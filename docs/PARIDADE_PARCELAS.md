@@ -225,3 +225,64 @@ com pré-visualização: SEM CAPTURA — o google-chrome headless desta máquina
 defeito de máquina já registrado na casa); a suíte prova os fluxos por API e por banco, e a
 interação de arrastar-e-soltar com pré-visualização fica na hipótese do item, para a trilha de
 interface (UX).
+
+## 13. Ajuste por mínimos quadrados e qualidade da malha (item 03)
+
+Fontes (consultadas em 09/09/2026):
+
+- Analyze by least squares adjustment (REST, parâmetros e valores de `analysisType`) — `developers.arcgis.com/rest/services-reference/enterprise/analyzebylsa-parcel-fabric-service/`
+- Apply least squares adjustment (REST, `movementTolerance`, `updateAttributes`) — `developers.arcgis.com/rest/services-reference/enterprise/applylsa-parcel-fabric-service/`
+- Least-squares adjustments and the parcel fabric (Pro) — `pro.arcgis.com/en/pro-app/3.5/help/data/parcel-editing/least-squares-parcel-fabric.htm`
+- Find gaps and overlaps (Pro, comando Highlight da aba Quality) — `pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/findgapsoverlaps.htm`
+- Parcel fabric data quality layers ("do not alter the original data") — `pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/parcelfabricdataqualitylayers.htm`
+
+### 13.1 analyzeByLSA / applyLSA
+
+Rota da casa: `POST /api/parcelas/fabrica/analyzeByLSA` e `POST /api/parcelas/fabrica/applyLSA`
+(escopo `parcelas:usar`, registro triplo). Resposta na forma da doc: `moment`, `success`,
+`exceededTransferLimit`; o analyze devolve `analysisType`, `resumo` e a lista integral de
+`pontos` e `linhas`; o apply devolve `serviceEdits` (camada "Ponto", `updates` com `id`, `x`,
+`y`, `deslocamentoM`) e o bloco `ajuste` com a versão gravada. Erro é 4xx do padrão da casa.
+
+| Parâmetro da doc | analyze | apply | Na casa |
+|---|---|---|---|
+| `parcelFeatures` [{id, layerId}] | sim | — | aceito (o apply da casa re-resolve as parcelas pedidas — divergência abaixo); `layerId` fixo `parcela` |
+| `analysisType` (`CONSISTENCY_CHECK` \| `WEIGHTED_LEAST_SQUARES`) | sim | — | aceito; **[diverge — declarado]**: os dois resolvem a MESMA rede ponderada com controles fixos; a rede livre da doc (sem controle) não está implementada e rede sem controle é recusada (`rede_sem_redundancia`) |
+| `convergenceTolerance` (padrão 0,05 m) | sim | — | aceito; a casa para quando o MAIOR passo fica abaixo da tolerância (semântica da doc: "maximum coordinate shift expected after iterating"); com a tolerância padrão isso é UM passo e sigma_zero ~1,5 sigma — declarado no teste, que roda também com tolerância fina |
+| `movementTolerance` (padrão 0,05 m) | — | sim | aceito; regra da doc aplicada à risca: ponto atualizado só quando o deslocamento é ESTRITAMENTE maior que a tolerância |
+| `updateAttributes` | — | sim | aceito; na doc copia XY Uncertainty/error ellipse para os pontos — na casa grava `precisao_xy_m` a posteriori |
+| `gdbVersion`, `sessionId`, `async`, `f` | aceitos sem efeito | aceitos sem efeito | versão única por inquilino, síncrono, JSON (mesma posição do §11) |
+| `semLinhas` | extra da casa | extra da casa | exclui a medida SÓ da rodada (nunca apaga); volta no relatório como `linhas_excluidas` |
+
+Divergências declaradas do apply: na doc ele aplica resultados ARMAZENADOS (classes AdjustmentPoints
+/ AdjustmentLines) e não recebe parcelas; na casa não há classes de ajuste — o apply re-resolve,
+escreve e grava a versão numa transação só, e `plat.parcela_ajuste` guarda o relatório integral
+(append-only). Na doc o ponto que se move mais que a tolerância "is updated to the location of the
+adjustment point"; na casa é a mesma regra, com a geometria de linha recomposta dos dois pontos e a
+face da parcela pelo polygonize das linhas dela (anel aberto não tem face e fica declarado em
+`sem_face`).
+
+Método da casa: Gauss-Newton ponderado sobre rumos (arcsegundos) e distâncias (metros), pesos por
+categoria (`medido` 2 cm/10"; `escritura` 10 cm/60"; `derivado` 50 cm/300"; ponto `controle`
+0,005 m / `apoio` 0,05 m), superáveis por coluna explícita de precisão. O portão é a solução
+analítica: malha 4x5 (98 observações, 54 incógnitas, 44 redundâncias) cujas coordenadas verdadeiras
+o ajuste tem de reproduzir a 1 mm — e a refutação (1 m em 100) tem de virar a SUSPEITA nº 1 e,
+excluída, reconvergir limpa. ADR `docs/adr/20260909T0142-ajuste-lsa-parcelas.md` registra os três
+bugs que essa prova pegou antes de passar.
+
+### 13.2 Qualidade — lacunas, sobreposições e regras de atributo
+
+Rota da casa: `POST /api/parcelas/qualidade` (mesmo escopo; `tipo` opcional no vocabulário fechado,
+`toleranciaM2` > 0). É o par do Find Gaps and Overlaps (o Highlight da aba Quality e a ferramenta
+da Parcel toolbox, que guarda lacuna/sobreposição como polígono): a casa devolve RELATÓRIO VIVO —
+sobreposições por par do MESMO tipo com área de interseção, lacunas por face do polygonize que
+nenhuma parcela cobre, e as regras de atributo (área calculada x declarada fora da tolerância;
+fechamento acima de 0,10 m). **[diverge — decidido]**: a LACUNA é calculada DENTRO de cada
+registro (cada registro é um levantamento; espaço entre dois registros não é lacuna de malha
+nenhuma) — a ferramenta da doc opera sobre a seleção do usuário, a casa sobre a malha do registro,
+e o polygonize do corpus inteiro de uma vez é inviável (medido: 20 min de GEOS e estouro de
+memória; por registro a maior malha do corpus é de 968 lotes e o mesmo cálculo é trivial). As
+camadas de qualidade do Pro "do not alter the original data" — a casa idem: a regra aponta, não
+altera dado. Conferência independente no teste com predicados DIFERENTES dos da implementação
+(ST_Overlaps no par; ST_Difference contra a união na face), sobre a malha determinística E sobre o
+corpo real de lotes de exemplo.
