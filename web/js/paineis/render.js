@@ -13,14 +13,24 @@
    ORDEM DO DOCUMENTO (a mesma ordem de `corpo.elementos`) — nenhum JS decide o empilhamento, é puro CSS. */
 
 import { h, limpar } from '../base/dom.js';
-import { TIPOS_COM_FONTE, pedidoDoElemento, renderElemento } from './elementos.js';
+import { Barramento } from '../app/barramento.js';
+import * as estadoUrl from '../app/estado_url.js';
+import { TIPOS_COM_FONTE, pedidoDoElemento, precisaPedido, renderElemento } from './elementos.js';
+import { VistaElemento, ligarInteracoes } from './interacoes.js';
 
 /* item L2-06-b-elementos-basicos: os tipos de elemento, o pedido de cada um e o desenho vivem em
    `elementos.js`; este módulo continua responsável só pela GRADE, pelo ciclo de atualização (uma requisição
    por fonte) e pelo estado de execução (filtros globais, ordenação de tabela, paginação de lista, extensão do
-   mapa como filtro). */
+   mapa como filtro).
+   item L2-06-c-acoes-seletores-filtros-cruzados: cada elemento com fonte ganha uma VISTA (VistaElemento,
+   chave `v:<id do elemento>`) — o barramento do L5-07 (`app/barramento.js`, UM só para o app e o painel)
+   traduz `corpo.mensagens` (gatilho → ações) sobre essas vistas; o filtro CQL2 que a vista guarda entra no
+   pedido do elemento (`pedido.filtro`) e roda em SQL no servidor (app/paineis/dados.py::filtro_do_pedido);
+   o estado dos seletores/filtros vai para a URL (app/estado_url.js) — copiar a URL reabre com o mesmo
+   estado. Ação de widget (zoom/pan/piscar/popup/definir_parametro) muda o estado de execução do elemento e
+   o efeito aparece no repintar. */
 
-function agruparPorFonte(elementos, ajustes = {}) {
+function agruparPorFonte(elementos, ajustes = {}, vistas = null) {
   const porFonte = new Map();
   for (const el of elementos) {
     if (!TIPOS_COM_FONTE.has(el.tipo) || !el.fonte) continue;
@@ -28,6 +38,11 @@ function agruparPorFonte(elementos, ajustes = {}) {
     if (!pedido) continue;
     const ajuste = ajustes[el.id];
     if (ajuste) Object.assign(pedido, ajuste);
+    // o filtro dinâmico da vista do elemento vira parte do PEDIDO (SQL no servidor). O seletor fica de
+    // fora: o filtro dele é o VALOR escolhido (que viaja pelas mensagens aos outros elementos), não uma
+    // condição sobre as próprias opções — senão o seletor colapsaria à opção escolhida.
+    const vista = vistas ? vistas.get(`v:${el.id}`) : null;
+    if (vista && vista.filtroDinamico && el.tipo !== 'seletor') pedido.filtro = vista.filtroDinamico;
     if (!porFonte.has(el.fonte)) porFonte.set(el.fonte, {});
     porFonte.get(el.fonte)[el.id] = pedido;
   }
@@ -45,8 +60,8 @@ function renderElementoVazio(elemento) {
   const corpo = h('div', { class: 'painel-el-corpo', 'data-papel': 'corpo' });
   if (elemento.tipo === 'texto') {
     corpo.textContent = (elemento.opcoes || {}).texto || '';
-  } else if (!TIPOS_COM_FONTE.has(elemento.tipo)) {
-    corpo.dataset.semFonte = '1';   // legenda, cabeçalho e texto rico sem campos: desenham na montagem
+  } else if (!precisaPedido(elemento)) {
+    corpo.dataset.semFonte = '1';   // legenda, cabeçalho, texto rico sem campos e seletor sem pedido: desenham na montagem
   } else {
     corpo.textContent = '…';
     corpo.setAttribute('aria-busy', 'true');
@@ -98,6 +113,17 @@ export function montarPainel(container, corpo, buscarDados, parametrosUrlIniciai
   const geracoes = new Map();      // número de ordem do último pedido de cada fonte (descarta resposta atrasada)
   let atualizadoEm = null;
 
+  /* L2-06-c: uma vista por elemento com fonte (chave `v:<id>`) — o estado de interação (filtro CQL2,
+     seleção) vive nela; o barramento do L5-07 executa `corpo.mensagens` sobre ela. O estado da URL é
+     aplicado ANTES de qualquer carga (as vistas já nascem com o filtro da URL; a primeira requisição
+     leva os pedidos já filtrados). */
+  const vistas = new Map();
+  for (const el of elementos) {
+    if (TIPOS_COM_FONTE.has(el.tipo)) vistas.set(`v:${el.id}`, new VistaElemento(el, fontesPorId.get(el.fonte)));
+  }
+  estadoUrl.aplicarDaUrl(vistas);
+  const barramento = new Barramento({ mensagens: corpo.mensagens || [] }, { vistas, widgets: new Map() });
+
   const ctx = {
     estado(id, inicial) {
       if (!estados.has(id)) estados.set(id, { ...inicial });
@@ -106,6 +132,27 @@ export function montarPainel(container, corpo, buscarDados, parametrosUrlIniciai
     repintar(id) {
       const el = elementos.find((e) => e.id === id);
       if (el) pintarResultado(container, el, ultimos.get(id), ctx);
+    },
+    vista(id) {
+      return vistas.get(`v:${id}`) || null;
+    },
+    /* gatilho do seletor (filtro_mudou): muda a vista — o barramento intercepta o evento e executa as
+       mensagens (ações de dado viram filtro nas vistas dos alvos; ações de widget caem no widget) — e
+       refaz o ciclo de requisições com os filtros novos */
+    definirFiltroElemento(id, filtro) {
+      const v = vistas.get(`v:${id}`);
+      if (v) v.definirFiltro(filtro, id);
+      for (const k of Object.keys(ajustes)) delete ajustes[k].deslocamento;
+      return atualizarTudo();
+    },
+    /* gatilho de seleção (clique em barra/linha/ponto): alternar — clicar na mesma marca de novo limpa */
+    definirSelecaoElemento(id, ids) {
+      const v = vistas.get(`v:${id}`);
+      if (!v) return Promise.resolve();
+      if (v.selecao.size === 1 && v.selecao.has(ids[0])) v.limparSelecao(id);
+      else v.definirSelecao(ids, id);
+      for (const k of Object.keys(ajustes)) delete ajustes[k].deslocamento;
+      return atualizarTudo();
     },
     paginar(id, deslocamento) {
       ajustes[id] = { ...(ajustes[id] || {}), deslocamento: Math.max(0, deslocamento) };
@@ -127,7 +174,10 @@ export function montarPainel(container, corpo, buscarDados, parametrosUrlIniciai
     },
   };
 
-  function porFonteAtual() { return agruparPorFonte(elementos, ajustes); }
+  ligarInteracoes(container, { elementos, vistas, ctx, barramento });
+  estadoUrl.ligarUrl(vistas);   // qualquer mudança de vista reescreve a URL (replaceState)
+
+  function porFonteAtual() { return agruparPorFonte(elementos, ajustes, vistas); }
 
   async function atualizarFonte(fonteId) {
     const pedidos = porFonteAtual().get(fonteId);
@@ -152,13 +202,20 @@ export function montarPainel(container, corpo, buscarDados, parametrosUrlIniciai
     const resultados = (resposta && resposta.resultados) || {};
     for (const elId of Object.keys(pedidos)) {
       const el = elementos.find((e) => e.id === elId);
-      if (el) { ultimos.set(elId, resultados[elId]); pintarResultado(container, el, resultados[elId], ctx); }
+      if (el) {
+        ultimos.set(elId, resultados[elId]);
+        // as feições da carga nova são o que as relações das mensagens leem (valores de campo para
+        // `atributo`, envelope para `espacial`) — a vista é atualizada ANTES do desenho
+        const vista = vistas.get(`v:${elId}`);
+        if (vista) vista.carregar(resultados[elId]);
+        pintarResultado(container, el, resultados[elId], ctx);
+      }
     }
   }
 
   function pintarSemFonte() {
     for (const el of elementos) {
-      if (TIPOS_COM_FONTE.has(el.tipo) || el.tipo === 'texto') continue;
+      if (precisaPedido(el) || el.tipo === 'texto') continue;
       pintarResultado(container, el, null, ctx);
     }
   }
