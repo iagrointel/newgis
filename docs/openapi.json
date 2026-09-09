@@ -10321,6 +10321,244 @@
     "x-privilegio": "proprio"
    }
   },
+  "/api/ferramentas/script": {
+   "post": {
+    "tags": [
+     "ferramentas"
+    ],
+    "summary": "Publicar",
+    "description": "Publica um script como ferramenta do catálogo (item `ferramenta_script`, versão 1).\nO cabeçalho YAML da docstring é validado antes de gravar; cabeçalho inválido é 422 e nada\né gravado.",
+    "operationId": "publicar_api_ferramentas_script_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PublicarEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Item"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.criar"
+   }
+  },
+  "/api/ferramentas/script/{id}/versao": {
+   "post": {
+    "tags": [
+     "ferramentas"
+    ],
+    "summary": "Publicar Versao",
+    "description": "Publica uma versão NOVA do script: cria o retrato imutável `versao + 1` em\n`plat.item_versao` (a mesma máquina de versões de qualquer item, L5-05). Execuções passadas\ncontinuam apontando a versão delas — a procedência é gravada por execução.",
+    "operationId": "publicar_versao_api_ferramentas_script__id__versao_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/VersaoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Item"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.criar"
+   }
+  },
+  "/api/ferramentas/script/{id}/formulario": {
+   "get": {
+    "tags": [
+     "ferramentas"
+    ],
+    "summary": "Formulario",
+    "description": "Formulário da ferramenta, gerado SÓ do cabeçalho: rótulos, exigência, padrões, mínimos e\nmáximos, e JSON Schema por parâmetro. O corpo do script não sai por aqui.",
+    "operationId": "formulario_api_ferramentas_script__id__formulario_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/ferramentas/script/{id}/executar": {
+   "post": {
+    "tags": [
+     "ferramentas"
+    ],
+    "summary": "Executar",
+    "description": "Executa a ferramenta como job (`ferramentas.executar_script`). Parâmetro fora do tipo/da\nfaixa ou entrada `item` inexistente é 422 ANTES de qualquer coisa ser enfileirada. O pedido\ndo job congela a versão e o sha256 do script: o worker roda o retrato imutável da versão.",
+    "operationId": "executar_api_ferramentas_script__id__executar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ExecutarEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "jobs.executar"
+   }
+  },
+  "/api/ferramentas/script/{id}/execucoes": {
+   "get": {
+    "tags": [
+     "ferramentas"
+    ],
+    "summary": "Execucoes",
+    "description": "Log de execução da ferramenta: jobs `ferramentas.executar_script` deste inquilino que\npediram esta ferramenta, a versão e o sha256 que cada uma congelou e onde terminou.",
+    "operationId": "execucoes_api_ferramentas_script__id__execucoes_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
   "/api/multiescala/conjuntos": {
    "post": {
     "tags": [
@@ -13779,6 +14017,24 @@
     ],
     "title": "ExecucaoPagina"
    },
+   "ExecutarEntrada": {
+    "properties": {
+     "parametros": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Parametros"
+     },
+     "timeout_s": {
+      "type": "integer",
+      "maximum": 900.0,
+      "minimum": 5.0,
+      "title": "Timeout S",
+      "default": 300
+     }
+    },
+    "type": "object",
+    "title": "ExecutarEntrada"
+   },
    "Fator": {
     "properties": {
      "id": {
@@ -16755,6 +17011,41 @@
     "type": "object",
     "title": "PublicarCamadaEntrada"
    },
+   "PublicarEntrada": {
+    "properties": {
+     "codigo": {
+      "type": "string",
+      "maxLength": 200000,
+      "minLength": 1,
+      "title": "Codigo",
+      "description": "texto completo do script; a docstring de módulo é o cabeçalho YAML"
+     },
+     "pasta_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pasta Id"
+     },
+     "tags": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 20,
+      "title": "Tags"
+     }
+    },
+    "type": "object",
+    "required": [
+     "codigo"
+    ],
+    "title": "PublicarEntrada"
+   },
    "RedefinicaoAplicada": {
     "properties": {
      "ok": {
@@ -18324,6 +18615,34 @@
      "corpo"
     ],
     "title": "VersaoCompleta"
+   },
+   "VersaoEntrada": {
+    "properties": {
+     "codigo": {
+      "type": "string",
+      "maxLength": 200000,
+      "minLength": 1,
+      "title": "Codigo",
+      "description": "texto completo da versão nova (o cabeçalho é revalidado)"
+     },
+     "comentario": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Comentario"
+     }
+    },
+    "type": "object",
+    "required": [
+     "codigo"
+    ],
+    "title": "VersaoEntrada"
    },
    "app__auth__modelos__LoteEntrada": {
     "properties": {
