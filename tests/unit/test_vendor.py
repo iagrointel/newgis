@@ -3,7 +3,11 @@
 admitir fontes .woff2: versão Major.Minor (fontes não seguem semver de 3 dígitos como as libs JS) e
 licença OFL-1.1 (SIL Open Font License, padrão de toda fonte aberta do Google Fonts — ver VERSOES.txt).
 Estendida de novo no item L2-02-e-simbolos-sprites-glifos (07/09/2026) para admitir .ttf (fontes de
-glifo de mapa, servidas ao Martin — diferentes das .woff2 acima, que são tipografia da INTERFACE)."""
+glifo de mapa, servidas ao Martin — diferentes das .woff2 acima, que são tipografia da INTERFACE).
+Estendida uma terceira vez na junção do wt/cx202c (item L2-02-b, 09/09/2026) para admitir o texto
+de licença <nome>-<versão>.LICENSE.txt: o portão do L2-02-c exige a licença Apache-Style da
+ColorBrewer EM ARQUIVO ao lado das rampas, e o arquivo é o package/LICENSE.txt do próprio pacote —
+mesma versão no nome, mesmo sha256 em VERSOES.txt, mesma disciplina de uma cópia por versão."""
 
 import hashlib
 import re
@@ -12,7 +16,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 VENDOR = ROOT / "web" / "vendor"
 LICENCAS = {"BSD-3-Clause", "MIT", "Apache-2.0", "ISC", "OFL-1.1"}
-NOME = re.compile(r"^(?P<nome>[a-z][a-z0-9-]*)-(?P<versao>\d+\.\d+(?:\.\d+)?)\.(js|css|woff2|ttf)$")
+NOME = re.compile(
+    r"^(?P<nome>[a-z][a-z0-9-]*)-(?P<versao>\d+\.\d+(?:\.\d+)?)(?:\.(?:js|css|woff2|ttf)|\.LICENSE\.txt)$"
+)
 
 
 def _linhas():
@@ -25,7 +31,7 @@ def test_todo_arquivo_do_vendor_esta_em_versoes_com_sha_e_licenca():
     declarados = {}
     for nome, versao, sha, licenca, origem in _linhas():
         m = NOME.match(nome)
-        assert m and m["versao"] == versao, f"nome fora da convenção <nome>-<versão>.js|css: {nome}"
+        assert m and m["versao"] == versao, f"nome fora da convenção <nome>-<versão>.<ext|LICENSE.txt>: {nome}"
         assert licenca in LICENCAS, (nome, licenca)
         assert origem.startswith("https://"), (nome, origem)
         declarados[nome] = sha
