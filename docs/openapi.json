@@ -10987,6 +10987,337 @@
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
    }
+  },
+  "/notebooks/{slug}": {
+   "get": {
+    "tags": [
+     "notebooks"
+    ],
+    "summary": "Abrir",
+    "operationId": "abrir_notebooks__slug__get",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Slug"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/notebooks/{slug}/": {
+   "get": {
+    "tags": [
+     "notebooks"
+    ],
+    "summary": "Abrir Barra",
+    "operationId": "abrir_barra_notebooks__slug___get",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Slug"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/notebooks/{slug}/{caminho}": {
+   "get": {
+    "tags": [
+     "notebooks"
+    ],
+    "summary": "Notebook Proxy Get",
+    "operationId": "notebook_proxy_get_notebooks__slug___caminho__get",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Slug"
+      }
+     },
+     {
+      "name": "caminho",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Caminho"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   },
+   "post": {
+    "tags": [
+     "notebooks"
+    ],
+    "summary": "Notebook Proxy Post",
+    "operationId": "notebook_proxy_post_notebooks__slug___caminho__post",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Slug"
+      }
+     },
+     {
+      "name": "caminho",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Caminho"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   },
+   "put": {
+    "tags": [
+     "notebooks"
+    ],
+    "summary": "Notebook Proxy Put",
+    "operationId": "notebook_proxy_put_notebooks__slug___caminho__put",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Slug"
+      }
+     },
+     {
+      "name": "caminho",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Caminho"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   },
+   "patch": {
+    "tags": [
+     "notebooks"
+    ],
+    "summary": "Notebook Proxy Patch",
+    "operationId": "notebook_proxy_patch_notebooks__slug___caminho__patch",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Slug"
+      }
+     },
+     {
+      "name": "caminho",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Caminho"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   },
+   "delete": {
+    "tags": [
+     "notebooks"
+    ],
+    "summary": "Notebook Proxy Delete",
+    "operationId": "notebook_proxy_delete_notebooks__slug___caminho__delete",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Slug"
+      }
+     },
+     {
+      "name": "caminho",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Caminho"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   }
   }
  },
  "components": {

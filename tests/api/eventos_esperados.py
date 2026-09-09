@@ -158,4 +158,11 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
+    # ---- notebook por inquilino (L2-16-b): o proxy /notebooks/{slug}/{caminho} é TÚNEL do Jupyter
+    # do inquilino — tráfego de sessão interativa não narra evento de domínio da plataforma; o único
+    # evento do item nasce no job agendado (notebooks/executado, emitido pela tarefa, não pela rota)
+    ("POST", "/notebooks/{slug}/{caminho}"): [],
+    ("PUT", "/notebooks/{slug}/{caminho}"): [],
+    ("PATCH", "/notebooks/{slug}/{caminho}"): [],
+    ("DELETE", "/notebooks/{slug}/{caminho}"): [],
 }

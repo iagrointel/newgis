@@ -906,6 +906,28 @@ CASOS: dict[tuple[str, str], Caso] = {
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
     ),
+    # ---- notebook por inquilino (L2-16-b): o slug da URL é o INQUILINO; A chamando o notebook de B
+    # (demo2) leva 404 na checagem de slug, ANTES de qualquer docker/levantamento de contêiner; por
+    # isso os casos usam sempre o slug de B e o padrão {401,403,404} cobre as quatro chamadas
+    ("GET", "/notebooks/{slug}"): Caso(lambda p: "/notebooks/demo2"),
+    ("GET", "/notebooks/{slug}/"): Caso(lambda p: "/notebooks/demo2/"),
+    ("GET", "/notebooks/{slug}/{caminho}"): Caso(lambda p: "/notebooks/demo2/api/status"),
+    ("POST", "/notebooks/{slug}/{caminho}"): Caso(
+        lambda p: "/notebooks/demo2/api/sessions",
+        lambda p: {"path": "zt.ipynb", "name": "zt.ipynb", "type": "notebook",
+                   "kernel": {"name": "python3"}},
+    ),
+    ("PUT", "/notebooks/{slug}/{caminho}"): Caso(
+        lambda p: "/notebooks/demo2/api/contents/zt.ipynb",
+        lambda p: {"type": "notebook"},
+    ),
+    ("PATCH", "/notebooks/{slug}/{caminho}"): Caso(
+        lambda p: "/notebooks/demo2/api/contents/zt.ipynb",
+        lambda p: {"path": "zt.ipynb"},
+    ),
+    ("DELETE", "/notebooks/{slug}/{caminho}"): Caso(
+        lambda p: "/notebooks/demo2/api/contents/zt.ipynb",
+    ),
 }
 
 
