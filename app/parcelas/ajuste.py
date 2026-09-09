@@ -168,16 +168,21 @@ def _resolver(rede: _Rede, tolerancia_m: float, sem_linhas: frozenset[str]) -> d
             d = math.hypot(dx, dy)
             if d <= 0.0:
                 raise ErroAPI(422, "valor_invalido", f"linha {ln.id} tem os dois pontos no mesmo lugar")
-            # observação de DISTÂNCIA
+            # observação de DISTÂNCIA (d = |p2 - p1|: as derivadas em relação ao PONTO 1
+            # carregam o sinal trocado em relação ao ponto 2)
             a[k, :] = 0.0
+            # o vetor de parâmetros é [x0, y0, x1, y1, ...]: o ponto j ocupa as
+            # colunas 2j e 2j + 1 (o mesmo mapa do passo de atualização abaixo);
+            # a linha INTEIRA é normalizada pelo sigma (o b abaixo também é) —
+            # sem isso o sistema linearizado mistura unidade e o passo explode
             if ln.de in indice:
-                i = indice[ln.de]
-                a[k, i] = dx / d
-                a[k, i + 1] = dy / d
+                i = 2 * indice[ln.de]
+                a[k, i] = -dx / d / ln.sigma_d
+                a[k, i + 1] = -dy / d / ln.sigma_d
             if ln.para in indice:
-                j = indice[ln.para]
-                a[k, j] = -dx / d
-                a[k, j + 1] = -dy / d
+                j = 2 * indice[ln.para]
+                a[k, j] = dx / d / ln.sigma_d
+                a[k, j + 1] = dy / d / ln.sigma_d
             b[k] = (ln.distancia - d) / ln.sigma_d
             # observação de RUMO (de norte, horário): theta = atan2(dx, dy)
             dk2 = d * d
@@ -185,11 +190,11 @@ def _resolver(rede: _Rede, tolerancia_m: float, sem_linhas: frozenset[str]) -> d
             dif = (ln.rumo - t_calc + 180.0) % 360.0 - 180.0  # embrulho de círculo
             a[n // 2 + k, :] = 0.0
             if ln.de in indice:
-                i = indice[ln.de]
+                i = 2 * indice[ln.de]
                 a[n // 2 + k, i] = -(dy / dk2) * RHO / ln.sigma_t
                 a[n // 2 + k, i + 1] = (dx / dk2) * RHO / ln.sigma_t
             if ln.para in indice:
-                j = indice[ln.para]
+                j = 2 * indice[ln.para]
                 a[n // 2 + k, j] = (dy / dk2) * RHO / ln.sigma_t
                 a[n // 2 + k, j + 1] = -(dx / dk2) * RHO / ln.sigma_t
             b[n // 2 + k] = dif * 3600.0 / ln.sigma_t
