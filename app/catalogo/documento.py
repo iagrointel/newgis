@@ -86,10 +86,18 @@ def validar_grafo(tipo: str, dados) -> None:
     ligação (`origem`/`alvo`) apontando para um id que não está em `corpo.nos`. O formato de cada campo (tipo do
     nó, tipos de `corpo`/`nos`/`ligacoes`) já é responsabilidade do JSON Schema do tipo (`tipos.validar`,
     chamado ANTES desta função nas duas rotas que escrevem `dados`); aqui só entra o que precisa da lista
-    inteira para ser conferido."""
+    inteira para ser conferido. No painel, vale também a validação das INTERAÇÕES do L2-06-c
+    (`app.paineis.interacoes`: `corpo.mensagens` e elemento `seletor` — a mensagem específica de cada
+    regra quebrada vai no detalhe do 422, que é o que a tela do editor mostra)."""
     corpo = _corpo_do_documento(tipo, dados)
     if corpo is None:
         return
+    erros_interacoes: list = []
+    if tipos.familia_de(tipo) == "painel":
+        # import tardio: app.paineis não pode entrar no import de catálogo (ciclo de módulo)
+        from app.paineis.interacoes import validar_interacoes
+
+        erros_interacoes, _avisos = validar_interacoes(corpo)
     nos = corpo.get("nos", [])
     if not isinstance(nos, list):
         return
@@ -123,6 +131,8 @@ def validar_grafo(tipo: str, dados) -> None:
                             "regra": "referencia_pendente",
                         }
                     )
+    if erros_interacoes:
+        erros.extend(erros_interacoes)
     if erros:
         raise ErroAPI(422, "grafo_invalido", f"grafo do documento ({tipo}) inválido", erros)
 
