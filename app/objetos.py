@@ -149,7 +149,18 @@ def garantir_bucket(cur, tenant_id: int | None = None, tenant_slug: str | None =
     admin.definir_cota(bucket["id"], cota_atual)
     # criar_chave é idempotente por NOME (ClienteAdmin.criar_chave): se a chave já existia, a resposta não traz
     # `secretAccessKey` de volta (o Garage só devolve o segredo na criação) — nesse caso o segredo já gravado em
-    # plat.arquivo_bucket é o único que vale; só entra aqui na 1ª vez que este bucket é criado, então sempre é novo
+    # plat.arquivo_bucket é o único que vale; só entra aqui na 1ª vez que este bucket é criado, então sempre é novo.
+    #
+    # Achado do item L2-03-edicao (07/09): essa suposição QUEBRA se o Garage já tinha bucket/chaves com este
+    # nome mas a linha em `plat.arquivo_bucket` sumiu (schema recriado numa trilha sem apagar o Garage —
+    # cenário real desta casa, não hipotético). Sem checagem, o INSERT abaixo gravaria `secretAccessKey=None`
+    # e o bucket ficaria inutilizável em silêncio até a primeira tentativa de uso. Erro explícito é melhor.
+    if "secretAccessKey" not in rw or "secretAccessKey" not in ro:
+        raise RuntimeError(
+            f"objetos.garantir_bucket: bucket/chaves '{alias}' já existem no Garage sem segredo conhecido "
+            "(a linha de plat.arquivo_bucket para este inquilino sumiu) — apague o bucket e as chaves no "
+            "Garage e rode de novo, ou restaure a linha de plat.arquivo_bucket de um backup"
+        )
     cur.execute(
         "SELECT plat.arquivo_bucket_registrar(%s,%s,%s,%s,%s,%s,%s,%s)",
         (
