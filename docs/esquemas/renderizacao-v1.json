@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Predefinição CUSTOM de renderização raster (item L1-02-f-predefinicoes-de-renderizacao-e-legenda). As 6 predefinições de FÁBRICA (RGB natural, falsa-cor NIR, NDVI, NDWI, NBR aproximado, relevo sombreado) não passam por este esquema: são código em app/imagens/predefinicoes.py::FABRICA, sempre válidas por construção, algumas usando a gramática de expressão já existente em app/imagens/tiles.py (item L1-02) — a linguagem de expressão livre por predefinição do usuário é o item L1-12, pendente, fora deste esquema.",
+  "properties": {
+    "bandas": {
+      "description": "bandas do asset, na ordem de saída (1-based); 1 banda = tabela de cor; 3-4 = composição RGB(A). Omitido = mesma regra padrão de hoje (3 primeiras bandas de um item com mais de 3).",
+      "items": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 64
+      },
+      "maxItems": 4,
+      "minItems": 1,
+      "type": "array"
+    },
+    "colormap": {
+      "description": "nome de uma rampa do catálogo do rio-tiler (GET /svc/<token>/raster/<item>/info.json lista os 211 nomes); só faz sentido com 1 banda de saída.",
+      "maxLength": 40,
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "type": ["string", "null"]
+    },
+    "descricao": {
+      "maxLength": 500,
+      "type": "string"
+    },
+    "esticamento": {
+      "additionalProperties": false,
+      "description": "como o valor do pixel vira 0-255. Toda faixa é calculada a partir da ESTATÍSTICA JÁ GRAVADA no item (raster:bands.statistics), nunca recalculada varrendo pixel; 'percentil' é uma aproximação normal a partir de média/desvio-padrão (a casa não guarda histograma).",
+      "properties": {
+        "desvios": {
+          "description": "só para tipo=desvio_padrao: faixa = média ± desvios×desvio-padrão.",
+          "exclusiveMinimum": 0,
+          "maximum": 6,
+          "type": "number"
+        },
+        "faixas": {
+          "description": "só para tipo=explicito: um par [min,max] por banda de saída, ou um único par aplicado a todas.",
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "type": "array"
+        },
+        "percentil_alto": {
+          "exclusiveMinimum": 50,
+          "maximum": 100,
+          "type": "number"
+        },
+        "percentil_baixo": {
+          "exclusiveMinimum": 0,
+          "maximum": 49.999,
+          "type": "number"
+        },
+        "tipo": {
+          "enum": ["minmax", "desvio_padrao", "percentil", "explicito"]
+        }
+      },
+      "required": ["tipo"],
+      "type": "object"
+    },
+    "nodata_transparente": {
+      "description": "true (padrão): nodata vira alfa 0 (transparente). false: nodata entra no render como valor opaco (mesma cor de fora-de-faixa).",
+      "type": "boolean"
+    },
+    "opacidade": {
+      "default": 1.0,
+      "description": "multiplicador de alfa aplicado depois da renderização (pós-processamento); 1 = sem alteração.",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "type": "number"
+    },
+    "resampling": {
+      "default": "nearest",
+      "description": "método de reamostro do rio-tiler/GDAL ao ler o COG na resolução do ladrilho/recorte pedido.",
+      "enum": ["nearest", "bilinear", "cubic", "cubic_spline", "lanczos", "average", "mode", "gauss", "rms"]
+    },
+    "titulo": {
+      "maxLength": 200,
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": ["titulo"],
+  "type": "object"
+}

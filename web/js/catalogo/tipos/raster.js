@@ -50,19 +50,67 @@ export async function previa(item) {
   ));
   const mapaEl = h('div', { class: 'tipo-mapa', 'aria-label': t('tipo_raster.previa_mapa') });
   raiz.append(mapaEl);
+  let tk;
   try {
-    const tk = await token(item);
+    tk = await token(item);
     const rTj = await obter(`/svc/${tk}/raster/${item.id}/tilejson.json`);
     if (rTj.status !== 200) throw new Error(rTj.json?.mensagem || 'tilejson');
-    montarMapaRaster(mapaEl, rTj.json);
+    const mapa = montarMapaRaster(mapaEl, rTj.json);
+    raiz.append(await painelRenderizacao(item, tk, mapa));
   } catch {
     mapaEl.replaceWith(h('p', { class: 'fraco' }, t('tipo_raster.erro_previa')));
   }
   return raiz;
 }
 
+/* ---------- Renderização: predefinição (item L1-02-f) ----------
+   Seção nova do painel do item raster: lista as 6 predefinições de fábrica + as CUSTOM do inquilino
+   (GET /api/imagens/<item>/predefinicoes, sessão), troca a fonte do mapa (mesma predefinição = mesma
+   query string, ver app/imagens/rotas_tiles.py::_consulta_render) e mostra a legenda (`legenda.png`) —
+   nunca duas fontes de verdade: a imagem de legenda vem do MESMO endpoint que o WMS GetLegendGraphic. */
+async function painelRenderizacao(item, tk, mapa) {
+  const raiz = h('div', { class: 'tipo-renderizacao' });
+  raiz.append(h('h4', {}, t('tipo_raster.renderizacao_titulo')));
+  const r = await obter(`/api/imagens/${encodeURIComponent(item.id)}/predefinicoes`);
+  if (r.status !== 200) {
+    raiz.append(h('p', { class: 'fraco' }, t('tipo_raster.renderizacao_erro')));
+    return raiz;
+  }
+  const opcoes = [
+    { nome: '', titulo: t('tipo_raster.renderizacao_padrao') },
+    ...r.json.fabrica.map((f) => ({ nome: f.nome, titulo: f.titulo })),
+    ...r.json.custom.map((c) => ({ nome: c.nome, titulo: `${c.titulo}${c.padrao ? ' ★' : ''}` })),
+  ];
+  const select = h('select', { class: 'campo-select', 'aria-label': t('tipo_raster.renderizacao_titulo') },
+    ...opcoes.map((o) => h('option', { value: o.nome }, o.titulo)));
+  const legendaImg = h('img', { class: 'renderizacao-legenda', alt: t('tipo_raster.renderizacao_legenda'), hidden: true });
+  const base = `${location.origin}/svc/${tk}/raster/${item.id}`;
+  const aplicar = () => {
+    const predef = select.value;
+    const consulta = predef ? `?predef=${encodeURIComponent(predef)}` : '';
+    const tiles = [`${base}/{z}/{x}/{y}.png${consulta}`];
+    mapa?.getSource?.('raster')?.setTiles?.(tiles);
+    if (predef) {
+      legendaImg.src = `${base}/legenda.png?predef=${encodeURIComponent(predef)}`;
+      legendaImg.hidden = false;
+    } else {
+      legendaImg.hidden = true;
+    }
+  };
+  select.addEventListener('change', aplicar);
+  raiz.append(
+    h('p', { class: 'fraco' }, t('tipo_raster.renderizacao_ajuda')),
+    h('div', { class: 'renderizacao-controle' }, select, legendaImg),
+    linha(t('tipo_raster.renderizacao_url'), campoUrl(`${base}/{z}/{x}/{y}.png?predef=<nome>`)),
+  );
+  return raiz;
+}
+
 function montarMapaRaster(container, tileJson) {
-  if (!window.maplibregl) { container.replaceWith(h('p', { class: 'fraco' }, t('tipo_raster.erro_previa'))); return; }
+  if (!window.maplibregl) {
+    container.replaceWith(h('p', { class: 'fraco' }, t('tipo_raster.erro_previa')));
+    return null;
+  }
   const map = new window.maplibregl.Map({
     container,
     style: {
@@ -78,6 +126,7 @@ function montarMapaRaster(container, tileJson) {
     const b = tileJson.bounds;
     if (Array.isArray(b) && b.length === 4) map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { animate: false, padding: 16 });
   });
+  return map;
 }
 
 /* ---------- Compartilhamento: URL de serviço para cliente externo ---------- */

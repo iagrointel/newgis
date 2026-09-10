@@ -34,9 +34,19 @@ from app.auth import escopos as esc
 from app.erros import ErroAPI
 from app.imagens import leitura, tiles
 from app.imagens import pgstac as ps
+from app.imagens import predefinicoes as pred
 from app.imagens import raster_item as ri
 from app.imagens import wms as wms_doc
-from app.imagens.rotas_tiles import CACHE_TILE, X, _asset_padrao, _autorizar, _bandas, _faixa, _fonte_do_item
+from app.imagens.rotas_tiles import (
+    CACHE_TILE,
+    X,
+    _asset_padrao,
+    _autorizar,
+    _bandas,
+    _faixa,
+    _fonte_do_item,
+    _predef_publicada,
+)
 from app.settings import settings
 
 router = APIRouter(tags=["wms"])
@@ -60,11 +70,40 @@ def _excecao(mensagem: str, codigo: str | None = None, status: int = 400) -> Res
                     headers={"Cache-Control": "no-store, must-revalidate"})
 
 
-def _camadas_visiveis(cur, auth) -> dict[str, dict[str, Any]]:
+def _estilos_do_item(cur, auth, item_id: str, stac: dict, token: str) -> list[dict]:
+    """`<Style>` do item (item L1-02-f): predefinições de fábrica cujo `min_bandas` cabe no asset
+    científico do item + predefinições custom do inquilino para este item. `legend_href` já sai pronto
+    para `GetLegendGraphic` (mesmo `LAYER`/`STYLE` que o dispatch de `_get_legend_graphic` espera)."""
+    n = pred.n_bandas(stac, "cientifico")
+    base = f"{_base(token)}/wms"
+    def _href(nome_estilo: str) -> str:
+        return (f"{base}?SERVICE=WMS&REQUEST=GetLegendGraphic&FORMAT=image/png&"
+               f"LAYER={item_id}&STYLE={nome_estilo}")
+
+    saida = [
+        {"nome": e["nome"], "titulo": e["titulo"], "legend_href": _href(e["nome"])}
+        for e in pred.listar_fabrica() if e["min_bandas"] <= n
+    ]
+    # `plat.render_predefinicao.item_id` é uuid (item do catálogo, `plat.item`); um `raster_item` de
+    # fixture de teste antiga pode ter item_id texto livre ("item-espelho-1") — nunca do catálogo, então
+    # nunca tem predefinição custom. Testar antes do cast evita 500 (achado ao ligar este item na demo).
+    if pred._e_uuid(item_id):  # noqa: SLF001 — mesmo teste do resto do item L1-02-f, sem duplicar
+        cur.execute(
+            "SELECT nome, titulo FROM plat.render_predefinicao WHERE tenant_id = %s AND item_id = %s::uuid "
+            "AND apagado_em IS NULL ORDER BY nome",
+            (auth.tenant_id, item_id),
+        )
+        for r in cur.fetchall():
+            saida.append({"nome": r["nome"], "titulo": r["titulo"], "legend_href": _href(r["nome"])})
+    return saida
+
+
+def _camadas_visiveis(cur, auth, token: str | None = None) -> dict[str, dict[str, Any]]:
     """Item ativo do inquilino do token, restrito ao que o escopo alcança (mesma regra do `/wmts` e do
     mosaico: `tiles:ler:<item>` ou `imagens:ler`). O bbox vem do próprio STAC (`bbox` do item, sempre em
     EPSG:4326) — não abre o COG por GDAL para montar o `GetCapabilities` (custaria uma leitura remota
-    por camada); só o `GetMap` de fato lê pixel."""
+    por camada); só o `GetMap` de fato lê pixel. `token` só é passado quando quem chama precisa dos
+    `<Style>`/`LegendURL` (GetCapabilities) — o GetMap não usa `estilos`, então não paga essa consulta."""
     linhas = [r for r in ri.listar(cur, auth.tenant_id) if r["estado"] == "ativo"]
     linhas = [
         r for r in linhas
@@ -82,13 +121,14 @@ def _camadas_visiveis(cur, auth) -> dict[str, dict[str, Any]]:
         camadas[r["item_id"]] = {
             "item_id": r["item_id"], "titulo": titulo, "resumo": "",
             "bounds": [oeste, sul, leste, norte],
+            "estilos": _estilos_do_item(cur, auth, r["item_id"], stac, token) if token else [],
         }
     return camadas
 
 
 # ---------------------------------------------------------------------------- GetCapabilities
 def _get_capabilities(token: str, auth, cur) -> Response:
-    camadas = list(_camadas_visiveis(cur, auth).values())
+    camadas = list(_camadas_visiveis(cur, auth, token).values())
     xml = wms_doc.capabilities(
         base=_base(token), titulo="plat WMS — análise/beta privado",
         resumo="Camadas raster do inquilino acessíveis por este token; triagem, não prova.",
@@ -127,15 +167,41 @@ def _formato_saida(txt: str | None) -> str | None:
 
 
 def _renderizar(auth, camadas: dict, nomes: list[str], bbox: tuple, crs: str, largura: int, altura: int,
-                formato: str, transparente: bool, expressao, bandas, faixa, colormap, asset) -> bytes:
-    asset_final = _asset_padrao(expressao, asset)
+                formato: str, transparente: bool, expressao, bandas, faixa, colormap, asset,
+                estilos_por_camada: dict[str, str | None] | None = None) -> bytes:
+    estilos_por_camada = estilos_por_camada or {}
     partes = []
     for nome in nomes:
+        predef = estilos_por_camada.get(nome)
+        resolvido = None
+        asset_camada = asset
+        if predef:
+            asset_camada = asset or "cientifico"
+            _, stac = _fonte_do_item(auth, nome, asset_camada)
+            with db.db(auth.contexto_leitura()) as cur:
+                resolvido = pred.resolver(cur, auth.tenant_id, nome, predef, stac, asset_camada)
+        expressao_camada = expressao or (resolvido.expressao if resolvido else None)
+        bandas_camada = bandas or (
+            ",".join(str(b) for b in resolvido.bandas) if resolvido and resolvido.bandas else None)
+        colormap_camada = colormap or (resolvido.colormap if resolvido else None)
+        asset_final = _asset_padrao(expressao_camada, asset_camada)
         fonte, _ = _fonte_do_item(auth, nome, asset_final)
-        corpo = tiles.recorte(
-            fonte, bbox, crs, largura, altura, formato="png", expressao=expressao,
-            bandas=_bandas(bandas), rescale=_faixa(faixa), colormap=colormap, transparente=True,
-        )
+        if resolvido and resolvido.hillshade:
+            corpo = pred.renderizar_hillshade(
+                fonte, banda=(resolvido.bandas or [1])[0], formato="png",
+                resampling=resolvido.resampling,
+                nodata_transparente=resolvido.nodata_transparente if not faixa else True,
+                parte=(bbox, tiles.CRS.from_user_input(crs), largura, altura),
+            )
+        else:
+            faixa_final = _faixa(faixa) if faixa else (resolvido.rescale if resolvido else None)
+            corpo = tiles.recorte(
+                fonte, bbox, crs, largura, altura, formato="png", expressao=expressao_camada,
+                bandas=_bandas(bandas_camada), rescale=faixa_final, colormap=colormap_camada,
+                transparente=True, resampling=(resolvido.resampling if resolvido else "nearest"),
+            )
+            if resolvido and resolvido.opacidade < 1.0:
+                corpo = pred.aplicar_opacidade(corpo, "png", resolvido.opacidade)
         leitura.contar(auth.tenant_id, auth.token_id, nome, len(corpo))
         partes.append(corpo)
     if len(partes) == 1 and formato == "png" and transparente:
@@ -169,9 +235,36 @@ def _get_map(auth, cur, p: dict[str, str]) -> Response:
     if faltando:
         return _excecao(f"camada não definida neste serviço: {', '.join(faltando)}", "LayerNotDefined")
 
-    estilos = [s for s in (p.get("STYLES") or "").split(",") if s]
-    if estilos and any(s not in ("", "default") for s in estilos):
-        return _excecao(f"estilo não definido: {p.get('STYLES')} (só 'default' é servido)", "StyleNotDefined")
+    # STYLES (item L1-02-f): vazio ou "default" por camada = comportamento de hoje, sem predefinição
+    # nenhuma (portão: "não mude o comportamento atual sem parâmetro"); um nome não-vazio tem de ser uma
+    # predefinição de fábrica ou custom (checado agora, contra o STAC de CADA camada — não só a forma).
+    estilos_brutos = (p.get("STYLES") or "").split(",") if p.get("STYLES") else []
+    if estilos_brutos and len(estilos_brutos) not in (1, len(nomes)):
+        return _excecao(f"STYLES tem de ter 1 valor (aplicado a todas as camadas) ou {len(nomes)} "
+                        f"(um por LAYERS); recebeu {len(estilos_brutos)}", "StyleNotDefined")
+    if len(estilos_brutos) == 1 and len(nomes) > 1:
+        estilos_brutos = estilos_brutos * len(nomes)
+    estilos_por_camada: dict[str, str | None] = {}
+    for i, nome in enumerate(nomes):
+        s = (estilos_brutos[i] if i < len(estilos_brutos) else "").strip()
+        if not s or s == "default":
+            estilos_por_camada[nome] = None
+            continue
+        try:
+            _, stac_camada = _fonte_do_item(auth, nome, "cientifico")
+            if s not in pred.NOMES_FABRICA:
+                cur.execute(
+                    "SELECT 1 FROM plat.render_predefinicao WHERE tenant_id = %s AND item_id = %s::uuid "
+                    "AND nome = %s AND apagado_em IS NULL",
+                    (auth.tenant_id, nome, s),
+                )
+                if cur.fetchone() is None:
+                    raise ErroAPI(404, "predefinicao_inexistente", "predefinição inexistente", {})
+            elif pred.n_bandas(stac_camada, "cientifico") < pred.FABRICA[s]["min_bandas"]:
+                raise ErroAPI(422, "predefinicao_incompativel", "bandas insuficientes", {})
+        except ErroAPI:
+            return _excecao(f"estilo não definido para a camada {nome!r}: {s!r}", "StyleNotDefined")
+        estilos_por_camada[nome] = s
 
     crs_bruto = p.get("CRS") or p.get("SRS")
     crs = wms_doc.normalizar_crs(crs_bruto)
@@ -206,6 +299,7 @@ def _get_map(auth, cur, p: dict[str, str]) -> Response:
         corpo = _renderizar(
             auth, camadas, nomes, (oeste, sul, leste, norte), crs, largura, altura, formato, transparente,
             p.get("EXPRESSAO"), p.get("BANDAS"), p.get("FAIXA"), p.get("COLORMAP"), p.get("ASSET"),
+            estilos_por_camada,
         )
     except tiles.ErroTile as e:
         return _excecao(str(e))
@@ -218,8 +312,33 @@ def _get_map(auth, cur, p: dict[str, str]) -> Response:
     return Response(corpo, media_type=media, headers={"Cache-Control": CACHE_TILE})
 
 
+# ---------------------------------------------------------------------------- GetLegendGraphic (L1-02-f)
+def _get_legend_graphic(auth, cur, p: dict[str, str]) -> Response:
+    camada = p.get("LAYER")
+    if not camada:
+        return _excecao("LAYER é obrigatório", "MissingDimensionValue")
+    camadas = _camadas_visiveis(cur, auth)
+    if camada not in camadas:
+        return _excecao(f"camada não definida neste serviço: {camada}", "LayerNotDefined")
+    estilo = (p.get("STYLE") or "").strip()
+    nome = estilo if estilo and estilo != "default" else None
+    if nome is None:
+        nome = _predef_publicada(auth, camada, None)
+        if nome is None:
+            return _excecao(
+                f"a camada {camada!r} não tem predefinição padrão nem STYLE explícito — nada para "
+                "desenhar na legenda (RGB sem rampa não tem GetLegendGraphic)", "StyleNotDefined")
+    try:
+        _, stac = _fonte_do_item(auth, camada, "cientifico")
+        resolvido = pred.resolver(cur, auth.tenant_id, camada, nome, stac, "cientifico")
+    except ErroAPI:
+        return _excecao(f"estilo não definido para a camada {camada!r}: {nome!r}", "StyleNotDefined")
+    corpo = pred.legenda_png(resolvido)
+    return Response(corpo, media_type="image/png", headers={"Cache-Control": "no-store, must-revalidate"})
+
+
 # ---------------------------------------------------------------------------- despacho KVP
-@router.get("/svc/{token}/wms", openapi_extra=X, summary="WMS 1.3.0 (GetCapabilities e GetMap)")
+@router.get("/svc/{token}/wms", openapi_extra=X, summary="WMS 1.3.0 (GetCapabilities, GetMap e GetLegendGraphic)")
 def wms_kvp(request: Request, token: str):
     auth = _autorizar(request, token)
     p = _kvp(request)
@@ -231,8 +350,10 @@ def wms_kvp(request: Request, token: str):
             return _get_capabilities(token, auth, cur)
         if operacao == "getmap":
             return _get_map(auth, cur, p)
+        if operacao == "getlegendgraphic":
+            return _get_legend_graphic(auth, cur, p)
     return _excecao(
-        f"REQUEST={p.get('REQUEST')!r} não suportado (use GetCapabilities ou GetMap; "
+        f"REQUEST={p.get('REQUEST')!r} não suportado (use GetCapabilities, GetMap ou GetLegendGraphic; "
         "GetFeatureInfo não está implementado nesta passagem)",
         "OperationNotSupported",
     )

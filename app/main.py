@@ -57,6 +57,7 @@ from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.imagens.rotas_imagens import router as rotas_imagens
 from app.imagens.rotas_imageserver import router as rotas_imageserver
+from app.imagens.rotas_predefinicoes import router as rotas_predefinicoes
 from app.imagens.rotas_stac import router as rotas_stac
 from app.imagens.rotas_tiles import router as rotas_tiles
 from app.imagens.rotas_wms import router as rotas_wms
@@ -206,6 +207,10 @@ ROUTERS = [
     # --- WMS 1.3.0 por token (L1-02-g-wms-1-3-0-raster): /svc/<token>/wms (GetCapabilities/GetMap),
     # mesma porta de entrada do WMTS, leitura de pixel por `tiles.recorte` (bbox arbitrário, não tile)
     rotas_wms,
+    # --- predefinições de renderização e legenda (L1-02-f): CRUD de sessão em
+    # /api/imagens/<item>/predefinicoes; consumidas por token em /svc/.../predef=, STYLES= (WMS/WMTS) e
+    # renderingRule (ImageServer) — ver app/imagens/predefinicoes.py
+    rotas_predefinicoes,
     # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,
     # /fatores/{id}/amostras, /conjuntos/{id}/macro, /execucoes/{id}/micro, /execucoes
     rotas_multiescala,

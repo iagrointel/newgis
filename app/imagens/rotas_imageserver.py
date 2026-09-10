@@ -36,12 +36,16 @@ do turno):
               (aceita também png8/png24/png32 como sinônimo de png), `f=image|json`; `identify` por ponto
               (`geometry`/`geometryType=esriGeometryPoint`/`sr`), devolvendo o valor de cada banda ou
               "NoData"; `tile/<z>/<y>/<x>` (mesma grade WebMercatorQuad do L1-02, service renomeado para
-              o padrão level/row/col do ArcGIS).
-  fora      — `renderingRule` e `mosaicRule`: dependem dos itens L1-02-f (predefinições de renderização)
-              e L1-07 (mosaico de coleção), NENHUM dos dois construído ainda. Mandar qualquer valor
-              não-vazio nesses dois parâmetros devolve erro Esri (nunca aplica a regra nem ignora em
-              silêncio — anunciar uma capacidade que não existe é o mesmo defeito que um botão que não
-              faz nada). `computeStatisticsHistograms`/histograma em geral: depende do item L1-02-h;
+              o padrão level/row/col do ArcGIS); `renderingRule` na forma `{"rasterFunction": "<nome>"}`
+              (item L1-02-f), onde `<nome>` é uma predefinição de renderização (fábrica ou custom do
+              inquilino) — `exportImage` e `tile/<z>/<y>/<x>` aplicam; `allowRasterFunction` no documento
+              do serviço vira `true` quando o item tem ao menos 1 predefinição de fábrica compatível.
+  fora      — `renderingRule` em qualquer OUTRA forma (encadeada, com `rasterFunctionArguments`, funções
+              nativas do Pro como Stretch/Colormap/NDVI cruas): recusado com erro Esri explícito, nunca
+              interpretado parcialmente — anunciar uma capacidade que não existe do jeito que o cliente
+              pediu é o mesmo defeito de um botão que não faz nada. `mosaicRule`: depende do item L1-07
+              (mosaico de coleção), não construído — mandar qualquer valor não-vazio devolve erro Esri.
+              `computeStatisticsHistograms`/histograma em geral: depende do item L1-02-h;
               `hasHistograms` é sempre `false`, nunca inventado. `rasterAttributeTable`: esta plataforma
               não tem RAT. `query` de pegadas/catálogo de mosaico: cada item é um raster único, não um
               mosaico multi-cena — `capabilities` nunca anuncia "Catalog". Download de pixel, measure,
@@ -65,10 +69,11 @@ from rasterio.crs import CRS
 from rio_tiler.errors import PointOutsideBounds
 from rio_tiler.io import Reader
 
-from app import limites
+from app import db, limites
 from app.consulta.formato_esri import resposta_esri
 from app.consulta.rotas_servico import CURRENT_VERSION
 from app.erros import ErroAPI
+from app.imagens import predefinicoes as pred
 from app.imagens import tiles
 from app.imagens.rotas_tiles import _autorizar, _fonte_do_item, _servir
 
@@ -201,6 +206,45 @@ def _crs_de(valor: str | None, wkid_padrao: int | None) -> tuple[int, CRS]:
         raise _ErroParametro(f"referência espacial desconhecida: {valor!r}") from e
 
 
+# ---------------------------------------------------------------------------- renderingRule (item L1-02-f)
+def _nome_da_rendering_rule(valor: str) -> str:
+    """`renderingRule` só é aceito na forma MÍNIMA `{"rasterFunction": "<nome>"}` — nada de
+    `rasterFunctionArguments`, funções encadeadas (`"rasterFunction": "Stretch", "rasterFunctionArguments":
+    {"Raster": {...}}`) nem os nomes nativos do Pro (Stretch/Colormap/NDVI): `<nome>` é sempre uma
+    predefinição desta plataforma (fábrica ou custom do inquilino), resolvida do MESMO jeito que
+    `predef=`/`STYLES=` nas outras portas (rotas_tiles.py/rotas_wms.py). Levanta ValueError com o motivo
+    em português quando a forma não bate — quem chama traduz para erro Esri."""
+    texto = (valor or "").strip()
+    if not texto:
+        raise ValueError("renderingRule vazio")
+    try:
+        corpo = _json.loads(texto)
+    except ValueError as e:
+        raise ValueError(f"renderingRule não é JSON: {valor!r}") from e
+    if not isinstance(corpo, dict) or set(corpo) != {"rasterFunction"}:
+        raise ValueError(
+            "só a forma {'rasterFunction': '<nome-da-predefinição>'} é aceita nesta implementação "
+            "(sem rasterFunctionArguments nem encadeamento)")
+    nome = corpo["rasterFunction"]
+    if not isinstance(nome, str) or not nome:
+        raise ValueError("rasterFunction precisa ser o nome (texto) de uma predefinição")
+    return nome
+
+
+def _resolver_rendering_rule(auth, item: str, valor: str, asset: str):
+    """(nome, `Resolvido`) a partir de `renderingRule=`, ou levanta `ErroAPI` já pronta para
+    `_erro_esri`. `asset` já chega resolvido (`_asset()` default é `cientifico` — o único asset com
+    estatística medida, o que uma predefinição precisa para o esticamento)."""
+    try:
+        nome = _nome_da_rendering_rule(valor)
+    except ValueError as e:
+        raise ErroAPI(400, "renderingRule_nao_suportado", str(e)) from e
+    _, stac = _fonte_do_item(auth, item, asset)
+    with db.db(auth.contexto_leitura()) as cur:
+        resolvido = pred.resolver(cur, auth.tenant_id, item, nome, stac, asset)
+    return nome, resolvido
+
+
 # ---------------------------------------------------------------------------- documento do serviço
 def _documento_servico(auth, item: str, asset: str) -> dict:
     fonte, stac = _fonte_do_item(auth, item, asset)
@@ -217,7 +261,9 @@ def _documento_servico(auth, item: str, asset: str) -> dict:
         "hasHistograms": False,  # depende do item L1-02-h, ainda não construído — nunca "true" sem ele
         "hasColormap": False,
         "hasRasterAttributeTable": False,  # esta plataforma não tem RAT
-        "allowRasterFunction": False,  # renderingRule está fora (ver docstring)
+        # allowRasterFunction (item L1-02-f): true quando há ao menos 1 predefinição de fábrica compatível
+        # com o nº de bandas do asset — só a FORMA mínima {"rasterFunction":"<nome>"}, ver docstring do módulo.
+        "allowRasterFunction": pred.n_bandas(stac, asset) >= min(e["min_bandas"] for e in pred.FABRICA.values()),
         "capabilities": CAPACIDADES,
         "copyrightText": props.get("plat:atribuicao") or "",
     }
@@ -269,12 +315,16 @@ def export_image(  # noqa: PLR0911 — operação com muitos parâmetros Esri pa
     if fmt is None:
         return _erro_esri(400, "'format' não é suportado por este serviço",
                           [f"aceitos: {', '.join(sorted(FORMATOS_EXPORT))}", f"recebido: {format!r}"])
-    for nome in ("renderingRule", "mosaicRule"):
-        valor = request.query_params.get(nome)
-        if valor:
-            return _erro_esri(400, f"'{nome}' não é suportado por este serviço",
-                              [f"{nome} depende de item ainda não construído no backlog — ver docstring de "
-                               "app/imagens/rotas_imageserver.py"])
+    if request.query_params.get("mosaicRule"):
+        return _erro_esri(400, "'mosaicRule' não é suportado por este serviço",
+                          ["mosaicRule depende do item L1-07 (mosaico de coleção), ainda não construído"])
+    resolvido = None
+    rendering_rule = request.query_params.get("renderingRule")
+    if rendering_rule:
+        try:
+            _, resolvido = _resolver_rendering_rule(auth, item, rendering_rule, asset_final)
+        except ErroAPI as e:
+            return _erro_esri(400 if e.status_code == 400 else 422, e.mensagem, [str(e.detalhe)] if e.detalhe else [])
     try:
         partes = [p.strip() for p in bbox.split(",")]
         if len(partes) != 4:
@@ -301,19 +351,46 @@ def export_image(  # noqa: PLR0911 — operação com muitos parâmetros Esri pa
     except _ErroParametro as e:
         return _erro_esri(400, e.mensagem, e.detalhes)
 
+    if resolvido and resolvido.hillshade:
+        corpo = pred.renderizar_hillshade(
+            fonte, banda=(resolvido.bandas or [1])[0], formato=("jpg" if fmt[0] == "JPEG" else "png"),
+            resampling=resolvido.resampling, nodata_transparente=resolvido.nodata_transparente,
+            parte=((xmin, ymin, xmax, ymax), img_crs, largura, altura),
+        )
+        if f == "json":
+            href = str(request.url.include_query_params(f="image"))
+            return JSONResponse({"href": href, "width": largura, "height": altura,
+                                 "extent": {"xmin": xmin, "ymin": ymin, "xmax": xmax, "ymax": ymax,
+                                            "spatialReference": {"wkid": img_wkid}}})
+        return Response(content=corpo, media_type=fmt[1], headers={"Cache-Control": "no-store"})
+
     with rasterio.Env(session=fonte.sessao, **fonte.env):
         with Reader(fonte.caminho, tms=tiles.TMS) as src:
-            indices = _indices_de_exibicao(src.dataset.count)
+            expressao = resolvido.expressao if resolvido else None
+            if expressao:
+                indices = None  # expressão lê as bandas dela mesma (numexpr) — indexes e expression são
+                                # mutuamente exclusivos no rio-tiler, mesma regra de tiles.ladrilho/recorte
+            elif resolvido and resolvido.bandas:
+                indices = tuple(resolvido.bandas)
+            else:
+                indices = _indices_de_exibicao(src.dataset.count)
             img = src.part((xmin, ymin, xmax, ymax), bounds_crs=bbox_crs, dst_crs=img_crs,
-                           width=largura, height=altura, indexes=indices)
-            if img.array.dtype != "uint8":
+                           width=largura, height=altura, indexes=indices, expression=expressao,
+                           resampling_method=(resolvido.resampling if resolvido else "nearest"))
+            if resolvido and resolvido.rescale:
+                img.rescale(resolvido.rescale)
+            elif img.array.dtype != "uint8":
                 # sem rescale explícito no contrato mínimo: estica pelo mínimo/máximo do próprio
                 # recorte, mesma regra que tiles.ladrilho usa para o ladrilho (C3 do conceito L1)
                 dados = img.array
                 lo = float(dados.min()) if dados.size else 0.0
                 hi = float(dados.max()) if dados.size else 1.0
                 img.rescale([(lo, hi if hi > lo else lo + 1e-9)])
-            corpo = img.render(img_format=fmt[0], add_mask=fmt[0] != "JPEG")
+            cm = tiles.colormap_de(resolvido.colormap) if resolvido else None
+            nodata_transparente = resolvido.nodata_transparente if resolvido else True
+            corpo = img.render(img_format=fmt[0], colormap=cm, add_mask=(fmt[0] != "JPEG") and nodata_transparente)
+    if resolvido and resolvido.opacidade < 1.0:
+        corpo = pred.aplicar_opacidade(corpo, ("jpg" if fmt[0] == "JPEG" else "png"), resolvido.opacidade)
 
     if f == "json":
         href = str(request.url.include_query_params(f="image"))
@@ -386,14 +463,27 @@ def tile_esri(token: str, item: str, level: int, row: int, col: int, request: Re
               asset: str | None = Query(None)):
     """Mesmo ladrilho do item L1-02 (`rotas_tiles._servir`, sem reescrever nada) — só o caminho muda
     para o padrão que o Pro usa ao pedir ladrilho de um `ImageServer` (`level/row/col`, sempre PNG,
-    sempre grade WebMercatorQuad). `renderingRule`/`bandIds` não são aceitos aqui pelo mesmo motivo do
-    exportImage."""
-    for nome in ("renderingRule", "bandIds"):
-        if request.query_params.get(nome):
-            return _erro_esri(400, f"'{nome}' não é suportado por este serviço", [])
+    sempre grade WebMercatorQuad). `renderingRule` (item L1-02-f) é repassado para `_servir` como
+    `predef=` na forma mínima `{"rasterFunction":"<nome>"}` (a MESMA validação de `export_image`, ver
+    `_nome_da_rendering_rule`); `bandIds` continua fora (não é o mesmo mecanismo de `bandas=`)."""
+    if request.query_params.get("bandIds"):
+        return _erro_esri(400, "'bandIds' não é suportado por este serviço", [])
     auth = _autorizar(request, token, item)
     asset_final = _asset(asset)
-    return _servir(request, auth, item, level, col, row, "png", None, None, None, None, asset_final)
+    rendering_rule = request.query_params.get("renderingRule")
+    predef = None
+    if rendering_rule:
+        try:
+            predef = _nome_da_rendering_rule(rendering_rule)
+        except ValueError as e:
+            return _erro_esri(400, "renderingRule_nao_suportado", [str(e)])
+    try:
+        return _servir(request, auth, item, level, col, row, "png", None, None, None, None, asset_final,
+                       predef=predef)
+    except ErroAPI as e:
+        if e.erro in ("predefinicao_inexistente", "predefinicao_incompativel"):
+            return _erro_esri(400, e.mensagem, [str(e.detalhe)] if e.detalhe else [])
+        raise
 
 
 __all__ = ["router"]

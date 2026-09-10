@@ -209,15 +209,39 @@ def test_export_image_format_nao_suportado_e_recusado_em_json_esri(token_img, ra
     assert r.status_code == 400 and r.json()["error"]["code"] == 400
 
 
-@pytest.mark.parametrize("parametro", ["renderingRule", "mosaicRule"])
-def test_export_image_rendering_e_mosaic_rule_sao_recusados(token_img, raster_demo, parametro):
+def test_export_image_mosaic_rule_e_recusado(token_img, raster_demo):
+    """`mosaicRule` continua fora (depende do item L1-07, não construído) — item L1-02-f não muda isso."""
     c, tok, item = _cliente(), token_img["token"], raster_demo["item_id"]
     r = c.get(f"{_base(tok, item)}/exportImage",
-             params={"bbox": "-47.95,-15.94,-47.76,-15.75", parametro: '{"rasterFunction":"Grayscale"}'})
+             params={"bbox": "-47.95,-15.94,-47.76,-15.75", "mosaicRule": '{"rasterFunction":"Grayscale"}'})
     assert r.status_code == 400, r.text
     corpo = r.json()
     assert corpo["error"]["code"] == 400
-    assert parametro in corpo["error"]["message"]
+    assert "mosaicRule" in corpo["error"]["message"]
+
+
+def test_export_image_rendering_rule_nome_desconhecido_e_recusado_sem_500(token_img, raster_demo):
+    """Item L1-02-f: `renderingRule` na forma mínima `{"rasterFunction":"<nome>"}` é ACEITO como forma —
+    "Grayscale" não é uma predefinição desta plataforma (nem de fábrica, nem custom deste item), então
+    recusa por predefinição inexistente (erro Esri, nunca 500, nunca aplicado às cegas)."""
+    c, tok, item = _cliente(), token_img["token"], raster_demo["item_id"]
+    r = c.get(f"{_base(tok, item)}/exportImage",
+             params={"bbox": "-47.95,-15.94,-47.76,-15.75", "renderingRule": '{"rasterFunction":"Grayscale"}'})
+    assert r.status_code in (400, 422), r.text
+    corpo = r.json()
+    assert corpo["error"]["code"] in (400, 422)
+    assert "Grayscale" in corpo["error"]["message"] or "renderingRule" in corpo["error"]["message"]
+
+
+def test_export_image_rendering_rule_forma_encadeada_e_recusada_sem_500(token_img, raster_demo):
+    """A forma completa do Pro (`rasterFunctionArguments`, encadeamento) nunca é interpretada — só a
+    forma mínima `{"rasterFunction":"<nome>"}` (ver docstring de app/imagens/rotas_imageserver.py)."""
+    c, tok, item = _cliente(), token_img["token"], raster_demo["item_id"]
+    r = c.get(f"{_base(tok, item)}/exportImage", params={
+        "bbox": "-47.95,-15.94,-47.76,-15.75",
+        "renderingRule": '{"rasterFunction":"Stretch","rasterFunctionArguments":{"Raster":{}}}'})
+    assert r.status_code == 400, r.text
+    assert r.json()["error"]["code"] == 400
 
 
 def test_export_image_bbox_malformado_nunca_500(token_img, raster_demo):

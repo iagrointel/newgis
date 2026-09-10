@@ -91,6 +91,23 @@ def service_exception(mensagem: str, codigo: str | None = None) -> str:
     )
 
 
+def _estilo_xml(item_id: str, nome: str, titulo: str, legend_href: str, indent: str) -> list[str]:
+    """`<Style>` (OGC 06-042 §7.2.4.6.5) com `<LegendURL>` apontando para `GetLegendGraphic` — item
+    L1-02-f: cada predefinição de renderização compatível com o item (fábrica cujo `min_bandas` cabe +
+    predefinições custom do inquilino) vira um estilo nomeado, do jeito que um cliente WMS de verdade
+    (QGIS "Estilos") já sabe listar e trocar sem inventar parâmetro nenhum."""
+    return [
+        f'{indent}  <Style>',
+        f"{indent}    <Name>{escape(nome)}</Name>",
+        f"{indent}    <Title>{escape(titulo)}</Title>",
+        f'{indent}    <LegendURL width="240" height="56">',
+        '      <Format>image/png</Format>',
+        f'      <OnlineResource xlink:type="simple" xlink:href="{escape(legend_href)}"/>',
+        f"{indent}    </LegendURL>",
+        f"{indent}  </Style>",
+    ]
+
+
 def _camada_xml(item: dict, indent: str = "      ") -> list[str]:
     oeste, sul, leste, norte = item["bounds"]
     linhas = [
@@ -102,6 +119,8 @@ def _camada_xml(item: dict, indent: str = "      ") -> list[str]:
         linhas.append(f"{indent}  <Abstract>{escape(item['resumo'])}</Abstract>")
     for crs in CRS_SUPORTADOS:
         linhas.append(f"{indent}  <CRS>{crs}</CRS>")
+    for estilo in item.get("estilos") or []:
+        linhas += _estilo_xml(item["item_id"], estilo["nome"], estilo["titulo"], estilo["legend_href"], indent)
     linhas += [
         f"{indent}  <EX_GeographicBoundingBox>",
         f"{indent}    <westBoundLongitude>{oeste:.7f}</westBoundLongitude>",
@@ -159,6 +178,12 @@ def capabilities(*, base: str, titulo: str, resumo: str, camadas: list[dict], la
         f"          {onlineresource}",
         "        </Get></HTTP></DCPType>",
         "      </GetMap>",
+        "      <GetLegendGraphic>",
+        "        <Format>image/png</Format>",
+        "        <DCPType><HTTP><Get>",
+        f"          {onlineresource}",
+        "        </Get></HTTP></DCPType>",
+        "      </GetLegendGraphic>",
         "    </Request>",
         "    <Exception>",
         "      <Format>text/xml</Format>",
