@@ -32,6 +32,15 @@ CREATE TABLE IF NOT EXISTS plat.backup (
   CONSTRAINT ck_backup_escopo_tenant CHECK (
     (escopo = 'plataforma' AND tenant_id IS NULL) OR (escopo = 'inquilino' AND tenant_id IS NOT NULL))
 );
+-- (entrega 10/09) a fusão trouxe DOIS desenhos de plat.backup; o CREATE acima foi ignorado por já existir.
+-- A tabela passa a ser a união dos dois, aditivamente:
+ALTER TABLE plat.backup ADD COLUMN IF NOT EXISTS escopo text;
+ALTER TABLE plat.backup ADD COLUMN IF NOT EXISTS schema_nome text;
+ALTER TABLE plat.backup ADD COLUMN IF NOT EXISTS estado text;
+ALTER TABLE plat.backup ADD COLUMN IF NOT EXISTS erro text;
+ALTER TABLE plat.backup ADD COLUMN IF NOT EXISTS iniciado_em timestamptz;
+ALTER TABLE plat.backup ADD COLUMN IF NOT EXISTS concluido_em timestamptz NOT NULL DEFAULT now();
+
 CREATE INDEX IF NOT EXISTS ix_backup_tenant_em ON plat.backup (tenant_id, concluido_em DESC);
 CREATE INDEX IF NOT EXISTS ix_backup_em ON plat.backup (concluido_em DESC);
 
