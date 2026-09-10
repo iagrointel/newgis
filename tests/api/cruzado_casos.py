@@ -181,6 +181,19 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     })
     assert r.status_code == 201, r.text
     execucao_b = r.json()
+    # L3-01-a: modelo + conjunto + execução de B, alvos das rotas de /api/amc — a execução marca o modelo
+    # como "executado" (permanente, é a regra do item); por isso o modelo NÃO é apagado em desfazer()
+    r = sessao_b.post("/api/amc/modelos", json={"nome": f"{PREFIXO}amc-modelo-{sufixo}", "definicao": AMC_DEF_MINIMA})
+    assert r.status_code == 201, r.text
+    modelo_amc_b = r.json()
+    r = sessao_b.post("/api/amc/conjuntos",
+                      json={"nome": f"{PREFIXO}amc-conjunto-{sufixo}", "tipo": "hexagonal", "lado_m": 250})
+    assert r.status_code == 201, r.text
+    conjunto_amc_b = r.json()
+    r = sessao_b.post("/api/amc/execucoes",
+                      json={"modelo_id": modelo_amc_b["id"], "conjunto_id": conjunto_amc_b["id"], "semente": 1})
+    assert r.status_code == 201, r.text
+    execucao_amc_b = r.json()
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
@@ -203,6 +216,7 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
                       convite_b=convite_b,
+                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b,
                       modelo_amc_b=modelo_amc_b, conjunto_amc_b=conjunto_amc_b,
                       execucao_amc_b=execucao_amc_b)
 

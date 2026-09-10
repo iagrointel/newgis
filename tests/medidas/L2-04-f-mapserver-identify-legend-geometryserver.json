@@ -1,0 +1,47 @@
+{
+ "item": "L2-04-f-mapserver-identify-legend-geometryserver",
+ "medidas": {
+  "export_1024x768_quente_s": {
+   "valor": 0.047,
+   "unidade": "s",
+   "comando": "GET .../MapServer/export?size=1024,768&format=png32&f=image (2a chamada)"
+  },
+  "export_1024x768_carga_1min": {
+   "valor": 4.3,
+   "unidade": "carga",
+   "comando": "os.getloadavg()[0] no instante da medida (12 nucleos)"
+  },
+  "export_1024x768_ram_livre_gb": {
+   "valor": 7.6,
+   "unidade": "GB",
+   "comando": "MemAvailable de /proc/meminfo"
+  },
+  "project_100_pontos_maior_diferenca_m": {
+   "valor": 0.0,
+   "unidade": "m",
+   "comando": "POST .../GeometryServer/project vs ST_Transform no mesmo banco"
+  },
+  "buffer_1km_erro_relativo_area": {
+   "valor": 0.0,
+   "unidade": "fração",
+   "comando": "POST .../GeometryServer/buffer (geodesic) vs ST_Buffer(geography, 1000)"
+  },
+  "export_denso_feicoes": {
+   "valor": 5003,
+   "unidade": "feicoes",
+   "comando": "count(*) da camada do teste denso"
+  },
+  "export_denso_1024x768_quente_s": {
+   "valor": 0.075,
+   "unidade": "s",
+   "comando": "GET .../MapServer/export?size=1024,768 sobre a camada densa (2a chamada)"
+  },
+  "export_denso_carga_1min": {
+   "valor": 4.81,
+   "unidade": "carga",
+   "comando": "os.getloadavg()[0]"
+  }
+ },
+ "gerado_em": "2026-09-08T06:34:03Z",
+ "git_sha": "00b45d5fe64a"
+}

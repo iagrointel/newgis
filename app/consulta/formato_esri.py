@@ -21,17 +21,30 @@ from fastapi import Response
 from app.erros import ErroAPI
 
 FORMATOS = ("json", "pjson", "html")
+# `f=image` é o segundo contrato do protocolo: nas operações que DESENHAM (export, legend), `f=json`
+# devolve a descrição da imagem e `f=image` devolve os bytes dela. Não entra em `FORMATOS` porque não
+# faz sentido em recurso de metadado — quem aceita passa `extras=("image",)` a `formato_de`.
+FORMATO_IMAGEM = "image"
 _CALLBACK_RE = re.compile(r"^[A-Za-z_$][A-Za-z0-9_$]*(\.[A-Za-z_$][A-Za-z0-9_$]*)*$")
 _CALLBACK_MAX = 128
 
 
-def formato_de(valor: str | None) -> str:
+def formato_de(valor: str | None, extras: tuple[str, ...] = ()) -> str:
     """`f` normalizado. Ausente ou vazio = json (padrão do protocolo). Valor fora do vocabulário é
-    400, não 500: o cliente pediu formato que não existe, e o erro é dele."""
+    400, não 500: o cliente pediu formato que não existe, e o erro é dele. `extras` acrescenta os
+    formatos que SÓ aquela operação entende (hoje `image`, do export e da legenda do MapServer)."""
+    aceitos = FORMATOS + tuple(extras)
     f = (valor or "json").strip().lower()
-    if f not in FORMATOS:
-        raise ErroAPI(400, "formato_nao_suportado", f"f={f} não é suportado; use {', '.join(FORMATOS)}")
+    if f not in aceitos:
+        raise ErroAPI(400, "formato_nao_suportado", f"f={f} não é suportado; use {', '.join(aceitos)}")
     return f
+
+
+def resposta_imagem(dados: bytes, tipo_conteudo: str) -> Response:
+    """Bytes de imagem/PDF já codificados. `no-store` porque o desenho depende do token do caminho e
+    dos parâmetros do pedido: nenhuma camada intermediária deve guardar a imagem de um inquilino."""
+    return Response(dados, media_type=tipo_conteudo,
+                    headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow"})
 
 
 def validar_callback(valor: str | None) -> str | None:

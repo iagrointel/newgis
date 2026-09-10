@@ -1056,6 +1056,40 @@ feito/parcial/fora contra a capacidade Esri.
 Ver `git log` do ramo desta trilha (`wt/il531constr`) — migração, backend (`app/catalogo/camada_esquema.py`),
 frontend (`web/construtor_camada.html`, `web/js/catalogo/camada_esquema.js`, `web/estilo/camada_esquema.css`)
 e testes (API + e2e) num só commit por não haver como dividir sem quebrar o portão no meio.
+## turno 4, setembro de 2026 (item L2-04-f-mapserver-identify-legend-geometryserver: MapServer e GeometryServer)
+
+O outro contrato do protocolo Esri, o dos clientes que consomem MAPA e não feição: `/svc/{token}/rest/services/
+{mapa}/MapServer` com descritor, `/layers`, `/{id}`, `export`, `identify`, `find`, `legend` e `generateKml`
+(`app/consulta/rotas_mapserver.py` + `app/consulta/mapserver.py`), e o
+`/svc/{token}/rest/services/Utilities/Geometry/GeometryServer` com `project`, `buffer`, `areasAndLengths`,
+`lengths`, `distance`, `union`, `intersect`, `difference`, `convexHull` e `simplify`
+(`app/consulta/rotas_geometria.py`). O serviço é um item de tipo `mapa` do catálogo, e o identificador de
+camada é a posição no documento; o diretório do item L2-04-b passou a listar mapa como `MapServer` ao lado da
+camada como `FeatureServer`.
+
+Sem dependência nova: o desenho é `PIL.ImageDraw`, o mesmo que `app/catalogo/miniatura.py` já usava, com o
+símbolo vindo do `drawingInfo` que o FeatureServer publica — a amostra da legenda e o pixel do mapa saem da
+MESMA estrutura, então não existe caminho em que a legenda diga uma cor e o mapa desenhe outra. Toda operação
+do GeometryServer é uma chamada ao PostGIS; nada de geometria é calculado em Python.
+
+Medido (`tests/medidas/L2-04-f-mapserver-identify-legend-geometryserver.json`): export de 1024×768 em
+**0,075 s quentes sobre 5.003 polígonos** (carga 4,81 em 12 núcleos; teto do portão 1,5 s) e 0,047 s no mapa
+de três camadas; `project` de 100 pontos com diferença **0,0 m** contra `ST_Transform`; envoltória geodésica
+de 1 km com erro relativo de área **0,0** contra `ST_Buffer` sobre `geography`. `identify` sobre três camadas
+devolve exatamente o mesmo conjunto de feições da consulta espacial escrita à mão (comparação por
+identificador, com e sem tolerância).
+
+Refutação declarada do item, toda ela em teste: export de 8.000×8.000 volta 400 com o limite declarado
+(`MAPSERVER_LADO_MAX = 4096`, no descritor do serviço) antes de alocar imagem; `identify` com tolerância 0
+responde sem erro; `layerDefs` com SQL injetado é 400 pelo analisador `where_ast`, o mesmo da operação
+`query`, e nunca chega ao banco.
+
+⛔ NÃO medido: QGIS e ArcGIS Pro não existem nesta máquina (sem ambiente gráfico). A cláusula do portão que
+pede a captura do cliente está na matriz de conformidade como `nao_medido`, com o motivo — nunca como
+aprovada. A comparação da imagem com a captura do visualizador foi substituída, com a razão escrita, pela
+comparação do pixel desenhado com a cor que o `drawingInfo` declara para aquela classe. ADR:
+`docs/adr/20260908T0712-mapserver-e-geometryserver.md`.
+
 ## turno 4, setembro de 2026 (item L2-04-d-featureserver-edicao-anexos: escrita pelo protocolo Esri sobre a porta única)
 
 `applyEdits` (na camada e no serviço), `addFeatures`/`updateFeatures`/`deleteFeatures`, `calculate`, os seis
@@ -1117,6 +1151,100 @@ segredos por `LoadCredential=`, repositório e histórico git com 0 ocorrências
 Runbook em `docs/RUNBOOKS/segredos.md` (procedimento por segredo, janela trust declarada, ressalva do
 garage.toml do daemon, que é da frente plataforma/pipeline e o produto nunca lê em operação).
 ## turno 3, setembro de 2026 (item L5-32-vistas-de-camada: vista de camada como VIEW do PostgreSQL)
+## turno 3, setembro de 2026 (item L3-19-multiescala: grades aninhadas do motor multicritério)
+
+Construído do zero neste turno (RESGATE da sessão executora derrubada por cota só tinha a migração,
+`app/multiescala/{crs,motor}.py` ainda sem rota nenhuma). Duas execuções ligadas: `POST
+/api/multiescala/conjuntos/{id}/macro` gera a grade grosseira sobre a área de estudo inteira e roda a
+combinação; `POST /api/multiescala/execucoes/{id}/micro` gera a grade fina SÓ dentro das células macro
+aprovadas (aritmético — a query de geração junta a região aprovada ANTES de expandir as sub-células, nunca
+gera tudo para descartar depois) e roda a mesma combinação nela. `GET /api/multiescala/execucoes/{id}`
+devolve o relatório por fator com `escala`/`escala_grosseira`/`razao_escala`, calculado pelo motor a partir
+de `resolucao_fonte_m` (declarada no fator) x `resolucao_grade_m` (da execução) — o cliente nunca envia
+esse campo. CRUD completo: `/conjuntos`, `/fatores`, `/fatores/{id}/amostras` (carga em lote),
+`/execucoes`; `DELETE` de conjunto e fator (cascata pelas FKs da migração), acrescentados neste turno para
+a varredura cruzada ter como limpar o que cria. Escopo de token novo `multiescala:usar`
+(`app/auth/escopos.py`). ADR `docs/adr/20260906T1640-grades-aninhadas-multiescala.md`.
+
+Um defeito de FRAMEWORK achado e corrigido, fora do arquivo deste item mas bloqueando-o:
+`app/schema_ambiente.py::CursorSchemaAmbiente` reescreve `plat.` → `plat_t<trilha>.` em `execute` e
+`callproc`, mas não em `executemany` (psycopg2 implementa em C e não chama `execute` de volta) —
+`POST /api/multiescala/fatores/{id}/amostras` falhava com `permission denied for schema plat` em qualquer
+trilha. A MESMA lacuna já quebrava `POST /api/papeis` (não deste item), convertida por `erro_do_banco` num
+403 "operação fora do inquilino da sessão" que parecia RLS cruzada e não era — reproduzido e confirmado
+antes de mexer. Corrigido na classe (um método a mais, mesmo corpo de `execute`), vale para as duas rotas.
+
+Um defeito do próprio teste (não do motor) achado rodando de verdade: uma área de estudo desenhada só um
+pouco maior que a resolução da grade (~1,35-1,47 km sobre 1 km) produz uma célula-fatia cujo CENTRO
+nominal (usado para achar o bloco de dado) cai FORA da extensão real da amostra — 2 das 4 células macro
+ficavam sem nota, não por bug, porque nenhuma amostra alcançava o bloco que aquela célula ia procurar.
+Corrigido aumentando a área de teste para 1.900 x 1.900 m (documentado no ADR, decisão B, para o próximo
+teste desta família não tropeçar na mesma coisa).
+
+Medido de verdade (`PLAT_GRAVAR_MEDIDAS=1`, `tests/medidas/L3-19-multiescala.json`), 10/10 testes passam
+duas vezes seguidas: grade macro de 1 km sobre estudo de 1.900x1.900 m dá 4 células, top_pct 50% aprova 2;
+grade micro de 100 m (k=10) gera exatamente 200 células (2 aprovadas × 10²) contra 400 possíveis (4×10²) —
+economia de 50,0%; o mesmo fator (1.000 m de escala nativa) sai `própria` na grade de 1 km e `grosseira`
+na grade de 100 m da MESMA execução ligada, sem o cliente declarar nada de diferente — é a refutação do
+item. `tests/api/multiescala/test_multiescala.py`: 10/10.
+
+**Fora do portão deste turno, registrado no ADR**: `docs/openapi.json` comitado não inclui
+`/api/multiescala/*` (regeneração é pendência do gerente após os merges); os 11 casos da varredura cruzada
+já estão em `tests/api/cruzado_casos.py` (conferidos à mão contra o app rodando — todas as 11 rotas
+recusam ou isolam o cross-tenant corretamente) e passam a valer em `test_cobertura_100_por_cento`/
+`test_rota_nao_cruza` assim que `make openapi` rodar contra a árvore juntada. `L3-01-b-unidades`
+(dependência declarada) segue PARCIAL num ramo não juntado (`wt/amc`); este item não depende dele em
+código (CRS resolvido de forma própria em `app/multiescala/crs.py`), só na hipótese conceitual.
+## turno 5, setembro de 2026 (item L5-01-a-layout-paginas: páginas e layout do app)
+
+Sobre o editor de arrasto do L5-08: paleta nova (`web/js/editor/paleta_paginas.js`) com `pagina` (tela cheia
+× rolável; `caminho`/`titulo`/`ordem`/`oculta`/`inicial`), `cabecalho`, `rodape`, `menu`, os widgets de
+layout do Experience Builder (`linha`, `coluna`, `grade`, `acordeao`, `painel_fixo`, `painel_lateral`) e
+`janela` (`modal`/`ancorada`) + `secao_vistas`/`vista`. Executor novo (`web/js/executor/{executor,paginas}.js`
++ tela `/executar?item=<id>&pagina=<caminho>`, `app/paginas.py`) que renderiza o MESMO documento como app de
+verdade: nav entre páginas por `history.pushState`, `<dialog>` nativo para janela modal, painel lateral que
+recolhe sem `display:none`, grade em CSS Grid `fr`. `web/js/editor/tela.js` escolhe a paleta pelo `tipo` do
+item (`app` → paleta de páginas; o resto continua com a paleta comum do L5-08) — única mudança num arquivo
+que outro item também toca.
+
+Medido (`tests/medidas/L5-01-a-layout-paginas.json`, e2e `tests/e2e/test_layout_paginas.py`): app de 2
+páginas (Central tela-cheia com mapa, Detalhes rolável com painel lateral/grade/janela) montado só por
+arrasto (2.245,1 ms); menu navega e a URL muda por página, F5 reabre na página certa; painel lateral
+recolhe/expande; grade mantém a razão 8:4 entre dois filhos em 1200 px (2,016) e 600 px (2,033) — diferença
+0,017; janela modal abre pelo botão e fecha por Esc (`<dialog>` nativo). Refutação do adversário: 6 níveis
+alternando linha/coluna, com irmão ao lado do 1º nível, em 3 larguras de viewport (1280/800/320) — 0 px de
+estouro horizontal e nenhum nível com largura, altura, `display` ou `visibility` zerados (a correção que fez
+isso passar foi `min-width:0`/`min-height:0` em todo item flexível, ADR
+`20260907T1355-paginas-e-layout-do-app`). Achado corrigido no caminho: `drag_and_drop` sobre o SELETOR do
+contêiner-alvo mira o CENTRO da caixa — quando o contêiner já tem um filho de largura 12/12, o centro cai
+sobre o filho e o `drop` do HTML5 é entregue a ele, não ao contêiner (o novo nó entra um nível mais fundo do
+que o pedido); o teste agora solta sempre no FUNDO do contêiner, como o e2e do L5-08 já fazia na raiz.
+Paridade contra "Add and manage pages" e "Layout widgets" (doc EXB) em `docs/PARIDADE.md`.
+
+## turno 4, setembro de 2026 (item L5-08-editor-arrasto: primitivas de edição compartilhadas pelos construtores)
+
+Editor de arrasto próprio em `web/js/editor/` (5 módulos, 43.771 bytes medidos; 0 byte de biblioteca de
+arrasto — `web/vendor/VERSOES.txt` segue sem SortableJS, dnd-kit ou GridStack) e tela `/construtor?item=<id>`
+sobre o documento do L5-05. Paleta→tela e tela→tela por HTML5 Drag and Drop; alça de largura por Pointer
+Events com `setPointerCapture`; árvore de estrutura, painel de propriedades gerado do JSON Schema do tipo e
+menu "mover para" para quem só tem toque. Largura sempre em COLUNAS da grade de 12, nunca em pixel.
+
+Medido (`tests/medidas/L5-08-editor-arrasto.json`, e2e `tests/e2e/test_editor_arrasto.py` contra a base da
+trilha): o MESMO layout de 5 componentes montado só por arrasto (787,5 ms) e só por teclado e menus
+(134,0 ms) grava dois documentos idênticos — diferença 0 depois de trocar cada ULID por `n1..nN` na ordem de
+profundidade (o ULID é aleatório por construção, D2). Redimensionar por arrasto levou o mapa de 8 para 4
+colunas nos dois caminhos; `"px"` não aparece no documento gravado. A árvore reflete o aninhamento
+(aria-level 1/2/2/1/1). O painel recusa zoom 99 num campo `maximum: 22`: mensagem no campo, `aria-invalid`,
+e o documento salvo depois continua com 12. Refutação do adversário no mesmo arquivo: soltar um contêiner
+dentro de um descendente dele é recusado com motivo ("dentro de si"), soltar fora da tela não muda nada, o
+menu de mover não oferece destino dentro do próprio nó, e o layout inteiro se monta só por toque no viewport
+Pixel 7 (onde o HTML5 Drag and Drop não dispara). 0 erro de console em todos os caminhos.
+
+Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a partir do navegador, e por
+isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
+anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
+coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
+## turno 3, setembro de 2026 (item L2-04-j-conformidade-clientes-e-paridade: matriz de conformidade viva)
 
 - `POST /api/camadas/{id}/vistas` cria uma vista da camada: filtro próprio, campos escondidos, só leitura ou
   editável, extensão limitada, estilo e janela de atributos próprios. `GET`/`PUT /api/vistas/{id}` leem e

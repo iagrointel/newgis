@@ -34,7 +34,6 @@ from app import db
 from app.auth import escopos as esc
 from app.auth import sessao as auth_sessao
 from app.auth.politica import HASH_FANTASMA
-from app.catalogo.tipos import TIPOS_CAMADA
 from app.consulta import rotas_query, rotas_servico
 from app.consulta.formato_esri import resposta_esri
 from app.erros import ErroAPI
@@ -76,14 +75,15 @@ def _url_base(request: Request, token: str) -> str:
 
 
 def _camadas_visiveis(cur) -> list[dict]:
-    """Itens de camada vetorial que a RLS deixa este token enxergar, com a pasta do catálogo.
-    `plat.item` só devolve o que o inquilino do contexto pode ler — a segregação é do banco."""
+    """Itens que a RLS deixa este token enxergar, com a pasta do catálogo e o tipo de serviço Esri que
+    cada um publica: camada vetorial vira FeatureServer, mapa vira MapServer (item L2-04-f). `plat.item`
+    só devolve o que o inquilino do contexto pode ler — a segregação é do banco."""
     cur.execute(
-        "SELECT i.id, i.titulo, i.resumo, i.descricao, i.tags, i.dados, i.pasta_id, p.nome AS pasta "
+        "SELECT i.id, i.titulo, i.resumo, i.descricao, i.tags, i.dados, i.pasta_id, p.nome AS pasta, "
+        "       CASE i.tipo WHEN 'mapa' THEN 'MapServer' ELSE 'FeatureServer' END AS servico "
         "FROM plat.item i LEFT JOIN plat.pasta p ON p.id = i.pasta_id "
-        "WHERE i.tipo = ANY(%s) AND i.apagado_em IS NULL "
-        "ORDER BY p.nome NULLS FIRST, i.titulo",
-        (list(TIPOS_CAMADA),),
+        "WHERE i.tipo IN ('camada_vetorial', 'mapa') AND i.apagado_em IS NULL "
+        "ORDER BY p.nome NULLS FIRST, i.titulo"
     )
     return cur.fetchall()
 
@@ -94,7 +94,7 @@ def _nome_pasta(r: dict) -> str:
 
 
 def _servico(r: dict, prefixo_pasta: str) -> dict:
-    return {"name": f"{prefixo_pasta}{r['id']}", "type": "FeatureServer"}
+    return {"name": f"{prefixo_pasta}{r['id']}", "type": r.get("servico") or "FeatureServer"}
 
 
 # ------------------------------------------------------------------ rest/info e generateToken

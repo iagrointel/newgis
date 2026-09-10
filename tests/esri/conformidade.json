@@ -1,7 +1,7 @@
 {
  "item": "L2-04-j-conformidade-clientes-e-paridade",
- "gerado_em": "2026-09-07T21:27:17+00:00",
- "versao_do_repositorio": "65d6e964de08943b99d8428874ce22aeb886f24a",
+ "gerado_em": "2026-09-08T10:35:01+00:00",
+ "versao_do_repositorio": "00b45d5fe64af00058d65a0293cb4725535645aa",
  "gerado_por": "tests/esri/conformidade.py",
  "regra": "linha 'suportado' sem prova que passou nesta rodada vira 'nao_medido'; prova que falhou vira 'refutado'",
  "fontes": {
@@ -20,18 +20,54 @@
   "ogc_features": {
    "url": "https://docs.ogc.org/is/17-069r4/17-069r4.html",
    "acesso_em": "2026-09-07"
+  },
+  "map_service": {
+   "url": "https://developers.arcgis.com/rest/services-reference/enterprise/map-service/",
+   "acesso_em": "2026-09-08"
+  },
+  "export_map": {
+   "url": "https://developers.arcgis.com/rest/services-reference/enterprise/export-map/",
+   "acesso_em": "2026-09-08"
+  },
+  "identify": {
+   "url": "https://developers.arcgis.com/rest/services-reference/enterprise/identify-map-service/",
+   "acesso_em": "2026-09-08"
+  },
+  "legend": {
+   "url": "https://developers.arcgis.com/rest/services-reference/enterprise/legend-map-service/",
+   "acesso_em": "2026-09-08"
+  },
+  "find": {
+   "url": "https://developers.arcgis.com/rest/services-reference/enterprise/find/",
+   "acesso_em": "2026-09-08"
+  },
+  "geometry_service": {
+   "url": "https://developers.arcgis.com/rest/services-reference/enterprise/geometry-service/",
+   "acesso_em": "2026-09-08"
+  },
+  "project": {
+   "url": "https://developers.arcgis.com/rest/services-reference/enterprise/project/",
+   "acesso_em": "2026-09-08"
+  },
+  "buffer": {
+   "url": "https://developers.arcgis.com/rest/services-reference/enterprise/buffer/",
+   "acesso_em": "2026-09-08"
+  },
+  "areas_lengths": {
+   "url": "https://developers.arcgis.com/rest/services-reference/enterprise/areas-and-lengths/",
+   "acesso_em": "2026-09-08"
   }
  },
  "parametros_query_da_doc": 45,
  "scripts_executados": true,
  "contagem": {
-  "suportado": 81,
-  "parcial": 5,
+  "suportado": 96,
+  "parcial": 6,
   "fora": 12,
-  "nao_medido": 4,
+  "nao_medido": 5,
   "refutado": 0
  },
- "total": 102,
+ "total": 119,
  "linhas": [
   {
    "familia": "query",
@@ -1794,21 +1830,435 @@
    "estado": "suportado"
   },
   {
-   "familia": "ausente",
+   "familia": "mapserver",
    "item": "L2-04-f-mapserver-identify-legend-geometryserver",
-   "linha": "MapServer, identify, legend e GeometryServer",
-   "estado_declarado": "fora",
-   "fonte": "feature_service",
+   "linha": "descritor do MapServer (layers, spatialReference, initialExtent, capabilities)",
+   "estado_declarado": "suportado",
+   "fonte": "map_service",
    "provas": [
     {
      "tipo": "pytest",
-     "referencia": "tests/api/test_conformidade_clientes.py::test_nao_existe_rota_wms_neste_repositorio",
+     "referencia": "tests/api/test_mapserver_esri.py::test_mapserver_lista_as_camadas_do_documento",
      "resultado": "passou",
-     "evidencia": "pytest tests/api/test_conformidade_clientes.py::test_nao_existe_rota_wms_neste_repositorio"
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_mapserver_lista_as_camadas_do_documento"
     }
    ],
-   "observacao": "nenhuma rota MapServer/GeometryServer no repositório; a prova mede a ausência de rota de mapa",
+   "observacao": "",
+   "estado": "suportado"
+  },
+  {
+   "familia": "mapserver",
+   "item": "L2-04-f-mapserver-identify-legend-geometryserver",
+   "linha": "MapServer/layers e MapServer/{id} com os metadados do FeatureServer",
+   "estado_declarado": "suportado",
+   "fonte": "map_service",
+   "provas": [
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_layers_e_camada_trazem_os_metadados_do_featureserver",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_layers_e_camada_trazem_os_metadados_do_featureserver"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_camada_inexistente_no_mapserver_e_404",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_camada_inexistente_no_mapserver_e_404"
+    }
+   ],
+   "observacao": "",
+   "estado": "suportado"
+  },
+  {
+   "familia": "mapserver",
+   "item": "L2-04-f-mapserver-identify-legend-geometryserver",
+   "linha": "export (bbox, size, dpi, format, transparent, f=json e f=image)",
+   "estado_declarado": "suportado",
+   "fonte": "export_map",
+   "provas": [
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_export_1024x768_devolve_imagem_do_tamanho_pedido",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_export_1024x768_devolve_imagem_do_tamanho_pedido"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_export_f_json_traz_href_extensao_e_a_mesma_imagem",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_export_f_json_traz_href_extensao_e_a_mesma_imagem"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_export_nos_formatos_de_imagem_declarados",
+     "resultado": "nao_executado",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_export_nos_formatos_de_imagem_declarados"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_export_em_pdf",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_export_em_pdf"
+    }
+   ],
+   "observacao": "",
+   "estado": "suportado"
+  },
+  {
+   "familia": "mapserver",
+   "item": "L2-04-f-mapserver-identify-legend-geometryserver",
+   "linha": "export desenha com o símbolo do estilo (mesmo drawingInfo do FeatureServer)",
+   "estado_declarado": "suportado",
+   "fonte": "export_map",
+   "provas": [
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_export_desenha_a_cor_que_o_drawing_info_declara",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_export_desenha_a_cor_que_o_drawing_info_declara"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/unit/test_mapserver_desenho.py::test_desenho_de_poligono_pinta_a_cor_do_simbolo",
+     "resultado": "passou",
+     "evidencia": "pytest tests/unit/test_mapserver_desenho.py::test_desenho_de_poligono_pinta_a_cor_do_simbolo"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/unit/test_mapserver_desenho.py::test_camada_zero_desenha_por_cima",
+     "resultado": "passou",
+     "evidencia": "pytest tests/unit/test_mapserver_desenho.py::test_camada_zero_desenha_por_cima"
+    }
+   ],
+   "observacao": "",
+   "estado": "suportado"
+  },
+  {
+   "familia": "mapserver",
+   "item": "L2-04-f-mapserver-identify-legend-geometryserver",
+   "linha": "export: layers show/hide/include/exclude e layerDefs",
+   "estado_declarado": "suportado",
+   "fonte": "export_map",
+   "provas": [
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_layer_defs_valido_filtra_o_que_e_desenhado",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_layer_defs_valido_filtra_o_que_e_desenhado"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_layer_defs_para_camada_inexistente_e_400",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_layer_defs_para_camada_inexistente_e_400"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/unit/test_mapserver_desenho.py::test_selecao_de_camadas",
+     "resultado": "nao_executado",
+     "evidencia": "pytest tests/unit/test_mapserver_desenho.py::test_selecao_de_camadas"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/unit/test_mapserver_desenho.py::test_layer_defs_nas_duas_formas",
+     "resultado": "passou",
+     "evidencia": "pytest tests/unit/test_mapserver_desenho.py::test_layer_defs_nas_duas_formas"
+    }
+   ],
+   "observacao": "",
+   "estado": "suportado"
+  },
+  {
+   "familia": "mapserver",
+   "item": "L2-04-f-mapserver-identify-legend-geometryserver",
+   "linha": "export: teto de tamanho declarado e layerDefs com SQL injetado recusado",
+   "estado_declarado": "suportado",
+   "fonte": "export_map",
+   "provas": [
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_export_de_8000x8000_e_recusado_com_o_limite_declarado",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_export_de_8000x8000_e_recusado_com_o_limite_declarado"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_layer_defs_com_sql_injetado_e_400",
+     "resultado": "nao_executado",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_layer_defs_com_sql_injetado_e_400"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_export_recusa_pedido_malformado_sem_500",
+     "resultado": "nao_executado",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_export_recusa_pedido_malformado_sem_500"
+    }
+   ],
+   "observacao": "",
+   "estado": "suportado"
+  },
+  {
+   "familia": "mapserver",
+   "item": "L2-04-f-mapserver-identify-legend-geometryserver",
+   "linha": "export: parâmetro time",
+   "estado_declarado": "fora",
+   "fonte": "export_map",
+   "provas": [
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_export_com_time_declara_por_que_recusa",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_export_com_time_declara_por_que_recusa"
+    }
+   ],
+   "observacao": "nenhuma camada declara timeInfo nesta implementação (o descritor já diz timeInfo=null); o pedido com time volta 422 com o motivo, em vez de ser ignorado em silêncio",
    "estado": "fora"
+  },
+  {
+   "familia": "mapserver",
+   "item": "L2-04-f-mapserver-identify-legend-geometryserver",
+   "linha": "identify (geometry, tolerance em pixels, layers, mapExtent, imageDisplay)",
+   "estado_declarado": "suportado",
+   "fonte": "identify",
+   "provas": [
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_identify_em_tres_camadas_bate_com_a_consulta_espacial_direta",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_identify_em_tres_camadas_bate_com_a_consulta_espacial_direta"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_identify_com_tolerancia_zero_responde_sem_erro",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_identify_com_tolerancia_zero_responde_sem_erro"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_identify_top_olha_so_a_primeira_camada",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_identify_top_olha_so_a_primeira_camada"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_identify_devolve_geometria_esri_quando_pedido",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_identify_devolve_geometria_esri_quando_pedido"
+    }
+   ],
+   "observacao": "",
+   "estado": "suportado"
+  },
+  {
+   "familia": "mapserver",
+   "item": "L2-04-f-mapserver-identify-legend-geometryserver",
+   "linha": "find (searchText, searchFields, contains)",
+   "estado_declarado": "suportado",
+   "fonte": "find",
+   "provas": [
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_find_acha_pelo_texto_e_declara_o_campo",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_find_acha_pelo_texto_e_declara_o_campo"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_find_com_campo_inexistente_e_400",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_find_com_campo_inexistente_e_400"
+    }
+   ],
+   "observacao": "",
+   "estado": "suportado"
+  },
+  {
+   "familia": "mapserver",
+   "item": "L2-04-f-mapserver-identify-legend-geometryserver",
+   "linha": "legend (uma amostra PNG por classe do estilo)",
+   "estado_declarado": "suportado",
+   "fonte": "legend",
+   "provas": [
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_legend_devolve_uma_imagem_por_classe_do_estilo",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_legend_devolve_uma_imagem_por_classe_do_estilo"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_legend_f_image_devolve_png",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_legend_f_image_devolve_png"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/unit/test_mapserver_desenho.py::test_amostra_de_legenda_usa_a_cor_da_classe",
+     "resultado": "passou",
+     "evidencia": "pytest tests/unit/test_mapserver_desenho.py::test_amostra_de_legenda_usa_a_cor_da_classe"
+    }
+   ],
+   "observacao": "",
+   "estado": "suportado"
+  },
+  {
+   "familia": "mapserver",
+   "item": "L2-04-f-mapserver-identify-legend-geometryserver",
+   "linha": "generateKml",
+   "estado_declarado": "parcial",
+   "fonte": "map_service",
+   "provas": [
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_generate_kml_devolve_documento_com_uma_pasta_por_camada",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_generate_kml_devolve_documento_com_uma_pasta_por_camada"
+    }
+   ],
+   "observacao": "KML sem KMZ e sem <Style> por classe: uma pasta por camada com as feições em WGS 84",
+   "estado": "parcial"
+  },
+  {
+   "familia": "mapserver",
+   "item": "L2-04-f-mapserver-identify-legend-geometryserver",
+   "linha": "MapServer de outro inquilino é 404 e sem token nada abre",
+   "estado_declarado": "suportado",
+   "fonte": "map_service",
+   "provas": [
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_mapa_de_outro_inquilino_nao_abre_pelo_token_de_a",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_mapa_de_outro_inquilino_nao_abre_pelo_token_de_a"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_sem_token_valido_nada_do_mapserver_abre",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_sem_token_valido_nada_do_mapserver_abre"
+    }
+   ],
+   "observacao": "",
+   "estado": "suportado"
+  },
+  {
+   "familia": "mapserver",
+   "item": "L2-04-f-mapserver-identify-legend-geometryserver",
+   "linha": "QGIS e ArcGIS Pro adicionam o MapServer e desenham",
+   "estado_declarado": "nao_medido",
+   "fonte": "map_service",
+   "provas": [],
+   "observacao": "nem QGIS nem ArcGIS Pro existem nesta máquina (sem ambiente gráfico); a cláusula do portão que os pede fica declarada como não medida, nunca como aprovada",
+   "estado": "nao_medido"
+  },
+  {
+   "familia": "geometria",
+   "item": "L2-04-f-mapserver-identify-legend-geometryserver",
+   "linha": "GeometryServer: project (igual a ST_Transform)",
+   "estado_declarado": "suportado",
+   "fonte": "project",
+   "provas": [
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_project_de_100_pontos_bate_com_st_transform",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_project_de_100_pontos_bate_com_st_transform"
+    }
+   ],
+   "observacao": "",
+   "estado": "suportado"
+  },
+  {
+   "familia": "geometria",
+   "item": "L2-04-f-mapserver-identify-legend-geometryserver",
+   "linha": "GeometryServer: buffer geodésico (igual a ST_Buffer sobre geography)",
+   "estado_declarado": "suportado",
+   "fonte": "buffer",
+   "provas": [
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_buffer_geodesico_de_1km_tem_area_de_st_buffer_geografico",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_buffer_geodesico_de_1km_tem_area_de_st_buffer_geografico"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_buffer_com_distancia_negativa_e_400",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_buffer_com_distancia_negativa_e_400"
+    }
+   ],
+   "observacao": "",
+   "estado": "suportado"
+  },
+  {
+   "familia": "geometria",
+   "item": "L2-04-f-mapserver-identify-legend-geometryserver",
+   "linha": "GeometryServer: areasAndLengths, lengths e distance",
+   "estado_declarado": "suportado",
+   "fonte": "areas_lengths",
+   "provas": [
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_areas_and_lengths_geodesico_bate_com_postgis",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_areas_and_lengths_geodesico_bate_com_postgis"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_lengths_e_distance",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_lengths_e_distance"
+    }
+   ],
+   "observacao": "",
+   "estado": "suportado"
+  },
+  {
+   "familia": "geometria",
+   "item": "L2-04-f-mapserver-identify-legend-geometryserver",
+   "linha": "GeometryServer: union, intersect, difference, convexHull e simplify",
+   "estado_declarado": "suportado",
+   "fonte": "geometry_service",
+   "provas": [
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_union_intersect_difference_convex_hull_e_simplify",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_union_intersect_difference_convex_hull_e_simplify"
+    }
+   ],
+   "observacao": "",
+   "estado": "suportado"
+  },
+  {
+   "familia": "geometria",
+   "item": "L2-04-f-mapserver-identify-legend-geometryserver",
+   "linha": "GeometryServer: teto de lote e pedido malformado sem 500",
+   "estado_declarado": "suportado",
+   "fonte": "geometry_service",
+   "provas": [
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_lote_de_geometrias_acima_do_teto_e_recusado",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_lote_de_geometrias_acima_do_teto_e_recusado"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_geometry_server_recusa_pedido_malformado_sem_500",
+     "resultado": "nao_executado",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_geometry_server_recusa_pedido_malformado_sem_500"
+    },
+    {
+     "tipo": "pytest",
+     "referencia": "tests/api/test_mapserver_esri.py::test_geometry_server_descritor",
+     "resultado": "passou",
+     "evidencia": "pytest tests/api/test_mapserver_esri.py::test_geometry_server_descritor"
+    }
+   ],
+   "observacao": "",
+   "estado": "suportado"
   },
   {
    "familia": "ausente",
