@@ -154,7 +154,9 @@ def _auth_de_sessao(r: dict, hash_sessao: str) -> Auth:
     )
 
 
-def _origem_permitida(origem: str, padroes: list[str]) -> bool:
+# (entrega 10/09) O ramo que trouxe app/cabecalhos.py tornou esta função pública e importa por esse
+# nome; a fusão manteve só o nome privado e o app não subia. Público é o canônico, privado é apelido.
+def origem_permitida(origem: str, padroes: list[str]) -> bool:
     """`https://*.exemplo.gov.br` casa só subdomínios; a comparação é da ORIGEM (esquema + host + porta)."""
     o = urlsplit(origem)
     if not o.scheme or not o.hostname:
@@ -175,6 +177,9 @@ def _origem_permitida(origem: str, padroes: list[str]) -> bool:
         elif fnmatchcase(host, phost):
             return True
     return False
+
+
+_origem_permitida = origem_permitida  # apelido histórico
 
 
 def _checar_restricao(request: Request, restricao: dict) -> str | None:
@@ -201,7 +206,7 @@ def _checar_restricao(request: Request, restricao: dict) -> str | None:
         origem = request.headers.get("origin") or request.headers.get("referer")
         if not origem:
             return "referer_ausente"
-        if not _origem_permitida(origem, referers):
+        if not origem_permitida(origem, referers):
             return "referer_nao_permitido"
     return None
 

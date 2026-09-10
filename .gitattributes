@@ -7,7 +7,8 @@
 # main.py, paginas.py, jobs/tipos.py — continua com união, que ali é aditiva e válida.
 # app/auth/escopos.py: registro de escopos de token, um por item. Oitavo da família.
 # app/jobs/tipos.py é REGISTRO de tipos de job (um import por módulo de tarefas); mesma família.
-app/jobs/tipos.py merge=union
+# app/jobs/tipos.py merge=union  # (10/09) tem import multilinha entre parênteses: a união concatena os dois
+# blocos e quebra a sintaxe (3 ramos caíram só por isso).
 app/limites.py merge=union
 # app/main.py é REGISTRO de rotas: cada item acrescenta import + include_router no mesmo lugar.
 app/main.py merge=union
