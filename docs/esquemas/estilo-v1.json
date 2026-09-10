@@ -3,18 +3,6 @@
   "additionalProperties": false,
   "description": "Estilo de camada em duas partes (ADR do item L2-02-a; C2 do L2_CONCEITO): `maplibre` = layers da MapLibre Style Spec v8 puras, validadas pelo pacote oficial no servidor; `plat_construtor` = o que o editor precisa para reabrir o estilo (tipo, campo, método, cortes, rampa, símbolo, rótulos, faixa de escala, transparência).",
   "properties": {
-    "camada_id": {
-      "anyOf": [
-        {
-          "format": "uuid",
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "description": "camada vetorial à qual este estilo se aplica (relação estilo_de_camada; o visualizador desenha a camada com o estilo mais recente ligado a ela). Nulo = estilo solto/reutilizável (item L2-02-c)"
-    },
     "corpo": {
       "additionalProperties": false,
       "properties": {
@@ -177,28 +165,6 @@
                     "pattern": "^#[0-9a-fA-F]{6}$",
                     "type": "string"
                   },
-                  "escala_max": {
-                    "maximum": 1000000000,
-                    "minimum": 0,
-                    "type": "number"
-                  },
-                  "escala_min": {
-                    "maximum": 1000000000,
-                    "minimum": 0,
-                    "type": "number"
-                  },
-                  "icone": {
-                    "anyOf": [
-                      {
-                        "maxLength": 64,
-                        "pattern": "^[a-z0-9][a-z0-9._/-]*$",
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
                   "rotulo": {
                     "maxLength": 250,
                     "type": "string"
@@ -229,16 +195,6 @@
                     "pattern": "^#[0-9a-fA-F]{6}$",
                     "type": "string"
                   },
-                  "escala_max": {
-                    "maximum": 1000000000,
-                    "minimum": 0,
-                    "type": "number"
-                  },
-                  "escala_min": {
-                    "maximum": 1000000000,
-                    "minimum": 0,
-                    "type": "number"
-                  },
                   "max": {
                     "type": "number"
                   },
@@ -248,12 +204,6 @@
                   "rotulo": {
                     "maxLength": 250,
                     "type": "string"
-                  },
-                  "tamanho": {
-                    "description": "classe de tamanho: raio (ponto) ou largura (linha) da faixa; ausente = só cor",
-                    "maximum": 100,
-                    "minimum": 0,
-                    "type": "number"
                   }
                 },
                 "required": [
@@ -273,38 +223,6 @@
               },
               "maxItems": 64,
               "type": "array"
-            },
-            "efeitos": {
-              "anyOf": [
-                {
-                  "additionalProperties": false,
-                  "properties": {
-                    "brilho": {
-                      "description": "linha: halo desfocado (line-blur) em px; 0 = sem",
-                      "maximum": 20,
-                      "minimum": 0,
-                      "type": "number"
-                    },
-                    "mistura": {
-                      "description": "modo de mistura pedido; a Style Spec não tem blend por camada — gravado e declarado parcial em PARIDADE.md",
-                      "enum": [
-                        "normal",
-                        "multiply",
-                        "screen"
-                      ],
-                      "type": "string"
-                    },
-                    "sombra": {
-                      "description": "polígono: segunda camada deslocada e escura por baixo",
-                      "type": "boolean"
-                    }
-                  },
-                  "type": "object"
-                },
-                {
-                  "type": "null"
-                }
-              ]
             },
             "escala_max": {
               "description": "maior denominador de escala em que o estilo desenha; 0 = sem limite",
@@ -340,86 +258,16 @@
               ],
               "type": "string"
             },
-            "outros": {
-              "anyOf": [
-                {
-                  "additionalProperties": false,
-                  "properties": {
-                    "cor": {
-                      "pattern": "^#[0-9a-fA-F]{6}$",
-                      "type": "string"
-                    },
-                    "rotulo": {
-                      "maxLength": 250,
-                      "type": "string"
-                    },
-                    "visivel": {
-                      "type": "boolean"
-                    }
-                  },
-                  "type": "object"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "tipo categoria: como desenhar o que não casa com nenhuma categoria (as 200 primeiras entram em categorias; o resto é 'outros')"
-            },
             "parametros_raster": {
               "additionalProperties": false,
               "description": "tipo raster: vocabulário de parâmetros de URL do TiTiler (C2 do L2_CONCEITO; L1-02 documenta)",
               "properties": {
-                "bandas": {
-                  "description": "composição de bandas para o ladrilho (1 banda = cinza/rampa; 3 = RGB); índice 1-based",
-                  "items": {
-                    "maximum": 64,
-                    "minimum": 1,
-                    "type": "integer"
-                  },
-                  "maxItems": 4,
-                  "minItems": 1,
-                  "type": "array"
-                },
                 "colormap_name": {
                   "maxLength": 64,
                   "type": "string"
                 },
-                "esticamento": {
-                  "additionalProperties": false,
-                  "description": "método usado para PROPOR o rescale gravado (a rota /estatisticas.json do L1-02 calcula os números; este bloco só registra qual método o editor usou, para reabrir a mesma escolha)",
-                  "properties": {
-                    "metodo": {
-                      "enum": [
-                        "minmax",
-                        "percentil_2_98",
-                        "desvio_padrao",
-                        "nenhum"
-                      ],
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "metodo"
-                  ],
-                  "type": "object"
-                },
                 "expression": {
                   "maxLength": 500,
-                  "type": "string"
-                },
-                "nodata": {
-                  "description": "nodata declarado pelo editor para documentação/legenda; o ladrilho usa o nodata do próprio COG (não há parâmetro de sobrescrita no L1-02 hoje)",
-                  "type": [
-                    "number",
-                    "null"
-                  ]
-                },
-                "resampling": {
-                  "description": "reamostragem pedida pelo editor; L1-02 ainda só serve o padrão do rio-tiler (vizinho) — 'bilinear' fica registrado no documento para quando o ladrilho aceitar (ver docs/PARIDADE.md)",
-                  "enum": [
-                    "vizinho",
-                    "bilinear"
-                  ],
                   "type": "string"
                 },
                 "rescale": {
@@ -478,272 +326,23 @@
               ],
               "description": "nome da rampa de cor aplicada (a cor concreta fica em categorias/classes/simbolo)"
             },
-            "rampa_invertida": {
-              "description": "a rampa nomeada em `rampa` foi aplicada em ordem inversa",
-              "type": "boolean"
-            },
             "rotulos": {
               "anyOf": [
                 {
                   "additionalProperties": false,
                   "properties": {
-                    "classes": {
-                      "description": "1+ classes de rótulo; a 1ª sem filtro (ou a única) é a classe padrão; várias classes = 1 layer MapLibre por classe, na mesma ordem (prioridade decide colisão, não a ordem dos layers)",
-                      "items": {
-                        "additionalProperties": false,
-                        "properties": {
-                          "ancora": {
-                            "description": "âncora do símbolo (ponto); ignorada em linha/polígono",
-                            "enum": [
-                              "center",
-                              "left",
-                              "right",
-                              "top",
-                              "bottom",
-                              "top-left",
-                              "top-right",
-                              "bottom-left",
-                              "bottom-right"
-                            ]
-                          },
-                          "ao_longo_da_linha": {
-                            "description": "geometria linha: rótulo segue a linha (symbol-placement=line) em vez de um ponto único",
-                            "type": "boolean"
-                          },
-                          "cor": {
-                            "pattern": "^#[0-9a-fA-F]{6}$",
-                            "type": "string"
-                          },
-                          "deslocamento": {
-                            "description": "[x, y] em 'em' (tamanho da fonte); ponto/polígono",
-                            "items": {
-                              "type": "number"
-                            },
-                            "maxItems": 2,
-                            "minItems": 2,
-                            "type": "array"
-                          },
-                          "escala_max": {
-                            "maximum": 1000000000,
-                            "minimum": 0,
-                            "type": "number"
-                          },
-                          "escala_min": {
-                            "description": "maior denominador de escala em que a classe desenha (0 = sem limite); mesma convenção de plat_construtor.escala_min",
-                            "maximum": 1000000000,
-                            "minimum": 0,
-                            "type": "number"
-                          },
-                          "filtro": {
-                            "anyOf": [
-                              {
-                                "additionalProperties": false,
-                                "properties": {
-                                  "campo": {
-                                    "maxLength": 63,
-                                    "type": "string"
-                                  },
-                                  "operador": {
-                                    "enum": [
-                                      "==",
-                                      "!=",
-                                      "<",
-                                      "<=",
-                                      ">",
-                                      ">="
-                                    ]
-                                  },
-                                  "valor": {
-                                    "type": [
-                                      "string",
-                                      "number",
-                                      "boolean"
-                                    ]
-                                  }
-                                },
-                                "required": [
-                                  "campo",
-                                  "operador",
-                                  "valor"
-                                ],
-                                "type": "object"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "description": "condição simples que decide se esta classe de rótulo se aplica à feição; nulo = aplica-se a todas (classe padrão)"
-                          },
-                          "fonte": {
-                            "description": "pilha de glifos pelo nome publicado no catálogo do Martin (item L2-02-e); padrão ['Noto Sans Regular']",
-                            "items": {
-                              "maxLength": 80,
-                              "type": "string"
-                            },
-                            "maxItems": 2,
-                            "minItems": 1,
-                            "type": "array"
-                          },
-                          "halo_cor": {
-                            "anyOf": [
-                              {
-                                "pattern": "^#[0-9a-fA-F]{6}$",
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "halo_largura": {
-                            "maximum": 10,
-                            "minimum": 0,
-                            "type": "number"
-                          },
-                          "maiusculas": {
-                            "description": "text-transform: uppercase",
-                            "type": "boolean"
-                          },
-                          "nome": {
-                            "description": "identifica a classe na legenda/editor; não entra no desenho",
-                            "maxLength": 120,
-                            "type": "string"
-                          },
-                          "permitir_sobreposicao": {
-                            "description": "text-allow-overlap: ignora o índice de colisão para esta classe",
-                            "type": "boolean"
-                          },
-                          "posicao_poligono": {
-                            "description": "centro geométrico (pode cair fora de polígono côncavo) ou ponto interior garantido",
-                            "enum": [
-                              "centro",
-                              "ponto_interior"
-                            ]
-                          },
-                          "prioridade": {
-                            "description": "número MENOR = mais importante (convenção do editor); compilado para symbol-sort-key NEGADO, porque o MapLibre real faz o sort-key MAIOR vencer a colisão (medido em tests/e2e/test_rotulos_render.py::test_prioridade_classe_a_vence_b_em_colisao)",
-                            "maximum": 1000,
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          "repetir_px": {
-                            "anyOf": [
-                              {
-                                "maximum": 2000,
-                                "minimum": 20,
-                                "type": "number"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "description": "distância de repetição do rótulo ao longo da linha (symbol-spacing); nulo = um rótulo só"
-                          },
-                          "tamanho": {
-                            "maximum": 72,
-                            "minimum": 4,
-                            "type": "number"
-                          },
-                          "tamanho_max": {
-                            "anyOf": [
-                              {
-                                "maximum": 72,
-                                "minimum": 4,
-                                "type": "number"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "tamanho_zoom_max": {
-                            "anyOf": [
-                              {
-                                "maximum": 24,
-                                "minimum": 0,
-                                "type": "number"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "tamanho_zoom_min": {
-                            "anyOf": [
-                              {
-                                "maximum": 24,
-                                "minimum": 0,
-                                "type": "number"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "description": "zoom onde `tamanho` vale; com `tamanho_zoom_max`/`tamanho_max` forma uma interpolação linear de tamanho por zoom"
-                          },
-                          "texto": {
-                            "additionalProperties": false,
-                            "description": "fonte do texto do rótulo: exatamente um de `campo` (leitura direta) ou `expressao` (linguagem do item L2-10-c; compilada para MapLibre quando possível, senão pré-calculada no servidor — app/estilos/rotulos_servidor.py)",
-                            "properties": {
-                              "campo": {
-                                "anyOf": [
-                                  {
-                                    "maxLength": 63,
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "expressao": {
-                                "anyOf": [
-                                  {
-                                    "maxLength": 500,
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              }
-                            },
-                            "type": "object"
-                          },
-                          "unidade": {
-                            "anyOf": [
-                              {
-                                "maxLength": 20,
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "description": "sufixo concatenado ao texto (ex. 'ha', 'km'); nunca aplicado à coluna do servidor sem passar pela mesma expressão"
-                          },
-                          "varias_linhas_largura_max": {
-                            "anyOf": [
-                              {
-                                "maximum": 40,
-                                "minimum": 1,
-                                "type": "number"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "description": "text-max-width em 'em'; nulo = uma linha só (largura 0 nativa do MapLibre)"
-                          }
-                        },
-                        "required": [
-                          "texto"
-                        ],
-                        "type": "object"
-                      },
-                      "maxItems": 20,
-                      "minItems": 1,
-                      "type": "array"
+                    "campo": {
+                      "maxLength": 63,
+                      "type": "string"
+                    },
+                    "cor": {
+                      "pattern": "^#[0-9a-fA-F]{6}$",
+                      "type": "string"
+                    },
+                    "tamanho": {
+                      "maximum": 72,
+                      "minimum": 4,
+                      "type": "number"
                     },
                     "visivel": {
                       "type": "boolean"
@@ -751,15 +350,14 @@
                   },
                   "required": [
                     "visivel",
-                    "classes"
+                    "campo"
                   ],
                   "type": "object"
                 },
                 {
                   "type": "null"
                 }
-              ],
-              "description": "rótulos da camada (item L2-02-d-rotulos); null ou ausente = sem rótulo"
+              ]
             },
             "simbolo": {
               "additionalProperties": false,
@@ -788,14 +386,7 @@
                     {
                       "type": "null"
                     }
-                  ],
-                  "pattern": "^[a-z0-9][a-z0-9._/-]*$"
-                },
-                "icone_tamanho": {
-                  "description": "ponto: fator do ícone (icon-size)",
-                  "maximum": 8,
-                  "minimum": 0.1,
-                  "type": "number"
+                  ]
                 },
                 "largura": {
                   "maximum": 40,
@@ -807,46 +398,10 @@
                   "minimum": 0,
                   "type": "number"
                 },
-                "padrao": {
-                  "anyOf": [
-                    {
-                      "maxLength": 64,
-                      "pattern": "^[a-z0-9][a-z0-9._/-]*$",
-                      "type": "string"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ],
-                  "description": "polígono: nome de padrão de preenchimento do sprite do inquilino (fill-pattern)"
-                },
                 "raio": {
                   "maximum": 100,
                   "minimum": 0,
                   "type": "number"
-                },
-                "seta": {
-                  "anyOf": [
-                    {
-                      "maxLength": 64,
-                      "pattern": "^[a-z0-9][a-z0-9._/-]*$",
-                      "type": "string"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ],
-                  "description": "linha: nome do ícone do sprite repetido ao longo da linha (symbol-placement line)"
-                },
-                "tracejado": {
-                  "description": "linha: padrão de traço em unidades da largura (line-dasharray); vazio = contínua",
-                  "items": {
-                    "maximum": 40,
-                    "minimum": 0,
-                    "type": "number"
-                  },
-                  "maxItems": 8,
-                  "type": "array"
                 }
               },
               "type": "object"
@@ -898,6 +453,6 @@
     "esquema_versao",
     "corpo"
   ],
-  "title": "documento de estilo do plat_tcx2l204i (estilo-v1)",
+  "title": "documento de estilo do plat (estilo-v1)",
   "type": "object"
 }

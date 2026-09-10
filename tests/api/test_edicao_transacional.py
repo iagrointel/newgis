@@ -311,7 +311,7 @@ def test_mil_feicoes_em_lote_menos_de_3s(sessao_a, camada_a, medida):
     dt = time.monotonic() - t0
     assert r.status_code == 200, r.text[:500]
     assert len(r.json()["adicionar"]) == 1000
-    gravar = medida("L2-03-a")
+    gravar = medida("L2-03-a-api-edicao-transacional")
     gravar("mil_feicoes_lote_s", round(dt, 3), "s",
            "POST /api/camadas/{id}/edicoes com 1.000 feições em `adicionar` (modo transação padrão), "
            "camada de teste em d_demo; tests/api/test_edicao_transacional.py::"
@@ -371,3 +371,74 @@ def test_inquilino_b_nunca_edita_nem_le_feicao_de_camada_de_a(sessao_a, sessao_b
 
     r_apagar = sessao_b.post(f"/api/camadas/{camada_a['id']}/edicoes", json={"apagar": [{"id": gid}]})
     assert r_apagar.status_code == 404, r_apagar.text
+
+
+# ---------------------------------------------------------------- refutação do item (roteiro do adversário)
+def test_lote_de_100_mil_feicoes_e_recusado_pelo_limite_declarado(sessao_a, camada_a):
+    """100 mil feições no `adicionar`, corpo pequeno o bastante para não bater primeiro no limite de corpo
+    HTTP (10 MiB): tem de recusar pelo teto de lote (`limites.EDICAO_LOTE_MAX`), nunca aceitar nem 500."""
+    corpo = {"adicionar": [{"atributos": {"nome": "x"}} for _ in range(100_000)]}
+    r = sessao_a.post(f"/api/camadas/{camada_a['id']}/edicoes", json=corpo)
+    assert r.status_code in (422, 413), r.text[:300]
+
+
+def test_geometria_em_outro_crs_sem_declarar_e_recusada(sessao_a, camada_a):
+    """Coordenada em metros (estilo UTM/Web Mercator) mandada sem `crs` numa camada de SRID geográfico
+    (graus): fora do intervalo [-180,180]/[-90,90] em qualquer hipótese — 422, nunca gravação silenciosa
+    da coordenada errada."""
+    r = sessao_a.post(
+        f"/api/camadas/{camada_a['id']}/edicoes",
+        json={"adicionar": [{"atributos": {"nome": "utm-sem-declarar"},
+                              "geometria": {"type": "Point", "coordinates": [412345.6, 7398765.4]}}]},
+    )
+    assert r.status_code == 422, r.text
+    assert r.json()["erro"] == "geometria_fora_do_crs", r.json()
+
+
+def test_srid_zero_declarado_e_recusado(sessao_a, camada_a):
+    r = sessao_a.post(
+        f"/api/camadas/{camada_a['id']}/edicoes",
+        json={"crs": {"srid": 0}, "adicionar": [{"atributos": {"nome": "srid-zero"}, "geometria": _ponto()}]},
+    )
+    assert r.status_code == 422, r.text
+
+
+def test_texto_de_1mb_e_recusado(sessao_a, camada_a):
+    r = sessao_a.post(
+        f"/api/camadas/{camada_a['id']}/edicoes",
+        json={"adicionar": [{"atributos": {"nome": "a" * (1024 * 1024)}, "geometria": _ponto()}]},
+    )
+    assert r.status_code == 422, r.text
+    assert r.json()["erro"] == "texto_grande", r.json()
+
+
+def test_feicao_com_fid_de_outro_inquilino_nunca_e_aceita_por_globalid(sessao_b, camada_a):
+    """`sessao_b` (inquilino B) tentando atualizar pelo `globalid` de uma feição de A que ele nem enxerga:
+    já coberto por `test_inquilino_b_nunca_edita_nem_le_feicao_de_camada_de_a` para a MESMA camada; aqui o
+    adversário tenta um `id` claramente inventado (nunca existiu em lugar nenhum) contra a PRÓPRIA camada de
+    B — tem de dar 404 de feição inexistente, nunca 500 nem sucesso."""
+    r = sessao_b.post(
+        f"/api/camadas/{camada_a['id']}/edicoes",
+        json={"apagar": [{"id": str(uuid.uuid4())}]},
+    )
+    assert r.status_code == 404, r.text
+
+
+def test_edicao_concorrente_de_duas_sessoes_nunca_sobrescreve_em_silencio(sessao_a, camada_a, usuarios_a):
+    """Duas sessões HTTP distintas (não só duas chamadas da mesma `sessao_a`) leem a versão 1 e as duas tentam
+    gravar: só a primeira que chega ganha, a segunda recebe 409 com a feição atual — nunca as duas 200."""
+    r = sessao_a.post(f"/api/camadas/{camada_a['id']}/edicoes",
+                       json={"adicionar": [{"atributos": {"nome": "concorrencia", "categoria": "A"},
+                                             "geometria": _ponto()}]})
+    assert r.status_code == 200, r.text
+    gid = r.json()["adicionar"][0]["id"]
+
+    outra_sessao, _u, _senha = usuarios_a.sessao(perfil="admin")
+    try:
+        corpo = {"atualizar": [{"id": gid, "versao": 1, "atributos": {"nome": "sessao-nova"}}]}
+        r1 = sessao_a.post(f"/api/camadas/{camada_a['id']}/edicoes", json=corpo)
+        r2 = outra_sessao.post(f"/api/camadas/{camada_a['id']}/edicoes", json=corpo)
+        codigos = sorted([r1.status_code, r2.status_code])
+        assert codigos == [200, 409], (r1.status_code, r2.status_code, r1.text[:200], r2.text[:200])
+    finally:
+        outra_sessao.close()

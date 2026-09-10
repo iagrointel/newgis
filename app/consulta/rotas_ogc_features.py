@@ -108,8 +108,8 @@ def _carregar(cur, item_id: str):
     return schema, tabela, srid, meta, geometria_tipo_esri, titulo
 
 
-def _colecao_json(base: str, item_id: str, titulo: str | None, extent4326: list[float] | None,
-                   srid_nativo: int) -> dict:
+def _colecao_json(base: str, item_id: str, titulo: str | None,
+                  extent4326: list[float] | None, srid_nativo: int) -> dict:
     storage_crs = _srid_para_crs_uri(srid_nativo)
     d = {
         "id": COLECAO_ID,
@@ -469,9 +469,11 @@ async def _corpo_geojson(request: Request) -> dict:
              operation_id="ogc_features_item_criar")
 async def item_criar(item_id: str, colecao_id: str, request: Request, response: Response,
                       auth: Auth = autenticado(escopo_token="camada:editar")):  # noqa: B008
-    _exigir_colecao(colecao_id)
+    # privilégio ANTES do identificador da coleção: quem não pode editar não fica sabendo qual coleção existe,
+    # e a guarda tests/api/test_privilegios_matriz.py exige 403 (não 404) de toda rota de privilégio puro
     if not (auth.tem("feicoes.editar") or auth.tem("feicoes.editar_total")):
         raise ErroAPI(403, "sem_privilegio", "a operação exige o privilégio feicoes.editar ou feicoes.editar_total")
+    _exigir_colecao(colecao_id)
     corpo = await _corpo_geojson(request)
     iid = comum.uuid_ok(item_id)
     esc.exigir_escopo(auth, "camada:editar", iid)
@@ -499,9 +501,11 @@ async def item_criar(item_id: str, colecao_id: str, request: Request, response: 
 async def item_substituir(item_id: str, colecao_id: str, feature_id: str, request: Request,
                            if_match: str | None = Header(None),
                            auth: Auth = autenticado(escopo_token="camada:editar")):  # noqa: B008
-    _exigir_colecao(colecao_id)
+    # privilégio ANTES do identificador da coleção: quem não pode editar não fica sabendo qual coleção existe,
+    # e a guarda tests/api/test_privilegios_matriz.py exige 403 (não 404) de toda rota de privilégio puro
     if not (auth.tem("feicoes.editar") or auth.tem("feicoes.editar_total")):
         raise ErroAPI(403, "sem_privilegio", "a operação exige o privilégio feicoes.editar ou feicoes.editar_total")
+    _exigir_colecao(colecao_id)
     corpo = await _corpo_geojson(request)
     iid = comum.uuid_ok(item_id)
     esc.exigir_escopo(auth, "camada:editar", iid)
@@ -538,9 +542,11 @@ async def item_substituir(item_id: str, colecao_id: str, feature_id: str, reques
 async def item_atualizar(item_id: str, colecao_id: str, feature_id: str, request: Request,
                           if_match: str | None = Header(None),
                           auth: Auth = autenticado(escopo_token="camada:editar")):  # noqa: B008
-    _exigir_colecao(colecao_id)
+    # privilégio ANTES do identificador da coleção: quem não pode editar não fica sabendo qual coleção existe,
+    # e a guarda tests/api/test_privilegios_matriz.py exige 403 (não 404) de toda rota de privilégio puro
     if not (auth.tem("feicoes.editar") or auth.tem("feicoes.editar_total")):
         raise ErroAPI(403, "sem_privilegio", "a operação exige o privilégio feicoes.editar ou feicoes.editar_total")
+    _exigir_colecao(colecao_id)
     corpo = await _corpo_geojson(request)
     iid = comum.uuid_ok(item_id)
     esc.exigir_escopo(auth, "camada:editar", iid)
@@ -577,9 +583,11 @@ async def item_atualizar(item_id: str, colecao_id: str, feature_id: str, request
 def item_apagar(item_id: str, colecao_id: str, feature_id: str, request: Request,
                  if_match: str | None = Header(None),
                  auth: Auth = autenticado(escopo_token="camada:editar")):  # noqa: B008
-    _exigir_colecao(colecao_id)
+    # privilégio ANTES do identificador da coleção: quem não pode editar não fica sabendo qual coleção existe,
+    # e a guarda tests/api/test_privilegios_matriz.py exige 403 (não 404) de toda rota de privilégio puro
     if not (auth.tem("feicoes.editar") or auth.tem("feicoes.editar_total")):
         raise ErroAPI(403, "sem_privilegio", "a operação exige o privilégio feicoes.editar ou feicoes.editar_total")
+    _exigir_colecao(colecao_id)
     iid = comum.uuid_ok(item_id)
     esc.exigir_escopo(auth, "camada:editar", iid)
     try:

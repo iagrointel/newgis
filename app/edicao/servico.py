@@ -202,6 +202,7 @@ def _preparar_geometria(
         raise ErroAPI(422, "geometria_invalida", "geometria não é um GeoJSON serializável") from e
 
     srid_camada = int(dados["srid"])
+    srid_declarado = srid_entrada is not None
     srid_origem = int(srid_entrada) if srid_entrada else srid_camada
     expr = "ST_SetSRID(ST_GeomFromGeoJSON(%s), %s)"
     parametros: list[Any] = [geojson_txt, srid_origem]
@@ -210,6 +211,40 @@ def _preparar_geometria(
         parametros.append(srid_camada)
     if promover:
         expr = f"ST_Multi({expr})"
+    # sanidade de CRS não declarado (refutação do item: "geometria em outro CRS sem declarar"): sem `crs` no
+    # corpo, a entrada é tratada como já estando no SRID da camada (hipótese do item). Quando esse SRID é
+    # geográfico (grau, ex. 4326/4674) e a geometria enviada tem coordenada fora de [-180,180]/[-90,90], NÃO é
+    # coordenada geográfica válida em NENHUMA hipótese — é quase sempre um envio em metros (UTM/Web Mercator)
+    # sem declarar o `crs`. Detectável sem heurística de "provavelmente errado": os limites do próprio domínio
+    # matemático do grau já bastam. Só roda quando o CRS NÃO foi declarado (é exatamente a lacuna do teste do
+    # adversário) — com `crs` declarado, ST_Transform já converteu para o sistema certo antes desta checagem.
+    if not srid_declarado:
+        cur.execute(
+            "SELECT proj4text ~ '\\+proj=longlat' AS geografico FROM spatial_ref_sys WHERE srid = %s",
+            (srid_camada,),
+        )
+        rr = cur.fetchone()
+        if rr and rr["geografico"]:
+            cur.execute(
+                "WITH g AS (SELECT ST_SetSRID(ST_GeomFromGeoJSON(%s), %s) AS geom) "
+                "SELECT ST_XMin(geom) AS xmin, ST_XMax(geom) AS xmax, "
+                "ST_YMin(geom) AS ymin, ST_YMax(geom) AS ymax FROM g",
+                [geojson_txt, srid_origem],
+            )
+            ext = cur.fetchone()
+            fora = (
+                ext and (
+                    ext["xmin"] < -180 or ext["xmax"] > 180 or ext["ymin"] < -90 or ext["ymax"] > 90
+                )
+            )
+            if fora:
+                raise ErroAPI(
+                    422, "geometria_fora_do_crs",
+                    "coordenada fora do intervalo geográfico da camada (grau: longitude em [-180,180], "
+                    "latitude em [-90,90]); declare `crs.srid` se a geometria não estiver no SRID da camada",
+                    {"srid_camada": srid_camada, "extent": {"xmin": ext["xmin"], "xmax": ext["xmax"],
+                                                             "ymin": ext["ymin"], "ymax": ext["ymax"]}},
+                )
     try:
         cur.execute(
             f"WITH g AS (SELECT {expr} AS geom) SELECT ST_IsValid(geom) AS valido, "
@@ -389,11 +424,7 @@ def _processar_lista(cur, lista: list, aplicar, modo: str, prefixo: str) -> tupl
     return resultados, avisos
 
 
-def aplicar_edicoes(cur, request: Request, auth: Auth, camada_id: str, corpo: EdicoesEntrada,
-                    origem: str = "api") -> EdicoesSaida:
-    """`origem` é o protocolo por onde a escrita entrou ("api" para `POST /api/camadas/{id}/edicoes`,
-    "wfs" para uma `wfs:Transaction`): entra no evento de domínio para o histórico dizer por onde
-    a linha mudou. Não muda regra nenhuma de validação — só rotula."""
+def aplicar_edicoes(cur, request: Request, auth: Auth, camada_id: str, corpo: EdicoesEntrada) -> EdicoesSaida:
     item, dados = camada_ou_404(cur, camada_id)
     exigir_camada_editavel(auth, dados)
 
@@ -422,8 +453,7 @@ def aplicar_edicoes(cur, request: Request, auth: Auth, camada_id: str, corpo: Ed
         )
     comum.registrar_evento(
         cur, request, "camadas/editar", "item", item["id"],
-        {"adicionados": n_add, "atualizados": n_upd, "apagados": n_del, "modo": corpo.modo,
-         "origem": origem},
+        {"adicionados": n_add, "atualizados": n_upd, "apagados": n_del, "modo": corpo.modo},
     )
     return EdicoesSaida(
         modo=corpo.modo, adicionar=resultados_add, atualizar=resultados_upd, apagar=resultados_del, avisos=avisos

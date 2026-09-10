@@ -27,12 +27,11 @@ FABRICA = "CursorSchemaAmbiente"
 # Exceção = arquivo:função onde a conexão NÃO precisa da fábrica, com o motivo. Só entra aqui quem não
 # manda SQL com nome de objeto do schema da plataforma. Acrescentar linha sem motivo é reprovar a trava.
 EXCECOES_DECLARADAS: dict[str, str] = {
-    # Declarada na junção do item L2-04-i (o script veio do L3-01-a e não estava declarado): é a
-    # recomputação INDEPENDENTE do hash do modelo AMC, cujo propósito é não passar por nenhuma
-    # facilidade da casa. Ele não escreve, e lê `PLAT_SCHEMA` do ambiente para pôr o `search_path`
-    # com `quote_ident` logo depois de abrir a conexão — que é justamente o que a fábrica faria.
-    "scripts/amc_hash_independente.py:_modo_tenant": "adversário do L3-01-a: recomputa o hash sem a pilha da "
-                                            "casa; só lê, e põe o search_path do PLAT_SCHEMA à mão",
+    "scripts/amc_hash_independente.py:_modo_tenant": (
+        "conferidor independente do versao_hash do modelo AMC (item L3-01-a): não importa nada de `app` de "
+        "propósito, para que um defeito na aplicação não escape à prova. Não escreve `plat.` na mão — lê "
+        "PLAT_SCHEMA e faz `SET search_path`, então respeita o schema da trilha; e só lê (SELECT)."
+    ),
 }
 
 

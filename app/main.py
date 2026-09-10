@@ -91,6 +91,12 @@ from app.edicao.rotas import router as rotas_edicao
 from app.exportacao.rotas import router as rotas_exportacao
 from app.estatistica.rotas import router as rotas_estatistica
 from app.estilos import rotas as rotas_estilos
+from app.consulta.rotas_ogc_features import router as rotas_ogc_features
+from app.consulta.rotas_query import router as rotas_consulta_esri
+from app.consulta.rotas_servico import router as rotas_consulta_servico
+from app.consulta.rotas_wfs import router as rotas_wfs
+from app.correio.rotas_smtp import router as rotas_smtp
+from app.edicao.rotas import router as rotas_edicao
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.imagens.rotas_imagens import router as rotas_imagens
@@ -179,6 +185,8 @@ from app.tabela.rotas import router as rotas_tabela
 from app.simbolos.rotas import router as rotas_simbolos
 from app.tiles.rotas import router as rotas_tiles
 from app.status import router as rotas_status
+from app.tiles.rotas import router as rotas_tiles
+from app.tiles.vector_tile_server import router as rotas_vector_tile_server
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
 from app.widgets.rotas import router as rotas_widgets_externos
@@ -593,6 +601,17 @@ ROUTERS = [
     rotas_simbolos,
     # --- editor de estilo (L2-02-c): POST /api/estilos/compilar (pré-visualização pela mesma função que grava)
     rotas_estilos.router,
+    rotas_consulta_servico,
+    rotas_ogc_features,
+    rotas_wfs,
+    # --- motor de análise multicritério (L3-01-a): /api/amc/modelos, /api/amc/conjuntos, /api/amc/execucoes
+    rotas_amc.router,
+    # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
+    rotas_tiles,
+    # --- servidor de tiles vetoriais em 3 contratos (L2-04-e): TileJSON+XYZ, VectorTileServer Esri
+    # (descritor, estilo, sprites/fontes, tile z/y/x) e exportação por URL (geojson/kml/csv/fgb/gpkg)
+    rotas_vector_tile_server,
+    rotas_tiles_exportacao,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

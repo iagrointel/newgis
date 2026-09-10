@@ -8,6 +8,10 @@ import re
 from app import objetos
 
 NOME = re.compile(r"^[a-z][a-z0-9_]{1,62}$")
+# contrato de plat.camada_tile_garantir/camada_tile_apagar (migração 20260906T1546): schema do inquilino e
+# tabela de camada hospedada. Fora deste par não existe função de tile a apagar.
+TILE_SCHEMA = re.compile(r"^d_[a-z0-9_]{1,60}$")
+TILE_TABELA = re.compile(r"^c_[0-9a-f]{16}$")
 
 
 class Recusado(Exception):
@@ -18,10 +22,12 @@ def _camada_vetorial(cur, dados: dict, log) -> int:
     schema, tabela = dados.get("schema"), dados.get("tabela")
     if not schema or not tabela or not NOME.match(schema) or not NOME.match(tabela):
         return 0
-    # item L2-04-a: a função de tile não é dona de plat_app e não cai com o DROP TABLE; sai por porta própria
-    # só tabela hospedada no padrão da casa (d_<slug>.c_<16 hex>) tem função de tile; a função RECUSA outro
-    # nome (nome_de_tabela_invalido) e derrubava o expurgo de camadas de teste em plat_trabalho
-    if re.match(r"^d_[a-z0-9_]{1,60}$", schema) and re.match(r"^c_[0-9a-f]{16}$", tabela):
+    # item L2-04-a: a função de tile não é dona de plat_app e não cai com o DROP TABLE; sai por porta própria.
+    # `plat.camada_tile_apagar` só aceita o par (d_<slug>, c_<16 hex>) que ela mesma criou e levanta
+    # `nome_de_tabela_invalido` em qualquer outro — e camada publicada por caminho de teste ou de trabalho
+    # (schema `plat_trabalho`, nome livre) nunca teve função de tile. Filtra-se AQUI, antes de chamar: sem
+    # isso o expurgo inteiro falha por uma camada que não tem tile nenhum para apagar.
+    if TILE_SCHEMA.match(schema) and TILE_TABELA.match(tabela):
         cur.execute("SELECT to_regprocedure('plat.camada_tile_apagar(text, text)') IS NOT NULL AS tem")
         if cur.fetchone()["tem"]:
             cur.execute("SELECT plat.camada_tile_apagar(%s, %s)", (schema, tabela))
@@ -29,16 +35,10 @@ def _camada_vetorial(cur, dados: dict, log) -> int:
     if cur.fetchone()["tem"]:
         cur.execute("SELECT plat.camada_apagar(%s, %s)", (schema, tabela))
         return 0
-    # schema/tabela vão NA CONSULTA (não como parâmetro de bind), igual ao DROP TABLE logo abaixo — item
-    # L0-07-c-cotas-uso, achado ao escrever o teste do contador simétrico: numa base de TRILHA (schema
-    # plat_trabalho_t<nome> em vez de plat_trabalho, ver app/schema_ambiente.py) o rewrite de schema só troca
-    # texto da CONSULTA, nunca valor de bind — com %s aqui a comparação nspname = 'plat_trabalho' nunca batia
-    # com o schema real da trilha, `r` saía None, e nem o DROP nem o desconto de tenant.uso_bytes rodavam,
-    # mesmo com a tabela viva (silencioso: o job terminava "concluido" com bytes_liberados=0). Seguro porque
-    # NOME já validou os dois contra `^[a-z][a-z0-9_]{1,62}$` duas linhas acima (sem aspas, sem ';', sem espaço).
     cur.execute(
-        f"SELECT pg_total_relation_size(c.oid) AS b FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
-        f"WHERE n.nspname = '{schema}' AND c.relname = '{tabela}'"
+        "SELECT pg_total_relation_size(c.oid) AS b FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+        "WHERE n.nspname = %s AND c.relname = %s",
+        (schema, tabela),
     )
     r = cur.fetchone()
     if r is None:

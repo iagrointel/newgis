@@ -129,14 +129,6 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/importacoes"): ["importacoes/criar"],
     ("PUT", "/api/importacoes/{id}/confirmar"): ["importacoes/confirmar"],
     ("DELETE", "/api/importacoes/{id}"): [],
-    # ---- documento de mapa (L2-01-a) e ícone do inquilino (L2-02-e), trazidos pelos ramos juntados no L2-02-c:
-    # as rotas gravam pelo catálogo (o item é o mapa/ícone) e não registram evento próprio; o evento de item
-    # (itens/criar, itens/atualizar) fica a cargo do L0-03 quando as duas passarem a chamá-lo.
-    ("POST", "/api/mapas"): [],
-    ("PUT", "/api/mapas/{id}"): [],
-    ("POST", "/api/simbolos"): [],
-    # ---- editor de estilo (L2-02-c): compilar é cálculo puro sem gravação nem dado de inquilino, sem evento
-    ("POST", "/api/estilos/compilar"): [],
     # ---- geocodificador (L2-11-a/b): cálculo sobre dado aberto CNEFE/IBGE, sem tabela de inquilino e sem
     # dono humano para narrar — mesma decisão já usada acima em /api/rota, /api/matriz, /api/isocrona.
     ("POST", "/api/geocodificar"): [],
@@ -166,9 +158,28 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
-    # ---- galeria de mapas base (L2-01-e-mapas-base): as duas rotas de escrita não têm evento próprio —
-    # elas criam/editam itens comuns do catálogo pelo MESMO caminho de /api/itens (app.catalogo.rotas_itens
-    # criar/editar_item), então quem narra é o vocabulário de itens, já declarado acima.
-    ("POST", "/api/mapas-base/instalar"): ["itens/adicionar"],
-    ("POST", "/api/mapas-base/{id}/tornar-padrao"): ["itens/atualizar"],
+    # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
+    # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
+    ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
+    # ---- documento de mapa (L2-01-a): as rotas de /api/mapas são atalhos tipados sobre as do catálogo
+    # (criar_item / editar_item), então o evento é o MESMO do item — não existe vocabulário "mapas/*"
+    ("POST", "/api/mapas"): ["itens/adicionar"],
+    ("PUT", "/api/mapas/{id}"): ["itens/atualizar"],
+    # ---- motor de análise multicritério (L3-01-a)
+    ("POST", "/api/amc/modelos/validar"): [],  # confere o documento e não grava nada: nada a registrar
+    ("POST", "/api/amc/modelos"): ["amc/modelo_criar"],
+    ("PUT", "/api/amc/modelos/{id}"): ["amc/modelo_editar"],
+    ("DELETE", "/api/amc/modelos/{id}"): ["amc/modelo_apagar"],
+    ("POST", "/api/amc/conjuntos"): ["amc/conjunto_criar"],
+    ("DELETE", "/api/amc/conjuntos/{id}"): ["amc/conjunto_apagar"],
+    ("POST", "/api/amc/execucoes"): ["amc/execucao_criar"],
+    ("DELETE", "/api/amc/execucoes/{id}"): ["amc/execucao_apagar"],
+    # ---- OGC API Features Part 4 (L2-04-g): a escrita entra pela MESMA porta da edição transacional
+    # (app/edicao/servico.py), logo o evento é `camadas/editar`, um por chamada
+    ("POST", "/ogc/features/{item_id}/collections/{colecao_id}/items"): ["camadas/editar"],
+    ("PUT", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): ["camadas/editar"],
+    ("PATCH", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): ["camadas/editar"],
+    ("DELETE", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): ["camadas/editar"],
+    # o POST do FeatureServer query é LEITURA (o Esri manda consulta por POST quando o where é grande)
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/query"): [],
 }

@@ -20,7 +20,6 @@ from fastapi import APIRouter, Request, Response
 from app import db
 from app.auth import escopos as esc
 from app.auth import sessao as auth_sessao
-from app.catalogo.tipos import TIPOS_CAMADA
 from app.consulta import campos as campos_mod
 from app.consulta import motor, serializar
 from app.consulta.geometria_esri import sr_wkid
@@ -36,7 +35,7 @@ _CONTENT_TYPE = {
 }
 
 
-def _autenticar(request: Request, item_id: str, escopo: str = ESCOPO):
+def _autenticar(request: Request, item_id: str):
     """Sessão normal OU token — igual ao GeocodeServer (`app/geocodificador/rotas_esri.py`):
     protocolo Esri manda o token na URL, então `?token=`/form `token=` também é aceito além do
     cabeçalho `Authorization`."""
@@ -50,7 +49,7 @@ def _autenticar(request: Request, item_id: str, escopo: str = ESCOPO):
             raise ErroAPI(401, "token_requerido", "informe token=<token de serviço> ou Authorization: Bearer")
         auth = auth_sessao._auth_de_token(request, tok)  # noqa: SLF001 — mesmo reuso do GeocodeServer
         request.state.auth = auth
-    esc.exigir_escopo(auth, escopo, item_id)
+    esc.exigir_escopo(auth, ESCOPO, item_id)
     return auth
 
 
@@ -117,13 +116,10 @@ def _item_id_valido(item_id: str) -> None:
 def _camada_do_item(cur, item_id: str) -> dict:
     _item_id_valido(item_id)
     cur.execute(
-        "SELECT dados FROM plat.item WHERE id = %s::uuid AND tipo = ANY(%s)",
-        (item_id, list(TIPOS_CAMADA)),
+        "SELECT dados FROM plat.item WHERE id = %s::uuid AND tipo = 'camada_vetorial'", (item_id,)
     )
     r = cur.fetchone()
-    # vista de camada (L5-32) só é servível quando aponta para a VIEW; item de vista sem `tabela` é registro
-    # incompleto e vale como inexistente, nunca como camada a consultar.
-    if r is None or not (r["dados"] or {}).get("tabela"):
+    if r is None:
         raise ErroAPI(404, "camada_nao_encontrada", "item inexistente, não é camada vetorial, ou sem permissão")
     return r["dados"]
 
