@@ -74,11 +74,6 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("PUT", "/api/itens/{id}/relacoes"): ["itens/relacoes"],
     ("PUT", "/api/itens/{id}/compartilhamento"): ["compartilhamento/alterar"],
     ("POST", "/api/itens/{id}/links"): ["compartilhamento/link_criar"],
-    # ---- publicação de documento de construtor (L5-14-publicacao-links-embed; vocabulário na migração
-    # 20260907T1410_publicacao_documento.sql). As três leituras da família (`GET .../publicacao`,
-    # `.../visualizacoes`, `.../exportacao`) não entram aqui: só rota de escrita é exigida.
-    ("POST", "/api/itens/{id}/publicacao"): ["publicacao/publicar"],
-    ("DELETE", "/api/itens/{id}/publicacao"): ["publicacao/despublicar"],
     ("DELETE", "/api/itens/{id}/links/{lid}"): ["compartilhamento/link_revogar"],
     ("POST", "/api/pastas"): ["pastas/criar"],
     ("PUT", "/api/pastas/{id}"): ["pastas/renomear", "pastas/mover"],
@@ -162,10 +157,8 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("DELETE", "/api/multiescala/fatores/{id}"): ["multiescala/fator_apagar"],
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
-    # L3-09-backtest-decisao-real: a rota não muda a execução, mas registra o pedido (escolhas, fora, AUC)
-    ("POST", "/api/multiescala/execucoes/{id}/backtest"): ["multiescala/backtest"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
-    # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
-    # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
-    ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
+    # L3-10-corredor-custo-minimo: o traçado não cria tabela; o que fica é o EVENTO com os parâmetros
+    # declarados (custo máximo, vetos, vizinhança, epsilon) e as medidas — é o rastro que repete a corrida.
+    ("POST", "/api/multiescala/execucoes/{id}/corredor"): ["multiescala/corredor"],
 }

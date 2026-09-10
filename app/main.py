@@ -145,6 +145,7 @@ from app.mapas.rotas import router as rotas_mapas
 from app.migracao.rotas import router as rotas_migracao
 from app.multiescala import regioes_rotas as rotas_regioes  # L3-05: localizar regiões
 from app.multiescala import backtest_rotas as rotas_backtest  # L3-09: backtest contra decisão real
+from app.multiescala.corredor_rotas import router as rotas_corredor
 from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
@@ -547,6 +548,8 @@ ROUTERS = [
     rotas_campo,
     rotas_stac,
     rotas_backtest.router,
+    # --- traçado de custo mínimo sobre a grade do multicritério (L3-10): /api/multiescala/execucoes/{id}/corredor
+    rotas_corredor,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
