@@ -91,6 +91,7 @@ from app.geocodificador.rotas_lote import router as rotas_geocodificacao_lote
 from app.imagens.rotas_stac import router as rotas_stac
 from app.imagens.rotas_tiles import router as rotas_tiles
 from app.geocodificador.rotas_lote import router as rotas_geocodificador_lote
+from app.imagens.rotas_stac import router as rotas_stac
 from app.ingestao.rotas import router as rotas_ingestao
 from app.intercambio.lote_importar import router as rotas_intercambio_lote_importar
 from app.intercambio.rotas import router as rotas_intercambio
@@ -506,6 +507,7 @@ ROUTERS = [
     # e o shell/manifest/service worker em /campo/* (servidos aqui, não em /static/: a trilha de teste roda
     # só uvicorn sem nginx na frente)
     rotas_campo,
+    rotas_stac,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

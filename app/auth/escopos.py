@@ -16,6 +16,11 @@ ESCOPOS_SEM_UUID = (
     "geocodificar:usar", "multiescala:usar", "admin:inquilino",
     rf"geocodificar:usar|amc:usar|admin:inquilino)$"
     rf"geocodificar:usar|campo:usar|admin:inquilino)$"
+    rf"geocodificar:usar|imagens:(ler|escrever)|admin:inquilino)$"
+)
+ESCOPOS_SEM_UUID = (
+    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
+    "geocodificar:usar", "imagens:ler", "imagens:escrever", "admin:inquilino",
 )
 ESCOPOS_SEM_UUID = (
     "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
