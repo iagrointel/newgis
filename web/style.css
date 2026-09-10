@@ -268,6 +268,11 @@ body.instrumento dd, body.instrumento .mono, body.instrumento .tabela td.mono, b
 }
 .upload-dropzone:hover, .upload-dropzone:focus-visible { border-color: var(--acento); color: var(--texto); }
 .upload-dropzone.sobre { border-color: var(--acento); background: var(--painel-2); color: var(--texto); }
+
+/* --- rede simples (item L4-18-rede-simples-trace-network): estado vazio honesto quando não há nenhuma
+   camada publicada da geometria certa para o papel (linha/ponto) — nunca uma caixa muda sem explicação. */
+.redes-simples .vazio { color: var(--fraco); padding: var(--e3) var(--e4); margin: var(--e2) 0 var(--e4); border: 1px dashed var(--borda); border-radius: var(--raio); }
+.redes-simples .vazio a { color: inherit; text-decoration: underline; }
 #upload-nome { font-family: var(--mono); color: var(--texto); margin-top: var(--e2); }
 #upload-progresso { width: 100%; height: .6rem; accent-color: var(--acento); border: none; border-radius: 999px; }
 #upload-progresso::-webkit-progress-bar { background: var(--painel-2); border-radius: 999px; }

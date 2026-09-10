@@ -925,6 +925,8 @@
   "redesimples.sem_pontos": "sem camada de pontos",
   "redesimples.titulo": "Nova rede simples",
   "redesimples.trechos": "Trechos",
+  "redesimples.vazio_linha": "nenhuma camada de linhas publicada; envie um arquivo de linhas em",
+  "redesimples.vazio_ponto": "nenhuma camada de pontos publicada; envie um arquivo de pontos em",
   "senha.atende": "atende",
   "senha.atual": "senha atual",
   "senha.nao_atende": "ainda não atende",

@@ -18,15 +18,20 @@ const usuario = await exigirSessao({ privilegio: 'rede.editar' });
 if (usuario) iniciar();
 pronto();
 
+// mesma aceitação do servidor (app/rede_utilidades/simples.py GEOMETRIA_ACEITA): "Geometry" (camada de
+// geometria mista/indefinida) vale nos dois papéis; o resto é específico.
+const GEOM_LINHA = new Set(['LineString', 'MultiLineString', 'Geometry']);
+const GEOM_PONTO = new Set(['Point', 'MultiPoint', 'Geometry']);
+
+/* GET /api/mapa/camadas (não /api/itens): já devolve `geometria` por camada servível e exclui apagados
+   (a lixeira nunca aparece aqui — achado do dono 10/09, camada "original" apagada entrando na caixa de
+   linhas). Com a geometria em mãos a TELA filtra por papel; o servidor continua sendo a última palavra
+   (erro `geometria_incompativel`), mas a caixa nunca mais oferece o que ele vai recusar. */
 async function camadas() {
-  const r = await obter('/api/itens?tipo=camada_vetorial&ordenar=criado_em&direcao=desc&limite=200');
-  return r.status === 200 ? (r.json.itens || []) : [];
+  const r = await obter('/api/mapa/camadas');
+  return r.status === 200 ? (r.json.camadas || []) : [];
 }
 
-/* A lista de itens NÃO traz `dados` (o catálogo omite os campos pesados na listagem), então a tela não tem
-   como filtrar por geometria aqui: as duas caixas oferecem as camadas vetoriais e é o servidor que recusa uma
-   camada de geometria errada no papel escolhido (erro `geometria_incompativel`, mensagem na tela). Os campos
-   da camada de linhas, para escolher o de direção, vêm de uma leitura do item — sem clique a mais. */
 async function camposDaCamada(id) {
   const r = await obter(`/api/itens/${id}`);
   if (r.status !== 200) return [];
@@ -38,21 +43,30 @@ async function iniciar() {
   cabecalho(t('redesimples.titulo'));
   const principal = document.getElementById('principal');
   const aviso = document.getElementById('aviso');
-  const linhas = await camadas();
-  const pontos = linhas;
+  const todas = await camadas();
+  const linhas = todas.filter((i) => GEOM_LINHA.has(i.geometria));
+  const pontos = todas.filter((i) => GEOM_PONTO.has(i.geometria));
 
-  const selLinha = h('select', { id: 'camada-linha', 'aria-label': t('redesimples.camada_linha') },
+  const selLinha = h('select', { id: 'camada-linha', 'aria-label': t('redesimples.camada_linha'), disabled: linhas.length === 0 },
     h('option', { value: '' }, t('redesimples.escolha')),
     ...linhas.map((i) => h('option', { value: i.id }, i.titulo)));
-  const selPonto = h('select', { id: 'camada-ponto', 'aria-label': t('redesimples.camada_ponto') },
+  const selPonto = h('select', { id: 'camada-ponto', 'aria-label': t('redesimples.camada_ponto'), disabled: pontos.length === 0 },
     h('option', { value: '' }, t('redesimples.sem_pontos')),
     ...pontos.map((i) => h('option', { value: i.id }, i.titulo)));
+  // estado vazio honesto (nunca some em silêncio): link de verdade para /uploads, não só o nome da tela.
+  const vazioLinha = linhas.length ? null
+    : h('p', { id: 'vazio-camada-linha', class: 'vazio' },
+      `${t('redesimples.vazio_linha')} `, h('a', { href: '/uploads' }, t('nav.uploads')), '.');
+  const vazioPonto = pontos.length ? null
+    : h('p', { id: 'vazio-camada-ponto', class: 'vazio' },
+      `${t('redesimples.vazio_ponto')} `, h('a', { href: '/uploads' }, t('nav.uploads')), '.');
   const nome = h('input', { id: 'nome-rede', type: 'text', maxlength: '200' });
   const disciplina = h('select', { id: 'disciplina' },
     ...DISCIPLINAS.map((d) => h('option', { value: d }, d)));
   const selDirecao = h('select', { id: 'campo-direcao' },
     h('option', { value: '' }, t('redesimples.direcao_padrao')));
-  const botao = h('button', { id: 'criar', class: 'primario', type: 'button' }, t('redesimples.criar'));
+  // sem camada de linhas não há o que criar — o botão avisa antes do clique, não depois do erro do servidor.
+  const botao = h('button', { id: 'criar', class: 'primario', type: 'button', disabled: linhas.length === 0 }, t('redesimples.criar'));
   const resultado = h('div', { id: 'resultado', class: 'resultado' });
 
   selLinha.addEventListener('change', async () => {
@@ -100,8 +114,8 @@ async function iniciar() {
   principal.append(
     h('p', { class: 'ajuda' }, t('redesimples.ajuda')),
     h('div', { class: 'formulario' },
-      h('label', { for: 'camada-linha' }, t('redesimples.camada_linha')), selLinha,
-      h('label', { for: 'camada-ponto' }, t('redesimples.camada_ponto')), selPonto,
+      h('label', { for: 'camada-linha' }, t('redesimples.camada_linha')), selLinha, vazioLinha,
+      h('label', { for: 'camada-ponto' }, t('redesimples.camada_ponto')), selPonto, vazioPonto,
       botao),
     h('details', { id: 'ajustes' },
       h('summary', {}, t('redesimples.ajustes')),
