@@ -5858,6 +5858,14 @@ defeito do script de trilha, fora do escopo de arquivo do L6-01-h — script mor
 `test_arquivo_aplicado_editado_devolve_codigo_3` passaram a falhar depois que a guarda nova de
 `db/migrar.sh` (inserida pelo gerente nesta mesma janela, código de saída 9 ao rodar de dentro de um
 worktree) mudou o comportamento que esses dois testes esperavam (código 3); também fora do escopo deste item.
+## turno 8, setembro de 2026 (item L6-02-i-google-sheets: camada_schema_garantir serializado por slug)
+
+A rodada completa da suíte de conexões (a cláusula que faltava ao item) esbarrava em "tuple concurrently
+updated": com dois processos de worker na 1ª carga do mesmo inquilino, os dois executavam CREATE SCHEMA
+IF NOT EXISTS + GRANT USAGE no mesmo schema ao mesmo tempo, e o GRANT reescreve a ACL da mesma tupla do
+catálogo. A migração 20260908T2210 acrescenta pg_advisory_xact_lock por slug em plat.camada_schema_garantir:
+a segunda chamada espera a primeira commitar e reconfere o IF NOT EXISTS. Duas rodadas completas seguidas
+de tests/api/conexao/test_google_sheets.py: 8 passed (carga 3,5).
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 - **L7-06-d-paineis**: cinco painéis Grafana provisionados por arquivo (`deploy/grafana/paineis/*.json` + `deploy/grafana/provisioning/`), homologação própria (`deploy/paineis_homologacao.sh`) com carga curta de verdade e captura de cada painel em `tests/e2e/capturas/`. Métricas novas para o que os painéis precisavam e não existia: usuários ativos em 24 h, duração e tamanho do último backup/ensaio, uso de armazenamento e tamanho do schema de dado por inquilino.
@@ -6024,7 +6032,39 @@ seguia o redirecionamento à mão (para revalidar SSRF a cada salto) e não tinh
 Provas: `tests/unit/test_conexao_credencial_redirect.py` (12 casos) e `tests/adversario/test_g5_adversario.py`
 (o teste do adversário, agora sem a marca `xfail`). ADR 0012, seção "a credencial nunca atravessa uma mudança
 de origem".
+falta só o gatilho periódico cross-tenant.## turno 3, setembro de 2026 (item L6-02-h-csv-url-geojson-kml: arquivo por URL pública vira camada)
 
+Conexão `http` no modo `copiada` passa a ser fonte de ARQUIVO: `PUT /api/conexoes/{id}/arquivo` configura,
+`POST /api/conexoes/{id}/arquivo/sincronizar` enfileira uma passagem e `GET .../arquivo` mostra o estado.
+O job `conexoes.arquivo_sincronizar` baixa pelo MESMO `buscar_seguro` do teste de saúde (nenhum cliente HTTP
+novo), reconhece o formato pelos bytes (`csv`, `geojson`, `kml`, `kmz`, `georss`, `gpx` — nunca pela extensão
+nem pelo Content-Type), converte KML/KMZ/GeoRSS/GPX para GeoJSON com `ogr2ogr` como neto do job e entrega ao
+pipeline de ingestão do L0-04 sem alterar nada dele: a camada nasce `camada_vetorial` com tabela PostGIS, RLS
+e estatísticas, igual à importada à mão. Periódico `conexoes.arquivo_sincronizar_vencidas` (`*/15 * * * *`)
+enfileira as agendadas vencidas, cada uma no inquilino dono.
+
+Atualização agendada que não recarrega igual: `plat.conexao_arquivo` (migração
+`20260906T1549391_conexao_arquivo_url.sql`) guarda ETag/Last-Modified/sha256 e os contadores `sincronizacoes`
+x `recargas`. `304` não recarrega; servidor que ignora o condicional e responde `200` com o mesmo corpo também
+não (o sha256 segura). Medido ponta a ponta contra um servidor no endereço público desta máquina — a defesa de
+SSRF fica ligada e `localhost` continua recusado.
+
+Consertado de caminho, no módulo de conexão: `Authorization`/`Cookie`/`Proxy-Authorization`/`X-Api-Key`
+deixavam de ser removidos num redirecionamento para outro host (achado do adversário do L6-02-a, que deixou
+aquele item marcado REFUTADO). Agora só seguem para o mesmo host, mesma porta e sem queda de https para http.
+`ResultadoBusca` ganhou os cabeçalhos da resposta (é deles que sai o ETag).
+
+Consertados dois defeitos de `app/ingestao/carregar.py` que só apareciam em camada de UM ponto — o caso mais
+comum de arquivo pequeno por URL: a envoltória era lida do GeoJSON de `ST_Extent` (que degenera para `[x, y]`
+e levantava "'float' object is not iterable") e, corrigida essa leitura, o retângulo de largura zero virava um
+polígono inválido que o CHECK `item_extent_check` recusava. Agora a envoltória vem de `ST_XMin/ST_YMin/...` e o
+lado nulo é afastado em `INGESTAO_EPSILON_ENVOLTORIA` (1e-7 grau, ~1 cm) — só o retângulo do item muda, nunca a
+geometria da feição.
+
+Refutação do item: CSV com latitude e longitude trocadas é RECUSADO quando produz valor fora de faixa, com a
+mensagem dizendo que as colunas parecem trocadas; a plataforma nunca troca sozinha. A limitação — troca
+indetectável quando os dois valores cabem em -90..90 — tem teste próprio para ninguém prometer mais do que o
+mecanismo faz. KML de 200 mil pontos não é recusado: é medido.
 ## turno 3, setembro de 2026 (nome de migração por carimbo de tempo — ADR 0014)
 
 Migração nova passa a se chamar `db/migracoes/YYYYMMDDTHHMM_<slug>.sql` (carimbo UTC, mais 3 hexadecimais

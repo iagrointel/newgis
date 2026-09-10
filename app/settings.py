@@ -35,11 +35,6 @@ class Settings:
     PLAT_URL_PUBLICA: str
     PLAT_GIT_SHA: str | None
     PLAT_MARTIN_URL: str | None
-    # glifos de fonte do item L2-02-e-simbolos-sprites-glifos (Noto Sans/Open Sans embutidas, nunca mudam
-    # em runtime — por isso podem vir de um Martin de verdade, ao contrário do sprite; ver
-    # docs/adr/20260907T1642-sprite-proprio-em-vez-de-martin.md). Sem valor: app/simbolos/fontes.py sobe um
-    # Martin próprio, efêmero, só para teste/desenvolvimento local.
-    PLAT_MARTIN_SIMBOLOS_URL: str | None
     PLAT_TITILER_URL: str | None
     PLAT_GARAGE_URL: str | None
     # arquivos/objetos (L0-11; ADR 0006): garage vira obrigatório a partir deste item (saude.py); admin api
@@ -65,12 +60,6 @@ class Settings:
     PLAT_OSRM_URL: str
     PLAT_ROTA_MATRIZ_MAX: int
     PLAT_ROTA_ISOCRONA_MAX_PONTOS: int
-    # tiles vetoriais (L2-01-b): DSN do papel plat_leitor (LOGIN, sem BYPASSRLS), usado SÓ pela rota
-    # /internal/tiles/verificar (auth_request do nginx) para validar o token antes de o pedido chegar ao
-    # Martin — o Martin (martin-core GetTileWithQueryError) devolve 500 para QUALQUER erro do Postgres,
-    # nunca 401/403, então a checagem de "sem token = 401" tem de acontecer fora dele. Ausente = a rota
-    # devolve 503 (falha fechada: sem DSN de leitor, nenhum tile passa).
-    PLAT_DSN_LEITOR: str | None
     # item L7-31 (docs/HOMOLOGACAO.md): homologação reusa o MESMO banco iagro_sat, nunca um banco novo (disco a
     # 98%) — schema e canal de notificação viram configuráveis para que o mesmo código sirva os dois ambientes
     # sem colisão. Produção nunca declara estas 4 chaves no .env: os padrões abaixo reproduzem bit a bit o que
@@ -79,11 +68,6 @@ class Settings:
     PLAT_SCHEMA_TRABALHO: str
     PLAT_CANAL_JOB: str
     PLAT_CANAL_WORKER: str
-    # atualização viva (L2-06-d): canal do NOTIFY de camada e interruptor do fluxo SSE. Desligado
-    # (PLAT_SSE_LIGADO=false), `GET /api/eventos/camadas` responde 503 e a tela cai no intervalo de
-    # atualização de cada fonte — é a saída para proxy que não sustenta conexão longa.
-    PLAT_CANAL_CAMADA: str
-    PLAT_SSE_LIGADO: bool
     # SMTP de instalação (item L0-07-d-smtp-convites; ADR 0013): padrão de TODOS os inquilinos que não têm
     # override próprio em tenant.config.smtp (app/correio/config.py::smtp_efetivo). Nenhuma chave é obrigatória:
     # sem PLAT_SMTP_HOST a instalação simplesmente não tem SMTP — o inquilino que precisar configura o dele, e
@@ -102,9 +86,11 @@ class Settings:
     # .env de trilha grava PLAT_POOL_MAX=2 (ver laco/trilha_ambiente.sh).
     PLAT_POOL_MIN: int
     PLAT_POOL_MAX: int
-    # telemetria opcional do appliance (item L7-11-c): receptor na casa; vazio = "ligar" só grava a intenção e o
-    # envio diário avisa "sem destino configurado" (nunca inventa um endereço)
-    PLAT_TELEMETRIA_URL: str | None
+    # item L6-02-i-google-sheets: origem aceita para URL de planilha e base da URL de exportação CSV
+    # (app/conexao/google_sheets.py). Produção NUNCA declara: o padrão é o docs.google.com. A chave existe
+    # para o teste de integração, que aponta para um servidor local no IP público da máquina falando os
+    # dois protocolos (exportação CSV e troca de token OAuth2) de verdade — mesma técnica do L6-02-h.
+    PLAT_SHEETS_EXPORTACAO_PREFIXO: str
 
     @property
     def producao(self) -> bool:
@@ -207,7 +193,6 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_URL_PUBLICA=url,
         PLAT_GIT_SHA=_opcional(valores, "PLAT_GIT_SHA"),
         PLAT_MARTIN_URL=_opcional(valores, "PLAT_MARTIN_URL"),
-        PLAT_MARTIN_SIMBOLOS_URL=_opcional(valores, "PLAT_MARTIN_SIMBOLOS_URL"),
         PLAT_TITILER_URL=_opcional(valores, "PLAT_TITILER_URL"),
         PLAT_GARAGE_URL=_opcional(valores, "PLAT_GARAGE_URL"),
         PLAT_GARAGE_ADMIN_URL=_opcional(valores, "PLAT_GARAGE_ADMIN_URL"),
@@ -230,13 +215,10 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_ROTA_ISOCRONA_MAX_PONTOS=_inteiro(
             valores, "PLAT_ROTA_ISOCRONA_MAX_PONTOS", limites.ROTA_ISOCRONA_MAX_PONTOS_PADRAO, 4
         ),
-        PLAT_DSN_LEITOR=_opcional(valores, "PLAT_DSN_LEITOR"),
         PLAT_SCHEMA=schema,
         PLAT_SCHEMA_TRABALHO=_identificador(valores, "PLAT_SCHEMA_TRABALHO", "plat_trabalho"),
         PLAT_CANAL_JOB=_identificador(valores, "PLAT_CANAL_JOB", "plat_job"),
         PLAT_CANAL_WORKER=_identificador(valores, "PLAT_CANAL_WORKER", "plat_worker"),
-        PLAT_CANAL_CAMADA=_identificador(valores, "PLAT_CANAL_CAMADA", f"{schema}_camada"),
-        PLAT_SSE_LIGADO=_booleano(valores, "PLAT_SSE_LIGADO", True),
         PLAT_SMTP_HOST=_opcional(valores, "PLAT_SMTP_HOST"),
         PLAT_SMTP_PORTA=_inteiro(valores, "PLAT_SMTP_PORTA", 587, 1),
         PLAT_SMTP_TLS=_booleano(valores, "PLAT_SMTP_TLS", True),
@@ -246,7 +228,9 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_SMTP_ROTULO=_opcional(valores, "PLAT_SMTP_ROTULO"),
         PLAT_POOL_MIN=pool_min,
         PLAT_POOL_MAX=pool_max,
-        PLAT_TELEMETRIA_URL=_opcional(valores, "PLAT_TELEMETRIA_URL"),
+        PLAT_SHEETS_EXPORTACAO_PREFIXO=(
+            _opcional(valores, "PLAT_SHEETS_EXPORTACAO_PREFIXO") or "https://docs.google.com"
+        ).rstrip("/"),
     )
 
 

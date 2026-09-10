@@ -97,50 +97,32 @@ class PublicarCamadaEntrada(Modelo):
     titulo: str | None = Field(default=None, min_length=1, max_length=250)
 
 
-# --- conector de feição externa (item L6-02-c-wfs-ogcapi): WFS 2.0 e OGC API - Features no modo REFERENCIADO.
-# A cópia (modo copiado) não tem rota própria: é o job `conexao.copiar_vetor` por `POST /api/jobs`, como toda
-# tarefa pesada da plataforma.
+# --------------------------------------------------------------- arquivo por URL (item L6-02-h)
+class ArquivoUrlEntrada(Modelo):
+    """Configuração da conexão como fonte de ARQUIVO por URL. `intervalo_s` só é usado quando `agendado`;
+    os limites vêm de `app/limites.py` (mínimo 15 min, o mesmo mínimo do agendador do L0-05)."""
+
+    intervalo_s: int = Field(
+        default=limites.CONEXAO_ARQUIVO_INTERVALO_PADRAO_S,
+        ge=limites.CONEXAO_ARQUIVO_INTERVALO_MIN_S, le=limites.CONEXAO_ARQUIVO_INTERVALO_MAX_S,
+    )
+    agendado: bool = False
 
 
-class ColecaoSaida(Saida):
-    nome: str
-    titulo: str | None = None
-    crs_nativo: str | None = None       # verbatim do serviço ("urn:ogc:def:crs:EPSG::4674"); None = não declarou
-    srid_nativo: int | None = None
-    srid_entregue: int
-    extent_4326: list[float] | None = None
-    formatos: list[str] = []
-
-
-class ColecoesPagina(Saida):
-    total: int
-    itens: list[ColecaoSaida]
-    do_cache: bool = False
-
-
-class CampoSaida(Saida):
-    nome: str            # já normalizado (o mesmo normalizador da ingestão de arquivo)
-    origem: str          # nome como o serviço o chama
-    tipo: str            # tipo de coluna PostgreSQL a que ele corresponde
-    tipo_declarado: str  # o que o serviço declarou, verbatim
-    origem_do_tipo: str  # describefeaturetype | queryables | amostra (inferido, nunca declarado)
-
-
-class CamposSaida(Saida):
-    colecao: str
-    itens: list[CampoSaida]
-    do_cache: bool = False
-
-
-class FeicoesSaida(Saida):
-    """GeoJSON + o que a paginação apurou. `numero_matched` é o total DECLARADO pelo serviço (pode ser None:
-    nem todo serviço declara) e `numberReturned` é o que veio nesta resposta — os dois juntos, nunca um só."""
-
-    type: str = "FeatureCollection"
-    features: list[dict]
-    numberReturned: int  # noqa: N815 — nome do padrão OGC API - Features, não do repositório
-    numberMatched: int | None = None  # noqa: N815
-    colecao: str
-    srid_entregue: int
-    do_cache: bool = False
-    avisos: list[str] = []
+class ArquivoUrlEstado(Saida):
+    conexao_id: str
+    formato: str | None = None
+    etag: str | None = None
+    last_modified: str | None = None
+    sha256: str | None = None
+    bytes: int | None = None
+    item_id: str | None = None
+    importacao_id: str | None = None
+    intervalo_s: int
+    agendado: bool
+    proximo_em: str | None = None
+    ultimo_em: str | None = None
+    ultimo_resultado: str | None = None
+    ultimo_detalhe: str | None = None
+    sincronizacoes: int
+    recargas: int

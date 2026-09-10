@@ -12,10 +12,9 @@ import datetime
 from pydantic import BaseModel, Field
 
 from app.conexao import credencial as credencial_mod
-from app.conexao import seguranca
+from app.conexao import google_sheets, seguranca
 from app.jobs.registro import tarefa
 from app.limites import CONEXAO_CONECTAR_TIMEOUT_S, CONEXAO_LER_TIMEOUT_S
-from app.seguranca_rotacao import decifrar_com_rotacao
 from app.settings import settings
 
 INTERVALO_RETESTE = datetime.timedelta(minutes=30)
@@ -40,23 +39,28 @@ def conexoes_saude_verificar(ctx, limite: int = LIMITE_POR_EXECUCAO) -> dict:
     for i, c in enumerate(candidatas):
         ctx.verificar()  # cancelamento cooperativo entre uma conexão e outra (o job pode ser longo)
         cabecalhos = None
+        falha_credencial = None
         if c["credencial_cifrada"]:
             try:
-                token = decifrar_com_rotacao(
-                    credencial_mod.decifrar,
-                    c["credencial_cifrada"],
-                    settings.PLAT_SECRET,
-                    settings.PLAT_SECRET_ANTERIOR,
-                )
-                cabecalhos = {"Authorization": f"Bearer {token}"}
-            except Exception:  # noqa: BLE001 — PLAT_SECRET (e ANTERIOR) trocados ou dado corrompido: testa sem
-                # credencial, nunca quebra o job (a exceção real do AEAD é InvalidTag, não ValueError — abrangida
-                # de propósito, achado deste item: o except antigo só pegava ValueError e deixava InvalidTag subir)
-                cabecalhos = None
-        resultado = seguranca.buscar_seguro(
-            c["url"], metodo="GET", timeout_conectar=CONEXAO_CONECTAR_TIMEOUT_S, timeout_ler=CONEXAO_LER_TIMEOUT_S,
-            cabecalhos=cabecalhos,
-        )
+                em_claro = credencial_mod.decifrar(c["credencial_cifrada"], settings.PLAT_SECRET)
+            except ValueError:
+                em_claro = None  # PLAT_SECRET trocado ou dado corrompido: testa sem credencial, nunca quebra o job
+            try:
+                # google_sheets (item L6-02-i): troca o JSON da conta de serviço por access token; conta
+                # revogada no Google vira saúde "erro" com a mensagem em português, nunca exceção no job
+                cabecalhos = google_sheets.cabecalhos_auth(c["tipo"], em_claro)
+            except google_sheets.ErroGoogleSheets as e:
+                falha_credencial = e.detalhe
+        if falha_credencial is not None:
+            resultado = seguranca.ResultadoBusca(
+                ok=False, status=None, mensagem=falha_credencial, url_final=c["url"],
+                latencia_ms=0, saltos=0,
+            )
+        else:
+            resultado = seguranca.buscar_seguro(
+                c["url"], metodo="GET", timeout_conectar=CONEXAO_CONECTAR_TIMEOUT_S, timeout_ler=CONEXAO_LER_TIMEOUT_S,
+                cabecalhos=cabecalhos,
+            )
         if resultado.ok:
             ok += 1
         else:
@@ -71,7 +75,4 @@ def conexoes_saude_verificar(ctx, limite: int = LIMITE_POR_EXECUCAO) -> dict:
     return {"candidatas": len(candidatas), "ok": ok, "erro": erro}
 
 
-from app.conexao import (  # noqa: E402,F401 — importar registra o periódico da saúde e o job de cópia
-    copia,  # item L6-02-c-wfs-ogcapi: job conexao.copiar_vetor
-    periodicos,  # item L6-02-l-saude: periódico conexoes.saude_verificar na lista do worker
-)
+from app.conexao import periodicos  # noqa: E402,F401 — importar registra o periódico da saúde na lista do worker

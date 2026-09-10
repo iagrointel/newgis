@@ -180,6 +180,9 @@ CONEXAO_TIPOS = (
     "wms", "wmts", "wfs", "ogc_api", "esri_rest", "stac", "geoparquet", "pmtiles", "xyz", "postgres_fdw", "s3", "http",
     "wms", "wmts", "wfs", "ogc_api", "esri_rest", "stac", "geoparquet", "pmtiles", "postgres_fdw", "s3", "http",
     "odk_central",
+    # item L6-02-i-google-sheets: planilha do Google como fonte (publicada = exportação CSV sem credencial;
+    # privada = JSON de conta de serviço, trocado por access token na leitura — app/conexao/google_sheets.py)
+    "google_sheets",
 )
 CONEXAO_MODOS = ("referenciada", "copiada")
 CONEXAO_NOME_MAX = 200
@@ -278,6 +281,26 @@ ODK_RESPOSTA_MAX_BYTES = 8 * 1024 * 1024   # página de OData / lista de entidad
 # API de anexo aceita (ANEXO_TAMANHO_MAX): dois tetos para a mesma coisa deixariam passar aqui o que a outra
 # porta recusa, e o envio só quebraria depois de baixado.
 ODK_ENTIDADES_MAX = 5000                   # entidades lidas de um dataset para virar lista de escolhas
+# --- arquivo por URL (L6-02-h-csv-url-geojson-kml; app/conexao/arquivo_url.py): CSV/GeoJSON/KML/KMZ/GeoRSS/GPX
+# baixados de uma URL pública pela MESMA `app.conexao.seguranca.buscar_seguro` do teste de saúde (nunca um
+# cliente HTTP próprio), convertidos para GeoJSON quando o formato não é um dos 4 que a ingestão do L0-04 já
+# lê, e carregados pelo pipeline de importação existente.
+CONEXAO_ARQUIVO_FORMATOS = ("csv", "geojson", "kml", "kmz", "georss", "gpx")
+CONEXAO_ARQUIVO_MAX_BYTES = 64 * 1024 * 1024   # teto geral do download (mesmo teto de GeoJSON do ADR 0005)
+# MEDIDO nesta máquina (06/09/2026, GDAL 3.8.4): KML de 200 mil pontos = 35,5 MB de arquivo -> `ogr2ogr -f
+# GeoJSON` gasta 2,42 s e 417 MiB de RSS (razão ~12x o tamanho do arquivo, porque o driver KML/GPX/GeoRSS lê o
+# documento XML inteiro na memória). Com o teto geral de 64 MiB o pico passaria de 780 MiB e estouraria o
+# RLIMIT do job (INGESTAO_MEMORIA_MB=768). Por isso os formatos XML têm teto PRÓPRIO, menor:
+CONEXAO_ARQUIVO_XML_MAX_BYTES = 40 * 1024 * 1024   # ~480 MiB de pico medido, dentro do orçamento do job
+CONEXAO_ARQUIVO_LER_TIMEOUT_S = 60.0           # baixar arquivo é mais lento que testar saúde (6 s lá)
+CONEXAO_ARQUIVO_INTERVALO_MIN_S = 900          # atualização agendada: 15 min é o mínimo do agendador (L0-05)
+CONEXAO_ARQUIVO_INTERVALO_PADRAO_S = 86400     # padrão: uma vez por dia
+CONEXAO_ARQUIVO_INTERVALO_MAX_S = 30 * 86400
+CONEXAO_ARQUIVO_LOTE_PERIODICO = 20            # conexões sincronizadas por execução do periódico
+# faixas de coordenada geográfica: usadas para RECUSAR (nunca para corrigir sozinho) CSV com latitude e
+# longitude trocadas — ver `app/conexao/arquivo_url.py::conferir_faixa_coordenada`.
+CONEXAO_ARQUIVO_LAT_MAX = 90.0
+CONEXAO_ARQUIVO_LON_MAX = 180.0
 
 # --- ingestão vetorial (L0-04; ADR 0005, reduzido a 4 formatos: shapefile.zip, gpkg, geojson, csv)
 INGESTAO_AMOSTRA_VALIDADE = 1000          # feições lidas na amostra de ST_IsValid (ogr2ogr -limit, MEDIDO no ADR)
@@ -288,6 +311,10 @@ CARGA_TIMEOUT_S = 3600
 CARGA_FATOR_COTA = 3                      # estimativa = bytes do arquivo × 3 (MEDIDO: shapefile 14 MB -> tabela 45 MB)
 INGESTAO_CAMPOS_MAX = 500                 # mesmo teto do JSON Schema de camada_vetorial (ADR 0004/0005)
 INGESTAO_FIDS_RELATORIO_MAX = 1000        # fids corrigidos listados no relatório de ST_MakeValid
+# camada de 1 ponto: a envoltória tem largura zero e o polígono correspondente é inválido (o CHECK
+# item_extent_check de plat.item recusa). O lado nulo é afastado deste tanto, em graus (~1 cm no equador);
+# só afeta o retângulo guardado no item, nunca a geometria da feição.
+INGESTAO_EPSILON_ENVOLTORIA = 1e-7
 
 # --- intercâmbio de formatos em lote (L6-02-o): exportação por camada nos formatos extra, escrow do inquilino
 # em GeoPackage + manifesto JSON e importação em lote, em app/intercambio/

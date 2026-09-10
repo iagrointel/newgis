@@ -6,8 +6,9 @@ from app.jobs import periodicos as base
 
 PERIODICOS: list[tuple[str, str, str, dict]] = [
     ("saúde das conexões", "*/15 * * * *", "conexoes.saude_verificar", {}),
-    # L6-02-m: catálogo de conectores públicos, reteste semanal (segunda 04:00), decisão B12
-    ("catálogo de conectores públicos", "0 4 * * 1", "endpoints_publicos.retestar", {}),
+    # item L6-02-h: o relógio bate a cada 15 min, mas quem decide se JÁ VENCEU é o `proximo_em` de cada linha
+    # de plat.conexao_arquivo (intervalo escolhido pelo inquilino, mínimo 15 min, padrão 1 dia).
+    ("arquivos por URL vencidos", "*/15 * * * *", "conexoes.arquivo_sincronizar_vencidas", {}),
 ]
 
 for _p in PERIODICOS:
