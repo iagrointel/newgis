@@ -220,7 +220,23 @@ def _restaurar_em_schema_temporario(ctx, dump_local: Path, esquema: str, schema_
                    timeout=30)
 
     texto = sql_bruto.read_text(encoding="utf-8", errors="replace")
-    reescrito = nucleo.reescrever_schema(texto, esquema, schema_ensaio)
+    # (10/09) O dump passou a ser seletivo (só as tabelas de camada do inquilino, `pg_dump -t`), e nesse modo
+    # o pg_dump NÃO emite `CREATE SCHEMA` — o dump de schema inteiro emitia. Sem isto o ensaio morria em
+    # `schema "plat_ensaio_..." does not exist` na primeira tabela. O CREATE vai à frente do SQL reescrito.
+    reescrito = ('CREATE SCHEMA IF NOT EXISTS "%s";\n' % schema_ensaio
+                 + nucleo.reescrever_schema(texto, esquema, schema_ensaio))
+    # o SQL roda como `postgres`, então o schema do ensaio nasce dele: sem estes GRANT o papel da aplicação
+    # (que é quem CONTA as linhas para comparar com a origem) leva `permission denied for schema` e o ensaio
+    # falha depois de ter restaurado tudo certo. Os GRANT vão no fim, quando as tabelas já existem.
+    with ctx.db() as cur:
+        cur.execute("SELECT current_user AS papel")
+        papel_app = cur.fetchone()["papel"]
+    reescrito += (
+        '\n-- (10/09) leitura para o papel da aplicação, que confere as contagens:\n'
+        'GRANT USAGE ON SCHEMA "%s" TO "%s";\n'
+        'GRANT SELECT ON ALL TABLES IN SCHEMA "%s" TO "%s";\n' % (
+            schema_ensaio, papel_app, schema_ensaio, papel_app)
+    )
     sql_reescrito = diretorio / "ensaio_reescrito.sql"
     sql_reescrito.write_text(reescrito, encoding="utf-8")
     sql_bruto.unlink(missing_ok=True)
@@ -304,7 +320,13 @@ def backup_ensaio_restauracao(ctx, origem: str = "manual") -> dict:
         with ctx.db() as cur:
             cur.execute(
                 "SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
-                "WHERE c.relkind = 'r' AND n.nspname = %s ORDER BY 1", (esquema,),
+                "WHERE c.relkind = 'r' AND n.nspname = %s "
+                # (10/09) mesma competência do dump: só as tabelas de camada DESTE inquilino. Sem este filtro
+                # o ensaio comparava contra as 656 tabelas do schema de dado compartilhado por 461
+                # instalações e acusava "tabela ausente na cópia restaurada" para camada de outra gente.
+                "  AND c.relname IN (SELECT 'c_' || replace(left(id::text, 18), '-', '') FROM plat.item "
+                "                    WHERE tenant_id = %s AND tipo = 'camada_vetorial' AND apagado_em IS NULL) "
+                "ORDER BY 1", (esquema, ctx.tenant_id),
             )
             tabelas = [row["relname"] for row in cur.fetchall()]
             contagens_producao: dict[str, int] = {}
