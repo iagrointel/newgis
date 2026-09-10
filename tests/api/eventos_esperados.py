@@ -299,6 +299,8 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("DELETE", "/api/multiescala/fatores/{id}"): ["multiescala/fator_apagar"],
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
+    # L3-05-localizar-regioes: a rota não muda a execução, mas registra o pedido (N, forma, método, área)
+    ("POST", "/api/multiescala/execucoes/{id}/regioes"): ["multiescala/regioes"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
     # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
     # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado

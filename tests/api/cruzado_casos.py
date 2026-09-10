@@ -1877,3 +1877,8 @@ CASOS.update({
     ("GET", "/api/itens/{id}/presenca"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/presenca"),
     ("GET", "/api/itens/{id}/presenca/eventos"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/presenca/eventos"),
 })
+# ---- L3-05-localizar-regioes: a execução é do inquilino (RLS em plat.escala_execucao) — a de B some para A
+CASOS[("POST", "/api/multiescala/execucoes/{id}/regioes")] = Caso(
+    lambda p: f"/api/multiescala/execucoes/{p.execucao_b['id']}/regioes", lambda p: {"n_regioes": 1},
+)
+

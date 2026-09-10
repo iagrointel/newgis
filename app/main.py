@@ -131,6 +131,7 @@ from app.relacionamentos.rotas import router as rotas_relacionamentos
 from app.relatorios.rotas import router as rotas_relatorios
 from app.mapas.rotas import router as rotas_mapas
 from app.migracao.rotas import router as rotas_migracao
+from app.multiescala import regioes_rotas as rotas_regioes  # L3-05: localizar regiões
 from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
@@ -489,6 +490,7 @@ ROUTERS = [
     # --- sistema de referência (L2-17-crs-transformacoes): /api/crs (lista, detalhe, proj4, transformar);
     # grades NTv2 do IBGE em grades_ibge/, escolhidas por área (app/crs/grades.py)
     rotas_crs,
+    rotas_regioes.router,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

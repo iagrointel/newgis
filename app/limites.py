@@ -680,3 +680,8 @@ LIMITE_TAXA_PADROES: dict[str, tuple] = {
 LIMITE_TAXA_JANELA_S = 60           # janela deslizante única para os dois escopos acima (segundos)
 LIMITE_TAXA_ESCOPOS = ("api", "tiles")
 LIMITE_TAXA_RETRY_AFTER_MIN_S = 1   # nunca manda Retry-After: 0 (RFC 6585 recomenda um valor positivo)
+# ---- L3-05-localizar-regioes: localizar N regiões contíguas sobre a grade de favorabilidade
+REGIOES_N_MAX = 30                    # o mesmo teto da referência (Locate Regions: 1-30)
+REGIOES_CELULAS_MAX = 4_000_000       # células da grade aceitas por chamada (2.000×2.000; acima disso é job)
+REGIOES_TEMPO_LIMITE_S = 120          # a rota é síncrona: acima disto o pedido é grande demais para a tela
+
