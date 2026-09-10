@@ -17,11 +17,11 @@ import pydantic
 from fastapi import APIRouter, Body, Query, Request, Response
 from jsonschema import Draft202012Validator
 
-from app import cotas, db, limites
+from app import db, limites
 from app.auth.comum import campos_json, paginacao
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo import busca as mod_busca
-from app.catalogo import comum, diff, documento, mesclagem, metadado, relacoes, texto, tipos
+from app.catalogo import comum, diff, documento, metadado, metadado_mgb, relacoes, texto, tipos
 from app.catalogo.comum import (
     carregar,
     exigir_edicao,
@@ -50,7 +50,6 @@ from app.catalogo.modelos import (
     VersaoCompleta,
 )
 from app.erros import ErroAPI
-from app.estilos import validador as estilos_validador
 from app.settings import settings
 
 router = APIRouter(tags=["catalogo"])
@@ -559,22 +558,19 @@ def criar(corpo: ItemEntrada, request: Request, auth: Auth = autenticado("conteu
     _publicar_tipo(auth, corpo.tipo)
     tipos.validar(corpo.tipo, corpo.dados)
     documento.validar_grafo(corpo.tipo, corpo.dados)
-    estilos_validador.validar_estilo(corpo.tipo, corpo.dados)
     _classificacao(auth, corpo.classificacao, novo=True)
     iid = str(uuid.UUID(corpo.id)) if corpo.id else str(uuid.uuid4())
     ext_sql, ext_params = _extent_sql(corpo.extent)
     try:
         with db.db(auth.contexto()) as cur:
-            # contar_itens_com_lixeira (item L0-07-c-cotas-uso): item na lixeira ainda não expurgado CONTA
-            # na cota — um count(*) cru via RLS esconderia o apagado e deixaria "liberar" cota sem expurgo.
-            n = cotas.contar_itens_com_lixeira(cur, auth.tenant_id)
-            cur.execute("SELECT plat.cota_itens(%s) AS cota", (auth.tenant_id,))
-            cota = cur.fetchone()["cota"]
-            if n >= cota:
+            cur.execute(
+                "SELECT plat.cota_itens(%s) AS cota, (SELECT count(*) FROM plat.item WHERE tenant_id = %s) AS n",
+                (auth.tenant_id, auth.tenant_id),
+            )
+            r = cur.fetchone()
+            if r["n"] >= r["cota"]:
                 raise ErroAPI(
-                    413, "cota_itens",
-                    f"cota de itens esgotada: uso atual {n} de {cota} itens",
-                    {"cota": cota, "uso": n},
+                    413, "cota_itens", f"cota de itens do inquilino esgotada ({r['cota']})", {"cota": r["cota"]}
                 )
             _pasta_existe(cur, corpo.pasta_id)
             cats = _categorias_existem(cur, corpo.categorias)
@@ -658,6 +654,121 @@ def metadado_iso(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler"))
     return Response(content=xml, media_type="application/xml")
 
 
+def _eventos_do_item(cur, item_id: str) -> list[dict]:
+    cur.execute(
+        "SELECT tipo, em, propriedades FROM plat.evento WHERE alvo_tipo = 'item' AND alvo_id = %s "
+        "ORDER BY em ASC LIMIT 50",
+        (str(item_id),),
+    )
+    return [dict(r) for r in cur.fetchall()]
+
+
+def _config_do_tenant(cur, tenant_id: int) -> dict:
+    cur.execute("SELECT config FROM plat.tenant WHERE id = %s", (tenant_id,))
+    r = cur.fetchone()
+    return (r["config"] or {}) if r else {}
+
+
+@router.get("/api/itens/{id}/metadado", openapi_extra=LER)
+def metadado_mgb_ver(
+    id: str, estilo: str | None = Query(default=None), auth: Auth = autenticado(escopo_token="catalogo:ler")
+):
+    """Editor ISO/MGB 2.0 (item L0-09-b-editor-iso-mgb): leitura completa (identificação sincronizada com o
+    item + parte própria de `metadado_iso` + linhagem computada de procedência/eventos), lista de campos
+    essenciais/completos que faltam, e a mesma leitura formatada no estilo do inquilino (ou no pedido pela
+    query, só para pré-visualizar outro estilo sem trocar a configuração)."""
+    with db.db(auth.contexto()) as cur:
+        r = item_ou_404(cur, id)
+        eventos = _eventos_do_item(cur, id)
+        tenant_cfg = _config_do_tenant(cur, auth.tenant_id)
+    v = metadado_mgb.visao(r, r.get("metadado_iso") or {}, eventos, settings.PLAT_URL_PUBLICA.rstrip("/"))
+    estilo_efetivo = estilo if estilo in metadado_mgb.ESTILOS else metadado_mgb.estilo_do_tenant(tenant_cfg)
+    return {
+        "estilo_do_inquilino": metadado_mgb.estilo_do_tenant(tenant_cfg),
+        "faltantes_essencial": metadado_mgb.faltantes(v, "essencial"),
+        "faltantes_completo": metadado_mgb.faltantes(v, "completo"),
+        "avisos": metadado_mgb.avisos_extent(r.get("metadado_iso") or {}, r),
+        **metadado_mgb.formatar_estilo(v, estilo_efetivo),
+    }
+
+
+@router.post("/api/itens/{id}/metadado/validar", openapi_extra=LER)
+def metadado_mgb_validar(id: str, request: Request, corpo: dict = Body(default={}), auth: Auth = autenticado()):  # noqa: B008
+    """Valida um RASCUNHO (ainda não salvo) contra o obrigatório do perfil, sem gravar nada: o botão
+    'Validar' do editor. `corpo` = {"item": {...campos sincronizados opcionais}, "metadado": {...}}."""
+    iid = uuid_ok(id)
+    stored = corpo.get("metadado") or {}
+    if not metadado_mgb.tamanho_ok(stored):
+        raise ErroAPI(
+            422, "metadado_grande", "metadado maior que o limite de 1 MiB",
+            {"limite_bytes": limites.METADADO_ISO_BYTES_MAX},
+        )
+    try:
+        metadado_mgb.validar_estrutura(stored)
+    except metadado_mgb.ErroMetadadoInvalido as e:
+        raise ErroAPI(422, "metadado_invalido", "metadado ISO/MGB inválido", e.erros) from e
+    with db.db(auth.contexto()) as cur:
+        r = item_ou_404(cur, iid)
+        eventos = _eventos_do_item(cur, iid)
+    rascunho = dict(r)
+    item_parcial = corpo.get("item") or {}
+    for campo in ("titulo", "resumo", "tags", "creditos"):
+        if campo in item_parcial:
+            rascunho[campo] = item_parcial[campo]
+    v = metadado_mgb.visao(rascunho, stored, eventos, settings.PLAT_URL_PUBLICA.rstrip("/"))
+    return {
+        "faltantes_essencial": metadado_mgb.faltantes(v, "essencial"),
+        "faltantes_completo": metadado_mgb.faltantes(v, "completo"),
+        "avisos": metadado_mgb.avisos_extent(stored, r),
+    }
+
+
+@router.put("/api/itens/{id}/metadado", openapi_extra=EDITAR)
+def metadado_mgb_salvar(id: str, request: Request, corpo: dict = Body(...), auth: Auth = autenticado()):  # noqa: B008
+    """Salva o metadado ISO/MGB do item: campos sincronizados (`corpo.item`) passam pelo MESMO núcleo do
+    PUT/PATCH de item (`editar_item`, título incluso — regra do item: 'o título É sincronizado'); a parte
+    própria (`corpo.metadado`) é validada contra `ESQUEMA_MGB` (422 com caminho em `campo` na lista de erros)
+    e gravada em `metadado_iso`. Nunca bloqueia por campo essencial faltando (o portão é o botão Validar);
+    só bloqueia por estrutura inválida, data fora de ordem, ou tamanho acima do limite."""
+    iid = uuid_ok(id)
+    stored = corpo.get("metadado") or {}
+    if not metadado_mgb.tamanho_ok(stored):
+        raise ErroAPI(
+            422, "metadado_grande", "metadado maior que o limite de 1 MiB",
+            {"limite_bytes": limites.METADADO_ISO_BYTES_MAX},
+        )
+    try:
+        metadado_mgb.validar_estrutura(stored)
+    except metadado_mgb.ErroMetadadoInvalido as e:
+        raise ErroAPI(422, "metadado_invalido", "metadado ISO/MGB inválido", e.erros) from e
+    item_parcial = campos_json(corpo.get("item") or {}, set(CAMPOS_EDITAVEIS))
+    try:
+        with db.db(auth.contexto()) as cur:
+            r_antes = item_ou_404(cur, iid)
+            avisos = metadado_mgb.avisos_extent(stored, r_antes)
+            if item_parcial:
+                editar_item(cur, request, auth, iid, item_parcial)
+            exigir_edicao(cur, iid)
+            cur.execute(
+                "UPDATE plat.item SET metadado_iso = %s WHERE id = %s::uuid", [jsonb(stored), iid]
+            )
+            registrar_evento(
+                cur, request, "itens/metadado_iso_atualizar", "item", iid, {"campos": sorted(stored.keys())}
+            )
+            r = item_ou_404(cur, iid)
+            eventos = _eventos_do_item(cur, iid)
+            tenant_cfg = _config_do_tenant(cur, auth.tenant_id)
+    except psycopg2.Error as e:
+        raise comum.erro_do_banco(e) from e
+    v = metadado_mgb.visao(r, r.get("metadado_iso") or {}, eventos, settings.PLAT_URL_PUBLICA.rstrip("/"))
+    return {
+        "item": item_json(r, auth),
+        "avisos": avisos,
+        "estilo_do_inquilino": metadado_mgb.estilo_do_tenant(tenant_cfg),
+        **metadado_mgb.formatar_estilo(v, metadado_mgb.estilo_do_tenant(tenant_cfg)),
+    }
+
+
 def editar_item(
     cur, request: Request, auth: Auth, iid: str, campos: dict, rotulo: str | None = None, comentario: str | None = None
 ) -> dict:
@@ -692,20 +803,12 @@ def editar_item(
                 {"versao_atual": r["versao_atual"]},
             )
         campos.pop("versao_atual")
-    mesclagem_relatorio = None
-    if "base_versao" in campos:
-        base_versao = campos.pop("base_versao")
-        if base_versao is not None and base_versao != r["versao_atual"]:
-            # L5-13: o cliente leu `base_versao` e o servidor já está adiante — mescla por nó (documento de grafo)
-            # ou recusa com o documento atual; para item sem grafo vale a regra estrita do versao_atual
-            mesclagem_relatorio = _mesclar_com_base(cur, r, campos, base_versao)
     if not campos:
         raise ErroAPI(422, "validacao", "nada a alterar")
     dados = campos.get("dados", r["dados"])
     if "dados" in campos:
         tipos.validar(r["tipo"], dados)
         documento.validar_grafo(r["tipo"], dados)
-        estilos_validador.validar_estilo(r["tipo"], dados)
     if "classificacao" in campos:
         _classificacao(auth, campos["classificacao"], novo=False)
     cats = (
@@ -773,8 +876,6 @@ def editar_item(
     if "dados" in campos and relacoes.tem_extrator(r["tipo"]):
         relacoes.sincronizar(cur, auth.tenant_id, iid, relacoes.extrair(r["tipo"], dados))
     novo = item_ou_404(cur, iid)
-    if mesclagem_relatorio:
-        novo["mesclagem"] = mesclagem_relatorio
     mudados = sorted(k for k in campos if k in CAMPOS_VERSAO)
     if mudados:
         registrar_evento(
@@ -787,52 +888,12 @@ def editar_item(
     return novo
 
 
-def _mesclar_com_base(cur, r: dict, campos: dict, base_versao: int) -> dict:
-    """Mesclagem de três vias por nó (item L5-13, `app/catalogo/mesclagem.py`): base = corpo da versão que o cliente
-    leu (`plat.item_versao`), servidor = `dados` atual, cliente = `campos["dados"]`. Sem conflito, `campos["dados"]`
-    passa a ser o resultado mesclado e a edição segue; com conflito, 409 `versao_conflito` com o documento atual
-    inteiro e os ids dos nós em conflito — nunca uma escolha às escondidas (refutação do item)."""
-    if r["tipo"] not in documento.FAMILIAS_GRAFO or "dados" not in campos:
-        raise ErroAPI(
-            409, "versao_conflito", "o item foi editado por outra pessoa; recarregue",
-            {"versao_atual": r["versao_atual"], "base_versao": base_versao, "dados": r["dados"]},
-        )
-    cur.execute(
-        "SELECT corpo FROM plat.item_versao WHERE item_id = %s::uuid AND versao = %s", (r["id"], base_versao)
-    )
-    linha = cur.fetchone()
-    if linha is None:
-        raise ErroAPI(
-            409, "versao_conflito", f"a versão base {base_versao} não existe mais (compactada ou inválida); recarregue",
-            {"versao_atual": r["versao_atual"], "base_versao": base_versao, "dados": r["dados"]},
-        )
-    dados_base = (linha["corpo"] or {}).get("dados") or {}
-    dados_cliente = campos["dados"] if isinstance(campos["dados"], dict) else {}
-    dados_servidor = r["dados"] or {}
-    resultado = mesclagem.mesclar(
-        dados_base.get("corpo") or {}, dados_servidor.get("corpo") or {}, dados_cliente.get("corpo") or {}
-    )
-    if not resultado.ok:
-        raise ErroAPI(
-            409, "versao_conflito",
-            "o mesmo nó foi alterado por outra pessoa; veja a diferença e escolha",
-            {"versao_atual": r["versao_atual"], "base_versao": base_versao, "dados": dados_servidor,
-             **resultado.relatorio()},
-        )
-    campos["dados"] = {**dados_servidor, **dados_cliente, "corpo": resultado.corpo}
-    return {"base_versao": base_versao, "versao_servidor": r["versao_atual"], **resultado.relatorio()}
-
-
-def _editar(id: str, corpo, request: Request, auth: Auth, rotulo: str | None = None) -> dict:
+def _editar(id: str, corpo, request: Request, auth: Auth) -> dict:
     iid = uuid_ok(id)
     campos = campos_json(corpo, set(CAMPOS_EDITAVEIS))
     try:
         with db.db(auth.contexto()) as cur:
-            novo = editar_item(cur, request, auth, iid, campos, rotulo=rotulo)
-            saida = item_json(novo, auth)
-            if novo.get("mesclagem"):
-                saida["mesclagem"] = novo["mesclagem"]  # L5-13: o que veio do servidor e o que ficou do cliente
-            return saida
+            return item_json(editar_item(cur, request, auth, iid, campos), auth)
     except psycopg2.Error as e:
         raise comum.erro_do_banco(e) from e
 
@@ -843,19 +904,8 @@ def editar(id: str, request: Request, corpo: dict = Body(...), auth: Auth = aute
 
 
 @router.patch("/api/itens/{id}", response_model=Item, openapi_extra=EDITAR)
-def editar_parcial(
-    id: str,
-    request: Request,
-    corpo: dict = Body(...),  # noqa: B008
-    rotulo: str | None = Query(default=None, pattern="^rascunho$"),
-    auth: Auth = autenticado(),
-):
-    """item L5-09-desfazer-refazer-rascunho: `?rotulo=rascunho` é a ÚNICA forma de rótulo que o cliente pode
-    pedir por fora (as outras — 'restauracao', 'publicacao', 'compactada', 'migracao' — só o servidor grava,
-    ver `restaurar_versao`/`app/catalogo/comum.py::rotular_versao`). Grava uma versão nova rotulada 'rascunho'
-    do MESMO jeito que o PATCH normal grava 'edicao': não toca `versao_publicada` (só
-    `.../versoes/{n}/publicar` muda isso), então o link público de quem já publicou não se altera."""
-    return _editar(id, corpo, request, auth, rotulo=rotulo)
+def editar_parcial(id: str, request: Request, corpo: dict = Body(...), auth: Auth = autenticado()):  # noqa: B008
+    return _editar(id, corpo, request, auth)
 
 
 # ---------------------------------------------------------------- exclusão lógica (lixeira) e lote

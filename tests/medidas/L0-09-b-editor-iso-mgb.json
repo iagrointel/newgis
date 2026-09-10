@@ -1,0 +1,57 @@
+{
+ "item": "L0-09-b-editor-iso-mgb",
+ "medidas": {
+  "clausula_1_e2e_essencial_validar_salvar_ver_captura": {
+   "valor": "passou",
+   "unidade": "teste",
+   "comando": "venv/bin/pytest tests/e2e/test_metadado_mgb.py -q --base-url http://127.0.0.1:8235 (uvicorn do worktree, static de web/ montado à parte, PLAT_URL_PUBLICA sobreposto para bater com a origem do navegador); 4 capturas em tests/e2e/capturas/L0-03_metadado_*.png"
+  },
+  "clausula_2_json_invalido_422_com_caminho": {
+   "valor": "passou (3 testes)",
+   "unidade": "teste",
+   "comando": "venv/bin/pytest tests/api/catalogo/test_metadado_mgb.py::test_estrutura_invalida_422_com_caminho tests/api/catalogo/test_metadado_mgb.py::test_campo_desconhecido_422 -q"
+  },
+  "clausula_3_titulo_sincronizado_dois_sentidos": {
+   "valor": "passou (api + e2e)",
+   "unidade": "teste",
+   "comando": "venv/bin/pytest tests/api/catalogo/test_metadado_mgb.py::test_titulo_sincronizado_editor_muda_item_e_vice_versa -q; e2e cobre o mesmo fluxo pela tela"
+  },
+  "clausula_4_metadado_exportado_no_l0_06_d": {
+   "valor": "pendente: L0-06-d-exportar-inquilino nao existe no repositorio",
+   "unidade": "fronteira honesta",
+   "comando": "grep -rn L0-06-d laco/estado.json (item catalogado, nunca entregue/parcial nesta arvore); ver ADR docs/adr/20260907T0148-metadado-iso-mgb.md decisao 5 e docs/PARIDADE.md linha 'exportação do metadado no pacote do inquilino'"
+  },
+  "clausula_5_paridade_metadata_11_4": {
+   "valor": "3 feito, 2 parcial/fora (estilos=feito, Validate=feito, Synchronize=feito; XML=parcial; Overwrite=fora)",
+   "unidade": "tabela",
+   "comando": "docs/PARIDADE.md, secao 'Editor de metadado no Perfil MGB 2.0 (item L0-09-b-editor-iso-mgb)'"
+  },
+  "refutacao_1_metadado_5mb_limite_1mib_422": {
+   "valor": "passou",
+   "unidade": "teste",
+   "comando": "venv/bin/pytest tests/api/catalogo/test_metadado_mgb.py::test_refutacao_metadado_grande_422 -q"
+  },
+  "refutacao_2_datas_fora_de_ordem_422": {
+   "valor": "passou",
+   "unidade": "teste",
+   "comando": "venv/bin/pytest tests/api/catalogo/test_metadado_mgb.py::test_refutacao_datas_fora_de_ordem_422 -q"
+  },
+  "refutacao_3_extent_diverge_aviso_nao_bloqueio": {
+   "valor": "passou",
+   "unidade": "teste",
+   "comando": "venv/bin/pytest tests/api/catalogo/test_metadado_mgb.py::test_refutacao_extent_diverge_e_aviso_nao_bloqueio -q"
+  },
+  "testes_api_proprios_verdes": {
+   "valor": 11,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/api/catalogo/test_metadado_mgb.py -q"
+  },
+  "testes_e2e_proprios_verdes": {
+   "valor": 1,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/e2e/test_metadado_mgb.py -q --base-url http://127.0.0.1:8235"
+  }
+ },
+ "gerado_em": "2026-09-07T02:20:00Z",
+ "git_sha": "de57dd2"
+}
