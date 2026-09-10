@@ -1,0 +1,95 @@
+{
+ "item": "L4-01-d-atributos-de-rede",
+ "assinado_por": "redes+dados+backend+adversario (trilha il401datrib)",
+ "gerado_em": "2026-09-10T23:19:35Z",
+ "medidas": {
+  "rede_id": "30ec3c6c-d768-49d0-bb72-4980af57bd95",
+  "clausulas": {
+   "catalogo_flags_e_calculados": {
+    "prova": "{'fase_propagavel': 8, 'traversabilidade': 1} / calculados=31",
+    "ok": true
+   },
+   "sincronizar_lote_roda_em_escala": {
+    "prova": "5481 dispositivos de 2+ terminais avaliados em 2.299s; 5481 ignorados por categoria transformação (nunca ganham aresta interna); 0 chave/seccionamento no arquivo desta cooperativa -> 0 aresta de dispositivo (fronteira b, não bug)",
+    "ok": true
+   },
+   "concordancia_fase_mt": {
+    "prova": "30888/43709 trechos de MT concordam com a raiz assumida do próprio alimentador (0.7067 se não-nulo) — via='raiz_assumida_por_alimentador': sem subestação no arquivo (fronteira a), a raiz é a extremidade de grau 1 do alimentador, não um controlador real; a cláusula ≥95% do portão pressupõe controlador real no MESMO arquivo, o que este extrato não tem — número registrado como está, não maquiado",
+    "ok": false,
+    "concordancia_medida": 0.7066736827655632,
+    "via_raiz": "raiz_assumida_por_alimentador"
+   },
+   "discrepancia_nunca_corrige_em_silencio": {
+    "prova": "12821 discrepâncias gravadas em plat.rede_atributo_discrepancia (candidatas a erro de cadastro); plat.rede_feicao_linha.fase_bitmask não foi tocado por propagar_fase",
+    "ok": true
+   },
+   "is_connected_recalculado_por_job": {
+    "prova": "43686/77675 nós e 44268/73512 arestas marcados is_connected=true em 2 subredes (uma por alimentador, mesma raiz assumida da propagação)",
+    "ok": true
+   },
+   "is_connected_usado_como_filtro": {
+    "prova": "WHERE is_connected devolve 44268 arestas, igual ao recalculado",
+    "ok": true
+   }
+  },
+  "avisos": [],
+  "carga": {
+   "ssdmt": {
+    "linhas": 44268,
+    "segundos": 7.572
+   },
+   "ssdbt": {
+    "linhas": 29244,
+    "segundos": 4.005
+   },
+   "ramlig": {
+    "linhas": 0,
+    "segundos": 1.14
+   },
+   "trafo": {
+    "linhas": 5481,
+    "segundos": 3.154
+   },
+   "ponnot": {
+    "linhas": 60549,
+    "segundos": 7.573
+   }
+  },
+  "resumo_topologia": {
+   "rede_id": "30ec3c6c-d768-49d0-bb72-4980af57bd95",
+   "tolerancia_m": 0.05,
+   "nos": 77675,
+   "arestas": 73512,
+   "nos_orfaos": 1167,
+   "arestas_sem_no": 0,
+   "duracao_ms": 26776,
+   "construido_em": "2026-09-10T23:17:50Z"
+  },
+  "sincronizar": {
+   "arestas_tensao_capacidade_atualizadas": 73512,
+   "dispositivos_considerados": 5481,
+   "dispositivo_arestas_criadas": 0,
+   "ignorados_transformacao": 5481,
+   "ignorados_sem_dois_nos": 0,
+   "segundos": 2.299
+  },
+  "propagar_fase": {
+   "via_raiz": "raiz_assumida_por_alimentador",
+   "raizes": 20,
+   "trechos_mt_alcancados": 43709,
+   "concordantes": 30888,
+   "discrepantes": 12821,
+   "concordancia": 0.7066736827655632,
+   "segundos": 47.742
+  },
+  "conectividade": {
+   "raizes": 20,
+   "nos_conectados": 43686,
+   "nos_total": 77675,
+   "arestas_conectadas": 44268,
+   "arestas_total": 73512,
+   "subredes": 2,
+   "segundos": 27.022
+  }
+ }
+}

@@ -24,6 +24,9 @@ from app.rede_medicao import (
     tarefas as rede_medicao_tarefas,  # noqa: F401 — L4-13: rede_medicao.particoes_criar + periódico (pausado)
 )
 from app.rede_utilidades import (
+    epanet_importar as rede_epanet_tarefas,  # noqa: F401 — L4-05-d: rede.epanet_importar
+)
+from app.rede_utilidades import (
     tarefas as rede_tarefas,  # noqa: F401 — L4-04-b redes.subredes_atualizar e L4-01-c rede.importar_bdgd
 )
 from app.uploads import tarefas as uploads_tarefas  # noqa: F401 — L0-04-a: uploads.expirar + periódico

@@ -3,6 +3,57 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L4-05-d-epanet-inp: arquivo EPANET .inp entra e sai da rede de água)
+
+Porta de entrada e de saída do formato que o setor de água usa: o `.inp` do EPANET. `ler_inp`/`escrever_inp`
+(`app/rede_utilidades/epanet_inp.py`) cobrem JUNCTIONS, RESERVOIRS, TANKS, PIPES, PUMPS, VALVES, COORDINATES,
+VERTICES, PATTERNS, CURVES e OPTIONS; seção fora do escopo vira aviso, nunca erro. `POST /api/rede/{id}/epanet`
+enfileira o job `rede.epanet_importar`, que grava feições sobre o pacote de ativos `agua-epanet`;
+`GET /api/rede/{id}/epanet` reconstrói o arquivo das tabelas, nunca devolve o que entrou. Migração
+`20260910T2353_rede_epanet_importacao.sql`: fila da importação, `plat.rede_epanet_curva`/`rede_epanet_padrao`
+(as curvas e os padrões que um ativo referencia por ID, e sem as quais o arquivo exportado é recusado pelo
+WNTR) e a queda do `NOT NULL` das duas colunas `geom` da rede.
+
+Medido sobre a rede de água real desta casa (`tests/medidas/L4-05-d-epanet-inp.json`): 11.119 junções,
+7 reservatórios e 14.756 trechos lidos do arquivo, 11.126 feições de ponto e 14.756 de linha gravadas,
+941.294,02 m de comprimento declarado, importação em 2,0 s. Topologia habilitada: 11.126 nós e 14.756 arestas.
+Traçado conectado a partir de um reservatório alcança 11.126 nós, exatamente o tamanho da componente conexa que
+o `networkx` calcula no próprio `.inp`. Exportar e reimportar numa rede nova dá o mesmo grafo, e o
+`wntr.sim.EpanetSimulator` 1.5.0 roda o arquivo exportado sem erro.
+
+Nó sem linha em `[COORDINATES]` entra sem geometria e com aviso, jamais como ponto em (0,0) — a refutação
+exigida pelo item é teste (`test_adversario_remove_uma_coordenada`), e a soma de comprimento dos trechos não
+muda quando a coordenada some, porque ela vem do campo Length e não da geometria. Fica declarado como parcial:
+bomba e válvula são LINK no EPANET e ganham aqui o ponto médio dos dois nós (aproximação, não medição), e a
+paridade com o "water utility network foundation" da Esri não foi medida — o modelo é fechado e licenciado.
+ADR `docs/adr/20260907T1629-epanet-inp.md`. Mesclado no ramo de lançamento em 10/09 (trabalho de turno 4,
+resgatado do ramo `wt/il405depane`).
+
+## turno 4, setembro de 2026 (item L4-01-h-alinhamento-inspire-gnm: alinhamento ao INSPIRE Generic Network Model — PARCIAL, elétrica e água)
+
+Mapeamento campo a campo do pacote de ativos (`L4-01-a`) para o Generic Network Model do INSPIRE
+(`net`/`us-net-common`/`us-net-el`), documentado em `docs/INSPIRE_GNM.md` (fonte única: `MAPEAMENTO_GNM`
+em `app/rede_utilidades/inspire_gnm.py`). Exportador `exportar_gml()` gera GML de uma rede de teste
+(elétrica: 3 nós/2 elos com códigos reais de `eletrica-br.json`; água: 2 nós/1 elo) como
+`base:SpatialDataSet` com membros `us-net-common:Appurtenance` (nós) e `us-net-common:UtilityLink`
+(elos, decisão registrada no documento: `Cable`/`Pipe`/`ElectricityCable` são `UtilityLinkSet`, não
+`Link`, e exigiriam uma segunda feature por elo). Validado contra o XSD OFICIAL do INSPIRE (cópia
+vendorizada em `app/rede_utilidades/gnm_xsd/`, resolução 100% offline via `gnm_xsd/catalogo.xml`, sem
+rede em CI): `xmllint --schema` contra `ElectricityNetwork.xsd` e `UtilityNetworksCommon.xsd`, ambos
+`validates` (`tests/unit/test_inspire_gnm.py`, 6 testes verdes). PARCIAL porque o portão pede elétrica,
+água e gás: gás fica de fora por não existir pacote-fonte (`L4-01-a` só publicou elétrica e água) — não
+é lacuna do mapeamento GNM. Também fora: atributos operacionais (tensão, diâmetro, potência) não têm
+correspondência no GNM (ele modela topologia e status, não o dado operacional do ativo) e o teamengine
+oficial do INSPIRE não foi rodado (sem instância local nem rede autorizada; a prova usada é `xmllint`
+contra o mesmo XSD que o teamengine consome na checagem estrutural). Mesclado no ramo de lançamento em
+10/09 (trabalho de turno 4, resgatado do ramo `wt/il401halinh`).
+
+### Commits
+
+| sha | mensagem |
+|---|---|
+| 3c38aa4 | Alinhamento INSPIRE GNM (item L4-01-h): mapeamento, exportador GML e validação contra o XSD oficial |
+
 ## turno 9, setembro de 2026 (item L7-03-d-injecao-consulta: 180 payloads de injeção contra o FeatureServer/OGC, 0 execução, 2 defeitos de 500 corrigidos)
 
 `tests/seguranca/test_injecao.py`: 180 payloads (where/outFields/orderBy/groupBy/outStatistics/having/objectIds/

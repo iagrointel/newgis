@@ -129,3 +129,12 @@ truststore==0.10.4
 # do pip-audit acima. gitleaks/trivy/zap são binários fixados em deploy/ferramentas_binarias.txt, não pacotes Python.
 bandit==1.9.4
 stevedore==5.9.1
+#
+# rede de utilidades — EPANET (item L4-05-d): networkx é a CONFERÊNCIA INDEPENDENTE do traçado conectado
+# (a componente conexa calculada no próprio .inp, `tests/api/test_rede_epanet.py`); só suíte, puro Python,
+# 2,1 MB, instalação aditiva (nenhuma versão de outro pacote mudou). `pyproj` (usado pela aplicação em
+# app/ingestao/inspecionar.py e em app/rede_utilidades/epanet_importar.py) continua vindo do dist-packages do
+# sistema, mesmo raciocínio já escrito no cabeçalho para shapely. `wntr` (simulação hidráulica) NÃO entra
+# aqui de propósito: arrasta numpy/pandas/scipy e só serve a UMA cláusula do portão, que o teste marca como
+# não medida quando a biblioteca falta (`pytest.importorskip`); quem quiser medir instala à parte.
+networkx==3.6.1

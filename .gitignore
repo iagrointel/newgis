@@ -43,3 +43,7 @@ tests/e2e/capturas/*.pdf
 
 # bancada local efêmera da trilha (Martin/nginx próprios, fora de qualquer unidade systemd de outra trilha)
 deploy/local/
+
+# fixture real de rede de agua (item L4-05-d): 2 MB, dado de operadora — repositorio publico,
+# fica so no disco da casa; os testes que dependem dela pulam quando ela nao esta no checkout
+tests/dados/rede_agua_real.inp

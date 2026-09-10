@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Catálogo XML (OASIS) que resolve os esquemas oficiais INSPIRE/GML/ISO 19139 para as cópias
+     vendorizadas neste diretório, permitindo validação OFFLINE idêntica à remota. Uso:
+     XML_CATALOG_FILES=<este arquivo> xmllint valida o GML contra o XSD oficial sem rede. -->
+<catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">
+  <rewriteSystem systemIdStartString="https://inspire.ec.europa.eu/schemas/" rewritePrefix="inspire.ec.europa.eu/schemas/"/>
+  <rewriteSystem systemIdStartString="http://inspire.ec.europa.eu/schemas/" rewritePrefix="inspire.ec.europa.eu/schemas/"/>
+  <rewriteSystem systemIdStartString="https://schemas.opengis.net/" rewritePrefix="schemas.opengis.net/"/>
+  <rewriteSystem systemIdStartString="http://schemas.opengis.net/" rewritePrefix="schemas.opengis.net/"/>
+  <rewriteSystem systemIdStartString="http://portele.de/" rewritePrefix="portele.de/"/>
+  <rewriteSystem systemIdStartString="https://portele.de/" rewritePrefix="portele.de/"/>
+  <rewriteSystem systemIdStartString="http://www.w3.org/" rewritePrefix="www.w3.org/"/>
+  <rewriteSystem systemIdStartString="https://www.w3.org/" rewritePrefix="www.w3.org/"/>
+  <rewriteURI uriStartString="https://inspire.ec.europa.eu/schemas/" rewritePrefix="inspire.ec.europa.eu/schemas/"/>
+  <rewriteURI uriStartString="http://inspire.ec.europa.eu/schemas/" rewritePrefix="inspire.ec.europa.eu/schemas/"/>
+  <rewriteURI uriStartString="https://schemas.opengis.net/" rewritePrefix="schemas.opengis.net/"/>
+  <rewriteURI uriStartString="http://schemas.opengis.net/" rewritePrefix="schemas.opengis.net/"/>
+  <rewriteURI uriStartString="http://portele.de/" rewritePrefix="portele.de/"/>
+  <rewriteURI uriStartString="http://www.w3.org/" rewritePrefix="www.w3.org/"/>
+  <rewriteURI uriStartString="https://www.w3.org/" rewritePrefix="www.w3.org/"/>
+</catalog>

@@ -82,6 +82,8 @@ from app.rede_utilidades.rotas_matpower import router as rotas_rede_matpower
 from app.rede_utilidades.rotas_resumos import router as rotas_rede_resumos
 from app.rede_utilidades.rotas_simples import router as rotas_rede_simples
 from app.rede_utilidades.rotas_subredes import router as rotas_rede_subredes
+from app.rede_utilidades.rotas_atributos import router as rotas_rede_atributos
+from app.rede_utilidades.rotas_epanet import router as rotas_rede_epanet
 from app.rede_utilidades.rotas_topologia import router as rotas_rede_topologia
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
@@ -173,6 +175,11 @@ ROUTERS = [
     # --- topologia derivada da rede de utilidades (L4-01-b): /api/rede/{rede_id}/feicoes/{pontos,linhas}
     # (as camadas de rede, editáveis) e /api/rede/{rede_id}/topologia/{habilitar,nos,arestas} (o índice derivado)
     rotas_rede_topologia,
+    # --- atributos de rede (L4-01-d): /api/rede/{rede_id}/atributos/{sincronizar,propagar-fase,
+    # conectividade,substituicoes,discrepancias} — fase/tensão/capacidade/is_connected/subrede
+    rotas_rede_atributos,
+    # --- EPANET .inp (L4-05-d): /api/rede/{rede_id}/epanet/{importar,importacoes,exportar}
+    rotas_rede_epanet,
     # --- configuração de traçado (L4-02-e): /api/rede/{rede_id}/config_tracado (CRUD) e o campo `config_id`
     # do POST /api/rede/{rede_id}/tracar, que faz o traçado ler o pedido salvo em vez do corpo
     rotas_rede_config_tracado,
