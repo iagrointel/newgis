@@ -1,0 +1,92 @@
+{
+ "fluxo_de_potencia": {
+  "medido_por": "/home/dev/plataforma/laco/var/venv-pandapower/bin/python",
+  "pandapower_pinado_em_requirements": "3.5.4",
+  "json_bus": 3,
+  "json_line": 1,
+  "json_trafo": 1,
+  "json_load": 1,
+  "json_sgen": 1,
+  "json_convergiu": true,
+  "json_vm_pu_minimo": 0.9937775950278687,
+  "json_vm_pu_maximo": 1.0,
+  "json_p_da_fonte_mw": 0.009166654759837911,
+  "mpc_convergiu": true,
+  "mpc_bus": 3,
+  "mpc_vm_pu_minimo": 0.9937899177393742,
+  "case9": {
+   "convergiu": true,
+   "bus": 9,
+   "branch": 9
+  },
+  "case30": {
+   "convergiu": true,
+   "bus": 30,
+   "branch": 41
+  }
+ },
+ "exportacao_pandapower": {
+  "conferencia_independente": {
+   "trechos": 5,
+   "nos": 8,
+   "subredes": 2
+  },
+  "pandapower": {
+   "bus": 7,
+   "barras_esperadas": 7,
+   "line": 5,
+   "linhas_esperadas": 5,
+   "trafo": 1,
+   "transformadores_esperados": 1,
+   "load": 1,
+   "cargas_esperadas": 1,
+   "sgen": 1,
+   "geracao_distribuida_esperada": 1,
+   "ext_grid": 1,
+   "impedancia_de_referencia": {
+    "r_ohm_per_km": 0.058,
+    "x_ohm_per_km": 0.1206,
+    "c_nf_per_km": 3.4,
+    "max_i_ka": 0.4
+   },
+   "vk_percent_de_referencia": 7.0,
+   "barras_com_coordenada": 7
+  }
+ },
+ "importacao_matpower": {
+  "case9": {
+   "contagens": {
+    "base_mva": 100.0,
+    "barras_no_caso": 9,
+    "barras_gravadas": 9,
+    "ramos_no_caso": 9,
+    "ramos_gravados": 9,
+    "ramos_fora_de_servico": 0,
+    "geradores_no_caso": 3,
+    "barras_com_geracao": 3,
+    "barras_sem_geometria": 9,
+    "transformadores": 0,
+    "comprimento_declarado": false
+   },
+   "arestas_no_caminho": 2,
+   "ramos_sem_comprimento_no_caminho": 2
+  },
+  "case30": {
+   "contagens": {
+    "base_mva": 100.0,
+    "barras_no_caso": 30,
+    "barras_gravadas": 30,
+    "ramos_no_caso": 41,
+    "ramos_gravados": 41,
+    "ramos_fora_de_servico": 0,
+    "geradores_no_caso": 6,
+    "barras_com_geracao": 6,
+    "barras_sem_geometria": 30,
+    "transformadores": 0,
+    "comprimento_declarado": false
+   },
+   "arestas_no_caminho": 5,
+   "ramos_sem_comprimento_no_caminho": 5
+  }
+ }
+}

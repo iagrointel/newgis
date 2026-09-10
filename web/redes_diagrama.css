@@ -1,0 +1,74 @@
+/* plat · diagrama de rede — estilo da tela /redes/diagrama (item L4-04-d-diagrama-esquematico). Escopado a
+   `body.redes-diagrama`: nenhuma regra de web/style.css é tocada.
+
+   Os dois quadros (esquema e mapa) têm fundo CLARO FIXO, e não `var(--painel)`, pela mesma razão registrada
+   em web/mapa.css: o que está dentro deles é desenho de cor fixa (o estilo do MapLibre não reflui com a
+   preferência de tema do sistema), então o que fica em cima também não pode refluir, ou o nó desaparece
+   contra o próprio fundo. As cores dos nós são as mesmas de `app/rede_utilidades/diagrama.py::_CORES`, para
+   que o SVG exportado e a tela mostrem a mesma figura.
+
+   O nó é um <button> (marcador com DOM próprio no MapLibre): tem foco visível, é alcançável pelo teclado e
+   anuncia o rótulo no leitor de tela. Um círculo desenhado no canvas não teria nada disso. */
+body.redes-diagrama {
+  --no-terminal: #2463a8;
+  --no-conexao: #8a8f98;
+  --no-conteiner: #d98a2b;
+  --no-selecionado: #b4341f;
+  --quadro-fundo: #f7f8fa;
+  --quadro-borda: #c8ced6;
+}
+
+body.redes-diagrama .quadros-diagrama {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--e3);
+  margin-top: var(--e3);
+}
+
+body.redes-diagrama .quadro h2 { font-size: 1rem; margin: 0 0 var(--e1); }
+
+body.redes-diagrama .tela-mapa {
+  height: 62vh;
+  min-height: 320px;
+  border: 1px solid var(--quadro-borda);
+  border-radius: var(--raio);
+  background: var(--quadro-fundo);
+  overflow: hidden;
+}
+
+body.redes-diagrama .marcador-no {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: var(--no-conexao);
+  cursor: pointer;
+}
+
+body.redes-diagrama .marcador-no[data-papel="terminal"] { background: var(--no-terminal); }
+body.redes-diagrama .marcador-no[data-papel="conteiner"] { background: var(--no-conteiner); }
+body.redes-diagrama .marcador-no[data-papel="conexao"] { width: 9px; height: 9px; }
+
+/* a seleção precisa ser visível SEM depender de cor (uma pessoa com daltonismo tem de ver a diferença):
+   além da cor, o nó selecionado ganha um anel e cresce. */
+body.redes-diagrama .marcador-no.selecionado {
+  background: var(--no-selecionado);
+  box-shadow: 0 0 0 4px rgba(180, 52, 31, .35);
+  transform: scale(1.35);
+}
+
+body.redes-diagrama .marcador-no:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+
+body.redes-diagrama .etiqueta {
+  display: inline-block;
+  padding: 2px var(--e1);
+  border-radius: var(--raio);
+  border: 1px solid var(--borda);
+}
+
+body.redes-diagrama .etiqueta.estado-consistente { border-color: #2f7d4f; color: #2f7d4f; }
+body.redes-diagrama .etiqueta.estado-inconsistente { border-color: #b4341f; color: #b4341f; }

@@ -1,0 +1,71 @@
+{
+  "item": "L4-02-e-configuracoes-de-tracado",
+  "rede_id": "77610e1f-5015-4ebb-ad30-902caddbfa8e",
+  "maquina": {
+    "carga_1min": 7.16,
+    "ram_livre_gb": 7.3,
+    "medido_em": "2026-09-08T06:01:00"
+  },
+  "clausulas": {
+    "kva_a_jusante": {
+      "kva_da_funcao": 940.0,
+      "kva_do_arquivo": 1730.0,
+      "trafos_alcancados": 34,
+      "trafos_do_arquivo": 50,
+      "diferenca_pct": -45.665,
+      "estado": "parcial_alcancado_pela_topologia"
+    }
+  },
+  "avisos": [
+    "16 de 50 transformadores que o cadastro filia a este alimentador não são alcançados pela topologia: o cadastro filia por campo, o traçado anda pela rede"
+  ],
+  "configuracoes_instaladas_com_o_pacote": 6,
+  "alimentador": {
+    "trechos_no_arquivo": 451,
+    "trafos_no_arquivo": 50,
+    "kva_no_arquivo": 1730.0
+  },
+  "carga": {
+    "ssdmt": {
+      "linhas": 451,
+      "segundos": 0.026
+    },
+    "trafo": {
+      "linhas": 50,
+      "segundos": 0.003
+    }
+  },
+  "topologia": {
+    "rede_id": "77610e1f-5015-4ebb-ad30-902caddbfa8e",
+    "tolerancia_m": 0.05,
+    "nos": 499,
+    "arestas": 451,
+    "nos_orfaos": 47,
+    "arestas_sem_no": 0,
+    "duracao_ms": 152,
+    "construido_em": "2026-09-08T06:01:01Z",
+    "segundos": 0.2
+  },
+  "controladores": {
+    "tier_media_tensao": "media_tensao",
+    "tier_baixa_tensao": "baixa_tensao",
+    "alimentadores": 1,
+    "alimentadores_por_dispositivo": 0,
+    "alimentadores_por_no_de_cabeca": 1,
+    "alimentadores_sem_no": 0,
+    "transformadores": 50,
+    "transformadores_marcados": 50,
+    "ja_marcados": 0
+  },
+  "controlador": {
+    "origem": "no_de_cabeca",
+    "tier": "media_tensao"
+  },
+  "tracado": {
+    "segundos": 0.1,
+    "direcao": "definida",
+    "motivo": null,
+    "contagem": 49,
+    "duracao_ms": 85
+  }
+}

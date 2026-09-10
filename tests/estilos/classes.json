@@ -1,0 +1,108 @@
+{
+  "corpo": {
+    "maplibre": {
+      "layers": [
+        {
+          "id": "camada",
+          "paint": {
+            "fill-color": [
+              "case",
+              [
+                "all",
+                [
+                  ">=",
+                  [
+                    "to-number",
+                    [
+                      "get",
+                      "area_ha"
+                    ]
+                  ],
+                  0
+                ],
+                [
+                  "<",
+                  [
+                    "to-number",
+                    [
+                      "get",
+                      "area_ha"
+                    ]
+                  ],
+                  50
+                ]
+              ],
+              "#deebf7",
+              [
+                "all",
+                [
+                  ">=",
+                  [
+                    "to-number",
+                    [
+                      "get",
+                      "area_ha"
+                    ]
+                  ],
+                  50
+                ],
+                [
+                  "<",
+                  [
+                    "to-number",
+                    [
+                      "get",
+                      "area_ha"
+                    ]
+                  ],
+                  200
+                ]
+              ],
+              "#6baed6",
+              "#08519c"
+            ],
+            "fill-opacity": 1.0
+          },
+          "type": "fill"
+        },
+        {
+          "id": "camada-contorno",
+          "paint": {
+            "line-color": "#1d3c34",
+            "line-width": 0.6
+          },
+          "type": "line"
+        }
+      ],
+      "version": 8
+    },
+    "plat_construtor": {
+      "campo": "area_ha",
+      "campos": [
+        "area_ha"
+      ],
+      "classes": [
+        {
+          "cor": "#deebf7",
+          "max": 50,
+          "min": 0
+        },
+        {
+          "cor": "#6baed6",
+          "max": 200,
+          "min": 50
+        },
+        {
+          "cor": "#08519c",
+          "max": 1000,
+          "min": 200
+        }
+      ],
+      "geometria": "poligono",
+      "metodo": "manual",
+      "tipo": "classes",
+      "versao": 1
+    }
+  },
+  "esquema_versao": 1
+}

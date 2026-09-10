@@ -239,6 +239,9 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
         with ctx.db() as cur:
             cur.execute("SELECT plat.camada_preparar(%s, %s, %s, %s, %s)",
                         (schema, tabela, srid, tipo_escolhido_raw, ctx.usuario_id))
+            # item L2-04-a: a função de tile da camada (d_<slug>.t_<16 hex>) e a política de RLS do papel de
+            # leitura nascem aqui, com a tabela; sem isto a camada não é servível pelo Martin.
+            cur.execute("SELECT plat.camada_tile_garantir(%s, %s, %s::uuid)", (schema, tabela, item_id))
 
         # ------------------------------------------------------------ estatísticas
         ctx.progresso(80, "estatísticas")

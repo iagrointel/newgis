@@ -1,0 +1,84 @@
+{
+ "item": "L2-04-e-vector-tile-server-tilejson",
+ "medidas": {
+  "geojson_1mi_rss_kb": {
+   "comando": "GET /svc/<token>/camadas/<item>.geojson (1.000.000 feições, 355378070 bytes) contra uvicorn real; amostra de /proc/<pid>/status:VmRSS a cada 100 ms",
+   "em": "2026-09-07T16:44:12.059292+00:00",
+   "sha": "7b2687f88f54",
+   "unidade": "kB",
+   "valor": 144944
+  },
+  "tilejson_valido_esquema_3_0_0": {
+   "valor": true,
+   "unidade": "bool",
+   "comando": "GET /tiles/<token>/<item>/tilejson.json + jsonschema contra docs/esquemas/vendorizados/tilejson-3.0.0.schema.json"
+  },
+  "tile_esri_ordem_zyx_igual_a_maplibre_zxy_bytes": {
+   "valor": 723,
+   "unidade": "bytes",
+   "comando": "GET /tiles/<token>/<item>/2/2/2.pbf vs GET /svc/<token>/.../VectorTileServer/tile/2/2/2.pbf"
+  },
+  "root_json_valido_style_spec_oficial": {
+   "valor": true,
+   "unidade": "bool",
+   "comando": "GET .../VectorTileServer/resources/styles/root.json + node ferramentas/estilo/validar.mjs (pacote oficial @maplibre/maplibre-gl-style-spec)"
+  },
+  "sprites_e_fontes_200": {
+   "valor": {
+    "sprite_json": 200,
+    "sprite_png": 200,
+    "fontes_pbf": 200
+   },
+   "unidade": "status",
+   "comando": "GET /svc/plat_f8ZUOJxZHyz7LEradSdOIygXJmdkBujuElBa6PL1lxS/rest/services/b08a90d3-0843-4cc2-b999-256c7bc215fe/VectorTileServer/resources/sprites/sprite.json|.png e /fonts/Arial Regular/0-255.pbf"
+  },
+  "kml_10_mil_feicoes_ogrinfo": {
+   "valor": 10000,
+   "unidade": "feicoes",
+   "comando": "GET /svc/<token>/camadas/<item>.kml (10.000 linhas) -> ogrinfo -so; saída: atualizado_por: String (0.0)"
+  },
+  "token_revogado_401_em_todas_as_rotas": {
+   "valor": {
+    "/tiles/plat_f8ZUOJxZHyz7LEradSdOIygXJmdkBujuElBa6PL1lxS/b08a90d3-0843-4cc2-b999-256c7bc215fe/tilejson.json": 401,
+    "/tiles/plat_f8ZUOJxZHyz7LEradSdOIygXJmdkBujuElBa6PL1lxS/b08a90d3-0843-4cc2-b999-256c7bc215fe/0/0/0.pbf": 401,
+    "/svc/plat_f8ZUOJxZHyz7LEradSdOIygXJmdkBujuElBa6PL1lxS/rest/services/b08a90d3-0843-4cc2-b999-256c7bc215fe/VectorTileServer": 401,
+    "/svc/plat_f8ZUOJxZHyz7LEradSdOIygXJmdkBujuElBa6PL1lxS/rest/services/b08a90d3-0843-4cc2-b999-256c7bc215fe/VectorTileServer/resources/styles/root.json": 401,
+    "/svc/plat_f8ZUOJxZHyz7LEradSdOIygXJmdkBujuElBa6PL1lxS/rest/services/b08a90d3-0843-4cc2-b999-256c7bc215fe/VectorTileServer/resources/sprites/sprite.json": 401,
+    "/svc/plat_f8ZUOJxZHyz7LEradSdOIygXJmdkBujuElBa6PL1lxS/rest/services/b08a90d3-0843-4cc2-b999-256c7bc215fe/VectorTileServer/resources/fonts/Arial/0-255.pbf": 401,
+    "/svc/plat_f8ZUOJxZHyz7LEradSdOIygXJmdkBujuElBa6PL1lxS/rest/services/b08a90d3-0843-4cc2-b999-256c7bc215fe/VectorTileServer/tile/0/0/0.pbf": 401,
+    "/svc/plat_f8ZUOJxZHyz7LEradSdOIygXJmdkBujuElBa6PL1lxS/camadas/b08a90d3-0843-4cc2-b999-256c7bc215fe.geojson": 401,
+    "/svc/plat_f8ZUOJxZHyz7LEradSdOIygXJmdkBujuElBa6PL1lxS/camadas/b08a90d3-0843-4cc2-b999-256c7bc215fe.csv": 401,
+    "/svc/plat_f8ZUOJxZHyz7LEradSdOIygXJmdkBujuElBa6PL1lxS/camadas/b08a90d3-0843-4cc2-b999-256c7bc215fe.kml": 401
+   },
+   "unidade": "status",
+   "comando": "revoga o token e repete as 10 rotas"
+  }
+ },
+ "gerado_em": "2026-09-07T16:53:24Z",
+ "git_sha": "7b2687f88f54",
+ "medidas_manuais_reproduziveis": {
+  "qgis_carrega_vector_tile_por_url_do_root_json": {
+   "resultado": "passou (medido aqui, sem GUI: PyQGIS 3.34.4 headless, QT_QPA_PLATFORM=offscreen)",
+   "prova": "QgsVectorTileLayer('type=xyz&url=<base>/tile/{z}/{y}/{x}.pbf&zmin=0&zmax=22', ...).isValid() == True; QgsMapBoxGlStyleConverter().convert(root.json) devolveu Success (0) contra o MESMO root.json servido pela API; renderer aplicado à camada e um QgsMapRendererParallelJob real desenhou as 30 feições (requisições HTTP reais de tile chegaram ao uvicorn, vistas no log de acesso) — captura salva",
+   "captura": "tests/medidas/L2-04-e_qgis_captura.png",
+   "comando": "QT_QPA_PLATFORM=offscreen venv/bin/python - (script no handoff, laco/handoffs/T3/L2-04-e-vector-tile-server-tilejson.md)"
+  },
+  "pro_agol_de_verdade": {
+   "resultado": "PENDENTE",
+   "nota_honesta": "D20 do item: credencial AGOL do parceiro não disponível nesta máquina. Só QGIS foi medido; ArcGIS Pro/AGOL exigem o teste do parceiro."
+  },
+  "tile_zoom_25": {
+   "resultado": "502 (nunca 500 cru nem estouro sem tratamento)",
+   "prova": "plat.camada_tile_garantir só aceita z 0-24 (migração 20260906T1546); Martin recusa e app.tiles.martin_cliente mapeia qualquer status != 200/204 do Martin para 502 'martin_erro', nomeado — teste test_tile_zoom_25_nao_derruba_o_servico"
+  },
+  "csv_sem_geometria_e_com_geometria_multi": {
+   "resultado": "multi: passou (MULTIPOLYGON em WKT, teste test_csv_export_com_geometria_multi); sem geometria: não existe esse conceito no catálogo",
+   "nota_honesta": "toda camada_vetorial exige SRID/tipo em plat.camada_preparar — não há 'tabela sem geometria' publicável por este caminho; um item alheio ao escopo do token dá 403 (nunca 404, nunca 500)"
+  },
+  "etag_muda_apos_edicao": {
+   "resultado": "passou, com fronteira registrada",
+   "prova": "ETag = sha256 dos bytes do tile; UPDATE na geometria + reinício do cache do Martin (deploy/martin.yaml: cache expiry 5m) mudou o ETag de \"915e43c5798b4bde109e3bbf81ac7958\" para \"3528efc464a34600075929803b64f036\" no MESMO tile",
+   "nota_honesta": "achado real do adversário: DENTRO da janela de 5 min do cache em memória do próprio Martin (decisão já tomada pelo L2-01-b, chave = URI completa), o mesmo pedido repete o ETag antigo mesmo após editar — não é defeito deste item, é o cache já aceito pelo item anterior; sem parâmetro de versão na query não há como furar esse cache em menos de 5 min (ver ADR 20260907T1648, refutação)"
+  }
+ }
+}

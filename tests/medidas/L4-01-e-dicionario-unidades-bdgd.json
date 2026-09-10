@@ -1,0 +1,16 @@
+{
+ "item": "L4-01-e-dicionario-unidades-bdgd",
+ "clausulas": {
+  "auditoria_por_campo": "SSDMT.COMP e UCBT_tab.ENE com declarada, detectada e fator",
+  "km_x_metros": "mesmo comprimento em metros nos dois arquivos",
+  "mwh_x_kwh": "mesma energia anual em quilowatt-hora nos dois arquivos",
+  "sumario_le_da_auditoria": "km_declarado e energia_anual_kwh mudam com a unidade medida",
+  "exportador_le_da_auditoria": "carga do OpenDSS mil vezes maior com o arquivo em megawatt-hora"
+ },
+ "medido": {
+  "kw_da_primeira_carga_arquivo_em_kwh": 0.000137,
+  "kw_da_primeira_carga_arquivo_em_mwh": 0.136612,
+  "energia_anual_do_arquivo_sintetico_kwh": 64800.0,
+  "comprimento_geodesico_total_m": 2324.901
+ }
+}

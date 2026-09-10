@@ -1,0 +1,85 @@
+{
+ "item": "L4-04-c-unificar-subrede",
+ "assinado_por": "construtor+fila (trilha il404cunifi)",
+ "gerado_em": "2026-09-08T02:47:34Z",
+ "git_sha": "7a12cd420e76d78235317c8eb7c65b3070af7b88",
+ "maquina": "PostgreSQL 16 em iagro_sat; base própria da trilha (plat_til404cunifi); fonte = BDGD da cooperativa de teste (ativo da casa, somente leitura); outras sessões da casa na mesma máquina",
+ "medidas": {
+  "rede_id": "cfe1d099-3c1c-47ff-8694-06288fc6128c",
+  "clausulas": {
+   "subrede_derivada_bate_com_a_do_arquivo": {
+    "prova": "3 de 3 alimentadores declarados pelo arquivo têm subrede derivada de mesmo nome no tier de média tensão = 1.0 (alvo 0.95); recorte de 3 alimentadores da cooperativa de teste; carga da máquina 4.82, 7.12 GB de RAM livre",
+    "ok": true
+   },
+   "reconciliacao_idempotente": {
+    "prova": "segunda passagem: {'declaradas': 3, 'com_equivalente': 3, 'sem_equivalente': 0, 'taxa': 1.0} (igual à primeira)",
+    "ok": true
+   }
+  },
+  "avisos": [],
+  "recorte": {
+   "quantos_alimentadores": 3,
+   "ctmts_no_arquivo_no_recorte": 3,
+   "postes": "fora (0 nó de topologia)"
+  },
+  "carga_bdgd": {
+   "ssdmt": {
+    "linhas": 13646,
+    "segundos": 0.43
+   },
+   "ssdbt": {
+    "linhas": 8550,
+    "segundos": 0.265
+   },
+   "ramlig": {
+    "linhas": 0,
+    "segundos": 0.002
+   },
+   "trafo": {
+    "linhas": 1729,
+    "segundos": 0.043
+   }
+  },
+  "importacao": {
+   "tier_media_tensao": "media_tensao",
+   "tier_baixa_tensao": "baixa_tensao",
+   "alimentadores": 3,
+   "alimentadores_por_dispositivo": 0,
+   "alimentadores_por_no_de_cabeca": 3,
+   "alimentadores_sem_no": 0,
+   "transformadores": 1729,
+   "transformadores_marcados": 1729,
+   "ja_marcados": 0
+  },
+  "declarado": {
+   "subestacoes": 3,
+   "alimentadores": 3,
+   "transformadores": 1729,
+   "alimentadores_sem_subestacao": 0,
+   "transformadores_sem_alimentador": 0,
+   "ja_declaradas": 0
+  },
+  "reconciliacao": {
+   "alimentadores": {
+    "declaradas": 3,
+    "com_equivalente": 3,
+    "sem_equivalente": 0,
+    "taxa": 1.0
+   },
+   "transformadores": {
+    "declaradas": 1729,
+    "com_equivalente": 1729,
+    "sem_equivalente": 0,
+    "taxa": 1.0
+   }
+  },
+  "tempo": {
+   "segundos": 30.84,
+   "carga_1min": 4.82,
+   "ram_livre_gb": 7.12,
+   "medido_em": "2026-09-08T02:46:47Z"
+  },
+  "ok": true
+ },
+ "comando": "bash laco/roda_teste.sh tests/api/test_rede_subrede_unificada_medida.py -m lento -q"
+}

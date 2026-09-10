@@ -1,0 +1,29 @@
+{
+  "corpo": {
+    "maplibre": {
+      "layers": [
+        {
+          "id": "camada",
+          "paint": {
+            "raster-opacity": 1.0
+          },
+          "type": "raster"
+        }
+      ],
+      "version": 8
+    },
+    "plat_construtor": {
+      "geometria": "raster",
+      "parametros_raster": {
+        "colormap_name": "viridis",
+        "rescale": [
+          0,
+          255
+        ]
+      },
+      "tipo": "raster",
+      "versao": 1
+    }
+  },
+  "esquema_versao": 1
+}

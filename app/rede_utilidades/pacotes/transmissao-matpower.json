@@ -1,0 +1,583 @@
+{
+ "atributos": [
+  {
+   "codigo": "area",
+   "grupo": "barra",
+   "nome": "área do sistema",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "mpc.bus",
+    "coluna": "area",
+    "conferida": true,
+    "esquema": "matpower_caseformat_2",
+    "nota": "coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte"
+   },
+   "tipo_dado": "inteiro",
+   "unidade": null
+  },
+  {
+   "codigo": "base_kv",
+   "grupo": "barra",
+   "nome": "tensão de base da barra",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "mpc.bus",
+    "coluna": "baseKV",
+    "conferida": true,
+    "esquema": "matpower_caseformat_2",
+    "nota": "coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte"
+   },
+   "tipo_dado": "real",
+   "unidade": "kV"
+  },
+  {
+   "codigo": "bus_i",
+   "grupo": "barra",
+   "nome": "número da barra no caso",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "mpc.bus",
+    "coluna": "bus_i",
+    "conferida": true,
+    "esquema": "matpower_caseformat_2",
+    "nota": "coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte"
+   },
+   "tipo_dado": "inteiro",
+   "unidade": null
+  },
+  {
+   "codigo": "bus_type",
+   "grupo": "barra",
+   "nome": "tipo da barra",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "mpc.bus",
+    "coluna": "type",
+    "conferida": true,
+    "esquema": "matpower_caseformat_2",
+    "nota": "coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte"
+   },
+   "tipo_dado": "inteiro",
+   "unidade": null
+  },
+  {
+   "codigo": "gen_n",
+   "grupo": "barra",
+   "nome": "quantidade de geradores ligados à barra",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "mpc.gen",
+    "coluna": "bus",
+    "conferida": true,
+    "esquema": "matpower_caseformat_2",
+    "nota": "coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte Somado por barra: o caseformat permite mais de uma linha da matriz gen na mesma barra."
+   },
+   "tipo_dado": "inteiro",
+   "unidade": null
+  },
+  {
+   "codigo": "gen_pg",
+   "grupo": "barra",
+   "nome": "potência ativa gerada na barra",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "mpc.gen",
+    "coluna": "Pg",
+    "conferida": true,
+    "esquema": "matpower_caseformat_2",
+    "nota": "coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte Soma das linhas da matriz gen desta barra."
+   },
+   "tipo_dado": "real",
+   "unidade": "MW"
+  },
+  {
+   "codigo": "gen_qg",
+   "grupo": "barra",
+   "nome": "potência reativa gerada na barra",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "mpc.gen",
+    "coluna": "Qg",
+    "conferida": true,
+    "esquema": "matpower_caseformat_2",
+    "nota": "coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte Soma das linhas da matriz gen desta barra."
+   },
+   "tipo_dado": "real",
+   "unidade": "Mvar"
+  },
+  {
+   "codigo": "gen_vg",
+   "grupo": "barra",
+   "nome": "tensão de referência do gerador",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "mpc.gen",
+    "coluna": "Vg",
+    "conferida": true,
+    "esquema": "matpower_caseformat_2",
+    "nota": "coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte Da primeira linha da matriz gen desta barra."
+   },
+   "tipo_dado": "real",
+   "unidade": "pu"
+  },
+  {
+   "codigo": "pd",
+   "grupo": "barra",
+   "nome": "potência ativa demandada",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "mpc.bus",
+    "coluna": "Pd",
+    "conferida": true,
+    "esquema": "matpower_caseformat_2",
+    "nota": "coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte"
+   },
+   "tipo_dado": "real",
+   "unidade": "MW"
+  },
+  {
+   "codigo": "qd",
+   "grupo": "barra",
+   "nome": "potência reativa demandada",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "mpc.bus",
+    "coluna": "Qd",
+    "conferida": true,
+    "esquema": "matpower_caseformat_2",
+    "nota": "coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte"
+   },
+   "tipo_dado": "real",
+   "unidade": "Mvar"
+  },
+  {
+   "codigo": "va",
+   "grupo": "barra",
+   "nome": "ângulo da tensão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "mpc.bus",
+    "coluna": "Va",
+    "conferida": true,
+    "esquema": "matpower_caseformat_2",
+    "nota": "coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte"
+   },
+   "tipo_dado": "real",
+   "unidade": "grau"
+  },
+  {
+   "codigo": "vm",
+   "grupo": "barra",
+   "nome": "módulo da tensão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "mpc.bus",
+    "coluna": "Vm",
+    "conferida": true,
+    "esquema": "matpower_caseformat_2",
+    "nota": "coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte"
+   },
+   "tipo_dado": "real",
+   "unidade": "pu"
+  },
+  {
+   "codigo": "angle",
+   "grupo": "ramo",
+   "nome": "defasagem angular",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "mpc.branch",
+    "coluna": "angle",
+    "conferida": true,
+    "esquema": "matpower_caseformat_2",
+    "nota": "coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte"
+   },
+   "tipo_dado": "real",
+   "unidade": "grau"
+  },
+  {
+   "codigo": "b",
+   "grupo": "ramo",
+   "nome": "susceptância total de carregamento",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "mpc.branch",
+    "coluna": "b",
+    "conferida": true,
+    "esquema": "matpower_caseformat_2",
+    "nota": "coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte"
+   },
+   "tipo_dado": "real",
+   "unidade": "pu"
+  },
+  {
+   "codigo": "f_bus",
+   "grupo": "ramo",
+   "nome": "barra de origem",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "mpc.branch",
+    "coluna": "fbus",
+    "conferida": true,
+    "esquema": "matpower_caseformat_2",
+    "nota": "coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte"
+   },
+   "tipo_dado": "inteiro",
+   "unidade": null
+  },
+  {
+   "codigo": "r",
+   "grupo": "ramo",
+   "nome": "resistência",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "mpc.branch",
+    "coluna": "r",
+    "conferida": true,
+    "esquema": "matpower_caseformat_2",
+    "nota": "coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte"
+   },
+   "tipo_dado": "real",
+   "unidade": "pu"
+  },
+  {
+   "codigo": "rate_a",
+   "grupo": "ramo",
+   "nome": "capacidade de longa duração",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "mpc.branch",
+    "coluna": "rateA",
+    "conferida": true,
+    "esquema": "matpower_caseformat_2",
+    "nota": "coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte"
+   },
+   "tipo_dado": "real",
+   "unidade": "MVA"
+  },
+  {
+   "codigo": "ratio",
+   "grupo": "ramo",
+   "nome": "relação de transformação",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "mpc.branch",
+    "coluna": "ratio",
+    "conferida": true,
+    "esquema": "matpower_caseformat_2",
+    "nota": "coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte"
+   },
+   "tipo_dado": "real",
+   "unidade": null
+  },
+  {
+   "codigo": "status",
+   "grupo": "ramo",
+   "nome": "em serviço",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "mpc.branch",
+    "coluna": "status",
+    "conferida": true,
+    "esquema": "matpower_caseformat_2",
+    "nota": "coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte"
+   },
+   "tipo_dado": "inteiro",
+   "unidade": null
+  },
+  {
+   "codigo": "t_bus",
+   "grupo": "ramo",
+   "nome": "barra de destino",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "mpc.branch",
+    "coluna": "tbus",
+    "conferida": true,
+    "esquema": "matpower_caseformat_2",
+    "nota": "coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte"
+   },
+   "tipo_dado": "inteiro",
+   "unidade": null
+  },
+  {
+   "codigo": "x",
+   "grupo": "ramo",
+   "nome": "reatância",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "mpc.branch",
+    "coluna": "x",
+    "conferida": true,
+    "esquema": "matpower_caseformat_2",
+    "nota": "coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte"
+   },
+   "tipo_dado": "real",
+   "unidade": "pu"
+  }
+ ],
+ "categorias": [
+  {
+   "codigo": "barramento",
+   "descricao": "Ponto do sistema onde a tensão é a mesma para todos os ramos que ali chegam.",
+   "nome": "Barramento"
+  },
+  {
+   "codigo": "consumo",
+   "descricao": "Potência ativa e reativa retirada do sistema numa barra.",
+   "nome": "Consumo"
+  },
+  {
+   "codigo": "injecao",
+   "descricao": "Elemento que injeta potência ativa no sistema.",
+   "nome": "Injeção"
+  },
+  {
+   "codigo": "interligacao",
+   "descricao": "Elemento que liga duas barras e carrega potência entre elas.",
+   "nome": "Interligação"
+  },
+  {
+   "codigo": "transformacao",
+   "descricao": "Elemento que liga dois níveis de tensão.",
+   "nome": "Transformação"
+  }
+ ],
+ "dominios": [
+  {
+   "codigo": "transmissao",
+   "descricao": "Rede equilibrada de alta tensão, da usina ao ponto de entrega da distribuidora.",
+   "disciplina": "eletrica",
+   "nome": "Transmissão de energia elétrica",
+   "ordem": 1,
+   "tipo": "dominio"
+  }
+ ],
+ "esquema": "plat.rede.pacote",
+ "esquema_versao": 1,
+ "grupos": [
+  {
+   "camadas_fonte": [
+    "mpc.bus"
+   ],
+   "codigo": "barra",
+   "descricao": "Linha da matriz bus do caso. Sem coordenada: o caseformat não tem coluna de posição.",
+   "dominio": "transmissao",
+   "geometria": "sem_geometria",
+   "nome": "Barra"
+  },
+  {
+   "camadas_fonte": [
+    "mpc.branch"
+   ],
+   "codigo": "ramo",
+   "descricao": "Linha da matriz branch. Ramo com relação de transformação diferente de zero é transformador; os demais são linha.",
+   "dominio": "transmissao",
+   "geometria": "sem_geometria",
+   "nome": "Ramo"
+  }
+ ],
+ "pacote": {
+  "codigo": "transmissao-matpower",
+  "descricao": "Pacote de ativos de rede de transmissão/subtransmissão no vocabulário do caseformat versão 2 do MATPOWER: barra e ramo (linha e transformador de potência); o que a matriz gen declara entra como atributo da barra. Existe porque o caso do MATPOWER descreve uma rede ELÉTRICA SEM GEOMETRIA — as matrizes bus/branch/gen não têm coordenada nenhuma. Por isso todo grupo deste pacote tem geometria 'sem_geometria': a barra importada vira objeto não espacial, e nunca um ponto na coordenada (0, 0). O vocabulário de distribuição (pacote eletrica-br, da BDGD) não serve aqui: lá o objeto é o trecho de média tensão com traçado medido em campo.",
+  "disciplina": "eletrica",
+  "fonte": "https://github.com/MATPOWER/matpower",
+  "nome": "Transmissão no vocabulário do MATPOWER",
+  "versao": "1.0.0"
+ },
+ "regras": [
+  {
+   "de": "ramo/1",
+   "descricao": "ramo ligado à barra",
+   "para": "barra/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "ramo/1",
+   "descricao": "ramo ligado à barra",
+   "para": "barra/2",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "ramo/1",
+   "descricao": "ramo ligado à barra",
+   "para": "barra/3",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "ramo/1",
+   "descricao": "ramo ligado à barra",
+   "para": "barra/4",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "ramo/2",
+   "descricao": "ramo ligado à barra",
+   "para": "barra/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "ramo/2",
+   "descricao": "ramo ligado à barra",
+   "para": "barra/2",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "ramo/2",
+   "descricao": "ramo ligado à barra",
+   "para": "barra/3",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "ramo/2",
+   "descricao": "ramo ligado à barra",
+   "para": "barra/4",
+   "tipo": "conectividade_no_trecho"
+  }
+ ],
+ "terminais": [
+  {
+   "caminhos_validos": [
+    {
+     "de": 1,
+     "nome": "fechado",
+     "para": 2
+    }
+   ],
+   "codigo": "dois_terminais",
+   "nome": "Dois terminais",
+   "terminais": [
+    {
+     "id": 1,
+     "montante": true,
+     "nome": "de"
+    },
+    {
+     "id": 2,
+     "montante": false,
+     "nome": "para"
+    }
+   ]
+  },
+  {
+   "caminhos_validos": [],
+   "codigo": "sem_terminal",
+   "nome": "Sem terminal",
+   "terminais": []
+  }
+ ],
+ "tiers": [
+  {
+   "codigo": "sistema",
+   "descricao": "O caso inteiro. O caseformat do MATPOWER não declara hierarquia de subrede; a área (coluna area da matriz bus) é partição, não hierarquia.",
+   "dominio": "transmissao",
+   "nome": "Sistema",
+   "ordem": 1,
+   "tipo": "hierarquico"
+  },
+  {
+   "codigo": "area",
+   "descricao": "Partição declarada na coluna area da matriz bus.",
+   "dominio": "transmissao",
+   "nome": "Área",
+   "ordem": 2,
+   "tipo": "particionado"
+  }
+ ],
+ "tipos": [
+  {
+   "categorias": [
+    "barramento",
+    "consumo"
+   ],
+   "chave": "barra_de_carga",
+   "codigo": 1,
+   "codigos_fonte": [
+    "1"
+   ],
+   "descricao": "type = 1 na matriz bus.",
+   "grupo": "barra",
+   "nome": "Barra de carga (PQ)",
+   "terminal": "sem_terminal",
+   "tier": "sistema"
+  },
+  {
+   "categorias": [
+    "barramento",
+    "injecao"
+   ],
+   "chave": "barra_de_geracao",
+   "codigo": 2,
+   "codigos_fonte": [
+    "2"
+   ],
+   "descricao": "type = 2 na matriz bus.",
+   "grupo": "barra",
+   "nome": "Barra de geração (PV)",
+   "terminal": "sem_terminal",
+   "tier": "sistema"
+  },
+  {
+   "categorias": [
+    "barramento",
+    "injecao"
+   ],
+   "chave": "barra_de_referencia",
+   "codigo": 3,
+   "codigos_fonte": [
+    "3"
+   ],
+   "descricao": "type = 3 na matriz bus: a barra que fecha o balanço.",
+   "grupo": "barra",
+   "nome": "Barra de referência (slack)",
+   "terminal": "sem_terminal",
+   "tier": "sistema"
+  },
+  {
+   "categorias": [
+    "barramento"
+   ],
+   "chave": "barra_isolada",
+   "codigo": 4,
+   "codigos_fonte": [
+    "4"
+   ],
+   "descricao": "type = 4 na matriz bus: fora de serviço.",
+   "grupo": "barra",
+   "nome": "Barra isolada",
+   "terminal": "sem_terminal",
+   "tier": "sistema"
+  },
+  {
+   "categorias": [
+    "interligacao"
+   ],
+   "chave": "linha_de_transmissao",
+   "codigo": 1,
+   "codigos_fonte": [
+    "ratio=0"
+   ],
+   "descricao": "Ramo com relação de transformação zero (coluna ratio).",
+   "grupo": "ramo",
+   "nome": "Linha de transmissão",
+   "terminal": "dois_terminais",
+   "tier": "sistema"
+  },
+  {
+   "categorias": [
+    "interligacao",
+    "transformacao"
+   ],
+   "chave": "transformador_de_potencia",
+   "codigo": 2,
+   "codigos_fonte": [
+    "ratio<>0"
+   ],
+   "descricao": "Ramo com relação de transformação diferente de zero.",
+   "grupo": "ramo",
+   "nome": "Transformador de potência",
+   "terminal": "dois_terminais",
+   "tier": "sistema"
+  }
+ ]
+}

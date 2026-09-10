@@ -64,7 +64,16 @@ def reescrever_schema(sql: str, schema: str = SCHEMA_PADRAO, schema_trabalho: st
 class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
     """RealDictCursor que reescreve o texto da consulta para settings.PLAT_SCHEMA/PLAT_SCHEMA_TRABALHO
     antes de mandar ao servidor. Import de app.settings é tardio (dentro do método) para não criar
-    ciclo — app/settings.py não importa este módulo."""
+    ciclo — app/settings.py não importa este módulo.
+
+    `execute` também reescreve consulta em BYTES, não só `str` (achado do item L4-01-modelo-rede,
+    06-07/09/2026): `psycopg2.extras.execute_values` monta a consulta final em bytes e chama
+    `cur.execute(bytes)` por dentro — sem este ramo, qualquer `execute_values` contra uma tabela
+    `plat.*` ia direto ao schema de PRODUÇÃO mesmo rodando numa base de trilha/homologação, porque
+    o `isinstance(query, str)` original nunca via essas consultas. `app/rede_utilidades/topologia.py`
+    (item L4-01-b) já tinha contornado o mesmo problema reimplementando `execute_values` à mão; o
+    conserto aqui é no cursor, então nenhum chamador de `execute_values` (presente ou futuro) precisa
+    saber disso."""
 
     def execute(self, query, *args, **kwargs):
         # `psycopg2.extras.execute_values` (usado pelos importadores em lote da rede de utilidades,
@@ -77,6 +86,8 @@ class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
             query = self._texto(query)
         if isinstance(query, str):
             query = self._reescrever(query)
+        elif isinstance(query, (bytes, bytearray)):
+            query = self._reescrever_bytes(bytes(query))
         return super().execute(query, *args, **kwargs)
 
     def executemany(self, query, vars_list):
@@ -119,3 +130,10 @@ class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
         if schema == SCHEMA_PADRAO and trabalho == SCHEMA_TRABALHO_PADRAO:
             return sql  # caminho de produção: nenhuma regex roda
         return reescrever_schema(sql, schema, trabalho)
+
+    @classmethod
+    def _reescrever_bytes(cls, sql: bytes) -> bytes:
+        schema, trabalho = esquemas_do_ambiente()
+        if schema == SCHEMA_PADRAO and trabalho == SCHEMA_TRABALHO_PADRAO:
+            return sql  # caminho de produção: nenhuma decodificação roda
+        return cls._reescrever(sql.decode("utf-8")).encode("utf-8")

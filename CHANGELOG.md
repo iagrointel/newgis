@@ -3,6 +3,283 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 7, setembro de 2026 (item L4-04-d-diagrama-esquematico: diagrama de rede, regras e layouts)
+
+O esquema do alimentador deixou de ser desenho de apresentação e virou objeto do produto. Um diagrama é um
+grafo derivado de um recorte da topologia — a subrede atualizada, um traçado com pontos de partida, ou uma
+seleção de feições —, passado pelas regras do modelo escolhido e posicionado por um layout. Fica gravado em
+`plat.rede_diagrama` com `rede_diagrama_no`/`rede_diagrama_aresta`, e as coordenadas dos nós vivem no espaço
+do diagrama, adimensional: o esquema não tem geografia, e guardar aquilo em graus faria parecer que tem.
+
+Três regras de construção, com vocabulário fechado: reduzir junção de passagem, colapsar contêiner e remover
+tipos. Seis layouts: árvore inteligente, radial, linha principal, geográfico, grade e força dirigida.
+Exportação em JSON, SVG e PNG, os três do mesmo grafo gravado. A tela `/redes/diagrama` põe o esquema e o
+mapa lado a lado e casa a seleção nos dois sentidos: cada nó é um botão de verdade nos dois quadros, com
+foco de teclado e rótulo anunciado, e a seleção não depende só de cor.
+
+Editar a rede marca o diagrama como `inconsistente` no mesmo instante em que marca a subrede suja — a área
+suja é apagada quando a topologia é reconstruída, então o estado tem de ser gravado na hora. Trocar de
+layout não conserta: só gerar de novo devolve `consistente`.
+
+Medido em `tests/medidas/L4-04-d-diagrama-esquematico.json` (comando
+`venv/bin/pytest tests/api/test_rede_diagrama_medida.py -m lento -q`), sobre o MAIOR alimentador da
+cooperativa de teste — 1 de 20, 4.963 trechos de média tensão no arquivo: o diagrama de 4.963 nós e 4.963
+ligações é gerado em **0,694 s** (teto do portão: 10 s), com carga 6,06 e 6,79 GB de RAM livre na máquina.
+Os quatro layouts do portão terminam com **0 par de nós a menos de 1 unidade**, entre 1,19 s e 1,76 s cada.
+A regra de redução leva o grafo de **4.963 para 1.037 nós** e mantém **1 componente conexo** antes e depois.
+
+O que NÃO faz, declarado em `docs/PARIDADE.md`: das cerca de onze opções de layout da fonte há seis; das
+muitas regras dela há três; não existe edição manual do desenho, nem diagrama que se refaça sozinho quando a
+subrede é atualizada, nem geração assíncrona. `colapsar_conteiner` é tradução, não equivalência — o modelo
+daqui não tem contêiner com conteúdo, e o que a regra colapsa é o dispositivo multi-terminal. O quadro do
+mapa desenha só os nós: ligar dois nós por uma reta seria inventar traçado. Acima de 200 nós a força
+dirigida cai na grade, com o aviso na resposta, porque ela compara todos contra todos a cada rodada.
+
+## turno 7, setembro de 2026 (item L4-01-f-alcance-do-tracado-rede-real: alcance do traçado e diagnóstico do órfão)
+
+O traçado a jusante alcançava 34 dos 50 transformadores de um alimentador do ativo de referência. A causa
+medida: a camada de PONTO do arquivo guarda a coordenada com 6 casas decimais de grau e a de LINHA com 13,
+então o mesmo poste aparece nas duas com até 0,073 m de diferença; os 16 transformadores fora estavam todos
+entre 0,051 m e 0,071 m da ponta de trecho mais próxima, e os 50 têm uma ponta cuja coordenada, arredondada
+a 6 casas, é IGUAL à deles. Subir a tolerância da rede não é conserto: com 1,0 m os laços da média tensão
+sobem de 584 para 638, porque o que funde nessa folga são pontas de trechos vizinhos.
+
+Conserto: `plat.rede_regra.tolerancia_m` (migração `20260908T0650`) declara a tolerância DAQUELE par de
+tipos; o pacote `eletrica-br` (versão 1.1.0) declara 0,10 m nos 16 pares que envolvem cadastro de ponto, e o
+par (trecho, trecho) fica com a tolerância da rede. `topologia._admitir_pares` aplica isso e mais uma trava:
+a folga extra serve para reencontrar o MESMO ponto, nunca para alcançar um SEGUNDO — sem ela, um dispositivo
+de dois terminais soldaria duas pontas distintas e fecharia ciclo (pego pelo teste da refutação). Novo
+`GET /api/rede/{id}/topologia/diagnostico`: os órfãos que sobram saem por classe, com contagem, distância e
+exemplo.
+
+Medido (`tests/medidas/L4-01-f-alcance-do-tracado-rede-real.json`; 7 alimentadores, 9.925 trechos, 1.172
+transformadores, cada alimentador na sua própria rede, carga 1 min 9,49 e 4,3 GB livres): transformadores
+alcançados a jusante do controlador de 428/600 para 599/600; pior alcance de um alimentador de 66,67 % para
+99,51 %; alimentadores acima de 95 % de 1 de 5 para 5 de 5; laços na média tensão iguais antes e depois
+(0,0,0,0,0,1,1 por alimentador); nós órfãos de 1.038 para 495. As classes `fora_da_tolerancia_declarada`
+(274 nós, todos entre 0,0503 m e 0,0726 m) e `derivacao_sem_no` somem; sobram o segundo terminal de cada
+transformador (sem a camada de baixa tensão carregada) e dois transformadores longe da rede. Dois dos sete
+alimentadores têm laço no próprio arquivo e o traçado recusa arbitrar sentido neles, antes e depois.
+
+## turno 7, setembro de 2026 (item L4-01-g-tarefas-import-tardio: a API sobe sem GDAL)
+
+`pyogrio` — a ligação vetorizada com o GDAL/OGR que o importador BDGD usa — estava importado no topo de
+`app/rede_utilidades/bdgd.py` e de `app/rede_utilidades/tarefas.py`, e nesta máquina vinha do site do
+usuário (`~/.local`), não da venv. Como `app/jobs/tipos.py` importa as tarefas, todo `import app.main`
+dependia dele: com `PYTHONNOUSERSITE=1`, que é como a unidade systemd roda a aplicação,
+`tests/unit/test_dependencias.py::test_app_main_importa_sem_site_do_usuario` reprovava com
+`ModuleNotFoundError: No module named 'pyogrio'`.
+
+Duas mudanças, nenhuma sozinha: o pacote passa a ser dependência declarada (`pyogrio==0.12.1` em
+`requirements.txt`, com o motivo escrito ao lado — é o job `rede.importar_bdgd` que precisa dele) e o
+import passa a ser tardio, dentro da função que abre o arquivo (`bdgd._pyogrio()`, usada também por
+`tarefas._ler_camadas_do_contrato`). A API sobe sem GDAL; quem depende do GDAL é o worker, no instante em
+que lê o `.gdb`. Instalação na venv aditiva, conferida com `pip install --dry-run` antes: nenhuma versão
+de fastapi, starlette, pydantic, psycopg2, uvicorn ou rasterio mudou. ADR
+`docs/adr/20260908T0628-pyogrio-dependencia-declarada-import-tardio.md`.
+
+## turno 7, setembro de 2026 (item L4-02-e-configuracoes-de-tracado: o pedido de traçado vira documento salvo)
+
+Configuração de traçado nomeada e compartilhável, o que a rede de utilidades da Esri chama *trace
+configuration*: tipo do traçado, barreiras de condição (atributo, fase, categoria, grupo ou tipo), barreiras
+de filtro, filtro de saída, funções sobre atributo (soma, contagem, mínimo, máximo, média) e tipo de
+resultado (elementos, geometria agregada, conectividade). Tabela `plat.rede_config_tracado` com RLS por
+inquilino, dono e `compartilhada`; CRUD em `/api/rede/{id}/config_tracado`. **Não existe rota nova de
+traçado**: `POST /api/rede/{id}/tracar` ganhou o campo `config_id`, e do corpo continuam valendo só os pontos
+de partida e as barreiras pontuais. A barreira de condição é traduzida para o que o motor já sabia recusar —
+a feição de ponto que casa perde os terminais, a de linha perde a aresta (`arestas_excluidas`, o único
+parâmetro novo em `tracado._montar_sql_arestas`); a barreira de FILTRO faz o traçado correr uma segunda vez
+com as duas listas somadas e publica a interseção, com `passagens` na resposta dizendo qual valeu.
+
+Seis configurações vêm prontas com o pacote elétrica-BR (clientes a jusante, kVA instalado a jusante,
+isolamento por chave fusível, alimentador inteiro, protetores a montante, trechos sem fase C), semeadas na
+importação do pacote — ficam em `config_tracado.CONFIGS_PADRAO` e não dentro do arquivo do pacote, cujo
+esquema JSON é fechado. Atributo, categoria, grupo, tipo, operador, função e tipo de resultado são conferidos
+contra o catálogo DA REDE na criação: o que a rede não tem vira 422 dizendo o nome, nunca uma configuração
+salva que só falharia ao ser usada. Tela `/redes/configuracoes` com a lista e o formulário. Paridade e
+lacunas declaradas (sem *function barrier*, sem *filter bitset*, sem `SUBTRACT`, contenção por coincidência
+de posição) em `docs/rede/CONFIG_TRACADO.md`; decisão em
+`docs/adr/20260908T0145-configuracoes-de-tracado.md`.
+## turno 7, setembro de 2026 (item L4-27-curto-circuito-e-protecao: corrente de curto por barra e coordenação)
+
+`POST /api/rede/{id}/subrede/{nome}/curto` calcula a corrente de curto-circuito de cada barra do
+alimentador — trifásica e fase-terra — pela fonte de tensão equivalente no ponto de falta, sobre o MESMO
+modelo em memória que os exportadores OpenDSS e pandapower usam. O resultado sai como tabela
+(`GET .../curto`) e como camada de pontos (`GET .../curto/camada`, com a coordenada lida da topologia na
+hora, nunca copiada), e para cada barra vem o dispositivo a montante com o veredito de coordenação contra
+a faixa de interrupção CADASTRADA: `interrompe`, `abaixo_da_faixa`, `acima_da_capacidade` ou `sem_dado`.
+
+As premissas são o produto tanto quanto o número, e voltam gravadas em toda execução e toda leitura:
+potência de curto da fonte, relação X/R, fator de tensão `c`, razão de sequência zero de linha e de fonte,
+base de potência. Fonte sem potência de curto declarada é RECUSADA (`422 impedancia_de_fonte_ausente`), e
+potência zero também (`impedancia_de_fonte_nula`): impedância nula daria corrente infinita, e isso não é
+resultado.
+
+Medido em `tests/medidas/L4-27-curto-circuito-e-protecao.json`, num alimentador real da cooperativa de
+teste (191 dos trechos de média tensão de 20 alimentadores do arquivo): 192 barras, todas com corrente
+calculada, de 6.442 A a 10.982 A trifásicos com fonte de 250 MVA, em 0,205 s (carga 8,57 e 2,75 GB de RAM
+livre no instante da medida). Nesse alimentador, 191 das 192 barras saíram `sem_dado` na coordenação —
+a BDGD não tem campo de faixa de interrupção, e nenhuma faixa foi suposta. Em `tests/unit`, a corrente
+bate com a conta fechada `Ik = c·Un/(√3·|Z|)` em três barras de um alimentador sintético.
+
+Limitações declaradas no cabeçalho do módulo e em `docs/PARIDADE.md`: impedância de condutor e de
+transformador são valores de REFERÊNCIA (o cadastro não os traz), a rede é tratada como radial (onde há
+laço a corrente sai subestimada, com aviso e contagem) e como equilibrada. Triagem: sinal, não prova.
+O ArcGIS Utility Network não faz cálculo elétrico — isto é "além da paridade", nunca paridade.
+
+## turno 7, setembro de 2026 (item L4-05-c-pandapower-e-matpower: conector para rede equilibrada)
+
+A subrede passou a sair em mais dois formatos, na MESMA rota do OpenDSS:
+`GET /api/rede/{id}/subrede/{nome}/exportar?formato=pandapower` devolve o `rede.json` que
+`pandapower.from_json` lê, e `?formato=matpower` devolve o `.m` do caseformat 2. Os três formatos vêm do
+mesmo modelo em memória (`opendss.montar_da_subrede`): uma leitura do banco, uma regra de conversão, três
+línguas. Medido em `tests/medidas/L4-05-c-pandapower-e-matpower.json`: `pp.runpp` converge sobre o arquivo
+exportado, o mesmo alimentador escrito em MATPOWER e relido por `pandapower.converter.from_mpc` converge com
+tensão a menos de 1 % do outro, e o número de `bus`/`line`/`trafo` bate com nós, trechos e transformadores
+contados por consulta independente ao banco.
+
+Na outra ponta, `POST /api/rede/{id}/matpower` importa um caso público (`case9` e `case30` entram na suíte,
+9 e 30 barras, e o traçado de menor caminho corre sobre eles). O caseformat não tem coordenada nenhuma:
+a barra entra no grafo de negócio com `geom` NULO, e nunca no ponto (0, 0). Pacote de ativos novo,
+`transmissao-matpower`, com os dois grupos declarados `sem_geometria` — o catálogo diz a mesma coisa que a
+tabela. Limitações escritas no `NAO_FAZ.md` que sai em toda exportação: os dois formatos são de rede
+EQUILIBRADA (as fases por trecho não são representadas — para desequilíbrio, o formato é o `dss`), e a
+impedância de linha é a de REFERÊNCIA (o padrão do motor OpenDSS, escrito em vez de implícito), porque o
+pacote de ativos não tem catálogo de condutor. Em `docs/PARIDADE.md` isto está registrado como CONECTOR: o
+ArcGIS Utility Network não exporta para esses formatos nem roda fluxo de potência, e a linha não deve ser
+lida como capacidade equivalente. ADR `docs/adr/20260908T0220-pandapower-e-matpower.md`.
+## turno 7, setembro de 2026 (item L4-04-c-unificar-subrede: uma tabela de subrede, com a origem ao lado)
+
+Dois itens tinham criado, em ramos separados, duas tabelas para o mesmo conceito: `plat.rede_subrede` (a
+subrede DERIVADA do controlador, item L4-04-a) e `plat.rede_subrede_bdgd` (a hierarquia que o ARQUIVO da
+BDGD declara, item L4-01-c). Agora é **uma tabela só**, com a coluna `origem`: a derivada é a canônica
+(tier, ciclo de vida limpa/suja, elementos, resumo) e a do arquivo entra como origem declarada
+(`origem='bdgd'`, `estado='declarada'`, com nível, código e pai). Um `CHECK` por origem impede a mistura, e
+o gatilho de nível estrito do item L4-01-c passou para a tabela unificada com os mesmos nomes de exceção.
+
+A migração `20260908T0152` copia as linhas da tabela antiga **preservando o `id`** e repõe as chaves
+estrangeiras de `plat.rede_no.subrede_id` e `plat.rede_aresta.subrede_id` na tabela unificada — nenhuma
+referência é reescrita, e a tabela antiga deixa de existir.
+
+Novo: `app/rede_utilidades/reconciliacao.py` grava a hierarquia declarada pelo arquivo e a liga à derivada
+de mesmo nome dentro do tier daquele nível (`equivalente_id`). As duas rodam no fim da marcação de
+controladores da importação, sem rota nova; a saída passa a trazer `declarado` e `reconciliacao`. O que não
+casa fica com `equivalente_id` nulo e é contado — divergência é candidata a erro de cadastro, nunca erro
+provado. Decisão em `docs/adr/20260908T0152-uma-tabela-de-subrede.md`.
+
+## turno 7, setembro de 2026 (item L4-01-e-dicionario-unidades-bdgd: a unidade vem do arquivo, medida)
+
+O dicionário do pacote `eletrica-br` declarava `COMP` em quilômetro e `ENE_SUM` em megawatt-hora; o extrato
+de referência da casa traz os dois em metro e em quilowatt-hora. A unidade passou a ser **medida na
+importação, campo a campo**, e gravada na auditoria (`plat.rede_importacao.unidades`): comprimento pela razão
+contra o comprimento geodésico da própria geometria (medida que o item L4-01-c já fazia, agora com nome e
+casa própria em `app/rede_utilidades/unidades.py`), energia pela ordem de grandeza contra a potência
+instalada dos transformadores e contra o número de unidades consumidoras — duas âncoras que têm de concordar.
+
+Quem soma e quem exporta lê o fator de lá, nunca do dicionário: o sumário por subrede (item L4-04-c) grava a
+unidade e a origem dela na própria linha, e o exportador OpenDSS deixou de multiplicar `ENE_SUM` por mil de
+cabeça. Sem importação registrada nada é convertido — fator 1 e `origem: nao_medida` escrito ao lado do
+número. Medido em `tests/medidas/L4-01-e-dicionario-unidades-bdgd.json`: dois arquivos iguais em tudo menos
+na unidade dão o mesmo comprimento em metros e a mesma energia anual em quilowatt-hora, e a carga do
+circuito exportado muda mil vezes quando a auditoria diz megawatt-hora. Fronteira: o exportador EPANET ainda
+não existe; a exportação de subrede em JSON, que é o que serve à água hoje, passou a carregar o mesmo bloco
+`unidades`.
+
+## turno 7, setembro de 2026 (item L4-05-a-exportar-opendss: a subrede vira circuito OpenDSS)
+
+`GET /api/rede/{id}/subrede/{nome}/exportar?formato=dss` devolve a pasta `.dss` da subrede num zip:
+`Master.dss`, `Linhas.dss`, `Transformadores.dss`, `Cargas.dss`, `Curvas.dss`, `resumo.json` e `NAO_FAZ.md`.
+Barra do circuito = nó da topologia (com os dois terminais de uma chave fechada fundidos numa barra só),
+`Line` = trecho com comprimento geodésico medido, `Transformer` = transformador com kVA e perdas de PER_FER e
+PER_TOT, `Load` = unidade consumidora, e a geração distribuída como carga negativa de corrente constante.
+`jusante=true` inclui as subredes de tier inferior: é o alimentador inteiro, e não só o tier pedido.
+
+O dicionário de códigos de tensão da BDGD (domínio TTEN) entra completo: **110 códigos, de 0 a 109, sem
+buraco**, contra os 13 do conversor que a casa já rodava — que por isso não resolvia o **código 63 (23,1 kV)**,
+presente num alimentador da cooperativa de teste. Todo código de tensão do acervo da casa (TEN_NOM, TEN_PRI e
+TEN_SEC) é resolvido pelo dicionário, medido no próprio acervo. A curva de carga tem **864 pontos**
+(12 meses x 3 tipos de dia x 24 horas, PRODIST Módulo 7), com feriado contando como domingo e energia
+conservada.
+
+Medido (`tests/medidas/L4-05-a-exportar-opendss.json`, opendssdirect.py 0.9.4): o circuito exportado compila
+sem erro, e o circuito compilado tem **7 barras e 5 linhas** contra **8 nós menos 1 fusão de chave fechada, e
+5 trechos**, contados por consulta independente ao banco.
+
+O conversor falha alto em vez de completar cadastro: transformador sem POT_NOM, tensão nominal ausente ou
+código fora do domínio TTEN param a exportação com 422. O que ele não faz — impedância de condutor, reatância
+de transformador, chave manobrável, curva típica por classe, regulador e capacitor — sai escrito em
+`NAO_FAZ.md`, dentro da pasta exportada. ADR `20260907T2319-exportador-opendss.md`.
+
+## turno 7, setembro de 2026 (item L4-04-b-atualizar-e-exportar-subrede: nome da subrede no elemento, propagação, SubnetLine e exportação)
+
+`Update Subnetwork` passa a fazer o que a fonte descreve: traça a subrede a partir dos controladores, grava o
+nome dela em cada elemento (`plat.rede_subrede_elemento` — tabela derivada, para não misturar o cálculo com o
+dado do arquivo), propaga os atributos declarados no tier (`plat.rede_tier.propagadores`, valor lido no
+dispositivo controlador), gera a linha agregada da subrede (`rede_subrede.linha` e `comprimento_m`, a
+SubnetLine da Esri) e devolve a subrede limpa. A edição marca `suja` só a subrede que a área suja toca — antes
+qualquer edição sujava a rede inteira — e o lote (`redes.subredes_atualizar`, job, com filtro por tier) só
+atualiza as sujas. `GET /api/rede/{id}/subrede/{nome}/exportar` devolve o JSON da subrede validado contra
+`plat.rede.subrede_exportada`; `GET .../subredes/conferencia` compara o nome calculado com um atributo do
+arquivo e lista as diferenças como candidatas a erro de cadastro.
+
+Medido na cooperativa de teste (três maiores alimentadores da BDGD, 13.646 trechos de média tensão;
+`tests/medidas/L4-04-b-atualizar-e-exportar-subrede.json`): 3 subredes, 14.878 elementos em 9,3 s com carga
+12,66; nome da subrede igual ao `CTMT` do arquivo em 13.646 de 13.646 (1,0); a exportação do maior alimentador
+traz 5.392 elementos, 4.963 ligações e 337.047 m de linha agregada. Achado no caminho e corrigido: sem a
+camada de chaves no arquivo, a marcação automática elegia o TRANSFORMADOR como controlador do tier de média
+tensão, e o traçado partia do lado de lá da fronteira de subrede — 4 elementos alcançados de 13.646 trechos.
+## junção, setembro de 2026 (ramo wt/bdgdjob × wt/il402bmonta: casos cruzados e eventos da família de rede)
+
+União dos dois ramos da linha L4 que trabalharam a rede de utilidades ao mesmo tempo. `test_cruzado.py`
+reprovava porque a árvore tinha as rotas de topologia, feições, traçado, rede simples e controlador sem
+caso em `tests/api/cruzado_casos.py`; a união trouxe os casos e os eventos correspondentes. Três consertos
+que a união exigiu: (a) o registro de união tinha deixado dois `return` em `preparar()` e um caso sem `),`
+— o primeiro `return` matava o segundo e todo caso de `/api/rede/{rede_id}` caía em KeyError; (b) três
+casos de `/api/conexoes/{id}/colecoes*` apontavam rotas que não existem nesta árvore e saíram; (c) a rota
+`POST /api/rede/{rede_id}/importar-bdgd` ganhou o tipo de evento `redes/importar_bdgd` no catálogo
+(migração `20260907T2210`) — sem a linha, a rota gravava o job e falhava ao registrar o evento.
+
+Colisão de nome resolvida (ADR `20260907T2200`): os dois ramos criaram `plat.rede_subrede` com conteúdo
+diferente. A tabela do controlador de subrede fica com o nome (é o do portão do item e o termo de paridade
+com a Esri); a hierarquia lida do arquivo BDGD passa a `plat.rede_subrede_bdgd`. As duas descrevem o mesmo
+conceito por caminhos diferentes e hoje não conversam — unificá-las é decisão de desenho, não desta junção.
+
+A asserção de contagem de rotas de escrita sob `/api/rede` foi de 6 para 16, com `POST .../tracar`
+declarado como consulta com verbo de escrita (pede `rls:visibilidade`, não `rede.editar`).
+
+Rede de referência sem nome de parceiro: o caminho do pacote `.gdb.zip` e o schema onde a BDGD real está
+carregada saíram do código para `PLAT_REDE_REFERENCIA_GDB`, `PLAT_REDE_REFERENCIA_CTMT` e
+`PLAT_REDE_REFERENCIA_ESQUEMA` (`tests/dados/carga_bdgd.py::esquema()`/`exigir_esquema()`); sem as
+variáveis os testes de medida pulam com a razão escrita, em vez de estourar. Os textos passam a dizer
+"distribuidora de referência" e "cooperativa de teste", e o nome do arquivo saiu da medida gravada — só o
+sha256 identifica o pacote.
+## turno 4, setembro de 2026 (item L2-04-d-featureserver-edicao-anexos: escrita pelo protocolo Esri sobre a porta única)
+
+`applyEdits` (na camada e no serviço), `addFeatures`/`updateFeatures`/`deleteFeatures`, `calculate`, os seis
+caminhos de anexo do protocolo Esri e `uploads/upload`, montados em
+`/rest/services/{item}/FeatureServer/0/*` (`app/consulta/rotas_edicao_esri.py` + `app/consulta/esri_edicao.py`).
+Nenhuma dessas rotas escreve em tabela de camada: todas traduzem o pedido Esri e chamam
+`app.edicao.servico.aplicar_edicoes`, a porta única de escrita do item L2-03-a — o que vale para a API da
+casa (tipo, domínio, CRS, propriedade, versão otimista) passou a valer para o cliente Esri sem cópia de regra.
+
+Três decisões, no ADR `docs/adr/20260907T2016-featureserver-escrita-esri.md`: (1) erro sai com o código HTTP
+REAL e o corpo no formato Esri, em vez do HTTP 200 com erro no corpo que a Esri usa; (2) `rollbackOnFailure`
+(padrão verdadeiro) é um `SAVEPOINT` de lote, e a resposta continua trazendo o resultado feição a feição, com
+`rolledBack`; (3) `calcExpression.sqlExpression` do `calculate` é traduzido para a linguagem de expressão da
+casa (L2-03-f) e avaliado em Python — SQL do cliente nunca chega ao banco.
+
+Migração `20260907T1927_featureserver_edicao.sql`: `origem` em `plat.feicao_historico` (preenchida pelo
+gatilho a partir do parâmetro de sessão `plat.origem`, padrão `api`), `numero bigserial` em
+`plat.feicao_anexo` (o protocolo Esri identifica anexo por inteiro; o uuid continua sendo a chave) e
+`plat.esri_upload` (o bilhete do arquivo enviado antes de existir feição-pai).
+
+Medidas em `tests/medidas/L2-04-d-featureserver-edicao-anexos.json`, com o comando exato: 26 testes de API
+dedicados, todos passando. Duas cláusulas do portão NÃO foram feitas e estão nomeadas lá: edição por QGIS
+(não instalado, sem ambiente gráfico) e a prova com o cliente Python `arcgis` (pacote não instalado). Ao
+regerar `docs/openapi.json` apareceu que a junção dos ramos de origem havia apagado as rotas de edição, de
+mapa e do FeatureServer do arquivo comitado; foram restauradas e cada um dos 29 (método, caminho) novos ganhou
+caso na varredura cruzada A→B, que segue em 100 % de cobertura.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
@@ -152,6 +429,526 @@ estoura o `statement_timeout` de 1 s. Guarda contra regressão: `test_toda_funca
 `pg_proc.prosrc` vivo e reprova função `SECURITY DEFINER` que faça DDL de schema, GRANT ou CREATE/DROP
 TABLE sem o trinco — necessário porque a migração redefine funções inteiras e um ramo posterior pode
 derrubar o trinco em silêncio. ADR 0025.
+## turno 4, setembro de 2026 (item L4-02-b-montante-jusante: sentido pela distância ao controlador)
+
+`POST /api/rede/{id}/tracar` com `tipo=montante|jusante` passou a derivar o SENTIDO do controlador de subrede
+quando a rede tem um em tier hierárquico: a árvore de caminhos mínimos a partir dos controladores
+(`public.pgr_drivingDistance`, `equicost`) diz quem está mais perto da fonte; jusante de um ponto é a
+subárvore dele, montante é a cadeia de pais até o controlador, que sai nomeado na resposta. Sem controlador,
+segue valendo a direção declarada em atributo (item L4-18) — e a resposta sempre diz de onde veio o sentido,
+no campo `origem_direcao`, que também pode ser imposto no pedido.
+
+O traçado se recusa a inventar direção em três situações, cada uma com motivo próprio na resposta: tier
+particionado (malha) sem nenhum trecho declarando `direcao_fluxo`; laço, isto é, mais de um caminho até o
+controlador tocando o resultado pedido (sai `direcao='indeterminado'` com `nos_do_laco`); e ponto que nenhum
+controlador alcança. Grafo, resolução de ponto, barreira e formato de saída são os de `tracado.py`: não há
+segundo motor de traçado. ADR `docs/adr/20260907T2133-montante-jusante-por-controlador.md`.
+
+Medido em `tests/medidas/L4-02-b-montante-jusante.json`. Fronteira honesta registrada ali: a comparação entre
+o jusante de cada transformador da cooperativa de teste e as unidades consumidoras que o arquivo liga a ele
+tem universo VAZIO — os 26.581 ramais de ligação do arquivo não têm geometria, então nenhuma das 27.587
+unidades consumidoras tem caminho desenhado até o transformador.
+
+Na mesma passagem, a união dos seis ramos de L4 fechou dois registros que faltavam e reprovavam o lote
+inteiro na fila: as 11 rotas de escrita da rede de utilidades em `tests/api/eventos_esperados.py` e os 16
+casos de cobertura cruzada em `tests/api/cruzado_casos.py`.
+
+## turno 4, setembro de 2026 (item L4-04-a-controladores-e-tiers: controlador de subrede e tiers)
+
+Onde cada subrede começa passou a ser dado gravado, e não convenção de traçado (ADR
+`docs/adr/20260907T2031-controlador-de-subrede-e-tiers.md`; paridade em `docs/PARIDADE.md`, seção "controlador
+de subrede e tiers"). `POST /api/rede/{id}/controlador` marca o TERMINAL de um dispositivo como controlador de
+uma subrede num tier, e `DELETE .../controlador/{cid}` desfaz; só um tipo de ativo com a categoria de rede
+`controlador` é aceito (poste é recusado com `422 categoria_nao_controladora`) e o NOME do controlador é único
+dentro do tier (`409 nome_de_controlador_repetido`), enquanto a mesma subrede aceita vários controladores de
+nomes distintos. A âncora gravada é feição + terminal, nunca o nó derivado: reconstruir a topologia inteira não
+apaga controlador nenhum.
+
+`plat.rede_subrede` é a tabela de subredes (nome, tier, estado `limpa`/`suja`, resumo do último traçado);
+`POST .../subredes/{id}/atualizar` refaz o traçado a partir dos controladores e devolve a subrede limpa, e
+qualquer área suja aberta na rede faz a leitura mostrar `suja` de novo, com `estado_gravado` ao lado.
+`POST .../controladores/importar` marca, a partir do que a importação da BDGD trouxe, **1 controlador por
+alimentador (CTMT)** — pelo terminal do disjuntor de saída quando o arquivo traz o equipamento, pelo nó de
+cabeça (convenção declarada, gravada como `origem='no_de_cabeca'`) quando não traz — e **1 por transformador
+de distribuição, no terminal de jusante, no tier de baixa tensão**. O pacote `eletrica-br` ganhou a categoria
+`controlador` em subestação, disjuntor e transformador (nada foi removido). Tela `/redes/controladores` com a
+tabela de subredes e a ficha do controlador (dispositivo, terminal, tier, subrede, papel, origem e o nó na
+topologia corrente), com atualizar e remover.
+
+Medido em `tests/medidas/L4-04-a-controladores-e-tiers.json`: numa rede no formato da BDGD com 2 alimentadores
+e 1 transformador, a marcação automática deu **1 por dispositivo, 1 por nó de cabeça e 1 por transformador**, e
+rodar de novo não duplicou nada (3 já marcados). 17 testes de API e 1 e2e da ficha. Lacuna nomeada: **grupo de
+tier (tier group) não existe** no modelo — a fonte o exige em domínio hierárquico e o dispensa em particionado,
+que é o caso do pacote elétrico entregue.
+
+## turno 4, setembro de 2026 (item L4-04-c-sumarios-por-subrede: sumário por subrede, tabela e CSV)
+
+Quanto tem cada alimentador passou a ser tabela, e não conta feita à mão (ADR
+`docs/adr/20260907T2243-sumario-por-subrede.md`; paridade em `docs/PARIDADE.md`, seção "sumário por
+subrede"). `plat.rede_subrede_resumo` tem uma linha por subrede com quilômetro por nível de tensão
+(declarado pelo cadastro e pela geometria, com a diferença em porcento ao lado), transformadores e kVA
+instalado, unidades consumidoras e sua distribuição por classe, energia anual faturada, dispositivos por
+categoria de rede, geração distribuída (unidades e kW) e o tronco — a maior distância, andando pela rede,
+de um controlador até um ponto alcançável da subrede. `POST /api/rede/{id}/subredes/resumos/calcular`
+recalcula (a rede inteira, um tier ou uma subrede) e `GET /api/rede/{id}/subredes/resumos` devolve a
+tabela com a DESCRIÇÃO das colunas ao lado das linhas — código, nome, tipo e unidade, que é o que um
+elemento de painel precisa para se ligar à fonte sem rótulo escrito à mão; `formato=csv` devolve a mesma
+tabela como arquivo.
+
+A filiação de cada elemento à subrede vem do atributo que o arquivo declara por tier (`ctmt` na média
+tensão, `uni_tr_mt` na baixa), a mesma convenção com que a importação da BDGD nomeia as subredes. É o
+retrato do CADASTRO, não do que a topologia alcança, e está dito assim no ADR e na tabela de paridade.
+
+Medido em `tests/medidas/L4-04-c-sumarios-por-subrede.json`, sobre o arquivo real da cooperativa de teste
+(44.268 trechos de média tensão, 5.481 transformadores, 27.587 unidades consumidoras, 1.385 gerações):
+**20 alimentadores somados em 1,5 s**, quilômetro de média tensão idêntico à soma do comprimento declarado
+no arquivo nos 20 (tolerância do portão: 0,1 %), contagem de unidades consumidoras idêntica nos 20 e
+**soma das unidades dos 20 sumários = 27.587 = total do arquivo** — nenhuma unidade contada em dois
+alimentadores. A diferença entre o comprimento declarado e o da geometria, medida e guardada por
+alimentador, vai de +0,03 % a −8,49 %. Um alimentador declarado na camada CTMT não tem trecho nenhum no
+arquivo e ficou anotado (não vira subrede). 9 testes de API rápidos e 1 medição em escala real.
+
+## turno 4, setembro de 2026 (item L4-18-rede-simples-trace-network: rede simples, direção de fluxo, montante e jusante)
+
+Rede sem pacote de ativos, o equivalente de disciplina ao Trace Network da Esri (ADR 20260907T2005; documento
+e tabela de paridade em `docs/rede/REDE_SIMPLES.md`). `POST /api/rede/simples` cria a rede a partir de DUAS
+camadas do inquilino numa chamada — rede, catálogo mínimo, feições copiadas (multiparte explodida,
+reprojetada), configuração de direção e topologia construída; a tela `/redes/simples` faz isso em
+**3 interações** (`criar_rede_simples_cliques` = 3, `tests/e2e/test_rede_simples.py`). A direção de fluxo vem
+de um ATRIBUTO do trecho, traduzido para o vocabulário fechado `digitalizada`/`contra`/`indeterminada`;
+`POST /api/rede/{id}/tracar` ganhou `tipo=montante` e `tipo=jusante`, que param em toda aresta indeterminada
+com um aviso por trecho (`app/rede_utilidades/fluxo.py`). `POST /api/rede/{id}/promover` carimba o pacote
+mínimo e muda o modo para `utilidades`.
+
+Medido em `tests/medidas/L4-18-rede-simples-trace-network.json`: uma bacia real do BC250 do IBGE
+(**584 trechos, 585 nós**, recorte em `tests/dados/bacia_bc250.json`) virou rede simples em **464 ms**
+(carga 6,83; 7,2 GiB livres) e **48 traçados** de montante/jusante bateram elemento a elemento com o cálculo
+independente em `networkx`, com **65 arestas indeterminadas** no meio do caminho
+(`tests/api/test_rede_simples_bacia_bc250.py`). 16 testes de API na rede sintética, entre eles a refutação do
+item: marcar um trecho como indeterminado por `applyEdits` faz montante e jusante pararem nele, com aviso
+nomeando trecho e nó.
+
+## turno 4, setembro de 2026 (item L4-02-d-lacos-e-caminho-curto: laços, caminho mais curto e isolados)
+
+`POST /api/rede/{id}/tracar` ganhou três valores novos de `tipo` (ADR 20260907T1748), sobre o MESMO grafo do
+item irmão L4-02-a: `lacos` (ciclos por componente biconexo, `public.pgr_biconnectedComponents`), `isolados`
+(sem caminho a nenhuma feição da categoria `categoria_controlador`, padrão `fonte`,
+`public.pgr_connectedComponents`) e `caminho_curto` (origem/destino, custo = `atributo_custo` ou o
+comprimento geodésico por padrão, `public.pgr_dijkstra` k=1 / `public.pgr_ksp` k>1). Módulo novo
+`app/rede_utilidades/lacos.py`. 13 testes funcionais verdes (`tests/api/test_rede_lacos_caminho.py`):
+rede radial sem laço = 0; quadrado fechado = 1 laço de 4 arestas; banco de capacitores sem linha = isolado
+(fonte nunca é isolada); comprimento de `caminho_curto` bate com a soma independente do `ST_Length` dos
+trechos (0% de diferença no caso testado, dentro do 0,5% do portão); `k=3` devolve 2 alternativas distintas
+no quadrado (só existem 2) e 1 na rede radial (honesto: k não inventa caminho); custo por atributo
+customizado (`impedancia`) escolhe caminho diferente do geodésico. Refutação: adversário fecha uma chave
+normalmente aberta (via `applyEdits` real, item L4-01-b) e o laço passa a aparecer (0 → 1, mesmas arestas
+esperadas); pedir `caminho_curto` com atributo de custo nulo num trecho do grafo é recusado com 422
+`atributo_custo_nulo` e a lista das feições faltantes — nunca troca nulo por zero. Cláusulas NÃO medidas,
+declaradas: laços da cooperativa de teste e p95 do maior alimentador — teste pronto
+(`tests/api/test_rede_lacos_caminho_medida.py`, marcador `lento`), máquina com carga 9,5-10,4 no momento
+(regra do brief: não medir acima de 8); registrado `medido: false` com a carga ao lado. Front-end
+clique+tabela+e2e: mesma fronteira honesta do item irmão (sem `web/` de rede de utilidades no repositório).
+
+## turno 4, setembro de 2026 (item L4-02-a-conectado-e-subrede: traçado conectado e subrede — PARCIAL)
+
+`POST /api/rede/{id}/tracar` (tipo `conectado`|`subrede`), sobre `public.pgr_connectedComponents`
+(pgRouting 4.0.1, já instalada — ver ADR 0021): ponto de partida por feição+terminal ou coordenada com
+tolerância, barreiras que removem nó do grafo inteiro, travessabilidade por `atributos.estado`, fronteira
+de subrede pela categoria `transformacao`. Rede sintética de 12 nós com resultado conhecido em pytest:
+conectado = 9 elementos/6 nós, subrede = 6 elementos/4 nós (`tests/api/test_rede_tracado.py`, 13 casos,
+todos verdes). Refutação: laço fechado não duplica elemento nem trava; transformador é a fronteira de
+subrede, chave em série (mesmo grupo) não é. pgRouting confirmada instalada por consulta a
+`pg_available_extensions`. Dois defeitos corrigidos na primeira execução real (import de `psycopg2` fora
+de escopo; SQL de arestas sem a coluna `cost` que `pgr_connectedComponents` exige) — ver ADR 0021.
+Cláusulas NÃO cumpridas, declaradas: (1) clique+tabela lateral+captura e2e — não existe front-end de rede
+de utilidades no repositório para acoplar; (2) p95 ≤ 2 s no maior alimentador da cooperativa de teste —
+teste pronto (`test_rede_tracado_medida.py`, marcador `lento`), mas a máquina estava com carga 18-21
+(regra do brief: não medir acima de 8); registrado `medido: false` com a carga ao lado, não fingido.
+
+## turno 4, setembro de 2026 (item L4-01-b-topologia-derivada: topologia derivada da rede de utilidades)
+
+`POST /api/rede/{id}/topologia/habilitar` reconstrói dois índices derivados das feições da rede —
+`plat.rede_topo_no` (um por vértice de conexão/terminal) e `plat.rede_topo_aresta` (um por trecho, com nó de
+origem/destino, comprimento geodésico e bitmask de fase) — numa transação, nunca incremental nesta passagem.
+Tolerância de coincidência é parâmetro da rede (`plat.rede.tolerancia_m`, padrão 0,05 m), visível na ficha:
+0,04 m conecta e 0,06 m não conecta na tolerância padrão; a mesma distância de 0,06 m conecta numa rede que
+declarou 0,1 m. Cruzamento geométrico no meio de duas linhas nunca gera nó (cruzar não é conectar). `applyEdits`
+de ponto/linha (paridade FeatureServer) marca área suja a cada gravação. RLS ligada e índice GIST conferidos
+no catálogo do Postgres (não no arquivo de migração) em todas as 6 tabelas da topologia. Contrato em
+`docs/adr/0020-topologia-derivada-da-rede-de-utilidades.md`; modelo e paridade em `docs/rede/TOPOLOGIA.md`.
+
+Medido em escala real (schema `certaja` do `iagro_sat`, ativo da casa, somente leitura — a rede real da
+cooperativa de teste, não um arquivo do repositório): 73.512 arestas reais (44.268 MT + 29.244 BT), 80.456
+nós, 3.948 órfãos, 0 arestas sem nó, 21 alimentadores com componente conexa idêntica arquivo × topologia
+(contador Python independente sobre o wkt cru), 1.554 terminais de alta órfãos batendo exato com o arquivo,
+60.549 postes → 0 nós. Conserto de dois achados do próprio agente ao medir em escala (`tests/dados/carga_bdgd.py`):
+literal `%` não escapado em SQL parametrizado (`IndexError: tuple index out of range` do psycopg2) e chave
+errada num dicionário de retorno (`fins_de_linha` → `fins_de_linha_grau1`).
+
+⛔ Fronteira medida, não fabricada: `certaja.ramlig` (ramal de ligação) tem os 26.581 registros do arquivo mas
+**0 com geometria armazenada** (`wkt` nulo em 100%) — entra como atributo, não como aresta geométrica; a
+topologia geométrica medida cobre MT + BT + transformador + poste (139.542 elementos reais). Tempo de
+`habilitar` variou de ~21 s a ~600 s na mesma carga conforme a disputa por CPU/RAM de outras trilhas na
+máquina compartilhada (swap 100% cheio no pior caso) — variação do ambiente, não do algoritmo (lotes de
+4.000 linhas, ADR 0020 §5); os dois tempos ficam no arquivo de medida. Manutenção incremental por área suja
+e traçado seguem fora desta passagem (itens seguintes da linha L4).
+## turno 3, setembro de 2026 (item L2-04-j-conformidade-clientes-e-paridade: matriz de conformidade viva)
+
+`tests/esri/conformidade.py` + `make conformidade`: a lista de serviços do `docs/PARIDADE.md` deixa de ser
+texto escrito à mão e passa a ser saída de medida. 102 linhas (45 parâmetros da operação `query`, diretório,
+edição, anexos, OGC API Features, WFS 2.0, tiles vetoriais, serviços ainda não construídos e clientes), cada
+uma nomeando a prova que a sustenta — um nó de teste ou uma chave dos roteiros de sonda dos itens irmãos. O
+script roda as provas, grava `tests/esri/conformidade.json` com data e versão do repositório, e reescreve a
+seção do documento entre marcadores. Regra: prova que falha derruba a linha para REFUTADO; linha sem prova
+executada cai para "não medido" e nunca vira "suportado". `tests/unit/test_conformidade_matriz.py` reprova
+documento editado à mão, linha afirmada sem prova, parâmetro da doc Esri ausente da matriz e item irmão
+construído fora dela.
+
+`tests/api/test_conformidade_clientes.py`: cliente OGC de terceiros (owslib) contra um uvicorn próprio da
+trilha — lê o `GetCapabilities` do nosso WFS 2.0, monta o catálogo e faz `GetFeature` pelo código dele.
+Também mede a AUSÊNCIA de rota WMS (404 e nenhum caminho no OpenAPI), e mede que QGIS e o pacote Python
+`arcgis` não estão nesta máquina: as linhas que dependem deles ficam "não medido", com o motivo escrito.
+`docs/TESTE_PARCEIRO_PRO_AGOL.md` traz o protocolo para quem tem ArcGIS Pro e ArcGIS Online executarem, com
+`resultado: pendente` até haver evidência devolvida.
+
+Dois defeitos que só aparecem com os ramos da família juntos foram consertados no caminho: o estilo do
+catálogo não chegava ao cliente Esri (o descritor entregava o documento de estilo inteiro ao conversor de
+`drawingInfo`, e o compilador da casa emite cadeia `case`, que o conversor não lia), e o tile vetorial
+devolvia 422 (o repasse do visualizador casava antes no mesmo prefixo `/tiles/`).
+
+## turno 3, setembro de 2026 (item L2-04-e-vector-tile-server-tilejson: servidor de tiles vetoriais em 3 contratos)
+
+`app/tiles/vector_tile_server.py` + `app/tiles/exportacao.py` + `app/tiles/{autorizacao,martin_cliente,
+tilejson,camada}.py`: **contrato 1** TileJSON 3.0.0 (`GET /tiles/{token}/{item}/tilejson.json`) + tile XYZ puro
+(`.../{z}/{x}/{y}.pbf`) para MapLibre/QGIS; **contrato 2** VectorTileServer compatível Esri
+(`GET /svc/{token}/rest/services/{item}/VectorTileServer` com `tileInfo` Web Mercator 512 px e `capabilities:
+TilesOnly`, estilo em `.../resources/styles/root.json` compilado por `app.estilos.padrao`/`compilador` — item
+L2-02-a, reusado sem reescrita —, sprites/glyphs REAIS mas vazios enquanto L2-02-e não existe, e o tile em ordem
+Esri `.../tile/{z}/{y}/{x}.pbf`); **contrato 3** exportação por URL (`GET /svc/{token}/camadas/{item}.geojson|
+.kml|.csv|.fgb|.gpkg`, filtro `where`/`bbox` reusando o AST do FeatureServer — L2-04-b/c). Token no CAMINHO em
+todos os três (decisão do ladrilho raster, item L1-02, citada como ativo da casa a reusar).
+
+Medido com Martin real (`.bin/martin` v1.15.0, mesmo binário do L2-01-b) e, para o contrato 2, com PyQGIS
+headless de verdade: TileJSON válido contra o esquema oficial 3.0.0 (vendorizado em
+`docs/esquemas/vendorizados/`); tile Esri (`z/y/x`) e MapLibre (`z/x/y`) **byte a byte idênticos** por construção
+(`_tile_bytes` é o único ponto que fala com o Martin); `root.json` passa no validador oficial
+`@maplibre/maplibre-gl-style-spec`; QGIS (`QgsVectorTileLayer` + `QgsMapBoxGlStyleConverter`) carregou a camada
+por URL do `root.json` e renderizou as feições com requisições HTTP reais ao servidor (captura em
+`tests/medidas/L2-04-e_qgis_captura.png`); KML de 10.000 feições confere com `ogrinfo`; GeoJSON de 1.000.000 de
+feições via cursor nomeado do Postgres, RSS de pico do worker **145 MB** (teto do portão: 300 MB); token
+revogado devolve 401 nas 10 rotas testadas (tiles, VectorTileServer, exportações).
+
+Achados do adversário, corrigidos ou registrados como fronteira: `/vsistdout/` não funciona com o driver
+FlatGeobuf nesta versão do GDAL (3.8.4) — FlatGeobuf e GeoPackage passaram a escrever em arquivo temporário via
+`ogr2ogr`, apagado ao fim; tile z25 (fora do intervalo 0-24 aceito por `plat.camada_tile_garantir`) vira 502
+nomeado, nunca 500 cru; `.csv` de camada com geometria MULTI funciona, e "camada sem geometria" não existe neste
+catálogo (item alheio ao escopo do token dá 403, nunca 404/500); o ETag muda de verdade depois de editar uma
+geometria, mas fica preso ao cache de 5 min em memória do próprio Martin (decisão já tomada pelo L2-01-b) dentro
+dessa janela — sem prazo declarado no portão, registrado como achado honesto, não como defeito. `docs/adr/
+20260907T1648-vector-tile-server-tres-contratos.md` e `tests/medidas/L2-04-e-vector-tile-server-tilejson.json`
+têm a cláusula a cláusula. Fora do turno: Pro/AGOL reais (D20, exige credencial do parceiro); sprite/glyphs de
+verdade (depende de L2-02-e, não construído).
+
+## turno 4, setembro de 2026 (item L2-04-servicos-esri-ogc: diretório do FeatureServer, OGC API Features e WFS 2.0)
+
+Construído em volta da operação `query` do FeatureServer (item L2-04-c, `wt/fsquery`, ADR 0018) sem reescrevê-la:
+`app/consulta/rotas_servico.py` (descritor de serviço `.../FeatureServer?f=json` e de camada `.../FeatureServer/0
+?f=json` — `fields`, `geometryType`, `objectIdField`, `fullExtent`), `app/consulta/rotas_ogc_features.py` (OGC API
+Features Part 1: landing, conformance, collections, items com bbox/limit/offset, item único, GeoJSON puro) e
+`app/consulta/rotas_wfs.py` (WFS 2.0 KVP: GetCapabilities validado pelo cliente real `owslib.wfs.WebFeatureService`,
+DescribeFeatureType mínimo, GetFeature em GeoJSON e GML 3.2 simples). `applyEdits`/anexos/`queryRelatedRecords`/
+`relationships` ficam de fora — dependem de L2-03-edicao e L2-10-b, nenhum construído (ADR 0019).
+
+Bateria de 13 ataques (item_id com aspas/comentário SQL/`;`, bbox com sub-select/`pg_sleep()`/função não prevista,
+BBOX do WFS com injeção, `REQUEST` desconhecida, `feature_id` não inteiro, unicode no item_id, cross-tenant nas 3
+raízes): **13/13 recusados com 400/404, nenhum 500**. Dois achados corrigidos no mesmo turno: (1) `item_id::uuid`
+sem validar antes deixava o Postgres levantar exceção sem handler → 500 real, inclusive na `/query` original do
+L2-04-c — corrigido com validação de UUID compartilhada; (2) landing/conformance do OGC API Features respondiam 200
+para item de outro inquilino (sem vazar dado, mas sem checar posse) — corrigido tocando `plat.item` sob RLS antes de
+responder. `docs/PARIDADE.md` e `tests/medidas/L2-04-servicos-esri-ogc.json` têm a tabela cláusula a cláusula.
+
+Fora do turno: QGIS/ArcGIS Pro/AGOL reais carregando o serviço (sem ambiente gráfico nesta máquina, mesma limitação
+já registrada para L2-04-c e para Chrome headless); OGC API Features Part 3 (CQL2), WFS-T; GML validado contra o
+XSD de referência do OGC.
+
+## turno 3, setembro de 2026 (item L2-04-b-featureserver-catalogo-metadados: diretório de serviços Esri por token)
+
+- Diretório de serviços compatível com Esri em `/svc/{token}/rest/...`: `rest/info`, `rest/generateToken`,
+  `rest/services` (pastas do catálogo), `rest/services/{pasta}`, `FeatureServer`, `FeatureServer/{id}`,
+  `FeatureServer/layers`, `FeatureServer/info/itemInfo` e `FeatureServer/info/metadata` (ISO 19139).
+  O token vai no caminho porque é uma URL que se entrega e o cliente navega sozinho a partir dela;
+  a consequência está declarada no ADR `20260907T1955-diretorio-servicos-esri-por-token.md`.
+- O FeatureServer não foi reescrito: `app/consulta/rotas_servico.py` passou a expor
+  `descritor_do_servico`/`descritor_da_camada` e o diretório as chama. O descritor da camada ganhou
+  `indexes` (lidos de `pg_index`), `editFieldsInfo`, `types`/`subtypes`/`typeIdField`, `timeInfo`,
+  `ownershipBasedAccessControlForFeatures` e `domain` por campo. `currentVersion` foi de 11.3 para 11.4.
+- `app/consulta/formato_esri.py`: `f=json|pjson|html` e `callback` (JSONP) num lugar só. `f` desconhecido
+  é 400 e nunca 500; nome de callback fora de identificador simples é recusado, nunca ecoado.
+- `app/consulta/renderizador.py`: estilo MapLibre → `drawingInfo`. Cor constante vira `simple`,
+  `["match", …]` vira `uniqueValue`, `["step", …]` vira `classBreaks`, `layout.text-field` vira
+  `labelingInfo`. Expressão fora desses casos não é aproximada: sai `simple` cinza com o motivo.
+- `app/consulta/cors_servicos.py`: CORS aberto em `/svc`, `/ogc` e `/tiles` — e só. Em `/api` a
+  credencial é o cookie de sessão, e abrir ali seria falsificação de requisição entre sítios legível.
+- O `drawingInfo` lê a relação `estilo_de_camada` (item de tipo `estilo` → camada), declarada pelo
+  `PUT /api/itens/{estilo}/relacoes` que já existia; nada foi acrescentado ao catálogo por causa disto.
+- Fica declarado como ausente, não simulado: `fields[].domain` nulo, `types`/`subtypes`/`relationships`
+  vazios e `capabilities` só `Query` — as linhas L2-10-a, L2-10-b e L2-03-a não estão nesta base.
+## turno 5, setembro de 2026 (item L2-03-edicao: fechamento — dois achados corrigidos, junção do turno 4)
+
+Retomada do turno 4 (sessão anterior morreu por limitação do servidor da API antes de registrar, comitar
+e enfileirar): conferência independente da suíte revelou dois defeitos reais, além do já corrigido pelo
+próprio turno 4. Corrigidos e cobertos por teste permanente (não script de auditoria à parte — removido,
+mesma convenção do commit `054286a`):
+
+1. `app/edicao/combinar.py::unir` checava `versao` declarada ANTES de checar existência/acesso do id — um
+   id inexistente ou de outro inquilino, quando listado depois de um id existente sem `versao`, nunca
+   chegava a 404 (ficava preso em 422 `versao_ausente`). Corrigido para existência de todos os ids primeiro,
+   depois versão de todos (`tests/api/test_edicao_dividir_unir.py::test_unir_sem_declarar_versao_de_uma_das_feicoes_e_422`
+   fecha o buraco original: `versoes` incompleto não pode mais deixar uma origem sem checagem de
+   concorrência).
+2. `limites.ANEXO_TAMANHO_MAX` (10 MiB) igual ao teto de corpo do middleware (`CORPO_MAX_PADRAO_BYTES`,
+   também 10 MiB) — como o anexo viaja em JSON com o conteúdo em base64 (~4/3 de inchaço), o 413 genérico
+   do corpo sempre disparava antes do 422 `anexo_grande` específico rodar; o limite documentado de anexo
+   era, na prática, letra morta. Reduzido para 7 MiB, com folga sob o teto de corpo mesmo codificado
+   (`tests/api/test_edicao_historico_anexos.py::test_anexo_no_teto_real_ainda_da_anexo_grande_nao_corpo_grande`).
+
+Suíte dedicada reconferida após os dois consertos: verde (mesmo comando do turno 4); `ruff` e
+`sem-marcador` verdes. Portão e veredito do item-pai continuam os do turno 4 (nenhuma cláusula mudou de
+prova, só a implementação ficou mais correta). Handoff em `laco/handoffs/T5/L2-03-edicao/`.
+
+## turno 4, setembro de 2026 (item L2-03-edicao: edição de feições no mapa — criar/mover/vértice/dividir/unir/apagar, formulário, anexos, desfazer, histórico e restauração)
+
+Constrói sobre o L2-03-a (API única de escrita) e o L2-01-mapa-web (visualizador): `web/js/mapa/edicao.js`
+inteiro novo, ligado à tela `/mapa`. Criar ponto/linha/polígono por clique; mover e editar vértice
+por arrasto (a geometria de trabalho vem sempre de `GET /api/camadas/{id}/feicoes/{globalid}`, exata,
+nunca da versão recortada por tile); apagar; formulário de atributos gerado dos mesmos `campos`/
+`regras_campo` da camada, com domínio/obrigatório espelhados no navegador — e reconferidos direto na
+API nesta rodada, sem passar pela tela, provando que a validação real mora no servidor (cláusula do
+item-pai). Aderência (checkbox "aderir a vértice próximo", tolerância de 12 px sobre feições
+renderizadas) e edição em lote (N feições selecionadas por shift-clique, um atributo aplicado a todas
+num único lote `atualizar`, reaproveitando o array heterogêneo que o L2-03-a já aceitava).
+
+Histórico e restauração são novos no banco: `plat.feicao_historico` + gatilho genérico
+`feicao_historico_registrar()` ligado por `plat.camada_preparar` a TODA tabela de camada (não só a
+escrita que passa pela API — SQL direto, importação e réplica também ficam registrados), migração
+`20260907T1025`. Restaurar reaplica pela MESMA porta de escrita (`_inserir`/`_atualizar` de
+`app.edicao.servico`) — feição existente vira `UPDATE`, feição apagada vira `INSERT` com o MESMO
+`globalid` (referência externa nunca quebra); a própria restauração grava um marcador
+`operacao='restaurar'` a mais no histórico, que nunca é reescrito.
+
+Anexos (`plat.feicao_anexo`, migração `20260907T1035`): limite de tamanho e de tipo aplicados no
+SERVIDOR em duas etapas (tamanho da string base64 antes de decodificar, depois o tamanho real) e
+contra o conteúdo de fato (item L7-03-b) — um PDF disfarçado de PNG é recusado mesmo com
+`content_type` mentindo. Objeto guardado no Garage por trás do adaptador já existente (`app.objetos`).
+
+Dividir/unir (`app/edicao/combinar.py`): geometria estrutural nunca sai do MVT (recortado/generalizado
+por tile) — as duas operações leem a geometria exata do banco e usam `ST_Union`/`ST_LineMerge`/
+`ST_LineSubstring`. `unir` funciona para qualquer família de geometria; `dividir` está escopado a
+LineString/MultiLineString de uma parte só nesta passagem (dividir polígono por linha de corte fica
+de fora, registrado no ADR, não escondido).
+
+Dois defeitos de infraestrutura achados e corrigidos nesta rodada (não só no código do item):
+`app/garage.py::criar_chave` devolvia um dicionário sem `accessKeyId` no caminho de reaproveitamento
+(`ListKeys` usa a chave `id`, `CreateKey` usa `accessKeyId`) — crashava com `KeyError` em vez de um
+erro que diz o que aconteceu; e `docs/gerar_limites.py` ficaria não determinístico se um limite fosse
+guardado como `frozenset` (a ordem de iteração de um set do Python varia entre execuções) — corrigido
+trocando `ANEXO_TIPOS_PERMITIDOS` para tupla ordenada antes de existir um segundo caso.
+
+ADR: `docs/adr/20260907T1123-historico-restauracao-anexos-feicao.md`. Medidas em
+`tests/medidas/L2-03-edicao.json` — sem cláusula numérica de tempo neste item; a suíte dedicada (75
+testes de API/unit) e o e2e dedicado (6 cláusulas no chromium do playwright, 0 erro de console) estão
+registrados lá com o comando exato. Fronteira honesta e vereditos completos no handoff do item.
+
+## turno 3, setembro de 2026 (item L2-03-a-api-edicao-transacional: edição transacional de feições — única porta de escrita)
+
+`POST /api/camadas/{id}/edicoes` (`app/edicao/`): equivalente do `applyEdits` da Esri e, a partir
+daqui, a única porta de escrita de feição para navegador, PWA, FeatureServer (L2-04-d) e OGC
+(L2-04-g). Corpo com `adicionar`/`atualizar`/`apagar` numa transação — tudo-ou-nada por padrão
+(`modo=transacao`), ou `modo=parcial` com `SAVEPOINT` por feição, devolvendo resultado feição a
+feição (como o `applyEdits` com `rollbackOnFailure=false`). Roda direto contra a tabela de camada
+`d_<slug>.c_<uuid16>` que `plat.camada_preparar` (029_ingestao_vetor.sql) já cria — nenhuma tabela
+nova (migração 20260906T1859, bump do esquema `camada_vetorial` v2→v3, só propriedades opcionais).
+
+Validação sempre no servidor: tipo de geometria e SRID da coluna (com a mesma promoção
+Point/LineString/Polygon → Multi* que `app/ingestao/carregar.py` usa na carga); `ST_IsValid`, com
+`ST_MakeValid` só quando `corrigir_geometria=true` (sem isso, polígono inválido é 422); domínio de
+atributo por `dados.regras_campo` (obrigatório, somente-leitura, lista de valores ou
+mínimo/máximo — mecanismo próprio deste item; quando o L2-10-a-dominios-subtipos, entregue noutra
+trilha, for integrado, ganha uma segunda fonte compartilhada entre camadas, não substitui esta);
+tamanho de texto (64 KiB); concorrência otimista pela coluna `versao` já existente na tabela de
+camada — atualizar/apagar com a versão errada devolve `409` com a feição ATUAL, nunca sobrescreve
+em silêncio; campos de rastreio (`fid`, `globalid`, `versao`, `tenant_id`, `criado_*`,
+`atualizado_*`) NUNCA aceitos do corpo, sempre preenchidos pelo servidor; "só as próprias feições"
+(`edicao.somente_proprias`) e "geometria travada" (`edicao.geometria_travada`) por camada, com
+`feicoes.editar_total` (perfil admin) ignorando as duas. Sanidade de CRS não declarado: coordenada
+fora de `[-180,180]`/`[-90,90]` numa camada de SRID geográfico sem `crs.srid` declarado é `422
+geometria_fora_do_crs` (cobre o envio de metros — UTM/Web Mercator — sem declarar). Um evento por
+LOTE (`camadas/editar`, nunca um por feição) com a contagem de adicionadas/atualizadas/apagadas, e
+bump de `dados.tiles_versao` no item (ponto de integração para a invalidação de tiles do L2-01-b,
+ainda pendente). Isolamento entre inquilinos por RLS FORCE já existente: o inquilino B recebe `404`
+ao ler, atualizar ou apagar feição de A — nunca `403`, nunca sucesso silencioso, porque a existência
+não é confirmada a quem não pode ver (ADR 20260907T0216).
+
+Medido: 1.000 feições em `adicionar` (modo transação) em menos de 1 s, contra o teto de 3 s do
+portão (`tests/medidas/L2-03-a-api-edicao-transacional.json`). Refutação do item (roteiro do
+adversário) rodada nesta passagem: lote de 100 mil feições recusado pelo teto de lista
+(`EDICAO_LOTE_MAX=2.000`); `crs.srid=0` recusado pela própria validação de entrada; texto de 1 MB
+recusado (`EDICAO_TEXTO_MAX=64 KiB`); geometria em outro CRS sem declarar recusada pela sanidade de
+grau; feição de outro inquilino nunca aceita (404); duas sessões editando a mesma feição — só uma
+ganha (200), a outra recebe 409 com a versão atual, nunca as duas 200. 20 testes verdes em
+`tests/api/test_edicao_transacional.py`.
+
+Fora desta passagem (fronteira honesta, ver ADR): matriz fina de permissão por operação × grupo
+(ficou em `edicao.habilitada`/`somente_proprias`/`geometria_travada` + privilégio único);
+integração com `plat.dominio` do L2-10-a; consumidor da invalidação de tiles (L2-01-b); histórico/
+restauração de feição (L2-03-d-historico-restauracao) — a coluna `versao` cobre só a concorrência
+otimista, não um log de mudanças.
+## turno 4, setembro de 2026 (item L2-01-mapa-web: visualizador de mapa próprio, do Martin à impressão)
+
+Visualizador MapLibre da plataforma, com a pilha de tiles vetoriais que faltava chegar a `master`.
+
+- **Servidor de tiles**: Martin 1.15.0 (musl, sha256 do pacote fixado em `deploy/martin_instalar.sh`) como
+  unidade `plat-martin` em `127.0.0.1:8151`, publicando SÓ funções (`auto_publish.tables: false`) — a
+  tabela crua da camada nunca é exposta. Papel de leitura `plat_leitor` (LOGIN, sem BYPASSRLS, sem ser
+  dono), `plat.contexto_por_token` e a função de tile por camada com RLS vieram do trabalho dos itens
+  L2-01-b/L2-04-a, que nunca tinha sido juntado.
+- **API do mapa** (`app/mapa/`): `GET /api/mapa/camadas` com estilo MapLibre e legenda geradas da
+  simbologia; `GET /api/mapa/camadas/{id}/tilejson` cunhando token de 12 h com escopo de UMA camada;
+  repasse `GET /tiles/{esquema}/{funcao}/{z}/{x}/{y}` com a mesma autorização do `auth_request` do nginx
+  (uma implementação, duas portas); `plat.camada_extensao` para o "enquadrar".
+- **Tela `/mapa`**: lista de camadas com ordem (arrastar e por botão), opacidade, ligar/desligar e
+  enquadrar; legenda; janela de atributos (campo nulo aparece marcado, multi-geometria não se repete);
+  medição geodésica de distância e área; pesquisa de endereço (CNEFE) e de coordenada em decimal e em
+  grau-minuto-segundo; escala, coordenadas e escala numérica 1:N; troca de mapa-base; impressão em PNG e
+  em PDF com escala, barra de escala e seta de norte.
+- **`GET /api/geocodificar`**: geocodificar é leitura e agora tem o verbo certo (o POST continua).
+- Medido com 1.000.000 de feições: 2,4 s do clique ao primeiro desenho, 1,5 s de zoom até `idle`, 61 MB
+  de heap; 10 camadas ao mesmo tempo em 4,3 s, pan em 302 ms, 24,8 MB. Tile z8 pelo repasse: 406 ms
+  frio, 21 ms quente. Detalhe em `tests/medidas/L2-01-mapa-web.json`.
+- Dois defeitos reais achados pelos testes e corrigidos: `attribution: undefined` fazia o MapLibre
+  recusar a fonte inteira em silêncio; repassar `Content-Encoding: gzip` com corpo já descompactado
+  entregava tile ilegível ao navegador. Registrados no ADR 20260907T0400.
+## turno 4, setembro de 2026 (item L2-01-b-martin-tiles-vetoriais: servidor de tiles em produção, PARCIAL)
+
+Sobe o serviço Martin de verdade (v1.15.0, binário oficial, sha256 conferido; `deploy/martin.yaml`,
+`deploy/plat-martin.service`) em cima do contrato do L2-04-a, com generalização por zoom
+(`ST_SimplifyPreserveTopology` abaixo de z12) e corte de 10.000 feições por tile marcado (migração
+`20260906T1955_martin_generalizacao.sql`, já existente desta trilha antes deste turno). Duas peças novas:
+
+1. **`/internal/tiles/verificar`** (`app/tiles/rotas.py`): o Martin (`martin-core::GetTileWithQueryError`)
+   devolve 500 para QUALQUER erro do Postgres — nunca 401/403, conferido no código-fonte da tag
+   `martin-v1.15.0`. A cláusula "sem token = 401" só existe porque o nginx faz `auth_request` para esta
+   rota ANTES de repassar ao Martin. ADR `20260907T0235`.
+2. **`plat.item_da_tabela`** (migração `20260907T0213_item_da_tabela.sql`): fecha um achado do próprio
+   adversário desta rodada — a 1ª versão da rota acima recebia o item de query param do cliente, e um
+   token amplo de QUALQUER inquilino autenticava para o item de QUALQUER outro (a `escopo_cobre` só
+   compara texto do token, nunca dono do item). Agora o item vem da tabela que está na URL, nunca do
+   cliente.
+
+Medido (`tests/medidas/L2-01-b-martin-tiles-vetoriais.json`, trilha própria, Martin/nginx de teste em
+8351/8451, não a unidade de produção): camada de 100 mil pontos sintéticos — tile z8 frio p95 41,8 ms,
+quente p95 4,3 ms (limite 200/20 ms, passou); camada de 472.780 setores censitários do IBGE já na casa (a
+hipótese do item citava "1 mi", número real registrado) servida por PMTiles (tippecanoe v2.80.0, `-z14
+--drop-densest-as-needed --extend-zooms-if-still-dropping --maximum-tile-bytes=500000`) — 110 tiles
+amostrados em z4-z14, 0 erro, 1 excede 1 MB por 1,3% (z9, região metropolitana de SP); RLS cruzada,
+revogação de token e invalidação de cache por versão (0,12 s) passaram; 200 pedidos paralelos ao pior caso
+(z0 da camada de 472,8 mil) na fonte PMTiles: 200/200 OK, RAM do Martin 38-39 MB — na FUNÇÃO AO VIVO (fora
+do desenho, que é servir isso por PMTiles) o mesmo teste dá 180/200 em 500 sob a piscina pequena da trilha,
+registrado como fronteira, não escondido. PMTiles: 206 a Range, sem Content-Encoding; abertura real no
+QGIS Desktop NÃO verificada nesta máquina (sem GUI) — só o formato (magic bytes) e o protocolo HTTP.
+
+Fica de fora, honesto: `ST_Subdivide` para polígono > 4.096 vértices (nenhuma camada de teste tem isso); a
+unidade systemd `plat-martin` real não foi instalada como serviço do sistema nesta trilha (rodada como
+processo de teste); a fonte PMTiles do Martin não passa pelo mesmo `auth_request` de token que a função ao
+vivo (controle de acesso dela é o do arquivo/bucket, L0-11, fora do escopo medido).
+
+### Commits
+
+Ver `git log wt/il201bmarti` a partir do commit desta entrada.
+
+## turno 3, setembro de 2026 (item L2-04-a-leitor-rls-martin: quem serve o tile não sabe o que é inquilino)
+
+O servidor de tiles vetoriais fala direto com o PostGIS e não tem noção de sessão, privilégio ou inquilino.
+Passa a existir um **papel de banco só de leitura** — LOGIN, sem BYPASSRLS, sem ser dono de nada, com SELECT
+nas tabelas de camada e EXECUTE nas funções de tile — e uma função `plat.contexto_por_token`, que valida o
+token de serviço, confere escopo `camada:ler` e restrição de Referer/IP, grava o uso em `plat.log_acesso` e
+põe o inquilino na transação. Cada camada ganha a sua função de tile `d_<slug>.t_<16 hex>(z, x, y,
+query_params)`, criada junto com a tabela; a primeira instrução dela é o contexto por token. Contrato no ADR
+0020; o papel, a senha e a linha do `pg_hba.conf` saem de `db/leitor_instalar.sh`, chamado pelo `install.sh`.
+
+A política de RLS do papel de leitura **não olha a GUC `plat.tenant_id` crua**: qualquer papel conectado
+escreve nela, e o papel de leitura é o mesmo para todos os inquilinos. Ela olha `plat.tenant_leitor()`, que
+exige uma prova (sha256 de um segredo que nenhum papel comum lê, mais o inquilino e o processo) emitida só
+por `contexto_por_token`. Medido em `tests/medidas/L2-04-a-leitor-rls-martin.json`: `SET plat.tenant_id` feito
+pelo próprio leitor devolve **0 linhas**; **6 chamadas cruzadas** às funções de tile com o token do outro
+inquilino devolvem **0 tiles com dado**; token revogado deixa de valer em **0,002 s**; **1 linha de log por
+chamada** de contexto aceita; segunda execução do instalador = **0 mudanças**.
+
+⛔ Fronteira honesta: a linha de log de uma RECUSA é escrita e desfeita com a transação abortada (o PostgreSQL
+não tem transação autônoma) — medida `linhas_log_de_recusa_persistidas: 0`. O rastro da recusa fica no log do
+servidor (a exceção é nomeada) e no log de acesso da API. E o Martin em si não está instalado nem configurado
+por este item: o que se entrega é o contrato de banco que ele consome.
+## turno 5, setembro de 2026 (item L2-02-a-modelo-estilo: o estilo de uma camada vira documento versionado)
+
+O tipo `estilo` deixa de ter `corpo` livre e passa a carregar o **JSON Schema publicado**
+(`docs/esquemas/estilo-v1.json`): `plat_construtor` (a intenção do usuário — 7 tipos: `unico`, `categoria`,
+`classes`, `proporcional`, `calor`, `agrupamento`, `raster`, com campo, cortes, cores, rótulos, faixa de
+escala e transparência) e `maplibre` (as camadas MapLibre Style Spec v8 que o navegador desenha). O servidor
+recompila `maplibre` a partir de `plat_construtor` na gravação (`app/estilos/validador.py`) — nunca existe um
+`maplibre` gravado que não seja exatamente o que aquele `plat_construtor` implica, o que fecha a ida-e-volta
+sem perda sem depender do cliente calcular o documento certo. Validação em três camadas na gravação, nunca no
+desenho: (1) `plat_construtor` compila sem erro (campo ausente, faixa invertida, tipo desconhecido —
+`app/estilos/compilador.py`, `EstiloInvalido` → 422 `plat_construtor_invalido` com o campo apontado); (2)
+todo campo citado em expressões `get`/`has`/`in` está no vocabulário `plat_construtor.campos` (422
+`campo_inexistente`); (3) a Style Spec enviada é válida pelo pacote oficial `@maplibre/maplibre-gl-style-spec`
+20.4.0, chamado por subprocesso Node (`ferramentas/estilo/validar.mjs`) — 422 `estilo_invalido` com a
+mensagem literal do validador. `docs/adr/20260907T1200-modelo-de-estilo.md` registra a convivência com
+`app/mapa/simbologia.py` (item L2-01-mapa-web, ramo `wt/l201mapa`, ainda não juntado): as duas coisas ainda
+não se ligam (nenhum código resolve um `estilo.ref` desenhando-o), e o caminho de convergência fica descrito
+lá, com a mesma paleta categórica preservada nos dois lugares.
+
+`app/estilos/padrao.py::estilo_padrao` gera o estilo padrão de uma camada nova por hash sha256 do uuid do
+item — mesmo uuid, mesma cor, em qualquer instalação (testado em `tests/unit/test_estilos_compilador.py`);
+wiring dentro do INSERT de `app/ingestao/carregar.py` fica para quem tocar o L0-04-c/L2-02-e em seguida (a
+função está pronta e testada, a chamada dentro do pipeline de ingestão não foi feita neste item).
+`app/estilos/sld.py::gerar_sld` converte o subconjunto declarado (`unico`/`categoria`/`classes`) para SLD 1.0;
+provado por leitura do XML (as mesmas cores do construtor), não por abrir no QGIS — QGIS não está instalado
+nesta máquina (`SISTEMA.md` recursos), então essa metade da cláusula fica **parcial**, nomeada no handoff.
+
+Sete exemplos (um por tipo do construtor) em `tests/estilos/*.json`: todos compilam, passam no validador
+oficial e a ida-e-volta (compilar de novo o mesmo `plat_construtor`) dá byte a byte o mesmo `maplibre`.
+Bateria da refutação, todas recusadas em 422 na gravação: expressão com campo inexistente, 300 layers
+(o esquema limita a 200), sprite de URL externa (padrão restrito a `/sprites/...` interno), faixa de classe
+invertida, valor de categoria duplicado; item de um inquilino não é legível por outro (404, RLS genérico do
+catálogo). `tests/api/catalogo/conftest.py::DADOS_POR_TIPO["estilo"]` e duas fixtures de `test_mapas.py` que
+fabricavam um `estilo` de exemplo com a forma antiga (`corpo` livre) foram atualizadas para o novo formato.
+
+## turno 3, setembro de 2026
+, setembro de 2026 (item L2-01-a-documento-mapa: o mapa é um documento com esquema, não um punhado de URLs)
+
+O tipo `mapa` deixa de ter `corpo` livre e passa a carregar um **JSON Schema publicado**
+(`docs/esquemas/mapa-v1.json`, gerado de `plat.tipo_item`): mapa-base, lista ordenada de camadas com
+visibilidade, opacidade, faixa de escala, grupo (até 3 níveis), estilo, popup, filtro CQL2-JSON, rótulos,
+campo de tempo e intervalo de atualização; extensão inicial, rotação, CRS de exibição fixo em 3857 e
+favoritos. Cada camada aponta o item do catálogo por **uuid** (`ref`), nunca por URL — o oposto do Web Map
+JSON da Esri, onde a URL do portal fica congelada dentro de cada mapa salvo. Rotas novas: `POST/GET/PUT
+/api/mapas`, `GET /api/mapas` e `GET /api/mapas/{id}/completo`, que devolve o documento com as camadas já
+resolvidas (título, tipo, campos, estilo, popup) em UMA chamada. Contrato no ADR 0022; de-para chave a chave
+contra a Web Map Specification em `docs/PARIDADE.md`.
+
+Medido em `tests/medidas/L2-01-a.json`: `/completo` de um mapa com **10 camadas** responde com p95 de
+**20,7 ms** (mediana 12,2 ms) em **50 chamadas**, contra o teto de 150 ms do portão. Camada de outro inquilino
+citada no documento = **404** (o mesmo 404 de uuid inexistente, sem revelar que existe); apagar camada usada
+por mapa = **409** com a lista dos mapas dependentes; 500 camadas, 5 níveis de grupo, ciclo de grupo e
+extensão fora do mundo = **422**, nenhum 200 e nenhum 500. Na tela `/mapa?id=<uuid>` a lista de camadas
+reordena arrastando (e por teclado, Alt+seta): e2e grava a ordem, recarrega a página e confere que voltou a
+mesma, com captura em `tests/e2e/capturas/L2-01-a-documento-mapa_painel_camadas.png`.
+
+⛔ Fronteira honesta: `/completo` devolve o CONTRATO da URL de tiles com `pronto: false` e o motivo — não há
+servidor de tiles vetoriais nem raster instalado nesta máquina (itens L2-01-b e L1-02) —, e `dominios` sai
+vazio com o motivo escrito, porque a camada ainda não guarda vocabulário de domínio (L0-04-c, parcial). A tela
+lista e reordena as camadas do documento; não as desenha no canvas, pelo mesmo motivo, e diz isso em cada
+linha. ⛔ Quebra declarada: documento com `corpo.camadas` como lista de uuid soltos passa a ser 422.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
@@ -212,6 +1009,57 @@ carimbo) e o cabeçalho opcional `-- depende: <arquivo>`; `db/migrar.sh`, `db/mi
 reprova nome fora do padrão, três dígitos novos e dependência que vem depois na ordem;
 `tests/api/test_saude.py` deixa de casar o glob de três dígitos e escreve o que "última migração" passa a
 significar (a de autoria mais recente pela chave, não a maior string nem a última aplicada no relógio).
+## turno 3, setembro de 2026 (item L4-01-a-pacote-de-ativos: o esquema da rede de utilidades é dado)
+
+Primeiro item da linha L4. O esquema de uma rede de utilidades — redes de domínio, tiers, grupos e tipos de
+ativo, categorias de rede, atributos e configurações de terminal — passa a ser um **pacote de ativos**: um
+documento JSON versionado, importado para dez tabelas `plat.rede_*` do inquilino (`POST
+/api/rede/{rede_id}/pacote`) e exportado de volta a partir delas (`GET .../pacote`). O contrato está no ADR
+0019; o mapeamento coluna a coluna, em `docs/PACOTE_REDE.md`, gerado do próprio dado.
+
+A exportação é **reconstruída das tabelas**, nunca o arquivo recebido — dos 96.042 bytes importados do pacote
+`eletrica-br`, saem os mesmos 96.042 bytes, e um teste altera uma linha no banco para mostrar que a exportação
+muda junto (`test_a_exportacao_vem_das_tabelas_e_nao_do_arquivo_recebido`). Pacote recusado sai com a lista
+inteira de problemas, cada um com o caminho (`tipos[41].grupo`) e a **linha do arquivo enviado**.
+
+Dois pacotes vêm com a instalação: `eletrica-br` (2 domínios, 4 tiers, 14 grupos, 24 tipos, 214 atributos, 24
+regras) cobrindo as 13 camadas de rede da BDGD do Módulo 10 do PRODIST, e `agua-epanet` (1 domínio, 2 tiers, 6
+grupos, 14 tipos, 41 atributos, 16 regras) no vocabulário do EPANET 2.2.
+
+⛔ Fronteira honesta declarada no próprio dado: dos 214 atributos do pacote elétrico, **154 têm a coluna de
+origem conferida contra uma extração real** (11 camadas) e **60 são declarados do documento da fonte, sem
+conferência** (`SUB`, `UNSEMT`, `UNCRMT`, `UNREMT`, `UGMT_tab`); o pacote de água é inteiramente declarado.
+Nenhum atributo com `conferida = false` deve decidir carga de dado sem antes conferir o dicionário da entrega.
+Topologia, traçado e subrede não existem ainda — este item entrega só o catálogo do esquema.
+
+## turno 3, setembro de 2026 (item L4-01-a-pacote-de-ativos: conserto pós-adversário, refutado -> corrigido)
+
+O adversário independente do turno 3 (`handoffs/T3/ataque-L4-portal-ADVERSARIO.md` §1) refutou o item com
+seis achados; todos corrigidos, com a mesma bateria de teste virando regressão permanente
+(`tests/api/test_rede_pacote_conserto_a1_a4.py`, `tests/api/test_fk_composta_por_inquilino.py`).
+
+**A1** (a FK não era filtrada pela RLS): as 10 tabelas `plat.rede_*` ganharam FK **composta** `(tenant_id,
+id)` (`db/migracoes/20260906T1815_rede_fk_por_inquilino.sql`) — um inquilino não pendura mais linha própria
+em `tipo`/`domínio` de outro pelo uuid alheio. A trava (`test_fk_composta_por_inquilino.py`) varre
+`pg_constraint` do schema inteiro, não só a rede; achou 55 FKs do mesmo padrão em outras tabelas do produto,
+documentadas como fora de escopo (não corrigidas aqui).
+
+**A2/A2b** (seção repetida entrava em silêncio e a linha apontada era a errada): `localizador.py` foi
+reescrito para construir um mapa de offsets numa única passada — a última ocorrência de uma chave
+sobrescreve a anterior, como `json.loads`, então a linha apontada é sempre a da seção que a validação de
+fato usou; `pacote._chave_repetida` recusa com 422 qualquer chave repetida, em qualquer profundidade.
+
+**A3** (NUL em `texto`/`jsonb` derrubava a importação com 500): `pacote._procurar_nul` recusa com 422 antes
+de a string chegar ao psycopg2.
+
+**A4** (a rota travava o laço de eventos e a localização de linha era quadrática): `POST
+.../{rede_id}/pacote` só lê o corpo no laço de eventos; validação e gravação vão para
+`run_in_threadpool`. O mesmo mapa de offsets do conserto A2b tornou a localização de linha linear (medido:
+pacote de 4 mil erros, 14,1 s → 1,2 s; pior `/saude` concorrente, 13,6 s → 0,19 s —
+`tests/medidas/L4-01-a.json`). Tornar a concorrência real expôs um `DeadlockDetected` não tratado em duas
+importações simultâneas na MESMA rede; corrigido com `SELECT ... FOR UPDATE` na linha da rede
+(`_travar_rede`), que serializa a substituição do catálogo sem 500.
+
 
 ## turno 3, setembro de 2026 (item L0-04-a-upload-arquivo: upload retomável pelo navegador)
 
@@ -1092,3 +1940,10 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
 | `8ffe950` | L0-01 correção (T1): dependências fixadas sem ~/.local, senha por stdin, HSTS, Swagger local, make medidas, PLAT_GIT_SHA |
 | `3083366` | Medidas do item L0-01-repo, rodada 2 do testador sobre 8ffe950 |
 | (este) | Documentação atualizada sobre 8ffe950 e 3083366 (passe curto do cronista) |
+
+## L4-01-c-importador-bdgd (07/09/2026, turno 4)
+- Job `rede.importar_bdgd` (`POST /api/rede/{id}/importar-bdgd`): pacote `.gdb.zip` local dentro de `PLAT_BDGD_RAIZ`, progresso, contrato de dado ANTES da carga (30 de 61 expectativas do YAML da casa avaliadas; as de nível transformador declaradas não avaliadas), contagem conferida contra o arquivo, unidade do COMP pela razão Σ COMP / Σ geodésico, três órfãos contados e listados.
+- `_gravar_dispositivos` em lote (duas consultas por dispositivo viraram dois `execute_values`): tira ~17 mil idas ao banco da cooperativa de teste.
+- `comprimento_m` da aresta passa a ser o COMP convertido (o comprimento do ATIVO); o geodésico fica em `atributos`. Cláusula "km de MT = Σ COMP ± 0,1 %" verdadeira por construção.
+- Migração `20260907T1330_rede_importacao_contrato.sql`: colunas `contrato`, `comp`, `orfaos` (jsonb) em `plat.rede_importacao`.
+- `inspecionar`/`sha256_gdb` aceitam arquivo único (GPKG) além de pasta `.gdb`.

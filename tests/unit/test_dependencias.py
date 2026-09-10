@@ -58,3 +58,45 @@ def test_requirements_fixa_o_que_a_aplicacao_importa():
     for linha in texto.splitlines():
         if linha and not linha.startswith("#"):
             assert "==" in linha, f"dependência sem versão fixada: {linha}"
+
+
+# ---- item L4-01-g: pyogrio é dependência declarada, e o import dela é tardio ----
+# `app/rede_utilidades/bdgd.py` e `app/rede_utilidades/tarefas.py` leem FileGDB com pyogrio (GDAL/OGR).
+# Importar no topo prendia `import app.main` — via app/jobs/tipos.py — a um pacote que, nesta máquina,
+# só existia no site do usuário. Os dois testes abaixo travam as duas metades do conserto.
+
+PROGRAMA_SEM_PYOGRIO = """
+import sys
+
+
+class _Bloqueia:
+    def find_spec(self, nome, path=None, target=None):
+        if nome == "pyogrio" or nome.startswith("pyogrio."):
+            raise ImportError("pyogrio ausente de proposito")
+        return None
+
+
+sys.meta_path.insert(0, _Bloqueia())
+import app.main  # noqa: E402
+print("ok")
+print("pyogrio" not in sys.modules)
+"""
+
+
+def test_app_main_importa_com_pyogrio_ausente():
+    """Refutação do item: tirar o pyogrio da máquina não pode quebrar a importação da aplicação.
+    A API não abre FileGDB; quem abre é o job `rede.importar_bdgd`, no worker."""
+    r = _rodar(PROGRAMA_SEM_PYOGRIO)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.split() == ["ok", "True"], r.stdout
+
+
+def test_pyogrio_vem_da_venv_quando_o_job_pede():
+    """A outra metade: o pacote é dependência declarada em requirements.txt e está NA venv, para que
+    o job que lê o pacote da ANEEL funcione sem o site do usuário."""
+    r = _rodar("from app.rede_utilidades import bdgd; print(bdgd._pyogrio().__file__)")
+    assert r.returncode == 0, r.stderr
+    caminho = Path(r.stdout.strip())
+    assert caminho.resolve().is_relative_to(VENV.resolve()), caminho
+    texto = (ROOT / "requirements.txt").read_text(encoding="utf-8")
+    assert any(linha.startswith("pyogrio==") for linha in texto.splitlines()), "pyogrio sem versão fixada"

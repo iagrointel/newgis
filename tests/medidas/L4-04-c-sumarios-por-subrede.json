@@ -1,0 +1,237 @@
+{
+ "item": "L4-04-c-sumarios-por-subrede",
+ "assinado_por": "redes+backend+testador (trilha il404csumar)",
+ "gerado_em": "2026-09-07T23:08:10Z",
+ "git_sha": "7faf15623e025ae1301e75a5e337e3147d478486",
+ "maquina": "PostgreSQL 16 em iagro_sat; base própria da trilha (plat_til404csumar); fonte = schema do ativo de rede de referência (BDGD, ativo da casa, somente leitura); outras sessões da casa na mesma máquina",
+ "medidas": {
+  "rede_id": "7e710666-b5cb-4544-a676-7f10f1337ebe",
+  "clausulas": {
+   "km_mt_por_ctmt": {
+    "prova": "20 alimentadores; maior desvio 0.000000 % contra a soma de COMP do arquivo (tolerância 0.1 %)",
+    "ok": true
+   },
+   "ucbt_por_ctmt": {
+    "prova": "20 alimentadores, contagem idêntica ao arquivo; divergentes: 0",
+    "ok": true
+   },
+   "sem_uc_em_dois_alimentadores": {
+    "prova": "soma das unidades dos 20 sumários = 27587; total no arquivo = 27587 (dupla contagem apareceria como soma maior)",
+    "ok": true
+   },
+   "trafos_kva_gd_energia": {
+    "prova": "transformadores, kVA, gerações e energia anual conferidos nos 20 alimentadores; divergentes: 0",
+    "ok": true
+   },
+   "csv": {
+    "prova": "20 linhas de dado + cabeçalho, 21 colunas",
+    "ok": true
+   }
+  },
+  "avisos": [
+   "1 alimentador(es) da camada CTMT sem trecho de média tensão no arquivo: 1_CORS_1"
+  ],
+  "carga": {
+   "ssdmt": {
+    "linhas": 44268,
+    "segundos": 1.435
+   },
+   "trafo": {
+    "linhas": 5481,
+    "segundos": 0.155
+   },
+   "ucbt": {
+    "linhas": 27587,
+    "segundos": 0.832
+   },
+   "ugbt": {
+    "linhas": 1385,
+    "segundos": 0.049
+   }
+  },
+  "arquivo": {
+   "ssdmt": 44268,
+   "trafo": 5481,
+   "ucbt": 27587,
+   "ugbt": 1385,
+   "ctmt": 21
+  },
+  "subredes_registradas": 20,
+  "alimentadores_declarados_sem_trecho": [
+   "1_CORS_1"
+  ],
+  "calcular_http_segundos": 1.523,
+  "calculo": {
+   "subredes": 20,
+   "calculadas": 20,
+   "sem_atributo": [],
+   "duracao_ms": 1498
+  },
+  "por_ctmt": {
+   "1_CTJ1_1": {
+    "arquivo_comp_m": 97284.79,
+    "sumario_m": 97284.79,
+    "desvio_pct": 0.0,
+    "arquivo_ucbt": 1425,
+    "sumario_ucs": 1425
+   },
+   "1_CTJ2_1": {
+    "arquivo_comp_m": 147070.03,
+    "sumario_m": 147070.03,
+    "desvio_pct": 0.0,
+    "arquivo_ucbt": 1807,
+    "sumario_ucs": 1807
+   },
+   "1_CTJ3_1": {
+    "arquivo_comp_m": 53.57,
+    "sumario_m": 53.57,
+    "desvio_pct": 0.0,
+    "arquivo_ucbt": 0,
+    "sumario_ucs": 0
+   },
+   "1_TQR_1": {
+    "arquivo_comp_m": 352.1,
+    "sumario_m": 352.1,
+    "desvio_pct": 0.0,
+    "arquivo_ucbt": 0,
+    "sumario_ucs": 0
+   },
+   "2_CTJ1_1": {
+    "arquivo_comp_m": 245105.02,
+    "sumario_m": 245105.02,
+    "desvio_pct": 0.0,
+    "arquivo_ucbt": 3128,
+    "sumario_ucs": 3128
+   },
+   "2_CTJ2_1": {
+    "arquivo_comp_m": 304468.87,
+    "sumario_m": 304468.87,
+    "desvio_pct": 0.0,
+    "arquivo_ucbt": 3708,
+    "sumario_ucs": 3708
+   },
+   "2_CTJ3_1": {
+    "arquivo_comp_m": 255384.21,
+    "sumario_m": 255384.21,
+    "desvio_pct": 0.0,
+    "arquivo_ucbt": 1158,
+    "sumario_ucs": 1158
+   },
+   "3_CTJ1_1": {
+    "arquivo_comp_m": 212607.52,
+    "sumario_m": 212607.52,
+    "desvio_pct": 0.0,
+    "arquivo_ucbt": 2386,
+    "sumario_ucs": 2386
+   },
+   "3_CTJ2_1": {
+    "arquivo_comp_m": 223997.0,
+    "sumario_m": 223997.0,
+    "desvio_pct": 0.0,
+    "arquivo_ucbt": 3069,
+    "sumario_ucs": 3069
+   },
+   "3_CTJ3_1": {
+    "arquivo_comp_m": 27816.28,
+    "sumario_m": 27816.28,
+    "desvio_pct": 0.0,
+    "arquivo_ucbt": 152,
+    "sumario_ucs": 152
+   },
+   "4_CTJ1_1": {
+    "arquivo_comp_m": 164188.55,
+    "sumario_m": 164188.55,
+    "desvio_pct": 0.0,
+    "arquivo_ucbt": 1681,
+    "sumario_ucs": 1681
+   },
+   "4_CTJ2_1": {
+    "arquivo_comp_m": 197604.82,
+    "sumario_m": 197604.82,
+    "desvio_pct": 0.0,
+    "arquivo_ucbt": 1891,
+    "sumario_ucs": 1891
+   },
+   "4_CTJ3_1": {
+    "arquivo_comp_m": 279095.47,
+    "sumario_m": 279095.47,
+    "desvio_pct": 0.0,
+    "arquivo_ucbt": 1747,
+    "sumario_ucs": 1747
+   },
+   "4_SCR2_1": {
+    "arquivo_comp_m": 35.94,
+    "sumario_m": 35.94,
+    "desvio_pct": 0.0,
+    "arquivo_ucbt": 0,
+    "sumario_ucs": 0
+   },
+   "55_05_1": {
+    "arquivo_comp_m": 95392.18,
+    "sumario_m": 95392.18,
+    "desvio_pct": 0.0,
+    "arquivo_ucbt": 544,
+    "sumario_ucs": 544
+   },
+   "5_CTJ2_1": {
+    "arquivo_comp_m": 9043.77,
+    "sumario_m": 9043.77,
+    "desvio_pct": 0.0,
+    "arquivo_ucbt": 0,
+    "sumario_ucs": 0
+   },
+   "5_CTJ3_1": {
+    "arquivo_comp_m": 71944.23,
+    "sumario_m": 71944.23,
+    "desvio_pct": 0.0,
+    "arquivo_ucbt": 795,
+    "sumario_ucs": 795
+   },
+   "5_VAS_1": {
+    "arquivo_comp_m": 339024.47,
+    "sumario_m": 339024.47,
+    "desvio_pct": 0.0,
+    "arquivo_ucbt": 2181,
+    "sumario_ucs": 2181
+   },
+   "6_CTJ3_1": {
+    "arquivo_comp_m": 225914.83,
+    "sumario_m": 225914.83,
+    "desvio_pct": 0.0,
+    "arquivo_ucbt": 1915,
+    "sumario_ucs": 1915
+   },
+   "6_RPA_1": {
+    "arquivo_comp_m": 39.02,
+    "sumario_m": 39.02,
+    "desvio_pct": 0.0,
+    "arquivo_ucbt": 0,
+    "sumario_ucs": 0
+   }
+  },
+  "divergencia_declarado_geometria_pct": {
+   "1_CTJ1_1": -0.2639,
+   "1_CTJ2_1": -0.7583,
+   "1_CTJ3_1": -6.3767,
+   "1_TQR_1": 0.0304,
+   "2_CTJ1_1": -0.2109,
+   "2_CTJ2_1": -0.6826,
+   "2_CTJ3_1": -0.2652,
+   "3_CTJ1_1": -0.6379,
+   "3_CTJ2_1": -1.3062,
+   "3_CTJ3_1": -1.2071,
+   "4_CTJ1_1": -0.3146,
+   "4_CTJ2_1": -0.5044,
+   "4_CTJ3_1": -1.2767,
+   "4_SCR2_1": -0.0195,
+   "55_05_1": -0.1662,
+   "5_CTJ2_1": -8.4907,
+   "5_CTJ3_1": -0.5095,
+   "5_VAS_1": -0.5831,
+   "6_CTJ3_1": -0.3287,
+   "6_RPA_1": 0.0154
+  },
+  "ok": true
+ },
+ "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/test_rede_subredes_resumo_medida.py -m lento -q (exige PLAT_REDE_REFERENCIA_ESQUEMA e GRANT de leitura no schema do ativo)"
+}

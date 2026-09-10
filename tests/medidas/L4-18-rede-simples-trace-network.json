@@ -1,0 +1,52 @@
+{
+ "item": "L4-18-rede-simples-trace-network",
+ "medidas": {
+  "bacia_bc250_trechos": {
+   "valor": 584,
+   "unidade": "trechos",
+   "comando": "bash laco/roda_teste.sh tests/api/test_rede_simples_bacia_bc250.py::test_montante_e_jusante_batem_com_networkx"
+  },
+  "bacia_bc250_nos": {
+   "valor": 585,
+   "unidade": "nós",
+   "comando": "bash laco/roda_teste.sh tests/api/test_rede_simples_bacia_bc250.py::test_montante_e_jusante_batem_com_networkx"
+  },
+  "bacia_bc250_arestas_indeterminadas": {
+   "valor": 65,
+   "unidade": "arestas",
+   "comando": "bash laco/roda_teste.sh tests/api/test_rede_simples_bacia_bc250.py::test_montante_e_jusante_batem_com_networkx"
+  },
+  "bacia_bc250_tracados_conferidos_contra_networkx": {
+   "valor": 48,
+   "unidade": "traçados",
+   "comando": "bash laco/roda_teste.sh tests/api/test_rede_simples_bacia_bc250.py::test_montante_e_jusante_batem_com_networkx"
+  },
+  "bacia_bc250_criar_rede_ms": {
+   "valor": 464,
+   "unidade": "ms",
+   "comando": "bash laco/roda_teste.sh tests/api/test_rede_simples_bacia_bc250.py::test_montante_e_jusante_batem_com_networkx (POST /api/rede/simples, camada -> feições -> topologia)"
+  },
+  "criar_rede_simples_cliques": {
+   "valor": 3,
+   "unidade": "interações",
+   "comando": "bash laco/roda_teste.sh tests/e2e/test_rede_simples.py --base-url http://127.0.0.1:8309"
+  },
+  "abrir_redes_simples_ms": {
+   "valor": 61.2,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright"
+  },
+  "carga_1min_quando_medido": {
+   "valor": 6.83,
+   "unidade": "carga",
+   "comando": "os.getloadavg()[0]"
+  },
+  "ram_livre_gb_quando_medido": {
+   "valor": 7.2,
+   "unidade": "GiB",
+   "comando": "MemAvailable de /proc/meminfo"
+  }
+ },
+ "gerado_em": "2026-09-07T20:03:42Z",
+ "git_sha": "b71c0e853deb"
+}

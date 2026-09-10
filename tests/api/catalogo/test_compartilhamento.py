@@ -8,7 +8,7 @@ import datetime
 import secrets
 import time
 
-from tests.api.catalogo.conftest import titulo_zt
+from tests.api.catalogo.conftest import documento_mapa, titulo_zt
 from tests.api.conftest import novo_cliente
 
 ITEM = "L0-03-catalogo"
@@ -121,7 +121,7 @@ def test_link_com_dependencias_e_elevar_de_outro_dono(sessao_a, itens_a, editor_
     minha_camada = itens_a.criar("camada_vetorial")
     sessao_a_sem_edit = novo_cliente()
     # o admin tem editar_tudo; use um segundo editor sem acesso à camada do primeiro
-    mapa = itens_a.criar("mapa", dados={"esquema_versao": 1, "corpo": {"camadas": [minha_camada["id"]]}})
+    mapa = itens_a.criar("mapa", dados=documento_mapa(minha_camada["id"]))
     r = sessao_a.get(f"/api/itens/{mapa['id']}/compartilhamento")
     deps = r.json()["dependencias"]
     assert [d["id"] for d in deps] == [minha_camada["id"]] and deps[0]["pode_editar"] is True
@@ -135,7 +135,7 @@ def test_link_com_dependencias_e_elevar_de_outro_dono(sessao_a, itens_a, editor_
     # editor: mapa com a camada de outro (visível por inquilino), elevar = 403
     sessao_a.put(f"/api/itens/{minha_camada['id']}/compartilhamento", json={"acesso": "inquilino"})
     mapa2 = itens_a.criar(
-        "mapa", sessao=dono_c, dados={"esquema_versao": 1, "corpo": {"camadas": [minha_camada["id"]]}}
+        "mapa", sessao=dono_c, dados=documento_mapa(minha_camada["id"])
     )
     r = dono_c.post(f"/api/itens/{mapa2['id']}/links", json={"itens_incluidos": [minha_camada["id"]]})
     assert (

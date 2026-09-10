@@ -1,0 +1,471 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "amc_modelo.v1",
+  "title": "Modelo de análise multicritério (AMC) — versão 1",
+  "_nota": "Documento gravado em plat.amc_modelo.definicao (item L3-01-a-modelo-dado; laco/decomposicao/L3L6_CONCEITO.md decisões A1/A4/A5/A6/A11). Camada 1 de validação (estrutura) fica aqui, jsonschema Draft 2020-12; camada 2 (semântica — soma de pesos, id duplicado, coerência da transformação) vive em app/amc/esquema.py porque JSON Schema puro não expressa checagem entre itens de um array. Vocabulário fechado de propósito (decisão A4): tipo de transformação novo exige par de testes SQL×numpy antes de entrar aqui.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "fatores",
+    "combinador"
+  ],
+  "properties": {
+    "descricao": {
+      "type": "string",
+      "maxLength": 2048
+    },
+    "combinador": {
+      "enum": [
+        "soma_ponderada",
+        "soma_ponderada_percentual",
+        "media_geometrica",
+        "minimo",
+        "maximo",
+        "produto"
+      ],
+      "description": "soma_ponderada = Σw·f/Σw sobre os fatores com dado (padrão, A5); os demais são paridade Esri ou permitem fator anular a nota."
+    },
+    "ausente": {
+      "enum": [
+        "excluir_e_renormalizar",
+        "zero",
+        "pior_nota"
+      ],
+      "default": "excluir_e_renormalizar",
+      "description": "política de dado ausente por fator numa unidade (A5); o padrão nunca contamina a nota com COALESCE(0)."
+    },
+    "restricoes": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "base",
+          "motivo"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,31}$"
+          },
+          "nome": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "base": {
+            "enum": [
+              "norma",
+              "engenharia",
+              "preferencia"
+            ],
+            "description": "distinção jurídica, não numérica (A6): veto e restrição nunca entram no sorteio de robustez."
+          },
+          "fonte": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "camada_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          },
+          "buffer_m": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "motivo": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      }
+    },
+    "fatores": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {
+        "$ref": "#/$defs/fator"
+      }
+    }
+  },
+  "$defs": {
+    "fator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "criterio",
+        "transformacao",
+        "peso"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,31}$",
+          "description": "único dentro do modelo (checado em app/amc/esquema.py; JSON Schema puro não compara itens do array entre si)."
+        },
+        "nome": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "criterio": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "camada_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+        },
+        "fonte": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500
+        },
+        "unidade": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 50
+        },
+        "direcao": {
+          "enum": [
+            "quanto_maior_melhor",
+            "quanto_menor_melhor",
+            null
+          ]
+        },
+        "base": {
+          "enum": [
+            "norma",
+            "engenharia",
+            "preferencia",
+            null
+          ],
+          "description": "A11: de onde vem o critério — nunca 'pesos que ninguém aprovou'."
+        },
+        "proxy": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "A11: fator mede algo diferente do que o critério promete (ex.: presença ≠ supressão)."
+        },
+        "nao_sustenta": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "A11: o que este fator explicitamente NÃO sustenta como evidência."
+        },
+        "peso": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "transformacao": {
+          "$ref": "#/$defs/transformacao"
+        },
+        "disponivel": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "false = gancho ainda sem dado (fator declarado, camada não ligada); default true (anatomia cbre.fatores.disponivel)."
+        },
+        "ressalva": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "o que este fator NÃO prova por si (ex.: 'confiança baixa não decide lote na linha de divisa')."
+        }
+      }
+    },
+    "transformacao": {
+      "type": "object",
+      "required": [
+        "tipo"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "linear"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "tipo",
+              "minimo",
+              "maximo"
+            ],
+            "properties": {
+              "tipo": {
+                "const": "linear"
+              },
+              "minimo": {
+                "type": "number"
+              },
+              "maximo": {
+                "type": "number"
+              },
+              "inverter": {
+                "type": "boolean",
+                "default": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "faixas"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "tipo",
+              "quebras",
+              "notas"
+            ],
+            "properties": {
+              "tipo": {
+                "const": "faixas"
+              },
+              "metodo": {
+                "enum": [
+                  "manual",
+                  "quantil",
+                  "intervalo_igual",
+                  "quebras_naturais"
+                ],
+                "default": "manual"
+              },
+              "quebras": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 1,
+                "maxItems": 20
+              },
+              "notas": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "minItems": 2,
+                "maxItems": 21
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "degraus"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "tipo",
+              "bandas"
+            ],
+            "properties": {
+              "tipo": {
+                "const": "degraus"
+              },
+              "bandas": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 20,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "ate",
+                    "nota"
+                  ],
+                  "properties": {
+                    "ate": {
+                      "type": "number"
+                    },
+                    "nota": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "categorias"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "tipo",
+              "mapa"
+            ],
+            "properties": {
+              "tipo": {
+                "const": "categorias"
+              },
+              "mapa": {
+                "type": "object",
+                "minProperties": 1,
+                "additionalProperties": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              },
+              "sem_correspondencia": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 100
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "gaussiana"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "tipo",
+              "media",
+              "desvio"
+            ],
+            "properties": {
+              "tipo": {
+                "const": "gaussiana"
+              },
+              "media": {
+                "type": "number"
+              },
+              "desvio": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "potencia"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "tipo",
+              "minimo",
+              "maximo",
+              "expoente"
+            ],
+            "properties": {
+              "tipo": {
+                "const": "potencia"
+              },
+              "minimo": {
+                "type": "number"
+              },
+              "maximo": {
+                "type": "number"
+              },
+              "expoente": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "binario"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "tipo",
+              "limiar"
+            ],
+            "properties": {
+              "tipo": {
+                "const": "binario"
+              },
+              "limiar": {
+                "type": "number"
+              },
+              "acima_passa": {
+                "type": "boolean",
+                "default": true
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "tipo": {
+          "enum": [
+            "linear",
+            "faixas",
+            "degraus",
+            "categorias",
+            "gaussiana",
+            "potencia",
+            "binario"
+          ]
+        }
+      }
+    }
+  }
+}

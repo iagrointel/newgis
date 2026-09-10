@@ -10018,6 +10018,3029 @@
     "x-privilegio": "proprio"
    }
   },
+  "/api/rede/pacotes": {
+   "get": {
+    "tags": [
+     "rede de utilidades"
+    ],
+    "summary": "Listar Pacotes Instalados",
+    "description": "Pacotes de ativos entregues com a instalação. Não lê nem escreve dado de inquilino.",
+    "operationId": "listar_pacotes_instalados_api_rede_pacotes_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PacoteInstaladoLista"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/rede/pacotes/{codigo}": {
+   "get": {
+    "tags": [
+     "rede de utilidades"
+    ],
+    "summary": "Baixar Pacote Instalado",
+    "description": "O arquivo do pacote instalado, byte a byte como está no disco (é o que se envia de volta na importação).",
+    "operationId": "baixar_pacote_instalado_api_rede_pacotes__codigo__get",
+    "parameters": [
+     {
+      "name": "codigo",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Codigo"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/rede": {
+   "get": {
+    "tags": [
+     "rede de utilidades"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_rede_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RedePagina"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "post": {
+    "tags": [
+     "rede de utilidades"
+    ],
+    "summary": "Criar",
+    "operationId": "criar_api_rede_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RedeEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Rede"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}": {
+   "get": {
+    "tags": [
+     "rede de utilidades"
+    ],
+    "summary": "Ver",
+    "operationId": "ver_api_rede__rede_id__get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Rede"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "delete": {
+    "tags": [
+     "rede de utilidades"
+    ],
+    "summary": "Apagar",
+    "operationId": "apagar_api_rede__rede_id__delete",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/pacote": {
+   "post": {
+    "tags": [
+     "rede de utilidades"
+    ],
+    "summary": "Importar Pacote",
+    "description": "Importa o pacote de ativos. Substitui o catálogo INTEIRO da rede, numa transação: ou entra tudo, ou nada.\nSó a leitura do corpo fica no laço de eventos (rápida, I/O); validação e gravação vão para o threadpool.",
+    "operationId": "importar_pacote_api_rede__rede_id__pacote_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ImportacaoResultado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   },
+   "get": {
+    "tags": [
+     "rede de utilidades"
+    ],
+    "summary": "Exportar Pacote",
+    "description": "O pacote da rede, reconstruído das tabelas e serializado na forma canônica — nunca o arquivo recebido.",
+    "operationId": "exportar_pacote_api_rede__rede_id__pacote_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/importar-bdgd": {
+   "post": {
+    "tags": [
+     "rede de utilidades"
+    ],
+    "summary": "Importar Bdgd",
+    "description": "Enfileira `rede.importar_bdgd`: contrato de dado, carga com contagem conferida, unidade do COMP\ne órfãos, com progresso em /api/jobs/{id}. O caminho é local e restrito a PLAT_BDGD_RAIZ (D21:\no job nunca baixa da ANEEL).",
+    "operationId": "importar_bdgd_api_rede__rede_id__importar_bdgd_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ImportarBdgdEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/matpower": {
+   "post": {
+    "tags": [
+     "rede de utilidades — MATPOWER"
+    ],
+    "summary": "Importar Matpower",
+    "description": "Importa um caso MATPOWER (caseformat 2) para o grafo da rede. A rede precisa ter o pacote de\nativos `transmissao-matpower` importado antes. `prefixo` entra no código externo de cada objeto e\npermite mais de um caso na mesma rede. As barras entram SEM geometria: o caseformat não tem\ncoordenada, e a plataforma não inventa uma.",
+    "operationId": "importar_matpower_api_rede__rede_id__matpower_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "prefixo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "maxLength": 32,
+       "pattern": "^[A-Za-z0-9_-]*$",
+       "default": "",
+       "title": "Prefixo"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/feicoes/pontos": {
+   "post": {
+    "tags": [
+     "rede de utilidades — topologia"
+    ],
+    "summary": "Criar Feicao Ponto",
+    "operationId": "criar_feicao_ponto_api_rede__rede_id__feicoes_pontos_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/FeicaoPontoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Feicao"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   },
+   "get": {
+    "tags": [
+     "rede de utilidades — topologia"
+    ],
+    "summary": "Listar Feicoes Ponto",
+    "operationId": "listar_feicoes_ponto_api_rede__rede_id__feicoes_pontos_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 200,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/feicoes/linhas": {
+   "post": {
+    "tags": [
+     "rede de utilidades — topologia"
+    ],
+    "summary": "Criar Feicao Linha",
+    "operationId": "criar_feicao_linha_api_rede__rede_id__feicoes_linhas_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/FeicaoLinhaEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Feicao"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   },
+   "get": {
+    "tags": [
+     "rede de utilidades — topologia"
+    ],
+    "summary": "Listar Feicoes Linha",
+    "operationId": "listar_feicoes_linha_api_rede__rede_id__feicoes_linhas_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 200,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/feicoes/pontos/applyEdits": {
+   "post": {
+    "tags": [
+     "rede de utilidades — topologia"
+    ],
+    "summary": "Aplicar Edicoes Ponto",
+    "description": "applyEdits da camada de dispositivos (paridade FeatureServer): `adds`/`updates`/`deletes` numa chamada,\ngeometria no JSON da Esri (`{\"x\":..,\"y\":..}`), resultado por feição. Cada feição gravada marca a área\nsuja correspondente se a topologia já foi construída (refutação do item L4-01-b).",
+    "operationId": "aplicar_edicoes_ponto_api_rede__rede_id__feicoes_pontos_applyEdits_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/feicoes/linhas/applyEdits": {
+   "post": {
+    "tags": [
+     "rede de utilidades — topologia"
+    ],
+    "summary": "Aplicar Edicoes Linha",
+    "description": "applyEdits da camada de trechos: geometria `{\"paths\": [[[lon, lat], ...]]}` (um caminho por feição).",
+    "operationId": "aplicar_edicoes_linha_api_rede__rede_id__feicoes_linhas_applyEdits_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/topologia/habilitar": {
+   "post": {
+    "tags": [
+     "rede de utilidades — topologia"
+    ],
+    "summary": "Habilitar Topologia",
+    "description": "Reconstrói a topologia INTEIRA da rede a partir das feições atuais. Idempotente (chamar de novo com as\nmesmas feições dá o mesmo resultado); substitui qualquer topologia anterior, nunca soma.",
+    "operationId": "habilitar_topologia_api_rede__rede_id__topologia_habilitar_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TopologiaResumo"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/topologia": {
+   "get": {
+    "tags": [
+     "rede de utilidades — topologia"
+    ],
+    "summary": "Ver Resumo Topologia",
+    "operationId": "ver_resumo_topologia_api_rede__rede_id__topologia_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TopologiaResumo"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/topologia/nos": {
+   "get": {
+    "tags": [
+     "rede de utilidades — topologia"
+    ],
+    "summary": "Listar Nos",
+    "operationId": "listar_nos_api_rede__rede_id__topologia_nos_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 200,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/topologia/arestas": {
+   "get": {
+    "tags": [
+     "rede de utilidades — topologia"
+    ],
+    "summary": "Listar Arestas",
+    "operationId": "listar_arestas_api_rede__rede_id__topologia_arestas_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 200,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/topologia/diagnostico": {
+   "get": {
+    "tags": [
+     "rede de utilidades — topologia"
+    ],
+    "summary": "Diagnosticar Topologia",
+    "description": "Nós órfãos da topologia separados por CLASSE, com contagem, distância medida e exemplo (item L4-01-f).\n\nContar órfão não diz o que consertar: cada classe tem uma causa e um conserto diferente — ver\n`app/rede_utilidades/diagnostico.py`. Só leitura; a varredura vai ao threadpool porque percorre a camada\nde linha com índice espacial e, em rede grande, passa de um segundo.",
+    "operationId": "diagnosticar_topologia_api_rede__rede_id__topologia_diagnostico_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "limiar_m",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "number",
+       "default": 1.0,
+       "title": "Limiar M"
+      }
+     },
+     {
+      "name": "exemplos",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 1,
+       "title": "Exemplos"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/topologia/areas-sujas": {
+   "get": {
+    "tags": [
+     "rede de utilidades — topologia"
+    ],
+    "summary": "Listar Areas Sujas",
+    "description": "As áreas sujas abertas da rede: onde uma edição (applyEdits ou criação simples) passou DEPOIS da última\nconstrução da topologia e o índice gravado é, portanto, suspeito. `habilitar` as apaga ao reconstruir.",
+    "operationId": "listar_areas_sujas_api_rede__rede_id__topologia_areas_sujas_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 200,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/topologia/alcance": {
+   "get": {
+    "tags": [
+     "rede de utilidades — topologia"
+    ],
+    "summary": "Alcance",
+    "description": "Traçado mínimo de conectividade: o conjunto de nós/arestas alcançáveis a partir de `no`. Sem regra de\nfluxo (montante/jusante) nem estado de chave — isso é o item seguinte da linha L4.",
+    "operationId": "alcance_api_rede__rede_id__topologia_alcance_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "no",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "No"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/tracar": {
+   "post": {
+    "tags": [
+     "rede de utilidades — topologia"
+    ],
+    "summary": "Tracar Rede",
+    "description": "Traça `tipo=conectado` (tudo que se alcança do(s) ponto(s) de partida, respeitando a traversabilidade\nde cada dispositivo e as barreiras) ou `tipo=subrede` (o mesmo, mas parando em qualquer controlador de\noutra subrede — hoje, categoria `transformacao` do pacote); ou, item L4-02-d-lacos-e-caminho-curto:\n`tipo=lacos` (ciclos por componente biconexo, `pgr_biconnectedComponents`), `tipo=isolados` (elementos sem\ncaminho a nenhuma feição da categoria `categoria_controlador`, padrão `fonte`, `pgr_connectedComponents`)\nou `tipo=caminho_curto` (origem em `pontos_partida[0]`, `destino`, custo = `atributo_custo` ou o\ncomprimento geodésico por padrão; `k` alternativas por `pgr_ksp` quando `k>1`); ou, item\nitens L4-18-rede-simples-trace-network e L4-02-b-montante-jusante, `tipo=montante`/`tipo=jusante`: numa\nrede com controlador de subrede em tier hierárquico o sentido vem da DISTÂNCIA AO CONTROLADOR (jusante de\num ponto = o que só chega ao controlador passando por ele); sem controlador, vem da DIREÇÃO DE FLUXO\ndeclarada no atributo `direcao_fluxo` de cada trecho (digitalizada/contra/indeterminada), que para, com\naviso por trecho, em toda aresta indeterminada. `origem_direcao` no pedido impõe um dos dois, e a\nresposta sempre diz qual valeu; em malha (tier particionado) sem atributo, e em laço, a resposta é\n`direcao='indeterminado'` com o motivo e os nós do laço, nunca um sentido arbitrado. Ponto de partida, destino\ne barreira são a mesma forma: feição+terminal ou coordenada com tolerância. Não exige `rede.editar`: é\nleitura sobre o índice já construído (mesmo privilégio de `topologia/alcance`), nunca grava nada na rede.\nSem `response_model` fixo porque cada `tipo` devolve um formato diferente (ver `docs/openapi.json` para o\nformato de cada um, e os testes de cada item para exemplo).",
+    "operationId": "tracar_rede_api_rede__rede_id__tracar_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TracadoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/config_tracado": {
+   "post": {
+    "tags": [
+     "rede de utilidades — configuração de traçado"
+    ],
+    "summary": "Criar Config",
+    "operationId": "criar_config_api_rede__rede_id__config_tracado_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ConfigTracadoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ConfigTracado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   },
+   "get": {
+    "tags": [
+     "rede de utilidades — configuração de traçado"
+    ],
+    "summary": "Listar Configs",
+    "operationId": "listar_configs_api_rede__rede_id__config_tracado_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 200,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ConfigTracadoPagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/config_tracado/{config_id}": {
+   "get": {
+    "tags": [
+     "rede de utilidades — configuração de traçado"
+    ],
+    "summary": "Ver Config",
+    "operationId": "ver_config_api_rede__rede_id__config_tracado__config_id__get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "config_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Config Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ConfigTracado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "put": {
+    "tags": [
+     "rede de utilidades — configuração de traçado"
+    ],
+    "summary": "Alterar Config",
+    "operationId": "alterar_config_api_rede__rede_id__config_tracado__config_id__put",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "config_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Config Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ConfigTracadoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ConfigTracado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   },
+   "delete": {
+    "tags": [
+     "rede de utilidades — configuração de traçado"
+    ],
+    "summary": "Apagar Config",
+    "operationId": "apagar_config_api_rede__rede_id__config_tracado__config_id__delete",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "config_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Config Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/simples": {
+   "post": {
+    "tags": [
+     "rede de utilidades — rede simples"
+    ],
+    "summary": "Criar Rede Simples",
+    "description": "Cria uma rede simples a partir de duas camadas do inquilino numa chamada só: rede + catálogo mínimo +\nfeições copiadas + configuração de direção de fluxo + topologia construída. Tudo numa transação: se algo\nfalhar, nenhuma rede pela metade fica no banco. Trabalho pesado (cópia e topologia) vai para o\nthreadpool, para não segurar o laço de eventos da API inteira.",
+    "operationId": "criar_rede_simples_api_rede_simples_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RedeSimplesEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/simples": {
+   "get": {
+    "tags": [
+     "rede de utilidades — rede simples"
+    ],
+    "summary": "Ver Config Simples",
+    "operationId": "ver_config_simples_api_rede__rede_id__simples_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/promover": {
+   "post": {
+    "tags": [
+     "rede de utilidades — rede simples"
+    ],
+    "summary": "Promover Rede Simples",
+    "description": "Promove a rede simples a rede de utilidades: grava o PACOTE MÍNIMO (o mesmo catálogo que ela já usava,\nagora validado pelo esquema do pacote, com sha256 e bytes) e muda o modo. A partir daí\n`GET /api/rede/{id}/pacote` devolve o pacote, e o inquilino pode importar por cima dele um pacote de\nativos de verdade.",
+    "operationId": "promover_rede_simples_api_rede__rede_id__promover_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/controlador": {
+   "post": {
+    "tags": [
+     "rede de utilidades — controladores e tiers"
+    ],
+    "summary": "Definir Controlador",
+    "description": "Só um tipo de ativo com a categoria de rede `controlador` pode controlar uma subrede, e o controlador\né sempre um TERMINAL do dispositivo — não a feição inteira.",
+    "operationId": "definir_controlador_api_rede__rede_id__controlador_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ControladorEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Controlador"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/controlador/{controlador_id}": {
+   "delete": {
+    "tags": [
+     "rede de utilidades — controladores e tiers"
+    ],
+    "summary": "Remover Controlador",
+    "operationId": "remover_controlador_api_rede__rede_id__controlador__controlador_id__delete",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "controlador_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Controlador Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   },
+   "get": {
+    "tags": [
+     "rede de utilidades — controladores e tiers"
+    ],
+    "summary": "Ver Controlador",
+    "description": "A ficha do controlador: qual dispositivo, qual terminal, em que tier, de que subrede, e o nó que ele\nocupa na topologia CORRENTE (`no_id` nulo = a topologia foi reconstruída e não há nó nessa âncora).",
+    "operationId": "ver_controlador_api_rede__rede_id__controlador__controlador_id__get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "controlador_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Controlador Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Controlador"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/controladores": {
+   "get": {
+    "tags": [
+     "rede de utilidades — controladores e tiers"
+    ],
+    "summary": "Listar Controladores",
+    "operationId": "listar_controladores_api_rede__rede_id__controladores_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 200,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/subredes": {
+   "get": {
+    "tags": [
+     "rede de utilidades — controladores e tiers"
+    ],
+    "summary": "Listar Subredes",
+    "description": "A tabela de subredes: nome, tier, controladores, estado (limpa/suja) e resumo da última atualização.",
+    "operationId": "listar_subredes_api_rede__rede_id__subredes_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "tier",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tier"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 200,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/tiers": {
+   "get": {
+    "tags": [
+     "rede de utilidades — controladores e tiers"
+    ],
+    "summary": "Listar Tiers",
+    "description": "Os tiers da rede na ordem da hierarquia (subestação > alimentador > transformador > baixa tensão no\npacote elétrico), com o tipo (hierárquico ou particionado) e quantas subredes cada um já tem.",
+    "operationId": "listar_tiers_api_rede__rede_id__tiers_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/subredes/{subrede_id}/atualizar": {
+   "post": {
+    "tags": [
+     "rede de utilidades — controladores e tiers"
+    ],
+    "summary": "Atualizar Subrede",
+    "description": "Refaz o traçado da subrede a partir dos controladores dela, grava o resumo e a devolve `limpa`.",
+    "operationId": "atualizar_subrede_api_rede__rede_id__subredes__subrede_id__atualizar_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "subrede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Subrede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/controladores/importar": {
+   "post": {
+    "tags": [
+     "rede de utilidades — controladores e tiers"
+    ],
+    "summary": "Importar Controladores",
+    "description": "Marca um controlador por alimentador (CTMT) no tier de média tensão e um por transformador de\ndistribuição (UNTRMT) no tier de baixa tensão, a partir do que a importação da BDGD trouxe.",
+    "operationId": "importar_controladores_api_rede__rede_id__controladores_importar_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/subredes/atualizar": {
+   "post": {
+    "tags": [
+     "rede de utilidades — subredes"
+    ],
+    "summary": "Atualizar Subredes",
+    "description": "Enfileira o job `redes.subredes_atualizar`. Devolve 202 com o id do job: quem chama acompanha em\n`GET /api/jobs/{id}` como em qualquer outro trabalho pesado da plataforma.",
+    "operationId": "atualizar_subredes_api_rede__rede_id__subredes_atualizar_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "todas",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Todas"
+      }
+     },
+     {
+      "name": "tier",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tier"
+      }
+     }
+    ],
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/tier/{codigo}/propagadores": {
+   "put": {
+    "tags": [
+     "rede de utilidades — subredes"
+    ],
+    "summary": "Definir Propagadores",
+    "description": "Os atributos que este tier propaga do controlador para os elementos da subrede (a lista pode ser\nvazia). Cada código tem de existir no pacote da rede.",
+    "operationId": "definir_propagadores_api_rede__rede_id__tier__codigo__propagadores_put",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "codigo",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Codigo"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PropagadoresEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/subredes/conferencia": {
+   "get": {
+    "tags": [
+     "rede de utilidades — subredes"
+    ],
+    "summary": "Conferir Subredes",
+    "description": "Concordância entre o nome da subrede calculado pelo traçado e o atributo do arquivo no mesmo elemento.\nA saída traz o universo (quantos elementos), quantos são comparáveis e a lista das diferenças — que são\ncandidatas a erro de cadastro, não erro provado.",
+    "operationId": "conferir_subredes_api_rede__rede_id__subredes_conferencia_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "atributo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "ctmt",
+       "title": "Atributo"
+      }
+     },
+     {
+      "name": "grupo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "trecho_de_media_tensao",
+       "title": "Grupo"
+      }
+     },
+     {
+      "name": "tier",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tier"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 200,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/subrede/{nome}/exportar": {
+   "get": {
+    "tags": [
+     "rede de utilidades — subredes"
+    ],
+    "summary": "Exportar Subrede",
+    "description": "`formato=json` (padrão): rede, subrede (com a linha agregada), controladores, elementos,\nconectividade e resumo, validado contra `plat.rede.subrede_exportada` antes de sair.\n\n`formato=dss`: a pasta OpenDSS da subrede, num zip. `ano` escolhe o calendário da curva de 864 pontos\n(24 h x 3 tipos de dia x 12 meses); o padrão é o ano corrente. `jusante=true` inclui as subredes de tier\ninferior que penduram nesta — é o alimentador inteiro, com transformador e carga, em vez de só o tier\npedido.\n\n`formato=pandapower`: `rede.json`, que `pandapower.from_json` lê, mais `resumo.json` e `NAO_FAZ.md`,\nnum zip. `formato=matpower`: o `.m` do caseformat 2, com os mesmos dois arquivos ao lado. Os dois são\nmodelos de rede EQUILIBRADA (sequência positiva): as fases declaradas por trecho não são\nrepresentadas, e onde o desequilíbrio importa o formato certo é o `dss`. O `ano` não muda nada nesses\ndois formatos — a curva de carga só existe no OpenDSS; cada carga sai com a potência média do ano.",
+    "operationId": "exportar_subrede_api_rede__rede_id__subrede__nome__exportar_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "nome",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Nome"
+      }
+     },
+     {
+      "name": "tier",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tier"
+      }
+     },
+     {
+      "name": "formato",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "json",
+       "title": "Formato"
+      }
+     },
+     {
+      "name": "ano",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Ano"
+      }
+     },
+     {
+      "name": "jusante",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Jusante"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/subredes/resumos/calcular": {
+   "post": {
+    "tags": [
+     "rede de utilidades — sumário por subrede"
+    ],
+    "summary": "Calcular Resumos",
+    "description": "Recalcula o sumário de cada subrede: quilômetro por nível de tensão, transformadores e potência\ninstalada, unidades consumidoras por classe, energia anual faturada, dispositivos por categoria,\ngeração distribuída e tronco. Sem `tier` nem `subrede_id`, recalcula a rede inteira.",
+    "operationId": "calcular_resumos_api_rede__rede_id__subredes_resumos_calcular_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "tier",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tier"
+      }
+     },
+     {
+      "name": "subrede_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Subrede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/subredes/resumos": {
+   "get": {
+    "tags": [
+     "rede de utilidades — sumário por subrede"
+    ],
+    "summary": "Listar Resumos",
+    "description": "A tabela de sumários: `colunas` descreve cada coluna (código, nome, tipo, unidade) e `itens` traz as\nlinhas. `formato=csv` devolve a mesma tabela como arquivo.",
+    "operationId": "listar_resumos_api_rede__rede_id__subredes_resumos_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "tier",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tier"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 500,
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "formato",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "json",
+       "title": "Formato"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       },
+       "text/csv": {}
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/subrede/{nome}/curto": {
+   "post": {
+    "tags": [
+     "rede de utilidades — curto-circuito e proteção"
+    ],
+    "summary": "Calcular Curto",
+    "description": "Corrente de curto-circuito por barra (trifásica e fase-terra) e verificação de coordenação simples\ndo dispositivo a montante de cada barra, sobre o mesmo modelo em memória que os exportadores usam.\n\nO corpo são as PREMISSAS: `potencia_de_curto_mva` (obrigatória — sem ela a impedância da fonte é nula\ne a corrente seria infinita), `relacao_x_r_fonte`, `fator_tensao_c`, `fator_sequencia_zero_linha`,\n`fator_sequencia_zero_fonte` e `base_mva`. Todas saem gravadas ao lado do resultado. É triagem:\na impedância de condutor e a do transformador são valores de REFERÊNCIA declarados, porque o cadastro\nde distribuição não os traz.",
+    "operationId": "calcular_curto_api_rede__rede_id__subrede__nome__curto_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "nome",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Nome"
+      }
+     },
+     {
+      "name": "tier",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tier"
+      }
+     },
+     {
+      "name": "ano",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Ano"
+      }
+     },
+     {
+      "name": "jusante",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Jusante"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": true,
+        "title": "Premissas"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   },
+   "get": {
+    "tags": [
+     "rede de utilidades — curto-circuito e proteção"
+    ],
+    "summary": "Ler Curto",
+    "description": "A tabela do último cálculo desta subrede: uma linha por barra, com a corrente trifásica, a\nfase-terra, o dispositivo a montante e o veredito de coordenação; as premissas do cálculo vêm no\nmesmo corpo, porque o número não se lê sem elas.",
+    "operationId": "ler_curto_api_rede__rede_id__subrede__nome__curto_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "nome",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Nome"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/subrede/{nome}/curto/camada": {
+   "get": {
+    "tags": [
+     "rede de utilidades — curto-circuito e proteção"
+    ],
+    "summary": "Ler Curto Camada",
+    "description": "O mesmo resultado como camada de pontos (GeoJSON): um ponto por barra que tem nó com geometria,\ncom corrente e veredito nas propriedades. Barra sem coordenada é contada em `barras_sem_coordenada`\ne não vira feição.",
+    "operationId": "ler_curto_camada_api_rede__rede_id__subrede__nome__curto_camada_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "nome",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Nome"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/diagrama": {
+   "post": {
+    "tags": [
+     "rede de utilidades — diagrama"
+    ],
+    "summary": "Gerar Diagrama",
+    "description": "Gera o diagrama. `origem` é um objeto com `tipo`:\n\n  * `{\"tipo\": \"subrede\", \"subrede\": \"<nome>\", \"tier\": \"<codigo>\"}` — a subrede tem de estar atualizada\n    (o diagrama é feito do que a atualização gravou, não de um traçado novo escondido dentro da chamada);\n  * `{\"tipo\": \"tracado\", \"tracado\": \"subrede|conectado\", \"pontos_partida\": [...], \"barreiras\": [...]}`;\n  * `{\"tipo\": \"selecao\", \"feicoes\": [\"<uuid>\", ...]}`.\n\nGerar de novo com o MESMO nome substitui o desenho e devolve o diagrama a `consistente`, mantendo o\nidentificador — o link que alguém guardou continua valendo.",
+    "operationId": "gerar_diagrama_api_rede__rede_id__diagrama_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DiagramaEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/diagramas": {
+   "get": {
+    "tags": [
+     "rede de utilidades — diagrama"
+    ],
+    "summary": "Listar Diagramas",
+    "description": "A lista de diagramas da rede, com o estado de consistência de cada um.",
+    "operationId": "listar_diagramas_api_rede__rede_id__diagramas_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 200,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/diagrama/{diagrama_id}": {
+   "get": {
+    "tags": [
+     "rede de utilidades — diagrama"
+    ],
+    "summary": "Ler Diagrama",
+    "description": "O grafo do diagrama: nós (x,y do diagrama, mais `feicao_id`/`terminal`/`lon`/`lat` para a seleção\ncasar com o mapa) e arestas (com a lista de feições que cada uma representa).",
+    "operationId": "ler_diagrama_api_rede__rede_id__diagrama__diagrama_id__get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "diagrama_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Diagrama Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "delete": {
+    "tags": [
+     "rede de utilidades — diagrama"
+    ],
+    "summary": "Apagar Diagrama",
+    "description": "Apaga o diagrama e o desenho dele. A rede não é tocada: diagrama é derivado.",
+    "operationId": "apagar_diagrama_api_rede__rede_id__diagrama__diagrama_id__delete",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "diagrama_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Diagrama Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/diagrama/{diagrama_id}/layout": {
+   "post": {
+    "tags": [
+     "rede de utilidades — diagrama"
+    ],
+    "summary": "Aplicar Layout Diagrama",
+    "description": "Reposiciona os nós com outro layout, sem refazer o recorte nem as regras. Não muda o estado de\nconsistência: trocar o desenho não conserta diagrama velho.",
+    "operationId": "aplicar_layout_diagrama_api_rede__rede_id__diagrama__diagrama_id__layout_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "diagrama_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Diagrama Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DiagramaLayoutEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/diagrama/{diagrama_id}/exportar": {
+   "get": {
+    "tags": [
+     "rede de utilidades — diagrama"
+    ],
+    "summary": "Exportar Diagrama",
+    "description": "`json` (padrão) devolve o mesmo documento da leitura; `svg` devolve o desenho vetorial e `png` a\nimagem. Os três saem do MESMO grafo gravado — a figura nunca é redesenhada por outro caminho.",
+    "operationId": "exportar_diagrama_api_rede__rede_id__diagrama__diagrama_id__exportar_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "diagrama_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Diagrama Id"
+      }
+     },
+     {
+      "name": "formato",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "json",
+       "title": "Formato"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/diagrama-modelos": {
+   "get": {
+    "tags": [
+     "rede de utilidades — diagrama"
+    ],
+    "summary": "Listar Modelos Diagrama",
+    "description": "Os modelos embutidos (`basico`, `esquematico`, `geografico`) e os declarados nesta rede.",
+    "operationId": "listar_modelos_diagrama_api_rede__rede_id__diagrama_modelos_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/diagrama-modelo/{codigo}": {
+   "put": {
+    "tags": [
+     "rede de utilidades — diagrama"
+    ],
+    "summary": "Definir Modelo Diagrama",
+    "description": "Declara um modelo do inquilino: as regras de construção, na ordem em que se aplicam, e o layout\npadrão. Código de modelo embutido é recusado — quem quer outro comportamento cria outro código.",
+    "operationId": "definir_modelo_diagrama_api_rede__rede_id__diagrama_modelo__codigo__put",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "codigo",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Codigo"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DiagramaModeloEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
   "/api/geocodificar": {
    "post": {
     "tags": [
@@ -10026,15 +13049,180 @@
     "summary": "Geocodificar",
     "operationId": "geocodificar_api_geocodificar_post",
     "requestBody": {
+     "required": true,
      "content": {
       "application/json": {
        "schema": {
         "$ref": "#/components/schemas/PedidoGeocodificar"
        }
       }
-     },
-     "required": true
+     }
     },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   },
+   "get": {
+    "tags": [
+     "geocodificador"
+    ],
+    "summary": "Geocodificar Get",
+    "description": "Mesma busca do POST, por parâmetro de consulta.\n\nExiste porque geocodificar é LEITURA e o verbo certo para leitura é GET: a caixa de pesquisa do\nvisualizador de mapa (item L2-01-mapa-web) não deve passar pela porta de escrita sob cookie, que\nexige a checagem de origem do ADR 0002 seção 5.3 (e falha, corretamente, em qualquer ambiente cuja\nURL pública não seja a mesma do navegador). O POST continua valendo, com o mesmo contrato.",
+    "operationId": "geocodificar_get",
+    "parameters": [
+     {
+      "name": "endereco",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 300
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Endereco"
+      }
+     },
+     {
+      "name": "logradouro",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 200
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Logradouro"
+      }
+     },
+     {
+      "name": "numero",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 999999,
+         "minimum": 0
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Numero"
+      }
+     },
+     {
+      "name": "bairro",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 120
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Bairro"
+      }
+     },
+     {
+      "name": "municipio",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 120
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Municipio"
+      }
+     },
+     {
+      "name": "uf",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "minLength": 2,
+         "maxLength": 2
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Uf"
+      }
+     },
+     {
+      "name": "cep",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 9
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Cep"
+      }
+     },
+     {
+      "name": "max_locations",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 50,
+       "minimum": 1,
+       "default": 10,
+       "title": "Max Locations"
+      }
+     }
+    ],
     "responses": {
      "200": {
       "description": "Successful Response",
@@ -10987,6 +14175,112 @@
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
    }
+  },
+  "/api/mapa/camadas": {
+   "get": {
+    "tags": [
+     "mapa"
+    ],
+    "summary": "Listar Camadas",
+    "description": "Camadas vetoriais que a sessão pode ler (a RLS de plat.item decide), prontas para o mapa.",
+    "operationId": "listar_camadas_api_mapa_camadas_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/mapa/camadas/{id}": {
+   "get": {
+    "tags": [
+     "mapa"
+    ],
+    "summary": "Obter Camada",
+    "operationId": "obter_camada_api_mapa_camadas__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/mapa/camadas/{id}/tilejson": {
+   "get": {
+    "tags": [
+     "mapa"
+    ],
+    "summary": "Tilejson",
+    "operationId": "tilejson_api_mapa_camadas__id__tilejson_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
   }
  },
  "components": {
@@ -11713,6 +15007,34 @@
     ],
     "title": "AmostrasResultado"
    },
+   "AtributoRede": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 63,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "tipo_dado": {
+      "type": "string",
+      "pattern": "^(texto|inteiro|real|data|booleano)$",
+      "title": "Tipo Dado",
+      "default": "texto"
+     },
+     "de": {
+      "type": "string",
+      "pattern": "^(linha|ponto)$",
+      "title": "De",
+      "default": "linha"
+     }
+    },
+    "type": "object",
+    "required": [
+     "nome"
+    ],
+    "title": "AtributoRede",
+    "description": "Atributo DE REDE: um campo da camada de origem que o inquilino declara como parte do modelo de rede\n(é o que o traçado pode usar como custo em `caminho_curto`). Declarar é o que separa um campo qualquer\nda camada de um atributo de rede."
+   },
    "CategoriaNo": {
     "properties": {
      "id": {
@@ -12378,6 +15700,162 @@
     ],
     "title": "ConexaoTeste"
    },
+   "ConfigTracado": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "rede_id": {
+      "type": "string",
+      "title": "Rede Id"
+     },
+     "codigo": {
+      "type": "string",
+      "title": "Codigo"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "descricao": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Descricao"
+     },
+     "tipo": {
+      "type": "string",
+      "title": "Tipo"
+     },
+     "config": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Config"
+     },
+     "origem": {
+      "type": "string",
+      "title": "Origem"
+     },
+     "compartilhada": {
+      "type": "boolean",
+      "title": "Compartilhada"
+     },
+     "dono_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Dono Id"
+     },
+     "criado_em": {
+      "type": "string",
+      "title": "Criado Em"
+     },
+     "atualizado_em": {
+      "type": "string",
+      "title": "Atualizado Em"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "rede_id",
+     "codigo",
+     "nome",
+     "descricao",
+     "tipo",
+     "config",
+     "origem",
+     "compartilhada",
+     "dono_id",
+     "criado_em",
+     "atualizado_em"
+    ],
+    "title": "ConfigTracado"
+   },
+   "ConfigTracadoEntrada": {
+    "properties": {
+     "codigo": {
+      "type": "string",
+      "maxLength": 63,
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,62}$",
+      "title": "Codigo"
+     },
+     "nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "descricao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Descricao"
+     },
+     "tipo": {
+      "type": "string",
+      "pattern": "^(conectado|subrede|montante|jusante)$",
+      "title": "Tipo"
+     },
+     "config": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Config"
+     },
+     "compartilhada": {
+      "type": "boolean",
+      "title": "Compartilhada",
+      "default": true
+     }
+    },
+    "type": "object",
+    "required": [
+     "codigo",
+     "nome",
+     "tipo"
+    ],
+    "title": "ConfigTracadoEntrada",
+    "description": "O documento salvo que preenche o pedido de traçado. `config` é validado contra o catálogo DA REDE em\n`config_tracado.validar_documento` (atributo, categoria, grupo, tipo, operador, função e tipo de\nresultado), e não por pydantic: a mensagem de erro precisa dizer qual atributo a rede não tem."
+   },
+   "ConfigTracadoPagina": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/ConfigTracado"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "type": "object",
+    "required": [
+     "total",
+     "itens"
+    ],
+    "title": "ConfigTracadoPagina"
+   },
    "ConfirmarEntrada": {
     "properties": {
      "titulo": {
@@ -12560,6 +16038,220 @@
      "itens"
     ],
     "title": "ConjuntoPagina"
+   },
+   "Controlador": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "papel": {
+      "type": "string",
+      "title": "Papel"
+     },
+     "origem": {
+      "type": "string",
+      "title": "Origem"
+     },
+     "subrede_id": {
+      "type": "string",
+      "title": "Subrede Id"
+     },
+     "subrede": {
+      "type": "string",
+      "title": "Subrede"
+     },
+     "tier": {
+      "type": "string",
+      "title": "Tier"
+     },
+     "tier_nome": {
+      "type": "string",
+      "title": "Tier Nome"
+     },
+     "tier_tipo": {
+      "type": "string",
+      "title": "Tier Tipo"
+     },
+     "tier_ordem": {
+      "type": "integer",
+      "title": "Tier Ordem"
+     },
+     "feicao_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Feicao Id"
+     },
+     "terminal": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Terminal"
+     },
+     "tipo_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tipo Id"
+     },
+     "grupo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Grupo"
+     },
+     "tipo_chave": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tipo Chave"
+     },
+     "tipo_nome": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tipo Nome"
+     },
+     "no_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "No Id"
+     },
+     "lon": {
+      "type": "number",
+      "title": "Lon"
+     },
+     "lat": {
+      "type": "number",
+      "title": "Lat"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "nome",
+     "papel",
+     "origem",
+     "subrede_id",
+     "subrede",
+     "tier",
+     "tier_nome",
+     "tier_tipo",
+     "tier_ordem",
+     "feicao_id",
+     "terminal",
+     "tipo_id",
+     "grupo",
+     "tipo_chave",
+     "tipo_nome",
+     "no_id",
+     "lon",
+     "lat"
+    ],
+    "title": "Controlador"
+   },
+   "ControladorEntrada": {
+    "properties": {
+     "feicao_id": {
+      "type": "string",
+      "maxLength": 36,
+      "minLength": 36,
+      "title": "Feicao Id"
+     },
+     "terminal": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 8.0,
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Terminal"
+     },
+     "subrede": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Subrede"
+     },
+     "tier": {
+      "type": "string",
+      "maxLength": 63,
+      "minLength": 1,
+      "title": "Tier"
+     },
+     "papel": {
+      "type": "string",
+      "pattern": "^(fonte|sumidouro)$",
+      "title": "Papel",
+      "default": "fonte"
+     },
+     "nome": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 200,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nome"
+     }
+    },
+    "type": "object",
+    "required": [
+     "feicao_id",
+     "subrede",
+     "tier"
+    ],
+    "title": "ControladorEntrada",
+    "description": "Marca o terminal de um dispositivo como controlador de uma subrede. `terminal` é obrigatório quando o\ntipo de ativo declara mais de um terminal no pacote. `nome` é o nome DO CONTROLADOR (único dentro do\ntier); sem ele, vale o nome da subrede."
    },
    "Convite": {
     "properties": {
@@ -12881,6 +16573,93 @@
      "motivo"
     ],
     "title": "ConviteResolvido"
+   },
+   "DiagramaEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "origem": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Origem"
+     },
+     "modelo": {
+      "type": "string",
+      "maxLength": 60,
+      "minLength": 1,
+      "title": "Modelo",
+      "default": "basico"
+     },
+     "layout": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 40
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Layout"
+     }
+    },
+    "type": "object",
+    "required": [
+     "nome"
+    ],
+    "title": "DiagramaEntrada",
+    "description": "Pedido de geração de diagrama. `origem` é validada em `diagrama._elementos_da_origem`, não aqui: as\ntrês formas (subrede, traçado, seleção) têm campos diferentes, e a mensagem de erro precisa dizer qual\nsubrede/feição não existe NESTA rede — coisa que pydantic não sabe."
+   },
+   "DiagramaLayoutEntrada": {
+    "properties": {
+     "layout": {
+      "type": "string",
+      "maxLength": 40,
+      "minLength": 1,
+      "title": "Layout"
+     }
+    },
+    "type": "object",
+    "required": [
+     "layout"
+    ],
+    "title": "DiagramaLayoutEntrada"
+   },
+   "DiagramaModeloEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "regras": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "maxItems": 20,
+      "title": "Regras"
+     },
+     "layout": {
+      "type": "string",
+      "maxLength": 40,
+      "minLength": 1,
+      "title": "Layout"
+     }
+    },
+    "type": "object",
+    "required": [
+     "nome",
+     "layout"
+    ],
+    "title": "DiagramaModeloEntrada",
+    "description": "Modelo (template) de diagrama do inquilino: as regras de construção e o layout padrão. As regras são\nvalidadas em `diagrama._validar_regras` contra o vocabulário fechado do módulo."
    },
    "Dono": {
     "properties": {
@@ -13578,6 +17357,161 @@
     ],
     "title": "FatorPesoEntrada"
    },
+   "Feicao": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "tipo_id": {
+      "type": "string",
+      "title": "Tipo Id"
+     },
+     "fase_bitmask": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fase Bitmask"
+     },
+     "atributos": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Atributos"
+     },
+     "criado_em": {
+      "type": "string",
+      "title": "Criado Em"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "tipo_id",
+     "fase_bitmask",
+     "atributos",
+     "criado_em"
+    ],
+    "title": "Feicao"
+   },
+   "FeicaoLinhaEntrada": {
+    "properties": {
+     "tipo_codigo": {
+      "type": "integer",
+      "maximum": 32767.0,
+      "minimum": 1.0,
+      "title": "Tipo Codigo"
+     },
+     "grupo": {
+      "type": "string",
+      "maxLength": 63,
+      "minLength": 1,
+      "title": "Grupo"
+     },
+     "coordenadas": {
+      "items": {
+       "prefixItems": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "number"
+        }
+       ],
+       "type": "array",
+       "maxItems": 2,
+       "minItems": 2
+      },
+      "type": "array",
+      "maxItems": 2000,
+      "minItems": 2,
+      "title": "Coordenadas"
+     },
+     "fase_bitmask": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 7.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fase Bitmask"
+     },
+     "atributos": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Atributos"
+     }
+    },
+    "type": "object",
+    "required": [
+     "tipo_codigo",
+     "grupo",
+     "coordenadas"
+    ],
+    "title": "FeicaoLinhaEntrada"
+   },
+   "FeicaoPontoEntrada": {
+    "properties": {
+     "tipo_codigo": {
+      "type": "integer",
+      "maximum": 32767.0,
+      "minimum": 1.0,
+      "title": "Tipo Codigo"
+     },
+     "grupo": {
+      "type": "string",
+      "maxLength": 63,
+      "minLength": 1,
+      "title": "Grupo"
+     },
+     "lon": {
+      "type": "number",
+      "maximum": 180.0,
+      "minimum": -180.0,
+      "title": "Lon"
+     },
+     "lat": {
+      "type": "number",
+      "maximum": 90.0,
+      "minimum": -90.0,
+      "title": "Lat"
+     },
+     "fase_bitmask": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 7.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fase Bitmask"
+     },
+     "atributos": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Atributos"
+     }
+    },
+    "type": "object",
+    "required": [
+     "tipo_codigo",
+     "grupo",
+     "lon",
+     "lat"
+    ],
+    "title": "FeicaoPontoEntrada"
+   },
    "FotoEntrada": {
     "properties": {
      "conteudo": {
@@ -14016,6 +17950,50 @@
     ],
     "title": "ImportacaoEntrada"
    },
+   "ImportacaoResultado": {
+    "properties": {
+     "rede_id": {
+      "type": "string",
+      "title": "Rede Id"
+     },
+     "codigo": {
+      "type": "string",
+      "title": "Codigo"
+     },
+     "versao": {
+      "type": "string",
+      "title": "Versao"
+     },
+     "esquema_versao": {
+      "type": "integer",
+      "title": "Esquema Versao"
+     },
+     "sha256": {
+      "type": "string",
+      "title": "Sha256"
+     },
+     "bytes": {
+      "type": "integer",
+      "title": "Bytes"
+     },
+     "contagens": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Contagens"
+     }
+    },
+    "type": "object",
+    "required": [
+     "rede_id",
+     "codigo",
+     "versao",
+     "esquema_versao",
+     "sha256",
+     "bytes",
+     "contagens"
+    ],
+    "title": "ImportacaoResultado"
+   },
    "ImportadoCategorias": {
     "properties": {
      "criadas": {
@@ -14034,6 +18012,27 @@
      "existentes"
     ],
     "title": "ImportadoCategorias"
+   },
+   "ImportarBdgdEntrada": {
+    "properties": {
+     "caminho": {
+      "type": "string",
+      "maxLength": 1024,
+      "minLength": 1,
+      "title": "Caminho",
+      "description": "pacote .gdb.zip ou pasta .gdb dentro de PLAT_BDGD_RAIZ"
+     },
+     "seguir_com_bloqueio": {
+      "type": "boolean",
+      "title": "Seguir Com Bloqueio",
+      "default": true
+     }
+    },
+    "type": "object",
+    "required": [
+     "caminho"
+    ],
+    "title": "ImportarBdgdEntrada"
    },
    "ImportarCategorias": {
     "properties": {
@@ -15565,6 +19564,93 @@
     ],
     "title": "OrgSaida"
    },
+   "PacoteInstalado": {
+    "properties": {
+     "codigo": {
+      "type": "string",
+      "title": "Codigo"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "versao": {
+      "type": "string",
+      "title": "Versao"
+     },
+     "disciplina": {
+      "type": "string",
+      "title": "Disciplina"
+     },
+     "descricao": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Descricao"
+     },
+     "fonte": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fonte"
+     },
+     "bytes": {
+      "type": "integer",
+      "title": "Bytes"
+     },
+     "sha256": {
+      "type": "string",
+      "title": "Sha256"
+     },
+     "contagens": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Contagens"
+     }
+    },
+    "type": "object",
+    "required": [
+     "codigo",
+     "nome",
+     "versao",
+     "disciplina",
+     "bytes",
+     "sha256",
+     "contagens"
+    ],
+    "title": "PacoteInstalado"
+   },
+   "PacoteInstaladoLista": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/PacoteInstalado"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "type": "object",
+    "required": [
+     "total",
+     "itens"
+    ],
+    "title": "PacoteInstaladoLista"
+   },
    "Papeis": {
     "properties": {
      "perfis": {
@@ -16161,6 +20247,76 @@
     ],
     "title": "PedidoRota"
    },
+   "PontoTracado": {
+    "properties": {
+     "feicao_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Feicao Id"
+     },
+     "terminal": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 8.0,
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Terminal"
+     },
+     "lon": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 180.0,
+        "minimum": -180.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Lon"
+     },
+     "lat": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 90.0,
+        "minimum": -90.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Lat"
+     },
+     "tolerancia_m": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 1000.0,
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tolerancia M"
+     }
+    },
+    "type": "object",
+    "title": "PontoTracado",
+    "description": "Um ponto de partida ou barreira: por feição (`feicao_id` + `terminal`, obrigatório quando a feição tem\nmais de um terminal) OU por coordenada (`lon`/`lat`, com `tolerancia_m` própria ou a da rede)."
+   },
    "Privilegio": {
     "properties": {
      "nome": {
@@ -16189,6 +20345,21 @@
      "administrativo"
     ],
     "title": "Privilegio"
+   },
+   "PropagadoresEntrada": {
+    "properties": {
+     "propagadores": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 20,
+      "title": "Propagadores"
+     }
+    },
+    "type": "object",
+    "title": "PropagadoresEntrada",
+    "description": "Atributos que um tier propaga do controlador para os elementos da subrede (item L4-04-b). Lista vazia\né legítima: significa \"este tier não propaga nada\"."
    },
    "ProvedorLdapEntrada": {
     "properties": {
@@ -16423,6 +20594,231 @@
     "additionalProperties": false,
     "type": "object",
     "title": "PublicarCamadaEntrada"
+   },
+   "Rede": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "disciplina": {
+      "type": "string",
+      "title": "Disciplina"
+     },
+     "descricao": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Descricao"
+     },
+     "tolerancia_m": {
+      "type": "number",
+      "title": "Tolerancia M"
+     },
+     "pacote": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pacote"
+     },
+     "contagens": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Contagens"
+     },
+     "dono": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Dono"
+     },
+     "criado_em": {
+      "type": "string",
+      "title": "Criado Em"
+     },
+     "atualizado_em": {
+      "type": "string",
+      "title": "Atualizado Em"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "nome",
+     "disciplina",
+     "descricao",
+     "tolerancia_m",
+     "pacote",
+     "contagens",
+     "dono",
+     "criado_em",
+     "atualizado_em"
+    ],
+    "title": "Rede"
+   },
+   "RedeEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "disciplina": {
+      "type": "string",
+      "pattern": "^(eletrica|agua|gas|esgoto|telecom|estrutura)$",
+      "title": "Disciplina"
+     },
+     "descricao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Descricao"
+     },
+     "tolerancia_m": {
+      "type": "number",
+      "maximum": 10.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Tolerancia M",
+      "default": 0.05
+     }
+    },
+    "type": "object",
+    "required": [
+     "nome",
+     "disciplina"
+    ],
+    "title": "RedeEntrada"
+   },
+   "RedePagina": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/Rede"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "type": "object",
+    "required": [
+     "total",
+     "itens"
+    ],
+    "title": "RedePagina"
+   },
+   "RedeSimplesEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "disciplina": {
+      "type": "string",
+      "pattern": "^(eletrica|agua|gas|esgoto|telecom|estrutura)$",
+      "title": "Disciplina"
+     },
+     "descricao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Descricao"
+     },
+     "tolerancia_m": {
+      "type": "number",
+      "maximum": 10.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Tolerancia M",
+      "default": 0.05
+     },
+     "camada_linha_id": {
+      "type": "string",
+      "maxLength": 36,
+      "minLength": 36,
+      "title": "Camada Linha Id"
+     },
+     "camada_ponto_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 36,
+        "minLength": 36
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Camada Ponto Id"
+     },
+     "campo_direcao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 63,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Campo Direcao"
+     },
+     "mapa_direcao": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "Mapa Direcao"
+     },
+     "atributos_rede": {
+      "items": {
+       "$ref": "#/components/schemas/AtributoRede"
+      },
+      "type": "array",
+      "maxItems": 50,
+      "title": "Atributos Rede"
+     }
+    },
+    "type": "object",
+    "required": [
+     "nome",
+     "disciplina",
+     "camada_linha_id"
+    ],
+    "title": "RedeSimplesEntrada",
+    "description": "Criação de uma rede simples a partir de duas camadas do inquilino. `camada_ponto_id` é opcional: uma\nrede simples pode ser só de trechos (hidrografia sem camada de nó, por exemplo). `campo_direcao` é o\nNOME do campo da camada de linhas que carrega a direção de fluxo, e `mapa_direcao` traduz os valores\ndesse campo (em minúsculas, sem espaço nas pontas) para o vocabulário fechado\ndigitalizada/contra/indeterminada; sem `campo_direcao`, toda a rede é lida como digitalizada."
    },
    "RedefinicaoAplicada": {
     "properties": {
@@ -17393,6 +21789,144 @@
      "escopos"
     ],
     "title": "TokenCriar"
+   },
+   "TopologiaResumo": {
+    "properties": {
+     "rede_id": {
+      "type": "string",
+      "title": "Rede Id"
+     },
+     "tolerancia_m": {
+      "type": "number",
+      "title": "Tolerancia M"
+     },
+     "nos": {
+      "type": "integer",
+      "title": "Nos"
+     },
+     "arestas": {
+      "type": "integer",
+      "title": "Arestas"
+     },
+     "nos_orfaos": {
+      "type": "integer",
+      "title": "Nos Orfaos"
+     },
+     "arestas_sem_no": {
+      "type": "integer",
+      "title": "Arestas Sem No"
+     },
+     "duracao_ms": {
+      "type": "integer",
+      "title": "Duracao Ms"
+     },
+     "construido_em": {
+      "type": "string",
+      "title": "Construido Em"
+     }
+    },
+    "type": "object",
+    "required": [
+     "rede_id",
+     "tolerancia_m",
+     "nos",
+     "arestas",
+     "nos_orfaos",
+     "arestas_sem_no",
+     "duracao_ms",
+     "construido_em"
+    ],
+    "title": "TopologiaResumo"
+   },
+   "TracadoEntrada": {
+    "properties": {
+     "tipo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^(conectado|subrede|lacos|caminho_curto|isolados|montante|jusante)$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tipo"
+     },
+     "config_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 36,
+        "minLength": 36
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Config Id"
+     },
+     "pontos_partida": {
+      "items": {
+       "$ref": "#/components/schemas/PontoTracado"
+      },
+      "type": "array",
+      "maxItems": 50,
+      "title": "Pontos Partida"
+     },
+     "destino": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/PontoTracado"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "barreiras": {
+      "items": {
+       "$ref": "#/components/schemas/PontoTracado"
+      },
+      "type": "array",
+      "maxItems": 200,
+      "title": "Barreiras"
+     },
+     "atributo_custo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 63
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Atributo Custo"
+     },
+     "k": {
+      "type": "integer",
+      "maximum": 10.0,
+      "minimum": 1.0,
+      "title": "K",
+      "default": 1
+     },
+     "categoria_controlador": {
+      "type": "string",
+      "maxLength": 63,
+      "minLength": 1,
+      "title": "Categoria Controlador",
+      "default": "fonte"
+     },
+     "origem_direcao": {
+      "type": "string",
+      "pattern": "^(auto|controlador|atributo)$",
+      "title": "Origem Direcao",
+      "default": "auto"
+     }
+    },
+    "type": "object",
+    "title": "TracadoEntrada",
+    "description": "`tipo=montante|jusante` (item L4-18) exige `pontos_partida` e anda pela direção de fluxo declarada em\natributo; `tipo=conectado|subrede` (item L4-02-a) exige `pontos_partida`; `tipo=caminho_curto` (item L4-02-d)\nexige um único ponto em `pontos_partida` (a origem) e `destino`; `tipo=lacos` e `tipo=isolados` não\nexigem `pontos_partida` (operam sobre a rede inteira) — a validação por tipo é feita na rota, não aqui,\nporque cada tipo tem uma exigência diferente sobre a MESMA lista."
    },
    "Transferencia": {
     "properties": {

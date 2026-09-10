@@ -1,0 +1,90 @@
+{
+ "item": "L2-03-a-api-edicao-transacional",
+ "medidas": {
+  "mil_feicoes_lote_s": {
+   "valor": 1.038,
+   "unidade": "s",
+   "comando": "POST /api/camadas/{id}/edicoes com 1.000 feições em `adicionar` (modo transação padrão), camada de teste em d_demo; tests/api/test_edicao_transacional.py::test_mil_feicoes_em_lote_menos_de_3s"
+  }
+ },
+ "portao_de_pronto": {
+  "clausula_1_transacao_tudo_ou_nada": {
+   "prova": "tests/api/test_edicao_transacional.py::test_transacao_rollback_quando_uma_de_tres_falha",
+   "resultado": "PASSOU",
+   "comando": "flock laco/.pytest.lock venv/bin/pytest tests/api/test_edicao_transacional.py -q -p no:cacheprovider"
+  },
+  "clausula_2_versao_otimista_409_com_feicao_atual": {
+   "prova": "tests/api/test_edicao_transacional.py::test_versao_otimista_segunda_sessao_recebe_409_com_feicao_atual",
+   "resultado": "PASSOU"
+  },
+  "clausula_3_atributo_fora_do_dominio_422_com_campo_e_valor": {
+   "prova": "tests/api/test_edicao_transacional.py::test_atributo_fora_do_dominio_422_com_campo_e_valor e test_atributo_fora_do_intervalo_422",
+   "resultado": "PASSOU"
+  },
+  "clausula_4_geometria_tipo_errado_422": {
+   "prova": "tests/api/test_edicao_transacional.py::test_geometria_tipo_errado_422",
+   "resultado": "PASSOU"
+  },
+  "clausula_5_makevalid_opcional": {
+   "prova": "tests/api/test_edicao_transacional.py::test_poligono_invalido_recusado_sem_corrigir e test_poligono_invalido_corrigido_com_makevalid_quando_pedido",
+   "resultado": "PASSOU"
+  },
+  "clausula_6_so_as_proprias_feicoes_403": {
+   "prova": "tests/api/test_edicao_transacional.py::test_somente_proprias_impede_update_de_feicao_alheia",
+   "resultado": "PASSOU"
+  },
+  "clausula_7_rastreio_nunca_aceito_do_cliente": {
+   "prova": "tests/api/test_edicao_transacional.py::test_campos_de_rastreio_ignorados_e_preenchidos_pelo_servidor",
+   "resultado": "PASSOU"
+  },
+  "clausula_8_mil_feicoes_lote_3s": {
+   "prova": "tests/api/test_edicao_transacional.py::test_mil_feicoes_em_lote_menos_de_3s",
+   "resultado": "PASSOU (1,038 s medido, teto 3 s)"
+  },
+  "clausula_9_evento_por_lote_com_contagem": {
+   "prova": "tests/api/test_edicao_transacional.py::test_evento_gravado_por_lote_com_contagem",
+   "resultado": "PASSOU"
+  },
+  "clausula_10_openapi_com_esquemas": {
+   "prova": "tests/api/test_edicao_transacional.py::test_rota_no_openapi_com_esquemas_de_entrada_e_saida",
+   "resultado": "PASSOU"
+  },
+  "clausula_11_isolamento_entre_inquilinos_inegociavel": {
+   "prova": "tests/api/test_edicao_transacional.py::test_inquilino_b_nunca_edita_nem_le_feicao_de_camada_de_a e test_feicao_com_fid_de_outro_inquilino_nunca_e_aceita_por_globalid",
+   "resultado": "PASSOU (404 em leitura, atualização e remoção, nunca 403, nunca 500)"
+  }
+ },
+ "refutacao_do_adversario": {
+  "lote_100_mil_feicoes": {
+   "prova": "tests/api/test_edicao_transacional.py::test_lote_de_100_mil_feicoes_e_recusado_pelo_limite_declarado",
+   "resultado": "PASSOU (422 pelo teto EDICAO_LOTE_MAX=2000; corpo abaixo do teto HTTP de 10 MiB de propósito, para provar que o teto de LISTA pega mesmo sem estourar o corpo)"
+  },
+  "crs_nao_declarado_geometria_em_metros": {
+   "prova": "tests/api/test_edicao_transacional.py::test_geometria_em_outro_crs_sem_declarar_e_recusada",
+   "resultado": "PASSOU (422 geometria_fora_do_crs)"
+  },
+  "srid_zero": {
+   "prova": "tests/api/test_edicao_transacional.py::test_srid_zero_declarado_e_recusado",
+   "resultado": "PASSOU (422 de validação de entrada, Field(ge=1))"
+  },
+  "texto_1mb": {
+   "prova": "tests/api/test_edicao_transacional.py::test_texto_de_1mb_e_recusado",
+   "resultado": "PASSOU (422 texto_grande, EDICAO_TEXTO_MAX=65536)"
+  },
+  "feicao_de_outro_inquilino": {
+   "prova": "tests/api/test_edicao_transacional.py::test_inquilino_b_nunca_edita_nem_le_feicao_de_camada_de_a e test_feicao_com_fid_de_outro_inquilino_nunca_e_aceita_por_globalid",
+   "resultado": "PASSOU (404, nunca 500, nunca sucesso)"
+  },
+  "edicao_concorrente_duas_sessoes": {
+   "prova": "tests/api/test_edicao_transacional.py::test_edicao_concorrente_de_duas_sessoes_nunca_sobrescreve_em_silencio",
+   "resultado": "PASSOU (uma sessão 200, a outra 409 — nunca as duas 200)"
+  },
+  "veredito": "nenhuma sobrescrita silenciosa e nenhum 500 encontrado nas 6 tentativas do roteiro"
+ },
+ "suite_completa": {
+  "comando": "flock /home/dev/plataforma/laco/.pytest.lock venv/bin/pytest tests/api/test_edicao_transacional.py -q -p no:cacheprovider",
+  "resultado": "20 passed"
+ },
+ "gerado_em": "2026-09-07T02:28:59Z",
+ "git_sha": "1ade59ea0ffe"
+}

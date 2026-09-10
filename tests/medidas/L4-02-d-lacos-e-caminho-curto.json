@@ -1,0 +1,24 @@
+{
+  "adversario_atributo_nulo_recusado": true,
+  "adversario_fecha_chave_laco_aparece": true,
+  "caminho_curto_comprimento_bate_com_soma_dos_trechos": true,
+  "custo_por_atributo_customizado": true,
+  "frontend_clique_tabela_e2e": "NAO_CUMPRIDA: mesma fronteira honesta do item irmão L4-02-a-conectado-e-subrede — não existe front-end de rede de utilidades no repositório (sem web/ sob rede_utilidades) para acoplar clique, tabela lateral e captura e2e; a API dos três tipos novos está completa e testada",
+  "k3_alternativas_quando_existem": true,
+  "k3_honesto_quando_nao_existem": true,
+  "lacos_cooperativa_teste": {
+    "carga_1min": 9.54,
+    "medido": false,
+    "motivo": "carga_1min=9.54 acima de 8 (regra do brief: não medir sob disputa)",
+    "ram_livre_gb": 8.0
+  },
+  "p95_caminho_curto_maior_alimentador": {
+    "carga_1min": 9.54,
+    "medido": false,
+    "motivo": "carga_1min=9.54 acima de 8 (regra do brief: não medir sob disputa)",
+    "ram_livre_gb": 8.0
+  },
+  "tipo_caminho_curto": true,
+  "tipo_isolados": true,
+  "tipo_lacos": true
+}
