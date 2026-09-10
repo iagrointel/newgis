@@ -49,6 +49,9 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # ---- L0-07-f console da plataforma (vocabulário na migração 20260907T2325)
     ("PUT", "/api/plataforma/inquilinos/{id}/cotas"): ["inquilinos/cotas"],
     ("POST", "/api/plataforma/inquilinos/{id}/admins/{usuario_id}/2fa/desativar"): ["inquilinos/2fa_desligar"],
+    # ---- relatórios do admin (L0-07-e; vocabulário na migração 20260908T0136)
+    ("POST", "/api/relatorios"): ["relatorios/gerar"],
+    ("POST", "/api/relatorios/agendas"): ["relatorios/agendar"],
     # ---- fila de jobs (L0-05; vocabulário na migração 007)
     ("POST", "/api/jobs"): ["jobs/criar"],
     ("POST", "/api/jobs/{job_id}/cancelar"): ["jobs/cancelar"],

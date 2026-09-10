@@ -463,3 +463,9 @@ LOTE_FALHAS_MAX = 100                     # falhas por feição devolvidas no mo
 LOTE_EXPRESSAO_MS = 500                   # orçamento do avaliador POR LINHA (mesmo teto do servidor do L2-10-c)
 LOTE_JOB_TIMEOUT_S = 1_800                # teto do job (refutação: "mede se o job respeita o timeout")
 LOTE_MAPEAMENTO_MAX = 500                 # pares campo_destino: campo_origem em copiar/mover (teto de campos da camada)
+# ---------------------------------------------------------------- relatórios do admin (item L0-07-e; limites iguais aos
+# relatórios de uso da Esri, declarados em GET /api/relatorios/tipos)
+RELATORIO_JANELA_DIAS = 366       # janela máxima de um relatório: 12 meses
+RELATORIO_LINHAS_MAX = 10_000     # linhas por relatório; acima disso o CSV é cortado e o resultado diz truncado
+RELATORIO_POR_TIPO_HORA = 1       # pedidos por tipo por hora pela API (agenda disparada pelo worker não conta)
+

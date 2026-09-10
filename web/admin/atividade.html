@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Atividade · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--e3); margin-bottom: var(--e3); }
+  .kpi { background: var(--painel); border: 1px solid var(--borda); border-radius: var(--raio); padding: var(--e3) var(--e4); }
+  .kpi strong { display: block; font-size: 1.6rem; }
+  .kpi span { color: var(--fraco); font-size: .85rem; }
+  .graficos { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--e4); }
+  .grafico svg { width: 100%; height: auto; display: block; }
+  .grafico rect.barra { fill: var(--acento); }
+  .grafico text { fill: var(--fraco); font-size: 10px; }
+  .grafico .rotulo-tipo { fill: var(--texto); font-size: 11px; }
+</style>
+</head>
+<body class="tela">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1 data-i18n="atividade.titulo">Atividade</h1>
+    <plat-aviso id="aviso"></plat-aviso>
+    <div class="linha-ferramentas" id="janela"></div>
+    <div class="kpis" id="kpis"></div>
+    <section class="cartao" id="graficos" aria-labelledby="t-graficos">
+      <h2 id="t-graficos" data-i18n="atividade.graficos">Eventos e acessos</h2>
+      <div class="graficos">
+        <figure class="grafico" id="grafico-dias"><figcaption data-i18n="atividade.eventos_por_dia">eventos por dia</figcaption></figure>
+        <figure class="grafico" id="grafico-acessos"><figcaption data-i18n="atividade.acessos_por_dia">acessos à API por dia</figcaption></figure>
+        <figure class="grafico" id="grafico-tipos"><figcaption data-i18n="atividade.eventos_por_tipo">eventos por tipo</figcaption></figure>
+      </div>
+    </section>
+    <section class="cartao" id="top" aria-labelledby="t-top">
+      <h2 id="t-top" data-i18n="atividade.top_itens">10 itens mais acessados</h2>
+      <p class="fraco" data-i18n="atividade.top_ajuda">contagem de chamadas a /api/itens/{id} no log de acesso do inquilino, dentro da janela</p>
+      <plat-tabela id="tabela-top" legenda="itens mais acessados"></plat-tabela>
+    </section>
+    <section class="cartao" id="relatorios" aria-labelledby="t-relatorios">
+      <h2 id="t-relatorios" data-i18n="relatorios.titulo">Relatórios</h2>
+      <p class="fraco" id="relatorios-limites"></p>
+      <div class="linha-ferramentas" id="relatorios-pedir"></div>
+      <plat-tabela id="tabela-relatorios" legenda="relatórios gerados"></plat-tabela>
+    </section>
+    <section class="cartao" id="agendas" aria-labelledby="t-agendas">
+      <h2 id="t-agendas" data-i18n="relatorios.agendas">Relatórios agendados</h2>
+      <p class="fraco" data-i18n="relatorios.agendas_ajuda">diário, semanal (segunda) ou mensal (dia 1), na hora escolhida; o link do CSV vai por e-mail ao dono da agenda quando o inquilino tem SMTP</p>
+      <div class="linha-ferramentas" id="agendas-pedir"></div>
+      <plat-tabela id="tabela-agendas" legenda="relatórios agendados"></plat-tabela>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/js/auth/atividade.js"></script>
+</body>
+</html>

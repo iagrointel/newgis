@@ -12,7 +12,6 @@ export const TELAS = [
   { caminho: '/mapa', chave: 'nav.mapa' },
   { caminho: '/conexoes', chave: 'nav.conexoes' },
   { caminho: '/uploads', chave: 'nav.uploads', privilegio: 'conteudo.criar' },
-  { caminho: '/migracao', chave: 'nav.migracao', privilegio: 'conteudo.registrar_fonte' },
   { caminho: '/conta', chave: 'nav.conta' },
   { caminho: '/admin/usuarios', chave: 'nav.usuarios', privilegio: 'membros.ver' },
   { caminho: '/admin/grupos', chave: 'nav.grupos' },
@@ -21,12 +20,12 @@ export const TELAS = [
   { caminho: '/admin/tokens', chave: 'nav.tokens', privilegio: 'tokens.gerar' },
   { caminho: '/admin/log', chave: 'nav.log', privilegio: 'org.log_ver' },
   { caminho: '/admin/organizacao', chave: 'nav.organizacao', privilegio: 'org.configurar' },
-  // item L0-07-f: console da plataforma, só para o superadmin (GET /api/eu superadmin=true), fora de qualquer inquilino
-  { caminho: '/plataforma', chave: 'nav.plataforma', superadmin: true },
+  // item L0-07-e: painel Atividade e relatórios do admin
+  { caminho: '/admin/atividade', chave: 'nav.atividade', privilegio: 'org.exportar' },
 ];
 
 export function telasVisiveis(usuario) {
-  return TELAS.filter((tela) => (!tela.privilegio || tem(tela.privilegio, usuario)) && (!tela.superadmin || usuario?.superadmin === true));
+  return TELAS.filter((tela) => !tela.privilegio || tem(tela.privilegio, usuario));
 }
 
 export function montarLayout({ usuario, ativo = location.pathname }) {

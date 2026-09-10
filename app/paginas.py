@@ -80,6 +80,8 @@ PAGINAS = {
     "/analise3d": "analise3d.html",
     # --- console do superadmin (L0-07-f-console-plataforma): fora de qualquer inquilino, só superadmin de `plataforma`
     "/plataforma": "plataforma.html",
+    # --- painel Atividade e relatórios do admin (L0-07-e-relatorios)
+    "/admin/atividade": "admin/atividade.html",
 }
 router = APIRouter()
 

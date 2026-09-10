@@ -99,6 +99,7 @@ from app.rede_utilidades.rotas_topologia import router as rotas_rede_topologia
 from app.regras.rotas import router as rotas_regras  # L2-10-d: regras de atributo por camada
 from app.replica.rotas import router as rotas_replicas
 from app.relacionamentos.rotas import router as rotas_relacionamentos
+from app.relatorios.rotas import router as rotas_relatorios
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
@@ -351,6 +352,8 @@ ROUTERS = [
     rotas_imagens,
     # --- análise 3D (L2-09-d): /api/analise3d/visada, /viewshed, /perfil, /sombra sobre terreno inline
     rotas_analise3d,
+    # --- relatórios do admin e painel Atividade (L0-07-e-relatorios): /api/relatorios, /api/atividade
+    rotas_relatorios,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
