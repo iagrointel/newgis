@@ -9915,6 +9915,27 @@
     "x-privilegio": "proprio"
    }
   },
+  "/api/importacoes/formatos": {
+   "get": {
+    "tags": [
+     "ingestao"
+    ],
+    "summary": "Formatos Aceitos",
+    "operationId": "formatos_aceitos_api_importacoes_formatos_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
   "/api/importacoes/{id}": {
    "get": {
     "tags": [
@@ -10044,27 +10065,6 @@
     },
     "x-auth": "S",
     "x-privilegio": "conteudo.publicar_camada"
-   }
-  },
-  "/api/importacoes/formatos": {
-   "get": {
-    "tags": [
-     "ingestao"
-    ],
-    "summary": "Formatos Aceitos",
-    "operationId": "formatos_aceitos_api_importacoes_formatos_get",
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "proprio"
    }
   },
   "/api/camadas/{id}/edicoes": {
@@ -12347,6 +12347,405 @@
       "content": {
        "application/json": {
         "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/atributos/sincronizar": {
+   "post": {
+    "tags": [
+     "rede de utilidades — atributos"
+    ],
+    "summary": "Sincronizar Atributos",
+    "description": "Sincroniza em lote: tensão/capacidade das feições -> topologia, e (re)constrói a aresta interna de\ncada dispositivo de dois terminais (`plat.rede_topo_dispositivo_aresta`). Exige topologia já habilitada.",
+    "operationId": "sincronizar_atributos_api_rede__rede_id__atributos_sincronizar_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/atributos/propagar-fase": {
+   "post": {
+    "tags": [
+     "rede de utilidades — atributos"
+    ],
+    "summary": "Propagar Fase",
+    "description": "Propaga a fase do(s) nó(s) controlador(es) para jusante (BFS respeitando traversabilidade e regra de\nsubstituição) e grava a divergência contra a fase declarada em `plat.rede_atributo_discrepancia`.",
+    "operationId": "propagar_fase_api_rede__rede_id__atributos_propagar_fase_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/atributos/conectividade": {
+   "post": {
+    "tags": [
+     "rede de utilidades — atributos"
+    ],
+    "summary": "Recalcular Conectividade",
+    "description": "Recalcula `is_connected`/`subrede` por alcançabilidade a partir do(s) controlador(es).",
+    "operationId": "recalcular_conectividade_api_rede__rede_id__atributos_conectividade_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/atributos/substituicoes": {
+   "post": {
+    "tags": [
+     "rede de utilidades — atributos"
+    ],
+    "summary": "Criar Substituicao",
+    "operationId": "criar_substituicao_api_rede__rede_id__atributos_substituicoes_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SubstituicaoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/atributos/discrepancias": {
+   "get": {
+    "tags": [
+     "rede de utilidades — atributos"
+    ],
+    "summary": "Listar Discrepancias",
+    "operationId": "listar_discrepancias_api_rede__rede_id__atributos_discrepancias_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 200,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/epanet": {
+   "post": {
+    "tags": [
+     "rede de utilidades — EPANET"
+    ],
+    "summary": "Importar Epanet",
+    "description": "Enfileira a importação do `.inp` recebido no corpo. `crs_epsg` é obrigatório quando as coordenadas do\narquivo não são WGS84 (faixa -180..180/-90..90) — o job recusa sem adivinhar a projeção.",
+    "operationId": "importar_epanet_api_rede__rede_id__epanet_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "crs_epsg",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Crs Epsg"
+      }
+     },
+     {
+      "name": "nome_arquivo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Nome Arquivo"
+      }
+     }
+    ],
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EpanetImportacaoAceita"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   },
+   "get": {
+    "tags": [
+     "rede de utilidades — EPANET"
+    ],
+    "summary": "Exportar Epanet",
+    "description": "O `.inp` reconstruído das feições atuais da rede (nunca um arquivo guardado).",
+    "operationId": "exportar_epanet_api_rede__rede_id__epanet_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/epanet/{importacao_id}": {
+   "get": {
+    "tags": [
+     "rede de utilidades — EPANET"
+    ],
+    "summary": "Ver Importacao Epanet",
+    "operationId": "ver_importacao_epanet_api_rede__rede_id__epanet__importacao_id__get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "importacao_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Importacao Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EpanetImportacao"
+        }
        }
       }
      },
@@ -29193,6 +29592,141 @@
     ],
     "title": "EnsaiosPagina"
    },
+   "EpanetImportacao": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "rede_id": {
+      "type": "string",
+      "title": "Rede Id"
+     },
+     "estado": {
+      "type": "string",
+      "title": "Estado"
+     },
+     "nome_arquivo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nome Arquivo"
+     },
+     "crs_epsg": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Crs Epsg"
+     },
+     "arquivo_sha256": {
+      "type": "string",
+      "title": "Arquivo Sha256"
+     },
+     "arquivo_bytes_tamanho": {
+      "type": "integer",
+      "title": "Arquivo Bytes Tamanho"
+     },
+     "job_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Job Id"
+     },
+     "contagens": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Contagens"
+     },
+     "avisos": {
+      "anyOf": [
+       {
+        "items": {},
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Avisos"
+     },
+     "erro": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Erro"
+     },
+     "criado_em": {
+      "type": "string",
+      "title": "Criado Em"
+     },
+     "atualizado_em": {
+      "type": "string",
+      "title": "Atualizado Em"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "rede_id",
+     "estado",
+     "nome_arquivo",
+     "crs_epsg",
+     "arquivo_sha256",
+     "arquivo_bytes_tamanho",
+     "job_id",
+     "contagens",
+     "avisos",
+     "erro",
+     "criado_em",
+     "atualizado_em"
+    ],
+    "title": "EpanetImportacao"
+   },
+   "EpanetImportacaoAceita": {
+    "properties": {
+     "importacao_id": {
+      "type": "string",
+      "title": "Importacao Id"
+     },
+     "job_id": {
+      "type": "string",
+      "title": "Job Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "importacao_id",
+     "job_id"
+    ],
+    "title": "EpanetImportacaoAceita"
+   },
    "Erro": {
     "properties": {
      "erro": {
@@ -34960,6 +35494,52 @@
      "atual"
     ],
     "title": "Sessao"
+   },
+   "SubstituicaoEntrada": {
+    "properties": {
+     "tipo_id": {
+      "type": "string",
+      "title": "Tipo Id"
+     },
+     "atributo_codigo": {
+      "type": "string",
+      "maxLength": 63,
+      "minLength": 1,
+      "title": "Atributo Codigo"
+     },
+     "de_valor": {
+      "type": "integer",
+      "maximum": 7.0,
+      "minimum": 0.0,
+      "title": "De Valor"
+     },
+     "para_valor": {
+      "type": "integer",
+      "maximum": 7.0,
+      "minimum": 0.0,
+      "title": "Para Valor"
+     },
+     "descricao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Descricao"
+     }
+    },
+    "type": "object",
+    "required": [
+     "tipo_id",
+     "atributo_codigo",
+     "de_valor",
+     "para_valor"
+    ],
+    "title": "SubstituicaoEntrada"
    },
    "TesteSaida": {
     "properties": {
