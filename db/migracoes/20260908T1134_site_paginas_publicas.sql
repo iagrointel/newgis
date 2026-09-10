@@ -16,8 +16,9 @@
 -- (a CHECK da 011 é reescrita aqui, em arquivo NOVO: a 011 está aplicada e é imutável)
 ALTER TABLE plat.tipo_item DROP CONSTRAINT IF EXISTS tipo_item_familia_check;
 ALTER TABLE plat.tipo_item ADD CONSTRAINT tipo_item_familia_check
-  CHECK (familia IN ('camada','raster','mapa','app','painel','formulario','fluxo','rede',
-                     'arquivo','ferramenta','documento','site'));
+  -- (entrega 10/09) união: a lista deste ramo não tinha narrativa, que outro ramo já semeou na tabela,
+  -- e a restrição nascia violada.
+  CHECK (familia IN ('camada', 'raster', 'mapa', 'app', 'painel', 'formulario', 'fluxo', 'rede', 'arquivo', 'ferramenta', 'documento', 'site', 'narrativa'));
 
 INSERT INTO plat.tipo_item(nome, familia, rotulo, descricao, esquema, esquema_versao, icone, modulo_front, abre_em,
                            tem_dado_fisico, linha_dona) VALUES
