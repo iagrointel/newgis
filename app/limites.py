@@ -453,3 +453,13 @@ ANALISE3D_SOLIDOS_MAX = 500            # sólidos (extrusões) por análise de s
 ANALISE3D_SOLIDO_VERTICES_MAX = 200    # vértices do polígono de cada sólido
 # ---------------------------------------------------------------- console da plataforma (item L0-07-f)
 PLATAFORMA_SUSPENSAO_MENSAGEM_MAX = 300   # mensagem mostrada aos membros do inquilino suspenso (503); cabe num aviso
+
+# --- edição em lote (L2-03-f-edicao-em-lote-calculo-campo; `POST /api/camadas/{id}/lote`)
+LOTE_SINCRONO_MAX = 5_000                 # hipótese do item: acima disto roda como job (L0-05), com progresso
+LOTE_TRANSACAO = 1_000                    # feições por sub-lote dentro da transação única (progresso a cada sub-lote)
+LOTE_PREVIA = 10                          # linhas da pré-visualização (antes/depois), hipótese do item
+LOTE_IDS_MAX = 50_000                     # ids explícitos numa seleção (acima disto use `onde` ou `todas`)
+LOTE_FALHAS_MAX = 100                     # falhas por feição devolvidas no modo parcial (o resto vira contagem)
+LOTE_EXPRESSAO_MS = 500                   # orçamento do avaliador POR LINHA (mesmo teto do servidor do L2-10-c)
+LOTE_JOB_TIMEOUT_S = 1_800                # teto do job (refutação: "mede se o job respeita o timeout")
+LOTE_MAPEAMENTO_MAX = 500                 # pares campo_destino: campo_origem em copiar/mover (teto de campos da camada)

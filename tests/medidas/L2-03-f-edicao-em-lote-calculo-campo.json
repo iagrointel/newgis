@@ -1,0 +1,37 @@
+{
+ "item": "L2-03-f-edicao-em-lote-calculo-campo",
+ "medidas": {
+  "calcular_area_ha_100mil_s": {
+   "valor": 16.1,
+   "unidade": "s",
+   "comando": "POST /api/camadas/{id}/lote calcular area_ha = $area_m2 / 10000 em 100.000 MultiPolygon (job camadas.lote, do pedido até estado=concluido; tests/api/test_edicao_lote.py)"
+  },
+  "calcular_area_ha_100mil_job_ms": {
+   "valor": 15156,
+   "unidade": "ms",
+   "comando": "duração medida dentro do job (só a transação do lote)"
+  },
+  "amostra_1000_desvio_max_ha": {
+   "valor": 0.0,
+   "unidade": "ha",
+   "comando": "max |area_ha - ST_Area(geom::geography)/10000| em 1.000 feições"
+  },
+  "e2e_estados_provados": {
+   "valor": 7,
+   "unidade": "estados",
+   "comando": "atribuir nulo; prévia calcular; aplicar; erro de expressão nomeado; atribuir fora do domínio nomeado; atribuir com onde; prévia apagar (tests/e2e/test_edicao_lote.py)"
+  },
+  "erros_de_console": {
+   "valor": 0,
+   "unidade": "erros",
+   "comando": "Tela.verificar (console.error, pageerror, respostas >= 400 não declaradas)"
+  },
+  "pagina_pronta_ms_mapa_lote": {
+   "valor": 1112.1,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright"
+  }
+ },
+ "gerado_em": "2026-09-08T07:17:58Z",
+ "git_sha": "f6156fc95842"
+}

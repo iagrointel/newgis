@@ -277,4 +277,11 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/analise3d/viewshed"): ["analise3d/viewshed"],
     ("POST", "/api/analise3d/perfil"): ["analise3d/perfil"],
     ("POST", "/api/analise3d/sombra"): ["analise3d/sombra"],
+    ("POST", "/api/camadas/{id}/lote"): ["camadas/lote"],  # L2-03-f: síncrono e job registram o mesmo evento
+    # L2-03-edicao (histórico/restauração, anexos, unir/dividir)
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/historico/{historico_id}/restaurar"): ["camadas/restaurar"],
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/anexos"): ["camadas/anexo_enviar"],
+    ("DELETE", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): ["camadas/anexo_apagar"],
+    ("POST", "/api/camadas/{id}/feicoes/unir"): ["camadas/unir"],
+    ("POST", "/api/camadas/{id}/feicoes/dividir"): ["camadas/dividir"],
 }

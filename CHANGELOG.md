@@ -742,6 +742,39 @@ Um defeito real de front achado na bancada do e2e e consertado: `perfilSvg` em
 (que traz uma série só) quebrava a página com "Cannot read properties of undefined (reading 'map')"
 com a API respondendo 200 correto. Corrigido com guard ternário; o e2e é o teste dele.
 
+## turno 48, setembro de 2026 (item L2-03-a-api-edicao-transacional reentregue: a família de edição inteira pousa em master pela junção do wt/cx203f)
+
+O item tinha sido marcado refutado por auditoria HARD-03 (07/09) com o motivo exato "artefato ausente em master":
+`app/edicao/` existia só em ramos de worktree e nunca tinha pousado — o que deixou refutados, pela mesma causa,
+L2-03-edicao, L2-03-f e todos os itens que dependem da porta de escrita (L2-03-d, L2-03-e, L2-07-c, L2-13). A
+reentrega é a junção do ramo `wt/cx203f` sobre o master atual (`wt/il203aed`, merge `c54ca762`), que traz a API
+`POST /api/camadas/{id}/edicoes` (única porta de escrita de feição; transação tudo-ou-nada, versão otimista com
+409 e feição atual, domínios/tipo/SRID/ST_IsValid validados no servidor, rastreio preenchido pelo servidor, RLS
+por inquilino), `POST /api/camadas/{id}/lote` (L2-03-f: prévia, até 5.000 síncrono, job `camadas.lote` acima, com
+cálculo de campo pela linguagem L2-10-c traduzida a SQL) e a edição no mapa (`web/js/mapa/edicao.js` sobre
+Martin/MapLibre do L2-01/L2-04-a). Na árvore junta, sobre o master que desde então ganhou as suítes adversariais
+HARD-03 (tenancy/RLS e SSRF), tudo verde: `tests/api/test_edicao_transacional.py` 20 passed — as 6 cláusulas do
+portão e os 6 ataques da refutação (lote de 100 mil recusado por limite declarado, CRS não declarado, SRID 0,
+texto de 1 MB, fid de outro inquilino, edição concorrente sem sobrescrita silenciosa); cruzado/eventos/docs/
+privilegios declarados 232 passed; adversário + unit verde; lote 9 passed com worker da trilha; `make lint` e
+`make sem-marcador` ok; `docs/openapi.json` regenerado sem um byte de diferença.
+
+## codex cx1, setembro de 2026 (item L2-03-f-edicao-em-lote-calculo-campo: edição em lote e cálculo de campo por expressão)
+
+`POST /api/camadas/{id}/lote` sobre uma seleção (ids, expressão `onde` ou todas): calcular campo por expressão da
+linguagem L2-10-c traduzida para SQL quando o subconjunto permite (`app/expressao/compilador_sql.py`) e avaliada
+linha a linha no servidor quando não; atribuir valor fixo; apagar; corrigir geometrias inválidas (ST_MakeValid com
+relatório); copiar/mover entre camadas com mapeamento de campos; pré-visualização (10 linhas antes/depois) sem
+gravar. Até 5.000 feições roda no pedido; acima vira o job `camadas.lote` com progresso e cancelamento — tudo numa
+transação só (erro ou cancelamento devolve a camada ao estado anterior). Campos derivados de geometria na
+expressão (`$area_m2`, `$comprimento_m`, `$perimetro_m`, `$x`, `$y`). Mesma validação, "só as próprias", gatilhos
+de versão/histórico, `tiles_versao` e evento por lote do L2-03-a. Painel "Edição em lote" na tela /mapa (edição do
+L2-03-edicao) com prévia, aplicação, acompanhamento do job e erro nomeado. Medido em tests/medidas/L2-03-f-*.json:
+100.000 MultiPolygon com `area_ha = $area_m2 / 10000` como job em 16,1 s (15,2 s dentro da transação), amostra de
+1.000 igual a ST_Area/10000 (desvio 0), histórico gerado para as 100.000. Migrações: evento `camadas/lote`;
+`camada_schema_garantir` só concede USAGE quando falta (evita "tuple concurrently updated" no d_demo partilhado).
+ADR `docs/adr/20260908T0830-edicao-em-lote-calculo-de-campo.md`.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a

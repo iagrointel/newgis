@@ -12,6 +12,7 @@ import json
 import time
 import uuid
 
+import psycopg2.errors
 import psycopg2.extras
 import pytest
 
@@ -41,8 +42,21 @@ class FabricaCamada:
         schema = f"d_{slug}"
         tabela = "c_" + uuid.uuid4().hex[:16]
         contexto(self.con, tenant_id, usuario_id=usuario_id, login="admin")
+        # `camada_schema_garantir` faz GRANT no schema COMPARTILHADO d_demo a cada chamada; com várias trilhas
+        # rodando suítes ao mesmo tempo o Postgres responde "tuple concurrently updated" (contenção de DDL no
+        # catálogo, não defeito do código) — repetir resolve (achado do L2-03-a, tornado automático no L2-03-f)
+        for tentativa in range(6):
+            try:
+                with self.con.cursor() as cur:
+                    cur.execute("SELECT plat.camada_schema_garantir(%s)", (slug,))
+                break
+            except psycopg2.errors.InternalError_ as e:
+                if "concurrently updated" not in str(e) or tentativa == 5:
+                    raise
+                self.con.rollback()
+                time.sleep(0.3 * (tentativa + 1))
+                contexto(self.con, tenant_id, usuario_id=usuario_id, login="admin")
         with self.con.cursor() as cur:
-            cur.execute("SELECT plat.camada_schema_garantir(%s)", (slug,))
             cols_sql = "".join(f', "{c["nome"]}" {c["tipo"]}' for c in campos)
             cur.execute(f'CREATE TABLE "{schema}"."{tabela}" (fid serial primary key, '
                         f'geom geometry({geometria}, {SRID}){cols_sql})')
