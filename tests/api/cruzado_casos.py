@@ -1818,3 +1818,11 @@ CASOS.update({
 CASOS[("GET", "/api/tiles/leituras")] = Caso(lambda p: "/api/tiles/leituras", proprio=True,
                                              aceita=frozenset({200}), verificar=_sem_marca)
 
+# ---- L5-13-edicao-concorrente: presença no item de B é cross-tenant puro (404 pela RLS de plat.item)
+CASOS.update({
+    ("POST", "/api/itens/{id}/presenca"): Caso(
+        lambda p: f"/api/itens/{p.item_b['id']}/presenca", lambda p: {"sessao": "aba-teste-cruzado", "no": None},
+    ),
+    ("GET", "/api/itens/{id}/presenca"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/presenca"),
+    ("GET", "/api/itens/{id}/presenca/eventos"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/presenca/eventos"),
+})

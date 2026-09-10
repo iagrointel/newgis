@@ -1920,3 +1920,30 @@ Recusas nomeadas: `caminho_inexistente`, `arquivo_ausente`, `arquivo_grande_dema
 `lote_grande_demais` (soma acima de 3 GB), `ja_exposto`, `hash_divergente`, `acervo_sem_raiz`. A raiz dos
 arquivos é `PLAT_ACERVO_ARQUIVOS_RAIZ` no `.env`; sem ela a lista vem vazia e a exposição responde 409.
 Item de fonte **sem licença escrita** nasce privado e marcado `uso_restrito` no campo `dados`.
+## 25. Edição concorrente no construtor (item L5-13-edicao-concorrente)
+
+Várias pessoas podem ter o mesmo documento (`app`, `painel`) aberto. O construtor mostra, no alto, quem mais
+está no documento e em que nó; um nó que outra aba está editando aparece com contorno tracejado e, ao selecioná-lo,
+um aviso diz quem está lá. Nada trava: o aviso só evita que duas pessoas mexam no mesmo nó sem saber.
+
+Ao gravar, a tela manda `base_versao` (a versão que ela leu). Se alguém gravou antes:
+- nós DIFERENTES: o servidor mescla por nó e grava; a tela absorve o resultado e o estado diz
+  "gravado (versão N; mesclado com a versão M de outra sessão)";
+- o MESMO nó: HTTP 409 com o documento atual; o painel mostra a diferença com o nó em conflito marcado e oferece
+  "gravar a minha nos nós em conflito (e mesclar o resto)" ou "descartar a minha e recarregar".
+
+Pela API:
+
+```
+PATCH /api/itens/{id}   {"dados": {...}, "base_versao": 7}
+  200 -> item (com "mesclagem": {"do_cliente": [...], "do_servidor": [...], "versao_servidor": 8}) quando mesclou
+  409 -> {"erro": "versao_conflito", "detalhe": {"versao_atual": 8, "base_versao": 7, "conflitos": ["<id do nó>"],
+          "do_cliente": [...], "do_servidor": [...], "dados": {...documento atual...}}}
+POST /api/itens/{id}/presenca            {"sessao": "<id da aba>", "no": "<id do nó ou null>", "sair": false}
+GET  /api/itens/{id}/presenca            -> {"itens": [{"login", "nome", "sessao", "no", "em", "usuario_id"}], "expira_s": 12}
+GET  /api/itens/{id}/presenca/eventos    -> SSE, evento `presenca` com a lista a cada mudança
+```
+
+`versao_atual` (regra estrita: qualquer diferença = 409) continua aceito. Item sem grafo com `base_versao`
+diferente recebe o 409 com o documento atual, sem mesclagem. A presença expira em 12 s sem batimento (a tela bate a
+cada 5 s) e some ao fechar a aba.

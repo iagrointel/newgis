@@ -266,6 +266,8 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # ---- L4-18-rede-simples: eventos registrados pelas rotas (vocabulário em db/migracoes da rede)
     ("POST", "/api/rede/simples"): ["redes/simples_criar"],
     ("POST", "/api/rede/{rede_id}/promover"): ["redes/simples_promover"],
+    # L5-13-edicao-concorrente: batimento de presença é efêmero (memória + NOTIFY), sem evento por desenho
+    ("POST", "/api/itens/{id}/presenca"): [],
     # ---- motor multicritério em grades aninhadas (L3-19-multiescala; vocabulário nas migrações
     # 20260906T1640_multiescala.sql e 20260906T1823_multiescala_apagar.sql). Conjunto, fator e execução são
     # tabelas do inquilino com dono humano, então toda escrita narra evento; o DELETE apaga em cascata e por

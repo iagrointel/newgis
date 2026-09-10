@@ -41,6 +41,7 @@ from app.catalogo import (
     rotas_miniatura,
     rotas_ogc,
     rotas_pastas,
+    rotas_presenca,  # L5-13: presença em documento (SSE)
     transferencia,
     vista_camada,
 )
@@ -196,6 +197,7 @@ ROUTERS = [
     rotas_ogc.router,
     # --- layout de impressão (L2-12-b): /api/layouts, página headless do quadro e Export Web Map Task (Esri)
     rotas_layout.router,
+    rotas_presenca.router,
     # --- acervo da casa (L6-01-a): /api/acervo, /api/acervo/{fonte_id}, /api/acervo/{fonte_id}/adicionar
     rotas_acervo.router,
     # --- conexão externa (L6-02-a): /api/conexoes, /api/conexoes/{id}, /api/conexoes/{id}/testar
