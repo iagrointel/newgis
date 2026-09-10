@@ -1179,3 +1179,64 @@ Arquivos: `web/js/sig/comparar.js` (novo), `web/sig.html` (ícone + painel "Comp
 mapas secundários), `web/sig.css` (`.comparar-*`), `web/js/sig/sig.js` (import + chamada de
 `instalarComparar`, atalho `c`), `web/js/i18n/pt-BR.json` (chaves `comparar.*`), `scripts/
 comparar_demo_tempo.py` (novo, bancada), `tests/e2e/test_comparar.py` (novo, 5 casos).
+
+## 22. OGC API — Tiles e OGC API — Maps por token (item L1-02-i-ogc-api-tiles-e-maps, ADR 20260910T2056)
+
+Segunda fachada sobre o MESMO motor de pixel do item 18 (`app/imagens/tiles.py`) — sem tabela nova, sem
+migração: `app/imagens/ogc_tiles.py` só monta JSON (landing, conformance, `tileMatrixSets`, coleção,
+tileset), `app/imagens/rotas_ogc_tiles.py` autoriza pela mesma porta (`rotas_tiles._autorizar`, token
+no caminho) e delega toda leitura de pixel:
+
+```
+ladrilho de item     -> rotas_tiles._servir            (a MESMA função do XYZ)
+ladrilho de mosaico  -> rotas_tiles._tile_mosaico_impl  (a MESMA função de /svc/<token>/mosaico/<alvo>/...)
+/map (bbox livre)    -> tiles.recorte()                 (a MESMA função do GetMap do WMS)
+```
+
+`{item}` no caminho de `/collections/{item}/...` resolve para item raster OU mosaico
+(`rotas_ogc_tiles._resolver_colecao`): tenta `plat.raster_item` primeiro (consulta leve, mesmo
+tenant_id do token); se não achar, tenta mosaico REGISTRADO (`mo.eh_uuid` + `mo.obter`) e por último
+coleção completa ad-hoc (`ps.colecao_pertence`, o modo pré-L1-07). As três formas nunca colidem porque
+um nome de coleção nunca é um uuid sintaticamente válido, e o item raster é sempre tentado ANTES do
+mosaico (evita a ambiguidade de um uuid de item raster também "parecer" um uuid de mosaico).
+
+Contrato de URL:
+```
+/svc/<token>/ogc/tiles                                                          landing
+/svc/<token>/ogc/tiles/conformance
+/svc/<token>/ogc/tiles/tileMatrixSets[/WebMercatorQuad]                         grade (definição REAL: TMS.model_dump())
+/svc/<token>/ogc/tiles/collections[/<item>]                                     coleções (só itens raster são ENUMERADOS)
+/svc/<token>/ogc/tiles/collections/<item>/map                                   OGC API Maps (só item raster)
+/svc/<token>/ogc/tiles/collections/<item>/map/tiles/WebMercatorQuad             tileset metadata (item + mosaico registrado)
+/svc/<token>/ogc/tiles/collections/<item>/map/tiles/WebMercatorQuad/{z}/{y}/{x}[.ext]  ladrilho (item + mosaico)
+```
+
+Duas armadilhas que valem registrar: (1) a ORDEM do caminho do ladrilho é `{tileMatrix}/{tileRow}/
+{tileCol}` = z/y/x — o INVERSO do XYZ (z/x/y) — literalmente porque a Tabela 4 da OGC 20-057 define
+assim; (2) `tileMatrixSetLimits` (por zoom, no tileset metadata) é calculado em O(1) por zoom com
+`TMS.tile()` nos DOIS CANTOS do bbox, nunca por enumeração dos ladrilhos que intersectam — um item
+cobrindo poucos graus em zoom alto teria milhões de ladrilhos, e só os dois cantos bastam para o
+retângulo de linhas/colunas.
+
+Dois achados corrigidos no próprio turno, ambos por auto-revisão antes do adversário externo: (a)
+`width`/`height` do `/map` tinham `le=` no `Query` iguais ao teto (`WMS_LARGURA_MAX`/`WMS_ALTURA_MAX`)
+— como o produto dos dois tetos é EXATAMENTE `WMS_PIXELS_MAX`, a checagem `width*height >
+WMS_PIXELS_MAX` nunca disparava (código morto) e um pedido no canto do teto (4096×4096) caía direto no
+render: medido em 142 s numa chamada. Corrigido para as MESMAS três condições OR'd de
+`rotas_wms._get_map` (`width > MAX or height > MAX or width*height > PIXELS_MAX`), sem `le=` no Query
+— a recusa acontece ANTES do render; (b) `/map` de item de outro inquilino caía direto em
+`_eh_item_raster` (que só confirma "não é raster item DESTE tenant", não distingue "não existe" de "é
+mosaico") e devolvia `422 mapa_nao_suportado` em vez de `403` — corrigido para chamar
+`_resolver_colecao` primeiro (que já dá o 403 honesto) e só recusar por tipo depois de confirmar que o
+item pertence ao inquilino.
+
+Fora deste item (nomeado, não escondido — `docs/PARIDADE.md`): OGC API Maps sobre mosaico (compor um
+retângulo arbitrário de várias cenas exigiria motor de composição por bbox livre — o que existe,
+`ladrilho_composto`, só compõe por CÉLULA da grade); tileset metadata do mosaico AD-HOC sem registro
+prévio (mesma lacuna que `mosaico_tilejson`/`mosaico_wmts_rest` já tinham — por consistência, não por
+esquecimento); `collections-selection`, `dataset-tilesets`, formatos vetorial/cobertura/netCDF, `/api`
+(OpenAPI próprio desta família), HTML, dimensão `datetime` por coleção.
+
+Arquivos: `app/imagens/ogc_tiles.py` (novo), `app/imagens/rotas_ogc_tiles.py` (novo, registrado em
+`app/main.py`), `tests/api/imagens/test_ogc_tiles.py` (novo, 22 casos), `docs/adr/20260910T2056-
+ogc-api-tiles-e-maps.md`.

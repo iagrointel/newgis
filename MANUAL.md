@@ -1205,9 +1205,9 @@ guardado — só o identificador dele e o prefixo visível.
   para várias coleções, período, filtro de nuvem e busca nomeada, ver o mosaico REGISTRADO (seção 24);
   escolha de pixel além de "primeira cena com dado" (mediana, média, travar cena, mais recente sem
   nuvem) é o item irmão L1-08, ainda não construído;
-- não há OGC API Tiles/Maps (L1-02-i), nem ponto/estatística/histograma (L1-02-h); WMS 1.3.0
-  (`GET /svc/<token>/wms`, ver CHANGELOG) e predefinição de renderização gravada (`predef=`, seção 25)
-  já existem;
+- ponto/estatística/histograma (L1-02-h) ainda não existe; WMS 1.3.0 (`GET /svc/<token>/wms`, ver
+  CHANGELOG), predefinição de renderização gravada (`predef=`, seção 25) e OGC API Tiles/Maps
+  (seção 28) já existem;
 - a única grade é a WebMercatorQuad (a do Google/OSM/AGOL).
 
 ## 23. ImageServer compatível Esri por token (item L1-25-servico-de-imagem-esri-compativel)
@@ -1523,3 +1523,62 @@ mostra "nenhuma camada com campo de data disponível" e o resto do painel funcio
   exata pela mesma chamada, com menos código novo e paridade Esri de graça (`docs/PARIDADE.md`);
 - indicador de carregamento na lupa enquanto o mapa B monta (27.1);
 - alça arrastável na divisão do "lado a lado" (hoje fixa em 50/50; só cortina tem alça).
+
+## 28. OGC API — Tiles e OGC API — Maps por token (item L1-02-i-ogc-api-tiles-e-maps)
+
+A família moderna que fecha o conjunto de padrões OGC do raster: a plataforma já falava WMTS, WMS,
+XYZ, TileJSON e STAC (seções 22, 24 e 25); faltava a que um catálogo/cliente novo (ArcGIS Pro,
+QGIS >= 3.34) procura primeiro — REST puro, sem KVP nem XML. Mesmo token, mesmo item, mesmo motor de
+pixel das outras seções: esta família só é outra FACHADA sobre o que já existe.
+
+### 28.1 As URLs
+
+Com `<tok>` = o token e `<item>` = o identificador da imagem OU de um mosaico (ad-hoc por nome de
+coleção, ou registrado — seção 24) no catálogo:
+
+| para quê | endereço |
+|---|---|
+| landing | `https://<dominio>/svc/<tok>/ogc/tiles` |
+| classes de conformidade cumpridas | `https://<dominio>/svc/<tok>/ogc/tiles/conformance` |
+| grades de ladrilho servidas | `https://<dominio>/svc/<tok>/ogc/tiles/tileMatrixSets` |
+| definição da grade (a REAL, não um resumo) | `https://<dominio>/svc/<tok>/ogc/tiles/tileMatrixSets/WebMercatorQuad` |
+| coleções (itens raster) visíveis a este token | `https://<dominio>/svc/<tok>/ogc/tiles/collections` |
+| metadados da coleção (item ou mosaico registrado) | `https://<dominio>/svc/<tok>/ogc/tiles/collections/<item>` |
+| metadados do tileset (extensão, limites por zoom) | `https://<dominio>/svc/<tok>/ogc/tiles/collections/<item>/map/tiles/WebMercatorQuad` |
+| ladrilho (map tile) | `https://<dominio>/svc/<tok>/ogc/tiles/collections/<item>/map/tiles/WebMercatorQuad/{z}/{y}/{x}.png` |
+| recorte por bbox/crs/tamanho (OGC API Maps — a irmã do `GetMap` do WMS) | `https://<dominio>/svc/<tok>/ogc/tiles/collections/<item>/map?bbox=<minx,miny,maxx,maxy>&crs=EPSG:3857&width=800&height=600` |
+
+Atenção à ORDEM do caminho do ladrilho: aqui é `{z}/{y}/{x}` (tileMatrix/tileRow/tileCol, do jeito
+que a spec 20-057 define) — no XYZ da seção 22 é `{z}/{x}/{y}`. O conteúdo do ladrilho é
+BYTE-A-BYTE igual nos dois endereços; só a ordem do caminho muda.
+
+### 28.2 O que funciona para item e o que funciona para mosaico
+
+- **ladrilho**: item raster, mosaico REGISTRADO (uuid) e mosaico AD-HOC (nome de coleção completo,
+  sem registro) — as três formas de `<item>` que a seção 22 já aceita;
+- **metadados do tileset**: item e mosaico registrado. Mosaico ad-hoc devolve `422 sem_metadados` com
+  a instrução de registrar a busca (`POST /svc/<tok>/stac/mosaicos`, seção 24) — o ladrilho continua
+  funcionando sem isso, só faltam os limites calculados;
+- **`/map` (OGC API Maps)**: só item raster nesta passagem. Um mosaico devolve `422
+  mapa_nao_suportado` — compor um retângulo arbitrário de várias cenas exige um motor que ainda não
+  existe (o que existe compõe por CÉLULA da grade, não por bbox livre).
+
+### 28.3 Conformidade declarada
+
+`ogcapi-common-1/core`, `ogcapi-common-2/collections`, `ogcapi-tiles-1/core`, `ogcapi-tiles-1/tileset`,
+`ogcapi-tiles-1/geodata-tilesets`, `ogcapi-tiles-1/png`, `ogcapi-tiles-1/jpeg`. Nada além disso: sem
+combinação de várias coleções num tile só, sem formato vetorial/cobertura crua, sem documento OpenAPI
+próprio desta família, sem HTML, sem dimensão de tempo por coleção — ver `docs/PARIDADE.md`.
+
+### 28.4 O que ainda não faz
+
+- OGC API Maps sobre mosaico (28.2);
+- tileset metadata do mosaico ad-hoc sem registro prévio (28.2);
+- HTML/`/api` (OpenAPI próprio) desta família, formatos vetorial/cobertura, `datetime` por coleção,
+  `collections-selection` (tile combinando várias coleções);
+- teste com ArcGIS Pro/QGIS reais: PENDENTE (decisão D20) — o que existe hoje prova a FORMA do
+  protocolo e a identidade byte-a-byte com o XYZ/WMS já em produção, não a compatibilidade final com o
+  cliente real.
+
+Ver `docs/PARIDADE.md`, seção do item, para a tabela cláusula a cláusula e o ADR
+`docs/adr/20260910T2056-ogc-api-tiles-e-maps.md` para as decisões de escopo.

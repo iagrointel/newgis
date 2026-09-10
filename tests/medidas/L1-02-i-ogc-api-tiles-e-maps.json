@@ -1,0 +1,36 @@
+{
+ "item": "L1-02-i-ogc-api-tiles-e-maps",
+ "medidas": {
+  "suite_pytest": {
+   "valor": 22,
+   "unidade": "testes_passando",
+   "comando": "flock laco/.pytest.lock venv/bin/pytest tests/api/imagens/test_ogc_tiles.py -q -> 22 passed; também rodado junto com test_tiles_token.py + test_mosaico.py sem regressão (test_wms.py tem 2 falhas PRE-EXISTENTES não relacionadas a este item, reproduzidas isoladamente antes de qualquer mudança deste item)"
+  },
+  "ladrilho_item_byte_a_byte_vs_xyz_live": {
+   "valor": 1,
+   "unidade": "identico (sha256 igual)",
+   "comando": "curl live demo.iagrointel.com, token tiles:ler+imagens:ler, item Sentinel-2B 23KLQ Guarulhos (ea34af14-4389-4ec6-a33b-a66eb0934632), z=10 row=579 col=379: /svc/<tok>/raster/<item>/10/379/579.png vs /svc/<tok>/ogc/tiles/collections/<item>/map/tiles/WebMercatorQuad/10/579/379.png -> sha256 1cb61eb0c78306e9c66f43fa1c8082b22d50985000185196218e363f07a3ef71 nos dois, 165711 bytes"
+  },
+  "mapa_byte_a_byte_vs_getmap_wms_live": {
+   "valor": 1,
+   "unidade": "identico (cmp sem diferenca)",
+   "comando": "mesmo item, bbox = extensao total do item reprojetada p/ EPSG:3857, width=500 height=500: GET .../ogc/tiles/collections/<item>/map?bbox=...&crs=EPSG:3857&width=500&height=500&f=png vs GET .../wms?REQUEST=GetMap&VERSION=1.3.0&LAYERS=<item>&CRS=EPSG:3857&BBOX=...&WIDTH=500&HEIGHT=500&FORMAT=image/png&TRANSPARENT=TRUE -> 729604 bytes identicos nos dois (cmp); Content-Crs: <http://www.opengis.net/def/crs/EPSG/0/3857>"
+  },
+  "tileMatrixSet_definicao_zooms": {
+   "valor": 25,
+   "unidade": "niveis_de_zoom",
+   "comando": "GET /svc/<tok>/ogc/tiles/tileMatrixSets/WebMercatorQuad (live) -> 25 tileMatrices (z0..z24), objeto igual a TMS.model_dump() do morecantile (conferido em tests/api/imagens/test_ogc_tiles.py::test_tile_matrix_sets_lista_e_definicao_batem_com_o_motor_de_verdade)"
+  },
+  "tileset_ortofoto_mogi": {
+   "valor": 7,
+   "unidade": "entradas_tileMatrixSetLimits",
+   "comando": "GET /svc/<tok>/ogc/tiles/collections/6698f81b-5e5a-48f1-a1b5-3e779819bacf/map/tiles/WebMercatorQuad (live, item real Ortofoto Mogi das Cruzes 2016) -> dataType=map, 7 entradas de tileMatrixSetLimits (minzoom..maxzoom do item)"
+  },
+  "grade_invalida_e_token_invalido": {
+   "valor": 1,
+   "unidade": "honesto (nunca 500/200 fingido)",
+   "comando": "GET /svc/<tok>/ogc/tiles/tileMatrixSets/NaoExiste -> 404 tileMatrixSet_invalido; GET /svc/tokeninvalido/ogc/tiles -> 403 (live, medido)"
+  }
+ },
+ "adversario": "laco/handoffs/T9/L1-02-i-ogc-api-tiles-e-maps/refutacao.json (ver relatorio do adversario independente)"
+}

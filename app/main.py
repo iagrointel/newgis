@@ -58,6 +58,7 @@ from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.imagens.rotas_cog import router as rotas_cog
 from app.imagens.rotas_imagens import router as rotas_imagens
 from app.imagens.rotas_imageserver import router as rotas_imageserver
+from app.imagens.rotas_ogc_tiles import router as rotas_ogc_tiles
 from app.imagens.rotas_predefinicoes import router as rotas_predefinicoes
 from app.imagens.rotas_stac import router as rotas_stac
 from app.imagens.rotas_tiles import router as rotas_tiles
@@ -209,6 +210,9 @@ ROUTERS = [
     # --- WMS 1.3.0 por token (L1-02-g-wms-1-3-0-raster): /svc/<token>/wms (GetCapabilities/GetMap),
     # mesma porta de entrada do WMTS, leitura de pixel por `tiles.recorte` (bbox arbitrário, não tile)
     rotas_wms,
+    # --- OGC API Tiles (20-057) e OGC API Maps por token (L1-02-i): /svc/<token>/ogc/tiles/*, landing+
+    # conformance+tileMatrixSets+collections+tileset+ladrilho (item e mosaico) e /map (item, bbox livre)
+    rotas_ogc_tiles,
     # --- predefinições de renderização e legenda (L1-02-f): CRUD de sessão em
     # /api/imagens/<item>/predefinicoes; consumidas por token em /svc/.../predef=, STYLES= (WMS/WMTS) e
     # renderingRule (ImageServer) — ver app/imagens/predefinicoes.py

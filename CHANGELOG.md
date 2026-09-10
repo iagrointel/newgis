@@ -3,6 +3,59 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 9, setembro de 2026 (item L1-02-i-ogc-api-tiles-e-maps: OGC API — Tiles e OGC API — Maps por token)
+
+Fecha a família de padrões OGC da imagem: a casa já falava WMTS, WMS 1.3.0, XYZ, TileJSON, STAC e um
+ImageServer compatível Esri (L1-02 e L1-25); faltava OGC API — Tiles (OGC 20-057, classe "GeoData
+TileSets") e OGC API — Maps, que é a porta que ArcGIS Pro/QGIS >= 3.34 procuram primeiro. Nova dupla de
+módulos `app/imagens/ogc_tiles.py` (JSON puro: landing, conformance, `tileMatrixSets`, coleção, tileset)
+e `app/imagens/rotas_ogc_tiles.py` (rotas, mesma porta de entrada `_autorizar` do resto do L1-02) —
+nenhuma leitura de pixel própria: ladrilho de item chama `rotas_tiles._servir`, ladrilho de mosaico
+chama `rotas_tiles._tile_mosaico_impl`, `/map` chama `tiles.recorte()` — as MESMAS funções que já
+atendem XYZ, mosaico ad-hoc/registrado e o `GetMap` do WMS, respectivamente. `docs/adr/20260910T2056-
+ogc-api-tiles-e-maps.md` registra as decisões de escopo (`{item}` no caminho vale para item raster OU
+mosaico; `/map` só item raster nesta passagem; conformance honesto — 7 classes declaradas, todas
+cumpridas, nada a mais).
+
+Medido (`tests/medidas/L1-02-i-ogc-api-tiles-e-maps.json`; suíte própria `tests/api/imagens/
+test_ogc_tiles.py`, 22 casos, todos verdes; rodada junto com `test_tiles_token.py` e `test_mosaico.py`
+sem regressão — `test_wms.py` tem 2 falhas PRÉ-EXISTENTES, reproduzidas isoladamente ANTES de qualquer
+mudança deste item, não relacionadas):
+
+- **ladrilho byte-a-byte igual ao XYZ**, medido na instância viva (`demo.iagrointel.com`) sobre o item
+  REAL Sentinel-2B 23KLQ — Guarulhos: `sha256` idêntico (`1cb61eb0…`, 165.711 bytes) entre
+  `/svc/<tok>/raster/<item>/10/379/579.png` e `/svc/<tok>/ogc/tiles/collections/<item>/map/tiles/
+  WebMercatorQuad/10/579/379.png` (mesma z/x/y, ordem de caminho trocada — `z/y/x` na família nova,
+  `z/x/y` no XYZ, conforme a Tabela 4 da 20-057);
+- **`/map` byte-a-byte igual ao `GetMap` do WMS**, mesmo item, bbox = extensão inteira reprojetada para
+  EPSG:3857, 500×500: `cmp` sem diferença, 729.604 bytes idênticos nos dois lados, `Content-Crs:
+  <http://www.opengis.net/def/crs/EPSG/0/3857>` no cabeçalho;
+- **`/tileMatrixSets/WebMercatorQuad`** devolve os 25 níveis de zoom do PRÓPRIO `TMS.model_dump()` do
+  morecantile (não um resumo escrito à mão) — conferido igual, campo a campo, no teste;
+- **tileset metadata do segundo item real** (Ortofoto Mogi das Cruzes 2016): `dataType: "map"`, 7
+  entradas de `tileMatrixSetLimits` calculadas em O(1) por zoom (dois cantos do bbox via `TMS.tile()`,
+  não enumeração de ladrilhos — evita milhões de tiles num item de poucos graus em zoom alto);
+- **grade inválida e token inválido**: `404 tileMatrixSet_invalido` / `403`, nunca 500 nem 200 fingido
+  (medido ao vivo também).
+
+Achados corrigidos no próprio turno (autoral, antes do adversário externo — ver §refutação abaixo):
+(1) `width`/`height` do `/map` tinham `le=WMS_LARGURA_MAX`/`le=WMS_ALTURA_MAX` no `Query` — como
+4096×4096 é EXATAMENTE o teto (`WMS_PIXELS_MAX`), a checagem `width*height > WMS_PIXELS_MAX` nunca
+disparava (código morto) e um pedido no canto do teto caía direto no render: medido em **142 s** numa
+única chamada de teste antes do conserto. Corrigido para três condições OR'd (mesma forma de
+`rotas_wms._get_map`), sem `le=` no Query — o teto em si continua permitido, só o que passa dele é
+recusado, e a recusa agora acontece ANTES do render; (2) `/map` de item de OUTRO inquilino devolvia
+`422 mapa_nao_suportado` (assumia "não é raster, deve ser mosaico") em vez de `403` — corrigido para
+chamar `_resolver_colecao` primeiro (que já dá o 403 honesto de "não existe para este token") e só
+recusar por tipo depois de confirmar que o item PERTENCE ao inquilino.
+
+Fora deste turno, nomeado em `docs/PARIDADE.md`: OGC API Maps sobre mosaico (motor de composição por
+bbox livre não existe — o que existe compõe por célula da grade); tileset metadata do mosaico AD-HOC
+sem registro prévio (mesma lacuna que `mosaico_tilejson`/`mosaico_wmts_rest` já tinham, por
+consistência); `collections-selection`, `dataset-tilesets`, formatos vetorial/cobertura/netCDF, `/api`
+(OpenAPI próprio desta família), HTML, dimensão `datetime` por coleção; teste com ArcGIS Pro/QGIS reais
+(decisão D20 do dono).
+
 ## turno 9, setembro de 2026 (item L2-01-j-comparacao-cortina-tempo: comparação — cortina, lado a lado, lupa e tempo)
 
 Quarta ferramenta do painel "Comparar" do SIG novo (`/sig`, ícone atalho `C`): cortina (swipe) vertical e
