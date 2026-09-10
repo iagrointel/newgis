@@ -1,0 +1,32 @@
+{
+ "item": "L7-01-d-instalador-extensoes",
+ "medidas": {
+  "extensoes_apos_instalador": {
+   "valor": [
+    "pg_trgm",
+    "pgcrypto",
+    "postgis",
+    "unaccent"
+   ],
+   "unidade": "nomes",
+   "comando": "tests/api/test_instalador_extensoes_base_nova.py::test_01"
+  },
+  "tabela_item_apos_restauracao_em_base_nova": {
+   "valor": true,
+   "unidade": "booleano",
+   "comando": "tests/api/test_instalador_extensoes_base_nova.py::test_02"
+  },
+  "pg_restore_codigo_base_nova": {
+   "valor": 1,
+   "unidade": "codigo de saida",
+   "comando": "so erros do schema externo acervo; a prova e a presenca da tabela item"
+  },
+  "tabela_item_sem_unaccent": {
+   "valor": false,
+   "unidade": "booleano",
+   "comando": "tests/api/test_instalador_extensoes_base_nova.py::test_03"
+  }
+ },
+ "gerado_em": "2026-09-07T22:44:38Z",
+ "git_sha": "4391f30d7b48"
+}

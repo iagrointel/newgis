@@ -1,12 +1,13 @@
 """Periódicos do backup (item L0-06-a), somados à lista PERIODICOS do L0-05 na importação (mesmo padrão de
-app/catalogo/periodicos.py): dump diário às 03:00 e verificação semanal às segundas 05:30, no inquilino
-técnico `plataforma`."""
+app/catalogo/periodicos.py): dump diário às 03:00, verificação semanal às segundas 05:30 e ensaio de
+restauração mensal no dia 1 às 04:30 (item L0-06-c), no inquilino técnico `plataforma`."""
 
 from app.jobs import periodicos as base
 
 PERIODICOS: list[tuple[str, str, str, dict]] = [
     ("backup lógico diário", "0 3 * * *", "backup.dump_logico", {"origem": "periodico"}),
     ("verificação de backups", "30 5 * * 1", "backup.verificar", {}),
+    ("ensaio de restauração", "30 4 1 * *", "backup.restore_drill", {"origem": "periodico"}),
 ]
 
 for _p in PERIODICOS:

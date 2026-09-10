@@ -40,11 +40,14 @@ df -h / | tail -1
 free -g | head -2
 echo "app_dir=$APP_DIR usuario=$APP_USER banco=$DB porta=$PORTA dominio=$DOM"
 
-echo "== b. extensões"
-"${PSQL[@]}" -f - <<'SQL'
-CREATE EXTENSION IF NOT EXISTS postgis;
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-SQL
+echo "== b. extensões (lista única em db/extensoes.txt, item L7-01-d)"
+# A lista mora em db/extensoes.txt e é lida também pelo laco/trilha_ambiente.sh e pelo ensaio de
+# restauração (app/backup/drill.py). Antes deste item o instalador criava só postgis e pgcrypto: pg_trgm
+# e unaccent tinham entrado com o geocodificador (migração 045) sem passar por aqui, e sem unaccent a
+# configuração de busca plat.pt_sem_acento não nasce e a tabela `item` some em silêncio numa restauração.
+# `plat_extensoes_garantir` confere em pg_extension e sai != 0 nomeando o que faltar.
+. "$APP_DIR/db/extensoes.sh"
+plat_extensoes_garantir "$APP_DIR/db/extensoes.txt" "${PSQL[@]}"
 
 echo "== c. migrações"
 bash db/migrar.sh

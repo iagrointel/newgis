@@ -1056,6 +1056,27 @@ garage.toml do daemon, que é da frente plataforma/pipeline e o produto nunca l�
   trabalho do processo.
 - Barra com tensão fora de 0,5 a 1,5 por unidade agora é contada e avisada: é tensão de BASE errada, não
   estado de rede.
+## turno 3, setembro de 2026 (item L7-01-d-instalador-extensoes: lista única de extensões)
+
+O `install.sh` criava duas das quatro extensões que o schema exige. `pg_trgm` e `unaccent` tinham
+entrado com o geocodificador (migração 045) declaradas como "já instaladas na casa" — verdade nesta
+máquina, falso numa instalação nova. Sem `unaccent` a configuração de busca `plat.pt_sem_acento` não
+nasce, a tabela `item` não é criada e o ensaio de restauração do L0-06-c acusa "tabela ausente na cópia
+restaurada"; foi assim que o defeito apareceu, no primeiro ensaio de verdade.
+
+A lista passa a morar em `db/extensoes.txt`, no mesmo formato de `deploy/pacotes_apt.txt`. `db/extensoes.sh`
+traz `plat_extensoes_lista` e `plat_extensoes_garantir`, que cria o que falta e **confere em
+`pg_extension`**, saindo diferente de zero com o nome do que não nasceu. Três consumidores leem o mesmo
+arquivo: o `install.sh` (seção "b"), o `laco/trilha_ambiente.sh` (seção "0", nova) e o ensaio de
+restauração, por `app.backup.drill.extensoes_do_ensaio()` — a tupla literal `EXTENSOES_DO_ENSAIO` deixa
+de existir.
+
+Medido em base descartável criada para o teste: base só com PostGIS termina com as quatro extensões e o
+dump do schema restaura nela sem passo manual, com a tabela `item` e a configuração `pt_sem_acento`
+presentes; a mesma restauração numa base sem `unaccent` não cria a tabela `item`. Ver
+`tests/api/test_instalador_extensoes_base_nova.py`, `tests/unit/test_extensoes_lista.py`, o ADR
+`docs/adr/20260907T2248-lista-unica-de-extensoes.md` e `tests/medidas/L7-01-d-instalador-extensoes.json`.
+O `install.sh` inteiro segue sem teste que o rode: ele instala pacotes e escreve unidades do systemd.
 
 ## turno 3, setembro de 2026 (item L3-19-multiescala: grades aninhadas do motor multicritério)
 
@@ -2442,6 +2463,22 @@ e 1 arquivo em 0,55 s (carga 12,02 numa máquina de 12 núcleos, 0,4 GB livres).
 Dois defeitos alheios ao item foram corrigidos no caminho: `/admin/organizacao` não terminava de carregar
 (zona morta temporal em `smtpAtual`, já em master, medida no navegador) e `app/schema_ambiente.py` tinha duas
 sobrecargas de `executemany` vindas de ramos diferentes, a segunda sombreando a primeira.
+
+## turno 3, setembro de 2026 (item L0-06-c-restore-drill: ensaio de restauração do backup)
+
+Job `backup.restore_drill`: restaura o último dump de cada schema num banco de ensaio, compara `COUNT(*)`
+de todas as tabelas com `tenant_id` contra a produção, confere o sha256 de até 3 objetos do bucket por
+inquilino contra o manifesto e grava tabelas, linhas, divergências, diferenças posteriores e
+`duracao_drill_s` em `plat.backup_drill`. Periódico mensal (dia 1, 04:30) e versão curta na suíte, dentro do
+`make check`: 3,7 s ponta a ponta com a máquina em carga 7,20, e 21,2 s na rodada que precisa criar o
+banco de ensaio (teto da cláusula: 60 s). A base de
+comparação é o instante do dump: linha escrita depois dele é registrada como diferença posterior, com tabela
+e delta, e não reprova; cópia com mais linhas que a produção, tabela ausente ou sha256 diferente do
+registrado reprovam, viram evento `backup/falha` e e-mail ao superadmin. `GET /saude` ganha o bloco
+`backup_drill` com a data do último ensaio. Runbook em `docs/RUNBOOKS/restauracao.md`, ADR
+20260907T2230. Achado do primeiro ensaio real: o dump do schema da plataforma só restaura numa base com
+`postgis`, `pgcrypto`, `pg_trgm` e `unaccent` — sem `unaccent` a tabela `item` não é criada e some em
+silêncio; o `install.sh` cria só as duas primeiras.
 
 ## turno 3, setembro de 2026 (item L0-06-a-dump-logico: backup lógico diário por inquilino)
 
