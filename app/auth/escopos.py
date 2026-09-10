@@ -34,6 +34,11 @@ ESCOPOS_SEM_UUID = (
 ESCOPOS_SEM_UUID = (
     "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
     "geocodificar:usar", "multiescala:usar", "analise3d:usar", "admin:inquilino",
+    rf"geocodificar:usar|multiescala:usar|imagens:(ler|escrever)|admin:inquilino)$"
+)
+ESCOPOS_SEM_UUID = (
+    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
+    "geocodificar:usar", "multiescala:usar", "imagens:ler", "imagens:escrever", "admin:inquilino",
 )
 DESCRICAO = {
     "catalogo:ler": "listar e ler metadado de itens que o dono pode ler",

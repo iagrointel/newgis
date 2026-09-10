@@ -2023,6 +2023,32 @@ chamada** de contexto aceita; segunda execução do instalador = **0 mudanças**
 não tem transação autônoma) — medida `linhas_log_de_recusa_persistidas: 0`. O rastro da recusa fica no log do
 servidor (a exceção é nomeada) e no log de acesso da API. E o Martin em si não está instalado nem configurado
 por este item: o que se entrega é o contrato de banco que ele consome.
+## turno 3, setembro de 2026 (item L2-01-a-documento-mapa: o mapa é um documento com esquema, não um punhado de URLs)
+## turno 5, setembro de 2026 (item L7-26-cdn-tiles: CDN de ladrilho — endereço versionado, purge por prefixo)
+
+Camada de CDN em frente ao ladrilho raster do L1-02: endereço `/svc/<token>/raster/<item>@<versao>/{z}/{x}/{y}`,
+`<versao>` = 12 caracteres do sha256 já gravado em `plat.raster_item` desde L1-01-a. Casar com o sha256
+vigente → `Cache-Control: public, max-age=31536000, immutable` + `ETag`; não casar → `404 versao_inexistente`
+sem ler o pixel — e a checagem de INQUILINO acontece antes da checagem de VERSÃO (achado desta bancada: sem
+essa ordem, um token de outro inquilino pedindo `item-alheio@versao` recebia 404, vazando pela diferença de
+código que aquele item existe com aquele sha256 em algum lugar; corrigido, com teste de regressão). O
+`tilejson.json` já devolve a URL versionada — o cliente de mapa nunca precisa saber que "versão" existe.
+
+⛔ Sem acesso à conta Cloudflare real: nenhum DNS, nenhuma Cache Rule, nenhum purge de produção foi tocado.
+O que foi medido de verdade contra sockets reais (`scripts/cdn_simulada.py`, um proxy HTTP simulando o
+mecanismo de uma Cache Rule "cache everything" com chave sem query string, cf-cache-status e purge por
+prefixo — não é a Cloudflare, é a mesma classe de mecanismo): `tests/medidas/L7-26-cdn-tiles.json` via
+`scripts/prova_cdn.py` — 2ª chamada HIT, revogar+purgar+3ª chamada 403 em 2,1 s (< 60 s), 87,5% de acerto
+numa rodada de navegação simulada (96 pedidos, 12 ladrilhos distintos), e a API da aplicação sem cabeçalho
+de cache de CDN. **Achado registrado (`docs/adr/20260907T1522-cdn-tiles.md`, seção 3)**: o cache de
+autorização da origem (2 s, já existia no L1-02) pode fazer um purge só-uma-vez ser recacheado por um 200
+morto se a chamada seguinte cair dentro da janela — o procedimento de purge tem de repetir por ≥ 2 s depois
+da revogação, documentado em `docs/CDN.md` junto com o comando real de purge e o passo a passo pendente do
+dono (DNS, Cache Rule, webhook de revogação, decisão de saída para Bunny/R2 acima de ~1 TB/mês).
+
+Refutação: martelar a URL revogada 20× depois do purge (0 de 20 com 200/HIT) e trocar só o token no mesmo
+item de outro inquilino pela CDN (403, não vaza pelo cache) — `laco/handoffs/T5/L7-26-cdn-tiles/refutacao.json`.
+
 ## turno 5, setembro de 2026 (item L2-02-a-modelo-estilo: o estilo de uma camada vira documento versionado)
 
 O tipo `estilo` deixa de ter `corpo` livre e passa a carregar o **JSON Schema publicado**
@@ -2359,6 +2385,31 @@ o sha256 de cada arquivo e lista arquivo órfão (o que está em disco sem linha
 Paridade escrita contra o `webgisdr` do ArcGIS Enterprise em `docs/PARIDADE.md`: cache de tile, dado
 referenciado e armazenamento espaço-temporal estão fora dos dois lados, e pelas mesmas razões; a restauração
 por inquilino e a retenção automática são nossas e não existem lá.
+## turno 4, setembro de 2026 (item L1-02-tiles-token: ladrilho raster por inquilino, token no caminho)
+
+Serviço de ladrilho raster sobre o COG que a ingestão (L1-01) deixou no Garage, com o token de serviço
+no CAMINHO da URL (decisão C6 do conceito L1; ADR 20260907T0300).
+
+- `/svc/<token>/raster/<item>/{z}/{x}/{y}[.png|.jpg|.webp]` (XYZ), `/tilejson.json`, `/info.json`,
+  `/wmts` (KVP GetCapabilities e GetTile) e `/wmts/1.0.0/WMTSCapabilities.xml` (REST); mosaico da
+  coleção em `/svc/<token>/mosaico/<colecao>/{z}/{x}/{y}`.
+- Motor rio-tiler 9.4.3 lendo o COG por `/vsis3` com a chave só-leitura do balde do inquilino. Nenhuma
+  rota aceita endereço de arquivo: o caminho nasce do catálogo do inquilino do token (sem `?url=`).
+- Expressão sobre bandas por parâmetro (NDVI = `(b4-b3)/(b4+b3)`), com gramática própria antes do
+  numexpr; faixa, colormap (211 do rio-tiler), seleção de bandas e escolha do asset.
+- GetCapabilities do WMTS **valida contra o esquema oficial do OGC** (XSD vendorizado em
+  `tests/dados/ogc_xsd`, validação sem rede).
+- Cache no nginx com chave SEM o token e `auth_request` que confere token E dono do item a cada
+  requisição — sem essa conferência, um token de outro inquilino recebia o ladrilho do cache (achado
+  desta bancada, hoje é teste).
+- Registro de uso agregado por token em `plat.tile_leitura` (migração `20260907T0249_tile_leitura.sql`)
+  e leitura em `GET /api/tiles/leituras`. O token nunca é gravado, só o `token_id`.
+- Bancada: `scripts/bench_tiles.py` (carga, `proxy_cache_lock`, revogação) e
+  `scripts/prova_cliente_ogc.sh` (driver WMTS e WMS/TMS do GDAL lendo pixel do serviço).
+- Medido: **68.738 ladrilhos/s** quente com o cache do nginx (`ab -c 32`, 0 erro; o mesmo nginx serve
+  arquivo estático a 68.484/s — o serviço está no teto da máquina); frio 96 ladrilhos/s numa conexão,
+  mediana 9,8 ms; 20 pedidos simultâneos ao mesmo ladrilho frio = **1 leitura + 19 acertos**; revogar
+  o token passa a 403 em **2,86-2,90 s**. Números e comandos em `tests/medidas/L1-02-tiles-token.json`.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 

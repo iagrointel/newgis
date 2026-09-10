@@ -207,11 +207,6 @@ else
 fi
 "${PSQL[@]}" -Atc "SELECT pg_reload_conf()" >/dev/null
 
-# papel de LEITURA (item L2-04-a): LOGIN, senha em credential, linha no pg_hba e nada mais. Fica em script
-# próprio porque tem de poder rodar sozinho numa base de trilha/homologação (PLAT_SCHEMA) sem reescrever o
-# .env desta instalação. Idempotente: a segunda execução seguida imprime `mudancas: 0`.
-PG_HBA="$PG_HBA" CRED_DIR="$CRED_DIR" bash "$APP_DIR/db/leitor_instalar.sh" "$DB"
-
 echo "== e2. pacotes apt (deploy/pacotes_apt.txt, item L7-14)"
 # Lista fechada e comentada em deploy/pacotes_apt.txt (ADR 0007 seção 1): servidor ASGI, driver de banco,
 # criador de venv, criptografia (ADR 0002/L7-16), GDAL (ADR 0005, subprocesso do worker) e sniff de tipo
@@ -316,20 +311,6 @@ fi
 "${PSQL[@]}" -Atc "UPDATE plat.tenant SET config = config || '{\"cota_jobs_dia\": 100000}' WHERE slug IN ('demo', 'demo2') AND coalesce((config->>'cota_jobs_dia')::int, 0) < 100000" >/dev/null
 echo "cota_jobs_dia dos inquilinos de demonstração garantida (100000)"
 
-echo "== g3. baldes por inquilino no Garage (item L1-01-d; ADR 20260908T1255)"
-# cada inquilino ATIVO ganha balde proprio com cota em bytes E em objetos (plat.tenant), chave RW (so a API usa)
-# e chave RO (TiTiler e conexao S3 do ArcGIS Pro), e o endpoint web ligado para o bloco /svc/<token>/cog/ do
-# nginx. A lista sai do psql como postgres porque a RLS de plat.tenant so deixa plat_app ver o proprio inquilino.
-# Idempotente por construcao: a 2a execucao imprime "0 criados/alterados". Sem PLAT_GARAGE_ADMIN_URL/TOKEN no
-# .env o passo nao roda (instalacao sem Garage e valida: o resto da plataforma nao depende dele).
-if grep -qE "^PLAT_GARAGE_ADMIN_TOKEN=.+" .env && grep -qE "^PLAT_GARAGE_ADMIN_URL=.+" .env; then
-  "${PSQL[@]}" -Atc "SELECT id || ' ' || slug FROM plat.tenant WHERE ativo ORDER BY id" \
-    | sudo -u "$APP_USER" env $(grep -E "^PLAT_[A-Z_]+=" .env | tr '\n' ' ') \
-        PLAT_SECRET="$(cat /etc/plat/segredos/PLAT_SECRET)" "$APP_DIR/venv/bin/python" -m app.baldes_semear
-else
-  echo "PLAT_GARAGE_ADMIN_URL/TOKEN ausentes no .env: baldes NAO semeados (instalacao sem Garage)"
-fi
-
 echo "== h. systemd $UNIDADE"
 sed -e "s#APP_DIR#$APP_DIR#g" -e "s#APP_USER#$APP_USER#g" -e "s#PORTA#$PORTA#g" deploy/plat-api.service > /etc/systemd/system/$UNIDADE.service
 # soquete de ativação (item L7-19): o systemd passa a segurar a :PORTA; a API recebe o fd 3. Em instalação
@@ -405,27 +386,13 @@ fi
 
 echo "== i. nginx"
 SITE=/etc/nginx/sites-enabled/$DOM
-# prefixo do alias do balde no Garage (PLAT_GARAGE_BUCKET_PREFIXO do .env): o bloco /svc/<token>/cog/
-# monta o Host `<prefixo><slug>.web.garage.localhost`, entao os dois tem de ser o MESMO valor
-PREFIXO_BALDE=$(grep -E "^PLAT_GARAGE_BUCKET_PREFIXO=" .env | tail -1 | cut -d= -f2-)
-PREFIXO_BALDE=${PREFIXO_BALDE:-plat-}
-mkdir -p /var/cache/nginx/plat_cog
 # zona limit_req própria: 10 tentativas/min por IP em /api/login e /api/login/2fa (ADR 0002 seção 6.2)
 LIMITES=/etc/nginx/conf.d/plat_limites.conf
-# cache do servidor de tiles vetoriais (item L2-04-e): a CHAVE nunca leva o token (dois tokens
-# válidos do mesmo item compartilham o tile em disco); quem barra token revogado é o auth_request
-# separado (`plat_tiles_vetor_auth`, 2 s), sempre executado mesmo com o tile em cache — ver o bloco
-# `/tiles/` e `/svc/.../VectorTileServer/tile/` em deploy/nginx.conf.
-mkdir -p /var/cache/nginx/plat_tiles_vetor /var/cache/nginx/plat_tiles_vetor_auth /var/cache/nginx/plat_tiles /var/cache/nginx/plat_tiles_auth /var/cache/nginx/plat_cog
-chown -R www-data:www-data /var/cache/nginx/plat_tiles_vetor /var/cache/nginx/plat_tiles_vetor_auth /var/cache/nginx/plat_tiles /var/cache/nginx/plat_tiles_auth /var/cache/nginx/plat_cog
+mkdir -p /var/cache/nginx/plat_tiles /var/cache/nginx/plat_tiles_auth
+chown -R www-data:www-data /var/cache/nginx/plat_tiles /var/cache/nginx/plat_tiles_auth
 {
   printf '# plat: limite por IP nos logins (ADR 0002 secao 6.2); escrito pelo install.sh\n'
   printf 'limit_req_zone $binary_remote_addr zone=plat_login:10m rate=10r/m;\n'
-  printf 'proxy_cache_path /var/cache/nginx/plat_tiles_vetor levels=1:2 keys_zone=plat_tiles_vetor:32m max_size=10g inactive=7d use_temp_path=off;\n'
-  printf 'proxy_cache_path /var/cache/nginx/plat_tiles_vetor_auth levels=1:2 keys_zone=plat_tiles_vetor_auth:8m max_size=64m inactive=1m use_temp_path=off;\n'
-  printf '# plat: cache das fatias de 1 MiB do COG por inquilino (item L1-01-d; ADR 20260908T1255). keys_zone pequena\n'
-  printf '# (a chave e curta), max_size 2g: o disco desta maquina e apertado e o objeto vive no Garage, nao aqui.\n'
-  printf 'proxy_cache_path /var/cache/nginx/plat_cog levels=1:2 keys_zone=plat_cog:16m max_size=2g inactive=7d use_temp_path=off;\n'
   # cache de ladrilho raster (item L1-02): NVMe, 20 GB, 14 dias sem uso; a zona de autorizacao e pequena
   # e vive 2 s (ver o bloco /svc/.../raster/ em deploy/nginx.conf)
   printf 'proxy_cache_path /var/cache/nginx/plat_tiles levels=1:2 keys_zone=plat_tiles:64m max_size=20g inactive=14d use_temp_path=off;\n'
@@ -434,8 +401,7 @@ chown -R www-data:www-data /var/cache/nginx/plat_tiles_vetor /var/cache/nginx/pl
 if [ -f "$LIMITES" ] && cmp -s "$LIMITES" "$LIMITES.novo"; then rm -f "$LIMITES.novo"; echo "$LIMITES já existe (igual)"; else mv "$LIMITES.novo" "$LIMITES"; echo "$LIMITES escrito"; fi
 escrever_nginx() {
   local bloco certbot_443 bloco_80
-  bloco=$(sed -e "s#DOMINIO#$DOM#g" -e "s#APP_DIR#$APP_DIR#g" -e "s#PORTA#$PORTA#g" \
-            -e "s#PREFIXO_BALDE#$PREFIXO_BALDE#g" deploy/nginx.conf)
+  bloco=$(sed -e "s#DOMINIO#$DOM#g" -e "s#APP_DIR#$APP_DIR#g" -e "s#PORTA#$PORTA#g" deploy/nginx.conf)
   if [ -f "$SITE" ] && grep -q '# managed by Certbot' "$SITE"; then
     # bloco 443: HSTS fica (modelo); as linhas do certbot são preservadas; o bloco 80 do certbot (301) fica como está
     certbot_443=$(awk '/^server[[:space:]]*\{/{n++} n==1 && /# managed by Certbot/' "$SITE")

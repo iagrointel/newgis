@@ -82,28 +82,18 @@ class RelatorioValidacao:
     categorico: bool
     avisos: list[str] = field(default_factory=list)
     isolamento: dict = field(default_factory=dict)  # `info.isolamento` do subprocesso (prova, não promessa)
-    # --- item L1-01-f (formatos de entrada): o que o arquivo DECLAROU ser e o que saiu dele
-    formato: str | None = None          # rótulo da tabela de formatos (info.formato do relatório isolado)
-    mosaico: bool = False               # zip com várias cenas (o item vira 1 COG mosaicado)
-    extraido_em: str | None = None      # subdiretório do trabalho com os arquivos extraídos do contêiner
-    arquivos: list[str] = field(default_factory=list)  # rasters (ou armazém) de dentro do contêiner
 
     def nodata_final(self) -> list[float | None]:
         return self.nodata_corrigido if self.nodata_corrigido is not None else self.nodata
 
 
-def ambiente_isolado(*fontes: str | os.PathLike) -> dict:
+def ambiente_isolado() -> dict:
     """Ambiente do neto do `gdal_translate` de CONVERSÃO (`cog.py`), rodado depois de a validação já ter
     aceitado o arquivo: o do worker menos credenciais/proxy de rede, mais o cadeado de sidecar. A leitura
     do arquivo ainda não confiado (a validação em si) não usa isto — usa o subprocesso com seccomp de
-    `app.raster.validacao`. Para par ENVI (`.dat`/`.bin`) o cadeado CEDE (mesma razão medida no validador:
-    o driver descobre o `.hdr` irmão pelo READDIR do diretório; com `EMPTY_DIR` devolve "not recognized" —
-    vale também para um VRT que REFERENCIA o `.dat`, aberto de novo na 2ª etapa da conversão visual). O
-    `.hdr` já foi conferido irmão-de-mesmo-nome na validação. Passar TODAS as fontes que o comando toca."""
+    `app.raster.validacao`."""
     env = {k: v for k, v in os.environ.items() if not k.startswith(_BLOQUEADAS)}
-    le_diretorio = any(str(f).lower().endswith((".dat", ".bin")) for f in fontes)
-    if not le_diretorio:
-        env["GDAL_DISABLE_READDIR_ON_OPEN"] = "EMPTY_DIR"
+    env["GDAL_DISABLE_READDIR_ON_OPEN"] = "EMPTY_DIR"
     return env
 
 
@@ -225,6 +215,4 @@ def validar(ctx, caminho: str, epsg_declarado: int | None = None) -> RelatorioVa
         epsg=epsg, epsg_origem=epsg_origem, nodata=nodata, nodata_corrigido=nodata_corrigido,
         geotransform=[float(v) for v in geotransform], wkt=(crs or {}).get("wkt2"),
         categorico=categorico, avisos=avisos, isolamento=info.get("isolamento") or {},
-        formato=(info.get("formato") or None), mosaico=bool(info.get("mosaico")),
-        extraido_em=info.get("extraido_em"), arquivos=list(info.get("arquivos") or []),
     )

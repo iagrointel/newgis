@@ -50,11 +50,8 @@ def _sha256(caminho: Path) -> str:
     return h.hexdigest()
 
 
-def _rodar(ctx, argv: list[str], perfil: str, *, fonte: str | Path | None = None) -> None:
-    # a fonte que decide se o cadeado de sidecar cede (par ENVI, ver ambiente_isolado) é a ORIGINAL da
-    # conversão — um VRT intermediário REFERENCIA o `.dat` de origem, e o padrão de todos os comandos
-    # daqui é `... <fonte> <saída>`; quem chama pode apontar a original com `fonte=`
-    r = ctx.subprocesso(argv, env=ambiente_isolado(fonte if fonte is not None else argv[-2]))
+def _rodar(ctx, argv: list[str], perfil: str) -> None:
+    r = ctx.subprocesso(argv, env=ambiente_isolado())
     if r.returncode != 0:
         linhas = [ln for ln in (r.stderr or "").splitlines() if ln.strip()]
         raise ErroConversao(
@@ -160,8 +157,7 @@ def converter_visual(ctx, bruto: Path, rel: RelatorioValidacao, stats: list[dict
     opcao_nivel = ["-co", f"WEBP_LEVEL={QUALIDADE_WEBP}"] if webp else ["-co", f"QUALITY={QUALIDADE_JPEG}"]
     argv = ["gdal_translate", *_argv_base_cog("visual"), "-co", f"COMPRESS={compressao}",
             *opcao_nivel, "-mo", "PLAT_PERFIL=visual", str(vrt), str(saida)]
-    # o VRT referencia o arquivo de ORIGEM: o cadeado de sidecar decide pelo `bruto`, não pelo .vrt
-    _rodar(ctx, argv, "visual", fonte=bruto)
+    _rodar(ctx, argv, "visual")
     vrt.unlink(missing_ok=True)
     _validar_cog(saida, "visual")
     return ProdutoCOG("visual", saida, saida.stat().st_size, _sha256(saida), compressao, bandas)

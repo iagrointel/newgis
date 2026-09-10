@@ -37,7 +37,6 @@ from app.auth.sessao import Auth, autenticado
 from app.catalogo.comum import registrar_evento, uuid_ok
 from app.catalogo.modelos import Modelo
 from app.erros import ErroAPI
-from app.imagens import formatos
 from app.imagens import pgstac as ps
 from app.jobs import servico
 from app.jobs.contexto import sessao_de
@@ -46,9 +45,7 @@ router = APIRouter(tags=["imagens"])
 LER = {"x-auth": "S/T", "x-privilegio": "proprio"}
 PUBLICAR = {"x-auth": "S/T", "x-privilegio": "conteudo.publicar_camada"}
 SEM_CACHE = {"Cache-Control": "no-store, must-revalidate"}
-# no-cache (e não max-age): o tile pode ser guardado, mas TEM de revalidar por ETag — um item excluído e
-# recriado (reingestão nova, chave de COG nova) nunca serve o tile velho de um cache intermediário (L1-01-i)
-TILE_CACHE = {"Cache-Control": "private, no-cache", "X-Robots-Tag": "noindex, nofollow"}
+TILE_CACHE = {"Cache-Control": "private, max-age=300", "X-Robots-Tag": "noindex, nofollow"}
 
 
 _TMS = morecantile.tms.get("WebMercatorQuad")
@@ -198,20 +195,6 @@ class IngestaoEntrada(Modelo):
     arquivo_id: str = Field(pattern=r"^[0-9a-fA-F-]{36}$")
     titulo: str | None = Field(default=None, min_length=1, max_length=250)
     epsg_declarado: int | None = Field(default=None, ge=1, le=999999)
-    guardar_original: bool = Field(
-        default=False,
-        description="manter o bruto no armazenamento após os COGs validados (ocupa cota); padrão: apagar",
-    )
-
-
-# ---------------------------------------------------------------- tabela de formatos (a MESMA do código)
-@router.get("/api/imagens/formatos", openapi_extra=LER)
-def formatos_de_entrada():
-    """A tabela canônica de formatos de entrada raster (`app.imagens.formatos.lista()`): aceitos com a
-    georreferência de cada um e recusados com a mensagem exata (ECW/MrSID sem SDK no GDAL desta
-    instalação; GeoPDF e HDF5 com razão medida). A tela de upload lê ESTA rota — nunca mantém lista à
-    mão: tabela da tela diferente da tabela do código é a refutação nomeada do item L1-01-f."""
-    return formatos.lista()
 
 
 @router.post("/api/imagens/ingestoes", status_code=202, openapi_extra=PUBLICAR)
@@ -223,7 +206,6 @@ def ingestao_criar(corpo: IngestaoEntrada, request: Request, auth: Auth = autent
             raise ErroAPI(404, "item_inexistente", "item de arquivo inexistente")
     job = servico.criar(sessao_de(auth), "imagens.ingestar", {
         "arquivo_id": arquivo_id, "titulo": corpo.titulo, "epsg_declarado": corpo.epsg_declarado,
-        "guardar_original": corpo.guardar_original,
     })
     with db.db(auth.contexto()) as cur:
         registrar_evento(cur, request, "imagens/ingestar", "item", arquivo_id, {"job_id": job["id"]})
@@ -272,19 +254,12 @@ def imagem_ver(item_id: str, auth: Auth = autenticado(escopo_token="imagens:ler"
 
 # ---------------------------------------------------------------- tiles
 @router.get("/api/imagens/{item_id}/tiles/{z}/{x}/{y}.png", openapi_extra=LER)
-def tile(item_id: str, z: int, x: int, y: int, request: Request,
-         auth: Auth = autenticado(escopo_token="imagens:ler")):
+def tile(item_id: str, z: int, x: int, y: int, auth: Auth = autenticado(escopo_token="imagens:ler")):
     if z < 0 or z > 24 or x < 0 or y < 0 or x >= 2 ** z or y >= 2 ** z:
         raise ErroAPI(422, "tile_invalido", f"coordenada de tile inválida: z={z} x={x} y={y}")
     with db.db(auth.contexto()) as cur:
         item = _item_raster(cur, item_id)
         chave = _chave_visual(cur, auth.tenant_id, item["dados"] or {})
-    # validador do tile: a CHAVE do COG visual (leva o sha256 do conteúdo, 8 hex) + as coordenadas —
-    # reingestão gera chave nova, então ETag novo e o 304 velho nunca é reaproveitado
-    etag = f'"tile-{chave}-{z}-{x}-{y}"'
-    cabecalhos = {**TILE_CACHE, "ETag": etag}
-    if (request.headers.get("if-none-match") or "").strip() == etag:
-        return Response(status_code=304, headers=cabecalhos)
     try:
         t = _TMS.tile(x, y, z)
     except morecantile.errors.InvalidZoomError as e:
@@ -297,4 +272,4 @@ def tile(item_id: str, z: int, x: int, y: int, request: Request,
                       f"a renderização do tile passou de {limites.RASTER_TILE_TIMEOUT_S} s") from None
     except (rasterio.errors.RasterioError, FileNotFoundError, objetos.ChaveInvalida) as e:
         raise ErroAPI(502, "tile_falhou", f"não foi possível ler o COG do item: {str(e)[:200]}") from e
-    return Response(_png_de(arr), media_type="image/png", headers=cabecalhos)
+    return Response(_png_de(arr), media_type="image/png", headers=TILE_CACHE)

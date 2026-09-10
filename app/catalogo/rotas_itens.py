@@ -21,7 +21,7 @@ from app import db, limites
 from app.auth.comum import campos_json, paginacao
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo import busca as mod_busca
-from app.catalogo import comum, diff, documento, metadado, procedencia, relacoes, texto, tipos
+from app.catalogo import comum, diff, documento, metadado, relacoes, texto, tipos
 from app.catalogo.comum import (
     carregar,
     exigir_edicao,
@@ -50,8 +50,7 @@ from app.catalogo.modelos import (
     VersaoCompleta,
 )
 from app.erros import ErroAPI
-from app.imagens import ciclo_vida  # L1-01-i: item de imagem na lixeira guarda STAC e agenda objetos
-from app.jobs import sistema
+from app.estilos import validador as estilos_validador
 from app.settings import settings
 
 router = APIRouter(tags=["catalogo"])
@@ -190,33 +189,6 @@ def filtros_da_query(auth: Auth, p: dict, lixeira: bool = False) -> tuple[list[s
         cond.append("i.extent && ST_MakeEnvelope(%s, %s, %s, %s, 4326)")
         params.extend([xmin, ymin, xmax, ymax])
         chave["bbox"] = [xmin, ymin, xmax, ymax]
-    # item L0-09-a: filtro lateral por licença registrada no bloco de procedência e por pontuação mínima
-    licencas = _lista_str(p.get("licenca"))
-    if licencas:
-        partes, valores = [], []
-        for v in licencas:
-            if v.lower() in ("nenhuma", "ausente"):
-                partes.append("plat.procedencia_licenca(i.dados) IS NULL")
-            else:
-                partes.append("plat.procedencia_licenca(i.dados) ILIKE '%%' || %s || '%%'")
-                valores.append(v)
-        cond.append("(" + " OR ".join(partes) + ")")
-        params.extend(valores)
-        chave["licenca"] = licencas
-    if p.get("procedencia_min") not in (None, ""):
-        try:
-            minimo = float(str(p["procedencia_min"]).replace(",", "."))
-        except ValueError as e:
-            raise ErroAPI(
-                422, "campo_invalido", "procedencia_min exige número de 0 a 10", {"campo": "procedencia_min"}
-            ) from e
-        if not 0 <= minimo <= 10:
-            raise ErroAPI(
-                422, "campo_invalido", "procedencia_min vai de 0 a 10", {"campo": "procedencia_min"}
-            )
-        cond.append("plat.procedencia_pontuacao(i.dados) >= %s")
-        params.append(minimo)
-        chave["procedencia_min"] = minimo
     if p.get("favoritos"):
         cond.append("EXISTS (SELECT 1 FROM plat.favorito f WHERE f.item_id = i.id AND f.usuario_id = %s)")
         params.append(auth.usuario_id)
@@ -373,7 +345,7 @@ def carregar_varios(cur, ids: list[str], auth: Auth, completo: bool = False) -> 
 def _params_lista(request: Request, limite, deslocamento) -> dict:
     p = {}
     for chave, valor in request.query_params.multi_items():
-        if chave in ("tipo", "familia", "dono_id", "tags", "categoria", "status", "acesso", "licenca"):
+        if chave in ("tipo", "familia", "dono_id", "tags", "categoria", "status", "acesso"):
             p.setdefault(chave, []).append(valor)
         else:
             p[chave] = valor
@@ -446,8 +418,6 @@ def listar(
     modificado_ate: str | None = None,
     bbox: str | None = None,
     grupo_id: str | None = None,
-    licenca: list[str] | None = Query(None),
-    procedencia_min: float | None = None,
     favoritos: bool = False,
     meus: bool = False,
     prefixo: bool = False,
@@ -509,14 +479,6 @@ def facetas(request: Request, auth: Auth = autenticado(escopo_token="catalogo:le
             params,
         )
         saida["categoria"] = [{"id": str(r["id"]), "valor": r["valor"], "n": r["n"]} for r in cur.fetchall()]
-        # item L0-09-a: licença REGISTRADA no bloco de procedência (o valor 'nenhuma' é o item sem licença
-        # escrita, que é justamente o que o filtro precisa achar — regra D17 do acervo aplicada ao catálogo)
-        cur.execute(
-            "SELECT coalesce(plat.procedencia_licenca(i.dados), 'nenhuma') AS valor, count(*) AS n "
-            f"{FROM_LISTA}{onde} GROUP BY 1 ORDER BY n DESC, 1 LIMIT 100",
-            params,
-        )
-        saida["licenca"] = [{"valor": r["valor"], "n": r["n"]} for r in cur.fetchall()]
     return saida
 
 
@@ -595,11 +557,9 @@ def _publicar_tipo(auth: Auth, tipo: str) -> None:
 def criar(corpo: ItemEntrada, request: Request, auth: Auth = autenticado("conteudo.criar")):
     tipos.obter(corpo.tipo)
     _publicar_tipo(auth, corpo.tipo)
-    # item L0-09-a: o bloco de procedência é canonizado ANTES do JSON Schema (licenca='' vira null, apelido do
-    # acervo vira nome canônico, origem declarado|medido é conferida) — o que o banco guarda é o já normalizado.
-    corpo.dados = procedencia.normalizar_em_dados(corpo.dados)
     tipos.validar(corpo.tipo, corpo.dados)
     documento.validar_grafo(corpo.tipo, corpo.dados)
+    estilos_validador.validar_estilo(corpo.tipo, corpo.dados)
     _classificacao(auth, corpo.classificacao, novo=True)
     iid = str(uuid.UUID(corpo.id)) if corpo.id else str(uuid.uuid4())
     ext_sql, ext_params = _extent_sql(corpo.extent)
@@ -734,9 +694,9 @@ def editar_item(
         raise ErroAPI(422, "validacao", "nada a alterar")
     dados = campos.get("dados", r["dados"])
     if "dados" in campos:
-        dados = campos["dados"] = procedencia.normalizar_em_dados(dados)  # item L0-09-a (mesma regra do POST)
         tipos.validar(r["tipo"], dados)
         documento.validar_grafo(r["tipo"], dados)
+        estilos_validador.validar_estilo(r["tipo"], dados)
     if "classificacao" in campos:
         _classificacao(auth, campos["classificacao"], novo=False)
     cats = (
@@ -837,17 +797,6 @@ def editar_parcial(id: str, request: Request, corpo: dict = Body(...), auth: Aut
 
 
 # ---------------------------------------------------------------- exclusão lógica (lixeira) e lote
-def _raster_ao_apagar(cur, item: dict) -> None:
-    """Item de IMAGEM indo à lixeira (L1-01-i): guarda o corpo STAC no espelho, tira o item do pgstac e agenda
-    o apagamento dos objetos do balde para o fim da retenção (RASTER_LIXEIRA_DIAS). Itens de outro tipo
-    passam direto. Roda na MESMA transação da lixeira: se a rota falhar, nada saiu do STAC."""
-    if (item.get("tipo") or "") != "raster":
-        return
-    cur.execute("SELECT current_setting('plat.tenant_id', true) AS t")
-    tenant_id = int(cur.fetchone()["t"] or 0)
-    ciclo_vida.ao_ir_para_lixeira(cur, tenant_id, item, sistema.enfileirar)
-
-
 def apagar_item(cur, request: Request, auth: Auth, iid: str, cascata: bool, forcado: bool = False) -> list[str]:
     """Envia o item (e, com cascata, os dependentes na ordem) para a lixeira. Devolve os ids apagados."""
     r = item_ou_404(cur, iid)
@@ -864,10 +813,8 @@ def apagar_item(cur, request: Request, auth: Auth, iid: str, cascata: bool, forc
             )
     apagados = []
     for dep in ordem["ordem"] if cascata else []:
-        dep_item = comum.carregar(cur, str(dep["id"]))  # ANTES da lixeira: a RLS esconde depois
         cur.execute("SELECT plat.item_lixeira(%s::uuid, true) AS ok", (dep["id"],))
         if cur.fetchone()["ok"]:
-            _raster_ao_apagar(cur, dep_item or {})
             apagados.append(dep["id"])
             registrar_evento(
                 cur, request, "itens/apagar", "item", dep["id"], {"cascata": True, "de": iid, "forcado": forcado}
@@ -875,7 +822,6 @@ def apagar_item(cur, request: Request, auth: Auth, iid: str, cascata: bool, forc
     cur.execute("SELECT plat.item_lixeira(%s::uuid, true) AS ok", (iid,))
     if not cur.fetchone()["ok"]:
         raise ErroAPI(404, "item_inexistente", "item inexistente")
-    _raster_ao_apagar(cur, r)
     apagados.append(iid)
     props = {"cascata": cascata, "titulo": r["titulo"][:250]}
     if forcado:

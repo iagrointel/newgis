@@ -10,6 +10,7 @@ import pytest
 from app import db, limites
 from app.imagens import pgstac as ps
 from app.imagens import raster_item as ri
+from tests.api.imagens import apoio_raster
 
 N_ITENS = 10_000
 # Brasil aproximado; a caixa de busca abaixo é ~1/16 da área total, o bastante para provar que o índice
@@ -32,10 +33,14 @@ def colecao_10k(token_stac_a, tenant_id_a, env):
     não como postgres): ingestão em massa é responsabilidade de um item futuro (L1-01-h), aqui só se prova
     que o catálogo AGUENTA o volume e que a busca por bbox permanece rápida."""
     ctx = db.Contexto(tenant_id_a, 0, "zt-medida")
-    colecao_id = ps.nome_colecao(tenant_id_a, "medida10k")
+    # o schema `pgstac` é global ao banco: sem o nome da trilha na coleção, a trilha que rodar depois
+    # encontra os 10.000 itens da anterior, pula a semeadura e fica sem o espelho em plat.raster_item
+    # da SUA base (o teste então lia 0 no espelho).
+    slug = apoio_raster.slug_da_trilha("medida10k")
+    colecao_id = ps.nome_colecao(tenant_id_a, slug)
     with db.db(ctx) as cur:
         if ps.colecao_obter(cur, tenant_id_a, colecao_id) is None:
-            ps.colecao_criar(cur, tenant_id_a, "medida10k", {})
+            ps.colecao_criar(cur, tenant_id_a, slug, {})
 
     xmin, ymin, xmax, ymax = BBOX_TOTAL
     lado = int(N_ITENS**0.5) + 1  # grade regular, determinística — reproduzível sem estado aleatório
@@ -60,23 +65,10 @@ def colecao_10k(token_stac_a, tenant_id_a, env):
     with db.db(ctx) as cur:
         cur.execute("SELECT count(*) AS n FROM pgstac.items WHERE collection = %s", (colecao_id,))
         ja = cur.fetchone()["n"]
-        cur.execute(
-            "SELECT count(*) AS n FROM plat.raster_item WHERE tenant_id = %s AND colecao = %s",
-            (tenant_id_a, colecao_id),
-        )
-        espelhados = cur.fetchone()["n"]
-    LOTE = 1000
-    if ja < N_ITENS:
-        for i in range(0, len(itens), LOTE):
-            with db.db(ctx) as cur:
+        if ja < N_ITENS:
+            LOTE = 1000
+            for i in range(0, len(itens), LOTE):
                 ps.itens_criar_lote(cur, colecao_id, itens[i : i + LOTE])
-                ri.espelhar_lote(cur, tenant_id_a, colecao_id, [it["id"] for it in itens[i : i + LOTE]])
-    elif espelhados < N_ITENS:
-        # o banco da trilha PERSISTE entre rodadas: o pgstac pode já ter os 10.000 de uma execução
-        # anterior em que o espelho não chegou a ser preenchido (estado sujo) — `espelhar_lote` é
-        # ON CONFLICT DO NOTHING, então recompletar o espelho é idempotente e não toca no STAC
-        for i in range(0, len(itens), LOTE):
-            with db.db(ctx) as cur:
                 ri.espelhar_lote(cur, tenant_id_a, colecao_id, [it["id"] for it in itens[i : i + LOTE]])
     return colecao_id
 

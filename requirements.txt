@@ -126,3 +126,4 @@ duckdb==1.5.5
 # do pip-audit acima. gitleaks/trivy/zap são binários fixados em deploy/ferramentas_binarias.txt, não pacotes Python.
 bandit==1.9.4
 stevedore==5.9.1
+truststore==0.10.4

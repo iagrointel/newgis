@@ -86,6 +86,7 @@ from app.migracao.rotas import router as rotas_migracao
 from app.multiescala.rotas import router as rotas_multiescala
 from app.paineis.rotas import router as rotas_paineis
 from app.mapa.rotas import router as rotas_mapa
+from app.mapas.rotas import router as rotas_mapas
 from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
@@ -380,6 +381,12 @@ ROUTERS = [
     rotas_amc_pareto,
     # --- temas de marca (L5-10): GET /api/temas (padrões + tema do inquilino); PUT /api/org/tema
     rotas_temas,
+    # --- catálogo de imagens STAC por inquilino (L1-01-a): /svc/<token>/stac/*, token de serviço no PATH
+    # (pgstac + convenção de nome de coleção `<tenant_id>-<slug>`; plat.raster_item com RLS)
+    rotas_stac,
+    # --- ladrilho raster por token no caminho (L1-02): /svc/<token>/raster/<item>/{z}/{x}/{y}, WMTS,
+    # TileJSON e mosaico por coleção; motor rio-tiler lendo COG no Garage por /vsis3
+    rotas_tiles,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

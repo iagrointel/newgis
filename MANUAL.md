@@ -1696,3 +1696,14 @@ Três coisas a saber antes de usar:
 WFS 1.0/1.1 (só 2.0.0), filtro CQL2 ou `Filter` OGC (item L6-02-n), agendamento da reexecução da cópia (item
 L6-02-k), desenho da camada referenciada no mapa (item L6-02-b), escrita de volta (WFS-T) e negociação de CRS
 da Parte 2 do OGC API — `/items` é sempre lido em CRS84.
+
+### 22.6 CDN (item L7-26-cdn-tiles): o endereço que fica para sempre
+
+O `tilejson.json` já entrega um endereço com a **versão embutida** — `/svc/<tok>/raster/<item>@<sha
+curto>/{z}/{x}/{y}.png` — que responde `Cache-Control: public, max-age=31536000, immutable`. Isso
+significa: uma CDN na frente desse endereço (hostname `tiles-<x>`, separado do domínio da aplicação)
+pode guardar o ladrilho **para sempre**, porque o conteúdo daquele endereço específico nunca muda —
+se a imagem for reingerida, o sha256 muda e o endereço muda junto. O endereço SEM versão (o de sempre,
+22.1) continua com cache curto (5 min), porque sem o sha256 no caminho o conteúdo por trás dele pode
+mudar sem avisar. Detalhe completo, achados de bancada e o que falta configurar na conta Cloudflare
+real: `docs/CDN.md`.
