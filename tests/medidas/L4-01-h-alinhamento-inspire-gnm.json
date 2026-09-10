@@ -1,0 +1,60 @@
+{
+ "item": "L4-01-h-alinhamento-inspire-gnm",
+ "assinado_por": "pesquisador+arquiteto+backend (turno T4, handoff laco/handoffs/T4/L4-01-h-alinhamento-inspire-gnm.md)",
+ "gerado_em": "2026-09-07T01:52:08Z",
+ "git_sha": "c45afa719d04e4fde74d48a21e1306af12e12608",
+ "maquina": "worktree wt/il401halinh, base de trilha f401h (schema plat_tf401h), PostgreSQL 16 em iagro_sat compartilhado",
+ "medidas": {
+  "testes_pytest": {
+   "valor": "6 passed",
+   "comando": "venv/bin/pytest tests/unit/test_inspire_gnm.py -q -p no:cacheprovider"
+  },
+  "validacao_xsd_eletrica_us_net_el": {
+   "valor": "validates",
+   "comando": "XML_CATALOG_FILES=app/rede_utilidades/gnm_xsd/catalogo.xml xmllint --noout --schema app/rede_utilidades/gnm_xsd/inspire.ec.europa.eu/schemas/us-net-el/4.0/ElectricityNetwork.xsd <GML gerado por exportar_gml(rede_teste_eletrica_br())>"
+  },
+  "validacao_xsd_eletrica_us_net_common": {
+   "valor": "validates",
+   "comando": "XML_CATALOG_FILES=app/rede_utilidades/gnm_xsd/catalogo.xml xmllint --noout --schema app/rede_utilidades/gnm_xsd/inspire.ec.europa.eu/schemas/us-net-common/4.0/UtilityNetworksCommon.xsd <mesmo GML>"
+  },
+  "validacao_xsd_agua_us_net_common": {
+   "valor": "validates",
+   "comando": "XML_CATALOG_FILES=app/rede_utilidades/gnm_xsd/catalogo.xml xmllint --noout --schema app/rede_utilidades/gnm_xsd/inspire.ec.europa.eu/schemas/us-net-common/4.0/UtilityNetworksCommon.xsd <GML de rede de teste de água, 2 nós/1 elo>"
+  },
+  "rede_teste_eletrica": {
+   "valor": {"nos": 3, "elos": 2, "fonte_dos_codigos": "app/rede_utilidades/pacotes/eletrica-br.json"},
+   "comando": "python3 -c \"from app.rede_utilidades.inspire_gnm import rede_teste_eletrica_br as f; r=f(); print(len(r.nos), len(r.elos))\""
+  },
+  "xsd_vendorizados": {
+   "valor": 77,
+   "unidade": "arquivos .xsd",
+   "comando": "find app/rede_utilidades/gnm_xsd -type f | wc -l"
+  },
+  "disco_do_pacote_xsd": {
+   "valor": "1.4M",
+   "comando": "du -sh app/rede_utilidades/gnm_xsd"
+  }
+ },
+ "portao_de_pronto": {
+  "documento_de_mapeamento_campo_a_campo": {
+   "estado": "parcial",
+   "nota": "docs/INSPIRE_GNM.md cobre elétrica e água; gás fica de fora porque L4-01-a não publicou pacote de ativos de gás (dependência a montante, não lacuna do mapeamento GNM)"
+  },
+  "exportador_gml_conforme_xsd_para_1_rede_de_teste": {
+   "estado": "cumprida",
+   "nota": "app/rede_utilidades/inspire_gnm.py::exportar_gml, testado para elétrica (3 nós/2 elos) e água (2 nós/1 elo)"
+  },
+  "validado_contra_schema_oficial_xsd_sem_erro": {
+   "estado": "cumprida",
+   "nota": "xmllint --schema contra o XSD oficial vendorizado (ElectricityNetwork.xsd e UtilityNetworksCommon.xsd), resolução offline via catálogo XML; saída 'validates' nas 3 combinações testadas; teamengine oficial (validador de referência da UE) NÃO foi rodado"
+  }
+ },
+ "veredito": "parcial",
+ "fora_do_escopo_desta_entrega": [
+  "gás: sem pacote-fonte publicado (L4-01-a)",
+  "UtilityLinkSet/UtilityLinkSequence (Cable/Pipe/ElectricityCable): mapeados no documento como decisão de NÃO usar (exigiriam 2 features por elo); só UtilityLink foi implementado no exportador",
+  "atributos operacionais do ativo (tensão, diâmetro, potência): sem correspondência no GNM, documentado como limitação estrutural do padrão",
+  "validação teamengine (regras ATC/OGC além do XSD): não rodada, sem instância local nem rede autorizada nesta trilha",
+  "identificadores externos oficiais (inspireId/versionId com namespace registrado): não emitidos"
+ ]
+}

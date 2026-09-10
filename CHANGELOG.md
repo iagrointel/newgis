@@ -3109,6 +3109,29 @@ Divergência assumida do portão: o portão pedia "revogar → 403 em ≤ 5 s"; 
 `token_revogado`**, que é o certo para credencial que deixou de existir e é o contrato do L0-02 já provado
 em `tests/e2e/test_tokens.py`. O prazo foi medido e cumprido (`segundos_revogar_ate_negar_no_portal`).
 ADR 0018, MANUAL seção 22.
+## turno 4, setembro de 2026 (item L4-01-h-alinhamento-inspire-gnm: alinhamento ao INSPIRE Generic Network Model — PARCIAL, elétrica e água)
+
+Mapeamento campo a campo do pacote de ativos (`L4-01-a`) para o Generic Network Model do INSPIRE
+(`net`/`us-net-common`/`us-net-el`), documentado em `docs/INSPIRE_GNM.md` (fonte única: `MAPEAMENTO_GNM`
+em `app/rede_utilidades/inspire_gnm.py`). Exportador `exportar_gml()` gera GML de uma rede de teste
+(elétrica: 3 nós/2 elos com códigos reais de `eletrica-br.json`; água: 2 nós/1 elo) como
+`base:SpatialDataSet` com membros `us-net-common:Appurtenance` (nós) e `us-net-common:UtilityLink`
+(elos, decisão registrada no documento: `Cable`/`Pipe`/`ElectricityCable` são `UtilityLinkSet`, não
+`Link`, e exigiriam uma segunda feature por elo). Validado contra o XSD OFICIAL do INSPIRE (cópia
+vendorizada em `app/rede_utilidades/gnm_xsd/`, resolução 100% offline via `gnm_xsd/catalogo.xml`, sem
+rede em CI): `xmllint --schema` contra `ElectricityNetwork.xsd` e `UtilityNetworksCommon.xsd`, ambos
+`validates` (`tests/unit/test_inspire_gnm.py`, 6 testes verdes). PARCIAL porque o portão pede elétrica,
+água e gás: gás fica de fora por não existir pacote-fonte (`L4-01-a` só publicou elétrica e água) — não
+é lacuna do mapeamento GNM. Também fora: atributos operacionais (tensão, diâmetro, potência) não têm
+correspondência no GNM (ele modela topologia e status, não o dado operacional do ativo) e o teamengine
+oficial do INSPIRE não foi rodado (sem instância local nem rede autorizada; a prova usada é `xmllint`
+contra o mesmo XSD que o teamengine consome na checagem estrutural).
+
+### Commits
+
+| sha | mensagem |
+|---|---|
+| 3c38aa4 | Alinhamento INSPIRE GNM (item L4-01-h): mapeamento, exportador GML e validação contra o XSD oficial |
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 - **L7-06-d-paineis**: cinco painéis Grafana provisionados por arquivo (`deploy/grafana/paineis/*.json` + `deploy/grafana/provisioning/`), homologação própria (`deploy/paineis_homologacao.sh`) com carga curta de verdade e captura de cada painel em `tests/e2e/capturas/`. Métricas novas para o que os painéis precisavam e não existia: usuários ativos em 24 h, duração e tamanho do último backup/ensaio, uso de armazenamento e tamanho do schema de dado por inquilino.

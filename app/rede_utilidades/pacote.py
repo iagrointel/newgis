@@ -99,8 +99,49 @@ def _repetidos(bruto: str, secao: str, itens: list, chave, rotulo: str) -> list[
     return saida
 
 
+def _chave_repetida(bruto: str) -> list[dict]:
+    """Seção ou campo repetido em qualquer profundidade (achado A2/A2b, turno 3). `json.loads` fica em silêncio
+    com a ÚLTIMA ocorrência; aqui cada duplicata sai como problema, com a linha que a validação de fato usou e
+    a linha da que foi descartada."""
+    saida = []
+    for d in localizador.chaves_repetidas(bruto):
+        pai = localizador.texto_do_caminho(d["caminho"][:-1]) or "(raiz)"
+        saida.append({
+            "caminho": localizador.texto_do_caminho(d["caminho"]),
+            "linha": d["linha"],
+            "erro": "chave_repetida",
+            "mensagem": (
+                f"a chave {d['chave']!r} aparece duas vezes em {pai}; a ocorrência da linha "
+                f"{d['linha_anterior']} foi descartada em silêncio e esta (linha {d['linha']}) é a que valeu"
+            ),
+            "linha_anterior": d["linha_anterior"],
+        })
+    return saida
+
+
+def _procurar_nul(bruto: str, no, caminho: list) -> list[dict]:
+    """Caractere nulo (`\\u0000`) dentro de qualquer texto do pacote (achado A3, turno 3): o esquema JSON não
+    proíbe, mas nem `text` nem `jsonb` do Postgres aceitam — sem esta checagem o pacote passa na validação e
+    derruba a importação com uma exceção não tratada (500)."""
+    problemas = []
+    if isinstance(no, str):
+        if "\x00" in no:
+            problemas.append(_problema(
+                bruto, caminho, "caractere_nulo",
+                f"o campo {localizador.texto_do_caminho(caminho)} contém um caractere nulo (\\u0000), "
+                f"que o banco não aceita",
+            ))
+    elif isinstance(no, dict):
+        for k, v in no.items():
+            problemas += _procurar_nul(bruto, v, [*caminho, k])
+    elif isinstance(no, list):
+        for i, v in enumerate(no):
+            problemas += _procurar_nul(bruto, v, [*caminho, i])
+    return problemas
+
+
 def _conferir_referencias(bruto: str, doc: dict) -> list[dict]:
-    problemas: list[dict] = []
+    problemas: list[dict] = _chave_repetida(bruto) + _procurar_nul(bruto, doc, [])
     dominios = {d.get("codigo") for d in doc.get("dominios", []) if isinstance(d, dict)}
     categorias = {c.get("codigo") for c in doc.get("categorias", []) if isinstance(c, dict)}
     terminais = {t.get("codigo") for t in doc.get("terminais", []) if isinstance(t, dict)}
