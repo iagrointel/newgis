@@ -1,0 +1,86 @@
+{
+ "item": "L3-06-criterios-de-feicao",
+ "medidas": {
+  "feicoes_avaliadas": {
+   "valor": 1000,
+   "unidade": "feições",
+   "comando": "bash laco/roda_teste.sh tests/unit/test_amc_criterios_feicao.py -q::test_mil_pontos_quatro_criterios_roda_e_ranqueia (dado aberto OSM/ODbL, tests/dados/l3_06_feicoes.geojson)"
+  },
+  "criterios": {
+   "valor": 4,
+   "unidade": "critérios",
+   "comando": "atributo, contagem em raio, distância ao mais próximo e ideal"
+  },
+  "ranque_posicoes": {
+   "valor": 1000,
+   "unidade": "posições",
+   "comando": "bash laco/roda_teste.sh tests/unit/test_amc_criterios_feicao.py -q::test_mil_pontos_quatro_criterios_roda_e_ranqueia (1..N sem buraco e sem repetição)"
+  },
+  "avaliacao_ms": {
+   "valor": {
+    "tempo_ms": 131.6,
+    "carga_1min": 7.66,
+    "ram_livre_gb": 7.33,
+    "medido_em": "2026-09-08T01:59:21Z"
+   },
+   "unidade": "ms",
+   "comando": "venv/bin/python sobre app.amc.criterios_feicao.avaliar, 1.000 feições × 4 critérios; carga alta (>8 é o teto da casa), o número é teto, não piso"
+  },
+  "contagem_raio_divergencias_st_dwithin": {
+   "valor": 0,
+   "unidade": "feições",
+   "comando": "bash laco/roda_teste.sh tests/api/amc/test_criterios_feicao_api.py -q::test_contagem_em_raio_confere_com_st_dwithin (1.000 feições × 212 pontos, raio 1.000 m, EPSG:31983)"
+  },
+  "ideal_no_alvo": {
+   "valor": 100.0,
+   "unidade": "favorabilidade",
+   "comando": "bash laco/roda_teste.sh tests/unit/test_amc_criterios_feicao.py -q::test_ideal_da_cem_no_alvo_e_zero_nos_extremos"
+  },
+  "ideal_nos_extremos": {
+   "valor": [
+    0.0,
+    0.0
+   ],
+   "unidade": "favorabilidade",
+   "comando": "bash laco/roda_teste.sh tests/unit/test_amc_criterios_feicao.py -q::test_ideal_da_cem_no_alvo_e_zero_nos_extremos (alvo centrado em [minimo, maximo])"
+  },
+  "histogramas": {
+   "valor": 4,
+   "unidade": "histogramas",
+   "comando": "bash laco/roda_teste.sh tests/unit/test_amc_criterios_feicao.py -q::test_histograma_por_criterio_conta_tudo (20 barras por critério; n + n_sem_dado = 1.000)"
+  },
+  "correlacao_matriz": {
+   "valor": [
+    4,
+    4
+   ],
+   "unidade": "linhas × colunas",
+   "comando": "bash laco/roda_teste.sh tests/unit/test_amc_criterios_feicao.py -q::test_matriz_de_correlacao_entre_criterios e ::test_correlacao_confere_com_numpy_par_a_par"
+  },
+  "correlacao_area_x_distancia": {
+   "valor": 0.233477,
+   "unidade": "pearson",
+   "comando": "bash laco/roda_teste.sh tests/unit/test_amc_criterios_feicao.py -q::test_correlacao_confere_com_numpy_par_a_par (recomputado com np.corrcoef)"
+  },
+  "csv_linhas": {
+   "valor": 1001,
+   "unidade": "linhas",
+   "comando": "bash laco/roda_teste.sh tests/unit/test_amc_criterios_feicao.py -q::test_csv_tem_uma_linha_por_feicao_na_ordem_do_ranque (1 cabeçalho + 1.000 feições)"
+  },
+  "testes_unidade": {
+   "valor": 28,
+   "unidade": "testes",
+   "comando": "bash laco/roda_teste.sh tests/unit/test_amc_criterios_feicao.py -q e tests/unit/test_amc_criterios_feicao_pagina.py"
+  },
+  "testes_api": {
+   "valor": 10,
+   "unidade": "testes",
+   "comando": "bash laco/roda_teste.sh tests/api/amc/test_criterios_feicao_api.py -q"
+  },
+  "e2e": {
+   "valor": null,
+   "unidade": "—",
+   "comando": "tests/e2e/test_amc_criterios_feicao.py — ESCRITO, NÃO MEDIDO nesta trilha: /static é servido pelo nginx, que não existe na base de trilha (o servidor local na porta 8377 devolve 404 nos ativos). Corre em homologação/CI. A conferência possível sem navegador está em tests/unit/test_amc_criterios_feicao_pagina.py"
+  }
+ }
+}

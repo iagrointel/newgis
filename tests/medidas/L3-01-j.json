@@ -1,0 +1,233 @@
+{
+ "item": "L3-01-j",
+ "medidas": {
+  "modelo_fatores": {
+   "valor": 19,
+   "unidade": "fatores",
+   "comando": "pytest tests/unit/test_amc_equivalencia_motor_referencia.py::test_modelo_valido (sha do modelo: b87cf5126749ffc6)"
+  },
+  "celulas_pct_dentro_de_0.5_declarado": {
+   "valor": 100.0,
+   "unidade": "%",
+   "comando": "pytest tests/unit/test_amc_equivalencia_motor_referencia.py::test_celulas[declarado] (n=73115, max|delta|=0.000e+00, fora=0)"
+  },
+  "celulas_divergencias_declarado": {
+   "valor": [],
+   "unidade": "lista",
+   "comando": "as primeiras 20 células fora da tolerância; lista vazia = nenhuma"
+  },
+  "celulas_segundos_declarado": {
+   "valor": {
+    "combinador_generico": 0.0575,
+    "oraculo_sql": 0.4832,
+    "carga_1min": 5.52099609375,
+    "medido_em": "2026-09-07T20:05:29Z"
+   },
+   "unidade": "s",
+   "comando": "time.perf_counter em volta de app.amc.combinacao.combinar e do oráculo"
+  },
+  "celulas_pct_dentro_de_0.5_iguais": {
+   "valor": 100.0,
+   "unidade": "%",
+   "comando": "pytest tests/unit/test_amc_equivalencia_motor_referencia.py::test_celulas[iguais] (n=73115, max|delta|=0.000e+00, fora=0)"
+  },
+  "celulas_divergencias_iguais": {
+   "valor": [],
+   "unidade": "lista",
+   "comando": "as primeiras 20 células fora da tolerância; lista vazia = nenhuma"
+  },
+  "celulas_segundos_iguais": {
+   "valor": {
+    "combinador_generico": 0.0167,
+    "oraculo_sql": 0.5223,
+    "carga_1min": 5.39892578125,
+    "medido_em": "2026-09-07T20:05:29Z"
+   },
+   "unidade": "s",
+   "comando": "time.perf_counter em volta de app.amc.combinacao.combinar e do oráculo"
+  },
+  "celulas_pct_dentro_de_0.5_sorteado": {
+   "valor": 100.0,
+   "unidade": "%",
+   "comando": "pytest tests/unit/test_amc_equivalencia_motor_referencia.py::test_celulas[sorteado] (n=73115, max|delta|=0.000e+00, fora=0)"
+  },
+  "celulas_divergencias_sorteado": {
+   "valor": [],
+   "unidade": "lista",
+   "comando": "as primeiras 20 células fora da tolerância; lista vazia = nenhuma"
+  },
+  "celulas_segundos_sorteado": {
+   "valor": {
+    "combinador_generico": 0.0168,
+    "oraculo_sql": 0.501,
+    "carga_1min": 5.39892578125,
+    "medido_em": "2026-09-07T20:05:30Z"
+   },
+   "unidade": "s",
+   "comando": "time.perf_counter em volta de app.amc.combinacao.combinar e do oráculo"
+  },
+  "celulas_veto_identico": {
+   "valor": true,
+   "unidade": "booleano",
+   "comando": "73115 de 73115 células com o mesmo sinal de veto"
+  },
+  "celulas_motivo_identico": {
+   "valor": true,
+   "unidade": "booleano",
+   "comando": "73115 de 73115 células com o mesmo motivo"
+  },
+  "celulas_vetadas": {
+   "valor": 51598,
+   "unidade": "células",
+   "comando": "veto entra como fração vetada 1, nunca como fator de nota baixa"
+  },
+  "feicoes_pct_dentro_de_0.5_declarado": {
+   "valor": 100.0,
+   "unidade": "%",
+   "comando": "pytest tests/unit/test_amc_equivalencia_motor_referencia.py::test_feicoes[declarado] (n=4346, max|delta|=4.263e-14, fora=0)"
+  },
+  "feicoes_divergencias_declarado": {
+   "valor": [],
+   "unidade": "lista",
+   "comando": "as primeiras 20 feições fora da tolerância"
+  },
+  "feicoes_pct_dentro_de_0.5_iguais": {
+   "valor": 100.0,
+   "unidade": "%",
+   "comando": "pytest tests/unit/test_amc_equivalencia_motor_referencia.py::test_feicoes[iguais] (n=4346, max|delta|=4.263e-14, fora=0)"
+  },
+  "feicoes_divergencias_iguais": {
+   "valor": [],
+   "unidade": "lista",
+   "comando": "as primeiras 20 feições fora da tolerância"
+  },
+  "feicoes_pct_dentro_de_0.5_sorteado": {
+   "valor": 100.0,
+   "unidade": "%",
+   "comando": "pytest tests/unit/test_amc_equivalencia_motor_referencia.py::test_feicoes[sorteado] (n=4346, max|delta|=4.263e-14, fora=0)"
+  },
+  "feicoes_divergencias_sorteado": {
+   "valor": [],
+   "unidade": "lista",
+   "comando": "as primeiras 20 feições fora da tolerância"
+  },
+  "feicoes_fracao_vetada_pct_igual": {
+   "valor": 100.0,
+   "unidade": "%",
+   "comando": "n=4346, forçadas por atributo da feição=1099"
+  },
+  "agregacao_pct_por_fator": {
+   "valor": {
+    "decl": 100.0,
+    "zon": 100.0,
+    "gru": 100.0,
+    "rod": 100.0,
+    "disp": 100.0,
+    "ener": 100.0,
+    "agua": 100.0,
+    "restr": 100.0,
+    "press": 100.0,
+    "dens": 100.0
+   },
+   "unidade": "%",
+   "comando": "pytest tests/unit/test_amc_equivalencia_motor_referencia.py::test_agregacao_de_celulas_para_feicoes"
+  },
+  "agregacao_fora_de_escopo": {
+   "valor": {
+    "roubo": "tabela própria por imóvel (densidade de ocorrência calculada no imóvel, não na célula)",
+    "trib": "tabela própria por imóvel (índice tributário do município do imóvel)",
+    "renda": "tabela própria por imóvel (percentil de renda dos setores do imóvel)",
+    "polos": "tabela própria por imóvel (distância e contagem a partir do próprio imóvel)",
+    "se": "tabela própria por imóvel (distância à subestação a partir do próprio imóvel)",
+    "cluster": "tabela própria por imóvel (área construída e contagem no raio do próprio imóvel)",
+    "rlapp": "tabela própria por imóvel; a grade não carrega este fator (todas as células nulas)",
+    "varzea": "fração de inundação medida NO IMÓVEL, com a mesma regra declarada de faixas",
+    "mine": "veredito do imóvel (cadastro mineiro mais série de satélite), não média de células"
+   },
+   "unidade": "texto",
+   "comando": "fatores cuja nota por feição o motor de referência NÃO obtém da média das células"
+  },
+  "agregacao_segundos": {
+   "valor": {
+    "valor": 0.0303,
+    "pares": 61238,
+    "carga_1min": 5.39892578125
+   },
+   "unidade": "s",
+   "comando": "app.amc.agregacao.agregar_por_feicao sobre todos os pares feição-célula"
+  },
+  "transformacao_do_bruto_pct": {
+   "valor": {
+    "agua": {
+     "pct": 100.0,
+     "n": 73115,
+     "max_delta": 0.0
+    },
+    "decl": {
+     "pct": 100.0,
+     "n": 73099,
+     "max_delta": 0.5
+    },
+    "press": {
+     "pct": 100.0,
+     "n": 73115,
+     "max_delta": 0.5
+    },
+    "rod": {
+     "pct": 100.0,
+     "n": 73115,
+     "max_delta": 0.499979
+    }
+   },
+   "unidade": "%",
+   "comando": "pytest tests/unit/test_amc_equivalencia_motor_referencia.py::test_transformacoes_do_valor_bruto"
+  },
+  "transformacao_do_bruto_fora_de_escopo": {
+   "valor": [
+    "cluster",
+    "dens",
+    "disp",
+    "ener",
+    "gru",
+    "mine",
+    "polos",
+    "renda",
+    "restr",
+    "rlapp",
+    "roubo",
+    "se",
+    "trib",
+    "varzea",
+    "zon"
+   ],
+   "unidade": "lista",
+   "comando": "fatores cujo valor bruto não está materializado no motor de referência, ou cuja regra compõe mais de uma variável antes de virar nota: a transformação declarada no modelo é a identidade sobre um valor que já chega em escala de favorabilidade"
+  },
+  "nao_agregados_evidencia": {
+   "valor": {
+    "feicoes": 4346,
+    "igual_a_tabela_por_imovel": {
+     "roubo": 4346,
+     "trib": 4346,
+     "renda": 4346,
+     "polos": 4346,
+     "se": 4346,
+     "cluster": 4346,
+     "rlapp": 4346
+    },
+    "varzea_pela_regra_no_imovel": [
+     4346,
+     4346
+    ],
+    "mine_pelo_veredito": [
+     4346,
+     4346
+    ]
+   },
+   "unidade": "feições",
+   "comando": "pytest tests/unit/test_amc_equivalencia_motor_referencia.py::test_fatores_que_a_referencia_nao_agrega"
+  }
+ },
+ "gerado_em": "2026-09-07T20:05:32Z",
+ "git_sha": "8c7c5ef85dff"
+}

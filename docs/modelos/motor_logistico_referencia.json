@@ -1,0 +1,743 @@
+{
+ "esquema": "amc_modelo.v1",
+ "nome": "Motor logístico de referência (19 fatores)",
+ "descricao": "Reescrita, no vocabulário do motor multicritério genérico, do motor logístico de referência da casa: 19 fatores disponíveis, cada um com fonte, direção, base do peso, extrator e transformação declarada, mais oito restrições que vetam a unidade. Serve à prova de equivalência do item L3-01-j: alimentado com os MESMOS valores por unidade, o combinador genérico (soma ponderada normalizada sobre os fatores com dado, multiplicada por 1 menos a fração vetada) tem de devolver a mesma favorabilidade que o motor de referência devolve por célula e por feição. Os pesos gravados aqui são o perfil declarado de galpão logístico; como todo peso deste motor, são escolha de quem decide, nunca medida nossa. Oito fatores (decl, gru, rod, agua, press, rlapp, se, mine) trazem a transformação do valor BRUTO; os outros onze declaram a identidade sobre um valor que já chega em escala de favorabilidade, porque no motor de referência a regra deles compõe mais de uma variável antes de virar nota — cada um desses diz isso em 'nao_sustenta'.",
+ "combinador": {
+  "tipo": "soma_ponderada_normalizada"
+ },
+ "dado_ausente": "excluir_fator",
+ "fatores": [
+  {
+   "id": "decl",
+   "nome": "Declividade",
+   "criterio": "terreno plano: menos terraplenagem",
+   "fonte": "Copernicus GLO-30 (modelo de superfície) + declividade por célula, edição de 2024",
+   "unidade": "%",
+   "direcao": "menor_melhor",
+   "base": "engenharia",
+   "camada": {
+    "tipo": "acervo",
+    "id": "motor_logistico_referencia/celulas",
+    "atributo": "v_slope"
+   },
+   "extrator": {
+    "tipo": "raster_media"
+   },
+   "transformacao": {
+    "tipo": "linear",
+    "minimo": 2.0,
+    "maximo": 30.0,
+    "direcao": "decrescente",
+    "abaixo": 100.0,
+    "acima": 0.0
+   },
+   "peso": 3,
+   "classe_peso": "custo_medido",
+   "ancora_peso": "escolhida",
+   "versao_fonte": "GLO-30, leitura de 08/2026"
+  },
+  {
+   "id": "zon",
+   "nome": "Zoneamento",
+   "criterio": "a carta municipal admite o uso pretendido na célula",
+   "fonte": "Cartas de zoneamento oficiais dos nove municípios da área de estudo (leis municipais, 2016-2025)",
+   "unidade": "categoria de zona",
+   "direcao": "maior_melhor",
+   "base": "norma",
+   "camada": {
+    "tipo": "acervo",
+    "id": "motor_logistico_referencia/celulas",
+    "atributo": "f_zon"
+   },
+   "extrator": {
+    "tipo": "valor_pronto"
+   },
+   "transformacao": {
+    "tipo": "linear",
+    "minimo": 0.0,
+    "maximo": 100.0,
+    "direcao": "crescente",
+    "abaixo": 0.0,
+    "acima": 100.0
+   },
+   "peso": 5,
+   "classe_peso": "consequencia_normativa",
+   "ancora_peso": "escolhida",
+   "nao_sustenta": "a nota deste fator no motor de referência nasce de uma COMPOSIÇÃO de mais de uma variável (ou de um veto interno) antes de virar 0-100; aqui a transformação é a identidade sobre o valor já em escala de favorabilidade, e a composição fica no extrator (item L3-01-c). Este fator não sustenta, sozinho, a afirmação de que a regra composta foi reproduzida a partir do dado bruto",
+   "versao_fonte": "cartas municipais, leitura de 08/2026"
+  },
+  {
+   "id": "gru",
+   "nome": "Acesso ao terminal de carga aérea",
+   "criterio": "tempo de viagem até a âncora logística escolhida no projeto",
+   "fonte": "Isócronas de roteamento sobre malha viária aberta (extração de 08/2026), fluxo livre",
+   "unidade": "min",
+   "direcao": "menor_melhor",
+   "base": "engenharia",
+   "camada": {
+    "tipo": "acervo",
+    "id": "motor_logistico_referencia/celulas",
+    "atributo": "v_t_gru_ctrl"
+   },
+   "extrator": {
+    "tipo": "ponto_distancia_mais_proximo"
+   },
+   "transformacao": {
+    "tipo": "degraus",
+    "bandas": [
+     {
+      "ate": 15,
+      "nota": 100
+     },
+     {
+      "ate": 30,
+      "nota": 80
+     },
+     {
+      "ate": 45,
+      "nota": 50
+     },
+     {
+      "ate": 60,
+      "nota": 30
+     }
+    ],
+    "acima": 10.0
+   },
+   "peso": 5,
+   "classe_peso": "custo_medido",
+   "ancora_peso": "escolhida",
+   "versao_fonte": "malha viária aberta de 27/08/2026"
+  },
+  {
+   "id": "rod",
+   "nome": "Distância a rodovia principal",
+   "criterio": "acesso rodoviário próximo",
+   "fonte": "Malha viária aberta (classes de rodovia expressa, troncal e primária), extração de 08/2026",
+   "unidade": "m",
+   "direcao": "menor_melhor",
+   "base": "engenharia",
+   "camada": {
+    "tipo": "acervo",
+    "id": "motor_logistico_referencia/celulas",
+    "atributo": "v_dist_rod"
+   },
+   "extrator": {
+    "tipo": "linha_distancia_mais_proxima"
+   },
+   "transformacao": {
+    "tipo": "linear",
+    "minimo": 300.0,
+    "maximo": 5000.0,
+    "direcao": "decrescente",
+    "saida_min": 10.0,
+    "saida_max": 100.0,
+    "abaixo": 100.0,
+    "acima": 10.0
+   },
+   "peso": 4,
+   "classe_peso": "custo_medido",
+   "ancora_peso": "escolhida",
+   "versao_fonte": "malha viária aberta de 27/08/2026"
+  },
+  {
+   "id": "disp",
+   "nome": "Disponibilidade da terra",
+   "criterio": "terra livre (pasto, mosaico, solo exposto), não mata nem urbano consolidado",
+   "fonte": "MapBiomas coleção 10, ano de 2024, frações por célula",
+   "unidade": "fração 0-1",
+   "direcao": "maior_melhor",
+   "base": "engenharia",
+   "camada": {
+    "tipo": "acervo",
+    "id": "motor_logistico_referencia/celulas",
+    "atributo": "f_disp"
+   },
+   "extrator": {
+    "tipo": "valor_pronto"
+   },
+   "transformacao": {
+    "tipo": "linear",
+    "minimo": 0.0,
+    "maximo": 100.0,
+    "direcao": "crescente",
+    "abaixo": 0.0,
+    "acima": 100.0
+   },
+   "peso": 3,
+   "classe_peso": "custo_medido",
+   "ancora_peso": "escolhida",
+   "nao_sustenta": "a nota deste fator no motor de referência nasce de uma COMPOSIÇÃO de mais de uma variável (ou de um veto interno) antes de virar 0-100; aqui a transformação é a identidade sobre o valor já em escala de favorabilidade, e a composição fica no extrator (item L3-01-c). Este fator não sustenta, sozinho, a afirmação de que a regra composta foi reproduzida a partir do dado bruto",
+   "versao_fonte": "MapBiomas coleção 10, 2024"
+  },
+  {
+   "id": "ener",
+   "nome": "Energia",
+   "criterio": "rede de média tensão perto; subestação a até 5 km",
+   "fonte": "Base de distribuição geográfica da agência reguladora, 2024, mais subestações do operador nacional",
+   "unidade": "m",
+   "direcao": "menor_melhor",
+   "base": "engenharia",
+   "camada": {
+    "tipo": "acervo",
+    "id": "motor_logistico_referencia/celulas",
+    "atributo": "f_ener"
+   },
+   "extrator": {
+    "tipo": "valor_pronto"
+   },
+   "transformacao": {
+    "tipo": "linear",
+    "minimo": 0.0,
+    "maximo": 100.0,
+    "direcao": "crescente",
+    "abaixo": 0.0,
+    "acima": 100.0
+   },
+   "peso": 2,
+   "classe_peso": "custo_medido",
+   "ancora_peso": "escolhida",
+   "nao_sustenta": "a nota deste fator no motor de referência nasce de uma COMPOSIÇÃO de mais de uma variável (ou de um veto interno) antes de virar 0-100; aqui a transformação é a identidade sobre o valor já em escala de favorabilidade, e a composição fica no extrator (item L3-01-c). Este fator não sustenta, sozinho, a afirmação de que a regra composta foi reproduzida a partir do dado bruto",
+   "versao_fonte": "base de distribuição 2024"
+  },
+  {
+   "id": "agua",
+   "nome": "Água e área de preservação permanente",
+   "criterio": "fora da faixa mínima de preservação permanente de curso d'água (30 m)",
+   "fonte": "Base cartográfica contínua 1:250.000 do instituto de geografia (drenagem)",
+   "unidade": "sim/não",
+   "direcao": "maior_melhor",
+   "base": "norma",
+   "camada": {
+    "tipo": "acervo",
+    "id": "motor_logistico_referencia/celulas",
+    "atributo": "v_app30"
+   },
+   "extrator": {
+    "tipo": "poligono_fracao_area"
+   },
+   "transformacao": {
+    "tipo": "categoria",
+    "notas": {
+     "True": 40.0,
+     "False": 100.0
+    }
+   },
+   "peso": 1,
+   "classe_peso": "consequencia_normativa",
+   "ancora_peso": "escolhida",
+   "proxy": {
+    "descricao": "a drenagem 1:250.000 é o piso do que existe em campo: cursos d'água menores não aparecem nessa escala e a faixa medida é a do que está mapeado, não a do que existe",
+    "teto_peso": 0.3
+   },
+   "versao_fonte": "base contínua 1:250.000, edição de 2023"
+  },
+  {
+   "id": "restr",
+   "nome": "Restrições legais e ambientais",
+   "criterio": "sem restrição que impeça ou onere o licenciamento",
+   "fonte": "Cadastro nacional de unidades de conservação, órgão indigenista federal, órgão ambiental federal (embargos) e leis estaduais de proteção de manancial",
+   "unidade": "categoria",
+   "direcao": "maior_melhor",
+   "base": "norma",
+   "camada": {
+    "tipo": "acervo",
+    "id": "motor_logistico_referencia/celulas",
+    "atributo": "f_restr"
+   },
+   "extrator": {
+    "tipo": "valor_pronto"
+   },
+   "transformacao": {
+    "tipo": "linear",
+    "minimo": 0.0,
+    "maximo": 100.0,
+    "direcao": "crescente",
+    "abaixo": 0.0,
+    "acima": 100.0
+   },
+   "peso": 3,
+   "classe_peso": "consequencia_normativa",
+   "ancora_peso": "escolhida",
+   "nao_sustenta": "a nota deste fator no motor de referência nasce de uma COMPOSIÇÃO de mais de uma variável (ou de um veto interno) antes de virar 0-100; aqui a transformação é a identidade sobre o valor já em escala de favorabilidade, e a composição fica no extrator (item L3-01-c). Este fator não sustenta, sozinho, a afirmação de que a regra composta foi reproduzida a partir do dado bruto",
+   "versao_fonte": "leituras de 08/2026"
+  },
+  {
+   "id": "varzea",
+   "nome": "Inundação (carta oficial)",
+   "criterio": "fora da área suscetível ou inundável oficial",
+   "fonte": "Cartas oficiais de suscetibilidade a inundação do serviço geológico e do instituto de pesquisas tecnológicas, mais manchas municipais de inundação",
+   "unidade": "fração 0-1",
+   "direcao": "menor_melhor",
+   "base": "norma",
+   "camada": {
+    "tipo": "acervo",
+    "id": "motor_logistico_referencia/celulas",
+    "atributo": "f_varzea"
+   },
+   "extrator": {
+    "tipo": "valor_pronto"
+   },
+   "transformacao": {
+    "tipo": "linear",
+    "minimo": 0.0,
+    "maximo": 100.0,
+    "direcao": "crescente",
+    "abaixo": 0.0,
+    "acima": 100.0
+   },
+   "peso": 2,
+   "classe_peso": "consequencia_normativa",
+   "ancora_peso": "escolhida",
+   "nao_sustenta": "a nota deste fator no motor de referência nasce de uma COMPOSIÇÃO de mais de uma variável (ou de um veto interno) antes de virar 0-100; aqui a transformação é a identidade sobre o valor já em escala de favorabilidade, e a composição fica no extrator (item L3-01-c). Este fator não sustenta, sozinho, a afirmação de que a regra composta foi reproduzida a partir do dado bruto",
+   "versao_fonte": "cartas de 2014-2026"
+  },
+  {
+   "id": "press",
+   "nome": "Pressão urbana 2014-2024",
+   "criterio": "vizinhança em urbanização (frente de expansão)",
+   "fonte": "MapBiomas coleção 10: variação da fração urbana na célula e nas seis vizinhas",
+   "unidade": "pontos percentuais (fração)",
+   "direcao": "maior_melhor",
+   "base": "preferencia",
+   "camada": {
+    "tipo": "acervo",
+    "id": "motor_logistico_referencia/celulas",
+    "atributo": "v_durb"
+   },
+   "extrator": {
+    "tipo": "raster_media"
+   },
+   "transformacao": {
+    "tipo": "linear",
+    "minimo": 0.0,
+    "maximo": 0.2,
+    "direcao": "crescente",
+    "abaixo": 0.0,
+    "acima": 100.0
+   },
+   "peso": 1,
+   "classe_peso": "apetite_de_risco",
+   "ancora_peso": "escolhida",
+   "versao_fonte": "MapBiomas coleção 10, 2014 e 2024"
+  },
+  {
+   "id": "dens",
+   "nome": "População e densidade",
+   "criterio": "densidade moderada: mão de obra e clientes perto",
+   "fonte": "Censo demográfico de 2022, setores censitários ponderados por área",
+   "unidade": "hab/km²",
+   "direcao": "maior_melhor",
+   "base": "preferencia",
+   "camada": {
+    "tipo": "acervo",
+    "id": "motor_logistico_referencia/celulas",
+    "atributo": "f_dens"
+   },
+   "extrator": {
+    "tipo": "valor_pronto"
+   },
+   "transformacao": {
+    "tipo": "linear",
+    "minimo": 0.0,
+    "maximo": 100.0,
+    "direcao": "crescente",
+    "abaixo": 0.0,
+    "acima": 100.0
+   },
+   "peso": 1,
+   "classe_peso": "apetite_de_risco",
+   "ancora_peso": "escolhida",
+   "nao_sustenta": "a nota deste fator no motor de referência nasce de uma COMPOSIÇÃO de mais de uma variável (ou de um veto interno) antes de virar 0-100; aqui a transformação é a identidade sobre o valor já em escala de favorabilidade, e a composição fica no extrator (item L3-01-c). Este fator não sustenta, sozinho, a afirmação de que a regra composta foi reproduzida a partir do dado bruto",
+   "versao_fonte": "Censo 2022"
+  },
+  {
+   "id": "roubo",
+   "nome": "Segurança: roubo de carga",
+   "criterio": "menos roubo de carga no entorno do trajeto",
+   "fonte": "Portal de transparência criminal da secretaria de segurança estadual, boletins de 2024 a 2026",
+   "unidade": "ocorrências/km²/ano",
+   "direcao": "menor_melhor",
+   "base": "preferencia",
+   "camada": {
+    "tipo": "acervo",
+    "id": "motor_logistico_referencia/celulas",
+    "atributo": "f_roubo"
+   },
+   "extrator": {
+    "tipo": "valor_pronto"
+   },
+   "transformacao": {
+    "tipo": "linear",
+    "minimo": 0.0,
+    "maximo": 100.0,
+    "direcao": "crescente",
+    "abaixo": 0.0,
+    "acima": 100.0
+   },
+   "peso": 1,
+   "classe_peso": "apetite_de_risco",
+   "ancora_peso": "escolhida",
+   "nao_sustenta": "a nota deste fator no motor de referência nasce de uma COMPOSIÇÃO de mais de uma variável (ou de um veto interno) antes de virar 0-100; aqui a transformação é a identidade sobre o valor já em escala de favorabilidade, e a composição fica no extrator (item L3-01-c). Este fator não sustenta, sozinho, a afirmação de que a regra composta foi reproduzida a partir do dado bruto",
+   "proxy": {
+    "descricao": "o boletim de ocorrência é georreferenciado no ponto do registro, que é o trajeto e não o imóvel: a mancha mede risco de rota, não risco do lote",
+    "teto_peso": 0.25
+   },
+   "versao_fonte": "boletins de 01/2024 a 06/2026"
+  },
+  {
+   "id": "trib",
+   "nome": "Tributação municipal",
+   "criterio": "menor imposto de armazenagem e de terreno, com incentivo declarado",
+   "fonte": "Legislação tributária municipal em fonte primária (nove municípios da área de estudo)",
+   "unidade": "índice 0-1",
+   "direcao": "menor_melhor",
+   "base": "preferencia",
+   "camada": {
+    "tipo": "acervo",
+    "id": "motor_logistico_referencia/celulas",
+    "atributo": "f_trib"
+   },
+   "extrator": {
+    "tipo": "valor_pronto"
+   },
+   "transformacao": {
+    "tipo": "linear",
+    "minimo": 0.0,
+    "maximo": 100.0,
+    "direcao": "crescente",
+    "abaixo": 0.0,
+    "acima": 100.0
+   },
+   "peso": 1,
+   "classe_peso": "custo_medido",
+   "ancora_peso": "escolhida",
+   "nao_sustenta": "a nota deste fator no motor de referência nasce de uma COMPOSIÇÃO de mais de uma variável (ou de um veto interno) antes de virar 0-100; aqui a transformação é a identidade sobre o valor já em escala de favorabilidade, e a composição fica no extrator (item L3-01-c). Este fator não sustenta, sozinho, a afirmação de que a regra composta foi reproduzida a partir do dado bruto",
+   "versao_fonte": "leis municipais vigentes em 08/2026"
+  },
+  {
+   "id": "renda",
+   "nome": "Renda domiciliar",
+   "criterio": "informativo: menor renda no entorno indica menor custo de terra e de mão de obra",
+   "fonte": "Censo demográfico de 2022, rendimento do responsável por setor censitário",
+   "unidade": "percentil",
+   "direcao": "menor_melhor",
+   "base": "preferencia",
+   "camada": {
+    "tipo": "acervo",
+    "id": "motor_logistico_referencia/celulas",
+    "atributo": "f_renda"
+   },
+   "extrator": {
+    "tipo": "valor_pronto"
+   },
+   "transformacao": {
+    "tipo": "linear",
+    "minimo": 0.0,
+    "maximo": 100.0,
+    "direcao": "crescente",
+    "abaixo": 0.0,
+    "acima": 100.0
+   },
+   "peso": 1,
+   "classe_peso": "custo_medido",
+   "ancora_peso": "escolhida",
+   "nao_sustenta": "a nota deste fator no motor de referência nasce de uma COMPOSIÇÃO de mais de uma variável (ou de um veto interno) antes de virar 0-100; aqui a transformação é a identidade sobre o valor já em escala de favorabilidade, e a composição fica no extrator (item L3-01-c). Este fator não sustenta, sozinho, a afirmação de que a regra composta foi reproduzida a partir do dado bruto",
+   "versao_fonte": "Censo 2022"
+  },
+  {
+   "id": "rlapp",
+   "nome": "Reserva legal e preservação permanente declaradas",
+   "criterio": "maior fração do imóvel fora de reserva legal e de área de preservação declaradas",
+   "fonte": "Cadastro ambiental rural: reserva legal e preservação permanente declaradas por imóvel",
+   "unidade": "fração 0-1",
+   "direcao": "maior_melhor",
+   "base": "norma",
+   "camada": {
+    "tipo": "acervo",
+    "id": "motor_logistico_referencia/celulas",
+    "atributo": "f_rlapp"
+   },
+   "extrator": {
+    "tipo": "poligono_fracao_area"
+   },
+   "transformacao": {
+    "tipo": "linear",
+    "minimo": 0.0,
+    "maximo": 1.0,
+    "direcao": "crescente",
+    "abaixo": 0.0,
+    "acima": 100.0
+   },
+   "peso": 1,
+   "classe_peso": "consequencia_normativa",
+   "ancora_peso": "escolhida",
+   "versao_fonte": "cadastro ambiental rural, extração de 08/2026"
+  },
+  {
+   "id": "polos",
+   "nome": "Polos geradores de tráfego",
+   "criterio": "poucos polos geradores de tráfego perto: veículo pesado quer via livre",
+   "fonte": "Malha aberta de pontos de interesse (comércio, saúde, ensino, terminais), extração de 08/2026",
+   "unidade": "m",
+   "direcao": "maior_melhor",
+   "base": "engenharia",
+   "camada": {
+    "tipo": "acervo",
+    "id": "motor_logistico_referencia/celulas",
+    "atributo": "f_polos"
+   },
+   "extrator": {
+    "tipo": "valor_pronto"
+   },
+   "transformacao": {
+    "tipo": "linear",
+    "minimo": 0.0,
+    "maximo": 100.0,
+    "direcao": "crescente",
+    "abaixo": 0.0,
+    "acima": 100.0
+   },
+   "peso": 1,
+   "classe_peso": "custo_medido",
+   "ancora_peso": "escolhida",
+   "nao_sustenta": "a nota deste fator no motor de referência nasce de uma COMPOSIÇÃO de mais de uma variável (ou de um veto interno) antes de virar 0-100; aqui a transformação é a identidade sobre o valor já em escala de favorabilidade, e a composição fica no extrator (item L3-01-c). Este fator não sustenta, sozinho, a afirmação de que a regra composta foi reproduzida a partir do dado bruto",
+   "versao_fonte": "malha aberta de 27/08/2026"
+  },
+  {
+   "id": "se",
+   "nome": "Subestação de distribuição",
+   "criterio": "subestação da distribuidora perto (ponto de conexão em média ou alta tensão)",
+   "fonte": "Base de distribuição geográfica da agência reguladora, edição de 31/12/2024, camadas de subestação e de transformação",
+   "unidade": "m",
+   "direcao": "menor_melhor",
+   "base": "engenharia",
+   "camada": {
+    "tipo": "acervo",
+    "id": "motor_logistico_referencia/celulas",
+    "atributo": "v_dist_se"
+   },
+   "extrator": {
+    "tipo": "ponto_distancia_mais_proximo"
+   },
+   "transformacao": {
+    "tipo": "linear",
+    "minimo": 2000.0,
+    "maximo": 15000.0,
+    "direcao": "decrescente",
+    "saida_min": 20.0,
+    "saida_max": 100.0,
+    "abaixo": 100.0,
+    "acima": 20.0
+   },
+   "peso": 2,
+   "classe_peso": "custo_medido",
+   "ancora_peso": "escolhida",
+   "versao_fonte": "base de distribuição de 31/12/2024"
+  },
+  {
+   "id": "cluster",
+   "nome": "Estoque construído existente",
+   "criterio": "aglomeração madura no entorno: mercado validado, mão de obra e serviços",
+   "fonte": "Malha aberta de edificações de armazenagem e indústria acima de 5.000 m², mais carteiras públicas com coordenada",
+   "unidade": "m² e contagem",
+   "direcao": "maior_melhor",
+   "base": "preferencia",
+   "camada": {
+    "tipo": "acervo",
+    "id": "motor_logistico_referencia/celulas",
+    "atributo": "f_cluster"
+   },
+   "extrator": {
+    "tipo": "valor_pronto"
+   },
+   "transformacao": {
+    "tipo": "linear",
+    "minimo": 0.0,
+    "maximo": 100.0,
+    "direcao": "crescente",
+    "abaixo": 0.0,
+    "acima": 100.0
+   },
+   "peso": 2,
+   "classe_peso": "apetite_de_risco",
+   "ancora_peso": "escolhida",
+   "nao_sustenta": "a nota deste fator no motor de referência nasce de uma COMPOSIÇÃO de mais de uma variável (ou de um veto interno) antes de virar 0-100; aqui a transformação é a identidade sobre o valor já em escala de favorabilidade, e a composição fica no extrator (item L3-01-c). Este fator não sustenta, sozinho, a afirmação de que a regra composta foi reproduzida a partir do dado bruto",
+   "versao_fonte": "malha aberta de 27/08/2026"
+  },
+  {
+   "id": "mine",
+   "nome": "Mineração",
+   "criterio": "sem lavra ativa nem sinal de mineração no imóvel",
+   "fonte": "Cadastro mineiro federal (processos com direito de lavra) mais série mensal Sentinel-2 de 2020 a 2026 por imóvel",
+   "unidade": "categoria de veredito",
+   "direcao": "maior_melhor",
+   "base": "norma",
+   "camada": {
+    "tipo": "acervo",
+    "id": "motor_logistico_referencia/celulas",
+    "atributo": "f_mine"
+   },
+   "extrator": {
+    "tipo": "poligono_atributo_ponderado"
+   },
+   "transformacao": {
+    "tipo": "categoria",
+    "notas": {
+     "veto_mineracao": 0.0,
+     "verificar_mineracao": 20.0,
+     "atencao_lavra": 50.0,
+     "atencao_anm": 80.0
+    },
+    "outros": 100.0
+   },
+   "peso": 5,
+   "classe_peso": "consequencia_normativa",
+   "ancora_peso": "escolhida",
+   "versao_fonte": "cadastro mineiro de 08/2026; Sentinel-2 até 08/2026"
+  }
+ ],
+ "restricoes": [
+  {
+   "id": "r_urbano",
+   "nome": "Urbano consolidado dominante",
+   "base": "precaucao",
+   "fonte": "MapBiomas coleção 10, 2024",
+   "camada": {
+    "tipo": "acervo",
+    "id": "mapbiomas/urbano_2024"
+   },
+   "regra": {
+    "tipo": "fracao_area_minima",
+    "fracao_minima": 0.6
+   },
+   "motivo": "urbano_ge_60"
+  },
+  {
+   "id": "r_zona_ambiental",
+   "nome": "Zona de proteção ambiental dominante",
+   "base": "norma",
+   "base_legal": "lei municipal de zoneamento do município da célula",
+   "fonte": "Cartas de zoneamento oficiais dos nove municípios",
+   "camada": {
+    "tipo": "acervo",
+    "id": "zoneamento/zonas",
+    "atributo": "categoria"
+   },
+   "regra": {
+    "tipo": "atributo_igual",
+    "atributo": "categoria",
+    "valores": [
+     "protecao_ambiental"
+    ]
+   },
+   "motivo": "zona_protecao_ambiental"
+  },
+  {
+   "id": "r_uc_integral",
+   "nome": "Unidade de conservação de proteção integral",
+   "base": "norma",
+   "base_legal": "Lei 9.985/2000 (sistema nacional de unidades de conservação)",
+   "fonte": "Cadastro nacional de unidades de conservação",
+   "camada": {
+    "tipo": "acervo",
+    "id": "unidades_conservacao/protecao_integral"
+   },
+   "regra": {
+    "tipo": "fracao_area_minima",
+    "fracao_minima": 0.1
+   },
+   "motivo": "uc_protecao_integral"
+  },
+  {
+   "id": "r_declividade",
+   "nome": "Declividade média igual ou acima de 30 %",
+   "base": "precaucao",
+   "fonte": "Copernicus GLO-30",
+   "camada": {
+    "tipo": "acervo",
+    "id": "glo30/declividade",
+    "banda": 1
+   },
+   "regra": {
+    "tipo": "valor_raster",
+    "valores": [
+     30
+    ]
+   },
+   "motivo": "declividade_ge_30"
+  },
+  {
+   "id": "r_terra_indigena",
+   "nome": "Terra indígena",
+   "base": "norma",
+   "base_legal": "Constituição, art. 231",
+   "fonte": "Órgão indigenista federal",
+   "camada": {
+    "tipo": "acervo",
+    "id": "terras_indigenas/limites"
+   },
+   "regra": {
+    "tipo": "intersecta"
+   },
+   "motivo": "terra_indigena"
+  },
+  {
+   "id": "r_embargo",
+   "nome": "Embargo ambiental federal",
+   "base": "norma",
+   "base_legal": "Decreto 6.514/2008",
+   "fonte": "Órgão ambiental federal (áreas embargadas)",
+   "camada": {
+    "tipo": "acervo",
+    "id": "embargos/areas"
+   },
+   "regra": {
+    "tipo": "intersecta"
+   },
+   "motivo": "embargo_ibama"
+  },
+  {
+   "id": "r_reserva_biosfera",
+   "nome": "Zona núcleo de reserva da biosfera",
+   "base": "norma",
+   "base_legal": "zoneamento estadual da reserva da biosfera",
+   "fonte": "Zoneamento estadual publicado em serviço de mapas",
+   "camada": {
+    "tipo": "acervo",
+    "id": "reserva_biosfera/zonas",
+    "atributo": "zona"
+   },
+   "regra": {
+    "tipo": "atributo_igual",
+    "atributo": "zona",
+    "valores": [
+     "nucleo"
+    ]
+   },
+   "motivo": "rbcv_nucleo"
+  },
+  {
+   "id": "r_uso_consolidado",
+   "nome": "Uso consolidado incompatível",
+   "base": "precaucao",
+   "fonte": "Malha aberta de uso do solo (água, aeroporto, cemitério, reserva natural)",
+   "camada": {
+    "tipo": "acervo",
+    "id": "uso_solo_aberto/poligonos",
+    "atributo": "uso"
+   },
+   "regra": {
+    "tipo": "atributo_igual",
+    "atributo": "uso",
+    "valores": [
+     "agua",
+     "aeroporto",
+     "cemiterio",
+     "reserva_natural"
+    ]
+   },
+   "motivo": "uso_consolidado"
+  }
+ ]
+}

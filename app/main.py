@@ -33,6 +33,7 @@ from app.amc.rotas import router as rotas_amc_presets
 from app.amc.rotas import router as rotas_amc
 from app.acervo import rotas as rotas_acervo
 from app.amc.rotas import router as rotas_amc
+from app.amc.rotas_criterios_feicao import router as rotas_criterios_feicao
 from app.amc.rotas_similaridade import router as rotas_similaridade
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
@@ -681,6 +682,9 @@ ROUTERS = [
     # --- notebook por inquilino (L2-16-b): /notebooks/{slug} (proxy JupyterLab com sessão; contêiner
     # sob demanda, rede interna, ceifa por ociosidade via job periódico notebooks.ceifar)
     rotas_notebooks,
+    # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,
+    # /fatores/{id}/amostras, /conjuntos/{id}/macro, /execucoes/{id}/micro, /execucoes
+    rotas_multiescala,
     # --- motor multicritério (L3-01-a/b): /api/amc/modelos, /api/amc/conjuntos, /api/amc/execucoes
     rotas_amc,
     # --- motor multicritério (AMC), localização semelhante (L3-17-similaridade): /api/amc/similaridade e
@@ -691,6 +695,9 @@ ROUTERS = [
     rotas_amc_presets,
     # --- motor multicritério (L3-01-a/b): /api/amc/modelos, /api/amc/conjuntos, /api/amc/execucoes
     rotas_amc,
+    # --- motor multicritério (AMC), critérios sobre a própria feição (L3-06-criterios-de-feicao):
+    # /api/amc/criterios-feicao e /api/amc/criterios-feicao/exportar; sem estado, como rotas_similaridade
+    rotas_criterios_feicao,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

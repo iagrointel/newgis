@@ -7,7 +7,7 @@ expõem defeito ficam `xfail(strict=True)` para virarem prova no dia do conserto
 Frentes:
 1. imutabilidade do modelo já executado (rota de atualização, rota parcial, reordenação de chaves, escrita direta
    na tabela com a role da aplicação);
-2. vazamento entre inquilinos nas 21 rotas de /api/amc (todas, não só as de id direto), por id de caminho, por
+2. vazamento entre inquilinos nas 18 rotas de /api/amc (todas, não só as de id direto), por id de caminho, por
    parâmetro de consulta, por corpo e pelo id do conjunto de unidades;
 3. a grade conferida por shapely/pyproj, com buraco, multipolígono, auto-interseção, antimeridiano e área ~0;
 4. a extrapolação declarada: o campo está marcado e a reta se sustenta em dois pontos medidos.
@@ -215,7 +215,18 @@ def test_adv_versao_forjada_no_banco_e_aceita_pelo_banco_mas_denunciada_pelo_rec
     conexao_plat_app.rollback()
 
 
-# ================================================================ 2. vazamento entre inquilinos: 21 rotas
+# ================================================================ 2. vazamento entre inquilinos: 18 rotas
+def _pedido_criterios_feicao() -> dict:
+    """Pedido mínimo do item L3-06, com dado do próprio chamador: nada de B entra aqui."""
+    return {
+        "feicoes": [{"id": "s1", "geometry": {"type": "Point", "coordinates": [-49.30, -16.70]},
+                     "properties": {"a": 1.0}},
+                    {"id": "s2", "geometry": {"type": "Point", "coordinates": [-49.29, -16.69]},
+                     "properties": {"a": 4.0}}],
+        "criterios": [{"id": "a", "tipo": "atributo", "campo": "a", "influencia": "positiva", "peso": 1}],
+    }
+
+
 def _rotas_amc() -> list[tuple[str, str]]:
     from tests.api.conftest import arquivo_openapi
 
@@ -223,11 +234,16 @@ def _rotas_amc() -> list[tuple[str, str]]:
     return sorted((m.upper(), p) for p, v in doc["paths"].items() if p.startswith("/api/amc") for m in v)
 
 
-def test_adv_as_21_rotas_de_amc_estao_todas_cobertas_por_este_ataque():
-    assert len(_rotas_amc()) == 21, _rotas_amc()
+# 23 rotas em /api/amc no contrato comitado: 18 do L3-01-a/b, a explicação do L3-01-f, as duas do
+# L3-17-similaridade e as duas do L3-06-criterios-de-feicao.
+ROTAS_AMC_ESPERADAS = 23
 
 
-def test_adv_nenhuma_das_21_rotas_entrega_dado_de_outro_inquilino(sessao_a, sessao_b, conexao_plat_app):
+def test_adv_as_rotas_de_amc_estao_todas_cobertas_por_este_ataque():
+    assert len(_rotas_amc()) == ROTAS_AMC_ESPERADAS, _rotas_amc()
+
+
+def test_adv_nenhuma_rota_de_amc_entrega_dado_de_outro_inquilino(sessao_a, sessao_b, conexao_plat_app):
     """A de B, lida por A: id no caminho, id no corpo, id no parâmetro de consulta e id do CONJUNTO de unidades.
     Qualquer 200 que carregue identificador de B é vazamento."""
     definicao_b = modelo_com_itens(sessao_b)
@@ -274,17 +290,20 @@ def test_adv_nenhuma_das_21_rotas_entrega_dado_de_outro_inquilino(sessao_a, sess
         ("GET", "/api/amc/execucoes/{execucao_id}", f"/api/amc/execucoes/{eid}", None),
         ("GET", "/api/amc/execucoes/{execucao_id}/resultados", f"/api/amc/execucoes/{eid}/resultados", None),
         ("DELETE", "/api/amc/execucoes/{execucao_id}", f"/api/amc/execucoes/{eid}", None),
-        # L3-01-f (explicação por unidade) e L3-17 (similaridade), que entraram depois das 18 primeiras.
-        # A similaridade não recebe identificador nenhum do inquilino — a matriz vem inteira no pedido —,
-        # então a sonda dela prova só que a rota não devolve marca de B por outra via.
         ("GET", "/api/amc/execucoes/{execucao_id}/unidades/{unidade_id}/explicacao",
          f"/api/amc/execucoes/{eid}/unidades/{MARCA_UNIDADE}/explicacao", None),
+        # L3-17 e L3-06: cálculo sobre o corpo do pedido, sem tocar em linha de inquilino nenhuma. A sonda passa
+        # por elas para provar o que importa aqui — a resposta a A não pode carregar marca de B — e porque a
+        # cobertura das rotas de /api/amc é cláusula deste ataque.
         ("POST", "/api/amc/similaridade", "/api/amc/similaridade",
-         {"unidades": {"A": {"chuva": 1200.0}, "B": {"chuva": 800.0}}, "referencias": ["A"]}),
-        ("POST", "/api/amc/similaridade/exportar", "/api/amc/similaridade/exportar",
-         {"unidades": {"A": {"chuva": 1200.0}, "B": {"chuva": 800.0}}, "referencias": ["A"]}),
+         {"unidades": {"s1": {"a": 1.0}, "s2": {"a": 2.0}}, "referencias": ["s1"]}),
+        ("POST", "/api/amc/similaridade/exportar", "/api/amc/similaridade/exportar?formato=csv",
+         {"unidades": {"s1": {"a": 1.0}, "s2": {"a": 2.0}}, "referencias": ["s1"]}),
+        ("POST", "/api/amc/criterios-feicao", "/api/amc/criterios-feicao", _pedido_criterios_feicao()),
+        ("POST", "/api/amc/criterios-feicao/exportar", "/api/amc/criterios-feicao/exportar?formato=csv",
+         _pedido_criterios_feicao()),
     ]
-    assert sorted((m, p) for m, p, _u, _c in sondas) == _rotas_amc(), "sonda não cobre as 21 rotas"
+    assert sorted((m, p) for m, p, _u, _c in sondas) == _rotas_amc(), "sonda não cobre todas as rotas de /api/amc"
     criados = []
     try:
         for metodo, _padrao, url, corpo in sondas:

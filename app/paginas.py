@@ -160,6 +160,10 @@ PAGINAS = {
     "/amc/motor": "amc_motor.html",
     # --- motor AMC: explicação da nota de uma unidade (L3-01-f-explicacao)
     "/amc/explicacao/{execucao_id}/{unidade_id}": "amc_explicacao.html",
+    # --- motor AMC: explicação da nota de uma unidade (L3-01-f-explicacao)
+    "/amc/explicacao/{execucao_id}/{unidade_id}": "amc_explicacao.html",
+    # --- motor AMC: critérios sobre a própria feição (L3-06-criterios-de-feicao)
+    "/amc/criterios-feicao": "amc_criterios_feicao.html",
 }
 router = APIRouter()
 

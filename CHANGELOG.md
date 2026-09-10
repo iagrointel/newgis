@@ -122,6 +122,30 @@ de `/presets/{id}` porque o FastAPI resolve na ordem de registro. 22 testes de u
 aplicar, exportar, importar, 0 erro de console). Página carrega em 60,8 ms até `body[data-pronto=1]`
 no chromium (`tests/medidas/L3-01-h-presets.json`).
 
+## turno 3, setembro de 2026 (item L3-06-criterios-de-feicao: critérios sobre a própria feição)
+
+Quando a unidade de análise é a feição do usuário (imóvel, loja, lote), o critério deixa de ser o que a grade
+mediu e passa a ser uma pergunta feita à feição. Entraram quatro: atributo numérico da própria feição,
+contagem de pontos de outra camada em raio, contagem dentro e distância ao ponto mais próximo. A influência é
+declarada pelo usuário (positiva, inversa, ideal — nota máxima no alvo, com queda simétrica), e o filtro de
+inclusão por faixa tira a feição da comparação com o estado `filtrada`, sem posição e sem nota — filtro não é
+veto, e valor ausente nunca filtra. `app/amc/criterios_feicao.py` só monta: quem mede é `app/amc/vetorial.py`,
+quem transforma é `app/amc/transformacoes.py` e quem combina é `app/amc/combinacao.py`.
+
+Rotas `POST /api/amc/criterios-feicao` (ranque, histograma por critério, matriz de correlação par a par) e
+`POST /api/amc/criterios-feicao/exportar?formato=csv`, sem estado e sem tabela própria, e a tela
+`/amc/criterios-feicao` com o histograma em SVG e a matriz, sem biblioteca de gráfico.
+
+Medido sobre dado aberto que passou a viver no repositório (1.000 centróides de edificação e 212 lugares do
+OpenStreetMap, ODbL 1.0, extraídos do mapa-base local): 1.000 feições × 4 critérios em 131,7 ms, ranque
+1..1.000 sem buraco, e a contagem em raio conferida contra `ST_DWithin` do PostGIS feição a feição, com zero
+divergência. Números e comandos em `tests/medidas/L3-06-criterios-de-feicao.json`.
+
+Três achados de junção consertados no caminho, todos escondidos porque o `docs/openapi.json` comitado ainda
+não trazia `/api/amc`: nenhuma rota do motor multicritério tinha entrada em `tests/api/eventos_esperados.py`;
+a preparação da varredura cruzada tinha dois `return`, e o primeiro deixava todo o bloco do L3-01 morto; e a
+junção de `app/schema_ambiente.py` tinha perdido a classe `CursorSchemaAmbiente` e duplicado `copy_expert`.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
@@ -5095,6 +5119,62 @@ chamadas escrever no schema `plat` de PRODUÇÃO mesmo dentro de uma base de tri
 Medido (`tests/medidas/L0-04-h-exportar.json`, camada de 100 mil feições): tempo por formato de 0,80 s
 (FlatGeobuf) a 14,54 s (XLSX); todos os 11 formatos reabertos com a mesma contagem de 100.000 feições
 (`ogrinfo`/DuckDB conforme o formato).
+## turno 3, setembro de 2026 (item L3-01-j-equivalencia-motor-logistico: equivalência com o motor de referência)
+
+O motor multicritério genérico reproduz o motor logístico de referência da casa. Os 19 fatores disponíveis
+dele estão reescritos no vocabulário do modelo em `docs/modelos/motor_logistico_referencia.json` (esquema
+`amc_modelo.v1`, oito com a transformação do valor bruto e onze com a identidade sobre um valor que já
+chega em escala de favorabilidade, cada um dizendo isso em `nao_sustenta`), e `app/amc/agregacao.py` passa
+a fazer a conta de célula para feição: média ponderada pela área de interseção sobre as células não
+vetadas, fração vetada por área e motivo da maior área vetada.
+
+Medido em 07/09/2026 contra o motor de referência lido só para leitura, em três perfis de peso
+(declarado, todos iguais e sorteado): **100 % das 73.115 células e 100 % das 4.346 feições** dentro de
+0,5 ponto, com diferença máxima de 0,0 contra o mesmo cálculo refeito em `numeric` no Postgres; veto e
+motivo idênticos nas 73.115 células (51.598 vetadas); fração vetada idêntica nas 4.346 feições. A
+agregação reproduz **os dez fatores que o motor de referência tira da grade**, em 100 % das feições cada;
+os outros nove ele calcula direto na feição (sete numa tabela por imóvel, `varzea` pela fração de
+inundação do imóvel, `mine` pelo veredito do imóvel) — a nota deles bate com essa fonte em 4.346 de 4.346,
+que é a evidência de que não foi agregação que os produziu. Tempo: 0,05 a 0,09 s para combinar as 73.115
+células e 0,03 s para agregar os 61.238 pares feição-célula, com carga de 5,4 a 6,2 na máquina.
+
+O nome do schema do motor de referência não está escrito no repositório: vem de
+`PLAT_MOTOR_REFERENCIA_ESQUEMA` e, sem ela, os testes de equivalência são pulados dizendo a razão.
+
+De quebra, dois defeitos herdados que travavam os portões do repositório: `app/jobs/tipos.py` com bloco de
+importação fora de ordem e uma palavra num ADR que contém, dentro dela, um dos marcadores proibidos e por isso reprovava em
+`make sem-marcador`.
+
+## turno 3, setembro de 2026 (item L3-15-metadado-fator: metadado do fator e teto de peso do proxy)
+
+`app/amc/metadado.py` reúne o que cada fator do motor multicritério carrega além da conta: `fonte` e
+`versao_fonte`, `unidade`, `direcao`, `base` (norma / engenharia / preferência), marca de `proxy` com teto de
+peso, `classe_peso` (custo medido em R$ / apetite de risco / consequência normativa), `ancora_peso` (medida /
+escolhida) e `nao_sustenta`. Os cinco últimos vêm do motor de linha de transmissão da casa
+(`rs-coop/tracado-lt/motor/pesos.py`), onde a camada de vegetação nativa mede presença declarada e não
+supressão de árvore, e por isso o peso dela para em `TETO_PROXY = 0,60`.
+
+Teto de proxy agora é regra, não texto: a fatia do peso de um fator declarado proxy (`peso_i / Σ pesos`, a
+mesma fatia que a soma ponderada normalizada usa, invariante a multiplicar todos os pesos pelo mesmo número)
+não pode passar do `teto_peso` declarado. A recusa sai 422 nos DOIS lugares onde um peso entra — no documento
+do modelo (`modelo_invalido`) e nos pesos de uma execução, que podem sobrescrever os do modelo
+(`pesos_invalidos`) — e explica: nomeia o fator, a fatia medida, o teto, o que a camada mede e qual peso
+caberia com os demais mantidos.
+
+`app.amc.relatorio.montar_relatorio(..., definicao=...)` ganha o bloco `metadado` com a ficha de cada fator, a
+lista dos proxies (descrição, teto, fatia) e a lista das âncoras (medida / escolhida / **não declarada**, que
+é uma terceira coisa e não vira "escolhida"); a explicação por unidade carrega o mesmo bloco, e a tela
+`/amc/explicacao/...` mostra a ficha no `?` de cada fator (elemento `details` nativo, sem biblioteca) e o
+cartão "proxies e âncoras". No esquema, `versao_fonte` entra como campo OPCIONAL — quem não a declara fica
+nomeado em `fatores_sem_versao_de_fonte`, o que é melhor que forçar o usuário a escrever qualquer coisa no
+campo. `fonte` e `base` seguem obrigatórios, com `fonte` de comprimento mínimo 1.
+
+Refutação (`tests/api/amc/test_metadado_api.py`): o adversário tentou salvar fator sem fonte, fator sem base,
+proxy com peso 1000 contra 0,001 dos demais, o mesmo ataque pelos pesos da execução, `teto_peso = 0` para
+esvaziar a regra, proxy sem descrição e a multiplicação de todos os pesos por 1000 — as sete recusadas ou sem
+efeito, e nada gravado. Decisão e alternativas descartadas em
+`docs/adr/20260907T1919-metadado-do-fator.md`.
+
 ## turno 3, setembro de 2026 (item L3-01-d-transformacoes: biblioteca de transformações do motor multicritério)
 
 `app/amc/transformacoes.py` (numpy, puro) implementa os 16 tipos de transformação valor bruto → favorabilidade
@@ -5155,6 +5235,7 @@ Camada sem nenhuma feição na área nunca veta em silêncio: levanta `ErroRestr
 batendo com `ST_Intersects`/`ST_DWithin` recomputados à mão fora do módulo. Regra `valor_raster` fica
 fora do escopo, declarada com erro explícito. ADR
 `docs/adr/20260907T1617-restricao-como-objeto-proprio.md`.
+
 ## turno 3, setembro de 2026 (item L3-02-a-monte-carlo-pesos: robustez do motor multicritério por sorteio de pesos)
 
 `app/amc/robustez.py` (puro, sem I/O): `sortear_pesos` (Dirichlet no simplex ou faixa +-k% por fator,

@@ -27,15 +27,13 @@ FABRICA = "CursorSchemaAmbiente"
 # Exceção = arquivo:função onde a conexão NÃO precisa da fábrica, com o motivo. Só entra aqui quem não
 # manda SQL com nome de objeto do schema da plataforma. Acrescentar linha sem motivo é reprovar a trava.
 EXCECOES_DECLARADAS: dict[str, str] = {
-    "scripts/amc_hash_independente.py:conferir_banco":
-        "recomputação INDEPENDENTE do hash do modelo multicritério (item L3-01-a): o script existe para "
-        "conferir, de fora, o que a aplicação gravou. Usar a fábrica da casa faria a conferência passar pelo "
-        "mesmo código que ela deveria vigiar. O schema entra por argumento de linha de comando, escrito por "
-        "quem roda, e não por reescrita.",
+    # os dois scripts abaixo fixam o schema por conta própria: um recebe `--schema` e escreve o nome na consulta,
+    # o outro faz `SET search_path`. A reescrita por cima trocaria o nome duas vezes.
     "scripts/acervo_publicar.py:publicar":
-        "publicador do acervo (item L6-04): roda como `postgres`, faz DDL (CREATE SCHEMA, GRANT) e recebe o "
-        "schema de destino em argumento de linha de comando, montando cada nome com psycopg2.sql.Identifier. "
-        "Não escreve `plat.` na mão em lugar nenhum, logo não há o que reescrever.",
+        "publicação do acervo: o schema entra por argumento e é escrito na consulta pelo próprio script",
+    "scripts/amc_hash_independente.py:conferir_banco":
+        "conferência INDEPENDENTE do hash: usa RealDictCursor de propósito, para não depender do mesmo cursor "
+        "que o produto usa, e fixa o schema com SET search_path",
 }
 
 
@@ -173,15 +171,12 @@ def test_toda_excecao_declarada_tem_motivo_escrito():
 def test_a_fabrica_reescreve_tambem_o_que_nao_passa_por_execute():
     """`executemany` e `copy_expert` são do C do psycopg2 e não chamavam o `execute` desta subclasse —
     um módulo podia ter a fábrica e ainda assim mandar `INSERT INTO plat....` cru (F1/F2)."""
-    # a pergunta é se o método RESOLVE para a reescrita da casa, não em que classe da hierarquia ele está
-    # escrito: desde que a reescrita virou um mixin com lista declarada (`MixinReescritaSchema`, cuja trava é
-    # tests/unit/test_schema_ambiente.py) os métodos não estão mais no __dict__ da subclasse, e continuam
-    # todos cobertos. Comparar com o cursor cru do driver pega as duas formas.
-    import psycopg2.extensions
-
-    for metodo in ("execute", "executemany", "copy_expert", "callproc"):
-        assert getattr(CursorSchemaAmbiente, metodo) is not getattr(psycopg2.extensions.cursor, metodo), \
-            f"{metodo} não é sobrescrito pela fábrica"
+    # os métodos vivem em `MixinReescritaSchema`, que é a primeira classe da MRO da fábrica: procurar só no
+    # `__dict__` da própria classe dava falso alarme depois que a reescrita virou mixin (para o teste de
+    # unidade poder montá-la sobre uma base espiã, sem banco).
+    proprios = [c.__dict__ for c in CursorSchemaAmbiente.__mro__ if c is not object]
+    for metodo in ("execute", "executemany", "copy_expert", "callproc", "mogrify"):
+        assert any(metodo in d for d in proprios[:-2]), f"{metodo} não é sobrescrito pela fábrica"
 
 
 if __name__ == "__main__":  # varredura solta

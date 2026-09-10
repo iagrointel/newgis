@@ -364,6 +364,39 @@ REDEFINICAO_JANELA_MIN = 15               # limite de taxa (refutação do item:
 REDEFINICAO_MAX_JANELA = 5                # no máximo 5 pedidos por (inquilino, e-mail) a cada REDEFINICAO_JANELA_MIN
 AVISO_EXPIRACAO_DIAS = (90, 30, 7, 1)     # avisos de expiração de token de serviço (hipótese do item; como a Esri)
 
+# --- grades aninhadas do motor multicritério (L3-19-multiescala; migração 20260906T1640_multiescala.sql):
+# macro (grosseira, ex. 1 km) triando regiões e micro (fina, ex. 100 m) gerada SÓ dentro das aprovadas.
+# ESCALA_CELULAS_MAX vale tanto para a grade macro inteira quanto para o refino micro (aprovadas × k²) — é o
+# mesmo teto de proteção de RAM/disco (a casa está com o disco a 98 %, item não pode gerar grade sem freio);
+# 250.000 células cobrem, por exemplo, uma grade macro de 500×500 ou um refino de 500 regiões aprovadas a
+# k=22. ESCALA_LIGACOES_MAX freia célula × fator (a tabela `escala_fator_celula` é uma LINHA por par).
+ESCALA_AREA_VERTICES_MAX = 5_000      # vértices do polígono de estudo (mesma ordem de grandeza de INGESTAO_*)
+ESCALA_RESOLUCAO_MIN_M = 1.0
+ESCALA_RESOLUCAO_MAX_M = 100_000.0
+ESCALA_CELULAS_MAX = 250_000
+ESCALA_FATORES_MAX = 20
+ESCALA_LIGACOES_MAX = 2_000_000
+ESCALA_APROVACAO_TIPOS = ("limiar", "top_pct")
+ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) da migração
+ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
+ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
+ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+# --- motor multicritério (L3-01-a/b; ADR 0016, decisões A1/A3/A7 do L3L6_CONCEITO). Os tetos de unidade e de
+# área não são arbitrários: MEDIDO 06/09/2026 nesta máquina, uma grade quadrada de 250 m sobre 2.000 km²
+# (32.000 células) leva ~13 s e ocupa ~19 MB; `df -h /mnt/pgdata` mostra 98 % de uso, então 1 milhão de
+# unidades num conjunto (≈ 600 MB com geometria e índice) é o máximo que cabe com folga. Acima disso a API
+# recusa com `grade_grande_demais` e diz para aumentar o lado ou reduzir a área, nunca corta em silêncio
+AMC_LADO_M_MIN = 10.0                 # abaixo disso a grade deixa de ser unidade de análise e vira pixel
+AMC_LADO_M_MAX = 100_000.0            # 100 km: célula maior que isto não cabe em nenhuma zona UTM sem distorcer
+AMC_AREA_ESTUDO_KM2_MAX = 2_000_000.0 # ~1/4 do Brasil: acima disso a zona UTM única do centróide perde sentido
+AMC_UNIDADES_MAX = 1_000_000          # unidades por conjunto (grade ou feições)
+AMC_FEICOES_INLINE_MAX = 20_000       # feições por envio síncrono de conjunto do tipo 'feicoes'
+AMC_MODELOS_POR_INQUILINO = 500       # modelos vivos (apagado_em IS NULL) por inquilino
+AMC_CONJUNTOS_POR_INQUILINO = 200     # conjuntos de unidades por inquilino
+AMC_VERSOES_POR_MODELO = 500          # versões de um modelo (cada edição cria uma; imutáveis, nunca apagadas)
+AMC_UNIDADES_PAGINA_MAX = 5_000       # unidades por página em GET /api/amc/conjuntos/{id}/unidades
+AMC_RESULTADOS_PAGINA_MAX = 5_000     # linhas por página em GET /api/amc/execucoes/{id}/resultados
+
 # --- imagens/STAC (L1-01-a-pgstac-e-stac-api-por-inquilino; app/imagens/): catálogo é o pgstac (schema
 # `pgstac`, global ao banco), isolado por inquilino por convenção de nome de coleção `<tenant_id>-<slug>`,
 # nunca por RLS do pgstac (ele não tem). STAC_SLUG_MAX é o que sobra de 63 bytes (limite de identificador do
@@ -1019,3 +1052,11 @@ AMC_PRESET_FATORES_MAX = 200          # fatores declarados por preset (mesma ord
 AMC_PRESET_FATOR_NOME_MAX = 120       # nome de fator dentro do preset
 AMC_PRESET_DESCRICAO_MAX = 2000       # mesmo teto de CHECK(length(descricao)<=2000) da migração
 AMC_PRESET_UNIDADES_MAX = 250_000     # unidades (linhas da matriz) por aplicação síncrona
+# --- critérios sobre a própria feição (L3-06-criterios-de-feicao): a avaliação é SÍNCRONA e roda na tela,
+# sobre as feições que chegam no pedido (com os atributos delas), então o teto é o que a requisição responde
+# em segundos. Acima do teto a API recusa com `acima_do_sincrono` e manda para o caminho de lote que já
+# existe (conjunto de unidades + POST /api/amc/execucoes, job `amc.executar`); nunca corta a lista em silêncio.
+AMC_CRITERIOS_FEICAO_MAX = 5_000        # feições por avaliação síncrona (na tela)
+AMC_CRITERIOS_POR_AVALIACAO = 20        # critérios por avaliação (o painel compara par a par: 20 = 400 células)
+AMC_CRITERIO_RAIO_M_MAX = 100_000.0     # 100 km: raio maior que isto não vale numa única zona UTM
+AMC_CRITERIO_CAMADA_PONTOS_MAX = 200_000  # pontos por camada auxiliar num pedido (raio, contenção, distância)

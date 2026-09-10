@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Critérios de feição · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  #pedido { width: 100%; min-height: 12rem; font-family: ui-monospace, monospace; font-size: .85rem; }
+  #tabela-ranque td, #tabela-ranque th { padding: .3rem .6rem; text-align: left; white-space: nowrap; }
+  tr[data-estado="filtrada"] { opacity: .6; }
+  .histogramas { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 1rem; }
+  .histograma figcaption { color: var(--fraco); font-size: .85rem; }
+  #tabela-correlacao td, #tabela-correlacao th { padding: .3rem .5rem; text-align: right; }
+  #tabela-correlacao th:first-child, #tabela-correlacao td:first-child { text-align: left; }
+  #tabela-correlacao td[data-sinal="positivo"] { background: rgba(0, 110, 60, .18); }
+  #tabela-correlacao td[data-sinal="negativo"] { background: rgba(150, 40, 30, .18); }
+  #tabela-correlacao td[data-sinal="sem"] { color: var(--fraco); }
+</style>
+</head>
+<body class="tela">
+<a class="pular" href="#principal">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1>Critérios sobre a feição</h1>
+    <p class="fraco">análise / beta privado · triagem: sinal, não prova</p>
+    <plat-aviso id="aviso"></plat-aviso>
+
+    <section class="cartao" aria-labelledby="t-pedido">
+      <h2 id="t-pedido">pedido</h2>
+      <p class="fraco">feições do usuário, critérios e camadas de apoio, em JSON. Os pesos abaixo são os que o
+        usuário escolheu para este projeto, não uma medida.</p>
+      <label for="pedido">pedido em JSON</label>
+      <textarea id="pedido" spellcheck="false" aria-describedby="t-pedido"></textarea>
+      <p>
+        <button type="button" id="rodar">avaliar</button>
+        <button type="button" id="baixar-csv" class="pequeno">exportar CSV</button>
+      </p>
+    </section>
+
+    <section class="cartao" id="resumo-cartao" aria-labelledby="t-resumo" hidden>
+      <h2 id="t-resumo">resumo</h2>
+      <dl id="resumo-lista"></dl>
+      <ul id="avisos-lista"></ul>
+    </section>
+
+    <section class="cartao" id="ranque-cartao" aria-labelledby="t-ranque" hidden>
+      <h2 id="t-ranque">ranque</h2>
+      <div class="tabela-rolagem">
+        <table id="tabela-ranque">
+          <thead><tr id="ranque-cabecalho"></tr></thead>
+          <tbody id="ranque-corpo"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="cartao" id="histogramas-cartao" aria-labelledby="t-histogramas" hidden>
+      <h2 id="t-histogramas">histograma por critério</h2>
+      <div class="histogramas" id="histogramas"></div>
+    </section>
+
+    <section class="cartao" id="correlacao-cartao" aria-labelledby="t-correlacao" hidden>
+      <h2 id="t-correlacao">correlação entre critérios</h2>
+      <p class="fraco" id="correlacao-nota"></p>
+      <div class="tabela-rolagem">
+        <table id="tabela-correlacao">
+          <thead><tr id="correlacao-cabecalho"></tr></thead>
+          <tbody id="correlacao-corpo"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/js/amc/criterios_feicao_pagina.js"></script>
+</body>
+</html>

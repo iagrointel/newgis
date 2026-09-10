@@ -1,0 +1,58 @@
+{
+  "item": "L3-15-metadado-fator",
+  "medido_em": "2026-09-07T19:19:00Z",
+  "carga_1min": 2.74,
+  "ram_livre_gb": 7,
+  "maquina": "servidor principal, 12 nucleos",
+  "portao_de_pronto": [
+    {
+      "clausula": "peso acima do teto de proxy recusado com explicacao",
+      "veredito": "passou",
+      "prova": "tests/unit/test_amc_metadado.py::test_proxy_acima_do_teto_e_recusado_com_explicacao, ::test_validar_levanta_422_com_a_violacao_do_teto, ::test_teto_nos_pesos_da_execucao; tests/api/amc/test_metadado_api.py::test_adversario_salva_proxy_com_peso_maximo, ::test_adversario_estoura_o_teto_pelos_pesos_da_execucao",
+      "detalhe": "regra: peso_i / soma(pesos) <= proxy.teto_peso (padrao 0,60). Recusa 422 modelo_invalido no documento e 422 pesos_invalidos nos pesos da execucao. A mensagem nomeia o fator, a fatia medida, o teto, o que a camada mede e o peso que caberia com os demais pesos mantidos.",
+      "exemplo_de_mensagem": "o fator 'veg' esta declarado como proxy (a camada mede presenca declarada de vegetacao, nao supressao de arvore) e ficaria com 100.0% do peso do modelo, acima do teto declarado de 60.0%. Camada que mede grandeza diferente do gatilho nao pode pesar como se medisse o gatilho: subir o peso amplifica o erro em vez de corrigi-lo. reduza o peso de 'veg' para no maximo 0.0015 (mantidos os demais pesos, que somam 0.001), aumente o peso dos outros fatores, ou retire a marca de proxy se a camada passar a medir o proprio gatilho."
+    },
+    {
+      "clausula": "relatorio lista proxies e ancoras",
+      "veredito": "passou",
+      "prova": "tests/unit/test_amc_metadado.py::test_relatorio_lista_proxies_e_ancoras, ::test_relatorio_sem_proxy_diz_que_nao_ha, ::test_relatorio_usa_os_pesos_da_execucao_na_fatia, ::test_explicacao_leva_a_ficha_de_cada_fator_e_o_bloco_de_proxies",
+      "detalhe": "app.amc.relatorio.montar_relatorio(..., definicao=...) devolve metadado.proxies (id, nome, descricao, teto_peso, fatia_do_peso), metadado.ancoras (medida / escolhida / nao_declarada), metadado.fatores_sem_versao_de_fonte e os dois avisos. A explicacao por unidade (rota /api/amc/execucoes/{id}/unidades/{id}/explicacao) carrega o mesmo bloco e a ficha por fator."
+    },
+    {
+      "clausula": "JSON Schema exige base e fonte",
+      "veredito": "passou",
+      "prova": "tests/unit/test_amc_metadado.py::test_esquema_exige_campo_no_fator[base|fonte], ::test_esquema_exige_campo_na_restricao[base|fonte], ::test_base_so_aceita_os_tres_valores, ::test_fonte_vazia_e_recusada; tests/api/amc/test_metadado_api.py::test_adversario_salva_fator_sem_fonte, ::test_adversario_salva_fator_sem_base",
+      "detalhe": "docs/esquemas/amc_modelo.v1.json: $defs.fator.required e $defs.restricao.required contem 'base' e 'fonte'. fonte com minLength 1 (string vazia recusada); base restrita a norma|engenharia|preferencia. versao_fonte entra como OPCIONAL e o relatorio nomeia quem nao a declarou."
+    },
+    {
+      "clausula": "teste",
+      "veredito": "passou",
+      "prova": "24 testes em tests/unit/test_amc_metadado.py e 8 em tests/api/amc/test_metadado_api.py, todos verdes",
+      "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/unit/test_amc_metadado.py tests/api/amc/test_metadado_api.py -q"
+    }
+  ],
+  "refutacao_exigida": {
+    "texto": "adversario tenta salvar fator sem fonte e proxy com peso maximo",
+    "veredito": "resistiu",
+    "tentativas": [
+      {"ataque": "fator sem fonte, por /modelos/validar e por /modelos", "resposta": "422 modelo_invalido; contagem de modelos do inquilino inalterada"},
+      {"ataque": "fator sem base", "resposta": "422 modelo_invalido"},
+      {"ataque": "proxy com peso 1000 e os demais em 0,001 (fatia 100,0%)", "resposta": "422 com a clausula do teto e a explicacao; nada gravado"},
+      {"ataque": "mesma coisa pelos pesos da execucao, com o modelo dentro do teto", "resposta": "422 pesos_invalidos; o mesmo pedido com pesos iguais passa (201)"},
+      {"ataque": "teto_peso = 0 para esvaziar a regra", "resposta": "422: o esquema exige exclusiveMinimum 0"},
+      {"ataque": "proxy declarado sem descricao", "resposta": "422: descricao com minLength 1"},
+      {"ataque": "multiplicar todos os pesos por 1000 para escapar do teto", "resposta": "veredito inalterado: a regra e sobre a fatia, nao sobre o valor absoluto"},
+      {"ataque": "tirar a marca de proxy e por peso maximo", "resposta": "aceito por desenho: o teto vale para quem se declara proxy; a declaracao fica visivel na ficha e no relatorio"}
+    ]
+  },
+  "fora_de_escopo": [
+    "tela 'Motor' (item L3-01-g, pendente): a ficha e o cartao de proxies foram postos na tela que existe hoje, /amc/explicacao/<execucao>/<unidade>; quando o L3-01-g nascer, reusa app.amc.metadado.fichas",
+    "relatorio/metodo em PDF (item L3-01-i, pendente): o bloco 'metadado' ja sai serializado e pronto, mas nao existe ainda rota que o publique em PDF",
+    "conferencia da tela em navegador: google-chrome sem interface quebra nesta maquina (CLAUDE.md), entao a prova da tela e ESTRUTURAL (presenca dos elementos, dos rotulos e das chaves lidas da API)"
+  ],
+  "pendencia_da_dependencia": {
+    "item": "L3-01-d-transformacoes",
+    "estado": "PARCIAL",
+    "efeito_neste_item": "nenhum: o metadado do fator nao depende do tipo de transformacao. O ramo deste item nasce do commit e9ecc378 (ponta de wt/il301dtrans) para ter o esquema, o relatorio e a explicacao no mesmo lugar."
+  }
+}
