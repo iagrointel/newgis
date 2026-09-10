@@ -26,11 +26,6 @@ SCHEMA_TRABALHO_PADRAO = "plat_trabalho"
 # sem espaço entre o parêntese e a aspa (conferido: as 16+12 ocorrências da árvore batem 1 a 1).
 _SCHEMA = re.compile(r"(?<!current_setting\(')(?<!set_config\(')\bplat\b")
 _TRABALHO = re.compile(r"\bplat_trabalho\b")
-# item L6-01-b: as views de publicação sem cópia moram no schema `plat_acervo` e são de
-# `plat_acervo_publicador`. Nenhum dos dois casa com `\bplat\b` (o `_` seguinte mata a fronteira de palavra),
-# então sem esta linha uma trilha/homologação escreveria no `plat_acervo` de PRODUÇÃO. O grupo opcional
-# mantém o sufixo do papel: plat_acervo_publicador -> <schema>_acervo_publicador.
-_ACERVO = re.compile(r"\bplat_acervo(_publicador)?\b")
 
 
 def esquemas_do_ambiente() -> tuple[str, str]:
@@ -55,7 +50,6 @@ def reescrever_schema(sql: str, schema: str = SCHEMA_PADRAO, schema_trabalho: st
     """Troca todo `plat`/`plat_trabalho` que é schema (não GUC) pelo nome do ambiente atual. No-op
     quando os dois já são o padrão — é isso que garante custo zero em produção."""
     if schema != SCHEMA_PADRAO:
-        sql = _ACERVO.sub(lambda m: f"{schema}_acervo{m.group(1) or ''}", sql)
         sql = _SCHEMA.sub(schema, sql)
     if schema_trabalho != SCHEMA_TRABALHO_PADRAO:
         sql = _TRABALHO.sub(schema_trabalho, sql)
@@ -82,13 +76,12 @@ class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
 
     def executemany(self, query, vars_list):
         # mesma classe de defeito do bytes/`execute_values` acima, achada agora em `cur.executemany`
-        # (usado por `POST /api/papeis` para `plat.papel_privilegio`, app/auth/rotas_usuarios.py, e pelo
-        # item L3-19-multiescala em execuções de grade aninhada): psycopg2 implementa executemany em C
-        # chamando pq_execute diretamente por linha, NUNCA através do `self.execute()` Python —
-        # subclassificar só `execute()` não intercepta nada aqui. Sem esta sobrecarga, o INSERT ia com o
-        # literal `plat.` para o schema de PRODUÇÃO em qualquer ambiente isolado (trilha/homologação), e a
-        # permissão negada aparecia traduzida como "operação fora do inquilino da sessão" — não uma
-        # checagem de inquilino, um schema errado na consulta.
+        # (usado por `POST /api/papeis` para `plat.papel_privilegio`, app/auth/rotas_usuarios.py):
+        # psycopg2 implementa executemany em C chamando pq_execute diretamente por linha, NUNCA
+        # através do `self.execute()` Python — subclassificar só `execute()` não intercepta nada aqui.
+        # Sem esta sobrecarga, o INSERT ia com o literal `plat.` para o schema de PRODUÇÃO em qualquer
+        # ambiente isolado (trilha/homologação), e a permissão negada aparecia traduzida como "operação
+        # fora do inquilino da sessão" — não uma checagem de inquilino, um schema errado na consulta.
         if isinstance(query, (bytes, bytearray)):
             query = self._texto(query)
         if isinstance(query, str):
@@ -109,29 +102,10 @@ class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
 
         return bytes(query).decode(_ext.encodings[self.connection.encoding])
 
-    def mogrify(self, query, *args, **kwargs):
-        # `cur.mogrify` monta o texto final da consulta sem mandá-la ao servidor; quem a usa para depois
-        # concatenar num COPY/INSERT precisa do schema do ambiente já trocado (item L0-02-tenant-auth).
-        if isinstance(query, (bytes, bytearray)):
-            query = self._texto(query)
-        if isinstance(query, str):
-            query = self._reescrever(query)
-        return super().mogrify(query, *args, **kwargs)
-
     def callproc(self, procname, *args, **kwargs):
         if isinstance(procname, str):
             procname = self._reescrever(procname)
         return super().callproc(procname, *args, **kwargs)
-
-    def mogrify(self, query, *args, **kwargs):
-        """Idem: `mogrify` produz o texto final do comando (o `-sql` do ogr2ogr na exportação sai daqui).
-        A sobrecarga de `executemany`/`copy_expert` que este item também trazia já está em master, com o
-        tratamento de bytes; sobrou aqui só o `mogrify`, que master não cobria."""
-        if isinstance(query, (bytes, bytearray)):
-            query = self._texto(query)
-        if isinstance(query, str):
-            query = self._reescrever(query)
-        return super().mogrify(query, *args, **kwargs)
 
     @staticmethod
     def _reescrever(sql: str) -> str:
