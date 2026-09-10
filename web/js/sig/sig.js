@@ -12,7 +12,7 @@
 import '../base/componentes.js';
 import { carregar as carregarIdioma, t } from '../base/i18n.js';
 import { pronto } from '../base/layout.js';
-import { h, limpar } from '../base/dom.js';
+import { h, limpar, menuContexto } from '../base/dom.js';
 import { exigirSessao } from '../auth/sessao.js';
 import { obter, enviar, alterar } from '../base/api.js';
 import { construirEstilo, camadasRede, ATRIBUICAO_OSM } from '../mapa/estilo.js';
@@ -20,7 +20,8 @@ import { carregar as carregarMapaDoc, camadasDoTopo, salvarOrdem, alternarVisive
 import { Catalogo } from '../mapa/catalogo.js';
 import { Arvore } from '../camadas.js';
 import { Legenda } from '../legenda.js';
-import { instalarPopup, atributosDaFeicao } from '../mapa/atributos.js';
+import { instalarPopup, montarTabelaPopup } from '../mapa/atributos.js';
+import { montarGaveta, fonteDeCamada, fonteDeRede } from '../mapa/tabela_atributos.js';
 import { Medicao } from '../mapa/medicao.js';
 import { interpretarCoordenada, sugerir, geocodificar } from '../mapa/busca.js';
 import { paraPng, paraPdf, escalaNumerica } from '../mapa/impressao.js';
@@ -439,19 +440,15 @@ function instalarPopupRede(map, maplibregl, redesAtivas) {
     if (!feicoes.length) return;
     const caixa = h('div', { class: 'popup-conteudo' });
     for (const feicao of feicoes.slice(0, 5)) {
-      const tabela = h('table', { class: 'popup-tabela' });
-      const corpo = h('tbody');
-      for (const at of atributosDaFeicao(feicao, null)) {
-        corpo.append(h('tr', {}, h('th', { scope: 'row' }, at.nome), h('td', { class: at.nulo ? 'nulo' : '' }, at.valor)));
-      }
-      tabela.append(corpo);
+      const campos = Object.keys(feicao.properties || {}).filter((nome) => nome !== 'id').map((nome) => ({ nome }));
+      const tabela = montarTabelaPopup(feicao, campos);
       caixa.append(h('div', { class: 'popup-camada' }, h('h3', {}, feicao.properties.tipo || '—'), tabela));
     }
     popup = new maplibregl.Popup({ closeButton: true, maxWidth: '360px', className: 'popup-plat' }).setLngLat(ev.lngLat).setDOMContent(caixa).addTo(map);
   });
 }
 
-async function instalarRede(map, maplibregl, { ativarTudo = false } = {}) {
+async function instalarRede(map, maplibregl, { ativarTudo = false, gavetaTabela } = {}) {
   const status = el('rede-status');
   const lista = el('rede-lista');
   const redesAtivas = new Map(); // rede.id -> {..., bbox}: o bbox fica guardado para o enquadramento
@@ -483,6 +480,7 @@ async function instalarRede(map, maplibregl, { ativarTudo = false } = {}) {
   const desligar = (redeId) => {
     const info = redesAtivas.get(redeId);
     if (!info) return;
+    if (gavetaTabela.fonteAtual()?.chave.startsWith(`rede:${redeId}:`)) gavetaTabela.fechar();
     for (const layerId of [info.layerLinhas, info.layerPontos]) if (map.getLayer(layerId)) map.removeLayer(layerId);
     for (const fonteId of [info.fonteLinhas, info.fontePontos]) if (map.getSource(fonteId)) map.removeSource(fonteId);
     redesAtivas.delete(redeId);
@@ -509,6 +507,18 @@ async function instalarRede(map, maplibregl, { ativarTudo = false } = {}) {
         h('span', { class: 'camada-titulo' }, rede.nome),
         h('span', { class: 'camada-tipo' }, rede.disciplina)),
       contagem);
+    const abrirMenu = (x, y) => menuContexto([{ rotulo: t('mapa.camadas_mostrar_tabela'),
+      aoClicar: () => gavetaTabela.abrir(fonteDeRede(map, {
+        id: rede.id, nome: rede.nome, ...(redesAtivas.get(rede.id) || {}),
+      }, 'pontos')),
+    }], x, y);
+    li.addEventListener('contextmenu', (ev) => {
+      ev.preventDefault(); ev.stopPropagation(); abrirMenu(ev.clientX, ev.clientY);
+    });
+    li.querySelector('.camada-cabecalho').append(h('button', { type: 'button', class: 'botao-mini',
+      'aria-label': t('mapa.camadas_menu'), 'aria-haspopup': 'menu', onclick: (ev) => {
+        const r = ev.currentTarget.getBoundingClientRect(); abrirMenu(r.left, r.bottom);
+      } }, '⋮'));
     return { li, caixa, aoAlternar };
   };
 
@@ -736,9 +746,25 @@ async function iniciar() {
   definirAtribuicao(BASES[0].atribuicao);
 
   const catalogo = new Catalogo(map);
+  const gavetaTabela = montarGaveta({
+    elGaveta: el('tabela-gaveta'), elAlca: el('tabela-gaveta-alca'),
+    elTitulo: el('tabela-gaveta-titulo'), elContagem: el('tabela-gaveta-contagem'),
+    elFiltro: el('tabela-gaveta-filtro'), elAbas: el('tabela-gaveta-abas'),
+    elCabecalho: el('tabela-gaveta-cabecalho'), elCorpo: el('tabela-gaveta-corpo'),
+    elFechar: el('tabela-gaveta-fechar'), elSentinela: el('tabela-gaveta-sentinela'), map,
+  });
+  // O realce usa a fonte original: retire-o ANTES que Catalogo remova essa fonte, inclusive em grupos.
+  const desligarCamada = catalogo.desligar.bind(catalogo);
+  catalogo.desligar = (id) => {
+    if (gavetaTabela.fonteAtual()?.chave === `camada:${id}`) gavetaTabela.fechar();
+    return desligarCamada(id);
+  };
   const medicao = new Medicao(map, el('medicao-saida'));
   const arvore = new Arvore(catalogo, map, el('lista-camadas'), {
     chaveDocumento: 'plat.sig.documento.v1',
+    aoAbrirPainel: (acao, camadaId) => {
+      if (acao === 'tabela') gavetaTabela.abrir(fonteDeCamada(catalogo, map, camadaId));
+    },
     aoEnquadrar: async (id) => {
       const ext = await catalogo.extensao(id);
       if (ext) map.fitBounds([[ext[0], ext[1]], [ext[2], ext[3]]], { padding: 40, duration: 0 });
@@ -761,6 +787,7 @@ async function iniciar() {
 
   let redeCtl = null;
   const { atual: baseAtual } = montarListaBases(map, async (base) => {
+    gavetaTabela.fechar();
     const ativas = [...catalogo.ativas];
     const opacidades = new Map(catalogo.opacidade);
     const redesLigadas = redeCtl ? [...redeCtl.redesAtivas.keys()] : [];
@@ -801,7 +828,7 @@ async function iniciar() {
   }
 
   try {
-    redeCtl = await instalarRede(map, maplibregl, { ativarTudo: !temDocumento });
+    redeCtl = await instalarRede(map, maplibregl, { ativarTudo: !temDocumento, gavetaTabela });
   } catch (e) {
     el('aviso').erro(`rede de utilidades: ${(e && e.message) || e}`);
   }

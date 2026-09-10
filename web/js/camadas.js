@@ -14,7 +14,8 @@
    próprios); quando aquele existir, quem persiste a árvore no servidor troca só `_gravar`/`_ler` abaixo,
    sem mexer no resto do módulo. */
 
-import { h, limpar } from './base/dom.js';
+import { h, limpar, menuContexto } from './base/dom.js';
+import { t } from './base/i18n.js';
 
 const CHAVE_PADRAO = 'plat.mapa.documento.v1';
 const PROFUNDIDADE_MAXIMA = 6; // a refutação do item usa 3 níveis; a trava evita ciclo/estouro
@@ -397,6 +398,20 @@ export class Arvore {
           no.aberto ? '▾ ' : '▸ ', this.tituloExibido(no))
       : h('label', { class: 'arvore-titulo camada-titulo', for: `chk-${no.chave}`, title: this.tituloExibido(no) }, this.tituloExibido(no));
     const cabecalho = h('div', { class: 'arvore-cabecalho' }, caixa, tituloEl);
+    if (no.tipo === 'camada') {
+      const abrirMenu = (x, y) => menuContexto([
+        { rotulo: t('mapa.camadas_mostrar_tabela'), aoClicar: () => this._acao('tabela', no) },
+      ], x, y);
+      li.addEventListener('contextmenu', (ev) => {
+        ev.preventDefault(); ev.stopPropagation(); abrirMenu(ev.clientX, ev.clientY);
+      });
+      cabecalho.append(h('button', { type: 'button', class: 'botao-mini',
+        onkeydown: (ev) => ev.stopPropagation(),
+        'aria-label': t('mapa.camadas_menu'), 'aria-haspopup': 'menu', onclick: (ev) => {
+          ev.stopPropagation();
+          const r = ev.currentTarget.getBoundingClientRect(); abrirMenu(r.left, r.bottom);
+        } }, '⋮'));
+    }
     if (no.tipo === 'camada') {
       // badge de tipo (Vetor · Imagem): reusa a classe `.camada-tipo` já estilizada (mono, --fraco) da
       // lista de rede em mapa.js — mesma linguagem visual, sem CSS novo.

@@ -16,10 +16,17 @@ export const MAX_ARGUMENTOS = 64;
 export const MAX_PASSOS_PADRAO = 100_000;
 export const LIMITE_MS_CLIENTE = 50; // orçamento do cliente (o servidor usa 500 ms, ver avaliador_py.py)
 
-// `util.types.isProxy` só existe no Node (onde os testes rodam); no navegador o import falha e o
-// detector fica nulo — ver contextoSimples() e docs/EXPRESSAO.md §7.
+// `util.types.isProxy` só existe no Node (onde os testes rodam); no navegador o detector fica nulo
+// — ver contextoSimples() e docs/EXPRESSAO.md §7.
+// ⚠ O `try/catch` sozinho NÃO basta: o navegador ainda IMPRIME o erro de CORS do import que falhou,
+// em vermelho, no console de quem abrir as ferramentas de desenvolvedor. Medido em 10/09/2026 na
+// instância viva: dois erros de console em toda carga de /sig, sem efeito funcional e sem culpado
+// óbvio. Por isso o import só é tentado quando existe Node de verdade.
 let detectorProxy = null;
-try { detectorProxy = (await import('node:util')).types.isProxy; } catch { detectorProxy = null; }
+const _temNode = typeof process !== 'undefined' && process?.versions?.node;
+if (_temNode) {
+  try { detectorProxy = (await import('node:util')).types.isProxy; } catch { detectorProxy = null; }
+}
 
 const OPERADORES = ['<=', '>=', '==', '!=', '&&', '||', '<', '>', '+', '-', '*', '/', '%', '^', '!'];
 const PALAVRAS_CHAVE = new Set(['verdadeiro', 'falso', 'nulo']);

@@ -73,6 +73,24 @@
       <button type="button" id="comparar-alca" class="comparar-alca" hidden aria-label="arrastar a cortina"></button>
     </div>
 
+    <div id="tabela-gaveta" class="tabela-gaveta" hidden role="region" aria-label="tabela de atributos" data-i18n-aria="mapa.tabela_titulo">
+      <button type="button" id="tabela-gaveta-alca" class="tabela-gaveta-alca" aria-label="redimensionar a tabela" data-i18n-aria="mapa.tabela_redimensionar"></button>
+      <div class="tabela-gaveta-topo">
+        <div id="tabela-gaveta-abas" class="tabela-gaveta-abas"></div>
+        <h2 id="tabela-gaveta-titulo" class="tabela-gaveta-titulo"></h2>
+        <span id="tabela-gaveta-contagem" class="tabela-gaveta-contagem"></span>
+        <input id="tabela-gaveta-filtro" class="tabela-gaveta-filtro" type="search" placeholder="filtrar…" aria-label="filtrar linhas da tabela" data-i18n-aria="mapa.tabela_filtrar_linhas">
+        <button type="button" id="tabela-gaveta-fechar" class="tabela-gaveta-fechar" aria-label="fechar tabela" data-i18n-aria="mapa.tabela_fechar">✕</button>
+      </div>
+      <div class="tabela-gaveta-rolagem">
+        <table class="tabela-gaveta-tabela">
+          <thead id="tabela-gaveta-cabecalho"></thead>
+          <tbody id="tabela-gaveta-corpo"></tbody>
+        </table>
+        <div id="tabela-gaveta-sentinela" class="tabela-gaveta-sentinela" aria-hidden="true"></div>
+      </div>
+    </div>
+
     <div class="sig-titulo-composicao" id="titulo-composicao">
       <input id="composicao-titulo" type="text" value="Composição sem título" aria-label="título da composição — clique para editar">
       <button type="button" id="composicao-salvar" class="sig-botao-mini" hidden>salvar</button>

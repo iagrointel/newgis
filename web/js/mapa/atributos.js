@@ -54,7 +54,39 @@ export function agrupar(feicoes, catalogo) {
   return porCamada;
 }
 
-export function montarConteudo(porCamada, catalogo) {
+export function camposDestaque(campos, limite = 6) {
+  const lista = campos || [];
+  const destacados = lista.filter((c) => c.destaque === true);
+  return destacados.length ? destacados : lista.slice(0, limite);
+}
+
+/* atributosDaFeicao preserva extras para os outros consumidores. Aqui a lista reduzida é explícita,
+   senão os extras recolocariam todos os campos que acabamos de esconder. */
+export function montarTabelaPopup(feicao, campos, maxCampos = 6) {
+  const lista = campos?.length ? campos : Object.keys(feicao.properties || {})
+    .filter((nome) => nome !== '_truncado').map((nome) => ({ nome }));
+  const nomes = new Set(camposDestaque(lista, maxCampos).map((c) => c.nome ?? c));
+  const completos = atributosDaFeicao(feicao, campos);
+  const reduzidos = atributosDaFeicao(feicao, camposDestaque(lista, maxCampos)).filter((at) => nomes.has(at.nome));
+  const caixa = h('div');
+  const corpo = h('tbody');
+  const desenhar = (atributos) => {
+    limpar(corpo);
+    for (const at of atributos) corpo.append(h('tr', { dataset: { campo: at.nome, nulo: at.nulo ? '1' : '0' } },
+      h('th', { scope: 'row' }, at.nome), h('td', { class: at.nulo ? 'nulo' : '' }, at.valor)));
+  };
+  desenhar(reduzidos);
+  caixa.append(h('table', { class: 'popup-tabela' }, corpo));
+  if (completos.length > reduzidos.length) {
+    const botao = h('button', { type: 'button', class: 'popup-ver-todos', onclick: () => {
+      desenhar(completos); botao.remove();
+    } }, t('mapa.popup_ver_todos'));
+    caixa.append(botao);
+  }
+  return caixa;
+}
+
+export function montarConteudo(porCamada, catalogo, opcoes = {}) {
   const caixa = h('div', { class: 'popup-conteudo' });
   let total = 0;
   for (const [camadaId, feicoes] of porCamada) {
@@ -63,15 +95,7 @@ export function montarConteudo(porCamada, catalogo) {
     const bloco = h('div', { class: 'popup-camada', dataset: { camada: camadaId } },
       h('h3', {}, ficha.titulo));
     for (const feicao of feicoes.slice(0, 5)) {
-      const tabela = h('table', { class: 'popup-tabela' });
-      const corpo = h('tbody');
-      for (const at of atributosDaFeicao(feicao, ficha.campos)) {
-        corpo.append(h('tr', { dataset: { campo: at.nome, nulo: at.nulo ? '1' : '0' } },
-          h('th', { scope: 'row' }, at.nome),
-          h('td', { class: at.nulo ? 'nulo' : '' }, at.valor)));
-      }
-      tabela.append(corpo);
-      bloco.append(tabela);
+      bloco.append(montarTabelaPopup(feicao, ficha.campos, opcoes.maxCampos ?? 6));
     }
     if (feicoes.length > 5) {
       bloco.append(h('p', { class: 'popup-mais' }, t('mapa.popup_mais', { n: feicoes.length - 5 })));

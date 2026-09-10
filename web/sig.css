@@ -249,3 +249,56 @@ body.sig .app, body.sig .lateral { display: none; } /* a casca do SIG não usa a
 @media (max-width: 720px) {
   .sig-painel { width: calc(100vw - 4.5rem); left: 60px !important; }
 }
+
+/* Tabela de atributos: ocupa só o rodapé do mapa; a rolagem pertence à tabela. */
+.tabela-gaveta {
+  position: absolute; left: 0; right: 0; bottom: 26px; height: 22vh;
+  min-height: 120px; max-height: 70%; z-index: 22; background: var(--painel);
+  border-top: 1px solid var(--borda); box-shadow: var(--sombra);
+  display: flex; flex-direction: column;
+}
+.tabela-gaveta[hidden] { display: none; }
+.tabela-gaveta-alca {
+  position: absolute; top: -3px; left: 0; width: 100%; height: 6px;
+  border: 0; background: transparent; cursor: ns-resize; padding: 0; touch-action: none; z-index: 2;
+}
+.tabela-gaveta-alca:hover, .tabela-gaveta-alca:active { background: var(--acento); opacity: .5; }
+.tabela-gaveta-topo {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2);
+  padding: .4rem var(--e3); border-bottom: 1px solid var(--borda); flex: 0 0 auto;
+}
+.tabela-gaveta-titulo { margin: 0; font-size: .82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tabela-gaveta-contagem { font-family: var(--mono); font-size: .72rem; color: var(--fraco); }
+.tabela-gaveta-filtro { margin-left: auto; max-width: 16rem; min-width: 6rem; flex: 1 1 8rem; }
+.tabela-gaveta-fechar { background: none; border: 0; color: var(--texto); cursor: pointer; padding: .2rem .4rem; }
+.tabela-gaveta-rolagem { flex: 1 1 auto; min-height: 0; overflow: auto; }
+.tabela-gaveta-tabela { width: 100%; border-collapse: collapse; font-size: .78rem; }
+.tabela-gaveta-tabela thead th {
+  position: sticky; top: 0; z-index: 1; background: var(--painel); text-align: left;
+  padding: .3rem .5rem; border-bottom: 1px solid var(--borda); cursor: pointer; white-space: nowrap;
+}
+.tabela-gaveta-tabela tbody td {
+  padding: .2rem .5rem; border-bottom: 1px solid var(--borda); font-family: var(--mono); white-space: nowrap;
+}
+.tabela-gaveta-tabela tbody tr { cursor: pointer; }
+.tabela-gaveta-tabela tbody tr:hover { background: var(--painel-2); }
+.tabela-gaveta-tabela tbody tr.selecionada { background: var(--acento); color: var(--i-acento-texto); }
+.tabela-gaveta-tabela :is(tr, th):focus-visible { outline: 2px solid var(--acento); outline-offset: -2px; }
+.tabela-gaveta-abas { display: flex; gap: .2rem; }
+.tabela-gaveta-abas button { white-space: nowrap; }
+.tabela-gaveta-abas button[aria-pressed="true"] { background: var(--acento); color: var(--i-acento-texto); }
+.tabela-gaveta-sentinela { height: 1px; }
+.menu-contexto {
+  position: fixed; z-index: 60; background: var(--painel); border: 1px solid var(--borda);
+  border-radius: var(--raio); box-shadow: var(--sombra); min-width: 10rem;
+  padding: .2rem; list-style: none; margin: 0;
+}
+.menu-contexto button {
+  display: block; width: 100%; text-align: left; background: none; border: 0;
+  padding: .35rem .5rem; font-size: .8rem; cursor: pointer; color: var(--texto);
+}
+.menu-contexto button:hover, .menu-contexto button:focus-visible { background: var(--painel-2); }
+.popup-ver-todos {
+  display: block; margin-top: .2rem; background: none; border: 0; color: var(--acento);
+  font-size: .72rem; cursor: pointer; padding: 0;
+}
