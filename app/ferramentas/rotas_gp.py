@@ -51,7 +51,12 @@ def _json(dados) -> JSONResponse:
 
 def _autenticar(request: Request):
     """Sessão/cabeçalho Authorization normal OU `?token=`/form `token=` (protocolo Esri); privilégio
-    analise.executar no dono."""
+    analise.executar no dono.
+
+    Ordem: em toda rota que declara `x-privilegio: analise.executar` esta função vem ANTES de
+    `_tarefa()`/`ferramenta_ou_404()`. Quem não tem o privilégio recebe 403 e não descobre, pelo 404, se a
+    ferramenta existe (é o que `tests/api/test_privilegios_matriz.py` cobra: privilégio declarado = privilégio
+    cobrado antes de qualquer outra checagem). Os descritores (`?f=json`) são públicos e seguem sem auth."""
     try:
         auth = auth_sessao.resolver(request)
     except ErroAPI:
@@ -156,8 +161,8 @@ def descritor_tarefa(ferramenta: str, tarefa: str, request: Request):
 # ---------------------------------------------------------------- execução
 async def _entrada(request: Request, ferramenta: str, tarefa: str):
     p = await _parametros(request)
-    f = _tarefa(ferramenta, tarefa)
     auth = _autenticar(request)
+    f = _tarefa(ferramenta, tarefa)
     try:
         crus = registro.parametros_de_formulario_gp(f, p)
     except registro.ErroParametro as e:
@@ -196,8 +201,8 @@ async def submit_job(ferramenta: str, tarefa: str, request: Request):
 @router.get(JOB, openapi_extra=X, operation_id="gpserver_job")
 def job_status(ferramenta: str, tarefa: str, job_id: str, request: Request):
     try:
-        f = _tarefa(ferramenta, tarefa)
         auth = _autenticar(request)
+        f = _tarefa(ferramenta, tarefa)
         job = _job_da_ferramenta(auth, f, job_id)
     except ErroAPI as e:
         return _erro_esri(request, e)
@@ -207,8 +212,8 @@ def job_status(ferramenta: str, tarefa: str, job_id: str, request: Request):
 @router.get(f"{JOB}/results/{{parametro}}", openapi_extra=X, operation_id="gpserver_job_resultado")
 def job_resultado(ferramenta: str, tarefa: str, job_id: str, parametro: str, request: Request):
     try:
-        f = _tarefa(ferramenta, tarefa)
         auth = _autenticar(request)
+        f = _tarefa(ferramenta, tarefa)
         job = _job_da_ferramenta(auth, f, job_id)
         if parametro != f.saidas[0].nome:
             raise ErroAPI(404, "parametro_inexistente", f"parâmetro de saída inexistente: {parametro}")
@@ -225,8 +230,8 @@ def job_resultado(ferramenta: str, tarefa: str, job_id: str, parametro: str, req
 async def job_cancel(ferramenta: str, tarefa: str, job_id: str, request: Request):
     try:
         await _parametros(request)
-        f = _tarefa(ferramenta, tarefa)
         auth = _autenticar(request)
+        f = _tarefa(ferramenta, tarefa)
         _job_da_ferramenta(auth, f, job_id)
         try:
             job = servico.cancelar(sessao_de(auth), job_id)

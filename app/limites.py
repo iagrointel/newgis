@@ -852,3 +852,11 @@ H3_NIVEL_MAX = 10
 DENSIDADE_RAIO_M_MAX = 100_000              # raio do kernel: mesmo teto do buffer geodésico
 IDW_VIZINHOS_MAX = 64                       # amostras usadas por célula na interpolação por inverso da distância
 CONTORNO_LINHAS_MAX = 200_000               # isolinhas geradas antes de a ferramenta recusar o intervalo
+# --- ferramentas raster (item L2-05-e) ---------------------------------------------------------------
+# Tetos de PRODUÇÃO das ferramentas de análise raster. O que cada um evita: zonas demais numa execução
+# (a memória do resultado é proporcional a elas), saída maior que o que o appliance escreve em disco de
+# trabalho, e vetorização/curva de nível que produziriam uma camada impossível de desenhar.
+FERRAMENTA_RASTER_ZONAS_MAX = 20_000          # feições de uma camada de zonas por execução
+FERRAMENTA_RASTER_PIXELS_SAIDA_MAX = 4_000_000_000  # pixels do raster de saída (4 Gpx)
+FERRAMENTA_RASTER_FEICOES_SAIDA_MAX = 500_000  # feições de curva de nível / vetorização por execução
+FERRAMENTA_RASTER_ENTRADAS_MAX = 20           # rasters numa calculadora ou num mosaico
