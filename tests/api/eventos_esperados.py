@@ -79,6 +79,8 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # ---- catálogo (L0-03; vocabulário na migração 011)
     ("POST", "/api/itens"): ["itens/adicionar"],
     ("POST", "/api/acervo/{fonte_id}/adicionar"): ["itens/adicionar", "acervo/adicionar_recusado_pii"],
+    # L6-01-i-raster-e-arquivos: a rota de exposição enfileira jobs e registra o pedido (o job registra o item)
+    ("POST", "/api/acervo/arquivos/expor"): ["acervo/arquivo_expor"],
     ("PUT", "/api/itens/{id}"): ["itens/atualizar", "itens/status", "itens/proteger", "itens/desproteger"],
     ("PATCH", "/api/itens/{id}"): ["itens/atualizar", "itens/status", "itens/proteger", "itens/desproteger"],
     ("DELETE", "/api/itens/{id}"): ["itens/apagar"],
@@ -383,3 +385,13 @@ ROTAS_SEM_EVENTO: dict[tuple[str, str], str] = {
     ("POST", "/api/rede/consumidores/enderecos-sem-rede"): ["rede/enderecos_sem_rede"],
     ("POST", "/api/rede/consumidores/jusante/calcular"): ["rede/jusante_calcular"],
 }
+
+# ---- rotas de SERVIÇO com token no caminho (item L1-02-tiles-token, mesclado na trilha do L6-01-i por ser
+# dependência): são a porta de cliente externo (QGIS, ArcGIS, STAC) e não escrevem no domínio do catálogo — o
+# rastro delas é `plat.log_acesso` (toda requisição) e `plat.tile_leitura` (contagem por token), não `plat.evento`.
+EVENTOS_POR_ROTA.update({
+    ("POST", "/svc/{token}/stac/search"): [],
+    ("POST", "/svc/{token}/stac/collections"): [],
+    ("POST", "/svc/{token}/stac/collections/{colecao_id}/items"): [],
+})
+

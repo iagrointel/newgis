@@ -1,0 +1,47 @@
+{
+ "item": "L6-01-i-raster-e-arquivos",
+ "medidas": {
+  "arquivos_no_registro": {
+   "valor": 321,
+   "unidade": "arquivos",
+   "comando": "GET /api/acervo/arquivos (acervo.camada_arquivo)"
+  },
+  "rasters_no_registro": {
+   "valor": 26,
+   "unidade": "arquivos",
+   "comando": "extensão tif/tiff/vrt"
+  },
+  "vetores_no_registro": {
+   "valor": 295,
+   "unidade": "arquivos",
+   "comando": "demais extensões suportadas"
+  },
+  "rasters_expostos": {
+   "valor": 10,
+   "unidade": "itens",
+   "comando": "job acervo.expor_arquivo (referência, sem cópia para o balde)"
+  },
+  "arquivos_expostos": {
+   "valor": 30,
+   "unidade": "itens",
+   "comando": "10 rasters + 20 vetoriais do acervo da casa"
+  },
+  "expor_30_arquivos_s": {
+   "valor": 147.32,
+   "unidade": "s",
+   "comando": "sha256 conferido + item criado (vetor: ogr2ogr para PostGIS)"
+  },
+  "bytes_copiados_para_o_balde": {
+   "valor": 0,
+   "unidade": "bytes",
+   "comando": "raster exposto por referência: o arquivo fica onde está (D21)"
+  },
+  "ladrilho_acervo_ms": {
+   "valor": 3156.6,
+   "unidade": "ms",
+   "comando": "GET /svc/<token>/raster/<item>/8/99/139.png lendo o arquivo do acervo no disco"
+  }
+ },
+ "gerado_em": "2026-09-08T12:17:02Z",
+ "git_sha": "b9cff07c90ab"
+}

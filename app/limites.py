@@ -604,3 +604,8 @@ ANEXO_BYTES_MAX = 100 * 1024 * 1024
 IMAGEM_UPLOAD_BYTES_MAX = 1 * 1024 * 1024
 CLAMD_MAX_BYTES = 25 * 1024 * 1024      # StreamMaxLength padrão do clamd; acima disso só o início é varrido
 CLAMD_TIMEOUT_S = 20.0                  # clamd fora do ar = recusa (nunca "passa sem varrer" quando configurado)
+# ---- L6-01-i-raster-e-arquivos: camadas de ARQUIVO do acervo da casa (acervo.camada_arquivo) no catálogo
+ACERVO_ARQUIVO_BYTES_MAX = 2 * 1024 * 1024 * 1024  # teto por arquivo (igual a RASTER_BYTES_MAX; guardrail D21)
+ACERVO_ARQUIVO_LOTE_MAX = 50                       # arquivos por chamada de exposição em lote
+ACERVO_ARQUIVO_LOTE_BYTES_MAX = 3 * 1024 * 1024 * 1024  # soma do lote (D21: a trilha trabalha com <= 3 GB)
+ACERVO_ARQUIVO_LISTA_MAX = 500                     # linhas por página de GET /api/acervo/arquivos

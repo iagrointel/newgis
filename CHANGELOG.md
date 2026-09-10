@@ -4432,3 +4432,16 @@ arquivo de teste e o ramo da fila onde ele vive. `docs/urls_paridade.txt` (20 UR
 `scripts/paridade_urls_testar.py` → `tests/medidas/L6-03-paridade-conectores.json` (20 de 20 com 200 em 07/09).
 `tests/unit/test_paridade_conectores.py` reprova linha `feito`/`parcial` sem teste existente (em master ou no
 ramo citado, via `git cat-file`), linha `fora` com teste, chave citada sem URL e URL sem 200 na medida.
+## turno 4, setembro de 2026 (item L6-01-i-raster-e-arquivos: o acervo de ARQUIVO no catálogo)
+
+O acervo da casa não é só tabela: os 321 arquivos com sha256 de `acervo.camada_arquivo` (3,6 GB, 26 raster e 295
+vetoriais, medidos 08/09/2026) entram no catálogo pela vista `plat.acervo_arquivo` e pela rota
+`GET /api/acervo/arquivos`, com a ficha da fonte. `POST /api/acervo/arquivos/expor` enfileira
+`acervo.expor_arquivo`, que **confere o sha256 antes de qualquer escrita**: raster vira item `raster` + item STAC
+apontando para `acervo://<caminho>` (lido onde está, zero byte copiado para o balde — guardrail de disco D21) e
+serve ladrilho por token (item L1-02); vetor é ingerido uma vez para PostGIS com `ogr2ogr`, na mesma tabela da
+ingestão do L0-04. Guardrail: arquivo acima de 2 GB e lote acima de 3 GB são recusados sem job. Fonte sem licença
+escrita (D17, medido: nenhuma das 27 fontes de arquivo tem) gera item privado e marcado `uso_restrito`. Medido em
+`tests/medidas/L6-01-i-raster-e-arquivos.json`: 10 rasters e 30 arquivos expostos em 147,3 s, ladrilho do acervo
+em 3.156 ms (GeoTIFF sem visão geral; converter para COG é decisão do dono). Refutação: 1 bit trocado num arquivo
+recusa por `hash_divergente` sem criar item. ADR `docs/adr/20260908T1300-acervo-de-arquivo.md`.
