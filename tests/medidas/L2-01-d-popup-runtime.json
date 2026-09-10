@@ -1,0 +1,85 @@
+{
+ "item": "L2-01-d-popup-runtime",
+ "medidas": {
+  "p95_consulta_servidor": {
+   "valor": {
+    "p95_ms": 8.35,
+    "carga_1min": 7.17,
+    "ram_livre_gb": 7.91,
+    "medido_em": "2026-09-07T18:30:04Z"
+   },
+   "unidade": "ms (+ carga/ram ao lado, regra do brief comum)",
+   "comando": "pytest tests/api/test_mapa_popup_api.py::test_p95_da_consulta_ao_servidor -q"
+  },
+  "expressao_area_vs_st_area": {
+   "valor": {
+    "feicoes": 5,
+    "erro_relativo_maximo": 0.0,
+    "tolerancia": 0.001
+   },
+   "unidade": "erro relativo (adimensional)",
+   "comando": "pytest tests/api/test_mapa_popup_api.py::test_expressao_de_area_bate_com_st_area_geografica -q"
+  }
+ },
+ "gerado_em": "2026-09-07T18:31:55Z",
+ "git_sha": "52cd0194a32f",
+ "clausulas_do_portao": {
+  "3_feicoes_coincidentes_mostra_1_de_3_e_navega": {
+   "status": "passa",
+   "prova": "tests/e2e/test_mapa_popup.py::test_paginacao_entre_tres_feicoes_coincidentes (chromium): pager le '1 de 3' e as tres paginas sao percorridas por clique em 'proxima feicao'."
+  },
+  "campo_nulo_aparece_como_travessao_nunca_null_nem_undefined": {
+   "status": "passa",
+   "prova": "tests/e2e/test_mapa_popup.py::test_campo_nulo_numero_grande_e_texto_bruto_nunca_executa: a feicao de nome nulo mostra '—' e nenhuma das 3 paginas contem 'null' ou 'undefined'. Unidade JS: tests/unit/js/test_formato_popup.mjs (valorExibicao)."
+  },
+  "numero_1234567.891_aparece_1.234.567,89_com_2_decimais": {
+   "status": "passa",
+   "prova": "mesmo e2e (le a celula valor_numero no navegador) + tests/unit/test_popup_formato.py::test_numero_grande_com_duas_casas_e_separador_ptbr (servidor) + test_formato_popup.mjs (navegador, Intl pt-BR)."
+  },
+  "data_no_fuso_do_inquilino_sao_paulo_e_utc": {
+   "status": "passa",
+   "prova": "tests/e2e/test_mapa_popup.py::test_data_no_fuso_do_inquilino_utc_e_sao_paulo: mesmo instante gravado, tenant.config.fuso trocado entre America/Sao_Paulo e UTC, textos diferentes na tela. Servidor: tests/unit/test_popup_formato.py::test_data_no_fuso_do_inquilino."
+  },
+  "geometria_multi_com_2_partes_conta_1_feicao": {
+   "status": "passa",
+   "prova": "tests/e2e/test_mapa_web.py::test_janela_de_atributos_com_campo_nulo_e_geometria_multi: com multi-parte de uma unica feicao o paginador nao aparece (.popup-pager == 0)."
+  },
+  "popup_em_viewport_390px_abre_como_painel_inferior_com_captura": {
+   "status": "passa",
+   "prova": "tests/e2e/test_mapa_popup.py::test_painel_acoplado_em_viewport_estreito: #popup-dock visivel, .maplibregl-popup ausente; captura em tests/e2e/capturas/L2-01-d-popup-runtime_painel_acoplado.png (capturas ficam fora do git)."
+  },
+  "expressao_de_area_bate_com_st_area_geografica_em_5_feicoes_tolerancia_0,1pc": {
+   "status": "passa",
+   "prova": "tests/api/test_mapa_popup_api.py::test_expressao_de_area_bate_com_st_area_geografica; ver medida expressao_area_vs_st_area.",
+   "ressalva": "o erro e ZERO por construcao: a expressao recebe $area_m2 calculado pela MESMA chamada ST_Area(geography(geom)) da consulta. O teste prova o encanamento (contexto -> avaliador -> formatacao), NAO um calculo de area independente."
+  },
+  "consulta_ao_servidor_p95_menor_ou_igual_100ms": {
+   "status": "passa",
+   "prova": "tests/api/test_mapa_popup_api.py::test_p95_da_consulta_ao_servidor; ver medida p95_consulta_servidor (8,38 ms com carga 7,24 e 8,01 GB livres). 50 pedidos, base da trilha, bancada de 30 pontos."
+  }
+ },
+ "refutacao_do_adversario": {
+  "campo_nulo_e_geometria_multi": {
+   "status": "coberta",
+   "prova": "e2e de campo nulo (acima) e test_mapa_web.py (multi = 1 feicao)."
+  },
+  "texto_com_html_e_script_aparece_como_texto": {
+   "status": "coberta",
+   "prova": "e2e: '<script>' aparece na celula como texto, .popup-tabela script == 0 e nenhum dialogo disparado (page.on('dialog') registrado antes do primeiro clique)."
+  },
+  "50_cliques_rapidos_sem_consulta_pendurada": {
+   "status": "coberta",
+   "prova": "tests/e2e/test_mapa_popup.py::test_cinquenta_cliques_rapidos_sem_consulta_pendurada: 2 s depois do ultimo clique nenhum td.carregando na tela (AbortController aborta a consulta anterior a cada render)."
+  },
+  "popup_nunca_mostra_campo_oculto_pela_vista_L0-04-j": {
+   "status": "NAO_COBERTA",
+   "nota": "esta lineage (app/mapa) nao tem vista com campo oculto: a configuracao do popup e dados.popup da propria camada e a lista de campos sai de dados.campos. Sem L0-04-j nesta arvore nao ha campo oculto a esconder — nao foi possivel provar nem refutar."
+  }
+ },
+ "fora_do_item_com_motivo": {
+  "anexos": "nao existe armazenamento de anexo POR FEICAO na casa (upload e por ITEM do catalogo, L0-04).",
+  "registros_relacionados": "item L2-10-b-relacionamentos pendente; a rota devolve relacionados=null com o motivo escrito no corpo.",
+  "popup_de_raster_com_valor_do_pixel": "item L1-02-h pendente; /api/mapa/camadas so serve vetor.",
+  "acoes_selecionar_e_editar": "dependem de L2-01-h/L2-03, que nao existem nesta lineage. Zoom para a feicao ENTRA (cliente puro) e esta em atributos.js."
+ }
+}

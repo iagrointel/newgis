@@ -7,7 +7,7 @@
 import { obter } from '../base/api.js';
 import '../base/componentes.js';
 import { loja } from '../base/estado.js';
-import { carregar as carregarIdioma } from '../base/i18n.js';
+import { aplicar, carregar as carregarIdioma, t } from '../base/i18n.js';
 import { cabecalho, montarLayout, pronto } from '../base/layout.js';
 import { caminhoPendencia, irParaLogin, lembrarInquilino, marcarSessao } from '../auth/sessao.js';
 import { h } from '../base/dom.js';
@@ -37,11 +37,13 @@ function layout(usuario) {
   if (!link && aside) {
     // a entrada "Tarefas" ainda não está em TELAS: acrescenta o item sem tocar no resto do menu
     const ul = aside.querySelector('nav ul');
-    link = h('a', { href: '/tarefas', 'aria-current': 'page' }, 'Tarefas');
+    link = h('a', { href: '/tarefas', 'aria-current': 'page' }, t('nav.tarefas'));
     if (ul) ul.append(h('li', {}, link));
   }
-  if (link) link.append(' ', h('span', { id: 'tarefas-ativas', class: 'marcador info', hidden: true, 'aria-label': 'tarefas ativas' }, '0'));
-  cabecalho('Tarefas');
+  if (link) link.append(' ', h('span', { id: 'tarefas-ativas', class: 'marcador info', hidden: true, 'aria-label': t('tarefas.ativas') }, '0'));
+  cabecalho(t('nav.tarefas'));
+  aplicar(document);
+  document.title = `${t('nav.tarefas')} · ${t('app.nome')}`;
 }
 
 async function principal() {
@@ -67,7 +69,7 @@ async function principal() {
       return;
     }
   } else {
-    aviso('aviso', `dados da sessão indisponíveis (GET /api/eu devolveu ${r.status}); a tela segue com a API de tarefas`, 'atencao');
+    aviso('aviso', t('tarefas.sessao_indisponivel', { status: r.status }), 'atencao');
   }
   layout(usuario);
 
@@ -76,7 +78,7 @@ async function principal() {
     tipos = await api.tipos();
   } catch (e) {
     if (e.status === 401) return;
-    aviso('aviso', `não foi possível carregar os tipos de tarefa (${e.status || 'rede'}): ${e.message}`);
+    aviso('aviso', t('tarefas.erro_tipos', { status: e.status || t('tarefas.rede'), erro: e.message }));
   }
 
   detalhe.iniciar({
@@ -108,7 +110,7 @@ await carregarIdioma();
 try {
   await principal();
 } catch (e) {
-  if (!(e && e.status === 401)) aviso('aviso', `não foi possível carregar a tela (${(e && e.status) || 'rede'}): ${(e && e.message) || e}`);
+  if (!(e && e.status === 401)) aviso('aviso', t('tarefas.erro_tela', { status: (e && e.status) || t('tarefas.rede'), erro: (e && e.message) || e }));
 } finally {
   if (!saindo) pronto();
 }

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>render · plat</title>
+<style>
+  /* sem chrome nenhum: o viewport da página headless É a imagem final (item L2-12-a-motor-render-servidor) */
+  html, body, #mapa { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0b0f10; }
+</style>
+<link rel="stylesheet" href="/static/vendor/maplibre-gl-4.7.1.css">
+</head>
+<body>
+<div id="mapa"></div>
+<script src="/static/vendor/maplibre-gl-4.7.1.js"></script>
+<script src="/static/vendor/pmtiles-4.5.0.js"></script>
+<script type="module" src="/static/js/mapa/render_entrada.js"></script>
+</body>
+</html>

@@ -9,7 +9,7 @@ import re
 
 import pytest
 
-from tests.e2e.apoio import RAIZ, sufixo
+from tests.e2e.apoio import RAIZ, local, sufixo
 from tests.e2e.apoio_catalogo import ROTAS_CATALOGO, TelaCatalogo, gravar_medidas_catalogo
 from tests.e2e.test_i18n_cru import _cruas, _texto
 
@@ -121,7 +121,7 @@ def test_conteudo_fluxo_completo(page, base_url, credenciais_demo, admin_api, ap
         url_link = page.text_content("#link-url").strip()
         token = TOKEN_NA_URL.search(url_link).group(1)
         tela.capturar("compartilhar")
-        anon = playwright.request.new_context(base_url=base_url)
+        anon = playwright.request.new_context(base_url=base_url, ignore_https_errors=local(base_url))
         try:
             assert anon.get(f"/api/compartilhado/{token}").status == 200
             _limpar_aviso(page, "#compartilhar-aviso")

@@ -14,6 +14,33 @@
 import { h, limpar } from '../base/dom.js';
 import * as doc from '../editor/documento.js';
 import { paginas, paginasNoMenu, paginaPorCaminho, paginaInicial } from './paginas.js';
+import { REGISTRO, BarramentoWidgets, carregarModulos, criarWidget } from '../widgets/motor.js';
+
+/* tipos de nó que o MOTOR DE WIDGETS desenha (item L5-01-d): o executor só cria o Custom Element e liga o barramento;
+   quem sabe desenhar texto rico, imagem por campo, cartão, embed, menu, controlador, compartilhar, login, idioma e
+   tema é o módulo do widget (web/js/widgets/<tipo>.js) — o MESMO que o /aplicativo publica. Zero renderizador
+   duplicado: `texto` e `imagem` também passam por aqui (o vocabulário antigo da paleta é traduzido em
+   `configuracaoDoNo`). */
+const TIPOS_WIDGET = new Set(['texto', 'imagem', 'botao', 'cartao', 'incorporar', 'divisor', 'menu_widget', 'controlador',
+  'compartilhar', 'login', 'idioma', 'tema']);
+const NIVEL_TEXTO = { titulo: 2, legenda: 6 };
+
+export function configuracaoDoNo(no) {
+  const p = { ...(no.propriedades || {}) };
+  if (no.tipo === 'texto' && typeof p.nivel === 'string') {
+    if (NIVEL_TEXTO[p.nivel]) p.nivel = NIVEL_TEXTO[p.nivel]; else delete p.nivel;
+  }
+  return p;
+}
+
+/* tipos de widget usados no documento inteiro (todas as páginas), para carregar os módulos uma vez, antes de desenhar */
+export function tiposDeWidget(documento) {
+  return [...new Set(doc.nos(documento).map((n) => (n.tipo === 'menu_widget' ? 'menu' : n.tipo)).filter((t) => REGISTRO.has(t)))];
+}
+
+export async function prepararWidgets(documento) {
+  return carregarModulos(tiposDeWidget(documento));
+}
 
 const PARAM_PAGINA = 'pagina';
 
@@ -39,8 +66,14 @@ export function paginaAtiva(documento, url = location.href) {
   return paginaInicial(documento);
 }
 
-export function montarExecucao({ raiz, documento, paleta }) {
+export function montarExecucao({ raiz, documento, paleta, falhas = new Map() }) {
   let doAtiva = null;
+  // barramento dos widgets da página: os eventos `*.pagina` (botão, menu, cartão) trocam de página no executor
+  const barramento = new BarramentoWidgets();
+  barramento.addEventListener('evento', ({ detail }) => {
+    if (detail.nome.endsWith('.pagina') && detail.detalhe && detail.detalhe.pagina) irPara(String(detail.detalhe.pagina));
+  });
+  const contexto = { barramento, falhas };
 
   function irPara(caminho, { substituir = false } = {}) {
     const u = urlComPagina(caminho);
@@ -60,7 +93,7 @@ export function montarExecucao({ raiz, documento, paleta }) {
       class: `exec-pagina exec-pagina-${telaCheia ? 'tela-cheia' : 'rolavel'}`,
       dataset: { pagina: props.caminho, tipoPagina: props.tipo_pagina },
     });
-    for (const filho of doc.filhos(documento, pagina.id)) container.append(desenharNo(filho, documento, paleta, irPara));
+    for (const filho of doc.filhos(documento, pagina.id)) container.append(desenharNo(filho, documento, paleta, irPara, contexto));
     raiz.append(container);
     document.title = props.titulo ? `${props.titulo} · plat` : document.title;
   }
@@ -78,25 +111,30 @@ export function montarExecucao({ raiz, documento, paleta }) {
 /* ---------------------------------------------------------------- despacho por tipo (a única função com
    `if (tipo === ...)` do executor — o resto é genérico, igual ao editor). Nenhum tipo desconhecido explode: o
    executor desenha uma caixa com o rótulo, para um widget novo da paleta nunca sumir da tela em silêncio. */
-function desenharNo(no, documento, paleta, irPara) {
+function desenharNo(no, documento, paleta, irPara, contexto = {}) {
   const def = paleta.tipos[no.tipo] || { rotulo: no.tipo };
-  const filhos = () => doc.filhos(documento, no.id).map((f) => desenharNo(f, documento, paleta, irPara));
+  const filhos = () => doc.filhos(documento, no.id).map((f) => desenharNo(f, documento, paleta, irPara, contexto));
+  if (TIPOS_WIDGET.has(no.tipo)) {
+    const tipo = no.tipo === 'menu_widget' ? 'menu' : no.tipo;
+    const el = criarWidget({ id: no.id, tipo, configuracao: configuracaoDoNo(no) }, contexto);
+    el.classList.add(`exec-${no.tipo}`, 'exec-widget');
+    el.dataset.no = no.id; // o mesmo endereço dos nós de layout (data-no); data-no-id é o do motor de widgets
+    return el;
+  }
   switch (no.tipo) {
     case 'cabecalho': return caixa(no, 'header', 'exec-cabecalho', filhos, { dataset: { fixo: String(!!no.propriedades?.fixo) } });
     case 'rodape': return caixa(no, 'footer', 'exec-rodape', filhos);
     case 'menu': return desenharMenu(no, documento, irPara);
-    case 'linha': return desenharLinha(no, documento, paleta, irPara);
-    case 'coluna': return desenharColuna(no, documento, paleta, irPara);
-    case 'grade': return desenharGrade(no, documento, paleta, irPara);
-    case 'acordeao': return desenharAcordeao(no, documento, paleta, irPara);
+    case 'linha': return desenharLinha(no, documento, paleta, irPara, contexto);
+    case 'coluna': return desenharColuna(no, documento, paleta, irPara, contexto);
+    case 'grade': return desenharGrade(no, documento, paleta, irPara, contexto);
+    case 'acordeao': return desenharAcordeao(no, documento, paleta, irPara, contexto);
     case 'painel_fixo': return caixa(no, 'div', `exec-painel-fixo pos-${no.propriedades?.posicao || 'superior-direita'}`, filhos);
-    case 'painel_lateral': return desenharPainelLateral(no, documento, paleta, irPara);
-    case 'janela': return desenharJanela(no, documento, paleta, irPara);
-    case 'secao_vistas': return desenharSecaoVistas(no, documento, paleta, irPara);
+    case 'painel_lateral': return desenharPainelLateral(no, documento, paleta, irPara, contexto);
+    case 'janela': return desenharJanela(no, documento, paleta, irPara, contexto);
+    case 'secao_vistas': return desenharSecaoVistas(no, documento, paleta, irPara, contexto);
     case 'vista': return caixa(no, 'div', 'exec-vista', filhos);
     case 'grupo': return caixa(no, 'div', 'exec-grupo', filhos);
-    case 'texto': return h('p', { class: `exec-texto exec-texto-${no.propriedades?.nivel || 'corpo'}`, dataset: { no: no.id, tipo: 'texto' } }, String(no.propriedades?.texto ?? ''));
-    case 'imagem': return h('img', { class: 'exec-imagem', dataset: { no: no.id, tipo: 'imagem' }, src: no.propriedades?.url || '', alt: no.propriedades?.alternativo || '' });
     case 'mapa': return h('div', { class: 'exec-mapa', dataset: { no: no.id, tipo: 'mapa', zoom: String(no.propriedades?.zoom ?? '') } }, 'mapa (zoom inicial ' + (no.propriedades?.zoom ?? '-') + ')');
     case 'tabela': return h('div', { class: 'exec-tabela', dataset: { no: no.id, tipo: 'tabela' } }, `tabela (${no.propriedades?.linhas_por_pagina ?? '-'} linhas/página)`);
     default: return caixa(no, 'div', 'exec-desconhecido', filhos, {}, def.rotulo);
@@ -132,10 +170,10 @@ function desenharMenu(no, documento, irPara) {
 /* ---------------------------------------------------------------- linha/coluna: flex com proporção por
    `largura_colunas` (flex-grow), `min-width:0`/`min-height:0` para NUNCA estourar em aninhamento profundo
    (achado direto da refutação do adversário: sem isto, 6 níveis de linha/coluna vazam largura) */
-function desenharLinha(no, documento, paleta, irPara) {
+function desenharLinha(no, documento, paleta, irPara, contexto) {
   const el = h('div', { class: `exec-linha alinhar-${no.propriedades?.alinhar || 'inicio'}`, dataset: { no: no.id, tipo: 'linha' } });
   for (const f of doc.filhos(documento, no.id)) {
-    const filho = desenharNo(f, documento, paleta, irPara);
+    const filho = desenharNo(f, documento, paleta, irPara, contexto);
     filho.style.flex = `${Math.max(1, f.largura_colunas || 1)} 1 0`;
     filho.classList.add('exec-flex-item');
     el.append(filho);
@@ -143,10 +181,10 @@ function desenharLinha(no, documento, paleta, irPara) {
   return el;
 }
 
-function desenharColuna(no, documento, paleta, irPara) {
+function desenharColuna(no, documento, paleta, irPara, contexto) {
   const el = h('div', { class: `exec-coluna alinhar-${no.propriedades?.alinhar || 'inicio'}`, dataset: { no: no.id, tipo: 'coluna' } });
   for (const f of doc.filhos(documento, no.id)) {
-    const filho = desenharNo(f, documento, paleta, irPara);
+    const filho = desenharNo(f, documento, paleta, irPara, contexto);
     filho.classList.add('exec-flex-item');
     el.append(filho);
   }
@@ -156,12 +194,12 @@ function desenharColuna(no, documento, paleta, irPara) {
 /* ---------------------------------------------------------------- grade: CSS Grid `repeat(N, 1fr)` — a
    proporção entre dois filhos é uma razão de frações (fr), invariante à largura do contêiner por definição
    do próprio CSS Grid: é isso que a cláusula "grade responsiva mantém proporção" mede. */
-function desenharGrade(no, documento, paleta, irPara) {
+function desenharGrade(no, documento, paleta, irPara, contexto) {
   const colunasGrade = Math.max(1, Math.min(12, no.propriedades?.colunas ?? 3));
   const el = h('div', { class: 'exec-grade', dataset: { no: no.id, tipo: 'grade', colunasGrade: String(colunasGrade) } });
   el.style.gridTemplateColumns = `repeat(${colunasGrade}, minmax(0, 1fr))`;
   for (const f of doc.filhos(documento, no.id)) {
-    const filho = desenharNo(f, documento, paleta, irPara);
+    const filho = desenharNo(f, documento, paleta, irPara, contexto);
     const vaoSpan = Math.max(1, Math.min(colunasGrade, Math.round(((f.largura_colunas || doc.COLUNAS) / doc.COLUNAS) * colunasGrade)));
     filho.style.gridColumn = `span ${vaoSpan}`;
     filho.classList.add('exec-grade-item');
@@ -173,14 +211,14 @@ function desenharGrade(no, documento, paleta, irPara) {
 /* ---------------------------------------------------------------- acordeão: um painel por filho; fecha os
    outros a não ser que `multiplo_aberto` — nunca usa `display:none` fixo no CABEÇALHO (só no CORPO), então
    nenhum painel vira um "widget oculto" que o adversário procura */
-function desenharAcordeao(no, documento, paleta, irPara) {
+function desenharAcordeao(no, documento, paleta, irPara, contexto) {
   const multiplo = !!no.propriedades?.multiplo_aberto;
   const el = h('div', { class: 'exec-acordeao', dataset: { no: no.id, tipo: 'acordeao' } });
   const paineis = doc.filhos(documento, no.id);
   const secoes = [];
   paineis.forEach((f, i) => {
     const corpo = h('div', { class: 'exec-acordeao-corpo', dataset: { acordeaoCorpo: f.id }, hidden: i !== 0 });
-    corpo.append(desenharNo(f, documento, paleta, irPara));
+    corpo.append(desenharNo(f, documento, paleta, irPara, contexto));
     const bt = h('button', {
       type: 'button', class: 'exec-acordeao-cabecalho', dataset: { acordeaoAbrir: f.id }, 'aria-expanded': i === 0 ? 'true' : 'false',
     }, (f.propriedades || {}).rotulo ?? (f.propriedades || {}).titulo ?? paleta.tipos[f.tipo]?.rotulo ?? f.tipo);
@@ -199,11 +237,11 @@ function desenharAcordeao(no, documento, paleta, irPara) {
 /* ---------------------------------------------------------------- painel lateral: recolhível por botão;
    recolhido = LARGURA zero + `aria-hidden`, nunca `display:none` no próprio painel (o botão de reabrir
    continua fora dele, sempre visível) */
-function desenharPainelLateral(no, documento, paleta, irPara) {
+function desenharPainelLateral(no, documento, paleta, irPara, contexto) {
   const lado = no.propriedades?.lado || 'esquerda';
   let aberto = no.propriedades?.aberto_inicial !== false;
   const corpo = h('aside', { class: `exec-painel-lateral lado-${lado}`, dataset: { no: no.id, tipo: 'painel_lateral' }, 'aria-hidden': aberto ? 'false' : 'true' });
-  for (const f of doc.filhos(documento, no.id)) corpo.append(desenharNo(f, documento, paleta, irPara));
+  for (const f of doc.filhos(documento, no.id)) corpo.append(desenharNo(f, documento, paleta, irPara, contexto));
   const envolucro = h('div', { class: `exec-painel-lateral-envolucro lado-${lado}${aberto ? '' : ' recolhido'}` });
   const bt = h('button', {
     type: 'button', class: 'exec-painel-lateral-alternar', dataset: { painelLateralAlternar: no.id }, 'aria-expanded': String(aberto),
@@ -225,12 +263,12 @@ function desenharPainelLateral(no, documento, paleta, irPara) {
 
 /* ---------------------------------------------------------------- janela: modal (com <dialog>, Esc nativo)
    ou ancorada (popover manual perto do botão, Esc por tratador próprio — <dialog> não tem "ancorado") */
-function desenharJanela(no, documento, paleta, irPara) {
+function desenharJanela(no, documento, paleta, irPara, contexto) {
   const modo = no.propriedades?.modo || 'modal';
   const rotuloBotao = no.propriedades?.rotulo_botao || 'Abrir';
   const envolucro = h('span', { class: 'exec-janela-envolucro', dataset: { no: no.id, tipo: 'janela' } });
   const bt = h('button', { type: 'button', class: 'exec-janela-botao', dataset: { janelaAbrir: no.id } }, rotuloBotao);
-  const conteudo = () => doc.filhos(documento, no.id).map((f) => desenharNo(f, documento, paleta, irPara));
+  const conteudo = () => doc.filhos(documento, no.id).map((f) => desenharNo(f, documento, paleta, irPara, contexto));
 
   if (modo === 'modal') {
     const dialogo = h('dialog', { class: 'exec-janela exec-janela-modal', dataset: { janela: no.id } });
@@ -257,7 +295,7 @@ function desenharJanela(no, documento, paleta, irPara) {
 }
 
 /* ---------------------------------------------------------------- seção com vistas (abas) */
-function desenharSecaoVistas(no, documento, paleta, irPara) {
+function desenharSecaoVistas(no, documento, paleta, irPara, contexto) {
   const vistas = doc.filhos(documento, no.id).filter((f) => f.tipo === 'vista');
   const el = h('div', { class: 'exec-secao-vistas', dataset: { no: no.id, tipo: 'secao_vistas' } });
   const barra = h('div', { class: 'exec-vistas-barra', role: 'tablist' });
@@ -265,7 +303,7 @@ function desenharSecaoVistas(no, documento, paleta, irPara) {
   function mostrar(id) {
     limpar(painel);
     const v = vistas.find((x) => x.id === id) || vistas[0];
-    if (v) painel.append(desenharNo(v, documento, paleta, irPara));
+    if (v) painel.append(desenharNo(v, documento, paleta, irPara, contexto));
     for (const bt of barra.children) bt.setAttribute('aria-selected', bt.dataset.vista === (v ? v.id : '') ? 'true' : 'false');
   }
   vistas.forEach((v) => {

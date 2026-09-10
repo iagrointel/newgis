@@ -150,6 +150,169 @@ def _migrar_app_v1_v2(dados: dict) -> dict:
     return {**dados, "corpo": corpo, "esquema_versao": 2}
 
 
+# ---------------------------------------------------------------------------------------------------------------
+# camada de desenho do mapa (item L2-01-k-desenho-anotacoes): GeoJSON + estilo dentro de `corpo.desenho`, sem
+# tabela própria — o desenho só vira tabela quando o usuário aperta "promover a camada" (app/mapa/promover.py).
+# Vale para as famílias com documento de mapa (`mapa`, `cena`); nas demais, esta função não faz nada, do mesmo
+# jeito que `validar_grafo` só olha `app`/`painel`.
+
+FAMILIAS_DESENHO = {"mapa", "cena"}
+DESENHO_FEATURES_MAX = 5000
+DESENHO_TEXTO_MAX = 10000
+TIPOS_DESENHO = {"ponto", "linha", "poligono", "retangulo", "circulo", "texto", "seta"}
+# geometria GeoJSON aceita por tipo_desenho (retangulo é um Polygon como outro qualquer — a diferença é só a
+# ferramenta que desenhou; circulo é um Point + raio_m, o polígono do círculo é calculado no cliente/servidor
+# só quando promovido a camada, nunca gravado como polígono aqui, para o raio continuar editável)
+GEOMETRIA_POR_TIPO = {
+    "ponto": {"Point"},
+    "texto": {"Point"},
+    "circulo": {"Point"},
+    "linha": {"LineString"},
+    "seta": {"LineString"},
+    "poligono": {"Polygon"},
+    "retangulo": {"Polygon"},
+}
+_COR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def _erro(campo: str, mensagem: str, regra: str) -> dict:
+    return {"campo": campo, "erro": mensagem, "regra": regra}
+
+
+def _num_dentro_do_mundo(coords) -> bool:
+    """Percorre coordinates de qualquer profundidade (Point..Polygon) e confere lon/lat dentro do mundo."""
+    if isinstance(coords, (int, float)):
+        return True
+    if not isinstance(coords, list) or not coords:
+        return False
+    if isinstance(coords[0], (int, float)):
+        if len(coords) < 2:
+            return False
+        lon, lat = coords[0], coords[1]
+        if not isinstance(lon, (int, float)) or not isinstance(lat, (int, float)):
+            return False
+        return -180 <= lon <= 180 and -90 <= lat <= 90
+    return all(_num_dentro_do_mundo(c) for c in coords)
+
+
+def _erros_estilo(campo: str, estilo) -> list[dict]:
+    if estilo is None:
+        return []
+    if not isinstance(estilo, dict):
+        return [_erro(campo, "estilo precisa ser um objeto", "tipo_invalido")]
+    saida = []
+    for chave in ("cor", "contorno"):
+        v = estilo.get(chave)
+        if v is not None and (not isinstance(v, str) or not _COR_RE.match(v)):
+            saida.append(_erro(f"{campo}.{chave}", "cor precisa ser #RRGGBB", "cor_invalida"))
+    v = estilo.get("opacidade")
+    if v is not None and (not isinstance(v, (int, float)) or not 0 <= v <= 1):
+        saida.append(_erro(f"{campo}.opacidade", "opacidade entre 0 e 1", "faixa"))
+    v = estilo.get("largura")
+    if v is not None and (not isinstance(v, (int, float)) or not 0 <= v <= 50):
+        saida.append(_erro(f"{campo}.largura", "largura entre 0 e 50", "faixa"))
+    v = estilo.get("tamanho_fonte")
+    if v is not None and (not isinstance(v, (int, float)) or not 4 <= v <= 96):
+        saida.append(_erro(f"{campo}.tamanho_fonte", "tamanho de fonte entre 4 e 96", "faixa"))
+    if estilo.get("preenchimento") is not None and not isinstance(estilo.get("preenchimento"), bool):
+        saida.append(_erro(f"{campo}.preenchimento", "preenchimento precisa ser booleano", "tipo_invalido"))
+    return saida
+
+
+def erros_de_desenho(dados) -> list[dict]:
+    """Lista [{campo, erro, regra}] do `corpo.desenho` (vazia = coerente). JSON Schema puro não decide isto
+    porque depende do PAR tipo_desenho×geometria e de olhar a lista inteira (id repetido, teto de feições)."""
+    corpo = dados.get("corpo") if isinstance(dados, dict) else None
+    corpo = corpo if isinstance(corpo, dict) else {}
+    desenho = corpo.get("desenho")
+    if desenho is None:
+        return []
+    saida: list[dict] = []
+    if not isinstance(desenho, dict):
+        return [_erro("corpo.desenho", "desenho precisa ser um objeto", "tipo_invalido")]
+    features = desenho.get("features")
+    if features is None:
+        return saida
+    if not isinstance(features, list):
+        return [_erro("corpo.desenho.features", "features precisa ser uma lista", "tipo_invalido")]
+    if len(features) > DESENHO_FEATURES_MAX:
+        saida.append(
+            _erro("corpo.desenho.features", f"{len(features)} feições; o máximo é {DESENHO_FEATURES_MAX}", "teto")
+        )
+        features = features[:DESENHO_FEATURES_MAX]  # ainda confere o resto para dar todos os erros de uma vez
+    vistos: set[str] = set()
+    for i, f in enumerate(features):
+        campo = f"corpo.desenho.features.{i}"
+        if not isinstance(f, dict):
+            saida.append(_erro(campo, "feição precisa ser um objeto", "tipo_invalido"))
+            continue
+        fid = f.get("id")
+        if not isinstance(fid, str) or not ULID_RE.match(fid):
+            saida.append(_erro(f"{campo}.id", "id de feição precisa ser um ULID", "ulid"))
+        elif fid in vistos:
+            saida.append(_erro(f"{campo}.id", f"id de feição repetido: {fid}", "id_duplicado"))
+        else:
+            vistos.add(fid)
+        props = f.get("properties") if isinstance(f.get("properties"), dict) else {}
+        tipo_desenho = props.get("tipo_desenho")
+        if tipo_desenho not in TIPOS_DESENHO:
+            saida.append(
+                _erro(f"{campo}.properties.tipo_desenho",
+                      f"tipo de desenho desconhecido: {tipo_desenho!r}", "tipo_desconhecido")
+            )
+            tipo_desenho = None
+        geom = f.get("geometry")
+        if not isinstance(geom, dict) or "type" not in geom or "coordinates" not in geom:
+            saida.append(_erro(f"{campo}.geometry", "geometria GeoJSON ausente ou incompleta", "geometria_invalida"))
+        else:
+            if tipo_desenho and geom.get("type") not in GEOMETRIA_POR_TIPO[tipo_desenho]:
+                saida.append(
+                    _erro(
+                        f"{campo}.geometry.type",
+                        f"tipo_desenho {tipo_desenho!r} espera geometria "
+                        f"{'/'.join(sorted(GEOMETRIA_POR_TIPO[tipo_desenho]))}, veio {geom.get('type')!r}",
+                        "geometria_incompativel",
+                    )
+                )
+            if not _num_dentro_do_mundo(geom.get("coordinates")):
+                saida.append(_erro(f"{campo}.geometry.coordinates",
+                                   "coordenada fora do mundo (lon/lat)", "fora_do_mundo"))
+            elif tipo_desenho == "circulo":
+                coords = geom.get("coordinates")
+                lat = coords[1] if isinstance(coords, list) and len(coords) > 1 else None
+                if isinstance(lat, (int, float)) and abs(lat) > 85:
+                    saida.append(
+                        _erro(f"{campo}.geometry.coordinates", "círculo com centro além de ±85° de latitude "
+                              "(degenerado em Mercator)", "circulo_no_polo")
+                    )
+        if tipo_desenho == "circulo":
+            raio = props.get("raio_m")
+            if not isinstance(raio, (int, float)) or not 0 < raio <= 2_000_000:
+                saida.append(_erro(f"{campo}.properties.raio_m", "raio_m precisa ser > 0 e <= 2.000.000 m", "faixa"))
+        if tipo_desenho == "texto":
+            txt = props.get("texto")
+            if not isinstance(txt, str) or not txt.strip():
+                saida.append(_erro(f"{campo}.properties.texto", "texto vazio", "obrigatorio"))
+            elif len(txt) > DESENHO_TEXTO_MAX:
+                saida.append(
+                    _erro(f"{campo}.properties.texto", f"{len(txt)} caracteres; o máximo é {DESENHO_TEXTO_MAX}", "teto")
+                )
+        rotulo = props.get("rotulo")
+        if isinstance(rotulo, str) and len(rotulo) > DESENHO_TEXTO_MAX:
+            saida.append(_erro(f"{campo}.properties.rotulo",
+                               f"{len(rotulo)} caracteres; o máximo é {DESENHO_TEXTO_MAX}", "teto"))
+        saida.extend(_erros_estilo(f"{campo}.properties.estilo", props.get("estilo")))
+    return saida
+
+
+def validar_desenho(tipo: str, dados) -> None:
+    if tipos.familia_de(tipo) not in FAMILIAS_DESENHO:
+        return
+    erros = erros_de_desenho(dados)
+    if erros:
+        raise ErroAPI(422, "desenho_invalido", "camada de desenho do mapa inválida", erros)
+
+
 # registro fechado: (tipo, versão de origem) -> função que devolve o documento na versão seguinte
 _MIGRACOES = {
     ("painel", 1): _migrar_painel_v1_v2,

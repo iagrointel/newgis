@@ -15,7 +15,8 @@ export class PlatTabela extends HTMLElement {
     this._montado = true;
     this.classList.add('tabela-rolagem');
     this._tabela = h('table', { class: 'tabela' });
-    if (this.getAttribute('legenda')) this._tabela.append(h('caption', { class: 'sr-only' }, this.getAttribute('legenda')));
+    // legenda como aria-label (não <caption class="sr-only">: a caption absoluta de 1 px deixava um traço visível no canto)
+    if (this.getAttribute('legenda')) this._tabela.setAttribute('aria-label', this.getAttribute('legenda'));
     this._thead = h('thead'); this._tbody = h('tbody');
     this._tabela.append(this._thead, this._tbody);
     this.append(this._tabela);

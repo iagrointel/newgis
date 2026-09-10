@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Plataforma · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<script src="/static/js/base/tema_cedo.js"></script>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="tela plataforma">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1 data-i18n="plataforma.titulo">Plataforma</h1>
+    <div class="linha-ferramentas" id="ferramentas"></div>
+    <p class="aviso-beta"><span data-i18n="app.beta">análise / beta privado</span> · <span data-i18n="plataforma.subtitulo">console do operador: inquilinos desta instalação</span></p>
+    <plat-aviso id="aviso"></plat-aviso>
+    <plat-estado id="estado" hidden></plat-estado>
+    <div id="corpo" hidden>
+      <section class="cartao" id="inquilinos" aria-labelledby="t-inquilinos">
+        <h2 id="t-inquilinos"><span data-i18n="plataforma.inquilinos">inquilinos</span> <span id="inquilinos-total" class="contagem"></span></h2>
+        <div class="linha-ferramentas">
+          <plat-busca id="inquilinos-busca" rotulo="filtrar por identificador ou nome"></plat-busca>
+          <button type="button" id="inquilinos-recarregar" class="pequeno" data-i18n="acao.recarregar">Recarregar</button>
+        </div>
+        <plat-estado id="inquilinos-estado" hidden></plat-estado>
+        <plat-tabela id="inquilinos-tabela" chave="id"></plat-tabela>
+        <p id="evento-registrado" class="fraco" hidden></p>
+      </section>
+      <section class="cartao" id="novo" aria-labelledby="t-novo">
+        <h2 id="t-novo" data-i18n="plataforma.novo">novo inquilino</h2>
+        <p class="fraco" data-i18n="plataforma.novo_ajuda">cria o inquilino com o seu primeiro administrador; a senha temporária aparece uma única vez e o administrador troca no primeiro acesso</p>
+        <plat-formulario id="form-novo"></plat-formulario>
+        <div id="criado" class="cartao-interno" hidden aria-live="polite">
+          <h3 data-i18n="plataforma.criado_titulo">inquilino criado</h3>
+          <p id="criado-resumo"></p>
+          <div class="linha-ferramentas">
+            <code id="criado-senha" class="mono"></code>
+            <button type="button" id="criado-copiar" class="pequeno" data-i18n="acao.copiar">Copiar</button>
+            <a id="criado-entrar" class="botao pequeno" href="#" data-i18n="plataforma.entrar_como_admin">abrir a entrada do inquilino</a>
+          </div>
+          <p class="ajuda" data-i18n="plataforma.criado_aviso">guarde a senha agora: ela não é mostrada de novo nem gravada em claro</p>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+<script type="module" src="/static/js/auth/plataforma.js"></script>
+</body>
+</html>

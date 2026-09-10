@@ -1,0 +1,16 @@
+{
+ "descricao": "lacunas de ESCRITA conhecidas (linha de base de tests/unit/test_cobertura_ui.py); encolhe conforme a trilha UX fecha itens; gerado por docs/gerar_cobertura_ui.py",
+ "lacunas": [
+  "DELETE /api/importacoes/{id}",
+  "POST /api/categorias/importar",
+  "POST /api/geocodificar",
+  "POST /api/importacoes",
+  "POST /api/reverso",
+  "POST /rest/services/Geocodificador/GeocodeServer",
+  "POST /rest/services/Geocodificador/GeocodeServer/findAddressCandidates",
+  "POST /rest/services/Geocodificador/GeocodeServer/geocodeAddresses",
+  "POST /rest/services/Geocodificador/GeocodeServer/reverseGeocode",
+  "PUT /api/categorias",
+  "PUT /api/importacoes/{id}/confirmar"
+ ]
+}

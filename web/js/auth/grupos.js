@@ -9,7 +9,7 @@ import '../base/componentes.js';
 import { confirmar } from '../base/componentes.js';
 import { montarLayout, cabecalho, pronto } from '../base/layout.js';
 import { exigirSessao } from './sessao.js';
-import { seletor } from './comum.js';
+import { seletor, estadoDeLista, eventoRegistrado } from './comum.js';
 
 const LIMITE = 50;
 const filtros = { meus: '1', q: '', limite: LIMITE, deslocamento: 0 };
@@ -39,6 +39,11 @@ async function iniciar() {
   }
   cabecalho(t('grupos.titulo'), { contagem: 0, botoes });
   document.getElementById('paginacao').addEventListener('mudar', (e) => { filtros.deslocamento = e.detail.deslocamento; carregarLista(); });
+  document.getElementById('estado').addEventListener('acao', (ev) => {
+    if (ev.detail.id === 'tentar') carregarLista();
+    if (ev.detail.id === 'novo') abrirCriar();
+    if (ev.detail.id === 'inquilino') document.getElementById('aba-inquilino').click();
+  });
   await carregarLista();
 }
 
@@ -90,20 +95,25 @@ function montarTabela() {
       const est = r.json?.estado;
       aviso.ok(est === 'pedido' ? t('grupo.pedido_enviado') : (e.detail.id === 'recusar' ? t('grupo.recusado') : t('grupo.entrou', { nome: g.nome })));
       await carregarLista();
+      eventoRegistrado();
     } else aviso.erro(mensagemDe(r));
   });
 }
 
 async function carregarLista() {
-  const aviso = document.getElementById('aviso');
+  const estado = document.getElementById('estado');
   const tab = document.getElementById('tabela');
   const seq = ++seqLista;
+  if (!tab.linhas.length) estadoDeLista(estado, tab, null);
   const r = await obter(`/api/grupos${consulta(filtros)}`);
   if (seq !== seqLista) return; // resposta atrasada de um pedido anterior: descarta
-  if (r.status !== 200) { aviso.erro(`${t('erro.carregar')}: ${mensagemDe(r)}`); tab.linhas = []; return; }
+  const acoes = [];
+  if (aba === 'meus' && !filtros.q) acoes.push({ id: 'inquilino', rotulo: t('grupos.aba_inquilino') });
+  if (tem('grupos.criar')) acoes.push({ id: 'novo', rotulo: t('grupos.novo'), classe: 'primario' });
+  estadoDeLista(estado, tab, r, { vazio: filtros.q ? t('grupos.vazio_busca', { q: filtros.q }) : (aba === 'meus' ? t('grupos.vazio_meus') : t('grupos.vazio_inquilino')), acoes });
+  if (r.status !== 200) { tab.linhas = []; return; }
   const total = r.json.total ?? (r.json.itens || []).length;
   tab.linhas = r.json.itens || [];
-  tab.vazio = aba === 'meus' ? t('grupos.vazio_meus') : t('grupos.vazio_inquilino');
   document.getElementById('paginacao').atualizar({ total, limite: LIMITE, deslocamento: filtros.deslocamento });
   cabecalho(t('grupos.titulo'), { contagem: total });
 }
@@ -142,7 +152,7 @@ function abrirCriar() {
     f.ocupado = true;
     const r = await enviar('/api/grupos', corpoDe(e.detail.valores, true));
     f.ocupado = false;
-    if (r.status === 201) { painel.fechar('ok'); await carregarLista(); document.getElementById('aviso').ok(t('grupos.criado', { nome: r.json.nome })); return; }
+    if (r.status === 201) { painel.fechar('ok'); await carregarLista(); document.getElementById('aviso').ok(t('grupos.criado', { nome: r.json.nome })); eventoRegistrado(); return; }
     const campo = { nome_existente: 'nome', atualizacao_exige_convite_ou_pedido: 'entrada', limite_grupos: 'nome' }[r.json.erro];
     if (campo) f.erro(campo, mensagemDe(r)); else f.mensagem(mensagemDe(r), 'erro');
   });
@@ -190,7 +200,7 @@ function montarVisao(g, alvo) {
       if (!ehDono(g)) delete c.administrativo;
       const r = await alterar(`/api/grupos/${g.id}`, c);
       f.ocupado = false;
-      if (r.status === 200) { Object.assign(g, r.json); await carregarLista(); f.mensagem(t('grupos.salvo'), 'ok'); return; }
+      if (r.status === 200) { Object.assign(g, r.json); await carregarLista(); f.mensagem(t('grupos.salvo'), 'ok'); eventoRegistrado(); return; }
       const campo = { nome_existente: 'nome', atualizacao_so_na_criacao: 'entrada' }[r.json.erro];
       if (campo) f.erro(campo, mensagemDe(r)); else f.mensagem(mensagemDe(r), 'erro');
     });
@@ -209,7 +219,7 @@ function montarVisao(g, alvo) {
       bt.addEventListener('click', async () => {
         if (!(await confirmar(t('grupo.sair'), t('grupo.sair_confirma', { nome: g.nome }), { perigo: true }))) return;
         const r = await apagar(`/api/grupos/${g.id}/membros/${usuario.id}`);
-        if (r.status === 204) { document.getElementById('painel').fechar('ok'); await carregarLista(); document.getElementById('aviso').ok(t('grupo.saiu', { nome: g.nome })); } else aviso.erro(mensagemDe(r));
+        if (r.status === 204) { document.getElementById('painel').fechar('ok'); await carregarLista(); document.getElementById('aviso').ok(t('grupo.saiu', { nome: g.nome })); eventoRegistrado(); } else aviso.erro(mensagemDe(r));
       });
       acoes.append(bt);
     }
@@ -221,7 +231,7 @@ function montarVisao(g, alvo) {
       bt.addEventListener('click', async () => {
         if (!(await confirmar(t('acao.apagar'), t('grupo.apagar_confirma', { nome: g.nome }), { perigo: true, ok: t('acao.apagar') }))) return;
         const r = await apagar(`/api/grupos/${g.id}`);
-        if (r.status === 204) { document.getElementById('painel').fechar('ok'); await carregarLista(); document.getElementById('aviso').ok(t('grupo.apagado', { nome: g.nome })); } else aviso.erro(mensagemDe(r));
+        if (r.status === 204) { document.getElementById('painel').fechar('ok'); await carregarLista(); document.getElementById('aviso').ok(t('grupo.apagado', { nome: g.nome })); eventoRegistrado(); } else aviso.erro(mensagemDe(r));
       });
       acoes.append(bt);
     }
@@ -241,7 +251,7 @@ async function transferirDono(g, aviso) {
     f.ocupado = true;
     const x = await alterar(`/api/grupos/${g.id}`, { dono_id: Number(e.detail.valores.dono_id) });
     f.ocupado = false;
-    if (x.status === 200) { document.getElementById('painel').fechar('ok'); await carregarLista(); document.getElementById('aviso').ok(t('grupo.dono_transferido')); } else f.mensagem(mensagemDe(x), 'erro');
+    if (x.status === 200) { document.getElementById('painel').fechar('ok'); await carregarLista(); document.getElementById('aviso').ok(t('grupo.dono_transferido')); eventoRegistrado(); } else f.mensagem(mensagemDe(x), 'erro');
   });
   aviso.after(f);
   f.focarPrimeiro();
@@ -273,7 +283,7 @@ async function montarMembros(g, alvo) {
     if (e.detail.id === 'aprovar') r = await enviar(`/api/grupos/${g.id}/membros/${uid}/aprovar`);
     else if (e.detail.id === 'remover') r = await apagar(`/api/grupos/${g.id}/membros/${uid}`);
     else r = await alterar(`/api/grupos/${g.id}/membros/${uid}`, { papel: e.detail.id });
-    if (r.status >= 200 && r.status < 300) { await recarregar(); aviso.ok(t('grupo.membro_atualizado')); } else aviso.erro(mensagemDe(r));
+    if (r.status >= 200 && r.status < 300) { await recarregar(); aviso.ok(t('grupo.membro_atualizado')); eventoRegistrado(); } else aviso.erro(mensagemDe(r));
   });
   async function recarregar() {
     const r = await obter(`/api/grupos/${g.id}/membros`);
@@ -298,7 +308,7 @@ async function montarMembros(g, alvo) {
         const bt = h('button', { type: 'button', class: 'pequeno primario' }, t('grupo.convidar'));
         bt.addEventListener('click', async () => {
           const x = await enviar(`/api/grupos/${g.id}/membros`, { usuario_id: u.id, papel: papelSel.value });
-          if (x.status === 201) { aviso.ok(t('grupo.convidado', { login: u.login })); limpar(resultados); busca.valor = ''; await recarregar(); } else aviso.erro(mensagemDe(x));
+          if (x.status === 201) { aviso.ok(t('grupo.convidado', { login: u.login })); limpar(resultados); busca.valor = ''; await recarregar(); eventoRegistrado(); } else aviso.erro(mensagemDe(x));
         });
         ul.append(h('li', {}, `${u.nome} (${u.login}) `, bt));
       }

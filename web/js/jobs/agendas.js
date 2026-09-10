@@ -4,6 +4,7 @@
    agora/apagar. Erros 422 do servidor aparecem campo a campo (detalhe do pydantic ou dicionário por campo). */
 import { confirmar } from '../base/componentes.js';
 import { h } from '../base/dom.js';
+import { aoTraduzir, t } from '../base/i18n.js';
 import * as api from './api.js';
 import { cronTemCincoCampos, data, dataHora, fusoValido } from './formato.js';
 import { marcaEstado } from './lista.js';
@@ -49,44 +50,44 @@ function validar(v) {
   if (texto) {
     try {
       parametros = JSON.parse(texto);
-      if (!parametros || typeof parametros !== 'object' || Array.isArray(parametros)) erros.parametros = 'os parâmetros são um objeto JSON';
+      if (!parametros || typeof parametros !== 'object' || Array.isArray(parametros)) erros.parametros = t('tarefas.ag_erro_parametros_objeto');
     } catch {
-      erros.parametros = 'JSON inválido';
+      erros.parametros = t('tarefas.ag_erro_json');
     }
   }
-  const t = tipoPorNome(v.tipo);
-  const obrigatorios = (t && t.parametros_schema && Array.isArray(t.parametros_schema.required)) ? t.parametros_schema.required : [];
+  const tp = tipoPorNome(v.tipo);
+  const obrigatorios = (tp && tp.parametros_schema && Array.isArray(tp.parametros_schema.required)) ? tp.parametros_schema.required : [];
   const faltam = obrigatorios.filter((k) => !(k in parametros));
-  if (!erros.parametros && faltam.length) erros.parametros = `campos obrigatórios ausentes: ${faltam.join(', ')}`;
-  if (!cronTemCincoCampos(v.cron)) erros.cron = 'a expressão cron tem 5 campos (minuto hora dia mês dia-da-semana)';
+  if (!erros.parametros && faltam.length) erros.parametros = t('tarefas.ag_erro_obrigatorios', { lista: faltam.join(', ') });
+  if (!cronTemCincoCampos(v.cron)) erros.cron = t('tarefas.ag_erro_cron');
   const fuso = v.fuso || 'America/Sao_Paulo';
-  if (!fusoValido(fuso)) erros.fuso = 'fuso desconhecido (nome IANA, ex.: America/Sao_Paulo)';
+  if (!fusoValido(fuso)) erros.fuso = t('tarefas.ag_erro_fuso');
   const dados = { nome: v.nome, tipo: v.tipo, parametros, cron: v.cron, fuso };
   if (v.expira_em) {
     const d = new Date(v.expira_em);
-    if (Number.isNaN(d.getTime())) erros.expira_em = 'data inválida (ISO 8601, ex.: 2026-12-31T23:59)';
+    if (Number.isNaN(d.getTime())) erros.expira_em = t('tarefas.ag_erro_data');
     else dados.expira_em = d.toISOString();
   }
   return { dados, erros };
 }
 
 function ajudaParametros() {
-  const t = tipoPorNome(s.form.campo('tipo').value);
+  const tp = tipoPorNome(s.form.campo('tipo').value);
   const n = s.form.querySelector('[data-campo="parametros"] .ajuda');
   if (!n) return;
-  if (!t) {
-    n.textContent = 'objeto JSON com os parâmetros do tipo';
+  if (!tp) {
+    n.textContent = t('tarefas.ag_parametros_ajuda');
     return;
   }
-  const props = (t.parametros_schema && t.parametros_schema.properties) || {};
-  const obrig = new Set((t.parametros_schema && t.parametros_schema.required) || []);
-  const lista = Object.entries(props).map(([k, v]) => `${k}${obrig.has(k) ? ' (obrigatório)' : ''}${v && v.type ? `: ${v.type}` : ''}`);
-  n.textContent = `${t.descricao || t.nome}${lista.length ? ` · parâmetros: ${lista.join(', ')}` : ' · sem parâmetros'}`;
+  const props = (tp.parametros_schema && tp.parametros_schema.properties) || {};
+  const obrig = new Set((tp.parametros_schema && tp.parametros_schema.required) || []);
+  const lista = Object.entries(props).map(([k, v]) => `${k}${obrig.has(k) ? ` (${t('tarefas.ag_obrigatorio')})` : ''}${v && v.type ? `: ${v.type}` : ''}`);
+  n.textContent = `${tp.descricao || tp.nome}${lista.length ? ` · ${t('tarefas.ag_parametros')}: ${lista.join(', ')}` : ` · ${t('tarefas.ag_sem_parametros')}`}`;
 }
 
 function abrirFormulario(agenda = null) {
   s.editando = agenda ? agenda.id : null;
-  porId('agenda-form-titulo').textContent = agenda ? `editar agenda: ${agenda.nome}` : 'nova agenda';
+  porId('agenda-form-titulo').textContent = agenda ? t('tarefas.ag_editar', { nome: agenda.nome }) : t('tarefas.ag_nova');
   s.form.limparErros();
   s.form.definir({
     nome: agenda ? agenda.nome : '',
@@ -123,10 +124,10 @@ async function salvar(valores) {
   } catch (e) {
     s.form.ocupado = false;
     const m = e.status === 422 ? errosPorCampo(e.detalhe) : {};
-    if (e.status === 409) m.nome = e.message || 'já existe uma agenda com este nome';
-    if (e.status === 413) m._ = e.message || 'cota de agendas do inquilino atingida';
-    if (e.status === 403) m._ = e.message || 'sem permissão para criar agendas';
-    if (!Object.keys(m).length) m._ = `não foi possível salvar (${e.status || 'rede'}): ${e.message}`;
+    if (e.status === 409) m.nome = e.message || t('tarefas.ag_erro_nome');
+    if (e.status === 413) m._ = e.message || t('tarefas.ag_erro_cota');
+    if (e.status === 403) m._ = e.message || t('tarefas.ag_erro_permissao');
+    if (!Object.keys(m).length) m._ = t('tarefas.ag_erro_salvar', { status: e.status || t('tarefas.rede'), erro: e.message });
     mostrarErros(m);
   }
 }
@@ -139,7 +140,7 @@ async function acao(id, agenda) {
     abrirFormulario(agenda);
     return;
   }
-  if (id === 'apagar' && !(await confirmar('Apagar agenda', `Apagar a agenda "${agenda.nome}"?`, { ok: 'apagar', perigo: true }))) return;
+  if (id === 'apagar' && !(await confirmar(t('tarefas.ag_apagar_titulo'), t('tarefas.ag_apagar_texto', { nome: agenda.nome }), { ok: t('tarefas.ag_apagar'), perigo: true }))) return;
   if (!fn) return;
   try {
     const r = await fn(agenda.id);
@@ -147,35 +148,35 @@ async function acao(id, agenda) {
     await carregar();
     if (id === 'rodar' && r && r.id && s.aoNovoJob) s.aoNovoJob(r);
   } catch (e) {
-    aviso('agendas-aviso', `não foi possível executar (${e.status || 'rede'}): ${e.message}`);
+    aviso('agendas-aviso', t('tarefas.ag_erro_executar', { status: e.status || t('tarefas.rede'), erro: e.message }));
   }
 }
 
-const COLUNAS = [
-  { chave: 'nome', titulo: 'nome', classe: 'c-nome' },
-  { chave: 'tipo', titulo: 'tipo', classe: 'c-tipo mono' },
-  { chave: 'cron', titulo: 'cron', classe: 'c-cron mono' },
-  { chave: 'fuso', titulo: 'fuso', classe: 'c-fuso' },
+const colunas = () => [
+  { chave: 'nome', titulo: t('tarefas.ag_col_nome'), classe: 'c-nome' },
+  { chave: 'tipo', titulo: t('tarefas.ag_col_tipo'), classe: 'c-tipo mono' },
+  { chave: 'cron', titulo: t('tarefas.ag_col_cron'), classe: 'c-cron mono' },
+  { chave: 'fuso', titulo: t('tarefas.ag_col_fuso'), classe: 'c-fuso' },
   {
-    chave: 'proxima_em', titulo: 'próxima', classe: 'c-proxima',
+    chave: 'proxima_em', titulo: t('tarefas.ag_col_proxima'), classe: 'c-proxima',
     formatar: (v, a) => (a.ativa
       ? h('time', { datetime: v || '', title: dataHora(v) }, data(v))
-      : h('span', { class: 'marcador atencao' }, 'pausada')),
+      : h('span', { class: 'marcador atencao' }, t('tarefas.ag_pausada'))),
   },
   {
-    chave: 'ultimo_estado', titulo: 'última', classe: 'c-ultima',
+    chave: 'ultimo_estado', titulo: t('tarefas.ag_col_ultima'), classe: 'c-ultima',
     formatar: (v, a) => (v
       ? h('span', {}, marcaEstado(v), ' ', h('time', { datetime: a.ultima_em || '', title: dataHora(a.ultima_em) }, data(a.ultima_em)),
-        a.falhas_seguidas > 0 ? h('span', { class: 'msg falha' }, ` · ${a.falhas_seguidas} falhas seguidas`) : null)
+        a.falhas_seguidas > 0 ? h('span', { class: 'msg falha' }, ` · ${t('tarefas.ag_falhas_seguidas', { n: a.falhas_seguidas })}`) : null)
       : '—'),
   },
 ];
 
 const acoesDe = (a) => [
-  { id: 'rodar', rotulo: 'rodar agora', classe: 'acao-rodar' },
-  a.ativa ? { id: 'pausar', rotulo: 'pausar', classe: 'acao-pausar' } : { id: 'retomar', rotulo: 'retomar', classe: 'acao-retomar' },
-  { id: 'editar', rotulo: 'editar', classe: 'texto acao-editar' },
-  { id: 'apagar', rotulo: 'apagar', classe: 'perigo acao-apagar' },
+  { id: 'rodar', rotulo: t('tarefas.ag_rodar'), classe: 'acao-rodar' },
+  a.ativa ? { id: 'pausar', rotulo: t('tarefas.ag_pausar'), classe: 'acao-pausar' } : { id: 'retomar', rotulo: t('tarefas.ag_retomar'), classe: 'acao-retomar' },
+  { id: 'editar', rotulo: t('tarefas.ag_editar_acao'), classe: 'texto acao-editar' },
+  { id: 'apagar', rotulo: t('tarefas.ag_apagar'), classe: 'perigo acao-apagar' },
 ];
 
 export async function carregar() {
@@ -183,14 +184,19 @@ export async function carregar() {
     const r = await api.agendas.listar({ limite: 200 });
     s.itens = Array.isArray(r.itens) ? r.itens : [];
     s.tabela.linhas = s.itens;
-    porId('agendas-total').textContent = `${s.itens.length} ${s.itens.length === 1 ? 'agenda' : 'agendas'}`;
+    porId('agendas-total').textContent = s.itens.length === 1 ? t('tarefas.ag_total_uma') : t('tarefas.ag_total', { n: s.itens.length });
     aviso('agendas-aviso', '');
+    const estado = document.getElementById('agendas-estado');
+    if (estado) estado.limpar();
+    s.tabela.hidden = false;
   } catch (e) {
     if (e.status === 403) {
       porId('agendas').hidden = true;
       return;
     }
-    aviso('agendas-aviso', `não foi possível carregar as agendas (${e.status || 'rede'}): ${e.message}`);
+    const estado = document.getElementById('agendas-estado');
+    if (estado) { s.tabela.hidden = true; estado.erro({ status: e.status, json: { mensagem: e.message, req_id: e.reqId } }); }
+    else aviso('agendas-aviso', t('tarefas.ag_erro_carregar', { status: e.status || t('tarefas.rede'), erro: e.message }));
   }
 }
 
@@ -208,29 +214,41 @@ export async function iniciar({ usuario = null, tipos = [], aoNovoJob = null } =
   sec.hidden = false;
 
   s.tabela = porId('agendas-tabela');
-  s.tabela.vazio = 'nenhuma agenda';
-  s.tabela.colunas = COLUNAS;
+  const montarTabela = () => {
+    s.tabela.vazio = t('tarefas.ag_vazio');
+    s.tabela.setAttribute('legenda', t('tarefas.ag_tabela_rotulo'));
+    s.tabela.querySelector('table')?.setAttribute('aria-label', t('tarefas.ag_tabela_rotulo'));
+    s.tabela.colunas = colunas();
+  };
+  montarTabela();
   s.tabela.acoes = acoesDe;
   s.tabela.addEventListener('acao', (ev) => acao(ev.detail.id, ev.detail.linha));
 
   s.form = porId('agenda-form');
-  s.form.campos = [
-    { nome: 'nome', rotulo: 'nome', tipo: 'texto', obrigatorio: true, atributos: { maxlength: '128', autocomplete: 'off' } },
-    { nome: 'tipo', rotulo: 'tipo', tipo: 'select', obrigatorio: true,
-      opcoes: [{ valor: '', rotulo: '— escolha —' }, ...tipos.map((t) => ({ valor: t.nome, rotulo: t.nome }))] },
-    { nome: 'parametros', rotulo: 'parâmetros (JSON)', tipo: 'area', padrao: '{}', linhas: 3, ajuda: 'objeto JSON com os parâmetros do tipo' },
-    { nome: 'cron', rotulo: 'cron', tipo: 'texto', obrigatorio: true, padrao: '',
-      ajuda: '5 campos: minuto hora dia mês dia-da-semana (ex.: 30 3 * * *); intervalo mínimo de 15 min', atributos: { autocomplete: 'off', spellcheck: 'false' } },
-    { nome: 'fuso', rotulo: 'fuso', tipo: 'texto', padrao: 'America/Sao_Paulo', ajuda: 'nome IANA', atributos: { autocomplete: 'off', spellcheck: 'false' } },
-    { nome: 'expira_em', rotulo: 'expira em', tipo: 'texto', padrao: '', ajuda: 'opcional; ISO 8601 (ex.: 2026-12-31T23:59)', atributos: { autocomplete: 'off' } },
-  ];
-  s.form.botoes = [
-    { id: 'salvar', rotulo: 'salvar', tipo: 'submit' },
-    { id: 'cancelar', rotulo: 'cancelar', tipo: 'button' },
-  ];
+  const montarForm = () => {
+    const valores = s.form.campos.length ? s.form.valores() : null;
+    s.form.campos = [
+      { nome: 'nome', rotulo: t('tarefas.ag_campo_nome'), tipo: 'texto', obrigatorio: true, atributos: { maxlength: '128', autocomplete: 'off' } },
+      { nome: 'tipo', rotulo: t('tarefas.ag_campo_tipo'), tipo: 'select', obrigatorio: true,
+        opcoes: [{ valor: '', rotulo: t('tarefas.ag_escolha') }, ...tipos.map((tp) => ({ valor: tp.nome, rotulo: tp.nome }))] },
+      { nome: 'parametros', rotulo: t('tarefas.ag_campo_parametros'), tipo: 'area', padrao: '{}', linhas: 3, ajuda: t('tarefas.ag_parametros_ajuda') },
+      { nome: 'cron', rotulo: t('tarefas.ag_campo_cron'), tipo: 'texto', obrigatorio: true, padrao: '',
+        ajuda: t('tarefas.ag_cron_ajuda'), atributos: { autocomplete: 'off', spellcheck: 'false' } },
+      { nome: 'fuso', rotulo: t('tarefas.ag_campo_fuso'), tipo: 'texto', padrao: 'America/Sao_Paulo', ajuda: t('tarefas.ag_fuso_ajuda'), atributos: { autocomplete: 'off', spellcheck: 'false' } },
+      { nome: 'expira_em', rotulo: t('tarefas.ag_campo_expira'), tipo: 'texto', padrao: '', ajuda: t('tarefas.ag_expira_ajuda'), atributos: { autocomplete: 'off' } },
+    ];
+    s.form.botoes = [
+      { id: 'salvar', rotulo: t('tarefas.ag_salvar'), tipo: 'submit' },
+      { id: 'cancelar', rotulo: t('tarefas.ag_cancelar'), tipo: 'button' },
+    ];
+    if (valores) s.form.definir(valores);
+    s.form.campo('tipo').addEventListener('change', ajudaParametros);
+  };
+  montarForm();
   s.form.addEventListener('enviar', (ev) => salvar(ev.detail.valores));
   s.form.addEventListener('botao', (ev) => { if (ev.detail.id === 'cancelar') fecharFormulario(); });
-  s.form.campo('tipo').addEventListener('change', ajudaParametros);
   porId('agenda-nova').addEventListener('click', () => abrirFormulario());
+  let primeira = true;
+  aoTraduzir(() => { if (primeira) { primeira = false; return; } montarTabela(); s.tabela.linhas = s.itens; montarForm(); });
   await carregar();
 }

@@ -7,12 +7,14 @@ import { tem } from '../base/estado.js';
 import '../base/componentes.js';
 import { montarLayout, cabecalho, pronto } from '../base/layout.js';
 import { exigirSessao } from './sessao.js';
-import { filtro, seletor } from './comum.js';
+import { filtro, seletor, estadoDeLista } from './comum.js';
 
 const LIMITE = 50;
 const PERIODOS = [['1', '24 h'], ['7', '7 d'], ['30', '30 d'], ['92', '92 d']];
-const f = { periodo: '7', usuario_id: '', token_id: '', rota: '', status: '', deslocamento: 0 };
-const fe = { periodo: '7', tipo: '', ator_id: '', deslocamento: 0 };
+// link profundo (UX-06): /admin/log?aba=eventos&tipo=usuarios/criar ou /admin/log?usuario_id=7 abre já filtrado
+const URL_INICIAL = new URLSearchParams(location.search);
+const f = { periodo: '7', usuario_id: URL_INICIAL.get('usuario_id') || '', token_id: '', rota: '', status: '', deslocamento: 0 };
+const fe = { periodo: '7', tipo: URL_INICIAL.get('tipo') || '', ator_id: '', deslocamento: 0 };
 let usuarios = [];
 let tokens = [];
 
@@ -39,7 +41,11 @@ async function iniciar() {
   montarFiltros();
   montarTabela();
   montarEventos();
-  await carregarLog();
+  for (const id of ['estado', 'estado-eventos']) {
+    document.getElementById(id).addEventListener('acao', (ev) => { if (ev.detail.id === 'tentar') (id === 'estado' ? carregarLog() : carregarEventos()); });
+  }
+  if (URL_INICIAL.get('aba') === 'eventos') document.getElementById('aba-eventos').click();
+  else await carregarLog();
 }
 
 function montarAbas() {
@@ -60,7 +66,7 @@ function montarAbas() {
 function montarFiltros() {
   const area = document.getElementById('filtros');
   const periodo = seletor('periodo', PERIODOS.map(([v, r]) => ({ valor: v, rotulo: r })), '7');
-  const usu = seletor('usuario_id', [{ valor: '', rotulo: t('geral.todos') }, ...usuarios.map((u) => ({ valor: String(u.id), rotulo: u.login }))], '');
+  const usu = seletor('usuario_id', [{ valor: '', rotulo: t('geral.todos') }, ...usuarios.map((u) => ({ valor: String(u.id), rotulo: u.login }))], f.usuario_id);
   const tok = seletor('token_id', [{ valor: '', rotulo: t('geral.todos') }, ...tokens.map((k) => ({ valor: String(k.id), rotulo: `${k.nome} (${k.prefixo})` }))], '');
   const rota = h('input', { type: 'text', name: 'rota', autocomplete: 'off', spellcheck: 'false' });
   const status = seletor('status', [{ valor: '', rotulo: t('geral.todos') }, ...['2xx', '3xx', '4xx', '5xx', '200', '201', '204', '400', '401', '403', '404', '409', '422', '423', '429', '500'].map((s) => ({ valor: s, rotulo: s }))], '');
@@ -112,9 +118,12 @@ async function carregarLog() {
   const tab = document.getElementById('tabela');
   document.getElementById('exportar-csv').href = `/api/log${parametrosLog('csv')}`;
   const seq = ++seqLog;
+  const estado = document.getElementById('estado');
+  if (!tab.linhas.length) estadoDeLista(estado, tab, null);
   const r = await obter(`/api/log${parametrosLog('')}`);
   if (seq !== seqLog) return; // resposta atrasada de um pedido anterior: descarta
-  if (r.status !== 200) { aviso.erro(`${t('erro.carregar')}: ${mensagemDe(r)}`); tab.linhas = []; return; }
+  estadoDeLista(estado, tab, r, { vazio: t('log.vazio') });
+  if (r.status !== 200) { tab.linhas = []; return; }
   aviso.limpar();
   tab.linhas = r.json.itens || [];
   const total = r.json.total ?? tab.linhas.length;
@@ -125,7 +134,7 @@ async function carregarLog() {
 function montarEventos() {
   const area = document.getElementById('filtros-eventos');
   const periodo = seletor('periodo', PERIODOS.map(([v, r]) => ({ valor: v, rotulo: r })), '7');
-  const tipo = h('input', { type: 'text', name: 'tipo', autocomplete: 'off', spellcheck: 'false' });
+  const tipo = h('input', { type: 'text', name: 'tipo', autocomplete: 'off', spellcheck: 'false', value: fe.tipo });
   const ator = seletor('ator_id', [{ valor: '', rotulo: t('geral.todos') }, ...usuarios.map((u) => ({ valor: String(u.id), rotulo: u.login }))], '');
   const bt = h('button', { type: 'button', class: 'primario', id: 'filtrar-eventos' }, t('log.filtrar'));
   const aplicar = () => { fe.periodo = periodo.value; fe.tipo = tipo.value.trim(); fe.ator_id = ator.value; fe.deslocamento = 0; carregarEventos(); };
@@ -151,8 +160,11 @@ async function carregarEventos() {
   const aviso = document.getElementById('aviso');
   const tab = document.getElementById('tabela-eventos');
   const j = janela(fe.periodo);
+  const estado = document.getElementById('estado-eventos');
+  if (!tab.linhas.length) estadoDeLista(estado, tab, null);
   const r = await obter(`/api/eventos${consulta({ tipo: fe.tipo, ator_id: fe.ator_id, desde: j.desde, ate: j.ate, limite: LIMITE, deslocamento: fe.deslocamento })}`);
-  if (r.status !== 200) { aviso.erro(`${t('erro.carregar')}: ${mensagemDe(r)}`); tab.linhas = []; return; }
+  estadoDeLista(estado, tab, r, { vazio: t('log.vazio') });
+  if (r.status !== 200) { tab.linhas = []; return; }
   aviso.limpar();
   tab.linhas = r.json.itens || [];
   document.getElementById('paginacao-eventos').atualizar({ total: r.json.total ?? tab.linhas.length, limite: LIMITE, deslocamento: fe.deslocamento });

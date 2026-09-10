@@ -39,7 +39,7 @@ import uuid
 from typing import Any
 
 from app import db
-from app.garage import ClienteAdmin, ClienteS3, CotaGarage, ErroGarage
+from app.garage import ClienteAdmin, ClienteS3, ErroGarage
 from app.settings import settings
 from app.varredura_conteudo import ConteudoRecusado, escanear_cabecalho  # noqa: F401 — reexportado (item L7-03-b)
 
@@ -58,6 +58,16 @@ EXTENSOES = {
     "application/zip": "zip",
     "application/vnd.google-earth.kmz": "kmz",
     "application/octet-stream": "bin",
+    # formatos de exportação de camada (item L0-04-h-exportar; app/exportacao/formatos.py)
+    "application/geopackage+sqlite3": "gpkg",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+    "application/vnd.google-earth.kml+xml": "kml",
+    "application/gml+xml": "gml",
+    "image/vnd.dxf": "dxf",
+    "application/vnd.apache.parquet": "parquet",
+    # acrescentados pelo item L2-01-l (exportação a partir do mapa)
+    "application/geo+json-seq": "geojsonl",
+    "application/vnd.pmtiles": "pmtiles",
 }
 _SLUG = r"[a-z0-9][a-z0-9-]{1,38}"
 _CLASSE = r"[a-z0-9_]{1,40}"
@@ -118,43 +128,23 @@ def _linha_bucket(cur, tenant_id: int) -> dict | None:
     return cur.fetchone()
 
 
-COTA_OBJETOS_PADRAO = 200000  # mesmo DEFAULT de plat.tenant.cota_objetos (migração 042)
-
-
-def _cotas_tenant(cur, tenant_id: int) -> tuple[int, int]:
-    """(cota_bytes, cota_objetos) do inquilino — `plat.tenant` é a autoridade; o balde só espelha."""
-    cur.execute("SELECT cota_bytes, cota_objetos FROM plat.tenant WHERE id = %s", (tenant_id,))
+def _cota_bytes_tenant(cur, tenant_id: int) -> int:
+    cur.execute("SELECT cota_bytes FROM plat.tenant WHERE id = %s", (tenant_id,))
     r = cur.fetchone()
-    if r is None:
-        return 21474836480, COTA_OBJETOS_PADRAO
-    return int(r["cota_bytes"]), int(r["cota_objetos"] or COTA_OBJETOS_PADRAO)
+    return int(r["cota_bytes"]) if r else 21474836480
 
 
-def garantir_bucket(
-    cur, tenant_id: int | None = None, tenant_slug: str | None = None, *, web: bool | None = None, forcar: bool = False
-) -> dict:
-    """Idempotente: cria bucket + 2 chaves (RW, RO) + cotas (bytes E objetos, item L1-01-d) no Garage na 1ª chamada;
-    nas seguintes só confere e resincroniza se `tenant.cota_bytes`/`cota_objetos` mudaram desde a última vez (ou
-    sempre, com `forcar=True` — é o que a semeadura do install.sh usa para provar que o Garage está igual ao
-    banco). `web=True/False` liga/desliga o endpoint web do balde (:3902; ADR 20260908T1255) e grava `web_ativo`; `None`
-    mantém o que está. Devolve a linha de `plat.arquivo_bucket`."""
+def garantir_bucket(cur, tenant_id: int | None = None, tenant_slug: str | None = None) -> dict:
+    """Idempotente: cria bucket + 2 chaves (RW, RO) + cota no Garage na 1ª chamada; nas seguintes só confere e
+    resincroniza a cota se `tenant.cota_bytes` mudou desde a última vez. Devolve a linha de `plat.arquivo_bucket`."""
     if tenant_id is None or tenant_slug is None:
         tenant_id, tenant_slug = _tenant_atual(cur)
     linha = _linha_bucket(cur, tenant_id)
-    cota_bytes, cota_objetos = _cotas_tenant(cur, tenant_id)
+    cota_atual = _cota_bytes_tenant(cur, tenant_id)
     if linha is not None:
-        web_alvo = bool(linha["web_ativo"]) if web is None else bool(web)
-        mudou_cota = int(linha["cota_bytes"]) != cota_bytes or int(linha["cota_objetos"]) != cota_objetos
-        mudou_web = web_alvo != bool(linha["web_ativo"])
-        if mudou_cota or forcar:
-            _admin().definir_cota(linha["bucket_id"], cota_bytes, cota_objetos)
-        if mudou_web or forcar:
-            _admin().definir_web(linha["bucket_id"], web_alvo)
-        if mudou_cota or mudou_web:
-            cur.execute(
-                "SELECT plat.arquivo_bucket_cotas_atualizar(%s, %s, %s, %s)",
-                (tenant_id, cota_bytes, cota_objetos, web_alvo),
-            )
+        if int(linha["cota_bytes"]) != cota_atual:
+            _admin().definir_cota(linha["bucket_id"], cota_atual)
+            cur.execute("SELECT plat.arquivo_bucket_cota_atualizar(%s, %s)", (tenant_id, cota_atual))
             linha = _linha_bucket(cur, tenant_id)
         return linha
     admin = _admin()
@@ -167,23 +157,10 @@ def garantir_bucket(
         admin.permitir(bucket["id"], rw["accessKeyId"], ler=True, escrever=True, dono=True)
     if ro["accessKeyId"] not in ids_permitidos:
         admin.permitir(bucket["id"], ro["accessKeyId"], ler=True, escrever=False, dono=False)
-    admin.definir_cota(bucket["id"], cota_bytes, cota_objetos)
-    admin.definir_web(bucket["id"], bool(web))
-    cota_atual = cota_bytes
+    admin.definir_cota(bucket["id"], cota_atual)
     # criar_chave é idempotente por NOME (ClienteAdmin.criar_chave): se a chave já existia, a resposta não traz
     # `secretAccessKey` de volta (o Garage só devolve o segredo na criação) — nesse caso o segredo já gravado em
-    # plat.arquivo_bucket é o único que vale; só entra aqui na 1ª vez que este bucket é criado, então sempre é novo.
-    #
-    # Achado do item L2-03-edicao (07/09): essa suposição QUEBRA se o Garage já tinha bucket/chaves com este
-    # nome mas a linha em `plat.arquivo_bucket` sumiu (schema recriado numa trilha sem apagar o Garage —
-    # cenário real desta casa, não hipotético). Sem checagem, o INSERT abaixo gravaria `secretAccessKey=None`
-    # e o bucket ficaria inutilizável em silêncio até a primeira tentativa de uso. Erro explícito é melhor.
-    if "secretAccessKey" not in rw or "secretAccessKey" not in ro:
-        raise RuntimeError(
-            f"objetos.garantir_bucket: bucket/chaves '{alias}' já existem no Garage sem segredo conhecido "
-            "(a linha de plat.arquivo_bucket para este inquilino sumiu) — apague o bucket e as chaves no "
-            "Garage e rode de novo, ou restaure a linha de plat.arquivo_bucket de um backup"
-        )
+    # plat.arquivo_bucket é o único que vale; só entra aqui na 1ª vez que este bucket é criado, então sempre é novo
     cur.execute(
         "SELECT plat.arquivo_bucket_registrar(%s,%s,%s,%s,%s,%s,%s,%s)",
         (
@@ -197,38 +174,8 @@ def garantir_bucket(
             cota_atual,
         ),
     )
-    cur.execute(
-        "SELECT plat.arquivo_bucket_cotas_atualizar(%s, %s, %s, %s)", (tenant_id, cota_bytes, cota_objetos, bool(web))
-    )
     log.info("objetos: bucket %s criado para tenant_id=%s", alias, tenant_id)
     return _linha_bucket(cur, tenant_id)
-
-
-def semear_bucket(cur, tenant_id: int, tenant_slug: str, *, web: bool = True) -> tuple[dict, list[str]]:
-    """Passo de instalação (install.sh seção g3, item L1-01-d): garante balde/chaves/cotas/web do inquilino e
-    devolve `(linha, mudanças)` — lista vazia na 2ª execução (é o que prova a idempotência). Depois de sincronizar,
-    LÊ o balde de volta pela Admin API e confere que as cotas do Garage são as do banco; divergência é erro alto,
-    nunca silêncio."""
-    antes = _linha_bucket(cur, tenant_id)
-    linha = garantir_bucket(cur, tenant_id, tenant_slug, web=web, forcar=antes is None)
-    mudancas: list[str] = []
-    if antes is None:
-        mudancas.append("balde, chaves RW/RO, cotas e web criados")
-    else:
-        for campo in ("cota_bytes", "cota_objetos", "web_ativo"):
-            if antes[campo] != linha[campo]:
-                mudancas.append(f"{campo}: {antes[campo]} -> {linha[campo]}")
-    info = _admin().info_bucket(linha["bucket_id"])
-    cotas = info.get("quotas") or {}
-    if int(cotas.get("maxSize") or 0) != int(linha["cota_bytes"]) or int(cotas.get("maxObjects") or 0) != int(
-        linha["cota_objetos"]
-    ):
-        _admin().definir_cota(linha["bucket_id"], int(linha["cota_bytes"]), int(linha["cota_objetos"]))
-        mudancas.append("cota reaplicada no Garage (divergia do banco)")
-    if bool(info.get("websiteAccess")) != bool(linha["web_ativo"]):
-        _admin().definir_web(linha["bucket_id"], bool(linha["web_ativo"]))
-        mudancas.append("web reaplicado no Garage (divergia do banco)")
-    return linha, mudancas
 
 
 def _resolver_bucket_por_slug(tenant_slug: str) -> dict | None:
@@ -299,71 +246,94 @@ def guardar(
     chave = f"{tenant_slug}/{obj_key}"
     cli = _cliente(bucket)
     if cli.head(bucket["bucket_alias"], obj_key) is None:
-        conferir_cotas(bucket, len(dados))
-        try:
-            cli.put(bucket["bucket_alias"], obj_key, dados, content_type)
-        except CotaGarage as e:
-            raise CotaExcedida(str(e)) from e
+        usado = _admin().info_bucket(bucket["bucket_id"]).get("bytes", 0)
+        if usado + len(dados) > bucket["cota_bytes"]:
+            raise CotaExcedida(
+                f"cota de {bucket['cota_bytes']} bytes excedida: uso atual {usado}, objeto de {len(dados)} bytes"
+            )
+        cli.put(bucket["bucket_alias"], obj_key, dados, content_type)
     _registrar_metadado(cur, tenant_id, classe, referencia, sha, len(dados), content_type, chave, usuario_id)
     return {"chave": chave, "sha256": sha, "bytes": len(dados), "content_type": content_type}
 
 
-PARTE_STREAM_BYTES = 16 * 1024 * 1024  # parte do multipart no envio em stream (>= PARTE_TAMANHO_MINIMO do S3)
-
-
 def guardar_arquivo(
-    cur, classe: str, caminho, content_type: str, item_id: Any = None, usuario_id: int | None = None
+    cur, classe: str, caminho, content_type: str, item_id: Any = None, usuario_id: int | None = None,
+    extensao: str | None = None,
 ) -> dict:
-    """Mesmo contrato de `guardar` (chave por sha256 do conteúdo, HEAD antes de PUT, metadado com RLS) lendo
-    de um ARQUIVO EM DISCO em vez de bytes em RAM (item L1-01: COG de centenas de MB nunca passa inteiro pela
-    memória do worker — sha256 calculado em stream, envio por multipart acima de PARTE_STREAM_BYTES)."""
-    tenant_id, tenant_slug = _tenant_atual(cur)
-    bucket = garantir_bucket(cur, tenant_id, tenant_slug)
-    h = hashlib.sha256()
-    with open(caminho, "rb") as f:
-        for pedaco in iter(lambda: f.read(1024 * 1024), b""):
-            h.update(pedaco)
-    sha = h.hexdigest()
-    tamanho = os.path.getsize(caminho)
-    ext = EXTENSOES.get(content_type, "bin")
-    referencia = str(item_id) if item_id is not None else None
-    meio = f"{referencia}/" if referencia else ""
-    obj_key = f"{classe}/{meio}{sha}.{ext}"
-    chave = f"{tenant_slug}/{obj_key}"
+    """Mesmo contrato de `guardar`, mas a origem é um ARQUIVO NO DISCO e o conteúdo NUNCA é montado inteiro em
+    memória (item L0-04-h-exportar: a exportação de uma camada grande pode passar de 1 GB; a casa já derrubou
+    o Postgres uma vez por processo que segurou tudo em RAM). O caminho é lido em blocos de
+    `limites.ARQUIVO_PARTE_BYTES`: até um bloco, 1 PUT só; acima disso, o multipart real do Garage
+    (`parte_iniciar`/`parte_enviar`/`parte_concluir`), uma parte por vez.
+
+    `extensao` sobrepõe a tabela EXTENSOES (a exportação usa `.fgb`, `.parquet`, `.dxf`… que não são tipos de
+    conteúdo registrados no navegador).
+    """
+    from app import limites
+
+    caminho = str(caminho)
+    tamanho_total = os.path.getsize(caminho)
+    if tamanho_total <= 0:
+        raise ValueError(f"guardar_arquivo: {caminho} está vazio")
+    parte = limites.ARQUIVO_PARTE_BYTES
+    if tamanho_total <= limites.ARQUIVO_BUFFER_UNICO_BYTES:
+        with open(caminho, "rb") as f:
+            dados = f.read()
+        resultado = guardar(cur, classe, dados, content_type, item_id=item_id, usuario_id=usuario_id)
+        if extensao and not resultado["chave"].endswith(extensao):
+            resultado = _renomear_extensao(cur, resultado, extensao)
+        return resultado
+    r = parte_iniciar(cur, classe, content_type, item_id=item_id)
+    upload_id = r["upload_id"]
+    partes: list[tuple[int, str]] = []
+    numero = 1
+    try:
+        with open(caminho, "rb") as f:
+            while True:
+                bloco = f.read(parte)
+                if not bloco:
+                    break
+                partes.append((numero, parte_enviar(cur, upload_id, numero, bloco)))
+                numero += 1
+        resultado = parte_concluir(cur, upload_id, partes)
+    except Exception:
+        try:
+            parte_abortar(cur, upload_id)
+        except Exception:  # noqa: BLE001 — o abortamento é melhor-esforço; o erro original é o que importa
+            log.warning("objetos: falha ao abortar o multipart %s", upload_id)
+        raise
+    if extensao and not resultado["chave"].endswith(extensao):
+        resultado = _renomear_extensao(cur, resultado, extensao)
+    return resultado
+
+
+def _renomear_extensao(cur, resultado: dict, extensao: str) -> dict:
+    """Copia o objeto para a MESMA chave com outra extensão e apaga a anterior. A chave é
+    `<slug>/<classe>/[<ref>/]<sha256>.<ext>`: só o sufixo muda, o conteúdo (e portanto o sha256) é o mesmo."""
+    ext = extensao.lstrip(".")
+    if not re.fullmatch(_EXT, ext):
+        raise ChaveInvalida(f"extensão inválida: {extensao!r}")
+    p = _partes(resultado["chave"])
+    if p["ext"] == ext:
+        return resultado
+    bucket, obj_key = _chave_e_objeto(resultado["chave"])
+    novo_obj = obj_key[: -(len(p["ext"]))] + ext
     cli = _cliente(bucket)
-    if cli.head(bucket["bucket_alias"], obj_key) is None:
-        usado = _admin().info_bucket(bucket["bucket_id"]).get("bytes", 0)
-        if usado + tamanho > bucket["cota_bytes"]:
-            raise CotaExcedida(
-                f"cota de {bucket['cota_bytes']} bytes excedida: uso atual {usado}, objeto de {tamanho} bytes"
-            )
-        if tamanho <= PARTE_STREAM_BYTES:
-            with open(caminho, "rb") as f:
-                cli.put(bucket["bucket_alias"], obj_key, f.read(), content_type)
-        else:
-            upload_id = cli.multipart_iniciar(bucket["bucket_alias"], obj_key, content_type)
-            try:
-                partes: list[tuple[int, str]] = []
-                with open(caminho, "rb") as f:
-                    numero = 1
-                    while True:
-                        pedaco = f.read(PARTE_STREAM_BYTES)
-                        if not pedaco:
-                            break
-                        etag = cli.multipart_enviar_parte(
-                            bucket["bucket_alias"], obj_key, upload_id, numero, pedaco
-                        )
-                        partes.append((numero, etag))
-                        numero += 1
-                cli.multipart_concluir(bucket["bucket_alias"], obj_key, upload_id, partes)
-            except Exception:
-                try:
-                    cli.multipart_abortar(bucket["bucket_alias"], obj_key, upload_id)
-                except ErroGarage:
-                    log.warning("objetos: abortar multipart de %s falhou na limpeza", obj_key)
-                raise
-    _registrar_metadado(cur, tenant_id, classe, referencia, sha, tamanho, content_type, chave, usuario_id)
-    return {"chave": chave, "sha256": sha, "bytes": tamanho, "content_type": content_type}
+    if cli.head(bucket["bucket_alias"], novo_obj) is None:
+        cli.copiar(bucket["bucket_alias"], obj_key, novo_obj)
+    cli.delete(bucket["bucket_alias"], obj_key)
+    nova_chave = f"{p['slug']}/{novo_obj}"
+    cur.execute(
+        "UPDATE plat.arquivo SET chave = %s WHERE tenant_id = %s AND chave = %s AND apagado_em IS NULL",
+        (nova_chave, bucket["tenant_id"], resultado["chave"]),
+    )
+    return {**resultado, "chave": nova_chave}
+
+
+def ler_stream(chave: str, pedaco_bytes: int = 1024 * 1024):
+    """Gerador de blocos do objeto (entrega de arquivo grande sem montá-lo em memória; item L0-04-h)."""
+    bucket, obj_key = _chave_e_objeto(chave)
+    return _cliente(bucket).get_stream(bucket["bucket_alias"], obj_key, pedaco_bytes)
 
 
 def existe(chave: str) -> bool:
@@ -383,53 +353,6 @@ def ler_intervalo(chave: str, inicio: int, fim: int) -> bytes:
     """Bytes [inicio, fim] inclusive (contrato ADR 0005: cabeçalho central de zip sem baixar o arquivo inteiro)."""
     bucket, obj_key = _chave_e_objeto(chave)
     return _cliente(bucket).get_intervalo(bucket["bucket_alias"], obj_key, inicio, fim)
-
-
-def tamanho(chave: str) -> int:
-    """Tamanho do objeto em bytes (HEAD no Garage); FileNotFoundError se não existe (item L1-01: o handler de
-    tiles e a entrega por Range precisam do tamanho sem baixar nada)."""
-    bucket, obj_key = _chave_e_objeto(chave)
-    info = _cliente(bucket).head(bucket["bucket_alias"], obj_key)
-    if info is None:
-        raise FileNotFoundError(chave)
-    return int(info.tamanho)
-
-
-def fonte_gdal(chave: str) -> tuple[str, dict]:
-    """(caminho `/vsis3/...`, opções de ambiente GDAL) para LER o objeto por faixa de bytes, sem baixar
-    (item L1-02: o motor de ladrilho abre o COG direto no Garage). Usa SEMPRE a chave só-leitura do balde
-    do inquilino — a chave RW nunca chega perto do caminho de leitura de tile.
-
-    Não devolve URL assinada nem credencial ao cliente: o segredo fica no processo, no `rasterio.Env` que
-    envolve a leitura. Quem chama nunca recebe endereço que o navegador possa repetir."""
-    bucket, obj_key = _chave_e_objeto(chave)
-    if not settings.PLAT_GARAGE_URL:
-        raise ConfiguracaoAusente("PLAT_GARAGE_URL é obrigatório para ler COG por /vsis3")
-    endpoint = settings.PLAT_GARAGE_URL
-    sem_esquema = endpoint.split("://", 1)[-1]
-    opcoes = {
-        "AWS_ACCESS_KEY_ID": bucket["chave_ro_id"],
-        "AWS_SECRET_ACCESS_KEY": bucket["chave_ro_segredo"],
-        "AWS_S3_ENDPOINT": sem_esquema,
-        "AWS_HTTPS": "YES" if endpoint.startswith("https://") else "NO",
-        "AWS_VIRTUAL_HOSTING": "FALSE",
-        "AWS_DEFAULT_REGION": settings.PLAT_GARAGE_REGIAO,
-        "AWS_REGION": settings.PLAT_GARAGE_REGIAO,
-    }
-    return f"/vsis3/{bucket['bucket_alias']}/{obj_key}", opcoes
-
-
-def baixar(chave: str, destino) -> int:
-    """Grava o objeto em `destino` (caminho local) EM STREAM, sem materializar em RAM (item L1-01: o bruto de
-    até RASTER_BYTES_MAX desce para o diretório de trabalho do job). Devolve os bytes escritos."""
-    bucket, obj_key = _chave_e_objeto(chave)
-    cli = _cliente(bucket)
-    escrito = 0
-    with open(destino, "wb") as f:
-        for pedaco in cli.get_stream(bucket["bucket_alias"], obj_key):
-            f.write(pedaco)
-            escrito += len(pedaco)
-    return escrito
 
 
 def apagar(chave: str) -> bool:
@@ -452,44 +375,12 @@ def apagar(chave: str) -> bool:
     return existia
 
 
-def conferir_cotas(bucket: dict, bytes_novos: int, objetos_novos: int = 1) -> dict:
-    """Checagem PRÉVIA (mensagem legível antes de o Garage recusar): uso atual + o que vai entrar contra as duas
-    cotas do balde. Devolve `{bytes, objetos}` usados. O Garage recusa de qualquer forma se esta checagem tiver
-    bug (ADR 0006 seção 2; a recusa dele chega traduzida por `CotaGarage`)."""
-    info = _admin().info_bucket(bucket["bucket_id"])
-    usado = int(info.get("bytes", 0))
-    objetos = int(info.get("objects", 0))
-    if usado + bytes_novos > int(bucket["cota_bytes"]):
-        raise CotaExcedida(
-            f"cota de {bucket['cota_bytes']} bytes excedida: uso atual {usado}, objeto de {bytes_novos} bytes"
-        )
-    if objetos + objetos_novos > int(bucket["cota_objetos"]):
-        raise CotaExcedida(
-            f"cota de {bucket['cota_objetos']} objetos excedida: uso atual {objetos}, mais {objetos_novos} objeto(s)"
-        )
-    return {"bytes": usado, "objetos": objetos}
-
-
 def uso(tenant_slug: str) -> int:
     """bytes_usados do bucket do inquilino (0 se o inquilino ainda não tem bucket — nada foi gravado ainda)."""
-    return uso_detalhado(tenant_slug)["bytes_usados"]
-
-
-def uso_detalhado(tenant_slug: str) -> dict:
-    """`{bytes_usados, objetos_usados, cota_bytes, cota_objetos, web_ativo}` lidos do PRÓPRIO Garage
-    (GetBucketInfo: contagem exata dele, não uma soma nossa) e do registro do balde; zeros e `None` quando o
-    inquilino ainda não tem balde."""
     bucket = _resolver_bucket_por_slug(tenant_slug)
     if bucket is None:
-        return {"bytes_usados": 0, "objetos_usados": 0, "cota_bytes": None, "cota_objetos": None, "web_ativo": False}
-    info = _admin().info_bucket(bucket["bucket_id"])
-    return {
-        "bytes_usados": int(info.get("bytes", 0)),
-        "objetos_usados": int(info.get("objects", 0)),
-        "cota_bytes": int(bucket["cota_bytes"]),
-        "cota_objetos": int(bucket["cota_objetos"]),
-        "web_ativo": bool(bucket["web_ativo"]),
-    }
+        return 0
+    return int(_admin().info_bucket(bucket["bucket_id"]).get("bytes", 0))
 
 
 # ---------------------------------------------------------------- assinatura HMAC (inalterado; ADR 0004 11.2)
@@ -612,10 +503,12 @@ def varrer_orfaos(cur, tenant_slug: str) -> dict:
     linhas = cur.fetchall()
     no_banco: dict[str, dict] = {}
     for linha in linhas:
-        # a chave gravada é sempre `<slug>/<caminho no balde>` — tanto no formato do L0-11
-        # (`<classe>/[ref/]<sha256>.<ext>`) quanto no de imagens do L1-01-d (`<item_id>/<asset>_<sha8>.<ext>`,
-        # app/objetos_raster.py); o caminho no balde é o que vem depois da 1ª barra
-        _slug, _, obj_key = linha["chave"].partition("/")
+        meio = f"{linha['referencia']}/" if linha["referencia"] else ""
+        ext = None
+        m = CHAVE.match(linha["chave"])
+        if m:
+            ext = m.group("ext")
+        obj_key = f"{linha['classe']}/{meio}{linha['sha256']}.{ext or 'bin'}"
         no_banco[obj_key] = linha
     sem_linha = sorted(no_garage - set(no_banco.keys()))
     sem_objeto = [dict(no_banco[k]) for k in sorted(set(no_banco.keys()) - no_garage)]
@@ -625,36 +518,3 @@ def varrer_orfaos(cur, tenant_slug: str) -> dict:
         "objetos_no_garage": len(no_garage),
         "linhas_no_banco": len(no_banco),
     }
-
-
-# ---------------------------------------------------------------- ciclo de vida do balde (item L1-01-d)
-def apagar_bucket_do_inquilino(cur, tenant_id: int) -> dict:
-    """Desfaz o que `garantir_bucket` fez: esvazia o balde, apaga as duas chaves de acesso, apaga o balde no
-    Garage e a linha de `plat.arquivo_bucket`. Existe porque apagar o inquilino (`plat.inquilino_apagar`) só
-    limpa o banco — sem isto o balde e as chaves ficariam órfãos no Garage. Idempotente: sem linha, devolve zeros.
-    Devolve `{objetos, bytes}` liberados."""
-    linha = _linha_bucket(cur, tenant_id)
-    if linha is None:
-        return {"objetos": 0, "bytes": 0}
-    admin = _admin()
-    cli = _cliente(linha)
-    alias = linha["bucket_alias"]
-    apagados = 0
-    liberados = 0
-    for o in cli.listar(alias, max_chaves=1000):
-        cli.delete(alias, o["chave"])
-        apagados += 1
-        liberados += int(o["bytes"])
-    for chave_id in (linha["chave_rw_id"], linha["chave_ro_id"]):
-        try:
-            admin.apagar_chave(chave_id)
-        except ErroGarage:
-            log.warning("objetos: chave %s já não existia no Garage", chave_id)
-    try:
-        admin.apagar_bucket(linha["bucket_id"])
-    except ErroGarage:
-        log.warning("objetos: balde %s já não existia no Garage", linha["bucket_id"])
-    cur.execute("DELETE FROM plat.arquivo_bucket WHERE tenant_id = %s", (tenant_id,))
-    cur.execute("UPDATE plat.arquivo SET apagado_em = now() WHERE tenant_id = %s AND apagado_em IS NULL", (tenant_id,))
-    log.info("objetos: balde %s apagado (%s objeto(s), %s bytes)", alias, apagados, liberados)
-    return {"objetos": apagados, "bytes": liberados}

@@ -36,6 +36,7 @@ V = visualizador · C = campo · E = editor · A = admin · **adm** = privilégi
 | conteudo | `conteudo.categorias` | gerir categorias do inquilino | **sim** |  |  |  | x |
 | conteudo | `conteudo.criar` | criar, editar e apagar os próprios itens (mapa, app, pasta) | não |  |  | x | x |
 | conteudo | `conteudo.editar_tudo` | editar metadado e dado de qualquer item | **sim** |  |  |  | x |
+| conteudo | `conteudo.exportar` | exportar camada para outros formatos (shapefile, GeoPackage, CSV, ...) | não |  |  | x | x |
 | conteudo | `conteudo.publicar_camada` | publicar camada vetorial hospedada | não |  |  | x | x |
 | conteudo | `conteudo.publicar_raster` | publicar imagem/raster | não |  |  | x | x |
 | conteudo | `conteudo.publicar_tiles` | publicar tiles vetoriais | não |  |  | x | x |

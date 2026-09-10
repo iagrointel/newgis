@@ -5,6 +5,7 @@
    A tabela é própria (não <plat-tabela>) porque as linhas mudam uma a uma ao vivo e o cabeçalho ordena. */
 import { confirmar } from '../base/componentes.js';
 import { h, limpar } from '../base/dom.js';
+import { aoTraduzir, t } from '../base/i18n.js';
 import * as api from './api.js';
 import { INTERVALO_POLLING_MS, assinar, cancelarAssinatura } from './eventos.js';
 import {
@@ -69,16 +70,16 @@ function celulaProgresso(job) {
   if (job.estado === 'rodando') {
     const pct = Math.max(0, Math.min(100, Number(job.progresso) || 0));
     td.append(
-      h('div', { class: 'progresso', role: 'progressbar', 'aria-valuenow': String(pct), 'aria-valuemin': '0', 'aria-valuemax': '100' },
+      h('div', { class: 'progresso', role: 'progressbar', 'aria-label': t('tarefas.progresso_de', { tipo: job.tipo }), 'aria-valuenow': String(pct), 'aria-valuemin': '0', 'aria-valuemax': '100' },
         h('div', { class: 'barra-progresso' }, h('div', { class: 'preenchido', style: `width:${pct}%` })),
         h('span', { class: 'valor' }, `${pct} %`)),
-      h('span', { class: 'msg' }, (job.mensagem || '') + (job.cancelar_solicitado ? ' · cancelando' : '')),
+      h('span', { class: 'msg' }, (job.mensagem || '') + (job.cancelar_solicitado ? ` · ${t('tarefas.cancelando')}` : '')),
     );
     return td;
   }
   td.append(h('span', { class: job.estado === 'falhou' ? 'msg falha' : 'msg' }, textoProgresso(job)));
   if (job.estado === 'concluido' && job.resultado && job.resultado.item_id) {
-    td.append(' ', h('a', { href: `/conteudo/${encodeURIComponent(job.resultado.item_id)}`, class: 'link-item' }, '→ item'));
+    td.append(' ', h('a', { href: `/conteudo/${encodeURIComponent(job.resultado.item_id)}`, class: 'link-item' }, t('tarefas.ir_item')));
   }
   return td;
 }
@@ -88,16 +89,16 @@ function botao(texto, classe, aoClicar, extra = {}) {
 }
 
 async function cancelarJob(job, btn) {
-  if (!(await confirmar('Cancelar tarefa', `Cancelar a tarefa ${job.tipo}?`, { ok: 'cancelar tarefa', perigo: true }))) return;
+  if (!(await confirmar(t('tarefas.cancelar_titulo'), t('tarefas.cancelar_texto', { tipo: job.tipo }), { ok: t('tarefas.cancelar_ok'), perigo: true }))) return;
   btn.disabled = true;
-  btn.textContent = 'cancelando';
+  btn.textContent = t('tarefas.cancelando');
   try {
     atualizarLinha(await api.cancelar(job.id));
     aviso('lista-aviso', '');
   } catch (e) {
     btn.disabled = false;
-    btn.textContent = 'cancelar';
-    aviso('lista-aviso', `não foi possível cancelar (${e.status || 'rede'}): ${e.message}`);
+    btn.textContent = t('tarefas.cancelar');
+    aviso('lista-aviso', t('tarefas.erro_cancelar', { status: e.status || t('tarefas.rede'), erro: e.message }));
   }
 }
 
@@ -107,23 +108,23 @@ async function repetirJob(job) {
     await carregar();
     if (s.aoAbrir) s.aoAbrir(novo.id);
   } catch (e) {
-    aviso('lista-aviso', `não foi possível repetir (${e.status || 'rede'}): ${e.message}`);
+    aviso('lista-aviso', t('tarefas.erro_repetir', { status: e.status || t('tarefas.rede'), erro: e.message }));
   }
 }
 
 function celulaAcoes(job) {
   const caixa = h('div', { class: 'acoes-linha' });
   if (!podeExecutar()) {
-    caixa.append(botao('abrir', 'texto acao-abrir', () => abrir(job.id)));
+    caixa.append(botao(t('tarefas.abrir'), 'texto acao-abrir', () => abrir(job.id)));
     return h('td', { class: 'c-acoes' }, caixa);
   }
   if (!FINAIS.has(job.estado)) {
-    caixa.append(botao(job.cancelar_solicitado ? 'cancelando' : 'cancelar', 'perigo acao-cancelar',
+    caixa.append(botao(job.cancelar_solicitado ? t('tarefas.cancelando') : t('tarefas.cancelar'), 'perigo acao-cancelar',
       (ev) => cancelarJob(job, ev.currentTarget), { disabled: Boolean(job.cancelar_solicitado) }));
   } else {
-    caixa.append(botao('repetir', 'acao-repetir', () => repetirJob(job)));
+    caixa.append(botao(t('tarefas.repetir'), 'acao-repetir', () => repetirJob(job)));
   }
-  caixa.append(botao('abrir', 'texto acao-abrir', () => abrir(job.id)));
+  caixa.append(botao(t('tarefas.abrir'), 'texto acao-abrir', () => abrir(job.id)));
   return h('td', { class: 'c-acoes' }, caixa);
 }
 
@@ -157,8 +158,7 @@ export function atualizarLinha(job) {
   } else if (s.deslocamento === 0 && casaComFiltros(job)) {
     s.itens.unshift(job);
     s.total += 1;
-    const vazio = corpo.querySelector('tr.linha-vazia');
-    if (vazio) vazio.remove();
+    mostrarEstado(null);
     corpo.prepend(linha(job));
     renderizarPaginacao();
   }
@@ -169,14 +169,30 @@ export function atualizarLinha(job) {
 
 function renderizarPaginacao() {
   porId('paginacao').atualizar({ total: s.total, limite: LIMITE_PAGINA, deslocamento: s.deslocamento });
-  porId('lista-total').textContent = `${numero(s.total)} ${s.total === 1 ? 'tarefa' : 'tarefas'}`;
+  porId('lista-total').textContent = s.total === 1 ? t('tarefas.total_uma') : t('tarefas.total', { n: numero(s.total) });
+}
+
+/* estado explícito da lista (UX-05): null = tabela visível; 'vazio' | 'carregando' | erro (objeto) = <plat-estado> no lugar */
+function mostrarEstado(tipo, extra) {
+  const estado = document.getElementById('lista-estado');
+  const caixa = document.getElementById('lista-caixa');
+  if (!estado || !caixa) return;
+  if (!tipo) { estado.limpar(); caixa.hidden = false; return; }
+  // vazio deixa o cabeçalho da tabela à vista (as colunas ordenáveis continuam sendo o controle); carregando e erro escondem
+  caixa.hidden = tipo !== 'vazio';
+  if (tipo === 'carregando') estado.carregando(t('tarefas.carregando'));
+  else if (tipo === 'vazio') {
+    const filtrado = Boolean(s.filtros.estado || s.filtros.tipo || s.filtros.periodo !== 'tudo');
+    estado.vazio(filtrado ? t('tarefas.vazio_filtros') : t('tarefas.vazio'), filtrado ? [{ id: 'limpar', rotulo: t('tarefas.limpar_filtros') }] : []);
+  } else if (tipo === 'erro') estado.erro({ status: extra.status, json: { mensagem: extra.message, req_id: extra.reqId } });
 }
 
 function renderizar() {
   const corpo = limpar(porId('lista-corpo'));
   if (s.itens.length === 0) {
-    corpo.append(h('tr', { class: 'linha-vazia' }, h('td', { colspan: '7', class: 'vazio' }, 'nenhuma tarefa com estes filtros')));
+    mostrarEstado('vazio');
   } else {
+    mostrarEstado(null);
     for (const job of s.itens) corpo.append(linha(job));
   }
   renderizarPaginacao();
@@ -195,6 +211,8 @@ export async function carregar() {
     return;
   }
   s.carregando = true;
+  porId('lista').setAttribute('aria-busy', 'true');
+  if (!s.itens.length) mostrarEstado('carregando');
   try {
     const r = await api.listar(parametros());
     s.itens = Array.isArray(r.itens) ? r.itens : [];
@@ -202,8 +220,9 @@ export async function carregar() {
     renderizar();
     aviso('lista-aviso', '');
   } catch (e) {
-    aviso('lista-aviso', `não foi possível carregar a lista (${e.status || 'rede'}): ${e.message}`);
+    if (e.status !== 401) mostrarEstado('erro', e);
   } finally {
+    porId('lista').setAttribute('aria-busy', 'false');
     s.carregando = false;
     if (s.recarregarDepois) {
       s.recarregarDepois = false;
@@ -239,8 +258,8 @@ function assinaturas() {
     s.timerPolling = null;
   }
   porId('lista-modo').textContent = faltou
-    ? `mais de ${s.assinados.size} tarefas ativas: lista atualizada a cada ${INTERVALO_POLLING_MS / 1000} s`
-    : (s.assinados.size ? `${s.assinados.size} ao vivo` : '');
+    ? t('tarefas.modo_polling', { n: s.assinados.size, s: INTERVALO_POLLING_MS / 1000 })
+    : (s.assinados.size ? t('tarefas.modo_ao_vivo', { n: s.assinados.size }) : '');
 }
 
 export async function atualizarResumo() {
@@ -252,12 +271,13 @@ export async function atualizarResumo() {
       cont.textContent = String(ativos);
       cont.hidden = ativos === 0;
     }
-    porId('resumo-texto').textContent = `${numero(r.pendente)} na fila · ${numero(r.rodando)} rodando · `
-      + `${numero(r.concluido_24h)} concluídas em 24 h · ${numero(r.falhou_24h)} falhas em 24 h`;
+    porId('resumo-texto').textContent = t('tarefas.resumo', {
+      pendente: numero(r.pendente), rodando: numero(r.rodando), concluido: numero(r.concluido_24h), falhou: numero(r.falhou_24h),
+    });
     if (s.ativos !== null && s.ativos !== ativos && s.deslocamento === 0) carregar();
     s.ativos = ativos;
   } catch (e) {
-    if (e.status !== 401) porId('resumo-texto').textContent = `resumo indisponível (${e.status || 'rede'})`;
+    if (e.status !== 401) porId('resumo-texto').textContent = t('tarefas.resumo_indisponivel', { status: e.status || t('tarefas.rede') });
   }
 }
 
@@ -324,13 +344,19 @@ export async function iniciar({ usuario = null, tipos = [], aoAbrir = null } = {
     const n = document.getElementById(id);
     if (n) n.addEventListener('change', lerFiltros);
   }
-  porId('f-limpar').addEventListener('click', () => {
+  const limparFiltros = () => {
     porId('f-estado').value = '';
     porId('f-tipo').value = '';
     porId('f-periodo').value = '7d';
     if (quemSel) quemSel.value = 'eu';
     lerFiltros();
-  });
+  };
+  porId('f-limpar').addEventListener('click', limparFiltros);
+  const estadoLista = document.getElementById('lista-estado');
+  if (estadoLista) estadoLista.addEventListener('acao', (ev) => { if (ev.detail.id === 'limpar') limparFiltros(); else if (ev.detail.id === 'tentar') carregar(); });
+  // aoTraduzir roda já na inscrição: a primeira chamada é pulada (a carga inicial vem logo abaixo)
+  let primeira = true;
+  aoTraduzir(() => { if (primeira) { primeira = false; return; } renderizar(); atualizarResumo(); });
   for (const th of document.querySelectorAll('#lista th[data-campo]')) {
     th.addEventListener('click', () => ordenarPor(th.dataset.campo));
     th.addEventListener('keydown', (ev) => {

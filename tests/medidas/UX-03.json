@@ -1,0 +1,16 @@
+{
+ "item": "UX-03",
+ "gerado_em": "2026-09-07T23:15:06Z",
+ "medidas": {
+  "render_1000_itens_p95_ms": {
+   "valor": 58.6,
+   "unidade": "ms",
+   "n": 20,
+   "mediana_ms": 46.0,
+   "carga_1min": 10.515625,
+   "ram_livre_gb": 6.18,
+   "medido_em": "2026-09-07T23:15:06Z",
+   "comando": "playwright chromium 1280x800: performance.measure('catalogo:render') de lista.js, 20 renders com 1.000 itens (3 vistas x 3 + 11 seleções), tests/e2e/test_conteudo_ux03.py"
+  }
+ }
+}

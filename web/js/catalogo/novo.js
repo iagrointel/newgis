@@ -130,6 +130,39 @@ async function sha256Hex(blob) {
   return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/* sobe UM arquivo pelo upload retomável (ADR 0005 seção 3) e devolve o item 'arquivo' criado; usado pelo diálogo
+   "Novo item > Arquivo" e pelo arrasto sobre a lista (soltar.js). aoProgresso(texto, pct?) informa a tela; falha
+   aborta o upload no servidor e relança a exceção da API (ErroApi). */
+export async function enviarArquivoComoItem(f, { tipo, aoProgresso = () => {} } = {}) {
+  const tipoDeclarado = tipo || tipoDeclaradoDoNome(f.name) || TIPOS_UPLOAD[0];
+  if (f.size > LIMITES.uploadBytes) throw new Error(t('catalogo.upload_grande', { max: bytes(LIMITES.uploadBytes) }));
+  let up = null;
+  try {
+    aoProgresso(t('catalogo.upload_preparando'), 0);
+    const sha = await sha256Hex(f);
+    up = await api.uploadIniciar({ nome: f.name, bytes: f.size, tipo_declarado: tipoDeclarado, ...(sha ? { sha256: sha } : {}), ...(pastaAtual() ? { pasta_id: pastaAtual() } : {}) });
+    const tam = up.parte_bytes || 16777216;
+    const partes = up.partes || Math.max(1, Math.ceil(f.size / tam));
+    for (let n = 1; n <= partes; n += 1) {
+      const ini = (n - 1) * tam;
+      const blob = f.slice(ini, Math.min(f.size, ini + tam));
+      let tentativa = 0;
+      for (;;) {
+        try { await api.uploadParte(up.id, n, blob); break; } catch (e) { tentativa += 1; if (tentativa >= 3 || e.status === 401 || (e.status >= 400 && e.status < 500 && e.status !== 429)) throw e; }
+      }
+      aoProgresso(t('catalogo.upload_parte', { n, total: partes }), Math.round((n / partes) * 100));
+    }
+    aoProgresso(t('catalogo.upload_concluindo'), 100);
+    const r = await api.uploadConcluir(up.id);
+    // a API devolve o item criado como arquivo_id (item_id era o nome antigo; o caminho nunca chegava a abrir o item)
+    const itemId = r.arquivo_id || r.item_id;
+    return itemId ? await api.obter(itemId) : null;
+  } catch (e) {
+    if (up && up.id) { try { await api.uploadAbortar(up.id); } catch { /* aborto falhou: o periódico expira em 24 h */ } }
+    throw e;
+  }
+}
+
 async function novoArquivo() {
   const d = document.getElementById('painel-novo') || document.body.appendChild(h('plat-dialogo', { id: 'painel-novo' }));
   const corpo = h('div', { class: 'arquivo-escolha' });
@@ -154,34 +187,16 @@ async function novoArquivo() {
     if (!f) return;
     enviar.disabled = true; entrada.disabled = true; tipoSel.disabled = true;
     barra.hidden = false;
-    let up = null;
     try {
-      estado.textContent = t('catalogo.upload_preparando');
-      const sha = await sha256Hex(f);
-      up = await api.uploadIniciar({ nome: f.name, bytes: f.size, tipo_declarado: tipoSel.value, ...(sha ? { sha256: sha } : {}) });
-      const tam = up.parte_bytes || 16777216;
-      const partes = up.partes || Math.max(1, Math.ceil(f.size / tam));
-      for (let n = 1; n <= partes; n += 1) {
-        const ini = (n - 1) * tam;
-        const blob = f.slice(ini, Math.min(f.size, ini + tam));
-        let tentativa = 0;
-        for (;;) {
-          try { await api.uploadParte(up.id, n, blob); break; } catch (e) { tentativa += 1; if (tentativa >= 3 || e.status === 401 || (e.status >= 400 && e.status < 500 && e.status !== 429)) throw e; }
-        }
-        const pct = Math.round((n / partes) * 100);
-        barra.firstChild.style.width = `${pct}%`; barra.setAttribute('aria-valuenow', String(pct));
-        estado.textContent = t('catalogo.upload_parte', { n, total: partes });
-      }
-      estado.textContent = t('catalogo.upload_concluindo');
-      const r = await api.uploadConcluir(up.id);
-      const itemId = r.item_id;
-      const item = itemId ? await api.obter(itemId) : null;
+      const item = await enviarArquivoComoItem(f, {
+        tipo: tipoSel.value,
+        aoProgresso: (texto, pct) => { estado.textContent = texto; if (pct !== undefined) { barra.firstChild.style.width = `${pct}%`; barra.setAttribute('aria-valuenow', String(pct)); } },
+      });
       el('aviso').ok(t('catalogo.arquivo_enviado', { nome: f.name }));
       d.fechar('ok');
       if (item) aoCriado(item);
     } catch (e) {
       aviso.erro(e.codigo === 'conteudo_nao_corresponde' || e.codigo === 'tipo_desconhecido' ? e.message : `${t('catalogo.upload_falhou')}: ${e.message}`);
-      if (up && up.id) { try { await api.uploadAbortar(up.id); } catch { /* aborto falhou: o periódico expira em 24 h */ } }
       enviar.disabled = false; entrada.disabled = false; tipoSel.disabled = false; barra.hidden = true;
     }
   });

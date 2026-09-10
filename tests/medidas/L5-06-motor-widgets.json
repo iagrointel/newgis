@@ -1,0 +1,23 @@
+{
+ "item": "L5-06-motor-widgets",
+ "medidas": {
+  "primeira_pintura_ms": {
+   "valor": 48,
+   "unidade": "ms",
+   "comando": "First Contentful Paint da página /aplicativo (tests/e2e/test_motor_widgets.py)"
+  },
+  "kb_por_widget": {
+   "valor": 1.32,
+   "unidade": "kB",
+   "comando": "transferência média dos três módulos de widget usados em /aplicativo"
+  }
+ },
+ "gerado_em": "2026-09-07T19:25:15Z",
+ "git_sha": "2063fbdf0ad6",
+ "contexto": {
+  "carga_1min": 5.13,
+  "ram_livre_gb": 7.2,
+  "medido_em": "2026-09-07T19:25:15Z",
+  "como": "chromium do playwright contra scripts/servir_local.py --porta 8433 na base da trilha cx506; roda_teste.sh tests/e2e/test_motor_widgets.py"
+ }
+}

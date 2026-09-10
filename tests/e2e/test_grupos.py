@@ -3,7 +3,7 @@ aceita em /conta; o grupo lista o membro ativo; o convidado sai; o dono apaga. C
 
 import pytest
 
-from tests.e2e.apoio import Tela, gravar_medidas, sufixo
+from tests.e2e.apoio import Tela, gravar_medidas, local, sufixo
 
 pytestmark = [pytest.mark.lento, pytest.mark.e2e]
 
@@ -42,7 +42,8 @@ def test_grupo_criar_convidar_aceitar_sair_apagar(page, base_url, credenciais_de
         tela.capturar("grupos")
         # o convidado aceita em /conta (troca a senha temporária antes)
         ctx2 = page.context.browser.new_context(base_url=base_url, locale="pt-BR",
-                                                viewport={"width": 1280, "height": 800})
+                                                viewport={"width": 1280, "height": 800},
+                                                ignore_https_errors=local(base_url))
         pag2 = ctx2.new_page()
         tela2 = Tela(pag2, base_url)
         tela2.entrar(slug, login, temporaria)

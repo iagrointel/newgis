@@ -1,76 +1,173 @@
-/* plat · mapa — visualizador (item L2-01-mapa-web; o mapa-base local é o L2-01-a).
+/* plat · mapa — visualizador (item L2-01-mapa-web; polimento UX-04-tela-mapa-polimento).
 
-   Módulo ES sem empacotador; cache resolvido por `no-store` no nginx — NUNCA `?v=` num import, porque
-   duas URLs para o mesmo arquivo criam duas instâncias do módulo e a aplicação morre (armadilha já paga
-   na casa). MapLibre GL JS e o protocolo PMTiles vêm de <script> clássico (window.maplibregl /
-   window.pmtiles, vendorizados em web/vendor/ com sha256 em VERSOES.txt), carregados ANTES deste módulo
-   em mapa.html: os dois não são módulos ES.
+   Módulo ES sem empacotador; cache resolvido por `no-store` no nginx — NUNCA `?v=` num import (duas URLs para
+   o mesmo arquivo criam duas instâncias do módulo e a aplicação morre, armadilha já paga na casa). MapLibre GL
+   JS, o protocolo PMTiles e o terra-draw vêm de <script> clássico (vendorizados em web/vendor/ com sha256 em
+   VERSOES.txt), carregados ANTES deste módulo em mapa.html: não são módulos ES.
+
+   Chrome único (UX-04): um trilho à esquerda com um botão por painel, uma gaveta com um <plat-painel> por
+   função (pesquisa, camadas, legenda, medição, desenho, anotações, impressão, exportação) e a tabela de
+   atributos ancorada ao rodapé do mapa. Cada painel novo de qualquer item futuro entra como mais um
+   <plat-painel> na gaveta e um botão no trilho, sem CSS próprio. Atalhos de teclado (b c l m d a i e t, f tela
+   cheia, Esc fecha, ? lista), tela cheia, impressão pelo navegador e painel inferior de 390 px em celular.
 
    O que esta tela junta:
-     camadas do catálogo (Martin/PMTiles)     catalogo.js
-     árvore de camadas (ordem/grupo/escala) ../camadas.js (item L2-01-c)
-     legenda dinâmica do estilo MapLibre     ../legenda.js (item L2-01-c)
-     edição de feições                        edicao.js (item L2-03)
-     janela de atributos                      atributos.js
-     medição geodésica                        medicao.js
-     pesquisa de endereço e de coordenada     busca.js
-     impressão PNG/PDF com escala e norte     impressao.js
-   Navegação, barra de escala e coordenadas do cursor ficam aqui mesmo (são três controles pequenos).
+     camadas do catálogo (Martin/PMTiles)      catalogo.js
+     árvore de camadas (ordem/grupo/escala)    ../camadas.js (L2-01-c)
+     legenda dinâmica do estilo MapLibre       ../legenda.js (L2-01-c)
+     janela de atributos                       atributos.js (L2-01-d)
+     medição geodésica                         medicao.js
+     pesquisa de endereço e de coordenada      busca.js
+     impressão PNG/PDF com escala e norte      impressao.js
+     tabela de atributos                       tabela.js (L2-01-g)
+     desenho e anotações                       desenho.js, anotacoes.js (L2-01-k)
+     exportação de camada                      exportar.js (L2-01-l)
 
    `body[data-pronto="1"]` só depois do primeiro 'load' do mapa: o e2e espera por isso. */
 import '../base/componentes.js';
-import { carregar as carregarIdioma, t } from '../base/i18n.js';
+import { carregar as carregarIdioma, t, aoTraduzir } from '../base/i18n.js';
 import { montarLayout, pronto } from '../base/layout.js';
 import { h, limpar } from '../base/dom.js';
+import { alterar, enviar, mensagemDe, obter } from '../base/api.js';
 import { exigirSessao } from '../auth/sessao.js';
-import { construirEstilo, camadasRede } from './estilo.js';
-import { carregar as carregarMapa, camadasDoTopo, salvarOrdem, alternarVisivel, salvarDocumento } from './documento.js';
-import { montarPainel } from './painel_camadas.js';
+import { construirEstilo } from './estilo.js';
 import { Catalogo } from './catalogo.js';
 import { Arvore } from '../camadas.js';
 import { Legenda } from '../legenda.js';
-import { instalarPopup, atributosDaFeicao } from './atributos.js';
-import { obter } from '../base/api.js';
+import { instalarPopup } from './atributos.js';
 import { Medicao } from './medicao.js';
 import { interpretarCoordenada, sugerir, geocodificar } from './busca.js';
 import { paraPng, paraPdf, escalaNumerica } from './impressao.js';
-import { Edicao } from './edicao.js';
+import '../widgets/mapa.js';
+import { PainelRotas } from './rotas.js';
+import { PainelMotor } from './motor.js';
+import { criarTabela } from './tabela.js';
+import { Desenho, kmlParaGeoJSON } from './desenho.js';
+import { PainelSelecao } from './selecao.js';
+import { PainelLayout } from './layout.js';
+import { PainelAnotacoes } from './anotacoes.js';
+import { PainelExportar } from './exportar.js';
 
-/* BASE mundial primeiro e PADRÃO (correção 10/09: o mapa não pode abrir num vazio preto fora de Guarulhos —
-   ver estilo.js). O recorte vetorial local continua disponível para quem quer o instrumento de alto detalhe. */
 const BASES = [
-  { id: 'osm-mundial', rotuloChave: 'mapa.base_osm_mundial', tipo: 'raster' },
-  { id: 'osm-guarulhos', rotuloChave: 'mapa.base_osm_guarulhos', tipo: 'pmtiles', arquivo: 'guarulhos.pmtiles' },
-  { id: 'sem-base', rotuloChave: 'mapa.base_nenhuma', tipo: 'nenhuma' },
+  { id: 'osm-guarulhos', rotuloChave: 'mapa.base_osm_guarulhos', arquivo: 'guarulhos.pmtiles' },
+  { id: 'sem-base', rotuloChave: 'mapa.base_nenhuma', arquivo: null },
 ];
 const CENTRO = [-46.593018, -23.493476];
+const PAINEIS = ['busca', 'camadas', 'legenda', 'medicao', 'desenho', 'anotacoes', 'impressao', 'exportar', 'rotas', 'motor', 'selecao', 'layout'];
+const ATALHOS = { b: 'busca', c: 'camadas', l: 'legenda', m: 'medicao', d: 'desenho', a: 'anotacoes', i: 'impressao', e: 'exportar', r: 'rotas', o: 'motor', s: 'selecao', y: 'layout' };
+const CHAVE_PAINEL = 'plat_mapa_painel';
 const el = (id) => document.getElementById(id);
 
 function urlDado(arquivo) { return `${location.origin}/static/dados/basemap/${arquivo}`; }
 
-function descritorBase(base) {
-  return { tipo: base.tipo, url: base.arquivo ? urlDado(base.arquivo) : undefined };
+/* ---------------------------------------------------------------- chrome: trilho, gaveta, atalhos, tela cheia */
+function painelAberto() {
+  const p = document.querySelector('.mapa-gaveta plat-painel:not([hidden])');
+  return p ? p.id.replace('painel-', '') : null;
 }
 
-/* une as extensões (graus, [oeste,sul,leste,norte]) das fichas que já trazem uma; ignora as que não trazem
-   (a listagem resumida só devolve extensão quando a ingestão a calculou — nunca mede ST_Extent aqui). */
-function uniaoDeExtensoes(fichas) {
-  let uniao = null;
-  for (const f of fichas || []) {
-    const e = f && f.extensao;
-    if (!Array.isArray(e) || e.length !== 4 || e.some((v) => typeof v !== 'number' || !Number.isFinite(v))) continue;
-    uniao = uniao
-      ? [Math.min(uniao[0], e[0]), Math.min(uniao[1], e[1]), Math.max(uniao[2], e[2]), Math.max(uniao[3], e[3])]
-      : [...e];
+function abrirPainel(id, { foco = true } = {}) {
+  if (!PAINEIS.includes(id)) return;
+  el('gaveta').hidden = false;
+  for (const p of PAINEIS) {
+    const painel = el(`painel-${p}`);
+    painel.hidden = p !== id;
+    if (p === id) painel.removeAttribute('recolhido');
   }
-  return uniao;
+  document.querySelectorAll('#trilho .trilho-botao[data-painel]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.painel === id)));
+  document.body.dataset.painel = id;
+  try { localStorage.setItem(CHAVE_PAINEL, id); } catch { /* sem armazenamento: só nesta página */ }
+  if (foco) el(`painel-${id}`).querySelector('h2')?.focus();
 }
 
-function montarSeletorBase(map) {
+function fecharGaveta({ devolverFoco = true } = {}) {
+  const aberto = painelAberto();
+  el('gaveta').hidden = true;
+  for (const p of PAINEIS) el(`painel-${p}`).hidden = true;
+  document.querySelectorAll('#trilho .trilho-botao[data-painel]').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+  delete document.body.dataset.painel;
+  try { localStorage.removeItem(CHAVE_PAINEL); } catch { /* idem */ }
+  if (devolverFoco && aberto) document.querySelector(`#trilho [data-painel="${aberto}"]`)?.focus();
+}
+
+function alternarPainel(id) { if (painelAberto() === id) fecharGaveta(); else abrirPainel(id); }
+
+function montarChrome() {
+  for (const p of PAINEIS) {
+    const painel = el(`painel-${p}`);
+    painel.titulo = t(painel.dataset.titulo);
+    painel.querySelector('h2')?.setAttribute('tabindex', '-1');
+    painel.addEventListener('fechar', () => { painel.hidden = false; fecharGaveta(); });
+  }
+  aoTraduzir(() => { for (const p of PAINEIS) { const painel = el(`painel-${p}`); painel.titulo = t(painel.dataset.titulo); } });
+  document.querySelectorAll('#trilho .trilho-botao[data-painel]').forEach((b) => b.addEventListener('click', () => alternarPainel(b.dataset.painel)));
+
+  // tela cheia: a tela inteira do mapa (barra + trilho + gaveta + mapa), não só o canvas
+  const btTela = el('btn-tela-cheia');
+  const raiz = el('principal');
+  if (!document.fullscreenEnabled) btTela.hidden = true;
+  btTela.addEventListener('click', () => { if (document.fullscreenElement) document.exitFullscreen(); else raiz.requestFullscreen?.(); });
+  document.addEventListener('fullscreenchange', () => {
+    const ativa = document.fullscreenElement === raiz;
+    btTela.setAttribute('aria-pressed', String(ativa));
+    document.body.dataset.telaCheia = ativa ? '1' : '0';
+  });
+
+  // impressão pelo navegador: @media print em mapa.css esconde o chrome e deixa o canvas inteiro na página
+  const imprimir = () => window.print();
+  el('btn-imprimir').addEventListener('click', imprimir);
+  el('btn-imprimir-navegador').addEventListener('click', imprimir);
+
+  // navegação do produto (barra lateral) como gaveta sobre o mapa: o mapa é tela cheia por padrão
+  const btNav = el('btn-nav');
+  const veu = el('nav-veu');
+  const definirNav = (aberta) => { document.body.dataset.nav = aberta ? '1' : '0'; btNav.setAttribute('aria-expanded', String(aberta)); veu.hidden = !aberta; if (aberta) el('lateral').querySelector('a')?.focus(); };
+  btNav.addEventListener('click', () => definirNav(document.body.dataset.nav !== '1'));
+  veu.addEventListener('click', () => definirNav(false));
+
+  // atalhos
+  el('btn-atalhos').addEventListener('click', mostrarAtalhos);
+  document.addEventListener('keydown', (e) => {
+    const alvo = e.target;
+    const emCampo = alvo && (alvo.tagName === 'INPUT' || alvo.tagName === 'TEXTAREA' || alvo.tagName === 'SELECT' || alvo.isContentEditable);
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === 'Escape') {
+      if (document.querySelector('dialog[open]')) return;
+      if (document.body.dataset.nav === '1') { definirNav(false); return; }
+      if (!el('painel-tabela').hidden && document.activeElement?.closest('#painel-tabela')) { el('tabela-alternar').click(); el('tabela-alternar').focus(); return; }
+      if (painelAberto()) { fecharGaveta(); return; }
+      return;
+    }
+    if (emCampo || document.querySelector('dialog[open]')) return;
+    const k = e.key.toLowerCase();
+    if (ATALHOS[k]) { e.preventDefault(); alternarPainel(ATALHOS[k]); }
+    else if (k === 't') { e.preventDefault(); el('tabela-alternar').click(); }
+    else if (k === 'f') { e.preventDefault(); btTela.click(); }
+    else if (e.key === '?') { e.preventDefault(); mostrarAtalhos(); }
+  });
+  el('tabela-fechar').addEventListener('click', () => { el('tabela-alternar').click(); el('tabela-alternar').focus(); });
+
+  // painel lembrado (ou camadas, na primeira visita em tela larga)
+  let lembrado = null;
+  try { lembrado = localStorage.getItem(CHAVE_PAINEL); } catch { /* sem armazenamento */ }
+  const largo = window.matchMedia('(min-width: 801px)').matches;
+  if (lembrado && PAINEIS.includes(lembrado)) abrirPainel(lembrado, { foco: false });
+  else if (largo) abrirPainel('camadas', { foco: false });
+}
+
+function mostrarAtalhos() {
+  const linhas = [
+    ...Object.entries(ATALHOS).map(([k, p]) => [k, t(el(`painel-${p}`).dataset.titulo)]),
+    ['t', t('tabela.alternar')], ['f', t('mapa.tela_cheia')], ['Esc', t('mapa.atalho_fechar')], ['?', t('mapa.atalhos')],
+  ];
+  const tabela = h('table', { class: 'tabela' }, h('tbody', {}, ...linhas.map(([k, r]) => h('tr', {}, h('td', { class: 'mono' }, h('kbd', {}, k)), h('td', {}, r)))));
+  el('dialogo-atalhos').abrir({ titulo: t('mapa.atalhos'), corpo: h('div', {}, h('p', { class: 'fraco' }, t('mapa.atalhos_ajuda')), tabela), botoes: [{ id: 'ok', rotulo: t('dialogo.fechar') }] });
+}
+
+/* ---------------------------------------------------------------- mapa */
+function montarSeletorBase() {
   const sel = el('seletor-base');
-  for (const base of BASES) {
-    sel.append(h('option', { value: base.id }, t(base.rotuloChave)));
-  }
+  for (const base of BASES) sel.append(h('option', { value: base.id }, t(base.rotuloChave)));
   sel.value = BASES[0].id;
   return sel;
 }
@@ -90,219 +187,25 @@ function montarCoordenadas(map) {
 }
 
 function marcador(map, maplibregl, lonlat, rotulo) {
-  const m = new maplibregl.Marker({ color: '#d98a2b' }).setLngLat(lonlat);
+  const cor = getComputedStyle(document.documentElement).getPropertyValue('--acento').trim() || undefined;
+  const m = new maplibregl.Marker({ color: cor }).setLngLat(lonlat);
   if (rotulo) m.setPopup(new maplibregl.Popup({ closeButton: true }).setText(rotulo));
   m.addTo(map);
+  // o MapLibre põe aria-label num <div> sem papel (axe: aria-prohibited-attr); marcador é imagem com nome
+  m.getElement().setAttribute('role', 'img');
+  m.getElement().setAttribute('aria-label', rotulo ? t('rotas.marcador', { rotulo }) : t('rotas.marcador_sem_nome'));
   return m;
 }
 
-/* --------------------------------------------------------------------------------------------------------
-   Rede de utilidades (10/09): grupo próprio no painel lateral, fora da árvore do catálogo (Arvore/camadas.js
-   é do documento de mapa; a rede é outro domínio, `/api/rede`, com sua própria RLS e seu próprio par de
-   rotas `.geojson`). Duas fontes GeoJSON por rede ligada (linhas/pontos, `camadasRede` de estilo.js decide a
-   cor por disciplina); a seção é criada por JS e inserida no DOM já existente de mapa.html — nenhum HTML
-   novo, para não disputar arquivo com quem está convergindo a identidade visual das páginas. */
-const PREFIXO_REDE = 'plat-rede-';
-
-async function listarRedes() {
-  const r = await obter('/api/rede?limite=200');
-  if (r.status !== 200) throw new Error((r.json && r.json.mensagem) || 'falha ao listar redes de utilidades');
-  return r.json.itens || [];
-}
-
-/* varre coordinates de Point/LineString (a rede de demonstração só tem essas duas geometrias) e devolve
-   [oeste,sul,leste,norte]; ST_AsGeoJSON já veio em 4326, mesma unidade do mapa. */
-function estenderBbox(bbox, coordenadas) {
-  if (!Array.isArray(coordenadas)) return bbox;
-  if (typeof coordenadas[0] === 'number') {
-    const [x, y] = coordenadas;
-    if (!bbox) return [x, y, x, y];
-    return [Math.min(bbox[0], x), Math.min(bbox[1], y), Math.max(bbox[2], x), Math.max(bbox[3], y)];
-  }
-  for (const parte of coordenadas) bbox = estenderBbox(bbox, parte);
-  return bbox;
-}
-
-function bboxDasColecoes(colecoes) {
-  let bbox = null;
-  for (const fc of colecoes) {
-    for (const feicao of (fc && fc.features) || []) bbox = estenderBbox(bbox, feicao.geometry && feicao.geometry.coordinates);
-  }
-  return bbox;
-}
-
-/* popup das camadas de rede: mesmo padrão visual de atributos.js (reusa `atributosDaFeicao`, que já trata
-   campo nulo e formata número em pt-BR), mas com clique/consulta PRÓPRIOS — o de atributos.js só conhece
-   camadas do catálogo (fonte `plat-<id>`, ficha em `catalogo.ficha`), a rede não tem ficha de catálogo. */
-function instalarPopupRede(map, maplibregl, redesAtivas) {
-  let popup = null;
-  map.on('click', (ev) => {
-    if (map.getCanvas().style.cursor === 'crosshair') return; // medição em curso
-    const camadas = [...redesAtivas.values()].flatMap((r) => [r.layerLinhas, r.layerPontos])
-      .filter((id) => map.getLayer(id));
-    if (!camadas.length) return;
-    const feicoes = map.queryRenderedFeatures(ev.point, { layers: camadas });
-    if (popup) { popup.remove(); popup = null; }
-    if (!feicoes.length) return;
-    const caixa = h('div', { class: 'popup-conteudo' });
-    for (const feicao of feicoes.slice(0, 5)) {
-      const tabela = h('table', { class: 'popup-tabela' });
-      const corpo = h('tbody');
-      for (const at of atributosDaFeicao(feicao, null)) {
-        corpo.append(h('tr', { dataset: { campo: at.nome, nulo: at.nulo ? '1' : '0' } },
-          h('th', { scope: 'row' }, at.nome), h('td', { class: at.nulo ? 'nulo' : '' }, at.valor)));
-      }
-      tabela.append(corpo);
-      caixa.append(h('div', { class: 'popup-camada' }, h('h3', {}, feicao.properties.tipo || '—'), tabela));
-    }
-    if (feicoes.length > 5) caixa.append(h('p', { class: 'popup-mais' }, t('mapa.popup_mais', { n: feicoes.length - 5 })));
-    popup = new maplibregl.Popup({ closeButton: true, maxWidth: '360px', className: 'popup-plat' })
-      .setLngLat(ev.lngLat).setDOMContent(caixa).addTo(map);
-  });
-}
-
-function montarSecaoRede() {
-  const status = h('p', { class: 'fraco', id: 'rede-utilidades-status' }, t('mapa.rede_utilidades_carregando'));
-  const lista = h('ul', { class: 'lista-camadas', id: 'rede-utilidades-lista', role: 'list' });
-  const secao = h('section', { class: 'bloco', id: 'rede-utilidades-painel', 'aria-label': t('mapa.rede_utilidades') },
-    h('h2', {}, t('mapa.rede_utilidades')), status, lista);
-  const painelLateral = document.querySelector('.mapa-painel-lateral');
-  const antesDe = el('edicao-painel');
-  if (painelLateral) painelLateral.insertBefore(secao, antesDe || null);
-  return { status, lista };
-}
-
-async function montarRedeUtilidades(map, maplibregl) {
-  const { status, lista } = montarSecaoRede();
-  const redesAtivas = new Map(); // rede.id -> {fonteLinhas, fontePontos, layerLinhas, layerPontos}
-  instalarPopupRede(map, maplibregl, redesAtivas);
-
-  const ligar = async (rede) => {
-    const base = `${PREFIXO_REDE}${rede.id}`;
-    const fonteLinhas = `${base}-linhas`;
-    const fontePontos = `${base}-pontos`;
-    const layerLinhas = `${base}-linhas-camada`;
-    const layerPontos = `${base}-pontos-camada`;
-    const [rLinhas, rPontos] = await Promise.all([
-      obter(`/api/rede/${rede.id}/feicoes/linhas.geojson`),
-      obter(`/api/rede/${rede.id}/feicoes/pontos.geojson`),
-    ]);
-    if (rLinhas.status !== 200 || rPontos.status !== 200) {
-      const erro = (rLinhas.json && rLinhas.json.mensagem) || (rPontos.json && rPontos.json.mensagem);
-      throw new Error(erro || 'falha ao carregar a geometria da rede');
-    }
-    if (!map.getSource(fonteLinhas)) map.addSource(fonteLinhas, { type: 'geojson', data: rLinhas.json });
-    if (!map.getSource(fontePontos)) map.addSource(fontePontos, { type: 'geojson', data: rPontos.json });
-    for (const camada of camadasRede(layerLinhas, fonteLinhas, layerPontos, fontePontos)) {
-      if (!map.getLayer(camada.id)) map.addLayer(camada);
-    }
-    redesAtivas.set(rede.id, { fonteLinhas, fontePontos, layerLinhas, layerPontos });
-    const bbox = bboxDasColecoes([rLinhas.json, rPontos.json]);
-    if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { animate: false, padding: 40 });
-    return { nLinhas: rLinhas.json.features.length, nPontos: rPontos.json.features.length };
-  };
-
-  const desligar = (redeId) => {
-    const info = redesAtivas.get(redeId);
-    if (!info) return;
-    for (const layerId of [info.layerLinhas, info.layerPontos]) if (map.getLayer(layerId)) map.removeLayer(layerId);
-    for (const fonteId of [info.fonteLinhas, info.fontePontos]) if (map.getSource(fonteId)) map.removeSource(fonteId);
-    redesAtivas.delete(redeId);
-  };
-
-  const itemRede = (rede) => {
-    const caixa = h('input', { type: 'checkbox', class: 'camada-visivel', 'aria-label': `mostrar ${rede.nome}` });
-    const contagem = h('span', { class: 'fraco pequeno' }, '');
-    caixa.addEventListener('change', async () => {
-      caixa.disabled = true;
-      try {
-        if (caixa.checked) {
-          const { nLinhas, nPontos } = await ligar(rede);
-          contagem.textContent = `${nLinhas.toLocaleString('pt-BR')} linhas · ${nPontos.toLocaleString('pt-BR')} pontos`;
-        } else {
-          desligar(rede.id);
-          contagem.textContent = '';
-        }
-      } catch (e) {
-        caixa.checked = false;
-        el('aviso').erro(`${t('mapa.rede_utilidades_erro')}: ${(e && e.message) || e}`);
-      } finally {
-        caixa.disabled = false;
-      }
-    });
-    return h('li', { class: 'camada-linha' },
-      h('label', { class: 'camada-rotulo' }, caixa,
-        h('span', { class: 'camada-titulo' }, rede.nome),
-        h('span', { class: 'camada-tipo' }, rede.disciplina)),
-      contagem);
-  };
-
-  try {
-    const redes = await listarRedes();
-    if (!redes.length) { status.textContent = t('mapa.rede_utilidades_vazio'); return; }
-    status.remove();
-    for (const rede of redes) lista.append(itemRede(rede));
-  } catch (e) {
-    status.textContent = `${t('mapa.rede_utilidades_erro')}: ${(e && e.message) || e}`;
-  }
-}
-
-/* Documento de mapa (item L2-01-a-documento-mapa): /mapa?id=<uuid> abre um mapa do catálogo. Sem `id` a tela
-   segue sendo só o mapa-base local, como no item que a criou — nada de mapa de exemplo embutido. */
-async function iniciarDocumento(map) {
-  const id = new URLSearchParams(location.search).get('id');
-  if (!id) return;
-  const { completo, documento, erro } = await carregarMapa(id);
-  if (erro) {
-    el('aviso').erro(`${t('mapa.erro_documento')}: ${erro.mensagem}`);
-    return;
-  }
-  let doc = documento;
-  let ordem = camadasDoTopo(completo).map((c) => c.id);
-  el('mapa-nome').textContent = completo.titulo;
-  const painel = el('painel-camadas');
-  painel.hidden = false;
-  const salvar = el('salvar-mapa');
-  salvar.hidden = false;
-  if (!completo.camadas.length) {
-    el('camadas').textContent = t('mapa.sem_camadas');
-  } else {
-    montarPainel({
-      raiz: el('camadas'),
-      camadas: camadasDoTopo(completo),
-      aoReordenar: (ids) => { ordem = ids; salvar.dataset.sujo = '1'; },
-      aoAlternarVisivel: (idLocal) => { doc = alternarVisivel(doc, idLocal); salvar.dataset.sujo = '1'; },
-    });
-  }
-  salvar.addEventListener('click', async () => {
-    salvar.disabled = true;
-    const gravado = await (ordem.length ? salvarOrdem(id, doc, ordem) : salvarDocumento(id, doc));
-    salvar.disabled = false;
-    if (gravado.erro) {
-      el('aviso').erro(`${t('mapa.erro_salvar')}: ${gravado.erro.mensagem}`);
-      return;
-    }
-    doc = gravado.documento;
-    delete salvar.dataset.sujo;
-    el('aviso').ok(t('mapa.salvo'));
-  });
-  if (completo.extensao_inicial) {
-    const [oeste, sul, leste, norte] = completo.extensao_inicial;
-    map.fitBounds([[oeste, sul], [leste, norte]], { animate: false, padding: 20 });
-  }
-}
-
-
-async function iniciar(usuario) {
+async function iniciar() {
   const maplibregl = window.maplibregl;
   if (!maplibregl || !window.pmtiles) { el('aviso').erro(t('mapa.erro_biblioteca')); return; }
   const protocolo = new window.pmtiles.Protocol();
   maplibregl.addProtocol('pmtiles', protocolo.tile);
 
   const map = new maplibregl.Map({
-    locale: { 'NavigationControl.ZoomIn': 'aproximar', 'NavigationControl.ZoomOut': 'afastar', 'NavigationControl.ResetBearing': 'norte para cima', 'ScaleControl.Meters': 'm', 'ScaleControl.Kilometers': 'km', 'AttributionControl.ToggleAttribution': 'atribuição', 'FullscreenControl.Enter': 'tela cheia', 'FullscreenControl.Exit': 'sair da tela cheia' },
     container: 'mapa',
-    style: construirEstilo(descritorBase(BASES[0])),
+    style: construirEstilo(urlDado(BASES[0].arquivo)),
     center: CENTRO,
     zoom: 11,
     attributionControl: false,
@@ -310,13 +213,21 @@ async function iniciar(usuario) {
     // obrigatório para a impressão ler o canvas depois do quadro composto (impressao.js explica)
     preserveDrawingBuffer: true,
   });
+  // <plat-mapa> (motor de widgets, L5-06): ações do barramento chegam como eventos DOM no recipiente
+  const recipiente = el('mapa');
+  recipiente.addEventListener('plat-mapa-enquadrar', ({ detail }) => {
+    if (Array.isArray(detail?.extensao) && detail.extensao.length === 4) {
+      map.fitBounds([[detail.extensao[0], detail.extensao[1]], [detail.extensao[2], detail.extensao[3]]]);
+    }
+  });
   map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
   map.addControl(new maplibregl.ScaleControl({ maxWidth: 140, unit: 'metric' }), 'bottom-left');
-  map.addControl(new maplibregl.AttributionControl({ compact: false }), 'bottom-right');
+  map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
   montarCoordenadas(map);
 
   const catalogo = new Catalogo(map);
   const medicao = new Medicao(map, el('medicao-saida'));
+  const estadoCamadas = el('camadas-estado');
   const arvore = new Arvore(catalogo, map, el('lista-camadas'), {
     aoEnquadrar: async (id) => {
       const ext = await catalogo.extensao(id);
@@ -327,45 +238,36 @@ async function iniciar(usuario) {
   });
   const legenda = new Legenda(map, el('legenda'), () => arvore.camadasParaLegenda());
   instalarPopup(map, catalogo, maplibregl);
-  // a edição nasce depois do primeiro 'load'; a troca de mapa-base pode acontecer antes disso.
-  let edicao = null;
 
   el('btn-novo-grupo').addEventListener('click', () => {
-    const titulo = window.prompt('nome do grupo', 'grupo novo');
+    const titulo = window.prompt(t('mapa.novo_grupo_nome'), t('mapa.novo_grupo_padrao'));
     if (titulo !== null) arvore.criarGrupo(titulo);
   });
 
   // troca de mapa-base: refazer o estilo apaga as camadas do catálogo, que são re-somadas em seguida
-  const sel = montarSeletorBase(map);
+  const sel = montarSeletorBase();
   sel.addEventListener('change', async () => {
     const base = BASES.find((b) => b.id === sel.value) || BASES[0];
     const ativas = [...catalogo.ativas];
     const opacidades = new Map(catalogo.opacidade);
-    map.setStyle(construirEstilo(descritorBase(base)));
+    const fundo = getComputedStyle(document.documentElement).getPropertyValue('--i-fundo').trim();
+    map.setStyle(base.arquivo ? construirEstilo(urlDado(base.arquivo))
+      : { version: 8, name: 'plat-sem-base', sources: {}, layers: [{ id: 'fundo', type: 'background', paint: { 'background-color': fundo } }] });
     await new Promise((r) => map.once('styledata', r));
     catalogo.ativas = [];
     catalogo.opacidade = opacidades;
     for (const id of [...ativas].reverse()) { try { await catalogo.ligar(id); } catch { /* segue */ } }
     catalogo.reordenar(ativas);
-    if (edicao) edicao._instalarFontesECamadas(); // setStyle apagou as fontes/camadas de edição também
   });
 
   // --- medição
-  el('btn-distancia').addEventListener('click', () => {
-    medicao.iniciar('distancia');
-    el('btn-distancia').setAttribute('aria-pressed', medicao.modo === 'distancia' ? 'true' : 'false');
-    el('btn-area').setAttribute('aria-pressed', 'false');
-  });
-  el('btn-area').addEventListener('click', () => {
-    medicao.iniciar('area');
-    el('btn-area').setAttribute('aria-pressed', medicao.modo === 'area' ? 'true' : 'false');
-    el('btn-distancia').setAttribute('aria-pressed', 'false');
-  });
-  el('btn-medicao-limpar').addEventListener('click', () => {
-    medicao.limpar();
-    el('btn-area').setAttribute('aria-pressed', 'false');
-    el('btn-distancia').setAttribute('aria-pressed', 'false');
-  });
+  const pressionar = (ativo) => {
+    el('btn-distancia').setAttribute('aria-pressed', String(ativo === 'distancia'));
+    el('btn-area').setAttribute('aria-pressed', String(ativo === 'area'));
+  };
+  el('btn-distancia').addEventListener('click', () => { medicao.iniciar('distancia'); pressionar(medicao.modo); });
+  el('btn-area').addEventListener('click', () => { medicao.iniciar('area'); pressionar(medicao.modo); });
+  el('btn-medicao-limpar').addEventListener('click', () => { medicao.limpar(); pressionar(null); });
 
   // --- pesquisa (endereço ou coordenada)
   let alfinete = null;
@@ -383,7 +285,9 @@ async function iniciar(usuario) {
     if (!texto) return;
     const coord = interpretarCoordenada(texto);
     if (coord) { irPara(coord.lat, coord.lon, `${coord.lat.toFixed(5)}, ${coord.lon.toFixed(5)}`); return; }
+    el('busca-form').setAttribute('aria-busy', 'true');
     const r = await geocodificar(texto);
+    el('busca-form').removeAttribute('aria-busy');
     if (r) irPara(r.lat, r.lon, r.rotulo);
     else el('busca-resultado').textContent = t('mapa.busca_sem_resultado');
   };
@@ -397,68 +301,176 @@ async function iniciar(usuario) {
       const sugestoes = await sugerir(texto);
       limpar(lista);
       for (const s of sugestoes) {
-        lista.append(h('li', {}, h('button', {
-          type: 'button', class: 'sugestao',
-          onclick: () => { campo.value = s.texto; buscar(); },
-        }, s.texto)));
+        lista.append(h('li', {}, h('button', { type: 'button', class: 'sugestao', onclick: () => { campo.value = s.texto; buscar(); } }, s.texto)));
       }
     }, 250);
   });
 
-  // --- impressão
+  // --- desenho e anotações (item L2-01-k-desenho-anotacoes)
+  const desenho = new Desenho(map, maplibregl, el('bloco-desenho'));
+  const params = new URLSearchParams(location.search);
+  let mapaId = params.get('mapa');
+
+  const listaDesenho = el('lista-desenho');
+  const redesenharLista = (features) => {
+    limpar(listaDesenho);
+    features.forEach((f) => {
+      const medida = desenho.medidaDe(f);
+      listaDesenho.append(h('li', { class: 'camada-item', dataset: { desenho: f.id } },
+        h('span', { class: 'camada-titulo' }, `${f.properties.tipo_desenho}${medida ? ' · ' + medida : ''}`),
+        h('button', { type: 'button', class: 'pequeno texto', 'aria-label': t(desenho.editando() === f.id ? 'mapa.desenho_editar_fim' : 'mapa.desenho_editar'),
+          onclick: () => (desenho.editando() === f.id ? desenho.terminarEdicao() : desenho.editar(f.id)) }, desenho.editando() === f.id ? '✓' : '✎'),
+        h('button', { type: 'button', class: 'pequeno texto', 'aria-label': t('mapa.desenho_mover_cima'), onclick: () => desenho.mover(f.id, -1) }, '↑'),
+        h('button', { type: 'button', class: 'pequeno texto', 'aria-label': t('mapa.desenho_mover_baixo'), onclick: () => desenho.mover(f.id, 1) }, '↓'),
+        h('button', { type: 'button', class: 'pequeno texto', 'aria-label': t('mapa.desenho_apagar'), onclick: () => desenho.apagar(f.id) }, '×')));
+    });
+  };
+  desenho.aoMudar(redesenharLista);
+  for (const botao of document.querySelectorAll('[data-desenho]')) {
+    botao.addEventListener('click', () => {
+      desenho.iniciarModo(botao.dataset.desenho);
+      document.querySelectorAll('[data-desenho]').forEach((b) => b.setAttribute('aria-pressed', String(b === botao)));
+    });
+  }
+  const pararDesenho = () => { desenho.pararModo(); document.querySelectorAll('[data-desenho]').forEach((b) => b.setAttribute('aria-pressed', 'false')); };
+  el('btn-desenho-parar').addEventListener('click', pararDesenho);
+  el('btn-desenho-limpar').addEventListener('click', () => desenho.limparTudo());
+  const atualizarEstiloAtual = () => desenho.definirEstilo({
+    cor: el('desenho-cor').value,
+    contorno: getComputedStyle(document.documentElement).getPropertyValue('--i-fundo').trim(),
+    opacidade: Number(el('desenho-opacidade').value),
+    largura: Number(el('desenho-largura').value),
+    tamanho_fonte: Number(el('desenho-fonte').value),
+  });
+  ['desenho-cor', 'desenho-opacidade', 'desenho-largura', 'desenho-fonte'].forEach((id) => el(id).addEventListener('input', atualizarEstiloAtual));
+  atualizarEstiloAtual();
+  el('desenho-snap').addEventListener('change', (ev) => desenho.definirSnap(ev.target.checked));
+  el('btn-desenho-editar-fim').addEventListener('click', () => desenho.terminarEdicao());
+
+  const salvarDesenho = async () => {
+    const corpo = { esquema_versao: 1, corpo: { desenho: { features: desenho.lista() } } };
+    const r = mapaId ? await alterar(`/api/itens/${mapaId}`, { dados: corpo })
+      : await enviar('/api/itens', { tipo: 'mapa', titulo: `${t('mapa.titulo')} ${new Date().toLocaleString('pt-BR')}`, dados: corpo });
+    if (r.status >= 400) { el('desenho-saida').textContent = mensagemDe(r); return; }
+    if (!mapaId) {
+      mapaId = r.json.id;
+      const novaUrl = new URL(location.href);
+      novaUrl.searchParams.set('mapa', mapaId);
+      history.replaceState(null, '', novaUrl);
+    }
+    el('desenho-saida').textContent = t('mapa.desenho_salvo');
+  };
+  el('btn-desenho-salvar').addEventListener('click', salvarDesenho);
+  el('btn-desenho-promover').addEventListener('click', async () => {
+    if (!mapaId) await salvarDesenho();
+    if (!mapaId) return;
+    const titulo = window.prompt(t('mapa.desenho_promover_pedir_titulo'), `${t('mapa.desenho')} ${new Date().toLocaleDateString('pt-BR')}`);
+    if (!titulo) return;
+    const r = await enviar(`/api/mapa/${mapaId}/desenho/promover`, { titulo });
+    if (r.status >= 400) { el('desenho-saida').textContent = mensagemDe(r); return; }
+    el('desenho-saida').textContent = t('mapa.desenho_promovido', { titulo, n: r.json.n_feicoes });
+    await arvore.carregar();
+  });
+  el('desenho-importar').addEventListener('change', async (ev) => {
+    const arquivo = ev.target.files[0];
+    if (!arquivo) return;
+    const texto = await arquivo.text();
+    try {
+      const colecao = arquivo.name.toLowerCase().endsWith('.kml') ? kmlParaGeoJSON(texto) : JSON.parse(texto);
+      el('desenho-saida').textContent = t('mapa.desenho_importado', { n: desenho.importarGeoJSON(colecao) });
+    } catch (e) {
+      el('desenho-saida').textContent = `${t('mapa.erro_carregar')}: ${(e && e.message) || e}`;
+    }
+    ev.target.value = '';
+  });
+
+  const painelAnotacoes = new PainelAnotacoes(map, catalogo, {
+    btnModo: el('btn-anotar'), corpo: el('anotacoes-corpo'), alvo: el('anotacoes-alvo'),
+    lista: el('lista-anotacoes'), selGrupo: el('anotacao-grupo'), campoTexto: el('anotacao-texto'),
+    btnEnviar: el('btn-anotacao-enviar'), estado: el('anotacoes-estado'), aviso: el('anotacoes-aviso'),
+  });
+
+  if (mapaId) {
+    try {
+      const r = await obter(`/api/itens/${mapaId}`);
+      if (r.status === 200) {
+        const features = ((r.json.dados || {}).corpo || {}).desenho?.features || [];
+        if (features.length) desenho.carregarFeatures(features);
+      }
+    } catch { /* documento novo ou inexistente: começa vazio, sem quebrar a tela */ }
+  }
+
+  // --- exportação (item L2-01-l)
+  const painelExportar = new PainelExportar(catalogo, map, {
+    raiz: el('exportar'),
+    aoErro: (e) => el('aviso').erro(`${t('mapa.exportar_falhou', { erro: (e && e.message) || e })}`),
+  });
+
+  // --- rotas (rota, isócrona, matriz) e motor multicritério de grades aninhadas (item UX-08)
+  const painelRotas = new PainelRotas(map, maplibregl, el('rotas'));
+  const painelMotor = new PainelMotor(map, maplibregl, el('motor'));
+
+  // --- impressão PNG/PDF: a legenda impressa é a MESMA que o painel mostra
   const titulo = () => `${t('mapa.titulo')} — ${new Date().toLocaleDateString('pt-BR')}`;
   const atribuicao = '© colaboradores do OpenStreetMap — ODbL 1.0';
-  el('btn-png').addEventListener('click', async () => {
-    const r = await paraPng(map, { titulo: titulo(), atribuicao, nome: 'mapa.png' });
-    el('impressao-saida').textContent = t('mapa.impressao_pronta', { formato: 'PNG', kb: Math.round(r.bytes / 1024) });
-  });
-  el('btn-pdf').addEventListener('click', async () => {
-    const r = await paraPdf(map, { titulo: titulo(), atribuicao, nome: 'mapa.pdf' });
-    el('impressao-saida').textContent = t('mapa.impressao_pronta', { formato: 'PDF', kb: Math.round(r.bytes / 1024) });
-  });
+  const legendaDaTela = () => catalogo.ativas.map((id) => catalogo.ficha(id)).filter(Boolean).flatMap((f) => f.legenda || []).slice(0, 12);
+  const imprimirComo = async (formato) => {
+    const saida = el('impressao-saida');
+    saida.textContent = t('mapa.impressao_gerando');
+    try {
+      const opcoes = { titulo: titulo(), atribuicao, legenda: legendaDaTela() };
+      const r = formato === 'PNG'
+        ? await paraPng(map, { ...opcoes, nome: 'mapa.png', escalaSaida: el('png-2x').checked ? 2 : 1 })
+        : await paraPdf(map, { ...opcoes, nome: 'mapa.pdf' });
+      saida.textContent = t('mapa.impressao_pronta', { formato, kb: Math.round(r.bytes / 1024) });
+    } catch (e) {
+      saida.textContent = `${t('mapa.impressao_falhou')}: ${(e && e.message) || e}`;
+    }
+  };
+  el('btn-png').addEventListener('click', () => imprimirComo('PNG'));
+  el('btn-pdf').addEventListener('click', () => imprimirComo('PDF'));
 
   map.on('error', (ev) => {
     const msg = (ev && ev.error && ev.error.message) || String(ev);
     el('aviso').erro(`${t('mapa.erro_carregar')}: ${msg}`);
   });
+  map.on('moveend', () => {
+    const limites = map.getBounds();
+    recipiente.emitir?.('mapa.extensao_alterada', {
+      extensao: [limites.getWest(), limites.getSouth(), limites.getEast(), limites.getNorth()],
+    });
+  });
 
   await new Promise((resolve) => map.once('load', resolve));
-  const temDocumento = !!new URLSearchParams(location.search).get('id');
-  await iniciarDocumento(map);
-  edicao = new Edicao(map, maplibregl, catalogo, {
-    raiz: el('edicao-painel'),
-    aoErro: (msg) => el('aviso').erro(msg),
-  });
+  estadoCamadas.carregando();
   try {
     await arvore.carregar();
-    // Sem documento de mapa (`?id=`), o catálogo não pode abrir vazio (pedido do dono 10/09: "tem de
-    // haver dado visível") — liga as camadas mais recentes do inquilino; documento salvo no navegador ou
-    // escolha explícita do usuário (`ativarPadrao` só age se nada estiver ligado) nunca é sobrescrita.
-    if (!temDocumento) await arvore.ativarPadrao(8);
     legenda.desenhar();
-    // Sem documento de mapa (`?id=`), a vista inicial enquadra as camadas do inquilino em vez de abrir
-    // sempre no recorte de Guarulhos (medido 10/09: camada fora de Guarulhos ficava "sobre o nada"). A
-    // extensão vem da listagem (`/api/mapa/camadas`, ficha resumida — só quando a ingestão já a gravou;
-    // camada sem extensão é ignorada, nunca medida aqui); sem nenhuma extensão disponível, mantém a vista
-    // padrão do recorte (CENTRO/z11), como antes. Prioriza as camadas VISÍVEIS (ligadas); sem nenhuma
-    // ativa ainda, cai para a união de todas as disponíveis — não deixa a vista sem enquadramento nenhum.
-    if (!temDocumento) {
-      const visiveis = catalogo.disponiveis.filter((f) => catalogo.ativas.includes(f.id));
-      const uniao = uniaoDeExtensoes(visiveis.length ? visiveis : catalogo.disponiveis);
-      if (uniao) map.fitBounds([[uniao[0], uniao[1]], [uniao[2], uniao[3]]], { animate: false, padding: 40 });
-    }
+    await painelExportar.iniciar();
+    estadoCamadas.limpar();
+    if (!el('lista-camadas').children.length) estadoCamadas.mostrar({ tipo: 'vazio', titulo: t('mapa.sem_camadas_titulo'), texto: t('mapa.sem_camadas') });
   } catch (e) {
+    estadoCamadas.erro({ status: e && e.status, json: { mensagem: (e && e.message) || String(e) } }, [{ id: 'tentar', rotulo: t('estado.tentar_de_novo'), classe: 'primario' }]);
     el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`);
   }
-  // rede de utilidades: domínio próprio (`/api/rede`), fora da árvore do catálogo — uma falha aqui não pode
-  // derrubar o resto do mapa, por isso o try/catch é dela sozinha.
-  try {
-    await montarRedeUtilidades(map, maplibregl);
-  } catch (e) {
-    el('aviso').erro(`${t('mapa.rede_utilidades_erro')}: ${(e && e.message) || e}`);
-  }
+  estadoCamadas.addEventListener('acao', async () => { estadoCamadas.carregando(); try { await arvore.carregar(); legenda.desenhar(); estadoCamadas.limpar(); } catch (e) { estadoCamadas.erro({ status: e && e.status, json: { mensagem: (e && e.message) || String(e) } }); } });
+
+  // tabela de atributos (L2-01-g): painel ancorado ao rodapé do mapa; a seleção da tabela realça a feição
+  const tabela = criarTabela(map, el('aviso'));
+  await tabela.iniciar();
+  // painel Seleção (UX-23): atributo, geometria do desenho e entre camadas; resultado cai na tabela
+  const painelSelecao = new PainelSelecao(map, catalogo, desenho, tabela, el('selecao'));
+  // painel Layout (L2-12-b): modelo → elementos por formulário → prévia → exportação por job; o mapa é o da tela
+  const painelLayout = new PainelLayout(map, catalogo, el('layout'), { baseAtual: () => sel.value, mapaId: () => mapaId });
+  const layoutPedido = params.get('layout');
+  if (layoutPedido) { painelLayout.abrirItem(layoutPedido); abrirPainel('layout', { foco: false }); }
+
+  // item L2-01-d-popup-runtime: o fuso do inquilino, uma vez só (nunca por campo de data no popup)
   window.plat = window.plat || {};
-  window.plat.mapa = { map, catalogo, medicao, arvore, legenda, edicao };  // ponto de inspeção do e2e, nunca de negócio
+  window.plat.org = window.plat.org || {};
+  obter('/api/mapa/fuso').then((r) => { if (r.status === 200) window.plat.org.fuso = r.json.fuso; }).catch(() => {});
+  // ponto de inspeção do e2e, nunca de negócio
+  window.plat.mapa = { map, catalogo, medicao, arvore, legenda, desenho, painelAnotacoes, exportar: painelExportar, rotas: painelRotas, motor: painelMotor, selecao: painelSelecao, layout: painelLayout, tabela, abrirPainel, fecharGaveta, painelAberto, get mapaId() { return mapaId; } };
   document.body.dataset.pronto = '1';
 }
 
@@ -466,10 +478,11 @@ await carregarIdioma();
 const usuario = await exigirSessao();
 if (usuario) {
   montarLayout({ usuario, ativo: '/mapa' });
+  montarChrome();
   try {
-    await iniciar(usuario);
+    await iniciar();
   } catch (e) {
-    el("aviso").erro(`${t("erro.carregar")}: ${(e && e.message) || e}`);
+    el('aviso').erro(`${t('erro.carregar')}: ${(e && e.message) || e}`);
     pronto();
   }
 }

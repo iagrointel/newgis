@@ -7,7 +7,7 @@
    só que POST/DELETE /api/eu/foto em vez de /api/org/logo. */
 import { obter, enviar, alterar, apagar, mensagemDe } from '../base/api.js';
 import { h, limpar, htmlSeguro, botaoCopiar, marcador } from '../base/dom.js';
-import { carregar, t, formatarData } from '../base/i18n.js';
+import { carregar, definirIdioma, idiomaAtual, t, formatarData } from '../base/i18n.js';
 import { loja } from '../base/estado.js';
 import '../base/componentes.js';
 import { pedir } from '../base/componentes.js';
@@ -135,6 +135,8 @@ function montarDados() {
     { nome: 'visibilidade_perfil', rotulo: t('conta.visibilidade'), tipo: 'select', padrao: usuario.visibilidade_perfil, opcoes: visibilidadesOpcoes() },
   ];
   f.botoes = [{ id: 'salvar', rotulo: t('acao.salvar'), tipo: 'submit' }];
+  if (f.dataset.ligado) return; // re-render após troca de idioma: o ouvinte de envio já existe
+  f.dataset.ligado = '1';
   f.addEventListener('enviar', async (e) => {
     f.ocupado = true;
     const v = e.detail.valores;
@@ -143,7 +145,14 @@ function montarDados() {
       formato_data: v.formato_data, visibilidade_perfil: v.visibilidade_perfil,
     });
     f.ocupado = false;
-    if (r.status === 200) { usuario = r.json; loja.definir({ usuario }); montarLayout({ usuario, ativo: '/conta' }); f.mensagem(t('conta.dados_salvos'), 'ok'); return; }
+    if (r.status === 200) {
+      usuario = r.json; loja.definir({ usuario });
+      const trocouIdioma = v.idioma_preferido && v.idioma_preferido !== idiomaAtual();
+      if (trocouIdioma) { await definirIdioma(v.idioma_preferido); montarDados(); montarSenha(); montar2fa(); await carregarResto(); }
+      montarLayout({ usuario, ativo: '/conta' });
+      document.getElementById('form-dados').mensagem(t(trocouIdioma ? 'conta.idioma_aplicado' : 'conta.dados_salvos'), 'ok');
+      return;
+    }
     if (r.json.erro === 'email_dominio') f.erro('email', mensagemDe(r)); else f.mensagem(mensagemDe(r), 'erro');
   });
 }
@@ -213,6 +222,8 @@ function montarSenha() {
     const ok = senhaAtende(nova.value);
     ajuda.textContent = nova.value ? `${regraSenha()} — ${ok ? t('senha.atende') : t('senha.nao_atende')}` : regraSenha();
   });
+  if (f.dataset.ligado) return;
+  f.dataset.ligado = '1';
   f.addEventListener('enviar', async (e) => {
     const { atual, nova: n } = e.detail.valores;
     if (!senhaAtende(n)) { f.erro('nova', t('senha.nao_atende_regra', { regra: regraSenha() })); return; }
@@ -301,7 +312,8 @@ async function iniciar2fa() {
     await carregarResto();
   });
   area.append(h('div', { class: 'par-qr' }, qr,
-    h('div', {}, h('p', {}, t('2fa.instrucao')), h('span', { class: 'campo-rotulo' }, t('2fa.segredo')), seg,
+    h('div', {}, h('ol', { class: 'passos' }, h('li', {}, t('2fa.passo_1')), h('li', {}, t('2fa.passo_2')), h('li', {}, t('2fa.passo_3'))),
+      h('span', { class: 'campo-rotulo' }, t('2fa.segredo')), seg,
       botaoCopiar(segredo, seg, { copiar: t('acao.copiar'), copiado: t('acao.copiado'), selecionado: t('acao.selecionado') }),
       uri ? h('details', {}, h('summary', {}, t('2fa.uri')), h('code', { class: 'codigo' }, uri)) : null, f)));
   f.focarPrimeiro();
@@ -358,7 +370,11 @@ async function carregarSessoes() {
     const r = await apagar(`/api/eu/sessoes/${e.detail.linha.id}`);
     if (r.status === 204) { await carregarSessoes(); aviso.ok(t('sessao.encerrada')); } else aviso.erro(mensagemDe(r));
   });
+  tab.setAttribute('aria-busy', 'true');
+  tab.vazio = t('conta.carregando_sessoes');
   const r = await obter('/api/eu/sessoes');
+  tab.setAttribute('aria-busy', 'false');
+  tab.vazio = null;
   if (r.status !== 200) { aviso.erro(mensagemDe(r)); tab.linhas = []; return; }
   tab.linhas = Array.isArray(r.json) ? r.json : (r.json.itens || []);
 }
@@ -384,8 +400,11 @@ async function carregarConvites() {
     const r = await enviar(`/api/grupos/${gid}/${e.detail.id}`);
     if (r.status === 200 || r.status === 204) { await carregarConvites(); aviso.ok(e.detail.id === 'aceitar' ? t('grupo.aceito') : t('grupo.recusado')); } else aviso.erro(mensagemDe(r));
   });
+  tab.setAttribute('aria-busy', 'true');
+  tab.vazio = t('conta.carregando_convites');
   const r = await obter('/api/eu/convites');
-  if (r.status !== 200) { aviso.erro(mensagemDe(r)); tab.linhas = []; return; }
+  tab.setAttribute('aria-busy', 'false');
+  if (r.status !== 200) { aviso.erro(mensagemDe(r)); tab.linhas = []; tab.vazio = null; return; }
   const itens = Array.isArray(r.json) ? r.json : (r.json.itens || []);
   tab.linhas = itens.map((c, i) => ({ ...c, chave: c.grupo?.id || i }));
   tab.vazio = t('grupo.sem_convites');

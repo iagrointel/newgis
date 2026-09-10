@@ -10,7 +10,7 @@ import httpx
 import pytest
 from PIL import Image
 
-from tests.e2e.apoio import Tela
+from tests.e2e.apoio import Tela, local
 
 ITEM = "L2-01-a-basemap-local-pmtiles"
 CAPTURAS = Path(__file__).resolve().parent / "capturas"
@@ -31,7 +31,8 @@ def _cores_distintas(caminho_png: Path) -> int:
 def test_pmtiles_servido_com_range_e_sem_gzip(base_url, url_publica_resolve):
     if not url_publica_resolve:
         pytest.skip(f"{base_url} não resolve nesta máquina")
-    r = httpx.get(f"{base_url}/static/dados/basemap/guarulhos.pmtiles", headers={"Range": "bytes=0-99"}, timeout=15)
+    r = httpx.get(f"{base_url}/static/dados/basemap/guarulhos.pmtiles", headers={"Range": "bytes=0-99"}, timeout=15,
+                  verify=not local(base_url))
     assert r.status_code == 206, (r.status_code, dict(r.headers))
     assert r.headers.get("content-range", "").startswith("bytes 0-99/")
     assert "gzip" not in (r.headers.get("content-encoding") or "")

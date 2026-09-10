@@ -29,10 +29,12 @@ export function limpar(el) {
 }
 
 /* HTML de fora (SVG do QR, texto de documento) só entra por aqui. Sem DOMPurify na página = erro, nunca inserção crua. */
-export function htmlSeguro(html, { svg = false } = {}) {
+export function htmlSeguro(html, { svg = false, proibir = [] } = {}) {
   if (!window.DOMPurify) throw new Error('DOMPurify ausente: inclua /static/vendor/dompurify-3.4.14.js antes do módulo');
   const perfil = svg ? { USE_PROFILES: { svg: true, svgFilters: true } } : { USE_PROFILES: { html: true } };
-  const limpo = window.DOMPurify.sanitize(String(html), { ...perfil, RETURN_DOM_FRAGMENT: true });
+  // `proibir`: tags a cortar além do perfil (o widget de texto tira <style>, que o perfil html deixa passar e
+  // cujo @import ainda dispara um pedido de rede — item L5-01-d)
+  const limpo = window.DOMPurify.sanitize(String(html), { ...perfil, FORBID_TAGS: proibir, RETURN_DOM_FRAGMENT: true });
   return limpo;
 }
 

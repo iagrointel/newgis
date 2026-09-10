@@ -26,7 +26,7 @@ import time
 
 import pytest
 
-from tests.e2e.apoio import RAIZ, Tela, sufixo
+from tests.e2e.apoio import RAIZ, Tela, local, sufixo
 
 ITEM = "L5-08-editor-arrasto"
 EDITOR = RAIZ / "web" / "js" / "editor"
@@ -294,7 +294,9 @@ def test_so_toque_pixel7_monta_o_layout(playwright, browser, base_url, credencia
     """Sem nenhum gesto de arrasto (o HTML5 DnD não dispara em toque): paleta por toque, menu 'mover para' e
     botões de largura. É a alternativa de ponteiro único da WCAG 2.2 SC 2.5.7."""
     slug, login, senha = credenciais_demo
-    ctx = browser.new_context(**playwright.devices["Pixel 7"], locale="pt-BR", base_url=base_url)
+    ctx = browser.new_context(
+        **playwright.devices["Pixel 7"], locale="pt-BR", base_url=base_url, ignore_https_errors=local(base_url)
+    )
     page = ctx.new_page()
     tela = Tela(page, base_url)
     tela.entrar(slug, login, senha)

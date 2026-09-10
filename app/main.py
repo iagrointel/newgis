@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import FileResponse
 
-from app import erros, limite_corpo, paginas
+from app import erros, limite_corpo, paginas, rotas_qr
 from app import log as plat_log
 from app.acervo import rotas as rotas_acervo
 from app.amc import rotas as rotas_amc
@@ -49,6 +49,7 @@ from app.consulta.rotas_servico import router as rotas_consulta_servico
 from app.consulta.rotas_wfs import router as rotas_wfs
 from app.correio.rotas_smtp import router as rotas_smtp
 from app.edicao.rotas import router as rotas_edicao
+from app.exportacao.rotas import router as rotas_exportacao
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.imagens.rotas_imagens import router as rotas_imagens
@@ -59,6 +60,13 @@ from app.jobs.rotas import router as rotas_jobs
 from app.mapa.proxy_wms import router as rotas_mapa_wms_publico
 from app.mapa.rotas import router as rotas_mapa
 from app.mapas.rotas import router as rotas_mapas
+from app.layout import rotas as rotas_layout
+from app.mapa.anotacoes import router as rotas_anotacoes
+from app.mapa.exportar import router as rotas_exportar_mapa
+from app.mapa.popup import router as rotas_mapa_popup
+from app.mapa.promover import router as rotas_promover
+from app.mapa.rotas import router as rotas_mapa
+from app.mapa.selecao import router as rotas_selecao
 from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
@@ -77,6 +85,8 @@ from app.settings import settings
 from app.tiles.exportacao import router as rotas_tiles_exportacao
 from app.tiles.rotas import router as rotas_tiles_martin_verificar
 from app.tiles.vector_tile_server import router as rotas_vector_tile_server
+from app.tabela.rotas import router as rotas_tabela
+from app.tiles.rotas import router as rotas_tiles
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
 
@@ -130,6 +140,8 @@ ROUTERS = [
     rotas_lixeira.router,
     # --- catálogo externo OGC API Records (L0-09-metadado-catalogo): /ogc/records; token catalogo:ler, nunca aberto
     rotas_ogc.router,
+    # --- layout de impressão (L2-12-b): /api/layouts, página headless do quadro e Export Web Map Task (Esri)
+    rotas_layout.router,
     # --- acervo da casa (L6-01-a): /api/acervo, /api/acervo/{fonte_id}, /api/acervo/{fonte_id}/adicionar
     rotas_acervo.router,
     # --- conexão externa (L6-02-a): /api/conexoes, /api/conexoes/{id}, /api/conexoes/{id}/testar
@@ -147,6 +159,9 @@ ROUTERS = [
     rotas_edicao,
     # --- mapa (L2-01-a-documento-mapa): /api/mapas (lista, criar, ler, editar) e /api/mapas/{id}/completo
     rotas_mapas,
+    # --- exportação de camada (L0-04-h) e do mapa (L2-01-l): /api/exportacoes (15 formatos por ogr2ogr
+    # mais o pacote de mapa; arquivo com validade de 7 dias)
+    rotas_exportacao,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- rede de utilidades (L4-01-a): /api/rede (redes do inquilino), /api/rede/{rede_id}/pacote (importa e
@@ -224,6 +239,21 @@ ROUTERS = [
     # --- motor de análise multicritério (L3-01-a): /api/amc/modelos, /api/amc/conjuntos, /api/amc/execucoes
     rotas_amc.router,
     rotas_tiles_exportacao,
+    rotas_tiles,
+    # --- tabela de atributos da camada (L2-01-g): /api/camadas/{item_id}/tabela/{colunas,vista,linhas,estatisticas}
+    rotas_tabela,
+    # --- desenho e anotações do mapa (L2-01-k): /api/mapa/{id}/desenho/promover, /api/anotacoes
+    rotas_promover,
+    rotas_anotacoes,
+    # --- popup em tempo de execução (L2-01-d): /api/camadas/{id}/feicoes/{fid}/popup (campos servidor + expressão)
+    rotas_mapa_popup,
+    # --- seleção e filtro (L2-01-h): /valores, /filtrar (CQL2-JSON), /selecionar, /selecao-espacial
+    rotas_selecao,
+    # --- exportação a partir do mapa (L2-01-l): cópia de feição, estilo (MapLibre/SLD) e import de pacote
+    rotas_exportar_mapa,
+    # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
+    # --- QR local para o widget compartilhar (L5-01-d)
+    rotas_qr.router,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
@@ -249,3 +279,23 @@ def inicio():
     return FileResponse(
         WEB / "index.html", media_type="text/html; charset=utf-8", headers={"Cache-Control": "no-store"}
     )
+
+
+if not settings.producao:
+    # Fora de produção (trilha de teste, servidor local sem nginx) não há quem sirva /static: o motor de render
+    # (L2-12-a/L2-12-b) e a página headless do quadro precisam de /static respondendo para carregar MapLibre,
+    # pmtiles e estilo.js. Guardado por `settings.producao`: zero mudança em produção, onde o nginx serve web/.
+    from fastapi.staticfiles import StaticFiles
+
+    if not any(getattr(r, "name", "") == "static" for r in app.routes):
+        app.mount("/static", StaticFiles(directory=str(WEB)), name="static_dev")
+
+
+@app.on_event("shutdown")
+async def _fechar_motor_render():
+    """O pool de chromium (L2-12-a) nasce só no primeiro render; quando nasceu, fecha aqui para não vazar processo."""
+    from app.render.motor import motor
+
+    m = motor()
+    if m.ativo:
+        await m.parar()

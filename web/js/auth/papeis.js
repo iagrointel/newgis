@@ -9,7 +9,7 @@ import '../base/componentes.js';
 import { confirmar } from '../base/componentes.js';
 import { montarLayout, cabecalho, pronto } from '../base/layout.js';
 import { exigirSessao } from './sessao.js';
-import { PERFIS } from './comum.js';
+import { PERFIS, eventoRegistrado } from './comum.js';
 
 let privilegios = [];
 let dados = { perfis: [], personalizados: [] };
@@ -57,7 +57,7 @@ function montarTabelas() {
     if (!(await confirmar(t('acao.apagar'), t('papeis.apagar_confirma', { nome: p.nome }), { perigo: true, ok: t('acao.apagar') }))) return;
     const r = await apagar(`/api/papeis/${p.id}`);
     const aviso = document.getElementById('aviso');
-    if (r.status === 204) { await carregarLista(); aviso.ok(t('papeis.apagado', { nome: p.nome })); return; }
+    if (r.status === 204) { await carregarLista(); aviso.ok(t('papeis.apagado', { nome: p.nome })); eventoRegistrado(); return; }
     let m = mensagemDe(r);
     if (r.json.erro === 'papel_em_uso' && r.json.detalhe?.usuarios !== undefined) m += ` (${t('papeis.em_uso_por', { n: r.json.detalhe.usuarios })})`;
     aviso.erro(m);
@@ -65,8 +65,15 @@ function montarTabelas() {
 }
 
 async function carregarLista() {
+  const estado = document.getElementById('estado');
+  if (!dados.perfis.length) estado.carregando();
   const r = await obter('/api/papeis');
-  if (r.status !== 200) { document.getElementById('aviso').erro(`${t('erro.carregar')}: ${mensagemDe(r)}`); return; }
+  if (r.status !== 200) {
+    estado.erro(r);
+    estado.addEventListener('acao', (ev) => { if (ev.detail.id === 'tentar') carregarLista(); }, { once: true });
+    return;
+  }
+  estado.limpar();
   dados = { perfis: r.json.perfis || [], personalizados: r.json.personalizados || [] };
   const ordem = Object.fromEntries(PERFIS.map((p, i) => [p, i]));
   document.getElementById('tabela-perfis').linhas = [...dados.perfis].sort((a, b) => (ordem[a.perfil] ?? 9) - (ordem[b.perfil] ?? 9));
@@ -110,7 +117,7 @@ function abrirPainel(p) {
     const corpo = { nome: v.nome, descricao: v.descricao || '', privilegios: v.privilegios };
     const r = novo ? await enviar('/api/papeis', corpo) : await alterar(`/api/papeis/${p.id}`, corpo);
     f.ocupado = false;
-    if (r.status === 201 || r.status === 200) { painel.fechar('ok'); await carregarLista(); document.getElementById('aviso').ok(t(novo ? 'papeis.criado' : 'papeis.salvo', { nome: r.json.nome })); return; }
+    if (r.status === 201 || r.status === 200) { painel.fechar('ok'); await carregarLista(); document.getElementById('aviso').ok(t(novo ? 'papeis.criado' : 'papeis.salvo', { nome: r.json.nome })); eventoRegistrado(); return; }
     let m = mensagemDe(r);
     if (Array.isArray(r.json.detalhe) && r.json.detalhe.every((x) => typeof x === 'string')) m += `: ${r.json.detalhe.join(', ')}`;
     if (r.json.erro === 'nome_existente') f.erro('nome', m);

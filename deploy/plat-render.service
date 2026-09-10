@@ -1,0 +1,29 @@
+[Unit]
+Description=plat-render — motor de render no servidor (item L2-12-a-motor-render-servidor; FastAPI :8154). Interno. Análise / beta privado.
+After=network.target plat-api.service
+Wants=plat-api.service
+
+[Service]
+Type=simple
+User=APP_USER
+Group=APP_USER
+WorkingDirectory=APP_DIR
+Environment=PYTHONNOUSERSITE=1
+# mesmo segredo da API (assina o token interno; nenhum segredo novo — app/render/token.py)
+LoadCredential=PLAT_SECRET:/etc/plat/segredos/PLAT_SECRET
+# --workers 1: o pool de chromium do playwright vive DENTRO do processo (app/render/motor.py); dois workers
+# seriam dois pools de páginas quentes e dobrariam a RAM sem dobrar a capacidade útil de fila.
+ExecStart=APP_DIR/venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8154 --workers 1 --proxy-headers --forwarded-allow-ips 127.0.0.1 --no-access-log
+Restart=on-failure
+RestartSec=3
+# teto medido (docs/adr/0023-motor-de-render.md): pool de 2 páginas do chromium + a própria app FastAPI.
+# PLAT_RENDER_MEMORIA_MB (settings) é o valor NOMINAL do pool; a unidade corta um pouco acima para sobrar
+# fôlego ao processo Python em volta — se MemoryMax matar o processo, o portão pede medir de novo, nunca
+# alargar sem medir (cláusula "RSS do pool ≤ MemoryMax" do item).
+MemoryHigh=1200M
+MemoryMax=1536M
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

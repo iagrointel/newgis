@@ -1,0 +1,102 @@
+{
+ "item": "L2-01-l-exportacao-do-mapa",
+ "medidas": {
+  "png_legenda_e_atribuicao": {
+   "valor": {
+    "classes_na_legenda": 1,
+    "pixels_da_atribuicao": 775,
+    "largura": 712,
+    "altura": 777
+   },
+   "unidade": "pixels comparados entre a composição com e sem legenda/atribuição",
+   "comando": "tests/e2e/test_exportar_mapa.py::test_png_do_mapa_traz_a_legenda_e_a_atribuicao"
+  },
+  "pagina_pronta_ms_mapa": {
+   "valor": 569.1,
+   "unidade": "ms",
+   "comando": "tests/e2e/test_exportar_mapa.py::test_botao_exportar_do_mapa_gera_arquivo_no_crs_pedido"
+  },
+  "exportar_do_mapa_ms": {
+   "valor": 1046.9,
+   "unidade": "ms",
+   "comando": "tests/e2e/test_exportar_mapa.py::test_botao_exportar_do_mapa_gera_arquivo_no_crs_pedido"
+  },
+  "carga_da_maquina_na_medida": {
+   "valor": {
+    "carga_1min": 13.00390625,
+    "ram_livre_gb": 0.6,
+    "medido_em": "2026-09-07T20:26:02Z"
+   },
+   "unidade": "carga de 1 min e RAM livre no instante da medida acima",
+   "comando": "os.getloadavg / os.sysconf"
+  },
+  "formatos_da_selecao_de_500": {
+   "valor": {
+    "gpkg": {
+     "feicoes": 500,
+     "epsg": 31983,
+     "bytes": 172032
+    },
+    "geojson": {
+     "feicoes": 500,
+     "epsg": 4326,
+     "bytes": 101036
+    },
+    "shapefile": {
+     "feicoes": 500,
+     "epsg": 31983,
+     "bytes": 16090
+    },
+    "csv": {
+     "feicoes": 500,
+     "epsg": null,
+     "bytes": 22504
+    },
+    "xlsx": {
+     "feicoes": 500,
+     "epsg": null,
+     "bytes": 17289
+    },
+    "kml": {
+     "feicoes": 500,
+     "epsg": 4326,
+     "bytes": 206468
+    },
+    "kmz": {
+     "feicoes": 500,
+     "epsg": 4326,
+     "bytes": 8869
+    },
+    "fgb": {
+     "feicoes": 500,
+     "epsg": 31983,
+     "bytes": 90920
+    },
+    "gml": {
+     "feicoes": 500,
+     "epsg": 31983,
+     "bytes": 356318
+    },
+    "dxf": {
+     "feicoes": 500,
+     "epsg": null,
+     "bytes": 48665
+    },
+    "geojsonseq": {
+     "feicoes": 500,
+     "epsg": 4326,
+     "bytes": 100462
+    },
+    "filegdb": {
+     "feicoes": 500,
+     "epsg": 31983,
+     "bytes": 22229
+    }
+   },
+   "unidade": "feições e EPSG lidos do arquivo baixado",
+   "comando": "tests/api/exportacao/test_exportacao_mapa.py::test_doze_formatos_da_selecao_de_500_com_contagem_e_crs"
+  }
+ },
+ "gerado_em": "2026-09-07T20:26:20Z",
+ "git_sha": "500292445074"
+}

@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from tests.e2e.apoio import Tela, gravar_medidas, sufixo, texto_aviso, totp
+from tests.e2e.apoio import Tela, gravar_medidas, local, sufixo, texto_aviso, totp
 
 pytestmark = [pytest.mark.lento, pytest.mark.e2e]
 
@@ -124,7 +124,7 @@ def test_usuarios_perfil_lote_2fa_desbloquear_apagar_com_grupos_e_401(
     def _como(login: str, senha: str):
         """Sessão de API própria de um usuário recém-criado, já com a pendência `trocar_senha` resolvida — sem
         isso a API barra qualquer rota fora da exceção (403 `pendencia`), inclusive `POST /api/grupos`."""
-        ctx = playwright.request.new_context(base_url=base_url)
+        ctx = playwright.request.new_context(base_url=base_url, ignore_https_errors=local(base_url))
         contextos.append(ctx)
         r = _login(ctx, login, senha)
         assert r.status == 200, r.text()
@@ -186,7 +186,7 @@ def test_usuarios_perfil_lote_2fa_desbloquear_apagar_com_grupos_e_401(
         assert r.status == 201, r.text()
         ubl = r.json()["usuario"]
         criados.append(ubl["id"])
-        ctx_bl = playwright.request.new_context(base_url=base_url)
+        ctx_bl = playwright.request.new_context(base_url=base_url, ignore_https_errors=local(base_url))
         contextos.append(ctx_bl)
         # bloqueio_tentativas padrão = 5 (app/limites.py): a 5ª senha errada já bloqueia, mas ainda responde 401
         # (o "já bloqueado" só é visto na tentativa seguinte); por isso 6 tentativas, não 5.
