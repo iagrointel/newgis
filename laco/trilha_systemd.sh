@@ -55,7 +55,7 @@ if [ -f "$PORTAS_ENV" ]; then . "$PORTAS_ENV"; fi
 API="${API:-${PLAT_TRILHA_PORTA_API:-}}"
 WORKER="${WORKER:-${PLAT_TRILHA_PORTA_WORKER:-}}"
 MARTIN="${MARTIN:-${PLAT_TRILHA_PORTA_MARTIN:-}}"
-[ -n "$API" ] && [ -n "$WORKER" ] && [ -n "$MARTIN" ] || {
+[ -n "$API" ] && [ -n "$WORKER" ] || {
   echo "faltam portas para a trilha '$T' e não há $PORTAS_ENV — primeira vez, informe --api --worker --martin" >&2
   exit 2
 }
@@ -69,16 +69,20 @@ if [ -z "$WORKTREE" ]; then
   else WORKTREE="/home/dev/plataforma/enterprise"; fi
 fi
 [ -x "$WORKTREE/venv/bin/python" ] || { echo "sem venv em $WORKTREE/venv/bin/python" >&2; exit 2; }
-[ -f "$WORKTREE/deploy/martin.yaml" ] || { echo "sem $WORKTREE/deploy/martin.yaml (molde do Martin)" >&2; exit 2; }
+# (10/09) Nem toda trilha serve tile vetorial: a do motor multicritério (il301gtelam) não tem
+# deploy/martin.yaml e não precisa de Martin. Sem esta saída, a trilha inteira ficava sem unidade
+# nenhuma por causa de um componente que ela não usa — e continuava solta, morrendo no reboot.
+COM_MARTIN=1
+[ -f "$WORKTREE/deploy/martin.yaml" ] || { COM_MARTIN=0; echo "sem deploy/martin.yaml: gerando só api e worker" >&2; }
 
 # binário do Martin: bin/ é gitignored (deploy/martin_instalar.sh), raramente existe em toda trilha —
 # aceita override e cai para o binário já instalado que as trilhas de hoje compartilham.
-if [ -z "$MARTIN_BIN" ]; then
+if [ "$COM_MARTIN" = 1 ] && [ -z "$MARTIN_BIN" ]; then
   if [ -x "$WORKTREE/bin/martin" ]; then MARTIN_BIN="$WORKTREE/bin/martin"
   elif [ -x /home/dev/plataforma/wt/l201mapa/bin/martin ]; then MARTIN_BIN=/home/dev/plataforma/wt/l201mapa/bin/martin
   else echo "sem binário do Martin; informe --martin-bin" >&2; exit 2; fi
 fi
-[ -x "$MARTIN_BIN" ] || { echo "martin_bin não executável: $MARTIN_BIN" >&2; exit 2; }
+[ "$COM_MARTIN" = 0 ] || [ -x "$MARTIN_BIN" ] || { echo "martin_bin não executável: $MARTIN_BIN" >&2; exit 2; }
 
 # grava/atualiza o registro de portas (não é segredo; fica junto do resto da trilha em laco/var/trilha/)
 cat > "$PORTAS_ENV" <<EOF
@@ -95,7 +99,9 @@ chmod 600 "$PORTAS_ENV"
 # copiado do molde do worktree, só a porta muda; nenhum segredo aqui (igual ao molde: ${PLAT_DSN_LEITOR}
 # vem do ambiente do processo, que a unidade injeta por EnvironmentFile).
 MARTIN_YAML="$VAR/$T.martin.yaml"
-sed "s/^listen_addresses:.*/listen_addresses: '127.0.0.1:$MARTIN'/" "$WORKTREE/deploy/martin.yaml" > "$MARTIN_YAML"
+if [ "$COM_MARTIN" = 1 ]; then
+  sed "s/^listen_addresses:.*/listen_addresses: '127.0.0.1:$MARTIN'/" "$WORKTREE/deploy/martin.yaml" > "$MARTIN_YAML"
+fi
 
 UNIDADES_DIR=/etc/systemd/system
 API_UNIT="plat-$T-api.service"
@@ -237,7 +243,9 @@ StandardError=journal
 WantedBy=multi-user.target
 EOF
 
-for f in "$API_UNIT" "$WORKER_UNIT" "$MARTIN_UNIT" "$VIGIA_UNIT"; do
+UNIDADES="$API_UNIT $WORKER_UNIT"
+[ "$COM_MARTIN" = 1 ] && UNIDADES="$UNIDADES $MARTIN_UNIT $VIGIA_UNIT"
+for f in $UNIDADES; do
   # nunca sobrescrever unidade que não é nossa (defesa contra digitar o nome errado de trilha)
   if [ -e "$UNIDADES_DIR/$f" ] && ! sudo -n grep -q "Gerado por laco/trilha_systemd.sh" "$UNIDADES_DIR/$f" 2>/dev/null; then
     echo "ERRO: $UNIDADES_DIR/$f já existe e NÃO foi gerado por este script — recuso sobrescrever" >&2
@@ -246,12 +254,9 @@ for f in "$API_UNIT" "$WORKER_UNIT" "$MARTIN_UNIT" "$VIGIA_UNIT"; do
 done
 
 if [ "$INSTALAR" = 1 ]; then
-  sudo -n install -m 0644 "$TMP/$API_UNIT" "$UNIDADES_DIR/$API_UNIT"
-  sudo -n install -m 0644 "$TMP/$WORKER_UNIT" "$UNIDADES_DIR/$WORKER_UNIT"
-  sudo -n install -m 0644 "$TMP/$MARTIN_UNIT" "$UNIDADES_DIR/$MARTIN_UNIT"
-  sudo -n install -m 0644 "$TMP/$VIGIA_UNIT" "$UNIDADES_DIR/$VIGIA_UNIT"
+  for f in $UNIDADES; do sudo -n install -m 0644 "$TMP/$f" "$UNIDADES_DIR/$f"; done
   sudo -n systemctl daemon-reload
-  echo "instaladas: $API_UNIT $WORKER_UNIT $MARTIN_UNIT $VIGIA_UNIT (daemon-reload feito; enable/start é passo separado)"
+  echo "instaladas: $UNIDADES (daemon-reload feito; enable/start é passo separado)"
 else
   cp "$TMP/$API_UNIT" "$TMP/$WORKER_UNIT" "$TMP/$MARTIN_UNIT" "$TMP/$VIGIA_UNIT" "$VAR/"
   echo "--sem-instalar: unidades escritas em $VAR/ para conferência, nada instalado"
