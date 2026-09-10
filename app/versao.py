@@ -22,37 +22,31 @@ def versao() -> str:
     return _ler(ROOT / "VERSAO") or "0.0.0"
 
 
-def _dir_git() -> Path:
-    """O diretório do git desta cópia. Num clone comum é `.git/`; num GIT WORKTREE, `.git` é um ARQUIVO
-    com `gitdir: <caminho>` — e sem seguir esse ponteiro o worker morre no arranque dizendo que não há sha
-    (medido em 07/09/2026 na trilha do item L2-01-l, que roda em worktree)."""
-    git = ROOT / ".git"
-    if git.is_file():
-        conteudo = _ler(git) or ""
-        if conteudo.startswith("gitdir:"):
-            apontado = Path(conteudo.split(":", 1)[1].strip())
-            return apontado if apontado.is_absolute() else (ROOT / apontado).resolve()
-    return git
-
-
 def _sha_do_git() -> str | None:
-    git = _dir_git()
+    git = ROOT / ".git"
+    apontador = _ler(git)
+    if apontador and apontador.startswith("gitdir:"):
+        # worktree do git: .git é um ARQUIVO que aponta para o gitdir real do repositório principal
+        indicado = Path(apontador.split(":", 1)[1].strip())
+        git = indicado if indicado.is_absolute() else ROOT / indicado
     head = _ler(git / "HEAD")
     if not head:
         return None
     if not head.startswith("ref:"):
         return head if _HEX.match(head) else None
     ref = head.split(":", 1)[1].strip()
-    direto = _ler(git / ref)
-    if direto and _HEX.match(direto):
-        return direto
-    # num worktree as refs empacotadas ficam no diretório COMUM, não no do worktree
-    comum = _ler(git / "commondir")
-    raiz_refs = (git / comum).resolve() if comum else git
-    direto = _ler(raiz_refs / ref)
-    if direto and _HEX.match(direto):
-        return direto
-    empacotadas = _ler(raiz_refs / "packed-refs") or ""
+    # refs de ramo vivem no diretório COMUM (o .git do repositório principal); o gitdir do
+    # worktree guarda só o que é dele (HEAD, bisect). O arquivo 'commidir' diz onde fica o comum.
+    comum = git
+    apontador_comum = _ler(git / "commidir")
+    if apontador_comum:
+        indicado = Path(apontador_comum.strip())
+        comum = indicado if indicado.is_absolute() else (git / indicado).resolve()
+    for base in (git, comum):
+        direto = _ler(base / ref)
+        if direto and _HEX.match(direto):
+            return direto
+    empacotadas = _ler(comum / "packed-refs") or ""
     for linha in empacotadas.splitlines():
         partes = linha.split()
         if len(partes) == 2 and partes[1] == ref and _HEX.match(partes[0]):

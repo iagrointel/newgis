@@ -58,3 +58,25 @@ def test_sem_git_e_sem_plat_git_sha_falha_nomeando(monkeypatch, tmp_path):
     with pytest.raises(RuntimeError, match="PLAT_GIT_SHA"):
         v.git_sha()
     v.git_sha.cache_clear()
+
+
+def test_git_de_worktree_arquivo_apontador_e_lido(monkeypatch, tmp_path):
+    """Em worktree, .git é um ARQUIVO ('gitdir: …') e não um diretório; o HEAD vem do gitdir do
+    worktree, mas a ref do ramo vive no diretório comum, indicado pelo arquivo 'commidir'."""
+    import app.versao as v
+
+    gitdir = tmp_path / "repo" / ".git" / "worktrees" / "wt"
+    comum = tmp_path / "repo" / ".git"
+    (comum / "refs" / "heads" / "wt").mkdir(parents=True)
+    (gitdir / "refs" / "heads").mkdir(parents=True)
+    (gitdir / "HEAD").write_text("ref: refs/heads/wt/ramo\n", encoding="ascii")
+    (gitdir / "commidir").write_text("../..\n", encoding="ascii")
+    (comum / "refs" / "heads" / "wt" / "ramo").write_text(
+        "fedcba9876543210fedcba9876543210fedcba98\n", encoding="ascii")
+    (tmp_path / ".git").write_text(f"gitdir: {gitdir}\n", encoding="ascii")
+    monkeypatch.setattr(v, "ROOT", tmp_path)
+    v.git_sha.cache_clear()
+    try:
+        assert v.git_sha() == "fedcba9876543210fedcba9876543210fedcba98"
+    finally:
+        v.git_sha.cache_clear()

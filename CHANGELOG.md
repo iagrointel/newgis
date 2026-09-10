@@ -1024,6 +1024,25 @@ era mais fraca que a regra escrita nela: linha `fora` só precisava de um parên
 trava cobra o que a regra promete: linha `fora` nomeia item (`L<n>-<n>`) ou decisão (`D<n>`) ou
 declara "nenhum item"; e TODO caminho `tests/...` citado em qualquer célula da linha (a coluna "nós"
 inclusive) tem de existir em `master` ou num ramo nomeado na própria linha. Suíte: 36 passed.
+## turno 48, setembro de 2026 (item L3-01-i-exportacao-metodo: o método do motor AMC exportado em JSON canônico com sha256 e PDF verificado número a número)
+
+O método sai do estado da aplicação e vira documento: `app/amc/metodo.py` define o formato
+`plat/amc_metodo` — modelo normalizado (pesos a 4 casas, vetos, combinador e política COM descrição),
+transformações por fator, camadas de entrada com sha256, a entrada bruta avaliada, o resultado com
+cobertura e veto, versão do motor e o sha256 da serialização canônica do próprio documento.
+`importar_metodo` recalcula o hash e recusa (`documento_alterado`, com gravado × recalculado) o
+documento alterado depois da exportação — a refutação do item, provada por teste: peso trocado muda o
+hash e o PDF antigo deixa de conferir. `app/amc/relatorio.py` gera o PDF determinístico (`invariant=1`,
+mesmo documento = mesmos bytes) no molde Suitability Modeler com UMA seção por página (resumo, fluxo
+do modelo, uma página por fator com histograma bruto e tabela de valores, pesos, resultado final,
+ressalvas); `scripts/metodo_exportar.py` é a linha de comando. A regra contra número digitado é
+testada de verdade: o teste extrai as palavras do PDF com pdfplumber e confere cada palavra que é só
+número contra `metodo.numeros_do_documento` (que varre valores, textos e chaves — o "256" de
+"sha256" entra). Medido (`tests/medidas/L3-01-i-exportacao-metodo.json`): geração 6,871 ms, 8 páginas
+= 8 seções, 23 números no PDF e todos no JSON; PDF lido página a página (pdftoppm) — duas passadas, a
+primeira achou célula estourando a margem no resumo e caixas sobrepostas no fluxo, corrigidas e
+reverificadas. Conserto de infra exigido pelo item: `app/versao.py` agora lê o sha em worktree do git
+(`.git` arquivo com "gitdir:" + `commidir`), com teste.
 
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
