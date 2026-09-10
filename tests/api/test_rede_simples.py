@@ -19,14 +19,16 @@ trecho faz montante e jusante pararem nele, com aviso nomeando o trecho e o nó.
 import pytest
 
 from tests.api.apoio_camada_teste import (
+    apagar_tabelas,
     conexao,
     criar_tabela_linhas,
     criar_tabela_pontos,
     registrar_item,
+    schema_dado,
 )
 from tests.api.conftest import PREFIXO_TESTE
 
-SCHEMA_DADO = "d_demo"
+SCHEMA_DADO = schema_dado()
 TAB_LINHAS = "zt_l418_trechos"
 TAB_PONTOS = "zt_l418_juncoes"
 CAMPOS_LINHA = ["nome", "sentido"]
@@ -47,15 +49,23 @@ PONTOS = [{"nome": n, "lon": p[0], "lat": p[1]} for n, p in
 
 @pytest.fixture(scope="module")
 def camadas_sinteticas():
-    """As duas camadas do inquilino demo, criadas uma vez por módulo (tabelas de nome fixo com o prefixo do
-    item; nada fora desse prefixo é tocado)."""
+    """As duas camadas do inquilino, criadas uma vez por módulo no schema de dado desta instalação (tabelas de
+    nome fixo com o prefixo do item; nada fora desse prefixo é tocado). O `yield` garante que a bancada é
+    apagada no fim mesmo quando um teste falha."""
     con = conexao()
     try:
         criar_tabela_linhas(con, SCHEMA_DADO, TAB_LINHAS, TRECHOS, CAMPOS_LINHA)
         criar_tabela_pontos(con, SCHEMA_DADO, TAB_PONTOS, PONTOS, CAMPOS_PONTO)
     finally:
         con.close()
-    return {"linhas": TAB_LINHAS, "pontos": TAB_PONTOS}
+    try:
+        yield {"linhas": TAB_LINHAS, "pontos": TAB_PONTOS}
+    finally:
+        con = conexao()
+        try:
+            apagar_tabelas(con, SCHEMA_DADO, [TAB_LINHAS, TAB_PONTOS])
+        finally:
+            con.close()
 
 
 @pytest.fixture

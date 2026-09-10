@@ -24,11 +24,17 @@ from pathlib import Path
 import networkx
 import pytest
 
-from tests.api.apoio_camada_teste import conexao, criar_tabela_linhas, registrar_item
+from tests.api.apoio_camada_teste import (
+    apagar_tabelas,
+    conexao,
+    criar_tabela_linhas,
+    registrar_item,
+    schema_dado,
+)
 from tests.api.conftest import PREFIXO_TESTE
 
 ARQUIVO = Path(__file__).resolve().parents[1] / "dados" / "bacia_bc250.json"
-SCHEMA_DADO = "d_demo"
+SCHEMA_DADO = schema_dado()
 TAB_BACIA = "zt_l418_bacia"
 CAMPOS = ["nome", "tipotrecho", "regime", "sentido"]
 MAPA = {"jusante": "digitalizada", "invertido": "contra", "desconhecido": "indeterminada"}
@@ -58,7 +64,14 @@ def bacia():
         criar_tabela_linhas(con, SCHEMA_DADO, TAB_BACIA, trechos, CAMPOS)
     finally:
         con.close()
-    return {"doc": doc, "trechos": trechos}
+    try:
+        yield {"doc": doc, "trechos": trechos}
+    finally:
+        con = conexao()
+        try:
+            apagar_tabelas(con, SCHEMA_DADO, [TAB_BACIA])
+        finally:
+            con.close()
 
 
 @pytest.fixture(scope="module")
