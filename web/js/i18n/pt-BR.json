@@ -2058,6 +2058,7 @@
   "mapa.erro_camada": "não foi possível carregar a camada",
   "mapa.erro_carregar": "não foi possível carregar o mapa",
   "mapa.erro_documento": "não foi possível carregar o documento do mapa",
+  "mapa.erro_galeria_vazia": "nenhum mapa base instalado (peça ao administrador para instalar a galeria)",
   "mapa.erro_salvar": "não foi possível gravar o mapa",
   "mapa.exportar": "Exportar",
   "mapa.exportar_baixar": "baixar arquivo ({feicoes} feições)",

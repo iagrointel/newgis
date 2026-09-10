@@ -150,6 +150,7 @@ from app.migracao.rotas import router as rotas_migracao
 from app.multiescala import regioes_rotas as rotas_regioes  # L3-05: localizar regiões
 from app.multiescala import backtest_rotas as rotas_backtest  # L3-09: backtest contra decisão real
 from app.multiescala.corredor_rotas import router as rotas_corredor
+from app.mapas_base.rotas import router as rotas_mapas_base
 from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
@@ -371,6 +372,9 @@ ROUTERS = [
     # --- motor de render no servidor (L2-12-a-motor-render-servidor): /api/render/mapa (PNG/PDF), token
     # interno de curta duração e /api/render/saude (fila, execução, falhas do pool de chromium)
     rotas_render,
+    # --- galeria de mapas base por inquilino (L2-01-e): /api/mapas-base, .../instalar, .../{id}/tornar-padrao,
+    # .../osm/{z}/{x}/{y}.png (proxy raster do OSM)
+    rotas_mapas_base,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- rede de utilidades (L4-01-a): /api/rede (redes do inquilino), /api/rede/{rede_id}/pacote (importa e

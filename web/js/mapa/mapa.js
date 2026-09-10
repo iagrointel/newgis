@@ -1,447 +1,162 @@
-/* plat · mapa — visualizador (item L2-01-mapa-web; polimento UX-04-tela-mapa-polimento).
+/* plat · mapa — entrada da tela /mapa (item L2-01-e-mapas-base, que generaliza o item
+   L2-01-a-basemap-local-pmtiles: mapa-base único → galeria por inquilino). Módulo ES sem build; cache
+   resolvido por no-store no nginx: NUNCA ?v= nos imports. Requer sessão (ADR 0002, exigirSessao).
+   MapLibre GL JS e o protocolo pmtiles vêm de <script> clássico (window.maplibregl / window.pmtiles,
+   vendorizados em web/vendor/, VERSOES.txt) carregado ANTES deste módulo em mapa.html.
 
-   Módulo ES sem empacotador; cache resolvido por `no-store` no nginx — NUNCA `?v=` num import (duas URLs para
-   o mesmo arquivo criam duas instâncias do módulo e a aplicação morre, armadilha já paga na casa). MapLibre GL
-   JS, o protocolo PMTiles e o terra-draw vêm de <script> clássico (vendorizados em web/vendor/ com sha256 em
-   VERSOES.txt), carregados ANTES deste módulo em mapa.html: não são módulos ES.
+   Galeria: GET /api/mapas-base devolve os itens `mapa_base` do inquilino (instalados por
+   POST /api/mapas-base/instalar, quatro fontes abertas — docs/DADO_DEMO.md), já na ordem de exibição.
+   Quatro tipos de fonte (dados.tipo): `pmtiles` (vetorial local, estilo próprio claro/escuro/cinza),
+   `osm_raster_proxy` (raster pelo proxy da casa, cache em disco), `satelite_titiler` (raster direto de um
+   TiTiler externo) e `nenhum` (fundo cor, sem fonte). O item com dados.padrao=true abre por padrão; sem
+   nenhum padrão, abre o primeiro da lista (ordem crescente, já vinda da API).
 
-   Chrome único (UX-04): um trilho à esquerda com um botão por painel, uma gaveta com um <plat-painel> por
-   função (pesquisa, camadas, legenda, medição, desenho, anotações, impressão, exportação) e a tabela de
-   atributos ancorada ao rodapé do mapa. Cada painel novo de qualquer item futuro entra como mais um
-   <plat-painel> na gaveta e um botão no trilho, sem CSS próprio. Atalhos de teclado (b c l m d a i e t, f tela
-   cheia, Esc fecha, ? lista), tela cheia, impressão pelo navegador e painel inferior de 390 px em celular.
-
-   O que esta tela junta:
-     camadas do catálogo (Martin/PMTiles)      catalogo.js
-     árvore de camadas (ordem/grupo/escala)    ../camadas.js (L2-01-c)
-     legenda dinâmica do estilo MapLibre       ../legenda.js (L2-01-c)
-     janela de atributos                       atributos.js (L2-01-d)
-     medição geodésica                         medicao.js
-     pesquisa de endereço e de coordenada      busca.js
-     impressão PNG/PDF com escala e norte      impressao.js
-     tabela de atributos                       tabela.js (L2-01-g)
-     desenho e anotações                       desenho.js, anotacoes.js (L2-01-k)
-     exportação de camada                      exportar.js (L2-01-l)
-
-   `body[data-pronto="1"]` só depois do primeiro 'load' do mapa: o e2e espera por isso. */
+   Trocar de mapa base troca o `style` inteiro do MapLibre — que descarta toda fonte/camada que não estiver
+   no novo JSON. Para as camadas OPERACIONAIS (as que representam dado do inquilino, não o mapa base)
+   sobreviverem à troca, este módulo expõe `window.platMapa.adicionarCamadaOperacional`/
+   `removerCamadaOperacional`: quem monta uma camada por cima do mapa registra aqui, e `trocarBase` guarda
+   center/zoom/bearing/pitch antes de `setStyle`, reaplica as camadas registradas no `styledata` seguinte e
+   restaura a posição com `jumpTo` (sem animação: a troca de base não é uma navegação do usuário). */
 import '../base/componentes.js';
-import { carregar as carregarIdioma, t, aoTraduzir } from '../base/i18n.js';
+import { carregar as carregarIdioma, t } from '../base/i18n.js';
 import { montarLayout, pronto } from '../base/layout.js';
-import { h, limpar } from '../base/dom.js';
-import { alterar, enviar, mensagemDe, obter } from '../base/api.js';
 import { exigirSessao } from '../auth/sessao.js';
-import { construirEstilo } from './estilo.js';
-import { Catalogo } from './catalogo.js';
-import { Arvore } from '../camadas.js';
-import { Legenda } from '../legenda.js';
-import { instalarPopup } from './atributos.js';
-import { Medicao } from './medicao.js';
-import { interpretarCoordenada, sugerir, geocodificar } from './busca.js';
-import { paraPng, paraPdf, escalaNumerica } from './impressao.js';
-import { exigeAtribuicao, rotuloLicenca } from '../acervo/licencas.js';
-import { criarTabela } from './tabela.js';
-import { Desenho, kmlParaGeoJSON } from './desenho.js';
-import { PainelAnotacoes } from './anotacoes.js';
-import { PainelExportar } from './exportar.js';
+import { construirEstilo, construirEstiloNenhum, construirEstiloRaster } from './estilo.js';
 
-const BASES = [
-  { id: 'osm-guarulhos', rotuloChave: 'mapa.base_osm_guarulhos', arquivo: 'guarulhos.pmtiles' },
-  { id: 'sem-base', rotuloChave: 'mapa.base_nenhuma', arquivo: null },
-];
-const CENTRO = [-46.593018, -23.493476];
-const PAINEIS = ['busca', 'camadas', 'legenda', 'medicao', 'desenho', 'anotacoes', 'impressao', 'exportar'];
-const ATALHOS = { b: 'busca', c: 'camadas', l: 'legenda', m: 'medicao', d: 'desenho', a: 'anotacoes', i: 'impressao', e: 'exportar' };
-const CHAVE_PAINEL = 'plat_mapa_painel';
+const ROTULO_LICENCA = {
+  pmtiles: 'ODbL 1.0',
+  osm_raster_proxy: 'ODbL 1.0 / CC BY-SA 2.0',
+  satelite_titiler: 'Copernicus',
+  nenhum: '',
+};
+const CENTRO_PADRAO = [-46.593018, -23.493476]; // recorte do PMTiles local (PROVENIENCIA.md)
+const ZOOM_PADRAO = 13;
+
 const el = (id) => document.getElementById(id);
 
-function urlDado(arquivo) { return `${location.origin}/static/dados/basemap/${arquivo}`; }
-
-/* ---------------------------------------------------------------- chrome: trilho, gaveta, atalhos, tela cheia */
-function painelAberto() {
-  const p = document.querySelector('.mapa-gaveta plat-painel:not([hidden])');
-  return p ? p.id.replace('painel-', '') : null;
+function absoluta(url) {
+  return /^https?:\/\//i.test(url) ? url : `${location.origin}${url}`;
 }
 
-function abrirPainel(id, { foco = true } = {}) {
-  if (!PAINEIS.includes(id)) return;
-  el('gaveta').hidden = false;
-  for (const p of PAINEIS) {
-    const painel = el(`painel-${p}`);
-    painel.hidden = p !== id;
-    if (p === id) painel.removeAttribute('recolhido');
+function atribuicaoDe(base) {
+  const rotulo = ROTULO_LICENCA[base.dados?.tipo] || '';
+  if (!base.creditos) return '';
+  return rotulo ? `${base.creditos} — ${rotulo}` : base.creditos;
+}
+
+function estiloDe(base) {
+  const dados = base.dados || {};
+  if (dados.tipo === 'pmtiles') return construirEstilo(absoluta(dados.url), dados.estilo || 'escuro');
+  if (dados.tipo === 'osm_raster_proxy' || dados.tipo === 'satelite_titiler') {
+    return construirEstiloRaster(absoluta(dados.url), atribuicaoDe(base), dados.zoom_min, dados.zoom_max);
   }
-  document.querySelectorAll('#trilho .trilho-botao[data-painel]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.painel === id)));
-  document.body.dataset.painel = id;
-  try { localStorage.setItem(CHAVE_PAINEL, id); } catch { /* sem armazenamento: só nesta página */ }
-  if (foco) el(`painel-${id}`).querySelector('h2')?.focus();
+  return construirEstiloNenhum();
 }
 
-function fecharGaveta({ devolverFoco = true } = {}) {
-  const aberto = painelAberto();
-  el('gaveta').hidden = true;
-  for (const p of PAINEIS) el(`painel-${p}`).hidden = true;
-  document.querySelectorAll('#trilho .trilho-botao[data-painel]').forEach((b) => b.setAttribute('aria-pressed', 'false'));
-  delete document.body.dataset.painel;
-  try { localStorage.removeItem(CHAVE_PAINEL); } catch { /* idem */ }
-  if (devolverFoco && aberto) document.querySelector(`#trilho [data-painel="${aberto}"]`)?.focus();
+async function buscarGaleria() {
+  const r = await fetch('/api/mapas-base', { headers: { Accept: 'application/json' } });
+  if (!r.ok) throw new Error(`GET /api/mapas-base → ${r.status}`);
+  return r.json();
 }
 
-function alternarPainel(id) { if (painelAberto() === id) fecharGaveta(); else abrirPainel(id); }
+async function instalarGaleria() {
+  const r = await fetch('/api/mapas-base/instalar', { method: 'POST', headers: { Accept: 'application/json' } });
+  if (!r.ok) throw new Error(`POST /api/mapas-base/instalar → ${r.status}`);
+  return r.json();
+}
 
-function montarChrome() {
-  for (const p of PAINEIS) {
-    const painel = el(`painel-${p}`);
-    painel.titulo = t(painel.dataset.titulo);
-    painel.querySelector('h2')?.setAttribute('tabindex', '-1');
-    painel.addEventListener('fechar', () => { painel.hidden = false; fecharGaveta(); });
-  }
-  aoTraduzir(() => { for (const p of PAINEIS) { const painel = el(`painel-${p}`); painel.titulo = t(painel.dataset.titulo); } });
-  document.querySelectorAll('#trilho .trilho-botao[data-painel]').forEach((b) => b.addEventListener('click', () => alternarPainel(b.dataset.painel)));
+// ---------------------------------------------------------------- camadas operacionais (sobrevivem à troca)
+const camadasOperacionais = new Map(); // layerId -> {sourceId, sourceDef, layerDef}
 
-  // tela cheia: a tela inteira do mapa (barra + trilho + gaveta + mapa), não só o canvas
-  const btTela = el('btn-tela-cheia');
-  const raiz = el('principal');
-  if (!document.fullscreenEnabled) btTela.hidden = true;
-  btTela.addEventListener('click', () => { if (document.fullscreenElement) document.exitFullscreen(); else raiz.requestFullscreen?.(); });
-  document.addEventListener('fullscreenchange', () => {
-    const ativa = document.fullscreenElement === raiz;
-    btTela.setAttribute('aria-pressed', String(ativa));
-    document.body.dataset.telaCheia = ativa ? '1' : '0';
+function montarCamada(map, entrada) {
+  if (!map.getSource(entrada.sourceId)) map.addSource(entrada.sourceId, entrada.sourceDef);
+  if (!map.getLayer(entrada.layerDef.id)) map.addLayer(entrada.layerDef);
+}
+
+function adicionarCamadaOperacional(map, { sourceId, sourceDef, layerDef }) {
+  const entrada = { sourceId, sourceDef, layerDef };
+  camadasOperacionais.set(layerDef.id, entrada);
+  montarCamada(map, entrada);
+}
+
+function removerCamadaOperacional(map, layerId) {
+  camadasOperacionais.delete(layerId);
+  if (map.getLayer(layerId)) map.removeLayer(layerId);
+}
+
+function restaurarCamadasOperacionais(map) {
+  for (const entrada of camadasOperacionais.values()) montarCamada(map, entrada);
+}
+
+function trocarBase(map, base) {
+  const centro = map.getCenter();
+  const zoom = map.getZoom();
+  const bearing = map.getBearing();
+  const pitch = map.getPitch();
+  map.setStyle(estiloDe(base));
+  map.once('styledata', () => {
+    restaurarCamadasOperacionais(map);
+    map.jumpTo({ center: centro, zoom, bearing, pitch });
   });
+}
 
-  // impressão pelo navegador: @media print em mapa.css esconde o chrome e deixa o canvas inteiro na página
-  const imprimir = () => window.print();
-  el('btn-imprimir').addEventListener('click', imprimir);
-  el('btn-imprimir-navegador').addEventListener('click', imprimir);
+function montarSeletorBase(map, galeria) {
+  const sel = el('seletor-base');
+  sel.replaceChildren();
+  for (const base of galeria) {
+    const opt = document.createElement('option');
+    opt.value = base.id;
+    opt.textContent = base.titulo;
+    sel.append(opt);
+  }
+  const padrao = galeria.find((b) => b.dados?.padrao) || galeria[0];
+  if (padrao) sel.value = padrao.id;
+  sel.addEventListener('change', () => {
+    const base = galeria.find((b) => b.id === sel.value);
+    if (base) trocarBase(map, base);
+  });
+  return padrao;
+}
 
-  // navegação do produto (barra lateral) como gaveta sobre o mapa: o mapa é tela cheia por padrão
-  const btNav = el('btn-nav');
-  const veu = el('nav-veu');
-  const definirNav = (aberta) => { document.body.dataset.nav = aberta ? '1' : '0'; btNav.setAttribute('aria-expanded', String(aberta)); veu.hidden = !aberta; if (aberta) el('lateral').querySelector('a')?.focus(); };
-  btNav.addEventListener('click', () => definirNav(document.body.dataset.nav !== '1'));
-  veu.addEventListener('click', () => definirNav(false));
+async function iniciarMapa() {
+  if (!window.maplibregl || !window.pmtiles) {
+    el('aviso').erro(t('mapa.erro_biblioteca'));
+    return;
+  }
+  const protocolo = new window.pmtiles.Protocol();
+  window.maplibregl.addProtocol('pmtiles', protocolo.tile);
 
-  // atalhos
-  el('btn-atalhos').addEventListener('click', mostrarAtalhos);
-  document.addEventListener('keydown', (e) => {
-    const alvo = e.target;
-    const emCampo = alvo && (alvo.tagName === 'INPUT' || alvo.tagName === 'TEXTAREA' || alvo.tagName === 'SELECT' || alvo.isContentEditable);
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
-    if (e.key === 'Escape') {
-      if (document.querySelector('dialog[open]')) return;
-      if (document.body.dataset.nav === '1') { definirNav(false); return; }
-      if (!el('painel-tabela').hidden && document.activeElement?.closest('#painel-tabela')) { el('tabela-alternar').click(); el('tabela-alternar').focus(); return; }
-      if (painelAberto()) { fecharGaveta(); return; }
+  // primeira visita do inquilino: instala as fontes padrão (idempotente — item L2-01-e-mapas-base). Sem
+  // privilégio conteudo.criar a instalação falha e a galeria some vazia; a mensagem já diz o que fazer.
+  let galeria = await buscarGaleria();
+  if (galeria.length === 0) {
+    try {
+      galeria = await instalarGaleria();
+    } catch {
+      el('aviso').erro(t('mapa.erro_galeria_vazia'));
       return;
     }
-    if (emCampo || document.querySelector('dialog[open]')) return;
-    const k = e.key.toLowerCase();
-    if (ATALHOS[k]) { e.preventDefault(); alternarPainel(ATALHOS[k]); }
-    else if (k === 't') { e.preventDefault(); el('tabela-alternar').click(); }
-    else if (k === 'f') { e.preventDefault(); btTela.click(); }
-    else if (e.key === '?') { e.preventDefault(); mostrarAtalhos(); }
-  });
-  el('tabela-fechar').addEventListener('click', () => { el('tabela-alternar').click(); el('tabela-alternar').focus(); });
-
-  // painel lembrado (ou camadas, na primeira visita em tela larga)
-  let lembrado = null;
-  try { lembrado = localStorage.getItem(CHAVE_PAINEL); } catch { /* sem armazenamento */ }
-  const largo = window.matchMedia('(min-width: 801px)').matches;
-  if (lembrado && PAINEIS.includes(lembrado)) abrirPainel(lembrado, { foco: false });
-  else if (largo) abrirPainel('camadas', { foco: false });
-}
-
-function mostrarAtalhos() {
-  const linhas = [
-    ...Object.entries(ATALHOS).map(([k, p]) => [k, t(el(`painel-${p}`).dataset.titulo)]),
-    ['t', t('tabela.alternar')], ['f', t('mapa.tela_cheia')], ['Esc', t('mapa.atalho_fechar')], ['?', t('mapa.atalhos')],
-  ];
-  const tabela = h('table', { class: 'tabela' }, h('tbody', {}, ...linhas.map(([k, r]) => h('tr', {}, h('td', { class: 'mono' }, h('kbd', {}, k)), h('td', {}, r)))));
-  el('dialogo-atalhos').abrir({ titulo: t('mapa.atalhos'), corpo: h('div', {}, h('p', { class: 'fraco' }, t('mapa.atalhos_ajuda')), tabela), botoes: [{ id: 'ok', rotulo: t('dialogo.fechar') }] });
-}
-
-/* ---------------------------------------------------------------- mapa */
-function montarSeletorBase() {
-  const sel = el('seletor-base');
-  for (const base of BASES) sel.append(h('option', { value: base.id }, t(base.rotuloChave)));
-  sel.value = BASES[0].id;
-  return sel;
-}
-
-function montarCoordenadas(map) {
-  const caixa = el('coordenadas');
-  const escrever = (lng, lat, zoom) => {
-    caixa.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)} · z${zoom.toFixed(1)} · 1:`
-      + `${escalaNumerica(lat, zoom).toLocaleString('pt-BR')}`;
-  };
-  const centro = () => { const c = map.getCenter(); escrever(c.lng, c.lat, map.getZoom()); };
-  map.on('mousemove', (ev) => escrever(ev.lngLat.lng, ev.lngLat.lat, map.getZoom()));
-  map.on('mouseout', centro);
-  map.on('zoomend', centro);
-  map.on('moveend', centro);
-  centro();
-}
-
-function marcador(map, maplibregl, lonlat, rotulo) {
-  const cor = getComputedStyle(document.documentElement).getPropertyValue('--acento').trim() || undefined;
-  const m = new maplibregl.Marker({ color: cor }).setLngLat(lonlat);
-  if (rotulo) m.setPopup(new maplibregl.Popup({ closeButton: true }).setText(rotulo));
-  m.addTo(map);
-  return m;
-}
-
-/* --------------------------------------------------------------- legenda das camadas do acervo (item L6-01-c)
-   O botão "adicionar ao meu mapa" da tela /acervo cria um item do catálogo tipo `conexao` com protocolo
-   `acervo` (nunca copia dado). Aqui o mapa lê essas camadas por `GET /api/acervo/meu-mapa` e mostra, por
-   camada, o nome e a licença; quando a licença CURADA é ODbL ou CC-BY-SA, a linha de atribuição obrigatória
-   aparece junto — esta é a tela onde o dado é visto, e é essa tela que a licença obriga a creditar.
-   O painel fica escondido quando não há nenhuma camada: legenda vazia sobre o mapa é ruído, não informação. */
-function linhaLegendaAcervo(camada) {
-  const rotulo = rotuloLicenca(camada.licenca_curada_tipo) || camada.licenca || t('acervo.licenca_nao_declarada');
-  const filhos = [
-    h('span', { class: 'titulo' }, camada.titulo),
-    h('span', { class: 'licenca' }, `${t('acervo.licenca')}: ${rotulo}`),
-  ];
-  if (exigeAtribuicao(camada.licenca_curada_tipo)) {
-    filhos.push(h('span', { class: 'atribuicao' }, t('acervo.atribuicao_obrigatoria', { licenca: camada.licenca_curada_tipo })));
   }
-  return h('li', { 'data-fonte-id': camada.fonte_id }, filhos);
-}
+  if (galeria.length === 0) {
+    el('aviso').erro(t('mapa.erro_galeria_vazia'));
+    return;
+  }
+  const inicial = galeria.find((b) => b.dados?.padrao) || galeria[0];
 
-async function montarLegendaAcervo() {
-  const painel = el('acervo-legenda');
-  const lista = el('acervo-legenda-lista');
-  if (!painel || !lista) return 0;
-  const r = await obter('/api/acervo/meu-mapa');
-  if (r.status >= 400) throw new Error(mensagemDe(r));
-  const camadas = r.json || [];
-  limpar(lista);
-  for (const camada of camadas) lista.append(linhaLegendaAcervo(camada));
-  painel.hidden = camadas.length === 0;
-  return camadas.length;
-}
-
-async function iniciar() {
-  const maplibregl = window.maplibregl;
-  if (!maplibregl || !window.pmtiles) { el('aviso').erro(t('mapa.erro_biblioteca')); return; }
-  const protocolo = new window.pmtiles.Protocol();
-  maplibregl.addProtocol('pmtiles', protocolo.tile);
-
-  const map = new maplibregl.Map({
+  const map = new window.maplibregl.Map({
     container: 'mapa',
-    style: construirEstilo(urlDado(BASES[0].arquivo)),
-    center: CENTRO,
-    zoom: 11,
+    style: estiloDe(inicial),
+    center: CENTRO_PADRAO,
+    zoom: ZOOM_PADRAO,
     attributionControl: false,
     hash: false,
-    // obrigatório para a impressão ler o canvas depois do quadro composto (impressao.js explica)
-    preserveDrawingBuffer: true,
   });
-  map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
-  map.addControl(new maplibregl.ScaleControl({ maxWidth: 140, unit: 'metric' }), 'bottom-left');
-  map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+  map.addControl(new window.maplibregl.NavigationControl({ showCompass: true }), 'top-right');
+  map.addControl(new window.maplibregl.ScaleControl({ maxWidth: 140, unit: 'metric' }), 'bottom-left');
+  map.addControl(new window.maplibregl.AttributionControl({ compact: false }), 'bottom-right');
+
+  montarSeletorBase(map, galeria);
   montarCoordenadas(map);
-
-  const catalogo = new Catalogo(map);
-  const medicao = new Medicao(map, el('medicao-saida'));
-  const estadoCamadas = el('camadas-estado');
-  const arvore = new Arvore(catalogo, map, el('lista-camadas'), {
-    aoEnquadrar: async (id) => {
-      const ext = await catalogo.extensao(id);
-      if (ext) map.fitBounds([[ext[0], ext[1]], [ext[2], ext[3]]], { padding: 40, duration: 0 });
-    },
-    aoErro: (e) => el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`),
-    aoMudarEscala: () => legenda.desenhar(),
-  });
-  const legenda = new Legenda(map, el('legenda'), () => arvore.camadasParaLegenda());
-  instalarPopup(map, catalogo, maplibregl);
-
-  el('btn-novo-grupo').addEventListener('click', () => {
-    const titulo = window.prompt(t('mapa.novo_grupo_nome'), t('mapa.novo_grupo_padrao'));
-    if (titulo !== null) arvore.criarGrupo(titulo);
-  });
-
-  // troca de mapa-base: refazer o estilo apaga as camadas do catálogo, que são re-somadas em seguida
-  const sel = montarSeletorBase();
-  sel.addEventListener('change', async () => {
-    const base = BASES.find((b) => b.id === sel.value) || BASES[0];
-    const ativas = [...catalogo.ativas];
-    const opacidades = new Map(catalogo.opacidade);
-    const fundo = getComputedStyle(document.documentElement).getPropertyValue('--i-fundo').trim();
-    map.setStyle(base.arquivo ? construirEstilo(urlDado(base.arquivo))
-      : { version: 8, name: 'plat-sem-base', sources: {}, layers: [{ id: 'fundo', type: 'background', paint: { 'background-color': fundo } }] });
-    await new Promise((r) => map.once('styledata', r));
-    catalogo.ativas = [];
-    catalogo.opacidade = opacidades;
-    for (const id of [...ativas].reverse()) { try { await catalogo.ligar(id); } catch { /* segue */ } }
-    catalogo.reordenar(ativas);
-  });
-
-  // --- medição
-  const pressionar = (ativo) => {
-    el('btn-distancia').setAttribute('aria-pressed', String(ativo === 'distancia'));
-    el('btn-area').setAttribute('aria-pressed', String(ativo === 'area'));
-  };
-  el('btn-distancia').addEventListener('click', () => { medicao.iniciar('distancia'); pressionar(medicao.modo); });
-  el('btn-area').addEventListener('click', () => { medicao.iniciar('area'); pressionar(medicao.modo); });
-  el('btn-medicao-limpar').addEventListener('click', () => { medicao.limpar(); pressionar(null); });
-
-  // --- pesquisa (endereço ou coordenada)
-  let alfinete = null;
-  const campo = el('busca-campo');
-  const lista = el('busca-sugestoes');
-  const irPara = (lat, lon, rotulo) => {
-    if (alfinete) alfinete.remove();
-    alfinete = marcador(map, maplibregl, [lon, lat], rotulo);
-    map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), 16), duration: 0 });
-    el('busca-resultado').textContent = rotulo;
-    limpar(lista);
-  };
-  const buscar = async () => {
-    const texto = campo.value.trim();
-    if (!texto) return;
-    const coord = interpretarCoordenada(texto);
-    if (coord) { irPara(coord.lat, coord.lon, `${coord.lat.toFixed(5)}, ${coord.lon.toFixed(5)}`); return; }
-    el('busca-form').setAttribute('aria-busy', 'true');
-    const r = await geocodificar(texto);
-    el('busca-form').removeAttribute('aria-busy');
-    if (r) irPara(r.lat, r.lon, r.rotulo);
-    else el('busca-resultado').textContent = t('mapa.busca_sem_resultado');
-  };
-  el('busca-form').addEventListener('submit', (ev) => { ev.preventDefault(); buscar(); });
-  let pendente = null;
-  campo.addEventListener('input', () => {
-    clearTimeout(pendente);
-    const texto = campo.value.trim();
-    if (interpretarCoordenada(texto)) { limpar(lista); return; }
-    pendente = setTimeout(async () => {
-      const sugestoes = await sugerir(texto);
-      limpar(lista);
-      for (const s of sugestoes) {
-        lista.append(h('li', {}, h('button', { type: 'button', class: 'sugestao', onclick: () => { campo.value = s.texto; buscar(); } }, s.texto)));
-      }
-    }, 250);
-  });
-
-  // --- desenho e anotações (item L2-01-k-desenho-anotacoes)
-  const desenho = new Desenho(map, maplibregl, el('bloco-desenho'));
-  const params = new URLSearchParams(location.search);
-  let mapaId = params.get('mapa');
-
-  const listaDesenho = el('lista-desenho');
-  const redesenharLista = (features) => {
-    limpar(listaDesenho);
-    features.forEach((f) => {
-      const medida = desenho.medidaDe(f);
-      listaDesenho.append(h('li', { class: 'camada-item', dataset: { desenho: f.id } },
-        h('span', { class: 'camada-titulo' }, `${f.properties.tipo_desenho}${medida ? ' · ' + medida : ''}`),
-        h('button', { type: 'button', class: 'pequeno texto', 'aria-label': t(desenho.editando() === f.id ? 'mapa.desenho_editar_fim' : 'mapa.desenho_editar'),
-          onclick: () => (desenho.editando() === f.id ? desenho.terminarEdicao() : desenho.editar(f.id)) }, desenho.editando() === f.id ? '✓' : '✎'),
-        h('button', { type: 'button', class: 'pequeno texto', 'aria-label': t('mapa.desenho_mover_cima'), onclick: () => desenho.mover(f.id, -1) }, '↑'),
-        h('button', { type: 'button', class: 'pequeno texto', 'aria-label': t('mapa.desenho_mover_baixo'), onclick: () => desenho.mover(f.id, 1) }, '↓'),
-        h('button', { type: 'button', class: 'pequeno texto', 'aria-label': t('mapa.desenho_apagar'), onclick: () => desenho.apagar(f.id) }, '×')));
-    });
-  };
-  desenho.aoMudar(redesenharLista);
-  for (const botao of document.querySelectorAll('[data-desenho]')) {
-    botao.addEventListener('click', () => {
-      desenho.iniciarModo(botao.dataset.desenho);
-      document.querySelectorAll('[data-desenho]').forEach((b) => b.setAttribute('aria-pressed', String(b === botao)));
-    });
-  }
-  const pararDesenho = () => { desenho.pararModo(); document.querySelectorAll('[data-desenho]').forEach((b) => b.setAttribute('aria-pressed', 'false')); };
-  el('btn-desenho-parar').addEventListener('click', pararDesenho);
-  el('btn-desenho-limpar').addEventListener('click', () => desenho.limparTudo());
-  const atualizarEstiloAtual = () => desenho.definirEstilo({
-    cor: el('desenho-cor').value,
-    contorno: getComputedStyle(document.documentElement).getPropertyValue('--i-fundo').trim(),
-    opacidade: Number(el('desenho-opacidade').value),
-    largura: Number(el('desenho-largura').value),
-    tamanho_fonte: Number(el('desenho-fonte').value),
-  });
-  ['desenho-cor', 'desenho-opacidade', 'desenho-largura', 'desenho-fonte'].forEach((id) => el(id).addEventListener('input', atualizarEstiloAtual));
-  atualizarEstiloAtual();
-  el('desenho-snap').addEventListener('change', (ev) => desenho.definirSnap(ev.target.checked));
-  el('btn-desenho-editar-fim').addEventListener('click', () => desenho.terminarEdicao());
-
-  const salvarDesenho = async () => {
-    const corpo = { esquema_versao: 1, corpo: { desenho: { features: desenho.lista() } } };
-    const r = mapaId ? await alterar(`/api/itens/${mapaId}`, { dados: corpo })
-      : await enviar('/api/itens', { tipo: 'mapa', titulo: `${t('mapa.titulo')} ${new Date().toLocaleString('pt-BR')}`, dados: corpo });
-    if (r.status >= 400) { el('desenho-saida').textContent = mensagemDe(r); return; }
-    if (!mapaId) {
-      mapaId = r.json.id;
-      const novaUrl = new URL(location.href);
-      novaUrl.searchParams.set('mapa', mapaId);
-      history.replaceState(null, '', novaUrl);
-    }
-    el('desenho-saida').textContent = t('mapa.desenho_salvo');
-  };
-  el('btn-desenho-salvar').addEventListener('click', salvarDesenho);
-  el('btn-desenho-promover').addEventListener('click', async () => {
-    if (!mapaId) await salvarDesenho();
-    if (!mapaId) return;
-    const titulo = window.prompt(t('mapa.desenho_promover_pedir_titulo'), `${t('mapa.desenho')} ${new Date().toLocaleDateString('pt-BR')}`);
-    if (!titulo) return;
-    const r = await enviar(`/api/mapa/${mapaId}/desenho/promover`, { titulo });
-    if (r.status >= 400) { el('desenho-saida').textContent = mensagemDe(r); return; }
-    el('desenho-saida').textContent = t('mapa.desenho_promovido', { titulo, n: r.json.n_feicoes });
-    await arvore.carregar();
-  });
-  el('desenho-importar').addEventListener('change', async (ev) => {
-    const arquivo = ev.target.files[0];
-    if (!arquivo) return;
-    const texto = await arquivo.text();
-    try {
-      const colecao = arquivo.name.toLowerCase().endsWith('.kml') ? kmlParaGeoJSON(texto) : JSON.parse(texto);
-      el('desenho-saida').textContent = t('mapa.desenho_importado', { n: desenho.importarGeoJSON(colecao) });
-    } catch (e) {
-      el('desenho-saida').textContent = `${t('mapa.erro_carregar')}: ${(e && e.message) || e}`;
-    }
-    ev.target.value = '';
-  });
-
-  const painelAnotacoes = new PainelAnotacoes(map, catalogo, {
-    btnModo: el('btn-anotar'), corpo: el('anotacoes-corpo'), alvo: el('anotacoes-alvo'),
-    lista: el('lista-anotacoes'), selGrupo: el('anotacao-grupo'), campoTexto: el('anotacao-texto'),
-    btnEnviar: el('btn-anotacao-enviar'),
-  });
-
-  if (mapaId) {
-    try {
-      const r = await obter(`/api/itens/${mapaId}`);
-      if (r.status === 200) {
-        const features = ((r.json.dados || {}).corpo || {}).desenho?.features || [];
-        if (features.length) desenho.carregarFeatures(features);
-      }
-    } catch { /* documento novo ou inexistente: começa vazio, sem quebrar a tela */ }
-  }
-
-  // --- exportação (item L2-01-l)
-  const painelExportar = new PainelExportar(catalogo, map, {
-    raiz: el('exportar'),
-    aoErro: (e) => el('aviso').erro(`${t('mapa.exportar_falhou', { erro: (e && e.message) || e })}`),
-  });
-
-  // --- impressão PNG/PDF: a legenda impressa é a MESMA que o painel mostra
-  const titulo = () => `${t('mapa.titulo')} — ${new Date().toLocaleDateString('pt-BR')}`;
-  const atribuicao = '© colaboradores do OpenStreetMap — ODbL 1.0';
-  const legendaDaTela = () => catalogo.ativas.map((id) => catalogo.ficha(id)).filter(Boolean).flatMap((f) => f.legenda || []).slice(0, 12);
-  const imprimirComo = async (formato) => {
-    const saida = el('impressao-saida');
-    saida.textContent = t('mapa.impressao_gerando');
-    try {
-      const opcoes = { titulo: titulo(), atribuicao, legenda: legendaDaTela() };
-      const r = formato === 'PNG'
-        ? await paraPng(map, { ...opcoes, nome: 'mapa.png', escalaSaida: el('png-2x').checked ? 2 : 1 })
-        : await paraPdf(map, { ...opcoes, nome: 'mapa.pdf' });
-      saida.textContent = t('mapa.impressao_pronta', { formato, kb: Math.round(r.bytes / 1024) });
-    } catch (e) {
-      saida.textContent = `${t('mapa.impressao_falhou')}: ${(e && e.message) || e}`;
-    }
-  };
-  el('btn-png').addEventListener('click', () => imprimirComo('PNG'));
-  el('btn-pdf').addEventListener('click', () => imprimirComo('PDF'));
 
   map.on('error', (ev) => {
     const msg = (ev && ev.error && ev.error.message) || String(ev);
@@ -449,43 +164,29 @@ async function iniciar() {
   });
 
   await new Promise((resolve) => map.once('load', resolve));
-  estadoCamadas.carregando();
-  try {
-    await arvore.carregar();
-    legenda.desenhar();
-    try {
-      await montarLegendaAcervo();
-    } catch (e) {
-      el('aviso').erro(`${t('acervo.erro_legenda')}: ${(e && e.message) || e}`);
-    }
-    await painelExportar.iniciar();
-    estadoCamadas.limpar();
-    if (!el('lista-camadas').children.length) estadoCamadas.mostrar({ tipo: 'vazio', titulo: t('mapa.sem_camadas_titulo'), texto: t('mapa.sem_camadas') });
-  } catch (e) {
-    estadoCamadas.erro({ status: e && e.status, json: { mensagem: (e && e.message) || String(e) } }, [{ id: 'tentar', rotulo: t('estado.tentar_de_novo'), classe: 'primario' }]);
-    el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`);
-  }
-  estadoCamadas.addEventListener('acao', async () => { estadoCamadas.carregando(); try { await arvore.carregar(); legenda.desenhar(); estadoCamadas.limpar(); } catch (e) { estadoCamadas.erro({ status: e && e.status, json: { mensagem: (e && e.message) || String(e) } }); } });
-
-  // tabela de atributos (L2-01-g): painel ancorado ao rodapé do mapa; a seleção da tabela realça a feição
-  await criarTabela(map, el('aviso')).iniciar();
-
-  // item L2-01-d-popup-runtime: o fuso do inquilino, uma vez só (nunca por campo de data no popup)
-  window.plat = window.plat || {};
-  window.plat.org = window.plat.org || {};
-  obter('/api/mapa/fuso').then((r) => { if (r.status === 200) window.plat.org.fuso = r.json.fuso; }).catch(() => {});
-  // ponto de inspeção do e2e, nunca de negócio
-  window.plat.mapa = { map, catalogo, medicao, arvore, legenda, desenho, painelAnotacoes, exportar: painelExportar, abrirPainel, fecharGaveta, painelAberto, get mapaId() { return mapaId; } };
+  // ganchos para quem monta camada operacional por cima do mapa (L2-01-c e adiante) e para o e2e deste item
+  window.platMapa = { map, adicionarCamadaOperacional, removerCamadaOperacional, trocarBase, galeria };
   document.body.dataset.pronto = '1';
+}
+
+function montarCoordenadas(map) {
+  const caixa = el('coordenadas');
+  const escrever = (lng, lat, zoom) => {
+    caixa.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)} · z${zoom.toFixed(1)}`;
+  };
+  const mostrarCentro = () => { const c = map.getCenter(); escrever(c.lng, c.lat, map.getZoom()); };
+  map.on('mousemove', (ev) => escrever(ev.lngLat.lng, ev.lngLat.lat, map.getZoom()));
+  map.on('mouseout', mostrarCentro);
+  map.on('zoomend', mostrarCentro);
+  mostrarCentro();
 }
 
 await carregarIdioma();
 const usuario = await exigirSessao();
 if (usuario) {
   montarLayout({ usuario, ativo: '/mapa' });
-  montarChrome();
   try {
-    await iniciar();
+    await iniciarMapa();
   } catch (e) {
     el('aviso').erro(`${t('erro.carregar')}: ${(e && e.message) || e}`);
     pronto();

@@ -70,9 +70,6 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/itens/{id}/miniatura/gerar"): ["itens/miniatura"],
     ("DELETE", "/api/itens/{id}/miniatura"): ["itens/miniatura"],
     ("POST", "/api/itens/{id}/versoes/{n}/restaurar"): ["itens/atualizar", "itens/versao_restaurar"],
-    # L0-09-c: a importação de metadado ISO grava pelo MESMO editar_item do PUT/PATCH, e por isso registra os
-    # mesmos eventos; a parte que vai para plat.item.metadado_iso não é campo versionado do item.
-    ("POST", "/api/itens/{id}/metadado.xml"): ["itens/atualizar", "itens/status"],
     ("POST", "/api/itens/{id}/versoes/{n}/publicar"): ["itens/versao_publicar"],
     ("PUT", "/api/itens/{id}/relacoes"): ["itens/relacoes"],
     ("PUT", "/api/itens/{id}/compartilhamento"): ["compartilhamento/alterar"],
@@ -161,16 +158,9 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
-    # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
-    # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
-    ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
-    # família L2-04 (serviços de camada por item): a escrita Esri/OGC/WFS não tem porta própria — toda
-    # ela chama `app.edicao.servico.aplicar_edicoes`, que registra o MESMO evento de lote, com o campo
-    # `origem` dizendo o protocolo ("api", "ogcfeat", "wfs").
-    ("POST", "/ogc/features/{item_id}/collections/{colecao_id}/items"): ["camadas/editar"],
-    ("PUT", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): ["camadas/editar"],
-    ("PATCH", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): ["camadas/editar"],
-    ("DELETE", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): ["camadas/editar"],
-    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/query"): [],  # leitura por POST (protocolo Esri)
-    ("POST", "/wfs/{item_id}"): ["camadas/editar"],  # wfs:Transaction; GetFeature por POST não escreve
+    # ---- galeria de mapas base (L2-01-e-mapas-base): as duas rotas de escrita não têm evento próprio —
+    # elas criam/editam itens comuns do catálogo pelo MESMO caminho de /api/itens (app.catalogo.rotas_itens
+    # criar/editar_item), então quem narra é o vocabulário de itens, já declarado acima.
+    ("POST", "/api/mapas-base/instalar"): ["itens/adicionar"],
+    ("POST", "/api/mapas-base/{id}/tornar-padrao"): ["itens/atualizar"],
 }
