@@ -1,10 +1,12 @@
 /* plat — layout comum: barra lateral (marca, inquilino, navegação por privilégio, pessoa, sair) + área principal.
    montarLayout({usuario, ativo}) preenche <aside id="lateral"> e marca body.com-lateral. Links só aparecem com o
-   privilégio correspondente (ADR 0002 seção 15); Grupos e Minha conta sempre. */
+   privilégio correspondente (ADR 0002 seção 15); Grupos e Minha conta sempre. Item L7-13-a: o botão "reportar"
+   e o banner de resposta do suporte (web/js/chamados/reportar.js) entram em TODA tela que usa este layout. */
 import { h, limpar } from './dom.js';
 import { t } from './i18n.js';
 import { tem } from './estado.js';
 import { sair } from '../auth/sessao.js';
+import { montar as montarReportar } from '../chamados/reportar.js';
 
 export const TELAS = [
   { caminho: '/', chave: 'nav.inicio' },
@@ -12,6 +14,7 @@ export const TELAS = [
   { caminho: '/mapa', chave: 'nav.mapa' },
   { caminho: '/conexoes', chave: 'nav.conexoes' },
   { caminho: '/uploads', chave: 'nav.uploads', privilegio: 'conteudo.criar' },
+  { caminho: '/chamados', chave: 'nav.chamados' },
   { caminho: '/conta', chave: 'nav.conta' },
   { caminho: '/admin/usuarios', chave: 'nav.usuarios', privilegio: 'membros.ver' },
   { caminho: '/admin/grupos', chave: 'nav.grupos' },
@@ -20,12 +23,13 @@ export const TELAS = [
   { caminho: '/admin/tokens', chave: 'nav.tokens', privilegio: 'tokens.gerar' },
   { caminho: '/admin/log', chave: 'nav.log', privilegio: 'org.log_ver' },
   { caminho: '/admin/organizacao', chave: 'nav.organizacao', privilegio: 'org.configurar' },
-  // item L0-07-e: painel Atividade e relatórios do admin
-  { caminho: '/admin/atividade', chave: 'nav.atividade', privilegio: 'org.exportar' },
+  /* painel do operador (superadmin, item L7-13-a): fila de chamados de todos os inquilinos */
+  { caminho: '/admin/chamados', chave: 'nav.chamados_operador', superadmin: true },
 ];
 
 export function telasVisiveis(usuario) {
-  return TELAS.filter((tela) => !tela.privilegio || tem(tela.privilegio, usuario));
+  return TELAS.filter((tela) => (!tela.privilegio || tem(tela.privilegio, usuario))
+    && (!tela.superadmin || (usuario && usuario.superadmin === true)));
 }
 
 export function montarLayout({ usuario, ativo = location.pathname }) {
@@ -53,6 +57,8 @@ export function montarLayout({ usuario, ativo = location.pathname }) {
       foto,
       h('a', { href: '/conta', id: 'pessoa-nome' }, usuario.nome || usuario.login, h('small', {}, `${usuario.login} · ${t(`perfil.${usuario.perfil}`)}`))),
     btSair));
+  /* item L7-13-a: botão "reportar" + banner de resposta do suporte, em toda tela com layout */
+  montarReportar(usuario);
 }
 
 /* cabeçalho da tela: h1 com contagem opcional + área de botões à direita */

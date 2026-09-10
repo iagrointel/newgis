@@ -1,208 +1,83 @@
-/* plat · mapa — visualizador (item L2-01-mapa-web; o mapa-base local é o L2-01-a).
+/* plat · mapa — entrada da tela /mapa (item L2-01-a-basemap-local-pmtiles). Módulo ES sem build; cache resolvido
+   por no-store no nginx: NUNCA ?v= nos imports. Requer sessão (ADR 0002, exigirSessao). MapLibre GL JS e o
+   protocolo pmtiles vêm de <script> clássico (window.maplibregl / window.pmtiles, vendorizados em web/vendor/,
+   VERSOES.txt) carregado ANTES deste módulo em mapa.html — os dois não são módulos ES.
 
-   Módulo ES sem empacotador; cache resolvido por `no-store` no nginx — NUNCA `?v=` num import, porque
-   duas URLs para o mesmo arquivo criam duas instâncias do módulo e a aplicação morre (armadilha já paga
-   na casa). MapLibre GL JS e o protocolo PMTiles vêm de <script> clássico (window.maplibregl /
-   window.pmtiles, vendorizados em web/vendor/ com sha256 em VERSOES.txt), carregados ANTES deste módulo
-   em mapa.html: os dois não são módulos ES.
-
-   O que esta tela junta:
-     camadas do catálogo (Martin/PMTiles)     catalogo.js
-     árvore de camadas (ordem/grupo/escala) ../camadas.js (item L2-01-c)
-     legenda dinâmica do estilo MapLibre     ../legenda.js (item L2-01-c)
-     janela de atributos                      atributos.js
-     medição geodésica                        medicao.js
-     pesquisa de endereço e de coordenada     busca.js
-     impressão PNG/PDF com escala e norte     impressao.js
-   Navegação, barra de escala e coordenadas do cursor ficam aqui mesmo (são três controles pequenos).
-
-   `body[data-pronto="1"]` só depois do primeiro 'load' do mapa: o e2e espera por isso. */
+   Mapa-base 100 % local: PMTiles estático (web/dados/basemap/guarulhos.pmtiles) lido por Range HTTP pelo próprio
+   nginx do appliance (sem Martin, sem serviço de tiles dinâmico — isso é item futuro). Controles: navegação
+   (zoom/pan, padrão MapLibre + arrastar/roda do mouse), escala, coordenadas do cursor (lê 'mousemove' do mapa) e
+   seletor de camada base — mecanismo genérico por lista (BASES), uma opção hoje; a próxima base só entra na
+   lista, o resto do fiação já funciona. body[data-pronto="1"] só depois do primeiro 'load' do mapa (o e2e espera
+   por isso antes de tirar a captura que prova o canvas desenhado). */
 import '../base/componentes.js';
 import { carregar as carregarIdioma, t } from '../base/i18n.js';
 import { montarLayout, pronto } from '../base/layout.js';
-import { h, limpar } from '../base/dom.js';
 import { exigirSessao } from '../auth/sessao.js';
 import { construirEstilo } from './estilo.js';
-import { Catalogo } from './catalogo.js';
-import { Arvore } from '../camadas.js';
-import { Legenda } from '../legenda.js';
-import { instalarPopup } from './atributos.js';
-import { Medicao } from './medicao.js';
-import { interpretarCoordenada, sugerir, geocodificar } from './busca.js';
-import { montarCoordenadas, Historico, Favoritos, montarLocalizacao, montarTelaCheia, instalarAtalhos, listaDeAtalhos } from './navegacao.js';
-import { formatarCoordenada } from './crs.js';
-import { paraPng, paraPdf, escalaNumerica } from './impressao.js';
 
 const BASES = [
   { id: 'osm-guarulhos', rotuloChave: 'mapa.base_osm_guarulhos', arquivo: 'guarulhos.pmtiles' },
-  { id: 'sem-base', rotuloChave: 'mapa.base_nenhuma', arquivo: null },
 ];
-const CENTRO = [-46.593018, -23.493476];
+
 const el = (id) => document.getElementById(id);
 
-function urlDado(arquivo) { return `${location.origin}/static/dados/basemap/${arquivo}`; }
+function urlDado(arquivo) {
+  return `${location.origin}/static/dados/basemap/${arquivo}`;
+}
 
 function montarSeletorBase(map) {
   const sel = el('seletor-base');
   for (const base of BASES) {
-    sel.append(h('option', { value: base.id }, t(base.rotuloChave)));
+    const opt = document.createElement('option');
+    opt.value = base.id;
+    opt.textContent = t(base.rotuloChave);
+    sel.append(opt);
   }
   sel.value = BASES[0].id;
-  return sel;
+  sel.addEventListener('change', () => {
+    const base = BASES.find((b) => b.id === sel.value) || BASES[0];
+    map.setStyle(construirEstilo(urlDado(base.arquivo)));
+  });
 }
 
-
-function marcador(map, maplibregl, lonlat, rotulo) {
-  const m = new maplibregl.Marker({ color: '#d98a2b' }).setLngLat(lonlat);
-  if (rotulo) m.setPopup(new maplibregl.Popup({ closeButton: true }).setText(rotulo));
-  m.addTo(map);
-  return m;
+function montarCoordenadas(map) {
+  const caixa = el('coordenadas');
+  const escrever = (lng, lat, zoom) => {
+    caixa.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)} · z${zoom.toFixed(1)}`;
+  };
+  const mostrarCentro = () => { const c = map.getCenter(); escrever(c.lng, c.lat, map.getZoom()); };
+  map.on('mousemove', (ev) => escrever(ev.lngLat.lng, ev.lngLat.lat, map.getZoom()));
+  map.on('mouseout', mostrarCentro);
+  map.on('zoomend', mostrarCentro);
+  mostrarCentro();
 }
 
-async function iniciar(usuario) {
-  const maplibregl = window.maplibregl;
-  if (!maplibregl || !window.pmtiles) { el('aviso').erro(t('mapa.erro_biblioteca')); return; }
+async function iniciarMapa() {
+  if (!window.maplibregl || !window.pmtiles) {
+    el('aviso').erro(t('mapa.erro_biblioteca'));
+    return;
+  }
   const protocolo = new window.pmtiles.Protocol();
-  maplibregl.addProtocol('pmtiles', protocolo.tile);
+  window.maplibregl.addProtocol('pmtiles', protocolo.tile);
 
-  const map = new maplibregl.Map({
+  const base = BASES[0];
+  const map = new window.maplibregl.Map({
     container: 'mapa',
-    style: construirEstilo(urlDado(BASES[0].arquivo)),
-    center: CENTRO,
-    zoom: 11,
+    style: construirEstilo(urlDado(base.arquivo)),
+    center: [-46.593018, -23.493476], // centro do recorte (metadado do pmtiles, PROVENIENCIA.md)
+    zoom: 13,
     attributionControl: false,
     hash: false,
-    // obrigatório para a impressão ler o canvas depois do quadro composto (impressao.js explica)
-    preserveDrawingBuffer: true,
   });
-  map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
-  map.addControl(new maplibregl.ScaleControl({ maxWidth: 140, unit: 'metric' }), 'bottom-left');
-  map.addControl(new maplibregl.AttributionControl({ compact: false }), 'bottom-right');
-  const coordenadas = montarCoordenadas(map, el('coordenadas'), el('seletor-crs'));
-  const localizacao = montarLocalizacao(map, maplibregl);
-  const telaCheia = montarTelaCheia(map, maplibregl, document.querySelector('.mapa-area'));
+  map.addControl(new window.maplibregl.NavigationControl({ showCompass: true }), 'top-right');
+  map.addControl(new window.maplibregl.ScaleControl({ maxWidth: 140, unit: 'metric' }), 'bottom-left');
+  map.addControl(new window.maplibregl.AttributionControl({ compact: false }), 'bottom-right');
+  /* item L7-13-a-chamados: registro da instância viva para a captura do botão "reportar"
+     (web/js/chamados/reportar.js) — o quadro do canvas só é capturável dentro de um evento 'render'. */
+  window.platMapa = map;
 
-  const catalogo = new Catalogo(map);
-  const medicao = new Medicao(map, el('medicao-saida'), { lista: el('medicao-segmentos') });
-  const arvore = new Arvore(catalogo, map, el('lista-camadas'), {
-    aoEnquadrar: async (id) => {
-      const ext = await catalogo.extensao(id);
-      if (ext) map.fitBounds([[ext[0], ext[1]], [ext[2], ext[3]]], { padding: 40, duration: 0 });
-    },
-    aoErro: (e) => el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`),
-    aoMudarEscala: () => legenda.desenhar(),
-  });
-  const legenda = new Legenda(map, el('legenda'), () => arvore.camadasParaLegenda());
-  instalarPopup(map, catalogo, maplibregl);
-
-  el('btn-novo-grupo').addEventListener('click', () => {
-    const titulo = window.prompt('nome do grupo', 'grupo novo');
-    if (titulo !== null) arvore.criarGrupo(titulo);
-  });
-
-  // troca de mapa-base: refazer o estilo apaga as camadas do catálogo, que são re-somadas em seguida
-  const sel = montarSeletorBase(map);
-  sel.addEventListener('change', async () => {
-    const base = BASES.find((b) => b.id === sel.value) || BASES[0];
-    const ativas = [...catalogo.ativas];
-    const opacidades = new Map(catalogo.opacidade);
-    map.setStyle(base.arquivo ? construirEstilo(urlDado(base.arquivo))
-      : { version: 8, name: 'plat-sem-base', sources: {}, layers: [
-        { id: 'fundo', type: 'background', paint: { 'background-color': '#0b0f10' } }] });
-    await new Promise((r) => map.once('styledata', r));
-    catalogo.ativas = [];
-    catalogo.opacidade = opacidades;
-    for (const id of [...ativas].reverse()) { try { await catalogo.ligar(id); } catch { /* segue */ } }
-    catalogo.reordenar(ativas);
-  });
-
-  // --- medição
-  el('btn-distancia').addEventListener('click', () => {
-    medicao.iniciar('distancia');
-    el('btn-distancia').setAttribute('aria-pressed', medicao.modo === 'distancia' ? 'true' : 'false');
-    el('btn-area').setAttribute('aria-pressed', 'false');
-  });
-  el('btn-area').addEventListener('click', () => {
-    medicao.iniciar('area');
-    el('btn-area').setAttribute('aria-pressed', medicao.modo === 'area' ? 'true' : 'false');
-    el('btn-distancia').setAttribute('aria-pressed', 'false');
-  });
-  el('btn-medicao-limpar').addEventListener('click', () => {
-    medicao.limpar();
-    el('btn-area').setAttribute('aria-pressed', 'false');
-    el('btn-distancia').setAttribute('aria-pressed', 'false');
-  });
-  el('btn-medicao-copiar').addEventListener('click', async () => {
-    if (await medicao.copiar()) el('aviso').ok(t('mapa.medicao_copiada'));
-  });
-
-  // --- navegação (item L2-01-f): histórico, favoritos, norte, atalhos, copiar coordenada
-  const historico = new Historico(map, { botaoVoltar: el('btn-voltar-extensao'), botaoAvancar: el('btn-avancar-extensao') });
-  const favoritos = new Favoritos(map, {
-    chave: `plat.mapa.favoritos.${new URLSearchParams(location.search).get('id') || 'padrao'}`,
-    lista: el('favoritos'), campoNome: el('favorito-nome'), botaoSalvar: el('btn-favorito-salvar'),
-  });
-  el('btn-norte').addEventListener('click', () => map.resetNorth());
-  el('atalhos-lista').append(listaDeAtalhos());
-  const copiarCoordenada = async () => {
-    const c = map.getCenter();
-    let texto;
-    try { texto = formatarCoordenada(c.lng, c.lat, coordenadas.srid()); } catch { texto = `${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`; }
-    try { await navigator.clipboard.writeText(texto); el('aviso').ok(`${t('mapa.coordenada_copiada')}: ${texto}`); } catch { el('aviso').erro(texto); }
-  };
-  el('coordenadas').addEventListener('click', copiarCoordenada);
-
-  // --- pesquisa (endereço ou coordenada)
-  let alfinete = null;
-  const campo = el('busca-campo');
-  const lista = el('busca-sugestoes');
-  const irPara = (lat, lon, rotulo) => {
-    if (alfinete) alfinete.remove();
-    alfinete = marcador(map, maplibregl, [lon, lat], rotulo);
-    map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), 16), duration: 0 });
-    el('busca-resultado').textContent = rotulo;
-    limpar(lista);
-  };
-  const buscar = async () => {
-    const texto = campo.value.trim();
-    if (!texto) return;
-    const coord = interpretarCoordenada(texto);
-    if (coord) { irPara(coord.lat, coord.lon, `${coord.lat.toFixed(5)}, ${coord.lon.toFixed(5)}`); return; }
-    // texto com cara de coordenada (números, graus, EPSG) mas malformado: diz o motivo em vez de mandar ao geocodificador
-    if (/EPSG|SRID|[°º′″]|^[-−\d.,;\s]+$/i.test(texto)) { el('busca-resultado').textContent = t('mapa.ir_para_invalido'); return; }
-    const r = await geocodificar(texto);
-    if (r) irPara(r.lat, r.lon, r.rotulo);
-    else el('busca-resultado').textContent = t('mapa.busca_sem_resultado');
-  };
-  el('busca-form').addEventListener('submit', (ev) => { ev.preventDefault(); buscar(); });
-  let pendente = null;
-  campo.addEventListener('input', () => {
-    clearTimeout(pendente);
-    const texto = campo.value.trim();
-    if (interpretarCoordenada(texto)) { limpar(lista); return; }
-    pendente = setTimeout(async () => {
-      const sugestoes = await sugerir(texto);
-      limpar(lista);
-      for (const s of sugestoes) {
-        lista.append(h('li', {}, h('button', {
-          type: 'button', class: 'sugestao',
-          onclick: () => { campo.value = s.texto; buscar(); },
-        }, s.texto)));
-      }
-    }, 250);
-  });
-
-  // --- impressão
-  const titulo = () => `${t('mapa.titulo')} — ${new Date().toLocaleDateString('pt-BR')}`;
-  const atribuicao = '© colaboradores do OpenStreetMap — ODbL 1.0';
-  el('btn-png').addEventListener('click', async () => {
-    const r = await paraPng(map, { titulo: titulo(), atribuicao, nome: 'mapa.png' });
-    el('impressao-saida').textContent = t('mapa.impressao_pronta', { formato: 'PNG', kb: Math.round(r.bytes / 1024) });
-  });
-  el('btn-pdf').addEventListener('click', async () => {
-    const r = await paraPdf(map, { titulo: titulo(), atribuicao, nome: 'mapa.pdf' });
-    el('impressao-saida').textContent = t('mapa.impressao_pronta', { formato: 'PDF', kb: Math.round(r.bytes / 1024) });
-  });
+  montarSeletorBase(map);
+  montarCoordenadas(map);
 
   map.on('error', (ev) => {
     const msg = (ev && ev.error && ev.error.message) || String(ev);
@@ -210,23 +85,6 @@ async function iniciar(usuario) {
   });
 
   await new Promise((resolve) => map.once('load', resolve));
-  try {
-    await arvore.carregar();
-    legenda.desenhar();
-  } catch (e) {
-    el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`);
-  }
-  window.plat = window.plat || {};
-  instalarAtalhos(map, {
-    voltar: () => historico.voltar(), avancar: () => historico.avancar(),
-    telaCheia: () => { const b = document.querySelector('.maplibregl-ctrl-fullscreen, .maplibregl-ctrl-shrink'); if (b) b.click(); },
-    localizacao: () => localizacao.trigger(),
-    distancia: () => el('btn-distancia').click(), area: () => el('btn-area').click(),
-    limpar: () => el('btn-medicao-limpar').click(), voltarVertice: () => medicao.voltar(),
-    favorito: () => el('favorito-nome').focus(), irPara: () => el('busca-campo').focus(),
-    copiarCoordenada, ajuda: () => { el('atalhos').open = true; el('atalhos').scrollIntoView(); },
-  });
-  window.plat.mapa = { map, catalogo, medicao, arvore, legenda, historico, favoritos, coordenadas, localizacao, telaCheia };  // ponto de inspeção do e2e, nunca de negócio
   document.body.dataset.pronto = '1';
 }
 
@@ -235,7 +93,7 @@ const usuario = await exigirSessao();
 if (usuario) {
   montarLayout({ usuario, ativo: '/mapa' });
   try {
-    await iniciar(usuario);
+    await iniciarMapa();
   } catch (e) {
     el('aviso').erro(`${t('erro.carregar')}: ${(e && e.message) || e}`);
     pronto();

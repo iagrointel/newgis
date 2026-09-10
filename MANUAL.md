@@ -1588,3 +1588,37 @@ a API de ligar/desligar já existe, falta o botão na tela); relacionamento sobr
 importação/exportação de File Geodatabase (a ingestão vetorial desta versão não cobre FGDB); medição de
 paginação com 100 mil relacionados numa única origem (o mecanismo — `limite_relacionados` vencendo um
 `limite` maior — foi medido com N=25; ver ADR 20260907T1436).
+## 22. Chamados de suporte (item L7-13-a-chamados)
+
+### 22.1 Reportar um problema (qualquer tela)
+
+O botão "Reportar problema" fica no fim da barra lateral de TODA tela com layout. O formulário já vem com
+a captura da tela marcada (em telas com mapa, o quadro real do canvas no momento do envio; em telas sem
+mapa, o chamado vai sem captura) e monta o contexto automático: tela atual, versão do produto, navegador,
+idioma, os req_id das últimas 20 requisições feitas pela tela e a estrutura dos títulos e botões visíveis.
+O contexto NUNCA leva valor de campo de formulário, para não anexar dado de inquilino ao chamado. Severidade
+(baixa, média, alta, crítica) define o prazo declarado da primeira resposta: 4 h crítica, 8 h alta, 24 h
+média, 72 h baixa.
+
+### 22.2 Acompanhar (`/chamados`)
+
+A lista mostra cada chamado com o tempo de primeira resposta MEDIDO ao lado do prazo declarado e a etiqueta
+"dentro do prazo"/"fora do prazo". Quando o suporte responde, um banner no topo da barra lateral avisa
+("o suporte respondeu o chamado nº N."); abrir o chamado zera o banner. No detalhe: conversa com o suporte
+(comentar), anexo de arquivo (imagens, zip e os formatos de dado aceitos no upload; executável é recusado),
+contexto automático em texto e botão "Fechar chamado" (idempotente; chamado fechado não recebe comentário).
+
+### 22.3 Painel do operador (`/admin/chamados`, só superadmin)
+
+Fila de chamados de todos os inquilinos com filtro por estado, leitura do contexto completo (inclui o
+inquilino), download dos anexos pela própria rota da API, resposta (registra o tempo de primeira resposta e
+enfileira o e-mail ao cliente no idioma da conta dele) e mudança de estado: aberto → em análise /
+aguardando cliente / resolvido; resolvido → fechado (encerra) ou de volta para em análise (reabre). Quem
+não é superadmin recebe 404 nas rotas do painel e vê "sem permissão" na tela.
+
+### 22.4 Notificação por e-mail
+
+O e-mail de resposta/resolução sai pelo SMTP da instalação (job da fila, worker real) só no sentido
+suporte → cliente, no idioma preferido da conta do cliente; o assunto nunca leva texto do cliente, só o
+número do chamado. A volta do cliente é pelo próprio produto (comentário no chamado) — o banner cobre
+quem não tem e-mail na conta.

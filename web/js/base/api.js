@@ -46,6 +46,14 @@ export async function chamar(metodo, url, corpo, opcoes = {}) {
   } catch {
     return { status: 0, json: normalizarErro(0, null, null) };
   }
+  /* item L7-13-a-chamados: todo X-Req-Id que passa pela tela entra no anel das últimas 20 — é o contexto que
+     o botão "reportar" anexa ao chamado, para o suporte achar no log a requisição que o cliente viu errada. */
+  const rid = resp.headers.get('X-Req-Id');
+  if (rid) {
+    if (!chamar.ultimas) chamar.ultimas = [];
+    chamar.ultimas.push(rid);
+    if (chamar.ultimas.length > 20) chamar.ultimas.shift();
+  }
   let json = null;
   const tipo = resp.headers.get('content-type') || '';
   if (resp.status !== 204 && tipo.includes('json')) {
@@ -60,6 +68,11 @@ export const enviar = (url, corpo) => chamar('POST', url, corpo ?? {});
 export const alterar = (url, corpo) => chamar('PUT', url, corpo ?? {});
 export const apagar = (url) => chamar('DELETE', url);
 export const remendar = (url, corpo) => chamar('PATCH', url, corpo ?? {}); // UX-23: PATCH parcial (anotações)
+
+/* as últimas 20 requisições vistas por esta tela (item L7-13-a; consumido por web/js/chamados/reportar.js) */
+export function reqIdsRecentes() {
+  return [...(chamar.ultimas || [])];
+}
 
 /* texto de tela para uma resposta de erro: a mensagem já vem em português da API; o front só mostra.
    Em 5xx acrescenta o req_id para o usuário citar ao suporte. */

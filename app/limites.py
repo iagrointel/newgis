@@ -475,3 +475,25 @@ RELATORIO_POR_TIPO_HORA = 1       # pedidos por tipo por hora pela API (agenda d
 # API. Acima disso a rota recusa com o número dizendo por quê, em vez de a máquina engasgar (o teto de célula
 # do motor de grades é 250.000, cinco vezes maior de propósito: gerar a grade é barato, devolvê-la não é).
 PARETO_UNIDADES_MAX = 50_000
+# --- chamados de suporte (L7-13-a-chamados; migração 20260908T2230_chamados_suporte.sql). O contexto vem do
+# navegador do cliente e nunca é confiado: o servidor recorta strings, conta entradas e descarta o que passa
+# dos tetos abaixo (nada aqui é dado de outra fonte). A captura de tela entra como data URL de PNG dentro do
+# MESMO corpo JSON (o CSRF sob cookie exige application/json em toda escrita — ADR 0002 seção 5.3; mesmo truque
+# base64-sob-JSON da miniatura e do logotipo), e os anexos comuns passam pela prova tipo × conteúdo do pipeline
+# de upload (app/uploads/tipos.py::verificar_conteudo) + varredura de cabeçalho (app/varredura_conteudo.py).
+CHAMADO_TITULO_MAX = 200
+CHAMADO_DESCRICAO_MAX = 20_000
+CHAMADO_COMENTARIO_MAX = 10_000
+CHAMADO_SEVERIDADES = ("baixa", "media", "alta", "critica")
+CHAMADO_ESTADOS = ("aberto", "em_analise", "aguardando_cliente", "resolvido", "fechado")
+CHAMADO_CONTEXTO_BYTES_MAX = 64_000        # contexto inteiro serializado; o que passa é cortado com marca
+CHAMADO_REQ_IDS_MAX = 20                   # as últimas 20 requisições (hipótese do item)
+CHAMADO_REQ_ID_TAM = 16                    # req_id são 16 hex (app/log.py::req_id); o que não casa é descartado
+CHAMADO_CAPTURA_BYTES_MAX = 2_000_000      # PNG decodificado; 2 MiB cobre tela 1280×800 com folga
+CHAMADO_ANEXO_BYTES_MAX = 8_000_000        # anexo comum; acima disso o upload retomável (L0-04-a) é o caminho
+CHAMADO_DOM_ENTRADAS_MAX = 60              # estrutura do DOM capturada: nº de elementos descritos
+CHAMADO_DOM_TEXTO_MAX = 120                # e o texto de cada entrada, cortado aqui
+# SLA de primeira resposta por severidade, em horas (hipótese: "SLA de primeira resposta por severidade
+# (L7-22)"). L7-22-sla-e-incidentes (pendente) é quem deve mover estes números para dado medido em tabela;
+# enquanto isso valem os valores declarados aqui, exibidos junto do tempo medido em toda leitura do chamado.
+CHAMADO_SLA_PRIMEIRA_RESPOSTA_HORAS = {"critica": 4, "alta": 8, "media": 24, "baixa": 72}

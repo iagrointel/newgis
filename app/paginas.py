@@ -41,6 +41,9 @@ PAGINAS = {
     "/paineis/{id}": "painel.html",
     # --- conexões externas (L6-02-a/L6-02-l/L6-05)
     "/conexoes": "conexoes.html",
+    # --- chamados de suporte (L7-13-a): cliente em /chamados, operador (superadmin) em /admin/chamados
+    "/chamados": "chamados.html",
+    "/admin/chamados": "admin/chamados.html",
     # --- SMTP, convite de membro e redefinição de senha (L0-07-d-smtp-convites): públicas, sem sessão
     "/aceitar-convite": "aceitar_convite.html",
     "/redefinir-senha": "redefinir_senha.html",

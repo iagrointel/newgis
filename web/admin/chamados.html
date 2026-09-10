@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Chamados · operação · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/tarefas.css">
+</head>
+<body class="tela chamados-operador">
+<a class="pular" href="#principal">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <div id="ferramentas" class="linha-ferramentas">
+      <h1>Chamados</h1>
+    </div>
+    <p class="aviso-beta">análise / beta privado</p>
+    <plat-aviso id="aviso"></plat-aviso>
+
+    <section class="cartao" aria-labelledby="t-fila">
+      <h2 id="t-fila">fila de todos os inquilinos <span id="lista-total" class="contagem">…</span></h2>
+      <div class="filtros">
+        <label class="campo-linha"><span id="rotulo-estado">estado</span>
+          <select id="filtro-estado">
+            <option value="">todos</option>
+            <option value="aberto">aberto</option>
+            <option value="em_analise">em análise</option>
+            <option value="aguardando_cliente">aguardando cliente</option>
+            <option value="resolvido">resolvido</option>
+            <option value="fechado">fechado</option>
+          </select>
+        </label>
+        <button type="button" id="recarregar" class="pequeno">recarregar</button>
+      </div>
+      <plat-aviso id="lista-aviso"></plat-aviso>
+      <div class="tabela-rolagem">
+        <table id="lista" class="tabela">
+          <caption class="sr-only">fila de chamados do operador</caption>
+          <thead>
+            <tr>
+              <th scope="col">inquilino</th>
+              <th scope="col">nº</th>
+              <th scope="col">título</th>
+              <th scope="col">severidade</th>
+              <th scope="col">estado</th>
+              <th scope="col">aberto por</th>
+              <th scope="col">primeira resposta</th>
+              <th scope="col">aberto em</th>
+              <th scope="col"><span class="sr-only">ações</span></th>
+            </tr>
+          </thead>
+          <tbody id="lista-corpo"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <plat-dialogo id="dialogo"></plat-dialogo>
+  </main>
+</div>
+<script type="module" src="/static/js/chamados/operador.js"></script>
+</body>
+</html>
