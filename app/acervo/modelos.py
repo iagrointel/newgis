@@ -11,7 +11,7 @@ sha256, método, confiança, limites, próxima_verificação) já existiam em `A
 (exemplos lidos em acervo.fonte.limites: "0 vendidos lidos; só o tempo resolve", "só fluxo, sem estoque
 RAIS") — não duplicado sob outro nome para não abrir campo que o adversário possa achar "inventado"."""
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Saida(BaseModel):
@@ -31,9 +31,6 @@ class AcervoCartao(Saida):
     proxima_verificacao: str | None = None
     risco_pii: bool = False
     risco_pii_motivo: str | None = None
-    # item L6-01-c-tela-acervo: tipo do vocabulário fechado do L6-01-g (plat.acervo_licenca), quando a fonte
-    # já foi curada por HTTP; None quando só existe o texto livre de `licenca` (nunca inferido do texto).
-    licenca_curada_tipo: str | None = None
 
 
 class AcervoEndpoint(Saida):
@@ -46,24 +43,6 @@ class AcervoEndpoint(Saida):
     testado_em: str | None = None
     confirmado: bool | None = None
     vivo: bool
-
-
-class AcervoCamadaResumo(Saida):
-    """Uma linha de `plat.acervo_camada` para a fonte, na ficha (item L6-01-j-multi-servidor). `origem`
-    é o texto que a ficha mostra: 'local' quando a tabela vive neste servidor, 'servidor remoto (<nome>)'
-    quando é lida por postgres_fdw só-leitura de outra máquina da casa, e 'servidor remoto indisponível
-    (<nome>)' quando a última verificação não conseguiu falar com ela — a camada nunca desaparece nem vira
-    '0 feições' por queda de rede; `linhas_exatas` conserva a última contagem conhecida e `aviso` explica."""
-
-    servidor: str
-    schema_nome: str
-    tabela: str
-    modo_acesso: str
-    origem: str
-    linhas_exatas: int | None = None
-    aviso: str | None = None
-    fdw_verificado_em: str | None = None
-    fdw_latencia_ms: int | None = None
 
 
 class AcervoFicha(AcervoCartao):
@@ -88,8 +67,6 @@ class AcervoFicha(AcervoCartao):
     endpoints_confirmados_vivos: int = 0
     # completude por extenso ("4,5/10"), nunca só o número cru — ausência é "não registrado", nunca 0/10 silencioso
     completude_texto: str | None = None
-    # item L6-01-j-multi-servidor: camadas de `plat.acervo_camada` desta fonte, local ou em outro servidor
-    camadas: list[AcervoCamadaResumo] = []
 
 
 class AcervoPagina(Saida):
@@ -100,19 +77,6 @@ class AcervoPagina(Saida):
 class AcervoDominio(Saida):
     dominio: str
     fontes: int
-
-
-class AcervoCamadaMapa(Saida):
-    """Uma camada do acervo já adicionada ao catálogo do inquilino, como a legenda do mapa precisa dela (item
-    L6-01-c-tela-acervo). Os campos vêm do instantâneo gravado em `dados.parametros` na hora de adicionar, não
-    de uma nova consulta ao acervo: a legenda mostra a licença sob a qual o dado foi adicionado."""
-
-    item_id: str
-    titulo: str
-    fonte_id: str
-    dominio: str | None = None
-    licenca: str | None = None
-    licenca_curada_tipo: str | None = None
 
 
 class AcervoAdicionarEntrada(BaseModel):
@@ -126,7 +90,10 @@ class AcervoAdicionarEntrada(BaseModel):
 
 class AcervoCamadaPublicada(Saida):
     """Uma view de `plat_acervo` (item L6-01-b). `assinada` é deste inquilino: a RLS de
-    plat.acervo_assinatura já recorta o LEFT JOIN, então nunca vaza a assinatura de outro."""
+    plat.acervo_assinatura já recorta o LEFT JOIN, então nunca vaza a assinatura de outro.
+    Item L6-01-e: os campos `licenca_*` são o que a tela mostra e o que o aceite grava — o
+    `licenca_sha256` é o que o chamador ecoa no POST de assinatura para provar que clicou no texto que o
+    servidor gravou. Todos None quando a fonte não tem licença curada (aí a assinatura é recusada)."""
 
     view_nome: str
     acervo_camada_id: str
@@ -139,6 +106,10 @@ class AcervoCamadaPublicada(Saida):
     linhas_exatas: int | None = None
     tipo_geom: str | None = None
     assinada: bool
+    licenca_tipo: str | None = None
+    licenca_texto: str | None = None
+    licenca_url: str | None = None
+    licenca_sha256: str | None = None
 
 
 class AcervoCamadaPagina(Saida):
@@ -154,3 +125,52 @@ class AcervoFeicoes(Saida):
     camada: str
     total: int
     features: list[dict]
+
+
+class AcervoAssinaturaEntrada(BaseModel):
+    """Corpo OBRIGATÓRIO de POST /api/acervo/camadas/{camada}/assinatura (item L6-01-e). O clique na
+    licença chega como `aceite_licenca=true` + o sha256 do texto que estava na tela: o servidor só grava se
+    o sha bater com o texto atual da fonte — sha defasado é 409 (a tela relê e mostra o texto novo).
+    Default False/"": nunca se aceita sozinho."""
+
+    model_config = ConfigDict(extra="forbid")
+    aceite_licenca: bool = False
+    licenca_sha256: str = Field(default="", max_length=64)
+
+
+class AcervoAssinaturaSaida(Saida):
+    """Resposta do POST de assinatura: o que ficou gravado (quem/quando vivem em plat.acervo_assinatura;
+    `assinado_em` volta aqui para a tela mostrar sem nova consulta)."""
+
+    camada: str
+    assinada: bool
+    licenca_tipo: str | None = None
+    licenca_sha256: str | None = None
+    assinado_em: str | None = None
+
+
+class AcervoUsoLinha(Saida):
+    """Uso de uma camada pelo inquilino no recorte pedido (dia ou mês)."""
+
+    view_nome: str | None = None
+    acervo_camada_id: str
+    consultas: int
+    feicoes: int
+    dias: int | None = None  # só no recorte mensal: em quantos dias do mês houve leitura
+
+
+class AcervoUsoDia(Saida):
+    dia: str
+    total_consultas: int
+    total_feicoes: int
+    camadas: list[AcervoUsoLinha]
+
+
+class AcervoUsoMensal(Saida):
+    """Relatório mensal de uso do acervo pelo inquilino — entrada do item L7-09."""
+
+    ano: int
+    mes: int
+    total_consultas: int
+    total_feicoes: int
+    camadas: list[AcervoUsoLinha]

@@ -25,12 +25,18 @@ SCHEMA_TRABALHO_PADRAO = "plat_trabalho"
 # sem espaço entre o parêntese e a aspa (conferido: as 16+12 ocorrências da árvore batem 1 a 1).
 _SCHEMA = re.compile(r"(?<!current_setting\(')(?<!set_config\(')\bplat\b")
 _TRABALHO = re.compile(r"\bplat_trabalho\b")
+# item L6-01-b: as views de publicação sem cópia moram no schema `plat_acervo` e são de
+# `plat_acervo_publicador`. Nenhum dos dois casa com `\bplat\b` (o `_` seguinte mata a fronteira de palavra),
+# então sem esta linha uma trilha/homologação escreveria no `plat_acervo` de PRODUÇÃO. O grupo opcional
+# mantém o sufixo do papel: plat_acervo_publicador -> <schema>_acervo_publicador.
+_ACERVO = re.compile(r"\bplat_acervo(_publicador)?\b")
 
 
 def reescrever_schema(sql: str, schema: str = SCHEMA_PADRAO, schema_trabalho: str = SCHEMA_TRABALHO_PADRAO) -> str:
     """Troca todo `plat`/`plat_trabalho` que é schema (não GUC) pelo nome do ambiente atual. No-op
     quando os dois já são o padrão — é isso que garante custo zero em produção."""
     if schema != SCHEMA_PADRAO:
+        sql = _ACERVO.sub(lambda m: f"{schema}_acervo{m.group(1) or ''}", sql)
         sql = _SCHEMA.sub(schema, sql)
     if schema_trabalho != SCHEMA_TRABALHO_PADRAO:
         sql = _TRABALHO.sub(schema_trabalho, sql)

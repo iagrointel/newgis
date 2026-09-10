@@ -948,6 +948,8 @@ foi construído (item L0-04-i). `DELETE /api/conexoes/{id}` ainda não limpa `SE
 
 ### 18.3 Publicar uma camada do acervo e assinar (item L6-01-b-view-so-leitura)
 
+### 18.3 Publicar uma camada do acervo e assinar (item L6-01-b-view-so-leitura)
+
 Publicar é criar a VIEW; assinar é ganhar o direito de lê-la. São dois passos com donos diferentes.
 
 1. **A casa publica** (uma vez por camada, como `postgres`):
