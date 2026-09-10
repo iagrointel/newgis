@@ -1180,6 +1180,40 @@ CASOS: dict[tuple[str, str], Caso] = {
         proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
         limpar=lambda p, j: p.sessao_a.put("/api/org/tema", json={"tema": None}),
     ),
+    ("POST", "/api/amc/modelos"): Caso(
+        lambda p: "/api/amc/modelos",
+        lambda p: {"nome": f"{PREFIXO}amc-modelo-a", "definicao": AMC_DEF_MINIMA},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/amc/modelos/{id}")),
+    ),
+    ("GET", "/api/amc/modelos"): Caso(lambda p: "/api/amc/modelos", proprio=True, aceita=frozenset({200}),
+                                      verificar=_sem_marca),
+    ("GET", "/api/amc/modelos/{id}"): Caso(lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}"),
+    ("PUT", "/api/amc/modelos/{id}"): Caso(
+        lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}", lambda p: {"nome": f"{PREFIXO}amc-invadido"},
+    ),
+    ("DELETE", "/api/amc/modelos/{id}"): Caso(lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}"),
+    ("POST", "/api/amc/conjuntos"): Caso(
+        lambda p: "/api/amc/conjuntos",
+        lambda p: {"nome": f"{PREFIXO}amc-conjunto-a", "tipo": "hexagonal", "lado_m": 250},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/amc/conjuntos/{id}")),
+    ),
+    ("GET", "/api/amc/conjuntos"): Caso(lambda p: "/api/amc/conjuntos", proprio=True, aceita=frozenset({200}),
+                                        verificar=_sem_marca),
+    ("GET", "/api/amc/conjuntos/{id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}"),
+    ("DELETE", "/api/amc/conjuntos/{id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}"),
+    ("POST", "/api/amc/execucoes"): Caso(
+        lambda p: "/api/amc/execucoes",
+        lambda p: {"modelo_id": p.modelo_amc_b["id"], "conjunto_id": p.conjunto_amc_b["id"], "semente": 1},
+    ),
+    ("GET", "/api/amc/execucoes"): Caso(lambda p: "/api/amc/execucoes", proprio=True, aceita=frozenset({200}),
+                                        verificar=_sem_marca),
+    ("GET", "/api/amc/execucoes/{id}"): Caso(lambda p: f"/api/amc/execucoes/{p.execucao_amc_b['id']}"),
+    ("DELETE", "/api/amc/execucoes/{id}"): Caso(lambda p: f"/api/amc/execucoes/{p.execucao_amc_b['id']}"),
+    ("GET", "/api/amc/execucoes/{id}/resultados"): Caso(
+        lambda p: f"/api/amc/execucoes/{p.execucao_amc_b['id']}/resultados",
+    ),
     # ---- L0-07-d convite de membro por e-mail (ADR 0013): GET/POST/DELETE agem só sobre o inquilino do
     # chamador (a tabela é por tenant_id, igual a papéis/tokens); POST usa o MESMO e-mail do convite de B de
     # propósito, para provar que a unicidade de convite pendente é por inquilino, não global (mesmo padrão de

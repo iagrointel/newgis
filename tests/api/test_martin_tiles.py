@@ -12,18 +12,20 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.api.test_leitor_tiles import (  # noqa: F401,F811 -- reexportadas para o pytest achar as fixtures (nomes precisam bater com os parametros)
-    SLUGS,
-    _admin,
-    _conectar_app,
-    _hex16,
-    _tile,
-    camadas,
-    instalador,
-    leitor,
-    token_novo,
-)
+from tests.api import test_leitor_tiles as _base
 from tests.api.test_rls import contexto
+
+# fixtures e ajudantes do arquivo do construtor, reexportados para o pytest achá-los por nome
+# (atribuição, e não `from ... import`, para o nome do parâmetro homônimo não virar F811 no ruff)
+SLUGS = _base.SLUGS
+_admin = _base._admin
+_conectar_app = _base._conectar_app
+_hex16 = _base._hex16
+_tile = _base._tile
+camadas = _base.camadas
+instalador = _base.instalador
+leitor = _base.leitor
+token_novo = _base.token_novo
 
 
 @pytest.fixture(scope="module")
