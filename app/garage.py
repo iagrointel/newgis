@@ -363,7 +363,10 @@ class ClienteAdmin:
 
     def criar_chave(self, nome: str) -> dict:
         """Idempotente por NOME: uma chave já existente com o mesmo nome não gera segredo novo (o segredo antigo
-        continua sendo o que está gravado em `plat.arquivo_bucket`; só a criação é idempotente, não a rotação)."""
+        continua sendo o que está gravado em `plat.arquivo_bucket`; só a criação é idempotente, não a rotação).
+        ATENÇÃO: no ramo de reuso a resposta NÃO traz `secretAccessKey` (o Garage só o devolve na criação) e
+        `accessKeyId` é o próprio `id` do ListKeys — quem precisa de segredo tem de garantir a criação (rotação
+        prévia, como faz objetos.garantir_bucket)."""
         existente = self.chave_por_nome(nome)
         if existente is not None:
             log.info("garage: chave %s já existe (id=%s), reaproveitada sem novo segredo", nome, existente["id"])

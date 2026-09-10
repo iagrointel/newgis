@@ -1,0 +1,235 @@
+{
+  "gerado_por": "dados_demo/gerar_do_acervo.py",
+  "data_acesso": "2026-09-06",
+  "observacao": "Arquivos comitados no repositório; o instalador semeia a partir daqui, sem rede.",
+  "itens": [
+    {
+      "arquivo": "municipios_ap_rr.zip",
+      "inquilino": "demo",
+      "formato": "shapefile.zip",
+      "ingerir": true,
+      "titulo": "Limites municipais do Amapá e de Roraima",
+      "resumo": "Malha municipal do IBGE recortada em dois estados e simplificada para 0,002 grau.",
+      "tags": [
+        "ibge",
+        "limites",
+        "municipio"
+      ],
+      "categoria": "Limites administrativos",
+      "fonte": "IBGE, malha municipal",
+      "orgao": "IBGE",
+      "url": "https://ftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/",
+      "licenca": "IBGE, dado aberto (o FTP declara apenas que os arquivos disponíveis são públicos)",
+      "data_acesso": "2026-09-06",
+      "bytes": 161559,
+      "sha256": "2f9e8ef463244c58c333100aeb29fdd1e8e0f42cbba072d98f8949a000023541"
+    },
+    {
+      "arquivo": "pontos_municipais_ap_rr.geojson",
+      "inquilino": "demo",
+      "formato": "geojson",
+      "ingerir": true,
+      "titulo": "Ponto representativo dos municípios do Amapá e de Roraima",
+      "resumo": "Um ponto por município, obtido por ST_PointOnSurface do próprio limite municipal do IBGE. Não é a sede municipal oficial.",
+      "tags": [
+        "ibge",
+        "ponto",
+        "municipio"
+      ],
+      "categoria": "Limites administrativos",
+      "fonte": "IBGE, malha municipal (ponto derivado pela casa)",
+      "orgao": "IBGE",
+      "url": "https://ftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/",
+      "licenca": "IBGE, dado aberto (o FTP declara apenas que os arquivos disponíveis são públicos)",
+      "data_acesso": "2026-09-06",
+      "bytes": 6075,
+      "sha256": "46eb9a3d9808bbcd331c5a0337689145243680c8911a60940f926f7e11e54e27"
+    },
+    {
+      "arquivo": "rodovias_federais_rr.geojson",
+      "inquilino": "demo",
+      "formato": "geojson",
+      "ingerir": true,
+      "titulo": "Rodovias federais de Roraima",
+      "resumo": "Trechos do Sistema Nacional de Viação (SNV) do DNIT no estado de Roraima.",
+      "tags": [
+        "dnit",
+        "rodovia",
+        "transporte"
+      ],
+      "categoria": "Transporte",
+      "fonte": "DNIT, SNV (rodovias federais)",
+      "orgao": "DNIT",
+      "url": "https://servicos.dnit.gov.br/vgeo/",
+      "licenca": "DNIT, dado público do VGeo; licença não declarada na fonte",
+      "data_acesso": "2026-09-06",
+      "bytes": 91370,
+      "sha256": "d97855c658667e30514ef25264e74ce2f1708bc96e4c6f8464b7ab2ca3da4a14"
+    },
+    {
+      "arquivo": "hidrografia_bacia_4668.geojson",
+      "inquilino": "demo",
+      "formato": "geojson",
+      "ingerir": true,
+      "titulo": "Hidrografia da otto-bacia 4668",
+      "resumo": "Trechos de drenagem da Base Hidrográfica Ottocodificada (BHO 2017) de uma única otto-bacia.",
+      "tags": [
+        "ana",
+        "hidrografia",
+        "bacia"
+      ],
+      "categoria": "Água",
+      "fonte": "ANA, Base Hidrográfica Ottocodificada (BHO 2017)",
+      "orgao": "ANA",
+      "url": "https://dadosabertos.ana.gov.br/",
+      "licenca": "ANA, dado aberto; licença não declarada na fonte (campo licenseInfo nulo no portal, conferido em 06/09/2026)",
+      "data_acesso": "2026-09-06",
+      "bytes": 374457,
+      "sha256": "66ce1103d7150cf51edfa191ed5e629603faf3c7171ee7df9ce7a3f41afa4ddb"
+    },
+    {
+      "arquivo": "estacoes_inmet_norte.csv",
+      "inquilino": "demo",
+      "formato": "csv",
+      "ingerir": true,
+      "titulo": "Estações meteorológicas do INMET na região Norte",
+      "resumo": "Cadastro de estações automáticas e convencionais do INMET, com latitude e longitude.",
+      "tags": [
+        "inmet",
+        "estacao",
+        "clima"
+      ],
+      "categoria": "Clima",
+      "fonte": "INMET, cadastro de estações",
+      "orgao": "INMET",
+      "url": "https://portal.inmet.gov.br/dadoshistoricos",
+      "licenca": "INMET, dado aberto; licença não declarada na fonte",
+      "data_acesso": "2026-09-06",
+      "bytes": 5493,
+      "sha256": "6e277ab2af3492cf1df4f98084a38f97fb5d5574d366a335625854b303cabb5d"
+    },
+    {
+      "arquivo": "demonstracao_3_camadas.gpkg",
+      "inquilino": "demo",
+      "formato": "gpkg",
+      "ingerir": true,
+      "titulo": "GeoPackage de demonstração com três camadas",
+      "resumo": "Um arquivo com pontos municipais, rodovias federais e hidrografia. A ingestão desta versão carrega a PRIMEIRA camada do arquivo (escolha de camada é lacuna do L0-04-d).",
+      "tags": [
+        "gpkg",
+        "demonstracao"
+      ],
+      "categoria": "Demonstração",
+      "fonte": "IBGE, DNIT e ANA (mesmas camadas acima, reunidas pela casa)",
+      "orgao": "IBGE/DNIT/ANA",
+      "url": "https://ftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/",
+      "licenca": "IBGE, dado aberto (o FTP declara apenas que os arquivos disponíveis são públicos); DNIT, dado público do VGeo; licença não declarada na fonte; ANA, dado aberto; licença não declarada na fonte (campo licenseInfo nulo no portal, conferido em 06/09/2026)",
+      "data_acesso": "2026-09-06",
+      "bytes": 393216,
+      "sha256": "1035423dbdc50e354267cf34398d175dcf1c6e6951406f5312dbb70980f98ce4"
+    },
+    {
+      "arquivo": "estacoes_inmet_norte.xlsx",
+      "inquilino": "demo",
+      "formato": "xlsx",
+      "ingerir": false,
+      "titulo": "Planilha das estações do INMET na região Norte",
+      "resumo": "A mesma tabela do CSV em XLSX. Fica no catálogo como arquivo: a ingestão de XLSX é lacuna do L0-04-d.",
+      "tags": [
+        "inmet",
+        "planilha"
+      ],
+      "categoria": "Clima",
+      "fonte": "INMET, cadastro de estações (convertido pela casa)",
+      "orgao": "INMET",
+      "url": "https://portal.inmet.gov.br/dadoshistoricos",
+      "licenca": "INMET, dado aberto; licença não declarada na fonte",
+      "data_acesso": "2026-09-06",
+      "bytes": 7831,
+      "sha256": "b4c8662aaa0024ab5e9f1db139f485daaef677209de0ec1185895d56bed85981"
+    },
+    {
+      "arquivo": "planta_exemplo.dxf",
+      "inquilino": "demo",
+      "formato": "dxf",
+      "ingerir": false,
+      "titulo": "Planta de exemplo em DXF",
+      "resumo": "Gleba fictícia de 200 m por 150 m com galpão e via de acesso, em SIRGAS 2000 / UTM 21S. Desenhada pela casa. Fica no catálogo como arquivo: a ingestão de DXF é lacuna do L0-04-d.",
+      "tags": [
+        "dxf",
+        "desenho"
+      ],
+      "categoria": "Demonstração",
+      "fonte": "desenho da casa (dados_demo/gerar_do_acervo.py)",
+      "orgao": "iAgroSat",
+      "url": "https://iagrointel.com/",
+      "licenca": "CC0 1.0 (arquivo desenhado pela casa só para demonstração; nenhum dado de terceiro dentro)",
+      "data_acesso": "2026-09-06",
+      "bytes": 9337,
+      "sha256": "b37a397d3ae50192f7eb493ee573e25edea7a8741855fa06c7d8bca805c17332"
+    },
+    {
+      "arquivo": "municipios_ac.zip",
+      "inquilino": "demo2",
+      "formato": "shapefile.zip",
+      "ingerir": true,
+      "titulo": "Limites municipais do Acre",
+      "resumo": "Malha municipal do IBGE recortada no Acre e simplificada para 0,002 grau.",
+      "tags": [
+        "ibge",
+        "limites",
+        "municipio"
+      ],
+      "categoria": "Limites administrativos",
+      "fonte": "IBGE, malha municipal",
+      "orgao": "IBGE",
+      "url": "https://ftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/",
+      "licenca": "IBGE, dado aberto (o FTP declara apenas que os arquivos disponíveis são públicos)",
+      "data_acesso": "2026-09-06",
+      "bytes": 81101,
+      "sha256": "3198c01e98abf3b2116b76b6fc3f48e8d5f452ff7a74328fdabcc741a6395b84"
+    },
+    {
+      "arquivo": "rodovias_federais_ac.geojson",
+      "inquilino": "demo2",
+      "formato": "geojson",
+      "ingerir": true,
+      "titulo": "Rodovias federais do Acre",
+      "resumo": "Trechos do Sistema Nacional de Viação (SNV) do DNIT no estado do Acre.",
+      "tags": [
+        "dnit",
+        "rodovia",
+        "transporte"
+      ],
+      "categoria": "Transporte",
+      "fonte": "DNIT, SNV (rodovias federais)",
+      "orgao": "DNIT",
+      "url": "https://servicos.dnit.gov.br/vgeo/",
+      "licenca": "DNIT, dado público do VGeo; licença não declarada na fonte",
+      "data_acesso": "2026-09-06",
+      "bytes": 52149,
+      "sha256": "a1b404525a616597a03ed859dbac49b8ad59025173e6c1f71011b7ac74a5d5aa"
+    },
+    {
+      "arquivo": "estacoes_inmet_centro_oeste.csv",
+      "inquilino": "demo2",
+      "formato": "csv",
+      "ingerir": true,
+      "titulo": "Estações meteorológicas do INMET na região Centro-Oeste",
+      "resumo": "Cadastro de estações automáticas e convencionais do INMET, com latitude e longitude.",
+      "tags": [
+        "inmet",
+        "estacao",
+        "clima"
+      ],
+      "categoria": "Clima",
+      "fonte": "INMET, cadastro de estações",
+      "orgao": "INMET",
+      "url": "https://portal.inmet.gov.br/dadoshistoricos",
+      "licenca": "INMET, dado aberto; licença não declarada na fonte",
+      "data_acesso": "2026-09-06",
+      "bytes": 10446,
+      "sha256": "b6455dd85e4e6172337e2249adae06fbbe70213e0a5802ea46b12701f3d78d68"
+    }
+  ]
+}
