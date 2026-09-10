@@ -42,6 +42,7 @@ from app.catalogo import (
     rotas_pastas,
     transferencia,
 )
+from app.conexao import proxy as rotas_conexao_proxy
 from app.conexao import rotas as rotas_conexao
 from app.consulta import cors_servicos
 from app.consulta.rotas_diretorio import router as rotas_diretorio_esri
@@ -140,6 +141,11 @@ ROUTERS = [
     rotas_acervo.router,
     # --- conexão externa (L6-02-a): /api/conexoes, /api/conexoes/{id}, /api/conexoes/{id}/testar
     rotas_conexao.router,
+    # --- conectores vivos (L6-02-conectores-vivos): /api/conexoes/{id}/descobrir, /camadas — descoberta de
+    # camada (nome/título/CRS/extensão) a partir de uma plat.conexao já cadastrada
+    # --- proxy de tile/imagem por conexão cadastrada (mesmo item): GET /api/conexoes/{id}/tile — generaliza
+    # `rotas_mapa_wms_publico` (allowlist fixa) para "as fontes que o inquilino cadastrou"
+    rotas_conexao_proxy.router,
     # --- arquivos/objetos (L0-11): /api/arquivos genérico por inquilino; /api/objetos/{chave} já vem do catálogo
     # (rotas_compartilhamento, entrega por URL assinada)
     rotas_arquivos,

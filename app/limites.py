@@ -142,6 +142,23 @@ CONEXAO_REDIRECT_MAX = 5                 # cada hop é revalidado do zero (host 
 CONEXAO_RESPOSTA_MAX_BYTES = 1 * 1024 * 1024  # 1 MiB: o teste de saúde confere status/corpo curto
                                                 # (nunca baixa o serviço inteiro)
 
+# --- descoberta de camada (item L6-02-conectores-vivos; app/conexao/descoberta.py): GetCapabilities de um
+# GeoServer nacional pode ser grande de verdade (o do IBGE mede 11.602.903 bytes, achado do T3) — teto maior
+# e timeout mais folgado que o teste de saúde, mas ainda finito (nunca "baixa até acabar").
+CONEXAO_DESCOBERTA_MAX_BYTES = 24 * 1024 * 1024   # 24 MiB
+CONEXAO_DESCOBERTA_TIMEOUT_S = 15.0
+CONEXAO_DESCOBERTA_CAMADAS_MAX = 2000              # teto de linhas gravadas por descoberta (corta, não trava)
+
+# --- proxy de tile/imagem por conexão cadastrada (mesmo item): generaliza `app/mapa/proxy_wms.py` (allowlist
+# fixa de 3 fontes públicas) para "as fontes que o inquilino cadastrou" em `plat.conexao`. Só wms/wmts/esri_rest
+# têm operação de tile/imagem (wfs/ogc_api são API de feição, não de raster — L6-02-c, fora deste proxy).
+CONEXAO_PROXY_TIPOS = ("wms", "wmts", "esri_rest")
+CONEXAO_PROXY_CONECTAR_TIMEOUT_S = 3.0
+CONEXAO_PROXY_LER_TIMEOUT_S = 20.0                 # uma base pública lenta não pode travar o mapa de quem espera
+CONEXAO_PROXY_MAX_BYTES = 12 * 1024 * 1024         # 12 MiB: teto de 1 tile/imagem (ortofoto 10-20 cm inclusa)
+CONEXAO_PROXY_CACHE_TTL_S = 600                    # mesmos 10 min do proxy público de hoje
+CONEXAO_PROXY_CACHE_MAX_ITENS = 500                # cache em processo; LRU simples por ordem de inserção
+
 # --- ingestão vetorial (L0-04; ADR 0005, reduzido a 4 formatos: shapefile.zip, gpkg, geojson, csv)
 INGESTAO_AMOSTRA_VALIDADE = 1000          # feições lidas na amostra de ST_IsValid (ogr2ogr -limit, MEDIDO no ADR)
 INGESTAO_MEMORIA_MB = 768                 # job ingestao.inspecionar (cobre GeoJSON de 64 MiB, ADR seção 0.4)

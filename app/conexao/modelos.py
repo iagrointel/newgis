@@ -95,3 +95,26 @@ class SaudeHistoricoPagina(Saida):
 
 class PublicarCamadaEntrada(Modelo):
     titulo: str | None = Field(default=None, min_length=1, max_length=250)
+
+
+# --- item L6-02-conectores-vivos: descoberta de camada (`app/conexao/descoberta.py`) e proxy de tile/imagem
+
+class CamadaExterna(Saida):
+    nome: str
+    titulo: str | None = None
+    crs: list[str] = Field(default_factory=list)
+    extensao: dict[str, Any] | None = None
+    descoberta_em: str
+
+
+class CamadasPagina(Saida):
+    total: int
+    itens: list[CamadaExterna]
+
+
+class DescobrirResultado(Saida):
+    ok: bool
+    mensagem: str
+    url_sondada: str | None = None
+    total: int
+    itens: list[CamadaExterna]

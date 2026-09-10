@@ -24,13 +24,16 @@ from app.catalogo import tipos as catalogo_tipos
 from app.catalogo.comum import registrar_evento, uuid_ok
 from app.catalogo.modelos import Item as ItemSaida
 from app.conexao import credencial as credencial_mod
+from app.conexao import descoberta as descoberta_mod  # `publicar_camada` já usa a variável local `descoberta`
 from app.conexao import proveniencia, seguranca
 from app.conexao.modelos import (
+    CamadasPagina,
     Conexao,
     ConexaoEditar,
     ConexaoEntrada,
     ConexaoPagina,
     ConexaoTeste,
+    DescobrirResultado,
     PublicarCamadaEntrada,
     SaudeHistoricoPagina,
 )
@@ -345,3 +348,80 @@ def publicar_camada(
             {"conexao_id": cid, "tipo": r["tipo"], "licenca_declarada": bool(descoberta.procedencia.get("licenca"))},
         )
         return catalogo_comum.item_json(catalogo_comum.item_ou_404(cur, iid), auth)
+
+
+def _camada_json(r: dict) -> dict:
+    return {
+        "nome": r["nome"], "titulo": r["titulo"], "crs": r["crs"] or [], "extensao": r["extensao"],
+        "descoberta_em": iso(r["descoberta_em"]),
+    }
+
+
+@router.post("/{id}/descobrir", response_model=DescobrirResultado, openapi_extra=EDITAR)
+def descobrir(id: str, request: Request, auth: Auth = autenticado()):
+    """Sonda o serviço agora (`GetCapabilities`/`/collections`/`f=json`, conforme o tipo) e SUBSTITUI a lista
+    guardada de camadas (item L6-02-conectores-vivos): a lista de hoje reflete o que o serviço declara HOJE,
+    nunca uma mistura com uma descoberta antiga que uma camada tenha sumido do serviço. Sem rede fora de
+    `app.conexao.seguranca.buscar_seguro` (mesmo caminho auditado contra SSRF do teste de saúde)."""
+    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
+    with db.db(auth.contexto()) as cur:
+        r = _carregar(cur, cid)
+        _pode_editar(r, auth)
+        conexao = {"tipo": r["tipo"], "url": r["url"]}
+
+    # I/O de rede FORA da transação (mesma regra de `publicar_camada`, mais abaixo neste arquivo)
+    resultado = descoberta_mod.descobrir_camadas(conexao)
+
+    if not resultado.ok:
+        # protocolo sem descoberta automática (postgres_fdw/s3/http/stac/geoparquet/pmtiles) é erro de
+        # PEDIDO (422); serviço fora do ar ou documento ilegível é erro do SERVIÇO EXTERNO (502) — nunca o
+        # mesmo código para os dois, senão a tela não sabe se deve reoferecer "tentar de novo".
+        codigo = 422 if resultado.mensagem.startswith("protocolo ") else 502
+        raise ErroAPI(
+            codigo, "descoberta_falhou", resultado.mensagem,
+            {"url_sondada": resultado.url_sondada, "protocolo": conexao["tipo"]},
+        )
+
+    with db.db(auth.contexto()) as cur:
+        r = _carregar(cur, cid)  # relê: a conexão pode ter sido apagada/editada durante a sondagem de rede
+        _pode_editar(r, auth)
+        cur.execute("DELETE FROM plat.conexao_camada WHERE conexao_id = %s::uuid", (cid,))
+        for camada in resultado.camadas:
+            cur.execute(
+                "INSERT INTO plat.conexao_camada(conexao_id, tenant_id, nome, titulo, crs, extensao) "
+                "VALUES (%s::uuid, %s, %s, %s, %s::jsonb, %s::jsonb) "
+                "ON CONFLICT (conexao_id, nome) DO UPDATE SET "
+                "titulo = EXCLUDED.titulo, crs = EXCLUDED.crs, extensao = EXCLUDED.extensao, descoberta_em = now()",
+                (
+                    cid, auth.tenant_id, camada.nome, camada.titulo,
+                    json.dumps(camada.crs, ensure_ascii=False),
+                    json.dumps(camada.extensao, ensure_ascii=False) if camada.extensao is not None else None,
+                ),
+            )
+        registrar_evento(
+            cur, request, "conexoes/descobrir", "conexao", cid,
+            {"tipo": r["tipo"], "total": len(resultado.camadas), "url_sondada": resultado.url_sondada},
+        )
+        cur.execute(
+            "SELECT nome, titulo, crs, extensao, descoberta_em FROM plat.conexao_camada "
+            "WHERE conexao_id = %s::uuid ORDER BY nome", (cid,),
+        )
+        itens = [_camada_json(row) for row in cur.fetchall()]
+    return {
+        "ok": True, "mensagem": resultado.mensagem, "url_sondada": resultado.url_sondada,
+        "total": len(itens), "itens": itens,
+    }
+
+
+@router.get("/{id}/camadas", response_model=CamadasPagina, openapi_extra=LER)
+def camadas(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """Lista a última descoberta GUARDADA (sem sondar o serviço de novo); `POST /descobrir` é quem atualiza."""
+    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
+    with db.db(auth.contexto()) as cur:
+        _carregar(cur, cid)  # 404 se a conexão não existe ou não é visível a este inquilino (RLS)
+        cur.execute(
+            "SELECT nome, titulo, crs, extensao, descoberta_em FROM plat.conexao_camada "
+            "WHERE conexao_id = %s::uuid ORDER BY nome", (cid,),
+        )
+        itens = [_camada_json(row) for row in cur.fetchall()]
+    return {"total": len(itens), "itens": itens}

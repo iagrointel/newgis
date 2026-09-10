@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Capabilities xmlns="http://www.opengis.net/wmts/1.0" xmlns:ows="http://www.opengis.net/ows/1.1">
+  <ows:ServiceIdentification>
+    <ows:Title>BDGEx (fixture de teste)</ows:Title>
+  </ows:ServiceIdentification>
+  <Contents>
+    <Layer>
+      <ows:Title>Carta Topográfica</ows:Title>
+      <ows:Identifier>bdgex:carta</ows:Identifier>
+      <ows:WGS84BoundingBox>
+        <ows:LowerCorner>-74.0 -34.0</ows:LowerCorner>
+        <ows:UpperCorner>-28.8 5.3</ows:UpperCorner>
+      </ows:WGS84BoundingBox>
+      <TileMatrixSetLink>
+        <TileMatrixSet>GoogleMapsCompatible</TileMatrixSet>
+      </TileMatrixSetLink>
+    </Layer>
+    <TileMatrixSet>
+      <ows:Identifier>GoogleMapsCompatible</ows:Identifier>
+      <ows:SupportedCRS>urn:ogc:def:crs:EPSG::3857</ows:SupportedCRS>
+    </TileMatrixSet>
+  </Contents>
+</Capabilities>
