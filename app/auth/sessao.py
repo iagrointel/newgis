@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 import psycopg2
 from fastapi import Depends, Request
 
-from app import auditoria, db, limites
+from app import db, limite_taxa, limites
 from app.auth import escopos as esc
 from app.auth.politica import Politica, politica_de
 from app.erros import ErroAPI
@@ -154,7 +154,7 @@ def _auth_de_sessao(r: dict, hash_sessao: str) -> Auth:
     )
 
 
-def origem_permitida(origem: str, padroes: list[str]) -> bool:
+def _origem_permitida(origem: str, padroes: list[str]) -> bool:
     """`https://*.exemplo.gov.br` casa só subdomínios; a comparação é da ORIGEM (esquema + host + porta)."""
     o = urlsplit(origem)
     if not o.scheme or not o.hostname:
@@ -201,26 +201,9 @@ def _checar_restricao(request: Request, restricao: dict) -> str | None:
         origem = request.headers.get("origin") or request.headers.get("referer")
         if not origem:
             return "referer_ausente"
-        if not origem_permitida(origem, referers):
+        if not _origem_permitida(origem, referers):
             return "referer_nao_permitido"
     return None
-
-
-def _recusar_se_suspenso(request: Request, h: str) -> None:
-    """Item L0-07-f: credencial (sessão ou token) que só não autentica porque o INQUILINO está suspenso recebe 503
-    `inquilino_suspenso` com a mensagem do operador, em vez de um 401 mudo — o mesmo código que POST /api/login já
-    devolve. Só roda no caminho de falha (a credencial válida nunca passa por aqui); nada é apagado."""
-    with db.db() as cur:
-        cur.execute("SELECT * FROM plat.credencial_suspensa(%s)", (h,))
-        r = cur.fetchone()
-    if r is None:
-        return
-    request.state.resultado = "suspenso"
-    detalhe = {"mensagem": r["mensagem"], "desde": iso(r["desde"]) if r["desde"] else None}
-    texto = "inquilino suspenso; fale com o operador da plataforma"
-    if r["mensagem"]:
-        texto = f"inquilino suspenso: {r['mensagem']}"
-    raise ErroAPI(503, "inquilino_suspenso", texto, detalhe)
 
 
 def _auth_de_token(request: Request, valor: str) -> Auth:
@@ -231,15 +214,11 @@ def _auth_de_token(request: Request, valor: str) -> Auth:
         cur.execute("SELECT * FROM plat.auth_token(%s, %s)", (h, ip_de(request)))
         r = cur.fetchone()
     if r is None:
-        _recusar_se_suspenso(request, h)
         request.state.resultado = "invalido"
         raise ErroAPI(401, "token_invalido", "token de serviço inválido")
     request.state.token_id = r["token_id"]
     request.state.tenant_id = r["tenant_id"]
     request.state.usuario_id = r["usuario_id"]
-    # a restrição fica no estado da requisição para o CORS de app/cabecalhos.py ecoar a origem SÓ quando
-    # ela está na lista do próprio token (item L7-03-e); a verificação que barra o acesso é a de baixo.
-    request.state.token_restricao = r["restricao"] or {}
     if r["revogado_em"] is not None:
         request.state.resultado = "revogado"
         raise ErroAPI(
@@ -302,9 +281,7 @@ def resolver(request: Request) -> Auth | None:
     if getattr(request.state, "auth", None) is not None:
         return request.state.auth
     cookie = request.cookies.get(COOKIE)
-    # `X-Esri-Authorization` é o cabeçalho que os clientes Esri (e o nosso leitor de portal, app/migracao/portal.py)
-    # usam para o token de serviço; vale como sinônimo de `Authorization` (item L2-08-b)
-    cabecalho = request.headers.get("authorization") or request.headers.get("x-esri-authorization", "")
+    cabecalho = request.headers.get("authorization", "")
     bearer = cabecalho[7:].strip() if cabecalho.lower().startswith("bearer ") else None
     if cookie and bearer:
         raise ErroAPI(400, "autenticacao_ambigua", "use o cookie de sessão OU o cabeçalho Authorization, não os dois")
@@ -316,7 +293,6 @@ def resolver(request: Request) -> Auth | None:
             cur.execute("SELECT * FROM plat.auth_sessao(%s, %s)", (h, ociosa_horas_padrao()))
             r = cur.fetchone()
         if r is None:
-            _recusar_se_suspenso(request, h)
             raise ErroAPI(401, "sessao_expirada", "sessão inexistente ou expirada; entre de novo")
         auth = _auth_de_sessao(r, h)
     else:
@@ -325,21 +301,14 @@ def resolver(request: Request) -> Auth | None:
     request.state.tenant_id = auth.tenant_id
     request.state.usuario_id = auth.usuario_id
     request.state.token_id = auth.token_id
-    auditoria.definir_token(auth.token_id)  # item L7-20: a linha de auditoria diz se o ato veio por token
+    # camada 2 do item L7-03-b-rate-limit-abuso: limite de taxa por inquilino, aqui porque é o único ponto
+    # por onde TODA requisição autenticada passa (sessão OU token), já com tenant_id e config resolvidos.
+    limite_taxa.exigir(request, auth.tenant_id, auth.config, "api", "api_por_minuto")
     return auth
 
 
-# Tipos de corpo aceitos numa escrita sob COOKIE. A regra não é "JSON": é "nada que um formulário HTML
-# consiga produzir". Um `<form>` de outro sítio só envia `application/x-www-form-urlencoded`,
-# `multipart/form-data` ou `text/plain` — qualquer outro tipo obriga o navegador a um preflight de CORS,
-# que a plataforma não responde. Por isso `application/zip` (o pacote de mapa do item L2-01-l, enviado
-# pela tela do mapa, que entra por cookie) é tão seguro quanto o JSON, e nenhum dos dois abre CSRF.
-TIPOS_DE_CORPO_ACEITOS = frozenset({"application/json", "application/zip"})
-
-
 def checar_escrita_sob_cookie(request: Request) -> None:
-    """CSRF em duas camadas (ADR 0002 seção 5.3): Origin igual à URL pública quando vem; corpo só nos
-    tipos que um formulário HTML não sabe produzir (`TIPOS_DE_CORPO_ACEITOS`)."""
+    """CSRF em duas camadas (ADR 0002 seção 5.3): Origin igual à URL pública quando vem; corpo só JSON."""
     if request.method not in VERBOS_DE_ESCRITA:
         return
     origem = request.headers.get("origin")
@@ -348,9 +317,8 @@ def checar_escrita_sob_cookie(request: Request) -> None:
     tem_corpo = request.headers.get("content-length", "0") not in ("", "0") or "transfer-encoding" in request.headers
     if tem_corpo:
         tipo = request.headers.get("content-type", "").split(";")[0].strip().lower()
-        if tipo not in TIPOS_DE_CORPO_ACEITOS:
-            raise ErroAPI(415, "tipo_nao_aceito",
-                          f"o corpo precisa ser um de: {', '.join(sorted(TIPOS_DE_CORPO_ACEITOS))}")
+        if tipo != "application/json":
+            raise ErroAPI(415, "tipo_nao_aceito", "o corpo precisa ser application/json")
 
 
 def _rota_admite_pendencia(caminho: str) -> bool:
@@ -394,29 +362,12 @@ def autenticado(
     permitir_pendencia: bool = False,
     superadmin_pode_ler: bool = False,
     superadmin: bool = False,
-    token_por_querystring: bool = False,
 ):
     """Fábrica de dependência. Ordem: credencial → só sessão? → CSRF sob cookie → X-Plat-Inquilino → pendências →
-    escopo do token → privilégio → superadmin (404, não 403, para não confirmar a rota).
-
-    `token_por_querystring=True` aceita, além do cabeçalho/cookie, o token de serviço em `?token=` — é o
-    protocolo REST da Esri, que não manda cabeçalho Authorization (GeocodeServer, FeatureServer publicados).
-    Existe aqui, e não numa função de autenticação paralela dentro do router, porque toda rota autenticada tem
-    de passar por ESTA porta: o achado G1-c1 do adversário do turno 3 mostrou 7 rotas do GeocodeServer que
-    autenticavam por fora e escapavam de três guardas de uma vez (pendência de 2FA obrigatório, CSRF sob cookie
-    e a checagem de X-Plat-Inquilino). tests/api/test_contrato_guarda.py reprova quem escapar de novo.
-    """
+    escopo do token → privilégio → superadmin (404, não 403, para não confirmar a rota)."""
 
     def dependencia(request: Request) -> Auth:
         auth = resolver(request)
-        if auth is None and token_por_querystring:
-            tok = request.query_params.get("token")
-            if tok:
-                auth = _auth_de_token(request, tok)
-                request.state.auth = auth
-                request.state.tenant_id = auth.tenant_id
-                request.state.usuario_id = auth.usuario_id
-                request.state.token_id = auth.token_id
         if auth is None:
             if superadmin:
                 raise ErroAPI(404, "nao_encontrado", "recurso inexistente")
@@ -436,13 +387,6 @@ def autenticado(
             raise ErroAPI(403, "sem_privilegio", f"a operação exige o privilégio {privilegio}", {"exigido": privilegio})
         return auth
 
-    # metadado lido pelo portal de API (item L7-08-d): o `x-plat-escopo` de cada rota do OpenAPI é DERIVADO
-    # daqui, nunca declarado à mão em `openapi_extra` — declaração à mão envelhece em silêncio quando o
-    # escopo do handler muda, e foi assim que 32 itens caíram em 06/09. Ver app/portal/openapi.py.
-    dependencia.plat_escopo_token = escopo_token
-    dependencia.plat_so_sessao = so_sessao
-    dependencia.plat_superadmin = superadmin
-    dependencia.plat_privilegio = privilegio
     return Depends(dependencia)
 
 

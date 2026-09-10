@@ -1,151 +1,135 @@
 # Segurança — segredos, certificados, dependências e upload
 
-Item L7-19-segredos-e-certificados (§1-6). Esta seção é o mapa: onde cada segredo mora, como rotacionar
-CADA um deles sem derrubar o produto (comando único `plat segredo rotacionar <nome>`), e como o
-certificado TLS se renova sozinho. Ela não repete o que já está no `docs/adr/0001-fundacao.md` seção 8
-(contrato de `.env`) — só o que mudou e o que é operação. Procedimento passo a passo para um humano em
-plantão: `docs/RUNBOOKS/segredos.md`. Estendida com o item L7-03-f-dependencias-cve-log-correcoes (§7,
-varredura de dependência + log de correções) e o item L7-03-b-antivirus-anexos (§8, varredura de
-conteúdo em upload de anexo/miniatura).
+Item L7-19-segredos-e-certificados (§1-6). Esta seção é o mapa: onde cada segredo mora, como rotacionar sem
+derrubar o produto, e como o certificado TLS se renova sozinho. Ela não repete o que já está no
+`docs/adr/0001-fundacao.md` seção 8 (contrato de `.env`) — só o que mudou e o que é operação. Estendida com
+o item L7-03-f-dependencias-cve-log-correcoes (§7, varredura de dependência + log de correções) e o item
+L7-03-b-antivirus-anexos (§8, varredura de conteúdo em upload de anexo/miniatura).
 
-## 1. Os 5 segredos — onde cada um mora hoje
+## 1. Onde cada segredo mora
 
-| segredo | onde mora | quem lê | dono/modo |
-|---|---|---|---|
-| `PLAT_SECRET` | `/etc/plat/segredos/PLAT_SECRET` | `plat-api`, `plat-worker` (`LoadCredential=`) | root, 0600 |
-| `PLAT_SECRET_ANTERIOR` (dupla-chave, 24h) | `/etc/plat/segredos/PLAT_SECRET_ANTERIOR` | `plat-api`, `plat-worker` | root, 0600 (normalmente vazio) |
-| `PLAT_DSN` (senha da role `plat_app`) | `/etc/plat/segredos/PLAT_DSN` | `plat-api`, `plat-worker` (a chave é exigida sempre por `settings.py`, só a API se autentica de verdade com ela) | root, 0600 |
-| `PLAT_DSN_WORKER` (senha da role `plat_worker`) | `/etc/plat/segredos/PLAT_DSN_WORKER` | `plat-worker` | root, 0600 |
-| `PLAT_GARAGE_ADMIN_TOKEN` (bearer da Admin API do Garage, :3903) | `/etc/plat/segredos/PLAT_GARAGE_ADMIN_TOKEN` e `garage.toml` (`admin_token`) | `plat-api` (chama o Garage) e o próprio Garage (autentica quem chama) | root, 0600 / dono do Garage |
-| chaves S3 por inquilino (`chave_rw_*`, `chave_ro_*`) | `plat.arquivo_bucket` (banco, uma linha por inquilino) | `plat-api`, resolvidas por `SELECT` a cada requisição — nunca em arquivo | RLS por `tenant_id` |
-| segredo TOTP por usuário | banco, cifrado com `PLAT_SECRET`/`PLAT_SECRET_ANTERIOR` (`app/auth/totp.py`) | `plat-api` | coluna do banco |
+| segredo | onde mora hoje | quem lê | dono do arquivo | modo |
+|---|---|---|---|---|
+| `PLAT_SECRET` | `/etc/plat/segredos/PLAT_SECRET` | `plat-api`, `plat-worker` (via `LoadCredential=`) | root | 0600, diretório 0700 |
+| `PLAT_DSN_WORKER` (senha da role `plat_worker`) | `/etc/plat/segredos/PLAT_DSN_WORKER` | `plat-worker` (via `LoadCredential=`) | root | 0600 |
+| `PLAT_DSN` (senha da role `plat_app`) | `.env` na raiz do repositório | `plat-api` | dono do repositório (`APP_USER`) | 0600 — **fora do escopo deste item**, ver §5 |
+| credenciais dos admins semeados (`tests/credenciais.txt`) | arquivo na raiz, gitignorado | `install.sh` (semente) | `APP_USER` | 0600 |
+| segredo TOTP por usuário (`plat.usuario.totp_secret`) | banco, cifrado com `PLAT_SECRET` (`app/auth/totp.py`) | `plat-api` | — | coluna do banco |
 
-Nenhum dos 5 primeiros está mais no `.env` (`tests/unit/test_segredos_fora_do_repo.py` e
-`tests/unit/test_instalador.py::test_env_real_desta_maquina_nao_tem_nenhum_dos_cinco_segredos` provam
-isso na máquina real, não só no texto de `install.sh`). A chave S3 por inquilino nunca esteve em
-arquivo — é um desenho de banco que já existia (item L0-11); entra na tabela porque rotacioná-la é uma
-das 5 cláusulas do portão deste item.
+Antes deste item, `PLAT_SECRET` e `PLAT_DSN_WORKER` moravam no `.env` (modo 600, mas dono do usuário do
+sistema que roda o repositório inteiro — o mesmo usuário que roda todo outro produto desta máquina).
+O adversário do turno T2 (item L0-05, `laco/handoffs/T2/L0-05-jobs/refutacao.json`) registrou a
+ameaça: quem lê `PLAT_DSN_WORKER` tem autoridade total sobre o estado de job de **qualquer** inquilino
+(`plat.job_terminar`/`plat.job_devolver` são `SECURITY DEFINER` e só conferem `worker = nome`, e o nome
+do worker é público em `GET /api/jobs/{id}.worker`) — não há autenticação por processo, a senha é o
+único portão. Um `.env` legível por qualquer processo do usuário do sistema é portão fraco demais para
+isso.
 
-### O mecanismo: `LoadCredential=` do systemd (retomado do turno T3, agora nos 5)
+### O mecanismo: `LoadCredential=` do systemd
 
-`deploy/plat-api.service` declara `LoadCredential=` para `PLAT_SECRET`, `PLAT_SECRET_ANTERIOR`,
-`PLAT_DSN` e `PLAT_GARAGE_ADMIN_TOKEN`; `deploy/plat-worker.service` para `PLAT_SECRET`,
-`PLAT_SECRET_ANTERIOR`, `PLAT_DSN` e `PLAT_DSN_WORKER`. O systemd (root, antes de rebaixar para
-`APP_USER`) lê o arquivo fonte e entrega uma cópia em `$CREDENTIALS_DIRECTORY`
-(`/run/credentials/<unidade>/`); nenhum valor aparece em `ps`, `systemctl show` ou `journalctl` — só o
-*caminho* do arquivo fonte, o que mantém a regra do ADR 0001 §8.
-
-**Um detalhe que muda o desenho**: `LoadCredential=` EXIGE que o arquivo-fonte exista, mesmo vazio — se
-não existir, a unidade não sobe. Isso é trivial para os 4 segredos que sempre têm um valor, mas
-`PLAT_SECRET_ANTERIOR` normalmente NÃO tem (só existe durante a janela de 24h depois de uma rotação de
-`PLAT_SECRET`) — por isso `install.sh` cria o arquivo **vazio** quando ele não existe (nunca pula a
-criação), e `settings.py` trata conteúdo vazio como chave ausente, idêntico ao comportamento sem o
-arquivo.
-
-**O que isso NÃO isola — medido nesta máquina (systemd 255, sem `DynamicUser=`)**: a ACL do
-`LoadCredential=` libera o arquivo só ao `User=`/`Group=` da unidade (`dev`, o mesmo usuário que roda
-**todo outro produto desta máquina**); outro processo rodando como `dev` que souber o caminho em
-`/run/credentials/` ainda lê. O ganho real é tirar o segredo de um `.env` que rotina de operação
-(`cat`, `grep -r`, editor, backup, histórico do git) varre o tempo todo, e nunca aparecer em
-`ps`/journal/unit file. Isolamento por-unidade de verdade pede `DynamicUser=` — muda a dono de toda a
-árvore do repositório, fora de escopo aqui (ver §5 do handoff do item para o detalhe).
-
-## 2. `plat segredo rotacionar <nome>` — um comando para os 5
+`deploy/plat-api.service` e `deploy/plat-worker.service` declaram:
 
 ```
-sudo scripts/plat segredo rotacionar PLAT_SECRET
-sudo scripts/plat segredo rotacionar PLAT_DSN
-sudo scripts/plat segredo rotacionar PLAT_DSN_WORKER
-sudo scripts/plat segredo rotacionar PLAT_GARAGE_ADMIN_TOKEN
-sudo scripts/plat segredo rotacionar PLAT_GARAGE_CHAVE_S3:<slug-do-inquilino>
+LoadCredential=PLAT_SECRET:/etc/plat/segredos/PLAT_SECRET
+LoadCredential=PLAT_DSN_WORKER:/etc/plat/segredos/PLAT_DSN_WORKER   # só plat-worker
 ```
 
-`scripts/plat` é o dispatcher; a lógica mora em `scripts/segredo_rotacionar.py` (Python, não bash —
-os 5 casos manipulam banco, arquivo e a Admin API do Garage, cada um com sua prova de "o valor antigo
-parou de funcionar"; um script só por caso viraria 5 arquivos quase iguais). Os nomes de unidade/porta
-são **parâmetros com valor-padrão de produção** (`plat-api`:8150, `plat-worker`:8153,
-`plataforma-garage`:3903) — o mesmo script roda em produção de verdade e, com os overrides
-`--unidade-api`/`--unidade-worker`/`--unidade-garage`/`--cred-dir`, foi o que provou o mecanismo deste
-item inteiro contra 3 serviços DE TESTE (`plat-teste-segredo-{a,b,garage}`, portas 8197-8199), sem
-nunca reiniciar `plat-api`/`plat-worker`/`nginx`/`postgres` reais — ver `scripts/prova_segredos_l7_19.py`
-(orquestra tudo, do zero até a limpeza) e `scripts/prova_garage_chave_s3.py` (o único dos 5 que roda de
-verdade em produção, porque não reinicia nada — ver abaixo). Reprodução automatizada:
-`pytest tests/e2e/test_rotacao_segredos.py -m lento`.
+O systemd (rodando como root, antes de rebaixar para `APP_USER`) lê o arquivo fonte e entrega uma cópia
+à unidade que a declarou, em `$CREDENTIALS_DIRECTORY` (tipicamente `/run/credentials/<unidade>/`). Isso
+é diferente de um segredo em argumento de linha de comando ou em `Environment=` da unidade: nenhum dos
+dois aparece em `ps` nem em `systemctl show` (só o *caminho* do arquivo fonte aparece ali, nunca o
+valor), o que mantém a regra do ADR 0001 §8 ("segredo nunca em argumento de linha de comando nem em
+unidade systemd") — e o arquivo fonte em `/etc/plat/segredos/` é `root:root 0600`, ilegível para
+qualquer usuário do sistema que não seja root.
 
-O que cada rotação faz, em ordem (a ordem sempre garante que nunca existe um instante em que o lado que
-recebe o restart já tenha o valor novo antes do lado que o autentica):
-
-1. **`PLAT_SECRET`** (dupla-chave): o valor atual vira `PLAT_SECRET_ANTERIOR` (grava-se ele **primeiro**,
-   nunca se perde o que estava valendo), gera-se um valor novo, grava-se como `PLAT_SECRET`, reinicia-se
-   `plat-api` (o único consumidor direto — o worker só precisa que a chave exista, ver tabela do §1)
-   e espera-se `/saude` = 200. Por 24h (janela documentada, não automática — ver §5) o que foi
-   cifrado/assinado com o valor antigo continua legível (`app/seguranca_rotacao.py`); depois disso,
-   apagar (esvaziar) `/etc/plat/segredos/PLAT_SECRET_ANTERIOR` — não há hoje um timer que faça isso
-   sozinho, é passo do runbook.
-2. **`PLAT_DSN`** (senha de `plat_app`): `ALTER ROLE plat_app PASSWORD` no banco **primeiro** → grava o
-   DSN novo no credential → reinicia `plat-api` → confere que a senha **antiga** já não autentica.
-3. **`PLAT_DSN_WORKER`** (senha de `plat_worker`): mesmo desenho, sobre `plat-worker`.
-4. **`PLAT_GARAGE_ADMIN_TOKEN`**: edita `admin_token` em `garage.toml` (texto exato, nunca por posição)
-   → grava o token novo no credential do plat → reinicia o Garage → reinicia `plat-api` → confere que
-   o token antigo já não autentica na Admin API e que o novo autentica. É o único dos 5 que reinicia
-   DOIS serviços diferentes ("reinício em cadeia"), cada um com sua própria janela medida.
-5. **`PLAT_GARAGE_CHAVE_S3:<slug>`**: cria uma chave NOVA no Garage (nunca reaproveita id), concede
-   permissão no bucket do inquilino, grava a chave nova (a gravação em `plat.arquivo_bucket` é o mesmo
-   caminho que `app/garage.py`/`app/objetos.py` já usam), confirma que a chave nova grava/lê um objeto
-   de prova, **apaga a chave antiga no Garage** e confirma que ela já não autentica (403). **Nenhuma
-   unidade reinicia** — a API resolve o par de chaves do bucket por `SELECT` a cada requisição
-   (`app.objetos._resolver_bucket_por_slug`), nunca as guarda em memória de processo — por isso este é
-   o único dos 5 cuja rotação real roda em produção de verdade dentro deste item: mede-se `/saude` de
-   `plat-api` antes/depois (sempre 200, nunca reiniciado) contra um bucket **descartável**, nunca um
-   inquilino real.
-
-### Zero 5xx durante o restart — a técnica, não um acaso
-
-Os 4 segredos que reiniciam serviço usam **ativação por soquete** (`Sockets=` do systemd) nos serviços
-de teste: o soquete TCP é propriedade da unidade `.socket`, que continua no ar e enfileirando conexões
-novas no kernel enquanto a unidade `.service` reinicia — por isso uma janela de restart não vira
-"connection refused" nem 5xx, ela só some na fila até o processo novo assumir. `scripts/
-segredo_rotacionar.py::reiniciar_e_medir` marreta `/saude` a cada 50 ms durante o `systemctl restart`
-inteiro e conta os códigos de resposta à parte de qualquer erro de conexão (os dois nunca se somam:
-"5xx" é uma resposta HTTP de servidor com erro; "erro de conexão" é ausência de resposta — confundir os
-dois esconderia justamente a baixa real, se existisse). **Medido, `tests/medidas/L7-19.json`: 0
-respostas 5xx nas 4 rotações que reiniciam algo**, num total de ~150 requisições martelo; um punhado de
-erros de conexão isolados (a fração de segundo entre o processo velho soltar o soquete e o novo
-assumi-lo, mesmo com socket activation) — reportados, nunca escondidos, nunca contados como 5xx.
-**Produção hoje (`plat-api`/`plat-worker`) NÃO usa socket activation** — a técnica foi provada no
-serviço de teste deste item; adotá-la em produção pede editar as unidades reais e um restart controlado
-para aplicar, o que este turno não fez (limite duro: nenhum restart de produção). Fica registrado como
-próximo passo natural em `docs/RUNBOOKS/segredos.md` §6.
-
-## 3. Prova de que nenhum dos 5 está no repositório nem no journal
+**O que isso NÃO isola — medido nesta máquina (systemd 255, sem `DynamicUser=`), não presumido:**
 
 ```
-sudo scripts/plat segredo rotacionar <nome> --json-saida /tmp/resultado.json   # cada rotação já imprime a prova "antigo falha / novo funciona"
+$ sudo getfacl /run/credentials/plat-api.service/PLAT_SECRET
+user::r--
+user:dev:r--          # dev = APP_USER desta unidade
+group::---
+other::---
+
+$ cat /run/credentials/plat-api.service/PLAT_SECRET     # rodando como dev, sem sudo
+851a69...                                                # LÊ — mesmo usuário do sistema, mesma ACL
+
+$ sudo -u postgres cat /run/credentials/plat-api.service/PLAT_SECRET
+cat: ...: Permission denied                              # outro usuário do sistema: bloqueado
 ```
 
-Automatizado (roda com `pytest`, lê os valores REAIS de `/etc/plat/segredos/` via `sudo cat` e procura
-por eles — nunca imprime o valor, só o nome do segredo se achar):
+O `LoadCredential=` sem sandboxing adicional (`DynamicUser=`, `PrivateMounts=`) libera o arquivo por
+ACL só ao `User=`/`Group=` configurado na unidade — aqui, `APP_USER` (`dev`), o mesmo usuário que roda
+**todo outro produto desta máquina** (CLAUDE.md: `/home/dev/*` é uma única conta operando dezenas de
+serviços). Não existe isolamento *por processo* nesta configuração: outro processo rodando como `dev`
+que conheça o caminho lê o arquivo igual. O ganho real deste item é outro, e é genuíno: o segredo sai
+de um `.env` dentro de um repositório que rotina de operação (`cat`, `grep -r`, editor, backup,
+histórico do git) varre o tempo todo — exatamente o método do adversário do T2 ("lê o repositório...
+o histórico do git à procura de qualquer segredo") — e passa a exigir saber o caminho específico em
+`/run/credentials/` e ter UID `dev`, nunca aparece em `ps`/journal/unit file, e fica ilegível para
+qualquer usuário do sistema que não seja root ou `dev`. Isolamento por-unidade de verdade (nem outro
+processo do mesmo usuário lê) pediria `DynamicUser=` (usuário efêmero por serviço, alocado a cada
+início) — mudaria a dono de toda a árvore do repositório hoje `dev:dev` e ficou fora desta passagem.
+
+`app/settings.py` (`_credenciais_systemd`) lê `$CREDENTIALS_DIRECTORY` quando ela existe e sobrepõe o
+`.env` com qualquer arquivo de lá cujo nome bata com um campo de `Settings`; o ambiente do processo
+continua por cima de tudo (é assim que a suíte injeta valor de teste sem tocar em arquivo, ver §4).
+Fora do systemd (dev, CLI, pytest fora do `Makefile`) a variável não existe e a função devolve vazio —
+comportamento idêntico ao de antes deste item, retrocompatibilidade P5.
+
+## 2. `scripts/rotacionar_segredo.sh` — rotação sem reinstalar
 
 ```
-pytest tests/unit/test_segredos_fora_do_repo.py -q
+sudo bash scripts/rotacionar_segredo.sh PLAT_SECRET
+sudo bash scripts/rotacionar_segredo.sh PLAT_DSN_WORKER
 ```
 
-Três cláusulas: (1) `grep -rIl` na árvore de trabalho inteira (exceto `.git`/`venv`/`node_modules`);
-(2) `git log --all -S<valor>` no histórico inteiro, não só o HEAD; (3) `journalctl -u plat-api -u
-plat-worker -g <valor>` — as três dão zero para os 5 segredos hoje. `.env` sem nenhum dos 5:
-`tests/unit/test_instalador.py::test_env_real_desta_maquina_nao_tem_nenhum_dos_cinco_segredos` lê o
-`.env` real desta instalação (não um exemplo) e falha se qualquer um aparecer.
+O que cada rotação faz, em ordem (a ordem importa: nunca existe um instante em que o serviço novo suba
+com um segredo que o outro lado — banco ou processo — ainda não aceita):
 
-## 4. Como a suíte de testes ainda usa os 5 segredos
+1. **`PLAT_DSN_WORKER`**: gera senha nova (`openssl rand -hex 16`) → `ALTER ROLE plat_worker PASSWORD`
+   no banco **primeiro** → grava o DSN novo em `/etc/plat/segredos/PLAT_DSN_WORKER` → confere que a
+   senha **antiga** já não autentica mais (tenta conectar com ela e exige falha) → `systemctl restart
+   plat-worker` → espera `/saude` responder 200 (mesmo laço de espera do `install.sh`).
+2. **`PLAT_SECRET`**: gera valor novo (`openssl rand -hex 32`) → grava em
+   `/etc/plat/segredos/PLAT_SECRET` → `systemctl restart plat-api` → espera `/saude` responder 200.
 
-`tests/conftest.py` e `app/settings.py::valores_do_ambiente` sempre deixam o **ambiente do processo**
-vencer o `.env` e o credential. O `Makefile` explora isso: a variável `SEGREDOS` lê os 5 arquivos com
-`sudo cat` (mesmo privilégio que `install.sh`/`make migrar` já exigem) e os exporta só para o processo
-filho (`pytest`, `uvicorn` de desenvolvimento) — nunca em argumento visível em `ps` — e só quando o
-arquivo existe e não é vazio (assim `PLAT_SECRET_ANTERIOR`/`PLAT_GARAGE_ADMIN_TOKEN`, normalmente
-vazios, não pisam em nada por engano):
+Downtime = o tempo do `systemctl restart` daquela unidade só (poucos segundos; `plat-worker` devolve os
+jobs em andamento ao receber `SIGTERM`, `TimeoutStopSec=40`, e o `plat-api` tem `Restart=on-failure`).
+Nenhuma outra unidade é tocada — rotacionar `PLAT_DSN_WORKER` nunca reinicia `plat-api` e vice-versa.
+
+**Consequência de rotacionar `PLAT_SECRET` (avisar antes, em produção com usuários ativos):**
+- Toda URL assinada de objeto (`app/objetos.py`, HMAC-SHA256 do `PLAT_SECRET`) emitida antes da troca
+  para de validar imediatamente — o cliente pede o link de novo, sem novo estado a limpar.
+- O `totp_secret` de cada usuário com 2FA ligado está cifrado com o `PLAT_SECRET` anterior
+  (`app/auth/totp.py`); depois da troca ele fica ilegível. Isto **já é tratado no código**, não é uma
+  falha nova: `app/auth/rotas_login.py` captura a exceção de decifragem e cai para código de
+  recuperação (`# segredo ilegível (PLAT_SECRET trocado): só recuperação vale`). A pessoa entra com um
+  código de recuperação e recadastra o 2FA. Não há hoje uma janela de dupla-chave (`PLAT_SECRET` +
+  `PLAT_SECRET_ANTERIOR`) que evite esse recadastro — ficou de fora deste passe por tamanho; ver §6.
+
+## 3. Prova de que o segredo não está mais no repositório
+
+```
+grep -c '^PLAT_SECRET=\|^PLAT_DSN_WORKER=' .env        # 0
+sudo stat -c '%a %U' /etc/plat/segredos/PLAT_SECRET     # 600 root
+sudo stat -c '%a %U' /etc/plat/segredos/PLAT_DSN_WORKER # 600 root
+sudo -u "$(stat -c %U .)" cat /etc/plat/segredos/PLAT_SECRET   # Permission denied — nem o dono do repo lê direto
+```
+
+`journalctl -u plat-api -o cat | grep -i PLAT_SECRET` e o mesmo para `plat-worker` continuam vazios
+(o middleware de log nunca grava valor de configuração; isso já valia antes deste item).
+
+## 4. Como a suíte de testes ainda usa os dois segredos
+
+`tests/conftest.py` (`valores_env`) e `app/settings.py` (`valores_do_ambiente`) sempre deixam o
+**ambiente do processo** vencer o `.env` e o credential. O `Makefile` explora exatamente isso: a
+variável `SEGREDOS` lê os dois arquivos com `sudo cat` (o mesmo privilégio que `install.sh` e `make
+migrar` já exigem — nenhuma novidade de permissão) e os passa como variável de ambiente só para o
+processo filho (`pytest`, `uvicorn` de desenvolvimento), nunca como argumento visível em `ps`:
 
 ```makefile
+SEGREDOS=PLAT_SECRET="$$(sudo cat /etc/plat/segredos/PLAT_SECRET 2>/dev/null)" PLAT_DSN_WORKER="$$(sudo cat /etc/plat/segredos/PLAT_DSN_WORKER 2>/dev/null)"
 teste:
 	$(SEGREDOS) $(VENV)/pytest -m "not lento"
 ```
@@ -155,17 +139,17 @@ Isso é só para desenvolvimento/CI local fora do systemd. Em produção o syste
 
 ## 5. O que fica de fora deste item (fora de escopo, não esquecido)
 
-- **`DynamicUser=`** (isolamento por-unidade de verdade, nem outro processo do mesmo usuário lê) —
-  mudaria a dono de toda a árvore do repositório hoje `dev:dev`; fora de escopo.
-- **Socket activation em produção** (`plat-api`/`plat-worker` de verdade) — provada no serviço de teste
-  (§2), não adotada nos serviços reais porque isso pede editar a unidade instalada e um restart
-  controlado, banido neste turno. Ver `docs/RUNBOOKS/segredos.md` §6 para o procedimento de adoção.
-- **Limpeza automática de `PLAT_SECRET_ANTERIOR` depois de 24h** — hoje é passo manual do runbook (§2
-  do `docs/RUNBOOKS/segredos.md`); um timer/cron que zera o arquivo sozinho é próximo passo natural.
-- **CA própria para appliance de cliente** (Degrau 0 da plataforma) — não existe cliente com appliance.
-- **Alarme de expiração de certificado antes dos 30 dias do certbot** (blackbox exporter, proposto no
-  backlog original) — não construído; `certbot.timer` automático continua sendo a única rede de
-  segurança (§6).
+- `PLAT_DSN` (senha da role `plat_app`) continua no `.env`. O mesmo raciocínio deste item vale para
+  ela; ficou de fora desta passagem porque o pedido foi específico (`PLAT_DSN_WORKER` + `PLAT_SECRET`,
+  os dois nomeados no achado do adversário do T2). Item futuro: migrar `PLAT_DSN` do mesmo jeito.
+- Chaves S3 do Garage por inquilino e o token admin do Garage (`garage.toml`, hoje em claro) — parte
+  maior do backlog original deste item (hipótese completa em `laco/estado.json`), tocam um daemon que
+  outra trilha (L0-11) está construindo em paralelo nesta mesma janela; não mexido aqui para não
+  colidir.
+- Dupla-chave de `PLAT_SECRET` (`PLAT_SECRET` + `PLAT_SECRET_ANTERIOR` por 24h) para rotação sem
+  recadastro de 2FA — ver §2.
+- CA própria para appliance de cliente (Degrau 0 da plataforma) — não existe cliente com appliance
+  ainda.
 
 ## 6. Certificado TLS — expiração e renovação
 
@@ -208,8 +192,10 @@ sudo certbot renew --dry-run              # simula a renovação sem gastar rate
 sudo certbot renew --cert-name plat.iagrointel.com --force-renewal
 ```
 
-**Alarme antes do vencimento**: não existe hoje (ver §5) — `systemctl status certbot.timer` é hoje a
-única checagem, manual.
+**Alarme antes do vencimento**: não existe hoje (o backlog original deste item propunha um exporter
+`blackbox` avisando 14 dias antes — fonte `PROM-blackbox` em `laco/estado.json`); com a renovação
+automática em 30 dias de folga o risco real é o *timer* parar (ex.: máquina desligada por mais de 30
+dias) — `systemctl status certbot.timer` acima é hoje a única checagem, manual.
 
 ## 7. Varredura de dependência com CVE conhecido (item L7-03-f-dependencias-cve-log-correcoes)
 
@@ -399,103 +385,134 @@ o mesmo acima do teto de uma parte (nunca abre multipart no Garage para um conte
 - O caminho de sincronização da PWA de campo (L2-07, ainda não construído) precisará da mesma barreira quando
   existir; `objetos.guardar()` já cobre automaticamente qualquer chamador futuro que passe por ele.
 
-## 9. Cabeçalhos de segurança, CORS e perfil TLS (item L7-03-e-cabecalhos-csp-tls)
+## 9. Limite de taxa contra abuso de volume (item L7-03-b-rate-limit-abuso)
 
-### 9.1 Quem declara cada cabeçalho
+Três camadas independentes (ADR `docs/adr/20260907T1500-limite-de-taxa-tres-camadas.md` tem as decisões e o
+que ficou de fora):
 
-`add_header` do nginx ACRESCENTA, nunca substitui: cabeçalho posto nos dois lugares sai em dobro e o
-serviço perde como dizer outra coisa numa rota. A repartição, então, é esta — e ela é provada por
-`tests/unit/test_cabecalhos_fonte.py`, que lê `deploy/nginx.conf`:
+| camada | onde | chave | o que segura |
+|---|---|---|---|
+| 1 — borda | nginx, zonas `plat_login`/`plat_api`/`plat_tiles` (`deploy/nginx.conf`, `install.sh` grava as zonas em `/etc/nginx/conf.d/plat_limites.conf`) | IP (`$binary_remote_addr`) | volume bruto, antes de gastar CPU/conexão de banco |
+| 2 — inquilino/plano | `app/limite_taxa.py` + `plat.limite_taxa_verificar` (Postgres, janela deslizante), chamada de dentro de `app/auth/sessao.py::resolver` | `tenant:<id>` | um inquilino (ou um token comprometido dele) não afeta outro; teto lido de `tenant.config.limites.*`, cortado para a faixa de `limites.LIMITE_TAXA_PADROES` |
+| 3 — reincidência | fail2ban, jail `plat` (`deploy/fail2ban/`) sobre `/var/log/nginx/plat_access.log` | IP (`$remote_addr` do log combined) | quem insiste em 401/429 depois de já ter sido recusado |
 
-| cabeçalho | quem declara | por quê |
-|---|---|---|
-| `Content-Security-Policy` | aplicação (`app/cabecalhos.py`) | depende da resposta: nonce novo a cada uma, política diferente para documento e para dado, `frame-ancestors` por inquilino |
-| `Permissions-Policy`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy` | aplicação | idem: o CORP muda para `cross-origin` quando a origem é a de um token autorizado |
-| `Referrer-Policy`, `X-Content-Type-Options` | aplicação | ficam ao lado dos demais, numa origem só |
-| `Cache-Control` | aplicação (piso `no-store, must-revalidate`) | decisão do turno T2, mantida |
-| `Strict-Transport-Security` | nginx, bloco 443 | é do transporte; a aplicação não sabe se a conexão chegou por TLS |
-| `X-Robots-Tag` | nginx | vale para tudo o que o domínio serve, inclusive o que a aplicação não responde |
-| conjunto inteiro em `/static/` | nginx | ali o nginx é a origem do corpo |
+### 9.1 Camada 1 — nginx por IP
 
-`X-Frame-Options` deixou de ser declarado. Quem manda no embutir passou a ser `frame-ancestors`, que
-aceita uma LISTA de origens (o cabeçalho antigo só aceita `DENY`, `SAMEORIGIN` ou uma origem) e que os
-navegadores atuais aplicam com precedência sobre ele quando os dois aparecem.
+`deploy/nginx.conf` tem `location /api/` (zona `plat_api`, `rate=120r/m burst=60 nodelay`) e
+`location /tiles/` (zona `plat_tiles`, `rate=600r/m burst=200 nodelay`), além do `location = /api/login`
+já existente (zona `plat_login`, item L0-02). `limit_req` roda ANTES do roteamento da aplicação — a
+rajada acima do burst nunca chega ao `proxy_pass`, então nunca invalida nem escreve num `proxy_cache`
+que a rota venha a ter (prova em 9.3). As três zonas usam `$binary_remote_addr`, nunca um cabeçalho:
+não há `ngx_http_realip_module` configurado neste vhost, então não existe "confiar no
+X-Forwarded-For" para configurar errado aqui — a defesa é segura por padrão.
 
-O HSTS continua em `max-age=31536000` (um ano). `includeSubDomains` e `preload` NÃO foram ligados:
-`preload` é irreversível na prática (a lista embutida nos navegadores demora meses a sair) e alcança o
-domínio inteiro da casa, não só este serviço — é decisão do dono, não do item.
-
-### 9.2 A política
-
-Documento HTML:
+Medido com `scripts/bench_limite_taxa.sh` (nginx e uvicorn reais, ver 9.4):
 
 ```
-default-src 'self'; script-src 'self' 'nonce-<sorteado por resposta>'; style-src 'self';
-img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:;
-child-src 'self' blob:; media-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none';
-form-action 'self'; frame-src 'self'; upgrade-insecure-requests; frame-ancestors <por inquilino>
+== camada 1, zona plat_api (rate=120r/m burst=60) ==
+direto (sem nginx), 90 pedidos rápidos: 90 404, 0 429   -- confirma que a defesa é só do nginx
+via nginx,           90 pedidos rápidos: 53 404, 37 429
+== camada 1, zona plat_tiles (rate=600r/m burst=200), sem existir rota de ladrilho ==
+via nginx, 320 pedidos rápidos: 229 404, 91 429
+== X-Forwarded-For forjado e ROTACIONADO a cada pedido, 200 pedidos cada rodada ==
+sem forjar: 192/200 em 429 · forjando: 197/200 em 429 (diferença 5, ruído de tempo entre rodadas)
 ```
 
-Sem `'unsafe-inline'` e sem `'unsafe-eval'`. `blob:` em `worker-src`/`child-src` porque o MapLibre cria o
-próprio processo de trabalho por URL de blob. As páginas de `web/` não têm `<script>` em linha nem
-tratador de evento em atributo (`onclick=`, `onerror=`…), e um teste que LÊ os arquivos impede que
-voltem: com esta política eles não executariam, e a tela abriria em branco sem erro visível. A única
-exceção é o script de arranque da Swagger UI, que recebe o nonce da própria resposta em `/api/docs`.
+### 9.2 Camada 3 — fail2ban
 
-Resposta que não é documento (JSON, GeoJSON, imagem, tile, arquivo) leva
-`default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`.
+`deploy/fail2ban/filter.d/plat-abuso.conf` casa linhas do log combined do nginx com status 401 ou 429
+em `/api/`, `/svc/` ou `/tiles/`; `deploy/fail2ban/jail.d/plat.conf` (`backend=auto`, arquivo — NUNCA o
+`backend=systemd`/journal que a jail `nginx-limit-req` já instalada nesta máquina usa, que leria todo
+nginx de todo produto) aponta para `/var/log/nginx/plat_access.log`, um `access_log` DEDICADO do vhost
+do plat (nunca o log genérico compartilhado com outros produtos da casa). `install.sh` copia os dois
+arquivos para `/etc/fail2ban/` e recarrega o fail2ban (seção "i4"). `maxretry=15 findtime=120s
+bantime=3600s`; `banaction` herdado do `[DEFAULT]` da casa (`nftables`).
 
-### 9.3 Embutir a aplicação no sítio do cliente (`frame-ancestors` por inquilino)
+**Prova real, medida em 07/09/2026** (nunca contra um IP de produção — `127.0.0.9` é loopback,
+`curl --interface` alcança sem configurar nada, e nenhum outro serviço desta máquina compartilhada
+depende dele; ver o ADR §Decisão 3 para o motivo de não usar um IP real neste teste):
 
-Embutir é caso de uso, não acidente. A lista de origens autorizadas é do INQUILINO e mora em
-`plat.tenant.config -> 'origens_embutidas'`, a mesma coluna jsonb das demais configurações da
-organização. Sem lista, a política sai `frame-ancestors 'none'` — a falta fecha.
+```
+$ fail2ban-regex /var/log/nginx/plat_access.log /etc/fail2ban/filter.d/plat-abuso.conf
+Failregex: 2226 total
+Lines: 3716 lines, 0 ignored, 2226 matched, 1490 missed
 
-```sql
--- pela role da aplicação, com contexto de inquilino (igual ao PUT /api/org)
-SELECT set_config('plat.tenant_id', '<id>', true);
-UPDATE plat.tenant
-   SET config = config || jsonb_build_object('origens_embutidas',
-       '["https://sig.exemplo.gov.br"]'::jsonb)
- WHERE id = plat.tenant_atual();
+$ for i in $(seq 1 30); do curl -s --interface 127.0.0.9 -o /dev/null -X POST http://.../api/login \
+    -H 'Content-Type: application/json' -d '{"inquilino":"demo","login":"zz-nao-existe","senha":"errada"}'; done
+$ sudo fail2ban-client status plat
+...
+   |- Currently banned:	1
+   `- Banned IP list:	127.0.0.9
+$ curl --interface 127.0.0.9 http://.../saude   # sem resposta (000) -- o nftables está mesmo bloqueando
+$ sudo fail2ban-client set plat unbanip 127.0.0.9   # limpeza; confirmado banned=0 depois
 ```
 
-O middleware descobre de quem é a página por `state.tenant_id` (quando houve autenticação) ou pelo
-parâmetro `inquilino` da própria URL (páginas ainda sem sessão). A leitura vai pela função
-`plat.origens_embutidas(slug, id)`, `SECURITY DEFINER` da migração `20260907T2047`: o cabeçalho é montado
-antes de haver contexto de inquilino na conexão, e sem ela a RLS devolveria zero linhas e a política sairia
-sempre fechada. A função devolve um campo de configuração de um inquilino, que o próprio cabeçalho já
-publica. O valor fica em memória por 60 s (`app.cabecalhos.CACHE_ORIGENS_S`).
+### 9.3 Camada 2 — por inquilino/plano, em Postgres
 
-### 9.4 CORS por token
+`app/limite_taxa.py` (mecanismo) + `plat.limite_taxa_verificar` (migração `20260907T1444_limite_taxa.sql`,
+janela deslizante — mesmo desenho de `plat.redefinicao_solicitar`, migração 047). Chamada de dentro de
+`app/auth/sessao.py::resolver()`, o único ponto por onde toda requisição autenticada passa (sessão OU
+token), já com `tenant_id`/`config` resolvidos. 429 com `Retry-After` (RFC 6585), corpo
+`{"erro": "limite_de_taxa", "detalhe": {"escopo", "maximo", "janela_s"}}`.
 
-A lista de origens do CORS é a MESMA `restricao.referer` que o token de serviço já usa desde o item L0-02
-para ser aceito. Só quando a requisição chega autenticada por token e a origem está naquela lista é que a
-resposta ganha `Access-Control-Allow-Origin` com a origem pedida (nunca `*`), mais
-`Access-Control-Expose-Headers: x-req-id` e `Cross-Origin-Resource-Policy: cross-origin`. `Vary: Origin`
-sai sempre que há `Origin`, para que um intermediário não sirva a resposta de uma origem a outra.
+Teto por `tenant.config.limites.<escopo>_por_minuto`, cortado para a faixa de `limites.LIMITE_TAXA_PADROES`
+(nunca abaixo do mínimo nem acima do máximo — mesma regra de corte de `AUTH_PADROES`):
 
-O preflight (`OPTIONS` com `Access-Control-Request-Method`) é respondido sem consultar token, porque a
-especificação proíbe o navegador de mandar crachá no preflight. Autorizar o preflight não entrega dado
-nenhum: a requisição de verdade continua barrada pela restrição do token (401 `referer_nao_permitido`).
+| escopo | padrão | mínimo | máximo |
+|---|---|---|---|
+| `api` (todo `/api/*` autenticado) | 6000/min | 5/min | 500.000/min |
+| `tiles` (`/tiles/*`, `/svc/<token>/(raster\|mosaico)`) | 12000/min | 10/min | 2.000.000/min |
 
-### 9.5 TLS, HTTP/2 e OCSP stapling
+O padrão é DE PROPÓSITO alto (100 req/s sustentado para `api`): o mesmo contador corre em toda a suíte
+de teste da casa martelando os inquilinos `demo`/`demo2` (`sessao_a`/`sessao_b`, escopo de sessão do
+pytest) — um teto pensado só para "uso normal de um cliente" derrubaria `make check` sem motivo nenhum
+do produto (provado: `tests/api/test_limite_taxa.py::
+test_limite_padrao_de_demo_e_alto_o_bastante_para_nao_atrapalhar_a_suite`).
 
-`deploy/nginx_tls.conf` (o `install.sh` escreve em `/etc/nginx/conf.d/plat_tls.conf`, contexto http, só
-depois de existir certificado) põe o servidor no perfil **intermediate** do guia Server Side TLS da
-Mozilla: TLS 1.2 e 1.3 apenas, escolha de cifra pelo cliente, retomada por ticket desligada. Uma
-diferença declarada: a lista de cifras não traz as `DHE-*`, o que dispensa gerar e manter um
-`ssl_dhparam` e não perde nenhum cliente do alvo do perfil — todos negociam ECDHE.
+Provas (`tests/api/test_limite_taxa.py`, 10 casos, todos verdes):
 
-O OCSP stapling entrega no aperto de mão a resposta do respondedor da CA, poupando ao navegador uma
-consulta que revela o sítio visitado; `ssl_stapling_verify on` exige a cadeia, que o certbot deixa em
-`chain.pem`, e o resolvedor declarado é o do sistema.
+- **Cláusula "inquilino não afeta outro"**: dois inquilinos temporários com o mesmo teto baixo; esgota
+  o de A, confere que B segue 200 no mesmo instante
+  (`test_limite_de_um_inquilino_nao_afeta_outro_teste_cruzado`).
+- **Refutação "50 IPs contra o mesmo token"**: rotaciona `X-Forwarded-For` a cada pedido contra o MESMO
+  inquilino — a chave é `tenant:<id>`, nunca o IP, então rotacionar o cabeçalho não devolve cota nenhuma
+  (`test_50_ips_forjados_contra_o_mesmo_token_a_camada_de_inquilino_segura`).
+- **Refutação "1 IP contra 50 tokens"**: a camada 2, por desenho, NÃO segura isso sozinha — cada
+  inquilino tem sua própria cota. Quem segura é a camada 1 (9.1): a zona `plat_api` não sabe o que é
+  um token, então criar mais tokens (ou mais inquilinos) não dá mais cota de IP.
+- **Contrato de erro e `Retry-After`**: `test_retry_after_e_o_corpo_seguem_o_contrato_de_erro_do_produto`.
+- **Escopos independentes da mesma chave**: `test_escopos_diferentes_da_mesma_chave_sao_contadores_independentes`.
+- **Não conta duas vezes na mesma requisição**: `test_nao_conta_duas_vezes_na_mesma_requisicao`.
+- **Concorrência real nunca fura o teto**: achado do adversário do turno — a 1ª versão da função tinha
+  uma corrida real (`SELECT count()` + `INSERT` sem trava, sob `READ COMMITTED` duas transações
+  concorrentes viam a mesma contagem e as duas passavam; medido furando 20 para 21/23). Consertado com
+  `pg_advisory_xact_lock` por `(chave, escopo)` na própria migração. Reproduzido depois do conserto:
+  `test_concorrencia_real_nunca_fura_o_teto` — 5 rodadas de 200 chamadas concorrentes (thread pool),
+  teto sempre exatamente respeitado.
 
-HTTP/2: no nginx 1.24 (Ubuntu 24.04) ainda é opção do `listen`, não a diretiva `http2 on;` do 1.25.1+.
-O `install.sh` acrescenta `http2` à linha `listen ... ssl;` que o certbot gerou, ao reescrever o bloco.
+### 9.4 X-Forwarded-For — por que não há nada novo para configurar
 
-### 9.6 `security.txt`
+`deploy/plat-api.service` já sobe o uvicorn com `--proxy-headers --forwarded-allow-ips 127.0.0.1` (de
+um item anterior, não tocado por este). Isso faz o `ProxyHeadersMiddleware` do uvicorn só confiar no
+cabeçalho quando o peer TCP imediato é `127.0.0.1` (o nginx local); de qualquer outro peer, o cabeçalho
+é ignorado e `request.client.host` fica com o IP real do socket. `app/auth/sessao.py::ip_de()` já lê só
+`request.client.host` — todo código que já usava essa função (restrição de token por IP, bloqueio de
+login, log de acesso) já herda a defesa sem mudança nenhuma. Este item PROVA isso, não inventa
+mecanismo novo — ver o ADR (Decisão 3) para o raciocínio completo e por que o teste usa `127.0.0.9`
+como "peer não confiável" em vez de tentar simular um atacante remoto de verdade numa máquina de teste
+local.
 
-`GET /.well-known/security.txt` responde no contrato da RFC 9116, gerado a cada leitura porque o campo
-`Expires` é obrigatório e um arquivo com data fixa envelhece em silêncio. O contato vem de
-`PLAT_SEGURANCA_CONTATO`; sem a chave vale `seguranca@<host de PLAT_URL_PUBLICA>`.
+### 9.5 O que ficou de fora (nomeado, não escondido)
+
+- **"Tile acima do limite do plano" fim a fim por HTTP real**: `L1-02-tiles-token` (que cria as rotas
+  `/tiles/...`/`/svc/<token>/raster/...`) está `entregue` mas **não mesclado** nesta base (`app/imagens/`
+  não existe neste worktree — ver `laco/handoffs/T4/L1-02-tiles-token.md`). O MECANISMO da camada 2 é
+  genérico por escopo e testado com `escopo="tiles"` diretamente contra a função SQL; a zona de nginx
+  `plat_tiles` já protege `/tiles/` na borda (9.1, provado até sem existir a rota real). O que falta é
+  só a FIAÇÃO — anexar `limite_taxa.exigir(..., "tiles", "tiles_por_minuto")` no ponto que resolve o
+  token de ladrilho quando aquele ramo mesclar. Registrado como pendência do item, não como feito.
+- **Limite nomeado por PLANO** (Bronze/Prata/Ouro, item L7-09-b): o mecanismo já lê
+  `tenant.config.limites.*`; nomear planos e expor a UI de configuração é do L7-09-b.
+- **`fail2ban` com IP real de produção no teste**: por segurança operacional desta máquina
+  compartilhada (ver 9.2) — em produção o `banaction` é o real (`nftables`, herdado), sem dry-run;
+  só o TESTE evita usar um IP de verdade.
