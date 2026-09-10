@@ -5,14 +5,18 @@ plat.log_acesso: app.auth.middleware) e monta os routers. O nginx serve web/ em 
 Cada trilha acrescenta o seu router na lista ROUTERS (uma linha por trilha; ordem = ordem de montagem)."""
 
 import os
+import datetime
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import erros, limite_corpo, paginas, rotas_qr
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
+
+from app import cabecalhos, erros, limite_corpo, paginas
 from app import log as plat_log
 from app.acervo import rotas as rotas_acervo
 from app.amc import rotas as rotas_amc
@@ -183,6 +187,9 @@ if not settings.producao:
     from fastapi.staticfiles import StaticFiles
 
     app.mount("/static", StaticFiles(directory=str(WEB)), name="static_dev")
+# o mais externo de todos: toda resposta sai com CSP/nonce, Permissions-Policy, COOP/CORP, Referrer-Policy
+# e nosniff, inclusive as que nascem de erro do middleware de corpo (item L7-03-e).
+cabecalhos.instalar(app)
 
 ROUTERS = [
     rotas_saude,
@@ -495,9 +502,11 @@ if os.environ.get("PLAT_SERVIR_ESTATICO") == "1" and not settings.producao:
 
 
 @app.get("/api/docs", include_in_schema=False)
-def documentacao_api():
-    """Swagger UI com todos os recursos locais; validatorUrl=None desliga a consulta ao validador externo."""
-    return get_swagger_ui_html(
+def documentacao_api(request: Request):
+    """Swagger UI com todos os recursos locais; validatorUrl=None desliga a consulta ao validador externo.
+    O único <script> em linha da casa é o de arranque da Swagger UI: recebe o nonce desta resposta, para que
+    a CSP siga sendo `script-src 'self' 'nonce-...'`, sem 'unsafe-inline' (item L7-03-e)."""
+    html = get_swagger_ui_html(
         openapi_url="/api/openapi.json",
         title="plat — API",
         swagger_js_url=SWAGGER_JS,
@@ -505,6 +514,8 @@ def documentacao_api():
         swagger_favicon_url=FAVICON,
         swagger_ui_parameters={"validatorUrl": None},
     )
+    corpo = html.body.decode("utf-8").replace("<script>", f'<script nonce="{request.state.csp_nonce}">')
+    return HTMLResponse(corpo, headers={"Cache-Control": "no-store"})
 
 
 @app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
@@ -537,3 +548,19 @@ async def _fechar_motor_render():
     m = motor()
     if m.ativo:
         await m.parar()
+SEGURANCA_TXT_DIAS = 90
+
+
+@app.get("/.well-known/security.txt", include_in_schema=False)
+def security_txt():
+    """RFC 9116. Gerado a cada leitura porque o campo Expires é obrigatório e um arquivo com data fixa
+    envelhece em silêncio: aqui a validade é sempre a de hoje mais SEGURANCA_TXT_DIAS dias."""
+    expira = datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=SEGURANCA_TXT_DIAS)
+    linhas = [
+        f"Contact: {settings.PLAT_SEGURANCA_CONTATO}",
+        f"Expires: {expira.strftime('%Y-%m-%dT%H:%M:%SZ')}",
+        "Preferred-Languages: pt-BR, pt, en",
+        f"Canonical: {settings.PLAT_URL_PUBLICA}/.well-known/security.txt",
+        "",
+    ]
+    return PlainTextResponse("\n".join(linhas), media_type="text/plain; charset=utf-8")

@@ -1,0 +1,40 @@
+{
+  "item": "L7-03-e-cabecalhos-csp-tls",
+  "medidas": {
+    "rotas_do_openapi_parametrizadas": {
+      "valor": 196,
+      "unidade": "par (método, caminho)",
+      "comando": "bash laco/roda_teste.sh tests/api/test_cabecalhos.py -q  (test_conjunto_de_seguranca_em_toda_rota_do_openapi)",
+      "nota": "toda rota do esquema, mais 6 fora do esquema (/, /api/docs, /api/openapi.json, /.well-known/security.txt, /entrar, /mapa); nenhuma resposta sem CSP, inclusive 401/404/405/422"
+    },
+    "paginas_web_examinadas": {
+      "valor": 19,
+      "unidade": "arquivo html",
+      "comando": "bash laco/roda_teste.sh tests/unit/test_cabecalhos_fonte.py -q",
+      "nota": "zero <script> em linha sem nonce e zero tratador de evento em atributo (onclick=, onerror=, ...); vendor/ fora"
+    },
+    "observatory_antes_do_item": {
+      "valor": 75,
+      "unidade": "pontos (nota B, 11 de 12 exames)",
+      "comando": "curl -s -X POST 'https://observatory-api.mdn.mozilla.net/api/v2/scan?host=plat.iagrointel.com'",
+      "medido_em": "2026-09-07T20:52:24Z",
+      "nota": "instalação pública ANTES deste item, que ainda não foi instalada. A nota DEPOIS nao foi medida: exige o dono instalar deploy/ e a app. O unico exame reprovado e a falta de CSP (-25 no algoritmo v6)."
+    },
+    "tls_da_instalacao_publica_antes_do_item": {
+      "valor": "TLS 1.2 aceito; OCSP stapling ausente (\"no response sent\")",
+      "unidade": "observação",
+      "comando": "openssl s_client -connect plat.iagrointel.com:443 -servername plat.iagrointel.com -status </dev/null",
+      "medido_em": "2026-09-07T20:55Z",
+      "nota": "TLS 1.0/1.1 nao puderam ser testados desta maquina: o openssl local nao os oferece (erro 'no protocols available' antes de sair pela rede). Relatorio de terceiro (SSL Labs v4) NAO obtido: a API exige cabecalho com endereco de e-mail e nao se envia endereco da casa a servico externo."
+    },
+    "e2e_no_navegador": {
+      "valor": 6,
+      "unidade": "teste",
+      "comando": "bash laco/roda_teste.sh tests/e2e/test_csp_embutir.py -q",
+      "carga_1min": 10.4,
+      "ram_livre_gb": 1,
+      "medido_em": "2026-09-07T20:53Z",
+      "nota": "chromium 147: /entrar, /mapa e /api/docs sem violacao de politica no console; Swagger UI desenha com a CSP ligada; embutir de origem autorizada carrega e de origem nao autorizada e recusado pelo navegador (\"violates the following Content Security Policy directive: frame-ancestors\")"
+    }
+  }
+}

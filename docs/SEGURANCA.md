@@ -1,165 +1,151 @@
 # Segurança — segredos, certificados, dependências e upload
 
-Item L7-19-segredos-e-certificados (§1-6). Esta seção é o mapa: onde cada segredo mora, como rotacionar sem
-derrubar o produto, e como o certificado TLS se renova sozinho. Ela não repete o que já está no
-`docs/adr/0001-fundacao.md` seção 8 (contrato de `.env`) — só o que mudou e o que é operação. Estendida com
-o item L7-03-f-dependencias-cve-log-correcoes (§7, varredura de dependência + log de correções) e o item
-L7-03-b-antivirus-anexos (§8, varredura de conteúdo em upload de anexo/miniatura).
+Item L7-19-segredos-e-certificados (§1-6). Esta seção é o mapa: onde cada segredo mora, como rotacionar
+CADA um deles sem derrubar o produto (comando único `plat segredo rotacionar <nome>`), e como o
+certificado TLS se renova sozinho. Ela não repete o que já está no `docs/adr/0001-fundacao.md` seção 8
+(contrato de `.env`) — só o que mudou e o que é operação. Procedimento passo a passo para um humano em
+plantão: `docs/RUNBOOKS/segredos.md`. Estendida com o item L7-03-f-dependencias-cve-log-correcoes (§7,
+varredura de dependência + log de correções) e o item L7-03-b-antivirus-anexos (§8, varredura de
+conteúdo em upload de anexo/miniatura).
 
-## 1. Onde cada segredo mora
+## 1. Os 5 segredos — onde cada um mora hoje
 
-| segredo | onde mora hoje | quem lê | dono do arquivo | modo |
-|---|---|---|---|---|
-| `PLAT_SECRET` | `/etc/plat/segredos/PLAT_SECRET` | `plat-api`, `plat-worker` (via `LoadCredential=`) | root | 0600, diretório 0700 |
-| `PLAT_DSN_WORKER` (senha da role `plat_worker`) | `/etc/plat/segredos/PLAT_DSN_WORKER` | `plat-worker` (via `LoadCredential=`) | root | 0600 |
-| `PLAT_DSN` (senha da role `plat_app`) | `/etc/plat/segredos/PLAT_DSN` | `plat-api`, `plat-worker` (via `LoadCredential=`) | root | 0600 — **preparado, valor ainda no `.env` até o dono rodar o passo 1 de `docs/AMBIENTES.md` §5** |
-| `PLAT_GARAGE_ADMIN_TOKEN` (credencial raiz do armazenamento) | `/etc/plat/segredos/PLAT_GARAGE_ADMIN_TOKEN` | `plat-api`, `plat-worker` (via `LoadCredential=`) | root | 0600 — **mesma situação, mesmo passo 1** |
-| `rpc_secret` e `admin_token` do daemon Garage | `pipeline/garage/garage.toml`, em claro | `plataforma-garage` | `dev` | 0600 — **drop-in pronto em `deploy/plataforma-garage-segredos.conf`, troca é o passo 2 de `docs/AMBIENTES.md` §5** |
-| `PLAT_GARAGE_CHAVE_SEGREDO` (chave S3 sem administração, só homologação) | `var/homolog/homolog.env` | processos de homologação | `APP_USER` | 0600 |
-| credenciais dos admins semeados (`tests/credenciais.txt`) | arquivo na raiz, gitignorado | `install.sh` (semente) | `APP_USER` | 0600 |
-| segredo TOTP por usuário (`plat.usuario.totp_secret`) | banco, cifrado com `PLAT_SECRET` (`app/auth/totp.py`) | `plat-api` | — | coluna do banco |
+| segredo | onde mora | quem lê | dono/modo |
+|---|---|---|---|
+| `PLAT_SECRET` | `/etc/plat/segredos/PLAT_SECRET` | `plat-api`, `plat-worker` (`LoadCredential=`) | root, 0600 |
+| `PLAT_SECRET_ANTERIOR` (dupla-chave, 24h) | `/etc/plat/segredos/PLAT_SECRET_ANTERIOR` | `plat-api`, `plat-worker` | root, 0600 (normalmente vazio) |
+| `PLAT_DSN` (senha da role `plat_app`) | `/etc/plat/segredos/PLAT_DSN` | `plat-api`, `plat-worker` (a chave é exigida sempre por `settings.py`, só a API se autentica de verdade com ela) | root, 0600 |
+| `PLAT_DSN_WORKER` (senha da role `plat_worker`) | `/etc/plat/segredos/PLAT_DSN_WORKER` | `plat-worker` | root, 0600 |
+| `PLAT_GARAGE_ADMIN_TOKEN` (bearer da Admin API do Garage, :3903) | `/etc/plat/segredos/PLAT_GARAGE_ADMIN_TOKEN` e `garage.toml` (`admin_token`) | `plat-api` (chama o Garage) e o próprio Garage (autentica quem chama) | root, 0600 / dono do Garage |
+| chaves S3 por inquilino (`chave_rw_*`, `chave_ro_*`) | `plat.arquivo_bucket` (banco, uma linha por inquilino) | `plat-api`, resolvidas por `SELECT` a cada requisição — nunca em arquivo | RLS por `tenant_id` |
+| segredo TOTP por usuário | banco, cifrado com `PLAT_SECRET`/`PLAT_SECRET_ANTERIOR` (`app/auth/totp.py`) | `plat-api` | coluna do banco |
 
-Antes deste item, `PLAT_SECRET` e `PLAT_DSN_WORKER` moravam no `.env` (modo 600, mas dono do usuário do
-sistema que roda o repositório inteiro — o mesmo usuário que roda todo outro produto desta máquina).
-O adversário do turno T2 (item L0-05, `laco/handoffs/T2/L0-05-jobs/refutacao.json`) registrou a
-ameaça: quem lê `PLAT_DSN_WORKER` tem autoridade total sobre o estado de job de **qualquer** inquilino
-(`plat.job_terminar`/`plat.job_devolver` são `SECURITY DEFINER` e só conferem `worker = nome`, e o nome
-do worker é público em `GET /api/jobs/{id}.worker`) — não há autenticação por processo, a senha é o
-único portão. Um `.env` legível por qualquer processo do usuário do sistema é portão fraco demais para
-isso.
+Nenhum dos 5 primeiros está mais no `.env` (`tests/unit/test_segredos_fora_do_repo.py` e
+`tests/unit/test_instalador.py::test_env_real_desta_maquina_nao_tem_nenhum_dos_cinco_segredos` provam
+isso na máquina real, não só no texto de `install.sh`). A chave S3 por inquilino nunca esteve em
+arquivo — é um desenho de banco que já existia (item L0-11); entra na tabela porque rotacioná-la é uma
+das 5 cláusulas do portão deste item.
 
-### O mecanismo: `LoadCredential=` do systemd
+### O mecanismo: `LoadCredential=` do systemd (retomado do turno T3, agora nos 5)
 
-`deploy/plat-api.service` e `deploy/plat-worker.service` declaram:
+`deploy/plat-api.service` declara `LoadCredential=` para `PLAT_SECRET`, `PLAT_SECRET_ANTERIOR`,
+`PLAT_DSN` e `PLAT_GARAGE_ADMIN_TOKEN`; `deploy/plat-worker.service` para `PLAT_SECRET`,
+`PLAT_SECRET_ANTERIOR`, `PLAT_DSN` e `PLAT_DSN_WORKER`. O systemd (root, antes de rebaixar para
+`APP_USER`) lê o arquivo fonte e entrega uma cópia em `$CREDENTIALS_DIRECTORY`
+(`/run/credentials/<unidade>/`); nenhum valor aparece em `ps`, `systemctl show` ou `journalctl` — só o
+*caminho* do arquivo fonte, o que mantém a regra do ADR 0001 §8.
 
-```
-LoadCredential=PLAT_SECRET:/etc/plat/segredos/PLAT_SECRET
-LoadCredential=PLAT_DSN_WORKER:/etc/plat/segredos/PLAT_DSN_WORKER   # só plat-worker
-```
+**Um detalhe que muda o desenho**: `LoadCredential=` EXIGE que o arquivo-fonte exista, mesmo vazio — se
+não existir, a unidade não sobe. Isso é trivial para os 4 segredos que sempre têm um valor, mas
+`PLAT_SECRET_ANTERIOR` normalmente NÃO tem (só existe durante a janela de 24h depois de uma rotação de
+`PLAT_SECRET`) — por isso `install.sh` cria o arquivo **vazio** quando ele não existe (nunca pula a
+criação), e `settings.py` trata conteúdo vazio como chave ausente, idêntico ao comportamento sem o
+arquivo.
 
-O systemd (rodando como root, antes de rebaixar para `APP_USER`) lê o arquivo fonte e entrega uma cópia
-à unidade que a declarou, em `$CREDENTIALS_DIRECTORY` (tipicamente `/run/credentials/<unidade>/`). Isso
-é diferente de um segredo em argumento de linha de comando ou em `Environment=` da unidade: nenhum dos
-dois aparece em `ps` nem em `systemctl show` (só o *caminho* do arquivo fonte aparece ali, nunca o
-valor), o que mantém a regra do ADR 0001 §8 ("segredo nunca em argumento de linha de comando nem em
-unidade systemd") — e o arquivo fonte em `/etc/plat/segredos/` é `root:root 0600`, ilegível para
-qualquer usuário do sistema que não seja root.
+**O que isso NÃO isola — medido nesta máquina (systemd 255, sem `DynamicUser=`)**: a ACL do
+`LoadCredential=` libera o arquivo só ao `User=`/`Group=` da unidade (`dev`, o mesmo usuário que roda
+**todo outro produto desta máquina**); outro processo rodando como `dev` que souber o caminho em
+`/run/credentials/` ainda lê. O ganho real é tirar o segredo de um `.env` que rotina de operação
+(`cat`, `grep -r`, editor, backup, histórico do git) varre o tempo todo, e nunca aparecer em
+`ps`/journal/unit file. Isolamento por-unidade de verdade pede `DynamicUser=` — muda a dono de toda a
+árvore do repositório, fora de escopo aqui (ver §5 do handoff do item para o detalhe).
 
-**O que isso NÃO isola — medido nesta máquina (systemd 255, sem `DynamicUser=`), não presumido:**
-
-```
-$ sudo getfacl /run/credentials/plat-api.service/PLAT_SECRET
-user::r--
-user:dev:r--          # dev = APP_USER desta unidade
-group::---
-other::---
-
-$ cat /run/credentials/plat-api.service/PLAT_SECRET     # rodando como dev, sem sudo
-851a69...                                                # LÊ — mesmo usuário do sistema, mesma ACL
-
-$ sudo -u postgres cat /run/credentials/plat-api.service/PLAT_SECRET
-cat: ...: Permission denied                              # outro usuário do sistema: bloqueado
-```
-
-O `LoadCredential=` sem sandboxing adicional (`DynamicUser=`, `PrivateMounts=`) libera o arquivo por
-ACL só ao `User=`/`Group=` configurado na unidade — aqui, `APP_USER` (`dev`), o mesmo usuário que roda
-**todo outro produto desta máquina** (CLAUDE.md: `/home/dev/*` é uma única conta operando dezenas de
-serviços). Não existe isolamento *por processo* nesta configuração: outro processo rodando como `dev`
-que conheça o caminho lê o arquivo igual. O ganho real deste item é outro, e é genuíno: o segredo sai
-de um `.env` dentro de um repositório que rotina de operação (`cat`, `grep -r`, editor, backup,
-histórico do git) varre o tempo todo — exatamente o método do adversário do T2 ("lê o repositório...
-o histórico do git à procura de qualquer segredo") — e passa a exigir saber o caminho específico em
-`/run/credentials/` e ter UID `dev`, nunca aparece em `ps`/journal/unit file, e fica ilegível para
-qualquer usuário do sistema que não seja root ou `dev`. Isolamento por-unidade de verdade (nem outro
-processo do mesmo usuário lê) pediria `DynamicUser=` (usuário efêmero por serviço, alocado a cada
-início) — mudaria a dono de toda a árvore do repositório hoje `dev:dev` e ficou fora desta passagem.
-
-`app/settings.py` (`_credenciais_systemd`) lê `$CREDENTIALS_DIRECTORY` quando ela existe e sobrepõe o
-`.env` com qualquer arquivo de lá cujo nome bata com um campo de `Settings`; o ambiente do processo
-continua por cima de tudo (é assim que a suíte injeta valor de teste sem tocar em arquivo, ver §4).
-Fora do systemd (dev, CLI, pytest fora do `Makefile`) a variável não existe e a função devolve vazio —
-comportamento idêntico ao de antes deste item, retrocompatibilidade P5.
-
-### Segredo por ambiente (item L7-31, achado 11 do adversário no turno 3)
-
-Até 06/09/2026 o `PLAT_GARAGE_ADMIN_TOKEN` era byte a byte o mesmo em produção e em homologação, e com
-o token do arquivo de homologação o adversário listou e leu os buckets de produção `plat-demo` e
-`plat-demo2`. Homologação passou a ter uma chave S3 própria, sem poder de administração, dona apenas
-dos buckets que ela mesma cria. O desenho, o que ainda é compartilhado e por quê, e o procedimento de
-troca em produção estão em **`docs/AMBIENTES.md`**; a prova viva em
-`tests/unit/test_isolamento_homologacao.py`.
-
-`app/settings.SEGREDOS` é a lista canônica dos segredos do produto e
-`app.settings.segredos_em_claro(<arquivo .env>)` devolve, por nome e nunca por valor, os que ainda
-estiverem em claro num arquivo de ambiente.
-
-## 2. `scripts/rotacionar_segredo.sh` — rotação sem reinstalar
+## 2. `plat segredo rotacionar <nome>` — um comando para os 5
 
 ```
-sudo bash scripts/rotacionar_segredo.sh PLAT_SECRET
-sudo bash scripts/rotacionar_segredo.sh PLAT_DSN_WORKER
-sudo bash scripts/rotacionar_segredo.sh PLAT_DSN
-sudo bash scripts/rotacionar_segredo.sh PLAT_GARAGE_ADMIN_TOKEN
-sudo bash scripts/rotacionar_segredo.sh PLAT_GARAGE_S3 <slug-do-inquilino>
+sudo scripts/plat segredo rotacionar PLAT_SECRET
+sudo scripts/plat segredo rotacionar PLAT_DSN
+sudo scripts/plat segredo rotacionar PLAT_DSN_WORKER
+sudo scripts/plat segredo rotacionar PLAT_GARAGE_ADMIN_TOKEN
+sudo scripts/plat segredo rotacionar PLAT_GARAGE_CHAVE_S3:<slug-do-inquilino>
 ```
 
-O que cada rotação faz, em ordem (a ordem importa: nunca existe um instante em que o serviço novo suba
-com um segredo que o outro lado — banco ou processo — ainda não aceita):
+`scripts/plat` é o dispatcher; a lógica mora em `scripts/segredo_rotacionar.py` (Python, não bash —
+os 5 casos manipulam banco, arquivo e a Admin API do Garage, cada um com sua prova de "o valor antigo
+parou de funcionar"; um script só por caso viraria 5 arquivos quase iguais). Os nomes de unidade/porta
+são **parâmetros com valor-padrão de produção** (`plat-api`:8150, `plat-worker`:8153,
+`plataforma-garage`:3903) — o mesmo script roda em produção de verdade e, com os overrides
+`--unidade-api`/`--unidade-worker`/`--unidade-garage`/`--cred-dir`, foi o que provou o mecanismo deste
+item inteiro contra 3 serviços DE TESTE (`plat-teste-segredo-{a,b,garage}`, portas 8197-8199), sem
+nunca reiniciar `plat-api`/`plat-worker`/`nginx`/`postgres` reais — ver `scripts/prova_segredos_l7_19.py`
+(orquestra tudo, do zero até a limpeza) e `scripts/prova_garage_chave_s3.py` (o único dos 5 que roda de
+verdade em produção, porque não reinicia nada — ver abaixo). Reprodução automatizada:
+`pytest tests/e2e/test_rotacao_segredos.py -m lento`.
 
-1. **`PLAT_DSN_WORKER`**: gera senha nova (`openssl rand -hex 16`) → `ALTER ROLE plat_worker PASSWORD`
-   no banco **primeiro** → grava o DSN novo em `/etc/plat/segredos/PLAT_DSN_WORKER` → confere que a
-   senha **antiga** já não autentica mais (tenta conectar com ela e exige falha) → `systemctl restart
-   plat-worker` → espera `/saude` responder 200 (mesmo laço de espera do `install.sh`).
-2. **`PLAT_SECRET`**: gera valor novo (`openssl rand -hex 32`) → grava em
-   `/etc/plat/segredos/PLAT_SECRET` → `systemctl restart plat-api` → espera `/saude` responder 200.
-3. **`PLAT_DSN`**: mesma ordem do `PLAT_DSN_WORKER`, sobre a role `plat_app` — banco primeiro,
-   credential depois, conferência de que a senha anterior já não autentica, e então DOIS reinícios, um
-   de cada vez, `plat-api` antes de `plat-worker` (as duas unidades leem esse segredo).
-4. **`PLAT_GARAGE_ADMIN_TOKEN`**: cria um token de administração GERENCIADO pelo Garage
-   (`garage admin-token create`, existe a partir da v2) → grava no credential → confere que o token
-   novo é aceito em `/v2/ListBuckets` → reinicia `plat-api` e `plat-worker` → apaga os tokens
-   gerenciados anteriores com o mesmo prefixo de nome. O token ESTÁTICO do `garage.toml` não é tocado:
-   ele só morre quando sai do arquivo (passo 2 de `docs/AMBIENTES.md` §5).
-5. **`PLAT_GARAGE_S3 <slug>`**: cria o par RW/RO novo de um bucket, dá permissão a cada um, grava em
-   `plat.arquivo_bucket` e apaga as chaves anteriores do Garage. É a única rotação **sem reinício e sem
-   janela de indisponibilidade**: a aplicação lê essas chaves do banco a cada chamada.
+O que cada rotação faz, em ordem (a ordem sempre garante que nunca existe um instante em que o lado que
+recebe o restart já tenha o valor novo antes do lado que o autentica):
 
-Downtime = o tempo do `systemctl restart` daquela unidade só (poucos segundos; `plat-worker` devolve os
-jobs em andamento ao receber `SIGTERM`, `TimeoutStopSec=40`, e o `plat-api` tem `Restart=on-failure`).
-Nenhuma outra unidade é tocada — rotacionar `PLAT_DSN_WORKER` nunca reinicia `plat-api` e vice-versa.
+1. **`PLAT_SECRET`** (dupla-chave): o valor atual vira `PLAT_SECRET_ANTERIOR` (grava-se ele **primeiro**,
+   nunca se perde o que estava valendo), gera-se um valor novo, grava-se como `PLAT_SECRET`, reinicia-se
+   `plat-api` (o único consumidor direto — o worker só precisa que a chave exista, ver tabela do §1)
+   e espera-se `/saude` = 200. Por 24h (janela documentada, não automática — ver §5) o que foi
+   cifrado/assinado com o valor antigo continua legível (`app/seguranca_rotacao.py`); depois disso,
+   apagar (esvaziar) `/etc/plat/segredos/PLAT_SECRET_ANTERIOR` — não há hoje um timer que faça isso
+   sozinho, é passo do runbook.
+2. **`PLAT_DSN`** (senha de `plat_app`): `ALTER ROLE plat_app PASSWORD` no banco **primeiro** → grava o
+   DSN novo no credential → reinicia `plat-api` → confere que a senha **antiga** já não autentica.
+3. **`PLAT_DSN_WORKER`** (senha de `plat_worker`): mesmo desenho, sobre `plat-worker`.
+4. **`PLAT_GARAGE_ADMIN_TOKEN`**: edita `admin_token` em `garage.toml` (texto exato, nunca por posição)
+   → grava o token novo no credential do plat → reinicia o Garage → reinicia `plat-api` → confere que
+   o token antigo já não autentica na Admin API e que o novo autentica. É o único dos 5 que reinicia
+   DOIS serviços diferentes ("reinício em cadeia"), cada um com sua própria janela medida.
+5. **`PLAT_GARAGE_CHAVE_S3:<slug>`**: cria uma chave NOVA no Garage (nunca reaproveita id), concede
+   permissão no bucket do inquilino, grava a chave nova (a gravação em `plat.arquivo_bucket` é o mesmo
+   caminho que `app/garage.py`/`app/objetos.py` já usam), confirma que a chave nova grava/lê um objeto
+   de prova, **apaga a chave antiga no Garage** e confirma que ela já não autentica (403). **Nenhuma
+   unidade reinicia** — a API resolve o par de chaves do bucket por `SELECT` a cada requisição
+   (`app.objetos._resolver_bucket_por_slug`), nunca as guarda em memória de processo — por isso este é
+   o único dos 5 cuja rotação real roda em produção de verdade dentro deste item: mede-se `/saude` de
+   `plat-api` antes/depois (sempre 200, nunca reiniciado) contra um bucket **descartável**, nunca um
+   inquilino real.
 
-**Consequência de rotacionar `PLAT_SECRET` (avisar antes, em produção com usuários ativos):**
-- Toda URL assinada de objeto (`app/objetos.py`, HMAC-SHA256 do `PLAT_SECRET`) emitida antes da troca
-  para de validar imediatamente — o cliente pede o link de novo, sem novo estado a limpar.
-- O `totp_secret` de cada usuário com 2FA ligado está cifrado com o `PLAT_SECRET` anterior
-  (`app/auth/totp.py`); depois da troca ele fica ilegível. Isto **já é tratado no código**, não é uma
-  falha nova: `app/auth/rotas_login.py` captura a exceção de decifragem e cai para código de
-  recuperação (`# segredo ilegível (PLAT_SECRET trocado): só recuperação vale`). A pessoa entra com um
-  código de recuperação e recadastra o 2FA. Não há hoje uma janela de dupla-chave (`PLAT_SECRET` +
-  `PLAT_SECRET_ANTERIOR`) que evite esse recadastro — ficou de fora deste passe por tamanho; ver §6.
+### Zero 5xx durante o restart — a técnica, não um acaso
 
-## 3. Prova de que o segredo não está mais no repositório
+Os 4 segredos que reiniciam serviço usam **ativação por soquete** (`Sockets=` do systemd) nos serviços
+de teste: o soquete TCP é propriedade da unidade `.socket`, que continua no ar e enfileirando conexões
+novas no kernel enquanto a unidade `.service` reinicia — por isso uma janela de restart não vira
+"connection refused" nem 5xx, ela só some na fila até o processo novo assumir. `scripts/
+segredo_rotacionar.py::reiniciar_e_medir` marreta `/saude` a cada 50 ms durante o `systemctl restart`
+inteiro e conta os códigos de resposta à parte de qualquer erro de conexão (os dois nunca se somam:
+"5xx" é uma resposta HTTP de servidor com erro; "erro de conexão" é ausência de resposta — confundir os
+dois esconderia justamente a baixa real, se existisse). **Medido, `tests/medidas/L7-19.json`: 0
+respostas 5xx nas 4 rotações que reiniciam algo**, num total de ~150 requisições martelo; um punhado de
+erros de conexão isolados (a fração de segundo entre o processo velho soltar o soquete e o novo
+assumi-lo, mesmo com socket activation) — reportados, nunca escondidos, nunca contados como 5xx.
+**Produção hoje (`plat-api`/`plat-worker`) NÃO usa socket activation** — a técnica foi provada no
+serviço de teste deste item; adotá-la em produção pede editar as unidades reais e um restart controlado
+para aplicar, o que este turno não fez (limite duro: nenhum restart de produção). Fica registrado como
+próximo passo natural em `docs/RUNBOOKS/segredos.md` §6.
+
+## 3. Prova de que nenhum dos 5 está no repositório nem no journal
 
 ```
-grep -c '^PLAT_SECRET=\|^PLAT_DSN_WORKER=' .env        # 0
-sudo stat -c '%a %U' /etc/plat/segredos/PLAT_SECRET     # 600 root
-sudo stat -c '%a %U' /etc/plat/segredos/PLAT_DSN_WORKER # 600 root
-sudo -u "$(stat -c %U .)" cat /etc/plat/segredos/PLAT_SECRET   # Permission denied — nem o dono do repo lê direto
+sudo scripts/plat segredo rotacionar <nome> --json-saida /tmp/resultado.json   # cada rotação já imprime a prova "antigo falha / novo funciona"
 ```
 
-`journalctl -u plat-api -o cat | grep -i PLAT_SECRET` e o mesmo para `plat-worker` continuam vazios
-(o middleware de log nunca grava valor de configuração; isso já valia antes deste item).
+Automatizado (roda com `pytest`, lê os valores REAIS de `/etc/plat/segredos/` via `sudo cat` e procura
+por eles — nunca imprime o valor, só o nome do segredo se achar):
 
-## 4. Como a suíte de testes ainda usa os dois segredos
+```
+pytest tests/unit/test_segredos_fora_do_repo.py -q
+```
 
-`tests/conftest.py` (`valores_env`) e `app/settings.py` (`valores_do_ambiente`) sempre deixam o
-**ambiente do processo** vencer o `.env` e o credential. O `Makefile` explora exatamente isso: a
-variável `SEGREDOS` lê os dois arquivos com `sudo cat` (o mesmo privilégio que `install.sh` e `make
-migrar` já exigem — nenhuma novidade de permissão) e os passa como variável de ambiente só para o
-processo filho (`pytest`, `uvicorn` de desenvolvimento), nunca como argumento visível em `ps`:
+Três cláusulas: (1) `grep -rIl` na árvore de trabalho inteira (exceto `.git`/`venv`/`node_modules`);
+(2) `git log --all -S<valor>` no histórico inteiro, não só o HEAD; (3) `journalctl -u plat-api -u
+plat-worker -g <valor>` — as três dão zero para os 5 segredos hoje. `.env` sem nenhum dos 5:
+`tests/unit/test_instalador.py::test_env_real_desta_maquina_nao_tem_nenhum_dos_cinco_segredos` lê o
+`.env` real desta instalação (não um exemplo) e falha se qualquer um aparecer.
+
+## 4. Como a suíte de testes ainda usa os 5 segredos
+
+`tests/conftest.py` e `app/settings.py::valores_do_ambiente` sempre deixam o **ambiente do processo**
+vencer o `.env` e o credential. O `Makefile` explora isso: a variável `SEGREDOS` lê os 5 arquivos com
+`sudo cat` (mesmo privilégio que `install.sh`/`make migrar` já exigem) e os exporta só para o processo
+filho (`pytest`, `uvicorn` de desenvolvimento) — nunca em argumento visível em `ps` — e só quando o
+arquivo existe e não é vazio (assim `PLAT_SECRET_ANTERIOR`/`PLAT_GARAGE_ADMIN_TOKEN`, normalmente
+vazios, não pisam em nada por engano):
 
 ```makefile
-SEGREDOS=PLAT_SECRET="$$(sudo cat /etc/plat/segredos/PLAT_SECRET 2>/dev/null)" PLAT_DSN_WORKER="$$(sudo cat /etc/plat/segredos/PLAT_DSN_WORKER 2>/dev/null)"
 teste:
 	$(SEGREDOS) $(VENV)/pytest -m "not lento"
 ```
@@ -169,17 +155,17 @@ Isso é só para desenvolvimento/CI local fora do systemd. Em produção o syste
 
 ## 5. O que fica de fora deste item (fora de escopo, não esquecido)
 
-- `PLAT_DSN` (senha da role `plat_app`) continua no `.env`. O mesmo raciocínio deste item vale para
-  ela; ficou de fora desta passagem porque o pedido foi específico (`PLAT_DSN_WORKER` + `PLAT_SECRET`,
-  os dois nomeados no achado do adversário do T2). Item futuro: migrar `PLAT_DSN` do mesmo jeito.
-- Chaves S3 do Garage por inquilino e o token admin do Garage (`garage.toml`, hoje em claro) — parte
-  maior do backlog original deste item (hipótese completa em `laco/estado.json`), tocam um daemon que
-  outra trilha (L0-11) está construindo em paralelo nesta mesma janela; não mexido aqui para não
-  colidir.
-- Dupla-chave de `PLAT_SECRET` (`PLAT_SECRET` + `PLAT_SECRET_ANTERIOR` por 24h) para rotação sem
-  recadastro de 2FA — ver §2.
-- CA própria para appliance de cliente (Degrau 0 da plataforma) — não existe cliente com appliance
-  ainda.
+- **`DynamicUser=`** (isolamento por-unidade de verdade, nem outro processo do mesmo usuário lê) —
+  mudaria a dono de toda a árvore do repositório hoje `dev:dev`; fora de escopo.
+- **Socket activation em produção** (`plat-api`/`plat-worker` de verdade) — provada no serviço de teste
+  (§2), não adotada nos serviços reais porque isso pede editar a unidade instalada e um restart
+  controlado, banido neste turno. Ver `docs/RUNBOOKS/segredos.md` §6 para o procedimento de adoção.
+- **Limpeza automática de `PLAT_SECRET_ANTERIOR` depois de 24h** — hoje é passo manual do runbook (§2
+  do `docs/RUNBOOKS/segredos.md`); um timer/cron que zera o arquivo sozinho é próximo passo natural.
+- **CA própria para appliance de cliente** (Degrau 0 da plataforma) — não existe cliente com appliance.
+- **Alarme de expiração de certificado antes dos 30 dias do certbot** (blackbox exporter, proposto no
+  backlog original) — não construído; `certbot.timer` automático continua sendo a única rede de
+  segurança (§6).
 
 ## 6. Certificado TLS — expiração e renovação
 
@@ -222,10 +208,8 @@ sudo certbot renew --dry-run              # simula a renovação sem gastar rate
 sudo certbot renew --cert-name plat.iagrointel.com --force-renewal
 ```
 
-**Alarme antes do vencimento**: não existe hoje (o backlog original deste item propunha um exporter
-`blackbox` avisando 14 dias antes — fonte `PROM-blackbox` em `laco/estado.json`); com a renovação
-automática em 30 dias de folga o risco real é o *timer* parar (ex.: máquina desligada por mais de 30
-dias) — `systemctl status certbot.timer` acima é hoje a única checagem, manual.
+**Alarme antes do vencimento**: não existe hoje (ver §5) — `systemctl status certbot.timer` é hoje a
+única checagem, manual.
 
 ## 7. Varredura de dependência com CVE conhecido (item L7-03-f-dependencias-cve-log-correcoes)
 
@@ -352,70 +336,39 @@ registrado na casa (`reference_oom-derrubou-postgres`: 20 sessões de 370 MiB ca
 compartilhado). Por decisão desta passagem — dentro do espírito de D21, não uma decisão nova —
 **ClamAV fica de fora até o disco/RAM da máquina mudar** (D21 resolver, ou servidor dedicado do D37).
 
-### 8.2 A camada que fica no lugar (versão de 06/09/2026, depois da refutação)
+### 8.2 A camada mínima que fica no lugar
 
-A primeira versão desta camada comparava só "família declarada x tipo devolvido pelo `libmagic`" e foi
-**REFUTADA por adversário independente** no mesmo dia (laço, handoff T3, achados 22-25): o polyglot passava
-(arquivo que COMEÇA com assinatura de imagem válida e carrega script depois recebe do `libmagic` exatamente a
-família declarada); `Content-Type` fora da tabela significava "não examinar", ou seja, quem decidia se a
-varredura rodava era o remetente; só os primeiros 8 KiB eram olhados; e zip/kmz não era aberto. `app/
-varredura_conteudo.py` agora roda cinco checagens, na ordem abaixo, e a primeira que recusar decide:
+`app/varredura_conteudo.py`: identifica o tipo REAL do arquivo pelos primeiros `CABECALHO_BYTES` (8 KiB, o
+bastante para `libmagic`/`python3-magic` decidir — já dpkg nesta máquina, ver `deploy/pacotes_apt.txt` do item
+L7-14/L0-04-a, que o cita pelo mesmo motivo: "confere o tipo declarado no upload contra o que o arquivo
+realmente é") e recusa quando o tipo detectado não bate com a família esperada do `Content-Type` declarado
+(`TIPOS_PERMITIDOS`, mesmas chaves de `app/objetos.EXTENSOES`). Isso já cobre o polyglot óbvio do portão: um
+arquivo com assinatura de imagem que também é reconhecido como HTML/script continua batendo a checagem porque
+o tipo que o `libmagic` reconhece primeiro já não é o da família declarada.
 
-| # | checagem | o que pega |
-|---|---|---|
-| 1 | família declarada x tipo real (`TIPOS_PERMITIDOS`, mesmas chaves de `app/objetos.EXTENSOES`) | script puro declarado `image/jpeg`; zip declarado `application/pdf` |
-| 2 | lista de NEGAÇÃO determinística, válida sob QUALQUER `Content-Type` (inclusive vazio, inventado e `application/octet-stream`): shebang no início, assinatura de executável conferida à mão, tipo real de script/HTML quando os bytes são texto | script declarado `text/plain`, `text/html` ou `application/x-inventado`; ELF/PE sob tipo genérico |
-| 3 | busca de carga executável no CORPO INTEIRO entregue pelo chamador (`<script`, `<iframe`, `<?php`, `<!doctype html`, `#!/bin/`, `#!/usr/`), com emenda entre as partes do multipart | polyglot imagem+script; carga além dos 8 KiB |
-| 4 | integridade estrutural de imagem: PNG termina no chunk `IEND`, JPEG no marcador `FFD9`, GIF no byte `0x3B`; byte depois do fim = recusa | qualquer coisa colada depois de uma imagem válida, mesmo carga que não está na lista da linha 3 |
-| 5 | lista de entradas do zip/kmz: extensão de script/executável, ou entrada cujo conteúdo começa com shebang | `carga.sh` dentro de um kmz |
-
-**Tipo declarado desconhecido virou rigor máximo, não isenção.** Antes, `TIPOS_PERMITIDOS.get(declarado, None)`
-devolvia `None` para qualquer tipo fora da tabela e `None` queria dizer "não examinar". Agora `None` quer dizer
-só "não há família para comparar na linha 1"; as linhas 2-5 valem para todo mundo. A rota `POST /api/arquivos`
-continua aceitando `Content-Type` fora de `app/objetos.EXTENSOES` (a suíte envia `text/plain`, e a chave no
-Garage cai na extensão `.bin`), mas esse arquivo é varrido com o mesmo rigor e é ENTREGUE de volta como anexo
-genérico (§8.6).
-
-**A armadilha que a regra tem de contornar, e como.** MEDIDO nesta máquina: `libmagic` classifica ~0,9% de
-bytes PURAMENTE ALEATÓRIOS (18/2000 amostras de 4 KiB) como algo diferente de `application/octet-stream`,
-inclusive `application/x-dosexec` por coincidência de assinatura. Recusar pelo RÓTULO faria o upload binário
-legítimo (CAD, dado proprietário, e o `os.urandom` que a própria suíte envia) reprovar de vez em quando — o
-oposto de P5 (reprodutível) e de P3 (suíte sempre verde). Por isso nenhuma checagem depende do rótulo para
-binário:
-
-- família de executável só recusa com a assinatura mágica REAL no início dos bytes: `\x7fELF`, Mach-O, Wasm,
-  Dalvik e `MZ` **com o `PE\0\0` conferido no deslocamento que o próprio arquivo declara em 0x3C** (dois bytes
-  `MZ` sozinhos aparecem por acaso em 1 de cada 65 mil blocos aleatórios; o `PE\0\0` fecha isso);
-- família de script/HTML só recusa quando os bytes são texto de verdade (sem byte nulo e decodificáveis em
-  UTF-8, ou 99% de ASCII imprimível) — 4 KiB aleatórios não passam nessa porta;
-- todo padrão da busca de carga tem 5 bytes ou mais (o mais curto, `<?php`, dá probabilidade da ordem de 3e-8
-  por amostra de 4 KiB);
-- o shebang exige `#!` mais um caminho ASCII plausível na primeira linha, nunca os dois bytes sozinhos.
-
-`tests/unit/test_varredura_conteudo_polyglot.py` roda 300 amostras aleatórias sob `application/octet-stream` e
-100 sob `text/plain` justamente para que uma regra que volte a depender de sorte comece a falhar.
-
-**Quanto do arquivo é varrido, honestamente.** A varredura só enxerga o que o chamador entrega. `POST /api/
-arquivos` entrega o corpo inteiro quando ele cabe em uma parte (`limites.ARQUIVO_BUFFER_UNICO_BYTES`, 8 MiB) e,
-acima disso, parte por parte (8 MiB de cada vez, com 32 bytes de emenda entre elas), sem nunca carregar o
-arquivo inteiro em RAM. As checagens 1, 2, 4 e 5 valem sobre a primeira parte; a 3 vale sobre o corpo inteiro.
-Um zip de mais de 8 MiB não tem o diretório central na primeira parte: a checagem 5 não dá veredito nele (as
-outras continuam valendo) — é o limite declarado desta camada, não um esquecimento.
+**Por que NÃO existe também um denylist "tipo perigoso, seja qual for o `Content-Type`"** — MEDIDO antes de
+escrever a regra (`tests/unit/test_varredura_conteudo.py::test_binario_generico_aleatorio_nunca_e_recusado_
+por_assinatura`): `libmagic` classifica ~0,9% de bytes PURAMENTE ALEATÓRIOS (18/2000 amostras de 4 KiB) como
+algo diferente de `application/octet-stream`, inclusive `application/x-dosexec` por coincidência de assinatura.
+Um denylist que valesse mesmo sob `Content-Type` genérico reprovaria upload binário legítimo (CAD, dado
+proprietário) ao acaso — o oposto de P5 (reprodutível) e P3 (suíte sempre verde). Por isso o `Content-Type`
+genérico (`application/octet-stream`) passa sem exame de assinatura nesta camada: é exatamente onde ClamAV
+faria a diferença de verdade (assinatura de conteúdo malicioso conhecido, não heurística de tipo).
 
 Onde a varredura entra (nunca depois de já ter gasto uma chamada ao Garage) — **de propósito na BORDA, não
 dentro de `objetos.guardar()`**: esse adaptador é genérico (ADR 0004/0006) e também é chamado com conteúdo já
 validado por outro meio (miniatura) ou sintético (a própria suíte grava `b"abc"` sob `image/png` em
 `tests/api/catalogo/test_miniatura.py::test_adaptador_de_objetos_e_url_assinada` para testar só o contrato de
 armazenamento) — varrer ali quebraria esse teste sem ganhar segurança nenhuma (o conteúdo real de produção
-que chega em `guardar()` pela miniatura já passou por uma validação mais forte, ver linha 3 da tabela):
+que chega em `guardar()` pela miniatura já passou por uma validação mais forte, ver linha 2 da tabela):
 
 | caminho | onde a varredura corre | quem varre |
 |---|---|---|
-| `POST /api/arquivos`, arquivo pequeno (1 PUT só) | em `enviar()`, logo antes de chamar `objetos.guardar()`, sobre o corpo inteiro | `app/rotas_arquivos.py::enviar` |
-| `POST /api/arquivos`, arquivo grande (multipart) | na 1ª parte, antes de `objetos.parte_iniciar`; nas partes seguintes, busca de carga com emenda entre blocos | `app/rotas_arquivos.py::enviar` |
+| `POST /api/arquivos`, arquivo pequeno (1 PUT só) | em `enviar()`, logo antes de chamar `objetos.guardar()` | `app/rotas_arquivos.py::enviar` |
+| `POST /api/arquivos`, arquivo grande (multipart) | na 1ª parte do streaming, antes de `objetos.parte_iniciar` | `app/rotas_arquivos.py::enviar` |
 | `POST /api/itens/{id}/miniatura` | não chama `app/varredura_conteudo.py` — a barreira já é `miniatura.normalizar()` (Pillow decodifica pixel real e reencoda para PNG limpo; mais forte que assinatura de bytes, existia antes deste item) | `app/catalogo/miniatura.py` |
 
-`ConteudoRecusado` (exceção de `app/varredura_conteudo.py`, reexportada por `app/objetos.py` como
+`ConteudoRecusado` (nova exceção em `app/varredura_conteudo.py`, reexportada por `app/objetos.py` como
 `objetos.ConteudoRecusado`, mesmo padrão de `objetos.CotaExcedida`) vira `415 conteudo_recusado` com
 `detalhe.tipo_detectado` na rota de `POST /api/arquivos`.
 
@@ -430,14 +383,8 @@ rotas do §8.2 muda — todas conhecem só `escanear_cabecalho()`.
 ### 8.4 Teste do portão
 
 ```
-$ pytest tests/unit/test_varredura_conteudo.py tests/unit/test_varredura_conteudo_polyglot.py \
-         tests/adversario/test_g6_varredura_anexos.py tests/api/test_arquivos.py
+$ pytest tests/unit/test_varredura_conteudo.py tests/api/test_arquivos.py -k "script or disfarcado" -v
 ```
-
-Os quatro grupos que o adversário deixou como `xfail(strict=True)` em
-`tests/adversario/test_g6_varredura_anexos.py` passaram a reprovar de verdade em 06/09/2026 e a marca saiu
-(polyglot GIF/JPEG/PNG + script; script sob `text/html`, `application/x-inventado`, `""` e `text/plain`; carga
-além de 8 KiB; `carga.sh` dentro de um kmz). O registro do ataque ficou no arquivo, como comentário.
 
 `test_extensao_jpg_com_conteudo_de_script_e_recusado` (unitário) e `test_api_recusa_script_disfarcado_de_jpeg`
 (fim a fim, API real): `Content-Type: image/jpeg` com corpo `#!/bin/sh\necho pwned\n` → `415 conteudo_recusado`,
@@ -446,41 +393,109 @@ o mesmo acima do teto de uma parte (nunca abre multipart no Garage para um conte
 
 ### 8.5 O que fica de fora desta passagem (não esquecido)
 
-- ClamAV de verdade — §8.1, D21. Nada aqui procura assinatura de malware conhecido: esta camada recusa CLASSE
-  de conteúdo (script, executável, HTML, imagem com carga colada), não vírus por nome.
-- Do zip/kmz é aberta a LISTA de entradas (nome e primeiros bytes de cada uma), não o conteúdo de cada entrada
-  inteira; e só quando o pacote cabe na primeira parte do envio (8 MiB), porque acima disso o diretório central
-  do zip não está no que o chamador entrega.
-- A busca de carga é por padrão literal em texto: conteúdo malicioso ofuscado ou comprimido dentro de um
-  formato binário legítimo não é alcançado por ela (é o que ClamAV faria).
-- O preço da checagem 3, declarado: um arquivo LEGÍTIMO que carregue um desses padrões literalmente (uma
-  coluna de CSV com `<script`, um PDF com JavaScript embutido) é recusado com `415 conteudo_recusado` e a
-  mensagem diz qual padrão e em que deslocamento. É escolha desta camada — o mesmo padrão é a carga de XSS
-  quando o arquivo volta pelo navegador — e não há exceção por inquilino; se um cliente real precisar enviar
-  esse conteúdo, a decisão volta ao dono, não se afrouxa a regra em silêncio.
+- ClamAV de verdade — §8.1, D21.
+- Varredura de conteúdo dentro de arquivos compostos (abrir o zip do KMZ e varrer cada entrada) — hoje só o
+  contêiner externo é conferido.
 - O caminho de sincronização da PWA de campo (L2-07, ainda não construído) precisará da mesma barreira quando
   existir; `objetos.guardar()` já cobre automaticamente qualquer chamador futuro que passe por ele.
 
-### 8.6 Entrega segura: o conteúdo do cliente volta como anexo, nunca como página
+## 9. Cabeçalhos de segurança, CORS e perfil TLS (item L7-03-e-cabecalhos-csp-tls)
 
-Medido pelo adversário no mesmo ataque (achado 23, cadeia): `GET /api/arquivos/{sha256}` devolvia o conteúdo
-com `media_type=r["content_type"]` — o MESMO `Content-Type` que o remetente escolheu — e sem
-`Content-Disposition`. Um arquivo enviado como `text/html` voltava renderizando como HTML na própria origem da
-aplicação, onde a sessão do usuário vale; `X-Content-Type-Options: nosniff` não resolve esse caso, porque o
-tipo declarado É `text/html` (não há adivinhação para desligar).
+### 9.1 Quem declara cada cabeçalho
 
-`app/entrega_conteudo.py` aplica três regras juntas em toda rota que devolve byte que veio de fora:
+`add_header` do nginx ACRESCENTA, nunca substitui: cabeçalho posto nos dois lugares sai em dobro e o
+serviço perde como dizer outra coisa numa rota. A repartição, então, é esta — e ela é provada por
+`tests/unit/test_cabecalhos_fonte.py`, que lê `deploy/nginx.conf`:
 
-1. **tipo de mídia por lista fechada**: só os tipos de `app/objetos.EXTENSOES` voltam como foram declarados;
-   qualquer outro — `text/html`, `application/xhtml+xml`, `image/svg+xml`, JavaScript, tipo inventado — é
-   rebaixado para `application/octet-stream`. Lista fechada, não lista de proibidos: tipo novo já nasce
-   rebaixado, sem ninguém precisar lembrar de acrescentá-lo.
-2. **`Content-Disposition: attachment`** com nome saneado, nas duas formas da RFC 6266 (`filename=` só ASCII e
-   `filename*=UTF-8''...` da RFC 5987).
-3. **`X-Content-Type-Options: nosniff`**.
+| cabeçalho | quem declara | por quê |
+|---|---|---|
+| `Content-Security-Policy` | aplicação (`app/cabecalhos.py`) | depende da resposta: nonce novo a cada uma, política diferente para documento e para dado, `frame-ancestors` por inquilino |
+| `Permissions-Policy`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy` | aplicação | idem: o CORP muda para `cross-origin` quando a origem é a de um token autorizado |
+| `Referrer-Policy`, `X-Content-Type-Options` | aplicação | ficam ao lado dos demais, numa origem só |
+| `Cache-Control` | aplicação (piso `no-store, must-revalidate`) | decisão do turno T2, mantida |
+| `Strict-Transport-Security` | nginx, bloco 443 | é do transporte; a aplicação não sabe se a conexão chegou por TLS |
+| `X-Robots-Tag` | nginx | vale para tudo o que o domínio serve, inclusive o que a aplicação não responde |
+| conjunto inteiro em `/static/` | nginx | ali o nginx é a origem do corpo |
 
-| rota | tratamento |
-|---|---|
-| `GET /api/arquivos/{sha256}` | tipo da lista fechada + anexo + nosniff |
-| `GET /api/objetos/{chave}` (URL assinada, anônima) | tipo da lista fechada + anexo + nosniff |
-| `GET /api/itens/{id}/miniatura` (e as variantes pública/compartilhada) | só nosniff: o conteúdo é um PNG REDESENHADO pelo Pillow, nunca os bytes do cliente, e é servido dentro de `<img>` na aplicação — forçar download quebraria a tela sem fechar risco nenhum |
+`X-Frame-Options` deixou de ser declarado. Quem manda no embutir passou a ser `frame-ancestors`, que
+aceita uma LISTA de origens (o cabeçalho antigo só aceita `DENY`, `SAMEORIGIN` ou uma origem) e que os
+navegadores atuais aplicam com precedência sobre ele quando os dois aparecem.
+
+O HSTS continua em `max-age=31536000` (um ano). `includeSubDomains` e `preload` NÃO foram ligados:
+`preload` é irreversível na prática (a lista embutida nos navegadores demora meses a sair) e alcança o
+domínio inteiro da casa, não só este serviço — é decisão do dono, não do item.
+
+### 9.2 A política
+
+Documento HTML:
+
+```
+default-src 'self'; script-src 'self' 'nonce-<sorteado por resposta>'; style-src 'self';
+img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:;
+child-src 'self' blob:; media-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none';
+form-action 'self'; frame-src 'self'; upgrade-insecure-requests; frame-ancestors <por inquilino>
+```
+
+Sem `'unsafe-inline'` e sem `'unsafe-eval'`. `blob:` em `worker-src`/`child-src` porque o MapLibre cria o
+próprio processo de trabalho por URL de blob. As páginas de `web/` não têm `<script>` em linha nem
+tratador de evento em atributo (`onclick=`, `onerror=`…), e um teste que LÊ os arquivos impede que
+voltem: com esta política eles não executariam, e a tela abriria em branco sem erro visível. A única
+exceção é o script de arranque da Swagger UI, que recebe o nonce da própria resposta em `/api/docs`.
+
+Resposta que não é documento (JSON, GeoJSON, imagem, tile, arquivo) leva
+`default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`.
+
+### 9.3 Embutir a aplicação no sítio do cliente (`frame-ancestors` por inquilino)
+
+Embutir é caso de uso, não acidente. A lista de origens autorizadas é do INQUILINO e mora em
+`plat.tenant.config -> 'origens_embutidas'`, a mesma coluna jsonb das demais configurações da
+organização. Sem lista, a política sai `frame-ancestors 'none'` — a falta fecha.
+
+```sql
+-- pela role da aplicação, com contexto de inquilino (igual ao PUT /api/org)
+SELECT set_config('plat.tenant_id', '<id>', true);
+UPDATE plat.tenant
+   SET config = config || jsonb_build_object('origens_embutidas',
+       '["https://sig.exemplo.gov.br"]'::jsonb)
+ WHERE id = plat.tenant_atual();
+```
+
+O middleware descobre de quem é a página por `state.tenant_id` (quando houve autenticação) ou pelo
+parâmetro `inquilino` da própria URL (páginas ainda sem sessão). A leitura vai pela função
+`plat.origens_embutidas(slug, id)`, `SECURITY DEFINER` da migração `20260907T2047`: o cabeçalho é montado
+antes de haver contexto de inquilino na conexão, e sem ela a RLS devolveria zero linhas e a política sairia
+sempre fechada. A função devolve um campo de configuração de um inquilino, que o próprio cabeçalho já
+publica. O valor fica em memória por 60 s (`app.cabecalhos.CACHE_ORIGENS_S`).
+
+### 9.4 CORS por token
+
+A lista de origens do CORS é a MESMA `restricao.referer` que o token de serviço já usa desde o item L0-02
+para ser aceito. Só quando a requisição chega autenticada por token e a origem está naquela lista é que a
+resposta ganha `Access-Control-Allow-Origin` com a origem pedida (nunca `*`), mais
+`Access-Control-Expose-Headers: x-req-id` e `Cross-Origin-Resource-Policy: cross-origin`. `Vary: Origin`
+sai sempre que há `Origin`, para que um intermediário não sirva a resposta de uma origem a outra.
+
+O preflight (`OPTIONS` com `Access-Control-Request-Method`) é respondido sem consultar token, porque a
+especificação proíbe o navegador de mandar crachá no preflight. Autorizar o preflight não entrega dado
+nenhum: a requisição de verdade continua barrada pela restrição do token (401 `referer_nao_permitido`).
+
+### 9.5 TLS, HTTP/2 e OCSP stapling
+
+`deploy/nginx_tls.conf` (o `install.sh` escreve em `/etc/nginx/conf.d/plat_tls.conf`, contexto http, só
+depois de existir certificado) põe o servidor no perfil **intermediate** do guia Server Side TLS da
+Mozilla: TLS 1.2 e 1.3 apenas, escolha de cifra pelo cliente, retomada por ticket desligada. Uma
+diferença declarada: a lista de cifras não traz as `DHE-*`, o que dispensa gerar e manter um
+`ssl_dhparam` e não perde nenhum cliente do alvo do perfil — todos negociam ECDHE.
+
+O OCSP stapling entrega no aperto de mão a resposta do respondedor da CA, poupando ao navegador uma
+consulta que revela o sítio visitado; `ssl_stapling_verify on` exige a cadeia, que o certbot deixa em
+`chain.pem`, e o resolvedor declarado é o do sistema.
+
+HTTP/2: no nginx 1.24 (Ubuntu 24.04) ainda é opção do `listen`, não a diretiva `http2 on;` do 1.25.1+.
+O `install.sh` acrescenta `http2` à linha `listen ... ssl;` que o certbot gerou, ao reescrever o bloco.
+
+### 9.6 `security.txt`
+
+`GET /.well-known/security.txt` responde no contrato da RFC 9116, gerado a cada leitura porque o campo
+`Expires` é obrigatório e um arquivo com data fixa envelhece em silêncio. O contato vem de
+`PLAT_SEGURANCA_CONTATO`; sem a chave vale `seguranca@<host de PLAT_URL_PUBLICA>`.

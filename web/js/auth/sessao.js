@@ -20,7 +20,10 @@ export function sessaoProvavel() { return ler(CHAVE_SESSAO) === '1'; }
 
 export function urlLogin(proximo = location.pathname + location.search) {
   const p = new URLSearchParams();
-  const slug = inquilinoLembrado();
+  /* item L7-03-e: sem o inquilino na URL, a tela de login perde de quem é a organização — e, quando a página
+     está EMBUTIDA no sítio do cliente, o frame-ancestors da resposta seguinte já não conhece o inquilino e o
+     navegador recusa o quadro no meio do caminho. O localStorage vem primeiro; a URL atual é a rede de baixo. */
+  const slug = inquilinoLembrado() || new URLSearchParams(location.search).get('inquilino') || '';
   if (slug) p.set('inquilino', slug);
   if (proximo && proximo !== '/entrar') p.set('proximo', proximo);
   const q = p.toString();
