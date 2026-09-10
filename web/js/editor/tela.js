@@ -17,6 +17,8 @@ import { PALETA_LAYOUT } from './paleta.js';
 import { PALETA_PAGINAS } from './paleta_paginas.js';
 import { novoDocumento } from './documento.js';
 import { montarPainelDados } from '../app/painel_dados.js';
+import { montarPainelAcoes } from '../app/painel_acoes.js';
+import { REGISTRO as REGISTRO_WIDGETS } from '../widgets/registro.js';
 
 /* item `app` ganha a paleta de PÁGINAS E LAYOUT (L5-01-a: página, cabeçalho, menu, janela, ...); os demais
    tipos de construtor continuam com a paleta de layout comum do L5-08, sem página nenhuma dentro deles. */
@@ -61,13 +63,23 @@ async function iniciar() {
   /* item L5-07: painel de fontes, vistas e mensagens (só para `app`); as coleções vivem fora do editor de nós e
      entram no corpo na gravação; erro do modelo bloqueia o Salvar com a mensagem na tela */
   let painel = null;
-  const editor = criarEditor({
+  const colecoes = { fontes: documento.corpo.fontes || [], vistas: documento.corpo.vistas || [], mensagens: documento.corpo.mensagens || [] };
+  let editor = null;
+  editor = criarEditor({
     raiz: alvo,
     documento,
     paleta: paletaDoTipo(documento.tipo),
     aoMudar: () => { estado.textContent = 'alterações não gravadas'; painel?.redesenhar(); },
+    /* item L5-01-e: painel "Ações" no fim das propriedades de cada WIDGET do app (tipos do registro do motor) —
+       gatilho → alvo → ação → parâmetros; escreve nas mesmas `colecoes.mensagens` do painel de dados */
+    extensaoPropriedades: ({ no, raiz }) => {
+      if (documento.tipo !== 'app' || !REGISTRO_WIDGETS.has(no.tipo)) return;
+      montarPainelAcoes({
+        raiz, no, colecoes, nosAtuais: () => editor.documento().corpo.nos,
+        aoMudar: () => { estado.textContent = 'alterações não gravadas'; painel?.redesenhar(); },
+      });
+    },
   });
-  const colecoes = { fontes: documento.corpo.fontes || [], vistas: documento.corpo.vistas || [], mensagens: documento.corpo.mensagens || [] };
   if (documento.tipo === 'app') {
     // recolhido por padrão e dentro da coluna lateral do editor: a altura da página continua a da paleta (o
     // arrasto da paleta é medido por coordenadas e o navegador só rola a paleta para a vista quando nada abaixo

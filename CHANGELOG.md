@@ -603,6 +603,22 @@ No visualizador: bloco "Gráficos" e botão ▥ na árvore, SVG próprio puro (`
 canvas, guardado por camada em localStorage, clique que seleciona no mapa (filtro SQL-92 para a contagem no
 servidor + expressão MapLibre numa camada de destaque). Testes: 31 de API, 16 unitários no node, 6 e2e com 12
 capturas.
+## codex cx1, setembro de 2026 (item L5-01-e-acoes-configuraveis: painel "Ações" por widget e ações do usuário)
+
+Painel "Ações" no fim das propriedades de cada widget de app no construtor (`web/js/app/painel_acoes.js`, gancho
+`extensaoPropriedades` do editor): gatilho (só os eventos que o TIPO do widget emite) → alvo (widget ou vista) →
+ação (só as que o alvo aceita) → parâmetros (relação mesma fonte / por atributo com os campos em lista / espacial;
+condição CQL2 sobre os registros de origem). Validação nos dois lados (`web/js/app/modelo.js` e
+`app/app_modelo/validar.py`, contrato dos widgets espelhado em `contratos.py` e comparado por teste):
+`evento_incompativel`, `alvo_incompativel`, `gatilho_repetido`, condição inválida ou com campo inexistente; campo
+renomeado na fonte vira "referência quebrada" marcada no painel. Barramento aplica a condição (ação de widget não
+dispara se nenhum registro passa). Botão "Ações" do usuário nos widgets de dado: exportar CSV/GeoJSON das feições
+FILTRADAS, ver na tabela, zoom à seleção, criar item com a seleção (tipo `selecao`; sem o tipo, erro nomeado no
+menu). Portão (`tests/e2e/test_app_acoes.py`): app "seleção no mapa → filtra tabela → gráfico pisca (condição) →
+lista de escolas (atributo)" montado só pelo painel, 8 capturas, exportação com 1 linha filtrada (CSV e GeoJSON).
+Refutação (`tests/unit/test_app_acoes.py`): 30 ações em cadeia, p95 0,47 ms por volta e profundidade 31, ciclo
+fechado só avisa e para (filtro idempotente); renomear campo quebra a relação nomeadamente nos dois validadores.
+Quadro gatilhos × alvos × ações vs os 8 gatilhos do EXB em `docs/PARIDADE.md`. ADR `20260908T1200`.
 
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 

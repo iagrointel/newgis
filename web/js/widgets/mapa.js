@@ -62,7 +62,8 @@ class PlatMapa extends PlatWidget {
     const barra = document.createElement('div');
     barra.className = 'mapa-barra';
     barra.textContent = `${desenhadas} feição(ões) · ${selecao.size} selecionada(s)`;
-    this.replaceChildren(svg, barra);
+    const acoes = this.montarAcoesUsuario();
+    this.replaceChildren(svg, barra, ...(acoes ? [acoes] : []));
   }
 
   #clique(f, acumular) {

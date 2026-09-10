@@ -85,8 +85,9 @@ def test_relacao_valida_espacial_e_referencias_pendentes():
     corpo = _corpo(relacao={"tipo": "espacial"},
                    campos2=[{"nome": "cod_mun", "tipo": "inteiro"}, {"nome": "geometria", "tipo": "geometria"}])
     assert pv.validar_modelo(corpo)[0] == []
+    # alvo W1 (widget de mapa aceita zoom): desde o L5-01-e uma VISTA como alvo de `zoom` seria `alvo_incompativel`
     corpo = _corpo(mensagens=[{"id": M1, "gatilho": {"origem": "01K50000000000000000000099", "evento": "clique"},
-                               "acoes": [{"alvo": VA, "acao": "zoom"}]}])
+                               "acoes": [{"alvo": W1, "acao": "zoom"}]}])
     assert _regras(pv.validar_modelo(corpo)[0]) == ["referencia_pendente"]
     assert _regras(_node("validar", {"corpo": corpo})["erros"]) == ["referencia_pendente"]
     corpo = _corpo(mensagens=[{"id": M1, "gatilho": {"origem": W1, "evento": "sacudiu"},

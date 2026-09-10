@@ -15,6 +15,7 @@
    geometria). O mesmo arquivo de regras existe em Python (app/app_modelo/validar.py): a API recusa o que o
    construtor recusaria. */
 import * as cql2 from './cql2.js';
+import { REGISTRO } from '../widgets/registro.js';
 
 export const EVENTOS = Object.freeze(['clique', 'dado_adicionado', 'filtro_mudou', 'extensao_mudou', 'localizacao', 'registros_carregados', 'selecao_mudou', 'vista_mudou']);
 export const ACOES_DADO = Object.freeze(['filtrar', 'selecionar', 'limpar_filtro', 'limpar_selecao']);
@@ -23,6 +24,24 @@ export const ACOES = Object.freeze([...ACOES_DADO, ...ACOES_WIDGET]);
 export const RELACOES = Object.freeze(['mesma_fonte', 'atributo', 'espacial']);
 export const TIPOS_CAMPO = Object.freeze(['texto', 'inteiro', 'decimal', 'booleano', 'data', 'data_hora', 'geometria']);
 export const OPERADORES_RELACAO = Object.freeze(['=', 'in']);
+/* item L5-01-e-acoes-configuraveis: contrato por TIPO de widget (eventos que emite, ações que aceita), lido do
+   registro dos widgets — o painel "Ações" só oferece o que casa, e a validação recusa o resto nos dois lados
+   (`app/app_modelo/contratos.py` é o espelho em Python; `tests/unit/test_app_acoes.py` compara os dois). Uma
+   vista emite só os cinco eventos de dado e aceita só as ações de dado. */
+export const EVENTOS_VISTA = Object.freeze(['filtro_mudou', 'selecao_mudou', 'vista_mudou', 'dado_adicionado', 'registros_carregados']);
+export const CONTRATOS = Object.freeze(Object.fromEntries([...REGISTRO.values()].map((m) => [m.nome, Object.freeze({ eventos: [...m.eventos], acoes: [...m.acoes] })])));
+export function eventosDe(corpo, id, idx = indices(corpo)) {
+  if (idx.vistas.has(id)) return EVENTOS_VISTA.filter((e) => EVENTOS.includes(e));
+  const no = idx.nos.get(id);
+  const c = no && CONTRATOS[no.tipo];
+  return c ? c.eventos.filter((e) => EVENTOS.includes(e)) : [];
+}
+export function acoesDe(corpo, id, idx = indices(corpo)) {
+  if (idx.vistas.has(id)) return [...ACOES_DADO];
+  const no = idx.nos.get(id);
+  const c = no && CONTRATOS[no.tipo];
+  return c ? c.acoes.filter((a) => ACOES.includes(a)) : [];
+}
 export const ULID_RE = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/;
 export const LIMITES = Object.freeze({ fontes: 50, vistas: 200, mensagens: 500, acoes_por_mensagem: 20, campos: 500 });
 
@@ -60,6 +79,11 @@ export function fonteDe(corpo, id, idx = indices(corpo)) {
   return v ? idx.fontes.get(v.fonte) || null : null;
 }
 
+function nomeNo(corpo, id, idx = indices(corpo)) {
+  const v = idx.vistas.get(id); if (v) return `vista ${v.nome || id}`;
+  const n = idx.nos.get(id); if (n) return `${n.tipo} ${String(id).slice(-4)}`;
+  return String(id);
+}
 function campoDe(fonte, nome) { return (fonte?.campos || []).find((c) => c.nome === nome) || null; }
 function temGeometria(fonte) { return (fonte?.campos || []).some((c) => c.tipo === 'geometria'); }
 
@@ -154,18 +178,34 @@ export function validarModelo(corpo) {
     if (v.selecao && (!Array.isArray(v.selecao) || v.selecao.length > 10000)) erro(erros, `${c}.selecao`, 'seleção precisa ser lista de até 10000 ids', 'selecao');
   });
   const alvosValidos = (id) => idx.nos.has(id) || idx.vistas.has(id);
+  const vistos = new Map(); // item L5-01-e: gatilho + alvo + ação repetidos = erro `gatilho_repetido`
   mensagens.forEach((m, i) => {
     const c = `corpo.mensagens.${i}`;
     if (!ULID_RE.test(m.id || '')) erro(erros, `${c}.id`, 'id de mensagem precisa ser um ULID', 'ulid');
     if (!m.gatilho || !alvosValidos(m.gatilho.origem)) erro(erros, `${c}.gatilho.origem`, `origem do gatilho não é widget nem vista do documento: ${m.gatilho?.origem}`, 'referencia_pendente');
     if (!EVENTOS.includes(m.gatilho?.evento)) erro(erros, `${c}.gatilho.evento`, `evento desconhecido: ${m.gatilho?.evento} (aceitos: ${EVENTOS.join(', ')})`, 'evento');
+    else if (m.gatilho && alvosValidos(m.gatilho.origem)) {
+      const emitidos = eventosDe(corpo, m.gatilho.origem, idx);
+      if (!emitidos.includes(m.gatilho.evento)) erro(erros, `${c}.gatilho.evento`, `a origem ${nomeNo(corpo, m.gatilho.origem, idx)} não emite ${m.gatilho.evento} (emite: ${emitidos.join(', ') || 'nada'})`, 'evento_incompativel');
+    }
     if (!Array.isArray(m.acoes) || !m.acoes.length) { erro(erros, `${c}.acoes`, 'mensagem sem ações', 'acoes'); return; }
     if (m.acoes.length > LIMITES.acoes_por_mensagem) erro(erros, `${c}.acoes`, `mais de ${LIMITES.acoes_por_mensagem} ações`, 'limite');
     m.acoes.forEach((a, j) => {
       const ca = `${c}.acoes.${j}`;
       if (!alvosValidos(a.alvo)) { erro(erros, `${ca}.alvo`, `alvo não é widget nem vista do documento: ${a.alvo}`, 'referencia_pendente'); return; }
       if (!ACOES.includes(a.acao)) { erro(erros, `${ca}.acao`, `ação desconhecida: ${a.acao} (aceitas: ${ACOES.join(', ')})`, 'acao'); return; }
+      const aceitas = acoesDe(corpo, a.alvo, idx);
+      if (!aceitas.includes(a.acao)) { erro(erros, `${ca}.acao`, `o alvo ${nomeNo(corpo, a.alvo, idx)} não aceita ${a.acao} (aceita: ${aceitas.join(', ') || 'nada'})`, 'alvo_incompativel'); return; }
+      const chave = `${m.gatilho?.origem}|${m.gatilho?.evento}|${a.alvo}|${a.acao}`;
+      if (vistos.has(chave)) erro(erros, `${ca}`, `gatilho já usado: ${m.gatilho?.evento} de ${nomeNo(corpo, m.gatilho?.origem, idx)} já dispara ${a.acao} em ${nomeNo(corpo, a.alvo, idx)} (mensagem ${vistos.get(chave)})`, 'gatilho_repetido');
+      else vistos.set(chave, i);
       if (ACOES_DADO.includes(a.acao) && m.gatilho?.origem) validarRelacao(corpo, m.gatilho.origem, a.alvo, a.relacao, ca, erros, idx);
+      const cond = a.parametros?.condicao;
+      if (cond !== undefined && cond !== null) {
+        try { cql2.validar(cond); } catch (e) { erro(erros, `${ca}.parametros.condicao`, `condição inválida: ${e.message}`, 'cql2'); }
+        const fo = m.gatilho?.origem ? fonteDe(corpo, m.gatilho.origem, idx) : null;
+        if (fo) for (const p of cql2.propriedades(cond)) if (!campoDe(fo, p)) erro(erros, `${ca}.parametros.condicao`, `condição cita campo inexistente na fonte de origem: ${p}`, 'campo_inexistente');
+      }
       if (a.acao === 'definir_parametro' && (!a.parametros || typeof a.parametros.nome !== 'string')) erro(erros, `${ca}.parametros.nome`, 'definir_parametro exige parametros.nome', 'parametros');
     });
   });
