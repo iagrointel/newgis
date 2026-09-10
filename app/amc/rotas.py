@@ -1,394 +1,737 @@
-"""Rotas do motor de análise multicritério — modelo, conjunto de unidades e execução (item
-L3-01-a-modelo-dado; laco/decomposicao/L3L6_CONCEITO.md seção A). Privilégio `analise.amc` (já existe em
-003_identidade_acesso.sql) para escrita; leitura é RLS puro (qualquer membro do inquilino lê o que existe).
+"""Rotas /api/amc (itens L3-01-a-modelo-dado e L3-01-b-unidades). Três recursos:
 
-Extração de fator, transformação e combinação (o que CALCULA favorabilidade) são os itens L3-01-c/d/e — aqui
-a execução nasce no estado `registrada` e só congela proveniência (modelo+versão, pesos, camadas declaradas,
-motor, semente). `amc_fator_bruto`/`amc_resultado` não têm rota de escrita nesta trilha (materializados pela
-extração/combinação futura); a listagem de resultados já existe porque a explicabilidade é o contrato de API,
-mesmo com a tabela vazia até esses itens rodarem."""
+- MODELO (`/api/amc/modelos`): documento JSON validado contra `docs/esquemas/amc_modelo.v1.json` e versionado pelo
+  sha256 do JSON canônico (A1). Editar cria versão nova e move a cabeça; versão nunca muda (gatilho na migração 045),
+  então execução antiga continua apontando para a versão que rodou.
+- CONJUNTO DE UNIDADES (`/api/amc/conjuntos`): grade hexagonal/quadrada em UTM SIRGAS 2000 da zona do centróide
+  (A7) gerada como job `amc.gerar_unidades`, ou feições do usuário com o id preservado (síncrono). A ficha do
+  conjunto declara CRS de trabalho e distorção de área máxima — a tela é outro item; aqui a API devolve a ficha.
+- EXECUÇÃO (`/api/amc/execucoes`): congela versão do modelo, pesos, proveniência de cada camada de entrada, versão
+  do motor e semente (A10). A extração dos fatores e a combinação são os itens L3-01-c/e; aqui a execução nasce no
+  estado `registrada` e os resultados são lidos quando existirem.
+
+Privilégio: `analise.amc` (já no vocabulário, `app/auth/privilegios.py`) para escrita; leitura aceita token com
+escopo `catalogo:ler`. RLS por inquilino em toda tabela `plat.amc_*`; nenhuma rota recebe tenant_id do cliente."""
 
 import json
-import secrets
+import uuid
 
 import psycopg2
-from fastapi import APIRouter, Request
+import psycopg2.extras
+from fastapi import APIRouter, Depends, Query, Request
+from pydantic import BaseModel, Field
 
 from app import db, limites
-from app import versao as versao_mod
-from app.amc import esquema
-from app.amc.modelos import (
-    Conjunto,
-    ConjuntoEntrada,
-    ConjuntoPagina,
-    Execucao,
-    ExecucaoEntrada,
-    ExecucaoPagina,
-    Modelo,
-    ModeloEditar,
-    ModeloEntrada,
-    ModeloPagina,
-    ModeloValidado,
-    ResultadoPagina,
-    ValidarEntrada,
-)
-from app.auth import comum as auth_comum
-from app.auth.sessao import Auth, autenticado, iso
-from app.catalogo.comum import registrar_evento, uuid_ok
+from app.amc import MOTOR_VERSAO
+from app.amc import camadas as mod_camadas
+from app.amc import esquema as mod_esquema
+from app.amc import explicacao as mod_explicacao
+from app.amc import transformacoes as mod_transformacoes
+from app.amc import unidades as mod_unidades
+from app.auth.comum import erro_do_banco, paginacao, registrar_evento
+from app.auth.sessao import Auth, autenticado
 from app.erros import ErroAPI
+from app.jobs import servico as jobs_servico
+from app.jobs.contexto import sessao_de
+from app.versao import git_sha_curto
+from app.versao import versao as versao_app
 
 router = APIRouter(prefix="/api/amc", tags=["amc"])
-LER = {"x-auth": "S/T", "x-privilegio": "rls:visibilidade"}
+LER = {"x-auth": "S/T", "x-privilegio": "analise.amc"}
 ESCREVER = {"x-auth": "S/T", "x-privilegio": "analise.amc"}
-
-# códigos de RAISE EXCEPTION dos gatilhos de 20260906T1900_amc_modelo.sql → (status, mensagem legível)
-ERROS_AMC = {
-    "amc_modelo_nao_apaga": (409, "modelo já executado nunca se apaga; crie outro modelo"),
-    "amc_modelo_identidade_imutavel": (
-        409, "modelo já executado: definição e hash não mudam mais; crie um modelo novo"),
-    "amc_modelo_tenant_imutavel": (403, "operação fora do inquilino da sessão"),
-    "amc_execucao_concluida_imutavel": (409, "execução concluída não se apaga"),
-    "amc_execucao_proveniencia_imutavel": (409, "o que rodou não muda; só o estado avança"),
-    "amc_execucao_tenant_incoerente": (422, "modelo e conjunto de unidades precisam ser do mesmo inquilino"),
-    "amc_execucao_inexistente": (404, "execução inexistente"),
-    "amc_materializado_imutavel": (409, "fator bruto e resultado não se editam; rode outra execução"),
-}
-
-
-def _erro_amc(e: Exception) -> ErroAPI:
-    if isinstance(e, psycopg2.errors.RaiseException):
-        codigo = (e.diag.message_primary or "").strip()
-        if codigo in ERROS_AMC:
-            status, mensagem = ERROS_AMC[codigo]
-            return ErroAPI(status, codigo, mensagem)
-    return auth_comum.erro_do_banco(e)
-
-
-def _erro_validacao(definicao: dict) -> list[dict]:
-    """As duas camadas (esquema/tipos.py já usa este padrão): estrutural primeiro; a semântica só roda
-    quando a estrutura de `fatores` já é uma lista de objetos (senão os erros se confundem)."""
-    erros = esquema.erros_estruturais(definicao)
-    erros.extend(esquema.erros_semanticos(definicao))
-    return erros
+SEMENTE_MAX = 2**63 - 1
 
 
 def _motor_versao() -> str:
+    """Versão do motor gravada na execução: motor + versão da aplicação + sha do commit (A10)."""
+    return f"{MOTOR_VERSAO}+{versao_app()}+{git_sha_curto()}"
+
+
+def _uuid(valor: str, campo: str) -> str:
     try:
-        sha = versao_mod.git_sha_curto()
-    except RuntimeError:
-        sha = "semsha"
-    return f"amc/1.0+{versao_mod.versao()}+{sha}"
-
-
-def _modelo_json(r: dict) -> dict:
-    return {
-        "id": str(r["id"]), "nome": r["nome"], "definicao": r["definicao"], "versao_hash": r["versao_hash"],
-        "executado": bool(r["executado"]), "criado_em": iso(r["criado_em"]), "atualizado_em": iso(r["atualizado_em"]),
-    }
-
-
-def _carregar_modelo(cur, mid: str) -> dict:
-    cur.execute(
-        "SELECT id, nome, definicao, versao_hash, executado, criado_em, atualizado_em "
-        "FROM plat.amc_modelo WHERE id = %s",
-        (mid,),
-    )
-    r = cur.fetchone()
-    if r is None:
-        raise ErroAPI(404, "modelo_inexistente", "modelo inexistente")
-    return r
-
-
-# ---------------------------------------------------------------- modelo
-@router.post("/modelos/validar", response_model=ModeloValidado, openapi_extra=LER)
-def validar(corpo: ValidarEntrada, auth: Auth = autenticado(escopo_token="amc:usar")):
-    """Valida sem gravar (não toca o banco; qualquer membro autenticado pode conferir o próprio rascunho)."""
-    erros = _erro_validacao(corpo.definicao)
-    if erros:
-        return {"valido": False, "versao_hash": None, "erros": erros}
-    return {"valido": True, "versao_hash": esquema.hash_canonico(corpo.definicao), "erros": []}
-
-
-@router.post("/modelos", response_model=Modelo, status_code=201, openapi_extra=ESCREVER)
-def criar(corpo: ModeloEntrada, request: Request, auth: Auth = autenticado("analise.amc", escopo_token="amc:usar")):
-    erros = _erro_validacao(corpo.definicao)
-    if erros:
-        raise ErroAPI(422, "modelo_invalido", "documento do modelo viola o esquema amc_modelo.v1", erros)
-    versao_hash = esquema.hash_canonico(corpo.definicao)
-    with db.db(auth.contexto()) as cur:
-        try:
-            cur.execute(
-                "INSERT INTO plat.amc_modelo(tenant_id, nome, definicao, versao_hash, criado_por, atualizado_por) "
-                "VALUES (%s, %s, %s::jsonb, %s, %s, %s) RETURNING id",
-                (auth.tenant_id, " ".join(corpo.nome.split()), _jsonb(corpo.definicao), versao_hash,
-                 auth.usuario_id, auth.usuario_id),
-            )
-            mid = str(cur.fetchone()["id"])
-        except psycopg2.Error as e:
-            raise _erro_amc(e) from e
-        registrar_evento(cur, request, "amc/modelo_criar", "amc_modelo", mid,
-                         {"nome": corpo.nome, "versao_hash": versao_hash})
-        return _modelo_json(_carregar_modelo(cur, mid))
-
-
-@router.get("/modelos", response_model=ModeloPagina, openapi_extra=LER)
-def listar_modelos(auth: Auth = autenticado(escopo_token="amc:usar")):
-    with db.db(auth.contexto()) as cur:
-        cur.execute("SELECT count(*) AS n FROM plat.amc_modelo")
-        total = cur.fetchone()["n"]
-        cur.execute(
-            "SELECT id, nome, definicao, versao_hash, executado, criado_em, atualizado_em "
-            "FROM plat.amc_modelo ORDER BY atualizado_em DESC LIMIT %s",
-            (limites.PAGINA_MAX,),
-        )
-        itens = [_modelo_json(r) for r in cur.fetchall()]
-    return {"total": total, "itens": itens}
-
-
-@router.get("/modelos/{id}", response_model=Modelo, openapi_extra=LER)
-def ver_modelo(id: str, auth: Auth = autenticado(escopo_token="amc:usar")):
-    mid = uuid_ok(id, "modelo_inexistente", "modelo inexistente")
-    with db.db(auth.contexto()) as cur:
-        return _modelo_json(_carregar_modelo(cur, mid))
-
-
-@router.put("/modelos/{id}", response_model=Modelo, openapi_extra=ESCREVER)
-def editar_modelo(id: str, corpo: ModeloEditar, request: Request,
-                   auth: Auth = autenticado("analise.amc", escopo_token="amc:usar")):
-    mid = uuid_ok(id, "modelo_inexistente", "modelo inexistente")
-    with db.db(auth.contexto()) as cur:
-        atual = _carregar_modelo(cur, mid)
-        if corpo.definicao is not None and atual["executado"]:
-            raise ErroAPI(409, "amc_modelo_identidade_imutavel",
-                          "modelo já executado: definição e hash não mudam mais; crie um modelo novo")
-        campos, params = [], []
-        versao_hash = atual["versao_hash"]
-        if corpo.nome is not None:
-            campos.append("nome = %s")
-            params.append(" ".join(corpo.nome.split()))
-        if corpo.definicao is not None:
-            erros = _erro_validacao(corpo.definicao)
-            if erros:
-                raise ErroAPI(422, "modelo_invalido", "documento do modelo viola o esquema amc_modelo.v1", erros)
-            versao_hash = esquema.hash_canonico(corpo.definicao)
-            campos.append("definicao = %s::jsonb")
-            params.append(_jsonb(corpo.definicao))
-            campos.append("versao_hash = %s")
-            params.append(versao_hash)
-        campos.append("atualizado_por = %s")
-        params.append(auth.usuario_id)
-        if campos:
-            params.append(mid)
-            try:
-                cur.execute(f"UPDATE plat.amc_modelo SET {', '.join(campos)} WHERE id = %s", params)  # noqa: S608
-            except psycopg2.Error as e:
-                raise _erro_amc(e) from e
-            registrar_evento(cur, request, "amc/modelo_editar", "amc_modelo", mid, {"versao_hash": versao_hash})
-        return _modelo_json(_carregar_modelo(cur, mid))
-
-
-@router.delete("/modelos/{id}", status_code=204, openapi_extra=ESCREVER)
-def apagar_modelo(id: str, request: Request, auth: Auth = autenticado("analise.amc", escopo_token="amc:usar")):
-    mid = uuid_ok(id, "modelo_inexistente", "modelo inexistente")
-    with db.db(auth.contexto()) as cur:
-        atual = _carregar_modelo(cur, mid)
-        try:
-            cur.execute("DELETE FROM plat.amc_modelo WHERE id = %s", (mid,))
-        except psycopg2.Error as e:
-            raise _erro_amc(e) from e
-        registrar_evento(cur, request, "amc/modelo_apagar", "amc_modelo", mid, {"nome": atual["nome"]})
-
-
-# ---------------------------------------------------------------- conjunto de unidades
-def _conjunto_json(r: dict) -> dict:
-    return {
-        "id": str(r["id"]), "nome": r["nome"], "tipo": r["tipo"], "lado_m": r["lado_m"],
-        "n_unidades": r["n_unidades"], "config": r["config"] or {}, "criado_em": iso(r["criado_em"]),
-    }
-
-
-def _carregar_conjunto(cur, cid: str) -> dict:
-    cur.execute(
-        "SELECT id, nome, tipo, lado_m, n_unidades, config, criado_em FROM plat.amc_conjunto_unidade WHERE id = %s",
-        (cid,),
-    )
-    r = cur.fetchone()
-    if r is None:
-        raise ErroAPI(404, "conjunto_inexistente", "conjunto de unidades inexistente")
-    return r
-
-
-@router.post("/conjuntos", response_model=Conjunto, status_code=201, openapi_extra=ESCREVER)
-def criar_conjunto(corpo: ConjuntoEntrada, request: Request,
-                    auth: Auth = autenticado("analise.amc", escopo_token="amc:usar")):
-    with db.db(auth.contexto()) as cur:
-        try:
-            cur.execute(
-                "INSERT INTO plat.amc_conjunto_unidade(tenant_id, nome, tipo, lado_m, n_unidades, config, criado_por) "
-                "VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s) RETURNING id",
-                (auth.tenant_id, " ".join(corpo.nome.split()), corpo.tipo, corpo.lado_m, corpo.n_unidades,
-                 _jsonb(corpo.config), auth.usuario_id),
-            )
-            cid = str(cur.fetchone()["id"])
-        except psycopg2.Error as e:
-            raise _erro_amc(e) from e
-        registrar_evento(cur, request, "amc/conjunto_criar", "amc_conjunto_unidade", cid,
-                         {"nome": corpo.nome, "tipo": corpo.tipo})
-        return _conjunto_json(_carregar_conjunto(cur, cid))
-
-
-@router.get("/conjuntos", response_model=ConjuntoPagina, openapi_extra=LER)
-def listar_conjuntos(auth: Auth = autenticado(escopo_token="amc:usar")):
-    with db.db(auth.contexto()) as cur:
-        cur.execute("SELECT count(*) AS n FROM plat.amc_conjunto_unidade")
-        total = cur.fetchone()["n"]
-        cur.execute(
-            "SELECT id, nome, tipo, lado_m, n_unidades, config, criado_em FROM plat.amc_conjunto_unidade "
-            "ORDER BY criado_em DESC LIMIT %s",
-            (limites.PAGINA_MAX,),
-        )
-        itens = [_conjunto_json(r) for r in cur.fetchall()]
-    return {"total": total, "itens": itens}
-
-
-@router.get("/conjuntos/{id}", response_model=Conjunto, openapi_extra=LER)
-def ver_conjunto(id: str, auth: Auth = autenticado(escopo_token="amc:usar")):
-    cid = uuid_ok(id, "conjunto_inexistente", "conjunto de unidades inexistente")
-    with db.db(auth.contexto()) as cur:
-        return _conjunto_json(_carregar_conjunto(cur, cid))
-
-
-@router.delete("/conjuntos/{id}", status_code=204, openapi_extra=ESCREVER)
-def apagar_conjunto(id: str, request: Request, auth: Auth = autenticado("analise.amc", escopo_token="amc:usar")):
-    cid = uuid_ok(id, "conjunto_inexistente", "conjunto de unidades inexistente")
-    with db.db(auth.contexto()) as cur:
-        atual = _carregar_conjunto(cur, cid)
-        try:
-            cur.execute("DELETE FROM plat.amc_conjunto_unidade WHERE id = %s", (cid,))
-        except psycopg2.Error as e:
-            raise _erro_amc(e) from e
-        registrar_evento(cur, request, "amc/conjunto_apagar", "amc_conjunto_unidade", cid, {"nome": atual["nome"]})
-
-
-# ---------------------------------------------------------------- execução
-def _execucao_json(r: dict) -> dict:
-    return {
-        "id": str(r["id"]), "modelo_id": str(r["modelo_id"]), "modelo_versao_hash": r["modelo_versao_hash"],
-        "conjunto_id": str(r["conjunto_id"]), "pesos": r["pesos"] or {}, "camadas": r["camadas"] or [],
-        "motor_versao": r["motor_versao"], "semente": r["semente"], "estado": r["estado"],
-        "criado_em": iso(r["criado_em"]), "atualizado_em": iso(r["atualizado_em"]),
-    }
-
-
-def _carregar_execucao(cur, eid: str) -> dict:
-    cur.execute(
-        "SELECT id, modelo_id, modelo_versao_hash, conjunto_id, pesos, camadas, motor_versao, semente, estado, "
-        "criado_em, atualizado_em FROM plat.amc_execucao WHERE id = %s",
-        (eid,),
-    )
-    r = cur.fetchone()
-    if r is None:
-        raise ErroAPI(404, "execucao_inexistente", "execução inexistente")
-    return r
-
-
-def _pesos_ok(pesos: dict, fatores_ids: set[str]) -> dict:
-    """Pesos escolhidos pelo usuário para ESTA execução (nunca 'pesos medidos'): vazio = usa o peso
-    declarado no modelo para cada fator; se vier preenchido, toda chave precisa ser um fator do modelo."""
-    if not pesos:
-        return {}
-    desconhecidos = sorted(set(pesos) - fatores_ids)
-    if desconhecidos:
-        raise ErroAPI(422, "pesos_fator_desconhecido", f"pesos citam fator fora do modelo: {desconhecidos}",
-                      {"desconhecidos": desconhecidos, "fatores_do_modelo": sorted(fatores_ids)})
-    return pesos
-
-
-@router.post("/execucoes", response_model=Execucao, status_code=201, openapi_extra=ESCREVER)
-def criar_execucao(corpo: ExecucaoEntrada, request: Request,
-                    auth: Auth = autenticado("analise.amc", escopo_token="amc:usar")):
-    mid = uuid_ok(corpo.modelo_id, "modelo_inexistente", "modelo inexistente")
-    cid = uuid_ok(corpo.conjunto_id, "conjunto_inexistente", "conjunto de unidades inexistente")
-    with db.db(auth.contexto()) as cur:
-        modelo = _carregar_modelo(cur, mid)
-        _carregar_conjunto(cur, cid)  # 404 se não for do inquilino da sessão
-        fatores_ids = {f["id"] for f in (modelo["definicao"].get("fatores") or []) if isinstance(f, dict) and "id" in f}
-        pesos = _pesos_ok({k: v for k, v in corpo.pesos.items()}, fatores_ids)
-        camadas = [c.model_dump() for c in corpo.camadas]
-        semente = corpo.semente if corpo.semente is not None else secrets.randbits(62)
-        try:
-            cur.execute(
-                "INSERT INTO plat.amc_execucao(tenant_id, modelo_id, modelo_versao_hash, conjunto_id, pesos, "
-                "camadas, motor_versao, semente, criado_por) "
-                "VALUES (%s, %s, %s, %s, %s::jsonb, %s::jsonb, %s, %s, %s) RETURNING id",
-                (auth.tenant_id, mid, modelo["versao_hash"], cid, _jsonb(pesos), _jsonb(camadas),
-                 _motor_versao(), semente, auth.usuario_id),
-            )
-            eid = str(cur.fetchone()["id"])
-        except psycopg2.Error as e:
-            raise _erro_amc(e) from e
-        registrar_evento(cur, request, "amc/execucao_criar", "amc_execucao", eid,
-                         {"modelo_id": mid, "versao_hash": modelo["versao_hash"], "conjunto_id": cid,
-                          "semente": semente})
-        return _execucao_json(_carregar_execucao(cur, eid))
-
-
-@router.get("/execucoes", response_model=ExecucaoPagina, openapi_extra=LER)
-def listar_execucoes(modelo_id: str | None = None, auth: Auth = autenticado(escopo_token="amc:usar")):
-    onde, params = ["true"], []
-    if modelo_id:
-        onde.append("modelo_id = %s")
-        params.append(uuid_ok(modelo_id, "modelo_inexistente", "modelo inexistente"))
-    filtro = " AND ".join(onde)
-    with db.db(auth.contexto()) as cur:
-        cur.execute(f"SELECT count(*) AS n FROM plat.amc_execucao WHERE {filtro}", params)  # noqa: S608
-        total = cur.fetchone()["n"]
-        cur.execute(
-            f"SELECT id, modelo_id, modelo_versao_hash, conjunto_id, pesos, camadas, motor_versao, semente, "  # noqa: S608
-            f"estado, criado_em, atualizado_em FROM plat.amc_execucao WHERE {filtro} "
-            f"ORDER BY criado_em DESC LIMIT %s",
-            (*params, limites.PAGINA_MAX),
-        )
-        itens = [_execucao_json(r) for r in cur.fetchall()]
-    return {"total": total, "itens": itens}
-
-
-@router.get("/execucoes/{id}", response_model=Execucao, openapi_extra=LER)
-def ver_execucao(id: str, auth: Auth = autenticado(escopo_token="amc:usar")):
-    eid = uuid_ok(id, "execucao_inexistente", "execução inexistente")
-    with db.db(auth.contexto()) as cur:
-        return _execucao_json(_carregar_execucao(cur, eid))
-
-
-@router.delete("/execucoes/{id}", status_code=204, openapi_extra=ESCREVER)
-def apagar_execucao(id: str, request: Request, auth: Auth = autenticado("analise.amc", escopo_token="amc:usar")):
-    eid = uuid_ok(id, "execucao_inexistente", "execução inexistente")
-    with db.db(auth.contexto()) as cur:
-        atual = _carregar_execucao(cur, eid)
-        try:
-            cur.execute("DELETE FROM plat.amc_execucao WHERE id = %s", (eid,))
-        except psycopg2.Error as e:
-            raise _erro_amc(e) from e
-        registrar_evento(cur, request, "amc/execucao_apagar", "amc_execucao", eid, {"estado": atual["estado"]})
-
-
-@router.get("/execucoes/{id}/resultados", response_model=ResultadoPagina, openapi_extra=LER)
-def listar_resultados(id: str, auth: Auth = autenticado(escopo_token="amc:usar")):
-    """Explicabilidade é o contrato (A9/A10): a tabela existe vazia até L3-01-d calcular; a rota já garante que
-    A não lê resultado de execução de B (404 na execução-mãe barra tudo antes de tocar amc_resultado)."""
-    eid = uuid_ok(id, "execucao_inexistente", "execução inexistente")
-    with db.db(auth.contexto()) as cur:
-        _carregar_execucao(cur, eid)
-        cur.execute("SELECT count(*) AS n FROM plat.amc_resultado WHERE execucao_id = %s", (eid,))
-        total = cur.fetchone()["n"]
-        cur.execute(
-            "SELECT unidade_id, favorabilidade, vetado, motivo, cobertura FROM plat.amc_resultado "
-            "WHERE execucao_id = %s ORDER BY unidade_id LIMIT %s",
-            (eid, limites.PAGINA_MAX),
-        )
-        itens = [dict(r) for r in cur.fetchall()]
-    return {"total": total, "itens": itens}
+        return str(uuid.UUID(str(valor)))
+    except (ValueError, AttributeError, TypeError):
+        raise ErroAPI(422, "validacao", f"{campo} não é um identificador válido", {"campo": campo}) from None
 
 
 def _jsonb(valor):
-    return json.dumps(valor, ensure_ascii=False, default=str)
+    return psycopg2.extras.Json(valor)
+
+
+# ================================================================ modelos
+class _ChaveRepetida(ValueError):
+    def __init__(self, chave: str):
+        super().__init__(chave)
+        self.chave = chave
+
+
+def _pares_unicos(pares):
+    vistos = set()
+    for k, _v in pares:
+        if k in vistos:
+            raise _ChaveRepetida(k)
+        vistos.add(k)
+    return dict(pares)
+
+
+async def corpo_json_sem_chave_repetida(request: Request) -> None:
+    """Recusa corpo JSON com chave repetida no MESMO objeto. `json.loads` fica em silêncio com a última ocorrência,
+    então `{"nome": "A", "nome": "B"}` era aceito, gravado como "B" e hasheado como "B" sem que quem enviou soubesse
+    que "A" foi descartado (achado do adversário do item L3-01-a em 06/09/2026). Num documento cuja VERSÃO é o hash,
+    aceitar texto ambíguo em silêncio é buraco de auditoria. Corpo malformado não é assunto desta guarda: quem
+    reclama dele é o parser do FastAPI, com a mensagem dele."""
+    try:
+        bruto = await request.body()
+    except Exception:  # noqa: BLE001 — corpo indisponível: o parser do FastAPI dá a mensagem
+        return
+    if not bruto:
+        return
+    try:
+        json.loads(bruto.decode("utf-8"), object_pairs_hook=_pares_unicos)
+    except _ChaveRepetida as e:
+        raise ErroAPI(422, "json_ambiguo",
+                      f"chave repetida no corpo JSON: '{e.chave}'. Duas ocorrências da mesma chave no mesmo objeto "
+                      f"deixam o documento ambíguo e o modelo é versionado pelo hash do documento; envie uma só",
+                      {"chave": e.chave}) from e
+    except (ValueError, UnicodeDecodeError):
+        return
+
+
+SEM_CHAVE_REPETIDA = Depends(corpo_json_sem_chave_repetida)
+
+
+class ModeloEntrada(BaseModel):
+    nome: str | None = Field(None, max_length=250)
+    definicao: dict
+
+
+class ValidarEntrada(BaseModel):
+    definicao: dict
+
+
+@router.post("/modelos/validar", openapi_extra=ESCREVER)
+def validar_modelo(corpo: ValidarEntrada, auth: Auth = autenticado("analise.amc"), _cru=SEM_CHAVE_REPETIDA):
+    """Valida sem gravar: devolve o hash que o documento teria. Modelo inválido sai 422 com todas as violações."""
+    definicao = mod_esquema.validar(corpo.definicao)
+    return {"valido": True, "esquema": mod_esquema.ESQUEMA_NOME,
+            "versao_hash": mod_esquema.hash_modelo(definicao),
+            "fatores": len(definicao.get("fatores") or []),
+            "restricoes": len(definicao.get("restricoes") or [])}
+
+
+def _modelo_json(r: dict, definicao=None) -> dict:
+    saida = {
+        "id": str(r["id"]), "nome": r["nome"], "versao_hash": r["versao_hash"], "n_versoes": r["n_versoes"],
+        "criado_em": r["criado_em"].isoformat(), "atualizado_em": r["atualizado_em"].isoformat(),
+        "criado_por": r["criado_por"], "atualizado_por": r["atualizado_por"],
+    }
+    if definicao is not None:
+        saida["definicao"] = definicao
+    return saida
+
+
+def _modelo_ou_404(cur, mid: str, com_definicao: bool = False) -> tuple[dict, dict | None]:
+    cur.execute("SELECT * FROM plat.amc_modelo WHERE id = %s::uuid AND apagado_em IS NULL", (mid,))
+    r = cur.fetchone()
+    if r is None:
+        raise ErroAPI(404, "nao_encontrado", "modelo inexistente")
+    definicao = None
+    if com_definicao:
+        cur.execute("SELECT definicao FROM plat.amc_modelo_versao WHERE modelo_id = %s::uuid AND versao_hash = %s",
+                    (mid, r["versao_hash"]))
+        definicao = (cur.fetchone() or {}).get("definicao")
+    return r, definicao
+
+
+@router.post("/modelos", status_code=201, openapi_extra=ESCREVER)
+def criar_modelo(corpo: ModeloEntrada, request: Request, auth: Auth = autenticado("analise.amc"),
+                 _cru=SEM_CHAVE_REPETIDA):
+    definicao = mod_esquema.validar(corpo.definicao)
+    versao_hash = mod_esquema.hash_modelo(definicao)
+    nome = (corpo.nome or definicao["nome"]).strip()
+    if not nome:
+        raise ErroAPI(422, "validacao", "nome do modelo vazio", {"campo": "nome"})
+    try:
+        with db.db(auth.contexto()) as cur:
+            cur.execute("SELECT count(*) AS n FROM plat.amc_modelo WHERE apagado_em IS NULL")
+            if cur.fetchone()["n"] >= limites.AMC_MODELOS_POR_INQUILINO:
+                raise ErroAPI(413, "cota_modelos",
+                              f"cota de modelos do inquilino esgotada ({limites.AMC_MODELOS_POR_INQUILINO})",
+                              {"cota": limites.AMC_MODELOS_POR_INQUILINO})
+            mid = str(uuid.uuid4())
+            cur.execute(
+                "INSERT INTO plat.amc_modelo(id, tenant_id, nome, versao_hash, n_versoes, criado_por, atualizado_por) "
+                "VALUES (%s::uuid, %s, %s, %s, 1, %s, %s)",
+                (mid, auth.tenant_id, nome, versao_hash, auth.usuario_id, auth.usuario_id),
+            )
+            cur.execute(
+                "INSERT INTO plat.amc_modelo_versao(modelo_id, versao_hash, tenant_id, numero, definicao, criado_por) "
+                "VALUES (%s::uuid, %s, %s, 1, %s, %s)",
+                (mid, versao_hash, auth.tenant_id, _jsonb(definicao), auth.usuario_id),
+            )
+            registrar_evento(cur, request, "amc/modelo_criar", "amc_modelo", mid,
+                             {"versao_hash": versao_hash, "nome": nome[:250]})
+            r, _ = _modelo_ou_404(cur, mid)
+            return _modelo_json(r, definicao)
+    except psycopg2.Error as e:
+        raise erro_do_banco(e) from e
+
+
+@router.get("/modelos", openapi_extra=LER)
+def listar_modelos(auth: Auth = autenticado("analise.amc", escopo_token="catalogo:ler"),
+                   limite: int | None = Query(None), deslocamento: int | None = Query(None)):
+    lim, desl = paginacao(limite, deslocamento)
+    with db.db(auth.contexto()) as cur:
+        cur.execute("SELECT count(*) AS n FROM plat.amc_modelo WHERE apagado_em IS NULL")
+        total = cur.fetchone()["n"]
+        cur.execute("SELECT * FROM plat.amc_modelo WHERE apagado_em IS NULL ORDER BY atualizado_em DESC "
+                    "LIMIT %s OFFSET %s", (lim, desl))
+        return {"total": total, "limite": lim, "deslocamento": desl,
+                "modelos": [_modelo_json(r) for r in cur.fetchall()]}
+
+
+@router.get("/modelos/{modelo_id}", openapi_extra=LER)
+def obter_modelo(modelo_id: str, auth: Auth = autenticado("analise.amc", escopo_token="catalogo:ler")):
+    mid = _uuid(modelo_id, "modelo_id")
+    with db.db(auth.contexto()) as cur:
+        r, definicao = _modelo_ou_404(cur, mid, com_definicao=True)
+        return _modelo_json(r, definicao)
+
+
+@router.put("/modelos/{modelo_id}", openapi_extra=ESCREVER)
+def atualizar_modelo(modelo_id: str, corpo: ModeloEntrada, request: Request,
+                     auth: Auth = autenticado("analise.amc"), _cru=SEM_CHAVE_REPETIDA):
+    """Edita: grava versão NOVA e move a cabeça. A versão anterior fica; execução que a usou não muda de resultado."""
+    mid = _uuid(modelo_id, "modelo_id")
+    definicao = mod_esquema.validar(corpo.definicao)
+    novo_hash = mod_esquema.hash_modelo(definicao)
+    try:
+        with db.db(auth.contexto()) as cur:
+            r, _ = _modelo_ou_404(cur, mid)
+            nome = (corpo.nome or definicao["nome"]).strip() or r["nome"]
+            anterior = r["versao_hash"]
+            if novo_hash == anterior:
+                if nome != r["nome"]:
+                    cur.execute("UPDATE plat.amc_modelo SET nome = %s, atualizado_por = %s, atualizado_em = now() "
+                                "WHERE id = %s::uuid", (nome, auth.usuario_id, mid))
+                r, _ = _modelo_ou_404(cur, mid)
+                return {**_modelo_json(r, definicao), "versao_nova": False}
+            if r["n_versoes"] >= limites.AMC_VERSOES_POR_MODELO:
+                raise ErroAPI(413, "cota_versoes",
+                              f"o modelo já tem {r['n_versoes']} versões (máximo {limites.AMC_VERSOES_POR_MODELO})",
+                              {"cota": limites.AMC_VERSOES_POR_MODELO})
+            cur.execute("SELECT 1 FROM plat.amc_modelo_versao WHERE modelo_id = %s::uuid AND versao_hash = %s",
+                        (mid, novo_hash))
+            ja_existe = cur.fetchone() is not None
+            numero = r["n_versoes"] + 1
+            if not ja_existe:
+                cur.execute(
+                    "INSERT INTO plat.amc_modelo_versao(modelo_id, versao_hash, tenant_id, numero, definicao, "
+                    "criado_por) VALUES (%s::uuid, %s, %s, %s, %s, %s)",
+                    (mid, novo_hash, auth.tenant_id, numero, _jsonb(definicao), auth.usuario_id),
+                )
+            cur.execute(
+                "UPDATE plat.amc_modelo SET nome = %s, versao_hash = %s, n_versoes = %s, atualizado_por = %s, "
+                "atualizado_em = now() WHERE id = %s::uuid",
+                (nome, novo_hash, numero if not ja_existe else r["n_versoes"], auth.usuario_id, mid),
+            )
+            registrar_evento(cur, request, "amc/modelo_atualizar", "amc_modelo", mid,
+                             {"versao_hash": novo_hash, "versao_anterior": anterior})
+            r, _ = _modelo_ou_404(cur, mid)
+            return {**_modelo_json(r, definicao), "versao_nova": not ja_existe}
+    except psycopg2.Error as e:
+        raise erro_do_banco(e) from e
+
+
+@router.get("/modelos/{modelo_id}/versoes", openapi_extra=LER)
+def listar_versoes(modelo_id: str, auth: Auth = autenticado("analise.amc", escopo_token="catalogo:ler")):
+    mid = _uuid(modelo_id, "modelo_id")
+    with db.db(auth.contexto()) as cur:
+        r, _ = _modelo_ou_404(cur, mid)
+        cur.execute("SELECT versao_hash, numero, criado_por, criado_em FROM plat.amc_modelo_versao "
+                    "WHERE modelo_id = %s::uuid ORDER BY numero", (mid,))
+        return {"modelo_id": mid, "versao_atual": r["versao_hash"],
+                "versoes": [{"versao_hash": v["versao_hash"], "numero": v["numero"], "criado_por": v["criado_por"],
+                             "criado_em": v["criado_em"].isoformat(), "atual": v["versao_hash"] == r["versao_hash"]}
+                            for v in cur.fetchall()]}
+
+
+@router.get("/modelos/{modelo_id}/versoes/{versao_hash}", openapi_extra=LER)
+def obter_versao(modelo_id: str, versao_hash: str,
+                 auth: Auth = autenticado("analise.amc", escopo_token="catalogo:ler")):
+    mid = _uuid(modelo_id, "modelo_id")
+    with db.db(auth.contexto()) as cur:
+        _modelo_ou_404(cur, mid)
+        cur.execute("SELECT versao_hash, numero, definicao, criado_em, criado_por FROM plat.amc_modelo_versao "
+                    "WHERE modelo_id = %s::uuid AND versao_hash = %s", (mid, versao_hash))
+        v = cur.fetchone()
+        if v is None:
+            raise ErroAPI(404, "nao_encontrado", "versão de modelo inexistente")
+        return {"modelo_id": mid, "versao_hash": v["versao_hash"], "numero": v["numero"],
+                "criado_em": v["criado_em"].isoformat(), "criado_por": v["criado_por"], "definicao": v["definicao"]}
+
+
+@router.delete("/modelos/{modelo_id}", status_code=204, openapi_extra=ESCREVER)
+def apagar_modelo(modelo_id: str, request: Request, auth: Auth = autenticado("analise.amc")):
+    """Esconde o modelo (apagado_em). Versões e execuções ficam: são a proveniência do que já rodou."""
+    mid = _uuid(modelo_id, "modelo_id")
+    try:
+        with db.db(auth.contexto()) as cur:
+            _modelo_ou_404(cur, mid)
+            cur.execute("UPDATE plat.amc_modelo SET apagado_em = now(), atualizado_por = %s, atualizado_em = now() "
+                        "WHERE id = %s::uuid", (auth.usuario_id, mid))
+            registrar_evento(cur, request, "amc/modelo_apagar", "amc_modelo", mid, {})
+    except psycopg2.Error as e:
+        raise erro_do_banco(e) from e
+    return None
+
+
+# ================================================================ conjuntos de unidades (L3-01-b)
+class ConjuntoEntrada(BaseModel):
+    nome: str = Field(..., min_length=1, max_length=250)
+    tipo: str = Field(..., description="hexagonal, quadrada ou feicoes")
+    lado_m: float | None = None
+    area_estudo: dict | None = Field(None, description="Polygon/MultiPolygon GeoJSON em EPSG:4326 (grade)")
+    feicoes: dict | None = Field(None, description="FeatureCollection GeoJSON em EPSG:4326 (tipo 'feicoes')")
+    campo_id: str | None = Field(None, max_length=128,
+                                 description="propriedade que carrega o id da unidade; sem ela, usa feature.id")
+
+
+def _conjunto_json(r: dict) -> dict:
+    return {
+        "id": str(r["id"]), "nome": r["nome"], "tipo": r["tipo"], "lado_m": r["lado_m"],
+        "srid_trabalho": r["srid_trabalho"], "estado": r["estado"], "job_id": str(r["job_id"]) if r["job_id"] else None,
+        "n_unidades": r["n_unidades"], "area_total_m2": r["area_total_m2"], "ficha": r["ficha"], "erro": r["erro"],
+        "criado_em": r["criado_em"].isoformat(), "criado_por": r["criado_por"],
+        "pronto_em": r["pronto_em"].isoformat() if r["pronto_em"] else None,
+    }
+
+
+def _conjunto_ou_404(cur, cid: str) -> dict:
+    cur.execute("SELECT * FROM plat.amc_conjunto_unidade WHERE id = %s::uuid", (cid,))
+    r = cur.fetchone()
+    if r is None:
+        raise ErroAPI(404, "nao_encontrado", "conjunto de unidades inexistente")
+    return r
+
+
+@router.post("/conjuntos", status_code=201, openapi_extra=ESCREVER)
+def criar_conjunto(corpo: ConjuntoEntrada, request: Request, auth: Auth = autenticado("analise.amc")):
+    """Grade: grava o conjunto e enfileira `amc.gerar_unidades` (estado 'pendente'). Feições: grava e responde
+    'pronto' na mesma chamada. A ficha traz sempre CRS de trabalho e distorção de área medida."""
+    if corpo.tipo not in ("hexagonal", "quadrada", "feicoes"):
+        raise ErroAPI(422, "tipo_invalido", "tipo tem de ser hexagonal, quadrada ou feicoes", {"campo": "tipo"})
+    try:
+        with db.db(auth.contexto()) as cur:
+            cur.execute("SELECT count(*) AS n FROM plat.amc_conjunto_unidade")
+            if cur.fetchone()["n"] >= limites.AMC_CONJUNTOS_POR_INQUILINO:
+                raise ErroAPI(413, "cota_conjuntos",
+                              f"cota de conjuntos do inquilino esgotada ({limites.AMC_CONJUNTOS_POR_INQUILINO})",
+                              {"cota": limites.AMC_CONJUNTOS_POR_INQUILINO})
+            cid = str(uuid.uuid4())
+            if corpo.tipo == "feicoes":
+                if corpo.feicoes is None:
+                    raise ErroAPI(422, "feicoes_invalidas", "conjunto do tipo 'feicoes' exige $.feicoes "
+                                  "(FeatureCollection)", {"campo": "feicoes"})
+                try:
+                    lista = mod_unidades.validar_feicoes(corpo.feicoes, corpo.campo_id)
+                except mod_unidades.ErroValidacao as e:
+                    raise e.api() from e
+                cur.execute(
+                    "INSERT INTO plat.amc_conjunto_unidade(id, tenant_id, nome, tipo, srid_trabalho, estado, "
+                    "criado_por) VALUES (%s::uuid, %s, %s, 'feicoes', 4326, 'pendente', %s)",
+                    (cid, auth.tenant_id, corpo.nome.strip(), auth.usuario_id),
+                )
+                try:
+                    mod_unidades.gravar_feicoes(cur, cid, auth.tenant_id, lista)
+                except mod_unidades.ErroValidacao as e:
+                    raise e.api() from e
+                registrar_evento(cur, request, "amc/conjunto_criar", "amc_conjunto_unidade", cid,
+                                 {"tipo": "feicoes", "n_unidades": len(lista)})
+                return _conjunto_json(_conjunto_ou_404(cur, cid))
+            if corpo.lado_m is None or corpo.area_estudo is None:
+                raise ErroAPI(422, "validacao", "grade exige lado_m e area_estudo (Polygon/MultiPolygon em 4326)",
+                              {"campos": ["lado_m", "area_estudo"]})
+            try:
+                preparo = mod_unidades.preparar_grade(cur, corpo.tipo, float(corpo.lado_m), corpo.area_estudo)
+            except mod_unidades.ErroValidacao as e:
+                raise e.api() from e
+            ficha = dict(preparo["ficha_crs"])
+            ficha.update({"tipo": corpo.tipo, "lado_m": float(corpo.lado_m),
+                          "contagem_esperada": round(preparo["contagem_esperada"], 2),
+                          "area_estudo_geodesica_m2": round(preparo["area_geodesica_m2"], 3),
+                          "area_estudo_plano_m2": round(preparo["area_plano_m2"], 3)})
+            cur.execute(
+                "INSERT INTO plat.amc_conjunto_unidade(id, tenant_id, nome, tipo, lado_m, srid_trabalho, area_estudo, "
+                "estado, ficha, criado_por) VALUES (%s::uuid, %s, %s, %s, %s, %s, "
+                "ST_Multi(ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326))), 'pendente', %s, %s)",
+                (cid, auth.tenant_id, corpo.nome.strip(), corpo.tipo, float(corpo.lado_m),
+                 ficha["srid_trabalho"], json.dumps(corpo.area_estudo), _jsonb(ficha), auth.usuario_id),
+            )
+            registrar_evento(cur, request, "amc/conjunto_criar", "amc_conjunto_unidade", cid,
+                             {"tipo": corpo.tipo, "lado_m": float(corpo.lado_m),
+                              "srid_trabalho": ficha["srid_trabalho"]})
+    except psycopg2.Error as e:
+        raise erro_do_banco(e) from e
+    job = jobs_servico.criar(sessao_de(auth), "amc.gerar_unidades", {"conjunto_id": cid})
+    try:
+        with db.db(auth.contexto()) as cur:
+            cur.execute("UPDATE plat.amc_conjunto_unidade SET job_id = %s::uuid WHERE id = %s::uuid",
+                        (str(job["id"]), cid))
+            return _conjunto_json(_conjunto_ou_404(cur, cid))
+    except psycopg2.Error as e:
+        raise erro_do_banco(e) from e
+
+
+@router.get("/conjuntos", openapi_extra=LER)
+def listar_conjuntos(auth: Auth = autenticado("analise.amc", escopo_token="catalogo:ler"),
+                     limite: int | None = Query(None), deslocamento: int | None = Query(None)):
+    lim, desl = paginacao(limite, deslocamento)
+    with db.db(auth.contexto()) as cur:
+        cur.execute("SELECT count(*) AS n FROM plat.amc_conjunto_unidade")
+        total = cur.fetchone()["n"]
+        cur.execute("SELECT * FROM plat.amc_conjunto_unidade ORDER BY criado_em DESC LIMIT %s OFFSET %s", (lim, desl))
+        return {"total": total, "limite": lim, "deslocamento": desl,
+                "conjuntos": [_conjunto_json(r) for r in cur.fetchall()]}
+
+
+@router.get("/conjuntos/{conjunto_id}", openapi_extra=LER)
+def obter_conjunto(conjunto_id: str, auth: Auth = autenticado("analise.amc", escopo_token="catalogo:ler")):
+    """Ficha do conjunto: CRS de trabalho, distorção de área mínima/máxima medida, contagem esperada × obtida."""
+    cid = _uuid(conjunto_id, "conjunto_id")
+    with db.db(auth.contexto()) as cur:
+        return _conjunto_json(_conjunto_ou_404(cur, cid))
+
+
+@router.get("/conjuntos/{conjunto_id}/unidades", openapi_extra=LER)
+def listar_unidades(conjunto_id: str, auth: Auth = autenticado("analise.amc", escopo_token="catalogo:ler"),
+                    limite: int = Query(1000, ge=1, le=limites.AMC_UNIDADES_PAGINA_MAX),
+                    deslocamento: int = Query(0, ge=0), geometria: bool = Query(True)):
+    """FeatureCollection paginada (ou só os ids e áreas com geometria=false)."""
+    cid = _uuid(conjunto_id, "conjunto_id")
+    with db.db(auth.contexto()) as cur:
+        r = _conjunto_ou_404(cur, cid)
+        cur.execute("SELECT count(*) AS n FROM plat.amc_unidade WHERE conjunto_id = %s::uuid", (cid,))
+        total = cur.fetchone()["n"]
+        if geometria:
+            cur.execute("SELECT unidade_id, area_m2, ST_AsGeoJSON(geom)::json AS g FROM plat.amc_unidade "
+                        "WHERE conjunto_id = %s::uuid ORDER BY unidade_id LIMIT %s OFFSET %s", (cid, limite,
+                                                                                                deslocamento))
+            feicoes = [{"type": "Feature", "id": u["unidade_id"], "geometry": u["g"],
+                        "properties": {"unidade_id": u["unidade_id"], "area_m2": u["area_m2"]}}
+                       for u in cur.fetchall()]
+        else:
+            cur.execute("SELECT unidade_id, area_m2 FROM plat.amc_unidade WHERE conjunto_id = %s::uuid "
+                        "ORDER BY unidade_id LIMIT %s OFFSET %s", (cid, limite, deslocamento))
+            feicoes = [{"type": "Feature", "id": u["unidade_id"], "geometry": None,
+                        "properties": {"unidade_id": u["unidade_id"], "area_m2": u["area_m2"]}}
+                       for u in cur.fetchall()]
+        return {"type": "FeatureCollection", "total": total, "limite": limite, "deslocamento": deslocamento,
+                "srid_trabalho": r["srid_trabalho"], "crs_saida": 4326, "features": feicoes}
+
+
+@router.delete("/conjuntos/{conjunto_id}", status_code=204, openapi_extra=ESCREVER)
+def apagar_conjunto(conjunto_id: str, request: Request, auth: Auth = autenticado("analise.amc")):
+    """Apaga o conjunto e as suas unidades. Conjunto usado por execução é recusado (FK RESTRICT → 409)."""
+    cid = _uuid(conjunto_id, "conjunto_id")
+    try:
+        with db.db(auth.contexto()) as cur:
+            _conjunto_ou_404(cur, cid)
+            cur.execute("SELECT count(*) AS n FROM plat.amc_execucao WHERE conjunto_id = %s::uuid", (cid,))
+            if cur.fetchone()["n"]:
+                raise ErroAPI(409, "em_uso", "o conjunto é entrada de uma execução e não se apaga")
+            cur.execute("DELETE FROM plat.amc_conjunto_unidade WHERE id = %s::uuid", (cid,))
+            registrar_evento(cur, request, "amc/conjunto_apagar", "amc_conjunto_unidade", cid, {})
+    except psycopg2.Error as e:
+        raise erro_do_banco(e) from e
+    return None
+
+
+# ================================================================ execuções (proveniência congelada)
+class ExecucaoEntrada(BaseModel):
+    modelo_id: str
+    conjunto_id: str
+    pesos: dict | None = Field(None, description="{fator_id: peso}; sem isto, os pesos do modelo")
+    semente: int | None = Field(None, ge=0, le=SEMENTE_MAX)
+
+
+def _execucao_json(r: dict) -> dict:
+    return {
+        "id": str(r["id"]), "modelo_id": str(r["modelo_id"]), "versao_hash": r["versao_hash"],
+        "conjunto_id": str(r["conjunto_id"]), "pesos": r["pesos"], "camadas": r["camadas"],
+        "motor_versao": r["motor_versao"], "semente": r["semente"], "estado": r["estado"],
+        "job_id": str(r["job_id"]) if r["job_id"] else None, "erro": r["erro"],
+        "criado_em": r["criado_em"].isoformat(), "criado_por": r["criado_por"],
+        "iniciado_em": r["iniciado_em"].isoformat() if r["iniciado_em"] else None,
+        "terminado_em": r["terminado_em"].isoformat() if r["terminado_em"] else None,
+    }
+
+
+def _execucao_ou_404(cur, eid: str) -> dict:
+    cur.execute("SELECT * FROM plat.amc_execucao WHERE id = %s::uuid", (eid,))
+    r = cur.fetchone()
+    if r is None:
+        raise ErroAPI(404, "nao_encontrado", "execução inexistente")
+    return r
+
+
+@router.post("/execucoes", status_code=201, openapi_extra=ESCREVER)
+def criar_execucao(corpo: ExecucaoEntrada, request: Request, auth: Auth = autenticado("analise.amc")):
+    """Congela a proveniência (A10): versão do modelo, pesos, ficha de cada camada de entrada, versão do motor e
+    semente. Nada disso muda depois (gatilho `amc_execucao_guarda`). A extração de fatores do acervo roda
+    automaticamente como job `amc.executar` (item L6-04-acervo-no-motor); fatores do tipo 'item' ficam fora do
+    escopo desse job (extração de camada do catálogo é item futuro) e a execução fica 'registrada' até lá."""
+    mid = _uuid(corpo.modelo_id, "modelo_id")
+    cid = _uuid(corpo.conjunto_id, "conjunto_id")
+    semente = corpo.semente if corpo.semente is not None else int.from_bytes(uuid.uuid4().bytes[:7], "big")
+    try:
+        with db.db(auth.contexto()) as cur:
+            r, definicao = _modelo_ou_404(cur, mid, com_definicao=True)
+            conjunto = _conjunto_ou_404(cur, cid)
+            if conjunto["estado"] != "pronto":
+                raise ErroAPI(409, "conjunto_nao_pronto",
+                              f"o conjunto de unidades está em '{conjunto['estado']}'; espere a grade ficar pronta",
+                              {"estado": conjunto["estado"], "job_id": str(conjunto["job_id"] or "")})
+            pesos = mod_esquema.validar_pesos(definicao, corpo.pesos)
+            entradas = mod_camadas.resolver(cur, definicao)
+            eid = str(uuid.uuid4())
+            cur.execute(
+                "INSERT INTO plat.amc_execucao(id, tenant_id, modelo_id, versao_hash, conjunto_id, pesos, camadas, "
+                "motor_versao, semente, estado, criado_por) "
+                "VALUES (%s::uuid, %s, %s::uuid, %s, %s::uuid, %s, %s, %s, %s, 'registrada', %s)",
+                (eid, auth.tenant_id, mid, r["versao_hash"], cid, _jsonb(pesos), _jsonb(entradas),
+                 _motor_versao(), semente, auth.usuario_id),
+            )
+            registrar_evento(cur, request, "amc/execucao_criar", "amc_execucao", eid,
+                             {"modelo_id": mid, "versao_hash": r["versao_hash"], "conjunto_id": cid,
+                              "camadas": len(entradas)})
+            tem_fator_acervo = any(e.get("origem") == "fator" and e.get("tipo") == "acervo" for e in entradas)
+    except psycopg2.Error as e:
+        raise erro_do_banco(e) from e
+    if tem_fator_acervo:
+        job = jobs_servico.criar(sessao_de(auth), "amc.executar", {"execucao_id": eid})
+        try:
+            with db.db(auth.contexto()) as cur:
+                cur.execute("UPDATE plat.amc_execucao SET job_id = %s::uuid WHERE id = %s::uuid",
+                            (str(job["id"]), eid))
+        except psycopg2.Error as e:
+            raise erro_do_banco(e) from e
+    with db.db(auth.contexto()) as cur:
+        return _execucao_json(_execucao_ou_404(cur, eid))
+
+
+@router.get("/execucoes", openapi_extra=LER)
+def listar_execucoes(auth: Auth = autenticado("analise.amc", escopo_token="catalogo:ler"),
+                     modelo_id: str | None = None, limite: int | None = Query(None),
+                     deslocamento: int | None = Query(None)):
+    lim, desl = paginacao(limite, deslocamento)
+    filtro, params = "", []
+    if modelo_id:
+        filtro, params = "WHERE modelo_id = %s::uuid", [_uuid(modelo_id, "modelo_id")]
+    with db.db(auth.contexto()) as cur:
+        cur.execute(f"SELECT count(*) AS n FROM plat.amc_execucao {filtro}", params)
+        total = cur.fetchone()["n"]
+        cur.execute(f"SELECT * FROM plat.amc_execucao {filtro} ORDER BY criado_em DESC LIMIT %s OFFSET %s",
+                    [*params, lim, desl])
+        return {"total": total, "limite": lim, "deslocamento": desl,
+                "execucoes": [_execucao_json(r) for r in cur.fetchall()]}
+
+
+@router.get("/execucoes/{execucao_id}", openapi_extra=LER)
+def obter_execucao(execucao_id: str, auth: Auth = autenticado("analise.amc", escopo_token="catalogo:ler")):
+    eid = _uuid(execucao_id, "execucao_id")
+    with db.db(auth.contexto()) as cur:
+        r = _execucao_ou_404(cur, eid)
+        cur.execute("SELECT definicao FROM plat.amc_modelo_versao WHERE modelo_id = %s AND versao_hash = %s",
+                    (r["modelo_id"], r["versao_hash"]))
+        v = cur.fetchone()
+        return {**_execucao_json(r), "definicao": (v or {}).get("definicao")}
+
+
+@router.get("/execucoes/{execucao_id}/resultados", openapi_extra=LER)
+def listar_resultados(execucao_id: str, auth: Auth = autenticado("analise.amc", escopo_token="catalogo:ler"),
+                      limite: int = Query(1000, ge=1, le=limites.AMC_RESULTADOS_PAGINA_MAX),
+                      deslocamento: int = Query(0, ge=0)):
+    """Favorabilidade por unidade. Execução sem resultado ainda devolve lista vazia com o estado — nunca zero."""
+    eid = _uuid(execucao_id, "execucao_id")
+    with db.db(auth.contexto()) as cur:
+        r = _execucao_ou_404(cur, eid)
+        cur.execute("SELECT count(*) AS n FROM plat.amc_resultado WHERE execucao_id = %s::uuid", (eid,))
+        total = cur.fetchone()["n"]
+        cur.execute("SELECT unidade_id, favorabilidade, vetado, motivo, cobertura FROM plat.amc_resultado "
+                    "WHERE execucao_id = %s::uuid ORDER BY unidade_id LIMIT %s OFFSET %s", (eid, limite, deslocamento))
+        return {"execucao_id": eid, "estado": r["estado"], "escala": "favorabilidade 0-100 (NULL = sem dado)",
+                "total": total, "limite": limite, "deslocamento": deslocamento,
+                "resultados": [dict(x) for x in cur.fetchall()]}
+
+
+@router.get("/execucoes/{execucao_id}/unidades/{unidade_id}/explicacao", openapi_extra=LER)
+def explicar_unidade(execucao_id: str, unidade_id: str,
+                     auth: Auth = autenticado("analise.amc", escopo_token="catalogo:ler")):
+    """Item L3-01-f-explicacao: "por que esta unidade tem nota N". Recalcula fator → valor bruto → transformação →
+    favorabilidade → peso → contribuição a partir de `plat.amc_fator_bruto` NA HORA (não lê nenhuma tabela de
+    explicação gravada), e compara com `plat.amc_resultado` quando a execução já tiver resultado. O cálculo é o
+    mesmo de `app/amc/explicacao.py`; a rota só busca as três peças (definição do modelo, pesos e fatores brutos)."""
+    eid = _uuid(execucao_id, "execucao_id")
+    with db.db(auth.contexto()) as cur:
+        execucao = _execucao_ou_404(cur, eid)
+        cur.execute("SELECT definicao FROM plat.amc_modelo_versao WHERE modelo_id = %s::uuid AND versao_hash = %s",
+                    (execucao["modelo_id"], execucao["versao_hash"]))
+        versao = cur.fetchone()
+        if versao is None:
+            raise ErroAPI(404, "nao_encontrado", "a versão do modelo desta execução não existe mais")
+        cur.execute("SELECT fator, valor, cobertura FROM plat.amc_fator_bruto "
+                    "WHERE execucao_id = %s::uuid AND unidade_id = %s", (eid, unidade_id))
+        brutos = {r["fator"]: {"valor": r["valor"], "cobertura": r["cobertura"]} for r in cur.fetchall()}
+        if not brutos:
+            raise ErroAPI(404, "nao_encontrado",
+                          "nenhum fator bruto desta execução para esta unidade; a extração ainda não rodou "
+                          "ou a unidade não existe no conjunto")
+        cur.execute("SELECT favorabilidade, vetado, motivo, cobertura FROM plat.amc_resultado "
+                    "WHERE execucao_id = %s::uuid AND unidade_id = %s", (eid, unidade_id))
+        gravado = cur.fetchone()
+    try:
+        explicacao = mod_explicacao.montar_explicacao(versao["definicao"], execucao["pesos"], brutos, gravado)
+    except mod_explicacao.ErroExplicacao as e:
+        raise ErroAPI(422, e.codigo, e.mensagem) from e
+    return {"execucao_id": eid, "unidade_id": unidade_id, **explicacao.como_dicionario()}
+
+
+@router.delete("/execucoes/{execucao_id}", status_code=204, openapi_extra=ESCREVER)
+def apagar_execucao(execucao_id: str, request: Request, auth: Auth = autenticado("analise.amc")):
+    """Só execução NÃO concluída se apaga (o gatilho do banco é quem manda; aqui a mensagem é em português)."""
+    eid = _uuid(execucao_id, "execucao_id")
+    try:
+        with db.db(auth.contexto()) as cur:
+            r = _execucao_ou_404(cur, eid)
+            if r["estado"] == "concluida":
+                raise ErroAPI(409, "execucao_concluida_imutavel",
+                              "execução concluída não se apaga: os resultados são o que se audita")
+            cur.execute("DELETE FROM plat.amc_execucao WHERE id = %s::uuid", (eid,))
+            registrar_evento(cur, request, "amc/execucao_apagar", "amc_execucao", eid, {"estado": r["estado"]})
+    except psycopg2.Error as e:
+        raise erro_do_banco(e) from e
+    return None
+
+
+# ================================================================ matriz da execução (tela do motor, L3-01-g)
+def _fatores_da_definicao(definicao: dict) -> list[dict]:
+    """Ficha de cada fator como a tela do motor precisa: o que se mede, de onde vem, o que NÃO sustenta."""
+    fichas = []
+    for f in definicao.get("fatores") or []:
+        proxy = f.get("proxy") or {}
+        fichas.append({
+            "id": f["id"], "nome": f["nome"], "criterio": f.get("criterio"), "fonte": f["fonte"],
+            "unidade": f["unidade"], "direcao": f["direcao"], "base": f["base"],
+            "peso_modelo": float(f["peso"]),
+            "camada": f.get("camada") or {}, "extrator_tipo": (f.get("extrator") or {}).get("tipo"),
+            "transformacao": f.get("transformacao") or {},
+            "proxy_descricao": proxy.get("descricao"),
+            "proxy_teto_peso": proxy.get("teto_peso"),
+            "nao_sustenta": f.get("nao_sustenta"),
+        })
+    return fichas
+
+
+@router.get("/execucoes/{execucao_id}/matriz", openapi_extra=LER)
+def matriz_execucao(execucao_id: str, auth: Auth = autenticado("analise.amc", escopo_token="catalogo:ler"),
+                    limite: int = Query(500, ge=1, le=limites.AMC_MATRIZ_PAGINA_MAX),
+                    deslocamento: int = Query(0, ge=0)):
+    """Item L3-01-g-tela-motor: valor bruto E favorabilidade de CADA fator em CADA unidade, para que a tela
+    recombine no navegador quando o usuário move um peso — sem novo job e sem nova extração. É a mesma conta
+    que `GET .../unidades/{id}/explicacao` faz para uma unidade, feita de uma vez para uma página de unidades.
+
+    A favorabilidade por fator sai de `app/amc/transformacoes.py` (item L3-01-d), vetorizada por fator: uma
+    chamada com todos os valores brutos daquele fator, não uma por unidade. Fator sem dado na unidade continua
+    NULL — nunca 0. Quem combina os fatores no navegador é `web/js/amc/combinacao.js`, provado equivalente ao
+    `app/amc/combinacao.py` em tests/unit/test_amc_combinacao_equivalencia.py; esta rota NÃO combina nada, para
+    não existir uma terceira implementação da mesma conta."""
+    eid = _uuid(execucao_id, "execucao_id")
+    with db.db(auth.contexto()) as cur:
+        execucao = _execucao_ou_404(cur, eid)
+        cur.execute("SELECT definicao FROM plat.amc_modelo_versao WHERE modelo_id = %s::uuid AND versao_hash = %s",
+                    (execucao["modelo_id"], execucao["versao_hash"]))
+        versao = cur.fetchone()
+        if versao is None:
+            raise ErroAPI(404, "nao_encontrado", "a versão do modelo desta execução não existe mais")
+        definicao = versao["definicao"]
+        cur.execute("SELECT count(DISTINCT unidade_id) AS n FROM plat.amc_fator_bruto WHERE execucao_id = %s::uuid",
+                    (eid,))
+        total = cur.fetchone()["n"]
+        cur.execute("SELECT unidade_id FROM plat.amc_fator_bruto WHERE execucao_id = %s::uuid "
+                    "GROUP BY unidade_id ORDER BY unidade_id LIMIT %s OFFSET %s", (eid, limite, deslocamento))
+        ids = [r["unidade_id"] for r in cur.fetchall()]
+        brutos: dict[str, dict[str, float]] = {u: {} for u in ids}
+        gravados: dict[str, dict] = {}
+        if ids:
+            cur.execute("SELECT unidade_id, fator, valor FROM plat.amc_fator_bruto "
+                        "WHERE execucao_id = %s::uuid AND unidade_id = ANY(%s)", (eid, ids))
+            for r in cur.fetchall():
+                brutos[r["unidade_id"]][r["fator"]] = r["valor"]
+            cur.execute("SELECT unidade_id, favorabilidade, vetado, motivo, cobertura FROM plat.amc_resultado "
+                        "WHERE execucao_id = %s::uuid AND unidade_id = ANY(%s)", (eid, ids))
+            gravados = {r["unidade_id"]: dict(r) for r in cur.fetchall()}
+
+    fichas = _fatores_da_definicao(definicao)
+    colunas: dict[str, list] = {}
+    for ficha in fichas:
+        crus = [brutos[u].get(ficha["id"]) for u in ids]
+        try:
+            transformados = mod_transformacoes.transformar(crus, ficha["transformacao"])
+        except (mod_transformacoes.ErroTransformacao, ValueError, KeyError) as e:
+            raise ErroAPI(422, "transformacao_invalida",
+                          f"o fator {ficha['id']!r} tem transformação que não se aplica aos valores extraídos: {e}",
+                          {"fator": ficha["id"]}) from e
+        colunas[ficha["id"]] = [None if v is None or v != v else float(v) for v in transformados]
+
+    unidades = []
+    for k, u in enumerate(ids):
+        g = gravados.get(u) or {}
+        unidades.append({
+            "unidade_id": u,
+            "brutos": [brutos[u].get(f["id"]) for f in fichas],
+            "favorabilidades": [colunas[f["id"]][k] for f in fichas],
+            "vetado": bool(g.get("vetado")) if g else False,
+            "motivo": g.get("motivo"),
+            "favorabilidade_gravada": g.get("favorabilidade"),
+            "cobertura_gravada": g.get("cobertura"),
+        })
+    comb = definicao.get("combinador") or {}
+    return {
+        "execucao_id": eid, "estado": execucao["estado"], "motor_versao": execucao["motor_versao"],
+        "modelo_id": str(execucao["modelo_id"]), "versao_hash": execucao["versao_hash"],
+        "conjunto_id": str(execucao["conjunto_id"]),
+        "aviso_pesos": "pesos escolhidos pelo usuário, não medidos",
+        "escala": "favorabilidade 0-100 (NULL = sem dado, nunca 0)",
+        "combinador": {"tipo": comb.get("tipo", "soma_ponderada_normalizada"), "gama": comb.get("gama")},
+        "dado_ausente": definicao.get("dado_ausente", "excluir_fator"),
+        "nota_pessimista_valor": definicao.get("nota_pessimista_valor", 0),
+        "pesos": execucao["pesos"], "fatores": fichas,
+        "total": total, "limite": limite, "deslocamento": deslocamento, "unidades": unidades,
+    }
+
+
+class PrevisaoEntrada(BaseModel):
+    transformacao: dict
+    valores: list[float | None] = Field(..., min_length=1, max_length=limites.AMC_PREVISAO_VALORES_MAX)
+    bins: int = Field(30, ge=2, le=200)
+
+
+@router.post("/transformacoes/previsao", openapi_extra=LER)
+def previsao_transformacao(corpo: PrevisaoEntrada, auth: Auth = autenticado("analise.amc"),
+                           _cru=SEM_CHAVE_REPETIDA):
+    """Pré-visualização da transformação escolhida (item L3-01-g): histograma do valor bruto, histograma da
+    favorabilidade resultante e a curva desenhada. Não grava nada e não abre o banco — os valores vêm de quem
+    chama (a tela manda a coluna do fator que `GET .../matriz` já lhe entregou). É a porta HTTP da função
+    `app.amc.transformacoes.pre_visualizar`, do item L3-01-d; a conta não é reimplementada aqui."""
+    try:
+        p = mod_transformacoes.pre_visualizar(corpo.valores, corpo.transformacao, bins=corpo.bins)
+        curva = mod_transformacoes.curva(corpo.valores, corpo.transformacao)
+    except (mod_transformacoes.ErroTransformacao, ValueError, KeyError) as e:
+        raise ErroAPI(422, "transformacao_invalida", str(e)) from e
+    return {
+        "tipo": corpo.transformacao.get("tipo"),
+        "entrada_histograma": p.entrada_histograma, "saida_histograma": p.saida_histograma,
+        "n": p.n, "n_nulo": p.n_nulo, "tempo_ms": round(p.tempo_ms, 3), "curva": curva,
+        "escala": "favorabilidade 0-100 (NULL = sem dado, nunca 0)",
+    }

@@ -1,0 +1,17 @@
+{
+ "item": "L3-01-g-tela-motor",
+ "medidas": {
+  "pagina_pronta_ms_motor": {
+   "valor": 342.2,
+   "unidade": "ms",
+   "comando": "tests/e2e/test_amc_motor.py::test_motor_recombina_ao_mover_peso_e_o_link_reabre_a_mesma_leitura"
+  },
+  "chamadas_api_ao_mover_um_peso": {
+   "valor": 0,
+   "unidade": "requisições",
+   "comando": "contadas pelo evento 'request' do playwright entre mover o controle e a lista mudar"
+  }
+ },
+ "gerado_em": "2026-09-08T12:12:54Z",
+ "git_sha": "84279ad77dcc"
+}

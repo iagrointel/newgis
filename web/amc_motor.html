@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Motor · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/estilo/tokens.css">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/vendor/maplibre-gl-4.7.1.css">
+<link rel="stylesheet" href="/static/mapa.css">
+<link rel="stylesheet" href="/static/amc_motor.css">
+</head>
+<body class="tela instrumento mapa motor">
+<a class="pular" href="#painel-motor">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal mapa-tela" tabindex="-1">
+    <div class="linha-ferramentas mapa-barra" id="ferramentas">
+      <h1>Motor</h1>
+      <plat-aviso id="aviso"></plat-aviso>
+      <div class="abas motor-abas" role="tablist" id="abas" hidden>
+        <button type="button" role="tab" id="aba-lista" aria-selected="true" aria-controls="painel-motor">lista</button>
+        <button type="button" role="tab" id="aba-mapa" aria-selected="false" aria-controls="area-mapa">mapa</button>
+      </div>
+    </div>
+
+    <div class="motor-corpo">
+      <section class="motor-painel" id="painel-motor" role="tabpanel" aria-labelledby="aba-lista" tabindex="-1">
+        <p class="fraco motor-ressalva">análise / beta privado · triagem: sinal, não prova.
+          Os pesos abaixo são escolhidos por você para este projeto: não são medidos nem otimizados por nós.</p>
+
+        <div class="cartao motor-bloco" id="bloco-recusas" hidden>
+          <h2>o link não foi aceito</h2>
+          <p class="fraco">nada foi calculado nem recolorido. Corrija o link ou volte aos pesos do modelo.</p>
+          <ul id="recusas-lista"></ul>
+          <button type="button" id="usar-pesos-do-modelo" class="pequeno">usar os pesos do modelo</button>
+        </div>
+
+        <div class="cartao motor-bloco" id="bloco-contexto">
+          <h2>conjunto e modelo</h2>
+          <dl id="contexto-lista" class="motor-dl"></dl>
+          <div class="botoes">
+            <button type="button" id="rodar" class="botao">rodar</button>
+            <button type="button" id="copiar-link" class="pequeno">copiar link</button>
+          </div>
+          <p class="fraco" id="estado-execucao" aria-live="polite"></p>
+        </div>
+
+        <div class="cartao motor-bloco" id="bloco-fatores">
+          <h2>fatores</h2>
+          <div class="motor-modo">
+            <label for="modo-peso">peso por</label>
+            <select id="modo-peso">
+              <option value="multiplicador">multiplicador</option>
+              <option value="percentual">percentual que fecha 100</option>
+            </select>
+            <span class="fraco" id="soma-pesos"></span>
+          </div>
+          <ul id="fatores-lista" class="motor-fatores"></ul>
+          <div class="botoes">
+            <button type="button" id="adicionar-fator" class="pequeno">adicionar fator</button>
+            <button type="button" id="adicionar-veto" class="pequeno">marcar veto</button>
+          </div>
+        </div>
+
+        <div class="cartao motor-bloco" id="bloco-vetos">
+          <h2>vetos</h2>
+          <p class="fraco">veto é objeto separado do peso: zera a unidade e diz por quê. Nunca se sorteia.</p>
+          <ul id="vetos-lista" class="motor-vetos"></ul>
+        </div>
+
+        <div class="cartao motor-bloco" id="bloco-melhores">
+          <h2>as melhores unidades</h2>
+          <div class="motor-modo">
+            <label for="quantas">quantas</label>
+            <input type="number" id="quantas" min="1" max="200" value="20" step="1">
+            <span class="fraco" id="resumo-notas"></span>
+          </div>
+          <plat-tabela id="tabela-melhores" legenda="unidades ordenadas por favorabilidade"></plat-tabela>
+        </div>
+
+        <div class="cartao motor-bloco" id="bloco-rampa">
+          <h2>rampa declarada</h2>
+          <ul id="legenda-rampa" class="motor-legenda"></ul>
+        </div>
+      </section>
+
+      <div class="mapa-area" id="area-mapa" role="tabpanel" aria-labelledby="aba-mapa" tabindex="-1">
+        <div id="mapa" aria-label="mapa de favorabilidade" role="application"></div>
+        <div class="mapa-painel mapa-coordenadas" id="coordenadas" aria-live="off">—</div>
+      </div>
+    </div>
+  </main>
+</div>
+<plat-dialogo id="dialogo"></plat-dialogo>
+<script src="/static/vendor/maplibre-gl-4.7.1.js"></script>
+<script src="/static/vendor/pmtiles-4.5.0.js"></script>
+<script type="module" src="/static/js/amc/motor_pagina.js"></script>
+</body>
+</html>

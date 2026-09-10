@@ -26,6 +26,9 @@ from app.amc import rotas as rotas_amc
 from app.analise3d.rotas import router as rotas_analise3d
 from app.amc.rotas_pareto import router as rotas_amc_pareto
 from app.amc.rotas import router as rotas_amc
+from app.acervo import rotas as rotas_acervo
+from app.amc.rotas import router as rotas_amc
+from app.amc.rotas_similaridade import router as rotas_similaridade
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
 from app.auth import sso as rotas_sso
@@ -673,6 +676,11 @@ ROUTERS = [
     # --- notebook por inquilino (L2-16-b): /notebooks/{slug} (proxy JupyterLab com sessão; contêiner
     # sob demanda, rede interna, ceifa por ociosidade via job periódico notebooks.ceifar)
     rotas_notebooks,
+    # --- motor multicritério (L3-01-a/b): /api/amc/modelos, /api/amc/conjuntos, /api/amc/execucoes
+    rotas_amc,
+    # --- motor multicritério (AMC), localização semelhante (L3-17-similaridade): /api/amc/similaridade e
+    # /api/amc/similaridade/exportar; sem tabela própria, mesmo padrão sem-estado de rotas_rede acima
+    rotas_similaridade,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

@@ -1,375 +1,436 @@
-"""Item L3-01-a-modelo-dado pela API: as cláusulas do portão (JSON Schema no POST, as quatro violações
-nomeadas, imutabilidade do modelo executado, hash reproduzido pelo script independente, isolamento entre
-inquilinos) e o CRUD que sustenta o resto da linha L3 (conjunto de unidades, execução, listagem de
-resultado). ESTA É A CLÁUSULA INEGOCIÁVEL do item: `test_a_nao_le_modelo_execucao_nem_resultado_de_b_pela_api`
-e `test_rls_no_banco_esconde_amc_de_outro_inquilino`."""
+"""Item L3-01-a (modelo de dado do motor multicritério) pela API e pelo banco.
 
-import secrets
+Cláusulas do portão provadas aqui:
+- JSON Schema validado no POST; modelo inválido (peso negativo, fator sem transformação, soma de pesos zero, fator
+  duplicado) devolve 422 com a cláusula violada;
+- teste cruzado A→B falha em `plat.amc_modelo`, `plat.amc_execucao` e `plat.amc_resultado`, tanto pela API (por id
+  direto) quanto pela role da aplicação com o contexto do outro inquilino;
+- o hash gravado é o que o script independente (`scripts/amc_hash_independente.py`, que não importa o módulo da
+  aplicação) recomputa a partir do que está no banco;
+- REFUTAÇÃO do adversário: editar um modelo já executado cria versão nova, e a execução antiga continua apontando
+  para a versão antiga, com o resultado inalterado.
+"""
+
+import json
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 
-import psycopg2
 import pytest
 
-from app.amc.esquema import hash_canonico
-from tests.api.conftest import PREFIXO_TESTE
+from tests.api.amc import exemplos
 from tests.api.test_rls import contexto, ids_por_slug
 
-RAIZ = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[3]
+SCRIPT = ROOT / "scripts" / "amc_hash_independente.py"
+PREFIXO = "zt-amc"
 
 
-def _nome(base="modelo"):
-    return f"{PREFIXO_TESTE}-amc-{base}-{secrets.token_hex(4)}"
-
-
-def _def(**over):
-    d = {
-        "combinador": "soma_ponderada",
-        "fatores": [
-            {"id": "declividade", "criterio": "menor declive é melhor", "peso": 2,
-             "transformacao": {"tipo": "linear", "minimo": 0, "maximo": 45, "inverter": True}},
-            {"id": "distancia_via", "criterio": "perto de via é melhor", "peso": 1,
-             "transformacao": {"tipo": "faixas", "quebras": [500, 1500], "notas": [100, 60, 20]}},
-        ],
-    }
-    d.update(over)
-    return d
-
-
-def _criar_modelo(sessao, **over):
-    r = sessao.post("/api/amc/modelos", json={"nome": _nome(), "definicao": _def(**over)})
+# ---------------------------------------------------------------- apoio
+def _criar_item(sessao, titulo: str) -> str:
+    r = sessao.post("/api/itens", json={"tipo": "mapa", "titulo": f"{PREFIXO} {titulo}",
+                                        "dados": {"esquema_versao": 1, "corpo": {}}})
     assert r.status_code == 201, r.text
-    return r.json()
+    return r.json()["id"]
 
 
-def _criar_conjunto(sessao):
-    r = sessao.post("/api/amc/conjuntos", json={"nome": _nome("conjunto"), "tipo": "hexagonal", "lado_m": 250})
+def _modelo_com_itens(sessao) -> dict:
+    """O modelo de exemplo com as camadas apontando para itens REAIS do inquilino (a execução resolve a
+    proveniência de cada camada e recusa camada inexistente)."""
+    m = exemplos.modelo_valido()
+    m["nome"] = f"{PREFIXO} modelo"
+    m["fatores"][0]["camada"]["id"] = _criar_item(sessao, "raster")
+    m["fatores"][1]["camada"]["id"] = _criar_item(sessao, "vias")
+    m["restricoes"][0]["camada"]["id"] = _criar_item(sessao, "alagavel")
+    return m
+
+
+def _hash_por_fora(definicao: dict, tmp_path: Path) -> str:
+    arquivo = tmp_path / "m.json"
+    arquivo.write_text(json.dumps(definicao, ensure_ascii=False), encoding="utf-8")
+    r = subprocess.run([sys.executable, str(SCRIPT), "--arquivo", str(arquivo)], capture_output=True, text=True,
+                       cwd=ROOT)
+    assert r.returncode == 0, r.stderr
+    return r.stdout.strip()
+
+
+@pytest.fixture
+def modelo_a(sessao_a):
+    """Modelo criado em A, escondido no fim (apagar = apagado_em; as versões ficam, é a proveniência)."""
+    definicao = _modelo_com_itens(sessao_a)
+    r = sessao_a.post("/api/amc/modelos", json={"definicao": definicao})
     assert r.status_code == 201, r.text
-    return r.json()
+    modelo = r.json()
+    yield modelo, definicao
+    sessao_a.delete(f"/api/amc/modelos/{modelo['id']}")
 
 
-def _criar_execucao(sessao, modelo_id, conjunto_id, **over):
-    corpo = {"modelo_id": modelo_id, "conjunto_id": conjunto_id, "semente": 42}
-    corpo.update(over)
-    r = sessao.post("/api/amc/execucoes", json=corpo)
+@pytest.fixture
+def conjunto_a(sessao_a):
+    """Conjunto pequeno de feições (síncrono, sem job): 2 quadrados de ~1 km em Goiás."""
+    colecao = {"type": "FeatureCollection", "features": [
+        {"type": "Feature", "id": "u1", "properties": {},
+         "geometry": exemplos.area_retangulo(-49.30, -16.70, 0.01, 0.01)},
+        {"type": "Feature", "id": "u2", "properties": {},
+         "geometry": exemplos.area_retangulo(-49.28, -16.70, 0.01, 0.01)},
+    ]}
+    r = sessao_a.post("/api/amc/conjuntos", json={"nome": f"{PREFIXO} conjunto", "tipo": "feicoes", "feicoes": colecao})
     assert r.status_code == 201, r.text
-    return r.json()
+    conjunto = r.json()
+    yield conjunto
+    sessao_a.delete(f"/api/amc/conjuntos/{conjunto['id']}")
 
 
-# ------------------------------------------------------------------ criação e hash
-def test_modelo_valido_nasce_com_hash_e_versao_1(sessao_a):
-    m = _criar_modelo(sessao_a)
-    assert len(m["versao_hash"]) == 64 and all(c in "0123456789abcdef" for c in m["versao_hash"])
-    assert m["executado"] is False
-    assert m["versao_hash"] == hash_canonico(m["definicao"])
-    assert sessao_a.delete(f"/api/amc/modelos/{m['id']}").status_code == 204
+# ---------------------------------------------------------------- validação
+def test_modelo_valido_nasce_com_hash_e_versao_1(modelo_a, tmp_path):
+    modelo, definicao = modelo_a
+    assert modelo["n_versoes"] == 1
+    assert modelo["versao_hash"] == _hash_por_fora(definicao, tmp_path)
+    assert modelo["definicao"] == definicao
 
 
-def test_validar_sem_gravar_nao_cria_nada(sessao_a):
-    r = sessao_a.post("/api/amc/modelos/validar", json={"definicao": _def()})
-    assert r.status_code == 200
-    j = r.json()
-    assert j["valido"] is True and j["versao_hash"] == hash_canonico(_def()) and j["erros"] == []
-    total_antes = sessao_a.get("/api/amc/modelos").json()["total"]
-    r2 = sessao_a.post("/api/amc/modelos/validar", json={"definicao": {"fatores": []}})
-    assert r2.status_code == 200 and r2.json()["valido"] is False
-    assert sessao_a.get("/api/amc/modelos").json()["total"] == total_antes
-
-
-# ------------------------------------------------------------------ as quatro cláusulas do portão, pela API
-@pytest.mark.parametrize(
-    "quebra,clausula",
-    [
-        ("peso_negativo", "fatores[].peso >= 0"),
-        ("fator_sem_transformacao", "fatores[].transformacao obrigatória"),
-        ("soma_de_pesos_zero", "soma(fatores[].peso) > 0"),
-        ("fator_duplicado", "fatores[].id único"),
-    ],
-)
-def test_modelo_invalido_devolve_422_com_a_clausula(sessao_a, quebra, clausula):
-    d = _def()
-    if quebra == "peso_negativo":
-        d["fatores"][0]["peso"] = -1
-    elif quebra == "fator_sem_transformacao":
-        del d["fatores"][0]["transformacao"]
-    elif quebra == "soma_de_pesos_zero":
-        for f in d["fatores"]:
-            f["peso"] = 0
-    elif quebra == "fator_duplicado":
-        d["fatores"].append(dict(d["fatores"][0]))
-    r = sessao_a.post("/api/amc/modelos", json={"nome": _nome(), "definicao": d})
+@pytest.mark.parametrize("nome", sorted(exemplos.INVALIDOS))
+def test_modelo_invalido_devolve_422_com_a_clausula(sessao_a, nome):
+    construir, clausula = exemplos.INVALIDOS[nome]
+    r = sessao_a.post("/api/amc/modelos", json={"definicao": construir()})
     assert r.status_code == 422, r.text
-    j = r.json()
-    assert j["erro"] == "modelo_invalido"
-    clausulas = [e["clausula"] for e in j["detalhe"]]
-    assert clausula in clausulas, j
+    corpo = r.json()
+    assert corpo["erro"] == "modelo_invalido"
+    clausulas = [v["clausula"] for v in corpo["detalhe"]["violacoes"]]
+    assert any(clausula in c for c in clausulas), (nome, clausulas)
+    assert corpo["detalhe"]["esquema"] == "amc_modelo.v1"
 
 
-# ------------------------------------------------------------------ CRUD e edição
-def test_listar_e_ver_modelo(sessao_a):
-    m = _criar_modelo(sessao_a)
-    lista = sessao_a.get("/api/amc/modelos").json()
-    assert any(i["id"] == m["id"] for i in lista["itens"])
-    r = sessao_a.get(f"/api/amc/modelos/{m['id']}")
-    assert r.status_code == 200 and r.json()["id"] == m["id"]
-    assert sessao_a.delete(f"/api/amc/modelos/{m['id']}").status_code == 204
-
-
-def test_editar_nome_nao_muda_hash(sessao_a):
-    m = _criar_modelo(sessao_a)
-    r = sessao_a.put(f"/api/amc/modelos/{m['id']}", json={"nome": _nome("renomeado")})
-    assert r.status_code == 200 and r.json()["versao_hash"] == m["versao_hash"]
-    assert sessao_a.delete(f"/api/amc/modelos/{m['id']}").status_code == 204
-
-
-def test_editar_definicao_gera_hash_novo(sessao_a):
-    m = _criar_modelo(sessao_a)
-    novo = _def(descricao="mudou")
-    r = sessao_a.put(f"/api/amc/modelos/{m['id']}", json={"definicao": novo})
-    assert r.status_code == 200
-    assert r.json()["versao_hash"] == hash_canonico(novo) != m["versao_hash"]
-    assert sessao_a.delete(f"/api/amc/modelos/{m['id']}").status_code == 204
-
-
-def test_editar_definicao_invalida_e_422_e_nao_grava(sessao_a):
-    m = _criar_modelo(sessao_a)
-    r = sessao_a.put(f"/api/amc/modelos/{m['id']}", json={"definicao": {"fatores": []}})
+def test_validar_nao_grava(sessao_a):
+    antes = sessao_a.get("/api/amc/modelos").json()["total"]
+    r = sessao_a.post("/api/amc/modelos/validar", json={"definicao": exemplos.modelo_sem_camada_externa()})
+    assert r.status_code == 200 and r.json()["valido"] is True and len(r.json()["versao_hash"]) == 64
+    r = sessao_a.post("/api/amc/modelos/validar", json={"definicao": exemplos.peso_negativo()})
     assert r.status_code == 422
-    assert sessao_a.get(f"/api/amc/modelos/{m['id']}").json()["versao_hash"] == m["versao_hash"]
-    assert sessao_a.delete(f"/api/amc/modelos/{m['id']}").status_code == 204
+    assert sessao_a.get("/api/amc/modelos").json()["total"] == antes
 
 
-def test_apagar_modelo_nao_executado_funciona(sessao_a):
-    m = _criar_modelo(sessao_a)
-    assert sessao_a.delete(f"/api/amc/modelos/{m['id']}").status_code == 204
-    assert sessao_a.get(f"/api/amc/modelos/{m['id']}").status_code == 404
+# ---------------------------------------------------------------- versionamento e imutabilidade
+def test_editar_cria_versao_nova_e_a_anterior_continua_legivel(sessao_a, modelo_a, tmp_path):
+    modelo, definicao = modelo_a
+    hash_v1 = modelo["versao_hash"]
+    nova = json.loads(json.dumps(definicao))
+    nova["fatores"][0]["peso"] = 9.0
+    r = sessao_a.put(f"/api/amc/modelos/{modelo['id']}", json={"definicao": nova})
+    assert r.status_code == 200, r.text
+    assert r.json()["versao_nova"] is True and r.json()["n_versoes"] == 2
+    hash_v2 = r.json()["versao_hash"]
+    assert hash_v2 != hash_v1 and hash_v2 == _hash_por_fora(nova, tmp_path)
+    versoes = sessao_a.get(f"/api/amc/modelos/{modelo['id']}/versoes").json()
+    assert [v["numero"] for v in versoes["versoes"]] == [1, 2]
+    assert versoes["versao_atual"] == hash_v2
+    antiga = sessao_a.get(f"/api/amc/modelos/{modelo['id']}/versoes/{hash_v1}")
+    assert antiga.status_code == 200 and antiga.json()["definicao"] == definicao
 
 
-# ------------------------------------------------------------------ conjunto de unidades
-def test_conjunto_crud(sessao_a):
-    c = _criar_conjunto(sessao_a)
-    assert c["tipo"] == "hexagonal" and c["lado_m"] == 250
-    assert sessao_a.get(f"/api/amc/conjuntos/{c['id']}").json()["id"] == c["id"]
-    lista = sessao_a.get("/api/amc/conjuntos").json()
-    assert any(i["id"] == c["id"] for i in lista["itens"])
-    assert sessao_a.delete(f"/api/amc/conjuntos/{c['id']}").status_code == 204
-    assert sessao_a.get(f"/api/amc/conjuntos/{c['id']}").status_code == 404
+def test_reenviar_a_mesma_definicao_nao_cria_versao(sessao_a, modelo_a):
+    modelo, definicao = modelo_a
+    r = sessao_a.put(f"/api/amc/modelos/{modelo['id']}", json={"definicao": definicao})
+    assert r.status_code == 200 and r.json()["versao_nova"] is False and r.json()["n_versoes"] == 1
 
 
-# ------------------------------------------------------------------ execução: proveniência congelada
-def test_execucao_congela_versao_do_modelo_e_marca_executado(sessao_a):
-    m = _criar_modelo(sessao_a)
-    c = _criar_conjunto(sessao_a)
-    e = _criar_execucao(
-        sessao_a, m["id"], c["id"], camadas=[{"id": "acervo:teste", "sha256": "a" * 64, "contagem": 10}]
-    )
-    assert e["modelo_id"] == m["id"] and e["modelo_versao_hash"] == m["versao_hash"]
-    assert e["estado"] == "registrada" and e["semente"] == 42
-    assert e["camadas"][0]["sha256"] == "a" * 64
-    assert sessao_a.get(f"/api/amc/modelos/{m['id']}").json()["executado"] is True
+def test_versao_gravada_e_imutavel_para_a_aplicacao(conexao_plat_app, sessao_a, modelo_a):
+    """Nem a role da aplicação edita ou apaga uma versão: o gatilho da migração 045 recusa."""
+    import psycopg2
+
+    modelo, _ = modelo_a
+    ids = ids_por_slug(conexao_plat_app)
+    contexto(conexao_plat_app, ids["demo"])
+    for sql in ("UPDATE plat.amc_modelo_versao SET definicao = '{}'::jsonb WHERE modelo_id = %s::uuid",
+                "DELETE FROM plat.amc_modelo_versao WHERE modelo_id = %s::uuid"):
+        with conexao_plat_app.cursor() as cur, pytest.raises(psycopg2.Error) as e:
+            cur.execute(sql, (modelo["id"],))
+        assert "amc_versao_imutavel" in str(e.value)
+        conexao_plat_app.rollback()
+        contexto(conexao_plat_app, ids["demo"])
 
 
-def test_execucao_com_peso_de_fator_desconhecido_e_422(sessao_a):
-    m = _criar_modelo(sessao_a)
-    c = _criar_conjunto(sessao_a)
-    r = sessao_a.post("/api/amc/execucoes", json={
-        "modelo_id": m["id"], "conjunto_id": c["id"], "semente": 1, "pesos": {"fator_que_nao_existe": 1},
-    })
-    assert r.status_code == 422 and r.json()["erro"] == "pesos_fator_desconhecido"
-    assert sessao_a.delete(f"/api/amc/modelos/{m['id']}").status_code == 204
-    assert sessao_a.delete(f"/api/amc/conjuntos/{c['id']}").status_code == 204
+def test_script_independente_confere_o_que_esta_no_banco(conexao_plat_app, modelo_a):
+    """Cláusula do portão: o hash gravado é recomputável por fora, direto das linhas de plat.amc_modelo_versao."""
+    ids = ids_por_slug(conexao_plat_app)
+    r = subprocess.run([sys.executable, str(SCRIPT), "--tenant", str(ids["demo"])], capture_output=True, text=True,
+                       cwd=ROOT)
+    assert r.returncode == 0, (r.stdout, r.stderr)
+    assert "divergentes: 0" in r.stdout and "cabeças órfãs: 0" in r.stdout
+    assert modelo_a[0]["versao_hash"] in r.stdout
 
 
-def test_execucao_com_modelo_ou_conjunto_inexistente_e_404(sessao_a):
-    c = _criar_conjunto(sessao_a)
-    falso = "00000000-0000-0000-0000-000000000000"
-    r = sessao_a.post("/api/amc/execucoes", json={"modelo_id": falso, "conjunto_id": c["id"], "semente": 1})
-    assert r.status_code == 404 and r.json()["erro"] == "modelo_inexistente"
-    m = _criar_modelo(sessao_a)
-    r = sessao_a.post("/api/amc/execucoes", json={"modelo_id": m["id"], "conjunto_id": falso, "semente": 1})
-    assert r.status_code == 404 and r.json()["erro"] == "conjunto_inexistente"
-    sessao_a.delete(f"/api/amc/modelos/{m['id']}")
-    sessao_a.delete(f"/api/amc/conjuntos/{c['id']}")
+# ---------------------------------------------------------------- execução: proveniência congelada
+def _criar_execucao(sessao, modelo_id: str, conjunto_id: str, **extra):
+    return sessao.post("/api/amc/execucoes",
+                       json={"modelo_id": modelo_id, "conjunto_id": conjunto_id, **extra})
 
 
-# ------------------------------------------------------------------ REFUTAÇÃO: editar modelo executado não
-# muda a execução nem o resultado (resultado inserido à mão: nada calcula favorabilidade ainda, L3-01-c/d/e)
+def test_execucao_congela_versao_pesos_camadas_motor_e_semente(sessao_a, modelo_a, conjunto_a):
+    modelo, definicao = modelo_a
+    r = _criar_execucao(sessao_a, modelo["id"], conjunto_a["id"], semente=42)
+    assert r.status_code == 201, r.text
+    exec_json = r.json()
+    assert exec_json["versao_hash"] == modelo["versao_hash"]
+    assert exec_json["pesos"] == {"declividade": 3.0, "dist_via": 1.5}
+    assert exec_json["semente"] == 42 and exec_json["estado"] == "registrada"
+    assert exec_json["motor_versao"].startswith("amc/")
+    camadas = exec_json["camadas"]
+    assert len(camadas) == 3
+    for c in camadas:
+        assert c["tipo"] == "item" and c["titulo"].startswith(PREFIXO)
+        assert "sha256" in c and "contagem" in c and "versao" in c
+    sessao_a.delete(f"/api/amc/execucoes/{exec_json['id']}")
+
+
+def test_execucao_recusa_camada_inexistente(sessao_a, conjunto_a):
+    definicao = exemplos.modelo_sem_camada_externa()
+    definicao["fatores"][0]["camada"] = {"tipo": "item", "id": str(uuid.uuid4())}
+    r = sessao_a.post("/api/amc/modelos", json={"definicao": definicao})
+    assert r.status_code == 201, r.text
+    modelo = r.json()
+    try:
+        r = _criar_execucao(sessao_a, modelo["id"], conjunto_a["id"])
+        assert r.status_code == 422 and r.json()["erro"] == "camada_inexistente"
+    finally:
+        sessao_a.delete(f"/api/amc/modelos/{modelo['id']}")
+
+
+def test_pesos_da_execucao_sao_validados(sessao_a, modelo_a, conjunto_a):
+    modelo, _ = modelo_a
+    r = _criar_execucao(sessao_a, modelo["id"], conjunto_a["id"], pesos={"nao_existe": 1})
+    assert r.status_code == 422 and r.json()["erro"] == "pesos_invalidos"
+    r = _criar_execucao(sessao_a, modelo["id"], conjunto_a["id"], pesos={"declividade": 0, "dist_via": 0})
+    assert r.status_code == 422 and r.json()["erro"] == "pesos_invalidos"
+
+
 def test_refutacao_editar_modelo_executado_nao_muda_a_execucao_nem_o_resultado(
-    sessao_a, conexao_plat_app, ids,
-):
-    m = _criar_modelo(sessao_a)
-    c = _criar_conjunto(sessao_a)
-    e = _criar_execucao(sessao_a, m["id"], c["id"])
-
-    tenant_id = ids_por_slug(conexao_plat_app)["demo"]
-    contexto(conexao_plat_app, tenant_id, usuario_id=ids["a"]["id"], login="admin")
+        sessao_a, conexao_plat_app, modelo_a, conjunto_a):
+    """A refutação pedida no item: o adversário edita um modelo JÁ EXECUTADO e confere que (1) a execução antiga
+    continua apontando para a versão antiga e (2) o resultado gravado não muda."""
+    modelo, definicao = modelo_a
+    r = _criar_execucao(sessao_a, modelo["id"], conjunto_a["id"], semente=7)
+    assert r.status_code == 201, r.text
+    execucao = r.json()
+    ids = ids_por_slug(conexao_plat_app)
+    contexto(conexao_plat_app, ids["demo"])
     with conexao_plat_app.cursor() as cur:
         cur.execute(
-            "INSERT INTO plat.amc_resultado(execucao_id, unidade_id, favorabilidade, vetado, cobertura) "
-            "VALUES (%s, 'u1', 71.5, false, 1.0), (%s, 'u2', 12.0, false, 0.8)",
-            (e["id"], e["id"]),
+            "INSERT INTO plat.amc_resultado(execucao_id, tenant_id, unidade_id, favorabilidade, cobertura) "
+            "VALUES (%s::uuid, %s, 'u1', 61.5, 1.0), (%s::uuid, %s, 'u2', 12.25, 0.5)",
+            (execucao["id"], ids["demo"], execucao["id"], ids["demo"]),
         )
     conexao_plat_app.commit()
+    try:
+        antes = sessao_a.get(f"/api/amc/execucoes/{execucao['id']}/resultados").json()["resultados"]
+        nova = json.loads(json.dumps(definicao))
+        nova["fatores"][0]["peso"] = 99.0
+        nova["fatores"][0]["transformacao"] = {"tipo": "linear", "minimo": 0, "maximo": 5, "direcao": "crescente"}
+        r = sessao_a.put(f"/api/amc/modelos/{modelo['id']}", json={"definicao": nova})
+        assert r.status_code == 200 and r.json()["versao_nova"] is True
+        depois_modelo = sessao_a.get(f"/api/amc/modelos/{modelo['id']}").json()
+        assert depois_modelo["versao_hash"] != execucao["versao_hash"]
 
-    # 1) PUT com definição nova: 200, mas devolve o modelo com versao_hash NOVO (é um modelo novo em
-    #    termos de conteúdo — a garantia não é "não editar", é "a execução não muda")
-    r = sessao_a.put(f"/api/amc/modelos/{m['id']}", json={"definicao": _def(descricao="ataque")})
-    assert r.status_code == 409 and r.json()["erro"] == "amc_modelo_identidade_imutavel", r.text
+        agora = sessao_a.get(f"/api/amc/execucoes/{execucao['id']}").json()
+        assert agora["versao_hash"] == execucao["versao_hash"], "a execução mudou de versão ao editar o modelo"
+        assert agora["pesos"] == execucao["pesos"] and agora["camadas"] == execucao["camadas"]
+        assert agora["definicao"] == definicao, "a execução tem de devolver a definição QUE RODOU"
+        depois = sessao_a.get(f"/api/amc/execucoes/{execucao['id']}/resultados").json()["resultados"]
+        assert depois == antes and [x["favorabilidade"] for x in depois] == [61.5, 12.25]
+    finally:
+        contexto(conexao_plat_app, ids["demo"])
+        with conexao_plat_app.cursor() as cur:
+            cur.execute("DELETE FROM plat.amc_resultado WHERE execucao_id = %s::uuid", (execucao["id"],))
+        conexao_plat_app.commit()
+        sessao_a.delete(f"/api/amc/execucoes/{execucao['id']}")
 
-    # 2) a execução continua com o versao_hash antigo e a definição do modelo não mudou
-    e_depois = sessao_a.get(f"/api/amc/execucoes/{e['id']}").json()
-    assert e_depois["modelo_versao_hash"] == m["versao_hash"] == e["modelo_versao_hash"]
-    assert sessao_a.get(f"/api/amc/modelos/{m['id']}").json()["definicao"] == m["definicao"]
 
-    # 3) os resultados são bit a bit os mesmos
-    res = sessao_a.get(f"/api/amc/execucoes/{e['id']}/resultados").json()
-    assert res["total"] == 2
-    valores = {r_["unidade_id"]: r_["favorabilidade"] for r_ in res["itens"]}
-    assert valores == {"u1": 71.5, "u2": 12.0}
-
-    # 4) UPDATE/DELETE direto no banco, como plat_app: barrados pelos gatilhos (o contexto é LOCAL à
-    #    transação — o commit do INSERT de resultado acima já o apagou; refaz antes de cada bloco)
-    contexto(conexao_plat_app, tenant_id, usuario_id=ids["a"]["id"], login="admin")
+# ---------------------------------------------------------------- inquilino cruzado (A→B)
+def test_a_nao_le_modelo_execucao_nem_resultado_de_b_pela_api(sessao_a, sessao_b, conexao_plat_app):
+    """Recursos criados em B, lidos por id direto com a sessão de A: 404 em toda rota."""
+    definicao = _modelo_com_itens(sessao_b)
+    r = sessao_b.post("/api/amc/modelos", json={"definicao": definicao})
+    assert r.status_code == 201, r.text
+    modelo_b = r.json()
+    colecao = {"type": "FeatureCollection", "features": [
+        {"type": "Feature", "id": "b1", "properties": {},
+         "geometry": exemplos.area_retangulo(-49.30, -16.70, 0.01, 0.01)}]}
+    r = sessao_b.post("/api/amc/conjuntos", json={"nome": f"{PREFIXO} conjunto B", "tipo": "feicoes",
+                                                  "feicoes": colecao})
+    assert r.status_code == 201, r.text
+    conjunto_b = r.json()
+    r = sessao_b.post("/api/amc/execucoes", json={"modelo_id": modelo_b["id"], "conjunto_id": conjunto_b["id"]})
+    assert r.status_code == 201, r.text
+    execucao_b = r.json()
+    ids = ids_por_slug(conexao_plat_app)
+    contexto(conexao_plat_app, ids["demo2"])
     with conexao_plat_app.cursor() as cur:
-        with pytest.raises(psycopg2.errors.RaiseException, match="amc_modelo_identidade_imutavel"):
-            cur.execute("UPDATE plat.amc_modelo SET definicao = '{}'::jsonb WHERE id = %s", (m["id"],))
-    conexao_plat_app.rollback()
-    contexto(conexao_plat_app, tenant_id, usuario_id=ids["a"]["id"], login="admin")
-    with conexao_plat_app.cursor() as cur:
-        with pytest.raises(psycopg2.errors.RaiseException, match="amc_execucao_proveniencia_imutavel"):
-            cur.execute("UPDATE plat.amc_execucao SET semente = 999 WHERE id = %s", (e["id"],))
-    conexao_plat_app.rollback()
-    contexto(conexao_plat_app, tenant_id, usuario_id=ids["a"]["id"], login="admin")
-    with conexao_plat_app.cursor() as cur:
-        with pytest.raises(psycopg2.errors.RaiseException, match="amc_materializado_imutavel"):
-            cur.execute("UPDATE plat.amc_resultado SET favorabilidade = 0 WHERE execucao_id = %s", (e["id"],))
-    conexao_plat_app.rollback()
-
-    # modelo executado nunca se apaga
-    contexto(conexao_plat_app, tenant_id, usuario_id=ids["a"]["id"], login="admin")
-    r = sessao_a.delete(f"/api/amc/modelos/{m['id']}")
-    assert r.status_code == 409 and r.json()["erro"] == "amc_modelo_nao_apaga"
-
-
-def test_versao_gravada_e_imutavel_para_a_aplicacao(sessao_a, conexao_plat_app, ids):
-    """UPDATE/DELETE em plat.amc_modelo já executado como plat_app: sempre amc_modelo_identidade_imutavel /
-    amc_modelo_nao_apaga, mesmo direto no banco (não só pela rota)."""
-    m = _criar_modelo(sessao_a)
-    c = _criar_conjunto(sessao_a)
-    _criar_execucao(sessao_a, m["id"], c["id"])
-    tenant_id = ids_por_slug(conexao_plat_app)["demo"]
-    contexto(conexao_plat_app, tenant_id, usuario_id=ids["a"]["id"], login="admin")
-    with conexao_plat_app.cursor() as cur:
-        with pytest.raises(psycopg2.errors.RaiseException, match="amc_modelo_nao_apaga"):
-            cur.execute("DELETE FROM plat.amc_modelo WHERE id = %s", (m["id"],))
-    conexao_plat_app.rollback()
-
-
-# ------------------------------------------------------------------ hash: script independente confere o banco
-def test_script_independente_confere_o_que_esta_no_banco(sessao_a, env, ids, conexao_plat_app):
-    m = _criar_modelo(sessao_a)
-    tenant_id = ids_por_slug(conexao_plat_app)["demo"]
-    ambiente = dict(__import__("os").environ)
-    ambiente["PLAT_DSN"] = env["PLAT_DSN"]
-    ambiente["PLAT_SCHEMA"] = env.get("PLAT_SCHEMA") or "plat"
-    r = subprocess.run(
-        [sys.executable, str(RAIZ / "scripts" / "amc_hash_independente.py"), "--tenant", str(tenant_id),
-         "--modelo", m["id"]],
-        capture_output=True, text=True, cwd=RAIZ, env=ambiente,
-    )
-    assert r.returncode == 0, r.stdout + r.stderr
-    assert "divergentes: 0" in r.stdout
-    assert m["versao_hash"] in r.stdout
-    assert sessao_a.delete(f"/api/amc/modelos/{m['id']}").status_code == 204
-
-
-# ------------------------------------------------------------------ CLÁUSULA INEGOCIÁVEL: A nunca lê amc_* de B
-def test_a_nao_le_modelo_execucao_nem_resultado_de_b_pela_api(sessao_a, sessao_b, conexao_plat_app, ids):
-    m_b = _criar_modelo(sessao_b)
-    c_b = _criar_conjunto(sessao_b)
-    e_b = _criar_execucao(sessao_b, m_b["id"], c_b["id"])
-    tenant_b = ids_por_slug(conexao_plat_app)["demo2"]
-    contexto(conexao_plat_app, tenant_b, usuario_id=ids["b"]["id"], login="admin")
-    with conexao_plat_app.cursor() as cur:
-        cur.execute(
-            "INSERT INTO plat.amc_resultado(execucao_id, unidade_id, favorabilidade) VALUES (%s, 'u1', 50.0)",
-            (e_b["id"],),
-        )
+        cur.execute("INSERT INTO plat.amc_resultado(execucao_id, tenant_id, unidade_id, favorabilidade) "
+                    "VALUES (%s::uuid, %s, 'b1', 88.0)", (execucao_b["id"], ids["demo2"]))
     conexao_plat_app.commit()
-
-    sondas = [
-        ("GET", f"/api/amc/modelos/{m_b['id']}"),
-        ("PUT", f"/api/amc/modelos/{m_b['id']}"),
-        ("DELETE", f"/api/amc/modelos/{m_b['id']}"),
-        ("GET", f"/api/amc/conjuntos/{c_b['id']}"),
-        ("DELETE", f"/api/amc/conjuntos/{c_b['id']}"),
-        ("GET", f"/api/amc/execucoes/{e_b['id']}"),
-        ("DELETE", f"/api/amc/execucoes/{e_b['id']}"),
-        ("GET", f"/api/amc/execucoes/{e_b['id']}/resultados"),
-    ]
-    for metodo, url in sondas:
-        r = sessao_a.request(metodo, url, json={"nome": "invadido"} if metodo == "PUT" else None)
-        assert r.status_code in (401, 403, 404), (metodo, url, r.status_code, r.text)
-        assert m_b["id"] not in r.text and m_b["nome"] not in r.text
-        assert "u1" not in r.text
-
-    # POST /api/amc/execucoes com modelo_id/conjunto_id de B no CORPO: 404, nunca resolve a camada de B
-    r = sessao_a.post("/api/amc/execucoes", json={"modelo_id": m_b["id"], "conjunto_id": c_b["id"], "semente": 1})
-    assert r.status_code == 404, r.text
-
-    # listagem com filtro apontando para modelo de B: 200 com lista VAZIA (o filtro é só um WHERE dentro
-    # do RLS do próprio A; o id de B não pertence a A, então nunca aparece — nunca 404 aqui, só 0 itens)
-    r = sessao_a.get(f"/api/amc/execucoes?modelo_id={m_b['id']}")
-    assert r.status_code == 200 and r.json() == {"total": 0, "itens": []}, r.text
-
-    # listagens gerais de A nunca trazem nada de B
-    assert m_b["id"] not in str(sessao_a.get("/api/amc/modelos").json())
-    assert c_b["id"] not in str(sessao_a.get("/api/amc/conjuntos").json())
-    assert e_b["id"] not in str(sessao_a.get("/api/amc/execucoes").json())
-
-    # limpeza: modelo de B já está "executado" (a sonda de execução acima foi recusada antes de existir,
-    # mas e_b já existia) — apaga execução primeiro, depois conjunto; o modelo fica (não se apaga executado,
-    # é o comportamento correto do produto, não resíduo de teste a esconder)
-    contexto(conexao_plat_app, tenant_b, usuario_id=ids["b"]["id"], login="admin")
-    with conexao_plat_app.cursor() as cur:
-        cur.execute("DELETE FROM plat.amc_resultado WHERE execucao_id = %s", (e_b["id"],))
-    conexao_plat_app.commit()
-    assert sessao_b.delete(f"/api/amc/execucoes/{e_b['id']}").status_code == 204
-    assert sessao_b.delete(f"/api/amc/conjuntos/{c_b['id']}").status_code == 204
+    try:
+        alvos = [
+            ("GET", f"/api/amc/modelos/{modelo_b['id']}"),
+            ("GET", f"/api/amc/modelos/{modelo_b['id']}/versoes"),
+            ("GET", f"/api/amc/modelos/{modelo_b['id']}/versoes/{modelo_b['versao_hash']}"),
+            ("PUT", f"/api/amc/modelos/{modelo_b['id']}"),
+            ("DELETE", f"/api/amc/modelos/{modelo_b['id']}"),
+            ("GET", f"/api/amc/conjuntos/{conjunto_b['id']}"),
+            ("GET", f"/api/amc/conjuntos/{conjunto_b['id']}/unidades"),
+            ("DELETE", f"/api/amc/conjuntos/{conjunto_b['id']}"),
+            ("GET", f"/api/amc/execucoes/{execucao_b['id']}"),
+            ("GET", f"/api/amc/execucoes/{execucao_b['id']}/resultados"),
+            ("DELETE", f"/api/amc/execucoes/{execucao_b['id']}"),
+        ]
+        for metodo, url in alvos:
+            corpo = {"definicao": definicao} if metodo == "PUT" else None
+            resposta = sessao_a.request(metodo, url, json=corpo)
+            assert resposta.status_code in (401, 403, 404), (metodo, url, resposta.status_code, resposta.text)
+        # e a execução de B não aparece na lista de A
+        lista = sessao_a.get("/api/amc/execucoes?limite=200").json()["execucoes"]
+        assert execucao_b["id"] not in [e["id"] for e in lista]
+        assert modelo_b["id"] not in [m["id"] for m in sessao_a.get("/api/amc/modelos?limite=200").json()["modelos"]]
+    finally:
+        contexto(conexao_plat_app, ids["demo2"])
+        with conexao_plat_app.cursor() as cur:
+            cur.execute("DELETE FROM plat.amc_resultado WHERE execucao_id = %s::uuid", (execucao_b["id"],))
+        conexao_plat_app.commit()
+        sessao_b.delete(f"/api/amc/execucoes/{execucao_b['id']}")
+        sessao_b.delete(f"/api/amc/conjuntos/{conjunto_b['id']}")
+        sessao_b.delete(f"/api/amc/modelos/{modelo_b['id']}")
 
 
-def test_rls_no_banco_esconde_amc_de_outro_inquilino(sessao_a, conexao_plat_app, ids):
-    """Direto no banco, como plat_app: sem contexto, 0 linhas; com o contexto do OUTRO inquilino, 0 linhas;
-    INSERT com tenant_id alheio é barrado pelo WITH CHECK — nas seis tabelas (a policy cobre até as duas que
-    não têm rota de escrita própria, amc_fator_bruto/amc_resultado, herdando o tenant da execução)."""
-    m = _criar_modelo(sessao_a)
-    c = _criar_conjunto(sessao_a)
-    e = _criar_execucao(sessao_a, m["id"], c["id"])
-    ids_tenant = ids_por_slug(conexao_plat_app)
-    tenant_a, tenant_b = ids_tenant["demo"], ids_tenant["demo2"]
+def test_rls_no_banco_esconde_amc_de_outro_inquilino(conexao_plat_app, sessao_a, modelo_a, conjunto_a):
+    """Cláusula literal: o teste cruzado falha em plat.amc_modelo, plat.amc_execucao e plat.amc_resultado — aqui
+    pela role da aplicação, que é quem a API usa."""
+    modelo, _ = modelo_a
+    r = _criar_execucao(sessao_a, modelo["id"], conjunto_a["id"])
+    assert r.status_code == 201, r.text
+    execucao = r.json()
+    ids = ids_por_slug(conexao_plat_app)
+    try:
+        contexto(conexao_plat_app, ids["demo"])
+        with conexao_plat_app.cursor() as cur:
+            cur.execute("INSERT INTO plat.amc_resultado(execucao_id, tenant_id, unidade_id, favorabilidade) "
+                        "VALUES (%s::uuid, %s, 'u1', 50.0)", (execucao["id"], ids["demo"]))
+        conexao_plat_app.commit()
 
-    with conexao_plat_app.cursor() as cur:  # sem contexto nenhum: RLS não libera NADA, nem do próprio A
-        for tabela in ("amc_modelo", "amc_conjunto_unidade", "amc_execucao", "amc_resultado"):
-            cur.execute(f"SELECT count(*) AS n FROM plat.{tabela}")  # noqa: S608 — nome de tabela fixo, sem dado do chamador
-            assert cur.fetchone()["n"] == 0, tabela
+        contexto(conexao_plat_app, ids["demo2"])
+        with conexao_plat_app.cursor() as cur:
+            for tabela, coluna, valor in (("amc_modelo", "id", modelo["id"]),
+                                          ("amc_modelo_versao", "modelo_id", modelo["id"]),
+                                          ("amc_conjunto_unidade", "id", conjunto_a["id"]),
+                                          ("amc_unidade", "conjunto_id", conjunto_a["id"]),
+                                          ("amc_execucao", "id", execucao["id"]),
+                                          ("amc_resultado", "execucao_id", execucao["id"])):
+                cur.execute(f"SELECT count(*) AS n FROM plat.{tabela} WHERE {coluna} = %s::uuid", (valor,))
+                assert cur.fetchone()["n"] == 0, f"{tabela} vazou para o outro inquilino"
+        conexao_plat_app.rollback()
 
-    contexto(conexao_plat_app, tenant_b, usuario_id=ids["b"]["id"], login="admin")
-    with conexao_plat_app.cursor() as cur:
-        cur.execute("SELECT count(*) AS n FROM plat.amc_modelo WHERE id = %s", (m["id"],))
-        assert cur.fetchone()["n"] == 0
-        cur.execute("SELECT count(*) AS n FROM plat.amc_execucao WHERE id = %s", (e["id"],))
-        assert cur.fetchone()["n"] == 0
-        with pytest.raises(psycopg2.errors.InsufficientPrivilege, match="row-level security"):
-            cur.execute(
-                "INSERT INTO plat.amc_modelo(tenant_id, nome, definicao, versao_hash) "
-                "VALUES (%s, 'intruso', '{}'::jsonb, %s)",
-                (tenant_a, "0" * 64),
-            )
+        # e nem escrever: WITH CHECK barra INSERT com tenant_id alheio
+        import psycopg2
+
+        contexto(conexao_plat_app, ids["demo2"])
+        with conexao_plat_app.cursor() as cur, pytest.raises(psycopg2.Error):
+            cur.execute("INSERT INTO plat.amc_resultado(execucao_id, tenant_id, unidade_id, favorabilidade) "
+                        "VALUES (%s::uuid, %s, 'x', 1.0)", (execucao["id"], ids["demo"]))
+        conexao_plat_app.rollback()
+    finally:
+        contexto(conexao_plat_app, ids["demo"])
+        with conexao_plat_app.cursor() as cur:
+            cur.execute("DELETE FROM plat.amc_resultado WHERE execucao_id = %s::uuid", (execucao["id"],))
+        conexao_plat_app.commit()
+        sessao_a.delete(f"/api/amc/execucoes/{execucao['id']}")
+
+
+# ================================================================ conserto do laudo L3-01-ADVERSARIO (06/09/2026)
+def test_chave_repetida_no_corpo_cru_sai_422_json_ambiguo(sessao_a):
+    """Achado 5: `json.loads` fica em silêncio com a ÚLTIMA ocorrência da chave repetida. Num documento cuja versão
+    é o hash do próprio documento, aceitar um texto ambíguo sem avisar é buraco de auditoria."""
+    definicao = _modelo_com_itens(sessao_a)
+    texto = json.dumps({"definicao": definicao}, ensure_ascii=False)
+    alvo = f'"nome": "{definicao["nome"]}"'
+    assert alvo in texto
+    ambiguo = texto.replace(alvo, '"nome": "MODELO QUE NAO VALE", ' + alvo, 1)
+    cabecalho = {"content-type": "application/json"}
+    for rota in ("/api/amc/modelos/validar", "/api/amc/modelos"):
+        r = sessao_a.post(rota, content=ambiguo, headers=cabecalho)
+        assert r.status_code == 422 and r.json()["erro"] == "json_ambiguo", (rota, r.text)
+        assert r.json()["detalhe"]["chave"] == "nome"
+    # o mesmo corpo sem a repetição continua sendo aceito
+    r = sessao_a.post("/api/amc/modelos", content=texto, headers=cabecalho)
+    assert r.status_code == 201, r.text
+    mid = r.json()["id"]
+    try:
+        r = sessao_a.put(f"/api/amc/modelos/{mid}", content=ambiguo, headers=cabecalho)
+        assert r.status_code == 422 and r.json()["erro"] == "json_ambiguo", r.text
+    finally:
+        sessao_a.delete(f"/api/amc/modelos/{mid}")
+
+
+def test_peso_inteiro_e_peso_real_iguais_nao_criam_versao_nova(sessao_a):
+    """Achado 5: `3` e `3.0` são o mesmo número em JSON. Reenviar o modelo com o peso escrito como inteiro não pode
+    criar uma versão nova, e o que fica gravado é o documento normalizado."""
+    definicao = _modelo_com_itens(sessao_a)
+    definicao["fatores"][0]["peso"] = 3.0
+    r = sessao_a.post("/api/amc/modelos", json={"definicao": definicao})
+    assert r.status_code == 201, r.text
+    modelo = r.json()
+    try:
+        como_inteiro = json.loads(json.dumps(definicao))
+        como_inteiro["fatores"][0]["peso"] = 3
+        r = sessao_a.put(f"/api/amc/modelos/{modelo['id']}", json={"definicao": como_inteiro})
+        assert r.status_code == 200, r.text
+        assert r.json()["versao_nova"] is False, "3 e 3.0 criaram versão nova"
+        assert r.json()["versao_hash"] == modelo["versao_hash"]
+        assert sessao_a.get(f"/api/amc/modelos/{modelo['id']}").json()["n_versoes"] == 1
+        # e mudar o peso de verdade continua criando versão
+        outro = json.loads(json.dumps(definicao))
+        outro["fatores"][0]["peso"] = 4
+        assert sessao_a.put(f"/api/amc/modelos/{modelo['id']}",
+                            json={"definicao": outro}).json()["versao_nova"] is True
+    finally:
+        sessao_a.delete(f"/api/amc/modelos/{modelo['id']}")
+
+
+def test_transformacao_incoerente_recusada_pela_api(sessao_a):
+    """Achado 2 pela API: o 422 traz a cláusula violada, como nos quatro defeitos que o item já pegava."""
+    definicao = _modelo_com_itens(sessao_a)
+    definicao["fatores"][0]["transformacao"] = {"tipo": "linear", "minimo": 30, "maximo": 0}
+    for rota in ("/api/amc/modelos/validar", "/api/amc/modelos"):
+        r = sessao_a.post(rota, json={"definicao": definicao})
+        assert r.status_code == 422 and r.json()["erro"] == "modelo_invalido", (rota, r.text)
+        clausulas = [v["clausula"] for v in r.json()["detalhe"]["violacoes"]]
+        assert "transformacao: minimo < maximo" in clausulas, clausulas
+
+
+def test_erro_de_privilegio_do_banco_nao_vira_403_de_inquilino(conexao_plat_app):
+    """Achado 1 do laudo, terceira parte: o SQLSTATE 42501 tem dois donos e os dois saíam com a MESMA frase.
+    Violar a política de inquilino continua sendo 403 'operação fora do inquilino da sessão'; faltar GRANT no
+    banco é erro de INSTALAÇÃO e passa a sair 500 `privilegio_do_banco` — dizer ao operador que ele saiu do
+    inquilino mandava-o investigar o lugar errado."""
+    import psycopg2
+
+    from app.auth.comum import erro_do_banco
+
+    ids = ids_por_slug(conexao_plat_app)
+    contexto(conexao_plat_app, ids["demo"])
+    # (a) fronteira de inquilino: RLS recusa o INSERT com tenant alheio
+    with conexao_plat_app.cursor() as cur, pytest.raises(psycopg2.errors.InsufficientPrivilege) as e:
+        cur.execute("INSERT INTO plat.amc_modelo(tenant_id, nome, versao_hash, criado_por, atualizado_por) "
+                    "VALUES (%s, 'zt-amc rls', %s, 0, 0)", (ids["demo2"], "0" * 64))
     conexao_plat_app.rollback()
+    assert "row-level security" in str(e.value)
+    erro = erro_do_banco(e.value)
+    assert erro.status_code == 403 and erro.erro == "sem_permissao"
 
-    contexto(conexao_plat_app, tenant_a, usuario_id=ids["a"]["id"], login="admin")
-    with conexao_plat_app.cursor() as cur:
-        cur.execute("SELECT count(*) AS n FROM plat.amc_modelo WHERE id = %s", (m["id"],))
-        assert cur.fetchone()["n"] == 1
+    # (b) falta de GRANT: mesmo SQLSTATE, outra causa, outra resposta
+    contexto(conexao_plat_app, ids["demo"])
+    with conexao_plat_app.cursor() as cur, pytest.raises(psycopg2.errors.InsufficientPrivilege) as e:
+        cur.execute("SELECT 1 FROM pg_catalog.pg_authid")
     conexao_plat_app.rollback()
+    assert "permission denied" in str(e.value)
+    erro = erro_do_banco(e.value)
+    assert erro.status_code == 500 and erro.erro == "privilegio_do_banco", (erro.status_code, erro.erro)
+    assert "inquilino" not in erro.mensagem.split("não de inquilino")[0], erro.mensagem

@@ -7,7 +7,7 @@ favorabilidade é L3-01-d, a combinação é L3-01-e.
 
 ## Contexto
 
-O motor logístico (`cbre/pipeline/85_fatores.sql`) já prova que extração cara/materializada + combinação barata/
+O motor logístico de referência da casa (o SQL de fatores do piloto) já prova que extração cara/materializada + combinação barata/
 interativa funciona (decisão A2). Faltava, em Python puro e sem depender do banco para o cálculo em si, a função que
 lê um raster ou uma camada vetorial e devolve o valor bruto por unidade, com o peso de área na borda que separa o
 motor certo do aproximado (regra do portão do item).

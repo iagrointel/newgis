@@ -997,3 +997,16 @@ CONSULTA_GRANDE_LIMIAR_LINHAS_DUCKDB = 5_000_000  # acima disto a ferramenta gra
 # guarda o worker (e o registro em plat.job.parametros) de um GeoJSON grande demais para buffer em memória.
 FERRAMENTA_GEOJSON_MAX_BYTES = 5_000_000  # GeoJSON de entrada por ferramenta (5 MB ≈ 1-2 milhões de vértices)
 FERRAMENTA_BUFFER_MAX_M = 100_000.0       # distância de buffer; 100 km já é análise regional, não local
+AMC_MATRIZ_PAGINA_MAX = 2_000         # unidades por página em GET /api/amc/execucoes/{id}/matriz (tela do motor
+                                      # recombina no navegador: cada unidade traz valor bruto E favorabilidade
+                                      # de cada fator, até 64 fatores, logo a página é ~64x mais pesada que a
+                                      # de resultados e o teto é proporcionalmente menor)
+AMC_PREVISAO_VALORES_MAX = 200_000    # valores por chamada de POST /api/amc/transformacoes/previsao (histograma
+                                      # da transformação escolhida; o portão do item L3-01-d mede 100 mil em
+                                      # <= 300 ms, este teto deixa o dobro de folga e nada além)
+
+# --- localização semelhante (L3-17-similaridade): pedido é síncrono (sem job), então o teto é o que a
+# requisição aguenta responder em segundos, não o que o motor AMC aguenta processar em lote.
+SIMILARIDADE_UNIDADES_MAX = 20_000
+SIMILARIDADE_CAMPOS_MAX = 50
+SIMILARIDADE_REFERENCIAS_MAX = 500

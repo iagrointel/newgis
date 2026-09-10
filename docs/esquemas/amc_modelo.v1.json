@@ -1,470 +1,161 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "amc_modelo.v1",
-  "title": "Modelo de análise multicritério (AMC) — versão 1",
-  "_nota": "Documento gravado em plat.amc_modelo.definicao (item L3-01-a-modelo-dado; laco/decomposicao/L3L6_CONCEITO.md decisões A1/A4/A5/A6/A11). Camada 1 de validação (estrutura) fica aqui, jsonschema Draft 2020-12; camada 2 (semântica — soma de pesos, id duplicado, coerência da transformação) vive em app/amc/esquema.py porque JSON Schema puro não expressa checagem entre itens de um array. Vocabulário fechado de propósito (decisão A4): tipo de transformação novo exige par de testes SQL×numpy antes de entrar aqui.",
+  "$id": "https://plat.local/esquemas/amc_modelo.v1.json",
+  "title": "amc_modelo.v1",
+  "description": "Modelo multicritério (AMC) da plataforma: documento único, versionado pelo sha256 do JSON canônico (json.dumps com sort_keys=True, separators=(',', ':'), ensure_ascii=False, codificado em UTF-8). Vocabulário e forma decididos em laco/decomposicao/L3L6_CONCEITO.md (A1, A3, A4, A5, A6, A11). Além deste esquema a API confere: id de fator único, soma dos pesos > 0, combinador 'percentual' com pesos que fecham 100.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "fatores",
-    "combinador"
-  ],
+  "required": ["esquema", "nome", "fatores"],
   "properties": {
-    "descricao": {
-      "type": "string",
-      "maxLength": 2048
-    },
+    "esquema": { "const": "amc_modelo.v1", "description": "versão do esquema deste documento" },
+    "nome": { "type": "string", "minLength": 1, "maxLength": 250 },
+    "descricao": { "type": "string", "maxLength": 4000 },
     "combinador": {
-      "enum": [
-        "soma_ponderada",
-        "soma_ponderada_percentual",
-        "media_geometrica",
-        "minimo",
-        "maximo",
-        "produto"
-      ],
-      "description": "soma_ponderada = Σw·f/Σw sobre os fatores com dado (padrão, A5); os demais são paridade Esri ou permitem fator anular a nota."
-    },
-    "ausente": {
-      "enum": [
-        "excluir_e_renormalizar",
-        "zero",
-        "pior_nota"
-      ],
-      "default": "excluir_e_renormalizar",
-      "description": "política de dado ausente por fator numa unidade (A5); o padrão nunca contamina a nota com COALESCE(0)."
-    },
-    "restricoes": {
-      "type": "array",
-      "maxItems": 20,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "base",
-          "motivo"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^[a-z][a-z0-9_]{0,31}$"
-          },
-          "nome": {
-            "type": "string",
-            "maxLength": 200
-          },
-          "base": {
-            "enum": [
-              "norma",
-              "engenharia",
-              "preferencia"
-            ],
-            "description": "distinção jurídica, não numérica (A6): veto e restrição nunca entram no sorteio de robustez."
-          },
-          "fonte": {
-            "type": "string",
-            "maxLength": 500
-          },
-          "camada_id": {
-            "type": "string",
-            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
-          },
-          "buffer_m": {
-            "type": "number",
-            "exclusiveMinimum": 0
-          },
-          "motivo": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 500
-          }
-        }
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Como as favorabilidades dos fatores viram a favorabilidade da unidade (A5). Padrão: soma ponderada normalizada Σ w·f / Σ w sobre os fatores COM dado.",
+      "properties": {
+        "tipo": {
+          "type": "string",
+          "default": "soma_ponderada_normalizada",
+          "enum": ["soma_ponderada_normalizada", "percentual", "media_geometrica", "minimo", "maximo", "produto", "soma_fuzzy", "gama"],
+          "description": "soma_ponderada_normalizada (padrão, motor logístico) · percentual (paridade com Weighted Overlay: pesos somam 100) · media_geometrica · minimo (AND fuzzy) · maximo (OR fuzzy) · produto · soma_fuzzy · gama"
+        },
+        "gama": { "type": "number", "minimum": 0, "maximum": 1, "description": "só para tipo 'gama'" }
       }
     },
+    "dado_ausente": {
+      "type": "string",
+      "default": "excluir_fator",
+      "enum": ["excluir_fator", "unidade_nula", "nota_pessimista"],
+      "description": "política obrigatória para fator sem dado na unidade (A5): excluir_fator (padrão; renormaliza pelos pesos presentes e grava cobertura) · unidade_nula · nota_pessimista (usa nota_pessimista_valor)"
+    },
+    "nota_pessimista_valor": { "type": "number", "minimum": 0, "maximum": 100, "default": 0 },
     "fatores": {
       "type": "array",
       "minItems": 1,
-      "maxItems": 50,
-      "items": {
-        "$ref": "#/$defs/fator"
-      }
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/fator" }
+    },
+    "restricoes": {
+      "type": "array",
+      "maxItems": 32,
+      "description": "vetos: objetos separados do peso, com base (norma × precaução), nunca sorteados na robustez (A6)",
+      "items": { "$ref": "#/$defs/restricao" }
     }
   },
   "$defs": {
-    "fator": {
+    "identificador": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,31}$",
+      "description": "chave curta e estável do fator/restrição (a mesma que vai na URL e nos pesos)"
+    },
+    "camada": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "criterio",
-        "transformacao",
-        "peso"
-      ],
+      "required": ["tipo", "id"],
       "properties": {
-        "id": {
+        "tipo": { "type": "string", "enum": ["item", "acervo"], "description": "item = camada do catálogo do inquilino (uuid); acervo = camada do acervo da casa (slug <fonte_id>/<schema>.<tabela>, B2)" },
+        "id": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "banda": { "type": "integer", "minimum": 1, "description": "banda do raster, quando houver" },
+        "atributo": { "type": "string", "maxLength": 128, "description": "coluna da camada vetorial lida pelo extrator, quando houver" }
+      }
+    },
+    "extrator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tipo"],
+      "description": "produz o VALOR BRUTO por unidade (L3-01-c); parâmetros por tipo ficam em 'parametros'",
+      "properties": {
+        "tipo": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_]{0,31}$",
-          "description": "único dentro do modelo (checado em app/amc/esquema.py; JSON Schema puro não compara itens do array entre si)."
-        },
-        "nome": {
-          "type": "string",
-          "maxLength": 200
-        },
-        "criterio": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 500
-        },
-        "camada_id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
-        },
-        "fonte": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "maxLength": 500
-        },
-        "unidade": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "maxLength": 50
-        },
-        "direcao": {
           "enum": [
-            "quanto_maior_melhor",
-            "quanto_menor_melhor",
-            null
-          ]
-        },
-        "base": {
-          "enum": [
-            "norma",
-            "engenharia",
-            "preferencia",
-            null
+            "raster_media", "raster_minimo", "raster_maximo", "raster_mediana", "raster_percentil", "raster_moda", "raster_fracao_classe",
+            "poligono_fracao_area", "poligono_area", "poligono_contagem", "poligono_atributo_ponderado",
+            "linha_comprimento", "linha_distancia_mais_proxima",
+            "ponto_contagem_raio", "ponto_densidade_kernel", "ponto_distancia_mais_proximo", "ponto_atributo_mais_proximo",
+            "valor_pronto"
           ],
-          "description": "A11: de onde vem o critério — nunca 'pesos que ninguém aprovou'."
+          "description": "valor_pronto = a camada já traz o valor por unidade (coluna 'atributo' casada pelo id da unidade)"
         },
-        "proxy": {
-          "type": [
-            "boolean",
-            "null"
-          ],
-          "description": "A11: fator mede algo diferente do que o critério promete (ex.: presença ≠ supressão)."
-        },
-        "nao_sustenta": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "maxLength": 500,
-          "description": "A11: o que este fator explicitamente NÃO sustenta como evidência."
-        },
-        "peso": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1000
-        },
-        "transformacao": {
-          "$ref": "#/$defs/transformacao"
-        },
-        "disponivel": {
-          "type": [
-            "boolean",
-            "null"
-          ],
-          "description": "false = gancho ainda sem dado (fator declarado, camada não ligada); default true (anatomia cbre.fatores.disponivel)."
-        },
-        "ressalva": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "maxLength": 500,
-          "description": "o que este fator NÃO prova por si (ex.: 'confiança baixa não decide lote na linha de divisa')."
-        }
+        "parametros": { "type": "object" }
       }
     },
     "transformacao": {
       "type": "object",
-      "required": [
-        "tipo"
-      ],
-      "allOf": [
-        {
-          "if": {
-            "properties": {
-              "tipo": {
-                "const": "linear"
-              }
-            }
-          },
-          "then": {
-            "additionalProperties": false,
-            "required": [
-              "tipo",
-              "minimo",
-              "maximo"
-            ],
-            "properties": {
-              "tipo": {
-                "const": "linear"
-              },
-              "minimo": {
-                "type": "number"
-              },
-              "maximo": {
-                "type": "number"
-              },
-              "inverter": {
-                "type": "boolean",
-                "default": false
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "tipo": {
-                "const": "faixas"
-              }
-            }
-          },
-          "then": {
-            "additionalProperties": false,
-            "required": [
-              "tipo",
-              "quebras",
-              "notas"
-            ],
-            "properties": {
-              "tipo": {
-                "const": "faixas"
-              },
-              "metodo": {
-                "enum": [
-                  "manual",
-                  "quantil",
-                  "intervalo_igual",
-                  "quebras_naturais"
-                ],
-                "default": "manual"
-              },
-              "quebras": {
-                "type": "array",
-                "items": {
-                  "type": "number"
-                },
-                "minItems": 1,
-                "maxItems": 20
-              },
-              "notas": {
-                "type": "array",
-                "items": {
-                  "type": "number",
-                  "minimum": 0,
-                  "maximum": 100
-                },
-                "minItems": 2,
-                "maxItems": 21
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "tipo": {
-                "const": "degraus"
-              }
-            }
-          },
-          "then": {
-            "additionalProperties": false,
-            "required": [
-              "tipo",
-              "bandas"
-            ],
-            "properties": {
-              "tipo": {
-                "const": "degraus"
-              },
-              "bandas": {
-                "type": "array",
-                "minItems": 1,
-                "maxItems": 20,
-                "items": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": [
-                    "ate",
-                    "nota"
-                  ],
-                  "properties": {
-                    "ate": {
-                      "type": "number"
-                    },
-                    "nota": {
-                      "type": "number",
-                      "minimum": 0,
-                      "maximum": 100
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "tipo": {
-                "const": "categorias"
-              }
-            }
-          },
-          "then": {
-            "additionalProperties": false,
-            "required": [
-              "tipo",
-              "mapa"
-            ],
-            "properties": {
-              "tipo": {
-                "const": "categorias"
-              },
-              "mapa": {
-                "type": "object",
-                "minProperties": 1,
-                "additionalProperties": {
-                  "type": "number",
-                  "minimum": 0,
-                  "maximum": 100
-                }
-              },
-              "sem_correspondencia": {
-                "type": [
-                  "number",
-                  "null"
-                ],
-                "minimum": 0,
-                "maximum": 100
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "tipo": {
-                "const": "gaussiana"
-              }
-            }
-          },
-          "then": {
-            "additionalProperties": false,
-            "required": [
-              "tipo",
-              "media",
-              "desvio"
-            ],
-            "properties": {
-              "tipo": {
-                "const": "gaussiana"
-              },
-              "media": {
-                "type": "number"
-              },
-              "desvio": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "tipo": {
-                "const": "potencia"
-              }
-            }
-          },
-          "then": {
-            "additionalProperties": false,
-            "required": [
-              "tipo",
-              "minimo",
-              "maximo",
-              "expoente"
-            ],
-            "properties": {
-              "tipo": {
-                "const": "potencia"
-              },
-              "minimo": {
-                "type": "number"
-              },
-              "maximo": {
-                "type": "number"
-              },
-              "expoente": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "tipo": {
-                "const": "binario"
-              }
-            }
-          },
-          "then": {
-            "additionalProperties": false,
-            "required": [
-              "tipo",
-              "limiar"
-            ],
-            "properties": {
-              "tipo": {
-                "const": "binario"
-              },
-              "limiar": {
-                "type": "number"
-              },
-              "acima_passa": {
-                "type": "boolean",
-                "default": true
-              }
-            }
-          }
-        }
-      ],
+      "required": ["tipo"],
+      "description": "valor bruto → favorabilidade 0-100 (A4; implementações SQL e numpy no item L3-01-d). Tipos: categoria (Unique Categories), faixas (Range of Classes), linear (com mínimo/máximo e direção), degraus (bandas do motor logístico) e as funções contínuas do Rescale by Function do ArcGIS Pro 3.4 com os mesmos nomes de parâmetro.",
       "properties": {
         "tipo": {
+          "type": "string",
           "enum": [
-            "linear",
-            "faixas",
-            "degraus",
-            "categorias",
-            "gaussiana",
-            "potencia",
-            "binario"
+            "categoria", "faixas", "linear", "degraus",
+            "exponencial", "gaussiana", "grande", "logaritmo", "decaimento_logistico", "crescimento_logistico",
+            "ms_grande", "ms_pequena", "proxima", "potencia", "pequena", "linear_simetrica"
           ]
-        }
+        },
+        "abaixo": { "type": ["number", "null"], "minimum": 0, "maximum": 100, "description": "nota para valor abaixo da faixa (value below threshold); null = NULL" },
+        "acima": { "type": ["number", "null"], "minimum": 0, "maximum": 100, "description": "nota para valor acima da faixa (value above threshold); null = NULL" }
+      },
+      "allOf": [
+        { "if": { "properties": { "tipo": { "const": "categoria" } } },
+          "then": { "required": ["notas"], "properties": { "notas": { "type": "object", "minProperties": 1, "additionalProperties": { "type": "number", "minimum": 0, "maximum": 100 } }, "outros": { "type": ["number", "null"], "minimum": 0, "maximum": 100 } } } },
+        { "if": { "properties": { "tipo": { "const": "faixas" } } },
+          "then": { "required": ["quebras", "notas"], "properties": { "quebras": { "type": "array", "minItems": 1, "items": { "type": "number" } }, "notas": { "type": "array", "minItems": 2, "items": { "type": "number", "minimum": 0, "maximum": 100 } }, "metodo": { "type": "string", "enum": ["manual", "quantil", "intervalo_igual", "quebras_naturais"], "default": "manual" } } } },
+        { "if": { "properties": { "tipo": { "const": "linear" } } },
+          "then": { "required": ["minimo", "maximo"], "properties": { "minimo": { "type": "number" }, "maximo": { "type": "number" }, "direcao": { "type": "string", "enum": ["crescente", "decrescente"], "default": "crescente" } } } },
+        { "if": { "properties": { "tipo": { "const": "degraus" } } },
+          "then": { "required": ["bandas"], "properties": { "bandas": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["ate", "nota"], "properties": { "ate": { "type": "number" }, "nota": { "type": "number", "minimum": 0, "maximum": 100 } } } } } } }
+      ]
+    },
+    "fator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "nome", "fonte", "unidade", "direcao", "base", "camada", "extrator", "transformacao", "peso"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identificador" },
+        "nome": { "type": "string", "minLength": 1, "maxLength": 250 },
+        "criterio": { "type": "string", "maxLength": 1000, "description": "uma linha: o que se quer (linguagem do motor logístico)" },
+        "fonte": { "type": "string", "minLength": 1, "maxLength": 1000, "description": "quem publica o dado e quando (A11)" },
+        "unidade": { "type": "string", "minLength": 1, "maxLength": 64, "description": "unidade de medida do valor bruto (m, %, hab/km², min, ...)" },
+        "direcao": { "type": "string", "enum": ["maior_melhor", "menor_melhor"], "description": "do valor bruto; a favorabilidade já sai orientada (maior = melhor)" },
+        "base": { "type": "string", "enum": ["norma", "engenharia", "preferencia"], "description": "por que este fator pesa (A11)" },
+        "camada": { "$ref": "#/$defs/camada" },
+        "extrator": { "$ref": "#/$defs/extrator" },
+        "transformacao": { "$ref": "#/$defs/transformacao" },
+        "peso": { "type": "number", "minimum": 0, "description": "multiplicador (ou percentual no combinador 'percentual'); escolhido pelo usuário, não medido" },
+        "proxy": {
+          "type": "object", "additionalProperties": false, "required": ["descricao"],
+          "properties": { "descricao": { "type": "string", "maxLength": 1000 }, "teto_peso": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.6 } },
+          "description": "o dado mede outra grandeza (proxy): declarar e limitar o peso (teto padrão 0,60 da escala)"
+        },
+        "classe_peso": { "type": "string", "enum": ["custo_medido", "apetite_de_risco", "consequencia_normativa"] },
+        "ancora_peso": { "type": "string", "enum": ["medida", "escolhida"] },
+        "nao_sustenta": { "type": "string", "maxLength": 1000, "description": "o que este fator NÃO permite concluir" }
+      }
+    },
+    "restricao": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "nome", "base", "fonte", "camada", "regra"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identificador" },
+        "nome": { "type": "string", "minLength": 1, "maxLength": 250 },
+        "base": { "type": "string", "enum": ["norma", "precaucao"], "description": "norma = a lei veda; precaucao = vetamos por precaução (nunca dizer que a lei proíbe)" },
+        "base_legal": { "type": "string", "maxLength": 1000 },
+        "fonte": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "camada": { "$ref": "#/$defs/camada" },
+        "buffer_m": { "type": "number", "minimum": 0, "description": "faixa em metros (geography)" },
+        "regra": {
+          "type": "object", "additionalProperties": false, "required": ["tipo"],
+          "properties": {
+            "tipo": { "type": "string", "enum": ["intersecta", "fracao_area_minima", "valor_raster", "atributo_igual"] },
+            "fracao_minima": { "type": "number", "minimum": 0, "maximum": 1 },
+            "valores": { "type": "array", "items": { "type": ["string", "number"] } },
+            "atributo": { "type": "string", "maxLength": 128 }
+          }
+        },
+        "motivo": { "type": "string", "maxLength": 500, "description": "texto que a unidade vetada carrega" }
       }
     }
   }

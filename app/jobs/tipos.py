@@ -6,6 +6,9 @@ from app.backup import tarefas as backup_tarefas  # noqa: F401 — L0-06-a: back
 from app.acervo import tarefas as acervo_tarefas  # noqa: F401 — L6-01-i: acervo.expor_arquivo
 from app import telemetria as telemetria_tarefas  # noqa: F401 — L7-11-c: telemetria.enviar + periódico diário
 from app.amc import tarefas as amc_tarefas  # noqa: F401 — L3-01-b: amc.gerar_unidades
+from app.amc import (
+    tarefas as amc_tarefas,  # noqa: F401 — L3-01-b: amc.gerar_unidades; L3-02-a: amc.robustez_pesos; L6-04: amc.executar
+)
 from app.catalogo import (
     tarefas as catalogo_tarefas,  # noqa: F401 — L0-03: 6 tipos catalogo.* e os periódicos do catálogo
 )

@@ -3584,6 +3584,32 @@ próprios do backlog com dono nomeado — o desenho do produto em si saiu limpo:
 segredos por `LoadCredential=`, repositório e histórico git com 0 ocorrências, `.env` raiz sem segredo.
 Runbook em `docs/RUNBOOKS/segredos.md` (procedimento por segredo, janela trust declarada, ressalva do
 garage.toml do daemon, que é da frente plataforma/pipeline e o produto nunca lê em operação).
+## turno 3, setembro de 2026 (item L3-01-g-tela-motor: a tela do motor multicritério)
+
+Tela `/amc/motor`, aberta a partir de um conjunto de unidades ou de uma execução. Monta o modelo (adicionar
+fator = camada do catálogo ou do acervo + extrator + transformação, com pré-visualização do histograma sobre
+os valores REAIS já extraídos; marcar veto = restrição declarada, objeto separado do peso), escolhe o peso de
+cada fator por controle deslizante (multiplicador) ou por percentual com trava, manda rodar (a extração é job
+do servidor) e, com a execução em mãos, RECOMBINA NA HORA ao mover um peso — medido no navegador: zero
+requisição à API entre mover o controle e a lista mudar. Mapa recolorido por favorabilidade com rampa
+declarada (vetado em cinza, sem nota vazado), lista das melhores unidades, clique = explicação fator a fator,
+e link com os pesos na URL que reabre a mesma leitura.
+
+Duas rotas novas: `GET /api/amc/execucoes/{id}/matriz` (valor bruto E favorabilidade de cada fator em cada
+unidade — é o que torna a recombinação local possível sem uma terceira implementação da conta) e
+`POST /api/amc/transformacoes/previsao` (porta HTTP de `app.amc.transformacoes.pre_visualizar`, mais a curva
+desenhada sobre o domínio dos valores recebidos).
+
+Os pesos viajam na URL, então a barra de endereço é fronteira de confiança: `web/js/amc/pesos_url.js` valida
+antes de qualquer conta e a tela RECUSA o link adulterado (peso acima do máximo da escala, fator inexistente,
+soma percentual fora de 100) com a razão escrita, deixando o mapa VAZIO em vez de recolorido com outros pesos.
+
+Três defeitos achados pelo próprio e2e e corrigidos: sem carregar o dicionário, a barra lateral mostrava chave
+crua; o campo de número dispara `change` outra vez ao perder o foco e redesenhava a lista entre o apertar e o
+soltar do botão, perdendo o clique; e item de grade nasce com `min-width: auto`, o que fazia a tabela esticar
+a coluna do painel por cima do mapa. A explicação de uma unidade passou a delegar as doze funções contínuas a
+`app/amc/transformacoes.py` — sem isso a tela e a explicação dariam números diferentes para o mesmo fator.
+
 ## turno 3, setembro de 2026 (item L3-19-multiescala: grades aninhadas do motor multicritério)
 
 Construído do zero neste turno (RESGATE da sessão executora derrubada por cota só tinha a migração,
@@ -5023,6 +5049,86 @@ chamadas escrever no schema `plat` de PRODUÇÃO mesmo dentro de uma base de tri
 Medido (`tests/medidas/L0-04-h-exportar.json`, camada de 100 mil feições): tempo por formato de 0,80 s
 (FlatGeobuf) a 14,54 s (XLSX); todos os 11 formatos reabertos com a mesma contagem de 100.000 feições
 (`ogrinfo`/DuckDB conforme o formato).
+## turno 3, setembro de 2026 (item L3-01-d-transformacoes: biblioteca de transformações do motor multicritério)
+
+`app/amc/transformacoes.py` (numpy, puro) implementa os 16 tipos de transformação valor bruto → favorabilidade
+0-100 do esquema (`categoria`, `faixas` com quebra manual/quantil/intervalo igual/quebras naturais, `linear`,
+`degraus`, e as 12 funções contínuas do Rescale by Function do ArcGIS Pro 3.4 — fórmula DECLARADA, a Esri não
+publica a fechada, ver ADR); `db/migracoes/20260907T1602_amc_transformacoes.sql` implementa as mesmas em
+PL/pgSQL (`plat.amc_transformar_num`/`_cat`) para materializar sem trazer a coluna ao Python. Equivalência
+SQL×numpy provada a ≤ 0,01 (`tests/unit/test_amc_transformacoes.py`, 20 casos + amostra aleatória de 200
+valores); refutação do adversário (gaussiana/logística/MSLarge reimplementadas do zero a partir da página
+pública da Esri, mais mínimo=máximo/spread 0/negativo/NaN) em
+`tests/unit/test_amc_transformacoes_adversario.py`. Pré-visualização com histograma de entrada/saída em
+~20-35 ms para 100 mil valores (limite do portão: 300 ms; `tests/unit/test_amc_transformacoes_desempenho.py`).
+Reprodução do motor logístico real (CBRE, só leitura): 4 dos 19 fatores batem a ≤ 0,5 em 100 % das células
+(`decl`, `rod`, `agua`, `press`); os outros 15 ficam fora de escopo (combinam várias colunas/veto/bônus, ou —
+`gru`/`se` — têm coluna candidata que diverge de verdade, 3,90 % e 80,1 % das células), cada um com o motivo
+nomeado em `tests/medidas/L3-01-d-transformacoes.json` — cláusula registrada como PARCIAL, não fingida como
+passada. `app/amc/executor.py` (item L6-04) agora usa esta biblioteca inteira em vez de só `linear`. 16
+gráficos gerados por `scripts/amc_transformacoes_graficos.py` em `docs/graficos/amc_transformacoes/`. ADR
+`docs/adr/20260907T1602-transformacoes-amc.md`.
+
+## turno 3, setembro de 2026 (item L3-02-a-monte-carlo-pesos: robustez do motor multicritério por sorteio de pesos)
+
+`app/amc/robustez.py` (puro, sem I/O): `sortear_pesos` (Dirichlet no simplex ou faixa +-k% por fator,
+declarada) e `simular_robustez`, que chama o combinador do L3-01-e (`app.amc.combinacao.combinar`) N
+vezes e agrega por unidade (minimo, media, maximo, desvio, frequencia no top-k e no decil superior,
+estavel = top-k em >=95% dos sorteios). Sorteio de peso em ordem canonica pelos IDs dos fatores (nunca
+pela posicao de entrada), remapeada de volta na saida: permutar a ordem de entrada e reexecutar com a
+mesma semente da o mesmo resultado (nota com tolerancia 1e-9 por soma de ponto flutuante nao ser
+perfeitamente associativa; ranking exato). Veto e restricao nunca sao sorteados: `fracao_vetada` fixo
+em todos os N sorteios, unidade vetada marcada com nota `-inf` antes de ordenar (exclusao do topo por
+construcao, testada com unidade que teria a nota maxima sem o veto). Job `amc.robustez_pesos`
+(`app/amc/tarefas.py`, pesado=True, timeout_s=120) registrado em `app/jobs/tipos.py`; resultado
+(agregados + semente, nunca a matriz N x unidades, conforme A9) em `job.resultado` (jsonb existente,
+sem migracao nova). Medido (`tests/medidas/L3-02-a-monte-carlo-pesos.json`): 1.000 sorteios em 5.000
+unidades x 8 fatores como job, 0,767 s (78x dentro do limite de 60 s). ADR
+`docs/adr/20260907T1245-robustez-sorteio-de-pesos.md`.
+## turno 3, setembro de 2026 (item L3-01-f-explicacao: explicação da nota do motor multicritério)
+
+`GET /api/amc/execucoes/{execucao_id}/unidades/{unidade_id}/explicacao` responde "por que esta unidade tem nota
+N": tabela fator → valor bruto (com unidade e fonte) → transformação → favorabilidade → peso → contribuição,
+mais soma, veto/motivo e cobertura (`app/amc/explicacao.py`). Recalculado a partir de `plat.amc_fator_bruto` na
+hora, nunca lido de uma tabela de explicação gravada — o mesmo combinador de `app/amc/combinacao.py` (item
+L3-01-e). Sobre 100 unidades sorteadas, |soma das contribuições − favorabilidade gravada| ≤ 0,5 (medido:
+`tests/medidas/L3-01-f-explicacao.json`). Painel em `/amc/explicacao/<execucao_id>/<unidade_id>`
+(`web/amc_explicacao.html` + `web/js/amc/explicacao_pagina.js`). Combinador fuzzy (mínimo/máximo/produto/soma
+fuzzy/gama) não decompõe em contribuições por fator por definição matemática — a tabela mostra a favorabilidade
+de cada fator sem fingir uma soma que não existe. Transformação contínua (Rescale by Function, item
+L3-01-d-transformacoes, pendente) aparece com valor bruto e observação, nunca com número fabricado. ADR
+`docs/adr/20260907T1245-explicacao-amc.md`.
+## turno 3, setembro de 2026 (item L6-04-acervo-no-motor: camada do acervo como fator no motor multicritério)
+
+Fecha o ciclo entre o motor AMC (L3-01-a/b/c) e a publicação sem cópia do acervo (L6-01-b): `app/amc/executor.py`
+(job `amc.executar`, enfileirado sozinho por `POST /api/amc/execucoes` quando o modelo tem fator `camada.tipo =
+'acervo'`) lê cada fator direto da view `plat_acervo.<view>` — nunca copia a tabela de origem — com
+`app.amc.vetorial` fazendo a extração e uma transformação `linear` levando o valor bruto a favorabilidade 0-100.
+Provado com 3 camadas REAIS já ingeridas na casa (`icmbio_unidades_conservacao`, `funai_terras_indigenas`,
+`hidro_nacional_bc250`, 1,6 mi de linhas), não dado sintético. `app/amc/camadas.py::_acervo` passou a exigir
+`plat.acervo_pode_ler` (mesmo porteiro da API de mapa) na CRIAÇÃO da execução — sem assinatura, 422
+`sem_assinatura`, execução nem nasce; o job confere a assinatura DE NOVO, uma vez antes de cada fator e uma vez
+depois do último, então revogar a assinatura NO MEIO do job (a refutação do item) derruba a execução com
+`FalhaDefinitiva` e mensagem, sem gravar nenhuma linha de `amc_fator_bruto`/`amc_resultado` — os dois só são
+escritos juntos, no bloco final, depois de todas as confirmações. Resultado de uma execução já concluída nunca é
+apagado por uma revogação posterior (gatilho `amc_resultado_guarda`, sem mudança). Proveniência
+(`amc_execucao.camadas`) ganhou o campo `fonte_id` explícito, ao lado de `sha256`/`contagem`/`contagem_origem`
+que `mod_camadas._acervo` já gravava. Limite honesto: só fatores `camada.tipo == 'acervo'` são extraídos por este
+job (fator do tipo `item` fica de fora, é ignorado na combinação); só transformação `linear`; camada lida só
+dentro da caixa envolvente das unidades + folga, não da tabela inteira (necessário para não varrer camadas
+nacionais de milhões de linhas a cada execução) — a combinação completa do motor (categorias, faixas, degraus,
+funções contínuas, combinadores alternativos) é o item L3-01-d/e, ainda não construído.
+
+Achado de merge: juntar os três worktrees de que este item depende (`wt/amc`, `wt/extrat`, `wt/t601b`, nenhum
+ainda integrado a `master`) produziu um `SyntaxError` real em `tests/api/cruzado_casos.py` — o merge automático
+(`git ort`) costurou dois `return Preparacao(...)` de branches diferentes de um jeito que partiu uma função no
+meio por uma `def` e derrubou um `),` de fechamento do dicionário `CASOS`. Sem o conserto (feito neste ramo),
+`make lint` e toda a suíte de API (que importa `tests/api/conftest.py`, que importa `cruzado_casos.py`) falhavam
+na coleta. `docs/openapi.json` continua sem nenhuma das 18 rotas `/api/amc` — débito pré-existente do próprio
+L3-01-a/b, não deste item; os dois testes que dependem dele (`test_amc_adversario_api.py` × 2,
+`test_cruzado.py::test_cobertura_100_por_cento`) seguem vermelhos, sem regressão nova. `docs/adr/0017` do
+L3-01-c também dispara `make sem-marcador` (falso positivo de uma palavra comum em português que contém a
+sequência proibida por acaso) — não é código deste item, não corrigido aqui.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 - **L7-06-d-paineis**: cinco painéis Grafana provisionados por arquivo (`deploy/grafana/paineis/*.json` + `deploy/grafana/provisioning/`), homologação própria (`deploy/paineis_homologacao.sh`) com carga curta de verdade e captura de cada painel em `tests/e2e/capturas/`. Métricas novas para o que os painéis precisavam e não existia: usuários ativos em 24 h, duração e tamanho do último backup/ensaio, uso de armazenamento e tamanho do schema de dado por inquilino.
@@ -6147,6 +6253,16 @@ arquivos de teste do item juntos: **77 passed**, `ruff` limpo, `make sem-marcado
 ## turno 3, setembro de 2026 (itens L3-01-a-modelo-dado e L3-01-b-unidades: motor multicritério — modelo, proveniência e unidade de análise)
 
 Migração `20260907T1206_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
+## turno 3, setembro de 2026 (itens L3-01-a-modelo-dado e L3-01-b-unidades: motor multicritério — modelo, proveniência e unidade de análise)
+
+Migração `20260907T1206_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
+Migração `044_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
+Migração `045_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
+## turno 3, setembro de 2026 (itens L3-01-a-modelo-dado e L3-01-b-unidades: motor multicritério — modelo, proveniência e unidade de análise)
+
+Migração `045_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
+Migração `044_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
+Migração `045_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
 editável) e `amc_modelo_versao` (toda versão que já existiu, imutável para a aplicação por gatilho), `amc_conjunto_unidade`
 e `amc_unidade`, `amc_execucao` (proveniência congelada), `amc_fator_bruto` e `amc_resultado` — linhas por (execução,
 unidade, fator), nunca uma coluna por fator. `amc_resultado` tem `CHECK` que impede unidade vetada de carregar número na
@@ -6172,6 +6288,8 @@ não tinha sido gerada (`/mnt/pgdata` a 99 %, 13 GB livres) e entrou como proje�
 livres, e a re-medição depois do conserto do teto deu **989.334 células em 33,55 s** (+0,202 %). A projeção de 34,3 s
 era conservadora: errou ~10 % para mais. A linha de bytes para 1 milhão continua marcada `EXTRAPOLADO` porque essa
 ninguém mediu.
+em 8,61 s**, em 3 faixas, ocupando **186 MB** de tabela e índices. **1 milhão de células NÃO foi gerado** — `/mnt/pgdata`
+está a 99 % com 13 GB livres —; a projeção linear (34,3 s e ~741 MB) está gravada com `EXTRAPOLADO` no nome do campo.
 
 Refutações escritas como teste: editar um modelo já executado cria versão nova e a execução antiga continua apontando
 para a versão antiga, com o resultado inalterado (`test_refutacao_editar_modelo_executado_nao_muda_a_execucao_nem_o_resultado`);
@@ -6223,6 +6341,76 @@ na junção com `master`, para **`20260907T1206_amc.sql`**: a numeração de tr�
 `app.migracoes.ULTIMO_LEGADO`), e `045` já era usado por `045_geocodificador.sql` na árvore principal. Conferido antes
 do renome: `045_amc.sql` nunca foi aplicado sob esse nome em nenhum ambiente (produção `plat`, homologação nem
 qualquer schema de trilha `plat_t*`) — o renome é seguro, sem entrada órfã para limpar em `versao_migracao`.
+45 testes novos (`tests/unit/test_amc_esquema.py`, `tests/unit/test_amc_crs.py`, `tests/api/amc/`), verdes; a varredura
+cruzada do OpenAPI cobre as 18 rotas novas (`tests/api/cruzado_casos.py`). ADR
+`docs/adr/0016-motor-amc-modelo-e-unidades.md`.
+
+### conserto depois da refutação (`laco/handoffs/T3/L3-01-CONSERTO.md`)
+
+O laudo `laco/handoffs/T3/L3-01-ADVERSARIO.md` refutou o item em cinco frentes; as duas cláusulas centrais do portão
+(imutabilidade do modelo já executado e isolamento entre inquilinos) resistiram. Consertado:
+
+1. **Reescrita de schema fechada como classe** (`app/schema_ambiente.py`). Era só `execute` com `str`; passou a cobrir
+   `str` e `bytes` em `execute`, `executemany`, `callproc`, `mogrify` e `copy_expert`, com `copy_from`/`copy_to`
+   declarados fora de cobertura com a razão escrita. Três defeitos do mesmo tipo apareceram no mesmo dia: o `bytes` de
+   `psycopg2.extras.execute_values` (que quebrava o conjunto do tipo `feicoes` fora do schema `plat`), as conexões de
+   teste (commit `c311aa7`) e o `executemany` de `POST`/`PUT /api/papeis` (que fazia a prova de isolamento entre
+   inquilinos rodar contra o schema de produção). `tests/unit/test_schema_ambiente.py` (22 casos) reprova se aparecer
+   um ponto de entrada novo sem reescrita. `app/amc/unidades.gravar_feicoes` não usa mais `execute_values`.
+2. **Erro de privilégio deixou de mentir** (`app/auth/comum._erro_de_privilegio`): o SQLSTATE 42501 por política de
+   inquilino continua 403 `sem_permissao`; por falta de GRANT passa a 500 `privilegio_do_banco` — é erro de instalação
+   do ambiente e o 403 mandava o operador investigar o lugar errado.
+3. **Coerência interna da transformação** (`app/amc/esquema._violacoes_transformacao`): faixa invertida ou degenerada,
+   número de notas incompatível com o de quebras, quebras e bandas fora de ordem crescente e função contínua sem
+   parâmetro passavam pelo `allOf` do esquema (que descreve 4 dos 16 tipos), entravam no hash e só quebrariam no motor.
+4. **`zonas_utm_cobertas`** (`app/amc/crs.py`) enumera todas as zonas do intervalo; de −60° a −42° declarava
+   `[21, 22, 24]` e "cruza 3 zonas".
+5. **Teto de unidades sobre a contagem real** (`app/amc/unidades.gerar_grade`): era conferido só sobre a estimativa
+   área/área-da-célula e a célula de borda passava do teto (medido: 1.000.175 com o teto em 1.000.000). Passou do teto,
+   as unidades são apagadas, o conjunto vai a `falhou` com o motivo e a tarefa levanta `FalhaDefinitiva`.
+6. **JSON canônico**: chave repetida no corpo cru sai 422 `json_ambiguo` (era aceita em silêncio, com a primeira
+   ocorrência descartada pelo parser), e os números são normalizados antes do hash — `3` e `3.0` são o mesmo número em
+   JSON e davam versões diferentes. O documento gravado é o normalizado, para o hash continuar recomputável por fora
+   com a regra simples. Medido: os 53 modelos que existem em `plat` são todos resíduo de teste (`zt-*` e "modelo de
+   teste interno"), então a mudança de regra não invalida histórico de ninguém.
+
+Os 12 `xfail(strict=True)` do adversário viraram prova permanente (as marcas saíram; nenhuma asserção foi afrouxada).
+A migração `044_amc.sql` foi renumerada para **`045_amc.sql`**: a árvore principal publicou `044_uploads.sql`.
+45 testes novos (`tests/unit/test_amc_esquema.py`, `tests/unit/test_amc_crs.py`, `tests/api/amc/`), verdes; a varredura
+cruzada do OpenAPI cobre as 18 rotas novas (`tests/api/cruzado_casos.py`). ADR
+`docs/adr/0016-motor-amc-modelo-e-unidades.md`.
+
+### conserto depois da refutação (`laco/handoffs/T3/L3-01-CONSERTO.md`)
+
+O laudo `laco/handoffs/T3/L3-01-ADVERSARIO.md` refutou o item em cinco frentes; as duas cláusulas centrais do portão
+(imutabilidade do modelo já executado e isolamento entre inquilinos) resistiram. Consertado:
+
+1. **Reescrita de schema fechada como classe** (`app/schema_ambiente.py`). Era só `execute` com `str`; passou a cobrir
+   `str` e `bytes` em `execute`, `executemany`, `callproc`, `mogrify` e `copy_expert`, com `copy_from`/`copy_to`
+   declarados fora de cobertura com a razão escrita. Três defeitos do mesmo tipo apareceram no mesmo dia: o `bytes` de
+   `psycopg2.extras.execute_values` (que quebrava o conjunto do tipo `feicoes` fora do schema `plat`), as conexões de
+   teste (commit `c311aa7`) e o `executemany` de `POST`/`PUT /api/papeis` (que fazia a prova de isolamento entre
+   inquilinos rodar contra o schema de produção). `tests/unit/test_schema_ambiente.py` (22 casos) reprova se aparecer
+   um ponto de entrada novo sem reescrita. `app/amc/unidades.gravar_feicoes` não usa mais `execute_values`.
+2. **Erro de privilégio deixou de mentir** (`app/auth/comum._erro_de_privilegio`): o SQLSTATE 42501 por política de
+   inquilino continua 403 `sem_permissao`; por falta de GRANT passa a 500 `privilegio_do_banco` — é erro de instalação
+   do ambiente e o 403 mandava o operador investigar o lugar errado.
+3. **Coerência interna da transformação** (`app/amc/esquema._violacoes_transformacao`): faixa invertida ou degenerada,
+   número de notas incompatível com o de quebras, quebras e bandas fora de ordem crescente e função contínua sem
+   parâmetro passavam pelo `allOf` do esquema (que descreve 4 dos 16 tipos), entravam no hash e só quebrariam no motor.
+4. **`zonas_utm_cobertas`** (`app/amc/crs.py`) enumera todas as zonas do intervalo; de −60° a −42° declarava
+   `[21, 22, 24]` e "cruza 3 zonas".
+5. **Teto de unidades sobre a contagem real** (`app/amc/unidades.gerar_grade`): era conferido só sobre a estimativa
+   área/área-da-célula e a célula de borda passava do teto (medido: 1.000.175 com o teto em 1.000.000). Passou do teto,
+   as unidades são apagadas, o conjunto vai a `falhou` com o motivo e a tarefa levanta `FalhaDefinitiva`.
+6. **JSON canônico**: chave repetida no corpo cru sai 422 `json_ambiguo` (era aceita em silêncio, com a primeira
+   ocorrência descartada pelo parser), e os números são normalizados antes do hash — `3` e `3.0` são o mesmo número em
+   JSON e davam versões diferentes. O documento gravado é o normalizado, para o hash continuar recomputável por fora
+   com a regra simples. Medido: os 53 modelos que existem em `plat` são todos resíduo de teste (`zt-*` e "modelo de
+   teste interno"), então a mudança de regra não invalida histórico de ninguém.
+
+Os 12 `xfail(strict=True)` do adversário viraram prova permanente (as marcas saíram; nenhuma asserção foi afrouxada).
+A migração `044_amc.sql` foi renumerada para **`045_amc.sql`**: a árvore principal publicou `044_uploads.sql`.
 
 ## turno 3, setembro de 2026 (item L0-08-d-ldap: LDAP/Active Directory como provedor de login externo)
 

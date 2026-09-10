@@ -57,56 +57,32 @@ def reescrever_schema(sql: str, schema: str = SCHEMA_PADRAO, schema_trabalho: st
 
 
 class MixinReescritaSchema:
-    """Reescrita de schema em cada ponto de entrada do cursor que carrega um comando SQL, e não só no `execute`
-    com texto. Fica separada do cursor do psycopg2 de propósito: assim `tests/unit/test_schema_ambiente.py`
-    monta a mesma reescrita sobre uma base espiã, sem banco, e confere método a método o que chegou ao driver.
+    """Reescrita de schema em cada ponto de entrada do cursor que carrega comando SQL.
 
-    Por que a classe inteira e não um método de cada vez: em 06/09/2026 o mesmo defeito apareceu três vezes num
-    dia (o `bytes` de `psycopg2.extras.execute_values`, as conexões de teste e o `executemany` de
-    `POST`/`PUT /api/papeis`), e nas três a consequência foi a mesma — a consulta ia para o schema `plat` de
-    produção mesmo com `PLAT_SCHEMA` apontando para outro lugar, e o 42501 que voltava chegava ao cliente
-    disfarçado de "operação fora do inquilino da sessão". Uma prova de isolamento entre inquilinos que roda
-    contra o schema errado não prova nada.
+    Por que um mixin com lista declarada, e não quatro métodos soltos: em 06/09/2026 o MESMO defeito apareceu
+    três vezes num dia (o `bytes` que `psycopg2.extras.execute_values` manda ao cursor; o `executemany` que
+    `POST`/`PUT /api/papeis` usa para gravar os privilégios do papel; o `copy_expert` da carga do
+    geocodificador). Nos três casos a consulta escapou da reescrita e foi para o schema `plat` de PRODUÇÃO
+    com PLAT_SCHEMA apontando para outro lugar, e o 42501 que voltava chegava ao cliente como 403 "operação
+    fora do inquilino da sessão" — não uma checagem de inquilino, um schema errado na consulta. Tapar buraco
+    por buraco deixava o próximo caminho aberto; a lista abaixo é confrontada com a API do driver em
+    tests/unit/test_schema_ambiente.py, então um ponto de entrada novo sem decisão ESCRITA reprova a suíte.
 
-    `PONTOS_COM_CONSULTA` é a lista fechada do que é coberto; `PONTOS_FORA_DE_COBERTURA` diz o que ficou de
-    fora e por quê. O teste de unidade reprova se aparecer um ponto de entrada novo que não esteja num dos dois."""
+    O import de app.settings é tardio (dentro da função) para não criar ciclo: app/settings.py não importa
+    este módulo."""
 
-    # nome do método -> posição do argumento que carrega o comando (todos são o primeiro depois de self)
     PONTOS_COM_CONSULTA = ("execute", "executemany", "callproc", "mogrify", "copy_expert")
     PONTOS_FORA_DE_COBERTURA = {
-        "copy_from": "recebe NOME de tabela (e a casa não usa: varrido em 06/09/2026 em app/, scripts/, db/ e "
-                     "tests/). Se passar a usar, cobrir aqui — o nome também leva o prefixo do schema.",
-        "copy_to": "recebe NOME de tabela e a casa não usa (mesma varredura de copy_from, 06/09/2026).",
-        "stream_factory": "não existe no psycopg2 2.x; anotado para o caso de troca de driver.",
+        "copy_from": "recebe NOME de tabela e a casa não usa este caminho em lugar nenhum; no dia em que usar, "
+                     "o teste da trava reprova e obriga a cobrir antes de a homologação descobrir sozinha",
+        "copy_to": "mesma razão do copy_from: só nome de tabela, sem uso em app/, scripts/ ou db/",
     }
 
     def execute(self, query, *args, **kwargs):
-        # `psycopg2.extras.execute_values` (usado pelos importadores em lote da rede de utilidades,
-        # L4-01-modelo-rede/L4-05-g-osm-power) monta a consulta em BYTES antes de chamar cur.execute
-        # -- isinstance(query, str) nunca batia para essas chamadas, então o schema de homologação/
-        # trilha nunca era aplicado nelas e o INSERT ia parar no `plat` de produção com permissão
-        # negada (achado do item L4-05-g-osm-power). `_reescrever` trata texto e bytes e devolve o mesmo
-        # tipo que entrou, então nada aqui precisa saber de codificação.
         return super().execute(self._reescrever(query), *args, **kwargs)
 
     def executemany(self, query, vars_list):
-        # mesma classe de defeito do bytes/`execute_values` acima, achada agora em `cur.executemany`
-        # (usado por `POST /api/papeis` para `plat.papel_privilegio`, app/auth/rotas_usuarios.py):
-        # psycopg2 implementa executemany em C chamando pq_execute diretamente por linha, NUNCA
-        # através do `self.execute()` Python — subclassificar só `execute()` não intercepta nada aqui.
-        # Sem esta sobrecarga, o INSERT ia com o literal `plat.` para o schema de PRODUÇÃO em qualquer
-        # ambiente isolado (trilha/homologação), e a permissão negada aparecia traduzida como "operação
-        # fora do inquilino da sessão" — não uma checagem de inquilino, um schema errado na consulta.
         return super().executemany(self._reescrever(query), vars_list)
-
-    def executemany(self, query, args_list, *args, **kwargs):
-        # executemany NÃO passa pelo execute do psycopg2 (laço próprio em C): sem esta sobrecarga, todo
-        # executemany com `plat.` literal ia bater no schema de produção dentro de trilha/homolog —
-        # 42501 "permission denied for schema plat" mascarado de 403 (achado da suíte cruzada, item
-        # L0-08-a-oidc; a rota POST /api/papeis era a única consumidora de executemany do app).
-        if isinstance(query, str):
-            query = self._reescrever(query)
-        return super().executemany(query, args_list, *args, **kwargs)
 
     def callproc(self, procname, *args, **kwargs):
         return super().callproc(self._reescrever(procname), *args, **kwargs)
@@ -119,15 +95,14 @@ class MixinReescritaSchema:
 
     @staticmethod
     def _reescrever(consulta):
-        """Reescreve texto OU bytes, devolvendo o mesmo tipo que entrou; qualquer outro tipo (por exemplo um
-        `psycopg2.sql.Composed`, que a casa não usa) passa cru, como sempre passou. No-op quando os dois schemas
-        já são o padrão: é o que garante que produção não paga nem uma regex.
+        """Reescreve texto OU bytes, devolvendo o MESMO tipo que entrou; qualquer outro tipo (por exemplo um
+        `psycopg2.sql.Composed`, que a casa não usa) passa cru, como sempre passou. No-op quando os dois
+        schemas já são o padrão: é o que garante que produção não paga nem uma regex.
 
         O caminho de bytes existe porque `psycopg2.extras.execute_values` monta o comando final com
-        `b"".join(...)` e chama `cur.execute(bytes)`; o de `executemany` porque o `POST`/`PUT /api/papeis` grava
-        os privilégios do papel por essa via."""
+        `b"".join(...)` e chama `cur.execute(bytes)` — foi por aí que a carga em lote da rede de utilidades
+        (itens L4-01/L4-05-g) escapou da reescrita."""
         schema, trabalho = esquemas_do_ambiente()  # tardio: evita ciclo settings <-> schema_ambiente
-
         if schema == SCHEMA_PADRAO and trabalho == SCHEMA_TRABALHO_PADRAO:
             return consulta  # caminho de produção: nenhuma regex roda, nem sobre texto nem sobre bytes
         if isinstance(consulta, str):
@@ -142,6 +117,6 @@ class MixinReescritaSchema:
 
 
 class CursorSchemaAmbiente(MixinReescritaSchema, psycopg2.extras.RealDictCursor):
-    """RealDictCursor que reescreve o texto da consulta para settings.PLAT_SCHEMA/PLAT_SCHEMA_TRABALHO antes de
-    mandar ao servidor, em todos os pontos de entrada listados em `MixinReescritaSchema.PONTOS_COM_CONSULTA`.
-    O mixin vem primeiro na MRO para que `super()` caia no cursor do psycopg2."""
+    """RealDictCursor que reescreve o texto da consulta para o schema do ambiente antes de mandar ao servidor,
+    em todos os pontos de `MixinReescritaSchema.PONTOS_COM_CONSULTA`. O mixin vem PRIMEIRO na ordem de
+    resolução para que `super()` caia no cursor do psycopg2."""
