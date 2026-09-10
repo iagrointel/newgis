@@ -102,6 +102,15 @@ class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
 
         return bytes(query).decode(_ext.encodings[self.connection.encoding])
 
+    def mogrify(self, query, *args, **kwargs):
+        # `cur.mogrify` monta o texto final da consulta sem mandá-la ao servidor; quem a usa para depois
+        # concatenar num COPY/INSERT precisa do schema do ambiente já trocado (item L0-02-tenant-auth).
+        if isinstance(query, (bytes, bytearray)):
+            query = self._texto(query)
+        if isinstance(query, str):
+            query = self._reescrever(query)
+        return super().mogrify(query, *args, **kwargs)
+
     def callproc(self, procname, *args, **kwargs):
         if isinstance(procname, str):
             procname = self._reescrever(procname)

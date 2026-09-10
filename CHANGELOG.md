@@ -2750,6 +2750,18 @@ no CAMINHO da URL (decisão C6 do conceito L1; ADR 20260907T0300).
   arquivo estático a 68.484/s — o serviço está no teto da máquina); frio 96 ladrilhos/s numa conexão,
   mediana 9,8 ms; 20 pedidos simultâneos ao mesmo ladrilho frio = **1 leitura + 19 acertos**; revogar
   o token passa a 403 em **2,86-2,90 s**. Números e comandos em `tests/medidas/L1-02-tiles-token.json`.
+Conserto na migração `20260907T0240_ddl_concorrente_trinco.sql`: `pg_advisory_xact_lock(hashtext(<chave>))`
+antes do DDL, chave derivada do objeto tocado. `IF NOT EXISTS` não bastava porque só cobre metade do
+problema e nem essa metade é atômica (ADR 0025 seção 2). A classe inteira foi coberta, não só o caso
+flagrado: `camada_schema_garantir`, `camada_preparar`, `tenant_criar` (mesmo `d_<slug>`, chave partilhada),
+`evento_particao_garantir` e `log_particao_garantir` (mais reconferência depois do trinco) e os dois
+expurgadores de partição. `tenant_apagar_interno` fica de fora com razão escrita: só emite `ALTER TABLE`,
+que já pega bloqueio pesado na tabela. A chave é por slug, então inquilinos diferentes não esperam um pelo
+outro — provado com uma transação segurando `demo` enquanto `demo2` completa em menos de 5 s e `demo`
+estoura o `statement_timeout` de 1 s. Guarda contra regressão: `test_toda_funcao_com_ddl_tem_trinco` lê
+`pg_proc.prosrc` vivo e reprova função `SECURITY DEFINER` que faça DDL de schema, GRANT ou CREATE/DROP
+TABLE sem o trinco — necessário porque a migração redefine funções inteiras e um ramo posterior pode
+derrubar o trinco em silêncio. ADR 0025.
 ## turno 3, setembro de 2026 (DESTRAVA dos 4 pais parciais: L0-05-jobs · L0-04-c-tabela-camada · L0-02-tenant-auth · L0-04-ingest-vetor)
 
 Retomada de queda por cota (worktree `wt/destrava`), tarefa de maior alavanca do laço: conferir cláusula por
