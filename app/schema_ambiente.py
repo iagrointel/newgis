@@ -123,6 +123,16 @@ class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
             procname = self._reescrever(procname)
         return super().callproc(procname, *args, **kwargs)
 
+    def mogrify(self, query, *args, **kwargs):
+        """Idem: `mogrify` produz o texto final do comando (o `-sql` do ogr2ogr na exportação sai daqui).
+        A sobrecarga de `executemany`/`copy_expert` que este item também trazia já está em master, com o
+        tratamento de bytes; sobrou aqui só o `mogrify`, que master não cobria."""
+        if isinstance(query, (bytes, bytearray)):
+            query = self._texto(query)
+        if isinstance(query, str):
+            query = self._reescrever(query)
+        return super().mogrify(query, *args, **kwargs)
+
     @staticmethod
     def _reescrever(sql: str) -> str:
         schema, trabalho = esquemas_do_ambiente()  # tardio: evita ciclo settings <-> schema_ambiente

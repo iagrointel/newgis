@@ -2301,3 +2301,6 @@ Recusas com código próprio (HTTP 422): `area_maior_que_a_disponivel`, `n_regio
 `area_min_impossivel`, `area_max_impossivel`, `distancia_min_maior_que_max`, `sem_regiao_possivel`,
 `sem_combinacao_possivel`, `grade_grande_demais` (teto de 4 milhões de células por chamada), `execucao_sem_nota`.
 Nada é gravado: a rota responde a uma pergunta sobre a execução; para guardar, crie um item com o GeoJSON.
+Exportação de VISTA de camada (o tipo `vista_de_camada` existe no catálogo, mas o item `L0-04-j` que o
+implementa ainda não foi entregue — quando for, o filtro da vista entra como mais um `where` neste mesmo
+motor) e exportação de camada REFERENCIADA (recusada com 422 `camada_nao_hospedada`, nunca silenciosa).

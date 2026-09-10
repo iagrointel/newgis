@@ -20,6 +20,7 @@ from app.exportacao_inquilino import tipos_job as exportacao_inquilino_tipos  # 
 from app.exportacao import tipos_job as exportacao_tipos  # noqa: F401 — L0-04-h: exportacao.gerar + periódico
 from app.geocodificador import lote as geocodificacao_lote  # noqa: F401 — L2-11-a: geocodificacao.lote
 from app.geocodificador import tarefas as geocodificador_tarefas  # noqa: F401 — L2-11-a: geocodificador.lote_csv
+from app.exportacao import tipos_job as exportacao_tipos  # noqa: F401 — L0-04-h: exportacao.gerar + periódico
 from app.ingestao import tarefas as ingestao_tarefas  # noqa: F401 — L0-04: ingestao.inspecionar/ingestao.carregar
 from app.jobs import periodicos, tipos_prova  # noqa: F401 — importação registra os tipos
 from app.jobs.registro import REGISTRO

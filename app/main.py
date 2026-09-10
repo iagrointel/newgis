@@ -76,6 +76,7 @@ from app.exportacao.rotas import router as rotas_exportacao
 from app.exportacao_inquilino.rotas import router as rotas_exportacao_inquilino
 from app.crs.rotas import router as rotas_crs
 from app.edicao.rotas import router as rotas_edicao
+from app.exportacao.rotas import router as rotas_exportacao
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.imagens.rotas_imagens import router as rotas_imagens
@@ -317,6 +318,8 @@ ROUTERS = [
     # --- edição transacional de feições (L2-03-a): POST /api/camadas/{id}/edicoes (adicionar/atualizar/apagar
     # numa transação; única porta de escrita de feição — FeatureServer/OGC futuros chamam este mesmo caminho)
     rotas_edicao,
+    # --- exportação de camada (L0-04-h): /api/exportacoes (11 formatos por ogr2ogr, arquivo com validade de 7 dias)
+    rotas_exportacao,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- rede de utilidades (L4-01-a): /api/rede (redes do inquilino), /api/rede/{rede_id}/pacote (importa e
