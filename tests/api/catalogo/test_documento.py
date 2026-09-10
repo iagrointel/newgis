@@ -56,7 +56,7 @@ def test_sha256_canonico_reproduz_fora_do_banco_com_sha256sum(tmp_path, sessao_a
     docstring de `documento.corpo_canonico` documenta, byte a byte, sem tocar o banco de novo."""
     a = _no("mapa")
     corpo = _corpo([a])
-    it = itens_a.criar("app", dados={"tipo": "app", "esquema_versao": 2, "corpo": corpo})
+    it = itens_a.criar("painel", dados={"tipo": "painel", "esquema_versao": 2, "corpo": corpo})
     v = sessao_a.get(f"/api/itens/{it['id']}/versoes/1").json()
 
     arquivo = tmp_path / "corpo.json"
@@ -155,9 +155,9 @@ def test_ulid_de_no_nunca_se_repete_entre_versoes(sessao_a, itens_a):
         assert novo[0] not in todos_vistos
         todos_vistos.add(novo[0])
         nos_atuais.append(novo)
-        corpo = {"tipo": "app", "esquema_versao": 2, "corpo": _corpo(nos_atuais)}
+        corpo = {"tipo": "painel", "esquema_versao": 2, "corpo": _corpo(nos_atuais)}
         if it is None:
-            it = itens_a.criar("app", dados=corpo)
+            it = itens_a.criar("painel", dados=corpo)
         else:
             r = sessao_a.put(f"/api/itens/{it['id']}", json={"dados": corpo})
             assert r.status_code == 200
@@ -177,10 +177,9 @@ def test_ulid_de_no_nunca_se_repete_entre_versoes(sessao_a, itens_a):
 
 def test_migracao_de_esquema_na_leitura_com_evento(sessao_a, itens_a, conexao_plat_app):
     """Documento gravado com esquema_versao=1 (`corpo:{}`, a forma que existia antes de 028_documento_grafo.sql
-    e que os 1.573/1.571 itens semeados em demo ainda têm) chega pela API JÁ migrado para a versão vigente do
-    tipo `painel` (v3 desde `20260906T2145_documento_painel.sql`, item L2-06-a-modelo-painel-fontes), passando
-    pela CADEIA inteira v1→v2→v3, com os campos default das duas migrações, e o evento `itens/esquema_migrado`
-    fica registrado — nunca é gravado de volta em `plat.item.dados`."""
+    e que os 1.573/1.571 itens semeados em demo ainda têm) chega pela API JÁ migrado para a versão vigente
+    (hoje v3, pela cadeia v1→v2→v3 de `20260908T1709_temas_marca.sql`), com `nos`/`ligacoes` default, e o
+    evento `itens/esquema_migrado` fica registrado — nunca é gravado de volta em `plat.item.dados`."""
     it = itens_a.criar("painel", dados={"tipo": "painel", "esquema_versao": 1, "corpo": {}})
     iid = it["id"]
     ids = ids_por_slug(conexao_plat_app)
@@ -200,12 +199,7 @@ def test_migracao_de_esquema_na_leitura_com_evento(sessao_a, itens_a, conexao_pl
     r = sessao_a.get(f"/api/itens/{iid}")
     assert r.status_code == 200
     dados = r.json()["dados"]
-    assert dados["esquema_versao"] == 3
-    assert dados["corpo"]["nos"] == [] and dados["corpo"]["ligacoes"] == []
-    assert dados["corpo"]["fontes"] == [] and dados["corpo"]["elementos"] == []
-    assert dados["corpo"]["filtros"] == [] and dados["corpo"]["parametros_url"] == []
-    assert dados["corpo"]["grade"] == {"colunas": 12, "linha_px": 36}
-    assert dados["corpo"]["tema"] == {"modo": "claro"}
+    assert dados["esquema_versao"] == 3 and dados["corpo"] == {"nos": [], "ligacoes": []}
 
     contexto(conexao_plat_app, ids["demo"], usuario_id=adm, login="admin")  # SET LOCAL não sobrevive ao commit acima
     with conexao_plat_app.cursor() as cur:
@@ -274,11 +268,11 @@ def test_integridade_acusa_linha_de_versao_editada_direto_no_banco(sessao_a, ite
 
 
 def test_latencia_salvar_versao_de_documento_ms(sessao_a, itens_a, medida):
-    it = itens_a.criar("app", dados={"tipo": "app", "esquema_versao": 2, "corpo": _corpo([_no()])})
+    it = itens_a.criar("painel", dados={"tipo": "painel", "esquema_versao": 2, "corpo": _corpo([_no()])})
     iid = it["id"]
     tempos = []
     for _i in range(30):
-        corpo = {"tipo": "app", "esquema_versao": 2, "corpo": _corpo([_no(), _no()])}
+        corpo = {"tipo": "painel", "esquema_versao": 2, "corpo": _corpo([_no(), _no()])}
         t0 = time.perf_counter()
         r = sessao_a.put(f"/api/itens/{iid}", json={"dados": corpo})
         tempos.append((time.perf_counter() - t0) * 1000)

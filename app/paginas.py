@@ -89,6 +89,8 @@ PAGINAS = {
     "/plataforma": "plataforma.html",
     # --- painel Atividade e relatórios do admin (L0-07-e-relatorios)
     "/admin/atividade": "admin/atividade.html",
+    # --- editor de tema do inquilino (L5-10-temas-marca)
+    "/temas": "temas.html",
 }
 router = APIRouter()
 

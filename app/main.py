@@ -105,6 +105,7 @@ from app.replica.rotas import router as rotas_replicas
 from app.relacionamentos.rotas import router as rotas_relacionamentos
 from app.relatorios.rotas import router as rotas_relatorios
 from app.rotas_arquivos import router as rotas_arquivos
+from app.rotas_temas import router as rotas_temas
 from app.saude import router as rotas_saude
 from app.saude_profunda import router as rotas_saude_profunda
 from app.settings import settings
@@ -371,6 +372,8 @@ ROUTERS = [
     rotas_relatorios,
     # --- motor multicritério, fronteira de Pareto (L3-08-pareto): /api/amc/pareto e /api/amc/pareto/camada
     rotas_amc_pareto,
+    # --- temas de marca (L5-10): GET /api/temas (padrões + tema do inquilino); PUT /api/org/tema
+    rotas_temas,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

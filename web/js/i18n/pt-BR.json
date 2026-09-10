@@ -1831,6 +1831,8 @@
   "nav.sair": "Sair",
   "nav.tarefas": "Tarefas",
   "nav.tarefas_desc": "jobs em execução, histórico e agendas",
+  "nav.temas": "Temas",
+  "nav.temas_desc": "temas de marca: padrões, tema do inquilino, exportação e importação em JSON",
   "nav.tokens": "Tokens",
   "nav.tokens_desc": "tokens de serviço com escopo, restrição e validade",
   "nav.uploads": "Enviar arquivo",
