@@ -1091,10 +1091,19 @@ em stream, nunca GDAL) e `POST /api/imagens/proveniencia/preencher-pendentes` (`
 `GET /api/imagens/<item>` ganhou o bloco `proveniencia` na resposta; `web/js/catalogo/tipos/raster.js`
 mostra a cadeia em texto simples na aba Visão geral com um botão "conferir".
 
+Adversário independente rodou ao fim do turno e achou um segundo buraco de design (não alcançável por
+cliente da API, mas real): num item com `cadeia_origem=reexecucao_retroativa`, `processing:software`
+continuava sendo o `plat:versoes` da ingestão ORIGINAL mesmo que a reexecução tivesse rodado com outro
+GDAL/rio-cogeo — nada cruzava os dois blocos, e `selar_manifesto` sela essa combinação sem reclamar (o
+manifesto prova integridade pós-selagem, nunca veracidade do conteúdo selado). Corrigido:
+`imagens_reexecutar` agora grava `plat:reexecucao.versoes_mudaram_desde_a_ingestao` (booleano,
+`plat:versoes` × `cog.versoes_software()` medido na hora) — a divergência vira campo explícito. A
+refutação PRESCRITA pelo item (1 byte trocado no balde, chave RW) foi tentada e FALHOU: `/conferir`
+acusou só o ativo certo, manifesto e outros ativos intactos.
+
 Fora deste item (nomeado): `plat raster reexecutar/verificar <item>` como comando de linha só (hoje:
-job de fila + rota HTTP cobrem o mesmo caso de uso); reexecução em lote (só um item por chamada); rodada
-de adversário independente separada (os dois achados de build/performance vieram do próprio teste de
-integração deste turno, não de um agente adversário à parte).
+job de fila + rota HTTP cobrem o mesmo caso de uso); reexecução em lote (só um item por chamada); teste
+automatizado de `versoes_mudaram_desde_a_ingestao` (hoje só verificado na instância viva).
 
 Arquivos: `app/imagens/proveniencia.py` (novo), `app/imagens/reexecucao.py` (novo, 2 jobs), `app/imagens/
 cog.py` (`ProdutoCOG.comando`), `app/imagens/ingestao.py` (`_item_stac` monta e sela a proveniência),
