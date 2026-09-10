@@ -7,19 +7,19 @@
    uma PWA instalável (sem service worker/manifest): é uma fila de escrita resiliente sobre localStorage,
    suficiente para o portão medido nesta trilha — ver relatório final para o que ficou de fora. */
 import { obter, enviar, mensagemDe } from '../base/api.js';
-import { h, limpar } from '../base/dom.js';
+import { anexar, h, limpar } from '../base/dom.js';
 import { carregar, t, formatarData } from '../base/i18n.js';
 import '../base/componentes.js';
 import { montarLayout, cabecalho, pronto } from '../base/layout.js';
 import { exigirSessao } from '../auth/sessao.js';
 
+const roteiroId = (/^\/campo\/roteiros\/([0-9a-fA-F-]{36})/.exec(location.pathname) || [])[1];
+const CHAVE_FILA = 'plat_campo_fila_local';
+
 await carregar();
 const usuario = await exigirSessao({ privilegio: 'campo.coletar' });
 if (usuario) iniciar();
 pronto();
-
-const roteiroId = (/^\/campo\/roteiros\/([0-9a-fA-F-]{36})/.exec(location.pathname) || [])[1];
-const CHAVE_FILA = 'plat_campo_fila_local';
 const STATUS = ['visitado', 'confirmado', 'nao_confirmado', 'inconclusivo'];
 
 function filaLocal() {
@@ -141,7 +141,7 @@ async function iniciar() {
   function render(d) {
     limpar(principal);
     const pendentesLocais = filaLocal().length;
-    principal.append(
+    anexar(principal, [
       h('p', {}, h('a', { href: `/campo/filas/${d.fila_id}` }, `← ${t('campo.roteiro.voltar')}`)),
       h('dl', { class: 'resumo-roteiro' },
         h('dt', {}, t('campo.roteiro.motor')), h('dd', {}, d.motor),
@@ -157,8 +157,8 @@ async function iniciar() {
               return bt;
             })())
         : null,
-    );
-    principal.append(...d.paradas.map((p) => {
+    ]);
+    anexar(principal, d.paradas.map((p) => {
       const jaVisitado = !!p.visita_id;
       const registrarBt = h('button', { type: 'button', class: 'pequeno' }, t('campo.roteiro.registrar_visita'));
       const linha = h('div', { class: 'parada-roteiro', 'data-status': p.status },

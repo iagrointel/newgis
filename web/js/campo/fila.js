@@ -1,18 +1,18 @@
 /* plat — tela /campo/filas/{id} (item L2-07-campo): alvos de uma fila (feição de camada + estado) e criação
    do roteiro do dia a partir dos alvos pendentes. */
 import { obter, enviar, mensagemDe } from '../base/api.js';
-import { h } from '../base/dom.js';
+import { anexar, h } from '../base/dom.js';
 import { carregar, t, formatarData } from '../base/i18n.js';
 import '../base/componentes.js';
 import { montarLayout, cabecalho, pronto } from '../base/layout.js';
 import { exigirSessao } from '../auth/sessao.js';
 
+const filaId = (/^\/campo\/filas\/([0-9a-fA-F-]{36})/.exec(location.pathname) || [])[1];
+
 await carregar();
 const usuario = await exigirSessao({ privilegio: 'campo.coletar' });
 if (usuario) iniciar();
 pronto();
-
-const filaId = (/^\/campo\/filas\/([0-9a-fA-F-]{36})/.exec(location.pathname) || [])[1];
 
 function localizacaoAtual() {
   return new Promise((resolve) => {
@@ -73,7 +73,7 @@ async function iniciar() {
         h('span', { class: 'tipo' }, `${rt.n_paradas} · ${formatarData(rt.criado_em)}`))))
     : null;
 
-  principal.append(
+  anexar(principal, [
     h('p', {}, h('a', { href: '/campo/filas' }, `← ${t('campo.fila.voltar')}`)),
     h('div', { class: 'cartao' },
       h('h2', {}, t('campo.fila.origem')),
@@ -83,5 +83,5 @@ async function iniciar() {
       btRoteiro,
       listaRoteiros ? h('h2', {}, 'Roteiros') : null, listaRoteiros),
     h('div', { class: 'cartao' }, h('h2', {}, t('campo.fila.alvos')), tabelaAlvos),
-  );
+  ]);
 }
