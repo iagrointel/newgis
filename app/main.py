@@ -55,6 +55,7 @@ from app.catalogo import (
     rotas_ogc,
     rotas_pastas,
     rotas_presenca,  # L5-13: presença em documento (SSE)
+    rotas_publicacao,
     transferencia,
     vista_camada,
 )
@@ -260,6 +261,9 @@ ROUTERS = [
     rotas_paineis,
     # --- notificações internas (L0-03-k): /api/notificacoes (sino, lista, marcar lida, apagar)
     rotas_notificacoes,
+    # --- publicação de documento de construtor (L5-14): /api/itens/{id}/publicacao(+/exportacao,+/visualizacoes),
+    # vitrine pública /api/p/{inquilino}/{slug} e /p/{inquilino}/{slug}
+    rotas_publicacao.router,
     # --- catálogo externo OGC API Records (L0-09-metadado-catalogo): /ogc/records; token catalogo:ler, nunca aberto
     rotas_ogc.router,
     # --- layout de impressão (L2-12-b): /api/layouts, página headless do quadro e Export Web Map Task (Esri)

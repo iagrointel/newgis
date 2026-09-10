@@ -43,7 +43,7 @@ ULID_RE = re.compile(r"^[0-7][0-9A-HJKMNP-TV-Z]{25}$")
 _CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
 # famílias de plat.tipo_item cujo `corpo` segue o formato {"nos": [...], "ligacoes": [...]} validado aqui
-FAMILIAS_GRAFO = {"app", "painel"}
+FAMILIAS_GRAFO = {"app", "painel", "narrativa"}
 
 
 def gerar_ulid() -> str:

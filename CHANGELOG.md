@@ -559,6 +559,38 @@ tela, 17 externos sem exposição, 28 lacunas de escrita. `tests/unit/test_cober
 nova sem tela e fora da linha de base; `--registrar` cria um item UX-<n> por grupo com lacuna. ADR em
 `docs/adr/*-cobertura-da-interface.md`.
 
+## codex cx1, setembro de 2026 (item L5-04-a-blocos-de-conteudo: narrativa por blocos no editor de arrasto, mapa com vista salva, texto alternativo obrigatório na publicação)
+
+Tipo de item `narrativa` (migração `20260908T0300_narrativa_tipo.sql`, envelope do L5-05) editado pelo editor
+compartilhado do L5-08 com a paleta `paleta_narrativa.js` (capa, texto, imagem, vídeo, áudio, mapa, tabela, botão,
+separador, incorporar, aplicativo); o editor ganhou ganchos genéricos (`personalizados`/`controle`/`resumo`,
+`api.propriedade`, área de texto para strings longas). Leitor próprio (`web/js/narrativa/leitor.js`) para
+`/executar` e para a página publicada do L5-14; bloco de mapa com vista salva = bbox + proporção do quadro,
+reaberto por `fitBounds` (deriva ≤ 1 % em 5 mapas × 2 viewports, e2e). Publicar recusa imagem sem texto
+alternativo (`422 narrativa_nao_publicavel`, lista por bloco) — regra no servidor, mensagem no construtor. Ramo
+junta `wt/il514public` (L5-14) e `wt/cx501d` (L5-01-d) para reusar publicação e sanitização. Testes: 5 unitários,
+4 de API, 4 e2e com capturas.
+
+## turno 5, setembro de 2026 (item L5-14-publicacao-links-embed: publicação de documento de construtor — links e embed)
+
+Publicar um documento de construtor (`app`/`painel`) por `POST /api/itens/{id}/publicacao` faz três coisas
+numa transação: aponta `plat.item.versao_publicada` (mecanismo já existente, reaproveitado), reserva a URL
+`/p/<inquilino>/<slug>` (tabela nova `plat.item_publicacao`) e emite um token de serviço PRÓPRIO da
+publicação com escopo calculado automaticamente (as camadas citadas pelo documento, via fecho de
+`plat.item_relacao`) e `restricao.referer` = domínios de incorporação escolhidos — mesmo mecanismo de
+`token_servico`/escopos do L0-02/L1-02, nenhuma autorização nova. Acesso à página: público (quando o
+inquilino permite) ou por link-com-token (reaproveita `plat.compartilhamento_link`/`link_resolver`, o
+mesmo de `/c/<token>`); nega com 401/403 depois de revogado. Rascunho editado não muda o publicado até
+novo publish (a leitura pública é sempre da versão CONGELADA em `plat.item_versao`, nunca da linha viva).
+`GET /p/{inquilino}/{slug}` serve a casca HTML com `Content-Security-Policy: frame-ancestors` calculado
+pelos domínios do app (exceção só nesta rota; nunca um `X-Frame-Options: DENY` genérico) — só funciona
+embutido nos domínios cadastrados. `GET /api/itens/{id}/publicacao/exportacao` devolve HTML autocontido
+(sem chamada de rede) que abre por `file://` com o mesmo conteúdo. `GET .../publicacao/visualizacoes`
+mostra a contagem por dia (`plat.item_publicacao_visualizacao`, incrementada dentro de
+`plat.publicacao_resolver`, SECURITY DEFINER). Ver `docs/adr/20260907T1410-publicacao-links-embed.md`
+(decisão de guardar o token da publicação em texto claro, não só hash — ele é uma chave publicável por
+natureza, não um segredo) e `laco/handoffs/T5/L5-14-publicacao-links-embed.md` (portão cláusula a
+cláusula, o que ficou de fora).
 ## turno 4, setembro de 2026 (item L5-01-d-widgets-pagina-menu: widgets de página e de menu)
 
 - **12 widgets** sobre o motor do L5-06 (`web/js/widgets/`): texto (Markdown + `{campo}` da feição, sanitizado),
