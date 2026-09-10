@@ -56,6 +56,7 @@ from app.imagens.rotas_stac import router as rotas_stac
 from app.imagens.rotas_tiles import router as rotas_tiles
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
+from app.mapa.proxy_wms import router as rotas_mapa_wms_publico
 from app.mapa.rotas import router as rotas_mapa
 from app.mapas.rotas import router as rotas_mapas
 from app.multiescala.rotas import router as rotas_multiescala
@@ -201,6 +202,9 @@ ROUTERS = [
     rotas_vector_tile_server,
     # --- visualizador de mapa (L2-01-mapa-web): /api/mapa/camadas, TileJSON com token curto, repasse /tiles
     rotas_mapa,
+    # --- casca do SIG (L2-01-a-casca-sig): GET /api/publico/wms/{fonte} — proxy WMS público sem sessão,
+    # allowlist fixa em app/settings.py (geosampa, ibge, inde)
+    rotas_mapa_wms_publico,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
     rotas_tiles_martin_verificar,
     # --- operação query do FeatureServer (L2-04-c): /rest/services/{item}/FeatureServer/{camada}/query

@@ -22,6 +22,16 @@ _HEX64 = re.compile(r"^[0-9a-fA-F]{64}$")
 POOL_MIN_PADRAO = 1
 POOL_MAX_PADRAO = 8
 
+# item L2-01-a-casca-sig (10/09/2026): allowlist FIXA de serviços WMS públicos que `app/mapa/proxy_wms.py`
+# repassa sem sessão (bases externas para o SIG: ortofoto GeoSampa, limites IBGE, catálogo INDE). Não é um
+# campo de `Settings` de propósito — não vem do .env, não muda por inquilino, é constante da instalação
+# (o mesmo motivo por que não é validada em `carregar()`).
+WMS_PUBLICO_ALLOWLIST: dict[str, str] = {
+    "geosampa": "https://raster.geosampa.prefeitura.sp.gov.br/geoserver/geoportal/wms",
+    "ibge": "https://geoservicos.ibge.gov.br/geoserver/ows",
+    "inde": "https://geoservicos.inde.gov.br/geoserver/ows",
+}
+
 
 class ErroConfiguracao(RuntimeError):
     """Chave de configuração ausente ou inválida; a mensagem nomeia a chave."""
