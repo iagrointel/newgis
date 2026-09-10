@@ -76,6 +76,8 @@ PAGINAS = {
     "/plataforma": "plataforma.html",
     # --- migração de Portal/AGOL (L2-08-a-leitor-portal-inventario)
     "/migracao": "migracao.html",
+    # --- análise 3D (L2-09-d): visada, viewshed, perfil e sombra sobre terreno de exemplo ou próprio
+    "/analise3d": "analise3d.html",
 }
 router = APIRouter()
 

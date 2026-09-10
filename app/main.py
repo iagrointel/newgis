@@ -15,6 +15,7 @@ from app import erros, limite_corpo, paginas, rotas_qr
 from app import log as plat_log
 from app.acervo import rotas as rotas_acervo
 from app.amc import rotas as rotas_amc
+from app.analise3d.rotas import router as rotas_analise3d
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
 from app.auth import (
@@ -346,6 +347,8 @@ ROUTERS = [
     # /api/imagens/{id}/tiles/{z}/{x}/{y}.png — as URLs que o Conteúdo e o mapa consomem com cookie;
     # a exclusão na lixeira esconde o item pela RLS e os tiles passam a responder 404 (cláusula L1-01-i)
     rotas_imagens,
+    # --- análise 3D (L2-09-d): /api/analise3d/visada, /viewshed, /perfil, /sombra sobre terreno inline
+    rotas_analise3d,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

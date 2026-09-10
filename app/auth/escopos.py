@@ -29,6 +29,11 @@ ESCOPOS_SEM_UUID = (
 ESCOPOS_SEM_UUID = (
     "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
     "geocodificar:usar", "multiescala:usar", "imagens:ler", "imagens:escrever", "admin:inquilino",
+    rf"geocodificar:usar|multiescala:usar|analise3d:usar|admin:inquilino)$"
+)
+ESCOPOS_SEM_UUID = (
+    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
+    "geocodificar:usar", "multiescala:usar", "analise3d:usar", "admin:inquilino",
 )
 DESCRICAO = {
     "catalogo:ler": "listar e ler metadado de itens que o dono pode ler",
@@ -50,6 +55,8 @@ DESCRICAO = {
     "/svc/<token>/stac/; nunca vê coleção de outro inquilino",
     "imagens:escrever": "criar coleção e item STAC no catálogo de imagens do dono (L1-01-a); quem tem este "
     "escopo também lê (checado em app/imagens/rotas_stac.py, não em escopos.cobre)",
+    "analise3d:usar": "rodar linha de visada, bacia visual (viewshed), perfil de elevação e sombra sobre "
+    "o terreno do próprio inquilino (L2-09-d; salvar como item exige conteudo.criar além do escopo)",
     "admin:inquilino": "tudo o que o dono pode fazer pela API, exceto gerir tokens, senha, 2FA e sessões",
 }
 
