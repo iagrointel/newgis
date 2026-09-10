@@ -21,14 +21,14 @@ SEGREDOS=PLAT_SECRET=$$(sudo cat /etc/plat/segredos/PLAT_SECRET 2>/dev/null); \
 	[ -n "$$PLAT_DSN" ] && export PLAT_DSN; \
 	[ -n "$$PLAT_GARAGE_ADMIN_TOKEN" ] && export PLAT_GARAGE_ADMIN_TOKEN;
 
-.PHONY: check check-rapido lint sem-marcador teste e2e medidas migrar openapi vendor limites seguranca-deps homolog pacote-rede
+.PHONY: check check-rapido lint sem-marcador teste e2e medidas migrar openapi vendor limites seguranca-deps seguranca seguranca-gravar seguranca-zap ferramentas homolog
 
-check: lint sem-marcador limites teste e2e  ## suíte inteira (portão P3)
+check: lint sem-marcador limites seguranca teste e2e  ## suíte inteira (portão P3); seguranca = item HARD-01
 
 check-rapido: lint sem-marcador limites teste  ## o que o driver roda
 
 lint:
-	$(VENV)/ruff check app tests docs/gerar_limites.py docs/gerar_pacote_rede.py
+	$(VENV)/ruff check app tests docs/gerar_limites.py
 
 limites:                                    ## docs/LIMITES.md == app/limites.py (item L0-12); falha se divergir
 	$(VENV)/python docs/gerar_limites.py --check
@@ -57,14 +57,28 @@ e2e:
 medidas:                                    ## suíte inteira gravando tests/medidas/<item>.json (ADR 0001 seção 10)
 	$(SEGREDOS) PLAT_GRAVAR_MEDIDAS=1 $(VENV)/pytest --base-url $(URL_PUBLICA)
 
-pacote-rede:                                ## docs/PACOTE_REDE.md == app/rede_utilidades/pacotes/*.json (item L4-01-a); GERA (o `make check` confere via tests/unit/test_rede_pacote.py)
-	$(VENV)/python docs/gerar_pacote_rede.py
-
 vendor:                                     ## confere sha256 de web/vendor contra VERSOES.txt
 	cd web/vendor && grep -v '^\#' VERSOES.txt | awk '{print $$3"  "$$1}' | sha256sum -c
 
-seguranca-deps:                             ## item L7-03-f: pip-audit em requirements.txt; reprova com CVE crítico/alto sem exceção viva em docs/excecoes_cve.json (docs/SEGURANCA.md seção 7); OPCIONAL, ainda não bloqueia `check`
-	$(VENV)/python scripts/varredura_dependencias.py --json var/seguranca/ultima_varredura.json
+seguranca-deps:                             ## item L7-03-f: só o pip-audit (docs/SEGURANCA.md seção 7); `seguranca` abaixo já o inclui
+	$(VENV)/python scripts/varredura_dependencias.py --json var/seguranca/pip_audit.json
+
+# item HARD-01 (docs/SEGURANCA.md seção 9): bandit + pip-audit + npm audit + gitleaks (histórico) + trivy, política de
+# bloqueio e exceções com prazo em docs/excecoes_seguranca.json; depois confere que a seção gerada do doc bate com a
+# medida versionada. Seco: não toca banco nem produção. Rede: OSV.dev (com cache), registry.npmjs.org, e o download
+# único das ferramentas binárias fixadas (cache do usuário). Sai 1 = achado bloqueante; 2 = ferramenta não rodou.
+seguranca: ferramentas
+	$(VENV)/python scripts/varredura_seguranca.py
+	$(VENV)/python scripts/varredura_seguranca.py --check-doc
+
+seguranca-gravar: ferramentas               ## roda tudo (com ZAP, exige ambiente de trilha) e regrava tests/medidas/HARD-01-seguranca.json + docs/SEGURANCA.md seção 9
+	$(VENV)/python scripts/varredura_seguranca.py --com-zap --gravar
+
+seguranca-zap: ferramentas                  ## só o baseline do ZAP: sobe uvicorn + nginx (deploy/nginx.conf) da trilha corrente numa porta 8800-8899 e derruba ao fim; recusa PLAT_SCHEMA=plat
+	$(VENV)/python scripts/varredura_seguranca.py --ferramentas zap
+
+ferramentas:                                ## instala (sha256 conferido) gitleaks/trivy/zap de deploy/ferramentas_binarias.txt em ~/.cache/plat/ferramentas
+	bash scripts/ferramentas_seguranca.sh
 
 migrar:
 	sudo bash db/migrar.sh

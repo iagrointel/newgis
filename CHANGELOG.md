@@ -1447,6 +1447,9 @@ dedicados, todos passando. Duas cláusulas do portão NÃO foram feitas e estão
 regerar `docs/openapi.json` apareceu que a junção dos ramos de origem havia apagado as rotas de edição, de
 mapa e do FeatureServer do arquivo comitado; foram restauradas e cada um dos 29 (método, caminho) novos ganhou
 caso na varredura cruzada A→B, que segue em 100 % de cobertura.
+## turno 8, setembro de 2026 (item HARD-01-varredura-de-seguranca-continua: varredura de segurança no portão)
+
+- HARD-01-varredura-de-seguranca-continua: `make seguranca` em `make check` (bandit + pip-audit + npm audit + gitleaks no histórico + trivy; ZAP baseline em `make seguranca-zap` contra instância própria), exceções com prazo em `docs/excecoes_seguranca.json`, binárias fixadas por sha256 (`deploy/ferramentas_binarias.txt`), seção 9 de docs/SEGURANCA.md gerada; consertos: defusedxml no Garage, `server_tokens off`, X-Frame-Options e Content-Security-Policy no nginx.
 
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 

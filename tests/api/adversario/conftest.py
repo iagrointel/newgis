@@ -1,5 +1,6 @@
 """Adversário HARD-03: só roda contra base de trilha/homologação. Em produção (PLAT_SCHEMA=plat) o pacote inteiro
-é pulado — os testes criam objetos de ataque e nunca podem tocar o schema real (regra do brief do endurecimento)."""
+é pulado com o motivo — os testes criam usuários, papéis, tokens e itens de ataque e nunca podem tocar o schema
+real (regra dura do brief do líder de endurecimento)."""
 
 import os
 
