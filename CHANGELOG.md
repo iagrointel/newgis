@@ -701,6 +701,22 @@ extração da rede real da casa não traz camada de dispositivo de manobra (nenh
 existe no schema) e o ramal de ligação tem 0 de 26.581 registros com geometria; a medida de tempo ficou NÃO
 MEDIDA por carga da máquina 10,95 (o brief proíbe medir tempo sob disputa).
 
+## turno 8, setembro de 2026 (item L2-08-b-clonar-camadas-hospedadas: camadas e tabelas de um FeatureServer da Esri viram camadas do catálogo)
+
+`POST /api/migracao/clones` (job `migracao.clonar`, retomável por camada) lê `/FeatureServer/{id}` pela conexão
+`esri_rest` do L2-08-a e cria, por camada ou tabela, um item `camada_vetorial` com o mesmo preparo da ingestão:
+campos com tipo, alias, tamanho e padrão (nomes saneados; `OBJECTID`/`GlobalID` viram `oid_origem`/
+`globalid_origem`; `Shape__*` descartados com aviso), dados paginados por `resultOffset` (ou por `objectIds`),
+geometria por EWKT com `102100` → `3857`, datas em ms (inclusive antes de 1970), domínios codificados e de
+intervalo e subtipos inteiros pela mesma função da rota `/api/dominios/importar`, anexos no armazém de objetos
+com sha256, relacionamentos entre as camadas clonadas (1:N com chave repetida no dado vira N:M por junção, com
+aviso) e verificação (contagem origem × destino, sha256 de amostra normalizada) no relatório por camada;
+re-execução sem mudança na origem não escreve nada. `X-Esri-Authorization: Bearer` passou a valer como
+`Authorization`, então o FeatureServer da própria plataforma serve de fonte de teste. Conferido: serviço público
+da Esri gravado com URL e data (20 feições, tabela relacionada, 3 anexos) e camada própria de 2.000 feições.
+Fora desta rodada: caminho por File Geodatabase (`createReplica`), vista hospedada como vista, 500 mil feições
+medidas (máquina acima da carga de medição).
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
@@ -1923,6 +1939,84 @@ de ordem, fechando um ciclo sem fim com a árvore de camadas sempre que o catál
 
 Medido com 5.000 desenhos num mapa: salvar em 190 ms e reabrir em 39 ms, idênticos bit a bit, com carga de
 1 minuto em 14,12 e 7,8 GB de memória livre (`tests/medidas/L2-01-k-desenho-anotacoes.json`).
+## turno 3, setembro de 2026 (item L2-08-a-leitor-portal-inventario: conserto de segurança, B1-B7 do adversário)
+
+Sete achados do adversário independente (`laco/handoffs/T3/ataque-L4-portal-ADVERSARIO.md`, seção 2)
+consertados; os 15 `xfail(strict=True)` de `tests/api/test_migracao_adversario.py` viraram teste normal
+(marca retirada, achado por achado). **B1/B1b (crítico)**: `ClientePortal._cabecalhos(alvo)` só põe
+`X-Esri-Authorization` quando `alvo` é a MESMA origem do portal configurado
+(`seguranca._mesma_origem_de_confianca`, copiada com atribuição da defesa que o item L6-02-h fez para
+redirecionamento) — nunca para o host de um item de terceiro nem para onde um 302 aponte; `_requisitar`
+recalcula os cabeçalhos a cada salto. **B2 (alto)**: título com NUL e `numViews` não numérico agora são
+SANEADOS antes do INSERT (`_sanear`, `_inteiro_nao_negativo`) — o item fica no inventário; quando o campo
+é irrecuperável (não adapta para a coluna) o item é registrado e PULADO (`Totais.itens_pulados`, AVISO no
+log do job), nunca trava o lote. **B3 (alto)**: `resposta_grande_demais` (página > 8 MiB) entrou em
+`MOTIVOS_DEFINITIVOS` — falha limpa em `falhou` já na 1ª tentativa, não fica `rodando` para sempre.
+**B4 (médio)**: quando a ordem do portal muda entre tentativas e a retomada perde itens, `Totais.aviso`
+registra a contagem esperada x obtida e some para a coluna `mensagem` mesmo com o job `concluido`
+(recuperar os itens perdidos fica fora do escopo do conserto — só detectar e avisar). **B5 (médio)**:
+`relatorio._texto` neutraliza injeção de fórmula no CSV (`'` na frente de células que começam com
+`=`/`+`/`-`/`@`). **B6 (baixo)**: `size: -1` do AGOL vira NULL, não entra mais somado em
+`bytes_declarados`. **B7 (médio)**: `POST /api/migracao/inventarios` confere o perfil mínimo do job
+(`servico.tipo_registrado` + `ordem_perfil`) ANTES de gravar a linha do inventário — editor sem privilégio
+nunca cria mais um inventário órfão. Handoff: `laco/handoffs/T3/L2-08-a-CONSERTO.md`.
+
+## turno 3, setembro de 2026 (item L2-08-a-leitor-portal-inventario: leitor de inventário de Portal/AGOL)
+
+Leitura só-leitura do Portal for ArcGIS / ArcGIS Online do cliente, como job retomável
+(`migracao.inventariar`): `portals/self`, `search` paginado, item, `item/data`, `item/resources`,
+`relatedItems`, grupos com membros, usuários, e contagem de feições por camada dos serviços hospedados
+(`query?returnCountOnly=true`). Grava em `plat.migracao_inventario` / `migracao_item` / `migracao_grupo` /
+`migracao_usuario` (migração `20260906T1540_migracao_inventario_portal.sql`, RLS por inquilino), com
+classificação prévia migra / migra parcial / não migra por tipo de item — tipo fora da tabela vira
+`desconhecido`, nunca chute. Tela `/migracao` (escolher a conexão, ler, ver o relatório por tipo e por item)
+e `GET /api/migracao/inventarios/{id}/relatorio.csv`. Rede pelo `app.conexao.seguranca` do L6-02-a (SSRF,
+IP pinado, sem seguir redirecionamento sozinho); token em cabeçalho `X-Esri-Authorization`, nunca em URL;
+429 com espera pelo `Retry-After`; corte de rede no meio retoma do ponto gravado sem reler o que já entrou.
+`plat.migracao_usuario` não tem coluna de e-mail, nome ou telefone: o dado pessoal que o portal devolve não
+tem onde ser gravado. ADR 0018. ⛔ a prova contra Portal REAL fica pendente da decisão D20 do dono
+(credencial do parceiro) — `tests/migracao/PORTAL_DE_TESTE.md` diz o que a prova atual sustenta e o que não.
+## turno 5, setembro de 2026 (item L2-10-b-relacionamentos: classes de relacionamento entre camadas)
+
+`plat.relacionamento`/`plat.relacionamento_junc` (migração `20260907T1244_relacionamentos.sql`; **ADR
+20260907T1436**): 1:N/1:1 vira FK real na tabela de destino (`(tenant_id, chave_destino) -> (tenant_id,
+chave_origem)`, `ON DELETE CASCADE` quando `composto=true`, `SET NULL`/`RESTRICT` quando simples); N:M não
+tem FK física (a junção pode ligar qualquer lado primeiro) e ganha gatilho de integridade
+(`plat.relacionamento_junc_conferir`) sobre uma tabela de junção única para todo o inquilino. Cardinalidade
+máxima em 1:N é gatilho GERADO por tabela de destino (mesmo padrão do L2-10-a, já com o cuidado de nunca
+concatenar texto do usuário no corpo do dollar-quote). Chave de origem/destino é sempre um VALOR (campo
+declarado ou `globalid`), nunca o `fid` físico — é por isso que o relacionamento sobrevive a apagar e
+recriar a linha com o mesmo `globalid` (medido).
+
+API: `POST/DELETE /api/relacionamentos`, `POST .../ligar` e `.../desligar` (N:M), `GET
+/api/camadas/{id}/relacionados/{rel}` com paginação (`limite_relacionados` da classe vence o `limite` da
+consulta) e o novo `GET /api/camadas/{id}/relacionamentos` (lista as classes que a camada enxerga, dos dois
+sentidos, para a tela montar o popup sem conhecer o nome de antemão). `GET
+/rest/services/{id}/FeatureServer/0/queryRelatedRecords` devolve os MESMOS fids da rota própria (paridade
+testada). Popup na tela `/camadas/{id}/dominios` (reaproveitada do L2-10-a): botão "Relacionados" por linha
+abre um `<plat-dialogo>` listando os registros ligados com link para `/camadas/{alvo}/dominios?fid=N`; a
+página de destino lê `?fid=` e destaca a linha (`tr.destaque`) — e2e com 3 capturas
+(`tests/e2e/capturas/L2-10-b-relacionamentos_*.png`).
+
+Refutação do item, todas fechadas: ciclo de relacionamentos compostos A→B→A não trava a criação nem o
+apagar (a segunda ponta do ciclo exige uma FK física que a camada de teste não declara, então cai em `404`
+de campo, nunca trava); cardinalidade máxima violada por inserção DIRETA na tabela (fora da API, mesmo
+caminho de uma edição em lote) é recusada pelo gatilho; paginação com `limite_relacionados` vence um
+`limite` maior pedido pela consulta (mecanismo testado com N=25; N=100 mil não medido nesta passagem —
+custo de disco/tempo compartilhado, registrado no ADR, não escondido). 8 testes de API + 1 e2e verdes;
+medidas em `tests/medidas/L2-10-b-relacionamentos.json`.
+
+Achado do turno (registrado para não se repetir): um teste de leitura que não fecha a própria transação
+(`SELECT` sem `commit`/`rollback`) segura `AccessShareLock` na tabela indefinidamente; a chamada seguinte
+que precise de `AccessExclusiveLock` na MESMA tabela (`ALTER TABLE ... ADD CONSTRAINT` ao criar a FK do
+relacionamento) trava até o Postgres matar a sessão ociosa por `idle_in_transaction_session_timeout`
+(~60 s) — e só então progride, com a conexão do teste já morta para a chamada seguinte
+(`tests/api/test_relacionamentos.py::_contar` agora fecha a própria transação).
+
+Fora desta passagem: formulário de criar/ligar/desligar um registro relacionado a partir do próprio popup
+(a API já faz; falta só o botão); relacionamento sobrevivendo a importação/exportação FGDB (a ingestão
+vetorial ainda não cobre FGDB).
+
 ## turno 4, setembro de 2026 (item L2-04-servicos-esri-ogc: diretório do FeatureServer, OGC API Features e WFS 2.0)
 
 Construído em volta da operação `query` do FeatureServer (item L2-04-c, `wt/fsquery`, ADR 0018) sem reescrevê-la:
@@ -2143,6 +2237,44 @@ pacote de 4 mil erros, 14,1 s → 1,2 s; pior `/saude` concorrente, 13,6 s → 0
 importações simultâneas na MESMA rede; corrigido com `SELECT ... FOR UPDATE` na linha da rede
 (`_travar_rede`), que serializa a substituição do catálogo sem 500.
 
+## turno 3, setembro de 2026 (item L2-10-a-dominios-subtipos: domínios de atributo e subtipos por camada)
+
+Domínio de atributo como objeto do inquilino (`plat.dominio`: codificado com lista de códigos, ou intervalo
+com mínimo e máximo), ligação campo -> domínio por camada e por subtipo (`plat.dominio_campo`), subtipo como
+campo inteiro designado da camada (`plat.camada_subtipo`). **ADR 0021**; migrações
+`20260906T1548_dominios_subtipos.sql` e `20260906T1620_dominios_gatilho_gerado.sql`.
+
+- **A regra vale no banco.** Um INSERT direto na tabela da camada como `plat_app`, sem passar pela API, é
+  recusado com `campo "uf": o valor 'ZZ' não pertence ao domínio "UF"` e com o nome do campo em `COLUMN` —
+  a API repassa isso em `detalhe.campo`. Domínio de intervalo recusa abaixo do mínimo e acima do máximo
+  (`campo "altura": o valor -0.1 está fora do intervalo 0.0 a 10.0`). Medido em
+  `tests/medidas/L2-10-a-dominios-subtipos.json`.
+- **Subtipo troca o domínio do mesmo campo.** Com dois subtipos ligados ao campo `situacao`, `terra` passa no
+  subtipo 2 e é recusado no 1; sem subtipo vale o domínio padrão da camada; subtipo fora da lista é recusado.
+- **Remover valor em uso = 409 com a contagem.** Quem conta é `plat.dominio_uso_contar`, a mesma função que
+  responde `GET /api/dominios/{id}/uso`: quatro feições usando `C1` dão
+  `{"erro": "valor_em_uso", "detalhe": {"codigo": "C1", "usos": 4}}`. Valor não usado sai sem drama.
+- **Custo do gatilho, medido e corrigido.** A primeira versão, genérica, lia a linha com `to_jsonb(NEW)` e
+  custou **1,80x** (10 mil inserções: 1,72 s sem gatilho, 3,11 s com) — acima do teto de 1,5x do item. Um
+  gatilho que só faz `to_jsonb(NEW)` já custa cerca de 129 us por linha, porque converte a linha inteira, com
+  geometria. O gatilho passou a ser GERADO por camada (`plat.dominio_v_<item>`, com `NEW.uf` no código), e
+  três gatilhos AFTER (em `plat.dominio_campo`, `plat.camada_subtipo` e `plat.dominio`) regeneram a função
+  sozinhos — nenhuma rota instala gatilho, e quem mexe por `psql` regenera do mesmo jeito.
+- **FeatureServer com domains e types.** `GET /rest/services/{item_id}/FeatureServer/0` publica
+  `fields[].domain` (codedValue e range) e `types[]` com `domains` por subtipo e `templates` com os valores
+  padrão; conferido contra o que `GET /api/camadas/{id}/dominios` devolve do banco. É só o METADADO: `/query`
+  e `/applyEdits` são da linha L2-08.
+- **Tela `/camadas/{id}/dominios`.** Campo com domínio codificado vira lista de escolha que mostra a descrição
+  e grava o código; trocar o subtipo refaz os campos dependentes e aplica os padrões; a tabela de feições usa
+  a mesma tradução (`web/js/dominios/valores.js`, a função única do formulário, da tabela e — quando o painel
+  de camada existir — do popup).
+- **CSV de ida e volta** (`GET /api/dominios.csv`, `POST /api/dominios/csv`) e **importação do `fields`/`types`
+  de um FeatureServer/FGDB** (`POST /api/dominios/importar`), que reaproveita domínio de mesmo nome em vez de
+  duplicar.
+
+Testes: `tests/api/test_dominios_subtipos.py` (inclui a refutação exigida: domínio de outro inquilino = 404,
+50 mil códigos = 422, código duplicado recusado na API e no banco, trocar o tipo de campo com domínio ligado
+= 409) e `tests/e2e/test_dominios.py` (playwright, com capturas).
 
 ## turno 3, setembro de 2026 (item L0-04-a-upload-arquivo: upload retomável pelo navegador)
 
@@ -2470,6 +2602,9 @@ Decisões em `docs/adr/0011-documento-de-construtor.md`. Detalhe: `MANUAL.md` se
 Constrói sobre o adaptador do L0-11 (ADR 0006) o que a linha de imagens precisa. **ADR 20260908T1255**; migração
 `20260908T1255_garage_por_inquilino.sql` (nome com carimbo de tempo UTC, regra fixa: a faixa de três dígitos está
 fechada).
+Constrói sobre o adaptador do L0-11 (ADR 0006) o que a linha de imagens precisa. **ADR 0016**; migração
+`20260906T1547_garage_inquilino.sql` (a reserva original era 034, e depois 042, mas a árvore principal já tinha commitado 034/036/040/041/042
+— renumerada e registrada no handoff).
 
 - **Cota dupla.** `plat.tenant.cota_objetos` e `plat.arquivo_bucket.cota_objetos` novas; `UpdateBucket` do Garage
   passa a receber `quotas: {maxSize, maxObjects}`. Medido: com `maxObjects` na conta exata, o PUT seguinte volta

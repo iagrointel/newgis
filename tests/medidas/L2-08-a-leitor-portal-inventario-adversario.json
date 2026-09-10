@@ -1,0 +1,22 @@
+{
+ "item": "L2-08-a-leitor-portal-inventario-adversario",
+ "medidas": {
+  "pedidos_totais_com_120_servicos_copiados_e_um_de_300_camadas": {
+   "valor": 987,
+   "unidade": "pedidos",
+   "comando": "portal de mentira"
+  },
+  "pedidos_por_feature_service_copiado": {
+   "valor": 4,
+   "unidade": "pedidos",
+   "comando": "1 descrição + camadas + 2 relações"
+  },
+  "pedidos_do_servico_de_300_camadas": {
+   "valor": 303,
+   "unidade": "pedidos",
+   "comando": "sem teto de camadas por serviço"
+  }
+ },
+ "gerado_em": "2026-09-06T18:06:12Z",
+ "git_sha": "0a11a61349a1"
+}

@@ -261,4 +261,7 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/rest/services/{item_id}/FeatureServer/synchronizeReplica"): ["replicas/sincronizar"],
     ("POST", "/rest/services/{item_id}/FeatureServer/unRegisterReplica"): ["replicas/apagar"],
     ("POST", "/rest/services/{item_id}/FeatureServer/extractChanges"): [],
+    # --- clonagem de camadas hospedadas (L2-08-b)
+    ("POST", "/api/migracao/clones"): ["migracao/clonar"],
+    ("DELETE", "/api/migracao/clones/{id}"): ["migracao/clone_apagar"],
 }

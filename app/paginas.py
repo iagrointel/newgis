@@ -56,6 +56,8 @@ PAGINAS = {
     "/redes/tracado": "redes_tracado.html",
     # --- traçado de isolamento (L4-02-c-isolamento)
     "/redes/isolamento": "redes_isolamento.html",
+    # --- domínios e subtipos da camada (L2-10-a): campos x domínio, formulário de feição e tabela
+    "/camadas/{id}/dominios": "camada_dominios.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
     "/uploads": "uploads.html",
     # --- sistema de design (UX-01-sistema-de-design): guia viva de tokens e componentes
@@ -72,6 +74,8 @@ PAGINAS = {
     "/ferramentas": "ferramentas.html",
     # --- console do operador da plataforma (UX-18): superadmin
     "/plataforma": "plataforma.html",
+    # --- migração de Portal/AGOL (L2-08-a-leitor-portal-inventario)
+    "/migracao": "migracao.html",
 }
 router = APIRouter()
 

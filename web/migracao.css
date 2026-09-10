@@ -1,0 +1,20 @@
+/* plat · tela /migracao (item L2-08-a-leitor-portal-inventario). Só o que esta tela precisa e o resto do
+   sistema não tem: a faixa de medidas do relatório e o botão que parece ligação dentro da tabela. Nada aqui
+   redefine classe de style.css/tarefas.css (as duas continuam mandando no resto da página). */
+.migracao .resumo { display: flex; flex-wrap: wrap; gap: var(--e3, .75rem); margin: var(--e3, .75rem) 0; }
+.migracao .medida {
+  display: flex; flex-direction: column; gap: .15rem; min-width: 8rem;
+  border: 1px solid var(--borda); border-radius: var(--raio, 6px);
+  padding: var(--e2, .5rem) var(--e3, .75rem); background: var(--fundo-2, #0f1216);
+}
+.migracao .medida-valor { font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.migracao .medida-rotulo { color: var(--fraco); font-size: .8rem; }
+.migracao .par { display: inline-flex; align-items: center; gap: .25rem; margin-right: .5rem; white-space: nowrap; }
+.migracao .ligacao {
+  font: inherit; color: var(--elo, #7aa2f7); background: none; border: 0; padding: 0;
+  cursor: pointer; text-decoration: underline;
+}
+.migracao .ligacao:focus-visible { outline: 2px solid var(--elo, #7aa2f7); outline-offset: 2px; }
+.migracao .formulario .campo { margin-bottom: var(--e3, .75rem); max-width: 32rem; }
+.migracao details { margin-bottom: var(--e3, .75rem); }
+.migracao details summary { cursor: pointer; color: var(--fraco); }

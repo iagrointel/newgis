@@ -108,8 +108,9 @@ def _carregar(cur, item_id: str):
     return schema, tabela, srid, meta, geometria_tipo_esri, titulo
 
 
-def _colecao_json(base: str, item_id: str, titulo: str | None, extent4326: list[float] | None,
-    srid_nativo: int) -> dict:
+def _colecao_json(
+    base: str, item_id: str, titulo: str | None, extent4326: list[float] | None, srid_nativo: int
+) -> dict:
     storage_crs = _srid_para_crs_uri(srid_nativo)
     d = {
         "id": COLECAO_ID,

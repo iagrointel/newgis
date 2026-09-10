@@ -1,0 +1,35 @@
+{
+ "item": "L2-08-b-clonar-camadas-hospedadas",
+ "medidas": {
+  "segundos_clone_servico_publico_gravado": {
+   "valor": 6.44,
+   "unidade": "s",
+   "comando": "2 camadas, 20+ feições, 3 anexos, portal de mentira",
+   "carga_1min": 8.79,
+   "ram_livre_gb": 6.7,
+   "medido_em": "2026-09-07T21:35:32Z",
+   "nota": "medido sob carga acima de 8 (12 nucleos); camada de 500 mil feicoes nao medida"
+  },
+  "segundos_clone_2000_feicoes_fonte_propria": {
+   "valor": 3.87,
+   "unidade": "s",
+   "comando": "carga_1min=9.8 (clone do próprio FeatureServer da trilha)",
+   "carga_1min": 8.79,
+   "ram_livre_gb": 6.7,
+   "medido_em": "2026-09-07T21:35:32Z",
+   "nota": "medido sob carga acima de 8 (12 nucleos); camada de 500 mil feicoes nao medida"
+  },
+  "camadas_clonadas_nos_testes": {
+   "valor": 3,
+   "unidade": "camadas",
+   "comando": "tests/api/test_migracao_clonar.py (2 do servico publico gravado + 1 da propria plataforma, 2.000 feicoes)"
+  },
+  "anexos_sha256_iguais": {
+   "valor": 3,
+   "unidade": "anexos",
+   "comando": "test_servico_publico_gravado_clona_esquema_dominios_relacionamento_e_anexos"
+  }
+ },
+ "gerado_em": "2026-09-07T21:35:32Z",
+ "git_sha": "77411ed09942"
+}

@@ -1470,6 +1470,14 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("GET", "/api/amc/execucoes/{id}/resultados"): Caso(
         lambda p: f"/api/amc/execucoes/{p.execucao_amc_b['id']}/resultados",
     ),
+    # --- clonagem de camadas hospedadas (L2-08-b): registro por inquilino; conexão de B nunca serve A
+    ("GET", "/api/migracao/clones"): Caso(lambda p: "/api/migracao/clones", proprio=True, aceita=frozenset({200})),
+    ("GET", "/api/migracao/clones/{id}"): Caso(lambda p: f"/api/migracao/clones/{UUID_NULO}"),
+    ("POST", "/api/migracao/clones"): Caso(
+        lambda p: "/api/migracao/clones",
+        lambda p: {"conexao_id": p.conexao_b["id"], "url_servico": "https://portal.invalido/server/rest/services/x/FeatureServer"},
+    ),
+    ("DELETE", "/api/migracao/clones/{id}"): Caso(lambda p: f"/api/migracao/clones/{UUID_NULO}"),
 }
 
 

@@ -24,6 +24,7 @@ from app.jobs.registro import REGISTRO
 from app.layout import tarefas as layout_tarefas  # noqa: F401 — L2-12-b: layout.exportar
 from app.regras import tarefas as regras_tarefas  # noqa: F401 — L2-10-d: camadas.validar
 from app.replica import tarefas as replica_tarefas  # noqa: F401 — L2-13-b: replicas.criar
+from app.migracao import tarefas as migracao_tarefas  # noqa: F401 — L2-08-a: migracao.inventariar
 from app.uploads import tarefas as uploads_tarefas  # noqa: F401 — L0-04-a: uploads.expirar + periódico
 
 __all__ = ["REGISTRO"]

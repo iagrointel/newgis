@@ -262,3 +262,20 @@ def buscar_seguro(
         ok=False, status=None, mensagem="redirecionamentos_demais", url_final=alvo,
         latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=max_redirects,
     )
+
+
+def _mesma_origem_de_confianca(anterior: str, novo: str) -> bool:
+    """Mesmo host (case-insensitive) e não é uma queda de https para http; porta diferente já é outro
+    serviço. Copiada (mesma lógica, não reinventada) do conserto que o item de conexão externa fez para
+    credencial que atravessa redirecionamento (linhagem ADR 0012 — modelo de conexão externa); usada aqui
+    pelo item L2-08-a-leitor-portal-inventario para decidir se o token do Portal/AGOL pode ir num pedido:
+    só para a origem do portal configurado, nunca para o host de um item de terceiro nem para onde um
+    redirecionamento aponte."""
+    a, b = urlsplit(anterior), urlsplit(novo)
+    if (a.hostname or "").lower() != (b.hostname or "").lower():
+        return False
+    if a.scheme.lower() == "https" and b.scheme.lower() != "https":
+        return False
+    porta_a = a.port or (443 if a.scheme.lower() == "https" else 80)
+    porta_b = b.port or (443 if b.scheme.lower() == "https" else 80)
+    return porta_a == porta_b

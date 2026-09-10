@@ -54,6 +54,8 @@ from app.consulta.rotas_servico import router as rotas_consulta_servico
 from app.consulta.rotas_sync_esri import router as rotas_sync_esri
 from app.consulta.rotas_wfs import router as rotas_wfs
 from app.correio.rotas_smtp import router as rotas_smtp
+from app.dominios import rotas as rotas_dominios
+from app.dominios import rotas_featureserver, rotas_feicoes
 from app.edicao.rotas import router as rotas_edicao
 from app.exportacao.rotas import router as rotas_exportacao
 from app.estatistica.rotas import router as rotas_estatistica
@@ -75,6 +77,7 @@ from app.mapa.popup import router as rotas_mapa_popup
 from app.mapa.promover import router as rotas_promover
 from app.mapa.rotas import router as rotas_mapa
 from app.mapa.selecao import router as rotas_selecao
+from app.migracao.rotas import router as rotas_migracao
 from app.multiescala.rotas import router as rotas_multiescala
 from app.paineis.rotas import router as rotas_paineis
 from app.rede.rotas import router as rotas_rede
@@ -92,6 +95,7 @@ from app.rede_utilidades.rotas_subredes import router as rotas_rede_subredes
 from app.rede_utilidades.rotas_topologia import router as rotas_rede_topologia
 from app.regras.rotas import router as rotas_regras  # L2-10-d: regras de atributo por camada
 from app.replica.rotas import router as rotas_replicas
+from app.relacionamentos.rotas import router as rotas_relacionamentos
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
@@ -194,6 +198,20 @@ ROUTERS = [
     rotas_exportacao,
     rotas_regras,
     rotas_replicas,   # L2-13-b: réplicas para trabalho desconectado
+    # --- domínios de atributo e subtipos (L2-10-a): /api/dominios, /api/camadas/{id}/dominios e /subtipos
+    rotas_dominios.router,
+    # --- gravação de UMA feição pelo formulário de atributos (L2-10-a; edição em lote é da linha L2-08)
+    rotas_feicoes.router,
+    # --- metadado de FeatureServer com domains/types (L2-10-a; /query e /applyEdits são da linha L2-08)
+    rotas_featureserver.router,
+    # --- edição transacional de feições (L2-03-a): POST /api/camadas/{id}/edicoes (adicionar/atualizar/apagar
+    # numa transação; única porta de escrita de feição — FeatureServer/OGC futuros chamam este mesmo caminho)
+    rotas_edicao,
+    # --- classes de relacionamento entre camadas (L2-10-b): /api/relacionamentos, /api/camadas/{id}/
+    # relacionados/{rel}, .../ligar, .../desligar; queryRelatedRecords no FeatureServer
+    rotas_relacionamentos,
+    # --- edição transacional de feições (L2-03-a): POST /api/camadas/{id}/edicoes (adicionar/atualizar/apagar
+    # numa transação; única porta de escrita de feição — FeatureServer/OGC futuros chamam este mesmo caminho)
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- rede de utilidades (L4-01-a): /api/rede (redes do inquilino), /api/rede/{rede_id}/pacote (importa e
@@ -267,6 +285,11 @@ ROUTERS = [
     rotas_mapa,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
     rotas_tiles,
+    # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,
+    # /fatores/{id}/amostras, /conjuntos/{id}/macro, /execucoes/{id}/micro, /execucoes
+    rotas_multiescala,
+    # --- migração de Portal/AGOL (L2-08-a): /api/migracao/inventarios (leitura só-leitura do portal do cliente)
+    rotas_migracao,
     # --- operação query do FeatureServer (L2-04-c): /rest/services/{item}/FeatureServer/{camada}/query
     # --- diretório/metadados do FeatureServer + OGC API Features Part 1 + WFS 2.0 (item
     # L2-04-servicos-esri-ogc, construído EM VOLTA da query acima, sem reescrevê-la): descritor de

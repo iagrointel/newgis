@@ -1,0 +1,2056 @@
+{
+ "url": "https://sampleserver6.arcgisonline.com/arcgis/rest/services/ServiceRequest/FeatureServer",
+ "gravado_em": "2026-09-07T21:13:32Z",
+ "raiz": {
+  "currentVersion": 10.91,
+  "cimVersion": "2.9.0",
+  "serviceDescription": "This is the map used to collect non-emergency requests for service from the general public.",
+  "hasVersionedData": false,
+  "hasArchivedData": false,
+  "hasBranchVersionedData": false,
+  "supportsDisconnectedEditing": false,
+  "supportsDatumTransformation": true,
+  "supportsReturnServiceEditsOption": true,
+  "returnServiceEditsHaveSR": true,
+  "supportsQueryDataElements": true,
+  "datesInUnknownTimezone": false,
+  "supportsRelationshipsResource": true,
+  "syncEnabled": false,
+  "supportedExportFormats": "sqlite,filegdb",
+  "extractChangesCapabilities": {
+   "supportsReturnIdsOnly": false,
+   "supportsReturnExtentOnly": false,
+   "supportsReturnAttachments": false,
+   "supportsLayerQueries": false,
+   "supportsGeometry": false,
+   "supportsFeatureReturn": false,
+   "supportsReturnHasGeometryUpdates": false
+  },
+  "supportedQueryFormats": "JSON",
+  "maxRecordCount": 1000,
+  "maxRecordCountFactor": 1,
+  "capabilities": "Query,Create,Update,Delete,Uploads,Editing",
+  "description": "This is the map used to collect non-emergency requests for service from the general public.",
+  "copyrightText": "Esri., Inc.",
+  "advancedEditingCapabilities": {
+   "supportsSplit": true,
+   "supportsReturnServiceEditsInSourceSR": true,
+   "supportsAsyncApplyEdits": true
+  },
+  "spatialReference": {
+   "wkid": 102100,
+   "latestWkid": 3857,
+   "xyTolerance": 0.001,
+   "zTolerance": 0.001,
+   "mTolerance": 0.001,
+   "falseX": -20037700,
+   "falseY": -30241100,
+   "xyUnits": 148923141.92838538,
+   "falseZ": -100000,
+   "zUnits": 10000,
+   "falseM": -100000,
+   "mUnits": 10000
+  },
+  "initialExtent": {
+   "xmin": -9814091.251948113,
+   "ymin": 5127179.36590259,
+   "xmax": -9812874.166180609,
+   "ymax": 5128639.868823595,
+   "spatialReference": {
+    "wkid": 102100,
+    "latestWkid": 3857,
+    "xyTolerance": 0.001,
+    "zTolerance": 0.001,
+    "mTolerance": 0.001,
+    "falseX": -20037700,
+    "falseY": -30241100,
+    "xyUnits": 148923141.92838538,
+    "falseZ": -100000,
+    "zUnits": 10000,
+    "falseM": -100000,
+    "mUnits": 10000
+   }
+  },
+  "fullExtent": {
+   "xmin": -14842597.721444273,
+   "ymin": -13270236.83168041,
+   "xmax": -4823845.652034055,
+   "ymax": 30240971.95838615,
+   "spatialReference": {
+    "wkid": 102100,
+    "latestWkid": 3857,
+    "xyTolerance": 0.001,
+    "zTolerance": 0.001,
+    "mTolerance": 0.001,
+    "falseX": -20037700,
+    "falseY": -30241100,
+    "xyUnits": 148923141.92838538,
+    "falseZ": -100000,
+    "zUnits": 10000,
+    "falseM": -100000,
+    "mUnits": 10000
+   }
+  },
+  "allowGeometryUpdates": true,
+  "allowTrueCurvesUpdates": false,
+  "onlyAllowTrueCurveUpdatesByTrueCurveClients": true,
+  "supportsApplyEditsWithGlobalIds": false,
+  "supportsTrueCurve": true,
+  "units": "esriMeters",
+  "documentInfo": {
+   "Title": "Service Request Map",
+   "Author": "Esri.,Inc.",
+   "Comments": "This is the map used to collect non-emergency requests for service from the general public.",
+   "Subject": "This is the map used to collect non-emergency requests for service from the general public.",
+   "Category": "",
+   "Keywords": "Local Government, Constituent Engagement"
+  },
+  "supportsQueryDomains": true,
+  "supportsQueryContingentValues": true,
+  "layers": [
+   {
+    "id": 0,
+    "name": "Service Requests",
+    "parentLayerId": -1,
+    "defaultVisibility": true,
+    "subLayerIds": null,
+    "minScale": 0,
+    "maxScale": 0,
+    "type": "Feature Layer",
+    "geometryType": "esriGeometryPoint"
+   }
+  ],
+  "tables": [
+   {
+    "id": 1,
+    "name": "ServiceRequestComment"
+   }
+  ],
+  "relationships": [
+   {
+    "id": 0,
+    "name": "ServiceRequestHasServiceRequestComment"
+   }
+  ],
+  "enableZDefaults": false,
+  "allowUpdateWithoutMValues": false,
+  "supportsVCSProjection": true,
+  "datumTransformations": [
+   {
+    "geoTransforms": [
+     {
+      "wkid": 108001,
+      "latestWkid": 1241,
+      "transformForward": true,
+      "name": "NAD_1927_To_NAD_1983_NADCON"
+     }
+    ]
+   },
+   {
+    "geoTransforms": [
+     {
+      "wkid": 108001,
+      "latestWkid": 1241,
+      "transformForward": false,
+      "name": "NAD_1927_To_NAD_1983_NADCON"
+     }
+    ]
+   }
+  ],
+  "referenceScale": 0
+ },
+ "camadas": {
+  "0": {
+   "currentVersion": 10.91,
+   "cimVersion": "2.9.0",
+   "id": 0,
+   "name": "Service Requests",
+   "type": "Feature Layer",
+   "parentLayer": null,
+   "defaultVisibility": true,
+   "minScale": 0,
+   "maxScale": 0,
+   "canScaleSymbols": false,
+   "geometryType": "esriGeometryPoint",
+   "description": "A request for service or incident reported by the general public or other interested party",
+   "copyrightText": "",
+   "editFieldsInfo": null,
+   "ownershipBasedAccessControlForFeatures": null,
+   "syncCanReturnChanges": false,
+   "relationships": [
+    {
+     "id": 0,
+     "name": "ss6.gdb.ServiceRequestComment",
+     "relatedTableId": 1,
+     "cardinality": "esriRelCardinalityOneToMany",
+     "role": "esriRelRoleOrigin",
+     "keyField": "requestid",
+     "composite": true
+    }
+   ],
+   "isDataVersioned": false,
+   "isDataArchived": false,
+   "infoInEstimates": [
+    "extent",
+    "count"
+   ],
+   "isDataBranchVersioned": false,
+   "isDataReplicaTracked": false,
+   "isCoGoEnabled": false,
+   "supportsRollbackOnFailureParameter": false,
+   "archivingInfo": {
+    "supportsQueryWithHistoricMoment": false,
+    "startArchivingMoment": -1
+   },
+   "supportsStatistics": true,
+   "supportsExceedsLimitStatistics": true,
+   "supportsAdvancedQueries": true,
+   "supportsValidateSQL": true,
+   "supportsCoordinatesQuantization": true,
+   "supportsQuantizationEditMode": true,
+   "supportsCalculate": true,
+   "supportsASyncCalculate": true,
+   "supportsDatumTransformation": true,
+   "advancedQueryCapabilities": {
+    "supportsPagination": true,
+    "supportsTrueCurve": true,
+    "supportsQueryWithDistance": true,
+    "supportsReturningQueryExtent": true,
+    "supportsStatistics": true,
+    "supportsPercentileStatistics": true,
+    "supportsHavingClause": true,
+    "supportsOrderBy": true,
+    "supportsDistinct": true,
+    "supportsCountDistinct": true,
+    "supportsQueryAttachments": true,
+    "supportsQueryAttachmentsWithReturnUrl": true,
+    "supportsQueryWithResultType": true,
+    "supportsReturningGeometryCentroid": false,
+    "supportsSqlExpression": true,
+    "supportsQueryWithDatumTransformation": true,
+    "supportsLod": false,
+    "supportsQueryWithLodSR": false,
+    "supportsQueryAnalytic": true
+   },
+   "advancedQueryAnalyticCapabilities": {
+    "supportsLinearRegression": true,
+    "supportsAsync": false,
+    "supportsPercentileAnalytic": false
+   },
+   "advancedEditingCapabilities": {
+    "supportedSqlFormatsInCalculate": [
+     "standard"
+    ],
+    "supportsAsyncApplyEdits": true
+   },
+   "hasMetadata": false,
+   "extent": {
+    "xmin": -14842597.721444273,
+    "ymin": -13270236.83168041,
+    "xmax": -4823845.652034055,
+    "ymax": 30240971.95838615,
+    "spatialReference": {
+     "wkid": 102100,
+     "latestWkid": 3857,
+     "xyTolerance": 0.001,
+     "zTolerance": 0.001,
+     "mTolerance": 0.001,
+     "falseX": -20037700,
+     "falseY": -30241100,
+     "xyUnits": 148923141.92838538,
+     "falseZ": -100000,
+     "zUnits": 10000,
+     "falseM": -100000,
+     "mUnits": 10000
+    }
+   },
+   "sourceSpatialReference": {
+    "wkt": "PROJCS[\"NAD_1983_HARN_StatePlane_Illinois_East_FIPS_1201\",GEOGCS[\"GCS_North_American_1983_HARN\",DATUM[\"D_North_American_1983_HARN\",SPHEROID[\"GRS_1980\",6378137.0,298.257222101]],PRIMEM[\"Greenwich\",0.0],UNIT[\"Degree\",0.0174532925199433]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"False_Easting\",984250.0],PARAMETER[\"False_Northing\",0.0],PARAMETER[\"Central_Meridian\",-88.33333333333333],PARAMETER[\"Scale_Factor\",0.999975],PARAMETER[\"Latitude_Of_Origin\",36.66666666666666],UNIT[\"Foot_US\",0.3048006096012192]]",
+    "xyTolerance": 0.00328083333333333,
+    "zTolerance": 2e-05,
+    "mTolerance": 2e-05,
+    "falseX": -17463800,
+    "falseY": -46132600,
+    "xyUnits": 3048.00609601219,
+    "falseZ": 0,
+    "zUnits": 400000,
+    "falseM": 0,
+    "mUnits": 100000
+   },
+   "drawingInfo": {
+    "renderer": {
+     "type": "uniqueValue",
+     "field1": "status",
+     "uniqueValueInfos": [
+      {
+       "symbol": {
+        "type": "esriPMS",
+        "url": "fe8935d442e12e0ae0af7ee2396c13da",
+        "imageData": "iVBORw0KGgoAAAANSUhEUgAAABoAAAAaCAYAAACpSkzOAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAD5klEQVRIieXVX2hTdxTA8e/v5ja3SZqmI1mymj9o6EstUoWCmw+O6Zii2IeKmwyG0paxdtT1RWdffPClMFCKVcQX6x8QWdmQPqiMKVOGbChYp9U9tGmbNv1zm7imzZImzb13D62lrWna4fBl5/Hew/lwzu/H78i8pZD/n5ABQpXl94XX+zmStAFdtwoY1hOJn0Us9qMbEm8EGSBUr/er8USiVY/HHQwOLk/5Qshyh+rxdGYika99EPvX0BjYJtat+0WLRKqE1Ypt/34Kt23D5PUiFAUtFiPz+DGp27el2b6+z0w2W7UqSZ+4p6d/XTPUA2bh8fyRHRkJFm7fjqO5GamkZEmO5HBQEAxiq6khefMmU+3tFk3X76l2+4e5sJyQKxDo1MLhoHXfPhzNzSAERjpN6s4dZnt6MNJpTH4/lh07kP1+rHv3IgcCvDx6VNJ0/adh8C8f42vQuM1WqQ0NVRds3IjjyBEQgszTp0yePIkWW3oEiatXKTp4EHtdHeZNmyhuaiJ+6pTF7PWeIxI5mBcSLlcbg4MUNzSAycRsKMTLY8cw0unXW9d1EteuAWCvr8e6Zw/JGzfIDg4eUKF+8W1cAhlgGlPVD+RAAHNFBQBT7e25kcWdXb+OZdcuZL8fy+7dTJ07JxlOZw2x2JWc0Bj4jVRKMW/eDIAWjZJ58iQv8qqz1N272A8dwrxlCwBSUdHHK0ICPAZgcrnmoOHh1ZH50IaGADA5nQAY4Fv8fwmUhRkJFkYlFGXN0KvchTFLUnJFCBgGyM53IgeDCEVZ9YwACubPVItE5j7oemhFyAexMZcrmn70yGVkswhFwVpdzd+dnXkRk9OJZedOAGYePJhzRkau5esIqbj4+2w02pjs6sJWU4O9tpbMs2fMvniRExGKQsmJEwhFQZ+cJHnrFpLDEffE47/nhQiFvhU2W13i0iVF2boV2evFefo00xcvkuzqWjJGc2UlxU1NFASDYBjE29owkkmk0tLjIh438kJuSIy73V9qAwOX/2pp4Z3WVmSvl+KGBuy1tWRDobknyOdbuJ1oGvEzZ5i5fx+5tPThu6OjF5bXzfnWefr7r6hlZeXZvr7jsYYGig4fxlpdjVAUCsrLl+RmenqYOn+e2efPMbndffro6EcCjOU1V1wT7t7eFnX9+j+1iYkLU2fPKtMdHShVVcg+39yaiEbJdHeTDYdBCEyBQFc0HD5QAZlc9fIuPvfAwGUVfhBlZd9p8finM/fuORf/FxZLRt6w4TdU9Rt3ONydr9aqq9wNCXp7G4HGYXACPhkKDRh/L5UaEv392mo11gQtjvkds+K6/s+gN4m3Bv0DZEOGMIN1/K4AAAAASUVORK5CYII=",
+        "contentType": "image/png",
+        "width": 19,
+        "height": 19,
+        "angle": 0,
+        "xoffset": 0,
+        "yoffset": 0
+       },
+       "value": "Unassigned",
+       "label": "Unassigned"
+      },
+      {
+       "symbol": {
+        "type": "esriPMS",
+        "url": "3e9b5323e83ce8b416b277e961dfe8ad",
+        "imageData": "iVBORw0KGgoAAAANSUhEUgAAABoAAAAaCAYAAACpSkzOAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAD2ElEQVRIieWV3U9bdRjHP7/Tc1pOu7ZASwsKq0DUEGdcFpJpvHBuhoRodmEcGs1e4tQYWOKl8y8w8cqLcbEYpuDLBVMv1ARdjE6jUeeSzRecGgEZVdrTF2hLX8+bF4BS1hZ0yW58Ls/v+3s++T6/5zyPzA0K+f8Jsm2Edka+W8gtjyPoBtstkKKWnv9YlPLvhkZYuS6QbSO08ZZn42cqL1p63o+e2Cw5LGTHq9q4/2wllx7pPEHqX4NiE3gS463nzVK6XziceG7aS1PL7TjUVoSkYFZyVDJzFLXLkp6PP+pwuQ5qY9JA6Hjxi22Dpidxirz/e6Oc7mkK9uHvfQhJdldpJMWN4gnj6dhLIX6J7NyUahrGZ9qYel8tWE1QsBg8a5aTPe72fvy9DwJgWzrFxI/ouQVsS8fRFEBtuxNZDeBu34PsDpKefl0yLetc9BRdm8t4DSg+ptxlFlMHFW8n/p5BACrZqyz/+jZmOVelXVn4nB2d9+KNHMDp24mvZ5DMb++rTm/rKKQfawgSSvPL6Al83QMgJPR8nPT0G9iWXsO7zUp0tUreyAHc4T0UFi9gFJKHtFGe2tiNVSB7Ekcsk7lHVoM4vV0AZGen6kA2OIt+iRrajawGUEO7yc59JNlNnochP1ETFEvRZYuKy+m/BWC1s7LzDSHrzoqJH/Du3IfT3w2ApHgeqAsSEmHbBofTuwoq1v0trgmztKpdv2tjdW48rwIZNiUJsC1jDaxsG7Su/afMolAXhEEUGYw1J7InjJCULd8IQFl7U7OYXv80WxfUeYJUbMybLC/PBG3bREgy7vZ+8n9+1RDicHlR23YBUFr6BQCrvPxWfUeA5FQnjXxuuBC7iKdjL97Ifiq5q+i5P2pChKTQfNsjCEnBMgoU4peQFE8m/GT+G55uACKrPS+cruMr8+ddruZbkdVWAruOkZv/hELsYlUZnb4Ivp5BFE8YgMzMB9hmBcnlOSlE3m7oKDTCSvw1/zNmSRtfuvImLX1PIKut+LoH8Eb2Y+TjqyNIDfzdYdgWmdkpSskryK7mb9sOL53mSHXemrMufEyb0CY6+ozC4snUd6+wI7IPd3s/QpJRvDdXaSu5BbJz59BzURwu/4zlWL5fCOzNOeuuidCRxRe08bafTT13Ojv7oSs3/ymu5l5kNYCQ5LU18TtGMQkIHGrwvaSaPHTHEJVa+RouvtDRxLg2yjvC1/6SqReGSqmfAhvPheysyGrb15QLz4WOJi83yrXlKl8djLFhYDh6igAynbKgybaIt/sqC2IoYW6VY1ugjbG2Y7Y/l/4r6HrihoH+ApWLixM2Kp40AAAAAElFTkSuQmCC",
+        "contentType": "image/png",
+        "width": 19,
+        "height": 19,
+        "angle": 0,
+        "xoffset": 0,
+        "yoffset": 0
+       },
+       "value": "Assigned",
+       "label": "Assigned"
+      },
+      {
+       "symbol": {
+        "type": "esriPMS",
+        "url": "35233f08025e48c37d8ed4f69e969e8c",
+        "imageData": "iVBORw0KGgoAAAANSUhEUgAAABoAAAAaCAYAAACpSkzOAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAEWklEQVRIieXWa1CUZRTA8f/LsrxACKILSMBSUIAgII3I4IBIOIIgonjJmi5KaoOKgWKNTWPkNJnjJQXFwRrwUqZgIgZ4SUVgwgANuV8SlVve1hQkYIVl+wDMuAiL5oxfOp/Pc35zzvM87/Pq8oJC9/8JpaYukFQZ6Cy5df/2/A5lh2WPSiUa6BncHTPKpFhuYrE1akbyX88F5eTE6Z6+X7pnV1Xe4lv3bw/OdQR89HT1Ypam+Ja52LkuivFLrH5mKCkv2nJPRfqVK/Wl5oaiIfN95+HrMgUrmRX6UhFF2z3+uFpCdvEp8iry3cpulFfEZS6KjJt1eO9TQ0mXPjXJzE+vq22uM5rmNpW14dGMNhqtkWPykgn2lnbM8wknqyibHekJOkfzjyV9mfWW8EXIkaSnggrL8gtrm+uM5niHsiY8GkEQ6OpWcq7kHOU3Kul6pERubsN0jzeRm9kQ6hWCrbmcmKR1ZBWdTvw2d0Xe4DE+AW06+e7b+8/96Ohi60z03NUIgkDp9XLiDm5E0XZPI/fA2YO8M20Ry2Z+iNurrsTMjWJz2jadymvlhwF3rVBVU93XvWo1q0IjkehIqL95jdi9n9DVrXyic1VvLwfPHwJgefBSQiYH8/Nvx/m9ptAt4UzEy4+fRg0oPjtK3F+wz9bWXM6EV1wA2Hk8YUjk8Th04TBBnoHIzWwI9gwiPmM3ja23Y4E1Q0Jt6nteDzsfCgEe/gDcbVVQUl+qFRno7GzJeSJmfMAbr3kA8PfDVs/HczSgLlX36wAyYxkALYrmEZGBaLzTRN/asQB0Puo0GxaSCpJ2AGX/qPSk4lND+np9uQNj1pVINOatARkbjykDaO7vxN7SDn2pOOIeAbj272mLogUAQ9Hw5rBQjF9i9fTNcmVx7SWxR9WDKBUJmzKbI7lpWhGZ8VgCPAIAyK8sAGCcqcXRYSEAJxuHi2cun52WfvEEC3zCWRYUQfn1Cqoah/6M6UtF4t7bgL5U5EH7A7KLTjLO1KLHubM3RSs03srh/aKa4oaU0/sEbycvrGVWxEdu57tTyWQUnNAYo4e9Ox/PicLe0g61Ws22YzvoUHYQNClw38LwNJVWaKVfYtOGjIXbj+SnrV33/Xq2LN2EtcyKVaGRLAuKoP7mNR51K7GSWWNm0nc6Vb0qdqTHc6Esj4n27ncCTd0jvyEdrRDAxrDU2LWpIU6ZRdkhy3dGsiRwMXO9ZyNKRZzl4zVyK25UsuuXPVQ2VOFo7dAeMMF/ov/UuJ7BNYd9JrYtzJr1ecb8rWcu/7om/vguIflUCp6Ok7CWWSNKRRRtCkquXqHhTiM6goCPy5RaLzdfr48mbW4dqp7Wh++rsKOxu3NX7KxuqTtQ01TnnVOaq3GxRhmMUns5Tm5wtnH4bP3MH35KpmDYWiM+5Sv9EpsAf4CtOcud/mlvc+9Wq4z0JdI/jYWxhauDE5RQNFKZZ/s5ifXfWwPUPMua/wQ9T7ww6F+g16FDhfcW+AAAAABJRU5ErkJggg==",
+        "contentType": "image/png",
+        "width": 19,
+        "height": 19,
+        "angle": 0,
+        "xoffset": 0,
+        "yoffset": 0
+       },
+       "value": "Closed",
+       "label": "Closed"
+      }
+     ],
+     "fieldDelimiter": ",",
+     "authoringInfo": {
+      "colorRamp": {
+       "type": "multipart",
+       "colorRamps": [
+        {
+         "type": "algorithmic",
+         "algorithm": "esriCIELabAlgorithm",
+         "fromColor": [
+          242,
+          252,
+          204,
+          255
+         ],
+         "toColor": [
+          242,
+          252,
+          204,
+          255
+         ]
+        },
+        {
+         "type": "algorithmic",
+         "algorithm": "esriCIELabAlgorithm",
+         "fromColor": [
+          188,
+          179,
+          252,
+          255
+         ],
+         "toColor": [
+          188,
+          179,
+          252,
+          255
+         ]
+        },
+        {
+         "type": "algorithmic",
+         "algorithm": "esriCIELabAlgorithm",
+         "fromColor": [
+          252,
+          182,
+          188,
+          255
+         ],
+         "toColor": [
+          252,
+          182,
+          188,
+          255
+         ]
+        },
+        {
+         "type": "algorithmic",
+         "algorithm": "esriCIELabAlgorithm",
+         "fromColor": [
+          179,
+          230,
+          252,
+          255
+         ],
+         "toColor": [
+          179,
+          230,
+          252,
+          255
+         ]
+        },
+        {
+         "type": "algorithmic",
+         "algorithm": "esriCIELabAlgorithm",
+         "fromColor": [
+          252,
+          215,
+          251,
+          255
+         ],
+         "toColor": [
+          252,
+          215,
+          251,
+          255
+         ]
+        },
+        {
+         "type": "algorithmic",
+         "algorithm": "esriCIELabAlgorithm",
+         "fromColor": [
+          179,
+          252,
+          224,
+          255
+         ],
+         "toColor": [
+          179,
+          252,
+          224,
+          255
+         ]
+        },
+        {
+         "type": "algorithmic",
+         "algorithm": "esriCIELabAlgorithm",
+         "fromColor": [
+          252,
+          217,
+          197,
+          255
+         ],
+         "toColor": [
+          252,
+          217,
+          197,
+          255
+         ]
+        },
+        {
+         "type": "algorithmic",
+         "algorithm": "esriCIELabAlgorithm",
+         "fromColor": [
+          195,
+          252,
+          179,
+          255
+         ],
+         "toColor": [
+          195,
+          252,
+          179,
+          255
+         ]
+        },
+        {
+         "type": "algorithmic",
+         "algorithm": "esriCIELabAlgorithm",
+         "fromColor": [
+          242,
+          182,
+          252,
+          255
+         ],
+         "toColor": [
+          242,
+          182,
+          252,
+          255
+         ]
+        },
+        {
+         "type": "algorithmic",
+         "algorithm": "esriCIELabAlgorithm",
+         "fromColor": [
+          212,
+          217,
+          252,
+          255
+         ],
+         "toColor": [
+          212,
+          217,
+          252,
+          255
+         ]
+        },
+        {
+         "type": "algorithmic",
+         "algorithm": "esriCIELabAlgorithm",
+         "fromColor": [
+          252,
+          182,
+          218,
+          255
+         ],
+         "toColor": [
+          252,
+          182,
+          218,
+          255
+         ]
+        },
+        {
+         "type": "algorithmic",
+         "algorithm": "esriCIELabAlgorithm",
+         "fromColor": [
+          212,
+          252,
+          250,
+          255
+         ],
+         "toColor": [
+          212,
+          252,
+          250,
+          255
+         ]
+        },
+        {
+         "type": "algorithmic",
+         "algorithm": "esriCIELabAlgorithm",
+         "fromColor": [
+          252,
+          210,
+          219,
+          255
+         ],
+         "toColor": [
+          252,
+          210,
+          219,
+          255
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "scaleSymbols": true,
+    "transparency": 0,
+    "labelingInfo": null
+   },
+   "hasM": false,
+   "hasZ": false,
+   "allowGeometryUpdates": true,
+   "allowTrueCurvesUpdates": false,
+   "onlyAllowTrueCurveUpdatesByTrueCurveClients": true,
+   "hasAttachments": true,
+   "supportsAttachmentsByUploadId": true,
+   "supportsApplyEditsWithGlobalIds": false,
+   "htmlPopupType": "esriServerHTMLPopupTypeAsHTMLText",
+   "objectIdField": "objectid",
+   "globalIdField": "globalid",
+   "displayField": "name",
+   "typeIdField": "status",
+   "subtypeField": "",
+   "fields": [
+    {
+     "name": "objectid",
+     "type": "esriFieldTypeOID",
+     "alias": "OBJECTID",
+     "domain": null,
+     "editable": false,
+     "nullable": false,
+     "defaultValue": null,
+     "modelName": "System-maintained ObjectID"
+    },
+    {
+     "name": "requestid",
+     "type": "esriFieldTypeString",
+     "alias": "Service Request ID",
+     "domain": null,
+     "editable": true,
+     "nullable": true,
+     "length": 25,
+     "defaultValue": null,
+     "modelName": "REQUESTID"
+    },
+    {
+     "name": "requesttype",
+     "type": "esriFieldTypeString",
+     "alias": "Problem",
+     "domain": {
+      "type": "codedValue",
+      "name": "ServiceRequestType",
+      "description": "The type of service request submitted by general public",
+      "codedValues": [
+       {
+        "name": "Blight",
+        "code": "Blight"
+       },
+       {
+        "name": "Bridge Impassible",
+        "code": "Bridge Impassible"
+       },
+       {
+        "name": "Business Closed",
+        "code": "Business Closed"
+       },
+       {
+        "name": "Civil Unrest or Riot",
+        "code": "Civil Unrest or Riot"
+       },
+       {
+        "name": "Damaged Structure",
+        "code": "Damaged Structure"
+       },
+       {
+        "name": "Debris on Road",
+        "code": "Debris on Road"
+       },
+       {
+        "name": "Downed Power Line",
+        "code": "Downed Power Line"
+       },
+       {
+        "name": "Excessive Noise",
+        "code": "Excessive Noise"
+       },
+       {
+        "name": "Fire Hydrant Leak",
+        "code": "Fire Hydrant Leak"
+       },
+       {
+        "name": "Gas Leak",
+        "code": "Gas Leak"
+       },
+       {
+        "name": "Gas Station Closed",
+        "code": "Gas Station Closed"
+       },
+       {
+        "name": "Graffiti",
+        "code": "Graffiti"
+       },
+       {
+        "name": "Illegal Sign",
+        "code": "Illegal Sign"
+       },
+       {
+        "name": "Illegal Storage of RV",
+        "code": "Illegal Storage of RV"
+       },
+       {
+        "name": "Illegal Sump Pump Discharge",
+        "code": "Illegal Sump Pump Discharge"
+       },
+       {
+        "name": "Inoperable Vehicle",
+        "code": "Inoperable Vehicle"
+       },
+       {
+        "name": "Looting",
+        "code": "Looting"
+       },
+       {
+        "name": "Pothole",
+        "code": "Pothole"
+       },
+       {
+        "name": "Power Outage",
+        "code": "Power Outage"
+       },
+       {
+        "name": "Public Facility Damage",
+        "code": "Public Facility Damage"
+       },
+       {
+        "name": "School Closed",
+        "code": "School Closed"
+       },
+       {
+        "name": "Sewer Odor",
+        "code": "Sewer Odor"
+       },
+       {
+        "name": "Sewer Overflow",
+        "code": "Sewer Overflow"
+       },
+       {
+        "name": "Sidewalk Damage",
+        "code": "Sidewalk Damage"
+       },
+       {
+        "name": "Smoke over Road",
+        "code": "Smoke over Road"
+       },
+       {
+        "name": "Storm Debris Pick Up",
+        "code": "Storm Debris Pick Up"
+       },
+       {
+        "name": "Storm Drain Clog",
+        "code": "Storm Drain Clog"
+       },
+       {
+        "name": "Street Light Damage",
+        "code": "Street Light Damage"
+       },
+       {
+        "name": "Street Sign Damage",
+        "code": "Street Sign Damage"
+       },
+       {
+        "name": "Tall Grass/Weeds",
+        "code": "Tall Grass/Weeds"
+       },
+       {
+        "name": "Telephone Cellular Outage",
+        "code": "Telephone Cellular Outage"
+       },
+       {
+        "name": "Telephone Landline Outage",
+        "code": "Telephone Landline Outage"
+       },
+       {
+        "name": "Trash Pick Up",
+        "code": "Trash Pick Up"
+       },
+       {
+        "name": "Unsafe Tree",
+        "code": "Unsafe Tree"
+       },
+       {
+        "name": "Water Leak",
+        "code": "Water Leak"
+       },
+       {
+        "name": "Water over Road",
+        "code": "Water over Road"
+       },
+       {
+        "name": "Water Pressure",
+        "code": "Water Pressure"
+       },
+       {
+        "name": "Water Quality - Cloudy Water",
+        "code": "Water Quality - Cloudy Water"
+       },
+       {
+        "name": "Water Quality - Odor",
+        "code": "Water Quality - Odor"
+       },
+       {
+        "name": "Water Quality - Taste",
+        "code": "Water Quality - Taste"
+       },
+       {
+        "name": "Wild Fire",
+        "code": "Wild Fire"
+       },
+       {
+        "name": "Other",
+        "code": "Other"
+       },
+       {
+        "name": "Standard Facity Requests",
+        "code": "Standard Facity Requests"
+       },
+       {
+        "name": "Temperature Too Hot",
+        "code": "Temperature Too Hot"
+       },
+       {
+        "name": "Temperature Too Cold",
+        "code": "Temperature Too Cold"
+       },
+       {
+        "name": "Lock Maintenance",
+        "code": "Lock Maintenance"
+       },
+       {
+        "name": "Door Maintenance",
+        "code": "Door Maintenance"
+       },
+       {
+        "name": "Desk Light Burnt Out",
+        "code": "Desk Light Burnt Out"
+       },
+       {
+        "name": "Ceiling Light Burnt Out",
+        "code": "Ceiling Light Burnt Out"
+       },
+       {
+        "name": "Keyboard Tray Added",
+        "code": "Keyboard Tray Added"
+       },
+       {
+        "name": "Keyboard Tray Removed",
+        "code": "Keyboard Tray Removed"
+       },
+       {
+        "name": "Blinds Broken",
+        "code": "Blinds Broken"
+       },
+       {
+        "name": "Cabinet Removed",
+        "code": "Cabinet Removed"
+       },
+       {
+        "name": "Cabinet Added",
+        "code": "Cabinet Added"
+       },
+       {
+        "name": "Clean Carpet",
+        "code": "Clean Carpet"
+       },
+       {
+        "name": "Insect Problem",
+        "code": "Insect Problem"
+       },
+       {
+        "name": "Whiteboard Replacement",
+        "code": "Whiteboard Replacement"
+       },
+       {
+        "name": "Snow Complaint",
+        "code": "Snow Complaint"
+       }
+      ],
+      "mergePolicy": "esriMPTDefaultValue",
+      "splitPolicy": "esriSPTDefaultValue"
+     },
+     "editable": true,
+     "nullable": true,
+     "length": 100,
+     "defaultValue": null,
+     "modelName": "REQUESTTYPE"
+    },
+    {
+     "name": "comments",
+     "type": "esriFieldTypeString",
+     "alias": "Comments",
+     "domain": null,
+     "editable": true,
+     "nullable": true,
+     "length": 255,
+     "defaultValue": null,
+     "modelName": "COMMENTS"
+    },
+    {
+     "name": "name",
+     "type": "esriFieldTypeString",
+     "alias": "Name",
+     "domain": null,
+     "editable": true,
+     "nullable": true,
+     "length": 150,
+     "defaultValue": null,
+     "modelName": "NAME"
+    },
+    {
+     "name": "phone",
+     "type": "esriFieldTypeString",
+     "alias": "Phone Number",
+     "domain": null,
+     "editable": true,
+     "nullable": true,
+     "length": 12,
+     "defaultValue": null,
+     "modelName": "PHONE"
+    },
+    {
+     "name": "email",
+     "type": "esriFieldTypeString",
+     "alias": "Email Address",
+     "domain": null,
+     "editable": true,
+     "nullable": true,
+     "length": 100,
+     "defaultValue": null,
+     "modelName": "EMAIL"
+    },
+    {
+     "name": "requestdate",
+     "type": "esriFieldTypeDate",
+     "alias": "Date Submitted",
+     "domain": null,
+     "editable": true,
+     "nullable": true,
+     "length": 8,
+     "defaultValue": null,
+     "modelName": "REQUESTDATE"
+    },
+    {
+     "name": "status",
+     "type": "esriFieldTypeString",
+     "alias": "Status",
+     "domain": {
+      "type": "codedValue",
+      "name": "ServiceRequestStatus",
+      "description": "The status of the resolution of a service request",
+      "codedValues": [
+       {
+        "name": "Unassigned",
+        "code": "Unassigned"
+       },
+       {
+        "name": "Assigned",
+        "code": "Assigned"
+       },
+       {
+        "name": "Closed",
+        "code": "Closed"
+       }
+      ],
+      "mergePolicy": "esriMPTDefaultValue",
+      "splitPolicy": "esriSPTDefaultValue"
+     },
+     "editable": true,
+     "nullable": true,
+     "length": 50,
+     "defaultValue": null,
+     "modelName": "STATUS"
+    },
+    {
+     "name": "building",
+     "type": "esriFieldTypeString",
+     "alias": "Building Name",
+     "domain": null,
+     "editable": true,
+     "nullable": true,
+     "length": 25,
+     "defaultValue": null,
+     "modelName": "BUILDING"
+    },
+    {
+     "name": "floor",
+     "type": "esriFieldTypeString",
+     "alias": "Floor Number",
+     "domain": null,
+     "editable": true,
+     "nullable": true,
+     "length": 5,
+     "defaultValue": null,
+     "modelName": "FLOOR"
+    },
+    {
+     "name": "globalid",
+     "type": "esriFieldTypeGlobalID",
+     "alias": "GlobalID",
+     "domain": null,
+     "editable": false,
+     "nullable": false,
+     "length": 38,
+     "defaultValue": null,
+     "modelName": "GlobalID"
+    }
+   ],
+   "geometryField": {
+    "name": "shape",
+    "type": "esriFieldTypeGeometry",
+    "alias": "SHAPE",
+    "domain": null,
+    "editable": true,
+    "nullable": true,
+    "defaultValue": null,
+    "modelName": "System-maintained Geometry for a feature"
+   },
+   "indexes": [
+    {
+     "name": "i136requestid",
+     "fields": "requestid",
+     "isAscending": true,
+     "isUnique": false,
+     "description": ""
+    },
+    {
+     "name": "a32_ix1",
+     "fields": "shape",
+     "isAscending": true,
+     "isUnique": true,
+     "description": ""
+    }
+   ],
+   "datesInUnknownTimezone": false,
+   "dateFieldsTimeReference": {
+    "timeZone": "UTC",
+    "respectsDaylightSaving": false
+   },
+   "preferredTimeReference": null,
+   "types": [
+    {
+     "id": "Unassigned",
+     "name": "Unassigned",
+     "domains": {
+      "requesttype": {
+       "type": "inherited"
+      },
+      "status": {
+       "type": "inherited"
+      }
+     },
+     "templates": [
+      {
+       "name": "Unassigned",
+       "description": "",
+       "prototype": {
+        "attributes": {
+         "status": "Unassigned"
+        }
+       },
+       "drawingTool": "esriFeatureEditToolPoint"
+      }
+     ]
+    },
+    {
+     "id": "Assigned",
+     "name": "Assigned",
+     "domains": {
+      "requesttype": {
+       "type": "inherited"
+      },
+      "status": {
+       "type": "inherited"
+      }
+     },
+     "templates": [
+      {
+       "name": "Assigned",
+       "description": "",
+       "prototype": {
+        "attributes": {
+         "floor": null,
+         "building": null,
+         "requestid": null,
+         "requesttype": null,
+         "comments": null,
+         "name": null,
+         "phone": null,
+         "email": null,
+         "requestdate": null,
+         "status": "Assigned"
+        }
+       },
+       "drawingTool": "esriFeatureEditToolPoint"
+      }
+     ]
+    },
+    {
+     "id": "Closed",
+     "name": "Closed",
+     "domains": {
+      "requesttype": {
+       "type": "inherited"
+      },
+      "status": {
+       "type": "inherited"
+      }
+     },
+     "templates": [
+      {
+       "name": "Closed",
+       "description": "",
+       "prototype": {
+        "attributes": {
+         "floor": null,
+         "building": null,
+         "requestid": null,
+         "requesttype": null,
+         "comments": null,
+         "name": null,
+         "phone": null,
+         "email": null,
+         "requestdate": null,
+         "status": "Closed"
+        }
+       },
+       "drawingTool": "esriFeatureEditToolPoint"
+      }
+     ]
+    }
+   ],
+   "templates": [],
+   "maxRecordCount": 1000,
+   "supportedQueryFormats": "JSON, geoJSON, PBF",
+   "supportedExportFormats": "sqlite,filegdb",
+   "capabilities": "Query,Create,Update,Delete,Uploads,Editing",
+   "useStandardizedQueries": true,
+   "supportedSpatialRelationships": [
+    "esriSpatialRelIntersects",
+    "esriSpatialRelContains",
+    "esriSpatialRelCrosses",
+    "esriSpatialRelEnvelopeIntersects",
+    "esriSpatialRelIndexIntersects",
+    "esriSpatialRelOverlaps",
+    "esriSpatialRelTouches",
+    "esriSpatialRelWithin",
+    "esriSpatialRelRelation"
+   ],
+   "attachmentProperties": [
+    {
+     "name": "id",
+     "fieldName": "attachmentid",
+     "isEnabled": true
+    },
+    {
+     "name": "globalId",
+     "fieldName": "GLOBALID",
+     "isEnabled": false
+    },
+    {
+     "name": "name",
+     "fieldName": "att_name",
+     "isEnabled": true
+    },
+    {
+     "name": "size",
+     "fieldName": "data_size",
+     "isEnabled": true
+    },
+    {
+     "name": "contentType",
+     "fieldName": "content_type",
+     "isEnabled": true
+    },
+    {
+     "name": "keywords",
+     "fieldName": "KEYWORDS",
+     "isEnabled": false
+    },
+    {
+     "name": "exifInfo",
+     "fieldName": "EXIFINFO",
+     "isEnabled": false
+    }
+   ],
+   "attachmentFields": [
+    {
+     "name": "attachmentid",
+     "type": "esriFieldTypeOID",
+     "alias": "ATTACHMENTID",
+     "domain": null,
+     "editable": false,
+     "nullable": false,
+     "defaultValue": null
+    },
+    {
+     "name": "att_name",
+     "type": "esriFieldTypeString",
+     "alias": "ATT_NAME",
+     "domain": null,
+     "editable": true,
+     "nullable": false,
+     "length": 250,
+     "defaultValue": null
+    },
+    {
+     "name": "data_size",
+     "type": "esriFieldTypeInteger",
+     "alias": "DATA_SIZE",
+     "domain": null,
+     "editable": true,
+     "nullable": false,
+     "defaultValue": null
+    },
+    {
+     "name": "content_type",
+     "type": "esriFieldTypeString",
+     "alias": "CONTENT_TYPE",
+     "domain": null,
+     "editable": true,
+     "nullable": false,
+     "length": 150,
+     "defaultValue": null
+    }
+   ],
+   "standardMaxRecordCount": 32000,
+   "tileMaxRecordCount": 8000,
+   "standardMaxRecordCountNoGeometry": 32000,
+   "maxRecordCountFactor": 1
+  },
+  "1": {
+   "currentVersion": 10.91,
+   "cimVersion": "2.9.0",
+   "id": 1,
+   "name": "ServiceRequestComment",
+   "type": "Table",
+   "description": "",
+   "copyrightText": "",
+   "editFieldsInfo": null,
+   "ownershipBasedAccessControlForFeatures": null,
+   "syncCanReturnChanges": false,
+   "relationships": [
+    {
+     "id": 0,
+     "name": "ss6.gdb.ServiceRequest",
+     "relatedTableId": 0,
+     "cardinality": "esriRelCardinalityOneToMany",
+     "role": "esriRelRoleDestination",
+     "keyField": "requestid",
+     "composite": true
+    }
+   ],
+   "isDataVersioned": false,
+   "isDataArchived": false,
+   "infoInEstimates": [
+    "count"
+   ],
+   "isDataBranchVersioned": false,
+   "isDataReplicaTracked": false,
+   "isCoGoEnabled": false,
+   "supportsRollbackOnFailureParameter": true,
+   "archivingInfo": {
+    "supportsQueryWithHistoricMoment": false,
+    "startArchivingMoment": -1
+   },
+   "supportsStatistics": true,
+   "supportsExceedsLimitStatistics": true,
+   "supportsAdvancedQueries": true,
+   "supportsValidateSQL": true,
+   "supportsCoordinatesQuantization": false,
+   "supportsCalculate": true,
+   "supportsASyncCalculate": true,
+   "advancedQueryCapabilities": {
+    "supportsPagination": true,
+    "supportsTrueCurve": true,
+    "supportsQueryWithDistance": true,
+    "supportsReturningQueryExtent": true,
+    "supportsStatistics": true,
+    "supportsPercentileStatistics": true,
+    "supportsHavingClause": true,
+    "supportsOrderBy": true,
+    "supportsDistinct": true,
+    "supportsCountDistinct": true,
+    "supportsQueryWithResultType": true,
+    "supportsReturningGeometryCentroid": false,
+    "supportsSqlExpression": true,
+    "supportsLod": false,
+    "supportsQueryWithLodSR": false,
+    "supportsQueryAnalytic": true
+   },
+   "advancedQueryAnalyticCapabilities": {
+    "supportsLinearRegression": true,
+    "supportsAsync": false,
+    "supportsPercentileAnalytic": false
+   },
+   "advancedEditingCapabilities": {
+    "supportedSqlFormatsInCalculate": [
+     "standard"
+    ],
+    "supportsAsyncApplyEdits": true
+   },
+   "hasMetadata": false,
+   "hasAttachments": false,
+   "supportsApplyEditsWithGlobalIds": true,
+   "htmlPopupType": "esriServerHTMLPopupTypeNone",
+   "objectIdField": "objectid",
+   "globalIdField": "globalid",
+   "displayField": "requestid",
+   "typeIdField": "",
+   "subtypeField": "",
+   "fields": [
+    {
+     "name": "objectid",
+     "type": "esriFieldTypeOID",
+     "alias": "OBJECTID",
+     "domain": null,
+     "editable": false,
+     "nullable": false,
+     "defaultValue": null,
+     "modelName": "System-maintained ObjectID"
+    },
+    {
+     "name": "requestid",
+     "type": "esriFieldTypeString",
+     "alias": "Service Request ID",
+     "domain": null,
+     "editable": true,
+     "nullable": true,
+     "length": 25,
+     "defaultValue": null,
+     "modelName": "REQUESTID"
+    },
+    {
+     "name": "comments",
+     "type": "esriFieldTypeString",
+     "alias": "Comments",
+     "domain": null,
+     "editable": true,
+     "nullable": true,
+     "length": 255,
+     "defaultValue": null,
+     "modelName": "COMMENTS"
+    },
+    {
+     "name": "submitdt",
+     "type": "esriFieldTypeDate",
+     "alias": "Date Submitted",
+     "domain": null,
+     "editable": true,
+     "nullable": true,
+     "length": 8,
+     "defaultValue": null,
+     "modelName": "SUBMITDT"
+    },
+    {
+     "name": "rank",
+     "type": "esriFieldTypeInteger",
+     "alias": "Importance",
+     "domain": {
+      "type": "range",
+      "name": "ServiceRequestRanking",
+      "description": "A factor assigned to unassigned service requests indicating importance",
+      "range": [
+       1,
+       5
+      ],
+      "mergePolicy": "esriMPTDefaultValue",
+      "splitPolicy": "esriSPTDuplicate"
+     },
+     "editable": true,
+     "nullable": true,
+     "defaultValue": null,
+     "modelName": "RANK"
+    },
+    {
+     "name": "globalid",
+     "type": "esriFieldTypeGlobalID",
+     "alias": "GlobalID",
+     "domain": null,
+     "editable": false,
+     "nullable": false,
+     "length": 38,
+     "defaultValue": null,
+     "modelName": "GlobalID"
+    }
+   ],
+   "indexes": [
+    {
+     "name": "i112requestid",
+     "fields": "requestid",
+     "isAscending": true,
+     "isUnique": false,
+     "description": ""
+    },
+    {
+     "name": "r52_sde_rowid_uk",
+     "fields": "objectid",
+     "isAscending": true,
+     "isUnique": true,
+     "description": ""
+    },
+    {
+     "name": "uuid_52",
+     "fields": "globalid",
+     "isAscending": true,
+     "isUnique": true,
+     "description": ""
+    }
+   ],
+   "datesInUnknownTimezone": false,
+   "dateFieldsTimeReference": {
+    "timeZone": "UTC",
+    "respectsDaylightSaving": false
+   },
+   "preferredTimeReference": null,
+   "types": [],
+   "templates": [
+    {
+     "name": "ServiceRequestComment",
+     "description": "",
+     "prototype": {
+      "attributes": {
+       "rank": null,
+       "submitdt": null,
+       "requestid": null,
+       "comments": null
+      }
+     },
+     "drawingTool": "esriFeatureEditToolNone"
+    }
+   ],
+   "maxRecordCount": 1000,
+   "supportedQueryFormats": "JSON, geoJSON, PBF",
+   "supportedExportFormats": "sqlite,filegdb",
+   "capabilities": "Query,Create,Update,Delete,Uploads,Editing",
+   "useStandardizedQueries": true,
+   "standardMaxRecordCount": 32000,
+   "tileMaxRecordCount": 1000,
+   "maxRecordCountFactor": 1
+  }
+ },
+ "paginas": {
+  "0": [
+   {
+    "objectIdFieldName": "objectid",
+    "globalIdFieldName": "globalid",
+    "geometryType": "esriGeometryPoint",
+    "spatialReference": {
+     "wkid": 102100,
+     "latestWkid": 3857
+    },
+    "fields": [
+     {
+      "name": "objectid",
+      "alias": "OBJECTID",
+      "type": "esriFieldTypeOID"
+     },
+     {
+      "name": "requestid",
+      "alias": "Service Request ID",
+      "type": "esriFieldTypeString",
+      "length": 25
+     },
+     {
+      "name": "requesttype",
+      "alias": "Problem",
+      "type": "esriFieldTypeString",
+      "length": 100
+     },
+     {
+      "name": "comments",
+      "alias": "Comments",
+      "type": "esriFieldTypeString",
+      "length": 255
+     },
+     {
+      "name": "name",
+      "alias": "Name",
+      "type": "esriFieldTypeString",
+      "length": 150
+     },
+     {
+      "name": "phone",
+      "alias": "Phone Number",
+      "type": "esriFieldTypeString",
+      "length": 12
+     },
+     {
+      "name": "email",
+      "alias": "Email Address",
+      "type": "esriFieldTypeString",
+      "length": 100
+     },
+     {
+      "name": "requestdate",
+      "alias": "Date Submitted",
+      "type": "esriFieldTypeDate",
+      "length": 8
+     },
+     {
+      "name": "status",
+      "alias": "Status",
+      "type": "esriFieldTypeString",
+      "length": 50
+     },
+     {
+      "name": "building",
+      "alias": "Building Name",
+      "type": "esriFieldTypeString",
+      "length": 25
+     },
+     {
+      "name": "floor",
+      "alias": "Floor Number",
+      "type": "esriFieldTypeString",
+      "length": 5
+     },
+     {
+      "name": "globalid",
+      "alias": "GlobalID",
+      "type": "esriFieldTypeGlobalID",
+      "length": 38
+     }
+    ],
+    "features": [
+     {
+      "attributes": {
+       "objectid": 2021294,
+       "requestid": "1",
+       "requesttype": "Snow Complaint",
+       "comments": "TEST123",
+       "name": "Lindsay Carter",
+       "phone": "999-9999",
+       "email": "Lindsay@Lindsay.com",
+       "requestdate": 1295000,
+       "status": "Unassigned-spike",
+       "building": null,
+       "floor": "0",
+       "globalid": "{87113FCE-CDE2-417D-9A48-ED73A4BFB4CC}"
+      },
+      "geometry": {
+       "x": "NaN",
+       "y": "NaN"
+      }
+     },
+     {
+      "attributes": {
+       "objectid": 2021295,
+       "requestid": "2",
+       "requesttype": "Snow Complaint",
+       "comments": "Plow my street.",
+       "name": "John Mary",
+       "phone": "999-9999",
+       "email": "John@John.com",
+       "requestdate": 1295252247000,
+       "status": "LOUIS-spike-test",
+       "building": null,
+       "floor": "0",
+       "globalid": "{8E48314E-4E22-4981-9531-A3F49B741CBA}"
+      },
+      "geometry": {
+       "x": "NaN",
+       "y": "NaN"
+      }
+     },
+     {
+      "attributes": {
+       "objectid": 2021298,
+       "requestid": "5",
+       "requesttype": "Snow Complaint",
+       "comments": "Plow my street. ",
+       "name": "Matt Jackson",
+       "phone": "999-9999",
+       "email": "Matt@Matt.com",
+       "requestdate": 1295252247000,
+       "status": "LOUIS-spike-test",
+       "building": null,
+       "floor": "0",
+       "globalid": "{6C6BCF61-AA3C-46F7-A9CF-287E6B5DA013}"
+      },
+      "geometry": {
+       "x": "NaN",
+       "y": "NaN"
+      }
+     },
+     {
+      "attributes": {
+       "objectid": 2021299,
+       "requestid": "6",
+       "requesttype": "Snow Complaint",
+       "comments": "Plow my street. ",
+       "name": "Teddie Solo",
+       "phone": "999-9999",
+       "email": "Teddie@Teddie.com",
+       "requestdate": 1295252247000,
+       "status": "Unassigned",
+       "building": null,
+       "floor": "0",
+       "globalid": "{70DED25C-ABC8-42BA-BD9F-9866AD704334}"
+      },
+      "geometry": {
+       "x": "NaN",
+       "y": "NaN"
+      }
+     },
+     {
+      "attributes": {
+       "objectid": 2021300,
+       "requestid": "7",
+       "requesttype": "Snow Complaint",
+       "comments": "Plow my street. ",
+       "name": "Ralf Mono",
+       "phone": "999-9999",
+       "email": "Ralf@Ralf.com",
+       "requestdate": 1295252247000,
+       "status": "Unassigned",
+       "building": null,
+       "floor": "0",
+       "globalid": "{8B2F1494-4CBC-4345-8A6A-27EEFC599149}"
+      },
+      "geometry": {
+       "x": -9811787.354364896,
+       "y": 5119855.003871855
+      }
+     },
+     {
+      "attributes": {
+       "objectid": 2021301,
+       "requestid": "8",
+       "requesttype": "Snow Complaint",
+       "comments": "Plow my street. ",
+       "name": "Gearlyn Kassouf",
+       "phone": "999-9999",
+       "email": "Gearlyn@Gearlyn.com",
+       "requestdate": 1295252247000,
+       "status": "Unassigned",
+       "building": null,
+       "floor": "0",
+       "globalid": "{6B6FA3A3-C140-4C2D-BEC1-84B227AFE509}"
+      },
+      "geometry": {
+       "x": -9810068.917336822,
+       "y": 5119459.0328281
+      }
+     },
+     {
+      "attributes": {
+       "objectid": 2021302,
+       "requestid": "1",
+       "requesttype": "Snow Complaint",
+       "comments": "Plow my street. ",
+       "name": "Lindsay Carter",
+       "phone": "999-9999",
+       "email": "Lindsay@Lindsay.com",
+       "requestdate": 1295252247000,
+       "status": "Unassigned",
+       "building": null,
+       "floor": "0",
+       "globalid": "{A550E65B-59A7-449A-9384-D43CC098BF20}"
+      },
+      "geometry": {
+       "x": -9814396.082753314,
+       "y": 5124911.074766463
+      }
+     },
+     {
+      "attributes": {
+       "objectid": 2021303,
+       "requestid": "2",
+       "requesttype": "Snow Complaint",
+       "comments": "Plow my street. ",
+       "name": "John Mary",
+       "phone": "999-9999",
+       "email": "John@John.com",
+       "requestdate": 1295252247000,
+       "status": "Unassigned",
+       "building": null,
+       "floor": "0",
+       "globalid": "{98BBA5D7-D370-4511-B72A-E52BA6FEEDF3}"
+      },
+      "geometry": {
+       "x": -9816176.265711341,
+       "y": 5124077.990325985
+      }
+     },
+     {
+      "attributes": {
+       "objectid": 2021304,
+       "requestid": "3",
+       "requesttype": "Snow Complaint",
+       "comments": "Plow my street. ",
+       "name": "Carol Anthony",
+       "phone": "999-9999",
+       "email": "Carol@Carol.com",
+       "requestdate": 1295252247000,
+       "status": "Unassigned",
+       "building": null,
+       "floor": "0",
+       "globalid": "{37E2E3DE-C8AD-4DCF-8653-BD71B2841ACF}"
+      },
+      "geometry": {
+       "x": -9813731.945764206,
+       "y": 5123528.795288699
+      }
+     },
+     {
+      "attributes": {
+       "objectid": 2021305,
+       "requestid": "4",
+       "requesttype": "Snow Complaint",
+       "comments": "Plow my street. ",
+       "name": "Mamata Mother",
+       "phone": "999-9999",
+       "email": "Mamata@mamata.com",
+       "requestdate": 1295252247000,
+       "status": "Unassigned",
+       "building": null,
+       "floor": "0",
+       "globalid": "{46D28766-FB81-42B0-822F-469BF6ED1F32}"
+      },
+      "geometry": {
+       "x": -9813954.742559738,
+       "y": 5127533.911377053
+      }
+     }
+    ],
+    "exceededTransferLimit": true
+   },
+   {
+    "objectIdFieldName": "objectid",
+    "globalIdFieldName": "globalid",
+    "geometryType": "esriGeometryPoint",
+    "spatialReference": {
+     "wkid": 102100,
+     "latestWkid": 3857
+    },
+    "fields": [
+     {
+      "name": "objectid",
+      "alias": "OBJECTID",
+      "type": "esriFieldTypeOID"
+     },
+     {
+      "name": "requestid",
+      "alias": "Service Request ID",
+      "type": "esriFieldTypeString",
+      "length": 25
+     },
+     {
+      "name": "requesttype",
+      "alias": "Problem",
+      "type": "esriFieldTypeString",
+      "length": 100
+     },
+     {
+      "name": "comments",
+      "alias": "Comments",
+      "type": "esriFieldTypeString",
+      "length": 255
+     },
+     {
+      "name": "name",
+      "alias": "Name",
+      "type": "esriFieldTypeString",
+      "length": 150
+     },
+     {
+      "name": "phone",
+      "alias": "Phone Number",
+      "type": "esriFieldTypeString",
+      "length": 12
+     },
+     {
+      "name": "email",
+      "alias": "Email Address",
+      "type": "esriFieldTypeString",
+      "length": 100
+     },
+     {
+      "name": "requestdate",
+      "alias": "Date Submitted",
+      "type": "esriFieldTypeDate",
+      "length": 8
+     },
+     {
+      "name": "status",
+      "alias": "Status",
+      "type": "esriFieldTypeString",
+      "length": 50
+     },
+     {
+      "name": "building",
+      "alias": "Building Name",
+      "type": "esriFieldTypeString",
+      "length": 25
+     },
+     {
+      "name": "floor",
+      "alias": "Floor Number",
+      "type": "esriFieldTypeString",
+      "length": 5
+     },
+     {
+      "name": "globalid",
+      "alias": "GlobalID",
+      "type": "esriFieldTypeGlobalID",
+      "length": 38
+     }
+    ],
+    "features": [
+     {
+      "attributes": {
+       "objectid": 2021306,
+       "requestid": "5",
+       "requesttype": "Snow Complaint",
+       "comments": "Plow my street. ",
+       "name": "Matt Jackson",
+       "phone": "999-9999",
+       "email": "Matt@Matt.com",
+       "requestdate": 1295252247000,
+       "status": "Unassigned",
+       "building": null,
+       "floor": "0",
+       "globalid": "{18E4EEA4-2062-4906-B79A-56ED1211A15F}"
+      },
+      "geometry": {
+       "x": -9810931.690194316,
+       "y": 5126657.397706155
+      }
+     },
+     {
+      "attributes": {
+       "objectid": 2021307,
+       "requestid": "6",
+       "requesttype": "Snow Complaint",
+       "comments": "Plow my street. ",
+       "name": "Teddie Solo",
+       "phone": "999-9999",
+       "email": "Teddie@Teddie.com",
+       "requestdate": 1295252247000,
+       "status": "Unassigned",
+       "building": null,
+       "floor": "0",
+       "globalid": "{3CE71505-F2EA-422A-B885-6A5CBEC2E207}"
+      },
+      "geometry": {
+       "x": -9809505.380428886,
+       "y": 5126410.0632864395
+      }
+     },
+     {
+      "attributes": {
+       "objectid": 2021308,
+       "requestid": "7",
+       "requesttype": "Snow Complaint",
+       "comments": "Plow my street. ",
+       "name": "Ralf Mono",
+       "phone": "999-9999",
+       "email": "Ralf@Ralf.com",
+       "requestdate": 1295252247000,
+       "status": "Unassigned",
+       "building": null,
+       "floor": "0",
+       "globalid": "{DD35BBA9-8F31-4F7C-97BC-5B0826A0B14B}"
+      },
+      "geometry": {
+       "x": -9811787.354364896,
+       "y": 5119855.003871855
+      }
+     },
+     {
+      "attributes": {
+       "objectid": 2021309,
+       "requestid": "8",
+       "requesttype": "Snow Complaint",
+       "comments": "Plow my street. ",
+       "name": "Gearlyn Kassouf",
+       "phone": "999-9999",
+       "email": "Gearlyn@Gearlyn.com",
+       "requestdate": 1295252247000,
+       "status": "Unassigned",
+       "building": null,
+       "floor": "0",
+       "globalid": "{0F561773-0055-4B7B-A51E-6F9202FCB0D3}"
+      },
+      "geometry": {
+       "x": -9810068.917336822,
+       "y": 5119459.0328281
+      }
+     },
+     {
+      "attributes": {
+       "objectid": 2021310,
+       "requestid": "11",
+       "requesttype": "Animal Complaint",
+       "comments": "Loose dog",
+       "name": "Kelsey Merrell",
+       "phone": "999-9999",
+       "email": "Kelsey@Kelsey.com",
+       "requestdate": 1298952711000,
+       "status": "Unassigned",
+       "building": null,
+       "floor": null,
+       "globalid": "{612FD7AB-EADB-4F21-9929-F96EE2965D6D}"
+      },
+      "geometry": {
+       "x": -9810265.448305601,
+       "y": 5132711.049733371
+      }
+     },
+     {
+      "attributes": {
+       "objectid": 2021311,
+       "requestid": "39",
+       "requesttype": "Animal Complaint",
+       "comments": "Stray cat",
+       "name": "Jeremy Wentzell",
+       "phone": "999-9999",
+       "email": "Jeremy@Jeremy.com",
+       "requestdate": 1299575823000,
+       "status": "Unassigned",
+       "building": null,
+       "floor": null,
+       "globalid": "{9BA94A50-0669-4EB8-B12E-EAE38D58E8A9}"
+      },
+      "geometry": {
+       "x": -9810584.904790897,
+       "y": 5129838.402412147
+      }
+     },
+     {
+      "attributes": {
+       "objectid": 2021312,
+       "requestid": "111",
+       "requesttype": "Animal Complaint",
+       "comments": "Stray dog",
+       "name": "Micheal Gunn",
+       "phone": "999-9999",
+       "email": "Micheal@Micheal.com",
+       "requestdate": 1300727132000,
+       "status": "Unassigned",
+       "building": null,
+       "floor": null,
+       "globalid": "{24C19231-1B8C-4B72-A4E2-7220EFA7B299}"
+      },
+      "geometry": {
+       "x": -9811562.227809861,
+       "y": 5129385.763007279
+      }
+     },
+     {
+      "attributes": {
+       "objectid": 2021313,
+       "requestid": "73",
+       "requesttype": "Animal Complaint",
+       "comments": "Barking dog",
+       "name": "Jonathan Thomas\r\n",
+       "phone": "999-9999",
+       "email": "Jonathan@Jonathan.com",
+       "requestdate": 1300118622000,
+       "status": "Unassigned",
+       "building": null,
+       "floor": null,
+       "globalid": "{E3095DA8-B99E-4591-A7CF-85045A3A93C3}"
+      },
+      "geometry": {
+       "x": -9812103.83972639,
+       "y": 5129252.232004792
+      }
+     },
+     {
+      "attributes": {
+       "objectid": 2021314,
+       "requestid": "70",
+       "requesttype": "Animal Complaint",
+       "comments": "Stray cat",
+       "name": "Matthew Flater",
+       "phone": "999-9999",
+       "email": "Matthew@Matthew.com",
+       "requestdate": 1300084326000,
+       "status": "Unassigned",
+       "building": null,
+       "floor": null,
+       "globalid": "{64F46A44-7162-48CF-94FF-D757F4F4CB87}"
+      },
+      "geometry": {
+       "x": -9814035.118592855,
+       "y": 5128948.462127478
+      }
+     },
+     {
+      "attributes": {
+       "objectid": 2021315,
+       "requestid": "71",
+       "requesttype": "Animal Complaint",
+       "comments": "Stray cat",
+       "name": "Allyson Cameron",
+       "phone": "999-9999",
+       "email": "Allyson@Allyson.com",
+       "requestdate": 1300085934000,
+       "status": "Unassigned",
+       "building": null,
+       "floor": null,
+       "globalid": "{25FC8A2D-4DC5-4A6F-9ECA-8F8CF02AB2C2}"
+      },
+      "geometry": {
+       "x": -9814695.720591996,
+       "y": 5128979.369916049
+      }
+     }
+    ],
+    "exceededTransferLimit": true
+   }
+  ],
+  "1": [
+   {
+    "objectIdFieldName": "objectid",
+    "globalIdFieldName": "globalid",
+    "fields": [
+     {
+      "name": "objectid",
+      "alias": "OBJECTID",
+      "type": "esriFieldTypeOID"
+     },
+     {
+      "name": "requestid",
+      "alias": "Service Request ID",
+      "type": "esriFieldTypeString",
+      "length": 25
+     },
+     {
+      "name": "comments",
+      "alias": "Comments",
+      "type": "esriFieldTypeString",
+      "length": 255
+     },
+     {
+      "name": "submitdt",
+      "alias": "Date Submitted",
+      "type": "esriFieldTypeDate",
+      "length": 8
+     },
+     {
+      "name": "rank",
+      "alias": "Importance",
+      "type": "esriFieldTypeInteger"
+     },
+     {
+      "name": "globalid",
+      "alias": "GlobalID",
+      "type": "esriFieldTypeGlobalID",
+      "length": 38
+     }
+    ],
+    "features": [
+     {
+      "attributes": {
+       "objectid": 514116,
+       "requestid": "1",
+       "comments": "test",
+       "submitdt": 1773850980000,
+       "rank": 3,
+       "globalid": "{459B5E80-45DC-442B-A81D-1FA7242A7280}"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "contagens": {
+  "0": 361,
+  "1": 1
+ },
+ "anexos": {
+  "0": {
+   "2021294": {
+    "attachmentInfos": [
+     {
+      "id": 42414,
+      "contentType": "image/png",
+      "size": 331,
+      "name": "C:\\Users\\huber_k\\AppData\\Local\\Temp\\ArcGISProTemp7756\\409bd20b31884a48b901fce429150bbb\\geocodeaddresslocator16.dark.png"
+     },
+     {
+      "id": 42415,
+      "contentType": "image/png",
+      "size": 472,
+      "name": "C:\\Users\\huber_k\\AppData\\Local\\Temp\\ArcGISProTemp142660\\cdbf3c7c300f4c6c875e99a8e7a002cd\\dsgdssgdsgs.png"
+     },
+     {
+      "id": 42416,
+      "contentType": "image/png",
+      "size": 472,
+      "name": "hurz.png"
+     }
+    ],
+    "bytes": {
+     "42414": "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAADgSURBVDhPjZMxDoIwFIb/GmdP4VCP4awmdXUirJynK3XyAh7AzXoDF2eZXEwghhifC8/AoxS/peGH97V/SEFEiOGNTmTWZiKDNt5o93p/nDfaNc/kje7sOCjwRruirJPz/YmirBOWSIICHr4+KgDA9VGhKOtglZ5ADjONpJNBCoaGGZa06/wEY8MM12GJIiJctgsHINhxhL0iIiilAAB5npO1Vn7UI8sypGmqAGAqXzKz7CAjPO1ORv2/0OZ2OnbWEFHBfLnprCEGK4SOGyJ6gn9QRIS1XcWvZAQ1dp3H+ALZkXoiatBsygAAAABJRU5ErkJggg==",
+     "42415": "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAFtSURBVDhPY/z//z/D2R3mCgwMDBuAWB+IYeAiEAcYe5x8AOFiB4xntpv9BzFWbf3HsPc4mAkGzpaMDGHeTFAedgA0nBFsQHrNX6gQ8WBmCzPYAPxWEAHgXiAHEO2Cvcf+MxS0/AVjEBsZEDTg8fP/DKu2/WOwYPcAYxAbJAYDeA0AKeyd+4/Bkd+DQZ1TG4xBbJAYzBCcBnz7wQBWCLJVkUOFYc3bxWAMYoPEQHIggNWAC9f/MxQC/cvym49Bik2WYdO7VQw///0AYxAbZggIYI2F+l4WBlvmcIb9H3cwvPn9ioGXmY8hVCQOLLf6zSIGdiYOBj+hMAY2RvaFWF3w4v1PsEaQIhFWMagoAoDkQC4BAgNwXsAF5vgsX/Dv/9+wde+WcYKcDwJQ298DbTdK2RL5AG8sABUkMDEyrwoSivoO0gjCIDZQ8yaQZpAavC6AAZBLgFQ8hMewEGQwlE2cASAANQTsKrAAGDAwAAAIbp+v3sC4CgAAAABJRU5ErkJggg==",
+     "42416": "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAFtSURBVDhPY/z//z/D2R3mCgwMDBuAWB+IYeAiEAcYe5x8AOFiB4xntpv9BzFWbf3HsPc4mAkGzpaMDGHeTFAedgA0nBFsQHrNX6gQ8WBmCzPYAPxWEAHgXiAHEO2Cvcf+MxS0/AVjEBsZEDTg8fP/DKu2/WOwYPcAYxAbJAYDeA0AKeyd+4/Bkd+DQZ1TG4xBbJAYzBCcBnz7wQBWCLJVkUOFYc3bxWAMYoPEQHIggNWAC9f/MxQC/cvym49Bik2WYdO7VQw///0AYxAbZggIYI2F+l4WBlvmcIb9H3cwvPn9ioGXmY8hVCQOLLf6zSIGdiYOBj+hMAY2RvaFWF3w4v1PsEaQIhFWMagoAoDkQC4BAgNwXsAF5vgsX/Dv/9+wde+WcYKcDwJQ298DbTdK2RL5AG8sABUkMDEyrwoSivoO0gjCIDZQ8yaQZpAavC6AAZBLgFQ8hMewEGQwlE2cASAANQTsKrAAGDAwAAAIbp+v3sC4CgAAAABJRU5ErkJggg=="
+    }
+   }
+  }
+ }
+}

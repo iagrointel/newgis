@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Migração de Portal · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/tarefas.css">
+<link rel="stylesheet" href="/static/migracao.css">
+</head>
+<body class="tela migracao">
+<a class="pular" href="#principal">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <div id="ferramentas" class="linha-ferramentas">
+      <h1>Migração de Portal</h1>
+    </div>
+    <p class="aviso-beta">análise / beta privado</p>
+    <plat-aviso id="aviso"></plat-aviso>
+
+    <section class="cartao" id="conexao-cartao" aria-labelledby="t-conexao">
+      <h2 id="t-conexao">conexão com o Portal</h2>
+      <p class="ajuda">a leitura é só-leitura: nada é criado, alterado ou apagado no portal do cliente.
+        O token viaja em cabeçalho e nunca aparece em log nem em URL.</p>
+      <plat-aviso id="conexao-aviso"></plat-aviso>
+      <form id="form-inventario" class="formulario">
+        <div class="campo">
+          <label for="conexao">conexão registrada (tipo ArcGIS REST)</label>
+          <select id="conexao" name="conexao" required></select>
+          <p class="ajuda" id="conexao-url"></p>
+        </div>
+        <details id="credencial">
+          <summary>usar usuário e senha do portal (gera o token por generateToken)</summary>
+          <p class="ajuda">a senha existe só durante a chamada: o que fica guardado é o token, cifrado.
+            Deixe em branco para usar o token já registrado na conexão.</p>
+          <div class="campo">
+            <label for="usuario">usuário do portal</label>
+            <input type="text" id="usuario" name="usuario" autocomplete="off">
+          </div>
+          <div class="campo">
+            <label for="senha">senha do portal</label>
+            <input type="password" id="senha" name="senha" autocomplete="off">
+          </div>
+        </details>
+        <div class="linha-ferramentas">
+          <button type="submit" id="inventariar" class="primario">ler o inventário</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="cartao" id="lista-cartao" aria-labelledby="t-lista">
+      <h2 id="t-lista">inventários <span id="lista-total" class="contagem">…</span></h2>
+      <plat-aviso id="lista-aviso"></plat-aviso>
+      <div class="tabela-rolagem">
+        <table id="lista" class="tabela">
+          <caption class="sr-only">inventários de Portal deste inquilino</caption>
+          <thead>
+            <tr>
+              <th scope="col">portal</th>
+              <th scope="col">estado</th>
+              <th scope="col">itens</th>
+              <th scope="col">grupos</th>
+              <th scope="col">usuários</th>
+              <th scope="col">quando</th>
+              <th scope="col"><span class="sr-only">ações</span></th>
+            </tr>
+          </thead>
+          <tbody id="lista-corpo"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="cartao" id="relatorio-cartao" aria-labelledby="t-relatorio" hidden>
+      <h2 id="t-relatorio">relatório de inventário <span id="relatorio-portal" class="contagem"></span></h2>
+      <p class="ajuda">classificação prévia por tipo de item: <span class="marcador ok">migra</span>
+        <span class="marcador atencao">migra parcial</span> <span class="marcador falha">não migra</span>
+        <span class="marcador info">desconhecido</span> (tipo fora da tabela, decidir a mão — nunca chutado).</p>
+      <div class="linha-ferramentas">
+        <a id="csv" class="botao" href="#" download>baixar CSV</a>
+      </div>
+      <div id="resumo" class="resumo"></div>
+      <h3>por tipo</h3>
+      <div class="tabela-rolagem">
+        <table class="tabela" id="por-tipo">
+          <caption class="sr-only">itens do portal por tipo</caption>
+          <thead>
+            <tr>
+              <th scope="col">tipo Esri</th>
+              <th scope="col">itens</th>
+              <th scope="col">feições</th>
+              <th scope="col">tamanho declarado</th>
+              <th scope="col">classificação</th>
+            </tr>
+          </thead>
+          <tbody id="por-tipo-corpo"></tbody>
+        </table>
+      </div>
+      <h3>itens</h3>
+      <div class="tabela-rolagem">
+        <table class="tabela" id="itens">
+          <caption class="sr-only">itens do portal</caption>
+          <thead>
+            <tr>
+              <th scope="col">título</th>
+              <th scope="col">tipo</th>
+              <th scope="col">dono</th>
+              <th scope="col">feições</th>
+              <th scope="col">dependências</th>
+              <th scope="col">classificação</th>
+              <th scope="col">último acesso</th>
+            </tr>
+          </thead>
+          <tbody id="itens-corpo"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/js/migracao/migracao.js"></script>
+</body>
+</html>
