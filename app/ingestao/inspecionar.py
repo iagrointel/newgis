@@ -61,24 +61,21 @@ def _ogrinfo_json(ctx, caminho: str, layer: str | None, oo: list[str]) -> dict:
 
 
 def _tipos_por_varredura(ctx, caminho: str, layer: str, oo: list[str]) -> dict[str, int]:
-    argv = ["ogrinfo", "-ro", "-json"]
+    """Conta as feições por tipo real de geometria quando o cabeçalho só diz "Geometry" (GeoJSON com Polygon e
+    MultiPolygon misturados, por exemplo). O dialeto OGRSQL do GDAL não aceita GROUP BY (3.8: "syntax error,
+    unexpected BY"), então a contagem sai de um `ogr2ogr -f CSV /vsistdout/` com só a coluna OGR_GEOMETRY —
+    uma linha por feição, contada aqui; 645 polígonos de município levam 0,2 s."""
+    argv = ["ogr2ogr", "-f", "CSV", "/vsistdout/", caminho]
     for o in oo:
         argv += ["-oo", o]
-    argv += ["-dialect", "OGRSQL", "-sql", f'SELECT OGR_GEOMETRY, COUNT(*) AS n FROM "{layer}" GROUP BY OGR_GEOMETRY',
-             caminho]
+    argv += ["-dialect", "OGRSQL", "-sql", f'SELECT OGR_GEOMETRY FROM "{layer}"']
     r = ctx.subprocesso(argv)
     if r.returncode != 0:
         return {}
-    try:
-        dados = json.loads(r.stdout)
-    except json.JSONDecodeError:
-        return {}
     saida: dict[str, int] = {}
-    for camada in dados.get("layers", []):
-        for feicao in camada.get("features", []):
-            props = feicao.get("properties", {})
-            tipo = props.get("OGR_GEOMETRY") or "NULL"
-            saida[tipo] = saida.get(tipo, 0) + int(props.get("n", 0))
+    for linha in (r.stdout or "").splitlines()[1:]:  # a 1ª linha é o cabeçalho "OGR_GEOMETRY"
+        tipo = linha.strip().strip('"') or "NULL"
+        saida[tipo] = saida.get(tipo, 0) + 1
     return saida
 
 
