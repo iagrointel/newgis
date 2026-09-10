@@ -66,6 +66,7 @@ from app.consulta.rotas_query import router as rotas_consulta_esri
 from app.consulta.rotas_servico import router as rotas_consulta_servico
 from app.consulta.rotas_sync_esri import router as rotas_sync_esri
 from app.consulta.rotas_wfs import router as rotas_wfs
+from app.conexao import rotas_esri_rest
 from app.correio.rotas_smtp import router as rotas_smtp
 from app.dominios import rotas as rotas_dominios
 from app.dominios import rotas_featureserver, rotas_feicoes
@@ -257,6 +258,8 @@ ROUTERS = [
     # /api/plataforma/chamados (painel do operador superadmin, fila de todos os inquilinos)
     rotas_chamados.router,
     rotas_chamados.router_operador,
+    # --- conector ArcGIS REST externo (L6-02-d): /api/conexoes/{id}/esri/*
+    rotas_esri_rest.router,
     # --- arquivos/objetos (L0-11): /api/arquivos genérico por inquilino; /api/objetos/{chave} já vem do catálogo
     # (rotas_compartilhamento, entrega por URL assinada)
     rotas_arquivos,
