@@ -11,16 +11,9 @@ import { carregar, t } from '../base/i18n.js';
 import '../base/componentes.js';
 import { montarLayout, cabecalho, pronto } from '../base/layout.js';
 import { exigirSessao } from './sessao.js';
-import { montarExportacao } from './organizacao_exportar.js';
 
 const IDIOMAS = [{ valor: 'pt-BR', rotulo: 'Português (Brasil)' }];
 let atual = null;
-/* `smtpAtual` fica declarado AQUI, antes do `await` de topo de módulo, e não junto das funções de SMTP lá
-   embaixo: o `await` de topo interrompe a avaliação do módulo, `iniciar()` roda com o resto do corpo ainda
-   não avaliado, e um `let` declarado depois ainda está na zona morta temporal — `carregarSmtp` estourava com
-   "Cannot access 'smtpAtual' before initialization" e a tela inteira parava antes de `pronto()`, sem
-   `body[data-pronto=1]`. Medido no navegador em 07/09/2026 com a versão de master, antes desta seção existir. */
-let smtpAtual = null;
 
 await carregar();
 const usuario = await exigirSessao({ privilegio: 'org.configurar' });
@@ -44,7 +37,6 @@ async function carregarOrg() {
   montarUsuarios();
   montarSeguranca();
   await carregarSmtp();
-  await montarExportacao(document.getElementById('aviso'), usuario);
 }
 
 /* corpo completo de PUT /api/org a partir do último GET conhecido; `sobre` sobrepõe só o que a seção que
@@ -215,6 +207,8 @@ document.getElementById('logo-remover').addEventListener('click', async () => {
 /* ---------------------------------------------------------------- SMTP (item L0-07-d-smtp-convites):
    endpoint PRÓPRIO (/api/org/smtp), fora de /api/org — a senha nunca volta na resposta (só
    senha_configurada: bool); "host" vazio apaga o override do inquilino (volta à instalação/caminho manual). */
+let smtpAtual = null;
+
 async function carregarSmtp() {
   const r = await obter('/api/org/smtp');
   if (r.status !== 200) { document.getElementById('aviso').erro(`${t('smtp.erro_carregar')}: ${mensagemDe(r)}`); return; }

@@ -39,14 +39,16 @@ def test_mede_binds_por_minuto_contra_logins_diferentes(servidor_ldap, provedor_
     print(f"\nbinds/s medidos contra logins diferentes: {n / dt:.1f} ({int(60 * n / dt)}/min)")
 
 
-# CONSERTADO (turno 3, ramo wt/g1fix), em três camadas:
-#  1. app/auth/ldap.py provisiona pelo atributo CANÔNICO do diretório (o atributo que o próprio
-#     `filtro_usuario` usa como chave; depois uid; depois o primeiro RDN do DN), nunca pelo texto digitado;
-#  2. plat.ldap_provisionar procura a identidade pelo SUJEITO EXTERNO (o DN) antes do login, então o mesmo
-#     DN atualiza a linha em vez de estourar o índice único; a colisão que sobra (dois DNs, um login) vira
-#     o código curto login_em_uso_externo;
-#  3. a rota pública nunca devolve nome de restrição do banco (erro_do_banco(expor_restricao=False)), e
-#     existe caminho administrativo para desfazer: DELETE /api/usuarios/{id}/vinculo-externo.
+@pytest.mark.xfail(
+    strict=True,
+    reason="ACHADO G1-l3 (o mais grave do grupo): plat.ldap_provisionar é chamado com o LOGIN CRU digitado pelo "
+    "cliente, não com o atributo canônico da entrada encontrada no diretório (o cn/dn já está em `achado`). No "
+    "diretório de teste do próprio item (glauth), 'ana.silva*' encontra a entrada de ana.silva, o bind com a "
+    "senha dela funciona e nasce um usuário LOCAL de login 'ana.silva*' amarrado ao DN de ana.silva. A partir "
+    "daí o login CANÔNICO 'ana.silva' recebe 409 conflito/ux_usuario_sujeito_externo, para sempre: uma "
+    "requisição não autenticada tira do ar a conta legítima e ainda devolve o nome da restrição do banco numa "
+    "rota pública.",
+)
 def test_l3_login_cru_nao_vira_identidade_local(servidor_ldap, provedor_ldap_demo, conexao_plat_app):
     from tests.api.test_rls import contexto, ids_por_slug
 

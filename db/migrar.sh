@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Aplicador de migrações do plat (ADR 0001 seção 5). Roda como postgres (sudo -u postgres), nunca como plat_app.
-#  - lista db/migracoes/ em ordem de aplicação: legado NNN_*.sql (001-048, fechado) e depois carimbo
+#  - lista db/migracoes/ em ordem de aplicação: legado NNN_*.sql (001-047, fechado) e depois carimbo
 #    YYYYMMDDTHHMM_*.sql, cada família em ordem lexicográfica (ADR 0014);
 #  - nome ausente em plat.versao_migracao: aplica arquivo + INSERT na MESMA transação (psql -1 -f - por stdin);
 #  - nome presente com o mesmo sha256: pula;
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS plat.versao_migracao (
 SQL
 
 # Lista as migrações na ORDEM DE APLICAÇÃO. Duas famílias de nome (ADR 0014):
-#  - legada `NNN_slug.sql` (001 a 048), FECHADA e imutável;
+#  - legada `NNN_slug.sql` (001 a 047), FECHADA e imutável;
 #  - carimbo de tempo `YYYYMMDDTHHMM_slug.sql`, com 3 hex opcionais quando duas nascem no mesmo minuto.
 # Chave de ordenação: prefixo "0" para o legado e "1" para o carimbo, depois o nome. Assim todo o
 # legado vem antes de qualquer carimbo e a ordem lexicográfica continua válida dentro de cada família.
@@ -50,12 +50,6 @@ listar_migracoes() {
     for f in "$d"/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]T[0-9][0-9][0-9][0-9]*_*.sql; do [ -e "$f" ] && printf '1\t%s\n' "$f"; done
   } | LC_ALL=C sort -t "$(printf '\t')" -k1,1 -k2,2 | cut -f2
 }
-
-# pgstac (item L1-01-a): instalado por `pypgstac migrate`, não por um .sql desta pasta (o pacote cria o
-# próprio schema `pgstac`, nome fixo). Roda ANTES do laço de .sql abaixo porque a migração
-# 20260906T1900_pgstac_privilegios.sql concede pgstac_read/pgstac_ingest a plat_app e precisa dos dois papéis
-# já existentes. Idempotente (db/pgstac_instalar.sh só reaplica se a versão instalada mudou).
-PLAT_DB="$DB" PLAT_SCHEMA=plat bash "$(dirname "${BASH_SOURCE[0]}")/pgstac_instalar.sh"
 
 aplicadas=0; puladas=0; reaplicadas=0
 shopt -s nullglob
@@ -81,6 +75,4 @@ for arq in "${arquivos[@]}"; do
   ms=$(( ($(date +%s%N) - t0) / 1000000 ))
   if [ "$modo" = inserir ]; then echo "aplicada   $nome (${ms} ms)"; aplicadas=$((aplicadas+1)); else echo "reaplicada $nome (${ms} ms)"; reaplicadas=$((reaplicadas+1)); fi
 done
-# pgstac (item L1-01-a; ADR 0011): passo à parte, depois das migrações SQL (a 046 cria plat.versao_pgstac)
-bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/migrar_pgstac.sh"
 echo "migracoes: aplicadas $aplicadas · reaplicadas $reaplicadas · iguais $puladas · pendentes 0"

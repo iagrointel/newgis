@@ -113,6 +113,11 @@ PAGINAS = {
     "/visualizar": "visualizar.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
     "/executar": "executar.html",
+    # --- SMTP, convite de membro e redefinição de senha (L0-07-d-smtp-convites): públicas, sem sessão
+    "/aceitar-convite": "aceitar_convite.html",
+    "/redefinir-senha": "redefinir_senha.html",
+    # --- upload retomável (L0-04-a-upload-arquivo)
+    "/uploads": "uploads.html",
 }
 router = APIRouter()
 

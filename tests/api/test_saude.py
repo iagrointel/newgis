@@ -7,7 +7,7 @@ from app.db import migracoes_em_disco
 
 ROOT = Path(__file__).resolve().parents[2]
 CAMPOS = {"versao", "git_sha", "ambiente", "banco", "migracoes_aplicadas", "migracoes_pendentes",
-          "ultima_migracao", "servicos", "servicos_obrigatorios", "fila", "tempo_ms", "em"}
+          "ultima_migracao", "servicos", "fila", "tempo_ms", "em"}
 
 
 def test_saude_200_com_json_do_contrato(cliente):
@@ -17,7 +17,7 @@ def test_saude_200_com_json_do_contrato(cliente):
     assert set(j) == CAMPOS
     assert j["banco"] == "ok"
     assert j["migracoes_pendentes"] == 0
-    # Duas famílias de nome convivem (ADR 0014): o legado `NNN_slug`, fechado em 048, e o carimbo de
+    # Duas famílias de nome convivem (ADR 0014): o legado `NNN_slug`, fechado em 047, e o carimbo de
     # tempo `YYYYMMDDTHHMM_slug` de toda migração nova. `migracoes_em_disco` já devolve as duas na
     # ordem de aplicação (legado primeiro, depois carimbo).
     migracoes = migracoes_em_disco()
@@ -30,10 +30,6 @@ def test_saude_200_com_json_do_contrato(cliente):
     assert j["ambiente"] in ("producao", "dev")
     assert set(j["servicos"]) == {"martin", "titiler", "garage", "worker"}
     assert all(v in ("ausente", "ok", "erro") for v in j["servicos"].values())
-    # Portão do L0-11 (achado G4-19, ADR 20260908T2125): o corpo DECLARA quem é obrigatório e a resposta
-    # só é 200 com o obrigatório configurado saudável — a regra do status é provada no teste do G4-19
-    # (tests/api/test_g4_adversario.py) e a fronteira "ausente não derruba" no teste dele.
-    assert j["servicos_obrigatorios"] == ["garage"]
     # fila (ADR 0003 seção 4.6): a unidade plat-worker tem de estar viva e alcançável em PLAT_WORKER_URL
     assert set(j["fila"]) == {"pendentes", "rodando", "workers_vivos", "ultimo_heartbeat"}, j["fila"]
     assert j["fila"]["workers_vivos"] >= 1, j["fila"]

@@ -6,7 +6,6 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Organização · plat</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-<script src="/static/js/base/tema_cedo.js"></script>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="tela">
@@ -16,8 +15,6 @@
   <main id="principal" class="principal" tabindex="-1">
     <h1 data-i18n="org.titulo">Organização</h1>
     <plat-aviso id="aviso"></plat-aviso>
-    <p id="evento-registrado" class="evento-registrado" hidden aria-live="polite"></p>
-    <plat-estado id="estado" hidden></plat-estado>
     <section class="cartao" id="identidade" aria-labelledby="t-identidade">
       <h2 id="t-identidade" data-i18n="org.identidade">Identidade</h2>
       <plat-formulario id="form-identidade"></plat-formulario>
@@ -42,29 +39,6 @@
       <h2 id="t-armazenamento" data-i18n="org.armazenamento">Armazenamento</h2>
       <plat-formulario id="form-armazenamento"></plat-formulario>
     </section>
-    <section class="cartao" id="arquivos" aria-labelledby="t-arquivos">
-      <h2 id="t-arquivos" data-i18n="org.arquivos">Arquivos e objetos</h2>
-      <p class="fraco" data-i18n="org.arquivos_ajuda">objetos genéricos do inquilino no armazenamento (logotipo, anexos, exportações); o envio usa um token de serviço de uma hora criado e revogado aqui</p>
-      <div class="progresso" id="arquivos-uso" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-i18n-aria="org.arquivos_uso_rotulo" aria-label="uso do armazenamento">
-        <div class="barra-progresso"><div class="preenchido" id="arquivos-uso-barra"></div></div>
-        <output class="valor" id="arquivos-uso-texto">…</output>
-      </div>
-      <plat-estado id="arquivos-estado" hidden></plat-estado>
-      <div class="form">
-        <div class="campo"><label for="arquivo-classe" data-i18n="org.arquivo_classe">classe</label><input id="arquivo-classe" type="text" value="objeto" maxlength="40" autocomplete="off" spellcheck="false" pattern="[a-z0-9_]{1,40}"><span class="ajuda" data-i18n="org.arquivo_classe_ajuda">letras minúsculas, dígitos e sublinhado; agrupa os objetos (objeto, anexo, org_logo)</span></div>
-        <div class="campo"><label for="arquivo-envio" data-i18n="org.arquivo_escolher">arquivo</label><input id="arquivo-envio" type="file"></div>
-        <div class="botoes">
-          <button type="button" id="arquivo-enviar" class="primario" disabled data-i18n="org.arquivo_enviar">Enviar arquivo</button>
-          <button type="button" id="arquivos-varrer" class="pequeno" data-i18n="org.arquivos_varrer">Varrer órfãos</button>
-        </div>
-      </div>
-      <p id="arquivos-varredura" class="saida" aria-live="polite"></p>
-      <table class="tabela" id="arquivos-lista" hidden>
-        <caption class="sr-only" data-i18n="org.arquivos_enviados">arquivos enviados nesta sessão</caption>
-        <thead><tr><th scope="col" data-i18n="org.arquivo_classe">classe</th><th scope="col">sha256</th><th scope="col" data-i18n="org.arquivo_tamanho">tamanho</th><th scope="col" data-i18n="org.arquivo_tipo">tipo</th><th scope="col" data-i18n="geral.acoes">ações</th></tr></thead>
-        <tbody id="arquivos-corpo"></tbody>
-      </table>
-    </section>
     <section class="cartao" id="usuarios" aria-labelledby="t-usuarios">
       <h2 id="t-usuarios" data-i18n="org.usuarios">Usuários</h2>
       <plat-formulario id="form-usuarios"></plat-formulario>
@@ -74,16 +48,6 @@
       <p class="fraco" data-i18n="org.seguranca_ajuda">a mesma política que /conta já mostra a cada membro ao trocar a senha (tenant.config.auth)</p>
       <plat-formulario id="form-seguranca"></plat-formulario>
     </section>
-    <section class="cartao" id="exportar-inquilino" aria-labelledby="t-exportar-inquilino">
-      <h2 id="t-exportar-inquilino" data-i18n="orgexp.titulo">Exportar meu inquilino</h2>
-      <p class="fraco" data-i18n="orgexp.ajuda">um pacote em formato aberto com tudo deste inquilino: um GeoPackage com as camadas hospedadas (metadado e estilo dentro do próprio arquivo), o catálogo em JSON, os arquivos enviados e um manifesto com o sha256 de cada parte. Uma execução por dia.</p>
-      <p id="exp-estimativa" class="fraco" data-i18n="orgexp.estimativa_lendo">lendo o tamanho estimado</p>
-      <p id="exp-cota" class="fraco" hidden></p>
-      <div class="botoes">
-        <button type="button" id="exp-pedir" data-i18n="orgexp.pedir">Exportar meu inquilino</button>
-      </div>
-      <div id="exp-lista"></div>
-    </section>
     <section class="cartao" id="smtp" aria-labelledby="t-smtp">
       <h2 id="t-smtp" data-i18n="smtp.titulo">E-mail (SMTP)</h2>
       <p class="fraco" id="smtp-origem" data-i18n="smtp.ajuda">convite de membro, redefinição de senha e avisos saem por este servidor; sem SMTP, esses fluxos caem no caminho manual (senha temporária mostrada ao admin)</p>
@@ -91,15 +55,6 @@
       <div class="botoes">
         <button type="button" id="smtp-testar" class="pequeno" data-i18n="smtp.testar">Testar envio</button>
       </div>
-    </section>
-    <section class="cartao" id="ldap" aria-labelledby="t-ldap" hidden>
-      <h2 id="t-ldap" data-i18n="ldap.titulo">Diretório corporativo (LDAP)</h2>
-      <p class="fraco" id="ldap-estado-texto" data-i18n="ldap.ajuda">login pelo diretório da organização; a senha de bind é guardada cifrada e nunca volta pela API</p>
-      <plat-estado id="ldap-estado" hidden></plat-estado>
-      <plat-formulario id="form-ldap"></plat-formulario>
-      <h3 data-i18n="ldap.importar_titulo">Importar membros de um grupo do diretório</h3>
-      <p class="fraco" data-i18n="ldap.importar_ajuda">cria contas para os membros do grupo informado, com o perfil escolhido; exige o provedor habilitado</p>
-      <plat-formulario id="form-ldap-importar"></plat-formulario>
     </section>
   </main>
 </div>

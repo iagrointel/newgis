@@ -10,7 +10,6 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from urllib.parse import urlsplit
 
 from dotenv import dotenv_values
 
@@ -42,12 +41,6 @@ class Settings:
     # (:3903) só é usada pelo backend para criar bucket/chave/cota — nunca chega ao navegador
     PLAT_GARAGE_ADMIN_URL: str | None
     PLAT_GARAGE_ADMIN_TOKEN: str | None
-    # chave S3 própria do ambiente (item L7-31, achado 11 do adversário no T3): quando estas duas estão
-    # definidas e PLAT_GARAGE_ADMIN_TOKEN não está, o ambiente cria e usa os próprios buckets pela API S3
-    # (`ClienteS3.criar_bucket`, alias LOCAL da chave) e nunca recebe poder de administração sobre o
-    # armazenamento. É assim que homologação deixa de compartilhar a credencial raiz com produção.
-    PLAT_GARAGE_CHAVE_ID: str | None
-    PLAT_GARAGE_CHAVE_SEGREDO: str | None
     PLAT_GARAGE_REGIAO: str
     PLAT_GARAGE_BUCKET_PREFIXO: str
     PLAT_LOG_NIVEL: str
@@ -65,9 +58,6 @@ class Settings:
     # rede de rota (L2-11-c): OSRM isolado plat-osrm-guarulhos (:5010), só recorte de teste ≤ 50 MB;
     # nunca aponta para os OSRM de outras frentes da casa (5000-5003)
     PLAT_OSRM_URL: str
-    # RFC 9116: endereço de contato do security.txt. Sem a chave vale a convenção seguranca@<host da URL
-    # pública> — endereço derivado, não inventado; quem instala troca no .env se o canal for outro.
-    PLAT_SEGURANCA_CONTATO: str
     PLAT_ROTA_MATRIZ_MAX: int
     PLAT_ROTA_ISOCRONA_MAX_PONTOS: int
     # item L7-31 (docs/HOMOLOGACAO.md): homologação reusa o MESMO banco iagro_sat, nunca um banco novo (disco a
@@ -78,7 +68,7 @@ class Settings:
     PLAT_SCHEMA_TRABALHO: str
     PLAT_CANAL_JOB: str
     PLAT_CANAL_WORKER: str
-    # SMTP de instalação (item L0-07-d-smtp-convites; ADR 0013): padrão de todos os inquilinos que não têm
+    # SMTP de instalação (item L0-07-d-smtp-convites; ADR 0013): padrão de TODOS os inquilinos que não têm
     # override próprio em tenant.config.smtp (app/correio/config.py::smtp_efetivo). Nenhuma chave é obrigatória:
     # sem PLAT_SMTP_HOST a instalação simplesmente não tem SMTP — o inquilino que precisar configura o dele, e
     # quem não configurar nada cai no caminho manual (senha temporária mostrada ao admin, já existente).
@@ -96,15 +86,6 @@ class Settings:
     # .env de trilha grava PLAT_POOL_MAX=2 (ver laco/trilha_ambiente.sh).
     PLAT_POOL_MIN: int
     PLAT_POOL_MAX: int
-    # motor de render no servidor (item L2-12-a-motor-render-servidor; ADR 0023): pool de páginas do
-    # chromium do playwright mantidas quentes, fila com limite e teto de tempo por pedido, token interno
-    # de curta duração. Padrões reproduzem o que já rodava (nenhum .env existente declara estas chaves).
-    PLAT_RENDER_POOL_TAMANHO: int
-    PLAT_RENDER_FILA_MAX: int
-    PLAT_RENDER_TIMEOUT_S: int
-    PLAT_RENDER_TOKEN_TTL_S: int
-    PLAT_RENDER_MAX_PX: int
-    PLAT_RENDER_MEMORIA_MB: int
 
     @property
     def producao(self) -> bool:
@@ -211,8 +192,6 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_GARAGE_URL=_opcional(valores, "PLAT_GARAGE_URL"),
         PLAT_GARAGE_ADMIN_URL=_opcional(valores, "PLAT_GARAGE_ADMIN_URL"),
         PLAT_GARAGE_ADMIN_TOKEN=_opcional(valores, "PLAT_GARAGE_ADMIN_TOKEN"),
-        PLAT_GARAGE_CHAVE_ID=_opcional(valores, "PLAT_GARAGE_CHAVE_ID"),
-        PLAT_GARAGE_CHAVE_SEGREDO=_opcional(valores, "PLAT_GARAGE_CHAVE_SEGREDO"),
         PLAT_GARAGE_REGIAO=_opcional(valores, "PLAT_GARAGE_REGIAO") or "garage",
         PLAT_GARAGE_BUCKET_PREFIXO=_opcional(valores, "PLAT_GARAGE_BUCKET_PREFIXO") or "plat-",
         PLAT_LOG_NIVEL=nivel,
@@ -227,9 +206,6 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_RELOGIO_TESTE=_opcional(valores, "PLAT_RELOGIO_TESTE"),
         PLAT_DSN_WORKER=_dsn_worker(valores, f"{schema}_worker"),
         PLAT_OSRM_URL=(_opcional(valores, "PLAT_OSRM_URL") or "http://127.0.0.1:5010").rstrip("/"),
-        PLAT_SEGURANCA_CONTATO=(
-            _opcional(valores, "PLAT_SEGURANCA_CONTATO") or f"mailto:seguranca@{urlsplit(url).hostname}"
-        ),
         PLAT_ROTA_MATRIZ_MAX=_inteiro(valores, "PLAT_ROTA_MATRIZ_MAX", limites.ROTA_MATRIZ_MAX_PADRAO, 1),
         PLAT_ROTA_ISOCRONA_MAX_PONTOS=_inteiro(
             valores, "PLAT_ROTA_ISOCRONA_MAX_PONTOS", limites.ROTA_ISOCRONA_MAX_PONTOS_PADRAO, 4
@@ -247,36 +223,7 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_SMTP_ROTULO=_opcional(valores, "PLAT_SMTP_ROTULO"),
         PLAT_POOL_MIN=pool_min,
         PLAT_POOL_MAX=pool_max,
-        PLAT_RENDER_POOL_TAMANHO=_inteiro(valores, "PLAT_RENDER_POOL_TAMANHO", 2, 1),
-        PLAT_RENDER_FILA_MAX=_inteiro(valores, "PLAT_RENDER_FILA_MAX", 20, 1),
-        PLAT_RENDER_TIMEOUT_S=_inteiro(valores, "PLAT_RENDER_TIMEOUT_S", 30, 1),
-        PLAT_RENDER_TOKEN_TTL_S=_inteiro(valores, "PLAT_RENDER_TOKEN_TTL_S", 60, 1),
-        PLAT_RENDER_MAX_PX=_inteiro(valores, "PLAT_RENDER_MAX_PX", 4096, 64),
-        PLAT_RENDER_MEMORIA_MB=_inteiro(valores, "PLAT_RENDER_MEMORIA_MB", 768, 128),
     )
-
-
-# Segredos do produto (item L7-19): o valor destes NUNCA deve estar em claro no `.env`; o lugar deles é
-# `/etc/plat/segredos/<NOME>` (0600, dono root), entregue por `LoadCredential=` do systemd — ver
-# `deploy/plat-api.service`, `deploy/plat-worker.service`, `scripts/rotacionar_segredo.sh` e
-# `docs/SEGURANCA.md`. A lista é usada por `segredos_em_claro()` (teste e verificação de instalação).
-SEGREDOS = (
-    "PLAT_DSN",
-    "PLAT_SECRET",
-    "PLAT_DSN_WORKER",
-    "PLAT_GARAGE_ADMIN_TOKEN",
-    "PLAT_GARAGE_CHAVE_SEGREDO",
-)
-
-
-def segredos_em_claro(caminho_env) -> list[str]:
-    """Nomes de `SEGREDOS` que aparecem com valor não vazio no arquivo `.env` indicado. Lista vazia = nenhum
-    segredo em claro nele. Nunca devolve valor, só nome — a saída pode ir para log e para relatório de teste."""
-    caminho = Path(caminho_env)
-    if not caminho.is_file():
-        return []
-    valores = dotenv_values(caminho)
-    return [nome for nome in SEGREDOS if (valores.get(nome) or "").strip()]
 
 
 def _credenciais_systemd() -> dict[str, str]:
