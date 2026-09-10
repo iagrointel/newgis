@@ -111,6 +111,10 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # anterior ("sem dono humano para narrar") deixava a destruição de dado sem rastro — foi o achado G4-08.
     ("POST", "/api/arquivos"): ["arquivos/enviar"],
     ("DELETE", "/api/arquivos/{sha256}"): ["arquivos/apagar"],
+    # notificações internas (L0-03-k): marcar lida registra um evento com a contagem; apagar a PRÓPRIA
+    # notificação não gera evento (não muda nada de domínio, só a caixa de entrada de quem apaga)
+    ("POST", "/api/notificacoes/lidas"): ["notificacoes/lida"],
+    ("DELETE", "/api/notificacoes/{id}"): [],
     # ---- arquivos/objetos (L0-11): sem dono humano (usuário/grupo/token) para narrar num evento de domínio; a
     # auditoria do objeto é a própria linha em plat.arquivo (quem gravou, quando, sha256) + plat.log_acesso da
     # requisição (rota, ip, bytes, token_id) — o mesmo padrão de decisão já usado acima em /api/eu/2fa/iniciar

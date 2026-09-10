@@ -397,7 +397,7 @@ def compartilhado_miniatura(token: str, id: str, request: Request):
         r = carregar(cur, iid)
         if r is None:
             raise ErroAPI(404, "item_inexistente", "item inexistente")
-    return miniatura.entregar(r, request)
+    return miniatura.entregar(r, request, cache=miniatura.CACHE_SEM)
 
 
 # ---------------------------------------------------------------- página do link (/c/<token>) com marcas abertas og:
@@ -468,7 +468,7 @@ def publico_miniatura(id: str, request: Request):
         r = _contexto_publico(cur, iid)
         if r is None:
             raise ErroAPI(404, "item_inexistente", "item inexistente")
-    return miniatura.entregar(r, request)
+    return miniatura.entregar(r, request, cache=miniatura.CACHE_SEM)
 
 
 # ---------------------------------------------------------------- objeto por URL assinada (adaptador local,

@@ -132,6 +132,7 @@ from app.render.rotas import router as rotas_render
 from app.rotas_arquivos import router as rotas_arquivos
 from app.rotas_temas import router as rotas_temas
 from app.rotas_videos import router as rotas_videos
+from app.rotas_notificacoes import router as rotas_notificacoes
 from app.saude import router as rotas_saude
 from app.saude_profunda import router as rotas_saude_profunda
 from app.settings import settings
@@ -215,6 +216,8 @@ ROUTERS = [
     rotas_lixeira.router,
     # --- documento de painel (L2-06-a-modelo-painel-fontes): dados por fonte, sessão/token e link anônimo
     rotas_paineis,
+    # --- notificações internas (L0-03-k): /api/notificacoes (sino, lista, marcar lida, apagar)
+    rotas_notificacoes,
     # --- catálogo externo OGC API Records (L0-09-metadado-catalogo): /ogc/records; token catalogo:ler, nunca aberto
     rotas_ogc.router,
     # --- layout de impressão (L2-12-b): /api/layouts, página headless do quadro e Export Web Map Task (Esri)

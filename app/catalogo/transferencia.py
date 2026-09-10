@@ -32,13 +32,19 @@ def _arrastados(cur, iid: str) -> list[dict]:
     """Relações origem→destino com arrasta_dono: destinos que vão junto (vista→camada primária? não: aqui é
     quem depende da camada com arrasta_dono = vistas (origem) da camada (destino))."""
     cur.execute(
-        "SELECT r.origem AS id, r.tipo, i.titulo, i.dono_id FROM plat.item_relacao r JOIN "
-        "plat.relacao_tipo rt ON rt.nome = r.tipo "
+        "SELECT r.origem AS id, r.tipo, i.titulo, i.dono_id, plat.pode_editar(i.id) AS pode_editar "
+        "FROM plat.item_relacao r JOIN plat.relacao_tipo rt ON rt.nome = r.tipo "
         "JOIN plat.item i ON i.id = r.origem AND i.apagado_em IS NULL WHERE r.destino = %s::uuid AND rt.arrasta_dono",
         (iid,),
     )
     return [
-        {"id": str(r["id"]), "tipo_relacao": r["tipo"], "titulo": r["titulo"], "dono_id": r["dono_id"]}
+        {
+            "id": str(r["id"]),
+            "tipo_relacao": r["tipo"],
+            "titulo": r["titulo"],
+            "dono_id": r["dono_id"],
+            "pode_editar": bool(r["pode_editar"]),
+        }
         for r in cur.fetchall()
     ]
 
@@ -63,6 +69,12 @@ def planejar(cur, auth: Auth, ids: list[str], novo: dict, adicionar_aos_grupos: 
             falhas.append({"codigo": "sem_edicao_no_item", "solucao": None})
         if r["dono_id"] == novo["id"]:
             falhas.append({"codigo": "ja_e_o_dono", "solucao": None})
+        arrasta = _arrastados(cur, iid)
+        # item arrastado que o ator não pode editar NÃO vai mudar de dono (a RLS barra o UPDATE sem levantar erro):
+        # a pré-checagem declara a falha em vez de prometer o arrasto e gravar um evento falso (achado G2-5).
+        for a in arrasta:
+            if not a["pode_editar"]:
+                falhas.append({"codigo": "arrasto_sem_edicao", "item": a, "solucao": None})
         primarias = _primaria_de(cur, iid)
         for pr in primarias:
             if pr["id"] not in ids:
@@ -94,7 +106,7 @@ def planejar(cur, auth: Auth, ids: list[str], novo: dict, adicionar_aos_grupos: 
                 "id": iid,
                 "titulo": r["titulo"],
                 "acao": "transferir",
-                "arrasta": _arrastados(cur, iid),
+                "arrasta": arrasta,
                 "falhas": [f for f in falhas if not f.get("resolvida")],
                 "resolvidas": [f for f in falhas if f.get("resolvida")],
             }
@@ -149,6 +161,16 @@ def executar(
                 )
             else:
                 cur.execute("UPDATE plat.item SET dono_id = %s WHERE id = %s::uuid", (novo["id"], iid))
+            # UPDATE barrado pela RLS não é erro no Postgres: afeta zero linhas e segue. Sem esta guarda o evento
+            # era gravado para item que NÃO mudou de dono e a auditoria mentia (achado G2-5). A transação inteira
+            # cai: ninguém fica com meia transferência gravada.
+            if cur.rowcount != 1:
+                raise ErroAPI(
+                    409,
+                    "transferencia_sem_efeito",
+                    "a transferência não alterou o item (sem permissão de edição ou item removido)",
+                    {"item_id": iid, "arrastado_por": None if iid == p["id"] else p["id"]},
+                )
             registrar_evento(
                 cur,
                 request,
