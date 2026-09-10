@@ -1,8 +1,19 @@
 """Sobrevivência a reinício (lento; refutação do item): no meio de um job, `systemctl restart plat-worker` devolve o
 job (reinicios=1, tentativa segue 1) e o worker novo o termina; `kill -9` no pai mata o filho (PDEATHSIG), a ceifa
-por heartbeat vencido (nunca por nome, 012) devolve em até ~90 s e o job conclui; 5 × kill -9 = falhou "devolvido 5
-vezes"; em nenhum momento `concluido` sem o
-marcador do último passo. Exige `sudo -n systemctl`; pula com mensagem quando não há sudo."""
+por heartbeat vencido (nunca por nome, 012) devolve em até ~90 s e o job conclui; 3 × kill -9 = falhou, nunca
+`concluido`; em nenhum momento `concluido` sem o marcador do último passo. Exige `sudo -n systemctl`; pula com
+mensagem quando não há sudo.
+
+Migração `20260906T1615a3f` (recurso partilhado, achado do adversário G3 no L0-05-a: 3 SIGKILL seguidos no
+mesmo job terminavam em `concluido`, porque a ceifa por heartbeat vencido devolvia como REINÍCIO, e o teto de
+reinícios era 5): morte do executor sem sinal (`plat.job_ceifar`, chamada na ceifa da partida e do laço do
+worker) passou a consumir TENTATIVA, não reinício — `reinicios` ficou só para a parada LIMPA do worker
+(`systemctl restart`, `_parar()`, que continua devolvendo com `p_conta_tentativa := false`). Por isso os dois
+testes de `kill -9` abaixo (que derrubam o processo inteiro sem sinal, sem passar por `_parar()`) agora leem
+`tentativa`, não `reinicios` — `reinicios` fica em 0 do início ao fim nos dois. Confirmado por simulação SQL
+direta em `plat_tpartilha` antes desta edição: 3 chamadas de `job_pegar`+`job_devolver(..., true, ...)` levam
+tentativa 1→2→3 e falham exatamente na 3ª, com `reinicios` sempre 0 (prova.progresso tem `max_tentativas=3`,
+`app/jobs/tipos_prova.py`)."""
 
 import json
 import subprocess
@@ -82,24 +93,32 @@ def test_kill_9_no_pai_mata_o_filho_e_a_ceifa_na_partida_retoma(cliente_demo, wo
     r = _systemctl("kill", "-s", "KILL")
     assert r.returncode == 0, r.stderr
     _pid_worker(env)
-    # kill -9: ninguém devolve na hora; a ceifa por heartbeat vencido (60 s, a cada 30 s) recoloca em até ~90 s (012)
+    # kill -9: ninguém devolve na hora; a ceifa por heartbeat vencido (60 s, a cada 30 s) recoloca em até ~90 s
+    # (012). Migração 20260906T1615a3f: a ceifa por heartbeat vencido (job_ceifar) devolve consumindo
+    # TENTATIVA, não reinício — reinicios fica em 0 (essa contagem é só da parada LIMPA, systemctl restart).
     devolvido = esperar(cliente_demo, job["id"], timeout=150,
-                        condicao=lambda j: j["reinicios"] >= 1 and j["estado"] in ("pendente", "rodando"))
-    assert devolvido["reinicios"] == 1 and devolvido["estado"] != "concluido"
+                        condicao=lambda j: j["tentativa"] >= 2 and j["estado"] in ("pendente", "rodando"))
+    assert devolvido["reinicios"] == 0 and devolvido["estado"] != "concluido"
     fim = esperar(cliente_demo, job["id"], timeout=120)
-    assert fim["estado"] == "concluido" and fim["tentativa"] == 1 and fim["reinicios"] == 1
+    assert fim["estado"] == "concluido" and fim["tentativa"] == 2 and fim["reinicios"] == 0
     assert _marcadores(conexao_plat_app, job["id"]) == [fim["resultado"]["marcador"]]
-    assert fim["proveniencia"]["reinicios"] == 1
+    assert fim["proveniencia"].get("reinicios", 0) == 0
 
 
-def test_cinco_kill_9_marcam_falhou_devolvido_5_vezes(cliente_demo, worker_vivo, conexao_plat_app, env):
+def test_tres_kill_9_marcam_falhou_e_nunca_concluido(cliente_demo, worker_vivo, conexao_plat_app, env):
+    """Refutação literal do L0-05-a (achado do adversário G3): 'mata o worker com SIGKILL (não SIGTERM) 3
+    vezes seguidas no mesmo job e verifica que o job termina falhou na 4a e nunca concluido'. Antes do
+    conserto, 3 mortes só somavam reinicios=3 (teto 5) e a 4a passagem completava o job normalmente —
+    CAIU (medido: `laco/handoffs/T3/ataque-g3-ADVERSARIO.md`, bloco L0-05-a item 1). Agora a ceifa consome
+    tentativa; prova.progresso tem max_tentativas=3 (app/jobs/tipos_prova.py), então a 3a morte já fecha em
+    falhou — nunca chega a existir uma 4a passagem."""
     job = criar_job(cliente_demo, "prova.progresso", {"duracao_s": 600, "passos": 600})
-    for k in range(5):
+    for k in range(1, 4):
         esperar(cliente_demo, job["id"], timeout=150,
-                condicao=lambda j, k=k: j["estado"] == "rodando" and j["reinicios"] == k and j["progresso"] >= 1)
+                condicao=lambda j, k=k: j["estado"] == "rodando" and j["tentativa"] == k and j["progresso"] >= 1)
         assert _systemctl("kill", "-s", "KILL").returncode == 0
         _pid_worker(env)
     fim = esperar(cliente_demo, job["id"], timeout=150)
-    assert fim["estado"] == "falhou" and fim["reinicios"] == 5
-    assert fim["erro"].startswith("devolvido 5 vezes sem terminar")
+    assert fim["estado"] == "falhou" and fim["tentativa"] == 3 and fim["reinicios"] == 0
+    assert fim["erro"] == "worker morreu sem terminar o trabalho"
     assert _marcadores(conexao_plat_app, job["id"]) == []

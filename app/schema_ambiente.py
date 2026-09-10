@@ -13,7 +13,6 @@ global ao processo do Postgres, não um objeto dentro de um schema. O app usa o 
 pontos (app/db.py, app/jobs/worker.py, app/jobs/tarefas.py) em QUALQUER ambiente; reescrevê-los quebraria
 a leitura porque quem grava (set_config) e quem lê (current_setting) deixariam de bater."""
 
-import os
 import re
 
 import psycopg2.extras
@@ -26,35 +25,12 @@ SCHEMA_TRABALHO_PADRAO = "plat_trabalho"
 # sem espaço entre o parêntese e a aspa (conferido: as 16+12 ocorrências da árvore batem 1 a 1).
 _SCHEMA = re.compile(r"(?<!current_setting\(')(?<!set_config\(')\bplat\b")
 _TRABALHO = re.compile(r"\bplat_trabalho\b")
-# 08/09 (achado do L3-01-g): as views publicadas do acervo (L6-01-b) vivem em `plat_acervo`, que nas bases por
-# trilha e em homologação vira `<schema>_acervo` (app/acervo/publicacao.py); sem esta regra a migração criava
-# o schema GLOBAL e os testes do acervo erravam na preparação em toda trilha nova.
-_ACERVO = re.compile(r"\bplat_acervo\b")
-
-
-def esquemas_do_ambiente() -> tuple[str, str]:
-    """Par (schema, schema_trabalho) do ambiente atual — fonte ÚNICA para quem roda FORA do processo da
-    aplicação (script solto de `scripts/`, gerador de `docs/`, tarefa agendada). Dentro do processo o valor
-    vem de `app.settings`, como sempre; quando `app.settings` não é importável (script rodado como
-    `postgres` com o psycopg2 do sistema, sem venv e sem leitura do `.env`) cai nas variáveis de ambiente
-    PLAT_SCHEMA/PLAT_SCHEMA_TRABALHO, que é como `laco/trilha_ambiente.sh` e `make homolog` passam o schema.
-    Sem esta segunda porta, todo script solto ignora PLAT_SCHEMA e escreve no `plat` de produção (achado F9
-    do adversário do reescritor de schema, 07/09/2026)."""
-    try:
-        from app.settings import settings
-    except Exception:  # noqa: BLE001 — sem venv/.env: o ambiente é a única fonte que resta
-        return (
-            os.environ.get("PLAT_SCHEMA") or SCHEMA_PADRAO,
-            os.environ.get("PLAT_SCHEMA_TRABALHO") or SCHEMA_TRABALHO_PADRAO,
-        )
-    return settings.PLAT_SCHEMA, settings.PLAT_SCHEMA_TRABALHO
 
 
 def reescrever_schema(sql: str, schema: str = SCHEMA_PADRAO, schema_trabalho: str = SCHEMA_TRABALHO_PADRAO) -> str:
     """Troca todo `plat`/`plat_trabalho` que é schema (não GUC) pelo nome do ambiente atual. No-op
     quando os dois já são o padrão — é isso que garante custo zero em produção."""
     if schema != SCHEMA_PADRAO:
-        sql = _ACERVO.sub(f"{schema}_acervo", sql)  # antes de `plat` (o \b não separa `plat_acervo`)
         sql = _SCHEMA.sub(schema, sql)
     if schema_trabalho != SCHEMA_TRABALHO_PADRAO:
         sql = _TRABALHO.sub(schema_trabalho, sql)
@@ -64,64 +40,20 @@ def reescrever_schema(sql: str, schema: str = SCHEMA_PADRAO, schema_trabalho: st
 class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
     """RealDictCursor que reescreve o texto da consulta para settings.PLAT_SCHEMA/PLAT_SCHEMA_TRABALHO
     antes de mandar ao servidor. Import de app.settings é tardio (dentro do método) para não criar
-    ciclo — app/settings.py não importa este módulo.
-
-    `execute` também reescreve consulta em BYTES, não só `str` (achado do item L4-01-modelo-rede,
-    06-07/09/2026): `psycopg2.extras.execute_values` monta a consulta final em bytes e chama
-    `cur.execute(bytes)` por dentro — sem este ramo, qualquer `execute_values` contra uma tabela
-    `plat.*` ia direto ao schema de PRODUÇÃO mesmo rodando numa base de trilha/homologação, porque
-    o `isinstance(query, str)` original nunca via essas consultas. `app/rede_utilidades/topologia.py`
-    (item L4-01-b) já tinha contornado o mesmo problema reimplementando `execute_values` à mão; o
-    conserto aqui é no cursor, então nenhum chamador de `execute_values` (presente ou futuro) precisa
-    saber disso."""
+    ciclo — app/settings.py não importa este módulo."""
 
     def execute(self, query, *args, **kwargs):
-        # `psycopg2.extras.execute_values` (usado pelos importadores em lote da rede de utilidades,
-        # L4-01-modelo-rede/L4-05-g-osm-power) monta a consulta em BYTES antes de chamar cur.execute
-        # -- isinstance(query, str) nunca batia para essas chamadas, então o schema de homologação/
-        # trilha nunca era aplicado nelas e o INSERT ia parar no `plat` de produção com permissão
-        # negada (achado do item L4-05-g-osm-power). Decodifica na codificação da conexão, reescreve
-        # e devolve como texto -- psycopg2 aceita str no lugar de bytes sem custo extra.
-        if isinstance(query, (bytes, bytearray)):
-            query = self._texto(query)
         if isinstance(query, str):
             query = self._reescrever(query)
-        elif isinstance(query, (bytes, bytearray)):
-            query = self._reescrever_bytes(bytes(query))
         return super().execute(query, *args, **kwargs)
 
-    def executemany(self, query, vars_list):
-        # Achado duas vezes, por dois itens (L0-04-h e L4-05-g), e por um tempo houve DUAS definições
-        # deste método nesta classe — a segunda, sem o tratamento de bytes, apagava a primeira em
-        # silêncio (Python fica com a última). Uma só, e é esta.
-        #
-        # mesma classe de defeito do bytes/`execute_values` acima, achada agora em `cur.executemany`
-        # (usado por `POST /api/papeis` para `plat.papel_privilegio`, app/auth/rotas_usuarios.py, e pelo
-        # item L3-19-multiescala em execuções de grade aninhada): psycopg2 implementa executemany em C
-        # chamando pq_execute diretamente por linha, NUNCA através do `self.execute()` Python —
-        # subclassificar só `execute()` não intercepta nada aqui. Sem esta sobrecarga, o INSERT ia com o
-        # literal `plat.` para o schema de PRODUÇÃO em qualquer ambiente isolado (trilha/homologação), e a
-        # permissão negada aparecia traduzida como "operação fora do inquilino da sessão" — não uma
-        # checagem de inquilino, um schema errado na consulta.
-        if isinstance(query, (bytes, bytearray)):
-            query = self._texto(query)
+    def executemany(self, query, *args, **kwargs):
+        # sem esta sobrecarga o INSERT em lote de papel_privilegio (app/auth/rotas_usuarios.py) ia ao
+        # servidor com o literal `plat.` e o ambiente de homologação/trilha respondia
+        # InsufficientPrivilege — que o app traduz para 403 "operação fora do inquilino da sessão".
         if isinstance(query, str):
             query = self._reescrever(query)
-        return super().executemany(query, vars_list)
-
-    def copy_expert(self, sql, *args, **kwargs):
-        # `COPY plat.geo_endereco ... FROM STDIN` da carga do geocodificador (achado F2, item F9): o COPY em
-        # lote também não passa pelo `execute` da subclasse.
-        if isinstance(sql, (bytes, bytearray)):
-            sql = self._texto(sql)
-        if isinstance(sql, str):
-            sql = self._reescrever(sql)
-        return super().copy_expert(sql, *args, **kwargs)
-
-    def _texto(self, query) -> str:
-        from psycopg2 import extensions as _ext
-
-        return bytes(query).decode(_ext.encodings[self.connection.encoding])
+        return super().executemany(query, *args, **kwargs)
 
     def mogrify(self, query, *args, **kwargs):
         if isinstance(query, str):
@@ -133,22 +65,10 @@ class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
             procname = self._reescrever(procname)
         return super().callproc(procname, *args, **kwargs)
 
-    def mogrify(self, query, *args, **kwargs):
-        """Idem: `mogrify` produz o texto final do comando (o `-sql` do ogr2ogr na exportação sai daqui)."""
-        if isinstance(query, str):
-            query = self._reescrever(query)
-        return super().mogrify(query, *args, **kwargs)
-
     @staticmethod
     def _reescrever(sql: str) -> str:
-        schema, trabalho = esquemas_do_ambiente()  # tardio: evita ciclo settings <-> schema_ambiente
-        if schema == SCHEMA_PADRAO and trabalho == SCHEMA_TRABALHO_PADRAO:
-            return sql  # caminho de produção: nenhuma regex roda
-        return reescrever_schema(sql, schema, trabalho)
+        from app.settings import settings  # tardio: evita ciclo settings <-> schema_ambiente
 
-    @classmethod
-    def _reescrever_bytes(cls, sql: bytes) -> bytes:
-        schema, trabalho = esquemas_do_ambiente()
-        if schema == SCHEMA_PADRAO and trabalho == SCHEMA_TRABALHO_PADRAO:
-            return sql  # caminho de produção: nenhuma decodificação roda
-        return cls._reescrever(sql.decode("utf-8")).encode("utf-8")
+        if settings.PLAT_SCHEMA == SCHEMA_PADRAO and settings.PLAT_SCHEMA_TRABALHO == SCHEMA_TRABALHO_PADRAO:
+            return sql  # caminho de produção: nenhuma regex roda
+        return reescrever_schema(sql, settings.PLAT_SCHEMA, settings.PLAT_SCHEMA_TRABALHO)

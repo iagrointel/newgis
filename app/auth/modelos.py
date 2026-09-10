@@ -125,8 +125,6 @@ class InquilinoCriar(Modelo):
     config: dict[str, Any] | None = None
     admin_login: str = Field(min_length=1, max_length=128, pattern=r"^[a-z0-9][a-z0-9._@-]*$")
     admin_nome: str = Field(min_length=1, max_length=200)
-    # item L0-07-f: cotas iniciais (validadas por CotasEntrada em rotas_plataforma; ausente = padrões da plataforma)
-    cotas: "CotasEntrada | None" = None
 
 
 # ---- saídas
@@ -320,15 +318,18 @@ class InquilinoCriado(Saida):
     senha_temporaria: str
 
 
-class CotasEntrada(Modelo):
-    """Cotas de um inquilino (item L0-07-f-console-plataforma): chave ausente = mantém; nada aceita zero."""
+class InquilinoCotasEntrada(Modelo):
+    """Teto de cota de UM inquilino, escrito só pela plataforma (achados G4-04/G4-05). O `le` aqui é o teto
+    absoluto da instalação (`app/limites.py`), repetido em `plat.tenant_cotas_teto_definir`."""
 
-    cota_bytes: int | None = Field(default=None, ge=limites.ORG_COTA_BYTES_MIN)
-    cota_usuarios: int | None = Field(default=None, ge=limites.ORG_COTA_USUARIOS_MIN)
-    cota_jobs_dia: int | None = Field(default=None, ge=1)
-    cota_jobs_simultaneos: int | None = Field(default=None, ge=1)
-    cota_agendas: int | None = Field(default=None, ge=1)
-    cota_itens: int | None = Field(default=None, ge=1)
+    cota_bytes_teto: int = Field(ge=limites.ORG_COTA_BYTES_MIN, le=limites.ORG_COTA_BYTES_TETO_MAX)
+    cota_usuarios_teto: int = Field(ge=limites.ORG_COTA_USUARIOS_MIN, le=limites.ORG_COTA_USUARIOS_TETO_MAX)
 
 
-InquilinoCriar.model_rebuild()
+class InquilinoCotas(Saida):
+    id: int
+    slug: str
+    cota_bytes: int
+    cota_bytes_teto: int
+    cota_usuarios: int
+    cota_usuarios_teto: int

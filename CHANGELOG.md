@@ -2410,6 +2410,114 @@ no CAMINHO da URL (decisão C6 do conceito L1; ADR 20260907T0300).
   arquivo estático a 68.484/s — o serviço está no teto da máquina); frio 96 ladrilhos/s numa conexão,
   mediana 9,8 ms; 20 pedidos simultâneos ao mesmo ladrilho frio = **1 leitura + 19 acertos**; revogar
   o token passa a 403 em **2,86-2,90 s**. Números e comandos em `tests/medidas/L1-02-tiles-token.json`.
+## turno 3, setembro de 2026 (DESTRAVA dos 4 pais parciais: L0-05-jobs · L0-04-c-tabela-camada · L0-02-tenant-auth · L0-04-ingest-vetor)
+
+Retomada de queda por cota (worktree `wt/destrava`), tarefa de maior alavanca do laço: conferir cláusula por
+cláusula, contra o código de hoje (HEAD já igual ao da árvore principal, 8c2c63c), os 4 itens que travavam 73
+dependentes. Achado central: os bloqueios registrados no `estado.json` estavam **defasados** — os "3 consertos
+em curso" do L0-05-jobs (semeadura e2e, perfil visualizador, Cache-Control) e a trilha B (catálogo) que o L0-02
+esperava já tinham chegado ao HEAD havia dias; o texto do bloqueio nunca foi atualizado.
+
+Quatro defeitos reais, pequenos e cirúrgicos, corrigidos com prova (nenhum tocou `app/main.py`, `app/jobs/tipos.py`,
+`app/limites.py` nem `app/catalogo/rotas_itens.py`):
+1. **`app/schema_ambiente.py`** — `CursorSchemaAmbiente` só reescrevia `execute()`/`callproc()`; o `executemany()`
+   usado por `POST/PUT /api/papeis` (lote de `papel_privilegio`) ia com `plat.` literal e quebrava em qualquer
+   trilha/homologação (403 "operação fora do inquilino"). Achado já estava escrito e não commitado no worktree
+   (agente anterior morreu no meio); revisado, confirmado com `tests/api/test_usuarios.py` (11/11) e commitado.
+2. **`app/catalogo/tarefas.py`** — `catalogo.lixeira_expurgar` calculava `bytes_liberados` por item mas nunca
+   escrevia de volta em `plat.tenant.uso_bytes`: a cota do inquilino só subia (achado do adversário G3). Corrigido
+   só para `tipo='camada_vetorial'` (o único que a carga incrementa). Medido manualmente: sobe 188.416 na
+   importação, volta ao valor exato de antes depois de apagar + expurgar.
+3. **Migração `20260906T1812_ingestao_slug_com_hifen.sql`** — `plat.tenant.slug` aceita hífen, mas
+   `camada_schema_garantir`/`camada_preparar` (029) e o `pattern` de "schema" no esquema JSON de `camada_vetorial`
+   recusavam qualquer slug com hífen (outro achado do G3): um inquilino como `zt-inq-xxxxxx` (o formato do próprio
+   fixture `InquilinoTemporario`) nunca conseguia importar camada nenhuma. Relaxado; teste novo
+   `test_inquilino_com_hifen_no_slug_importa` prova a importação de ponta a ponta.
+4. **`tests/api/test_sessao.py::test_sessao_ociosa_expira`** — `plat.auth_sessao` só usa o parâmetro de teste
+   `PLAT_TESTE_OCIOSA_S` quando o inquilino não tem `config.auth.sessao_ociosa_horas` explícito; o `demo` de
+   instalação passou a nascer com essa chave preenchida (12 h), travando o teste sempre em 200. Corrigido para
+   remover a chave por baixo do bloqueio e devolvê-la no fim (try/finally) — não é defeito do mecanismo de sessão.
+
+Medida nova gravada: `tests/medidas/L0-04-c-tabela-camada.json` — `tempo_import_100k_s = 14,0 s` (teto do portão:
+60 s; shapefile dos 100.000 primeiros setores censitários de SP, IBGE Censo 2022, EPSG:4674).
+
+Achado no worktree, não escrito por este turno, revisado e mantido: `db/migrar.sh` ganhou uma guarda que recusa
+rodar (código 9) a partir de um `wt/*` sem `PLAT_TRILHA_ALVO` — protege exatamente o incidente descrito em
+`BRIEF_WORKTREES.md` item 5 (migração de trilha aplicada em `plat` de produção). Efeito colateral aceito, não uma
+regressão: `tests/api/test_migracoes.py` (2 testes) chamam o script direto e agora recusam de dentro de um
+worktree — continuam passando a partir da árvore principal, onde a P3 "suíte inteira verde" é de fato avaliada.
+
+Veredito por item (portão literal, cláusula a cláusula — detalhe completo em
+`laco/handoffs/T3/DESTRAVA-pais-parciais.md`): os 4 itens permanecem **parcial** — nenhum tinha todas as cláusulas
+prontas para virar `entregue` hoje, mas cada um saiu com pelo menos uma cláusula fechada com prova nova e o
+bloqueio reescrito com a cláusula exata que falta (nunca deixado em branco).
+## turno 3, setembro de 2026 (recurso partilhado sem dimensão de inquilino — laudo `ataque-g3-ADVERSARIO.md`)
+
+Sete achados do adversário G3, todos sobre RECURSO PARTILHADO (o que é por linha já estava protegido por
+RLS; o que é da instalação/máquina inteira não tinha dimensão de inquilino nenhuma), consertados em
+`db/migracoes/20260906T1615a3f_recurso_partilhado_por_inquilino.sql` + código: (1) chave do trinco
+(`plat.job.chave`) passou a ser comparada por `(tenant_id, chave)` — um inquilino não congela mais o
+trabalho de outro; (2) fila reparte por inquilino (menos trabalho rodando, depois mais tempo de espera)
+antes de olhar a prioridade escolhida pelo usuário — medido: inquilino que chegou 1º saiu da posição 21ª
+para a 1ª; (3) `plat.job_ceifar_vencidos` novo permite a API ceifar trabalho sem executor vivo (antes,
+68 s depois de um SIGKILL sem nenhum worker de pé, o trabalho seguia "rodando" na tela); (4) morte do
+executor sem sinal (`job_ceifar`) passa a consumir TENTATIVA, não reinício — 3 SIGKILL seguidos no mesmo
+trabalho fecham "falhou" na 3ª (nunca "concluído"; reproduzido ao vivo,
+`tests/api/adversario_g3/g3_sigkill_worker.py`: veredito PASSA); reinício limpo do worker
+(`systemctl restart`) continua contando como reinício; (5) `plat.tenant.uso_bytes` virou gatilho simétrico
+em `plat.item` (soma no INSERT, devolve no DELETE) em vez de soma manual em `app/ingestao/carregar.py` —
+medido: 188.416 → 376.832 → 0 depois de apagar e expurgar (antes ficava em 376.832 para sempre); (6) o
+schema de dado do inquilino carrega o prefixo da INSTALAÇÃO (`plat.camada_schema_prefixo()`) — produção,
+homologação e as trilhas do laço deixam de escrever todas em `d_<slug>`; (7) orçamento de conexões SSE
+(`app/jobs/eventos.py`) virou teto da INSTALAÇÃO com três níveis (usuário/inquilino/total), repartido por
+`PLAT_API_PROCESSOS` — antes o teto por usuário era por PROCESSO e a unidade sobe `--workers 2` (o limite
+real valia o dobro do publicado, sem nenhum teto por inquilino).
+
+Achado extra, fora do laudo original, do próprio gerente medindo o efeito colateral em produção: o
+advisory lock "1 pesado por vez" (`app/jobs/worker.py::_pegar`) também é recurso partilhado — sem
+namespace de instalação (`LOCK_PESADO`, cherry-pick `9eb88b9` de `wt/stac`) e com um defeito de disciplina
+próprio (`pesado_ok` só refletia a aquisição FRESCA do lock: um worker que já o segurava de uma volta
+anterior nunca mais o soltava sozinho — medido ao vivo, a trilha `destrava` segurando o lock horas com a
+fila vazia). Testando o conserto apareceu uma TERCEIRA metade do mesmo defeito: advisory lock é reentrante
+na mesma sessão, então um worker com `PLAT_WORKER_PROCESSOS > 1` que já tinha um pesado em curso pedia (e
+recebia) um SEGUNDO pesado para si mesmo — dois pesados em paralelo no MESMO worker, sem nenhuma outra
+trilha envolvida (`tests/api/jobs/test_jobs_fila.py::test_pesado_nunca_em_paralelo_com_pesado`, que já
+existia e não tinha essa regressão até este achado). `tests/unit/test_worker_lock_pesado.py` (4 testes)
+prova as três metades directement contra a classe `Worker`, sem banco.
+
+`tests/unit/test_recurso_partilhado_por_inquilino.py` (a trava de classe que já existia, virada de
+`xfail(strict=True)` para prova de cada um dos 5 pontos do laudo) ganhou um 6º ponto (o lock de pesado) e
+reprova qualquer recurso partilhado novo que perca a dimensão de inquilino/instalação.
+
+Achado colateral fora de escopo (registrado, não consertado aqui): `tests/api/jobs/test_jobs_memoria.py`
+falha mesmo alocando só 64 MB sob um `RLIMIT_DATA` de 256 MB — confirmado com `git stash` que a falha É
+PRÉ-EXISTENTE (reproduz sem nenhuma mudança desta trilha). Medido: o worker, ANTES de forkar qualquer job,
+já tem `VmData` (`/proc/<pid>/status`) de ~483 MB — acima do teto de 256 MB que o filho herda por COW no
+fork. É item do dono do L0-05-e/memória (RLIMIT_DATA x VmData herdado do pai), não de recurso partilhado.
+## turno 3, setembro de 2026 (conserto do grupo G4: dono de objeto, teto de cota, expurgo de rastro, contrato comitado)
+
+Cinco achados do ataque adversarial independente (`laco/handoffs/T3/ataque-g4-ADVERSARIO.md`, ramo `wt/adv4`)
+consertados nesta trilha (`wt/g4fix`); decisões em `docs/adr/20260906T1747-g4-conserto-seguranca.md`.
+`GET`/`DELETE /api/arquivos/{sha256}` agora exigem ser DONO do objeto ou ter `conteudo.ver_tudo`/
+`conteudo.apagar_tudo` (G4-06, G4-07; um visualizador lia e apagava o logotipo da organização). Apagar objeto
+grava evento (`arquivos/apagar`) e marca a linha como apagada por `plat.arquivo_apagado_marcar`, `SECURITY
+DEFINER` com o inquilino como argumento explícito — não mais um `UPDATE` que a RLS engolia em silêncio fora de
+sessão (G4-08, G4-09; a varredura de órfãos parou de acusar toda exclusão legítima). `plat.tenant` ganhou
+`cota_bytes_teto`/`cota_usuarios_teto` (padrão 20 GiB / 2000, teto absoluto da instalação 1 TiB / 100.000);
+`PUT /api/org` recusa com `422 cota_acima_do_teto` acima do teto do inquilino, e só a plataforma move o teto
+(`PUT /api/plataforma/inquilinos/{id}/cotas`, superadmin) — três camadas independentes (esquema, rota,
+gatilho `tg_tenant_cota_guarda`) fecham o que antes deixava um admin de inquilino subir a cota a `9×10¹⁸`
+bytes com `200 OK` (G4-04, G4-05). `plat.evento_expurgar`/`log_expurgar` agora validam `p_meses` (1-1200, nunca
+alcança o mês corrente) e perderam `EXECUTE` de `plat_app`/`plat_worker`; expurgo por UM inquilino é caminho
+separado (`*_expurgar_inquilino`, `EXECUTE` só para `plat_worker`) que apaga linha, nunca partição — antes,
+`evento_expurgar(-1)` derrubava a partição do mês corrente para todos os inquilinos (G4-10). `docs/openapi.json`
+regerado e `tests/api/test_openapi_contrato.py` novo compara o arquivo comitado com `app.openapi()` a cada
+rodada — estava 28 rotas atrás, o que fazia a cobertura de evento e a varredura cruzada de isolamento
+enxergarem menos rotas do que a aplicação tem (G4-01). Migração
+`db/migracoes/20260906T1601_g4_conserto_seguranca.sql`. `tests/api/test_g4_adversario.py` (ramo `wt/adv4`,
+copiado) teve as marcas `xfail` destes oito achados trocadas por teste comum; `tests/api/test_g4_conserto.py`
+cobre o que o ataque não podia medir de fora (ciclo completo do apagar, permissão de banco, caminho legítimo
+do teto). Os demais 16 achados do laudo (G4-02/03/11 a 24) pertencem a outros itens/trilhas e ficam de fora.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 

@@ -200,6 +200,13 @@ ORG_LOGO_PIXELS_MAX = 25_000_000          # mesma defesa de bomba de descompress
 ORG_LOGO_LADO = 300                       # canvas quadrado 300×300 (portão do item-pai)
 ORG_COTA_BYTES_MIN = 100 * 1024 * 1024    # 100 MiB: abaixo disso o próprio inquilino de demonstração não sobe
 ORG_COTA_USUARIOS_MIN = 1
+# Teto ABSOLUTO da instalação (achados G4-04/G4-05: o admin do inquilino passou de 20 GiB para 9e18 bytes e de
+# 2.000 para 1e9 assentos com HTTP 200, e a cota chegou ao bucket do Garage). Quem escolhe o teto de CADA
+# inquilino é a plataforma (`PUT /api/plataforma/inquilinos/{id}/cotas`, superadmin, grava
+# plat.tenant.cota_bytes_teto/cota_usuarios_teto); o inquilino só escolhe abaixo do próprio teto. Estes dois
+# números são o limite que nem a plataforma passa, e estão repetidos em plat.tenant_cotas_teto_definir.
+ORG_COTA_BYTES_TETO_MAX = 1024 * 1024 * 1024 * 1024   # 1 TiB
+ORG_COTA_USUARIOS_TETO_MAX = 100_000
 ORG_COTA_USUARIOS_PADRAO = 2000           # bem acima do maior lote (LOTE_MAX=100) e do uso medido em demo (T3: 59)
 
 # --- perfil próprio do usuário (L0-02-g-perfil-usuario; POST/PUT /api/eu, app/auth/rotas_eu.py): idioma,
@@ -545,3 +552,14 @@ CHAMADO_DOM_TEXTO_MAX = 120                # e o texto de cada entrada, cortado 
 # (L7-22)"). L7-22-sla-e-incidentes (pendente) é quem deve mover estes números para dado medido em tabela;
 # enquanto isso valem os valores declarados aqui, exibidos junto do tempo medido em toda leitura do chamado.
 CHAMADO_SLA_PRIMEIRA_RESPOSTA_HORAS = {"critica": 4, "alta": 8, "media": 24, "baixa": 72}
+# --- recurso partilhado com dimensão de inquilino (conserto de classe 06/09, laudos ataque-g2/g3/g4/g6).
+# Cinco adversários independentes mediram o mesmo padrão: o que é por LINHA estava protegido (RLS, filtro de
+# dono, contexto por inquilino), o que é RECURSO PARTILHADO não tinha dimensão de inquilino nenhuma. Os
+# números abaixo são tetos da INSTALAÇÃO inteira; app/jobs/eventos.py divide cada um pelo número de
+# processos da API (PLAT_API_PROCESSOS) antes de aplicá-lo dentro do processo.
+SSE_POR_USUARIO = 10        # conexões de eventos abertas por usuário (era 10 POR PROCESSO = 20 na unidade)
+SSE_POR_INQUILINO = 40      # teto novo: sem ele um inquilino com muitos usuários consome a máquina inteira
+SSE_TOTAL = 200             # teto novo: orçamento da instalação, independente de quantos inquilinos existem
+CEIFA_API_INTERVALO_S = 30  # a API ceifa os jobs sem sinal do PRÓPRIO inquilino no máximo a cada 30 s
+CEIFA_LIMITE_S = 60         # mesmo LIMITE_SEM_SINAL_S do worker (app/jobs/worker.py); piso na função SQL
+CHAVE_RESERVADA = "sys:"    # espaço de nome das chaves de trinco dos periódicos da plataforma

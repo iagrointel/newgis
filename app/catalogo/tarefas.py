@@ -120,7 +120,16 @@ def catalogo_lixeira_expurgar(
                 cur.execute("SELECT plat.item_expurgar(%s::uuid) AS ok", (iid,))
                 if not cur.fetchone()["ok"]:
                     raise destruidores.Recusado("registro já não estava na lixeira")
-                bytes_total += liberados or int(c["tamanho_bytes"] or 0)
+                liberados_item = liberados or int(c["tamanho_bytes"] or 0)
+                bytes_total += liberados_item
+                if liberados_item and c["tipo"] == "camada_vetorial":
+                    # achado do adversário G3 (L0-04-c): uso_bytes só subia em app/ingestao/carregar.py (só
+                    # camada_vetorial incrementa — arquivo usa a cota própria do bucket no Garage, L0-11) e
+                    # nunca descia no expurgo — a cota do inquilino nunca voltava, mesmo desfazendo tudo.
+                    cur.execute(
+                        "UPDATE plat.tenant SET uso_bytes = greatest(0, uso_bytes - %s) WHERE id = %s",
+                        (liberados_item, c["tenant_id"]),
+                    )
                 _evento(
                     cur,
                     c["tenant_id"],
@@ -129,7 +138,7 @@ def catalogo_lixeira_expurgar(
                     {
                         "item_id": iid,
                         "tipo": c["tipo"],
-                        "bytes_liberados": liberados or int(c["tamanho_bytes"] or 0),
+                        "bytes_liberados": liberados_item,
                         "titulo": (c["titulo"] or "")[:250],
                         "job_id": str(ctx.job_id),
                     },

@@ -3,7 +3,10 @@ técnico `plataforma` na partida do worker. Este arquivo entrega três: `jobs.ex
 job_log > 30 dias, marcadores e passos órfãos em plat_trabalho, diretórios de trabalho órfãos > 7 dias),
 `jobs.sessoes_expurgar` (sessões vencidas e desafios 2FA expirados, `plat.sessoes_expurgar()` da 003, já existia
 sem periódico que a chamasse) e `jobs.manutencao_analyze` (ANALYZE semanal nas tabelas centrais, `plat.
-manutencao_analyze` da 026 — ANALYZE não pode rodar como plat_app, então a função é SECURITY DEFINER). Somados aos
+manutencao_analyze` da 026 — ANALYZE não pode rodar como plat_app, então a função é SECURITY DEFINER). As duas
+chaves de trinco que só a plataforma usa vivem no espaço de nome reservado `sys:` (app/limites.py): o gatilho
+plat.job_chave_reservada recusa essa chave a trabalho de inquilino comum criado fora de agenda, e a partir da
+migração 20260906T1615 o trinco é comparado por (inquilino, chave) — um inquilino não congela o outro. Somados aos
 dois do catálogo (`app/catalogo/periodicos.py`, que se soma a esta lista na importação), o total é 5 (achado do
 testador T3: o portão L0-05-d exige 5 periódicos e só 3 estavam registrados)."""
 
@@ -13,6 +16,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from app.limites import CHAVE_RESERVADA
 from app.jobs.registro import tarefa
 
 DIAS_JOB = 90
@@ -61,7 +65,7 @@ class SessoesExpurgarParametros(BaseModel):
 @tarefa(nome="jobs.sessoes_expurgar",
         descricao="Expurgo: sessões vencidas (expira_em ou 24h sem uso) e desafios 2FA expirados, todos os inquilinos",
         parametros=SessoesExpurgarParametros, pesado=False, memoria_mb=256, timeout_s=120, tentativas=1,
-        chave=lambda p: "sessoes_expurgar", perfil_minimo="admin")
+        chave=lambda p: f"{CHAVE_RESERVADA}sessoes_expurgar", perfil_minimo="admin")
 def jobs_sessoes_expurgar(ctx) -> dict:
     with ctx.db() as cur:
         cur.execute("SELECT plat.sessoes_expurgar() AS n")
@@ -80,7 +84,7 @@ class ManutencaoAnalyzeParametros(BaseModel):
 @tarefa(nome="jobs.manutencao_analyze",
         descricao="Manutenção: ANALYZE nas tabelas centrais da plataforma (estimativas do planejador em dia)",
         parametros=ManutencaoAnalyzeParametros, pesado=False, memoria_mb=256, timeout_s=1800, tentativas=1,
-        chave=lambda p: "manutencao_analyze", perfil_minimo="admin")
+        chave=lambda p: f"{CHAVE_RESERVADA}manutencao_analyze", perfil_minimo="admin")
 def jobs_manutencao_analyze(ctx, tabelas: list[str] | None = None) -> dict:
     with ctx.db() as cur:
         if tabelas:
