@@ -30,7 +30,7 @@ ESQUEMA_AUTH: dict[str, dict[str, Any]] = {
 
 @dataclass(frozen=True)
 class Politica:
-    senha_min: int = 8
+    senha_min: int = 10  # espelha limites.AUTH_PADROES["senha_min"][0]; piso configurável 8
     senha_maiuscula: bool = False
     senha_minuscula: bool = False
     senha_simbolo: bool = False

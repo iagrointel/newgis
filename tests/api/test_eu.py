@@ -30,19 +30,21 @@ def _png(largura=64, altura=64, cor=(30, 90, 200)) -> bytes:
 def _b64(dados: bytes) -> str:
     return base64.b64encode(dados).decode()
 
+# os exemplos de COMPOSIÇÃO têm 10 caracteres desde que o padrão da plataforma virou 10 (achado G1-b1): com 8
+# reprovariam por `minimo` e a falta de letra ou de dígito nunca seria avaliada.
 SENHAS_FRACAS = [
     ("", "minimo"),
     ("a1", "minimo"),
     ("abcdef1", "minimo"),
-    ("12345678", "composicao"),
-    ("abcdefgh", "composicao"),
-    ("        ", "composicao"),
+    ("1234567890", "composicao"),
+    ("abcdefghij", "composicao"),
+    ("          ", "composicao"),
     ("x" * 129 + "1", "maximo"),
     ("ãéíõú", "minimo"),
     ("1234567", "minimo"),
     ("abc def", "minimo"),
-    ("AAAAAAAA", "composicao"),
-    ("!!!!!!!!", "composicao"),
+    ("AAAAAAAAAA", "composicao"),
+    ("!!!!!!!!!!", "composicao"),
 ]
 
 
@@ -65,7 +67,7 @@ def test_objeto_eu_sob_cookie(sessao_a):
         "sessao",
     } <= set(j)
     assert j["superadmin"] is False and j["origem"] == "local" and "token" not in j
-    assert j["inquilino"]["config_publica"]["auth"]["senha_min"] == 8
+    assert j["inquilino"]["config_publica"]["auth"]["senha_min"] == 10  # padrão da plataforma (piso 8)
     assert set(j["sessao"]) == {"criado_em", "expira_em", "ociosa_ate", "ip"}
     assert "senha_hash" not in j and "totp_secret" not in j
 

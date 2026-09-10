@@ -697,7 +697,7 @@ Como o superadmin age sobre outros inquilinos, sem nunca "entrar como" ninguém:
 
 | chave | padrão | faixa | usada em |
 |---|---|---|---|
-| `senha_min` | 8 | 8–64 | 6.1 |
+| `senha_min` | 10 | 8–64 | 6.1 |
 | `senha_maiuscula`, `senha_minuscula`, `senha_simbolo` | false | boolean | 6.1 |
 | `senha_historico` | 5 | 0–24 | 6.1 |
 | `senha_expira_dias` | 0 | 0 ou 30–365 | 6.1 |
@@ -713,7 +713,7 @@ Como o superadmin age sobre outros inquilinos, sem nunca "entrar como" ninguém:
 
 Valor ausente = padrão; valor fora da faixa = `422` na rota que grava (`PUT /api/inquilino/config`, L0-07-a) e, se
 já estiver no banco por outro caminho, a leitura CORTA para a faixa e grava aviso no journal (nunca deixa a política
-mais fraca que o padrão: `senha_min = 4` no banco vale 8). `app/limites.py` guarda padrões e faixas; `docs/LIMITES.md`
+mais fraca que o piso: `senha_min = 4` no banco vale 8, e sem a chave vale o padrão 10). `app/limites.py` guarda padrões e faixas; `docs/LIMITES.md`
 (L0-12) é gerado dali.
 
 ---

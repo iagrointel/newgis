@@ -2,7 +2,6 @@
 de exceção do banco (gatilhos e funções levantam códigos curtos) para ErroAPI, paginação, cookie de sessão."""
 
 import json
-import logging
 from typing import Any
 
 import psycopg2
@@ -13,8 +12,6 @@ from app import limites
 from app.auth.sessao import COOKIE, Auth, ip_de, iso
 from app.erros import ErroAPI
 from app.settings import settings
-
-log = logging.getLogger("plat.auth.comum")
 
 SQL_USUARIO = """
 SELECT u.id, u.login, u.nome, u.email, u.perfil, u.superadmin, u.ativo, u.origem, u.totp_ativo, u.trocar_senha,
@@ -41,9 +38,6 @@ ERROS_DO_BANCO = {
     "contexto_de_outro_inquilino": (403, "operação fora do inquilino da sessão"),
     "superadmin_so_plataforma": (422, "superadmin só no inquilino da plataforma"),
     "usuario_inativo_ou_inquilino_suspenso": (401, "usuário inativo ou inquilino suspenso"),
-    # item L0-07-f-console-plataforma
-    "so_admin_de_inquilino": (409, "só administradores do inquilino; membro comum é atendido pelo admin dele"),
-    "plataforma_2fa_obrigatorio": (409, "o segundo fator do inquilino da plataforma não se desliga por aqui"),
 }
 
 
@@ -108,36 +102,34 @@ def registrar_evento(
     )
 
 
-def erro_do_banco(e: Exception) -> ErroAPI:
-    """RaiseException com código curto → ErroAPI; violação de unicidade/CHECK/FK → 409/422."""
+def erro_do_banco(e: Exception, *, expor_restricao: bool = True) -> ErroAPI:
+    """RaiseException com código curto → ErroAPI; violação de unicidade/CHECK/FK → 409/422.
+
+    `expor_restricao=False` em ROTA PÚBLICA (sem credencial): o nome do índice/constraint é topologia interna do
+    banco e não vai para quem ainda não se autenticou (achado G1-l3 do adversário do turno 3, em
+    POST /api/login/ldap). Em rota autenticada o nome continua saindo — ele é o que deixa o administrador
+    entender qual regra recusou a operação.
+    """
+
+    def _detalhe(nome: str | None) -> dict | None:
+        return {"restricao": nome} if expor_restricao else None
+
     if isinstance(e, psycopg2.errors.RaiseException):
         codigo = (e.diag.message_primary or "").strip()
         if codigo in ERROS_DO_BANCO:
             status, mensagem = ERROS_DO_BANCO[codigo]
             return ErroAPI(status, codigo, mensagem)
+        if not expor_restricao:
+            return ErroAPI(409, "regra_do_banco", "a operação foi recusada por uma regra da plataforma")
         return ErroAPI(409, "regra_do_banco", codigo or "regra do banco recusou a operação")
     if isinstance(e, psycopg2.errors.UniqueViolation):
-        return ErroAPI(409, "conflito", "já existe um registro com esse valor", {"restricao": e.diag.constraint_name})
-    if isinstance(e, psycopg2.errors.WithCheckOptionViolation):
-        # vista de camada criada `WITH CASCADED CHECK OPTION` (item L5-32): a linha nasceria/ficaria fora do
-        # filtro ou da extensão da vista. É recusa de regra declarada, nunca falha do servidor.
-        return ErroAPI(422, "fora_da_vista",
-                       "a feição ficaria fora do filtro ou da extensão desta vista de camada",
-                       {"restricao": e.diag.constraint_name})
+        return ErroAPI(409, "conflito", "já existe um registro com esse valor", _detalhe(e.diag.constraint_name))
     if isinstance(e, psycopg2.errors.CheckViolation):
-        return ErroAPI(422, "validacao", "valor fora do permitido", {"restricao": e.diag.constraint_name})
+        return ErroAPI(422, "validacao", "valor fora do permitido", _detalhe(e.diag.constraint_name))
     if isinstance(e, psycopg2.errors.ForeignKeyViolation):
-        return ErroAPI(409, "em_uso", "registro referenciado por outro", {"restricao": e.diag.constraint_name})
+        return ErroAPI(409, "em_uso", "registro referenciado por outro", _detalhe(e.diag.constraint_name))
     if isinstance(e, psycopg2.errors.InsufficientPrivilege):
-        # Portão do L0-12 (achado G4-23): 403 "fora do inquilino" só quando o banco PROVA a fronteira —
-        # a mensagem da violação de RLS. Qualquer outro 42501 (GRANT faltando, schema errado, papel mal
-        # configurado) é defeito de servidor: 500 com a causa real no diário, nunca um fato não medido
-        # sobre o inquilino do chamador.
-        mensagem = (getattr(e, "diag", None) and e.diag.message_primary) or str(e)
-        if "row-level security policy" in mensagem:
-            return ErroAPI(403, "sem_permissao", "operação fora do inquilino da sessão")
-        log.exception("erro_do_banco: 42501 sem violação de RLS é configuração do servidor: %s", mensagem)
-        return ErroAPI(500, "configuracao_banco", "defeito de configuração do servidor; a causa está no diário")
+        return ErroAPI(403, "sem_permissao", "operação fora do inquilino da sessão")
     if isinstance(e, psycopg2.errors.ReadOnlySqlTransaction):
         return ErroAPI(403, "somente_leitura", "leitura de outro inquilino não permite escrita")
     raise e

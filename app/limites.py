@@ -4,7 +4,10 @@ Cada trilha acrescenta a sua seção abaixo da anterior; nenhuma edita a seção
 # --- identidade (L0-02)
 # política de senha, sessão, bloqueio e token: (padrão, mínimo, máximo) por chave de tenant.config.auth
 AUTH_PADROES: dict[str, tuple] = {
-    "senha_min": (8, 8, 64),
+    # padrão 10 (a hipótese do item L0-02-b, e o que o portão declara); 8 continua sendo o PISO configurável,
+    # que é também o mínimo do NIST SP 800-63B §3.1.1.2 para senha escolhida pelo usuário. Era (8, 8, 64):
+    # achado G1-b1 do adversário do turno 3, portão e código divergindo.
+    "senha_min": (10, 8, 64),
     "senha_maiuscula": (False, None, None),
     "senha_minuscula": (False, None, None),
     "senha_simbolo": (False, None, None),
@@ -27,6 +30,7 @@ DESAFIO_2FA_MIN = 5
 TOTP_JANELA_PASSOS = 1
 CODIGOS_RECUPERACAO = 8
 SENHA_TEMPORARIA_TAMANHO = 12
+TOKEN_PREFIXO_TAMANHO = 8  # "plat_" + 3 do segredo; o portão do L0-02-d declara 8 (achado G1-d1)
 TOKENS_POR_USUARIO = 20
 GRUPOS_POR_USUARIO = 512
 GRUPO_TAGS_MAX = 50

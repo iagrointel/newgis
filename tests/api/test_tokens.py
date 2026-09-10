@@ -20,7 +20,9 @@ def test_criar_formato_e_lista(sessao_a):
     r = _criar(sessao_a)
     assert r.status_code == 201, r.text
     j = r.json()
-    assert j["token"].startswith("plat_") and len(j["token"]) == 48 and j["prefixo"] == j["token"][:12]
+    # prefixo de 8, como o portão do L0-02-d declara (achado G1-d1): "plat_" + 3 do segredo
+    assert j["token"].startswith("plat_") and len(j["token"]) == 48
+    assert j["prefixo"] == j["token"][:8] and len(j["prefixo"]) == limites.TOKEN_PREFIXO_TAMANHO
     assert j["escopos"] == ["catalogo:ler"] and j["expira_em"]
     lista = sessao_a.get("/api/tokens").json()
     meu = next(t for t in lista if t["id"] == j["id"])

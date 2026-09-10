@@ -1,5 +1,9 @@
 """Política de senha e faixas de tenant.config.auth (ADR 0002 seções 6.1, 11, 16.5): 12 senhas inválidas com a regra
-nomeada; valor fora da faixa é cortado (nunca mais fraco que o padrão); plataforma exige 2FA sempre."""
+nomeada; valor fora da faixa é cortado (nunca mais fraco que o padrão); plataforma exige 2FA sempre.
+
+Os exemplos de COMPOSIÇÃO passaram de 8 para 10 caracteres quando o padrão da plataforma virou 10 (achado
+G1-b1 do adversário do turno 3): com 8 eles passariam a reprovar por `minimo`, e a regra que este teste quer
+exercitar — falta de letra ou de dígito — nunca chegaria a ser avaliada. O que se testa continua o mesmo."""
 
 import logging
 
@@ -10,29 +14,28 @@ from app.auth import politica as pol
 
 PADRAO = pol.politica_de({}, "demo")
 
+LOGIN, SLUG, NOME = "maria12345", "demo202612", "Maria Silva1"
+
 INVALIDAS = [
     ("", "minimo"),
     ("a1", "minimo"),
     ("abcdef1", "minimo"),  # 7
-    ("12345678", "composicao"),  # sem letra
-    ("abcdefgh", "composicao"),  # sem dígito
-    ("        ", "minimo"),  # 8 espaços: sem letra e sem dígito... o mínimo passa? não: len 8 ok → composição
+    ("1234567890", "composicao"),  # 10, sem letra
+    ("abcdefghij", "composicao"),  # 10, sem dígito
+    ("          ", "composicao"),  # 10 espaços: o mínimo passa, a composição não
     ("x" * 129 + "1", "maximo"),
-    ("maria123", "igual_login"),  # igual ao login
-    ("Demo2026", "igual_login"),  # igual ao slug (caso-insensível)
-    ("Maria Silva1", "igual_login"),  # igual ao nome
+    (LOGIN, "igual_login"),  # igual ao login
+    (SLUG.capitalize(), "igual_login"),  # igual ao slug (caso-insensível)
+    (NOME, "igual_login"),  # igual ao nome
     ("ãéíõú", "minimo"),
-    ("1234567a", None),  # válida: controle
+    ("1234567abc", None),  # válida: controle
 ]
 
 
 @pytest.mark.parametrize("senha,regra", INVALIDAS)
 def test_senhas_invalidas_nomeiam_a_regra(senha, regra):
-    esperado = regra
-    if senha == "        ":
-        esperado = "composicao"
-    r = pol.regra_da_senha(senha, PADRAO, login="maria123", slug="demo2026", nome="Maria Silva1")
-    assert r == esperado, (senha, r)
+    r = pol.regra_da_senha(senha, PADRAO, login=LOGIN, slug=SLUG, nome=NOME)
+    assert r == regra, (senha, r)
 
 
 def test_composicao_extra_quando_o_inquilino_exige():
@@ -70,7 +73,7 @@ def test_valor_fora_da_faixa_e_cortado_com_aviso(caplog):
             },
             "demo",
         )
-    assert p.senha_min == 8 and p.bloqueio_tentativas == 10 and p.sessao_ociosa_horas == 1
+    assert p.senha_min == 8 and p.bloqueio_tentativas == 10 and p.sessao_ociosa_horas == 1  # 4 -> piso 8
     assert p.senha_expira_dias == 30 and p.token_max_dias == 365 and p.token_padrao_dias == 365
     assert sum("cortado" in r.getMessage() for r in caplog.records) >= 5
 
@@ -79,7 +82,7 @@ def test_tipo_errado_vira_padrao_e_dominios_normalizados():
     p = pol.politica_de(
         {"auth": {"senha_min": "dez", "exigir_2fa": "sim", "dominios_email": [" Org.Gov.BR ", ""]}}, "demo"
     )
-    assert p.senha_min == 8 and p.exigir_2fa is False
+    assert p.senha_min == 10 and p.exigir_2fa is False  # tipo errado vira o PADRÃO (10), não o piso (8)
     assert p.dominios_email == ("org.gov.br",)
     assert pol.email_permitido("m@org.gov.br", p) and not pol.email_permitido("m@outro.com", p)
     assert pol.email_permitido(None, p) and pol.email_permitido("x@qualquer.com", PADRAO)
