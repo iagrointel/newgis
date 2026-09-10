@@ -3428,6 +3428,29 @@ L2-05-b sobre uma feição real (não um bbox de consulta) precisa saber que rep
 reprojetar cada vértice, nunca só os 2 cantos opostos do envelope. Sentido inverso SIRGAS2000 -> Córrego
 Alegre não é suportado (recusa explícita, `CRSInexistenteErro`): a ingestão só LÊ dado legado, nunca
 grava nele, e nenhum consumidor desta plataforma pede essa direção.
+## turno 3, setembro de 2026 (item FK-CLASSE-CONSERTO: FK composta por inquilino no resto do schema `plat`)
+
+Mesma classe do achado A1 de `L4-01-a-pacote-de-ativos` (FK simples entre duas tabelas com `tenant_id` não é
+filtrada pela RLS — a checagem de referência do Postgres roda com o privilégio do dono da tabela, ignora a
+política), fora de `plat.rede_*` (já corrigida em `20260906T1815_rede_fk_por_inquilino.sql`). A varredura de
+`pg_constraint` daquele item achou 55 ocorrências fora da rede, listadas como "fora do escopo" na trava
+`tests/api/test_fk_composta_por_inquilino.py`; 44 delas já existem no schema `master` (as outras 11 pertencem
+a tabelas de trilhas ainda não mescladas — `exportacao`, `geocodificacao*`, `raster_item`, `raster_colecao`,
+`rede.dono_id`/`rede.importado_por`). `db/migracoes/20260906T1847_fk_por_inquilino_classe.sql` dá `UNIQUE
+(tenant_id, id)` a 10 tabelas-alvo (`usuario`, `papel_personalizado`, `item`, `grupo`, `pasta`, `categoria`,
+`compartilhamento_link`, `conexao`, `job`, `token_servico`) e recompõe as 44 FKs como `(tenant_id, col)
+REFERENCES alvo (tenant_id, id)`, preservando o `ON DELETE` original de cada uma — as 9 que eram `SET NULL`
+usam a sintaxe de lista de colunas do Postgres 15+ (`ON DELETE SET NULL (col)`) para nulificar só a coluna da
+FK, nunca `tenant_id` (que é `NOT NULL` em toda tabela do schema; verificado na base da trilha `fkclasse`,
+nunca em produção: apagar um usuário referenciado só zera a coluna dele, o `tenant_id` da linha filha não
+muda — sem essa sintaxe o Postgres tentaria nulificar as DUAS colunas da FK composta e o DELETE falharia
+contra o `NOT NULL` de `tenant_id`). `PERMITIDAS` da trava fica vazio —
+zero FKs simples entre tabelas com `tenant_id` no schema inteiro, dívida paga (as 11 restantes reaparecem
+como achado novo quando a trilha que as introduz mesclar, e quem mesclar aplica o mesmo padrão).
+`tests/unit/test_fk_por_inquilino_classe_conserto.py` prova 5 casos concretos como `plat_app` (alvo comum,
+auto-referência uuid, auto-referência inteira, cadeia de duas tabelas): o inquilino B nunca grava apontando
+para uma linha de A, e a mensagem de recusa do Postgres é IDÊNTICA para "id não existe" e "id é de outro
+inquilino" — mata o oráculo de existência do achado A1. Medidas em `tests/medidas/fk-por-inquilino.json`.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 - **L7-06-d-paineis**: cinco painéis Grafana provisionados por arquivo (`deploy/grafana/paineis/*.json` + `deploy/grafana/provisioning/`), homologação própria (`deploy/paineis_homologacao.sh`) com carga curta de verdade e captura de cada painel em `tests/e2e/capturas/`. Métricas novas para o que os painéis precisavam e não existia: usuários ativos em 24 h, duração e tamanho do último backup/ensaio, uso de armazenamento e tamanho do schema de dado por inquilino.

@@ -10,80 +10,26 @@ cujas duas tabelas tenham `tenant_id` mas cujas colunas da FK não incluam `tena
 `20260906T1815_rede_fk_por_inquilino.sql` trocou as 10 da rede por FK composta `(tenant_id, id)`; qualquer
 tabela nova do produto que repita o padrão simples cai aqui.
 
-`PERMITIDAS` é uma exceção NOMEADA, nunca um jeito de calar o teste: cada entrada aqui é uma FK que já existia
-achada por esta varredura e pertence a OUTRO item (não fechado, não é a rede) — listada no handoff, não
-consertada nesta trilha. Uma FK nova nesta lista sem dono é bug de quem editou o teste, não do produto."""
+`PERMITIDAS` é uma exceção NOMEADA, nunca um jeito de calar o teste: só entra aqui uma FK que já foi
+avaliada e é LEGÍTIMA sem ser composta (ex.: alvo é dicionário global sem inquilino — caso que nem chega a
+este dict, porque a varredura já exige `tenant_id` dos dois lados). Uma FK nova nesta lista sem justificativa
+escrita é bug de quem editou o teste, não do produto.
+
+Item FK-CLASSE-CONSERTO (turno 3, 06/09/2026, `handoffs/T3/FK-CLASSE-CONSERTO.md`) consertou as 44 das 55
+achadas nesta varredura que já existiam no schema `master` (migração `20260906T1847_fk_por_inquilino_classe.sql`,
+mesmo padrão da `20260906T1815_rede_fk_por_inquilino.sql`). As outras 11 (`exportacao`×3, `geocodificacao`/
+`geocodificacao_linha`×3, `raster_item`/`raster_colecao`×3, `rede.dono_id`/`rede.importado_por`×2) pertencem a
+tabelas que AINDA NÃO EXISTEM em `master` — vêm de trilhas em voo (garage/valida/stac) não mescladas. Não
+entraram como exceção permanente de propósito: quando aquela trilha mesclar, esta trava vai acusar a mesma
+classe de falha e quem mesclar aplica o MESMO padrão (`UNIQUE (tenant_id, id)` no alvo + FK composta) —
+listar como "fora do escopo" para sempre deixaria a dívida crescer sem prazo."""
 
 import pytest
 
-# (tabela_filha, coluna_da_fk) -> item responsável. Achadas na mesma varredura, fora do escopo de L4-01-a;
-# ver handoffs/T3/L4-01-a-CONSERTO.md secão "fora do escopo".
-PERMITIDAS: dict[tuple[str, str], str] = {
-    # varredura de 06/09 (turno 3, item L4-01-a-pacote-de-ativos): mesma classe de falha do achado A1
-    # (a FK não confere que o alvo é do mesmo tenant_id), mas em tabelas de OUTROS itens — nenhuma é
-    # `plat.rede_*`. Listadas em handoffs/T3/L4-01-a-CONSERTO.md § "fora do escopo"; não consertadas
-    # aqui. A maioria aponta para `plat.usuario`/`plat.item`/`plat.pasta` (o dono/criador de um
-    # registro) e nasceu antes deste item — cada dono de tabela decide se compõe a FK por tenant_id
-    # ou por gatilho.
-    ("agenda", "usuario_id"): "fora do escopo de L4-01-a",
-    ("arquivo", "criado_por"): "fora do escopo de L4-01-a",
-    ("categoria", "pai_id"): "fora do escopo de L4-01-a",
-    ("compartilhamento_link_item", "item_id"): "fora do escopo de L4-01-a",
-    ("compartilhamento_link_item", "link_id"): "fora do escopo de L4-01-a",
-    ("compartilhamento_link", "criado_por"): "fora do escopo de L4-01-a",
-    ("compartilhamento_link", "item_id"): "fora do escopo de L4-01-a",
-    ("conexao_saude_historico", "conexao_id"): "fora do escopo de L4-01-a",
-    ("conexao", "dono_id"): "fora do escopo de L4-01-a",
-    ("convite", "criado_por"): "fora do escopo de L4-01-a",
-    ("convite", "papel_id"): "fora do escopo de L4-01-a",
-    ("convite", "usuario_criado_id"): "fora do escopo de L4-01-a",
-    ("exportacao", "arquivo_item_id"): "fora do escopo de L4-01-a",
-    ("exportacao", "item_id"): "fora do escopo de L4-01-a",
-    ("exportacao", "usuario_id"): "fora do escopo de L4-01-a",
-    ("favorito", "item_id"): "fora do escopo de L4-01-a",
-    ("favorito", "usuario_id"): "fora do escopo de L4-01-a",
-    ("geocodificacao_linha", "geocodificacao_id"): "fora do escopo de L4-01-a",
-    ("geocodificacao", "arquivo_id"): "fora do escopo de L4-01-a",
-    ("geocodificacao", "usuario_id"): "fora do escopo de L4-01-a",
-    ("grupo_membro", "convidado_por"): "fora do escopo de L4-01-a",
-    ("grupo_membro", "grupo_id"): "fora do escopo de L4-01-a",
-    ("grupo_membro", "usuario_id"): "fora do escopo de L4-01-a",
-    ("grupo", "dono_id"): "fora do escopo de L4-01-a",
-    ("importacao", "arquivo_id"): "fora do escopo de L4-01-a",
-    ("importacao", "usuario_id"): "fora do escopo de L4-01-a",
-    ("item_grupo", "grupo_id"): "fora do escopo de L4-01-a",
-    ("item_grupo", "item_id"): "fora do escopo de L4-01-a",
-    ("item_relacao", "destino"): "fora do escopo de L4-01-a",
-    ("item_relacao", "origem"): "fora do escopo de L4-01-a",
-    ("item_versao", "item_id"): "fora do escopo de L4-01-a",
-    ("item", "apagado_por"): "fora do escopo de L4-01-a",
-    ("item", "criado_por"): "fora do escopo de L4-01-a",
-    ("item", "dono_id"): "fora do escopo de L4-01-a",
-    ("item", "modificado_por"): "fora do escopo de L4-01-a",
-    ("item", "pasta_id"): "fora do escopo de L4-01-a",
-    ("job_log", "job_id"): "fora do escopo de L4-01-a",
-    ("job", "usuario_id"): "fora do escopo de L4-01-a",
-    ("papel_personalizado", "criado_por"): "fora do escopo de L4-01-a",
-    ("pasta", "dono_id"): "fora do escopo de L4-01-a",
-    ("pasta", "pai_id"): "fora do escopo de L4-01-a",
-    ("provedor_ldap", "atualizado_por"): "fora do escopo de L4-01-a",
-    ("provedor_ldap", "criado_por"): "fora do escopo de L4-01-a",
-    ("raster_colecao", "criado_por"): "fora do escopo de L4-01-a",
-    ("raster_item", "colecao"): "fora do escopo de L4-01-a",
-    ("raster_item", "criado_por"): "fora do escopo de L4-01-a",
-    ("redefinicao_senha", "usuario_id"): "fora do escopo de L4-01-a",
-    ("rede", "dono_id"): "fora do escopo de L4-01-a — aponta para usuario, não para outra plat.rede_*",
-    ("rede", "importado_por"): "fora do escopo de L4-01-a — aponta para usuario, não para outra plat.rede_*",
-    ("rede_topo_resumo", "construido_por"): "mesmo padrão de rede.dono_id/importado_por (item L4-01-b) — "
-        "aponta para usuario, não para outra plat.rede_topo_*; as tabelas de topologia (no/aresta/resumo/"
-        "feicao_ponto/feicao_linha) já são compostas entre si (20260906T2000)",
-    ("sessao", "usuario_id"): "fora do escopo de L4-01-a",
-    ("token_servico", "renovado_por"): "fora do escopo de L4-01-a",
-    ("token_servico", "usuario_id"): "fora do escopo de L4-01-a",
-    ("upload", "arquivo_id"): "fora do escopo de L4-01-a",
-    ("upload", "usuario_id"): "fora do escopo de L4-01-a",
-    ("usuario", "papel_id"): "fora do escopo de L4-01-a",
-}
+# (tabela_filha, coluna_da_fk) -> justificativa. Vazio: nenhuma FK simples entre tabelas com tenant_id
+# ficou sem conserto neste schema (ver histórico acima — as 11 que faltam são de tabelas que não existem
+# em `master`, não exceções). Uma entrada nova aqui exige justificativa escrita, não apaga achado.
+PERMITIDAS: dict[tuple[str, str], str] = {}
 
 
 def _fks_simples_entre_tabelas_com_tenant(cur) -> list[dict]:
