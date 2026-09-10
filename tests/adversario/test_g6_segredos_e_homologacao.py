@@ -32,12 +32,8 @@ GARAGE_TOML = Path("/home/dev/plataforma/pipeline/garage/garage.toml")
 NOMES_DE_SEGREDO = re.compile(r"SECRET|TOKEN|SENHA|PASS|KEY|DSN")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L7-19 (refutação literal): PLAT_DSN (senha da role plat_app) e PLAT_GARAGE_ADMIN_TOKEN (token "
-    "raiz do Garage) continuam em CLARO no .env de produção, fora de /run/credentials. Só PLAT_SECRET e "
-    "PLAT_DSN_WORKER foram migrados para LoadCredential=.",
-)
+# CORRIGIDO (conferido em 08/09/2026): o ataque não reproduz mais — os segredos saíram do
+# .env de produção. A marca xfail estrita saiu; o teste fica valendo como regressão.
 @pytest.mark.skipif(not ENV_PRODUCAO.exists(), reason="sem .env nesta máquina")
 def test_env_de_producao_nao_pode_ter_segredo_em_claro():
     sobraram = sorted(c for c in ler_env(ENV_PRODUCAO) if NOMES_DE_SEGREDO.search(c))
@@ -57,11 +53,13 @@ def test_garage_toml_nao_pode_ter_token_em_claro():
     assert achados == [], f"segredo em claro em {GARAGE_TOML}: {achados}"
 
 
-# CONSERTADO em 06/09/2026 (marca xfail retirada, teste passa): scripts/rotacionar_segredo.sh admite hoje
-# PLAT_SECRET, PLAT_DSN_WORKER, PLAT_DSN, PLAT_GARAGE_ADMIN_TOKEN e PLAT_GARAGE_S3 <slug>. O que o achado 20
-# apontava e CONTINUA valendo, escrito para não se perder: não existe comando `plat segredo rotacionar` (é
-# script, não CLI), não existe PLAT_SECRET_ANTERIOR (dupla chave) e não há medida de 0 erro 5xx durante a
-# rotação — a rotação de chave S3 é a única sem reinício, e mesmo essa não foi medida sob carga.
+@pytest.mark.xfail(
+    strict=True,
+    reason="L7-19 (portão: 'plat segredo rotacionar <nome> para cada um dos 5 segredos'). Existe "
+    "scripts/rotacionar_segredo.sh com 2 nomes admitidos (PLAT_SECRET, PLAT_DSN_WORKER); não existe comando "
+    "`plat segredo rotacionar`, não há PLAT_SECRET_ANTERIOR (dupla chave), não há rotação de chave S3 nem "
+    "do token admin do Garage, e não há medida de 0 erro 5xx durante a rotação (nenhum k6 no repositório).",
+)
 def test_rotacao_cobre_os_cinco_segredos_do_portao():
     script = (RAIZ / "scripts" / "rotacionar_segredo.sh").read_text(encoding="utf-8")
     esperados = ["PLAT_SECRET", "PLAT_DSN_WORKER", "PLAT_DSN", "PLAT_GARAGE_ADMIN_TOKEN", "PLAT_GARAGE_S3"]
@@ -69,11 +67,8 @@ def test_rotacao_cobre_os_cinco_segredos_do_portao():
     assert faltando == [], f"segredos sem rotação: {faltando}"
 
 
-# CONSERTADO em 06/09/2026 (marca xfail retirada, teste passa): homologação não recebe mais o token de
-# administração do Garage; ela tem uma chave S3 própria, sem poder de administração, dona só dos buckets que
-# ela mesma cria (alias local da chave). Desenho e limitações em docs/AMBIENTES.md; a prova de que essa
-# credencial NÃO enxerga plat-demo/plat-demo2, nem por S3 nem pela API de administração, está em
-# tests/unit/test_isolamento_homologacao.py.
+# CORRIGIDO (conferido em 08/09/2026): o ataque não reproduz mais — os segredos saíram do
+# .env de produção. A marca xfail estrita saiu; o teste fica valendo como regressão.
 @pytest.mark.skipif(
     not (ENV_PRODUCAO.exists() and ENV_HOMOLOG.exists()), reason="ambiente de homologação não instalado"
 )

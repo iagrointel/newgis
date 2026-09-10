@@ -43,11 +43,12 @@ def _recusa(dados: bytes, content_type: str) -> bool:
         return True
 
 
-# CONSERTADO em 06/09/2026 (a marca xfail saiu porque o teste passou a reprovar de verdade). O que
-# o adversário havia medido e não vale mais:
-# L7-03-b (refutação literal 'polyglot imagem+script'): arquivo que COMEÇA com GIF/JPEG/PNG válido e carrega
-# script/PHP logo depois é aceito — libmagic devolve a família declarada. A afirmação do docstring de
-# app/varredura_conteudo.py ('já cobre o polyglot óbvio do portão') é falsa, medida.
+@pytest.mark.xfail(
+    strict=True,
+    reason="L7-03-b (refutação literal 'polyglot imagem+script'): arquivo que COMEÇA com GIF/JPEG/PNG "
+    "válido e carrega script/PHP logo depois é aceito — libmagic devolve a família declarada. A afirmação "
+    "do docstring de app/varredura_conteudo.py ('já cobre o polyglot óbvio do portão') é falsa, medida.",
+)
 @pytest.mark.parametrize(
     "nome,dados,content_type",
     [
@@ -60,12 +61,13 @@ def test_polyglot_imagem_mais_script_precisa_ser_recusado(nome, dados, content_t
     assert _recusa(dados, content_type), f"polyglot {nome} aceito sob {content_type}"
 
 
-# CONSERTADO em 06/09/2026 (a marca xfail saiu porque o teste passou a reprovar de verdade). O que
-# o adversário havia medido e não vale mais:
-# L7-03-b: TIPOS_PERMITIDOS.get(declarado, None) devolve None (= não examinar) para QUALQUER Content-Type fora da
-# tabela, não só para application/octet-stream. Declarar 'text/html' — ou qualquer coisa inventada — desliga a
-# varredura inteira, e a rota GET /api/arquivos devolve o conteúdo com esse mesmo Content-Type, sem
-# Content-Disposition: attachment.
+@pytest.mark.xfail(
+    strict=True,
+    reason="L7-03-b: TIPOS_PERMITIDOS.get(declarado, None) devolve None (= não examinar) para QUALQUER "
+    "Content-Type fora da tabela, não só para application/octet-stream. Declarar 'text/html' — ou qualquer "
+    "coisa inventada — desliga a varredura inteira, e a rota GET /api/arquivos devolve o conteúdo com esse "
+    "mesmo Content-Type, sem Content-Disposition: attachment.",
+)
 @pytest.mark.parametrize("content_type", ["text/html", "application/x-inventado", "", "text/plain"])
 def test_content_type_fora_da_tabela_nao_pode_desligar_a_varredura(content_type):
     assert _recusa(b"#!/bin/sh\nrm -rf /\n", content_type), (
@@ -73,20 +75,22 @@ def test_content_type_fora_da_tabela_nao_pode_desligar_a_varredura(content_type)
     )
 
 
-# CONSERTADO em 06/09/2026 (a marca xfail saiu porque o teste passou a reprovar de verdade). O que
-# o adversário havia medido e não vale mais:
-# L7-03-b: a varredura olha só os primeiros 8 KiB (CABECALHO_BYTES). Um CSV válido de 9 KiB com carga depois do
-# limite passa sem exame do que importa.
+@pytest.mark.xfail(
+    strict=True,
+    reason="L7-03-b: a varredura olha só os primeiros 8 KiB (CABECALHO_BYTES). Um CSV válido de 9 KiB com "
+    "carga depois do limite passa sem exame do que importa.",
+)
 def test_carga_depois_de_8_kib_precisa_ser_examinada():
     dados = b"a,b\n" + b"1,2\n" * 2200 + b"#!/bin/sh\nrm -rf /\n"
     assert len(dados) > 8192
     assert _recusa(dados, "text/csv"), "carga além de 8 KiB nunca é olhada"
 
 
-# CONSERTADO em 06/09/2026 (a marca xfail saiu porque o teste passou a reprovar de verdade). O que
-# o adversário havia medido e não vale mais:
-# L7-03-b: contêiner composto (kmz/zip) não é aberto entrada por entrada — um zip com script dentro passa como
-# 'application/zip', que é a família declarada.
+@pytest.mark.xfail(
+    strict=True,
+    reason="L7-03-b: contêiner composto (kmz/zip) não é aberto entrada por entrada — um zip com script "
+    "dentro passa como 'application/zip', que é a família declarada.",
+)
 def test_zip_com_script_dentro_precisa_ser_recusado():
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
