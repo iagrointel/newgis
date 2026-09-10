@@ -22,6 +22,16 @@ _HEX64 = re.compile(r"^[0-9a-fA-F]{64}$")
 POOL_MIN_PADRAO = 1
 POOL_MAX_PADRAO = 8
 
+# item L2-01-a-casca-sig (10/09/2026): allowlist FIXA de serviços WMS públicos que `app/mapa/proxy_wms.py`
+# repassa sem sessão (bases externas para o SIG: ortofoto GeoSampa, limites IBGE, catálogo INDE). Não é um
+# campo de `Settings` de propósito — não vem do .env, não muda por inquilino, é constante da instalação
+# (o mesmo motivo por que não é validada em `carregar()`).
+WMS_PUBLICO_ALLOWLIST: dict[str, str] = {
+    "geosampa": "https://raster.geosampa.prefeitura.sp.gov.br/geoserver/geoportal/wms",
+    "ibge": "https://geoservicos.ibge.gov.br/geoserver/ows",
+    "inde": "https://geoservicos.inde.gov.br/geoserver/ows",
+}
+
 
 class ErroConfiguracao(RuntimeError):
     """Chave de configuração ausente ou inválida; a mensagem nomeia a chave."""
@@ -31,6 +41,12 @@ class ErroConfiguracao(RuntimeError):
 class Settings:
     PLAT_DSN: str
     PLAT_SECRET: str
+    # item L7-19-segredos-e-certificados: dupla-chave de rotação. Durante as 24h depois de `plat segredo
+    # rotacionar PLAT_SECRET`, o valor ANTIGO fica aqui (LoadCredential=, nunca no .env) para que o que foi
+    # cifrado/assinado com ele ainda seja lido (sessão TOTP, credencial LDAP/SMTP/conexao, URL de objeto já
+    # emitida) enquanto o valor novo já assina/cifra tudo o que é gravado dali em diante. Vazio fora da
+    # janela de rotação — é o caso comum. Ver app/seguranca_rotacao.py e docs/RUNBOOKS/segredos.md.
+    PLAT_SECRET_ANTERIOR: str | None
     PLAT_AMBIENTE: str
     PLAT_URL_PUBLICA: str
     PLAT_GIT_SHA: str | None
@@ -58,8 +74,17 @@ class Settings:
     # rede de rota (L2-11-c): OSRM isolado plat-osrm-guarulhos (:5010), só recorte de teste ≤ 50 MB;
     # nunca aponta para os OSRM de outras frentes da casa (5000-5003)
     PLAT_OSRM_URL: str
+    # importação BDGD por caminho local (item L4-01-c): pasta de onde o job aceita ler pacotes .gdb.zip;
+    # vazia = desligada (D21: o job nunca baixa da ANEEL, o disco não comporta)
+    PLAT_BDGD_RAIZ: str | None
     PLAT_ROTA_MATRIZ_MAX: int
     PLAT_ROTA_ISOCRONA_MAX_PONTOS: int
+    # tiles vetoriais (L2-01-b): DSN do papel plat_leitor (LOGIN, sem BYPASSRLS), usado SÓ pela rota
+    # /internal/tiles/verificar (auth_request do nginx) para validar o token antes de o pedido chegar ao
+    # Martin — o Martin (martin-core GetTileWithQueryError) devolve 500 para QUALQUER erro do Postgres,
+    # nunca 401/403, então a checagem de "sem token = 401" tem de acontecer fora dele. Ausente = a rota
+    # devolve 503 (falha fechada: sem DSN de leitor, nenhum tile passa).
+    PLAT_DSN_LEITOR: str | None
     # item L7-31 (docs/HOMOLOGACAO.md): homologação reusa o MESMO banco iagro_sat, nunca um banco novo (disco a
     # 98%) — schema e canal de notificação viram configuráveis para que o mesmo código sirva os dois ambientes
     # sem colisão. Produção nunca declara estas 4 chaves no .env: os padrões abaixo reproduzem bit a bit o que
@@ -86,11 +111,6 @@ class Settings:
     # .env de trilha grava PLAT_POOL_MAX=2 (ver laco/trilha_ambiente.sh).
     PLAT_POOL_MIN: int
     PLAT_POOL_MAX: int
-    # item L6-02-i-google-sheets: origem aceita para URL de planilha e base da URL de exportação CSV
-    # (app/conexao/google_sheets.py). Produção NUNCA declara: o padrão é o docs.google.com. A chave existe
-    # para o teste de integração, que aponta para um servidor local no IP público da máquina falando os
-    # dois protocolos (exportação CSV e troca de token OAuth2) de verdade — mesma técnica do L6-02-h.
-    PLAT_SHEETS_EXPORTACAO_PREFIXO: str
 
     @property
     def producao(self) -> bool:
@@ -101,6 +121,34 @@ class Settings:
                 "worker": self.PLAT_WORKER_URL}
 
 
+    # ------------------------------------------------------------------------------------------
+    # (entrega 10/09) União dos campos que outros ramos declararam neste mesmo dataclass e que a
+    # fusão perdeu ao ficar com um lado só. Todos com padrão, para não quebrar a ordem do dataclass.
+    PLAT_RENDER_POOL_TAMANHO: int = 0  # (entrega 10/09) de wt/il212blayou
+    PLAT_RENDER_FILA_MAX: int = 0  # (entrega 10/09) de wt/il212blayou
+    PLAT_RENDER_TIMEOUT_S: int = 0  # (entrega 10/09) de wt/il212blayou
+    PLAT_RENDER_TOKEN_TTL_S: int = 0  # (entrega 10/09) de wt/il212blayou
+    PLAT_RENDER_MAX_PX: int = 0  # (entrega 10/09) de wt/il212blayou
+    PLAT_RENDER_MEMORIA_MB: int = 0  # (entrega 10/09) de wt/il212blayou
+    PLAT_RENDER_BASE_URL: str | None = None  # (entrega 10/09) de wt/il212blayou
+    PLAT_RENDER_IGNORAR_HTTPS: bool = False  # (entrega 10/09) de wt/il212blayou
+    PLAT_MARTIN_SIMBOLOS_URL: str | None = None  # (entrega 10/09) de wt/il202bclas
+    PLAT_CANAL_CAMADA: str = ""  # (entrega 10/09) de wt/il214ainges
+    PLAT_SSE_LIGADO: bool = False  # (entrega 10/09) de wt/il214ainges
+    PLAT_BACKUP_DIR: str | None = None  # (entrega 10/09) de wt/il006estatu
+    PLAT_BACKUP_EXTERNO_URL: str | None = None  # (entrega 10/09) de wt/il006estatu
+    PLAT_BACKUP_EXTERNO_BUCKET: str | None = None  # (entrega 10/09) de wt/il006estatu
+    PLAT_BACKUP_EXTERNO_CHAVE: str | None = None  # (entrega 10/09) de wt/il006estatu
+    PLAT_BACKUP_EXTERNO_SEGREDO: str | None = None  # (entrega 10/09) de wt/il006estatu
+    PLAT_BACKUP_EXTERNO_REGIAO: str | None = None  # (entrega 10/09) de wt/il006estatu
+    PLAT_TELEMETRIA_URL: str | None = None  # (entrega 10/09) de wt/cx5l711c
+    PLAT_API_PROCESSOS: int = 0  # (entrega 10/09) de wt/il004hexpor
+    PLAT_CLAMD: str | None = None  # (entrega 10/09) de wt/cx5l703a
+    PLAT_ACERVO_ARQUIVOS_RAIZ: str | None = None  # (entrega 10/09) de wt/cx5l601i
+    PLAT_SHEETS_EXPORTACAO_PREFIXO: str = ""  # (entrega 10/09) de wt/il602igoogl
+    PLAT_GARAGE_CHAVE_ID: str | None = None  # (entrega 10/09) de wt/segur
+    PLAT_GARAGE_CHAVE_SEGREDO: str | None = None  # (entrega 10/09) de wt/segur
+    PLAT_SEGURANCA_CONTATO: str = ""  # (entrega 10/09) de wt/il703ecabec
 def _obrigatoria(valores: Mapping[str, str | None], chave: str) -> str:
     v = (valores.get(chave) or "").strip()
     if not v:
@@ -167,6 +215,13 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
     segredo = _obrigatoria(valores, "PLAT_SECRET")
     if not _HEX64.match(segredo):
         raise ErroConfiguracao("PLAT_SECRET inválido: exige 64 caracteres hexadecimais (openssl rand -hex 32)")
+    segredo_anterior = _opcional(valores, "PLAT_SECRET_ANTERIOR")
+    if segredo_anterior is not None and not _HEX64.match(segredo_anterior):
+        raise ErroConfiguracao("PLAT_SECRET_ANTERIOR inválido: exige 64 caracteres hexadecimais ou vazio")
+    if segredo_anterior is not None and segredo_anterior == segredo:
+        # rotação que já passou das 24h (ou nunca aconteceu de verdade): não faz sentido tratar o
+        # mesmo valor como "atual" e "anterior" ao mesmo tempo — trata como se não houvesse anterior.
+        segredo_anterior = None
     ambiente = _obrigatoria(valores, "PLAT_AMBIENTE")
     if ambiente not in AMBIENTES:
         raise ErroConfiguracao(f"PLAT_AMBIENTE inválido: {ambiente!r}; admitidos {AMBIENTES}")
@@ -189,6 +244,7 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
     return Settings(
         PLAT_DSN=dsn,
         PLAT_SECRET=segredo,
+        PLAT_SECRET_ANTERIOR=segredo_anterior,
         PLAT_AMBIENTE=ambiente,
         PLAT_URL_PUBLICA=url,
         PLAT_GIT_SHA=_opcional(valores, "PLAT_GIT_SHA"),
@@ -211,10 +267,12 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_RELOGIO_TESTE=_opcional(valores, "PLAT_RELOGIO_TESTE"),
         PLAT_DSN_WORKER=_dsn_worker(valores, f"{schema}_worker"),
         PLAT_OSRM_URL=(_opcional(valores, "PLAT_OSRM_URL") or "http://127.0.0.1:5010").rstrip("/"),
+        PLAT_BDGD_RAIZ=_opcional(valores, "PLAT_BDGD_RAIZ"),
         PLAT_ROTA_MATRIZ_MAX=_inteiro(valores, "PLAT_ROTA_MATRIZ_MAX", limites.ROTA_MATRIZ_MAX_PADRAO, 1),
         PLAT_ROTA_ISOCRONA_MAX_PONTOS=_inteiro(
             valores, "PLAT_ROTA_ISOCRONA_MAX_PONTOS", limites.ROTA_ISOCRONA_MAX_PONTOS_PADRAO, 4
         ),
+        PLAT_DSN_LEITOR=_opcional(valores, "PLAT_DSN_LEITOR"),
         PLAT_SCHEMA=schema,
         PLAT_SCHEMA_TRABALHO=_identificador(valores, "PLAT_SCHEMA_TRABALHO", "plat_trabalho"),
         PLAT_CANAL_JOB=_identificador(valores, "PLAT_CANAL_JOB", "plat_job"),
@@ -228,9 +286,6 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_SMTP_ROTULO=_opcional(valores, "PLAT_SMTP_ROTULO"),
         PLAT_POOL_MIN=pool_min,
         PLAT_POOL_MAX=pool_max,
-        PLAT_SHEETS_EXPORTACAO_PREFIXO=(
-            _opcional(valores, "PLAT_SHEETS_EXPORTACAO_PREFIXO") or "https://docs.google.com"
-        ).rstrip("/"),
     )
 
 

@@ -18,7 +18,6 @@ from pydantic import BaseModel
 from app import limites, objetos
 from app import versao as app_versao
 from app.catalogo import procedencia as mod_procedencia
-from app.ingestao.inspecionar import PREPARADORES, tabela_de
 from app.ingestao import georreferencia
 from app.ingestao.inspecionar import PREPARADORES, _cfg, tabela_de
 from app.jobs.registro import Cancelado, FalhaDefinitiva, tarefa

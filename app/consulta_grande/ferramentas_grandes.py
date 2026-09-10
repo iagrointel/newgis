@@ -200,7 +200,7 @@ def _sql_resumir_dentro(d: dial.Dialeto, fontes: dict, parametros: dict) -> tupl
         alvo = "*" if e == "contagem" else valor
         expressao = _AGREGADO[e].format(c=alvo)
         agregados.append(f"{expressao} AS {e}" if e != "contagem"
-                         else f"count(a.geom)::bigint AS contagem")
+                         else "count(a.geom)::bigint AS contagem")
     geom_ponto = d.transformar("a.geom", int(pontos["srid"]), srid)
     sql = (
         f"SELECT b.{chave} AS chave, {', '.join(agregados)}, b.geom AS geom "

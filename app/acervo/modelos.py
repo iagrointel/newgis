@@ -11,7 +11,13 @@ sha256, método, confiança, limites, próxima_verificação) já existiam em `A
 (exemplos lidos em acervo.fonte.limites: "0 vendidos lidos; só o tempo resolve", "só fluxo, sem estoque
 RAIS") — não duplicado sob outro nome para não abrir campo que o adversário possa achar "inventado"."""
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,  # (entrega 10/09) faltava para o bloco recuperado abaixo
+)
+
+from app import limites  # (entrega 10/09) faltava para o bloco recuperado abaixo
 
 
 class Saida(BaseModel):
@@ -188,3 +194,175 @@ class AcervoExecucao(Saida):
 class AcervoExecucaoPagina(Saida):
     total: int
     itens: list[AcervoExecucao]
+
+
+# ---------------------------------------------------------------------------------------------
+# (entrega 10/09) União das definições que outros ramos acrescentaram a este mesmo arquivo e que a
+# fusão descartou ao ficar com um lado só. Ordem preservada do ramo de origem.
+
+
+# de wt/cxux18
+class AcervoCamadaMapa(Saida):
+    """Uma camada do acervo já adicionada ao catálogo do inquilino, como a legenda do mapa precisa dela (item
+    L6-01-c-tela-acervo). Os campos vêm do instantâneo gravado em `dados.parametros` na hora de adicionar, não
+    de uma nova consulta ao acervo: a legenda mostra a licença sob a qual o dado foi adicionado."""
+
+    item_id: str
+    titulo: str
+    fonte_id: str
+    dominio: str | None = None
+    licenca: str | None = None
+    licenca_curada_tipo: str | None = None
+
+
+# de wt/il301gtelam
+class AcervoCamadaPublicada(Saida):
+    """Uma view de `plat_acervo` (item L6-01-b). `assinada` é deste inquilino: a RLS de
+    plat.acervo_assinatura já recorta o LEFT JOIN, então nunca vaza a assinatura de outro."""
+
+    view_nome: str
+    acervo_camada_id: str
+    fonte_id: str
+    schema_origem: str
+    tabela_origem: str
+    coluna_geom: str
+    srid: int
+    colunas: list[str]
+    linhas_exatas: int | None = None
+    tipo_geom: str | None = None
+    assinada: bool
+
+
+# de wt/il301gtelam
+class AcervoCamadaPagina(Saida):
+    total: int
+    camadas: list[AcervoCamadaPublicada]
+
+
+# de wt/il301gtelam
+class AcervoFeicoes(Saida):
+    """GeoJSON de uma camada publicada. `features` fica vazio quando o filtro não achou nada — nunca quando
+    falta assinatura: aí a rota já devolveu 403 antes de consultar."""
+
+    type: str
+    camada: str
+    total: int
+    features: list[dict]
+
+
+# de wt/cx5l601i
+class AcervoArquivo(Saida):
+    caminho: str
+    nome: str | None = None
+    tipo: str                      # raster | vetor
+    extensao: str
+    bytes: int | None = None
+    sha256: str | None = None
+    feicoes: int | None = None
+    srid: str | None = None
+    tipo_geom: str | None = None
+    fonte_id: str | None = None
+    fonte_nome: str | None = None
+    orgao: str | None = None
+    dominio: str | None = None
+    licenca: str | None = None
+    publicavel: bool = False       # D17: sem licença escrita o item nasce privado e não se compartilha
+    exposto: bool = False
+    item_id: str | None = None
+    no_disco: bool | None = None   # o arquivo do registro existe nesta instalação
+
+
+# de wt/cx5l601i
+class AcervoArquivosPagina(Saida):
+    total: int
+    itens: list[AcervoArquivo]
+    raiz_configurada: bool
+    rasters: int
+    vetores: int
+
+
+# de wt/cx5l601i
+class AcervoExporEntrada(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    caminhos: list[str] = Field(min_length=1, max_length=limites.ACERVO_ARQUIVO_LOTE_MAX)
+    titulo: str | None = Field(default=None, max_length=200)
+
+
+# de wt/cx5l601i
+class AcervoExporSaida(Saida):
+    jobs: list[dict]
+    recusados: list[dict]
+
+
+# de wt/il601eassin
+class AcervoAssinaturaEntrada(BaseModel):
+    """Corpo OBRIGATÓRIO de POST /api/acervo/camadas/{camada}/assinatura (item L6-01-e). O clique na
+    licença chega como `aceite_licenca=true` + o sha256 do texto que estava na tela: o servidor só grava se
+    o sha bater com o texto atual da fonte — sha defasado é 409 (a tela relê e mostra o texto novo).
+    Default False/"": nunca se aceita sozinho."""
+
+    model_config = ConfigDict(extra="forbid")
+    aceite_licenca: bool = False
+    licenca_sha256: str = Field(default="", max_length=64)
+
+
+# de wt/il601eassin
+class AcervoAssinaturaSaida(Saida):
+    """Resposta do POST de assinatura: o que ficou gravado (quem/quando vivem em plat.acervo_assinatura;
+    `assinado_em` volta aqui para a tela mostrar sem nova consulta)."""
+
+    camada: str
+    assinada: bool
+    licenca_tipo: str | None = None
+    licenca_sha256: str | None = None
+    assinado_em: str | None = None
+
+
+# de wt/il601eassin
+class AcervoUsoLinha(Saida):
+    """Uso de uma camada pelo inquilino no recorte pedido (dia ou mês)."""
+
+    view_nome: str | None = None
+    acervo_camada_id: str
+    consultas: int
+    feicoes: int
+    dias: int | None = None  # só no recorte mensal: em quantos dias do mês houve leitura
+
+
+# de wt/il601eassin
+class AcervoUsoDia(Saida):
+    dia: str
+    total_consultas: int
+    total_feicoes: int
+    camadas: list[AcervoUsoLinha]
+
+
+# de wt/il601eassin
+class AcervoUsoMensal(Saida):
+    """Relatório mensal de uso do acervo pelo inquilino — entrada do item L7-09."""
+
+    ano: int
+    mes: int
+    total_consultas: int
+    total_feicoes: int
+    camadas: list[AcervoUsoLinha]
+
+
+# de wt/il601jmulti
+class AcervoCamadaResumo(Saida):
+    """Uma linha de `plat.acervo_camada` para a fonte, na ficha (item L6-01-j-multi-servidor). `origem`
+    é o texto que a ficha mostra: 'local' quando a tabela vive neste servidor, 'servidor remoto (<nome>)'
+    quando é lida por postgres_fdw só-leitura de outra máquina da casa, e 'servidor remoto indisponível
+    (<nome>)' quando a última verificação não conseguiu falar com ela — a camada nunca desaparece nem vira
+    '0 feições' por queda de rede; `linhas_exatas` conserva a última contagem conhecida e `aviso` explica."""
+
+    servidor: str
+    schema_nome: str
+    tabela: str
+    modo_acesso: str
+    origem: str
+    linhas_exatas: int | None = None
+    aviso: str | None = None
+    fdw_verificado_em: str | None = None
+    fdw_latencia_ms: int | None = None
