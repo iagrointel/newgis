@@ -15,7 +15,7 @@ import uuid
 import psycopg2
 from fastapi import APIRouter, Request
 
-from app import cotas, db, limites
+from app import db, limites
 from app.auth import comum as auth_comum
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo import comum as catalogo_comum
@@ -24,23 +24,17 @@ from app.catalogo import tipos as catalogo_tipos
 from app.catalogo.comum import registrar_evento, uuid_ok
 from app.catalogo.modelos import Item as ItemSaida
 from app.conexao import credencial as credencial_mod
-from app.conexao import pgfdw as pgfdw_mod
-from app.conexao import proveniencia, seguranca
+from app.conexao import ladrilhos, proveniencia, seguranca
 from app.conexao.modelos import (
-    CamadaDaConexaoSaida,
     Conexao,
     ConexaoEditar,
     ConexaoEntrada,
     ConexaoPagina,
     ConexaoTeste,
     PublicarCamadaEntrada,
-    PublicarEmMassaEntrada,
-    PublicarEmMassaSaida,
     SaudeHistoricoPagina,
-    TabelasExternasSaida,
 )
 from app.erros import ErroAPI
-from app.seguranca_rotacao import decifrar_com_rotacao
 from app.settings import settings
 
 router = APIRouter(prefix="/api/conexoes", tags=["conexoes"])
@@ -111,24 +105,36 @@ def _config_ok(config: dict) -> None:
         )
 
 
-def _url_ok(url: str, tipo: str = "") -> None:
+def _url_ok(url: str) -> None:
     """Recusa SSRF já na entrada (criar/editar), não só no teste de saúde: uma conexão nunca fica registrada
-    com URL que o proxy jamais poderia buscar. `postgres_fdw` (item L0-04-i-fonte-registrada) não é HTTP: a
-    URL é `postgres://host:porta/banco` e passa por `pgfdw.validar_alvo` (lista explícita de banco proibido +
-    IP em categoria bloqueada), nunca por `seguranca.validar_url` (que recusaria qualquer coisa fora de
-    http/https já no esquema)."""
-    if tipo == "postgres_fdw":
-        try:
-            host, porta, banco = pgfdw_mod.alvo_da_url(url)
-            pgfdw_mod.validar_alvo(host, porta, banco)
-        except (pgfdw_mod.ErroAlvoProibido, ValueError) as e:
-            motivo = e.motivo if isinstance(e, pgfdw_mod.ErroAlvoProibido) else "url_malformada"
-            raise ErroAPI(422, "url_insegura", f"URL recusada: {motivo}", {"motivo": motivo}) from e
-        return
+    com URL que o proxy jamais poderia buscar."""
     try:
         seguranca.validar_url(url)
     except seguranca.ErroURLInsegura as e:
         raise ErroAPI(422, "url_insegura", f"URL recusada: {e.motivo}", {"motivo": e.motivo}) from e
+
+
+def _config_tiles_ok(tipo: str, url: str, config: dict) -> dict:
+    """PMTiles/XYZ (item L6-02-g-pmtiles-xyz-tilejson): `config.atribuicao`/`zoom_min`/`zoom_max` obrigatórios
+    (e `formato`/marcadores `{z}{x}{y}` para xyz) — ver `app.conexao.ladrilhos.validar_config`. Devolve o
+    `config` já normalizado; para qualquer outro tipo devolve o `config` recebido, sem tocar."""
+    try:
+        return ladrilhos.validar_config(tipo, url, config)
+    except ladrilhos.ErroConfigTiles as e:
+        raise ErroAPI(422, e.codigo, str(e), {"campo": e.campo}) from e
+
+
+def _range_pmtiles_ok(url: str) -> None:
+    """PMTiles (item L6-02-g-pmtiles-xyz-tilejson): recusa a conexão ANTES de gravar se o servidor não honrar
+    `Range`/206 — ver `app.conexao.ladrilhos.verificar_range_pmtiles` (a refutação do item: adversário que
+    devolve 200 ignorando o Range)."""
+    resultado = ladrilhos.verificar_range_pmtiles(url)
+    if not resultado.ok:
+        raise ErroAPI(
+            422, "pmtiles_sem_range",
+            f"o servidor não confirmou suporte a Range/206 para PMTiles: {resultado.motivo}",
+            {"motivo": resultado.motivo, "status": resultado.status},
+        )
 
 
 @router.get("", response_model=ConexaoPagina, openapi_extra=LER)
@@ -153,6 +159,20 @@ def ver(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
         return _json(_carregar(cur, cid))
 
 
+@router.get("/{id}/tilejson", openapi_extra=LER)
+def tilejson(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """TileJSON 3.0.0 de uma conexão `xyz` (item L6-02-g-pmtiles-xyz-tilejson) — só monta o que a conexão já
+    guarda (`app.conexao.ladrilhos.tilejson`), nunca sonda o serviço de novo."""
+    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
+    with db.db(auth.contexto()) as cur:
+        r = _json(_carregar(cur, cid))
+    if r["tipo"] != "xyz":
+        raise ErroAPI(
+            422, "tipo_sem_tilejson", "TileJSON só existe para conexões do tipo xyz", {"tipo": r["tipo"]}
+        )
+    return ladrilhos.tilejson(r)
+
+
 @router.post("", response_model=Conexao, status_code=201, openapi_extra=CRIAR)
 def criar(corpo: ConexaoEntrada, request: Request, auth: Auth = autenticado("conteudo.criar")):
     if not auth.tem("conteudo.registrar_fonte"):
@@ -160,8 +180,11 @@ def criar(corpo: ConexaoEntrada, request: Request, auth: Auth = autenticado("con
             403, "sem_privilegio", "a operação exige o privilégio conteudo.registrar_fonte",
             {"exigido": "conteudo.registrar_fonte"},
         )
-    _url_ok(corpo.url, corpo.tipo)
+    _url_ok(corpo.url)
     _config_ok(corpo.config)
+    config = _config_tiles_ok(corpo.tipo, corpo.url, corpo.config)
+    if corpo.tipo == "pmtiles":
+        _range_pmtiles_ok(corpo.url)
     credencial_cifrada = credencial_mod.cifrar(corpo.credencial, settings.PLAT_SECRET) if corpo.credencial else None
     with db.db(auth.contexto()) as cur:
         try:
@@ -170,7 +193,7 @@ def criar(corpo: ConexaoEntrada, request: Request, auth: Auth = autenticado("con
                 "VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s, %s) RETURNING id",
                 (
                     auth.tenant_id, corpo.tipo, corpo.modo, " ".join(corpo.nome.split()), corpo.url,
-                    json.dumps(corpo.config, ensure_ascii=False), credencial_cifrada, auth.usuario_id,
+                    json.dumps(config, ensure_ascii=False), credencial_cifrada, auth.usuario_id,
                 ),
             )
             cid = str(cur.fetchone()["id"])
@@ -194,8 +217,9 @@ def editar(id: str, corpo: ConexaoEditar, request: Request, auth: Auth = autenti
         if corpo.nome is not None:
             campos.append("nome = %s")
             params.append(" ".join(corpo.nome.split()))
+        url_nova = corpo.url if corpo.url is not None else r["url"]
         if corpo.url is not None:
-            _url_ok(corpo.url, r["tipo"])
+            _url_ok(corpo.url)
             campos.append("url = %s")
             params.append(corpo.url)
             campos.append("saude = 'nunca_testada'")  # URL mudou: a saúde anterior não vale mais para a nova
@@ -204,8 +228,15 @@ def editar(id: str, corpo: ConexaoEditar, request: Request, auth: Auth = autenti
             params.append(corpo.modo)
         if corpo.config is not None:
             _config_ok(corpo.config)
+            config_nova = _config_tiles_ok(r["tipo"], url_nova, corpo.config)
             campos.append("config = %s::jsonb")
-            params.append(json.dumps(corpo.config, ensure_ascii=False))
+            params.append(json.dumps(config_nova, ensure_ascii=False))
+        elif corpo.url is not None and r["tipo"] in ("pmtiles", "xyz"):
+            # a URL mudou mas o config não veio nesta edição: revalida contra o config já gravado (o
+            # `atribuicao`/zoom continuam obrigatórios, e xyz precisa dos marcadores {z}{x}{y} na URL NOVA)
+            _config_tiles_ok(r["tipo"], url_nova, r["config"] or {})
+        if corpo.url is not None and r["tipo"] == "pmtiles":
+            _range_pmtiles_ok(corpo.url)
         if corpo.remover_credencial:
             campos.append("credencial_cifrada = NULL")
         elif corpo.credencial is not None:
@@ -242,34 +273,21 @@ def testar(id: str, request: Request, auth: Auth = autenticado()):
         url = r["url"]
 
     # decifra a credencial só em memória, só aqui, e só para autenticar o teste — nunca volta na resposta
-    senha_ou_token = None
+    cabecalhos = None
     if r["tem_credencial"]:
         with db.db(auth.contexto()) as cur:
             cur.execute("SELECT credencial_cifrada FROM plat.conexao WHERE id = %s::uuid", (cid,))
             bruta = cur.fetchone()["credencial_cifrada"]
         try:
-            # dupla-chave de 24 h da rotação de PLAT_SECRET (item L7-19): a credencial cifrada antes da troca
-            # ainda decifra com o valor anterior.
-            senha_ou_token = decifrar_com_rotacao(
-                credencial_mod.decifrar, bruta, settings.PLAT_SECRET, settings.PLAT_SECRET_ANTERIOR
-            )
-        except Exception:  # noqa: BLE001 — PLAT_SECRET (e ANTERIOR) trocados ou dado corrompido: testa sem
-            # credencial, nunca quebra a rota (InvalidTag do AEAD não é ValueError — abrangido de propósito)
-            senha_ou_token = None
+            token = credencial_mod.decifrar(bruta, settings.PLAT_SECRET)
+            cabecalhos = {"Authorization": f"Bearer {token}"}
+        except ValueError:
+            cabecalhos = None  # PLAT_SECRET trocado ou dado corrompido: testa sem credencial, nunca quebra a rota
 
-    if r["tipo"] == "postgres_fdw":
-        host, porta, banco = pgfdw_mod.alvo_da_url(url)
-        alvo = pgfdw_mod.AlvoPg(
-            host=host, porta=porta, banco=banco, usuario=(r["config"] or {}).get("usuario", ""),
-            schema_remoto=(r["config"] or {}).get("schema_remoto", "public"),
-        )
-        resultado = pgfdw_mod.testar_e_medir(alvo, senha_ou_token or "")
-    else:
-        cabecalhos = {"Authorization": f"Bearer {senha_ou_token}"} if senha_ou_token else None
-        resultado = seguranca.buscar_seguro(
-            url, metodo="GET", timeout_conectar=limites.CONEXAO_CONECTAR_TIMEOUT_S,
-            timeout_ler=limites.CONEXAO_LER_TIMEOUT_S, cabecalhos=cabecalhos,
-        )
+    resultado = seguranca.buscar_seguro(
+        url, metodo="GET", timeout_conectar=limites.CONEXAO_CONECTAR_TIMEOUT_S,
+        timeout_ler=limites.CONEXAO_LER_TIMEOUT_S, cabecalhos=cabecalhos,
+    )
     saude = "ok" if resultado.ok else "erro"
     with db.db(auth.contexto()) as cur:
         # plat.conexao_saude_registrar (036) grava saude/saude_mensagem/... E o histórico (item L6-02-l-saude)
@@ -345,16 +363,14 @@ def publicar_camada(
     atribuicao = (descoberta.atribuicao or "")[:2048] or None
     iid = str(uuid.uuid4())
     with db.db(auth.contexto()) as cur:
-        # contar_itens_com_lixeira (item L0-07-c-cotas-uso): item na lixeira ainda não expurgado CONTA na
-        # cota — um count(*) cru via RLS esconderia o apagado e deixaria "liberar" cota sem expurgo.
-        n = cotas.contar_itens_com_lixeira(cur, auth.tenant_id)
-        cur.execute("SELECT plat.cota_itens(%s) AS cota", (auth.tenant_id,))
-        cota_itens = cur.fetchone()["cota"]
-        if n >= cota_itens:
+        cur.execute(
+            "SELECT plat.cota_itens(%s) AS cota, (SELECT count(*) FROM plat.item WHERE tenant_id = %s) AS n",
+            (auth.tenant_id, auth.tenant_id),
+        )
+        rc = cur.fetchone()
+        if rc["n"] >= rc["cota"]:
             raise ErroAPI(
-                413, "cota_itens",
-                f"cota de itens esgotada: uso atual {n} de {cota_itens} itens",
-                {"cota": cota_itens, "uso": n},
+                413, "cota_itens", f"cota de itens do inquilino esgotada ({rc['cota']})", {"cota": rc["cota"]}
             )
         try:
             cur.execute(
@@ -373,229 +389,3 @@ def publicar_camada(
             {"conexao_id": cid, "tipo": r["tipo"], "licenca_declarada": bool(descoberta.procedencia.get("licenca"))},
         )
         return catalogo_comum.item_json(catalogo_comum.item_ou_404(cur, iid), auth)
-
-
-# ---------------------------------------------------------------------------------------------------------
-# item L0-04-i-fonte-registrada: conector postgres_fdw ("fonte de dado registrada" — o "data store item" da
-# Esri 11.4 / o "store" do GeoServer, restrito ao Postgres/PostGIS externo). As três rotas abaixo só existem
-# para `tipo == "postgres_fdw"`; qualquer outro tipo devolve 422 `tipo_nao_suportado`.
-
-
-def _alvo_pg(r: dict, schema_remoto: str) -> "pgfdw_mod.AlvoPg":
-    if r["tipo"] != "postgres_fdw":
-        raise ErroAPI(422, "tipo_nao_suportado", "esta operação só existe para conexões do tipo postgres_fdw")
-    host, porta, banco = pgfdw_mod.alvo_da_url(r["url"])
-    return pgfdw_mod.AlvoPg(
-        host=host, porta=porta, banco=banco, usuario=(r["config"] or {}).get("usuario", ""),
-        schema_remoto=schema_remoto,
-    )
-
-
-def _decifrar_senha(cur, cid: str) -> str:
-    cur.execute("SELECT credencial_cifrada FROM plat.conexao WHERE id = %s::uuid", (cid,))
-    bruta = cur.fetchone()["credencial_cifrada"]
-    if not bruta:
-        return ""
-    try:
-        return credencial_mod.decifrar(bruta, settings.PLAT_SECRET)
-    except ValueError:
-        return ""  # PLAT_SECRET trocado ou dado corrompido: tenta sem credencial, nunca quebra a rota
-
-
-def _marcar_saude(cur, cid: str, ok: bool, mensagem: str) -> None:
-    """Mesma função SECURITY DEFINER de L6-02-l (036) — o teste postgres_fdw grava saúde/histórico igual ao
-    teste HTTP; é essa gravação que faz `GET /{id}/camadas` (abaixo) mostrar "fonte_indisponivel" depois de
-    uma queda, sem apagar nada do catálogo."""
-    cur.execute("SELECT plat.conexao_saude_registrar(%s::uuid, %s, %s, %s, %s)", (cid, ok, None, mensagem, None))
-
-
-@router.get("/{id}/tabelas", response_model=TabelasExternasSaida, openapi_extra=LER)
-def tabelas_externas(id: str, schema_remoto: str = "public", auth: Auth = autenticado()):
-    """Lista as tabelas base do schema `schema_remoto` do Postgres do cliente (via `pg_catalog`, nunca
-    copiando dado). Conexão fora do ar vira 503 `fonte_indisponivel` (a conexão em si continua registrada;
-    nada é apagado)."""
-    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
-    with db.db(auth.contexto()) as cur:
-        r = _carregar(cur, cid)
-        _pode_editar(r, auth)
-        senha = _decifrar_senha(cur, cid)
-    if not pgfdw_mod.identificador_ok(schema_remoto):
-        raise ErroAPI(422, "schema_invalido", "nome de schema remoto inválido")
-    alvo = _alvo_pg(r, schema_remoto)
-    try:
-        itens = pgfdw_mod.listar_tabelas(alvo, senha)
-    except pgfdw_mod.ErroFonteIndisponivel as e:
-        with db.db(auth.contexto()) as cur:
-            _marcar_saude(cur, cid, False, e.motivo)
-        raise ErroAPI(503, "fonte_indisponivel", f"não foi possível conectar à fonte: {e.motivo}") from e
-    except pgfdw_mod.ErroAlvoProibido as e:
-        raise ErroAPI(422, "alvo_proibido", f"alvo recusado: {e.motivo}", {"motivo": e.motivo}) from e
-    with db.db(auth.contexto()) as cur:
-        _marcar_saude(cur, cid, True, f"{len(itens)} tabelas listadas")
-    return {"schema_remoto": schema_remoto, "itens": itens}
-
-
-@router.post("/{id}/publicar-em-massa", response_model=PublicarEmMassaSaida, status_code=201, openapi_extra=CRIAR)
-def publicar_em_massa(
-    id: str, corpo: PublicarEmMassaEntrada, request: Request, auth: Auth = autenticado("conteudo.criar"),
-):
-    """"Bulk publish" (Esri) / criar N "stores" (GeoServer) de uma vez: uma camada `camada_vetorial`
-    REFERENCIADA por tabela pedida, sem copiar dado — cada uma vira `FOREIGN TABLE` + `VIEW` (com
-    `tenant_id`/predicado equivalente a RLS; `plat.conexao_fdw_publicar`, migração 20260907T0148) e um item de
-    catálogo. Nome de tabela é validado por identificador ANTES de qualquer SQL (o adversário do item injeta
-    no nome da tabela); se a fonte cair NO MEIO do lote, as tabelas já publicadas ficam no catálogo e as
-    restantes voltam com `erro: "fonte_indisponivel:..."` no item da lista — a chamada inteira nunca vira 503
-    sozinha quando pelo menos uma tabela já foi confirmada (o 503 do portão é para quando a fonte já está fora
-    do ar ANTES de qualquer publicação, ver `tabelas_externas` acima e o teste `test_pgfdw.py`)."""
-    if not auth.tem("conteudo.registrar_fonte"):
-        raise ErroAPI(
-            403, "sem_privilegio", "a operação exige o privilégio conteudo.registrar_fonte",
-            {"exigido": "conteudo.registrar_fonte"},
-        )
-    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
-    with db.db(auth.contexto()) as cur:
-        r = _carregar(cur, cid)
-        senha = _decifrar_senha(cur, cid)
-        cur.execute("SELECT slug FROM plat.tenant WHERE id = %s", (auth.tenant_id,))
-        slug = cur.fetchone()["slug"]
-    if not pgfdw_mod.identificador_ok(corpo.schema_remoto):
-        raise ErroAPI(422, "schema_invalido", "nome de schema remoto inválido")
-    alvo = _alvo_pg(r, corpo.schema_remoto)
-
-    # geometria de todas as tabelas do schema, numa única leitura (evita 1 round-trip extra por tabela); se a
-    # fonte já está fora do ar aqui, NENHUMA tabela foi tocada ainda: 503 limpo, catálogo intocado (portão).
-    try:
-        geometria_por_tabela = {t["tabela"]: t for t in pgfdw_mod.listar_tabelas(alvo, senha)}
-    except pgfdw_mod.ErroFonteIndisponivel as e:
-        with db.db(auth.contexto()) as cur:
-            _marcar_saude(cur, cid, False, e.motivo)
-        raise ErroAPI(503, "fonte_indisponivel", f"não foi possível conectar à fonte: {e.motivo}") from e
-    except pgfdw_mod.ErroAlvoProibido as e:
-        raise ErroAPI(422, "alvo_proibido", f"alvo recusado: {e.motivo}", {"motivo": e.motivo}) from e
-
-    resultados: list[dict] = []
-    fonte_caiu_no_meio = False
-    for nome_tabela in corpo.tabelas:
-        if fonte_caiu_no_meio:
-            resultados.append({"tabela": nome_tabela, "ok": False, "erro": "fonte_indisponivel:conexao_caiu_no_lote"})
-            continue
-        if not pgfdw_mod.identificador_ok(nome_tabela):
-            resultados.append({"tabela": nome_tabela, "ok": False, "erro": "nome_de_tabela_invalido"})
-            continue
-        try:
-            colunas = pgfdw_mod.colunas_da_tabela(alvo, senha, nome_tabela)
-        except pgfdw_mod.ErroFonteIndisponivel as e:
-            fonte_caiu_no_meio = True
-            with db.db(auth.contexto()) as cur:
-                _marcar_saude(cur, cid, False, e.motivo)
-            resultados.append({"tabela": nome_tabela, "ok": False, "erro": f"fonte_indisponivel:{e.motivo}"})
-            continue
-        except pgfdw_mod.ErroAlvoProibido as e:
-            resultados.append({"tabela": nome_tabela, "ok": False, "erro": e.motivo})
-            continue
-
-        info_geom = geometria_por_tabela.get(nome_tabela)
-        geometria = pgfdw_mod.geometria_enum(info_geom["geometria_tipo"] if info_geom else None)
-        srid = int(info_geom["srid"]) if info_geom and info_geom.get("srid") else 4326  # schema exige srid>=1
-                                                                                           # mesmo sem geometria
-        campos_schema = [{"nome": c["nome"], "tipo": (c["tipo_pg"] or "")[:64]} for c in colunas]
-        dados_item = {
-            "schema": f"d_{slug}", "tabela": "",  # preenchidos com o nome REAL logo abaixo (linha_fdw)
-            "geometria": geometria, "srid": srid, "campos": campos_schema, "fonte": "referenciada",
-            "procedencia": {
-                "conexao_id": cid, "protocolo": "postgres_fdw", "banco_remoto": alvo.banco,
-                "schema_remoto": corpo.schema_remoto, "tabela_remota": nome_tabela,
-                "metodo": "postgres_fdw (foreign table + view sobre tenant_id), sem copiar dado",
-            },
-        }
-        try:
-            with db.db(auth.contexto()) as cur:
-                cur.execute(
-                    "SELECT schema_local, tabela_local FROM plat.conexao_fdw_publicar("
-                    "%s::uuid, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s)",
-                    (
-                        cid, slug, alvo.host, alvo.porta, alvo.banco, alvo.usuario, senha, corpo.schema_remoto,
-                        nome_tabela, catalogo_comum.jsonb(colunas), auth.tenant_id,
-                    ),
-                )
-                linha_fdw = cur.fetchone()
-        except psycopg2.Error as e:
-            erro_bd = auth_comum.erro_do_banco(e).erro
-            resultados.append({"tabela": nome_tabela, "ok": False, "erro": f"erro_ao_publicar:{erro_bd}"})
-            continue
-        dados_item["schema"] = linha_fdw["schema_local"]
-        dados_item["tabela"] = linha_fdw["tabela_local"]
-        try:
-            catalogo_tipos.validar("camada_vetorial", dados_item)
-            catalogo_documento.validar_grafo("camada_vetorial", dados_item)
-        except ErroAPI as e:
-            resultados.append({"tabela": nome_tabela, "ok": False, "erro": f"dados_invalidos:{e.erro}"})
-            continue
-
-        iid = str(uuid.uuid4())
-        with db.db(auth.contexto()) as cur:
-            cur.execute(
-                "SELECT plat.cota_itens(%s) AS cota, (SELECT count(*) FROM plat.item WHERE tenant_id = %s) AS n",
-                (auth.tenant_id, auth.tenant_id),
-            )
-            rc = cur.fetchone()
-            if rc["n"] >= rc["cota"]:
-                resultados.append({"tabela": nome_tabela, "ok": False, "erro": "cota_itens"})
-                continue
-            try:
-                cur.execute(
-                    "INSERT INTO plat.item(id, tenant_id, tipo, titulo, dono_id, dados, origem, url, "
-                    "criado_por, modificado_por) "
-                    "VALUES (%s::uuid, %s, 'camada_vetorial', %s, %s, %s, 'referenciado', NULL, %s, %s)",
-                    (
-                        # url fica NULL: `plat.item.url` exige http(s) (item_url_check) — a origem real
-                        # (postgres://host:porta/banco) já está em `dados.procedencia`, que é onde a tela
-                        # de procedência olha (mesmo padrão de proveniencia.py para os outros protocolos)
-                        iid, auth.tenant_id, nome_tabela[:250], auth.usuario_id, catalogo_comum.jsonb(dados_item),
-                        auth.usuario_id, auth.usuario_id,
-                    ),
-                )
-            except psycopg2.Error as e:
-                erro_bd = auth_comum.erro_do_banco(e).erro
-                resultados.append({"tabela": nome_tabela, "ok": False, "erro": f"erro_ao_gravar:{erro_bd}"})
-                continue
-            registrar_evento(
-                cur, request, "camadas/importar", "item", iid,
-                {"conexao_id": cid, "tabela_remota": nome_tabela, "fonte": "postgres_fdw"},
-            )
-        resultados.append({"tabela": nome_tabela, "ok": True, "item_id": iid, "erro": None})
-
-    with db.db(auth.contexto()) as cur:
-        if not fonte_caiu_no_meio:
-            _marcar_saude(cur, cid, True, f"{sum(1 for x in resultados if x['ok'])}/{len(resultados)} publicadas")
-        registrar_evento(
-            cur, request, "conexoes/publicar_em_massa", "conexao", cid,
-            {"tabelas": len(corpo.tabelas), "ok": sum(1 for x in resultados if x["ok"])},
-        )
-    return {"itens": resultados}
-
-
-@router.get("/{id}/camadas", response_model=CamadaDaConexaoSaida, openapi_extra=LER)
-def camadas_da_conexao(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
-    """Camadas de catálogo publicadas a partir desta conexão, com o estado da FONTE (não do item) calculado
-    da última verificação de saúde — a camada em si NUNCA some daqui: "fonte_indisponivel" é o estado, não um
-    apagamento (portão: "a camada continua no catálogo com estado 'fonte indisponível'")."""
-    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
-    with db.db(auth.contexto()) as cur:
-        r = _carregar(cur, cid)
-        cur.execute(
-            "SELECT id, titulo, dados FROM plat.item "
-            "WHERE tenant_id = %s AND tipo = 'camada_vetorial' AND dados->'procedencia'->>'conexao_id' = %s "
-            "ORDER BY lower(titulo)",
-            (auth.tenant_id, cid),
-        )
-        linhas = cur.fetchall()
-    estado_fonte = "fonte_indisponivel" if r["saude"] == "erro" else ("ok" if r["saude"] == "ok" else "nunca_testada")
-    itens = [
-        {
-            "id": str(linha["id"]), "titulo": linha["titulo"], "schema_tabela": linha["dados"]["schema"],
-            "tabela": linha["dados"]["tabela"], "estado_fonte": estado_fonte,
-        }
-        for linha in linhas
-    ]
-    return {"itens": itens}
