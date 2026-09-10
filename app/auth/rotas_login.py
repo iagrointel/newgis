@@ -3,6 +3,7 @@
 → auth_falha/auth_ok → 2FA? desafio : sessão + cookie → evento usuarios/entrar → resultado no log_acesso."""
 
 import datetime
+from urllib.parse import urlsplit
 
 import psycopg2
 from fastapi import APIRouter, Request, Response
@@ -58,13 +59,6 @@ def _falhou(request: Request, ctx: db.Contexto, usuario_id: int, politica: Polit
     request.state.resultado = resultado
 
 
-# sentinela para "quem chama não trouxe a data de troca de senha; leia do banco". Existe porque o caminho do
-# segundo fator (plat.auth_desafio_2fa_resolver) não devolve `senha_alterada_em`, e passar None ali significava
-# "nunca expira" — quem ligava o 2FA ficava com a política de senha MAIS FRACA da plataforma (achado G1-b2 do
-# adversário do turno 3). `None` continua sendo o valor legítimo de quem não tem senha local (LDAP).
-NAO_INFORMADO = object()
-
-
 def _abrir_sessao(
     request: Request,
     resposta: Response,
@@ -77,10 +71,6 @@ def _abrir_sessao(
     try:
         with db.db(ctx) as cur:
             cur.execute("SELECT plat.auth_ok(%s, %s)", (usuario_id, ip_de(request)))
-            if senha_alterada_em is NAO_INFORMADO:
-                cur.execute("SELECT senha_alterada_em FROM plat.usuario WHERE id = %s", (usuario_id,))
-                linha_senha = cur.fetchone()
-                senha_alterada_em = linha_senha["senha_alterada_em"] if linha_senha else None
             if (
                 politica.senha_expira_dias
                 and senha_alterada_em is not None
@@ -115,15 +105,22 @@ def provedores(inquilino: str):
         t = cur.fetchone()
     if t is None:
         raise ErroAPI(404, "inquilino_inexistente", "inquilino inexistente")
-    # provedores externos: hoje só o diretório LDAP/AD do inquilino (L0-08-d), declarado aqui para a tela de
-    # entrada mostrar o controle (UX-17). Nada de segredo sai: só tipo, nome e a rota de login.
-    provedores_lista: list[dict] = []
+    # provedores federados habilitados (L0-08-sso): OIDC e SAML entram como botão de redirecionamento
+    # (a tela /entrar renderiza {tipo, nome, url}); o LDAP fica fora de propósito — o fluxo dele é
+    # formulário com senha na própria tela, não botão que sai da página (L0-08-d)
+    externos = []
     with db.db() as cur:
-        cur.execute("SELECT habilitado FROM plat.provedor_ldap_de(%s)", (inquilino,))
-        pl = cur.fetchone()
-    if pl is not None and pl["habilitado"]:
-        provedores_lista.append({"tipo": "ldap", "nome": "LDAP / Active Directory", "rota": "/api/login/ldap"})
-    return {"inquilino": {"slug": t["slug"], "nome": t["nome"]}, "provedores": provedores_lista, "login_local": True}
+        for tipo in ("oidc", "saml"):
+            cur.execute("SELECT * FROM plat.provedor_sso_de(%s, %s)", (t["slug"], tipo))
+            p = cur.fetchone()
+            if p is None or not p["habilitado"]:
+                continue
+            if tipo == "oidc":
+                nome = urlsplit(p["emissor"]).hostname or p["emissor"]
+            else:
+                nome = p["idp_entidade"]
+            externos.append({"tipo": tipo, "nome": nome, "url": f"/api/login/{tipo}/iniciar?inquilino={t['slug']}"})
+    return {"inquilino": {"slug": t["slug"], "nome": t["nome"]}, "provedores": externos, "login_local": True}
 
 
 @router.post(
@@ -145,15 +142,7 @@ def login(corpo: LoginEntrada, request: Request, resposta: Response):
     if not r["ativo_tenant"]:
         senha.verificar(corpo.senha, HASH_FANTASMA)
         request.state.resultado = "suspenso"
-        # item L0-07-f: a mensagem do operador (config.suspensao.mensagem) chega aos membros no próprio 503
-        suspensao = (r["config"] or {}).get("suspensao") or {}
-        mensagem = (suspensao.get("mensagem") or "").strip()
-        raise ErroAPI(
-            503,
-            "inquilino_suspenso",
-            f"inquilino suspenso: {mensagem}" if mensagem else "inquilino suspenso; fale com o operador da plataforma",
-            {"mensagem": mensagem or None, "desde": suspensao.get("em")},
-        )
+        raise ErroAPI(503, "inquilino_suspenso", "inquilino suspenso; fale com o operador da plataforma")
     if r["origem"] != "local":
         request.state.resultado = "externo"
         raise ErroAPI(403, "login_externo", "esta conta entra pelo login da organização")
@@ -213,12 +202,8 @@ def login_2fa(corpo: Login2FAEntrada, request: Request, resposta: Response):
     with db.db(ctx) as cur:
         if corpo.codigo:
             try:
-                from app.seguranca_rotacao import decifrar_com_rotacao
-
-                segredo = decifrar_com_rotacao(
-                    totp.decifrar, r["totp_secret"] or "", settings.PLAT_SECRET, settings.PLAT_SECRET_ANTERIOR
-                )
-            except Exception:  # noqa: BLE001 — segredo ilegível (PLAT_SECRET e ANTERIOR trocados): só recuperação vale
+                segredo = totp.decifrar(r["totp_secret"] or "", settings.PLAT_SECRET)
+            except Exception:  # noqa: BLE001 — segredo ilegível (PLAT_SECRET trocado): só recuperação vale
                 segredo = None
             passo = totp.verificar(segredo, corpo.codigo, r["totp_ultimo_passo"]) if segredo else None
             if passo is not None:
@@ -242,9 +227,7 @@ def login_2fa(corpo: Login2FAEntrada, request: Request, resposta: Response):
     if fator is None:
         _falhou(request, ctx, r["usuario_id"], politica, resultado)
         raise ErroAPI(401, "codigo_invalido", "código inválido")
-    # a política de senha do inquilino vale nos DOIS caminhos: o segundo fator é uma prova A MAIS, nunca uma
-    # dispensa da expiração (achado G1-b2). A data vem do banco porque o desafio não a traz.
-    return _abrir_sessao(request, resposta, ctx, r["usuario_id"], politica, fator, NAO_INFORMADO)
+    return _abrir_sessao(request, resposta, ctx, r["usuario_id"], politica, fator, None)
 
 
 @router.post(
