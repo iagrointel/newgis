@@ -1,18 +1,14 @@
-"""Formatos aceitos nesta instalação (ADR 0005 seção 3.3 e 10.1). Cada um tem: extensões aceitas, prova pelo
-CONTEÚDO (nunca só a extensão — a mesma regra do L0-11/L7-03-b, aqui aplicada ao tipo declarado no upload) e o
-driver GDAL usado na inspeção/carga. Os 9 formatos do portão do L0-04-d (shapefile zipado, GeoPackage, GeoJSON,
-GeoJSONSeq, KML, KMZ, CSV/TXT, GPX, XLSX) e os 4 que o portão do L0-04-b pede a mais (GML, FlatGeobuf, DXF,
-File Geodatabase zipada) estão todos aqui, porque o GDAL 3.8.4 desta instalação tem driver para todos —
-conferido com `ogrinfo --formats` e gravado em tests/medidas/L0-04-d-formatos-base.json.
-
-O que NÃO entra e por quê: **DWG** depende de conversor de terceiro (ODA File Converter, binário gratuito com
-licença própria, ou LibreDWG sob GPL-3) — é decisão do dono, registrada como pendência do item L0-04-e, e não
-uma limitação técnica desta camada. `formato_nao_suportado` continua sendo a recusa para qualquer tipo fora
-deste dicionário.
-
-Profundidade honesta: aceitar e inspecionar não é o mesmo que tratar a semântica própria de cada formato. O
-tratamento de blocos/georreferência do DXF fica no item L0-04-e e o de domínios/subtipos da File Geodatabase
-no L0-04-f; aqui os dois entram pelo caminho comum do GDAL, com as camadas todas listadas na proposta."""
+"""Formatos aceitos (ADR 0005 seção 3.3 e 10.1; item L6-02-o-importacao-exportacao-formatos): os 4 da fundação
+(shapefile zipado, GeoPackage, GeoJSON, CSV/TXT lat/lon) mais os que o `L6-02-o` acrescentou depois de MEDIR os
+drivers reais do GDAL desta máquina (`ogr --formats`, 05/09 e reconferido nesta passagem: todos presentes e com
+DCAP_CREATE=YES) — GeoJSONSeq (NDJSON), KML/LIBKML, DXF (CAD), XLSX (tabular, sem geometria nativa: ver
+`app/ingestao/xlsx_geom.py`) e FileGDB zipada (driver OpenFileGDB, mesmo truque `/vsizip` do shapefile.zip). MVT,
+PMTiles e MSSQLSpatial são só destino de EXPORTAÇÃO (`app/ingestao/exportar.py`) — não entram aqui porque não são
+fonte de importação de camada nesta plataforma (mosaico de tiles e banco externo, não arquivo de origem). GPX,
+DWG binário, GML, MapInfo, FlatGeobuf e GeoParquet continuam fora (não medidos/decisão de escopo); Apache
+Parquet/GeoParquet e Oracle Spatial (OCI) NÃO existem no GDAL desta instalação — nunca prometer os dois.
+Cada formato tem: extensões aceitas, prova pelo CONTEÚDO (nunca só a extensão — a mesma regra do L0-11/L7-03-b,
+aqui aplicada ao tipo declarado no upload), e o driver GDAL usado na inspeção/carga."""
 
 from __future__ import annotations
 
@@ -38,38 +34,30 @@ FORMATOS: dict[str, Formato] = {
     "shapefile.zip": Formato("shapefile.zip", (".zip",), "Shapefile (zip)", "ESRI Shapefile"),
     "gpkg": Formato("gpkg", (".gpkg",), "GeoPackage", "GPKG"),
     "geojson": Formato("geojson", (".geojson", ".json"), "GeoJSON", "GeoJSON"),
-    "geojsonseq": Formato("geojsonseq", (".geojsonl", ".geojsons", ".ndjson"), "GeoJSON Sequence", "GeoJSONSeq"),
     "csv": Formato("csv", (".csv", ".txt", ".tsv", ".psv"), "CSV / texto delimitado", "CSV"),
+    "geojsonseq": Formato("geojsonseq", (".geojsonl", ".geojsons", ".ndjson"), "GeoJSON sequencial (NDJSON)",
+                          "GeoJSONSeq"),
     "kml": Formato("kml", (".kml",), "KML", "LIBKML"),
-    "kmz": Formato("kmz", (".kmz",), "KMZ (KML zipado)", "LIBKML"),
-    "gpx": Formato("gpx", (".gpx",), "GPX (trilhas, rotas, pontos)", "GPX"),
-    "xlsx": Formato("xlsx", (".xlsx", ".xlsm"), "Planilha XLSX", "XLSX"),
-    "gml": Formato("gml", (".gml", ".xml"), "GML", "GML"),
-    "flatgeobuf": Formato("flatgeobuf", (".fgb",), "FlatGeobuf", "FlatGeobuf"),
-    "dxf": Formato("dxf", (".dxf",), "DXF (AutoCAD)", "DXF"),
-    "gdb": Formato("gdb", (".zip", ".gdb.zip"), "File Geodatabase (zip)", "OpenFileGDB"),
+    "dxf": Formato("dxf", (".dxf",), "DXF (CAD)", "DXF"),
+    "xlsx": Formato("xlsx", (".xlsx",), "Excel (XLSX)", "XLSX"),
+    "filegdb.zip": Formato("filegdb.zip", (".zip",), "File Geodatabase (zip)", "OpenFileGDB"),
 }
 
-# Formatos cuja leitura depende de programa de TERCEIRO com licença própria: nunca entram no dicionário acima
-# sem decisão do dono (item L0-04-e). A recusa cita o motivo em vez de fingir que o tipo não existe.
-FORMATOS_QUE_DEPENDEM_DE_LICENCA: dict[str, str] = {
-    "dwg": ("a leitura de DWG depende de conversor de terceiro (ODA File Converter, licença própria, ou "
-            "LibreDWG sob GPL-3); esta instalação não o traz e a escolha do conversor é decisão do dono. "
-            "Converta para DXF e envie como 'dxf'."),
+# formatos que só existem como DESTINO de exportação (app/ingestao/exportar.py); nunca aparecem em FORMATOS de
+# importação nem em `GET /api/importacoes/formatos` — não são fonte de carga nesta plataforma.
+FORMATOS_EXPORTACAO: dict[str, Formato] = {
+    **FORMATOS,
+    "mvt": Formato("mvt", (), "Mapbox Vector Tiles (mosaico)", "MVT"),
+    "pmtiles": Formato("pmtiles", (), "PMTiles", "PMTiles"),
+    "mssqlspatial": Formato("mssqlspatial", (), "Microsoft SQL Server (MSSQLSpatial)", "MSSQLSpatial"),
 }
 
 
-class ArquivoRecusado(ValueError):
-    """Mãe de toda recusa de ENTRADA da ingestão. A rota captura ESTA classe e devolve 422 com mensagem em
-    português; classes irmãs sem mãe comum foi exatamente o defeito que fazia um zip malformado sair como 500
-    (achado do adversário do turno 3). Toda recusa nova de conteúdo herda daqui."""
+class ZipSuspeito(ValueError):
+    """Zip-bomba ou caminho malicioso (ADR 0005 seção 3.2): nunca chega a ser extraído."""
 
 
-class ZipSuspeito(ArquivoRecusado):
-    """Zip-bomba, zip malformado ou caminho malicioso (ADR 0005 seção 3.2): nunca chega a ser extraído."""
-
-
-class ConteudoNaoCorresponde(ArquivoRecusado):
+class ConteudoNaoCorresponde(ValueError):
     """Bytes não provam o tipo declarado (ADR 0005 seção 3.3)."""
 
 
@@ -119,109 +107,37 @@ def _shapefile_no_zip(zf: zipfile.ZipFile) -> list[str]:
     return [b for b, exts in por_base.items() if {"shp", "shx", "dbf"} <= exts]
 
 
-def _membros_do_zip(dados: bytes) -> list[str]:
-    return [i.filename for i in conferir_zip(dados).infolist()]
-
-
-def _e_xml_com(dados: bytes, marcas: tuple[bytes, ...]) -> bool:
-    """XML (com ou sem BOM/declaração) cuja abertura cita uma das marcas nos primeiros 64 KiB."""
-    amostra = dados[:65536].lstrip(b"\xef\xbb\xbf \r\n\t")
-    if not amostra.startswith(b"<"):
-        return False
-    minusculo = dados[:65536].lower()
-    return any(m in minusculo for m in marcas)
-
-
-def _verificar_kmz(dados: bytes) -> None:
-    membros = _membros_do_zip(dados)
-    if not any(m.lower().endswith(".kml") for m in membros):
-        raise ConteudoNaoCorresponde(
-            "conteúdo não corresponde ao tipo kmz: nenhum arquivo .kml dentro do zip"
-        )
-
-
-def _verificar_xlsx(dados: bytes) -> None:
-    membros = _membros_do_zip(dados)
-    if "xl/workbook.xml" not in membros:
-        raise ConteudoNaoCorresponde(
-            "conteúdo não corresponde ao tipo xlsx: falta xl/workbook.xml no pacote"
-        )
-
-
-def _verificar_gdb(dados: bytes) -> None:
-    membros = _membros_do_zip(dados)
-    if not any(".gdb/" in m.lower().replace("\\", "/") for m in membros):
-        raise ConteudoNaoCorresponde(
-            "conteúdo não corresponde ao tipo gdb: nenhuma pasta .gdb dentro do zip"
-        )
-
-
-def _verificar_dxf(dados: bytes) -> None:
-    if dados[:22] == b"AutoCAD Binary DXF\r\n\x1a\x00":
-        return  # DXF binário: o driver do GDAL lê
-    amostra = dados[:65536].upper()
-    if b"SECTION" not in amostra or (b"HEADER" not in amostra and b"ENTITIES" not in amostra):
-        raise ConteudoNaoCorresponde(
-            "conteúdo não corresponde ao tipo dxf: o arquivo é " + _o_que_e(dados)
-        )
-
-
-def _verificar_geojsonseq(dados: bytes) -> None:
-    """Uma feição por linha (RS opcional). A 1ª linha não vazia tem de ser um objeto JSON com "type"."""
-    for linha in dados[:65536].splitlines():
-        limpa = linha.strip(b"\x1e \t\r\n\xef\xbb\xbf")
-        if not limpa:
+def _gdb_no_zip(zf: zipfile.ZipFile) -> str | None:
+    """Nome do primeiro `<algo>.gdb/` no zip que tem ao menos um `a*.gdbtable` dentro (catálogo do FileGDB)."""
+    diretorios: dict[str, int] = {}
+    for info in zf.infolist():
+        nome = info.filename.replace("\\", "/")
+        m = nome.lower().find(".gdb/")
+        if m == -1:
             continue
-        if not limpa.startswith(b"{") or b'"type"' not in limpa:
-            raise ConteudoNaoCorresponde(
-                "conteúdo não corresponde ao tipo geojsonseq: a primeira linha não é um objeto GeoJSON"
-            )
-        return
-    raise ConteudoNaoCorresponde("conteúdo não corresponde ao tipo geojsonseq: arquivo vazio")
+        base = nome[: m + 4]
+        if nome.lower().endswith(".gdbtable"):
+            diretorios[base] = diretorios.get(base, 0) + 1
+    for base, n in diretorios.items():
+        if n:
+            return base
+    return None
 
 
 def verificar_conteudo(tipo_declarado: str, dados: bytes) -> None:
     """Levanta ConteudoNaoCorresponde quando os bytes não provam `tipo_declarado`."""
-    if tipo_declarado == "kmz":
-        return _verificar_kmz(dados)
-    if tipo_declarado == "xlsx":
-        return _verificar_xlsx(dados)
-    if tipo_declarado == "gdb":
-        return _verificar_gdb(dados)
-    if tipo_declarado == "dxf":
-        return _verificar_dxf(dados)
-    if tipo_declarado == "geojsonseq":
-        return _verificar_geojsonseq(dados)
-    if tipo_declarado == "kml":
-        if not _e_xml_com(dados, (b"<kml", b"http://www.opengis.net/kml",
-                                  b"http://earth.google.com/kml")):
-            raise ConteudoNaoCorresponde(
-                "conteúdo não corresponde ao tipo kml: o arquivo é " + _o_que_e(dados)
-            )
-        return
-    if tipo_declarado == "gpx":
-        if not _e_xml_com(dados, (b"<gpx", b"http://www.topografix.com/gpx")):
-            raise ConteudoNaoCorresponde(
-                "conteúdo não corresponde ao tipo gpx: o arquivo é " + _o_que_e(dados)
-            )
-        return
-    if tipo_declarado == "gml":
-        if not _e_xml_com(dados, (b"gml", b"http://www.opengis.net/wfs")):
-            raise ConteudoNaoCorresponde(
-                "conteúdo não corresponde ao tipo gml: o arquivo é " + _o_que_e(dados)
-            )
-        return
-    if tipo_declarado == "flatgeobuf":
-        if dados[:4] != b"\x66\x67\x62\x03":  # "fgb" + versão 3 (magic do FlatGeobuf)
-            raise ConteudoNaoCorresponde(
-                "conteúdo não corresponde ao tipo flatgeobuf: o arquivo é " + _o_que_e(dados)
-            )
-        return
     if tipo_declarado == "shapefile.zip":
         zf = conferir_zip(dados)
         if not _shapefile_no_zip(zf):
             raise ConteudoNaoCorresponde(
                 "conteúdo não corresponde ao tipo shapefile.zip: nenhum trio .shp/.shx/.dbf encontrado no zip"
+            )
+    elif tipo_declarado == "filegdb.zip":
+        zf = conferir_zip(dados)
+        if _gdb_no_zip(zf) is None:
+            raise ConteudoNaoCorresponde(
+                "conteúdo não corresponde ao tipo filegdb.zip: nenhuma pasta <nome>.gdb com catálogo "
+                "(a*.gdbtable) encontrada no zip"
             )
     elif tipo_declarado == "gpkg":
         if dados[:16] != b"SQLite format 3\x00":
@@ -234,12 +150,39 @@ def verificar_conteudo(tipo_declarado: str, dados: bytes) -> None:
             raise ConteudoNaoCorresponde(
                 "conteúdo não corresponde ao tipo geojson: o arquivo é " + _o_que_e(dados)
             )
+    elif tipo_declarado == "geojsonseq":
+        primeira = dados[:65536].lstrip(b"\x1e \t\r\n")
+        if not primeira.startswith(b"{") or b'"type"' not in primeira[:4096] or b"\x00" in dados[:65536]:
+            raise ConteudoNaoCorresponde(
+                "conteúdo não corresponde ao tipo geojsonseq: a primeira linha não é um objeto GeoJSON"
+            )
+    elif tipo_declarado == "kml":
+        inicio = dados[:4096]
+        if b"<kml" not in inicio or (b"<?xml" not in inicio and not inicio.lstrip().startswith(b"<kml")):
+            raise ConteudoNaoCorresponde(
+                "conteúdo não corresponde ao tipo kml: falta a tag <kml> no início do arquivo"
+            )
+    elif tipo_declarado == "dxf":
+        amostra = dados[:4096]
+        if b"\x00" in amostra:
+            raise ConteudoNaoCorresponde("conteúdo não corresponde ao tipo dxf: o arquivo tem bytes nulos (DXF "
+                                         "binário não é aceito, só o formato texto)")
+        linhas = [ln.strip() for ln in amostra.replace(b"\r\n", b"\n").split(b"\n") if ln.strip()][:4]
+        if not (b"SECTION" in amostra[:2048] and b"0" in linhas):
+            raise ConteudoNaoCorresponde(
+                "conteúdo não corresponde ao tipo dxf: não achou o par de códigos de grupo '0'/'SECTION' no início"
+            )
+    elif tipo_declarado == "xlsx":
+        e_zip = dados[:4] == b"PK\x03\x04"
+        tem_indicio_ooxml = b"xl/workbook.xml" in dados[:65536] or b"[Content_Types]" in dados[:2048]
+        if not e_zip or not tem_indicio_ooxml:
+            raise ConteudoNaoCorresponde(
+                "conteúdo não corresponde ao tipo xlsx: não é um pacote OOXML (zip com xl/workbook.xml)"
+            )
     elif tipo_declarado == "csv":
         amostra = dados[:65536]
         if b"\x00" in amostra:
             raise ConteudoNaoCorresponde("conteúdo não corresponde ao tipo csv: o arquivo tem bytes nulos (binário)")
-    elif tipo_declarado in FORMATOS_QUE_DEPENDEM_DE_LICENCA:
-        raise ConteudoNaoCorresponde(FORMATOS_QUE_DEPENDEM_DE_LICENCA[tipo_declarado])
     else:
         raise ConteudoNaoCorresponde(f"tipo declarado desconhecido nesta instalação: {tipo_declarado}")
 

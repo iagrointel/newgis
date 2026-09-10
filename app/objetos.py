@@ -57,6 +57,12 @@ EXTENSOES = {
     "application/pdf": "pdf",
     "application/zip": "zip",
     "application/vnd.google-earth.kmz": "kmz",
+    "application/geopackage+sqlite3": "gpkg",
+    "application/vnd.google-earth.kml+xml": "kml",
+    "image/vnd.dxf": "dxf",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+    "application/x-ndjson": "geojsonl",
+    "application/vnd.pmtiles": "pmtiles",
     "application/octet-stream": "bin",
     # formatos de exportação de camada (item L0-04-h-exportar; app/exportacao/formatos.py)
     "application/geopackage+sqlite3": "gpkg",

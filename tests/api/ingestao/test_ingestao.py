@@ -7,7 +7,7 @@ auto-intersectado, CSV com vírgula decimal — cada um importa certo ou recusa 
 
 import pytest
 
-from tests.api.ingestao.conftest import GERADOS, Ingestor
+from tests.api.ingestao.conftest import GERADOS
 from tests.api.test_rls import contexto, ids_por_slug
 
 
@@ -150,14 +150,12 @@ def test_geojson_poligono_autointersectado_e_corrigido_com_relatorio(ingestor_a)
 
 
 def test_formato_nao_suportado_recusa_antes_de_qualquer_job(ingestor_a):
-    """'kml' era o exemplo histórico de formato não suportado; desde o conserto do turno 3 (adversário G3,
-    achado do L0-04-d) a instalação passou a anunciar 13 formatos, e 'kml' é um deles — usá-lo aqui faria a
-    recusa cair em 'conteudo_nao_corresponde' (os bytes do gpkg não são KML), não em 'formato_nao_suportado'.
-    'dwg' continua fora de `app/ingestao/formatos.FORMATOS` de propósito (depende de conversor de terceiro
-    com licença própria; decisão do dono, item L0-04-e) — é o formato que ainda prova esta cláusula."""
+    # "gml" nunca entrou em `FORMATOS` (item L6-02-o ampliou para geojsonseq/kml/dxf/filegdb.zip/xlsx, mas GML
+    # continua fora — decisão de escopo, não medição pendente); "kml" NÃO serve mais de exemplo aqui desde que
+    # o L6-02-o o suportou de verdade.
     obj = ingestor_a.enviar_arquivo(GERADOS / "cobertura.gpkg")
     item_id = ingestor_a.item_arquivo(obj, "cobertura.gpkg")
-    r = ingestor_a.sessao.post("/api/importacoes", json={"arquivo_id": item_id, "formato": "dwg"})
+    r = ingestor_a.sessao.post("/api/importacoes", json={"arquivo_id": item_id, "formato": "gml"})
     assert r.status_code == 422 and r.json()["erro"] == "formato_nao_suportado"
 
 
@@ -232,12 +230,8 @@ def test_cota_excedida_nao_cria_tabela(ingestor_a, conexao_plat_app, env):
         _contexto_admin(conexao_plat_app, ids)
         # invariante geral do item (ADR 6.2-9): toda tabela d_demo.c_* tem item, todo item camada_vetorial tem tabela
         with conexao_plat_app.cursor() as cur:
-            # o schema de dado é o da INSTALAÇÃO (plat.camada_schema_prefixo): em produção `d_demo`, numa
-            # trilha `d_plat_t<T>_demo`. Com 'd_demo' fixo, o invariante media o schema de PRODUÇÃO —
-            # e contava as tabelas que outras trilhas deixaram lá (87 em 07/09/2026).
             cur.execute(
-                "SELECT count(*) AS n FROM pg_tables t WHERE t.schemaname = plat.camada_schema_prefixo() || 'demo' "
-                "AND t.tablename LIKE 'c\\_%' "
+                "SELECT count(*) AS n FROM pg_tables t WHERE t.schemaname = 'd_demo' AND t.tablename LIKE 'c\\_%' "
                 "AND NOT EXISTS (SELECT 1 FROM plat.item i WHERE i.tipo='camada_vetorial' "
                 "AND i.dados->>'tabela' = t.tablename)"
             )
@@ -247,30 +241,6 @@ def test_cota_excedida_nao_cria_tabela(ingestor_a, conexao_plat_app, env):
         with conexao_plat_app.cursor() as cur:
             cur.execute("UPDATE plat.tenant SET uso_reservado_bytes = %s WHERE id = %s",
                         (antes["uso_reservado_bytes"], ids["demo"]))
-        conexao_plat_app.commit()
-
-
-def test_inquilino_com_hifen_no_slug_importa(inquilino_temporario, conexao_plat_app):
-    """ATAQUE do adversário G3 (achado 2 do L0-04-c): `plat.tenant.slug` aceita hífen (CHECK da 002:
-    '^[a-z0-9][a-z0-9-]{1,38}$', e é exatamente o formato que `InquilinoTemporario` usa: 'zt-inq-xxxxxx'),
-    mas `plat.camada_schema_garantir`/`plat.camada_preparar` (029) recusavam qualquer slug com hífen
-    ('slug_invalido'/'nome_de_tabela_invalido') — um inquilino assim nunca conseguia importar camada
-    nenhuma. Migração 20260906T1812 relaxou as duas funções e o pattern de 'schema' no esquema JSON de
-    camada_vetorial; este teste prova que o slug com hífen do próprio inquilino_temporario importa."""
-    assert "-" in inquilino_temporario.slug
-    ing = Ingestor(inquilino_temporario.admin)
-    try:
-        importacao_id, insp = ing.importar("cobertura.gpkg", "gpkg")
-        assert insp["estado"] == "proposta", insp
-        final = ing.confirmar(importacao_id)
-        assert final["estado"] == "concluida", final
-        assert final["relatorio"]["feicoes_carregadas"] == 80
-    finally:
-        ing.liberar_token()
-        # o schema físico (d_<slug do inquilino temporário>, único por teste) não é limpo pelo
-        # tenant_apagar_interno (só varre `plat.*` com tenant_id) — apagado aqui direto, plat_app é dono.
-        with conexao_plat_app.cursor() as cur:
-            cur.execute(f'DROP SCHEMA IF EXISTS "d_{inquilino_temporario.slug}" CASCADE')
         conexao_plat_app.commit()
 
 

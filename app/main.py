@@ -97,6 +97,7 @@ from app.imagens.rotas_stac import router as rotas_stac
 from app.ingestao.rotas import router as rotas_ingestao
 from app.intercambio.lote_importar import router as rotas_intercambio_lote_importar
 from app.intercambio.rotas import router as rotas_intercambio
+from app.ingestao.rotas_exportar import router as rotas_ingestao_exportar
 from app.jobs.rotas import router as rotas_jobs
 from app.mapa.proxy_wms import router as rotas_mapa_wms_publico
 from app.mapa.rotas import router as rotas_mapa
@@ -331,6 +332,8 @@ ROUTERS = [
     rotas_edicao,
     # --- exportação de camada (L0-04-h): /api/exportacoes (11 formatos por ogr2ogr, arquivo com validade de 7 dias)
     rotas_exportacao,
+    # --- exportação vetorial (L6-02-o): /api/itens/{id}/exportar, /api/org/exportar (escrow do L0-06)
+    rotas_ingestao_exportar,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- rede de utilidades (L4-01-a): /api/rede (redes do inquilino), /api/rede/{rede_id}/pacote (importa e
