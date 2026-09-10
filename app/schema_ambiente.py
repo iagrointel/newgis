@@ -13,6 +13,7 @@ global ao processo do Postgres, não um objeto dentro de um schema. O app usa o 
 pontos (app/db.py, app/jobs/worker.py, app/jobs/tarefas.py) em QUALQUER ambiente; reescrevê-los quebraria
 a leitura porque quem grava (set_config) e quem lê (current_setting) deixariam de bater."""
 
+import os
 import re
 
 import psycopg2.extras
@@ -25,6 +26,24 @@ SCHEMA_TRABALHO_PADRAO = "plat_trabalho"
 # sem espaço entre o parêntese e a aspa (conferido: as 16+12 ocorrências da árvore batem 1 a 1).
 _SCHEMA = re.compile(r"(?<!current_setting\(')(?<!set_config\(')\bplat\b")
 _TRABALHO = re.compile(r"\bplat_trabalho\b")
+
+
+def esquemas_do_ambiente() -> tuple[str, str]:
+    """Par (schema, schema_trabalho) do ambiente atual — fonte ÚNICA para quem roda FORA do processo da
+    aplicação (script solto de `scripts/`, gerador de `docs/`, tarefa agendada). Dentro do processo o valor
+    vem de `app.settings`, como sempre; quando `app.settings` não é importável (script rodado como
+    `postgres` com o psycopg2 do sistema, sem venv e sem leitura do `.env`) cai nas variáveis de ambiente
+    PLAT_SCHEMA/PLAT_SCHEMA_TRABALHO, que é como `laco/trilha_ambiente.sh` e `make homolog` passam o schema.
+    Sem esta segunda porta, todo script solto ignora PLAT_SCHEMA e escreve no `plat` de produção (achado F9
+    do adversário do reescritor de schema, 07/09/2026)."""
+    try:
+        from app.settings import settings
+    except Exception:  # noqa: BLE001 — sem venv/.env: o ambiente é a única fonte que resta
+        return (
+            os.environ.get("PLAT_SCHEMA") or SCHEMA_PADRAO,
+            os.environ.get("PLAT_SCHEMA_TRABALHO") or SCHEMA_TRABALHO_PADRAO,
+        )
+    return settings.PLAT_SCHEMA, settings.PLAT_SCHEMA_TRABALHO
 
 
 def reescrever_schema(sql: str, schema: str = SCHEMA_PADRAO, schema_trabalho: str = SCHEMA_TRABALHO_PADRAO) -> str:
@@ -66,15 +85,9 @@ class MixinReescritaSchema:
         # L4-01-modelo-rede/L4-05-g-osm-power) monta a consulta em BYTES antes de chamar cur.execute
         # -- isinstance(query, str) nunca batia para essas chamadas, então o schema de homologação/
         # trilha nunca era aplicado nelas e o INSERT ia parar no `plat` de produção com permissão
-        # negada (achado do item L4-05-g-osm-power). Decodifica na codificação da conexão, reescreve
-        # e devolve como texto -- psycopg2 aceita str no lugar de bytes sem custo extra.
-        if isinstance(query, (bytes, bytearray)):
-            from psycopg2 import extensions as _ext
-
-            query = bytes(query).decode(_ext.encodings[self.connection.encoding])
-        if isinstance(query, str):
-            query = self._reescrever(query)
-        return super().execute(query, *args, **kwargs)
+        # negada (achado do item L4-05-g-osm-power). `_reescrever` trata texto e bytes e devolve o mesmo
+        # tipo que entrou, então nada aqui precisa saber de codificação.
+        return super().execute(self._reescrever(query), *args, **kwargs)
 
     def executemany(self, query, vars_list):
         # mesma classe de defeito do bytes/`execute_values` acima, achada agora em `cur.executemany`
@@ -84,13 +97,7 @@ class MixinReescritaSchema:
         # Sem esta sobrecarga, o INSERT ia com o literal `plat.` para o schema de PRODUÇÃO em qualquer
         # ambiente isolado (trilha/homologação), e a permissão negada aparecia traduzida como "operação
         # fora do inquilino da sessão" — não uma checagem de inquilino, um schema errado na consulta.
-        if isinstance(query, (bytes, bytearray)):
-            from psycopg2 import extensions as _ext
-
-            query = bytes(query).decode(_ext.encodings[self.connection.encoding])
-        if isinstance(query, str):
-            query = self._reescrever(query)
-        return super().executemany(query, vars_list)
+        return super().executemany(self._reescrever(query), vars_list)
 
     def callproc(self, procname, *args, **kwargs):
         return super().callproc(self._reescrever(procname), *args, **kwargs)
@@ -110,18 +117,18 @@ class MixinReescritaSchema:
         O caminho de bytes existe porque `psycopg2.extras.execute_values` monta o comando final com
         `b"".join(...)` e chama `cur.execute(bytes)`; o de `executemany` porque o `POST`/`PUT /api/papeis` grava
         os privilégios do papel por essa via."""
-        from app.settings import settings  # tardio: evita ciclo settings <-> schema_ambiente
+        schema, trabalho = esquemas_do_ambiente()  # tardio: evita ciclo settings <-> schema_ambiente
 
-        if settings.PLAT_SCHEMA == SCHEMA_PADRAO and settings.PLAT_SCHEMA_TRABALHO == SCHEMA_TRABALHO_PADRAO:
+        if schema == SCHEMA_PADRAO and trabalho == SCHEMA_TRABALHO_PADRAO:
             return consulta  # caminho de produção: nenhuma regex roda, nem sobre texto nem sobre bytes
         if isinstance(consulta, str):
-            return reescrever_schema(consulta, settings.PLAT_SCHEMA, settings.PLAT_SCHEMA_TRABALHO)
+            return reescrever_schema(consulta, schema, trabalho)
         if isinstance(consulta, (bytes, bytearray)):
             try:
                 texto = bytes(consulta).decode("utf-8")
             except UnicodeDecodeError:
                 return consulta  # não é SQL em UTF-8: melhor mandar cru do que corromper o comando
-            return reescrever_schema(texto, settings.PLAT_SCHEMA, settings.PLAT_SCHEMA_TRABALHO).encode("utf-8")
+            return reescrever_schema(texto, schema, trabalho).encode("utf-8")
         return consulta
 
 

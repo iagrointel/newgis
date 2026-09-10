@@ -36,6 +36,8 @@ from app.amc.rotas import router as rotas_amc
 from app.amc.rotas_criterios_feicao import router as rotas_criterios_feicao
 from app.amc.rotas_similaridade import router as rotas_similaridade
 from app.amc.rotas import router as rotas_amc
+from app.amc.rotas import router as rotas_amc
+from app.amc.rotas_similaridade import router as rotas_similaridade
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
 from app.auth import sso as rotas_sso
