@@ -1,0 +1,264 @@
+[
+ {
+  "descricao": "tipo de geometria errado em Area",
+  "entrada": "Area($g)",
+  "contexto": {
+   "g": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      0,
+      0
+     ],
+     [
+      0,
+      1
+     ]
+    ]
+   }
+  },
+  "erro": "geometria_invalida"
+ },
+ {
+  "descricao": "tipo de geometria errado em Comprimento",
+  "entrada": "Comprimento($g)",
+  "contexto": {
+   "g": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "erro": "geometria_invalida"
+ },
+ {
+  "descricao": "tipo de geometria errado em Dentro (2º argumento)",
+  "entrada": "Dentro($p, $l)",
+  "contexto": {
+   "p": {
+    "type": "Point",
+    "coordinates": [
+     0.5,
+     0.5
+    ]
+   },
+   "l": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      0,
+      0
+     ],
+     [
+      0,
+      1
+     ]
+    ]
+   }
+  },
+  "erro": "geometria_invalida"
+ },
+ {
+  "descricao": "anel de polígono que não fecha é recusado",
+  "entrada": "Area($g)",
+  "contexto": {
+   "g": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ]
+     ]
+    ]
+   }
+  },
+  "erro": "geometria_invalida"
+ },
+ {
+  "descricao": "anel com menos de quatro posições é recusado",
+  "entrada": "Area($g)",
+  "contexto": {
+   "g": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "erro": "geometria_invalida"
+ },
+ {
+  "descricao": "latitude fora da faixa é recusada",
+  "entrada": "Distancia($a, $b)",
+  "contexto": {
+   "a": {
+    "type": "Point",
+    "coordinates": [
+     0,
+     91
+    ]
+   },
+   "b": {
+    "type": "Point",
+    "coordinates": [
+     -46.6,
+     -23.5
+    ]
+   }
+  },
+  "erro": "geometria_invalida"
+ },
+ {
+  "descricao": "longitude fora da faixa é recusada",
+  "entrada": "Distancia($a, $b)",
+  "contexto": {
+   "a": {
+    "type": "Point",
+    "coordinates": [
+     181,
+     0
+    ]
+   },
+   "b": {
+    "type": "Point",
+    "coordinates": [
+     -46.6,
+     -23.5
+    ]
+   }
+  },
+  "erro": "geometria_invalida"
+ },
+ {
+  "descricao": "coordenada com texto em vez de número é recusada",
+  "entrada": "Distancia($a, $b)",
+  "contexto": {
+   "a": {
+    "type": "Point",
+    "coordinates": [
+     "0",
+     0
+    ]
+   },
+   "b": {
+    "type": "Point",
+    "coordinates": [
+     -46.6,
+     -23.5
+    ]
+   }
+  },
+  "erro": "geometria_invalida"
+ },
+ {
+  "descricao": "geometria sem a chave coordinates é recusada",
+  "entrada": "Area($g)",
+  "contexto": {
+   "g": {
+    "type": "Polygon"
+   }
+  },
+  "erro": "geometria_invalida"
+ },
+ {
+  "descricao": "dicionário que não é geometria é recusado",
+  "entrada": "Area($g)",
+  "contexto": {
+   "g": {
+    "a": 1
+   }
+  },
+  "erro": "geometria_invalida"
+ },
+ {
+  "descricao": "atributo de nome proibido é recusado",
+  "entrada": "Atributo($f, '__proto__')",
+  "contexto": {
+   "f": {
+    "atributos": {
+     "uso": "pasto",
+     "area_ha": 12.5,
+     "nome com espaco": "Gleba 1",
+     "vazio": null
+    },
+    "geometria": {
+     "type": "Polygon",
+     "coordinates": [
+      [
+       [
+        0,
+        0
+       ],
+       [
+        1,
+        0
+       ],
+       [
+        1,
+        1
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        0
+       ]
+      ]
+     ]
+    }
+   }
+  },
+  "erro": "campo_nao_permitido"
+ }
+]

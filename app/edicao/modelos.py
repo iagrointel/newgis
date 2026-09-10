@@ -43,6 +43,7 @@ class EdicoesEntrada(Modelo):
     modo: str = Field(default="transacao", pattern="^(transacao|parcial)$")
     crs: Crs | None = None  # ausente = geometria já está no SRID da camada
     corrigir_geometria: bool = False  # ST_MakeValid + relatório; sem isto, polígono inválido é 422 (portão cl.5)
+    em_massa: bool = False  # L2-10-d: lote de importação em massa — regras com excluir_em_massa não rodam
     adicionar: list[FeicaoAdicionar] = Field(default_factory=list, max_length=limites.EDICAO_LOTE_MAX)
     atualizar: list[FeicaoAtualizar] = Field(default_factory=list, max_length=limites.EDICAO_LOTE_MAX)
     apagar: list[FeicaoApagar] = Field(default_factory=list, max_length=limites.EDICAO_LOTE_MAX)

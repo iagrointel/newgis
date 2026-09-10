@@ -79,6 +79,7 @@ from app.rede_utilidades.rotas_resumos import router as rotas_rede_resumos
 from app.rede_utilidades.rotas_simples import router as rotas_rede_simples
 from app.rede_utilidades.rotas_subredes import router as rotas_rede_subredes
 from app.rede_utilidades.rotas_topologia import router as rotas_rede_topologia
+from app.regras.rotas import router as rotas_regras  # L2-10-d: regras de atributo por camada
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
@@ -162,6 +163,7 @@ ROUTERS = [
     # --- exportação de camada (L0-04-h) e do mapa (L2-01-l): /api/exportacoes (15 formatos por ogr2ogr
     # mais o pacote de mapa; arquivo com validade de 7 dias)
     rotas_exportacao,
+    rotas_regras,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- rede de utilidades (L4-01-a): /api/rede (redes do inquilino), /api/rede/{rede_id}/pacote (importa e
@@ -222,6 +224,13 @@ ROUTERS = [
     rotas_mapa_wms_publico,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
     rotas_tiles_martin_verificar,
+    # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,
+    # /fatores/{id}/amostras, /conjuntos/{id}/macro, /execucoes/{id}/micro, /execucoes
+    rotas_multiescala,
+    # --- visualizador de mapa (L2-01-mapa-web): /api/mapa/camadas, TileJSON com token curto, repasse /tiles
+    rotas_mapa,
+    # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
+    rotas_tiles,
     # --- operação query do FeatureServer (L2-04-c): /rest/services/{item}/FeatureServer/{camada}/query
     # --- diretório/metadados do FeatureServer + OGC API Features Part 1 + WFS 2.0 (item
     # L2-04-servicos-esri-ogc, construído EM VOLTA da query acima, sem reescrevê-la): descritor de

@@ -1,18 +1,5 @@
-/* plat — página /aplicativo (item L5-06-motor-widgets; UX-07): monta um documento de WIDGETS pelo motor
-   (`montarWidgets`), sem o chrome interno do produto — a página é dona do viewport.
-
-   Três origens, nesta ordem:
-     1. `?item=<id>`: o item do catálogo (sessão), `painel` ou `app`. O documento do editor (nós com `pai`,
-        `largura_colunas`, `propriedades`) é traduzido para o documento de widgets do motor (nós com `posicao` e
-        `configuracao`) por `paraWidgets()`; num `app` entram os nós da página inicial. É o "Executar" de um painel.
-     2. `<script type="application/json" id="documento-widgets">` incorporado na página (publicação estática).
-     3. sem nada: a demonstração fixa (três widgets ligados), que o e2e do L5-06 mede.
-   Estados por <plat-estado>: carregando, vazio (documento sem widget), negado (403), inexistente (404) e erro.
-   A página nunca fica em branco e `data-pronto` é marcado de qualquer jeito. */
-import '../base/componentes.js';
-import { obter } from '../base/api.js';
-import { carregar, t } from '../base/i18n.js';
 import { montarWidgets } from './motor.js';
+import { aplicarDaUrl, ligarUrl } from '../app/estado_url.js';
 
 const DEMONSTRACAO = {
   tipo: 'app', esquema_versao: 2,
@@ -41,99 +28,43 @@ const DEMONSTRACAO = {
   },
 };
 
-const NIVEL_TEXTO = { titulo: 2, legenda: 6 };
-
-/* configuração de widget a partir das propriedades do nó do editor (paleta de layout / de páginas) */
-function configuracaoDe(no) {
-  const p = { ...(no.propriedades || {}) };
-  switch (no.tipo) {
-    case 'texto': {
-      const c = { texto: String(p.texto ?? '') };
-      if (typeof p.nivel === 'string' && NIVEL_TEXTO[p.nivel]) c.nivel = NIVEL_TEXTO[p.nivel];
-      if (typeof p.nivel === 'number') c.nivel = p.nivel;
-      if (p.formato) c.formato = p.formato;
-      return c;
-    }
-    case 'imagem': return { url: p.url || '', alternativo: p.alternativo || '' };
-    case 'mapa': return { rotulo: p.rotulo || t('aplicativo.widget_mapa') };
-    case 'tabela': return { colunas: Array.isArray(p.colunas) ? p.colunas : [], linhas: Array.isArray(p.linhas) ? p.linhas : [] };
-    case 'menu_widget': return p;
-    default: return p;
+/* item L5-07: `/aplicativo?item=<id>` publica o documento do item (GET /api/itens/{id}); sem `item`, o documento
+   embutido na página ou a demonstração do L5-06. O estado de filtros e seleção vive na URL (`v.<vista>`):
+   restaurado ANTES de as mensagens ouvirem e reescrito a cada mudança de vista. */
+async function documentoDaPagina() {
+  const itemId = new URL(location.href).searchParams.get('item');
+  if (itemId) {
+    const r = await fetch(`/api/itens/${encodeURIComponent(itemId)}`, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+    if (!r.ok) throw new Error(`item ${itemId}: HTTP ${r.status}`);
+    const item = await r.json();
+    if (!item.dados?.corpo?.nos) throw new Error(`item ${itemId} não é um documento de aplicativo`);
+    document.title = `${item.titulo} · plat`;
+    return item.dados;
   }
-}
-
-/* documento do EDITOR (árvore com pai/largura_colunas) -> documento de WIDGETS (grade de 12 colunas, um nó por
-   widget; contêineres de layout não viram widget: os filhos deles entram em sequência). Num `app`, só a página
-   inicial (marcada `inicial`, senão a primeira). */
-export function paraWidgets(documento) {
-  const nos = Array.isArray(documento?.corpo?.nos) ? documento.corpo.nos : [];
-  const filhos = (pai) => nos.filter((n) => (n.pai ?? null) === pai);
-  let raiz = null;
-  const paginas = filhos(null).filter((n) => n.tipo === 'pagina');
-  if (paginas.length) raiz = (paginas.find((n) => n.propriedades?.inicial) || paginas[0]).id;
-  const saida = [];
-  let linha = 1;
-  let coluna = 1;
-  const visitar = (pai) => {
-    for (const no of filhos(pai)) {
-      if (no.tipo === 'pagina') continue;
-      const largura = Math.min(12, Math.max(1, Number(no.largura_colunas) || 12));
-      const temFilhos = filhos(no.id).length > 0;
-      if (temFilhos || no.tipo === 'grupo' || ['linha', 'coluna', 'grade', 'acordeao', 'painel_fixo', 'painel_lateral', 'janela', 'secao_vistas', 'vista', 'cabecalho', 'rodape'].includes(no.tipo)) {
-        visitar(no.id);
-        continue;
-      }
-      if (coluna + largura - 1 > 12) { linha += 1; coluna = 1; }
-      const tipo = no.tipo === 'menu_widget' ? 'menu' : no.tipo;
-      saida.push({ id: no.id, tipo, posicao: { coluna, linha, largura, altura: 1 }, configuracao: configuracaoDe(no) });
-      coluna += largura;
-      if (coluna > 12) { linha += 1; coluna = 1; }
-    }
-  };
-  visitar(raiz);
-  return { tipo: documento?.tipo || 'painel', esquema_versao: 2, corpo: { nos: saida, ligacoes: Array.isArray(documento?.corpo?.ligacoes) ? documento.corpo.ligacoes : [] } };
-}
-
-function documentoIncorporado() {
   const incorporado = document.getElementById('documento-widgets');
-  return incorporado ? JSON.parse(incorporado.textContent) : null;
+  return incorporado ? JSON.parse(incorporado.textContent) : DEMONSTRACAO;
 }
 
+// A página nunca fica em branco: documento ilegível ou motor que não sobe viram uma mensagem no <main>,
+// e `data-pronto` é marcado de qualquer jeito para o e2e (e quem lê a tela) saber que terminou.
 const principal = document.getElementById('aplicativo');
-const estado = document.getElementById('estado');
-await carregar();
-estado.addEventListener('acao', (ev) => {
-  if (ev.detail.id === 'tentar') location.reload();
-  if (ev.detail.id === 'construtor') location.href = '/construtor';
-});
-const id = new URLSearchParams(location.search).get('item');
 try {
-  let documento;
-  if (id) {
-    estado.carregando(t('executor.carregando'));
-    const r = await obter(`/api/itens/${encodeURIComponent(id)}`);
-    if (r.status === 401) { location.replace(`/entrar?proximo=${encodeURIComponent(location.pathname + location.search)}`); throw new Error('sessao'); }
-    if (r.status === 404) {
-      estado.mostrar({ tipo: 'vazio', titulo: t('executor.inexistente_titulo'), texto: t('executor.inexistente_texto'), acoes: [{ id: 'construtor', rotulo: t('executor.ir_construtor') }] });
-      throw new Error('inexistente');
-    }
-    if (r.status !== 200) { estado.erro(r); throw new Error(`http ${r.status}`); }
-    const item = r.json;
-    document.title = `${item.titulo} · ${t('app.nome')}`;
-    documento = paraWidgets({ tipo: item.tipo, ...(item.dados || {}) });
-    if (!documento.corpo.nos.length) {
-      estado.mostrar({ tipo: 'vazio', titulo: t('aplicativo.vazio_titulo'), texto: t('aplicativo.vazio_texto'), acoes: [{ id: 'construtor', rotulo: t('executor.ir_construtor') }] });
-      throw new Error('vazio');
-    }
-    estado.limpar();
-  } else {
-    documento = documentoIncorporado() || DEMONSTRACAO;
-  }
-  const motor = await montarWidgets(principal, documento);
+  const documento = await documentoDaPagina();
+  const motor = await montarWidgets(principal, documento, {
+    antesDoBarramento: (vistas) => { aplicarDaUrl(vistas); ligarUrl(vistas); },
+  });
+  const avisos = document.createElement('div');
+  avisos.id = 'avisos-barramento'; avisos.setAttribute('aria-live', 'polite'); avisos.className = 'plat-avisos';
+  motor.barramentoApp.addEventListener('aviso', (e) => {
+    const p = document.createElement('p'); p.dataset.tipo = e.detail.tipo; p.textContent = e.detail.mensagem;
+    avisos.append(p);
+  });
+  principal.append(avisos);
   window.plat = { ...(window.plat || {}), widgets: motor };
 } catch (erro) {
-  if (!['sessao', 'inexistente', 'vazio'].includes(erro.message) && !/^http /.test(erro.message)) {
-    estado.mostrar({ tipo: 'erro', texto: t('aplicativo.erro_montar', { erro: erro.message }), acoes: [{ id: 'tentar', rotulo: t('estado.tentar_de_novo') }] });
-  }
+  const aviso = document.createElement('section');
+  aviso.className = 'plat-widget-erro'; aviso.setAttribute('role', 'alert');
+  aviso.textContent = `Aplicativo não pôde ser montado: ${erro.message}`;
+  principal.replaceChildren(aviso);
 }
 document.body.dataset.pronto = '1';

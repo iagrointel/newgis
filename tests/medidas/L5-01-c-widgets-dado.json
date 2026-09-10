@@ -1,0 +1,42 @@
+{
+ "item": "L5-01-c-widgets-dado",
+ "medidas": {
+  "tabela_pagina_100k_p95_ms": {
+   "valor": 113.2,
+   "unidade": "ms",
+   "comando": "POST /rest/services/{camada}/FeatureServer/0/query resultRecordCount=50, resultOffset aleatorio, orderByFields e where variados, 30 paginas sobre 100 mil pontos (TestClient em processo)"
+  },
+  "tabela_pagina_100k_p50_ms": {
+   "valor": 35.0,
+   "unidade": "ms",
+   "comando": "mesma medida, mediana"
+  },
+  "semeadura_100k_s": {
+   "valor": 1.36,
+   "unidade": "s",
+   "comando": "INSERT ... generate_series(1, 100000) + ANALYZE na trilha"
+  },
+  "carga_1min": {
+   "valor": 7.48,
+   "unidade": "load",
+   "comando": "os.getloadavg()[0] no instante da medida"
+  },
+  "pagina_pronta_ms_aplicativo_widgets_dado": {
+   "valor": 158.9,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (apoio.py Tela.ir)"
+  },
+  "e2e_consulta_featureserver_p95_ms": {
+   "valor": 77.6,
+   "unidade": "ms",
+   "comando": "FonteServidor.p95() no navegador: todas as consultas ao FeatureServer durante o fluxo e2e (300 pontos)"
+  },
+  "e2e_widgets_dado": {
+   "valor": 1,
+   "unidade": "fluxo",
+   "comando": "tests/e2e/test_widgets_dado.py: tabela, gráfico, histograma, filtro e mapa combinados, consulta, seleção, info, lista, CSV, adicionar dado"
+  }
+ },
+ "gerado_em": "2026-09-08T11:57:59Z",
+ "git_sha": "58147bf0383c"
+}

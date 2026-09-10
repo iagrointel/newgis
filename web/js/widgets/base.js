@@ -1,10 +1,16 @@
-import { htmlSeguro } from '../base/dom.js';
-
+/* plat — base dos widgets (L5-06), com a ligação a VISTA do L5-07: `widget.vista` (objeto Vista do
+   app/vistas.js) chega pelo motor quando `configuracao.vista` aponta para uma vista do documento; o widget
+   ouve `vista_mudou` e repinta. `emitir(nome, detalhe)` publica no barramento de widgets do L5-06 (ligações
+   simples) E no barramento de mensagens do L5-07 (`barramentoApp.disparar`), quando houver. As ações de dado
+   (filtrar/selecionar/limpar_*) chegam ao widget já resolvidas na vista pelo barramento; aqui ficam as ações de
+   widget (piscar, abrir, fechar, definir_parametro) com comportamento padrão. */
 export class PlatWidget extends HTMLElement {
   #configuracao = {};
+  #vista = null;
+  #aoMudarVista = null;
   barramento = null;
+  barramentoApp = null;
   noId = '';
-  feicao = null; // feição selecionada (mapa/tabela) que os widgets de página leem por {campo}
 
   set configuracao(valor) {
     this.#configuracao = Object.freeze({ ...(valor || {}) });
@@ -13,9 +19,22 @@ export class PlatWidget extends HTMLElement {
 
   get configuracao() { return this.#configuracao; }
 
+  set vista(v) {
+    if (this.#vista && this.#aoMudarVista) this.#vista.removeEventListener('vista_mudou', this.#aoMudarVista);
+    this.#vista = v || null;
+    if (this.#vista) {
+      this.#aoMudarVista = (e) => { if (this.isConnected) this.renderizar(e?.detail || null); };
+      this.#vista.addEventListener('vista_mudou', this.#aoMudarVista);
+    }
+    if (this.isConnected) this.renderizar();
+  }
+
+  get vista() { return this.#vista; }
+
   emitir(nome, detalhe = {}) {
     const evento = { nome, origem: this.noId, detalhe };
     this.barramento?.publicar(evento);
+    this.barramentoApp?.disparar(this.noId, nome, detalhe);
     this.dispatchEvent(new CustomEvent(nome, { detail: detalhe, bubbles: true, composed: true }));
   }
 
@@ -25,29 +44,29 @@ export class PlatWidget extends HTMLElement {
     metodo.call(this, detalhe);
   }
 
-  /* ação comum `<widget>.feicao`: guarda a feição selecionada e redesenha (texto, imagem, cartão a usam) */
-  definirFeicao(detalhe) {
-    this.feicao = (detalhe && (detalhe.feicao || detalhe.linha || detalhe)) || null;
-    if (this.isConnected) this.renderizar();
+  /* ações de widget com comportamento padrão (o widget pode sobrescrever) */
+  acao_piscar() {
+    this.setAttribute('data-piscando', '1');
+    clearTimeout(this._piscar);
+    this._piscar = setTimeout(() => this.removeAttribute('data-piscando'), 1200);
   }
 
-  /* HTML vindo do documento entra só pelo DOMPurify (D23); sem DOMPurify na página, cai para texto puro */
-  fragmentoSeguro(html) {
-    try { return htmlSeguro(html, { proibir: ['style', 'form', 'input', 'button'] }); }
-    catch { return document.createTextNode(String(html)); }
-  }
+  acao_abrir() { this.hidden = false; this.setAttribute('data-aberto', '1'); }
 
-  /* caixa de erro nomeada dentro do próprio widget (config inválida em tempo de execução) */
-  erro(mensagem) {
-    const e = document.createElement('section');
-    e.className = 'plat-widget-erro'; e.setAttribute('role', 'alert');
-    e.textContent = `Widget “${this.dataset.tipo || this.localName}”: ${mensagem}`;
-    this.replaceChildren(e);
+  acao_fechar() { this.hidden = true; this.removeAttribute('data-aberto'); }
+
+  acao_definir_parametro(detalhe) {
+    if (!detalhe || typeof detalhe.nome !== 'string') return;
+    this.dataset[`parametro${detalhe.nome.replace(/[^a-z0-9]/gi, '')}`] = String(detalhe.valor ?? '');
+    this.configuracao = { ...this.configuracao, [detalhe.nome]: detalhe.valor };
   }
 
   connectedCallback() { this.renderizar(); }
 
-  renderizar() {}
+  disconnectedCallback() { if (this.#vista && this.#aoMudarVista) this.#vista.removeEventListener('vista_mudou', this.#aoMudarVista); }
+
+  /* `mudanca` é o detalhe de `vista_mudou` ({causa, origem}) quando a repintura vem da vista; null nos demais casos */
+  renderizar(mudanca = null) {}  // eslint-disable-line no-unused-vars
 }
 
 export function definir(nome, classe) {

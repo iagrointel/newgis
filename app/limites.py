@@ -248,6 +248,16 @@ ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_CELULAS_GEOJSON_MAX = 50_000   # feições de GET /api/multiescala/execucoes/{id}/celulas (UX-08); além = truncado
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+
+# ---- L2-10-d-regras-de-atributo: regras por camada (cálculo, restrição, validação) e campos virtuais, avaliadas
+# pela linguagem de expressão (app/expressao) no caminho único de escrita (app/edicao) e no job camadas.validar
+REGRAS_POR_CAMADA_MAX = 100                # entradas em dados.regras (cálculo + restrição + validação)
+REGRAS_CAMPOS_VIRTUAIS_MAX = 50            # entradas em dados.campos_virtuais (só leitura, avaliados na leitura)
+REGRAS_EXPRESSAO_TEXTO_MAX = 4_000         # caracteres por expressão de regra (bem abaixo de MAX_TEXTO do avaliador)
+REGRAS_MENSAGEM_MAX = 500                  # mensagem configurada da restrição/validação
+REGRAS_VALIDACAO_LOTE = 5_000              # feições por lote do job camadas.validar (cursor no servidor)
+REGRAS_VALIDACAO_ERROS_MAX = 1_000_000     # teto de erros gravados por execução (acima disso o job para e avisa)
+REGRAS_FEICOES_LEITURA_MAX = 1_000         # linhas por chamada de GET /api/camadas/{id}/feicoes
 # --- edição transacional de feições (L2-03-a-api-edicao-transacional; POST /api/camadas/{id}/edicoes, única
 # porta de escrita para navegador/PWA/FeatureServer/OGC). LOTE_MAX = 2× o tamanho medido no portão (1.000
 # feições ≤ 3 s), com folga operacional; bem abaixo do lote de 100 mil que a refutação do item manda recusar

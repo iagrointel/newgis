@@ -1,0 +1,52 @@
+{
+ "item": "L5-11-expressoes-no-navegador",
+ "medidas": {
+  "funcoes_da_linguagem": {
+   "valor": 49,
+   "unidade": "funções",
+   "comando": "len(TABELA_FUNCOES)"
+  },
+  "perfis_de_uso": {
+   "valor": 7,
+   "unidade": "perfis",
+   "comando": "len(PERFIS)"
+  },
+  "vetores_de_expressao_python_e_javascript": {
+   "valor": 339,
+   "unidade": "vetores",
+   "comando": "len(tests/expressoes/vetores.json)"
+  },
+  "vetores_de_perfil": {
+   "valor": 57,
+   "unidade": "vetores",
+   "comando": "len(tests/expressoes/vetores_perfis.json)"
+  },
+  "vetores_popup_igual_calculo_de_formulario": {
+   "valor": 19,
+   "unidade": "vetores",
+   "comando": "test_mesma_expressao_no_popup_e_no_calculo_de_formulario_da_o_mesmo_valor"
+  },
+  "tempo_corte_perfil_popup_python_ms": {
+   "valor": 50.72,
+   "unidade": "ms",
+   "comando": "test_expressao_sem_fim_e_cortada_pelo_orcamento_do_perfil_no_python"
+  },
+  "tempo_corte_perfil_popup_javascript_ms": {
+   "valor": 51.76,
+   "unidade": "ms",
+   "comando": "test_expressao_sem_fim_e_cortada_pelo_orcamento_do_perfil_no_javascript"
+  },
+  "carga_1min": {
+   "valor": 10.25,
+   "unidade": "média de 1 min (12 núcleos)",
+   "comando": "os.getloadavg()[0] no instante da medida"
+  },
+  "ram_livre_gb": {
+   "valor": 6.23,
+   "unidade": "GB",
+   "comando": "MemAvailable de /proc/meminfo no instante da medida"
+  }
+ },
+ "gerado_em": "2026-09-08T13:30:20Z",
+ "git_sha": "84263e122105"
+}

@@ -1,15 +1,28 @@
+/* plat — registro de widgets (item L5-06-motor-widgets; ampliado pelo L5-07-fontes-vistas-mensagens e pelo
+   L5-01-c-widgets-dado: tabela 2, gráfico 2, filtro 2, lista, consulta, seleção, info-feicao, adicionar-dado).
+   Cada manifesto declara os EVENTOS que emite e as AÇÕES que aceita no vocabulário do barramento
+   (L5_CONCEITO D5): eventos clique | dado_adicionado | filtro_mudou | extensao_mudou | localizacao |
+   registros_carregados | selecao_mudou | vista_mudou; ações de dado filtrar | selecionar | limpar_filtro |
+   limpar_selecao (resolvidas na VISTA do widget) e de widget zoom | pan | piscar | popup | abrir | fechar |
+   definir_parametro (chamadas no elemento). `configuracao.vista` liga o widget a uma vista do documento. */
 const textoCurto = { type: 'string', maxLength: 200 };
+const ulid = { type: 'string', maxLength: 26 };
 const objetoFechado = (properties = {}, required = []) => ({ type: 'object', additionalProperties: false, properties, required });
+
+export const EVENTOS_BARRAMENTO = Object.freeze(['clique', 'dado_adicionado', 'filtro_mudou', 'extensao_mudou', 'localizacao', 'registros_carregados', 'selecao_mudou', 'vista_mudou']);
+export const ACOES_DADO = Object.freeze(['filtrar', 'selecionar', 'limpar_filtro', 'limpar_selecao']);
+export const ACOES_WIDGET = Object.freeze(['zoom', 'pan', 'piscar', 'popup', 'abrir', 'fechar', 'definir_parametro']);
 
 const manifestos = [
   {
-    nome: 'mapa', versao: '1.0.0', api_widget: 1, modulo: './mapa.js', elemento: 'plat-w-mapa',
-    esquema_config: objetoFechado({ rotulo: textoCurto }),
-    eventos: ['mapa.selecao', 'mapa.extensao_alterada'], acoes: ['mapa.enquadrar', 'mapa.destacar'],
+    nome: 'mapa', versao: '1.1.0', api_widget: 1, modulo: './mapa.js', elemento: 'plat-mapa',
+    esquema_config: objetoFechado({ rotulo: textoCurto, vista: ulid, campo_rotulo: textoCurto, altura: { type: 'integer', minimum: 120, maximum: 2000 } }),
+    eventos: ['clique', 'selecao_mudou', 'extensao_mudou', 'registros_carregados', 'mapa.selecao', 'mapa.extensao_alterada'],
+    acoes: [...ACOES_DADO, 'zoom', 'pan', 'piscar', 'popup', 'mapa.enquadrar', 'mapa.destacar'],
     fontes: { min: 0, max: 100, tipos: ['mapa', 'camada'] }, i18n: 'widget.mapa',
   },
   {
-    nome: 'legenda', versao: '1.0.0', api_widget: 1, modulo: './legenda.js', elemento: 'plat-w-legenda',
+    nome: 'legenda', versao: '1.0.0', api_widget: 1, modulo: './legenda.js', elemento: 'plat-legenda',
     esquema_config: objetoFechado({
       titulo: textoCurto,
       itens: { type: 'array', maxItems: 500, items: objetoFechado({ rotulo: textoCurto, cor: textoCurto, valor: {} }, ['rotulo']) },
@@ -18,103 +31,80 @@ const manifestos = [
     fontes: { min: 0, max: 1, tipos: ['mapa'] }, i18n: 'widget.legenda',
   },
   {
-    nome: 'tabela', versao: '1.0.0', api_widget: 1, modulo: './tabela.js', elemento: 'plat-w-tabela',
+    nome: 'tabela', versao: '2.0.0', api_widget: 1, modulo: './tabela.js', elemento: 'plat-tabela',
     esquema_config: objetoFechado({
+      vista: ulid,
       colunas: { type: 'array', maxItems: 100, items: objetoFechado({ campo: textoCurto, rotulo: textoCurto }, ['campo', 'rotulo']) },
       linhas: { type: 'array', maxItems: 10000, items: { type: 'object' } },
-    }, ['colunas']),
-    eventos: ['tabela.linha_selecionada'], acoes: ['tabela.definir', 'tabela.filtrar'],
+      linhas_por_pagina: { type: 'integer', minimum: 5, maximum: 1000 },
+      exportar: { type: 'boolean' },
+    }),
+    eventos: ['clique', 'selecao_mudou', 'registros_carregados', 'tabela.linha_selecionada', 'tabela.exportada'],
+    acoes: [...ACOES_DADO, 'piscar', 'tabela.definir', 'tabela.filtrar', 'tabela.ordenar', 'tabela.pagina'],
     fontes: { min: 1, max: 1, tipos: ['camada', 'tabela'] }, i18n: 'widget.tabela',
   },
   {
-    nome: 'texto', versao: '1.1.0', api_widget: 1, modulo: './texto.js', elemento: 'plat-w-texto',
+    nome: 'grafico', versao: '2.0.0', api_widget: 1, modulo: './grafico.js', elemento: 'plat-grafico',
     esquema_config: objetoFechado({
-      texto: { type: 'string', maxLength: 10000 }, nivel: { type: 'integer', minimum: 1, maximum: 6 },
-      formato: { type: 'string', enum: ['texto', 'markdown'] },
-    }, ['texto']),
-    eventos: [], acoes: ['texto.definir', 'texto.feicao'], fontes: { min: 0, max: 1, tipos: ['camada', 'tabela'] }, i18n: 'widget.texto',
+      vista: ulid, titulo: textoCurto, tipo: { type: 'string', enum: ['barra', 'linha', 'pizza', 'dispersao', 'histograma'] },
+      campo: textoCurto, agregacao: { type: 'string', enum: ['contagem', 'soma', 'media', 'minimo', 'maximo'] },
+      campo_valor: textoCurto, campo_y: textoCurto, maximo_barras: { type: 'integer', minimum: 1, maximum: 200 },
+      faixas: { type: 'integer', minimum: 2, maximum: 100 }, amostra: { type: 'integer', minimum: 10, maximum: 5000 },
+      altura: { type: 'integer', minimum: 80, maximum: 2000 },
+    }, ['campo']),
+    eventos: ['clique', 'selecao_mudou', 'filtro_mudou', 'registros_carregados', 'grafico.desenhado'],
+    acoes: [...ACOES_DADO, 'piscar', 'grafico.definir'],
+    fontes: { min: 1, max: 1, tipos: ['camada', 'tabela'] }, i18n: 'widget.grafico',
   },
   {
-    nome: 'botao', versao: '1.1.0', api_widget: 1, modulo: './botao.js', elemento: 'plat-w-botao',
-    esquema_config: objetoFechado({
-      rotulo: textoCurto, valor: {}, habilitado: { type: 'boolean' },
-      acao: objetoFechado({ tipo: { type: 'string', enum: ['evento', 'link', 'pagina'] }, url: { type: 'string', maxLength: 2048 },
-                            pagina: textoCurto, nova_aba: { type: 'boolean' } }, ['tipo']),
-    }, ['rotulo']),
-    eventos: ['botao.acionado', 'botao.pagina'], acoes: ['botao.habilitar'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.botao',
+    nome: 'lista', versao: '1.0.0', api_widget: 1, modulo: './lista.js', elemento: 'plat-lista',
+    esquema_config: objetoFechado({ vista: ulid, modelo: { type: 'string', maxLength: 2000 }, linhas_por_pagina: { type: 'integer', minimum: 1, maximum: 500 } }),
+    eventos: ['clique', 'selecao_mudou', 'lista.item_selecionado'], acoes: [...ACOES_DADO, 'piscar', 'lista.pagina'],
+    fontes: { min: 1, max: 1, tipos: ['camada', 'tabela'] }, i18n: 'widget.lista',
   },
   {
-    nome: 'filtro', versao: '1.0.0', api_widget: 1, modulo: './filtro.js', elemento: 'plat-w-filtro',
-    esquema_config: objetoFechado({ rotulo: textoCurto, valor: textoCurto }),
-    eventos: ['filtro.alterado'], acoes: ['filtro.definir'], fontes: { min: 1, max: 100, tipos: ['camada', 'tabela'] }, i18n: 'widget.filtro',
+    nome: 'consulta', versao: '1.0.0', api_widget: 1, modulo: './consulta_dado.js', elemento: 'plat-consulta',
+    esquema_config: objetoFechado({ vista: ulid, rotulo: textoCurto, campos: { type: 'array', maxItems: 100, items: textoCurto }, espacial: { type: 'boolean' } }),
+    eventos: ['filtro_mudou', 'consulta.executada'], acoes: ['limpar_filtro', 'consulta.executar', 'definir_parametro'],
+    fontes: { min: 1, max: 1, tipos: ['camada', 'tabela'] }, i18n: 'widget.consulta',
   },
-  // ---- widgets de página e de menu (item L5-01-d): texto/imagem/botão/cartão/incorporar/divisor · menu/controlador/
-  // compartilhar/login/idioma/tema — os 12 do "Page elements" + "Menu and toolbar" do Experience Builder
   {
-    nome: 'imagem', versao: '1.0.0', api_widget: 1, modulo: './imagem.js', elemento: 'plat-w-imagem',
+    nome: 'selecao', versao: '1.0.0', api_widget: 1, modulo: './selecao.js', elemento: 'plat-selecao',
+    esquema_config: objetoFechado({ vista: ulid, campo: textoCurto }),
+    eventos: ['selecao_mudou', 'selecao.alterada'], acoes: ['selecionar', 'limpar_selecao', 'selecao.por_atributo', 'selecao.tudo', 'selecao.inverter'],
+    fontes: { min: 1, max: 1, tipos: ['camada', 'tabela'] }, i18n: 'widget.selecao',
+  },
+  {
+    nome: 'info-feicao', versao: '1.0.0', api_widget: 1, modulo: './info_feicao.js', elemento: 'plat-info-feicao',
+    esquema_config: objetoFechado({ vista: ulid, modelo: { type: 'string', maxLength: 2000 }, campos: { type: 'array', maxItems: 100, items: textoCurto }, vazio: textoCurto }),
+    eventos: ['info.mostrada'], acoes: ['piscar', 'info.mostrar', 'abrir', 'fechar'],
+    fontes: { min: 1, max: 1, tipos: ['camada', 'tabela'] }, i18n: 'widget.info-feicao',
+  },
+  {
+    nome: 'adicionar-dado', versao: '1.0.0', api_widget: 1, modulo: './adicionar_dado.js', elemento: 'plat-adicionar-dado',
+    esquema_config: objetoFechado({ vista: ulid, rotulo: textoCurto, aceitar_url: { type: 'boolean' } }),
+    eventos: ['dado_adicionado', 'adicionar.carregado', 'adicionar.erro'], acoes: ['adicionar.carregar'],
+    fontes: { min: 1, max: 1, tipos: ['camada', 'tabela'] }, i18n: 'widget.adicionar-dado',
+  },
+  {
+    nome: 'texto', versao: '1.0.0', api_widget: 1, modulo: './texto.js', elemento: 'plat-texto',
+    esquema_config: objetoFechado({ texto: { type: 'string', maxLength: 10000 }, nivel: { type: 'integer', minimum: 1, maximum: 6 } }, ['texto']),
+    eventos: [], acoes: ['texto.definir', 'definir_parametro'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.texto',
+  },
+  {
+    nome: 'botao', versao: '1.0.0', api_widget: 1, modulo: './botao.js', elemento: 'plat-botao',
+    esquema_config: objetoFechado({ rotulo: textoCurto, valor: {}, habilitado: { type: 'boolean' } }, ['rotulo']),
+    eventos: ['clique', 'botao.acionado'], acoes: ['botao.habilitar', 'abrir', 'fechar'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.botao',
+  },
+  {
+    nome: 'filtro', versao: '2.0.0', api_widget: 1, modulo: './filtro.js', elemento: 'plat-filtro',
     esquema_config: objetoFechado({
-      url: { type: 'string', maxLength: 2048 }, campo: textoCurto, alternativo: textoCurto, legenda: textoCurto,
-      ajuste: { type: 'string', enum: ['cover', 'contain', 'fill', 'none'] }, altura: { type: 'integer', minimum: 16, maximum: 4000 },
+      rotulo: textoCurto, valor: textoCurto, vista: ulid, campo: textoCurto,
+      modo: { type: 'string', enum: ['texto', 'valores', 'intervalo', 'data'] }, multiplo: { type: 'boolean' },
+      maximo_valores: { type: 'integer', minimum: 1, maximum: 5000 },
     }),
-    eventos: ['imagem.acionada'], acoes: ['imagem.definir', 'imagem.feicao'], fontes: { min: 0, max: 1, tipos: ['camada', 'tabela'] }, i18n: 'widget.imagem',
-  },
-  {
-    nome: 'cartao', versao: '1.0.0', api_widget: 1, modulo: './cartao.js', elemento: 'plat-w-cartao',
-    esquema_config: objetoFechado({
-      titulo: textoCurto, texto: { type: 'string', maxLength: 10000 }, imagem: { type: 'string', maxLength: 2048 },
-      imagem_alternativo: textoCurto, link: { type: 'string', maxLength: 2048 }, link_rotulo: textoCurto, pagina: textoCurto,
-    }),
-    eventos: ['cartao.acionado', 'cartao.pagina'], acoes: ['cartao.feicao'], fontes: { min: 0, max: 1, tipos: ['camada', 'tabela'] }, i18n: 'widget.cartao',
-  },
-  {
-    nome: 'incorporar', versao: '1.0.0', api_widget: 1, modulo: './incorporar.js', elemento: 'plat-w-incorporar',
-    esquema_config: objetoFechado({
-      url: { type: 'string', maxLength: 2048 }, html: { type: 'string', maxLength: 20000 }, titulo: textoCurto,
-      altura: { type: 'integer', minimum: 40, maximum: 4000 },
-      dominios_permitidos: { type: 'array', maxItems: 20, items: textoCurto },
-      sandbox: { type: 'array', maxItems: 4, items: { type: 'string', enum: ['allow-scripts', 'allow-forms', 'allow-popups', 'allow-presentation'] } },
-    }),
-    eventos: [], acoes: ['incorporar.definir'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.incorporar',
-  },
-  {
-    nome: 'divisor', versao: '1.0.0', api_widget: 1, modulo: './divisor.js', elemento: 'plat-w-divisor',
-    esquema_config: objetoFechado({ estilo: { type: 'string', enum: ['linha', 'tracejado', 'espaco'] }, vertical: { type: 'boolean' } }),
-    eventos: [], acoes: [], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.divisor',
-  },
-  {
-    nome: 'menu', versao: '1.0.0', api_widget: 1, modulo: './menu.js', elemento: 'plat-w-menu',
-    esquema_config: objetoFechado({
-      rotulo: textoCurto, orientacao: { type: 'string', enum: ['horizontal', 'vertical'] },
-      itens: { type: 'array', maxItems: 50, items: objetoFechado({ rotulo: textoCurto, pagina: textoCurto, url: { type: 'string', maxLength: 2048 }, valor: {} }, ['rotulo']) },
-    }, ['itens']),
-    eventos: ['menu.pagina', 'menu.acionado'], acoes: ['menu.definir'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.menu',
-  },
-  {
-    nome: 'controlador', versao: '1.0.0', api_widget: 1, modulo: './controlador.js', elemento: 'plat-w-controlador',
-    esquema_config: objetoFechado({
-      alvos: { type: 'array', maxItems: 50, items: objetoFechado({ id: textoCurto, rotulo: textoCurto }, ['id']) },
-    }, ['alvos']),
-    eventos: ['controlador.alternado'], acoes: ['controlador.abrir', 'controlador.fechar'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.controlador',
-  },
-  {
-    nome: 'compartilhar', versao: '1.0.0', api_widget: 1, modulo: './compartilhar.js', elemento: 'plat-w-compartilhar',
-    esquema_config: objetoFechado({ url: { type: 'string', maxLength: 2048 }, qr: { type: 'boolean' }, incorporar: { type: 'boolean' } }),
-    eventos: [], acoes: [], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.compartilhar',
-  },
-  {
-    nome: 'login', versao: '1.0.0', api_widget: 1, modulo: './login.js', elemento: 'plat-w-login',
-    esquema_config: objetoFechado({ rotulo: textoCurto }),
-    eventos: ['login.mudou'], acoes: ['login.atualizar'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.login',
-  },
-  {
-    nome: 'idioma', versao: '1.0.0', api_widget: 1, modulo: './idioma.js', elemento: 'plat-w-idioma',
-    esquema_config: objetoFechado({ rotulo: textoCurto, idiomas: { type: 'array', maxItems: 10, items: textoCurto } }),
-    eventos: ['idioma.mudou'], acoes: ['idioma.definir'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.idioma',
-  },
-  {
-    nome: 'tema', versao: '1.0.0', api_widget: 1, modulo: './tema.js', elemento: 'plat-w-tema',
-    esquema_config: objetoFechado({ rotulo: textoCurto }),
-    eventos: ['tema.mudou'], acoes: ['tema.definir'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.tema',
+    eventos: ['filtro_mudou', 'filtro.alterado'], acoes: ['filtro.definir', 'limpar_filtro', 'definir_parametro'],
+    fontes: { min: 1, max: 100, tipos: ['camada', 'tabela'] }, i18n: 'widget.filtro',
   },
 ];
 
@@ -129,6 +119,7 @@ export function validarEsquema(valor, esquema, caminho = 'configuracao') {
   const tipoEsperado = esquema.type === 'integer' ? 'number' : esquema.type;
   if (tipoEsperado && tipo !== tipoEsperado) falha(caminho, `esperado ${esquema.type}, recebido ${tipo}`);
   if (tipo === 'string' && esquema.maxLength !== undefined && valor.length > esquema.maxLength) falha(caminho, `máximo ${esquema.maxLength} caracteres`);
+  if (tipo === 'string' && esquema.enum && !esquema.enum.includes(valor)) falha(caminho, `valor fora de ${esquema.enum.join('|')}`);
   if ((tipo === 'number' || tipo === 'integer') && esquema.minimum !== undefined && valor < esquema.minimum) falha(caminho, `mínimo ${esquema.minimum}`);
   if ((tipo === 'number' || tipo === 'integer') && esquema.maximum !== undefined && valor > esquema.maximum) falha(caminho, `máximo ${esquema.maximum}`);
   if (esquema.type === 'integer' && !Number.isInteger(valor)) falha(caminho, 'esperado inteiro');

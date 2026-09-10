@@ -136,7 +136,7 @@ lados e têm vetor de teste em `tests/expressoes/vetores_convergencia.json`.
   devolve `valor` sem nunca avaliar `alternativa`.
 - **`&&`/`||`**: como descrito acima — o lado que decide sozinho evita avaliar o outro.
 
-## 5. Catálogo de funções (43)
+## 5. Catálogo de funções (49)
 
 Uma linha por função, com 1 exemplo. `TABELA_FUNCOES` em `avaliador_py.py` e `TABELA_FUNCOES` em
 `avaliador.js` são a fonte única — `tests/unit/test_expressao_doc_sincronizada.py` confere que
@@ -243,6 +243,46 @@ posteriores à primeira correspondência. Não modifica o contexto. As chaves `_
 `prototype` e `constructor` são recusadas por `Obter`; getters e propriedades herdadas não
 são caminhos de acesso a dados.
 
+### Feição e geometria (item L5-11)
+
+A feição é o dicionário `{"atributos": {...}, "geometria": ...}` e chega às expressões como
+`$feicao`; `$geometria` é a geometria dela e cada atributo cujo nome é um identificador válido
+chega como `$nome` (quem monta isso é `app/expressao/perfis.py` / `web/js/expressao/perfis.js`,
+seção 12). Geometria é GeoJSON (RFC 7946) com as chaves do próprio padrão — `{"type": "Point" |
+"LineString" | "Polygon", "coordinates": ...}` —, grau decimal em WGS-84 e longitude ANTES da
+latitude. Coordenada fora de −180..180 / −90..90, anel de polígono que não fecha, anel com menos
+de quatro posições, tipo de geometria diferente do que a função pede e dicionário que não é
+geometria dão `geometria_invalida`.
+
+| função | aridade | descrição | exemplo |
+|---|---|---|---|
+| `Atributo(feicao, nome, padrao)` | 2-3 | atributo por nome; ausente devolve o padrão (ou nulo); presente com valor nulo permanece nulo; `__proto__`/`prototype`/`constructor` são `campo_nao_permitido` | `Atributo($feicao, 'nome do lote')` → `'L-7'` |
+| `Geometria(feicao)` | 1 | geometria da feição, ou nulo se ela não tiver | `EhNulo(Geometria($feicao))` → `falso` |
+| `Area(poligono)` | 1 | área do polígono em metros quadrados, descontando os anéis internos | `Area($geometria)` → `12363718145.180046` |
+| `Comprimento(linha)` | 1 | comprimento da linha em metros (soma dos segmentos) | `Comprimento($geometria)` → `111195.080234` |
+| `Distancia(ponto, ponto)` | 2 | distância entre dois pontos em metros | `Distancia($a, $b)` → `111195.080234` |
+| `Dentro(ponto, poligono)` | 2 | verdadeiro se o ponto está dentro do polígono | `Dentro($p, $geometria)` → `verdadeiro` |
+
+**Modelo da Terra, e o que ele NÃO é.** Esfera de raio autálico 6.371.008,8 m (IUGG), sem
+elipsoide, sem projeção e sem PostGIS: área pela fórmula de Chamberlain & Duquette
+(`A = R²/2 · Σ (λ₂−λ₁)(sin φ₁ + sin φ₂)`, o sinal do anel dá a orientação e o resultado é o módulo
+do anel externo menos o módulo de cada anel interno), comprimento e distância por haversine,
+`Dentro` por cruzamento de raio par-ímpar no plano de graus. O erro do modelo esférico chega a
+0,5 % contra o elipsoide — serve para ordem de grandeza e comparação, nunca para medição legal de
+área. Todo resultado métrico é arredondado a 6 casas decimais (1 micrômetro quando a unidade é
+metro) porque `sin`/`cos`/`asin` da biblioteca matemática do Python e do V8 podem divergir no
+último bit e o portão exige o MESMO número nos dois lados.
+
+**Bordas, e a assimetria que existe de propósito.** Ponto sobre a aresta ou sobre um vértice do
+anel EXTERNO conta como dentro; ponto sobre a borda de um anel interno (buraco) conta como fora.
+Não há tolerância: a comparação é exata em ponto flutuante. `Dentro` não cruza o antimeridiano nem
+trata polígono que contém um polo — polígono assim tem de ser partido antes.
+
+**Fora desta passagem** (nomeado, não escondido): `MultiPoint`/`MultiLineString`/`MultiPolygon`/
+`GeometryCollection`, `Buffer`, `Centroide`, `Interseta`, `Toca`, distância de ponto a linha ou a
+polígono, área de linha, comprimento de polígono (perímetro) e qualquer sistema de coordenadas que
+não seja grau decimal WGS-84.
+
 ## 6. Algoritmos que têm de ser IDÊNTICOS nos dois avaliadores
 
 Números de ponto flutuante e formatação são onde Python e JavaScript mais divergem por padrão
@@ -328,6 +368,10 @@ dentro de um nó de AST é recusado** (`no_desconhecido`), não ignorado: a form
 | `limite_passos` | avaliação acima do orçamento de passos |
 | `tempo_excedido` | avaliação acima do orçamento de tempo |
 | `no_desconhecido` | AST em JSON malformada ou com tipo de nó fora do vocabulário |
+| `geometria_invalida` | geometria fora do contrato GeoJSON aceito: tipo errado para a função, coordenada fora da faixa ou não numérica, anel que não fecha, anel com menos de quatro posições, `coordinates` ausente |
+| `feicao_invalida` | feição que não é dicionário, `atributos` que não é dicionário de nomes ou `geometria` que não é dicionário (montagem do contexto, seção 12) |
+| `perfil_desconhecido` | nome de perfil fora de `PERFIS` (seção 12) |
+| `tipo_de_retorno_invalido` | a expressão avaliou, mas devolveu um tipo que o perfil não aceita (seção 12) |
 | `operador_desconhecido` | defesa interna (`# pragma: no cover`): nunca alcançável a partir da gramática publicada — todo operador que o parser aceita tem tratamento no avaliador |
 
 Todo erro de sintaxe (`sintaxe_invalida`, `caractere_invalido`, `profundidade_excedida` quando
@@ -545,10 +589,17 @@ Lista de nomes lida das páginas oficiais (`developers.arcgis.com/arcade/functio
 
 ## 11. O que fica FORA desta passagem (pendências nomeadas)
 
-- Geometria; funções com expressão por elemento (`Filter`/`Map`),
-  domínio (`DomainName`/`DomainCode`/`Subtypes`) e `FeatureSetByRelationship`.
-- Integração com popup, rótulo (MapLibre), regra de atributo/formulário, restrição/validação,
-  indicador — todas de itens futuros do L2-10/L5 (o "ativo da casa" `L5-11` do item).
+- Funções com expressão por elemento (`Filter`/`Map`), domínio (`DomainName`/`DomainCode`/
+  `Subtypes`) e `FeatureSetByRelationship`. **Geometria deixou de estar aqui no item L5-11**: ponto,
+  linha e polígono simples com `Area`/`Comprimento`/`Distancia`/`Dentro` existem (seção 5); o que
+  continua fora está nomeado no fim daquela subseção (multi-geometria, `Buffer`, `Centroide`,
+  `Interseta`, ponto a linha, projeção).
+- **Os perfis de uso existem desde o item L5-11 (seção 12)**: popup, rótulo, cálculo de formulário,
+  visibilidade, restrição, indicador de painel e título dinâmico, com o contrato de tipo de retorno
+  e o orçamento de cada um. O que ainda NÃO existe é a ligação com a TELA: nenhum popup do mapa,
+  nenhum rótulo do MapLibre e nenhum formulário de edição chamam `avaliar_perfil` ainda — quem liga
+  são os itens de tela do L2-01/L5, e a regra de atributo do L2-10-d tem o próprio caminho de
+  avaliação no servidor.
 - Máscara livre de formatação (`#,###.00`, `DD/MM/Y`) do `Text` do Arcade: `TextoNumero` tem casas
   decimais e `TextoData` tem 4 formatos fixos, nada além disso. `Texto()` continua sem localidade
   de propósito (é a conversão crua para texto, usada por `Concatenar` e `Juntar`); quem quer pt-BR
@@ -560,3 +611,37 @@ Lista de nomes lida das páginas oficiais (`developers.arcgis.com/arcade/functio
 - `pyparsing` (presente na máquina) não é usado no runtime — o mesmo motivo do L2_CONCEITO.md C6:
   o analisador tem de existir em JavaScript também, e gramática pequena escrita duas vezes à mão é
   mais barata de manter igual do que um gerador em duas línguas.
+
+## 12. Perfis de uso (item L5-11)
+
+Um PERFIL diz três coisas sobre uma expressão: onde ela é usada, que TIPO de valor ela tem de
+devolver e com que ORÇAMENTO ela roda. O perfil não muda a semântica da linguagem — a mesma
+expressão avaliada em dois perfis que aceitam o mesmo tipo devolve o mesmo valor, e é isso que o
+portão deste item exige entre o popup e o cálculo de formulário.
+
+| perfil | tipos de retorno aceitos | orçamento de tempo | onde |
+|---|---|---|---|
+| `popup` | texto, número, booleano, nulo | 50 ms | navegador, a cada clique na feição |
+| `rotulo` | texto, número, nulo | 50 ms | navegador, a cada quadro do mapa |
+| `calculo_formulario` | texto, número, booleano, nulo | 500 ms | formulário de edição, conferido também no servidor |
+| `visibilidade` | booleano, nulo | 50 ms | navegador, mostra/esconde campo ou elemento |
+| `restricao` | booleano, nulo | 500 ms | servidor, na gravação |
+| `indicador_painel` | número, nulo | 500 ms | painel |
+| `titulo_dinamico` | texto, número, nulo | 50 ms | navegador |
+
+Valor de tipo fora da lista do perfil devolve `tipo_de_retorno_invalido` — a expressão avaliou, o
+perfil é que recusa. Nome de perfil fora da tabela devolve `perfil_desconhecido`.
+
+**Montagem do contexto (`contexto_da_feicao`).** Entra só o que veio da feição recebida:
+`$feicao` (o dicionário inteiro, normalizado para `{"atributos": ..., "geometria": ...}`),
+`$geometria` e um `$nome` para cada atributo cujo nome case com `[A-Za-z_][A-Za-z0-9_]*`. Atributo
+chamado `feicao` ou `geometria` NÃO sombreia os dois reservados, e atributo com espaço, acento ou
+hífen não vira `$nome`: os dois casos se alcançam por `Atributo($feicao, '<nome>')`. `$campo` fora
+dessa lista é `campo_nao_permitido`, como em qualquer outro uso da linguagem.
+
+**Isolamento.** O módulo de perfis não abre rede, arquivo nem banco: importa só o avaliador, e o
+teste (`tests/unit/test_expressao_perfis.py`) varre a árvore sintática do arquivo Python e o texto
+do arquivo JavaScript para reprovar `fetch`, `XMLHttpRequest`, `window`, `document`, `import(`,
+`eval`, `open`, `socket`, `subprocess` e cliente de banco. Uma expressão só enxerga a feição que o
+chamador passou; não há caminho para outra feição, outra camada ou outro inquilino, porque não há
+caminho para lugar nenhum.

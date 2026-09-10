@@ -1,0 +1,2261 @@
+[
+ {
+  "descricao": "popup: texto simples do atributo",
+  "perfil": "popup",
+  "entrada": "$nome",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": "Gleba 1"
+ },
+ {
+  "descricao": "popup: rótulo montado com número em pt-BR",
+  "perfil": "popup",
+  "entrada": "Concatenar($nome, ' - ', TextoNumero($area_ha, 1), ' ha')",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": "Gleba 1 - 12,5 ha"
+ },
+ {
+  "descricao": "popup: número puro é escalar aceito",
+  "perfil": "popup",
+  "entrada": "$area_ha",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": 12.5
+ },
+ {
+  "descricao": "popup: booleano é escalar aceito",
+  "perfil": "popup",
+  "entrada": "$ativo",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": true
+ },
+ {
+  "descricao": "popup: nulo é escalar aceito",
+  "perfil": "popup",
+  "entrada": "$dono",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": null
+ },
+ {
+  "descricao": "popup: valor ausente substituído",
+  "perfil": "popup",
+  "entrada": "SeNulo($dono, 'sem dono')",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": "sem dono"
+ },
+ {
+  "descricao": "popup: área da geometria em hectares",
+  "perfil": "popup",
+  "entrada": "Arredondar(Area($geometria) / 10000, 2)",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": 1236371.81
+ },
+ {
+  "descricao": "popup: atributo com espaço no nome só por Atributo",
+  "perfil": "popup",
+  "entrada": "Atributo($feicao, 'nome do lote')",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": "L-7"
+ },
+ {
+  "descricao": "popup: lista não é escalar e o perfil recusa",
+  "perfil": "popup",
+  "entrada": "Lista(1, 2)",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "erro": "tipo_de_retorno_invalido"
+ },
+ {
+  "descricao": "popup: dicionário não é escalar e o perfil recusa",
+  "perfil": "popup",
+  "entrada": "$feicao",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "erro": "tipo_de_retorno_invalido"
+ },
+ {
+  "descricao": "popup: campo que não é atributo da feição é recusado",
+  "perfil": "popup",
+  "entrada": "$salario",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "erro": "campo_nao_permitido"
+ },
+ {
+  "descricao": "popup: feição sem atributos ainda tem $feicao e $geometria",
+  "perfil": "popup",
+  "entrada": "EhNulo($geometria)",
+  "feicao": null,
+  "saida": true
+ },
+ {
+  "descricao": "popup: divisão por zero é erro nomeado",
+  "perfil": "popup",
+  "entrada": "$area_ha / 0",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "erro": "divisao_por_zero"
+ },
+ {
+  "descricao": "popup: data em pt-BR",
+  "perfil": "popup",
+  "entrada": "TextoData(0, 'extenso')",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": "1 de janeiro de 1970"
+ },
+ {
+  "descricao": "rotulo: nome da feição",
+  "perfil": "rotulo",
+  "entrada": "$nome",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": "Gleba 1"
+ },
+ {
+  "descricao": "rotulo: número é aceito",
+  "perfil": "rotulo",
+  "entrada": "$visitas",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": 3
+ },
+ {
+  "descricao": "rotulo: nulo é aceito (nada desenhado)",
+  "perfil": "rotulo",
+  "entrada": "$dono",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": null
+ },
+ {
+  "descricao": "rotulo: booleano NÃO é aceito",
+  "perfil": "rotulo",
+  "entrada": "$ativo",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "erro": "tipo_de_retorno_invalido"
+ },
+ {
+  "descricao": "rotulo: texto cortado por Left",
+  "perfil": "rotulo",
+  "entrada": "Left($nome, 5)",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": "Gleba"
+ },
+ {
+  "descricao": "rotulo: maiúsculas",
+  "perfil": "rotulo",
+  "entrada": "Maiuscula($uso)",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": "PASTO"
+ },
+ {
+  "descricao": "calculo: área calculada da geometria em hectares",
+  "perfil": "calculo_formulario",
+  "entrada": "Arredondar(Area($geometria) / 10000, 2)",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": 1236371.81
+ },
+ {
+  "descricao": "calculo: comprimento da linha em metros",
+  "perfil": "calculo_formulario",
+  "entrada": "Comprimento($geometria)",
+  "feicao": {
+   "atributos": {
+    "nome": "Cerca norte"
+   },
+   "geometria": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      0,
+      0
+     ],
+     [
+      0,
+      1
+     ]
+    ]
+   }
+  },
+  "saida": 111195.080234
+ },
+ {
+  "descricao": "calculo: campo derivado de dois atributos",
+  "perfil": "calculo_formulario",
+  "entrada": "Concatenar($nome, '/', $uso)",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": "Gleba 1/pasto"
+ },
+ {
+  "descricao": "calculo: valor numérico arredondado",
+  "perfil": "calculo_formulario",
+  "entrada": "Arredondar($area_ha * 2.5, 2)",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": 31.25
+ },
+ {
+  "descricao": "calculo: nulo permitido (campo fica vazio)",
+  "perfil": "calculo_formulario",
+  "entrada": "$dono",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": null
+ },
+ {
+  "descricao": "calculo: geometria ausente propaga nulo",
+  "perfil": "calculo_formulario",
+  "entrada": "Area($geometria)",
+  "feicao": {
+   "atributos": {
+    "nome": "Sem geometria"
+   },
+   "geometria": null
+  },
+  "saida": null
+ },
+ {
+  "descricao": "calculo: lista não é escalar e o perfil recusa",
+  "perfil": "calculo_formulario",
+  "entrada": "Lista(1)",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "erro": "tipo_de_retorno_invalido"
+ },
+ {
+  "descricao": "visibilidade: comparação numérica",
+  "perfil": "visibilidade",
+  "entrada": "$area_ha > 10",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": true
+ },
+ {
+  "descricao": "visibilidade: comparação falsa",
+  "perfil": "visibilidade",
+  "entrada": "$area_ha > 100",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": false
+ },
+ {
+  "descricao": "visibilidade: conjunção com atributo booleano",
+  "perfil": "visibilidade",
+  "entrada": "$ativo && $area_ha > 10",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": true
+ },
+ {
+  "descricao": "visibilidade: nulo é 'não sei' e é aceito",
+  "perfil": "visibilidade",
+  "entrada": "$dono == 'x' && $ativo",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": false
+ },
+ {
+  "descricao": "visibilidade: EhNulo decide",
+  "perfil": "visibilidade",
+  "entrada": "!EhNulo($dono)",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": false
+ },
+ {
+  "descricao": "visibilidade: texto NÃO é aceito",
+  "perfil": "visibilidade",
+  "entrada": "$nome",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "erro": "tipo_de_retorno_invalido"
+ },
+ {
+  "descricao": "visibilidade: número NÃO é aceito",
+  "perfil": "visibilidade",
+  "entrada": "$area_ha",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "erro": "tipo_de_retorno_invalido"
+ },
+ {
+  "descricao": "visibilidade: ponto dentro do polígono",
+  "perfil": "visibilidade",
+  "entrada": "Dentro($p, $geometria)",
+  "feicao": {
+   "atributos": {
+    "p": {
+     "type": "Point",
+     "coordinates": [
+      0.5,
+      0.5
+     ]
+    }
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": true
+ },
+ {
+  "descricao": "restricao: área mínima respeitada",
+  "perfil": "restricao",
+  "entrada": "$area_ha >= 10",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": true
+ },
+ {
+  "descricao": "restricao: área mínima violada",
+  "perfil": "restricao",
+  "entrada": "$area_ha >= 100",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": false
+ },
+ {
+  "descricao": "restricao: uso do solo dentro da lista permitida",
+  "perfil": "restricao",
+  "entrada": "Contem(Lista('pasto', 'lavoura'), $uso)",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": true
+ },
+ {
+  "descricao": "restricao: nome não pode ser vazio",
+  "perfil": "restricao",
+  "entrada": "Contagem(Trim($nome)) > 0",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": true
+ },
+ {
+  "descricao": "restricao: exige geometria",
+  "perfil": "restricao",
+  "entrada": "!EhNulo($geometria)",
+  "feicao": {
+   "atributos": {
+    "nome": "Sem geometria"
+   },
+   "geometria": null
+  },
+  "saida": false
+ },
+ {
+  "descricao": "restricao: texto NÃO é aceito",
+  "perfil": "restricao",
+  "entrada": "$uso",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "erro": "tipo_de_retorno_invalido"
+ },
+ {
+  "descricao": "indicador: área total em hectares",
+  "perfil": "indicador_painel",
+  "entrada": "Arredondar(Area($geometria) / 10000, 0)",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": 1236372
+ },
+ {
+  "descricao": "indicador: contagem de visitas",
+  "perfil": "indicador_painel",
+  "entrada": "$visitas",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": 3
+ },
+ {
+  "descricao": "indicador: média de uma lista",
+  "perfil": "indicador_painel",
+  "entrada": "Media(Lista(1, 2, 3))",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": 2
+ },
+ {
+  "descricao": "indicador: nulo é aceito (sem dado)",
+  "perfil": "indicador_painel",
+  "entrada": "$dono",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": null
+ },
+ {
+  "descricao": "indicador: texto NÃO é aceito",
+  "perfil": "indicador_painel",
+  "entrada": "$nome",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "erro": "tipo_de_retorno_invalido"
+ },
+ {
+  "descricao": "indicador: booleano NÃO é aceito",
+  "perfil": "indicador_painel",
+  "entrada": "$ativo",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "erro": "tipo_de_retorno_invalido"
+ },
+ {
+  "descricao": "titulo: nome com contagem",
+  "perfil": "titulo_dinamico",
+  "entrada": "Concatenar($nome, ' (', Texto($visitas), ' visitas)')",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": "Gleba 1 (3 visitas)"
+ },
+ {
+  "descricao": "titulo: número é aceito",
+  "perfil": "titulo_dinamico",
+  "entrada": "$visitas",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": 3
+ },
+ {
+  "descricao": "titulo: nulo é aceito",
+  "perfil": "titulo_dinamico",
+  "entrada": "$dono",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": null
+ },
+ {
+  "descricao": "titulo: booleano NÃO é aceito",
+  "perfil": "titulo_dinamico",
+  "entrada": "$ativo",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "erro": "tipo_de_retorno_invalido"
+ },
+ {
+  "descricao": "titulo: decide pelo uso do solo",
+  "perfil": "titulo_dinamico",
+  "entrada": "Decode($uso, 'pasto', 'Pastagem', 'lavoura', 'Lavoura', 'Outro')",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "saida": "Pastagem"
+ },
+ {
+  "descricao": "feição com atributos que não são dicionário é recusada",
+  "perfil": "popup",
+  "entrada": "1",
+  "feicao": {
+   "atributos": [
+    1,
+    2
+   ],
+   "geometria": null
+  },
+  "erro": "feicao_invalida"
+ },
+ {
+  "descricao": "feição com geometria que não é dicionário é recusada",
+  "perfil": "popup",
+  "entrada": "1",
+  "feicao": {
+   "atributos": {},
+   "geometria": [
+    1,
+    2
+   ]
+  },
+  "erro": "feicao_invalida"
+ },
+ {
+  "descricao": "feição que não é dicionário é recusada",
+  "perfil": "popup",
+  "entrada": "1",
+  "feicao": [
+   1,
+   2
+  ],
+  "erro": "feicao_invalida"
+ },
+ {
+  "descricao": "expressão com erro de sintaxe",
+  "perfil": "popup",
+  "entrada": "1 +",
+  "feicao": {
+   "atributos": {
+    "nome": "Gleba 1",
+    "area_ha": 12.5,
+    "uso": "pasto",
+    "dono": null,
+    "ativo": true,
+    "visitas": 3,
+    "nome do lote": "L-7"
+   },
+   "geometria": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       0
+      ]
+     ]
+    ]
+   }
+  },
+  "erro": "sintaxe_invalida"
+ },
+ {
+  "descricao": "atributo reservado 'feicao' não sombreia $feicao",
+  "perfil": "popup",
+  "entrada": "Texto(EhNulo($feicao))",
+  "feicao": {
+   "atributos": {
+    "feicao": "sombra"
+   },
+   "geometria": null
+  },
+  "saida": "falso"
+ }
+]

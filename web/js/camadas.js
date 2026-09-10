@@ -151,25 +151,6 @@ export class Arvore {
     this._sincronizarDisponiveis();
   }
 
-  /* padrão de visibilidade ao abrir o mapa (10/09, pedido do dono: "ao abrir o mapa tem de haver dado
-     visível" — o catálogo não pode abrir com tudo desmarcado). Só age se NADA estiver ligado ainda (não
-     pisa em documento salvo no navegador nem em escolha explícita do usuário); mais de `maximo` camadas
-     disponíveis, liga só as mais recentes (`criado_em`, vindo do servidor — ver app/mapa/rotas.py e
-     app/imagens/rotas_imagens.py). Chamado por quem monta a tela (web/js/mapa/mapa.js), não pelo
-     `carregar()`: esta árvore também serve o widget do L5-01-b, que pode não querer este comportamento. */
-  async ativarPadrao(maximo = 8) {
-    if (this.catalogo.ativas.length) return;
-    const candidatas = [...this.catalogo.disponiveis]
-      .sort((a, b) => new Date(b.criado_em || 0) - new Date(a.criado_em || 0))
-      .slice(0, maximo);
-    for (const f of [...candidatas].reverse()) { // reverso: a mais recente liga por último e fica no topo
-      try { await this.catalogo.ligar(f.id); } catch (e) { this.aoErro(e); }
-    }
-    this._aplicarOrdemNoMapa();
-    this.desenhar();
-    this.salvar();
-  }
-
   // ------------------------------------------------------------------------------------- grupo/estrutura
   criarGrupo(titulo) {
     const g = noGrupo(titulo, []);
@@ -210,6 +191,12 @@ export class Arvore {
     if (!no) return;
     if (no.tipo === 'camada') {
       try { await this.catalogo.alternar(no.id); } catch (e) { this.aoErro(e); }
+      // "a mais recente entra no topo": a camada que acabou de ser ligada sobe para o topo do seu grupo, como o
+      // catálogo já faz em `ativas` (unshift) — sem isto a árvore e o mapa discordam da ordem de desenho
+      if (this.catalogo.ativas.includes(no.id)) {
+        const achado = encontrar(this.itens, chave);
+        if (achado && achado.indice > 0) achado.pai.splice(0, 0, achado.pai.splice(achado.indice, 1)[0]);
+      }
     } else {
       // grupo: liga tudo se algo estiver desligado, senão desliga tudo
       const ids = achatar(no.itens);
@@ -391,12 +378,6 @@ export class Arvore {
           no.aberto ? '▾ ' : '▸ ', this.tituloExibido(no))
       : h('label', { class: 'arvore-titulo camada-titulo', for: `chk-${no.chave}`, title: this.tituloExibido(no) }, this.tituloExibido(no));
     const cabecalho = h('div', { class: 'arvore-cabecalho' }, caixa, tituloEl);
-    if (no.tipo === 'camada') {
-      // badge de tipo (Vetor · Imagem): reusa a classe `.camada-tipo` já estilizada (mono, --fraco) da
-      // lista de rede em mapa.js — mesma linguagem visual, sem CSS novo.
-      const ficha = this.catalogo.ficha(no.id) || {};
-      cabecalho.append(h('span', { class: 'camada-tipo' }, ficha.tipo === 'raster' ? 'Imagem' : 'Vetor'));
-    }
 
     if (no.tipo === 'camada' && ativa) {
       const f = this.catalogo.ficha(no.id) || {};
@@ -440,9 +421,9 @@ export class Arvore {
   _controleDeEscala(no) {
     const faixa = no.faixaEscala || [null, null];
     const min = h('input', { type: 'number', min: '0', max: '24', step: '1', class: 'escala-min',
-      value: faixa[0] === null ? '' : String(faixa[0]), 'aria-label': 'zoom mínimo' });
+      value: faixa[0] === null ? '' : String(faixa[0]), placeholder: '0', 'aria-label': 'zoom mínimo' });
     const max = h('input', { type: 'number', min: '0', max: '24', step: '1', class: 'escala-max',
-      value: faixa[1] === null ? '' : String(faixa[1]), 'aria-label': 'zoom máximo' });
+      value: faixa[1] === null ? '' : String(faixa[1]), placeholder: '24', 'aria-label': 'zoom máximo' });
     const aplicar = () => {
       const mn = min.value === '' ? null : Number(min.value);
       const mx = max.value === '' ? null : Number(max.value);
