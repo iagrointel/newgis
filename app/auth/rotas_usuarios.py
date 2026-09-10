@@ -101,7 +101,11 @@ def _nao_conceder_alem_do_proprio(cur, auth: Auth, perfil: str, papel_id: int | 
     ou tirar o papel (papel_id nulo), o que devolve o teto inteiro do perfil. As rotas de papel já barravam
     isso na CRIAÇÃO do papel (`_validar_papel`); faltava barrar na ATRIBUIÇÃO. Vale para perfil e papel
     juntos, porque promover de editor para admin com papel nulo concede exatamente o mesmo conjunto."""
-    sobra = sorted(_privilegios_concedidos(cur, perfil, papel_id) - set(auth.privilegios))
+    # o teto do perfil `visualizador` é o PISO de todo membro (ver, entrar em grupo, gerar o próprio token…): não é
+    # "concedido" por ninguém, e por isso não conta na sobra — sem isso um administrador restrito a
+    # {membros.ver, membros.gerir} não conseguiria criar nem um visualizador (regra do L0-02-f, test_usuarios.py)
+    piso = _privilegios_concedidos(cur, "visualizador", None)
+    sobra = sorted(_privilegios_concedidos(cur, perfil, papel_id) - piso - set(auth.privilegios))
     if sobra:
         raise ErroAPI(403, "privilegio_proprio_insuficiente", "não se concede privilégio que não se tem", sobra)
 
@@ -408,12 +412,10 @@ def criar_usuario(corpo: UsuarioCriar, request: Request, auth: Auth = autenticad
     temporaria = _senha_temporaria()
     try:
         with db.db(auth.contexto()) as cur:
-            # cota de usuários do inquilino (tenant.config.cota_usuarios), agora ATÔMICA (item
-            # L0-07-c-cotas-uso): a checagem e o INSERT acontecem sob SELECT ... FOR UPDATE na linha do
-            # tenant — duas criações concorrentes de usuário serializam na mesma trava que serializa as
-            # reservas de bytes (app/objetos.py::guardar, app/uploads/rotas.py), então nenhuma lê um uso
-            # que o outro ainda não commitou.
-            cur.execute("SELECT 1 FROM plat.tenant WHERE id = %s FOR UPDATE", (auth.tenant_id,))
+            # cota de usuários do inquilino (item L0-07-a-configuracoes-org, tenant.config.cota_usuarios): checagem
+            # simples, não atômica sob concorrência — a reserva à prova de corrida (SELECT ... FOR UPDATE, mesmo
+            # padrão que o item de cota de armazenamento/uso exige) é responsabilidade do item L0-07-c-cotas-uso,
+            # que cobre TODAS as cotas do inquilino junto; aqui a cota só deixa de ser um campo sem efeito.
             cur.execute(
                 "SELECT plat.cota_usuarios(%s) AS cota, plat.usuarios_ativos(%s) AS ativos",
                 (auth.tenant_id, auth.tenant_id),
@@ -421,9 +423,8 @@ def criar_usuario(corpo: UsuarioCriar, request: Request, auth: Auth = autenticad
             cota = cur.fetchone()
             if cota["ativos"] >= cota["cota"]:
                 raise ErroAPI(
-                    413, "cota_usuarios",
-                    f"cota de usuários esgotada: uso atual {cota['ativos']} de {cota['cota']} usuários ativos",
-                    {"cota": cota["cota"], "uso": cota["ativos"]},
+                    413, "cota_usuarios", f"cota de usuários do inquilino esgotada ({cota['cota']})",
+                    {"cota": cota["cota"]},
                 )
             _papel_compativel(cur, corpo.papel_id, corpo.perfil)
             _nao_conceder_alem_do_proprio(cur, auth, corpo.perfil, corpo.papel_id)
@@ -481,22 +482,6 @@ def lote(corpo: LoteEntrada, request: Request, auth: Auth = autenticado()):
         raise ErroAPI(403, "sem_privilegio", f"a ação exige {exigido}", {"exigido": exigido})
     alterados, recusados = 0, []
     with db.db(auth.contexto()) as cur:
-        if corpo.acao in ("perfil", "papel"):
-            # Ninguém concede privilégio que não tem, TAMBÉM em lote (ALERTA-1, caminho 3). A conferência
-            # existe dentro de `_editar` e recusaria item a item, mas o lote devolve 200 com a lista de
-            # recusados — e uma tentativa de escalada tem de ser NEGADA, não contabilizada. Concedido depende
-            # do par (perfil, papel) que cada alvo passa a ter, então a conta é feita por alvo, antes de
-            # alterar qualquer um: basta um alvo além do teto do ator para o lote inteiro cair em 403.
-            for uid in dict.fromkeys(corpo.ids):
-                alvo = carregar_usuario(cur, uid)
-                if alvo is None:
-                    continue
-                _nao_conceder_alem_do_proprio(
-                    cur,
-                    auth,
-                    campos.get("perfil", alvo["perfil"]),
-                    campos["papel_id"] if "papel_id" in campos else alvo["papel_id"],
-                )
         for uid in dict.fromkeys(corpo.ids):
             cur.execute("SAVEPOINT item")
             try:
@@ -603,43 +588,6 @@ def desbloquear(id: int, request: Request, auth: Auth = autenticado("membros.ger
             "UPDATE plat.usuario SET bloqueado_ate = NULL, falhas_login = 0, falhas_desde = NULL WHERE id = %s", (id,)
         )
         registrar_evento(cur, request, "usuarios/desbloquear", "usuario", id)
-    return Response(status_code=204)
-
-
-@router.delete(
-    "/usuarios/{id}/vinculo-externo",
-    status_code=204,
-    response_class=Response,
-    openapi_extra={"x-auth": "S/T", "x-privilegio": "membros.gerir"},
-)
-def remover_vinculo_externo(id: int, request: Request, auth: Auth = autenticado("membros.gerir")):
-    """Desfaz o vínculo entre uma conta local e a identidade do diretório (`usuario.sujeito_externo`).
-
-    Existe por causa do achado G1-l3 do adversário do turno 3: enquanto o login LDAP nascia do texto cru do
-    cliente, um vínculo errado podia tomar o DN de outra pessoa e não havia caminho administrativo para
-    desfazer — a conta legítima ficava trancada. O conserto principal é provisionar pelo atributo canônico do
-    diretório; esta rota é a saída para os vínculos que já estejam errados (e para qualquer troca de identidade
-    no diretório). Não apaga a conta nem os itens dela: a conta fica sem vínculo externo e desabilitada, porque
-    conta de origem 'ldap' não tem senha local e sem vínculo não teria como entrar; reabilitar é o caminho
-    normal de PUT /api/usuarios/{id} depois do vínculo novo.
-    """
-    with db.db(auth.contexto()) as cur:
-        alvo = usuario_ou_404(cur, id)
-        so_admin_sobre_admin(auth, alvo["perfil"], None, "so_admin_altera_admin")
-        if alvo["origem"] == "local":
-            raise ErroAPI(409, "sem_vinculo_externo", "esta conta é local; não há vínculo com diretório a desfazer")
-        cur.execute(
-            "UPDATE plat.usuario SET sujeito_externo = NULL, ativo = false WHERE id = %s "
-            "AND sujeito_externo IS NOT NULL",
-            (id,),
-        )
-        if cur.rowcount == 0:
-            raise ErroAPI(409, "sem_vinculo_externo", "esta conta não tem vínculo com diretório a desfazer")
-        cur.execute("SELECT plat.sessoes_encerrar_usuario(%s, NULL)", (id,))
-        registrar_evento(
-            cur, request, "usuarios/vinculo_externo_remover", "usuario", id,
-            {"login": alvo["login"], "origem": alvo["origem"]},
-        )
     return Response(status_code=204)
 
 

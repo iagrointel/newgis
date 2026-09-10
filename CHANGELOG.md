@@ -1931,6 +1931,10 @@ grava `url = NULL` (a origem fica em `dados.procedencia`, mesmo padrão dos outr
 `srid` do schema de `camada_vetorial` é sempre obrigatório (`minimum: 1`) mesmo sem geometria — tabela não
 espacial grava `srid: 4326` por convenção neutra (documentado no ADR, não escondido). ADR
 `docs/adr/20260907T0148-fonte-registrada-postgres-fdw.md`.
+## turno 8, setembro de 2026 (item L0-02-g-checagem-privilegio-papel-id: conserto trazido de wt/valida para master — ALERTA-1 do adversário HARD-03)
+
+- L0-02-g: `_nao_conceder_alem_do_proprio` em criar/editar/lote de usuário (commit 6ad841bf de wt/valida, nunca juntado; o adversário HARD-03 mediu 6 caminhos de escalada com 200 em master), com o piso do perfil visualizador isento para o administrador restrito continuar criando visualizador; refutação por privilégio (47) distingue piso de escalada.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
