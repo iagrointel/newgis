@@ -1,0 +1,42 @@
+{
+ "item": "L0-03-e",
+ "medidas": {
+  "rotas_compartilhamento_cruzadas": {
+   "valor": 10,
+   "unidade": "rotas",
+   "comando": "len(ROTAS) = rotas do OpenAPI com /compartilh, /links ou /publico/"
+  },
+  "chamadas_cruzadas_a_para_b": {
+   "valor": 86,
+   "unidade": "chamadas",
+   "comando": "test_cruzado_a_para_b_em_todas_as_rotas: 4 identidades × casos + 6 casos de A com recurso de B"
+  },
+  "revogacao_ate_404_api_ms": {
+   "valor": 20.6,
+   "unidade": "ms",
+   "comando": "DELETE /api/itens/{id}/links/{lid} + GET JSON e miniatura por link → 404 (TestClient)"
+  },
+  "pagina_item_ms": {
+   "valor": 619.6,
+   "unidade": "ms",
+   "comando": "playwright chromium 1280x800 (tests/e2e/test_compartilhamento.py)"
+  },
+  "revogacao_clique_ate_404_e2e_ms": {
+   "valor": 64.2,
+   "unidade": "ms",
+   "comando": "playwright chromium 1280x800 (tests/e2e/test_compartilhamento.py)"
+  },
+  "revogacao_ate_404_e2e_ms": {
+   "valor": 5.8,
+   "unidade": "ms",
+   "comando": "playwright chromium 1280x800 (tests/e2e/test_compartilhamento.py)"
+  },
+  "pagina_link_anonimo_ms": {
+   "valor": 254.9,
+   "unidade": "ms",
+   "comando": "playwright chromium 1280x800 (tests/e2e/test_compartilhamento.py)"
+  }
+ },
+ "gerado_em": "2026-09-06T19:28:29Z",
+ "git_sha": "90d03c07da0c"
+}

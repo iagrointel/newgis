@@ -85,14 +85,12 @@ def guardar(cur, item_id: str, png: bytes) -> dict:
 
 
 CACHE_SESSAO = "private, max-age=300"
-# rota aberta por token ou por "público": a revogação tem de valer no ato, então o cliente pergunta sempre
-# (achado G2-6: com max-age=300 o navegador de quem tinha o link continuava mostrando a miniatura por 5 min)
-CACHE_SEM = "no-store, must-revalidate"
 
 
 def entregar(r: dict, request: Request, cache: str = CACHE_SESSAO) -> Response:
-    """GET da miniatura: 204 sem miniatura; ETag = sha256; 304 quando o cliente já tem. `cache` é o Cache-Control:
-    CACHE_SESSAO nas rotas com sessão, CACHE_SEM nas rotas anônimas (link por token e público)."""
+    """GET da miniatura: 204 sem miniatura; ETag = sha256; 304 quando o cliente já tem. `cache` é o Cache-Control
+    da resposta: o padrão vale para a sessão; a rota por link e a pública passam `no-store` (achado G2-6 do
+    adversário: com max-age=300 o cliente continuava servindo a miniatura do cache 5 min depois da revogação)."""
     if not r["miniatura_chave"]:
         return Response(status_code=204, headers={"Cache-Control": cache})
     etag = f'"{r["miniatura_sha256"]}"'

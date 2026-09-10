@@ -4,13 +4,13 @@ backend não publica /api/login (o frontend foi escrito contra o ADR 0002 antes 
 import httpx
 import pytest
 
-from tests.e2e.apoio import credenciais, local
+from tests.e2e.apoio import credenciais
+from tests.e2e.apoio_catalogo import ROTAS_CATALOGO
 
 
 @pytest.fixture(scope="session")
-def browser_context_args(browser_context_args, base_url):
-    return {**browser_context_args, "locale": "pt-BR", "viewport": {"width": 1280, "height": 800},
-            "ignore_https_errors": local(base_url)}
+def browser_context_args(browser_context_args):
+    return {**browser_context_args, "locale": "pt-BR", "viewport": {"width": 1280, "height": 800}}
 
 
 @pytest.fixture(scope="session")
@@ -18,7 +18,7 @@ def rotas_api(base_url, url_publica_resolve) -> set[str]:
     if not url_publica_resolve:
         pytest.skip(f"{base_url} não resolve nesta máquina")
     try:
-        r = httpx.get(f"{base_url}/api/openapi.json", timeout=15, verify=not local(base_url))
+        r = httpx.get(f"{base_url}/api/openapi.json", timeout=15)
     except httpx.HTTPError as e:
         pytest.skip(f"{base_url}/api/openapi.json inacessível: {e}")
     if r.status_code != 200:
@@ -44,11 +44,22 @@ def credenciais_demo(api_auth) -> tuple[str, str, str]:
     return ("demo", *c["demo"])
 
 
+@pytest.fixture(scope="session")
+def api_catalogo(api_auth) -> set[str]:
+    """as rotas do catálogo (ADR 0004) existem no OpenAPI da URL interna; usada pelos e2e de /conteudo
+    (item L0-03-catalogo e L0-03-f-tela-conteudo) — fixture compartilhada para não precisar importar
+    função de outro módulo de teste (o que o ruff marca como redefinição, F811)."""
+    faltam = [r for r in ROTAS_CATALOGO if r not in api_auth]
+    if faltam:
+        pytest.skip(f"backend ainda sem {faltam} no OpenAPI (rotas do ADR 0004)")
+    return api_auth
+
+
 @pytest.fixture
 def admin_api(playwright, base_url, credenciais_demo):
     """contexto de API já autenticado como admin de demo (cookie), para preparar e limpar dados dos e2e."""
     slug, login, senha = credenciais_demo
-    ctx = playwright.request.new_context(base_url=base_url, ignore_https_errors=local(base_url))
+    ctx = playwright.request.new_context(base_url=base_url)
     r = ctx.post("/api/login", data={"inquilino": slug, "login": login, "senha": senha})
     assert r.status == 200 and r.json().get("ok") is True, (r.status, r.text())
     yield ctx

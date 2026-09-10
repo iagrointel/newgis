@@ -6,15 +6,13 @@ assinada de objeto (/api/objetos/{chave}) do adaptador local."""
 
 import datetime
 import hashlib
-import html
-import re
 import secrets
 
 import psycopg2
 from fastapi import APIRouter, Request, Response
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import JSONResponse
 
-from app import db, entrega_conteudo, limites, objetos
+from app import db, limites, objetos
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo import comum, miniatura, relacoes
 from app.catalogo.comum import (
@@ -36,7 +34,6 @@ from app.catalogo.modelos import (
     LinkEntrada,
 )
 from app.erros import ErroAPI
-from app.paginas import WEB
 from app.settings import settings
 
 router = APIRouter(tags=["compartilhamento"])
@@ -236,8 +233,8 @@ def criar_link(
             if cur.fetchone()["n"] >= limites.LINKS_POR_ITEM:
                 raise ErroAPI(422, "limite_links", f"no máximo {limites.LINKS_POR_ITEM} links ativos por item")
             incluidos = [uuid_ok(x) for x in dict.fromkeys(corpo.itens_incluidos or []) if uuid_ok(x) != iid]
-            deps = {d["id"]: d for d in _dependencias(cur, iid) if not d.get("oculto") and d["id"] != iid}
             if incluidos:
+                deps = {d["id"]: d for d in _dependencias(cur, iid) if not d.get("oculto")}
                 sem = [x for x in incluidos if x not in deps or not deps[x]["pode_editar"]]
                 if sem:
                     raise ErroAPI(
@@ -269,12 +266,6 @@ def criar_link(
             cur.execute(SQL_LINK + " AND k.id = %s::uuid", (iid, lid))
             j = _link_json(cur.fetchone())
             j.update({"token": token, "url": f"{settings.PLAT_URL_PUBLICA}/c/{token}"})
-            # dependências citadas pelo conteúdo (corpo do documento) mas fora do link: o anônimo não as vê,
-            # então quem publica recebe a lista na resposta e a página do catálogo oferece recriar com elas
-            dentro = set(incluidos) | {iid}
-            j["avisos"] = [
-                {"id": x, "titulo": deps[x]["titulo"], "tipo": deps[x]["tipo"]} for x in deps if x not in dentro
-            ]
             return j
     except psycopg2.Error as e:
         raise comum.erro_do_banco(e) from e
@@ -397,45 +388,8 @@ def compartilhado_miniatura(token: str, id: str, request: Request):
         r = carregar(cur, iid)
         if r is None:
             raise ErroAPI(404, "item_inexistente", "item inexistente")
-    return miniatura.entregar(r, request, cache=miniatura.CACHE_SEM)
-
-
-# ---------------------------------------------------------------- página do link (/c/<token>) com marcas abertas og:
-# L5-04-c: `og:title`/`og:description`/`og:image` existem SÓ na página pública do link (as internas — /conteudo,
-# /colecao — nunca levam og:). Link inválido/expirado serve a mesma página sem og: e o JavaScript mostra o erro.
-_MIDIA_PAGINA = re.compile(r"^(https://[^\s]+|/[^\s]*)$")
-
-
-def _og_da_pagina(cur, token: str, request: Request) -> str:
-    try:
-        link = resolver_link(cur, token, request)
-    except ErroAPI:
-        return ""
-    r = carregar(cur, link["item_id"])
-    if r is None:
-        return ""
-    corpo = r["dados"].get("corpo") if isinstance(r["dados"], dict) else None
-    colecao = corpo if (r["tipo"] == "colecao" and isinstance(corpo, dict)) else {}
-    metadados = colecao.get("metadados") if isinstance(colecao.get("metadados"), dict) else {}
-    titulo = metadados.get("titulo") or (colecao.get("capa") or {}).get("titulo") or r["titulo"]
-    resumo = metadados.get("resumo") or r["resumo"] or ""
-    og = [
-        f'<meta property="og:title" content="{html.escape(str(titulo), quote=True)}">',
-        f'<meta property="og:description" content="{html.escape(str(resumo), quote=True)}">',
-    ]
-    caminho_mini = metadados.get("miniatura")
-    if isinstance(caminho_mini, str) and _MIDIA_PAGINA.match(caminho_mini):
-        inteira = caminho_mini if caminho_mini.startswith("https://") else settings.PLAT_URL_PUBLICA + caminho_mini
-        og.append(f'<meta property="og:image" content="{html.escape(inteira, quote=True)}">')
-    return "\n".join(og)
-
-
-@router.get("/c/{token}", include_in_schema=False)
-def pagina_compartilhada(token: str, request: Request):
-    conteudo = (WEB / "compartilhado.html").read_text(encoding="utf-8")
-    with db.db() as cur:
-        og = _og_da_pagina(cur, token, request)
-    return HTMLResponse(conteudo.replace("</head>", og + "\n</head>"), headers=SEM_CACHE)
+    # sem cache no cliente (G2-6): link revogado nega em ≤ 1 s também na miniatura, não só no JSON
+    return miniatura.entregar(r, request, cache=SEM_CACHE["Cache-Control"])
 
 
 # ---------------------------------------------------------------- leitura pública (D24: só com o inquilino autorizando)
@@ -468,7 +422,8 @@ def publico_miniatura(id: str, request: Request):
         r = _contexto_publico(cur, iid)
         if r is None:
             raise ErroAPI(404, "item_inexistente", "item inexistente")
-    return miniatura.entregar(r, request, cache=miniatura.CACHE_SEM)
+    # item que deixa de ser público some do cliente na hora, como o link revogado (mesmo motivo do G2-6)
+    return miniatura.entregar(r, request, cache=SEM_CACHE["Cache-Control"])
 
 
 # ---------------------------------------------------------------- objeto por URL assinada (adaptador local,
@@ -488,13 +443,6 @@ def objeto_assinado(chave: str, ate: int = 0, assinatura: str = ""):
         "json": "application/json",
         "csv": "text/csv",
     }.get(chave.rsplit(".", 1)[-1], "application/octet-stream")
-    # entrega segura (item L7-03-b, 2ª metade): esta rota é ANÔNIMA e devolve byte que veio do cliente —
-    # tipo de mídia da lista fechada e download forçado, nunca renderização na origem da aplicação
-    nome = entrega_conteudo.nome_saneado(chave.rsplit("/", 1)[-1])
     return Response(
-        dados,
-        media_type=entrega_conteudo.tipo_de_entrega(tipo),
-        headers=entrega_conteudo.cabecalhos_de_anexo(
-            nome, {"Cache-Control": "private, max-age=60", "X-Robots-Tag": "noindex, nofollow"}
-        ),
+        dados, media_type=tipo, headers={"Cache-Control": "private, max-age=60", "X-Robots-Tag": "noindex, nofollow"}
     )

@@ -1,7 +1,9 @@
 /* plat · catálogo — diálogo Compartilhar (ADR 0004 seções 6 e 15.2): nível privado / inquilino / público (este só
    se o inquilino permite), grupos em que o ator contribui (os demais com aviso), links por token (criar com validade,
-   copiar uma vez, revogar) e a árvore de dependências com o nível de cada uma e a caixa "aplicar este nível"
-   (desabilitada onde pode_editar = false, com o motivo no title). Nada muda até "Aplicar". */
+   copiar uma vez, revogar) e a árvore de dependências com o nível de cada uma. Dependência ABAIXO do nível escolhido
+   (camada privada num mapa que vai ao inquilino, por exemplo) ganha o aviso #compartilhar-dependencias-aviso e a
+   etiqueta "abaixo do nível" na linha; a caixa "elevar ao nível do mapa" (desabilitada onde pode_editar = false, com
+   o motivo no title) é a ESCOLHA explícita — nada é rebaixado nem elevado em silêncio, e nada muda até "Aplicar". */
 import { h, limpar, botaoCopiar } from '../base/dom.js';
 import { t } from '../base/i18n.js';
 import { tem } from '../base/estado.js';
@@ -51,20 +53,53 @@ export async function abrirCompartilhar(item, { aoMudar = () => {} } = {}) {
   }
   corpo.append(gruposFs);
 
-  /* dependências */
+  /* dependências: nível de cada uma; "abaixo" = quem recebe este item no nível escolhido não vê a dependência */
   const deps = estado.dependencias || [];
   const depCaixas = [];
+  const depLinhas = [];
+  const depAviso = h('p', { id: 'compartilhar-dependencias-aviso', class: 'aviso-pendencia', role: 'status', hidden: true });
+  const ORDEM = { privado: 0, inquilino: 1, publico: 2 };
+  const nivelEscolhido = () => fs.querySelector('input[name=acesso]:checked')?.value || estado.acesso;
+  const gruposEscolhidos = () => gruposFs.querySelectorAll('input[name=grupo]:checked').length;
+  const rotuloAcesso = (dp) => `${t(`catalogo.acesso_${dp.acesso}`)}${dp.grupos ? ` +${dp.grupos}` : ''}`;
+  function abaixo(dp) {
+    if (dp.oculto) return false;
+    const n = nivelEscolhido();
+    if ((ORDEM[dp.acesso] ?? 0) < (ORDEM[n] ?? 0)) return true;
+    return n === 'privado' && gruposEscolhidos() > 0 && !dp.grupos;
+  }
+  function atualizarDependencias() {
+    let n = 0; let editaveis = 0;
+    for (const { dp, tr, marca } of depLinhas) {
+      const ab = abaixo(dp);
+      tr.classList.toggle('abaixo', ab);
+      marca.hidden = !ab;
+      if (ab) { n += 1; if (dp.pode_editar) editaveis += 1; }
+    }
+    depAviso.hidden = !n;
+    if (n) depAviso.textContent = t('catalogo.dependencias_aviso', { n, nivel: t(`catalogo.acesso_${nivelEscolhido()}`), editaveis });
+  }
   if (deps.length) {
-    const tab = h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, t('catalogo.aplicar_nivel')), h('th', {}, t('catalogo.col_titulo')), h('th', {}, t('catalogo.col_tipo')), h('th', {}, t('catalogo.col_acesso')))));
+    const tab = h('table', { id: 'compartilhar-dependencias' }, h('thead', {}, h('tr', {}, h('th', {}, t('catalogo.elevar_nivel')), h('th', {}, t('catalogo.col_titulo')), h('th', {}, t('catalogo.col_tipo')), h('th', {}, t('catalogo.col_acesso')))));
     const tb = h('tbody');
     for (const dp of deps) {
-      const cx = h('input', { type: 'checkbox', value: dp.id, 'aria-label': t('catalogo.aplicar_nivel') });
+      if (dp.oculto) { tb.append(h('tr', { class: 'oculto', 'data-dependencia': dp.id }, h('td'), h('td', { colspan: 3, class: 'fraco' }, t('catalogo.dependencia_oculta')))); continue; }
+      const cx = h('input', { type: 'checkbox', value: dp.id, 'aria-label': t('catalogo.elevar_nivel') });
       if (!dp.pode_editar) { cx.disabled = true; cx.title = t('catalogo.dependencia_sem_edicao'); }
+      const marca = h('span', { class: 'marcador atencao', hidden: true }, t('catalogo.dependencia_abaixo'));
+      const acessoCel = h('td', {}, h('span', { class: 'acesso' }, rotuloAcesso(dp)), ' ', marca);
+      const tr = h('tr', { 'data-dependencia': dp.id }, h('td', {}, cx), h('td', {}, elipse(dp.titulo, 50)), h('td', {}, rotuloTipo(dp.tipo)), acessoCel);
       depCaixas.push(cx);
-      tb.append(h('tr', {}, h('td', {}, cx), h('td', {}, elipse(dp.titulo, 50)), h('td', {}, rotuloTipo(dp.tipo)), h('td', {}, t(`catalogo.acesso_${dp.acesso}`), dp.grupos ? ` +${dp.grupos}` : '')));
+      depLinhas.push({ dp, tr, marca, cx, acessoCel });
+      tb.append(tr);
     }
     tab.append(tb);
-    corpo.append(h('section', { class: 'dependencias' }, h('h3', {}, t('catalogo.dependencias')), h('p', { class: 'fraco' }, t('catalogo.dependencias_texto')), tab));
+    const elevarTodas = h('button', { type: 'button', class: 'pequeno', id: 'compartilhar-elevar-todas' }, t('catalogo.elevar_todas'));
+    elevarTodas.addEventListener('click', () => { for (const { dp, cx } of depLinhas) if (abaixo(dp) && dp.pode_editar) cx.checked = true; });
+    corpo.append(h('section', { class: 'dependencias' }, h('h3', {}, t('catalogo.dependencias')), h('p', { class: 'fraco' }, t('catalogo.dependencias_texto')), depAviso, tab, h('div', { class: 'linha-ferramentas' }, h('div', { class: 'direita' }, elevarTodas))));
+    fs.addEventListener('change', atualizarDependencias);
+    gruposFs.addEventListener('change', atualizarDependencias);
+    atualizarDependencias();
   }
 
   const aplicar = h('button', { type: 'button', class: 'primario', id: 'compartilhar-aplicar' }, t('catalogo.aplicar'));
@@ -78,6 +113,14 @@ export async function abrirCompartilhar(item, { aoMudar = () => {} } = {}) {
     try {
       estado = await api.compartilhar(item.id, corpoPut);
       aviso.ok(t('catalogo.compartilhamento_salvo'));
+      // a árvore reflete o nível novo das dependências elevadas; as caixas voltam a vazio (escolha é por vez)
+      const novas = new Map((estado.dependencias || []).map((dp) => [dp.id, dp]));
+      for (const linha of depLinhas) {
+        Object.assign(linha.dp, novas.get(linha.dp.id) || {});
+        linha.acessoCel.querySelector('.acesso').textContent = rotuloAcesso(linha.dp);
+        linha.cx.checked = false;
+      }
+      atualizarDependencias();
       aoMudar({ acesso: estado.acesso, compartilhado_com_grupos: (estado.grupos || []).length });
     } catch (e) {
       const dt = e.detalhe || {};
