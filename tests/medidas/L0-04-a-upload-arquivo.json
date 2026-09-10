@@ -2,11 +2,11 @@
  "item": "L0-04-a-upload-arquivo",
  "medidas": {
   "taxa_upload_mb_s": {
-   "valor": 92.1,
+   "valor": 90.87,
    "unidade": "MB/s",
    "comando": "tests/api/uploads/test_uploads.py::test_100mb_em_7_partes_com_reenvio_da_4_sha256_igual"
   }
  },
- "gerado_em": "2026-09-06T15:06:39Z",
- "git_sha": "9a69cebb2476"
+ "gerado_em": "2026-09-06T19:50:44Z",
+ "git_sha": "90d03c07da0c"
 }

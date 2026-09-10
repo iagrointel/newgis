@@ -31,7 +31,6 @@ from app.edicao.modelos import (
 )
 from app.erros import ErroAPI
 from app.ingestao.geometria import MULTI_DE, TIPOS_CONCRETOS
-from app.regras import motor as regras_motor  # L2-10-d: cálculo/restrição no caminho único de escrita
 
 # campos de rastreio e sistema: NUNCA aceitos do cliente, mesmo que ele os inclua em `atributos` — ignorados em
 # silêncio (portão cláusula 7). Nunca fazem parte de `dados.campos` (a ingestão nunca os lista lá), então isso
@@ -66,7 +65,7 @@ def camada_ou_404(cur, camada_id: str) -> tuple[dict, dict]:
     cláusula 11) validado como `camada_vetorial` hospedada (a única editável por aqui; camada referenciada não
     tem `versao`/rastreio, é escopo de outro item)."""
     r = comum.item_ou_404(cur, camada_id)
-    if r["tipo"] not in ("camada_vetorial", "vista_de_camada"):
+    if r["tipo"] != "camada_vetorial":
         raise ErroAPI(404, "item_inexistente", "item inexistente")
     dados = r["dados"] or {}
     if dados.get("fonte") != "hospedada":
@@ -76,14 +75,7 @@ def camada_ou_404(cur, camada_id: str) -> tuple[dict, dict]:
 
 def exigir_camada_editavel(auth: Auth, dados: dict) -> None:
     """`feicoes.editar_total` (perfil admin) ignora a chave `edicao.habilitada`; sem ela, `feicoes.editar`
-    exige que a camada tenha ligado edição (hipótese do item; ADR Esri de editor tracking).
-
-    Vista de camada marcada `somente_leitura` (item L5-32) é recusada ANTES do atalho de administrador: ali
-    a recusa não é permissão de quem escreve, é a natureza do objeto — a view foi publicada como só-leitura
-    e nem o administrador escreve por ela (escreve pela camada-mãe, que continua editável)."""
-    if dados.get("somente_leitura"):
-        raise ErroAPI(403, "vista_somente_leitura",
-                      "esta vista de camada é somente leitura; edite pela camada-mãe")
+    exige que a camada tenha ligado edição (hipótese do item; ADR Esri de editor tracking)."""
     if auth.tem("feicoes.editar_total"):
         return
     if not (dados.get("edicao") or {}).get("habilitada"):
@@ -210,7 +202,6 @@ def _preparar_geometria(
         raise ErroAPI(422, "geometria_invalida", "geometria não é um GeoJSON serializável") from e
 
     srid_camada = int(dados["srid"])
-    srid_declarado = srid_entrada is not None
     srid_origem = int(srid_entrada) if srid_entrada else srid_camada
     expr = "ST_SetSRID(ST_GeomFromGeoJSON(%s), %s)"
     parametros: list[Any] = [geojson_txt, srid_origem]
@@ -219,40 +210,6 @@ def _preparar_geometria(
         parametros.append(srid_camada)
     if promover:
         expr = f"ST_Multi({expr})"
-    # sanidade de CRS não declarado (refutação do item: "geometria em outro CRS sem declarar"): sem `crs` no
-    # corpo, a entrada é tratada como já estando no SRID da camada (hipótese do item). Quando esse SRID é
-    # geográfico (grau, ex. 4326/4674) e a geometria enviada tem coordenada fora de [-180,180]/[-90,90], NÃO é
-    # coordenada geográfica válida em NENHUMA hipótese — é quase sempre um envio em metros (UTM/Web Mercator)
-    # sem declarar o `crs`. Detectável sem heurística de "provavelmente errado": os limites do próprio domínio
-    # matemático do grau já bastam. Só roda quando o CRS NÃO foi declarado (é exatamente a lacuna do teste do
-    # adversário) — com `crs` declarado, ST_Transform já converteu para o sistema certo antes desta checagem.
-    if not srid_declarado:
-        cur.execute(
-            "SELECT proj4text ~ '\\+proj=longlat' AS geografico FROM spatial_ref_sys WHERE srid = %s",
-            (srid_camada,),
-        )
-        rr = cur.fetchone()
-        if rr and rr["geografico"]:
-            cur.execute(
-                "WITH g AS (SELECT ST_SetSRID(ST_GeomFromGeoJSON(%s), %s) AS geom) "
-                "SELECT ST_XMin(geom) AS xmin, ST_XMax(geom) AS xmax, "
-                "ST_YMin(geom) AS ymin, ST_YMax(geom) AS ymax FROM g",
-                [geojson_txt, srid_origem],
-            )
-            ext = cur.fetchone()
-            fora = (
-                ext and (
-                    ext["xmin"] < -180 or ext["xmax"] > 180 or ext["ymin"] < -90 or ext["ymax"] > 90
-                )
-            )
-            if fora:
-                raise ErroAPI(
-                    422, "geometria_fora_do_crs",
-                    "coordenada fora do intervalo geográfico da camada (grau: longitude em [-180,180], "
-                    "latitude em [-90,90]); declare `crs.srid` se a geometria não estiver no SRID da camada",
-                    {"srid_camada": srid_camada, "extent": {"xmin": ext["xmin"], "xmax": ext["xmax"],
-                                                             "ymin": ext["ymin"], "ymax": ext["ymax"]}},
-                )
     try:
         cur.execute(
             f"WITH g AS (SELECT {expr} AS geom) SELECT ST_IsValid(geom) AS valido, "
@@ -289,31 +246,11 @@ def _feicao_atual_json(atual: dict, dados: dict) -> dict:
     return saida
 
 
-def obter_feicao(cur, camada_id: str, globalid: str) -> dict:
-    """`GET /api/camadas/{id}/feicoes/{globalid}` — geometria e atributos EXATOS (não a versão recortada por
-    tile que o mapa desenha). É daqui que a tela de edição parte para mover vértice, dividir ou preencher o
-    formulário: a ficha do MVT nunca é fonte de verdade geométrica (item L2-03-edicao)."""
-    _item, dados = camada_ou_404(cur, camada_id)
-    schema, tabela = _schema_tabela(dados)
-    tem_geom = dados.get("geometria") not in (None, "nenhuma")
-    extra = ", ST_AsGeoJSON(geom) AS __geom_geojson" if tem_geom else ""
-    cur.execute(f'SELECT *{extra} FROM "{schema}"."{tabela}" WHERE globalid = %s', (globalid,))
-    atual = cur.fetchone()
-    if atual is None:
-        raise ErroAPI(404, "feicao_inexistente", "feição inexistente nesta camada", {"id": globalid})
-    return _feicao_atual_json(atual, dados)
-
-
 def _inserir(
     cur, auth: Auth, dados: dict, corpo: EdicoesEntrada, feicao: FeicaoAdicionar
 ) -> tuple[ResultadoFeicao, list[str]]:
     schema, tabela = _schema_tabela(dados)
     atributos, avisos = validar_atributos(feicao.atributos, dados, "adicionar")
-    # L2-10-d: regras de cálculo preenchem campos e regras de restrição recusam (422 com código/mensagem da regra)
-    atributos, _ = regras_motor.aplicar_edicao(
-        regras_motor.compilar(dados), atributos, None, "inserir", em_massa=corpo.em_massa,
-        geometria_mudou=feicao.geometria is not None,
-    )
     tem_geom = dados.get("geometria") not in (None, "nenhuma")
     colunas = list(atributos.keys())
     valores: list[Any] = [atributos[c] for c in colunas]
@@ -368,19 +305,12 @@ def _atualizar(
     avisos: list[str] = []
     sets: list[str] = []
     valores: list[Any] = []
-    atributos: dict[str, Any] = {}
     if feicao.atributos:
         atributos, avisos_a = validar_atributos(feicao.atributos, dados, "atualizar")
         avisos += avisos_a
-    if feicao.atributos or feicao.geometria is not None:
-        # L2-10-d: gatilho por campo (o que veio no pedido + o que outra regra calculou) ou por geometria
-        atributos, _ = regras_motor.aplicar_edicao(
-            regras_motor.compilar(dados), atributos, atual, "atualizar", em_massa=corpo.em_massa,
-            geometria_mudou=feicao.geometria is not None,
-        )
-    for c, v in atributos.items():
-        sets.append(f"{_ident(c)} = %s")
-        valores.append(v)
+        for c, v in atributos.items():
+            sets.append(f"{_ident(c)} = %s")
+            valores.append(v)
     if feicao.geometria is not None:
         if not tem_geom:
             raise ErroAPI(422, "camada_sem_geometria", "esta camada não aceita geometria")
@@ -401,7 +331,7 @@ def _atualizar(
         valores,
     )
     r = cur.fetchone()
-    return ResultadoFeicao(sucesso=True, id=feicao.id, fid=r["fid"], versao=r["versao"], atributos=atributos), avisos
+    return ResultadoFeicao(sucesso=True, id=feicao.id, fid=r["fid"], versao=r["versao"]), avisos
 
 
 def _apagar(
@@ -443,10 +373,6 @@ def _processar_lista(cur, lista: list, aplicar, modo: str, prefixo: str) -> tupl
                 cur.execute(f"RELEASE SAVEPOINT {savepoint}")
         except (ErroAPI, psycopg2.Error) as e:
             if modo != "parcial":
-                if isinstance(e, psycopg2.errors.WithCheckOptionViolation):
-                    # vista de camada só aceita feição dentro do próprio filtro (item L5-32): recusa com
-                    # código de negócio, não 500. Os demais erros do banco seguem como estavam.
-                    raise comum.erro_do_banco(e) from e
                 raise
             cur.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
             cur.execute(f"RELEASE SAVEPOINT {savepoint}")
@@ -497,12 +423,3 @@ def aplicar_edicoes(cur, request: Request, auth: Auth, camada_id: str, corpo: Ed
     return EdicoesSaida(
         modo=corpo.modo, adicionar=resultados_add, atualizar=resultados_upd, apagar=resultados_del, avisos=avisos
     )
-
-
-# Portas públicas de UMA feição, para quem aplica edição fora da rota de lote. O item L2-13-b (sincronização
-# de réplica) precisa decidir feição a feição — conferir a versão, escolher pela política de conflito da
-# réplica e só então aplicar — o que `aplicar_edicoes` (lote inteiro, política fixa) não permite. Mesmo
-# código, mesma validação, mesma RLS: não é uma segunda porta de escrita, é a mesma sem o laço por cima.
-inserir = _inserir
-atualizar = _atualizar
-apagar = _apagar

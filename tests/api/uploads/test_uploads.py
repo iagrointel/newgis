@@ -274,6 +274,48 @@ def test_tipo_desconhecido_422(up_a):
     assert r.json()["erro"] == "tipo_desconhecido"
 
 
+# ---------------------------- achado do adversário independente T3 (handoffs/T3/L0-04-a-ADVERSARIO.md)
+def test_editor_comum_sobe_arquivo_pelo_proprio_token(usuarios_a):
+    """Achado do adversário: com o escopo padrão `admin:inquilino`, NENHUM usuário que não fosse admin do
+    inquilino conseguia usar o upload (a própria tela pedia um token que só admin pode emitir). Prova que um
+    editor comum (só o privilégio `conteudo.criar`, perfil `editor`) hoje: (1) consegue emitir um token com o
+    escopo `conteudo:criar`; (2) completa o fluxo inteiro com ele; (3) continua sem conseguir `admin:inquilino`
+    (o teto por perfil daquele escopo não foi enfraquecido)."""
+    c_ed, _, _ = usuarios_a.sessao("editor")
+    r_tok = c_ed.post("/api/tokens", json={"nome": f"{PREFIXO_TESTE}-editor-upload", "escopos": ["conteudo:criar"]})
+    assert r_tok.status_code == 201, r_tok.text
+    up = Uploader(c_ed)
+    up._tok = r_tok.json()["token"]
+    up._tok_id = r_tok.json()["id"]
+    try:
+        dados = _csv_de(1024)
+        r = up.iniciar(f"{PREFIXO_TESTE}-editor.csv", dados, "csv")
+        upload_id = r.json()["id"]
+        for r_parte in up.enviar_partes(upload_id, dados, r.json()["parte_bytes"]):
+            assert r_parte.status_code == 200, r_parte.text
+        resultado = up.concluir(upload_id, sha256=hashlib.sha256(dados).hexdigest())
+        assert resultado.status_code == 202, resultado.text
+
+        # o teto do escopo de ADMIN continua de pé: editor não vira admin de token por tabela
+        r_neg = c_ed.post("/api/tokens", json={"nome": f"{PREFIXO_TESTE}-editor-nega", "escopos": ["admin:inquilino"]})
+        assert r_neg.status_code == 422 and r_neg.json()["erro"] == "escopo_fora_do_teto"
+    finally:
+        up.liberar_token()
+        for iid in up.arquivos:
+            try:
+                c_ed.delete(f"/api/itens/{iid}")
+            except Exception:  # noqa: BLE001 — limpeza best-effort
+                pass
+
+
+def test_perfil_sem_conteudo_criar_nao_ganha_token_de_upload(usuarios_a):
+    """Simetria da correção: quem NÃO tem `conteudo.criar` (perfil `visualizador`) continua sem conseguir se
+    emitir um token de upload — o teto virou "por privilégio", não "sem teto"."""
+    c_vis, _, _ = usuarios_a.sessao("visualizador")
+    r = c_vis.post("/api/tokens", json={"nome": f"{PREFIXO_TESTE}-vis-upload", "escopos": ["conteudo:criar"]})
+    assert r.status_code == 422 and r.json()["erro"] == "escopo_fora_do_teto"
+
+
 # ---------------------------------------------------------------- refutação do adversário (aqui de antemão)
 def test_zip_bomba_1_milhao_de_entradas_recusado(up_a):
     buf = BytesIO()

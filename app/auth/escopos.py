@@ -55,7 +55,15 @@ ESCOPOS_SEM_UUID = (
 ESCOPOS_SEM_UUID = (
     "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
     "geocodificar:usar", "crs:usar", "admin:inquilino",
+    rf"geocodificar:usar|conteudo:criar|admin:inquilino)$"
 )
+ESCOPOS_SEM_UUID = (
+    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
+    "geocodificar:usar", "conteudo:criar", "admin:inquilino",
+)
+# achado do adversário T3 (L0-04-a/L0-11): escopo cujo teto NÃO é "admin" (perfil), mas sim um privilégio —
+# quem já tem o privilégio no perfil pode se emitir um token com este escopo. `rotas_tokens.criar` consulta.
+ESCOPO_EXIGE_PRIVILEGIO = {"conteudo:criar": "conteudo.criar"}
 DESCRICAO = {
     "catalogo:ler": "listar e ler metadado de itens que o dono pode ler",
     "camada:ler": "ler feições e atributos de camada legível pelo dono (opcional :<uuid> de uma camada)",
@@ -82,6 +90,8 @@ DESCRICAO = {
     "multicritério em grades aninhadas (L3-19-multiescala; dado e execução do próprio inquilino)",
     "crs:usar": "listar CRS, ler definição proj4 e transformar coordenada/bbox (L2-17-crs-transformacoes; "
     "serviço transversal sem estado por inquilino)",
+    "conteudo:criar": "criar/editar os próprios itens por token (upload de arquivo em partes, L0-04-a): exige "
+    "que o dono do token já tenha o privilégio conteudo.criar (editor ou admin), não é exclusivo de admin",
     "admin:inquilino": "tudo o que o dono pode fazer pela API, exceto gerir tokens, senha, 2FA e sessões",
 }
 

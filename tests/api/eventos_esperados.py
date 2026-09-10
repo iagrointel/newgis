@@ -406,6 +406,9 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/rest/services/Geocodificador/GeocodeServer/findAddressCandidates"): [],
     ("POST", "/rest/services/Geocodificador/GeocodeServer/geocodeAddresses"): [],
     ("POST", "/rest/services/Geocodificador/GeocodeServer/reverseGeocode"): [],
+    # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
+    # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
+    ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
 }
 
 # Verbo de escrita que NÃO altera estado. Cada motivo é conferido por test_eventos.py (tamanho mínimo, sem
