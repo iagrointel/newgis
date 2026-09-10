@@ -40,6 +40,10 @@ PAGINAS = {
     # --- SMTP, convite de membro e redefinição de senha (L0-07-d-smtp-convites): públicas, sem sessão
     "/aceitar-convite": "aceitar_convite.html",
     "/redefinir-senha": "redefinir_senha.html",
+    # --- campo (L2-07-campo): fila de trabalho, roteiro do dia e visita com foto
+    "/campo/filas": "campo_filas.html",
+    "/campo/filas/{fila_id}": "campo_fila.html",
+    "/campo/roteiros/{roteiro_id}": "campo_roteiro.html",
     # --- rede simples (L4-18-rede-simples-trace-network)
     "/redes/simples": "redes_simples.html",
     # --- controladores de subrede e tiers (L4-04-a-controladores-e-tiers)

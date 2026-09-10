@@ -293,3 +293,28 @@ body.instrumento dd, body.instrumento .mono, body.instrumento .tabela td.mono, b
 .lista-recentes a { display: flex; justify-content: space-between; gap: var(--e3); padding: var(--e2) 0; border-bottom: 1px solid var(--borda); color: var(--texto); text-decoration: none; }
 .lista-recentes a:hover { color: var(--acento); }
 .lista-recentes .tipo { color: var(--fraco); font-size: .8rem; white-space: nowrap; }
+
+/* --- campo (item L2-07-campo): fila de trabalho, roteiro do dia e visita com foto */
+.campo-filas .ajuda, .campo-fila .ajuda, .campo-roteiro .ajuda { color: var(--fraco); font-size: .85rem; margin: 0 0 var(--e2); }
+.campo-filas .vazio, .campo-fila .vazio { color: var(--fraco); padding: var(--e3) var(--e4); margin: var(--e2) 0; border: 1px dashed var(--borda); border-radius: var(--raio); }
+.linha-botoes { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); margin: var(--e2) 0; }
+.lista-selecao { max-height: 260px; overflow-y: auto; border: 1px solid var(--borda); border-radius: var(--raio); padding: var(--e2) var(--e3); margin: var(--e2) 0; background: var(--painel); }
+.linha-selecao { display: block; padding: var(--e1) 0; font-size: .9rem; }
+.linha-selecao input { margin-right: var(--e2); accent-color: var(--acento); }
+.badge { display: inline-block; padding: 2px var(--e2); border-radius: 999px; font-size: .78rem; font-weight: 600;
+  background: var(--painel-2); border: 1px solid var(--borda-forte); color: var(--fraco); }
+.badge-visitado, .badge-confirmado { color: var(--ok); border-color: var(--ok); }
+.badge-pulado, .badge-nao_confirmado { color: var(--erro, #c0392b); border-color: var(--erro, #c0392b); }
+.badge-inconclusivo { color: var(--aviso, #b8860b); border-color: var(--aviso, #b8860b); }
+.badge-pendente { color: var(--fraco); }
+.resumo-roteiro { display: grid; grid-template-columns: max-content 1fr; gap: var(--e1) var(--e3); margin: var(--e2) 0 var(--e4); }
+.resumo-roteiro dt { color: var(--fraco); }
+.parada-roteiro { display: flex; align-items: center; gap: var(--e3); padding: var(--e2) 0; border-bottom: 1px solid var(--borda); }
+.parada-roteiro .num { display: inline-flex; align-items: center; justify-content: center; width: 1.6rem; height: 1.6rem;
+  border-radius: 50%; background: var(--painel-2); border: 1px solid var(--borda-forte); font-size: .8rem; font-weight: 600; }
+.parada-roteiro .ja-visitado { margin-left: auto; color: var(--fraco); font-size: .85rem; }
+.parada-roteiro button { margin-left: auto; }
+.formulario-visita { margin: var(--e2) 0 var(--e3); display: grid; gap: var(--e2); }
+.formulario-visita label { display: grid; gap: 4px; font-size: .85rem; color: var(--fraco); }
+.aviso-fila-local { background: var(--painel-2); border: 1px solid var(--borda-forte); border-radius: var(--raio);
+  padding: var(--e2) var(--e3); margin: var(--e2) 0; font-size: .9rem; }

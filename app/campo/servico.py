@@ -70,6 +70,22 @@ def feicao_ponto(cur, dados: dict, globalid: str) -> dict | None:
     }
 
 
+def listar_globalids(cur, dados: dict, limite: int) -> list[dict]:
+    """`[{globalid, titulo}]` das primeiras `limite` feições da camada — usado pela tela de criação de fila
+    (escolher quais feições viram alvo) sem exigir um visualizador de mapa completo para isso."""
+    campos_texto = [
+        c.get("nome") for c in (dados.get("campos") or [])
+        if isinstance(c, dict) and c.get("nome") and c.get("tipo") in (None, "text")
+    ]
+    rotulo_campo = campos_texto[0] if campos_texto else None
+    extra_sql = f', "{rotulo_campo}"::text AS __rotulo' if rotulo_campo else ""
+    cur.execute(f"SELECT globalid{extra_sql} FROM {_tabela_sql(dados)} ORDER BY fid LIMIT %s", (limite,))
+    return [
+        {"globalid": str(r["globalid"]), "titulo": (r.get("__rotulo") if rotulo_campo else None)}
+        for r in cur.fetchall()
+    ]
+
+
 def feicoes_geojson(cur, dados: dict, globalids: list[str]) -> dict:
     """FeatureCollection com geometria+atributos das feições pedidas (mesma origem de dado de `feicao_ponto`,
     mas a geometria ORIGINAL, não o centróide) — usado pela camada de alvos no mapa."""

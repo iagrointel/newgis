@@ -72,6 +72,18 @@ def _visita_json(v: dict) -> dict:
     }
 
 
+# ---------------------------------------------------------------------- camada de origem (apoio da tela de criação)
+@router.get("/camadas/{camada_id}/globalids", openapi_extra=LER)
+def camada_globalids(camada_id: str, limite: int = 200, auth: Auth = autenticado()) -> dict:
+    """Lista curta de feições da camada (globalid + rótulo) para a tela de criação de fila escolher os
+    alvos sem precisar de um visualizador de mapa completo."""
+    cid = uuid_ok(camada_id, "item_inexistente", "item de camada inexistente")
+    limite = max(1, min(limite, 1000))
+    with db.db(auth.contexto()) as cur:
+        _item, dados = servico.camada_ou_404(cur, cid)
+        return {"feicoes": servico.listar_globalids(cur, dados, limite)}
+
+
 # ---------------------------------------------------------------------- fila
 @router.post("/filas", status_code=201, openapi_extra=ESCREVER)
 def criar_fila(corpo: FilaCriar, request: Request, auth: Auth = autenticado("campo.coletar")):
