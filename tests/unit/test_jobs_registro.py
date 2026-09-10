@@ -19,6 +19,14 @@ class P(BaseModel):
 
 @pytest.fixture(autouse=True)
 def ambiente(monkeypatch):
+    # Os tipos REAIS da casa entram no registro ANTES do teto artificial de 512 MB e antes do retrato
+    # `antes`. Sem isto acontecem dois estragos: a primeira importação de app.jobs.tipos dentro de um teste
+    # deste arquivo esbarra no teto artificial (amc.gerar_unidades pede 768 MB, amc.recombinar pede o
+    # orçamento do motor) e falha com ErroRegistro; e a limpeza do fim do teste, que só deveria tirar os
+    # tipos sintéticos, arrancaria do registro global os tipos reais importados durante ele — o teste
+    # seguinte, em qualquer arquivo, encontraria o registro incompleto.
+    import app.jobs.tipos  # noqa: F401
+
     for k, v in AMBIENTE.items():
         monkeypatch.setenv(k, v)
     monkeypatch.delenv("PLAT_GPU_SSH", raising=False)

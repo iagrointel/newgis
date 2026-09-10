@@ -18,25 +18,6 @@ export const COMBINADORES = {
   soma_fuzzy: 'soma fuzzy 1 − Π(1 − f), na escala 0-1; ignora os pesos por definição',
   gama: 'gama fuzzy (soma fuzzy)^γ · (produto)^(1−γ); ignora os pesos por definição',
 };
-// Tradução do vocabulário do documento do modelo (docs/esquemas/amc_modelo.v1.json, item L3-01-a) para o
-// vocabulário desta função — as duas trilhas nomearam a mesma escolha de forma diferente. Gêmeo em JavaScript
-// dos dicionários MAPA_COMBINADOR/MAPA_POLITICA de app/amc/explicacao.py; quem escrever mais um nome de
-// combinador tem de escrever nos dois lugares, e tests/unit/test_amc_combinacao_equivalencia.py cobra.
-export const MAPA_COMBINADOR = {
-  soma_ponderada_normalizada: 'soma_ponderada',
-  percentual: 'percentual',
-  media_geometrica: 'media_geometrica',
-  minimo: 'minimo',
-  maximo: 'maximo',
-  produto: 'produto',
-  soma_fuzzy: 'soma_fuzzy',
-  gama: 'gama',
-};
-export const MAPA_POLITICA = {
-  excluir_fator: 'excluir',
-  unidade_nula: 'nulo',
-  nota_pessimista: 'pessimista',
-};
 export const SEM_PESO = ['minimo', 'maximo', 'produto', 'soma_fuzzy', 'gama'];
 export const POLITICAS_AUSENTE = {
   excluir: 'o fator sai da conta naquela unidade e a cobertura cai (padrão)',
@@ -44,6 +25,30 @@ export const POLITICAS_AUSENTE = {
   pessimista: 'o fator ausente recebe a nota 0, declarada como estimativa pessimista',
 };
 const ESCALA_MAX = 100;
+// Contrato de escala do motor (item L3-16-desempenho-escala). O MESMO número está em
+// app/limites.py::AMC_COMBINAR_NAVEGADOR_MAX e os dois são comparados em
+// tests/unit/test_amc_escala.py — se divergirem, o teste reprova. Acima do limite o navegador RECUSA
+// (nunca combina pela metade, nunca trava a aba): quem chama tem de refazer o pedido no servidor.
+export const LIMITE_NAVEGADOR = 50000;
+
+/** Onde a combinação de `nUnidades` deve rodar. Mesma decisão de app/amc/escala.py::onde_combinar. */
+export function ondeCombinar(nUnidades) {
+  const n = Number(nUnidades);
+  if (n <= LIMITE_NAVEGADOR) {
+    return {
+      onde: 'navegador',
+      limite: LIMITE_NAVEGADOR,
+      motivo: `${n} unidades cabem no navegador (limite ${LIMITE_NAVEGADOR}); a combinação é imediata, `
+        + 'sem ida ao servidor e sem gastar job',
+    };
+  }
+  return {
+    onde: 'servidor',
+    limite: LIMITE_NAVEGADOR,
+    motivo: `${n} unidades passam do limite do navegador (${LIMITE_NAVEGADOR}); a combinação vai para o `
+      + 'servidor, em blocos, como job',
+  };
+}
 const TOLERANCIA_PERCENTUAL = 1e-6;
 
 export class ErroCombinacao extends Error {
@@ -109,6 +114,14 @@ export function combinar(fatores, pesos, opcoes = {}) {
     throw new ErroCombinacao('matriz_invalida', 'a matriz de fatores precisa ter duas dimensões (unidade × fator)');
   }
   const nUnidades = fatores.length;
+  if (nUnidades > LIMITE_NAVEGADOR) {
+    // Recusa declarada, não silenciosa: acima deste tamanho a conta é do servidor (item L3-16). Combinar
+    // aqui prenderia a aba do usuário por segundos e obrigaria a trazer a matriz inteira pela rede.
+    throw new ErroCombinacao('unidades_demais_para_o_navegador',
+      `${nUnidades} unidades passam do limite de ${LIMITE_NAVEGADOR} do navegador; peça a combinação ao `
+      + 'servidor (POST da execução), que a faz em blocos',
+      { n_unidades: nUnidades, limite: LIMITE_NAVEGADOR, onde: 'servidor' });
+  }
   const nFatores = nUnidades ? fatores[0].length : (Array.isArray(pesos) ? pesos.length : 0);
   if (!nFatores) throw new ErroCombinacao('sem_fatores', 'o modelo não tem nenhum fator');
   validaIds(idsFatores, nFatores);

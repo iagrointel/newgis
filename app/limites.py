@@ -1060,3 +1060,21 @@ AMC_CRITERIOS_FEICAO_MAX = 5_000        # feições por avaliação síncrona (n
 AMC_CRITERIOS_POR_AVALIACAO = 20        # critérios por avaliação (o painel compara par a par: 20 = 400 células)
 AMC_CRITERIO_RAIO_M_MAX = 100_000.0     # 100 km: raio maior que isto não vale numa única zona UTM
 AMC_CRITERIO_CAMADA_PONTOS_MAX = 200_000  # pontos por camada auxiliar num pedido (raio, contenção, distância)
+# --- desempenho em escala do motor multicritério (L3-16-desempenho-escala). Contrato de escala do motor:
+# ONDE a combinação roda, de quanto em quanto o servidor lê a matriz de fatores e quanta RAM um job de
+# extração pode pedir. Os números medidos ficam em tests/medidas/L3-16-desempenho-escala.json e é de lá
+# que o MANUAL os cita (teste tests/unit/test_amc_escala_manual.py reprova se alguém digitar à mão).
+# AMC_COMBINAR_NAVEGADOR_MAX é o mesmo número nos dois lados: web/js/amc/combinacao.js recusa acima dele
+# com `unidades_demais_para_o_navegador` e o cliente refaz o pedido no servidor (nunca combina pela metade).
+AMC_COMBINAR_NAVEGADOR_MAX = 50_000   # unidades combinadas no navegador; acima disso, servidor
+AMC_BLOCO_UNIDADES = 50_000           # unidades por bloco lido/gravado pelo servidor (pico de RAM constante)
+AMC_EXTRACAO_MEMORIA_MB = 4096        # teto DECLARADO do job de extração/recombinação (guardrail do portão do
+                                      # item). A máquina pode ter teto menor (PLAT_WORKER_MEMORIA_MB, 1024 MB
+                                      # nesta): vale o MENOR dos dois, e é ele que vira RLIMIT_DATA no filho
+                                      # (app/jobs/filho.py, item L0-05-e). Ver app.amc.escala.orcamento_mb.
+AMC_EXTRACAO_TIMEOUT_S = 1800         # 30 min: o prazo do portão para 1 mi de células × 15 fatores
+# Custo MEDIDO da extração, por unidade e por fator. Sai de tests/medidas/L3-16-desempenho-escala.json
+# (chave `extracao_por_unidade_por_fator_us`, estatística zonal real sobre GeoTIFF, 07/09/2026) e é o que
+# permite ao plano dizer, ANTES de enfileirar, que um trabalho não termina no prazo. Número deliberadamente
+# conservador: a medida foi feita com parte das unidades fora do raster, que custam menos que a média real.
+AMC_EXTRACAO_US_POR_UNIDADE_FATOR = 719

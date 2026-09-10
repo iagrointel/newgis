@@ -14,6 +14,7 @@ inválida (auto-interseção) é reparada com `shapely.make_valid` antes de qual
 e nunca derruba o job silenciosamente — a reparação fica registrada em `avisos`.
 """
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import shapely
@@ -31,17 +32,7 @@ _TIPOS_LINHA_OU_PONTO_DIST = ("vetor_comprimento_dentro", "vetor_distancia_mais_
 _TIPOS_PONTO_RAIO = ("vetor_contagem_raio", "vetor_densidade_kernel")
 
 
-def _gpd():
-    """geopandas entra tarde de propósito: hoje ele vem do site do usuário, não do venv da aplicação
-    (`requirements.txt`, nota do shapely), e um import no topo deste arquivo chega a `app.main` pelo registro de
-    jobs — o que fazia `app.main` deixar de importar sem o site do usuário (tests/unit/test_dependencias.py).
-    Quem EXTRAI vetor precisa de geopandas; quem só sobe a aplicação, não."""
-    import geopandas as gpd
-
-    return gpd
-
-
-def _reparar(serie_geom):
+def _reparar(serie_geom: gpd.GeoSeries) -> tuple[gpd.GeoSeries, int]:
     """`shapely.make_valid` nas geometrias inválidas; devolve a série reparada e quantas foram tocadas."""
     invalidas = ~serie_geom.is_valid
     n = int(invalidas.sum())
@@ -52,8 +43,7 @@ def _reparar(serie_geom):
     return reparada, n
 
 
-def _gdf(feicoes, srid_trabalho: int):
-    gpd = _gpd()
+def _gdf(feicoes, srid_trabalho: int) -> gpd.GeoDataFrame:
     if not feicoes:
         return gpd.GeoDataFrame(columns=["id"], geometry=gpd.GeoSeries([], crs=f"EPSG:{srid_trabalho}"))
     ids = [f[0] for f in feicoes]

@@ -5316,6 +5316,26 @@ L3-01-a/b, não deste item; os dois testes que dependem dele (`test_amc_adversar
 `test_cruzado.py::test_cobertura_100_por_cento`) seguem vermelhos, sem regressão nova. `docs/adr/0017` do
 L3-01-c também dispara `make sem-marcador` (falso positivo de uma palavra comum em português que contém a
 sequência proibida por acaso) — não é código deste item, não corrigido aqui.
+## turno 3, setembro de 2026 (item L3-16-desempenho-escala: limites de escala do motor multicritério, medidos)
+
+Contrato de escala do motor num lugar só (`app/amc/escala.py`, ADR
+`docs/adr/20260907T1915-escala-do-motor-amc.md`): a combinação roda no navegador até 50.000 unidades e no
+servidor acima disso, em blocos de 50.000 lidos por faixa de `unidade_id`; o plano é recusado ANTES de
+enfileirar quando não cabe (unidades demais, fatores demais, bloco maior que o orçamento de RAM, prazo
+projetado maior que o do job). `web/js/amc/combinacao.js` passa a recusar acima do limite com
+`unidades_demais_para_o_navegador` — o mesmo número que `app/limites.py`, comparado por teste. Job pesado
+novo `amc.recombinar` (1 por vez na máquina, provado com dois processos de worker e duas execuções).
+
+Medidas de `tests/medidas/L3-16-desempenho-escala.json`, cada uma com `carga_1min`, `ram_livre_gb` e
+`medido_em` ao lado (carga entre 2,84 e 3,10 em 12 núcleos): recombinação no servidor de 10 mil × 15 em
+**0,0011 s**, 100 mil em **0,0808 s** e 1 milhão em **0,9734 s** (prazo do portão: 5 s); pico de memória de
+um processo que recombina 1 milhão em 20 blocos: **70,26 MB** (orçamento do job: 1024 MB nesta máquina);
+combinação de 50.000 × 15 no navegador (o maior tamanho que ele aceita): **21,18 ms**.
+
+Cláusula REFUTADA e registrada como tal: à taxa medida da estatística zonal (**698,93 µs** por unidade e
+por fator), 1 milhão de células × 15 fatores levaria **10.483,9 s** — quase 3 horas contra os 1.800 s do
+portão. O motor recusa esse plano com `prazo_projetado_estourado`; o limite honesto de hoje é uma grade de
+**166.898 unidades** com 15 fatores. Move esse número o item `L3-01-c2-extracao-em-lote`.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 - **L7-06-d-paineis**: cinco painéis Grafana provisionados por arquivo (`deploy/grafana/paineis/*.json` + `deploy/grafana/provisioning/`), homologação própria (`deploy/paineis_homologacao.sh`) com carga curta de verdade e captura de cada painel em `tests/e2e/capturas/`. Métricas novas para o que os painéis precisavam e não existia: usuários ativos em 24 h, duração e tamanho do último backup/ensaio, uso de armazenamento e tamanho do schema de dado por inquilino.
@@ -6453,6 +6473,9 @@ Migração `045_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RL
 ## turno 3, setembro de 2026 (itens L3-01-a-modelo-dado e L3-01-b-unidades: motor multicritério — modelo, proveniência e unidade de análise)
 
 Migração `20260907T1206_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
+## turno 3, setembro de 2026 (itens L3-01-a-modelo-dado e L3-01-b-unidades: motor multicritério — modelo, proveniência e unidade de análise)
+
+Migração `045_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
 editável) e `amc_modelo_versao` (toda versão que já existiu, imutável para a aplicação por gatilho), `amc_conjunto_unidade`
 e `amc_unidade`, `amc_execucao` (proveniência congelada), `amc_fator_bruto` e `amc_resultado` — linhas por (execução,
 unidade, fator), nunca uma coluna por fator. `amc_resultado` tem `CHECK` que impede unidade vetada de carregar número na
