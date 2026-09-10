@@ -273,9 +273,10 @@ def recorte(
 
 
 METODOS_COMPOSICAO = {
-    # item L1-08 (mínimo): 4 dos 7 métodos citados na hipótese — os que o rio-tiler já embute prontos,
-    # sem exigir máscara de nuvem (SCL) nem "travar cena", que ficam de fora deste turno. Nomes em
-    # português na API (`metodo=`); o valor é resolvido para a classe do rio_tiler aqui, uma vez só.
+    # Nomes canônicos persistidos no mosaico e aliases da API de tile anterior ao L1-08.
+    # rio-tiler não tem LastMethod: last usa FirstMethod sobre a ordem invertida das candidatas.
+    "first": "FirstMethod", "last": "FirstMethod", "lowest": "LowestMethod",
+    "highest": "HighestMethod", "mean": "MeanMethod", "median": "MedianMethod", "stdev": "StdevMethod",
     "primeira": "FirstMethod", "mediana": "MedianMethod", "media": "MeanMethod",
     "maxima": "HighestMethod", "minima": "LowestMethod",
 }
@@ -312,9 +313,8 @@ def ladrilho_composto(
     PIXEL A PIXEL (não cena a cena): onde a primeira fonte da lista não cobre o ladrilho (ou cobre só
     em parte), o(s) pixel(s) que faltam vêm da segunda, da terceira, e assim por diante — é o que faz
     o ladrilho da JUNTA entre duas cenas mostrar as duas, em vez de escolher uma cena inteira e deixar
-    o resto transparente (o defeito do mosaico "cena inteira" que este item substitui). `mediana`/
-    `media`/`maxima`/`minima` são o MÍNIMO do item irmão L1-08 (regras de seleção): "travar cena" e
-    "mais recente sem nuvem" (dependem de máscara SCL) ficam fora deste turno. Levanta
+    o resto transparente (o defeito do mosaico "cena inteira" que este item substitui).
+    Lock e ordenação são aplicados na busca, antes de resolver fontes. Levanta
     `ForaDaCobertura` quando NENHUMA fonte cobre o ladrilho; `ErroTile` se `metodo` for desconhecido."""
     if formato not in RENDER:
         raise ErroTile(f"formato de ladrilho desconhecido: {formato}")
@@ -323,6 +323,8 @@ def ladrilho_composto(
         if not ok:
             raise ErroTile(f"expressão recusada: {motivo}")
     metodo_classe = _metodo_composicao(metodo)
+    if metodo == "last":
+        fontes = list(reversed(fontes))
     from rio_tiler.mosaic import mosaic_reader
 
     cm = _colormap(colormap)

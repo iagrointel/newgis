@@ -538,8 +538,7 @@ def _servir_composto(request: Request, auth, feicoes: list[dict], z: int, x: int
     a ordem já vem do `sortby` registrado/pedido ("mais recente" por padrão); `metodo` escolhe a REGRA
     de seleção de pixel (padrão `primeira` — a primeira cena COM DADO vence, PIXEL A PIXEL, não cena a
     cena: é isto que faz a junta entre duas cenas mostrar as duas, em vez de uma cena inteira com o
-    resto em branco). `mediana`/`media`/`maxima`/`minima` são o mínimo do item irmão L1-08 — "travar
-    cena" e "mais recente sem nuvem" (SCL) ficam fora deste turno (ADR §1, `tiles.METODOS_COMPOSICAO`).
+    resto em branco). A seleção vem dos critérios persistidos quando não há override `metodo`.
     Candidata cujo item não resolve fonte (excluído/de outro estado) é ignorada, não derruba o tile."""
     if not feicoes:
         return Response(status_code=204, headers={"Cache-Control": CACHE_TILE})
@@ -592,7 +591,7 @@ def _tile_mosaico_impl(
             feicoes = mo.candidatas_para_tile(cur, linha, _bbox_do_tile(z, x, y),
                                               limite or linha["criterios"].get("limite") or mo.LIMITE_TILE_PADRAO)
         return _servir_composto(request, auth, feicoes, z, x, y, formato, expressao, bandas, faixa,
-                                  colormap, asset, metodo)
+                                  colormap, asset, metodo or linha["criterios"].get("pixel_selection", "first"))
 
     colecao = alvo
     auth = _autorizar(request, token)
@@ -745,8 +744,8 @@ def tile_mosaico_ext(
     colormap: str | None = Query(None, max_length=40),
     asset: str | None = Query(None, pattern="^(visual|cientifico)$"),
     limite: int | None = Query(None, ge=1, le=mo.LIMITE_TILE_MAX),
-    metodo: str | None = Query(None, description="regra de seleção de pixel (item L1-08, mínimo): "
-                               "primeira|mediana|media|maxima|minima"),
+    metodo: str | None = Query(None, description="override da seleção persistida: "
+                               "first|last|lowest|highest|mean|median|stdev (aceita aliases em português)"),
 ):
     if ext not in tiles.FORMATOS:
         raise ErroAPI(404, "formato_desconhecido", f"formato de ladrilho desconhecido: {ext}",
@@ -767,8 +766,8 @@ def tile_mosaico(
     asset: str | None = Query(None, pattern="^(visual|cientifico)$"),
     limite: int | None = Query(None, ge=1, le=mo.LIMITE_TILE_MAX,
                                description="máximo de cenas candidatas por ladrilho"),
-    metodo: str | None = Query(None, description="regra de seleção de pixel (item L1-08, mínimo): "
-                               "primeira|mediana|media|maxima|minima"),
+    metodo: str | None = Query(None, description="override da seleção persistida: "
+                               "first|last|lowest|highest|mean|median|stdev (aceita aliases em português)"),
 ):
     return _tile_mosaico_impl(request, token, alvo, z, x, y, formato, expressao, bandas, faixa,
                               colormap, asset, limite, metodo)

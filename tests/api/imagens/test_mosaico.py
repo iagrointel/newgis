@@ -24,26 +24,78 @@ def limpeza_de_residuos():
     yield
 
 
-def _sessao_isolada(admin):
-    from tests.api.conftest import Usuarios
+@pytest.fixture(scope="session", autouse=True)
+def trincos_em_tmp():
+    """A execução deste arquivo não grava arquivos de apoio nem credenciais no repositório."""
+    import contextlib
+    import fcntl
+    from pathlib import Path
 
-    usuarios = Usuarios(admin)
+    from tests.api import conftest as apoio
+
+    @contextlib.contextmanager
+    def trinco(nome):
+        with (Path("/tmp") / f"plat-mosaico-{nome}").open("w") as arquivo:
+            fcntl.flock(arquivo, fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(arquivo, fcntl.LOCK_UN)
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(apoio, "trinco", trinco)
+        yield
+
+
+@pytest.fixture(scope="session")
+def sessao_plat(cred, trincos_em_tmp):
+    from tests.api.conftest import entrar, novo_cliente, totp_guardado
+
+    cliente = novo_cliente()
+    login, senha = cred["plataforma"]
+    resposta = entrar(cliente, "plataforma", login, senha, totp_guardado("plataforma"))
+    assert resposta.status_code == 200, "login da plataforma falhou"
+    assert "configurar_2fa" not in resposta.json()["usuario"]["pendencias"], "2FA precisa estar configurado"
+    return cliente
+
+
+@pytest.fixture(scope="session")
+def inquilinos_mosaico(sessao_plat):
+    from tests.api import conftest as apoio
+    from tests.api.conftest import InquilinoTemporario
+
+    criados = []
     try:
-        cliente, _, _ = usuarios.sessao(perfil="admin")
-        yield cliente
+        # Outras rodadas varrem zt-* globalmente. Estes inquilinos têm teardown próprio e
+        # prefixo exclusivo para não perder sessão/objetos durante testes concorrentes.
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(apoio, "PREFIXO_TESTE", "l108")
+            for _ in range(2):
+                criados.append(InquilinoTemporario(sessao_plat))
+        yield criados
     finally:
-        usuarios.limpar()
+        for inquilino in reversed(criados):
+            inquilino.apagar()
 
 
 @pytest.fixture(scope="session")
-def sessao_a(sessao_a):
-    """Tokens da rodada pertencem a um usuário temporário, sem disputar a cota do admin demo."""
-    yield from _sessao_isolada(sessao_a)
+def sessao_a(inquilinos_mosaico):
+    return inquilinos_mosaico[0].admin
 
 
 @pytest.fixture(scope="session")
-def sessao_b(sessao_b):
-    yield from _sessao_isolada(sessao_b)
+def sessao_b(inquilinos_mosaico):
+    return inquilinos_mosaico[1].admin
+
+
+@pytest.fixture(scope="session")
+def tenant_id_a(inquilinos_mosaico):
+    return inquilinos_mosaico[0].id
+
+
+@pytest.fixture(scope="session")
+def tenant_id_b(inquilinos_mosaico):
+    return inquilinos_mosaico[1].id
 
 
 def _cliente():
@@ -55,19 +107,19 @@ def _cliente():
 
 
 @pytest.fixture(scope="module")
-def grade_a(tenant_id_a):
+def grade_a(tenant_id_a, inquilinos_mosaico):
     from tests.api.imagens.apoio_mosaico import apagar_grade, semear_grade
 
-    grade = semear_grade(tenant_id_a, "demo", n_col=3, n_lin=2)
+    grade = semear_grade(tenant_id_a, inquilinos_mosaico[0].slug, n_col=3, n_lin=2)
     yield grade
     apagar_grade(tenant_id_a, grade)
 
 
 @pytest.fixture(scope="module")
-def grade_b(tenant_id_b):
+def grade_b(tenant_id_b, inquilinos_mosaico):
     from tests.api.imagens.apoio_mosaico import apagar_grade, semear_grade
 
-    grade = semear_grade(tenant_id_b, "demo2", n_col=1, n_lin=1)
+    grade = semear_grade(tenant_id_b, inquilinos_mosaico[1].slug, n_col=1, n_lin=1)
     yield grade
     apagar_grade(tenant_id_b, grade)
 
@@ -123,9 +175,8 @@ def test_registrar_devolve_uuid_e_e_idempotente(token_stac_a, grade_a):
     assert r3.status_code == 201, r3.text
     assert r3.json()["id"] != m1["id"]
     c.delete(f"/svc/{tok}/stac/mosaicos/{r3.json()['id']}")
-    # `m1` (sem bbox/limite) NÃO é apagado aqui: `limite` não entra no hash (só afeta como o TILE é
-    # servido, nunca o registro), então `m1` e `mosaico_a` (abaixo, mesmas coleções, só `limite`
-    # diferente) são a MESMA linha — quem apaga é a teardown de `mosaico_a`, módulo inteiro depois.
+    # L1-08: limite também participa da identidade; não deixa o primeiro registro ocultar a regra.
+    c.delete(f"/svc/{tok}/stac/mosaicos/{m1['id']}")
 
 
 def test_colecao_de_outro_inquilino_e_filtrada_fora_no_registro(token_stac_a, grade_b):
@@ -403,10 +454,10 @@ def _tile_central(z: int = 15) -> tuple[int, int, int]:
 
 
 @pytest.fixture(scope="module")
-def sobrepostas_a(tenant_id_a):
+def sobrepostas_a(tenant_id_a, inquilinos_mosaico):
     from tests.api.imagens.apoio_mosaico import apagar_grade, semear_sobrepostas
 
-    dados = semear_sobrepostas(tenant_id_a, "demo", VALORES_SOBREPOSTAS)
+    dados = semear_sobrepostas(tenant_id_a, inquilinos_mosaico[0].slug, VALORES_SOBREPOSTAS)
     yield dados
     apagar_grade(tenant_id_a, dados)
 
@@ -478,3 +529,130 @@ def test_metodo_padrao_e_primeira_cena_mais_recente(token_tiles_sobreposto_a, mo
     assert r.status_code == 200, r.text
     pixel = _pixel_medio(r.content)
     assert abs(pixel - round(20 / 100 * 255)) <= 5, pixel
+
+
+@pytest.fixture(scope="module")
+def cenas_regras(tenant_id_a, inquilinos_mosaico):
+    from tests.api.imagens.apoio_mosaico import apagar_grade, semear_sobrepostas
+
+    cenas = semear_sobrepostas(tenant_id_a, inquilinos_mosaico[0].slug, [10, 20, 30],
+                              colecao_slug="mosaicoregras")
+    yield cenas
+    apagar_grade(tenant_id_a, cenas)
+
+
+@pytest.fixture(scope="module")
+def token_regras(sessao_a):
+    r = sessao_a.post("/api/tokens", json={"nome": f"{PREFIXO_TESTE}-regras",
+                                          "escopos": ["imagens:escrever", "imagens:ler"]})
+    assert r.status_code == 201
+    dados = r.json()
+    yield dados["token"]
+    sessao_a.delete(f"/api/tokens/{dados['id']}")
+
+
+@pytest.fixture
+def registrar_regra(token_regras, cenas_regras):
+    cliente = _cliente()
+    ids = set()
+
+    def registrar(**regra):
+        resposta = cliente.post(f"/svc/{token_regras}/stac/mosaicos", json={
+            "nome": "Regra de pixel sintético", "collections": [cenas_regras["colecao"]], **regra,
+        })
+        assert resposta.status_code == 201, resposta.status_code
+        mosaico = resposta.json()
+        ids.add(mosaico["id"])
+        detalhe = cliente.get(f"/svc/{token_regras}/stac/mosaicos/{mosaico['id']}")
+        assert detalhe.status_code == 200
+        assert detalhe.json()["criterios"] == mosaico["criterios"]
+        for chave, valor in regra.items():
+            assert mosaico["criterios"][chave] == valor
+        return mosaico
+
+    yield registrar
+    for mid in ids:
+        cliente.delete(f"/svc/{token_regras}/stac/mosaicos/{mid}")
+
+
+def _pixel_da_regra(token, mosaico, **params):
+    import io
+
+    import numpy as np
+    from PIL import Image
+
+    z, x, y = _tile_central()
+    resposta = _cliente().get(f"/svc/{token}/mosaico/{mosaico['id']}/{z}/{x}/{y}.png",
+                              params={"faixa": "0,255", "bandas": "1", **params})
+    assert resposta.status_code == 200, resposta.status_code
+    pixels = np.asarray(Image.open(io.BytesIO(resposta.content)).convert("RGBA"))
+    assert np.all(pixels[:, :, 3] == 255), "o tile deve estar integralmente coberto"
+    valores = np.unique(pixels[:, :, 0])
+    assert len(valores) == 1, valores
+    return int(valores[0])
+
+
+@pytest.mark.parametrize("campo,direcao,esperado", [
+    ("datetime", "desc", 10), ("datetime", "asc", 30),
+    ("eo:cloud_cover", "asc", 30), ("plat:valor_teste", "desc", 30),
+])
+def test_pixel_first_por_ordem_persistida(registrar_regra, token_regras, campo, direcao, esperado):
+    mosaico = registrar_regra(sortby=[{"field": campo, "direction": direcao}], pixel_selection="first")
+    assert _pixel_da_regra(token_regras, mosaico) == esperado
+
+
+@pytest.mark.parametrize("selecao,esperado", [
+    ("first", 10), ("last", 30), ("lowest", 10), ("highest", 30),
+    ("mean", 20), ("median", 20), ("stdev", 8),  # sqrt(200/3) = 8,1649; PNG trunca para uint8
+])
+def test_pixel_selecao_persistida(registrar_regra, token_regras, selecao, esperado):
+    mosaico = registrar_regra(pixel_selection=selecao)
+    assert _pixel_da_regra(token_regras, mosaico) == esperado
+
+
+def test_pixel_lock_persistido(registrar_regra, token_regras, cenas_regras):
+    cena = cenas_regras["itens"][1]["item_id"]
+    mosaico = registrar_regra(lock=cena, limite=1)
+    assert _pixel_da_regra(token_regras, mosaico) == 20
+    # Mesmo com override de método e limite, nenhuma cena pode preencher pixels da cena travada.
+    assert _pixel_da_regra(token_regras, mosaico, metodo="highest", limite=12) == 20
+    pegadas = _cliente().get(f"/svc/{token_regras}/mosaico/{mosaico['id']}/pegadas").json()
+    assert [f["id"] for f in pegadas["features"]] == [cena]
+
+
+def test_regras_distintas_nao_reaproveitam_composicao(registrar_regra, token_regras):
+    primeira = registrar_regra(pixel_selection="first")
+    mediana = registrar_regra(pixel_selection="median")
+    limitada = registrar_regra(pixel_selection="median", limite=1)
+    assert len({primeira["id"], mediana["id"], limitada["id"]}) == 3
+    assert registrar_regra(pixel_selection="median")["id"] == mediana["id"]
+    assert _pixel_da_regra(token_regras, primeira) == 10
+    assert _pixel_da_regra(token_regras, mediana) == 20
+    assert _pixel_da_regra(token_regras, limitada) == 10
+
+
+@pytest.mark.parametrize("regra", [
+    {"pixel_selection": "blend"}, {"pixel_selection": []}, {"pixel_selection": None},
+    {"lock": []}, {"lock": ""}, {"lock": True}, {"limite": True},
+    {"sortby": "-datetime"}, {"sortby": []}, {"sortby": [None]},
+    {"sortby": [{"field": "datetime", "direction": []}]},
+    {"sortby": [{"field": "datetime", "direction": "up"}]},
+])
+def test_regra_invalida_recusada_no_registro(token_regras, cenas_regras, regra):
+    resposta = _cliente().post(f"/svc/{token_regras}/stac/mosaicos", json={
+        "nome": "Inválida", "collections": [cenas_regras["colecao"]], **regra,
+    })
+    assert resposta.status_code == 422
+
+
+def test_lock_nao_aceita_cena_alheia_ou_fora_do_filtro(token_regras, cenas_regras, grade_b):
+    for lock, filtros in [
+        (grade_b["itens"][0]["item_id"], {}),
+        ("cena-inexistente", {}),
+        (cenas_regras["itens"][1]["item_id"], {"datetime": "2000-01-01T00:00:00Z"}),
+    ]:
+        resposta = _cliente().post(f"/svc/{token_regras}/stac/mosaicos", json={
+            "nome": "Lock indisponível", "collections": [cenas_regras["colecao"]], "lock": lock, **filtros,
+        })
+        assert resposta.status_code == 422
+        assert resposta.json()["erro"] == "lock_indisponivel"

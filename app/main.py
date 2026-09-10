@@ -15,7 +15,6 @@ from app import log as plat_log
 from app.acervo import rotas as rotas_acervo
 from app.agol import rotas as rotas_agol
 from app.amc import rotas as rotas_amc
-from app.backup import rotas as rotas_backup
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
 from app.auth import (
@@ -30,6 +29,7 @@ from app.auth import (
     rotas_tokens,
     rotas_usuarios,
 )
+from app.backup import rotas as rotas_backup
 from app.campo import rotas as rotas_campo
 from app.catalogo import (
     rotas_categorias,
@@ -55,6 +55,7 @@ from app.correio.rotas_smtp import router as rotas_smtp
 from app.edicao.rotas import router as rotas_edicao
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
+from app.imagens.rotas_cog import router as rotas_cog
 from app.imagens.rotas_imagens import router as rotas_imagens
 from app.imagens.rotas_imageserver import router as rotas_imageserver
 from app.imagens.rotas_predefinicoes import router as rotas_predefinicoes
@@ -201,6 +202,7 @@ ROUTERS = [
     # --- ladrilho raster por token no caminho (L1-02): /svc/<token>/raster/<item>/{z}/{x}/{y}, WMTS,
     # TileJSON e mosaico por coleção; motor rio-tiler lendo COG no Garage por /vsis3
     rotas_tiles,
+    rotas_cog,
     # --- ImageServer compatível Esri por token (L1-25): /svc/<token>/rest/services/<item>/ImageServer,
     # exportImage, identify e tile/<z>/<y>/<x> — reusa a autorização e o motor do L1-02, acima
     rotas_imageserver,

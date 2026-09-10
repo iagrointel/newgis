@@ -248,6 +248,10 @@ RASTER_ESTATISTICA_AMOSTRA = 100_000    # pixels amostrados por banda para perce
 RASTER_TILE_CACHE_DATASET_MAX = 8       # datasets abertos por processo no handler de tiles (LRU)
 RASTER_TILE_TIMEOUT_S = 30              # teto de renderização de um tile (mata a requisição, não o worker)
 
+# --- COG direto por HTTPS (L1-02-e): uma requisição Range é mantida pequena para que clientes analíticos
+# não transformem a API em download monolítico; a resposta sem Range continua permitida, mas sai em streaming.
+COG_FAIXA_MAX_BYTES = 16 * 1024 * 1024  # 16 MiB por Range; GDAL/QGIS normalmente pede blocos muito menores
+
 # --- WMS 1.3.0 (L1-02-g-wms-1-3-0-raster; app/imagens/wms.py, rotas_wms.py): camada fina sobre o mesmo
 # leitor de pixel do ladrilho (`recorte()` em tiles.py, irmã de `ladrilho()`) — GetMap é um recorte
 # arbitrário (bbox+CRS+tamanho do cliente), não uma célula da grade WebMercator. WMS_PIXELS_MAX é o

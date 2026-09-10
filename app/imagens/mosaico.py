@@ -28,6 +28,32 @@ LIMITE_TILE_PADRAO = 6
 LIMITE_TILE_MAX = 12
 LIMITE_PEGADAS = 2000  # teto de segurança: uma busca larga não pagina infinito na resposta de pegadas
 PADRAO_HASH = re.compile(r"^[0-9a-f]{32}$")
+SELECOES_PIXEL = frozenset({"first", "last", "lowest", "highest", "mean", "median", "stdev"})
+
+
+def validar_regras(corpo: dict[str, Any]) -> dict:
+    """Contrato persistido do mosaico: sortby STAC, pixel_selection e lock (id STAC).
+
+    Ex.: {"sortby": [{"field": "eo:cloud_cover", "direction": "asc"}],
+          "pixel_selection": "median", "lock": null}.
+    O lock restringe a busca às coleções autorizadas e aos demais critérios; nunca há fallback.
+    """
+    sortby = corpo.get("sortby", [{"field": "datetime", "direction": "desc"}])
+    if not isinstance(sortby, list) or not sortby or len(sortby) > 10:
+        raise ErroAPI(422, "sortby_invalido", "sortby exige de 1 a 10 campos STAC com direction asc/desc")
+    for ordem in sortby:
+        if (not isinstance(ordem, dict) or set(ordem) != {"field", "direction"}
+                or not isinstance(ordem["field"], str)
+                or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_.:]{0,199}", ordem["field"])
+                or ordem["direction"] not in ("asc", "desc")):
+            raise ErroAPI(422, "sortby_invalido", "cada ordem exige field STAC e direction asc/desc")
+    selecao = corpo.get("pixel_selection", "first")
+    if not isinstance(selecao, str) or selecao not in SELECOES_PIXEL:
+        raise ErroAPI(422, "pixel_selection_invalido", "pixel_selection: " + ", ".join(sorted(SELECOES_PIXEL)))
+    lock = corpo.get("lock")
+    if lock is not None and (not isinstance(lock, str) or not lock.strip() or len(lock) > 250):
+        raise ErroAPI(422, "lock_invalido", "lock deve ser o id STAC de uma única cena")
+    return {"sortby": sortby, "pixel_selection": selecao, "lock": lock}
 
 
 def _validar_nome(nome: Any) -> str:
@@ -39,7 +65,7 @@ def _validar_nome(nome: Any) -> str:
 def _validar_limite(limite: Any) -> int:
     if limite is None:
         return LIMITE_TILE_PADRAO
-    if not isinstance(limite, int) or not (1 <= limite <= LIMITE_TILE_MAX):
+    if type(limite) is not int or not (1 <= limite <= LIMITE_TILE_MAX):
         raise ErroAPI(422, "limite_invalido", f"limite de cenas por ladrilho: 1 a {LIMITE_TILE_MAX}")
     return limite
 
@@ -51,6 +77,7 @@ def registrar(cur, tenant_id: int, usuario_id: int | None, corpo: dict[str, Any]
     busca registrada duas vezes" com nomes diferentes contaria como duas buscas) devolve o mesmo id."""
     nome = _validar_nome(corpo.get("nome"))
     limite_tile = _validar_limite(corpo.get("limite"))
+    regras = validar_regras(corpo)
     colecoes_pedidas = corpo.get("collections") or corpo.get("colecoes")
     if not colecoes_pedidas or not isinstance(colecoes_pedidas, list):
         raise ErroAPI(422, "colecoes_obrigatorias", "informe ao menos uma coleção (collections)")
@@ -60,7 +87,8 @@ def registrar(cur, tenant_id: int, usuario_id: int | None, corpo: dict[str, Any]
         collections=colecoes_pedidas,
         bbox=corpo.get("bbox"),
         datetime_=corpo.get("datetime"),
-        sortby=corpo.get("sortby") or [{"field": "datetime", "direction": "desc"}],
+        sortby=regras["sortby"],
+        ids=[regras["lock"]] if regras["lock"] else None,
         filtro=corpo.get("filter"),
         filtro_lang=corpo.get("filter-lang"),
     )
@@ -68,13 +96,17 @@ def registrar(cur, tenant_id: int, usuario_id: int | None, corpo: dict[str, Any]
         raise ErroAPI(422, "colecoes_inexistentes", "nenhuma das coleções pedidas pertence a este inquilino",
                       {"pedidas": colecoes_pedidas})
 
-    # `pgstac.search_query` é a função que o titiler-pgstac chama em /searches/register (ADR §1): ela
-    # calcula o hash, grava (ou reaproveita) a linha em pgstac.searches e a devolve. Metadata vazio de
-    # propósito — se o nome entrasse aqui, duas buscas idênticas com nomes diferentes teriam hash
-    # diferente (search_hash(search, metadata) usa os dois), quebrando a idempotência exigida pelo portão.
+    # A identidade inclui a composição e o limite: a mesma busca pode ter mosaicos first/median
+    # distintos. O nome continua fora do hash. Defaults preservam a identidade dos registros L1-07.
+    metadata = {}
+    if regras["pixel_selection"] != "first":
+        metadata["pixel_selection"] = regras["pixel_selection"]
+    if limite_tile != LIMITE_TILE_PADRAO:
+        metadata["limite"] = limite_tile
     cur.execute("SET LOCAL search_path = pgstac, public")
     try:
-        cur.execute("SELECT hash FROM pgstac.search_query(%s::jsonb, false, '{}'::jsonb)", (jsonb(payload),))
+        cur.execute("SELECT hash FROM pgstac.search_query(%s::jsonb, false, %s::jsonb)",
+                    (jsonb(payload), jsonb(metadata)))
     except psycopg2.Error as e:
         raise ErroAPI(422, "busca_invalida", "critérios de mosaico rejeitados pelo catálogo",
                       {"motivo": str(e).strip()}) from e
@@ -87,18 +119,21 @@ def registrar(cur, tenant_id: int, usuario_id: int | None, corpo: dict[str, Any]
     # ao servir o primeiro tile/pegada. Uma busca de teste (limit=1) AQUI, na mesma transação, garante
     # que "registrado com sucesso" significa "esta busca RODA de verdade" — `ps.buscar` já converte
     # erro do banco em 422 `busca_invalida`, nunca deixa a exceção crua escapar.
-    ps.buscar(cur, {**payload, "limit": 1})
+    prova = ps.buscar(cur, {**payload, "limit": 1})
+    if regras["lock"] and not prova.get("features"):
+        raise ErroAPI(422, "lock_indisponivel", "a cena travada não pertence à busca autorizada do mosaico")
 
     criterios = {
         "bbox": corpo.get("bbox"), "datetime": corpo.get("datetime"),
         "filter": corpo.get("filter"), "filter-lang": corpo.get("filter-lang"),
-        "sortby": payload.get("sortby"), "limite": limite_tile,
+        **regras, "limite": limite_tile,
     }
     cur.execute(
         """
         INSERT INTO plat.mosaico (tenant_id, hash, nome, colecoes, criterios, busca, criado_por)
         VALUES (%s, %s, %s, %s, %s::jsonb, %s::jsonb, %s)
-        ON CONFLICT (tenant_id, hash) DO UPDATE SET atualizado_em = now(), estado = 'ativo'
+        ON CONFLICT (tenant_id, hash) DO UPDATE SET atualizado_em = now(), estado = 'ativo',
+            criterios = EXCLUDED.criterios
         RETURNING id, tenant_id, hash, nome, colecoes, criterios, busca, estado, criado_em, atualizado_em
         """,
         (tenant_id, hash_pgstac, nome, payload["collections"], jsonb(criterios), jsonb(payload), usuario_id),

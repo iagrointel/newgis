@@ -43,8 +43,8 @@ do turno):
   fora      — `renderingRule` em qualquer OUTRA forma (encadeada, com `rasterFunctionArguments`, funções
               nativas do Pro como Stretch/Colormap/NDVI cruas): recusado com erro Esri explícito, nunca
               interpretado parcialmente — anunciar uma capacidade que não existe do jeito que o cliente
-              pediu é o mesmo defeito de um botão que não faz nada. `mosaicRule`: depende do item L1-07
-              (mosaico de coleção), não construído — mandar qualquer valor não-vazio devolve erro Esri.
+              pediu é o mesmo defeito de um botão que não faz nada. `mosaicRule`: as regras L1-08 estão
+              disponíveis nos mosaicos STAC; exportImage ainda recusa qualquer valor não-vazio.
               `computeStatisticsHistograms`/histograma em geral: depende do item L1-02-h;
               `hasHistograms` é sempre `false`, nunca inventado. `rasterAttributeTable`: esta plataforma
               não tem RAT. `query` de pegadas/catálogo de mosaico: cada item é um raster único, não um
@@ -317,7 +317,7 @@ def export_image(  # noqa: PLR0911 — operação com muitos parâmetros Esri pa
                           [f"aceitos: {', '.join(sorted(FORMATOS_EXPORT))}", f"recebido: {format!r}"])
     if request.query_params.get("mosaicRule"):
         return _erro_esri(400, "'mosaicRule' não é suportado por este serviço",
-                          ["mosaicRule depende do item L1-07 (mosaico de coleção), ainda não construído"])
+                          ["regras disponíveis nos mosaicos STAC; mosaicRule ainda não integrado ao exportImage"])
     resolvido = None
     rendering_rule = request.query_params.get("renderingRule")
     if rendering_rule:

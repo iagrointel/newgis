@@ -150,6 +150,25 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `CONEXAO_REDIRECT_MAX` | `5` | cada hop é revalidado do zero (host novo pode ser interno) |
 | `CONEXAO_RESPOSTA_MAX_BYTES` | `1048576` | 1 MiB: o teste de saúde confere status/corpo curto |
 
+## descoberta de camada (item L6-02-conectores-vivos; app/conexao/descoberta.py): GetCapabilities de um
+
+| nome | valor | explicação |
+|---|---|---|
+| `CONEXAO_DESCOBERTA_MAX_BYTES` | `25165824` | 24 MiB |
+| `CONEXAO_DESCOBERTA_TIMEOUT_S` | `15.0` | — |
+| `CONEXAO_DESCOBERTA_CAMADAS_MAX` | `2000` | teto de linhas gravadas por descoberta (corta, não trava) |
+
+## proxy de tile/imagem por conexão cadastrada (mesmo item): generaliza `app/mapa/proxy_wms.py` (allowlist
+
+| nome | valor | explicação |
+|---|---|---|
+| `CONEXAO_PROXY_TIPOS` | `('wms', 'wmts', 'esri_rest')` | — |
+| `CONEXAO_PROXY_CONECTAR_TIMEOUT_S` | `3.0` | — |
+| `CONEXAO_PROXY_LER_TIMEOUT_S` | `20.0` | uma base pública lenta não pode travar o mapa de quem espera |
+| `CONEXAO_PROXY_MAX_BYTES` | `12582912` | 12 MiB: teto de 1 tile/imagem (ortofoto 10-20 cm inclusa) |
+| `CONEXAO_PROXY_CACHE_TTL_S` | `600` | mesmos 10 min do proxy público de hoje |
+| `CONEXAO_PROXY_CACHE_MAX_ITENS` | `500` | cache em processo; LRU simples por ordem de inserção |
+
 ## ingestão vetorial (L0-04; ADR 0005, reduzido a 4 formatos: shapefile.zip, gpkg, geojson, csv)
 
 | nome | valor | explicação |
@@ -237,6 +256,12 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `RASTER_ESTATISTICA_AMOSTRA` | `100000` | pixels amostrados por banda para percentis do perfil visual |
 | `RASTER_TILE_CACHE_DATASET_MAX` | `8` | datasets abertos por processo no handler de tiles (LRU) |
 | `RASTER_TILE_TIMEOUT_S` | `30` | teto de renderização de um tile (mata a requisição, não o worker) |
+
+## COG direto por HTTPS (L1-02-e): uma requisição Range é mantida pequena para que clientes analíticos
+
+| nome | valor | explicação |
+|---|---|---|
+| `COG_FAIXA_MAX_BYTES` | `16777216` | 16 MiB por Range; GDAL/QGIS normalmente pede blocos muito menores |
 
 ## WMS 1.3.0 (L1-02-g-wms-1-3-0-raster; app/imagens/wms.py, rotas_wms.py): camada fina sobre o mesmo
 

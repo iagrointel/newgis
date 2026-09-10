@@ -199,6 +199,7 @@ def semear_sobrepostas(tenant_id: int, slug: str, valores: list[int],
                 "properties": {
                     "datetime": quando.strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "title": f"cena sobreposta de teste do mosaico {indice} (valor {valor})",
+                    "eo:cloud_cover": float((len(valores) - indice) * 3),
                     "plat:valor_teste": valor,
                 },
                 "assets": {"cientifico": {**asset, "roles": ["data"]}, "visual": {**asset, "roles": ["visual"]}},
