@@ -53,3 +53,5 @@ docs/manual/capturas/
 .regeneracao_teste_*/
 sdk/python/src/*.egg-info/
 sdk/python/build/
+# vídeos gerados por `make videos` (item L7-04-d); o número citável vive em tests/medidas/
+web/videos/

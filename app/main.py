@@ -116,6 +116,7 @@ from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rotas_arquivos import router as rotas_arquivos
 from app.rotas_temas import router as rotas_temas
+from app.rotas_videos import router as rotas_videos
 from app.saude import router as rotas_saude
 from app.saude_profunda import router as rotas_saude_profunda
 from app.settings import settings
@@ -400,6 +401,8 @@ ROUTERS = [
     # --- geocodificação de tabela (L2-11-a): /api/geocodificacoes (mapear colunas -> lote ->
     # camada de pontos com colunas de qualidade -> revisão manual do que ficou pendente)
     rotas_geocodificacao_lote,
+    # --- vídeos por tarefa (L7-04-d): /api/videos (manifesto) e /videos/arquivo/{caminho}
+    rotas_videos,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

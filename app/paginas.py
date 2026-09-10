@@ -95,6 +95,8 @@ PAGINAS = {
     "/colecao": "colecao.html",
     # --- revisão da geocodificação de tabela (L2-11-a-geocodificacao-csv)
     "/geocodificacoes/{geocodificacao_id}": "geocodificacao.html",
+    # --- vídeos por tarefa (L7-04-d): arquivos em /videos/arquivo/... (app/rotas_videos.py)
+    "/videos": "videos.html",
 }
 router = APIRouter()
 

@@ -1798,3 +1798,31 @@ Linha ruim não derruba o lote: o job conclui e publica a camada com o que deu c
   o lote não o usa.
 - **CSV latin-1 muito curto** pode ser lido com acento errado (a codificação é adivinhada). O endereço ainda
   casa, porque a comparação no banco dobra acento com `unaccent`.
+## 22. Vídeos por tarefa (item L7-04-d-videos-por-tarefa)
+
+O comando `make videos` grava a sessão real de cada tarefa com o mesmo navegador dos testes e2e
+(playwright, 1280×800), monta o vídeo com o ffmpeg e publica em `/videos` (página com sessão de
+usuário, `noindex`). Cada vídeo tem até 3 minutos, narração sintética em português (voz livre piper,
+sem voz clonada, sem rosto) e legenda em português, inglês e espanhol (WebVTT). A legenda de um passo
+só é escrita depois de a ação do passo acontecer de verdade: passo que não existe na versão instalada
+derruba a geração. Os arquivos ficam em `web/videos/` (fora do git, regenerados quando a versão menor
+muda); o registro citável fica em `tests/medidas/L7-04-d-videos-por-tarefa.json`.
+
+| arquivo em /videos | tarefa | seção do manual |
+|---|---|---|
+| saude.mp4 | saúde do serviço | 1 |
+| entrar.mp4 | entrar | 2 |
+| conta.mp4 | minha conta | 3 |
+| usuarios.mp4 | usuários | 4 |
+| grupos.mp4 | grupos | 5 |
+| papeis.mp4 | papéis e privilégios | 6 |
+| tokens.mp4 | tokens de serviço | 7 |
+| log.mp4 | log de acesso | 8 |
+| tarefas.mp4 | tarefas | 9 |
+| mapa.mp4 | mapa | 13 |
+| conexoes.mp4 | conexões externas | 18 |
+
+O gerador (`scripts/videos/gerar.py --validar`) confere que a seção declarada por cada tarefa existe
+em MANUAL.md antes de gerar e que cada mp4 tem fluxo de vídeo e de áudio dentro do limite de duração.
+O que o vídeo não mostra: nada de dado de inquilino além do de demonstração, e nenhum passo que não
+esteja nesta versão do produto.
