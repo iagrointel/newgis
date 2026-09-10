@@ -55,6 +55,22 @@ def _contar_tabelas(cur, esquema: str) -> int:
     return int(cur.fetchone()["n"])
 
 
+def _conferir_teto(tmp: Path, esquema: str) -> int:
+    """Tamanho do dump; recusa (apaga o arquivo, FalhaDefinitiva) acima de `limites.BACKUP_DUMP_BYTES_MAX`
+    — disco a 99% nesta máquina, o código não pode presumir que o schema do inquilino continua pequeno
+    como o de demonstração (item L0-06-backup-status). Função isolada de propósito: é o que
+    `tests/api/test_backup.py` exercita diretamente para provar a recusa sem precisar de um dump real de
+    gigabytes (impraticável e arriscado com o disco nesse estado)."""
+    tamanho = tmp.stat().st_size
+    if tamanho > limites.BACKUP_DUMP_BYTES_MAX:
+        tmp.unlink(missing_ok=True)
+        raise FalhaDefinitiva(
+            f"backup: dump de {esquema} tem {tamanho} bytes, acima do teto desta instalação "
+            f"({limites.BACKUP_DUMP_BYTES_MAX} bytes) — nada foi enviado ao armazenamento"
+        )
+    return tamanho
+
+
 def _notificar_falha(ctx, motivo: str, detalhe: dict) -> None:
     """Falha de backup/ensaio NUNCA é silêncio: log ERRO do job + evento auditável no inquilino (o item
     L0-06 pede notificação ao superadmin; o canal de e-mail (`correio.enviar`, L0-07-d) fica para um turno
@@ -103,9 +119,26 @@ def backup_executar(ctx, origem: str = "manual") -> dict:
     nome = nucleo.nome_arquivo(esquema, agora)
     tmp = diretorio / nome
 
-    ctx.progresso(5, f"despejando o schema {esquema} (pg_dump -Fc)")
+    # (10/09/2026) O dump era `-n d_<slug>`, o schema de DADO inteiro. Nesta máquina esse schema é
+    # COMPARTILHADO por várias instalações (medido: 734 tabelas, 8,5 GB, de 461 trilhas), então o "backup do
+    # inquilino" levava camada de todas as outras — escopo errado, mesma classe do defeito que travava a
+    # montagem do laço. Agora o dump é explícito: as tabelas de camada DESTE inquilino, uma a uma, tiradas do
+    # catálogo da própria instalação. Sem camada, o dump sai só com o desenho do schema, e isso é dito.
+    with ctx.db() as cur:
+        cur.execute(
+            "SELECT 'c_' || replace(left(id::text, 18), '-', '') AS tabela FROM plat.item "
+            "WHERE tenant_id = %s AND tipo = 'camada_vetorial' AND apagado_em IS NULL",
+            (ctx.tenant_id,),
+        )
+        tabelas = [r["tabela"] for r in cur.fetchall()]
+    alvos: list[str] = []
+    for t in tabelas:
+        alvos += ["-t", f"{esquema}.{t}"]
+    ctx.progresso(5, f"despejando {len(tabelas)} tabela(s) de camada do inquilino em {esquema} (pg_dump -Fc)"
+                     if tabelas else f"inquilino sem camada: dump só do desenho de {esquema}")
     r = ctx.subprocesso([
         "sudo", "-n", "-u", "postgres", "pg_dump", "-d", banco_nome, "-n", esquema,
+        *(alvos if alvos else ["--schema-only"]),
         "--format=custom", "--compress=6", "--no-owner", "--no-privileges", "-f", str(tmp),
     ])
     if r.returncode != 0 or not tmp.exists() or tmp.stat().st_size == 0:
@@ -120,15 +153,11 @@ def backup_executar(ctx, origem: str = "manual") -> dict:
         tmp.unlink(missing_ok=True)
         raise FalhaDefinitiva(f"backup: chmod do dump de {esquema} saiu com código {r_chmod.returncode}")
 
-    tamanho = tmp.stat().st_size
-    if tamanho > limites.BACKUP_DUMP_BYTES_MAX:
-        tmp.unlink(missing_ok=True)
-        _notificar_falha(ctx, f"dump de {tamanho} bytes acima do teto desta instalação "
-                              f"({limites.BACKUP_DUMP_BYTES_MAX} bytes)", {"esquema": esquema, "bytes": tamanho})
-        raise FalhaDefinitiva(
-            f"backup: dump de {esquema} tem {tamanho} bytes, acima do teto desta instalação "
-            f"({limites.BACKUP_DUMP_BYTES_MAX} bytes) — nada foi enviado ao armazenamento"
-        )
+    try:
+        tamanho = _conferir_teto(tmp, esquema)
+    except FalhaDefinitiva as e:
+        _notificar_falha(ctx, str(e), {"esquema": esquema})
+        raise
     ctx.progresso(55, f"{tamanho / 1e6:.1f} MB despejados; subindo ao armazenamento do inquilino")
 
     with ctx.db() as cur:
