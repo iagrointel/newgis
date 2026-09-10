@@ -1,0 +1,49 @@
+{
+ "item": "L0-14-cli-admin",
+ "assinado_por": "backend/testador (turno fable, portão leve de 07/09/2026)",
+ "gerado_em": "2026-09-07T23:17:17Z",
+ "git_sha": "5e89faa4",
+ "maquina": "12 vCPU, 23 GB RAM (7 GB disponíveis), carga 1 min 11,95 (máquina disputada por outras trilhas); base de trilha plat_til014cliadm; uvicorn próprio em 127.0.0.1:8358",
+ "medidas": {
+  "subcomandos_no_argparse": {
+   "valor": 28,
+   "unidade": "parsers",
+   "comando": "venv/bin/python -c 'percorre montar_parser() contando os subparsers' — 9 grupos e 19 ações, todos com bloco em docs/CLI.md"
+  },
+  "testes_do_item": {
+   "valor": 19,
+   "unidade": "testes",
+   "comando": "bash laco/roda_teste.sh tests/api/test_cli_admin.py -q -p no:cacheprovider -> 19 passed, 0 skipped, 0 failed"
+  },
+  "subcomandos_comparados_com_a_rota": {
+   "valor": 13,
+   "unidade": "subcomandos",
+   "comando": "inquilino criar/listar/suspender/reativar/cota, usuario criar/listar/redefinir-senha/desabilitar+reabilitar, token criar/revogar, camada importar, job listar/cancelar/repetir, evento exportar: cada um tem asserção sobre o resultado E sobre o evento gravado, contra a mesma rota chamada pelo cliente da suíte"
+  },
+  "palavras_em_ingles_na_ajuda": {
+   "valor": 0,
+   "unidade": "ocorrências",
+   "comando": "test_ajuda_de_todo_comando_esta_em_portugues percorre os 28 parsers procurando 'usage:', 'positional arguments', 'options:', 'optional arguments', 'show this help message', 'default:', 'error:'"
+  },
+  "linhas_do_docs_cli": {
+   "valor": 457,
+   "unidade": "linhas",
+   "comando": "docs/CLI.md é gerado por `scripts/plat docs`; test_docs_cli_esta_gerado_do_argparse compara byte a byte com o que o argparse produz na hora"
+  },
+  "dependencias_novas": {
+   "valor": 0,
+   "unidade": "pacotes",
+   "comando": "app/cli usa só biblioteca padrão (argparse, urllib, http.cookiejar, csv, json); a única importação do repositório é app.auth.totp, e só quando o login exige segundo fator"
+  },
+  "senha_em_argumento": {
+   "valor": 0,
+   "unidade": "caminhos aceitos",
+   "comando": "recusar_senha_em_argv corta --senha/--password/--pass/-p antes de qualquer chamada (saída 2); provado em test_senha_em_argumento_e_recusada e test_arquivo_de_senha_frouxo_e_recusado (arquivo 644 recusado com instrução de chmod 600)"
+  }
+ },
+ "fora_desta_passagem": [
+  "backup agora/verificar/restaurar-drill: app/backup ainda não está em master (ramos wt/il006adumpl e wt/il006cresto na fila de junção). A CLI chamaria o que existe; como não existe nesta árvore, o subcomando não foi inventado.",
+  "item exportar/importar pacote: depende de L0-06-d-exportar-inquilino, PARCIAL e fora de master pelo mesmo motivo.",
+  "camada importar com espera do worker: exercitado só com --sem-esperar, porque a base de trilha não tem worker rodando; os três primeiros passos (upload, item de arquivo, importação enfileirada) são comparados com a rota."
+ ]
+}
