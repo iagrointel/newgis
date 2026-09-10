@@ -378,10 +378,11 @@ def _no_id(barra: str) -> str | None:
     return f"{corpo[:8]}-{corpo[8:12]}-{corpo[12:16]}-{corpo[16:20]}-{corpo[20:]}"
 
 
-def _modelo_da_subrede(cur, rede_id: str, nome: str, tier: str | None, ano: int | None,
-                       jusante: bool) -> tuple[dict, dict]:
+def modelo_da_subrede(cur, rede_id: str, nome: str, tier: str | None, ano: int | None,
+                      jusante: bool) -> tuple[dict, dict]:
     """Mesma preparação de `subredes.exportar_dss`/`exportar_equilibrada`, reusada inteira: o modelo do
-    curto é o MESMO que os exportadores usam."""
+    curto é o MESMO que os exportadores usam. Pública porque o fluxo de potência (item L4-07) parte deste
+    mesmo modelo — dois cálculos elétricos sobre a mesma leitura do banco, nunca duas leituras."""
     from datetime import datetime, timezone
 
     from app.erros import ErroAPI
@@ -413,7 +414,7 @@ def calcular_e_gravar(cur, tenant_id: int, rede_id: str, nome: str, premissas_pe
     import json
 
     premissas = validar_premissas(premissas_pedidas)
-    s, modelo = _modelo_da_subrede(cur, rede_id, nome, tier, ano, jusante)
+    s, modelo = modelo_da_subrede(cur, rede_id, nome, tier, ano, jusante)
     saida = calcular(modelo, premissas)
 
     cur.execute("DELETE FROM plat.rede_curto_execucao WHERE subrede_id = %s::uuid", (str(s["id"]),))

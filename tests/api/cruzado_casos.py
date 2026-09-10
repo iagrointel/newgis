@@ -962,6 +962,16 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("PUT", "/api/rede/{rede_id}/diagrama-modelo/{codigo}"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/diagrama-modelo/zt-cruzado",
         lambda p: {"nome": "zt cruzado", "regras": [], "layout": "grade"}),
+
+    # ---- L4-07 fluxo de potência: as três rotas apontam a rede de B. O corpo do POST leva o modo `hora`,
+    # que é o parâmetro mínimo válido — a recusa tem de vir da rede alheia, não do parâmetro.
+    ("POST", "/api/rede/{rede_id}/subrede/{nome}/fluxo"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/subrede/zt-inexistente/fluxo",
+        lambda p: {"modo": "hora", "ponto": 0}),
+    ("GET", "/api/rede/{rede_id}/subrede/{nome}/fluxo"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/subrede/zt-inexistente/fluxo"),
+    ("GET", "/api/rede/{rede_id}/subrede/{nome}/fluxo/camada"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/subrede/zt-inexistente/fluxo/camada"),
     ("GET", "/api/org"): Caso(lambda p: "/api/org", proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
     ("PUT", "/api/org"): Caso(
         lambda p: "/api/org", _corpo_org_atual, proprio=True, aceita=frozenset({200}), verificar=_sem_marca,

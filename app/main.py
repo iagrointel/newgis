@@ -74,6 +74,7 @@ from app.rede_utilidades.rotas_config_tracado import router as rotas_rede_config
 from app.rede_utilidades.rotas_controladores import router as rotas_rede_controladores
 from app.rede_utilidades.rotas_curto import router as rotas_rede_curto
 from app.rede_utilidades.rotas_diagrama import router as rotas_rede_diagrama
+from app.rede_utilidades.rotas_fluxo import router as rotas_rede_fluxo
 from app.rede_utilidades.rotas_matpower import router as rotas_rede_matpower
 from app.rede_utilidades.rotas_resumos import router as rotas_rede_resumos
 from app.rede_utilidades.rotas_simples import router as rotas_rede_simples
@@ -194,6 +195,9 @@ ROUTERS = [
     # --- diagrama de rede (L4-04-d): /api/rede/{rede_id}/diagrama (gerar), /diagramas, /diagrama/{id},
     # .../layout, .../exportar (json|svg|png) e os modelos em /diagrama-modelos
     rotas_rede_diagrama,
+    # --- fluxo de potência do alimentador (L4-07): /api/rede/{rede_id}/subrede/{nome}/fluxo
+    # (POST analisa no OpenDSS com os parâmetros declarados, GET a tabela) e .../fluxo/camada
+    rotas_rede_fluxo,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,

@@ -48,6 +48,8 @@ PAGINAS = {
     "/redes/configuracoes": "redes_configuracoes.html",
     # --- diagrama de rede (L4-04-d-diagrama-esquematico)
     "/redes/diagrama": "redes_diagrama.html",
+    # --- fluxo de potência do alimentador (L4-07-fluxo-de-potencia)
+    "/redes/fluxo": "redes_fluxo.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
     "/uploads": "uploads.html",
     # --- sistema de design (UX-01-sistema-de-design): guia viva de tokens e componentes

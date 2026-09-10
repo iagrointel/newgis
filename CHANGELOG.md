@@ -586,6 +586,23 @@ garage.toml do daemon, que é da frente plataforma/pipeline e o produto nunca l�
   com uma linha e um exemplo por função. `docs/EXPRESSAO.md` ganhou a subseção de feição/geometria
   e a seção 12 (perfis). ADR `docs/adr/20260908T1331-expressoes-no-navegador.md`.
 - Nenhuma tela chama os perfis ainda: o que entrou é a biblioteca, provada nos dois runtimes.
+## turno 3, setembro de 2026 (item L4-07-fluxo-de-potencia: fluxo de potência do alimentador)
+
+- Fluxo de potência trifásico desequilibrado do alimentador no OpenDSS, sobre o MESMO modelo em memória
+  que os exportadores usam: `POST /api/rede/{id}/subrede/{nome}/fluxo` analisa e grava,
+  `GET .../fluxo` devolve a tabela por elemento e `GET .../fluxo/camada?grandeza=` devolve a camada de
+  tensão, corrente ou carregamento para o mapa. Tela nova em `/redes/fluxo`.
+- Job `redes.analisar_alimentador`: um alimentador de cada vez, o que falhar entra em `recusados` sem
+  derrubar o lote, e a agregação EXCLUI quem não convergiu, nomeando-o.
+- Duas tabelas novas: `plat.rede_fluxo_execucao` (parâmetros, versão da topologia, convergência, ponto
+  crítico, energia) e `plat.rede_fluxo_resultado` (barra e fase, trecho, transformador, no ponto crítico).
+- O motor OpenDSS passou a rodar em PROCESSO PRÓPRIO: medido que ele derruba o interpretador inteiro
+  quando usado fora da thread principal deste processo (ADR 20260908T1255).
+- Consertos achados ao medir: o alvo do `BatchEdit` do OpenDSS é expressão regular, não curinga de
+  arquivo (`Load.u*` casava com toda carga, geração inclusive), e o `Compile` troca o diretório de
+  trabalho do processo.
+- Barra com tensão fora de 0,5 a 1,5 por unidade agora é contada e avisada: é tensão de BASE errada, não
+  estado de rede.
 
 ## turno 3, setembro de 2026 (item L3-19-multiescala: grades aninhadas do motor multicritério)
 
