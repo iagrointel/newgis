@@ -93,6 +93,66 @@ def listar_linhas(cur, rede_id: str, limite: int) -> list[dict]:
     return cur.fetchall()
 
 
+# --- GeoJSON para o mapa (item L2-01-mapa-web, fatia "rede de utilidades") ------------------------------
+# `.geojson`: mesmas duas tabelas, mas com a geometria (ST_AsGeoJSON, 6 casas — ~11 cm, sobra para a escala
+# de rede de distribuição) e o nome do tipo/disciplina já resolvidos pelo join tipo->grupo->domínio, para o
+# navegador não ter de saber o esquema do pacote de ativos só para rotular um popup.
+_SQL_GEOJSON_PONTO = (
+    "SELECT f.id, f.tipo_id, tp.nome AS tipo, dm.disciplina AS disciplina, f.fase_bitmask, f.atributos, "
+    "ST_AsGeoJSON(f.geom, 6) AS geojson "
+    "FROM plat.rede_feicao_ponto f "
+    "JOIN plat.rede_tipo tp ON tp.id = f.tipo_id "
+    "JOIN plat.rede_grupo g ON g.id = tp.grupo_id "
+    "JOIN plat.rede_dominio dm ON dm.id = g.dominio_id "
+    "WHERE f.rede_id = %(rede_id)s::uuid"
+)
+_SQL_GEOJSON_LINHA = (
+    "SELECT f.id, f.tipo_id, tp.nome AS tipo, dm.disciplina AS disciplina, f.fase_bitmask, f.atributos, "
+    "ST_AsGeoJSON(f.geom, 6) AS geojson "
+    "FROM plat.rede_feicao_linha f "
+    "JOIN plat.rede_tipo tp ON tp.id = f.tipo_id "
+    "JOIN plat.rede_grupo g ON g.id = tp.grupo_id "
+    "JOIN plat.rede_dominio dm ON dm.id = g.dominio_id "
+    "WHERE f.rede_id = %(rede_id)s::uuid"
+)
+_BBOX_SQL = " AND f.geom && ST_MakeEnvelope(%(minx)s, %(miny)s, %(maxx)s, %(maxy)s, 4326)"
+
+
+def _feicao_para_feature(r: dict) -> dict:
+    propriedades = {
+        **(r["atributos"] or {}),
+        "id": str(r["id"]),
+        "tipo_id": str(r["tipo_id"]),
+        "tipo": r["tipo"],
+        "disciplina": r["disciplina"],
+        "fase_bitmask": r["fase_bitmask"],
+    }
+    return {"type": "Feature", "geometry": json.loads(r["geojson"]), "properties": propriedades}
+
+
+def _feature_collection(
+    cur, sql_base: str, rede_id: str, limite: int, bbox: tuple[float, float, float, float] | None
+) -> dict:
+    sql = sql_base
+    params = {"rede_id": rede_id}
+    if bbox is not None:
+        sql += _BBOX_SQL
+        params.update(minx=bbox[0], miny=bbox[1], maxx=bbox[2], maxy=bbox[3])
+    sql += " ORDER BY f.id LIMIT %(limite)s"
+    params["limite"] = limite
+    cur.execute(sql, params)
+    linhas = cur.fetchall()
+    return {"type": "FeatureCollection", "features": [_feicao_para_feature(r) for r in linhas]}
+
+
+def geojson_pontos(cur, rede_id: str, limite: int, bbox: tuple[float, float, float, float] | None) -> dict:
+    return _feature_collection(cur, _SQL_GEOJSON_PONTO, rede_id, limite, bbox)
+
+
+def geojson_linhas(cur, rede_id: str, limite: int, bbox: tuple[float, float, float, float] | None) -> dict:
+    return _feature_collection(cur, _SQL_GEOJSON_LINHA, rede_id, limite, bbox)
+
+
 # --- área suja (refutação do item: applyEdits tem de marcar onde a topologia gravada ficou velha) -----------
 
 def _tolerancia_se_topologia_construida(cur, rede_id: str) -> float | None:

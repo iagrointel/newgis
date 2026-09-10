@@ -42,6 +42,25 @@ router = APIRouter(prefix="/api/rede", tags=["rede de utilidades — topologia"]
 LER = {"x-auth": "S/T", "x-privilegio": "rls:visibilidade"}
 EDITAR = {"x-auth": "S/T", "x-privilegio": "rede.editar"}
 LISTA_LIMITE_MAX = 2000
+# .geojson é para o MAPA desenhar a rede inteira de uma vez (o alvo, `eletrica-br`, tem 5.703 linhas/2.035
+# pontos) — teto bem acima do que `/feicoes/pontos|linhas` (paginação Esri-like) aceita.
+GEOJSON_LIMITE_PADRAO = 20000
+GEOJSON_LIMITE_MAX = 50000
+
+
+def _bbox_ok(bbox: str | None) -> tuple[float, float, float, float] | None:
+    if not bbox:
+        return None
+    partes = bbox.split(",")
+    if len(partes) != 4:
+        raise ErroAPI(422, "bbox_invalido", "bbox exige 4 números: minx,miny,maxx,maxy")
+    try:
+        minx, miny, maxx, maxy = (float(p) for p in partes)
+    except ValueError as e:
+        raise ErroAPI(422, "bbox_invalido", "bbox exige 4 números: minx,miny,maxx,maxy") from e
+    if minx >= maxx or miny >= maxy:
+        raise ErroAPI(422, "bbox_invalido", "bbox precisa de minx < maxx e miny < maxy")
+    return (minx, miny, maxx, maxy)
 
 
 def _uuid_ok(valor: str) -> str:
@@ -102,6 +121,30 @@ def listar_feicoes_linha(rede_id: str, limite: int = 200, auth: Auth = autentica
         _rede_existe(cur, rid)
         itens = feicoes.listar_linhas(cur, rid, min(limite, LISTA_LIMITE_MAX))
         return {"total": len(itens), "itens": [_feicao_json(r) for r in itens]}
+
+
+@router.get("/{rede_id}/feicoes/pontos.geojson", openapi_extra=LER)
+def geojson_feicoes_ponto(rede_id: str, limite: int = GEOJSON_LIMITE_PADRAO, bbox: str | None = None,
+                          auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """FeatureCollection dos dispositivos (pontos) da rede, para o mapa desenhar direto — mesmo controle de
+    acesso de `/feicoes/pontos` (RLS por inquilino); `bbox=minx,miny,maxx,maxy` (graus, EPSG:4326) evita
+    mandar a rede inteira quando só a área visível interessa."""
+    rid = _uuid_ok(rede_id)
+    caixa = _bbox_ok(bbox)
+    with db.db(auth.contexto()) as cur:
+        _rede_existe(cur, rid)
+        return feicoes.geojson_pontos(cur, rid, min(limite, GEOJSON_LIMITE_MAX), caixa)
+
+
+@router.get("/{rede_id}/feicoes/linhas.geojson", openapi_extra=LER)
+def geojson_feicoes_linha(rede_id: str, limite: int = GEOJSON_LIMITE_PADRAO, bbox: str | None = None,
+                          auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """FeatureCollection dos trechos (linhas) da rede — ver `geojson_feicoes_ponto`."""
+    rid = _uuid_ok(rede_id)
+    caixa = _bbox_ok(bbox)
+    with db.db(auth.contexto()) as cur:
+        _rede_existe(cur, rid)
+        return feicoes.geojson_linhas(cur, rid, min(limite, GEOJSON_LIMITE_MAX), caixa)
 
 
 @router.post("/{rede_id}/feicoes/pontos/applyEdits", status_code=200, openapi_extra=EDITAR)

@@ -126,3 +126,50 @@ export function construirEstilo(base) {
   if (b.tipo === 'pmtiles') return estiloPmtilesGuarulhos(b.url);
   return estiloSemBase();
 }
+
+/* ---------------------------------------------------------------------------------------------------------
+   Rede de utilidades no mapa (10/09): paleta categórica curta declarada AQUI, uma vez só, para linha e ponto
+   usarem a MESMA cor por disciplina — o vocabulário vem do CHECK de `plat.rede_dominio.disciplina`
+   (db/migracoes, tabela `rede_dominio`), fechado em 6 valores; disciplina fora da lista cai na cor padrão em
+   vez de sumir sem explicação. */
+export const PALETA_DISCIPLINA = {
+  eletrica: '#d98a2b',
+  agua: '#3f8fd9',
+  gas: '#d9502b',
+  esgoto: '#8a5a2b',
+  telecom: '#9b6bd9',
+  estrutura: '#6f8580',
+};
+const COR_DISCIPLINA_PADRAO = '#8fa19c';
+
+/* expressão MapLibre ['match', ['get','disciplina'], 'eletrica', '#...', ..., padrão] — mesma forma para
+   'line-color' e 'circle-color', para as duas camadas da rede nunca discordarem de cor. */
+export function expressaoCorDisciplina() {
+  const pares = Object.entries(PALETA_DISCIPLINA).flatMap(([disciplina, cor]) => [disciplina, cor]);
+  return ['match', ['get', 'disciplina'], ...pares, COR_DISCIPLINA_PADRAO];
+}
+
+/* camadas de estilo (não a fonte) para as duas fontes GeoJSON de uma rede — `fonteLinhas`/`fontePontos` são
+   os ids das fontes já adicionadas ao mapa (mapa.js decide o id, esta função só desenha). O contorno do ponto
+   lê o token `--i-fundo` do documento (tema claro/escuro já resolvido pelo navegador), o mesmo truque da
+   camada `lugares` do recorte local acima — sem isso o ponto se perde dentro da própria cor em telas escuras. */
+export function camadasRede(idLinhas, fonteLinhas, idPontos, fontePontos) {
+  const contorno = (getComputedStyle(document.documentElement).getPropertyValue('--i-fundo') || '#0b0f10').trim();
+  const cor = expressaoCorDisciplina();
+  return [
+    {
+      id: idLinhas, type: 'line', source: fonteLinhas,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': cor, 'line-width': 1.5 },
+    },
+    {
+      id: idPontos, type: 'circle', source: fontePontos,
+      paint: {
+        'circle-color': cor,
+        'circle-radius': 4,
+        'circle-stroke-color': contorno,
+        'circle-stroke-width': 1,
+      },
+    },
+  ];
+}

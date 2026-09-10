@@ -23,13 +23,14 @@ import { carregar as carregarIdioma, t } from '../base/i18n.js';
 import { montarLayout, pronto } from '../base/layout.js';
 import { h, limpar } from '../base/dom.js';
 import { exigirSessao } from '../auth/sessao.js';
-import { construirEstilo } from './estilo.js';
+import { construirEstilo, camadasRede } from './estilo.js';
 import { carregar as carregarMapa, camadasDoTopo, salvarOrdem, alternarVisivel, salvarDocumento } from './documento.js';
 import { montarPainel } from './painel_camadas.js';
 import { Catalogo } from './catalogo.js';
 import { Arvore } from '../camadas.js';
 import { Legenda } from '../legenda.js';
-import { instalarPopup } from './atributos.js';
+import { instalarPopup, atributosDaFeicao } from './atributos.js';
+import { obter } from '../base/api.js';
 import { Medicao } from './medicao.js';
 import { interpretarCoordenada, sugerir, geocodificar } from './busca.js';
 import { paraPng, paraPdf, escalaNumerica } from './impressao.js';
@@ -93,6 +94,157 @@ function marcador(map, maplibregl, lonlat, rotulo) {
   if (rotulo) m.setPopup(new maplibregl.Popup({ closeButton: true }).setText(rotulo));
   m.addTo(map);
   return m;
+}
+
+/* --------------------------------------------------------------------------------------------------------
+   Rede de utilidades (10/09): grupo próprio no painel lateral, fora da árvore do catálogo (Arvore/camadas.js
+   é do documento de mapa; a rede é outro domínio, `/api/rede`, com sua própria RLS e seu próprio par de
+   rotas `.geojson`). Duas fontes GeoJSON por rede ligada (linhas/pontos, `camadasRede` de estilo.js decide a
+   cor por disciplina); a seção é criada por JS e inserida no DOM já existente de mapa.html — nenhum HTML
+   novo, para não disputar arquivo com quem está convergindo a identidade visual das páginas. */
+const PREFIXO_REDE = 'plat-rede-';
+
+async function listarRedes() {
+  const r = await obter('/api/rede?limite=200');
+  if (r.status !== 200) throw new Error((r.json && r.json.mensagem) || 'falha ao listar redes de utilidades');
+  return r.json.itens || [];
+}
+
+/* varre coordinates de Point/LineString (a rede de demonstração só tem essas duas geometrias) e devolve
+   [oeste,sul,leste,norte]; ST_AsGeoJSON já veio em 4326, mesma unidade do mapa. */
+function estenderBbox(bbox, coordenadas) {
+  if (!Array.isArray(coordenadas)) return bbox;
+  if (typeof coordenadas[0] === 'number') {
+    const [x, y] = coordenadas;
+    if (!bbox) return [x, y, x, y];
+    return [Math.min(bbox[0], x), Math.min(bbox[1], y), Math.max(bbox[2], x), Math.max(bbox[3], y)];
+  }
+  for (const parte of coordenadas) bbox = estenderBbox(bbox, parte);
+  return bbox;
+}
+
+function bboxDasColecoes(colecoes) {
+  let bbox = null;
+  for (const fc of colecoes) {
+    for (const feicao of (fc && fc.features) || []) bbox = estenderBbox(bbox, feicao.geometry && feicao.geometry.coordinates);
+  }
+  return bbox;
+}
+
+/* popup das camadas de rede: mesmo padrão visual de atributos.js (reusa `atributosDaFeicao`, que já trata
+   campo nulo e formata número em pt-BR), mas com clique/consulta PRÓPRIOS — o de atributos.js só conhece
+   camadas do catálogo (fonte `plat-<id>`, ficha em `catalogo.ficha`), a rede não tem ficha de catálogo. */
+function instalarPopupRede(map, maplibregl, redesAtivas) {
+  let popup = null;
+  map.on('click', (ev) => {
+    if (map.getCanvas().style.cursor === 'crosshair') return; // medição em curso
+    const camadas = [...redesAtivas.values()].flatMap((r) => [r.layerLinhas, r.layerPontos])
+      .filter((id) => map.getLayer(id));
+    if (!camadas.length) return;
+    const feicoes = map.queryRenderedFeatures(ev.point, { layers: camadas });
+    if (popup) { popup.remove(); popup = null; }
+    if (!feicoes.length) return;
+    const caixa = h('div', { class: 'popup-conteudo' });
+    for (const feicao of feicoes.slice(0, 5)) {
+      const tabela = h('table', { class: 'popup-tabela' });
+      const corpo = h('tbody');
+      for (const at of atributosDaFeicao(feicao, null)) {
+        corpo.append(h('tr', { dataset: { campo: at.nome, nulo: at.nulo ? '1' : '0' } },
+          h('th', { scope: 'row' }, at.nome), h('td', { class: at.nulo ? 'nulo' : '' }, at.valor)));
+      }
+      tabela.append(corpo);
+      caixa.append(h('div', { class: 'popup-camada' }, h('h3', {}, feicao.properties.tipo || '—'), tabela));
+    }
+    if (feicoes.length > 5) caixa.append(h('p', { class: 'popup-mais' }, t('mapa.popup_mais', { n: feicoes.length - 5 })));
+    popup = new maplibregl.Popup({ closeButton: true, maxWidth: '360px', className: 'popup-plat' })
+      .setLngLat(ev.lngLat).setDOMContent(caixa).addTo(map);
+  });
+}
+
+function montarSecaoRede() {
+  const status = h('p', { class: 'fraco', id: 'rede-utilidades-status' }, t('mapa.rede_utilidades_carregando'));
+  const lista = h('ul', { class: 'lista-camadas', id: 'rede-utilidades-lista', role: 'list' });
+  const secao = h('section', { class: 'bloco', id: 'rede-utilidades-painel', 'aria-label': t('mapa.rede_utilidades') },
+    h('h2', {}, t('mapa.rede_utilidades')), status, lista);
+  const painelLateral = document.querySelector('.mapa-painel-lateral');
+  const antesDe = el('edicao-painel');
+  if (painelLateral) painelLateral.insertBefore(secao, antesDe || null);
+  return { status, lista };
+}
+
+async function montarRedeUtilidades(map, maplibregl) {
+  const { status, lista } = montarSecaoRede();
+  const redesAtivas = new Map(); // rede.id -> {fonteLinhas, fontePontos, layerLinhas, layerPontos}
+  instalarPopupRede(map, maplibregl, redesAtivas);
+
+  const ligar = async (rede) => {
+    const base = `${PREFIXO_REDE}${rede.id}`;
+    const fonteLinhas = `${base}-linhas`;
+    const fontePontos = `${base}-pontos`;
+    const layerLinhas = `${base}-linhas-camada`;
+    const layerPontos = `${base}-pontos-camada`;
+    const [rLinhas, rPontos] = await Promise.all([
+      obter(`/api/rede/${rede.id}/feicoes/linhas.geojson`),
+      obter(`/api/rede/${rede.id}/feicoes/pontos.geojson`),
+    ]);
+    if (rLinhas.status !== 200 || rPontos.status !== 200) {
+      const erro = (rLinhas.json && rLinhas.json.mensagem) || (rPontos.json && rPontos.json.mensagem);
+      throw new Error(erro || 'falha ao carregar a geometria da rede');
+    }
+    if (!map.getSource(fonteLinhas)) map.addSource(fonteLinhas, { type: 'geojson', data: rLinhas.json });
+    if (!map.getSource(fontePontos)) map.addSource(fontePontos, { type: 'geojson', data: rPontos.json });
+    for (const camada of camadasRede(layerLinhas, fonteLinhas, layerPontos, fontePontos)) {
+      if (!map.getLayer(camada.id)) map.addLayer(camada);
+    }
+    redesAtivas.set(rede.id, { fonteLinhas, fontePontos, layerLinhas, layerPontos });
+    const bbox = bboxDasColecoes([rLinhas.json, rPontos.json]);
+    if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { animate: false, padding: 40 });
+    return { nLinhas: rLinhas.json.features.length, nPontos: rPontos.json.features.length };
+  };
+
+  const desligar = (redeId) => {
+    const info = redesAtivas.get(redeId);
+    if (!info) return;
+    for (const layerId of [info.layerLinhas, info.layerPontos]) if (map.getLayer(layerId)) map.removeLayer(layerId);
+    for (const fonteId of [info.fonteLinhas, info.fontePontos]) if (map.getSource(fonteId)) map.removeSource(fonteId);
+    redesAtivas.delete(redeId);
+  };
+
+  const itemRede = (rede) => {
+    const caixa = h('input', { type: 'checkbox', class: 'camada-visivel', 'aria-label': `mostrar ${rede.nome}` });
+    const contagem = h('span', { class: 'fraco pequeno' }, '');
+    caixa.addEventListener('change', async () => {
+      caixa.disabled = true;
+      try {
+        if (caixa.checked) {
+          const { nLinhas, nPontos } = await ligar(rede);
+          contagem.textContent = `${nLinhas.toLocaleString('pt-BR')} linhas · ${nPontos.toLocaleString('pt-BR')} pontos`;
+        } else {
+          desligar(rede.id);
+          contagem.textContent = '';
+        }
+      } catch (e) {
+        caixa.checked = false;
+        el('aviso').erro(`${t('mapa.rede_utilidades_erro')}: ${(e && e.message) || e}`);
+      } finally {
+        caixa.disabled = false;
+      }
+    });
+    return h('li', { class: 'camada-linha' },
+      h('label', { class: 'camada-rotulo' }, caixa,
+        h('span', { class: 'camada-titulo' }, rede.nome),
+        h('span', { class: 'camada-tipo' }, rede.disciplina)),
+      contagem);
+  };
+
+  try {
+    const redes = await listarRedes();
+    if (!redes.length) { status.textContent = t('mapa.rede_utilidades_vazio'); return; }
+    status.remove();
+    for (const rede of redes) lista.append(itemRede(rede));
+  } catch (e) {
+    status.textContent = `${t('mapa.rede_utilidades_erro')}: ${(e && e.message) || e}`;
+  }
 }
 
 /* Documento de mapa (item L2-01-a-documento-mapa): /mapa?id=<uuid> abre um mapa do catálogo. Sem `id` a tela
@@ -290,6 +442,13 @@ async function iniciar(usuario) {
     }
   } catch (e) {
     el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`);
+  }
+  // rede de utilidades: domínio próprio (`/api/rede`), fora da árvore do catálogo — uma falha aqui não pode
+  // derrubar o resto do mapa, por isso o try/catch é dela sozinha.
+  try {
+    await montarRedeUtilidades(map, maplibregl);
+  } catch (e) {
+    el('aviso').erro(`${t('mapa.rede_utilidades_erro')}: ${(e && e.message) || e}`);
   }
   window.plat = window.plat || {};
   window.plat.mapa = { map, catalogo, medicao, arvore, legenda, edicao };  // ponto de inspeção do e2e, nunca de negócio
