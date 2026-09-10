@@ -1657,3 +1657,61 @@ leitura/placa/estado de alarme dos ativos que tocou (nunca a rede em si).
 
 Ver `docs/PARIDADE.md`, seção do item, e `docs/adr/` para as decisões de escopo (grandeza fechada em
 catálogo, `ativo` sem FK, alarme síncrono em vez de job periódico).
+
+## 30. Construtor de formulário de atributos, arrasta-e-solta (item L5-03-form-builder)
+
+### 30.1 O que existe
+
+Uma camada tem no máximo um formulário (`plat.formulario`), com N versões (`plat.formulario_versao`,
+desenho em jsonb). Só a versão PUBLICADA vale: até publicar, a edição web e o PWA de campo continuam
+mostrando o campo-a-campo genérico de sempre (obrigatório/domínio de `dados.regras_campo`, sem grupo,
+condicional ou cálculo). O desenho é grupo → campo; cada campo liga a um atributo real da camada
+(validado contra `dados.campos`) e pode ter: rótulo, widget (texto, área de texto, número, inteiro,
+booleano, data, seleção), obrigatório (fixo ou condicional — `obrigatorio_se`), visível condicional
+(`visivel_se`), domínio (lista fixa, faixa min/max, ou "vindo da camada" — resolvido como uma FOTO da
+lista de valores distintos no momento de publicar) e cálculo (`calculo`, expressão sobre `$outro_campo`
+que o servidor recomputa sempre — o cliente nunca decide o valor de um campo calculado). Condicional e
+cálculo são expressões da linguagem do item L2-10-c (`$campo`, `==`, `&&`, `Se(...)` etc.,
+`docs/EXPRESSAO.md`), avaliadas IGUAL no navegador (`web/js/expressao/avaliador.js`) e no servidor
+(`app/expressao/avaliador_py.py`).
+
+### 30.2 Construir (`/camadas/{id}/formulario`)
+
+Paleta à esquerda (atributos reais da camada, `GET /api/camadas/{id}/campos`); tela à direita (grupos,
+"+ grupo" cria um novo). Arrasto HTML5 nativo (`page.drag_and_drop` no e2e; mouse/touch no navegador de
+verdade) da paleta para dentro de um grupo cria o campo; arrastar um campo já colocado move-o para
+outro grupo. Cada campo tem um painel curto embutido no próprio cartão (rótulo, widget, obrigatório,
+domínio, visível quando, obrigatório quando, cálculo). "Salvar rascunho" grava uma versão nova
+(`POST /api/camadas/{id}/formulario/versoes`); "Publicar" compila a versão escolhida em
+`plat.item.dados` da camada (`app/formulario/servico.py::versao_publicar`) e a partir daí vale nas duas
+telas de preenchimento — sem outro passo manual.
+
+### 30.3 Preencher (edição web e PWA de campo)
+
+Um só módulo de renderização, `web/js/formulario/motor.js`, importado por `web/js/mapa/edicao.js`
+(painel Edição do `/mapa`, ao criar/editar feição) e por `web/js/campo/roteiro.js` (formulário de
+visita do PWA de campo): grupo vira `<fieldset>`, condicional some/mostra o campo e liga/desliga o
+`*` de obrigatório, cálculo desabilita o campo e mostra o valor recém-recomputado a cada mudança de
+outro campo. `validarLocal` faz a mesma checagem no navegador só para UX — o navegador NUNCA é a trava
+(cláusula 4 do portão): o servidor valida de novo em toda escrita.
+
+### 30.4 Validação no servidor
+
+`app/edicao/servico.py::validar_atributos` (item L2-03-a) já validava obrigatório/domínio de
+`dados.regras_campo`; este item acrescenta duas chaves lidas pela MESMA função sem mudar sua
+assinatura — `form_condicionais` (obrigatório condicional) e `form_calculados` (recomputa e sobrescreve
+o valor do cliente), escritas por `versao_publicar`. Isso só roda em `adicionar` (feição nova — o
+contexto está completo; numa atualização parcial não há garantia de que o corpo trouxe os campos que a
+expressão referencia, documentado como fora de escopo, não escondido). `app/campo/servico.py`
+(`POST /api/campo/visitas`) não validava `dados` nenhuma antes deste item; agora, com formulário
+publicado, `app/formulario/motor.py::validar_dados_livre` roda a mesma obrigatório/domínio/condicional/
+cálculo direto sobre o desenho (a visita grava `dados` jsonb livre, não colunas de tabela).
+
+Medido: 13 casos de API (obrigatório incondicional e condicional, domínio, cálculo ignorando o valor do
+cliente nos DOIS caminhos de escrita, RLS cruzada 404, desenho inválido recusado —
+`tests/api/test_formulario.py`) + 1 e2e no navegador contra a instância viva (arrasto real, publicar,
+depois a MESMA sessão provando a refutação do item pela API de campo —
+`tests/e2e/test_formulario_construtor.py`, medida em `tests/medidas/L5-03-form-builder.json`).
+
+Fora do escopo: cálculo/condicional em `atualizar` parcial; domínio "vindo da camada" é uma foto, não
+uma consulta ao vivo; o construtor não tem editor visual de condição (é a expressão em texto).

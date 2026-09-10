@@ -1173,6 +1173,24 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", "/api/camadas/{id}/edicoes"): Caso(
         lambda p: f"/api/camadas/{UUID_NULO}/edicoes", lambda p: {"adicionar": []}
     ),
+    # ---- construtor de formulário de atributos, arrasta-e-solta (L5-03-form-builder): mesmo padrão acima —
+    # UUID que não é de A nem de B, RLS de `plat.item` (via `comum.item_ou_404`/`comum.exigir_edicao`) responde
+    # 404 antes de tocar `plat.formulario`/`formulario_versao`, sem precisar de um formulário real de B.
+    ("GET", "/api/camadas/{id}/campos"): Caso(lambda p: f"/api/camadas/{UUID_NULO}/campos"),
+    ("GET", "/api/camadas/{id}/formulario"): Caso(lambda p: f"/api/camadas/{UUID_NULO}/formulario"),
+    ("GET", "/api/camadas/{id}/formulario/versoes"): Caso(lambda p: f"/api/camadas/{UUID_NULO}/formulario/versoes"),
+    ("GET", "/api/camadas/{id}/formulario/versoes/{versao}"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/formulario/versoes/1"
+    ),
+    ("POST", "/api/camadas/{id}/formulario"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/formulario", lambda p: {"nome": "zt"}
+    ),
+    ("POST", "/api/camadas/{id}/formulario/versoes"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/formulario/versoes", lambda p: {"desenho": {"grupos": []}}
+    ),
+    ("POST", "/api/camadas/{id}/formulario/versoes/{versao}/publicar"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/formulario/versoes/1/publicar", lambda p: {}
+    ),
     ("POST", "/api/camadas/{id}/feicoes/unir"): Caso(
         lambda p: f"/api/camadas/{UUID_NULO}/feicoes/unir",
         lambda p: {"ids": [UUID_NULO, UUID_NULO], "versoes": {UUID_NULO: 1}},

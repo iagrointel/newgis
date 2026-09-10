@@ -3,6 +3,39 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 9, setembro de 2026 (item L5-03-form-builder: construtor de formulário de atributos, arrasta-e-solta)
+
+Formulário de atributos por camada, versionado e publicável, desenhado arrastando (grupo, campo
+obrigatório, domínio, condicional, cálculo) — o "L2-10 formulário" que faltava para a edição web e o
+PWA de campo pararem de mostrar um campo-a-campo genérico. Novo `plat.formulario`/`formulario_versao`
+(migração `20260910T2350_formulario.sql`), módulo `app/formulario/` (`motor.py` compila o desenho em
+duas chaves novas de `plat.item.dados` — `form_condicionais`/`form_calculados` — lidas por
+`app/edicao/servico.py::validar_atributos` sem mudar sua assinatura, e valida o mesmo desenho ao vivo
+para `app/campo/servico.py`/`visita_criar`, que antes deste item não validava `dados` nenhuma).
+Condicional e cálculo usam a linguagem de expressão do item L2-10-c-linguagem-expressao
+(`app/expressao/avaliador_py.py`), a MESMA que o navegador usa (`web/js/expressao/avaliador.js`) —
+byte a byte, sem duas implementações. Um só motor de RENDERIZAÇÃO no navegador,
+`web/js/formulario/motor.js`, importado por `web/js/mapa/edicao.js` (edição web) e
+`web/js/campo/roteiro.js` (PWA de campo); construtor arrasta-e-solta em `/camadas/{id}/formulario`
+(`web/js/formulario/construtor.js`, sobre as primitivas de `web/js/editor/arrasto.js` do item
+L5-08-editor-arrasto, reaproveitadas sem cópia).
+
+Medido: 13 casos de API (`tests/api/test_formulario.py` — obrigatório incondicional e condicional,
+domínio, cálculo ignorando o valor do cliente, RLS cruzada 404, desenho inválido recusado) + 1 e2e no
+navegador contra a instância viva (`tests/e2e/test_formulario_construtor.py`, `venv/bin/pytest
+tests/e2e/test_formulario_construtor.py -m lento --base-url https://demo.iagrointel.com`; medida em
+`tests/medidas/L5-03-form-builder.json`): 5 campos em 2 grupos montados por `page.drag_and_drop`
+nativo, publicados, e a MESMA sessão de navegador provando a refutação do item ("adversário define
+campo obrigatório e submete sem ele pela API") em `POST /api/campo/visitas` — sem "nome" → 422
+`campo_obrigatorio`; `categoria=A` sem "ativo" (condicional) → 422; `categoria=B`/`area=5`/
+`total=999` enviado pelo cliente → servidor recomputa `total=10` (`area*2`), ignora o valor mandado.
+
+Fora do escopo deste turno: cálculo/condicional na ATUALIZAÇÃO parcial de feição (só cobertos em
+`adicionar`, contexto completo garantido; documentado em `app/edicao/servico.py`); domínio "vindo da
+camada" é resolvido como um SNAPSHOT na hora de publicar, não uma consulta ao vivo a cada edição;
+arrasto de propriedade avançada (visível/obrigatório/cálculo) é campo de texto com a expressão, não um
+construtor de condição visual — decisão de escopo, não lacuna escondida.
+
 ## turno 9, setembro de 2026 (item L1-02-i-ogc-api-tiles-e-maps: OGC API — Tiles e OGC API — Maps por token)
 
 Fecha a família de padrões OGC da imagem: a casa já falava WMTS, WMS 1.3.0, XYZ, TileJSON, STAC e um

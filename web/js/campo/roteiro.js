@@ -8,6 +8,7 @@
    suficiente para o portão medido nesta trilha — ver relatório final para o que ficou de fora. */
 import { obter, enviar, mensagemDe } from '../base/api.js';
 import { anexar, h, limpar } from '../base/dom.js';
+import * as formularioMotor from '../formulario/motor.js';
 import { carregar, t, formatarData } from '../base/i18n.js';
 import '../base/componentes.js';
 import { montarLayout, cabecalho, pronto } from '../base/layout.js';
@@ -71,20 +72,37 @@ async function sincronizarFilaLocal(aviso) {
   return sincronizadas;
 }
 
-function formularioVisita({ parada, camadaId, filaId, aviso, aoRegistrar }) {
+function formularioVisita({ parada, camadaId, filaId, aviso, aoRegistrar, desenho }) {
   const status = h('select', {}, ...STATUS.map((s) => h('option', { value: s }, t(`campo.visita.status_${s}`))));
   const texto = h('textarea', { rows: '3', maxlength: '8000' });
   const foto = h('input', { type: 'file', accept: 'image/*', capture: 'environment' });
+  // item L5-03-form-builder: MESMO motor de renderização da edição web (web/js/mapa/edicao.js) — o
+  // formulário arrasta-e-solta da camada (grupo, condicional, cálculo, domínio, obrigatório) some no
+  // PWA de campo quando não há formulário publicado (comportamento de sempre: status/texto/foto só).
+  const dadosValores = {};
+  const camposDinamicos = h('div', { class: 'formulario-visita-dinamico' });
+  const errosDinamicos = h('ul', { class: 'edicao-erros' });
+  if (desenho) formularioMotor.renderizar(camposDinamicos, desenho, { valores: dadosValores });
   const enviarBt = h('button', { type: 'button', class: 'primario' }, t('campo.visita.enviar'));
   const cancelarBt = h('button', { type: 'button', class: 'pequeno' }, t('campo.visita.cancelar'));
   const bloco = h('div', { class: 'formulario-visita cartao' },
     h('label', {}, t('campo.visita.status'), status),
     h('label', {}, t('campo.visita.texto'), texto),
     h('label', {}, t('campo.visita.foto'), foto),
+    desenho ? camposDinamicos : null,
+    desenho ? errosDinamicos : null,
     h('div', { class: 'linha-botoes' }, enviarBt, cancelarBt));
 
   cancelarBt.addEventListener('click', () => bloco.remove());
   enviarBt.addEventListener('click', async () => {
+    if (desenho) {
+      limpar(errosDinamicos);
+      const erros = formularioMotor.validarLocal(desenho, dadosValores);
+      if (erros.length) {
+        for (const erro of erros) errosDinamicos.append(h('li', {}, `${erro.campo}: ${erro.mensagem}`));
+        return;
+      }
+    }
     enviarBt.disabled = true;
     let fotoBase64 = null;
     if (foto.files && foto.files[0]) {
@@ -94,7 +112,7 @@ function formularioVisita({ parada, camadaId, filaId, aviso, aoRegistrar }) {
       visita: {
         cliente_uuid: crypto.randomUUID(), camada_id: camadaId, globalid: parada.globalid,
         alvo_id: parada.alvo_id, fila_id: filaId, roteiro_id: roteiroId, status: status.value,
-        texto: texto.value || null, capturado_em: new Date().toISOString(),
+        texto: texto.value || null, capturado_em: new Date().toISOString(), dados: desenho ? dadosValores : {},
       },
       fotoBase64,
     };
@@ -171,6 +189,7 @@ async function iniciar() {
         registrarBt.addEventListener('click', () => {
           const form = formularioVisita({
             parada: p, camadaId: detalheCamadaId, filaId: d.fila_id, aviso, aoRegistrar: redesenhar,
+            desenho: desenhoFormulario,
           });
           linha.after(form);
         });
@@ -182,5 +201,12 @@ async function iniciar() {
   // camada_id não vem no /roteiros/{id} (paradas só trazem globalid); busca da fila 1x
   const filaResp = await obter(`/api/campo/filas/${detalhe.fila_id}`);
   const detalheCamadaId = filaResp.status === 200 ? filaResp.json.fila.camada_id : null;
+  // item L5-03-form-builder: formulário publicado da camada (grupo/condicional/cálculo/domínio/obrigatório),
+  // se houver — `null` mantém o comportamento de sempre (status/texto/foto só, sem `dados`)
+  let desenhoFormulario = null;
+  if (detalheCamadaId) {
+    const fr = await obter(`/api/camadas/${detalheCamadaId}/formulario`);
+    desenhoFormulario = (fr.status === 200 && fr.json.desenho) ? fr.json.desenho : null;
+  }
   render(detalhe);
 }

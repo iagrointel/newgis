@@ -25,6 +25,8 @@ from app.campo.modelos import (
 )
 from app.catalogo.comum import registrar_evento, uuid_ok
 from app.erros import ErroAPI
+from app.formulario import motor as form_motor
+from app.formulario import servico as form_servico
 
 router = APIRouter(prefix="/api/campo", tags=["campo"])
 LER = {"x-auth": "S/T", "x-privilegio": "rls:visibilidade"}
@@ -240,8 +242,17 @@ def criar_visita(corpo: VisitaCriar, request: Request, auth: Auth = autenticado(
             cur.execute("SELECT 1 FROM plat.campo_alvo WHERE id = %s::uuid", (uuid_ok(corpo.alvo_id),))
             if cur.fetchone() is None:
                 raise ErroAPI(404, "alvo_inexistente", "alvo inexistente")
+    cid = uuid_ok(corpo.camada_id, "item_inexistente", "item de camada inexistente")
     with db.db(auth.contexto()) as cur:
-        servico.camada_ou_404(cur, uuid_ok(corpo.camada_id, "item_inexistente", "item de camada inexistente"))
+        servico.camada_ou_404(cur, cid)
+        # item L5-03-form-builder: se a camada tem formulário PUBLICADO, `dados` (jsonb livre da visita)
+        # passa pelo MESMO motor que valida `POST /api/camadas/{id}/edicoes` (obrigatório/domínio) mais
+        # condicional/cálculo (que a edição já compila em regras_campo/form_condicionais/form_calculados,
+        # e aqui roda direto sobre o desenho — ver app/formulario/motor.py::validar_dados_livre). Sem
+        # formulário publicado, o comportamento é o de sempre (dados livre, sem validação nenhuma).
+        desenho = form_servico.desenho_publicado(cur, cid)
+        if desenho:
+            corpo.dados, _avisos_form = form_motor.validar_dados_livre(desenho, corpo.dados)
         visita, criada = servico.visita_criar(cur, auth, corpo)
         if criada:
             registrar_evento(cur, request, "campo/visita_registrar", "campo_visita", str(visita["id"]), {

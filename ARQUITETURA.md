@@ -1330,3 +1330,60 @@ rotas,tarefas}.py`, `app/main.py`/`app/jobs/tipos.py`/`app/paginas.py` (registro
 `web/js/rede/medicao_ficha.js`, `web/js/i18n/pt-BR.json` (chaves `rede_medicao.ficha.*`),
 `web/style.css` (seção telemetria), `scripts/rede_medicao_simulador.py`, `tests/api/
 test_rede_medicao.py` (11 casos).
+
+## 24. Construtor de formulário de atributos, arrasta-e-solta (item L5-03-form-builder)
+
+`plat.formulario` (1 por camada, `camada_id UNIQUE`) e `plat.formulario_versao` (N por formulário,
+`desenho` jsonb, só uma `publicado=true` por vez — índice único parcial) na migração
+`20260910T2350_formulario.sql`; RLS e GRANT no mesmo molde de `campo.sql`. Módulo `app/formulario/`:
+`modelos.py` (pydantic), `servico.py` (CRUD/publicação — `_resolver_dominios_de_camada` resolve domínio
+"vindo da camada" como SNAPSHOT na hora de publicar, uma `SELECT DISTINCT` na tabela física da camada),
+`motor.py` (validação + compilação, sem I/O), `rotas.py` (`/api/camadas/{id}/campos`, `/formulario`,
+`/formulario/versoes[/{versao}[/publicar]]`; leitura exige só `camada:ler`, escrita reusa
+`comum.exigir_edicao` — nenhum privilégio novo).
+
+Decisão central: `versao_publicar` COMPILA o desenho em três chaves de `plat.item.dados` da camada —
+`regras_campo` (obrigatório incondicional + domínio, a MESMA chave que `app/edicao/servico.py::
+validar_atributos` já lia desde o item L2-03-a: zero mudança de esquema aí) e duas chaves NOVAS,
+`form_condicionais`/`form_calculados`, lidas pela mesma função sem mudar sua assinatura — só ativa
+quando presentes (`dados.get(...)`, vazio por padrão). Isso evitou uma segunda passagem de leitura de
+banco em toda edição: o motor de validação continua puramente sobre o `dados` que a rota já carrega.
+Para o caminho de CAMPO (`app/campo/servico.py::visita_criar`, que grava `dados` jsonb LIVRE, não
+colunas de tabela), não há compilação — `app/campo/rotas.py::criar_visita` busca o desenho publicado
+(`app/formulario/servico.py::desenho_publicado`) e chama `motor.validar_dados_livre` direto sobre ele;
+antes deste item essa rota não validava `dados` nenhuma.
+
+Condicional (`visivel_se`/`obrigatorio_se`) e cálculo (`calculo`) são expressões da linguagem do item
+L2-10-c-linguagem-expressao (`app/expressao/avaliador_py.py`/`web/js/expressao/avaliador.js`,
+`$campo` + `Se`/comparação/aritmética) — a integração que `docs/EXPRESSAO.md` deixava para "itens
+futuros do L5" é este item. `avaliar_texto`/`avaliar` do lado Python roda dentro do orçamento de passos/
+tempo já existente na linguagem (nenhum limite novo); um erro de avaliação (`ErroExpressao`) vira
+`409 formulario_expressao_invalida` (config quebrada é erro do publicador, não do usuário que preenche).
+
+Front: um SÓ módulo de renderização, `web/js/formulario/motor.js` (sem I/O, só DOM + o avaliador JS),
+importado por `web/js/mapa/edicao.js` (`_montarFormulario` passa a ramificar: com desenho publicado usa
+`formularioMotor.renderizar`/`validarLocal`; sem desenho, o campo-a-campo genérico de sempre —
+mudança aditiva, zero teste existente de L2-03-edicao quebrou) e por `web/js/campo/roteiro.js`
+(`formularioVisita` ganha campos dinâmicos ao lado de status/texto/foto; sem formulário publicado o
+comportamento é o de sempre, sem `dados`). Construtor em `web/js/formulario/construtor.js` +
+`web/formulario_construtor.html` (`/camadas/{id}/formulario`, registrado em `app/paginas.py`), sobre as
+primitivas de arrasto do item L5-08-editor-arrasto (`web/js/editor/arrasto.js`) — reaproveitadas tal e
+qual, sem copiar a mecânica de `dragstart`/`dragover`/`drop`.
+
+Achado do e2e (medido, não suposto): o 3º `page.drag_and_drop` consecutivo falhava sempre (qualquer
+campo, só por posição) com o viewport padrão — o cartão de propriedades de cada campo (7 linhas) empurra
+o alvo do grupo para baixo da dobra, e o Chromium confunde o ponto de soltura com o auto-scroll no meio
+do gesto nativo de Drag and Drop; resolvido com viewport mais alto no teste (`1400×1800`) e
+`scroll_into_view_if_needed()` antes de soltar num segundo grupo. Um segundo achado do e2e: `iniciar()`
+limpava `#principal` (`limpar(principal)`) antes de reconstruir a tela, apagando o `<plat-aviso
+id="aviso">` que já vinha no HTML — `document.getElementById('aviso')` do teste (e qualquer código que
+dependesse do aviso persistir) passava a achar `null`; corrigido não limpando `#principal` (a tela só
+renderiza uma vez, nunca precisou disso).
+
+Arquivos: `db/migracoes/20260910T2350_formulario.sql`, `app/formulario/{__init__,modelos,servico,
+motor,rotas}.py`, `app/main.py`/`app/paginas.py` (registro), `app/limites.py` (seção
+`FORMULARIO_*`), `app/edicao/servico.py` (bloco novo em `validar_atributos`), `app/campo/rotas.py`
+(validação em `criar_visita`), `web/js/formulario/{motor,construtor}.js`, `web/formulario_construtor.html`,
+`web/js/mapa/edicao.js`/`web/js/campo/roteiro.js` (integração), `web/js/i18n/pt-BR.json` (chaves
+`formulario.construtor.*`), `tests/api/test_formulario.py` (13 casos), `tests/e2e/
+test_formulario_construtor.py`, `tests/api/cruzado_casos.py` (7 rotas novas, portão P6).

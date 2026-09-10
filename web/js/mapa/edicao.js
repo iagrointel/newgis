@@ -18,6 +18,7 @@
 import { apagar as apagarHttp, enviar, obter } from '../base/api.js';
 import { h, limpar } from '../base/dom.js';
 import { t } from '../base/i18n.js';
+import * as formularioMotor from '../formulario/motor.js';
 
 const FONTE_RASCUNHO = 'plat-edicao-rascunho';
 const FONTE_VERTICES = 'plat-edicao-vertices';
@@ -62,6 +63,7 @@ export class Edicao {
     this.selecionadas = new Map(); // id -> {versao, atributos, geometria}
     this.arrastando = null;
     this.pilha = []; this.indicePilha = -1; // desfazer/refazer (adicionar/atualizar; ver README do item)
+    this._desenhoFormulario = null; // item L5-03-form-builder: desenho publicado da camada atual (ou null)
     // shift+arrastar é "caixa de zoom" por padrão no MapLibre — some com o shift+clique de seleção
     // múltipla desta tela (achado do e2e: com boxZoom ligado, o evento 'click' nunca dispara sob shift)
     map.boxZoom.disable();
@@ -286,6 +288,17 @@ export class Edicao {
   }
 
   // ---------------------------------------------------------------- formulário de atributos
+  // item L5-03-form-builder: quando a camada tem formulário PUBLICADO, o formulário arrasta-e-solta
+  // (grupo, condicional, cálculo, domínio, obrigatório) substitui o campo-a-campo genérico abaixo — pelo
+  // MESMO motor de renderização que o PWA de campo usa (web/js/formulario/motor.js), com o servidor
+  // sempre validando de novo (cláusula 4 do portão: o navegador não é a trava).
+  async _carregarDesenhoFormulario() {
+    this._desenhoFormulario = null;
+    if (!this.camadaId) return;
+    const r = await obter(`/api/camadas/${this.camadaId}/formulario`);
+    this._desenhoFormulario = (r.status === 200 && r.json.desenho) ? r.json.desenho : null;
+  }
+
   _camposDaCamada() {
     const f = this.catalogo.ficha(this.camadaId);
     return (f && f.campos) || [];
@@ -326,20 +339,32 @@ export class Edicao {
   }
 
   _montarFormulario({ atributosIniciais, aoSubmeter, rotuloBotao, permitirLote }) {
-    const campos = this._camposDaCamada();
-    const regras = this._regrasDaCamada();
+    const desenho = this._desenhoFormulario;
     const valores = { ...atributosIniciais };
     const erros = h('ul', { class: 'edicao-erros' });
     const form = h('form', { class: 'edicao-form' });
     let ultimoCampoMudado = null;
-    for (const campo of campos) {
-      const regra = regras[campo.nome];
-      if ((regra || {}).somente_leitura) continue;
-      const linha = h('div', { class: 'campo' },
-        h('label', {}, campo.nome, (regra || {}).obrigatorio ? ' *' : ''),
-        this._campoInput(campo, regra, valores[campo.nome], (nome, v) => { valores[nome] = v; ultimoCampoMudado = nome; }));
-      form.append(linha);
+
+    if (desenho) {
+      // item L5-03-form-builder: MESMO motor de renderização do PWA de campo (grupo, condicional, cálculo)
+      formularioMotor.renderizar(form, desenho, {
+        valores, aoMudar: (nome) => { ultimoCampoMudado = nome; },
+      });
+    } else {
+      // sem formulário publicado: campo-a-campo genérico de sempre (obrigatório/domínio de `regras_campo`)
+      const campos = this._camposDaCamada();
+      const regras = this._regrasDaCamada();
+      for (const campo of campos) {
+        const regra = regras[campo.nome];
+        if ((regra || {}).somente_leitura) continue;
+        const linha = h('div', { class: 'campo' },
+          h('label', {}, campo.nome, (regra || {}).obrigatorio ? ' *' : ''),
+          this._campoInput(campo, regra, valores[campo.nome],
+            (nome, v) => { valores[nome] = v; ultimoCampoMudado = nome; }));
+        form.append(linha);
+      }
     }
+
     const botoes = h('div', { class: 'linha' },
       h('button', { type: 'submit', class: 'botao' }, rotuloBotao));
     if (permitirLote && this.selecionadas.size > 1) {
@@ -353,9 +378,18 @@ export class Edicao {
       ev.preventDefault();
       limpar(erros);
       let ok = true;
-      for (const campo of campos) {
-        const msg = this._validarCampo(campo, valores[campo.nome], regras[campo.nome]);
-        if (msg) { erros.append(h('li', {}, `${campo.nome}: ${msg}`)); ok = false; }
+      if (desenho) {
+        for (const erro of formularioMotor.validarLocal(desenho, valores)) {
+          erros.append(h('li', {}, `${erro.campo}: ${erro.mensagem}`));
+          ok = false;
+        }
+      } else {
+        const campos = this._camposDaCamada();
+        const regras = this._regrasDaCamada();
+        for (const campo of campos) {
+          const msg = this._validarCampo(campo, valores[campo.nome], regras[campo.nome]);
+          if (msg) { erros.append(h('li', {}, `${campo.nome}: ${msg}`)); ok = false; }
+        }
       }
       if (!ok) return;
       await aoSubmeter(valores);
@@ -551,9 +585,11 @@ export class Edicao {
       this.selecionadas.clear();
       this._verticesRedesenhar();
       this._desenharPainelSelecao();
+      this._carregarDesenhoFormulario();
     });
     this.catalogo.aoMudar(() => this._redesenharSeletor(seletor));
     this._redesenharSeletor(seletor);
+    if (this.camadaId) this._carregarDesenhoFormulario();
 
     limpar(raiz);
     raiz.append(
