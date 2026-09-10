@@ -16,7 +16,7 @@ def registrar(cur, tenant_id: int, item_id: str, **campos) -> dict:
         INSERT INTO plat.agol_publicacao (
             tenant_id, item_id, job_id, estado, portal, agol_geojson_item_id, agol_servico_item_id,
             servico_url, n_feicoes, mensagem, publicado_em
-        ) VALUES (%(tenant_id)s, %(item_id)s, %(job_id)s, %(estado)s, %(portal)s, %(agol_geojson_item_id)s,
+        ) VALUES (%(tenant_id)s, %(item_id)s::uuid, %(job_id)s::uuid, %(estado)s, %(portal)s, %(agol_geojson_item_id)s,
                   %(agol_servico_item_id)s, %(servico_url)s, %(n_feicoes)s, %(mensagem)s,
                   CASE WHEN %(estado)s = 'publicado' THEN now() ELSE NULL END)
         ON CONFLICT (tenant_id, item_id) DO UPDATE SET

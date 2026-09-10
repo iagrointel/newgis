@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Modelo 3D · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/estilo/tokens.css">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/vendor/pannellum-2.5.7.css">
+<link rel="stylesheet" href="/static/modelo.css">
+</head>
+<body class="tela instrumento modelo3d">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal modelo3d-tela" tabindex="-1">
+    <div class="linha-ferramentas modelo3d-barra" id="ferramentas">
+      <a href="/conteudo" class="voltar" data-i18n="modelo3d.voltar">&larr; conteúdo</a>
+      <h1 id="modelo3d-titulo" data-i18n="modelo3d.titulo">Modelo 3D</h1>
+      <span class="modelo3d-origem" id="modelo3d-origem-etiqueta"></span>
+      <plat-aviso id="aviso"></plat-aviso>
+    </div>
+    <div class="modelo3d-corpo">
+      <section class="modelo3d-painel" aria-label="informações do modelo">
+        <div class="bloco" id="modelo3d-info"></div>
+        <div class="bloco" id="modelo3d-ambientes" hidden>
+          <h2 data-i18n="modelo3d.ambientes">Ambientes (IFC)</h2>
+          <ul id="modelo3d-lista-ambientes" class="lista-simples"></ul>
+        </div>
+      </section>
+      <div class="modelo3d-area">
+        <canvas id="xcanvas" aria-label="visualizador 3D"></canvas>
+        <div id="pano" aria-label="visualizador de foto 360" hidden></div>
+        <div id="modelo3d-carregando" class="modelo3d-carregando" aria-live="polite" data-i18n="modelo3d.carregando">carregando o modelo…</div>
+        <div id="modelo3d-erro" class="modelo3d-erro" role="alert" hidden></div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/static/vendor/pannellum-2.5.7.js"></script>
+<script type="module" src="/static/js/modelo3d/pagina.js"></script>
+</body>
+</html>

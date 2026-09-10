@@ -13,6 +13,10 @@ const NOME_TOKEN = 'plat-uploads-tela';
    app/uploads/tipos.py TIPOS: geotiff/jp2 são os dois tipos raster aceitos no upload. */
 export const FORMATOS_VETOR = new Set(['shapefile.zip', 'gpkg', 'geojson', 'csv']);
 export const TIPOS_RASTER = new Set(['geotiff', 'jp2']);
+/* item L1-03-modelo3d: .ifc/.xkt viram job modelo3d.converter (POST /api/modelo3d/ingestoes); foto360 (.jpg
+   equirretangular) não precisa de job — cria o item direto (POST /api/foto360, síncrono). */
+export const TIPOS_MODELO3D = new Set(['ifc', 'xkt']);
+export const TIPOS_FOTO360 = new Set(['foto360']);
 const POLL_MS = 1500;
 const POLL_TIMEOUT_MS = 10 * 60 * 1000;
 
@@ -193,6 +197,24 @@ export async function publicar(arquivoId, tipoDeclarado, nomeArquivo, { aoStatus
   if (FORMATOS_VETOR.has(tipoDeclarado)) {
     const itemId = await publicarVetor(arquivoId, tipoDeclarado, { aoStatus, aoProgredir });
     return { itemId, publicado: true };
+  }
+  if (TIPOS_MODELO3D.has(tipoDeclarado)) {
+    aoStatus(t('upload.publicando_modelo3d'));
+    aoProgredir(0);
+    const r = await enviar('/api/modelo3d/ingestoes', { arquivo_id: arquivoId, titulo: nomeArquivo });
+    if (r.status !== 202) throw new Error((r.json && r.json.mensagem) || t('upload.publicar_erro'));
+    const job = await esperarJob(r.json.job_id, (j) => { aoProgredir(j.progresso ?? 0); aoStatus(`${t('upload.publicando_modelo3d')} ${j.progresso ?? 0}%`); });
+    const itemId = job.resultado && job.resultado.item_id;
+    if (!itemId) throw new Error(t('upload.publicar_erro'));
+    return { itemId, publicado: true };
+  }
+  if (TIPOS_FOTO360.has(tipoDeclarado)) {
+    aoStatus(t('upload.publicando_foto360'));
+    aoProgredir(0);
+    const r = await enviar('/api/foto360', { arquivo_id: arquivoId, titulo: nomeArquivo });
+    if (r.status !== 201) throw new Error((r.json && r.json.mensagem) || t('upload.publicar_erro'));
+    aoProgredir(100);
+    return { itemId: r.json.item_id, publicado: true };
   }
   return { itemId: arquivoId, publicado: false };
 }

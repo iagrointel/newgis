@@ -59,6 +59,12 @@ TIPOS: dict[str, Tipo] = {
     "geotiff": Tipo("geotiff", (".tif", ".tiff"), "GeoTIFF / raster", False, "image/tiff"),
     "jp2": Tipo("jp2", (".jp2",), "JPEG 2000 (JP2)", False, "application/octet-stream"),
     "zip": Tipo("zip", (".zip",), "Zip (genérico)", True, "application/zip"),
+    # item L1-03-modelo3d (10/09/2026): IFC entra cru (convertido para .xkt pelo job modelo3d.converter, no
+    # conversor que existir nesta instalação — GPU box por ssh hoje); .xkt já convertido entra direto, sem job;
+    # foto360 é um JPEG equirretangular (proporção 2:1) para o visualizador pannellum, sem conversão nenhuma.
+    "ifc": Tipo("ifc", (".ifc",), "IFC (BIM)", False, "application/octet-stream"),
+    "xkt": Tipo("xkt", (".xkt",), "Modelo 3D (.xkt, já convertido)", False, "application/octet-stream"),
+    "foto360": Tipo("foto360", (".jpg", ".jpeg"), "Foto 360 (equirretangular, JPEG)", False, "image/jpeg"),
 }
 
 
@@ -230,5 +236,24 @@ def verificar_conteudo(tipo_declarado: str, chave: str, tamanho: int) -> None:
     elif tipo_declarado == "jp2":
         if not _e_jp2(cabecalho):
             raise ConteudoNaoCorresponde(f"conteúdo não corresponde ao tipo jp2: o arquivo é {_o_que_e(cabecalho)}")
+    elif tipo_declarado == "ifc":
+        # STEP/IFC: "ISO-10303-21;" é a assinatura fixa da seção HEADER (ISO 10303-21, todo IFC é um STEP);
+        # tolera BOM/espaço líder como os outros tipos de texto acima.
+        if not _texto_comeca_com(cabecalho, b"ISO-10303-21;"):
+            raise ConteudoNaoCorresponde(f"conteúdo não corresponde ao tipo ifc: o arquivo é {_o_que_e(cabecalho)}")
+    elif tipo_declarado == "xkt":
+        # .xkt (xeokit v10) não tem assinatura textual: os 4 primeiros bytes são um uint32 little-endian com a
+        # CONTAGEM de arranjos do dataset (12 nos três modelos de gabarito medidos nesta instalação, 10/09/2026)
+        # — não é um número mágico fixo pela especificação, mas um valor implausível prova que os bytes não são
+        # um xkt de verdade (arquivo de texto, imagem, etc.), o mesmo raciocínio de "prova pelos bytes" dos
+        # outros tipos desta função.
+        if len(cabecalho) < 4 or not (1 <= int.from_bytes(cabecalho[:4], "little") <= 64):
+            raise ConteudoNaoCorresponde(
+                f"conteúdo não corresponde ao tipo xkt: cabeçalho binário não é um xkt (contagem de arranjos "
+                f"implausível); o arquivo é {_o_que_e(cabecalho)}"
+            )
+    elif tipo_declarado == "foto360":
+        if cabecalho[:3] != b"\xff\xd8\xff":
+            raise ConteudoNaoCorresponde(f"conteúdo não corresponde ao tipo foto360: o arquivo é {_o_que_e(cabecalho)}")
     else:  # pragma: no cover — TIPOS e o dispatch acima são mantidos em sincronia manualmente
         raise ConteudoNaoCorresponde(f"tipo declarado sem verificação implementada: {tipo_declarado}")

@@ -28,6 +28,8 @@ PAGINAS = {
     "/c/{token}": "compartilhado.html",
     # --- mapa (L2-01-a)
     "/mapa": "mapa.html",
+    # --- modelo 3D / foto 360 (L1-03-modelo3d)
+    "/modelo/{id}": "modelo.html",
     # --- casca do SIG (L2-01-a-casca-sig, 10/09/2026): mapa em tela cheia, painéis flutuantes. `/mapa`
     # continua existindo até a casca nova estar aprovada (decisão do orientador depois das capturas).
     "/sig": "sig.html",

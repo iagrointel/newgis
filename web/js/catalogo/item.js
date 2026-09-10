@@ -19,11 +19,13 @@ import * as relacoes from './item_relacoes.js';
 import { seletorPasta, caminhoDe } from './pastas.js';
 import * as tipoCamadaVetorial from './tipos/camada_vetorial.js';
 import * as tipoRaster from './tipos/raster.js';
+import * as tipoModelo3d from './tipos/modelo3d.js';
+import * as tipoFoto360 from './tipos/foto360.js';
 
 /* módulos de painel por tipo (tipo_item.modulo_front): resumo + prévia no mapa (aba Visão geral) e URL de
    serviço para cliente externo (aba Compartilhamento). Só os dois tipos que hospedam dado servível hoje —
    os demais (arquivo, conexão, mapa…) seguem só com o formulário genérico do esquema (aba Dados). */
-const MODULOS_TIPO = { camada_vetorial: tipoCamadaVetorial, raster: tipoRaster };
+const MODULOS_TIPO = { camada_vetorial: tipoCamadaVetorial, raster: tipoRaster, modelo3d: tipoModelo3d, foto360: tipoFoto360 };
 
 /* preenche `alvo` com o que `carregar()` (assíncrono) devolve, sem travar o render síncrono do resto do
    painel: mostra "carregando…" e troca pelo conteúdo real (ou pelo erro real) assim que chega. */

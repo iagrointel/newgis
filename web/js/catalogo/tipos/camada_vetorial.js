@@ -4,11 +4,17 @@
    n_feicoes/tilejson/estilo prontos (app/mapa/rotas.py); a prévia sob sessão não cunha token nenhum — quem
    cunha é a própria rota de tilejson, escopada só àquela camada, 12 h. As URLs da seção Compartilhar (WFS/
    OGC API Features/Esri FeatureServer) são para cliente EXTERNO (QGIS, ArcGIS, um script) e por isso levam
-   um token de serviço de verdade (token_servico.js). */
+   um token de serviço de verdade (token_servico.js). A seção "Publicar no ArcGIS Online" (item
+   L2-08-migracao-agol), no fim da mesma aba, fala com `app/agol/rotas.py`: credencial do inquilino
+   (GET/PUT /api/agol/credencial + POST /api/agol/testar) e o estado de publicação por item
+   (POST/GET /api/agol/publicacoes) — só aparece o formulário de credencial e o botão Publicar; nunca finge
+   que publicou sem a credencial configurada (a API recusa com 422 `agol_nao_configurado`, mostrado aqui tal
+   e qual). */
 import { h, limpar } from '../../base/dom.js';
-import { obter } from '../../base/api.js';
+import { obter, enviar, alterar, mensagemDe } from '../../base/api.js';
 import { botaoCopiar } from '../../base/dom.js';
 import { t } from '../../base/i18n.js';
+import { dataHora } from '../formato.js';
 import { tokenServico, renovarTokenServico } from './token_servico.js';
 
 export const tipo = 'camada_vetorial';
@@ -121,13 +127,142 @@ function montarUrls(raiz, item, tk) {
 
 export async function compartilhar(item) {
   const raiz = h('div', { class: 'tipo-compartilhar' });
-  let tk;
   try {
-    tk = await tokenServico(item, NOME_TOKEN(item), ESCOPOS_TOKEN(item));
+    const tk = await tokenServico(item, NOME_TOKEN(item), ESCOPOS_TOKEN(item));
+    montarUrls(raiz, item, tk);
   } catch (e) {
     raiz.append(h('p', { class: 'erro' }, e.message));
-    return raiz;
   }
-  montarUrls(raiz, item, tk);
+  const agolAlvo = h('div', { class: 'tipo-secao-agol' });
+  raiz.append(agolAlvo);
+  await montarAgol(agolAlvo, item);
   return raiz;
+}
+
+/* ---------- Publicar no ArcGIS Online (item L2-08-migracao-agol) ---------- */
+const AGOL_ESTADO_ROTULO = {
+  nunca_publicado: 'tipo_camada.agol_estado_nunca_publicado',
+  pendente: 'tipo_camada.agol_estado_pendente',
+  publicando: 'tipo_camada.agol_estado_publicando',
+  publicado: 'tipo_camada.agol_estado_publicado',
+  erro: 'tipo_camada.agol_estado_erro',
+};
+const AGOL_ESTADOS_EM_ANDAMENTO = new Set(['pendente', 'publicando']);
+
+function campoTexto(valor, rotulo, opcoes = {}) {
+  return h('input', { type: opcoes.senha ? 'password' : 'text', value: valor || '', placeholder: rotulo, autocomplete: 'off', class: 'campo-agol' });
+}
+
+async function montarAgol(raiz, item) {
+  limpar(raiz);
+  raiz.append(h('h5', {}, t('tipo_camada.agol_titulo')));
+  if (!item.dados || item.dados.fonte !== 'hospedada') {
+    raiz.append(h('p', { class: 'fraco' }, t('tipo_camada.agol_somente_hospedada')));
+    return;
+  }
+
+  let cred, pub;
+  try {
+    [cred, pub] = await Promise.all([
+      obter('/api/agol/credencial'),
+      obter(`/api/agol/publicacoes/${encodeURIComponent(item.id)}`),
+    ]);
+  } catch {
+    raiz.append(h('p', { class: 'erro' }, t('tipo_camada.agol_erro_generico')));
+    return;
+  }
+  if (cred.status !== 200) { raiz.append(h('p', { class: 'erro' }, mensagemDe(cred))); return; }
+  const c = cred.json;
+
+  raiz.append(h('p', { class: 'fraco' }, c.configurado
+    ? t('tipo_camada.agol_credencial_configurada', { usuario: c.usuario || '—', portal: c.portal || '' })
+    : t('tipo_camada.agol_credencial_ausente')));
+
+  const portalEl = campoTexto(c.portal || 'https://www.arcgis.com', t('tipo_camada.agol_portal'));
+  const usuarioEl = campoTexto(c.usuario, t('tipo_camada.agol_usuario'));
+  const tipoEl = h('select', { class: 'campo-agol' },
+    h('option', { value: 'senha' }, t('tipo_camada.agol_tipo_senha')),
+    h('option', { value: 'token' }, t('tipo_camada.agol_tipo_token')));
+  tipoEl.value = c.tipo || 'senha';
+  const credencialEl = campoTexto('', t('tipo_camada.agol_credencial_campo'), { senha: true });
+  const rotuloEl = campoTexto(c.rotulo, t('tipo_camada.agol_rotulo'));
+  const avisoCred = h('p', { class: 'fraco' });
+  const salvarBt = h('button', { type: 'button', class: 'pequeno' }, t('tipo_camada.agol_salvar_credencial'));
+  const testarBt = h('button', { type: 'button', class: 'pequeno' }, t('tipo_camada.agol_testar'));
+
+  salvarBt.addEventListener('click', async () => {
+    salvarBt.disabled = true;
+    try {
+      const corpo = { portal: portalEl.value, usuario: usuarioEl.value, rotulo: rotuloEl.value };
+      if (credencialEl.value) { corpo.credencial = credencialEl.value; corpo.tipo = tipoEl.value; }
+      const r = await alterar('/api/agol/credencial', corpo);
+      avisoCred.className = r.status === 200 ? 'fraco' : 'erro';
+      avisoCred.textContent = r.status === 200 ? t('tipo_camada.agol_credencial_salva') : mensagemDe(r);
+      if (r.status === 200) { credencialEl.value = ''; await montarAgol(raiz, item); }
+    } finally {
+      salvarBt.disabled = false;
+    }
+  });
+
+  testarBt.addEventListener('click', async () => {
+    testarBt.disabled = true;
+    avisoCred.className = 'fraco';
+    avisoCred.textContent = '';
+    try {
+      const r = await enviar('/api/agol/testar');
+      if (r.status !== 200 || !r.json.ok) {
+        avisoCred.className = 'erro';
+        avisoCred.textContent = r.status === 200 ? r.json.mensagem : mensagemDe(r);
+        return;
+      }
+      avisoCred.className = 'fraco';
+      avisoCred.textContent = t('tipo_camada.agol_teste_ok', {
+        organizacao: r.json.organizacao || '—',
+        creditos: r.json.creditos_disponiveis ?? '—',
+      });
+    } finally {
+      testarBt.disabled = false;
+    }
+  });
+
+  raiz.append(
+    h('div', { class: 'campo-linha' }, portalEl),
+    h('div', { class: 'campo-linha' }, usuarioEl, tipoEl),
+    h('div', { class: 'campo-linha' }, credencialEl, rotuloEl),
+    h('div', { class: 'botoes' }, salvarBt, testarBt),
+    avisoCred,
+  );
+
+  const estado = pub.status === 200 ? pub.json : { estado: 'nunca_publicado' };
+  raiz.append(h('p', {}, t(AGOL_ESTADO_ROTULO[estado.estado] || 'tipo_camada.agol_estado_nunca_publicado')));
+  if (estado.servico_url) {
+    raiz.append(linha(t('tipo_camada.agol_servico_url'),
+      h('a', { href: estado.servico_url, target: '_blank', rel: 'noopener noreferrer' }, t('tipo_camada.agol_abrir_no_agol'))));
+  }
+  if (estado.n_feicoes !== null && estado.n_feicoes !== undefined) {
+    raiz.append(h('p', { class: 'fraco' }, t('tipo_camada.agol_n_feicoes', { n: estado.n_feicoes })));
+  }
+  if (estado.mensagem) raiz.append(h('p', { class: 'erro' }, estado.mensagem));
+  if (estado.atualizado_em) {
+    raiz.append(h('p', { class: 'fraco' }, t('tipo_camada.agol_atualizado_em', { data: dataHora(estado.atualizado_em) })));
+  }
+
+  const avisoPub = h('p', { class: 'erro' });
+  const publicarBt = h(
+    'button',
+    { type: 'button', class: 'pequeno primario', disabled: !c.configurado || AGOL_ESTADOS_EM_ANDAMENTO.has(estado.estado) },
+    t('tipo_camada.agol_publicar'),
+  );
+  if (!c.configurado) raiz.append(h('p', { class: 'fraco' }, t('tipo_camada.agol_publicar_desabilitado')));
+  publicarBt.addEventListener('click', async () => {
+    publicarBt.disabled = true;
+    try {
+      const r = await enviar('/api/agol/publicacoes', { item_id: item.id });
+      if (r.status !== 202) { avisoPub.textContent = mensagemDe(r); raiz.append(avisoPub); return; }
+      await montarAgol(raiz, item);
+    } finally {
+      publicarBt.disabled = false;
+    }
+  });
+  raiz.append(h('div', { class: 'botoes' }, publicarBt));
 }

@@ -17,3 +17,16 @@ ibm-plex-sans-3.201.woff2  3.201  e2291e842cf5af167122a22881a740c7f2dda7716f1e8c
 ibm-plex-mono-regular-2.3.woff2  2.3  08949f728dc52d528e69b1667d15c89a5686a4ee9a296ff90983985f99c380f7  OFL-1.1  https://raw.githubusercontent.com/google/fonts/main/ofl/ibmplexmono/OFL.txt (baixado de fonts.gstatic.com via CSS2 API, 06/09/2026; peso 400)
 ibm-plex-mono-medium-2.3.woff2  2.3  01d285447409c8a588692162439a038b8cbd7871309ee20267b0d2d91c6e8e22  OFL-1.1  https://raw.githubusercontent.com/google/fonts/main/ofl/ibmplexmono/OFL.txt (baixado de fonts.gstatic.com via CSS2 API, 06/09/2026; peso 500)
 pmtiles-4.5.0.js  4.5.0  caf981bc46f6327ee7e65d5dc964d89d38a69f60edca2bd4c5c890c21b554c6c  BSD-3-Clause  https://registry.npmjs.org/pmtiles/-/pmtiles-4.5.0.tgz (npm pack pmtiles@4.5.0, 06/09/2026; arquivo package/dist/pmtiles.js, build UMD global `pmtiles`; item L2-01-a-basemap-local-pmtiles — protocolo `pmtiles://` que o MapLibre usa para ler o PMTiles local por Range HTTP, sem servidor de tiles dinâmico)
+# item L1-03-modelo3d (10/09/2026): visualizador de modelo 3D e foto 360, portado do SIG de teste interno
+# (cópia dos mesmos dois arquivos que já rodam lá). pannellum é MIT, dentro da lista admitida. xeokit-sdk NÃO
+# é: é AGPL-3.0-only (com licença comercial alternativa da criadora, creoox/xeokit — LICENSE do pacote
+# @xeokit/xeokit-convert, conferida 10/09/2026, é a mesma família do xeokit-sdk). ⛔⛔ FORA da lista admitida
+# pelo ADR 0001 §11.2 regra 3 (BSD-3/MIT/Apache-2.0/ISC/OFL-1.1) — `tests/unit/test_vendor.py` REPROVA esta
+# linha de propósito, como gate: não editar a lista de licenças admitidas nem o teste para calar o aviso.
+# Ficou visível (não removida) para o dono decidir com o módulo inteiro na mesa: (a) licença comercial
+# xeokit, (b) trocar por visualizador BSD/MIT (Babylon.js + parser IFC próprio), ou (c) aceitar AGPL só
+# enquanto o módulo for interno/análise-beta-privado (nunca redistribuído fora da casa). Ver relatório da
+# sessão que portou o módulo.
+xeokit-sdk-2.6.113.js  2.6.113  89d380a867d82f96d2ee1e0a589bbb3820c4d2d67ffed5caeed641e34c3eaf42  AGPL-3.0-only  https://github.com/xeokit/xeokit-sdk (cópia do arquivo em uso em SIG de teste interno, build 2026-08-20; NÃO está na lista de licenças admitidas — ver nota acima)
+pannellum-2.5.7.js  2.5.7  51b8df674333612adbd807b6f47940d4d7aa07317d949d3f1314f84de965fc3c  MIT  https://github.com/mpetroff/pannellum/releases/tag/2.5.7 (cópia do arquivo em uso em SIG de teste interno)
+pannellum-2.5.7.css  2.5.7  da0906e704524cca414ce6160c7be218048dcdd0c13fafa84184f6ea0b084785  MIT  https://github.com/mpetroff/pannellum/releases/tag/2.5.7 (cópia do arquivo em uso em SIG de teste interno)
