@@ -19,7 +19,7 @@ from app.auth.sessao import Auth, autenticado
 from app.catalogo.comum import jsonb, registrar_evento, uuid_ok
 from app.catalogo.modelos import UUID_PADRAO, JobCriado, Modelo
 from app.erros import ErroAPI
-from app.ingestao.formatos import FORMATOS, FORMATOS_QUE_DEPENDEM_DE_LICENCA, ArquivoRecusado
+from app.ingestao.formatos import FORMATOS, ConteudoNaoCorresponde
 from app.ingestao.formatos import verificar_conteudo as _verificar_conteudo
 from app.jobs import servico
 from app.jobs.contexto import sessao_de
@@ -41,12 +41,69 @@ class ConfirmarEntrada(Modelo):
     contra a proposta gravada dentro da rota (nunca um esquema fixo — a proposta é que dá as opções válidas)."""
 
     titulo: str | None = Field(default=None, min_length=1, max_length=250)
-    camada: dict | None = None
     crs: dict | None = None
     codificacao: dict | None = None
     geometria: dict | None = None
     campos: list[dict] | None = None
     validade: dict | None = None
+    cad: dict | None = None   # DXF/DWG: unidade, camadas do desenho, blocos e pontos de controle (ADR 0020)
+
+
+def _confirmar_cad(pedido: dict, proposta: dict, perguntas_pendentes: list) -> dict:
+    """Valida as respostas de DXF/DWG CONTRA a proposta gravada (nunca contra o arquivo de novo, ADR 0005 §5):
+    unidade da lista do formato, camadas entre as que o desenho tem, blocos como ponto ou explodidos, e de 2 a 4
+    pontos de controle para a georreferência. O RMSE é calculado aqui para que a tela mostre o erro ANTES de
+    disparar a carga — quem confirma vê o resíduo, não descobre depois."""
+    from app.ingestao import cad as cad_mod
+    from app.ingestao import georreferencia
+
+    saida: dict = {}
+    unidade = pedido.get("unidade")
+    if unidade is not None:
+        try:
+            codigo = int(unidade)
+        except (TypeError, ValueError):
+            raise ErroAPI(422, "validacao", "cad.unidade deve ser o código $INSUNITS do DXF") from None
+        if codigo not in cad_mod.UNIDADES or cad_mod.UNIDADES[codigo][1] is None:
+            raise ErroAPI(422, "unidade_invalida", "unidade de desenho desconhecida",
+                          {"opcoes": [{"codigo": c, "nome": n, "metros": m}
+                                      for c, (n, m) in sorted(cad_mod.UNIDADES.items()) if m is not None]})
+        saida["unidade"] = codigo
+        saida["metros_por_unidade"] = cad_mod.UNIDADES[codigo][1]
+        if "unidade" in perguntas_pendentes:
+            perguntas_pendentes.remove("unidade")
+    if pedido.get("blocos") is not None:
+        if pedido["blocos"] not in ("ponto", "explodido"):
+            raise ErroAPI(422, "validacao", "cad.blocos deve ser 'ponto' ou 'explodido'")
+        saida["blocos"] = pedido["blocos"]
+    if pedido.get("camadas") is not None:
+        disponiveis = list(proposta.get("camadas_desenho") or [])
+        escolhidas = [str(c) for c in pedido["camadas"]]
+        faltando = [c for c in escolhidas if c not in disponiveis]
+        if faltando:
+            raise ErroAPI(422, "camada_desconhecida", f"camada {faltando[0][:80]!r} não está no desenho",
+                          {"camadas": disponiveis})
+        if not escolhidas:
+            raise ErroAPI(422, "validacao", "escolha ao menos uma camada do desenho")
+        saida["camadas"] = escolhidas
+    pontos = (pedido.get("georreferencia") or {}).get("pontos")
+    if pontos:
+        try:
+            origem = [(float(p["desenho"][0]), float(p["desenho"][1])) for p in pontos]
+            destino = [(float(p["terreno"][0]), float(p["terreno"][1])) for p in pontos]
+        except (KeyError, IndexError, TypeError, ValueError):
+            raise ErroAPI(422, "validacao",
+                          "cada ponto de controle precisa de desenho:[x,y] e terreno:[x,y]") from None
+        try:
+            ajuste = georreferencia.ajustar(origem, destino)
+        except (georreferencia.PontosInsuficientes, georreferencia.AjusteImpossivel) as e:
+            raise ErroAPI(422, "georreferencia_invalida", str(e)) from e
+        saida["georreferencia"] = {"pontos": [{"desenho": list(o), "terreno": list(d)}
+                                              for o, d in zip(origem, destino, strict=True)],
+                                  "ajuste": ajuste}
+    if "georreferencia" in perguntas_pendentes and (pontos or saida.get("unidade") is not None):
+        perguntas_pendentes.remove("georreferencia")
+    return saida
 
 
 def _importacao_json(r: dict) -> dict:
@@ -73,10 +130,9 @@ def _carregar(cur, auth: Auth, importacao_id: str) -> dict:
 @router.post("/api/importacoes", status_code=202, openapi_extra=PUBLICAR)
 def criar(corpo: ImportacaoEntrada, request: Request, auth: Auth = autenticado("conteudo.publicar_camada")):
     if corpo.formato not in FORMATOS:
-        motivo = FORMATOS_QUE_DEPENDEM_DE_LICENCA.get(corpo.formato)
         raise ErroAPI(
             422, "formato_nao_suportado",
-            motivo or f"formato {corpo.formato!r} não suportado nesta instalação; aceitos: {sorted(FORMATOS)}",
+            f"formato {corpo.formato!r} não suportado nesta instalação; aceitos: {sorted(FORMATOS)}",
             {"aceitos": sorted(FORMATOS)},
         )
     arquivo_id = uuid_ok(corpo.arquivo_id)
@@ -92,12 +148,8 @@ def criar(corpo: ImportacaoEntrada, request: Request, auth: Auth = autenticado("
         raise ErroAPI(404, "objeto_inexistente", "o objeto do arquivo não existe mais no armazenamento") from e
     try:
         _verificar_conteudo(corpo.formato, dados)
-    except ArquivoRecusado as e:
-        # ArquivoRecusado é a MÃE de ConteudoNaoCorresponde E de ZipSuspeito. Capturar só a primeira deixava
-        # um zip malformado ("File is not a zip file") escapar como 500 com rastro (achado do adversário do
-        # turno 3). Toda recusa nova de conteúdo herda de ArquivoRecusado e cai aqui.
-        codigo = "zip_suspeito" if type(e).__name__ == "ZipSuspeito" else "conteudo_nao_corresponde"
-        raise ErroAPI(422, codigo, str(e)) from e
+    except ConteudoNaoCorresponde as e:
+        raise ErroAPI(422, "conteudo_nao_corresponde", str(e)) from e
 
     item_id = str(uuid.uuid4())
     with db.db(auth.contexto()) as cur:
@@ -136,22 +188,13 @@ def listar(limite: int = 50, deslocamento: int = 0, auth: Auth = autenticado(esc
     return {"itens": [_importacao_json(r) for r in linhas], "total": len(linhas)}
 
 
-# ATENÇÃO À ORDEM: rota de caminho LITERAL vem sempre ANTES da rota com parâmetro do mesmo prefixo. O
-# roteador do Starlette casa na ORDEM DE DECLARAÇÃO e `/api/importacoes/{id}` casa a palavra "formatos" —
-# declarada depois, esta rota respondia 404 "importação inexistente" (achado do adversário do turno 3).
-# `tests/api/test_rotas_sombreadas.py` reprova qualquer rota nova que caia nessa armadilha.
 @router.get("/api/importacoes/formatos", openapi_extra=LER)
-def formatos_aceitos():
-    """Lista de formatos. `aceito: true` é o que ESTA instalação importa; `aceito: false` é o que a
-    plataforma conhece e não traz, com o motivo escrito (hoje só o DWG, que depende de conversor de terceiro
-    com licença própria) — a tela mostra o motivo em vez de esconder o tipo."""
-    aceitos = [{"tipo": f.nome, "extensoes": list(f.extensoes), "rotulo": f.rotulo, "driver": f.driver,
-                "aceito": True, "motivo": None}
-               for f in FORMATOS.values()]
-    recusados = [{"tipo": nome, "extensoes": [], "rotulo": nome.upper(), "driver": None,
-                  "aceito": False, "motivo": motivo}
-                 for nome, motivo in FORMATOS_QUE_DEPENDEM_DE_LICENCA.items()]
-    return aceitos + recusados
+def formatos_aceitos(auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """Lista os formatos que ESTA instalação aceita importar. O conteúdo é estático e igual para todo
+    inquilino, mas a rota exige sessão ou token como as vizinhas: sem autenticação ela seria indistinguível
+    de esquecimento, e revelaria a superfície de ingestão da instalação a quem não entrou. A rota vive ANTES
+    de `/api/importacoes/{id}` de propósito — atrás dele o `{id}` casava primeiro e devolvia 404."""
+    return [{"tipo": f.nome, "extensoes": list(f.extensoes), "rotulo": f.rotulo} for f in FORMATOS.values()]
 
 
 @router.get("/api/importacoes/{id}", openapi_extra=LER)
@@ -172,30 +215,6 @@ def confirmar(id: str, corpo: ConfirmarEntrada, request: Request,
 
         confirmacao: dict = {}
         perguntas_pendentes = list(proposta.get("perguntas") or [])
-
-        # ------------------------------------------------------------ camada do arquivo (multi-camada)
-        # A inspeção grava a proposta de TODAS as camadas em `proposta["camadas"]` e copia a primeira com dado
-        # para o topo. Quando há mais de uma, "camada" é pergunta obrigatória: nada é escolhido em silêncio.
-        # Escolher outra camada troca os campos/geometria/CRS validados abaixo pelos DAQUELA camada.
-        camadas = proposta.get("camadas") or []
-        if corpo.camada is not None and corpo.camada.get("escolhida"):
-            nome = corpo.camada["escolhida"]
-            opcoes = [c["camada_origem"] for c in camadas] or [proposta.get("camada_origem")]
-            if nome not in opcoes:
-                raise ErroAPI(422, "camada_nao_permitida",
-                              f"camada {nome!r} não está no arquivo; opções: {opcoes}", {"opcoes": opcoes})
-            confirmacao["camada"] = {"escolhida": nome}
-            escolhida = next((c for c in camadas if c["camada_origem"] == nome), None)
-            if escolhida is not None:
-                proposta = {**proposta, **{k: v for k, v in escolhida.items()
-                                           if k in ("camada_origem", "feicoes", "geometria", "crs", "campos",
-                                                    "validade")},
-                            "camada_escolhida": nome}
-                confirmacao["titulo"] = escolhida.get("titulo")
-                # as perguntas pendentes passam a ser as DA CAMADA ESCOLHIDA (mais a de camada, já respondida)
-                perguntas_pendentes = list(escolhida.get("perguntas") or [])
-            if "camada" in perguntas_pendentes:
-                perguntas_pendentes.remove("camada")
 
         if corpo.crs is not None:
             srid = corpo.crs.get("srid")
@@ -243,25 +262,18 @@ def confirmar(id: str, corpo: ConfirmarEntrada, request: Request,
                 if base["nome"] not in mencionados:
                     campos_saida.append({**base, "importar": True})
             confirmacao["campos"] = campos_saida
+        if corpo.cad is not None:
+            confirmacao["cad"] = _confirmar_cad(corpo.cad, proposta, perguntas_pendentes)
         if corpo.titulo:
             confirmacao["titulo"] = corpo.titulo
+        # DXF/DWG: a pendência de georreferência é respondida de duas maneiras — o EPSG em que o desenho já
+        # está, ou os pontos de controle. Confirmar o CRS basta.
+        if "georreferencia" in perguntas_pendentes and "crs" in confirmacao:
+            perguntas_pendentes.remove("georreferencia")
 
         if perguntas_pendentes:
             raise ErroAPI(422, "perguntas_pendentes", "há perguntas sem resposta na proposta",
                           {"perguntas": perguntas_pendentes})
-
-        # Recusa explícita (nunca silêncio, nunca job que morre no meio): camada sem geometria não é carregada
-        # nesta passagem. Fica dito o que não entra e por quê — a tabela sem coluna espacial é a cláusula que
-        # falta do portão do L0-04-d ("CSV sem coluna de coordenada vira tabela sem geom"), registrada no
-        # handoff do turno 3 como pendência do item, não como defeito escondido.
-        if not ((proposta.get("geometria") or {}).get("escolhida")):
-            raise ErroAPI(
-                422, "camada_sem_geometria",
-                f"a camada {proposta.get('camada_origem')!r} não tem geometria; esta passagem só carrega "
-                "camada com geometria. Tabela sem coluna espacial (planilha, CSV sem coluna de coordenada, "
-                "tabela de atributo de GeoPackage) ainda não é importada — nada foi criado.",
-                {"camada": proposta.get("camada_origem")},
-            )
 
         cur.execute(
             "UPDATE plat.importacao SET estado = 'confirmada', confirmacao = %s, atualizado_em = now() "
@@ -276,12 +288,11 @@ def confirmar(id: str, corpo: ConfirmarEntrada, request: Request,
 
 
 @router.delete("/api/importacoes/{id}", status_code=204, response_class=Response, openapi_extra=PUBLICAR)
-def apagar(id: str, request: Request, auth: Auth = autenticado("conteudo.publicar_camada")):
+def apagar(id: str, auth: Auth = autenticado("conteudo.publicar_camada")):
     with db.db(auth.contexto()) as cur:
         r = _carregar(cur, auth, id)
         if r["estado"] not in ESTADOS_APAGAVEIS:
             raise ErroAPI(409, "estado_invalido", f"importação em estado {r['estado']!r} não pode ser apagada")
         cur.execute("DELETE FROM plat.importacao WHERE id = %s::uuid", (r["id"],))
-        registrar_evento(cur, request, "importacoes/apagar", "importacao", str(r["id"]), {"estado": r["estado"]})
     return Response(status_code=204)
 

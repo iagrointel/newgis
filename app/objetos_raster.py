@@ -1,4 +1,4 @@
-"""Objetos de IMAGEM por inquilino no Garage (item L1-01-d-garage-por-inquilino; ADR 20260908T1255, sobre o ADR 0006).
+"""Objetos de IMAGEM por inquilino no Garage (item L1-01-d-garage-por-inquilino; ADR 0016, sobre o ADR 0006).
 Constrói EM CIMA de `app/objetos.py` (balde/chaves/cota por inquilino, `plat.arquivo`, `garantir_bucket`) o que a
 linha L1 exige e o adaptador genérico não dava:
 
@@ -18,7 +18,7 @@ linha L1 exige e o adaptador genérico não dava:
 
 A chave de ESCRITA (RW) só existe dentro de `objetos._cliente(bucket)` (processo da API/worker); nenhuma rota
 devolve o segredo dela. A chave só-leitura sai por `GET /api/arquivos/_chave-leitura` (privilégio
-`org.integracoes`, só sessão) porque o Pro precisa dela para a conexão S3 — decisão registrada no ADR 20260908T1255."""
+`org.integracoes`, só sessão) porque o Pro precisa dela para a conexão S3 — decisão registrada no ADR 0016."""
 
 from __future__ import annotations
 
@@ -250,8 +250,8 @@ def credenciais_leitura(cur) -> dict:
     """A chave SÓ-LEITURA do inquilino do contexto com o que a conexão S3 do ArcGIS Pro (`Create Cloud Storage
     Connection File`, provedor MinIO/S3 compatível, path-style) e o TiTiler (`/vsis3`) precisam: endpoint, região,
     balde, id e segredo. Nunca a chave RW. `endpoint` é o interno (`PLAT_GARAGE_URL`); a exposição pública por
-    HTTPS é decisão de infraestrutura registrada no ADR 20260908T1255 (pendência), por isso sai também
-    `endpoint_publico` vazio até existir."""
+    HTTPS é decisão de infraestrutura registrada no ADR 0016 (pendência), por isso sai também `endpoint_publico`
+    vazio até existir."""
     tenant_id, slug = objetos._tenant_atual(cur)
     bucket = objetos.garantir_bucket(cur, tenant_id, slug)
     return {

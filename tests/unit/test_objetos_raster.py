@@ -1,8 +1,8 @@
 """Nome de objeto por conteúdo, recusa de travessia e tradução do erro do Garage (item L1-01-d-garage-por-inquilino;
-ADR 20260908T1255). Tudo aqui é puro: nenhuma destas asserções toca o Garage nem o banco — o que precisa da
-instância viva está em tests/api/test_garage_inquilino.py. A última função compara a expressão do caminho
-`/svc/<token>/cog/` que a APLICAÇÃO usa com a que o NGINX usa (deploy/nginx.conf): se as duas divergirem, o
-nginx entrega um caminho que a autorização não sabe ler."""
+ADR 0016). Tudo aqui é puro: nenhuma destas asserções toca o Garage nem o banco — o que precisa da instância viva
+está em tests/api/test_garage_inquilino.py. A última função compara a expressão do caminho `/svc/<token>/cog/` que
+a APLICAÇÃO usa com a que o NGINX usa (deploy/nginx.conf): se as duas divergirem, o nginx entrega um caminho que a
+autorização não sabe ler."""
 
 import hashlib
 import re

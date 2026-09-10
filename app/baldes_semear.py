@@ -1,4 +1,4 @@
-"""Semeadura idempotente dos baldes por inquilino no Garage (item L1-01-d; passo g3 do install.sh; ADR 20260908T1255).
+"""Semeadura idempotente dos baldes por inquilino no Garage (item L1-01-d; passo g3 do install.sh; ADR 0016).
 Lê `id slug` por linha no stdin — a lista vem do psql como postgres (`SELECT id, slug FROM plat.tenant WHERE
 ativo`), porque a role plat_app só enxerga o próprio inquilino pela RLS — e, para cada um, chama
 `objetos.semear_bucket` dentro do contexto daquele inquilino. Imprime uma linha por balde e um resumo; a 2ª
