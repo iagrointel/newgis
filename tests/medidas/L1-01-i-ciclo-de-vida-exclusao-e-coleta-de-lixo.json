@@ -36,6 +36,15 @@
    },
    "unidade": "itens",
    "comando": "plat raster gc --inquilino zt-inq-f290b1 (subprocesso)"
+  },
+  "contexto_da_maquina": {
+   "valor": {
+    "carga_1min": 1.03,
+    "ram_livre_gb": 8.67,
+    "medido_em": "2026-09-08T22:15:00Z"
+   },
+   "unidade": "contexto",
+   "comando": "os.getloadavg()[0] e MemAvailable de /proc/meminfo, lidos no fechamento do item — APÓS a rodada de testes de 21:51 (não simultâneos); cláusula de número de desempenho: carga_1min <= 8 nos 12 núcleos"
   }
  },
  "gerado_em": "2026-09-08T21:51:50Z",
