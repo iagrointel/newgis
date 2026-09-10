@@ -30,6 +30,7 @@ from app.catalogo import tipos as tipos_item
 from app.catalogo.comum import jsonb
 from app.imagens import cog
 from app.imagens import pgstac as ps
+from app.imagens import proveniencia as prov
 from app.imagens import raster_item as ri
 from app.imagens.cog import ErroConversao
 from app.imagens.validacao import RecusaValidacao, validar
@@ -39,6 +40,7 @@ EXTENSOES_STAC = (
     "https://stac-extensions.github.io/projection/v1.1.0/schema.json",
     "https://stac-extensions.github.io/raster/v1.1.0/schema.json",
     "https://stac-extensions.github.io/file/v2.1.0/schema.json",
+    prov.EXTENSAO_PROCESSING,  # item L1-01-j: processing:software / processing:lineage
 )
 SLUG_COLECAO = "imagens"
 
@@ -95,7 +97,7 @@ def _asset_objeto(o: dict, papel: list[str], titulo: str, tipo_midia: str) -> di
 
 def _item_stac(
     item_id: str, colecao_id: str, titulo: str, rel, stats: list[dict], geometria: dict, bbox: list[float],
-    objetos_ref: dict, versoes: dict, nodata_final: list,
+    objetos_ref: dict, versoes: dict, nodata_final: list, cadeia: list[dict],
 ) -> dict:
     quando = datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
     raster_bandas = []
@@ -124,7 +126,22 @@ def _item_stac(
                                "application/octet-stream"),
         "miniatura": _asset_objeto(objetos_ref["miniatura"], ["thumbnail"], "miniatura 600x400", "image/png"),
     }
-    return {
+    properties = {
+        "datetime": quando,
+        "title": titulo,
+        "proj:epsg": rel.epsg,
+        "proj:shape": [rel.altura, rel.largura],
+        "proj:transform": rel.geotransform,
+        "plat:perfil": "visual+cientifico",
+        "plat:epsg_origem": rel.epsg_origem,
+        "plat:nodata": nodata_final,
+        "plat:avisos_validacao": rel.avisos,
+        "plat:versoes": versoes,
+    }
+    # item L1-01-j: proveniência verificável — cadeia medida NA HORA da conversão (origem 'ingestao'), nunca
+    # reconstruída para um item que acabou de nascer.
+    properties = prov.preencher_propriedades_proveniencia(properties, versoes=versoes, cadeia=cadeia, origem="ingestao")
+    item = {
         "type": "Feature",
         "stac_version": "1.0.0",
         "stac_extensions": list(EXTENSOES_STAC),
@@ -132,21 +149,13 @@ def _item_stac(
         "collection": colecao_id,
         "geometry": geometria,
         "bbox": bbox,
-        "properties": {
-            "datetime": quando,
-            "title": titulo,
-            "proj:epsg": rel.epsg,
-            "proj:shape": [rel.altura, rel.largura],
-            "proj:transform": rel.geotransform,
-            "plat:perfil": "visual+cientifico",
-            "plat:epsg_origem": rel.epsg_origem,
-            "plat:nodata": nodata_final,
-            "plat:avisos_validacao": rel.avisos,
-            "plat:versoes": versoes,
-        },
+        "properties": properties,
         "assets": assets,
         "links": [],
     }
+    # último passo: selar o manifesto (plat:manifesto_sha256 sobre o item inteiro MENOS essa própria chave) —
+    # qualquer edição depois disto quebra o hash, que é o objetivo (ver app/imagens/proveniencia.py).
+    return prov.selar_manifesto(item)
 
 
 @tarefa(
@@ -230,14 +239,17 @@ def imagens_ingestar(ctx, arquivo_id: uuid.UUID, titulo: str | None = None,
                                  usuario_id=ctx.usuario_id)
 
     geometria, bbox = _geometria_4326(rel)
+    bruto_sha256 = dados_arq.get("sha256") or ""
     objetos_ref = {
         "visual": {**o_vis, "compressao": visual.compressao},
         "cientifico": o_cient,
-        "bruto": {"chave": chave_bruto, "sha256": dados_arq.get("sha256") or "", "bytes": bytes_baixados},
+        "bruto": {"chave": chave_bruto, "sha256": bruto_sha256, "bytes": bytes_baixados},
         "miniatura": o_mini,
     }
+    # item L1-01-j: comando exato + sha256 de entrada/saída de cada passo, medidos NA HORA da conversão.
+    cadeia = prov.montar_cadeia_ingestao(bruto_sha256=bruto_sha256, cientifico=cientifico, visual=visual)
     stac = _item_stac(item_id, ps.nome_colecao(ctx.tenant_id, SLUG_COLECAO), titulo_final, rel, stats,
-                      geometria, bbox, objetos_ref, versoes, rel.nodata_final())
+                      geometria, bbox, objetos_ref, versoes, rel.nodata_final(), cadeia)
 
     ctx.progresso(96, "gravando o catálogo (STAC + item)")
     dados_item = {

@@ -432,6 +432,20 @@ def baixar(chave: str, destino) -> int:
     return escrito
 
 
+def sha256_remoto(chave: str) -> str:
+    """Sha256 do objeto RELIDO do balde em stream, nunca inteiro em RAM (item L1-01-j: o COG científico de
+    uma cena chega a centenas de MB) — é o mecanismo de CONFERÊNCIA que torna a proveniência do Lastro
+    VERIFICÁVEL (baixa de novo, recalcula, compara), não prometida. Usa a chave só-leitura (mesma regra de
+    `fonte_gdal`: conferir nunca precisa de RW). `FileNotFoundError`/`ChaveInvalida`/`ErroGarage` sobem ao
+    chamador sem tratamento — "não consegui conferir" é diferente de "conferi e diverge"."""
+    bucket, obj_key = _chave_e_objeto(chave)
+    cli = _cliente(bucket, ro=True)
+    h = hashlib.sha256()
+    for pedaco in cli.get_stream(bucket["bucket_alias"], obj_key):
+        h.update(pedaco)
+    return h.hexdigest()
+
+
 def apagar(chave: str) -> bool:
     """`True` só quando havia objeto (idempotente: a segunda chamada devolve `False`). O DELETE do S3/Garage é
     idempotente no sentido dele (sempre 204, exista ou não o objeto) — por isso o HEAD prévio decide o retorno,

@@ -115,6 +115,25 @@ def item_criar(cur, tenant_id: int, colecao_id: str, corpo: dict[str, Any]) -> d
     return conteudo
 
 
+def item_atualizar(cur, tenant_id: int, colecao_id: str, item_id: str, corpo: dict[str, Any]) -> dict:
+    """Atualiza um item STAC que já existe (item L1-01-j: preencher/recalcular a proveniência sem recriar o
+    item nem tocar nos assets). `pgstac.update_item` substitui o conteúdo inteiro — nunca cria; por isso o
+    item alvo tem de existir E ser do inquilino antes de chamar (mesmas duas checagens de `item_criar`, na
+    mesma ordem: 404 para os dois casos indistinguíveis de propósito — coleção alheia e item inexistente)."""
+    if colecao_obter(cur, tenant_id, colecao_id) is None:
+        raise ErroAPI(404, "colecao_inexistente", "coleção inexistente")
+    if item_obter(cur, tenant_id, colecao_id, item_id) is None:
+        raise ErroAPI(404, "item_inexistente", "item inexistente")
+    if str(corpo.get("id")) != str(item_id):
+        raise ErroAPI(422, "item_id_divergente", "id do corpo diverge do item alvo")
+    if corpo.get("collection") not in (None, colecao_id):
+        raise ErroAPI(422, "colecao_divergente", "properties.collection do corpo diverge da coleção")
+    conteudo = {**corpo, "type": "Feature", "stac_version": corpo.get("stac_version", "1.0.0"),
+               "collection": colecao_id}
+    cur.execute("SELECT pgstac.update_item(%s::jsonb)", (jsonb(conteudo),))
+    return conteudo
+
+
 def itens_criar_lote(cur, colecao_id: str, itens: list[dict]) -> int:
     """Ingestão em massa direto no `items_staging` do pgstac (usada pela semeadura sintética de teste,
     tests/api/imagens/test_medida_10000.py) — o CALLER já garantiu que `colecao_id` é do inquilino e que
