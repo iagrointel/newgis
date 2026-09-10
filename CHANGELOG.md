@@ -1008,6 +1008,22 @@ desenvolvimento sem objetos); martin/titiler/worker continuam informativos. O te
 `test_saude_reprova_quando_o_garage_esta_fora` saiu de `xfail(strict=True)` para portão em pé, com
 teste complementar da fronteira (`test_saude_200_quando_garage_ausente`) e o contrato do corpo
 atualizado em `tests/api/test_saude.py`.
+## turno 8, setembro de 2026 (item L6-03-paridade-conectores: as duas linhas `fora (decisão)` que o adversário provou falsas)
+
+O adversário do item reproduziu 11 linhas `feito` OK e provou 2 FALSIFICADAS. As linhas "armazém em
+nuvem" e "NoSQL (Knowledge Server)" diziam `fora (decisão)`, e nenhuma decisão do dono cobre nenhuma
+das duas — o registro `laco/estado.json`, D18-D41, não fala de armazém em nuvem nem de Knowledge
+Server; a linha do armazém citava ainda "L3L6_CONCEITO seção 14", seção que não existe no documento
+(as seções são A1-A10 e B1-B13) e que não trata do assunto. Correção honesta: as duas linhas agora
+declaram que NENHUM item do backlog e NENHUMA decisão do dono cobre a exclusão, e a linha "pasta (file
+share)" perde o "decisão:" sem dono e fica `fora (L7-11)` (o item do appliance existe e é o que
+cobre). A linha STAC citava `tests/api/imagens/test_stacit_gdal.py` no ramo `wt/stac`, que não tem o
+arquivo; a citação aponta agora `wt/il101apgsta` (item L1-01-a, na fila de junção, onde o teste
+existe — conferido com `git cat-file -e`). A trava do guard (`tests/unit/test_paridade_conectores.py`)
+era mais fraca que a regra escrita nela: linha `fora` só precisava de um parêntese no estado. Agora a
+trava cobra o que a regra promete: linha `fora` nomeia item (`L<n>-<n>`) ou decisão (`D<n>`) ou
+declara "nenhum item"; e TODO caminho `tests/...` citado em qualquer célula da linha (a coluna "nós"
+inclusive) tem de existir em `master` ou num ramo nomeado na própria linha. Suíte: 36 passed.
 
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
@@ -4408,3 +4424,11 @@ entrega (`GET /api/arquivos/{sha}`) sai com `attachment` para tudo que não é i
 `docs/SEGURANCA.md` §9 lista os tipos por classe (teste confere). `tests/seguranca/test_upload.py`: EICAR com
 clamd de teste, SVG com script, zip de 1 GiB de zeros, KMZ com 10 mil entradas, polyglot GIF+HTML, anexo .html.
 ClamAV real segue fora (D21, ~1,3 GiB de RAM de assinaturas).
+## turno 4 (líder 5), setembro de 2026 (item L6-03-paridade-conectores: seção "Conectores e acervo" de docs/PARIDADE.md com teste que prende cada linha)
+
+35 linhas (tipos de camada por URL do Map Viewer 11.4, itens de data store, Living Atlas, Data Pipelines, Data
+Interoperability, cascateamento do GeoServer) em feito/parcial/fora, cada `feito`/`parcial` apontando para o
+arquivo de teste e o ramo da fila onde ele vive. `docs/urls_paridade.txt` (20 URLs de referência) testado por
+`scripts/paridade_urls_testar.py` → `tests/medidas/L6-03-paridade-conectores.json` (20 de 20 com 200 em 07/09).
+`tests/unit/test_paridade_conectores.py` reprova linha `feito`/`parcial` sem teste existente (em master ou no
+ramo citado, via `git cat-file`), linha `fora` com teste, chave citada sem URL e URL sem 200 na medida.

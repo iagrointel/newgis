@@ -1,0 +1,24 @@
+# URLs de referência da seção "Conectores e acervo" de docs/PARIDADE.md (item L6-03-paridade-conectores).
+# Uma por linha: chave<TAB>URL. Testadas por HTTP GET; o resultado (código e data) fica em
+# tests/medidas/L6-03-paridade-conectores.json, gerado por scripts/paridade_urls_testar.py — este arquivo
+# nunca carrega o código digitado à mão. Linha que começa com # é comentário.
+E11-mv-tipos	https://enterprise.arcgis.com/en/portal/11.4/use/add-layers-mv.htm
+E11-mv-url	https://enterprise.arcgis.com/en/portal/11.4/use/add-layers-from-url.htm
+E11-mv-add	https://enterprise.arcgis.com/en/portal/11.4/use/add-layers.htm
+E11-add-items	https://enterprise.arcgis.com/en/portal/11.4/use/add-items.htm
+E11-datastore	https://enterprise.arcgis.com/en/portal/11.4/use/data-store-items.htm
+E11-datastore-add	https://enterprise.arcgis.com/en/portal/11.4/use/add-data-store-item.htm
+E11-living-atlas	https://enterprise.arcgis.com/en/portal/11.4/use/what-is-living-atlas.htm
+E11-living-atlas-admin	https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-living-atlas-content.htm
+BA-living-atlas	https://doc.arcgis.com/en/business-analyst/web/understand-arcgis-living-atlas.htm
+DP-about	https://doc.arcgis.com/en/data-pipelines/latest/get-started/about-data-pipelines.htm
+DP-editor	https://doc.arcgis.com/en/data-pipelines/latest/get-started/data-pipelines-editor.htm
+DP-faq	https://doc.arcgis.com/en/data-pipelines/latest/get-started/faq.htm
+DP-tarefas	https://doc.arcgis.com/en/data-pipelines/latest/get-started/schedule-data-pipeline-tasks.htm
+PRO-interop	https://pro.arcgis.com/en/pro-app/3.4/help/data/data-interoperability/what-is-the-data-interoperability-extension.htm
+PRO-interop-formatos	https://pro.arcgis.com/en/pro-app/3.4/help/data/data-interoperability/supported-formats-with-the-data-interoperability-extension.htm
+GS-cascade	https://docs.geoserver.org/stable/en/user/data/cascaded/index.html
+E11-geojson	https://enterprise.arcgis.com/en/portal/11.4/use/geojson.htm
+E11-kml	https://enterprise.arcgis.com/en/portal/11.4/use/kml.htm
+AGOL-geojson	https://doc.arcgis.com/en/arcgis-online/reference/geojson.htm
+AGOL-kml	https://doc.arcgis.com/en/arcgis-online/reference/kml.htm
