@@ -161,7 +161,8 @@ def backup_executar(ctx, origem: str = "manual") -> dict:
     ctx.progresso(55, f"{tamanho / 1e6:.1f} MB despejados; subindo ao armazenamento do inquilino")
 
     with ctx.db() as cur:
-        tabelas = _contar_tabelas(cur, esquema)
+        # o dump é seletivo: contar o schema inteiro incluiria tabelas de outros inquilinos.
+        tabelas = len(tabelas)
         try:
             obj = objetos.guardar_arquivo(cur, "backup", tmp, "application/octet-stream", usuario_id=ctx.usuario_id)
         except Exception as e:
