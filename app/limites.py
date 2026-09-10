@@ -301,6 +301,9 @@ ORG_COTA_USUARIOS_MIN = 1
 ORG_COTA_BYTES_TETO_MAX = 1024 * 1024 * 1024 * 1024   # 1 TiB
 ORG_COTA_USUARIOS_TETO_MAX = 100_000
 ORG_COTA_USUARIOS_PADRAO = 2000           # bem acima do maior lote (LOTE_MAX=100) e do uso medido em demo (T3: 59)
+ORG_COTA_ITENS_MIN = 1                    # cota de itens do catálogo (tenant.config.catalogo.cota_itens, D16 da 011)
+ORG_USO_DIAS_PADRAO = 30                  # período padrão da tela/relatório de uso (L0-07-admin-org)
+ORG_USO_DIAS_MAX = 366                    # acima disso = 422 (a série é diária; um ano basta para o console)
 
 # --- perfil próprio do usuário (L0-02-g-perfil-usuario; POST/PUT /api/eu, app/auth/rotas_eu.py): idioma,
 # unidades, formato de data, visibilidade e foto (mesmo padrão do org_logo do L0-07-a — reaproveita
