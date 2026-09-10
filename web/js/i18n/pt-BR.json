@@ -645,7 +645,7 @@
   "grupos.vazio_inquilino": "nenhum grupo visível do inquilino",
   "grupos.vazio_meus": "você não participa de nenhum grupo",
   "inicio.atalhos_titulo": "Atalhos",
-  "inicio.compartilhar_texto": "pelo mapa ou por WMS/WFS/WMTS/OGC API — link pronto para colar em outro sistema.",
+  "inicio.compartilhar_texto": "pelo mapa ou por link de serviço: WFS, OGC API Features e FeatureServer (Esri) para camadas; WMTS e STAC para imagens. Pronto para colar no QGIS ou no ArcGIS.",
   "inicio.compartilhar_titulo": "Compartilhe",
   "inicio.enviar_texto": "arraste um GeoTIFF, shapefile, GeoPackage, GeoJSON, CSV ou outro arquivo geoespacial.",
   "inicio.enviar_titulo": "Envie",
