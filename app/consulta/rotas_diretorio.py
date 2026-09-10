@@ -78,9 +78,9 @@ def _camadas_visiveis(cur) -> list[dict]:
     """Itens de camada vetorial que a RLS deixa este token enxergar, com a pasta do catálogo.
     `plat.item` só devolve o que o inquilino do contexto pode ler — a segregação é do banco."""
     cur.execute(
-        "SELECT i.id, i.titulo, i.resumo, i.descricao, i.tags, i.dados, i.pasta_id, p.nome AS pasta "
+        "SELECT i.id, i.tipo, i.titulo, i.resumo, i.descricao, i.tags, i.dados, i.pasta_id, p.nome AS pasta "
         "FROM plat.item i LEFT JOIN plat.pasta p ON p.id = i.pasta_id "
-        "WHERE i.tipo = 'camada_vetorial' AND i.apagado_em IS NULL "
+        "WHERE i.tipo IN ('camada_vetorial', 'raster') AND i.apagado_em IS NULL "
         "ORDER BY p.nome NULLS FIRST, i.titulo"
     )
     return cur.fetchall()
@@ -92,7 +92,11 @@ def _nome_pasta(r: dict) -> str:
 
 
 def _servico(r: dict, prefixo_pasta: str) -> dict:
-    return {"name": f"{prefixo_pasta}{r['id']}", "type": "FeatureServer"}
+    # (10/09) O diretório listava só FeatureServer, então o ImageServer do item L1-25 existia mas não era
+    # DESCOBERTO: o cliente Esri tinha de receber a URL completa a mão em vez de navegar a raiz e clicar.
+    # Item raster entra aqui como ImageServer; o descritor de cada um segue em app/imagens/rotas_imageserver.py.
+    tipo = "ImageServer" if r.get("tipo") == "raster" else "FeatureServer"
+    return {"name": f"{prefixo_pasta}{r['id']}", "type": tipo}
 
 
 # ------------------------------------------------------------------ rest/info e generateToken
