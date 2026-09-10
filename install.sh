@@ -333,57 +333,21 @@ else
   echo "== h4. worker em contêiner PULADO (rode com --worker-container para instalar; ver ADR 0010 e docs/ARQUITETURA.md)"
 fi
 
-echo "== h5. retenção do journal (item L7-06-c)"
-JOURNALD=/etc/systemd/journald.conf.d/plat.conf
-mkdir -p /etc/systemd/journald.conf.d
-cp deploy/journald-plat.conf "$JOURNALD.novo"
-if [ -f "$JOURNALD" ] && cmp -s "$JOURNALD" "$JOURNALD.novo"; then
-  rm -f "$JOURNALD.novo"; echo "$JOURNALD já existe (igual)"
-else
-  mv "$JOURNALD.novo" "$JOURNALD"
-  echo "$JOURNALD escrito; vale no próximo: systemctl restart systemd-journald"
-fi
+echo "== h5. grades NTv2 do IBGE (item L2-17-crs-transformacoes; sistema de referência transversal)"
+bash grades_ibge/instalar.sh
 
 echo "== i. nginx"
 SITE=/etc/nginx/sites-enabled/$DOM
 # zona limit_req própria: 10 tentativas/min por IP em /api/login e /api/login/2fa (ADR 0002 seção 6.2)
 LIMITES=/etc/nginx/conf.d/plat_limites.conf
-cat > "$LIMITES.novo" <<'NGINXCONF'
-# plat: escrito pelo install.sh. Duas coisas moram aqui porque so valem no contexto http do nginx.
-# 1) limite por IP nos logins (ADR 0002 secao 6.2)
-limit_req_zone $binary_remote_addr zone=plat_login:10m rate=10r/m;
-# 2) formato de acesso em JSON por linha, com $request_id (item L7-06-c). O mesmo identificador vai ao
-#    upstream em X-Req-Id, entao a linha do nginx e a linha da API casam por igualdade, sem adivinhacao
-#    de horario. upstream_addr distingue quem atendeu (API, Martin ou TiTiler), que nao registram
-#    identificador de pedido proprio. Vai para o journal com a etiqueta plat_nginx, para `plat logs`
-#    ler tudo de um lugar so e a retencao ser a mesma dos outros servicos (SystemMaxUse/MaxRetentionSec).
-log_format plat_json escape=json '{"ts":"$time_iso8601","req_id":"$request_id","ip":"$remote_addr",'
-  '"metodo":"$request_method","rota":"$uri","consulta":"$args","status":$status,'
-  '"bytes":$body_bytes_sent,"tempo_ms":$request_time,"upstream":"$upstream_addr",'
-  '"upstream_status":"$upstream_status","agente":"$http_user_agent"}';
-NGINXCONF
+printf '# plat: limite por IP nos logins (ADR 0002 secao 6.2); escrito pelo install.sh\nlimit_req_zone $binary_remote_addr zone=plat_login:10m rate=10r/m;\n' > "$LIMITES.novo"
 if [ -f "$LIMITES" ] && cmp -s "$LIMITES" "$LIMITES.novo"; then rm -f "$LIMITES.novo"; echo "$LIMITES já existe (igual)"; else mv "$LIMITES.novo" "$LIMITES"; echo "$LIMITES escrito"; fi
-# perfil TLS + HTTP/2 + OCSP stapling (item L7-03-e): contexto http, só faz sentido com certificado no disco
-TLSCONF=/etc/nginx/conf.d/plat_tls.conf
-escrever_tls() {
-  if [ ! -d "/etc/letsencrypt/live/$DOM" ]; then
-    echo "$TLSCONF PULADO (sem certificado ainda; o install.sh volta aqui depois do certbot)"
-    return 0
-  fi
-  sed -e "s#DOMINIO#$DOM#g" deploy/nginx_tls.conf > "$TLSCONF.novo"
-  if [ -f "$TLSCONF" ] && cmp -s "$TLSCONF" "$TLSCONF.novo"; then rm -f "$TLSCONF.novo"; echo "$TLSCONF já existe (igual)"
-  else mv "$TLSCONF.novo" "$TLSCONF"; echo "$TLSCONF escrito (Mozilla intermediate, stapling)"; fi
-}
 escrever_nginx() {
   local bloco certbot_443 bloco_80
   bloco=$(sed -e "s#DOMINIO#$DOM#g" -e "s#APP_DIR#$APP_DIR#g" -e "s#PORTA#$PORTA#g" deploy/nginx.conf)
-  escrever_tls
   if [ -f "$SITE" ] && grep -q '# managed by Certbot' "$SITE"; then
     # bloco 443: HSTS fica (modelo); as linhas do certbot são preservadas; o bloco 80 do certbot (301) fica como está
-    # e a linha `listen 443 ssl` do certbot ganha o `http2` (no nginx 1.24 o HTTP/2 é opção do listen, não
-    # a diretiva `http2 on;` do 1.25.1+): sem isso o navegador fala HTTP/1.1 com uma conexão por recurso.
-    certbot_443=$(awk '/^server[[:space:]]*\{/{n++} n==1 && /# managed by Certbot/' "$SITE" \
-      | sed -E 's/^([[:space:]]*listen[^;]*[[:space:]]ssl)([[:space:]]*;)/\1 http2\2/')
+    certbot_443=$(awk '/^server[[:space:]]*\{/{n++} n==1 && /# managed by Certbot/' "$SITE")
     bloco_80=$(awk '/^server[[:space:]]*\{/{n++} n>=2' "$SITE")
     printf '%s\n\n%s\n}\n\n%s\n' "$bloco" "$certbot_443" "$bloco_80" > "$SITE.novo"
     echo "bloco 443 reescrito com HSTS, preservando $(printf '%s\n' "$certbot_443" | grep -c .) linhas do certbot"

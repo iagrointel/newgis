@@ -5,7 +5,6 @@ import { h, limpar } from './dom.js';
 import { t } from './i18n.js';
 import { tem } from './estado.js';
 import { sair } from '../auth/sessao.js';
-import { montarSino } from './notificacoes.js';
 
 export const TELAS = [
   { caminho: '/', chave: 'nav.inicio' },
@@ -13,7 +12,7 @@ export const TELAS = [
   { caminho: '/mapa', chave: 'nav.mapa' },
   { caminho: '/conexoes', chave: 'nav.conexoes' },
   { caminho: '/uploads', chave: 'nav.uploads', privilegio: 'conteudo.criar' },
-  { caminho: '/migracao', chave: 'nav.migracao', privilegio: 'conteudo.registrar_fonte' },
+  { caminho: '/crs', chave: 'nav.crs' },
   { caminho: '/conta', chave: 'nav.conta' },
   { caminho: '/admin/usuarios', chave: 'nav.usuarios', privilegio: 'membros.ver' },
   { caminho: '/admin/grupos', chave: 'nav.grupos' },
@@ -21,9 +20,7 @@ export const TELAS = [
   { caminho: '/admin/papeis', chave: 'nav.papeis', privilegio: 'papeis.gerir' },
   { caminho: '/admin/tokens', chave: 'nav.tokens', privilegio: 'tokens.gerar' },
   { caminho: '/admin/log', chave: 'nav.log', privilegio: 'org.log_ver' },
-  { caminho: '/admin/auditoria', chave: 'nav.auditoria', privilegio: 'org.log_ver' },
   { caminho: '/admin/organizacao', chave: 'nav.organizacao', privilegio: 'org.configurar' },
-  { caminho: '/temas', chave: 'nav.temas' },
 ];
 
 export function telasVisiveis(usuario) {
@@ -43,7 +40,6 @@ export function montarLayout({ usuario, ativo = location.pathname }) {
     ul.append(h('li', {}, a));
   }
   aside.append(h('nav', { 'aria-label': t('nav.rotulo') }, ul));
-  montarSino(aside);   /* sino de notificações (item L0-03-k) */
   const btSair = h('button', { type: 'button', class: 'pequeno', id: 'sair' }, t('nav.sair'));
   btSair.addEventListener('click', () => sair());
   /* item L0-02-g-perfil-usuario: "ver a foto na barra" — a mesma foto de /conta; sem foto, sem <img> nenhum

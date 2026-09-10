@@ -72,6 +72,7 @@ from app.estatistica.rotas import router as rotas_estatistica
 from app.estatistica.rotas_graficos import router as rotas_graficos
 from app.exportacao.rotas import router as rotas_exportacao
 from app.exportacao_inquilino.rotas import router as rotas_exportacao_inquilino
+from app.crs.rotas import router as rotas_crs
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.imagens.rotas_imagens import router as rotas_imagens
@@ -473,6 +474,9 @@ ROUTERS = [
     rotas_portal,
     # --- migração de Portal/AGOL (L2-08-a): /api/migracao/inventarios (leitura só-leitura do portal do cliente)
     rotas_migracao,
+    # --- sistema de referência (L2-17-crs-transformacoes): /api/crs (lista, detalhe, proj4, transformar);
+    # grades NTv2 do IBGE em grades_ibge/, escolhidas por área (app/crs/grades.py)
+    rotas_crs,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

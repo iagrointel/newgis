@@ -20,7 +20,7 @@ LOCAIS = ("127.0.0.1", "localhost")
 
 
 def local(base_url: str) -> bool:
-    """servidor de trilha com certificado autoassinado (scripts/servir_local.py --certificado): o e2e de escrita
+    """servidor de trilha com certificado autoassinado (scripts/servir_local.py --cert): o e2e de escrita
     precisa de https na mesma origem que PLAT_URL_PUBLICA, e só aí o erro de certificado é ignorado."""
     from urllib.parse import urlparse
 
@@ -130,9 +130,8 @@ class Tela:
             if m and int(m.group(1)) in self.esperados:
                 continue
             graves.append(linha)
+        assert graves == [], graves
         ruins = [(u, s) for u, s in self.respostas if s >= 400 and s not in self.esperados]
-        # o console do Chromium não diz QUAL recurso falhou; as respostas >= 400 dizem
-        assert graves == [], (graves, ruins)
         assert ruins == [], ruins
 
 

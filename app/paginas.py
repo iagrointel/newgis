@@ -106,6 +106,8 @@ PAGINAS = {
     "/geocodificar/{item_id}": "geocodificar_revisao.html",
     # --- migração de Portal/AGOL (L2-08-a-leitor-portal-inventario)
     "/migracao": "migracao.html",
+    # --- sistema de referência (L2-17-crs-transformacoes): lista curada + reprojeção de coordenada/bbox
+    "/crs": "crs.html",
 }
 router = APIRouter()
 

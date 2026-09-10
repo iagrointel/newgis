@@ -50,6 +50,11 @@ ESCOPOS_SEM_UUID = (
 ESCOPOS_SEM_UUID = (
     "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
     "geocodificar:usar", "amc:usar", "multiescala:usar", "admin:inquilino",
+    rf"geocodificar:usar|crs:usar|admin:inquilino)$"
+)
+ESCOPOS_SEM_UUID = (
+    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
+    "geocodificar:usar", "crs:usar", "admin:inquilino",
 )
 DESCRICAO = {
     "catalogo:ler": "listar e ler metadado de itens que o dono pode ler",
@@ -75,6 +80,8 @@ DESCRICAO = {
     "o terreno do próprio inquilino (L2-09-d; salvar como item exige conteudo.criar além do escopo)",
     "multiescala:usar": "criar área de estudo, fator e amostra, e rodar execução macro/micro do motor "
     "multicritério em grades aninhadas (L3-19-multiescala; dado e execução do próprio inquilino)",
+    "crs:usar": "listar CRS, ler definição proj4 e transformar coordenada/bbox (L2-17-crs-transformacoes; "
+    "serviço transversal sem estado por inquilino)",
     "admin:inquilino": "tudo o que o dono pode fazer pela API, exceto gerir tokens, senha, 2FA e sessões",
 }
 
