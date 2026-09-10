@@ -3,12 +3,12 @@
    porta de serviço (`/svc/<token>/raster/<item>/...`, app/imagens/rotas_tiles.py) não aceita cookie de sessão
    de propósito — é a porta para QGIS/ArcGIS/navegador de terceiro — então tanto a prévia quanto a seção
    Compartilhar usam o MESMO token de serviço reciclável (token_servico.js), nunca um por carregamento. */
-import { h } from '../../base/dom.js';
+import { h, limpar } from '../../base/dom.js';
 import { obter } from '../../base/api.js';
 import { botaoCopiar } from '../../base/dom.js';
 import { t } from '../../base/i18n.js';
 import { bytes } from '../formato.js';
-import { tokenServico } from './token_servico.js';
+import { tokenServico, renovarTokenServico } from './token_servico.js';
 
 export const tipo = 'raster';
 
@@ -24,8 +24,11 @@ function linha(rotulo, valor) {
   return h('div', { class: 'campo-linha' }, h('div', { class: 'rotulo' }, rotulo), h('div', { class: 'valor' }, valor));
 }
 
+const NOME_TOKEN = (item) => `svc-raster:${item.id}`;
+const ESCOPOS_TOKEN = ['imagens:ler'];
+
 async function token(item) {
-  return tokenServico(`svc-raster:${item.id}`, ['imagens:ler']);
+  return tokenServico(item, NOME_TOKEN(item), ESCOPOS_TOKEN);
 }
 
 /* ---------- Visão geral: resumo + prévia no mapa ---------- */
@@ -78,6 +81,36 @@ function montarMapaRaster(container, tileJson) {
 }
 
 /* ---------- Compartilhamento: URL de serviço para cliente externo ---------- */
+function montarUrls(raiz, item, tk) {
+  limpar(raiz);
+  const origem = location.origin;
+  const base = `${origem}/svc/${tk}/raster/${item.id}`;
+  const aviso = h('p', { class: 'fraco' });
+  const btRenovar = h('button', { type: 'button', class: 'pequeno' }, t('catalogo.servico_renovar'));
+  btRenovar.addEventListener('click', async () => {
+    btRenovar.disabled = true;
+    try {
+      const novo = await renovarTokenServico(item, NOME_TOKEN(item), ESCOPOS_TOKEN);
+      montarUrls(raiz, item, novo);
+      raiz.append(h('p', { class: 'fraco' }, t('catalogo.servico_renovado')));
+    } catch (e) {
+      aviso.textContent = e.message || t('catalogo.servico_erro_renovar');
+      raiz.append(aviso);
+    } finally {
+      btRenovar.disabled = false;
+    }
+  });
+  raiz.append(
+    h('p', { class: 'fraco' }, t('tipo_raster.compartilhar_ajuda')),
+    linha('TileJSON', campoUrl(`${base}/tilejson.json`)),
+    linha('WMTS · GetCapabilities', campoUrl(`${base}/wmts/1.0.0/WMTSCapabilities.xml`)),
+    linha(t('tipo_raster.tile_xyz'), campoUrl(`${base}/{z}/{x}/{y}.png`)),
+    linha('STAC', campoUrl(`${origem}/svc/${tk}/stac/`)),
+    h('p', {}, btRenovar),
+    h('p', {}, h('a', { href: '/mapa', class: 'pequeno' }, t('tipo_raster.abrir_no_mapa'))),
+  );
+}
+
 export async function compartilhar(item) {
   const raiz = h('div', { class: 'tipo-compartilhar' });
   let tk;
@@ -87,15 +120,6 @@ export async function compartilhar(item) {
     raiz.append(h('p', { class: 'erro' }, e.message));
     return raiz;
   }
-  const origem = location.origin;
-  const base = `${origem}/svc/${tk}/raster/${item.id}`;
-  raiz.append(
-    h('p', { class: 'fraco' }, t('tipo_raster.compartilhar_ajuda')),
-    linha('TileJSON', campoUrl(`${base}/tilejson.json`)),
-    linha('WMTS · GetCapabilities', campoUrl(`${base}/wmts/1.0.0/WMTSCapabilities.xml`)),
-    linha(t('tipo_raster.tile_xyz'), campoUrl(`${base}/{z}/{x}/{y}.png`)),
-    linha('STAC', campoUrl(`${origem}/svc/${tk}/stac/`)),
-    h('p', {}, h('a', { href: '/mapa', class: 'pequeno' }, t('tipo_raster.abrir_no_mapa'))),
-  );
+  montarUrls(raiz, item, tk);
   return raiz;
 }

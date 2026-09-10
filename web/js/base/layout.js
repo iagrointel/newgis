@@ -6,20 +6,37 @@ import { t } from './i18n.js';
 import { tem } from './estado.js';
 import { sair } from '../auth/sessao.js';
 
+/* rótulo de grupo (caixa alta, --fraco) mostrado ANTES do primeiro item de cada `grupo` — só aparece quando o
+   grupo muda em relação ao item anterior (telasVisiveis filtra por privilégio antes, então o rótulo nunca some
+   sozinho: o grupo todo pode ficar vazio e some junto). Sem colapsar (item L do pedido do dono): é só um
+   separador visual para a barra não virar uma lista indiferenciada de 17 itens. */
+export const ROTULOS_GRUPO = {
+  rede: 'nav.grupo_rede',
+  conta: 'nav.grupo_conta',
+  administracao: 'nav.grupo_administracao',
+};
+
 export const TELAS = [
   { caminho: '/', chave: 'nav.inicio' },
   { caminho: '/conteudo', chave: 'nav.conteudo' },
   { caminho: '/mapa', chave: 'nav.mapa' },
-  { caminho: '/conexoes', chave: 'nav.conexoes' },
-  { caminho: '/uploads', chave: 'nav.uploads', privilegio: 'conteudo.criar' },
-  { caminho: '/conta', chave: 'nav.conta' },
-  { caminho: '/admin/usuarios', chave: 'nav.usuarios', privilegio: 'membros.ver' },
-  { caminho: '/admin/grupos', chave: 'nav.grupos' },
-  { caminho: '/tarefas', chave: 'nav.tarefas', privilegio: 'jobs.executar' },
-  { caminho: '/admin/papeis', chave: 'nav.papeis', privilegio: 'papeis.gerir' },
-  { caminho: '/admin/tokens', chave: 'nav.tokens', privilegio: 'tokens.gerar' },
-  { caminho: '/admin/log', chave: 'nav.log', privilegio: 'org.log_ver' },
-  { caminho: '/admin/organizacao', chave: 'nav.organizacao', privilegio: 'org.configurar' },
+  /* rede de utilidades: leitura é `rls:visibilidade` no backend (app/rede_utilidades/rotas*.py LER) — não há
+     privilégio "rede.ver" no catálogo (app/auth/privilegios.py só tem rede.tracar/rede.editar), então ver a
+     tela é igual a Mapa/Conexões: qualquer sessão válida, sem `privilegio` aqui. */
+  { caminho: '/redes/simples', chave: 'nav.redes_simples', grupo: 'rede' },
+  { caminho: '/redes/diagrama', chave: 'nav.redes_diagrama', grupo: 'rede' },
+  { caminho: '/redes/controladores', chave: 'nav.redes_controladores', grupo: 'rede' },
+  { caminho: '/redes/configuracoes', chave: 'nav.redes_configuracoes', grupo: 'rede' },
+  { caminho: '/conexoes', chave: 'nav.conexoes', grupo: 'conta' },
+  { caminho: '/uploads', chave: 'nav.uploads', privilegio: 'conteudo.criar', grupo: 'conta' },
+  { caminho: '/conta', chave: 'nav.conta', grupo: 'conta' },
+  { caminho: '/tarefas', chave: 'nav.tarefas', privilegio: 'jobs.executar', grupo: 'conta' },
+  { caminho: '/admin/usuarios', chave: 'nav.usuarios', privilegio: 'membros.ver', grupo: 'administracao' },
+  { caminho: '/admin/grupos', chave: 'nav.grupos', grupo: 'administracao' },
+  { caminho: '/admin/papeis', chave: 'nav.papeis', privilegio: 'papeis.gerir', grupo: 'administracao' },
+  { caminho: '/admin/tokens', chave: 'nav.tokens', privilegio: 'tokens.gerar', grupo: 'administracao' },
+  { caminho: '/admin/log', chave: 'nav.log', privilegio: 'org.log_ver', grupo: 'administracao' },
+  { caminho: '/admin/organizacao', chave: 'nav.organizacao', privilegio: 'org.configurar', grupo: 'administracao' },
 ];
 
 export function telasVisiveis(usuario) {
@@ -34,7 +51,13 @@ export function montarLayout({ usuario, ativo = location.pathname }) {
   const inq = usuario.inquilino || {};
   aside.append(h('div', { class: 'marca' }, h('strong', {}, t('app.nome')), h('span', { title: inq.slug }, inq.nome || inq.slug || '')));
   const ul = h('ul');
+  let grupoAberto = null;
   for (const tela of telasVisiveis(usuario)) {
+    if (tela.grupo !== grupoAberto) {
+      grupoAberto = tela.grupo;
+      const chaveRotulo = ROTULOS_GRUPO[grupoAberto];
+      if (chaveRotulo) ul.append(h('li', { class: 'grupo-rotulo', role: 'separator' }, t(chaveRotulo)));
+    }
     const a = h('a', { href: tela.caminho, 'aria-current': tela.caminho === ativo ? 'page' : undefined }, t(tela.chave));
     ul.append(h('li', {}, a));
   }

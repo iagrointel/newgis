@@ -49,6 +49,8 @@ body:not(.com-lateral) .lateral { display: none; }
 .lateral nav a { display: block; padding: var(--e2) var(--e4); color: var(--texto); text-decoration: none; border-left: 3px solid transparent; }
 .lateral nav a:hover { background: var(--painel); }
 .lateral nav a[aria-current="page"] { border-left-color: var(--acento); background: var(--painel); font-weight: 600; }
+.lateral nav .grupo-rotulo { padding: var(--e3) var(--e4) var(--e1); margin-top: var(--e1); color: var(--fraco); font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; }
+.lateral nav ul li.grupo-rotulo:first-child { margin-top: 0; }
 .lateral .pessoa { padding: var(--e4); border-top: 1px solid var(--borda); display: grid; gap: var(--e2); }
 .lateral .pessoa-topo { display: flex; align-items: center; gap: var(--e2); min-width: 0; }
 .lateral .pessoa a { color: var(--texto); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }

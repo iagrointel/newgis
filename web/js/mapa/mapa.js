@@ -35,14 +35,35 @@ import { interpretarCoordenada, sugerir, geocodificar } from './busca.js';
 import { paraPng, paraPdf, escalaNumerica } from './impressao.js';
 import { Edicao } from './edicao.js';
 
+/* BASE mundial primeiro e PADRÃO (correção 10/09: o mapa não pode abrir num vazio preto fora de Guarulhos —
+   ver estilo.js). O recorte vetorial local continua disponível para quem quer o instrumento de alto detalhe. */
 const BASES = [
-  { id: 'osm-guarulhos', rotuloChave: 'mapa.base_osm_guarulhos', arquivo: 'guarulhos.pmtiles' },
-  { id: 'sem-base', rotuloChave: 'mapa.base_nenhuma', arquivo: null },
+  { id: 'osm-mundial', rotuloChave: 'mapa.base_osm_mundial', tipo: 'raster' },
+  { id: 'osm-guarulhos', rotuloChave: 'mapa.base_osm_guarulhos', tipo: 'pmtiles', arquivo: 'guarulhos.pmtiles' },
+  { id: 'sem-base', rotuloChave: 'mapa.base_nenhuma', tipo: 'nenhuma' },
 ];
 const CENTRO = [-46.593018, -23.493476];
 const el = (id) => document.getElementById(id);
 
 function urlDado(arquivo) { return `${location.origin}/static/dados/basemap/${arquivo}`; }
+
+function descritorBase(base) {
+  return { tipo: base.tipo, url: base.arquivo ? urlDado(base.arquivo) : undefined };
+}
+
+/* une as extensões (graus, [oeste,sul,leste,norte]) das fichas que já trazem uma; ignora as que não trazem
+   (a listagem resumida só devolve extensão quando a ingestão a calculou — nunca mede ST_Extent aqui). */
+function uniaoDeExtensoes(fichas) {
+  let uniao = null;
+  for (const f of fichas || []) {
+    const e = f && f.extensao;
+    if (!Array.isArray(e) || e.length !== 4 || e.some((v) => typeof v !== 'number' || !Number.isFinite(v))) continue;
+    uniao = uniao
+      ? [Math.min(uniao[0], e[0]), Math.min(uniao[1], e[1]), Math.max(uniao[2], e[2]), Math.max(uniao[3], e[3])]
+      : [...e];
+  }
+  return uniao;
+}
 
 function montarSeletorBase(map) {
   const sel = el('seletor-base');
@@ -128,7 +149,7 @@ async function iniciar(usuario) {
 
   const map = new maplibregl.Map({
     container: 'mapa',
-    style: construirEstilo(urlDado(BASES[0].arquivo)),
+    style: construirEstilo(descritorBase(BASES[0])),
     center: CENTRO,
     zoom: 11,
     attributionControl: false,
@@ -167,9 +188,7 @@ async function iniciar(usuario) {
     const base = BASES.find((b) => b.id === sel.value) || BASES[0];
     const ativas = [...catalogo.ativas];
     const opacidades = new Map(catalogo.opacidade);
-    map.setStyle(base.arquivo ? construirEstilo(urlDado(base.arquivo))
-      : { version: 8, name: 'plat-sem-base', sources: {}, layers: [
-        { id: 'fundo', type: 'background', paint: { 'background-color': '#0b0f10' } }] });
+    map.setStyle(construirEstilo(descritorBase(base)));
     await new Promise((r) => map.once('styledata', r));
     catalogo.ativas = [];
     catalogo.opacidade = opacidades;
@@ -251,6 +270,7 @@ async function iniciar(usuario) {
   });
 
   await new Promise((resolve) => map.once('load', resolve));
+  const temDocumento = !!new URLSearchParams(location.search).get('id');
   await iniciarDocumento(map);
   edicao = new Edicao(map, maplibregl, catalogo, {
     raiz: el('edicao-painel'),
@@ -259,6 +279,15 @@ async function iniciar(usuario) {
   try {
     await arvore.carregar();
     legenda.desenhar();
+    // Sem documento de mapa (`?id=`), a vista inicial enquadra as camadas do inquilino em vez de abrir
+    // sempre no recorte de Guarulhos (medido 10/09: camada fora de Guarulhos ficava "sobre o nada"). A
+    // extensão vem da listagem (`/api/mapa/camadas`, ficha resumida — só quando a ingestão já a gravou;
+    // camada sem extensão é ignorada, nunca medida aqui); sem nenhuma extensão disponível, mantém a vista
+    // padrão do recorte (CENTRO/z11), como antes.
+    if (!temDocumento) {
+      const uniao = uniaoDeExtensoes(catalogo.disponiveis);
+      if (uniao) map.fitBounds([[uniao[0], uniao[1]], [uniao[2], uniao[3]]], { animate: false, padding: 40 });
+    }
   } catch (e) {
     el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`);
   }

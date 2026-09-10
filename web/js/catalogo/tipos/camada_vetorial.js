@@ -5,11 +5,11 @@
    cunha é a própria rota de tilejson, escopada só àquela camada, 12 h. As URLs da seção Compartilhar (WFS/
    OGC API Features/Esri FeatureServer) são para cliente EXTERNO (QGIS, ArcGIS, um script) e por isso levam
    um token de serviço de verdade (token_servico.js). */
-import { h } from '../../base/dom.js';
+import { h, limpar } from '../../base/dom.js';
 import { obter } from '../../base/api.js';
 import { botaoCopiar } from '../../base/dom.js';
 import { t } from '../../base/i18n.js';
-import { tokenServico } from './token_servico.js';
+import { tokenServico, renovarTokenServico } from './token_servico.js';
 
 export const tipo = 'camada_vetorial';
 
@@ -87,23 +87,47 @@ function montarMapaVetor(container, tileJson, ficha) {
 }
 
 /* ---------- Compartilhamento: URL de serviço para cliente externo ---------- */
-export async function compartilhar(item) {
-  const raiz = h('div', { class: 'tipo-compartilhar' });
-  let tk;
-  try {
-    tk = await tokenServico(`svc-camada:${item.id}`, [`camada:ler:${item.id}`]);
-  } catch (e) {
-    raiz.append(h('p', { class: 'erro' }, e.message));
-    return raiz;
-  }
+const NOME_TOKEN = (item) => `svc-camada:${item.id}`;
+const ESCOPOS_TOKEN = (item) => [`camada:ler:${item.id}`];
+
+function montarUrls(raiz, item, tk) {
+  limpar(raiz);
   const origem = location.origin;
   const q = (url) => `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(tk)}`;
+  const aviso = h('p', { class: 'fraco' });
+  const btRenovar = h('button', { type: 'button', class: 'pequeno' }, t('catalogo.servico_renovar'));
+  btRenovar.addEventListener('click', async () => {
+    btRenovar.disabled = true;
+    try {
+      const novo = await renovarTokenServico(item, NOME_TOKEN(item), ESCOPOS_TOKEN(item));
+      montarUrls(raiz, item, novo);
+      raiz.append(h('p', { class: 'fraco' }, t('catalogo.servico_renovado')));
+    } catch (e) {
+      aviso.textContent = e.message || t('catalogo.servico_erro_renovar');
+      raiz.append(aviso);
+    } finally {
+      btRenovar.disabled = false;
+    }
+  });
   raiz.append(
     h('p', { class: 'fraco' }, t('tipo_camada.compartilhar_ajuda')),
     linha('WFS · GetCapabilities', campoUrl(q(`${origem}/wfs/${item.id}?SERVICE=WFS&REQUEST=GetCapabilities`))),
     linha('OGC API Features', campoUrl(q(`${origem}/ogc/features/${item.id}/collections`))),
     linha('Esri FeatureServer', campoUrl(q(`${origem}/rest/services/${item.id}/FeatureServer/0/query?where=1%3D1&f=json`))),
+    h('p', {}, btRenovar),
     h('p', {}, h('a', { href: '/mapa', class: 'pequeno' }, t('tipo_camada.abrir_no_mapa'))),
   );
+}
+
+export async function compartilhar(item) {
+  const raiz = h('div', { class: 'tipo-compartilhar' });
+  let tk;
+  try {
+    tk = await tokenServico(item, NOME_TOKEN(item), ESCOPOS_TOKEN(item));
+  } catch (e) {
+    raiz.append(h('p', { class: 'erro' }, e.message));
+    return raiz;
+  }
+  montarUrls(raiz, item, tk);
   return raiz;
 }
