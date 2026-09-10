@@ -4138,3 +4138,12 @@ mensagem exata, script inline bloqueado pela CSP, capturas dos dois mapas com >1
 (`tests/sdk_js/plat.test.mjs`, 13, via `tests/unit/test_sdk_js.py`). Paridade contra o ArcGIS Maps SDK for
 JavaScript em `docs/PARIDADE.md`; ADR `docs/adr/20260908T0705-sdk-javascript.md`; `sdk/js/README.md`. Fora:
 feições por camada e tiles dinâmicos (dependem do L2-04); CORS (a API é same-origin).
+## turno 4 (líder 5), setembro de 2026 (item L7-03-d-injecao-consulta: 180 payloads de injeção contra o FeatureServer/OGC, 0 execução, 2 defeitos de 500 corrigidos)
+
+`tests/seguranca/test_injecao.py`: 180 payloads (where/outFields/orderBy/groupBy/outStatistics/having/objectIds/
+OGC) contra camada importada de verdade — 0 respostas 5xx, 8 ms de latência máxima, tabela-canário e contagem
+intactas; teste estático por AST (nenhum `.execute` em `app/` interpola nome de entrada do usuário) + `bandit
+B608` em `app/consulta` fixado em 6 f-strings de lista branca. Corrigidos em `app/consulta/motor.py`: `LIKE` em
+coluna numérica e `statisticParameters.value` não numérico devolviam 500 com traceback; agora 400 nomeado
+(`_executar`, rede de segurança para erro de tipo do banco). `docs/SEGURANCA.md` §10. ZAP baseline não rodou
+(sem imagem, disco 94 %, D21).

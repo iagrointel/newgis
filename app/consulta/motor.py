@@ -15,11 +15,31 @@ import json
 import re
 from dataclasses import dataclass
 
+import psycopg2
+import psycopg2.errors
+
 from app.consulta import campos as campos_mod
 from app.consulta import geometria_esri as geo
 from app.consulta import quantizacao as quant
 from app.consulta import where_ast
 from app.erros import ErroAPI
+
+# Erros de TIPO/valor que o Postgres só descobre ao executar (`fid LIKE '1%'` num bigint, `fid = 'abc'`,
+# percentil fora de 0-1): a consulta é parametrizada e não tem efeito, mas sem esta rede o cliente veria um
+# 500 com o SQL no traceback do servidor. Item L7-03-d: vira 400 nomeado, sem texto do banco na resposta.
+_ERROS_DE_CONSULTA = (psycopg2.errors.DataError, psycopg2.errors.UndefinedFunction, psycopg2.errors.DatatypeMismatch,
+                      psycopg2.errors.AmbiguousFunction, psycopg2.errors.UndefinedColumn)
+
+
+def _executar(cur, sql: str, params) -> None:
+    try:
+        cur.execute(sql, params)
+    except _ERROS_DE_CONSULTA as e:
+        raise ErroAPI(
+            400, "consulta_invalida",
+            "consulta recusada pelo banco: tipo ou valor incompatível com o campo (ex.: LIKE em campo numérico)",
+            {"classe": type(e).__name__},
+        ) from e
 
 MAX_RECORD_COUNT_PADRAO = 2000
 MAX_RECORD_COUNT_TETO = 5000
@@ -284,13 +304,13 @@ def preparar_pedido(p: PedidoQuery, meta: list[dict], srid_nativo: int) -> dict:
 
 
 def executar_count(cur, schema: str, tabela: str, prep: dict) -> ResultadoCount:
-    cur.execute(f'SELECT count(*) AS n FROM "{schema}"."{tabela}" WHERE {prep["where_sql"]}', prep["where_params"])
+    _executar(cur, f'SELECT count(*) AS n FROM "{schema}"."{tabela}" WHERE {prep["where_sql"]}', prep["where_params"])
     return ResultadoCount(count=int(cur.fetchone()["n"]))
 
 
 def executar_ids(cur, schema: str, tabela: str, prep: dict) -> ResultadoIds:
     sql = f'SELECT fid FROM "{schema}"."{tabela}" WHERE {prep["where_sql"]} ORDER BY fid LIMIT %s'
-    cur.execute(sql, [*prep["where_params"], MAX_IDS_SEM_LIMITE + 1])
+    _executar(cur, sql, [*prep["where_params"], MAX_IDS_SEM_LIMITE + 1])
     linhas = cur.fetchall()
     if len(linhas) > MAX_IDS_SEM_LIMITE:
         raise ErroAPI(413, "resultado_grande_demais", f"mais de {MAX_IDS_SEM_LIMITE} ids; filtre mais")
@@ -298,7 +318,7 @@ def executar_ids(cur, schema: str, tabela: str, prep: dict) -> ResultadoIds:
 
 
 def executar_extent(cur, schema: str, tabela: str, prep: dict, srid_saida: int, com_count: bool) -> ResultadoExtent:
-    cur.execute(
+    _executar(cur,
         f'SELECT ST_Extent(ST_Transform(geom, %s)) AS ext, count(*) AS n '
         f'FROM "{schema}"."{tabela}" WHERE {prep["where_sql"]}',
         [srid_saida, *prep["where_params"]],
@@ -353,8 +373,13 @@ def _outstatistics_sql(outStatistics: str, groupBy: str | None, colunas_sql: dic
             if func is None:
                 raise ErroAPI(422, "statistictype_fora", f"statisticType não suportado: {tipo!r}")
             if func in ("percentile_cont", "percentile_disc"):
-                pct = spec.get("statisticParameters", {}).get("value", 0.5)
-                expr = f"{func}({float(pct)}) WITHIN GROUP (ORDER BY {colunas_sql[campo]})"
+                try:
+                    pct = float((spec.get("statisticParameters") or {}).get("value", 0.5))
+                except (TypeError, ValueError) as e:
+                    raise ErroAPI(400, "outstatistics_invalido", "statisticParameters.value precisa ser número") from e
+                if not 0.0 <= pct <= 1.0:
+                    raise ErroAPI(400, "outstatistics_invalido", "statisticParameters.value precisa estar entre 0 e 1")
+                expr = f"{func}({pct}) WITHIN GROUP (ORDER BY {colunas_sql[campo]})"
             else:
                 expr = f"{func}({colunas_sql[campo]})"
         selects.append(f'{expr} AS "{alias}"')
@@ -383,7 +408,7 @@ def executar_estatisticas(
             raise ErroAPI(400, e.codigo, e.mensagem, e.detalhe) from e
         sql += f" HAVING {h.sql}"
         params += h.params
-    cur.execute(sql, params)
+    _executar(cur, sql, params)
     linhas = cur.fetchall()
     features = [{"attributes": dict(r), "geometry": None, "centroid": None} for r in linhas]
     return ResultadoFeatures(
@@ -469,7 +494,7 @@ def executar_features(cur, schema: str, tabela: str, prep: dict, p: PedidoQuery,
     sql += " LIMIT %s OFFSET %s"
     limite = max_rec + 1
     offset = int(p.resultOffset or 0)
-    cur.execute(sql, [*select_params, *params, limite, offset])
+    _executar(cur, sql, [*select_params, *params, limite, offset])
     linhas = cur.fetchall()
     excedeu = len(linhas) > max_rec
     linhas = linhas[:max_rec]

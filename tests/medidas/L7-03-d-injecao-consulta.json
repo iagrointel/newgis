@@ -1,0 +1,72 @@
+{
+ "item": "L7-03-d-injecao-consulta",
+ "medidas": {
+  "payloads": {
+   "valor": 180,
+   "unidade": "payloads",
+   "comando": "tests/seguranca/test_injecao.py PAYLOADS (where/outFields/orderBy/groupBy/outStatistics/having/objectIds/OGC)"
+  },
+  "respostas_por_status": {
+   "valor": {
+    "400": 151,
+    "200": 16,
+    "422": 6,
+    "404": 7
+   },
+   "unidade": "respostas",
+   "comando": "status HTTP de cada payload (nenhum 5xx)"
+  },
+  "latencia_max_ms": {
+   "valor": 8,
+   "unidade": "ms",
+   "comando": "maior tempo de resposta entre os payloads (pg_sleep(5) nunca executou)"
+  },
+  "respostas_5xx": {
+   "valor": 0,
+   "unidade": "respostas",
+   "comando": "contagem de 5xx (tem de ser 0)"
+  },
+  "bandit_b608_app_consulta": {
+   "valor": 6,
+   "unidade": "achados",
+   "comando": "venv/bin/bandit -q -f json -t B608 -r app/consulta (cada um conferido: interpola só lista branca)"
+  },
+  "bandit_b608_linhas": {
+   "valor": [
+    "consulta/motor.py:307",
+    "consulta/motor.py:312",
+    "consulta/motor.py:322",
+    "consulta/motor.py:400",
+    "consulta/motor.py:491",
+    "consulta/rotas_servico.py:54"
+   ],
+   "unidade": "linhas",
+   "comando": "onde o bandit vê SQL montado por string em app/consulta"
+  },
+  "zap_baseline_alertas_altos": {
+   "valor": "não medido",
+   "unidade": "alertas",
+   "comando": "ZAP baseline não rodou: sem imagem zaproxy nesta máquina e disco a 94 % (D21) — cláusula pendente, nunca marcada como passada"
+  }
+ },
+ "gerado_em": "2026-09-07T22:44:50Z",
+ "git_sha": "70fe3e489b83",
+ "contexto": {
+  "payloads_por_parametro": {
+   "where": 137,
+   "outFields": 11,
+   "orderByFields": 10,
+   "groupByFieldsForStatistics": 5,
+   "outStatistics": 10,
+   "havingClause": 5,
+   "objectIds": 6,
+   "ogc": 12
+  },
+  "camada": "cobertura.gpkg importada de verdade (worker da trilha)",
+  "canario": "plat_trabalho.zt_canario_injecao intacta (3 linhas) ao fim",
+  "defeitos_corrigidos": [
+   "LIKE em coluna numérica devolvia 500 (UndefinedFunction) -> 400 consulta_invalida por _executar em app/consulta/motor.py",
+   "statisticParameters.value não numérico em percentile devolvia 500 (ValueError) -> 400 outstatistics_invalido"
+  ]
+ }
+}
