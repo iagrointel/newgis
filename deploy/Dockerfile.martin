@@ -1,0 +1,33 @@
+# syntax=docker/dockerfile:1
+# Imagem do Martin (tiles vetoriais, item L2-01-b) para o perfil `appliance` do compose
+# (item L7-01-a-compose-perfis).
+#
+# Mesmo raciocínio do Dockerfile.garage: NUNCA baixa a imagem oficial `ghcr.io/maplibre/martin` (disco a
+# 95-96% no dia deste item); empacota o MESMO binário estático já em produção nesta máquina
+# (/usr/local/bin/martin, martin 1.15.0, `file` confere "statically linked") sobre `busybox` (já em cache,
+# zero pull novo). Vendorizado por `deploy/compose/vendorizar_binarios.sh` em `deploy/compose/vendor/martin`.
+FROM busybox:latest
+
+LABEL org.opencontainers.image.title="plat-martin" \
+      org.opencontainers.image.description="Martin (tiles vetoriais) vendorizado do binário de produção (item L7-01-a-compose-perfis). Interno. Análise / beta privado."
+
+RUN adduser -D -H -u 10003 martin
+
+COPY deploy/compose/vendor/martin /usr/local/bin/martin
+RUN chmod 0755 /usr/local/bin/martin
+
+WORKDIR /martin
+COPY deploy/martin.yaml /martin/martin.yaml
+RUN chown -R martin:martin /martin
+
+USER martin
+EXPOSE 3000
+
+HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=5 \
+    CMD wget -q -O- http://127.0.0.1:3000/health || exit 1
+
+# PLAT_DSN_LEITOR chega por variável de ambiente (secrets: no compose), interpolada dentro do martin.yaml
+# como ${PLAT_DSN_LEITOR} — o mesmo mecanismo que a unidade systemd usa via LoadCredential (deploy/plat-martin
+# não existe como arquivo próprio; ver docs/adr sobre Martin), só que aqui a variável já chega pronta no
+# ambiente do contêiner (docker-compose.yml -> environment/secrets), sem passo de leitura extra.
+ENTRYPOINT ["/usr/local/bin/martin", "--config", "/martin/martin.yaml"]

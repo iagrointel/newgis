@@ -1,0 +1,61 @@
+{
+ "item": "L7-01-a-compose-perfis",
+ "assinado_por": "arquiteto/backend/testador/adversario (turno único, retomada 07/09/2026 após queda por cota)",
+ "gerado_em": "2026-09-07T16:10:00Z",
+ "git_sha": "642cf206344e",
+ "maquina": "12 vCPU, 23 GB RAM; disco / a 95-96% no início do item (23-24 GB livres); carga 1min 7.7-9.5 durante as medidas de tempo",
+ "clausulas": {
+  "docker_compose_config_hospedado": {
+   "resultado": "passou",
+   "comando": "docker compose -f deploy/compose/docker-compose.yml --profile hospedado config -q",
+   "saida": "exit=0, sem erro de interpolação nem de referência circular"
+  },
+  "docker_compose_config_appliance": {
+   "resultado": "passou",
+   "comando": "docker compose -f deploy/compose/docker-compose.yml --profile appliance config -q",
+   "saida": "exit=0; 7 serviços (db, garage, martin, titiler, api-appliance, worker-appliance, nginx) resolvidos, rede `interna`, 3 volumes, 5 secrets"
+  },
+  "servico_minimo_construido_e_subido": {
+   "resultado": "passou",
+   "servico": "api (perfil hospedado)",
+   "comando_build": "docker compose -f deploy/compose/docker-compose.yml -f deploy/compose/docker-compose.teste-trilha.override.yml --profile hospedado build --no-cache api",
+   "tempo_build_s": 77.4,
+   "carga_1min": 7.69,
+   "ram_livre_gb": 0,
+   "medido_em": "2026-09-07T16:04:44Z",
+   "comando_subida": "docker compose ... --profile hospedado up -d api",
+   "tempo_ate_healthy_s": "menos de 7 (2 sondas de 3s cada; primeira 'starting', segunda 'healthy')",
+   "curl_saude": "GET http://127.0.0.1:8272/saude -> 200, {\"banco\":\"ok\",\"migracoes_aplicadas\":44,\"migracoes_pendentes\":0,...}",
+   "nota": "porta 8272 é a atribuída a este item no prompt (8150/8153 são de PRODUÇÃO nesta máquina — colisão real encontrada e corrigida durante o turno, ver handoff). DSN/segredos apontam para o schema da própria trilha (plat_til701acompo), nunca para plat de produção."
+  },
+  "imagem_sem_latest": {
+   "resultado": "passou",
+   "nota": "toda imagem plat-* do compose tem tag própria (x-imagem-* em docker-compose.yml, ex. plat-api:0.1.0); nenhuma referência a `latest` em serviço nenhum (grep -n ':latest' docker-compose.yml só acha as BASES busybox:latest, que são de terceiro e vendorizam binário, não código do plat)"
+  },
+  "digest_pinado_em_versoes_txt": {
+   "resultado": "parcial",
+   "nota": "deploy/compose/VERSOES.txt grava o digest de tudo que foi de fato construído ou já estava em cache local (plat-api:0.1.0, python:3.12-slim-bookworm, postgres:16-alpine, busybox:latest); as 5 imagens plat-* não construídas neste turno (db, garage, martin, titiler, nginx) estão listadas como PENDENTE, nomeadas, sem inventar dígito"
+  },
+  "appliance_up_10min_healthcheck_verde": {
+   "resultado": "não medida",
+   "razao": "disco a 95-96% no início do item; regra do handoff da trilha ('nunca construa imagem grande nem baixe base') proíbe pull de nginx:1.27-alpine (não cacheada) e o pip install de rasterio/GDAL do TiTiler (centenas de MB); Dockerfile.db é rascunho (pgRouting/pgstac não existem nem em produção ainda, ADR 0007). As 5 imagens continuam sem build; a cláusula fica pendente até o disco ou a decisão do dono (compilar pgRouting, trocar nginx por caddy já cacheado, etc.) liberarem o próximo turno."
+  },
+  "make_check_identico_compose_e_systemd": {
+   "resultado": "parcial",
+   "medido": [
+    "tests/api/test_saude.py (5 testes, TestClient em processo — não fala com nenhum contêiner) passou com o MESMO código-fonte que a imagem plat-api:0.1.0 empacota: `bash laco/roda_teste.sh tests/api/test_saude.py -q` -> 5 passed",
+    "comparação HTTP direta entre o contêiner (127.0.0.1:8272) e um `venv/bin/python -m uvicorn app.main:app --port 8279` rodando FORA do contêiner, ambos apontando para o MESMO banco de trilha e o MESMO processo de worker de teste (127.0.0.1:8278): GET /saude dos dois, removendo tempo_ms/em/ultimo_heartbeat, é byte a byte igual (script python inline no handoff)"
+   ],
+   "razao_parcial": "tests/api usa TestClient em processo (app/main.py importado direto, tests/api/conftest.py linha 73) — pytest nunca fala HTTP com um servidor de verdade, então 'a mesma suíte rodando contra o compose' não é uma frase que a suíte atual permite ao pé da letra; e não existe uma instalação systemd REAL desta trilha para comparar (a trilha não roda unidade systemd, só processos de teste) — comparar contra produção está fora de cogitação (nunca tocar o `plat` compartilhado). A prova feita (mesmo código + comparação HTTP direta de duas formas de execução do MESMO Dockerfile.api, uma em contêiner e outra fora) é a mais próxima do espírito da cláusula que este turno conseguiu sem inventar infraestrutura nova."
+  },
+  "diff_esquema_pg_dump_vazio": {
+   "resultado": "não medida",
+   "razao": "exigiria um segundo Postgres de verdade rodando a partir do Dockerfile.db (perfil appliance) para comparar contra o schema da trilha (`hospedado`, que usa o Postgres compartilhado da casa) — Dockerfile.db não foi construído neste turno (ver appliance_up_10min_healthcheck_verde). Sem os dois bancos de pé, um pg_dump -s comparado seria fabricado."
+  },
+  "adversario_maquina_so_docker_sem_pacote_da_casa": {
+   "resultado": "não medida",
+   "razao": "o adversário precisaria de uma máquina descartável (container privilegiado ou VM) só com Docker — fora do escopo de disco/tempo deste turno; a prova equivalente feita foi validar que Dockerfile.api NÃO depende de nenhum caminho do host (venv construída do zero dentro da imagem, sem --system-site-packages, sem ~/.local: `docker history plat-api:0.1.0` confere que todo pacote Python vem de `pip install` dentro do build, nunca de bind mount)."
+  }
+ },
+ "resumo": "item PARCIAL: as duas listas de perfil (hospedado, appliance) do compose único validam estruturalmente (docker compose config); UM serviço mínimo (api, perfil hospedado) foi de fato construído, subido, e comparado byte a byte com uma execução fora de contêiner do MESMO código, com healthcheck verde e /saude 200 migracoes_pendentes=0 em bem menos que 10 min. As 5 imagens do perfil appliance que exigiriam baixar base nova (nginx) ou instalar pacote pesado (rasterio/GDAL do TiTiler, pgRouting/pgstac do banco — que nem em produção existem ainda) ficam PENDENTES, nomeadas, por disco (95-96% no início do turno)."
+}

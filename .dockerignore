@@ -7,7 +7,14 @@
 *
 !app
 !app/**
+!web
+!web/**
 !requirements.txt
 !VERSAO
 !deploy
 !deploy/entrypoint-worker.sh
+!deploy/entrypoint-api.sh
+# só o arquivo de proveniência (728 B), lido em app/rede/rotas.py na importação do módulo — NUNCA os
+# `.osrm.*` (61 MB de grafo de teste, MEDIDO neste item; servidos por um processo OSRM à parte, PLAT_OSRM_URL)
+!osrm
+!osrm/proveniencia.json

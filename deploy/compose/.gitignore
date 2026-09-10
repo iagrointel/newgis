@@ -1,0 +1,5 @@
+# binários/arquivos vendorizados do host por vendorizar_binarios.sh — nunca no git (são cópia de binário
+# de produção, não fonte; ver o próprio script para como regerar)
+vendor/
+segredos_teste/
+segredos_appliance/

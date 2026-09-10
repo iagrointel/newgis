@@ -1,0 +1,266 @@
+# Compose único do plat, dois perfis (item L7-01-a-compose-perfis; ADR desta trilha em
+# docs/adr/20260907T1300-compose-perfis.md tem o raciocínio completo).
+#
+# `hospedado` — o MESMO alvo que install.sh instala como unidades systemd (plat-api, plat-worker), aqui como
+# contêineres que enxergam os serviços da máquina (Postgres/Garage/Martin/TiTiler já rodando no host, fora
+# do compose) via `network_mode: host` — MESMO mecanismo já medido e em produção em
+# deploy/docker-compose.worker.yml (ADR 0010; ver os comentários daquele arquivo para o porquê de host
+# network aqui: os serviços do host só escutam em 127.0.0.1). nginx NÃO entra neste perfil: a instalação
+# hospedada usa o nginx do sistema operacional, gerenciado por install.sh (com certbot).
+#
+#     uso: docker compose -f deploy/compose/docker-compose.yml --profile hospedado up --build
+#
+# `appliance` — TUDO containerizado: Postgres+PostGIS(+pgRouting+pgstac, ver deploy/Dockerfile.db),
+# Garage, Martin, TiTiler, API, worker, nginx, numa rede-ponte interna própria (`interna`), sem depender de
+# nada já instalado na máquina além do Docker — o alvo do próprio portão de pronto deste item
+# ("`docker compose --profile appliance up -d` em máquina com só docker").
+#
+#     uso: bash deploy/compose/vendorizar_binarios.sh && bash deploy/compose/gerar_segredos_appliance.sh \
+#          && docker compose -f deploy/compose/docker-compose.yml --profile appliance up --build -d
+#
+# ⛔ Estado real neste item (07/09/2026, disco a 95-96%): SÓ o serviço `api` (perfil `hospedado`) foi
+# CONSTRUÍDO e SUBIDO de verdade nesta máquina (prova mínima exigida pelo handoff da trilha: "prove com
+# docker compose config e um serviço mínimo"). `db`, `garage`, `martin`, `titiler`, `nginx` e o `api`/`worker`
+# do perfil `appliance` estão com Dockerfile e definição de serviço completos e válidos
+# (`docker compose config` confere as duas listas de perfil sem erro), mas NENHUM foi construído nem subido —
+# ver o comentário de cada Dockerfile.* para o motivo específico e tests/medidas/L7-01-a-compose-perfis.json
+# para a cláusula nomeada como pendente.
+#
+# Todas as imagens abaixo têm tag própria (nunca `latest`) e, quando construídas de fato, o digest resultante
+# é gravado em deploy/compose/VERSOES.txt por `docker inspect --format='{{index .RepoDigests 0}}'`.
+
+x-imagem-api: &imagem-api plat-api:0.1.0
+x-imagem-worker: &imagem-worker plat-worker:0.1.0
+x-imagem-db: &imagem-db plat-db:0.1.0
+x-imagem-garage: &imagem-garage plat-garage:0.1.0
+x-imagem-martin: &imagem-martin plat-martin:0.1.0
+x-imagem-titiler: &imagem-titiler plat-titiler:0.1.0
+x-imagem-nginx: &imagem-nginx plat-nginx:0.1.0
+
+services:
+  # ---------------------------------------------------------------- perfil hospedado (host, sem rede própria)
+  api:
+    profiles: ["hospedado"]
+    build:
+      context: ../..
+      dockerfile: deploy/Dockerfile.api
+    image: *imagem-api
+    container_name: plat-api-compose
+    hostname: plat-api-compose
+    network_mode: host
+    env_file:
+      - path: ../../.env
+        required: false
+    environment:
+      PLAT_API_PORTA: "8150"
+      PLAT_URL_PUBLICA: http://127.0.0.1:8150
+    secrets:
+      - PLAT_SECRET
+      - PLAT_DSN_WORKER
+    mem_limit: 1g
+    memswap_limit: 1g
+    restart: "no"
+    stop_grace_period: 15s
+
+  worker:
+    profiles: ["hospedado"]
+    build:
+      context: ../..
+      dockerfile: deploy/Dockerfile.worker
+    image: *imagem-worker
+    container_name: plat-worker-compose
+    hostname: plat-worker-compose
+    network_mode: host
+    env_file:
+      - path: ../../.env
+        required: false
+    environment:
+      PLAT_WORKER_URL: http://127.0.0.1:8156
+      PLAT_WORKER_NOME: worker-compose
+    secrets:
+      - PLAT_SECRET
+      - PLAT_DSN_WORKER
+    mem_limit: 2g
+    memswap_limit: 2g
+    restart: "no"
+    stop_grace_period: 40s
+
+  # ----------------------------------------------------------------------- perfil appliance (rede própria)
+  db:
+    profiles: ["appliance"]
+    build:
+      context: ../..
+      dockerfile: deploy/Dockerfile.db
+    image: *imagem-db
+    networks: [interna]
+    environment:
+      POSTGRES_DB: plat
+      POSTGRES_USER: plat_app
+      POSTGRES_PASSWORD_FILE: /run/secrets/DB_SENHA
+    secrets:
+      - DB_SENHA
+    volumes:
+      - db_dados:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U plat_app -d plat"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: "no"
+
+  garage:
+    profiles: ["appliance"]
+    build:
+      context: ../..
+      dockerfile: deploy/Dockerfile.garage
+    image: *imagem-garage
+    networks: [interna]
+    secrets:
+      - GARAGE_RPC_SECRET
+      - GARAGE_ADMIN_TOKEN
+    volumes:
+      - garage_meta:/garage/meta
+      - garage_dados:/garage/data
+    restart: "no"
+
+  martin:
+    profiles: ["appliance"]
+    build:
+      context: ../..
+      dockerfile: deploy/Dockerfile.martin
+    image: *imagem-martin
+    networks: [interna]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # gerado por gerar_segredos_appliance.sh a partir da role plat_leitor criada no `db` (bootstrap
+      # PENDENTE — ver handoff); martin.yaml interpola ${PLAT_DSN_LEITOR} do ambiente do processo, não de
+      # arquivo, por isso ENTRA como `environment:` e não como `secrets:` (docker secrets do Compose fora
+      # de swarm só monta ARQUIVO em /run/secrets, martin.yaml pediria um `_file` que martin 1.15.0 não
+      # oferece para connection_string — MEDIDO no --help do binário, seção postgres).
+      PLAT_DSN_LEITOR: ${PLAT_DSN_LEITOR:-}
+    restart: "no"
+
+  titiler:
+    profiles: ["appliance"]
+    build:
+      context: ../..
+      dockerfile: deploy/Dockerfile.titiler
+    image: *imagem-titiler
+    networks: [interna]
+    depends_on:
+      garage:
+        condition: service_started
+    environment:
+      AWS_ACCESS_KEY_ID: ${GARAGE_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${GARAGE_SECRET_ACCESS_KEY:-}
+      AWS_S3_ENDPOINT: garage:3900
+      AWS_HTTPS: "NO"
+      AWS_VIRTUAL_HOSTING: "FALSE"
+      AWS_DEFAULT_REGION: garage
+      PLATAFORMA_BUCKET: demo
+    restart: "no"
+
+  api-appliance:
+    profiles: ["appliance"]
+    build:
+      context: ../..
+      dockerfile: deploy/Dockerfile.api
+    image: *imagem-api
+    container_name: plat-api-appliance
+    networks: [interna]
+    depends_on:
+      db:
+        condition: service_healthy
+      garage:
+        condition: service_started
+    environment:
+      PLAT_AMBIENTE: producao
+      PLAT_URL_PUBLICA: http://127.0.0.1:8150
+      PLAT_MARTIN_URL: http://martin:3000/health
+      PLAT_TITILER_URL: http://titiler:8131/healthz
+      PLAT_GARAGE_URL: http://garage:3900
+      PLAT_GARAGE_ADMIN_URL: http://garage:3903
+      PLAT_WORKER_URL: http://worker-appliance:8153
+    env_file:
+      # PLAT_DSN com a senha do `db` já embutida (mesma forma que install.sh grava no .env hospedado —
+      # a senha do BANCO nunca foi o segredo movido para arquivo pelo L7-19, só PLAT_SECRET/PLAT_DSN_WORKER
+      # o são). Gerado por deploy/compose/gerar_segredos_appliance.sh (PENDENTE, ver handoff), fora do git.
+      - path: ../compose/segredos_appliance/appliance.env
+        required: false
+    secrets:
+      - source: PLAT_SECRET_APPLIANCE
+        target: PLAT_SECRET
+      - source: PLAT_DSN_WORKER_APPLIANCE
+        target: PLAT_DSN_WORKER
+    restart: "no"
+
+  worker-appliance:
+    profiles: ["appliance"]
+    build:
+      context: ../..
+      dockerfile: deploy/Dockerfile.worker
+    image: *imagem-worker
+    networks: [interna]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PLAT_WORKER_URL: http://worker-appliance:8153
+      PLAT_WORKER_NOME: worker-appliance
+    env_file:
+      - path: ../compose/segredos_appliance/appliance.env
+        required: false
+    secrets:
+      - source: PLAT_SECRET_APPLIANCE
+        target: PLAT_SECRET
+      - source: PLAT_DSN_WORKER_APPLIANCE
+        target: PLAT_DSN_WORKER
+    mem_limit: 2g
+    memswap_limit: 2g
+    restart: "no"
+    stop_grace_period: 40s
+
+  nginx:
+    profiles: ["appliance"]
+    build:
+      context: ../..
+      dockerfile: deploy/Dockerfile.nginx
+    image: *imagem-nginx
+    networks: [interna]
+    ports:
+      - "8150:80"
+    depends_on:
+      api-appliance:
+        condition: service_started
+    restart: "no"
+
+networks:
+  interna:
+    driver: bridge
+
+volumes:
+  db_dados:
+  garage_meta:
+  garage_dados:
+
+secrets:
+  # perfil hospedado: os MESMOS arquivos que a unidade systemd lê (docs/SEGURANCA.md §1), idêntico a
+  # deploy/docker-compose.worker.yml
+  PLAT_SECRET:
+    file: /etc/plat/segredos/PLAT_SECRET
+  PLAT_DSN_WORKER:
+    file: /etc/plat/segredos/PLAT_DSN_WORKER
+  # perfil appliance: gerados uma vez por deploy/compose/gerar_segredos_appliance.sh em
+  # deploy/compose/segredos_appliance/ (fora do git; script PENDENTE de construção neste item — ver handoff)
+  DB_SENHA:
+    file: ../compose/segredos_appliance/DB_SENHA
+  GARAGE_RPC_SECRET:
+    file: ../compose/segredos_appliance/GARAGE_RPC_SECRET
+  GARAGE_ADMIN_TOKEN:
+    file: ../compose/segredos_appliance/GARAGE_ADMIN_TOKEN
+  PLAT_SECRET_APPLIANCE:
+    file: ../compose/segredos_appliance/PLAT_SECRET
+  PLAT_DSN_WORKER_APPLIANCE:
+    file: ../compose/segredos_appliance/PLAT_DSN_WORKER

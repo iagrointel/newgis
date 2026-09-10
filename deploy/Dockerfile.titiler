@@ -1,0 +1,54 @@
+# syntax=docker/dockerfile:1
+# Imagem do TiTiler para o perfil `appliance` do compose (item L7-01-a-compose-perfis).
+#
+# ⛔ NÃO CONSTRUÍDA neste turno (disco a 95-96% no dia deste item; regra do handoff da trilha: nunca imagem
+# grande, nunca base nova). `rasterio`+GDAL (que titiler-core exige em tempo de execução) somam centenas de
+# MB de wheel/apt e este item não tinha orçamento de disco para baixá-los com segurança. Documentada e
+# pronta para build assim que o disco tiver folga (ver tests/medidas/L7-01-a-compose-perfis.json, cláusula
+# "titiler_imagem": "pendente").
+#
+# O binário HTTP em si (`app.py`) hoje mora em `/home/dev/plataforma/pipeline/app.py` — produto IRMÃO
+# ("prova do pipeline"), NUNCA editado por este item (regra da casa: pipeline/ é "copiar, não editar").
+# Este Dockerfile copia esse arquivo para dentro da imagem (cópia, não edição do original) porque a
+# arquitetura do item pede TiTiler DENTRO do mesmo repositório/imagem do plat — quando o item dono do
+# TiTiler do plat (fora de L7-01) nascer um app próprio em `app/tiles/titiler_app.py`, troca-se a linha COPY
+# abaixo sem mexer em mais nada.
+#
+# Base: python:3.12-slim-bookworm (já em cache local, zero pull novo) — mesma base das outras imagens deste
+# compose, para não multiplicar camadas base diferentes no mesmo host.
+FROM python:3.12-slim-bookworm
+
+LABEL org.opencontainers.image.title="plat-titiler" \
+      org.opencontainers.image.description="TiTiler (tiles raster via pgstac/COG), vendorizado de plataforma/pipeline (item L7-01-a-compose-perfis). Interno. Análise / beta privado. NÃO CONSTRUÍDA neste turno."
+
+RUN groupadd --gid 10004 plat && useradd --uid 10004 --gid plat --no-create-home --shell /usr/sbin/nologin plat
+
+WORKDIR /app
+
+# Versões travadas na medida feita em plataforma/pipeline/venv em 07/09/2026 (pip list). rasterio traz o
+# GDAL embutido no próprio wheel manylinux — por isso NENHUM `apt-get install gdal-bin/libgdal-dev` aqui
+# (evita duplicar duas cópias de libgdal no mesmo contêiner, uma do apt e outra do wheel).
+RUN python3 -m venv venv \
+    && PYTHONNOUSERSITE=1 venv/bin/pip install --no-cache-dir --upgrade pip \
+    && PYTHONNOUSERSITE=1 venv/bin/pip install --no-cache-dir \
+        uvicorn==0.27.1 \
+        fastapi==0.140.2 \
+        rasterio==1.5.0 \
+        titiler-core==2.2.0 \
+        titiler-extensions==2.2.0 \
+        titiler-mosaic==2.2.0 \
+    && find venv -name '__pycache__' -type d -prune -exec rm -rf {} + \
+    && rm -rf /root/.cache
+
+# vendorizado por deploy/compose/vendorizar_binarios.sh ANTES do `docker build` (mesmo mecanismo do
+# garage/martin: o Dockerfile não alcança caminho fora do contexto de build do repositório).
+COPY deploy/compose/vendor/titiler_app.py ./app.py
+RUN mkdir -p data && chown -R plat:plat /app
+
+USER plat
+EXPOSE 8131
+
+HEALTHCHECK --interval=15s --timeout=3s --start-period=15s --retries=5 \
+    CMD venv/bin/python -c "import urllib.request as u; u.urlopen('http://127.0.0.1:8131/healthz', timeout=2)" || exit 1
+
+ENTRYPOINT ["venv/bin/python", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8131"]

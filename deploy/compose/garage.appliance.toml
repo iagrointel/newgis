@@ -1,0 +1,25 @@
+# Configuração do Garage para o perfil `appliance` do compose (item L7-01-a-compose-perfis). Molde do
+# garage.toml de produção (/home/dev/plataforma/pipeline/garage/garage.toml, NUNCA copiado literal: aquele
+# tem rpc_secret e admin_token reais desta máquina) — caminhos internos ao contêiner, credenciais geradas na
+# primeira subida por deploy/compose/gerar_segredos_appliance.sh (fora do escopo construído neste turno;
+# ver handoff).
+metadata_dir = "/garage/meta"
+data_dir = "/garage/data"
+db_engine = "lmdb"
+replication_factor = 1
+rpc_bind_addr = "0.0.0.0:3901"
+rpc_public_addr = "127.0.0.1:3901"
+rpc_secret_file = "/run/secrets/GARAGE_RPC_SECRET"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "0.0.0.0:3900"
+root_domain = ".s3.garage.localhost"
+
+[admin]
+api_bind_addr = "0.0.0.0:3903"
+admin_token_file = "/run/secrets/GARAGE_ADMIN_TOKEN"
+
+[s3_web]
+bind_addr = "0.0.0.0:3902"
+root_domain = ".web.garage.localhost"

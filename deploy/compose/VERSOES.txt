@@ -1,0 +1,27 @@
+# Digests fixados das imagens do compose do plat (item L7-01-a-compose-perfis). Nenhuma imagem usa `latest`
+# como tag do plat (as próprias plat-* têm tag de versão, x-imagem-* em docker-compose.yml); as BASES de
+# terceiro abaixo têm o digest travado no dia em que foram usadas nesta máquina — regravar esta lista
+# sempre que uma base for atualizada de propósito (`docker inspect --format='{{index .RepoDigests 0}}' <imagem>`).
+#
+# formato: <referência> <digest completo> <medido em> <observação>
+
+# ---- construídas e SUBIDAS de verdade neste item (07/09/2026) ----
+plat-api:0.1.0                    sha256:d14d1c7f8528d939024fc5dc85b5580cd53af62f2b8e693be0e4d04a929e879a   2026-09-07   perfil hospedado; build --no-cache 1m17s, healthcheck verde, /saude 200 migracoes_pendentes=0
+
+# ---- bases de terceiro usadas pelas imagens acima e abaixo, JÁ em cache local (zero pull novo, disco a
+# 95-96% no dia deste item) ----
+python:3.12-slim-bookworm         sha256:782412e85d0f0984994c290652577d4018aff08145c85b262bb63dc0c7522254   2026-09-07   base de Dockerfile.api, Dockerfile.worker (já existia), Dockerfile.titiler (rascunho)
+postgres:16-alpine                sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685   2026-09-07   base de Dockerfile.db (rascunho, NÃO construído)
+busybox:latest                    sha256:dc2d74b28e4cf8984fa52af1f39bc7c3d9c73760b41a74d629f5d11b1ab28616   2026-09-07   base de Dockerfile.garage/Dockerfile.martin (binário vendorizado) e do rascunho de Dockerfile.nginx
+
+# ---- construídas mas NÃO subidas neste item (Dockerfile válido, `docker compose config` confere a
+# definição do serviço; ver cada Dockerfile.* para o motivo específico de não ter sido construída/subida) ----
+plat-worker:0.1.0                 (não reconstruída pelo item; imagem já existia de L0-05-e, ver deploy/Dockerfile.worker)
+plat-db:0.1.0                     PENDENTE — Dockerfile.db é rascunho; pgRouting/pgstac não existem nem em produção (ADR 0007)
+plat-garage:0.1.0                 PENDENTE — binário vendorizado, mas imagem não construída
+plat-martin:0.1.0                 PENDENTE — binário vendorizado, mas imagem não construída
+plat-titiler:0.1.0                PENDENTE — pip install de rasterio/GDAL não feito (disco)
+plat-nginx:0.1.0                  PENDENTE — base nginx:1.27-alpine não está em cache; nenhum pull novo neste item
+
+# ---- bases de terceiro NÃO baixadas neste item (planos registrados nos próprios Dockerfile.*) ----
+nginx:1.27-alpine                 NÃO BAIXADA — Dockerfile.nginx

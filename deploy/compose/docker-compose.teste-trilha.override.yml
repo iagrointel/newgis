@@ -1,0 +1,28 @@
+# Override SÓ para a prova manual deste item nesta trilha (item L7-01-a-compose-perfis) — NUNCA usado em
+# produção nem citado pelo README/install.sh. A trilha não tem /etc/plat/segredos (esse caminho é da
+# instalação hospedada real); aqui os MESMOS dois segredos (PLAT_SECRET, PLAT_DSN_WORKER) vêm de
+# deploy/compose/segredos_teste/ (gerados a partir do .env da própria trilha, fora do git — ver
+# tests/medidas/L7-01-a-compose-perfis.json e o handoff para o comando exato).
+services:
+  api:
+    environment:
+      # 8150 é a porta de PRODUÇÃO do plat-api (brief das trilhas); esta trilha usa a porta atribuída no
+      # próprio prompt do item (8272) para nunca colidir com o processo real que já escuta em 8150.
+      # PLAT_URL_PUBLICA exige https:// (app/settings.py) mesmo em teste — mantém a mesma URL do .env da
+      # trilha (https://trilha-il701acompo.invalido), só a porta de bind muda.
+      PLAT_API_PORTA: "8272"
+      PLAT_URL_PUBLICA: https://trilha-il701acompo.invalido
+      # mesmo worker de teste que roda diretamente no host nesta prova (venv/bin/python -m app.jobs.worker),
+      # alcançável porque este serviço usa network_mode: host (ver docker-compose.yml)
+      PLAT_WORKER_URL: http://127.0.0.1:8278
+    secrets:
+      - source: PLAT_SECRET
+        target: PLAT_SECRET
+      - source: PLAT_DSN_WORKER
+        target: PLAT_DSN_WORKER
+
+secrets:
+  PLAT_SECRET:
+    file: ./segredos_teste/PLAT_SECRET
+  PLAT_DSN_WORKER:
+    file: ./segredos_teste/PLAT_DSN_WORKER

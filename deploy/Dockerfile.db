@@ -1,0 +1,28 @@
+# syntax=docker/dockerfile:1
+# Imagem do Postgres do perfil `appliance` (item L7-01-a-compose-perfis): Postgres 16 + PostGIS + pgRouting
+# + pgstac, para uma instalação que NÃO tem o Postgres compartilhado da casa (iagro_sat) por baixo.
+#
+# ⛔ NÃO CONSTRUÍDA neste turno (disco a 95-96% no dia deste item). Duas cláusulas do próprio portão de
+# pronto deste item já MEDEM que essa pilha não existe hoje nem em produção: ADR 0007
+# (docs/adr/0007-pacotes-apt-e-assinatura-de-release.md linha 27) registra que `postgresql-16-pgrouting`
+# **não está instalada** na máquina de produção em 05/09/2026, e nenhuma migração em db/migracoes usa
+# pgRouting ou pgstac hoje (grep confere: só menções em ADR/doc, nenhum `CREATE EXTENSION pgrouting` nem
+# schema pgstac real). Construir essa imagem hoje seria compilar/baixar uma pilha que a PRÓPRIA produção
+# ainda não tem — risco de disco sem retorno imediato de teste (não haveria migração para exercitá-la).
+#
+# Plano registrado para quando o disco e a decisão da pgRouting (ADR 0007) permitirem:
+#   FROM postgres:16-alpine   (já em cache local desta máquina — zero pull novo)
+#   RUN apk add --no-cache postgis                      # PostGIS via apk (comunidade Alpine, compilado p/ pg16)
+#   # pgRouting: sem pacote apk pronto medido em 07/09/2026; exigiria compilar da fonte (CGAL/SFCGAL como
+#   # dependência de build) — orçamento de disco/tempo incompatível com este turno.
+#   # pgstac: `pip install pypgstac` roda as migrações SQL do pgstac contra o banco já de pé; não é parte
+#   # da IMAGEM do banco, é um passo de `docker compose run` equivalente ao `db/migrar.sh` do plat.
+#
+# Enquanto isso, o perfil `appliance` aceita `PLAT_DB_EXTERNO=1` (ver docker-compose.yml) para apontar para
+# um Postgres 16+PostGIS já existente fora do compose (o caminho que este item PROVOU nesta máquina: a
+# trilha usa exatamente esse Postgres compartilhado). Ver tests/medidas/L7-01-a-compose-perfis.json,
+# cláusula "db_imagem_appliance": "pendente".
+FROM postgres:16-alpine
+LABEL org.opencontainers.image.title="plat-db-appliance-PENDENTE" \
+      org.opencontainers.image.description="Rascunho não construído (item L7-01-a-compose-perfis) — ver comentário do arquivo."
+RUN echo "PENDENTE: apk add postgis (medir espaço antes); pgRouting e pgstac ainda não fazem parte de nenhuma migração deste repositório (ADR 0007)." >&2
