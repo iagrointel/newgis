@@ -56,8 +56,8 @@ from app.imagens.rotas_tiles import router as rotas_tiles
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
 from app.mapa.rotas import router as rotas_mapa
-from app.multiescala.rotas import router as rotas_multiescala
 from app.mapas.rotas import router as rotas_mapas
+from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rede_utilidades.rotas_config_tracado import router as rotas_rede_config_tracado
@@ -72,9 +72,8 @@ from app.rede_utilidades.rotas_topologia import router as rotas_rede_topologia
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
-from app.tiles.rotas import router as rotas_tiles
 from app.tiles.exportacao import router as rotas_tiles_exportacao
-from app.tiles.rotas import router as rotas_tiles
+from app.tiles.rotas import router as rotas_tiles_martin_verificar
 from app.tiles.vector_tile_server import router as rotas_vector_tile_server
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
@@ -201,7 +200,7 @@ ROUTERS = [
     # --- visualizador de mapa (L2-01-mapa-web): /api/mapa/camadas, TileJSON com token curto, repasse /tiles
     rotas_mapa,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
-    rotas_tiles,
+    rotas_tiles_martin_verificar,
     # --- operação query do FeatureServer (L2-04-c): /rest/services/{item}/FeatureServer/{camada}/query
     # --- diretório/metadados do FeatureServer + OGC API Features Part 1 + WFS 2.0 (item
     # L2-04-servicos-esri-ogc, construído EM VOLTA da query acima, sem reescrevê-la): descritor de
