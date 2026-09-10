@@ -25,7 +25,7 @@ import { Medicao } from '../mapa/medicao.js';
 import { interpretarCoordenada, sugerir, geocodificar } from '../mapa/busca.js';
 import { paraPng, paraPdf, escalaNumerica } from '../mapa/impressao.js';
 import { Edicao } from '../mapa/edicao.js';
-import { enviarArquivo, publicar, obterTipos, extensaoDe } from '../uploads/nucleo.js';
+import { enviarArquivo, publicar, obterTipos, extensaoDe, TIPOS_RASTER } from '../uploads/nucleo.js';
 
 const el = (id) => document.getElementById(id);
 const CENTRO = [-46.593018, -23.493476];
@@ -474,10 +474,21 @@ async function publicarArquivoNoMapa(arquivo, { map, catalogo, paineis }) {
     const ext2 = await catalogo.extensao(itemId);
     if (ext2 && map) map.fitBounds([[ext2[0], ext2[1]], [ext2[2], ext2[3]]], { padding: 40, animate: false });
     linksBox.hidden = false;
-    const wfs = `${location.origin}/wfs/${itemId}`;
-    const wmts = `${location.origin}/api/mapa/camadas/${itemId}/tilejson`;
-    el('envio-copiar-wfs').onclick = () => navigator.clipboard?.writeText(wfs).catch(() => {});
-    el('envio-copiar-wmts').onclick = () => navigator.clipboard?.writeText(wmts).catch(() => {});
+    // WFS (app/consulta/rotas_wfs.py, prefixo /wfs/{item_id}) só existe para camada VETORIAL; imagem
+    // publicada não tem WFS — em vez de fingir um link OGC que este produto ainda não serve para raster
+    // (WMTS de verdade exige token de serviço, item L1-02, e não é a mesma rota de sessão do catálogo),
+    // o botão de raster copia o template XYZ que o próprio mapa já usa para desenhá-la.
+    const ehRaster = TIPOS_RASTER.has(achado.tipo);
+    el('envio-copiar-wfs').hidden = ehRaster;
+    el('envio-copiar-wmts').hidden = !ehRaster;
+    el('envio-copiar-wmts').textContent = 'copiar link de tiles (XYZ)';
+    if (!ehRaster) {
+      const wfs = `${location.origin}/wfs/${itemId}`;
+      el('envio-copiar-wfs').onclick = () => navigator.clipboard?.writeText(wfs).catch(() => {});
+    } else {
+      const tiles = `${location.origin}/api/imagens/${itemId}/tiles/{z}/{x}/{y}.png`;
+      el('envio-copiar-wmts').onclick = () => navigator.clipboard?.writeText(tiles).catch(() => {});
+    }
   } catch (e) {
     status.textContent = `falha ao publicar: ${(e && e.message) || e}`;
     el('aviso').erro(`falha ao publicar ${arquivo.name}: ${(e && e.message) || e}`);
