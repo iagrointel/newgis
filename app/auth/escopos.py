@@ -6,73 +6,21 @@ import re
 from app.erros import ErroAPI
 
 UUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+# (entrega 10/09/2026) Este arquivo é registro com `merge=union` no .gitattributes. A fusão de 146 ramos
+# concatenou a expressão regular DOZE vezes e deixou `re.compile` com parêntese desbalanceado — o app não
+# subia. Reconstruído aqui como UNIÃO real: todo escopo que qualquer ramo fundido introduziu, uma definição
+# só. Os três que aceitam `:<uuid>` seguem na expressão abaixo e no COM_UUID original, mais adiante.
+ESCOPOS_SEM_UUID = (
+    "admin:inquilino", "amc:usar", "analise3d:usar", "campo:usar",
+    "catalogo:ler", "conteudo:criar", "crs:usar", "geocodificar:usar",
+    "imagens:escrever", "imagens:ler", "jobs:executar", "multiescala:usar",
+    "rota:usar",
+)
 ESCOPO = re.compile(
-    rf"^(catalogo:ler|camada:(ler|editar)(:{UUID})?|tiles:ler(:{UUID})?|jobs:executar|rota:usar|"
-    rf"geocodificar:usar|imagens:(ler|escrever)|multiescala:usar|admin:inquilino)$"
-    rf"geocodificar:usar|multiescala:usar|admin:inquilino)$"
+    rf"^(catalogo:ler|camada:(ler|editar)(:{UUID})?|tiles:ler(:{UUID})?|"
+    rf"admin:inquilino|amc:usar|analise3d:usar|campo:usar|catalogo:ler|conteudo:criar|crs:usar|geocodificar:usar|imagens:escrever|imagens:ler|jobs:executar|multiescala:usar|rota:usar)$"
 )
-ESCOPOS_SEM_UUID = (
-    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
-    "geocodificar:usar", "multiescala:usar", "admin:inquilino",
-    rf"geocodificar:usar|amc:usar|admin:inquilino)$"
-    rf"geocodificar:usar|campo:usar|admin:inquilino)$"
-    rf"geocodificar:usar|imagens:(ler|escrever)|admin:inquilino)$"
-)
-ESCOPOS_SEM_UUID = (
-    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
-    "geocodificar:usar", "imagens:ler", "imagens:escrever", "admin:inquilino",
-)
-ESCOPOS_SEM_UUID = (
-    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
-    "geocodificar:usar", "campo:usar", "admin:inquilino",
-)
-ESCOPOS_SEM_UUID = (
-    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
-    "geocodificar:usar", "amc:usar", "admin:inquilino",
-    "geocodificar:usar", "imagens:ler", "imagens:escrever", "multiescala:usar", "admin:inquilino",
-    rf"geocodificar:usar|multiescala:usar|amc:usar|admin:inquilino)$"
-)
-ESCOPOS_SEM_UUID = (
-    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
-    "geocodificar:usar", "multiescala:usar", "amc:usar", "admin:inquilino",
-    rf"geocodificar:usar|multiescala:usar|imagens:(ler|escrever)|admin:inquilino)$"
-)
-ESCOPOS_SEM_UUID = (
-    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
-    "geocodificar:usar", "multiescala:usar", "imagens:ler", "imagens:escrever", "admin:inquilino",
-    rf"geocodificar:usar|multiescala:usar|analise3d:usar|admin:inquilino)$"
-)
-ESCOPOS_SEM_UUID = (
-    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
-    "geocodificar:usar", "multiescala:usar", "analise3d:usar", "admin:inquilino",
-    rf"geocodificar:usar|multiescala:usar|imagens:(ler|escrever)|admin:inquilino)$"
-)
-ESCOPOS_SEM_UUID = (
-    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
-    "geocodificar:usar", "multiescala:usar", "imagens:ler", "imagens:escrever", "admin:inquilino",
-    rf"geocodificar:usar|imagens:(ler|escrever)|admin:inquilino)$"
-)
-ESCOPOS_SEM_UUID = (
-    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
-    "geocodificar:usar", "imagens:ler", "imagens:escrever", "admin:inquilino",
-    rf"geocodificar:usar|amc:usar|multiescala:usar|admin:inquilino)$"
-)
-ESCOPOS_SEM_UUID = (
-    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
-    "geocodificar:usar", "amc:usar", "multiescala:usar", "admin:inquilino",
-    rf"geocodificar:usar|crs:usar|admin:inquilino)$"
-)
-ESCOPOS_SEM_UUID = (
-    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
-    "geocodificar:usar", "crs:usar", "admin:inquilino",
-    rf"geocodificar:usar|conteudo:criar|admin:inquilino)$"
-)
-ESCOPOS_SEM_UUID = (
-    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
-    "geocodificar:usar", "conteudo:criar", "admin:inquilino",
-)
-# achado do adversário T3 (L0-04-a/L0-11): escopo cujo teto NÃO é "admin" (perfil), mas sim um privilégio —
-# quem já tem o privilégio no perfil pode se emitir um token com este escopo. `rotas_tokens.criar` consulta.
+
 ESCOPO_EXIGE_PRIVILEGIO = {"conteudo:criar": "conteudo.criar"}
 DESCRICAO = {
     "catalogo:ler": "listar e ler metadado de itens que o dono pode ler",
