@@ -1,0 +1,22 @@
+{
+ "item": "L3-02-c-smaa",
+ "medidas": {
+  "soma_aceitabilidade_primeiro": {
+   "valor": 1.0,
+   "unidade": "fração",
+   "comando": "soma de b^1 sobre as 2000 unidades em 1000 sorteios — a conferência do adversário do item é 1 ± 0,01; carga_1min=7.73, ram_livre_gb=4.52, medido_em=2026-09-08T10:28:43Z"
+  },
+  "linhas_da_tabela_topo": {
+   "valor": 20,
+   "unidade": "unidades",
+   "comando": "tabela de aceitabilidade do top-20 sobre 2000 unidades, 20 posições por linha"
+  },
+  "smaa_1000x2000_job_s": {
+   "valor": 0.221,
+   "unidade": "s",
+   "comando": "amc.smaa (1000 sorteios × 2000 unidades × 6 fatores, dirichlet, ContextoJob sem banco) — limite 60.0 s; carga_1min=7.73, ram_livre_gb=4.52, medido_em=2026-09-08T10:28:43Z"
+  }
+ },
+ "gerado_em": "2026-09-08T10:28:43Z",
+ "git_sha": "0d3f673ac96b"
+}
