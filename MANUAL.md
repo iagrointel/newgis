@@ -1438,3 +1438,88 @@ o mesmo mecanismo por trás dos dois:
   reconversão é que é em lote);
 - reconstrução de `plat:cadeia` real para item retroativo SEM rodar `imagens.reexecutar` — não existe
   atalho, e não deveria existir (ver 26.3).
+
+## 27. Comparar: cortina, lado a lado, lupa e tempo (`/sig`, painel "Comparar", item L2-01-j-comparacao-cortina-tempo)
+
+Quarta ferramenta da barra de instrumento (ícone entre "Impressão" e "Composições", atalho de teclado
+`C`): comparação visual entre CONJUNTOS de camadas escolhidos na lista, mais um controle de tempo para
+camada vetorial com campo de data. É o que um parceiro que avalia o produto ao lado do concorrente vê em
+dez segundos — não existia antes deste item.
+
+### 27.1 Cortina, lado a lado e lupa
+
+No painel "Comparar", a seção "Cortina, lado a lado, lupa" tem cinco modos (rádio) e duas listas de
+camadas — **conjunto A** (esquerda/mapa 1) e **conjunto B** (direita/mapa 2/lupa) — com as mesmas
+camadas do catálogo principal, marcadas por caixa de seleção. Escolher o modo já aplica (o botão
+"aplicar" existe para reaplicar sem trocar de modo, por exemplo depois de mudar os conjuntos):
+
+- **cortina vertical / cortina horizontal**: dois mapas independentes, sobrepostos na MESMA área, com o
+  mapa B recortado por uma linha que se arrasta (a alça laranja) — arrastar move a linha; o recorte é
+  puro CSS (`clip-path`) sobre um mapa que já está desenhado por baixo, não um "antes/depois" trocado no
+  clique.
+- **lado a lado**: os dois mapas em metades reais da tela (50/50), cada um com seu conjunto de camadas.
+- **lupa**: o mapa PRINCIPAL continua a tela normal (com o que estiver ligado no painel "Camadas"); um
+  círculo de 260 px que segue o cursor mostra por cima, na posição do mouse, o conjunto B.
+
+Em todos os quatro, os dois mapas (ou o mapa principal e o círculo da lupa, no caso da lupa) têm
+**centro, zoom e rotação sincronizados por evento**: mover um dos dois move o outro imediatamente
+(`jumpTo`, sem animação, para não perder passo), com uma trava contra o laço de retroalimentação (mapa A
+move → sincroniza B → B dispara seu próprio evento de movimento → a trava impede sincronizar A de volta).
+Medido na instância viva (`scripts/comparar_demo_tempo.py` + captura Playwright, 20 movimentos aleatórios
+de centro/zoom/rotação só no mapa A): **diferença de centro entre os dois mapas = 0,0 grau em todos os 20
+passos** (a barra "sincronismo" no painel mostra a contagem e a diferença máxima medida em tempo real).
+
+O estado do modo e dos dois conjuntos fica na URL (`?cmp=cortina-v&cmpa=<ids>&cmpb=<ids>`) — recarregar a
+página ou mandar o link para outra pessoa reabre a mesma comparação.
+
+⚠️ Achado do e2e (10/09): o círculo da lupa fica preso no canto até o carregamento do mapa B terminar
+(catálogo de camadas + tiles) — a barra some do lugar assim que o cursor volta a se mover depois disso;
+não há indicador de carregamento dedicado ainda.
+
+### 27.2 Controle de tempo
+
+Seção "Tempo" do mesmo painel: uma camada vetorial com campo de data/hora tipado (detectado pelo tipo do
+campo — `timestamp with time zone`, `timestamp`, `date` — não por convenção de nome), janela
+**instantânea** (só o intervalo do passo atual) ou **acumulativa** (desde o início da faixa até o fim do
+passo atual), um controle deslizante de passo, "reproduzir" a 2 passos por segundo, e a contagem de
+feições do passo atual.
+
+**A filtragem é feita no servidor, não escondida no cliente**: o painel usa a MESMA operação `query` do
+FeatureServer compatível Esri que qualquer cliente (Pro, um script) já usa contra a plataforma
+(`GET /rest/services/<item>/FeatureServer/0/query`, `app/consulta/motor.py`/`where_ast.py`, item
+L2-04-c) — nenhuma rota nova, nenhum parâmetro de tile novo no Martin. O passo monta um `where` no
+dialeto Esri (`<campo> >= TIMESTAMP '2022-03-01 00:00:00' AND <campo> < TIMESTAMP '2022-04-01
+00:00:00'`, sempre em UTC — a sessão do Postgres desta instância é `Etc/UTC`, `SHOW TIME ZONE` conferido)
+e faz DUAS chamadas: `returnCountOnly=true` para a contagem mostrada, `f=geojson&returnGeometry=true`
+para o que aparece no mapa (GeoJSON, camada `circle`). Como as duas passam pelo mesmo `where`
+server-side, um campo nulo nunca aparece em nenhuma janela (comparação com `NULL` é sempre falsa no SQL)
+e o fuso de origem do dado não importa — o que decide é o instante armazenado (`timestamptz`), nunca o
+texto.
+
+Medido na instância viva contra `COUNT(*)` direto no banco (não contra a mesma rota que a tela usa — se o
+motor de contagem da tela estivesse errado, comparar com ele mesmo não provaria nada): **5 passos da
+janela instantânea + 3 da acumulativa, os 8 batendo exatamente** com uma consulta SQL independente
+(`scratchpad/prova_final.py`, capturas `comparar_tempo_instantanea.png`/`comparar_tempo_acumulativa.png`
+em `tests/e2e/capturas/`). "Reproduzir" espera cada passo terminar (contagem + geometria já chegaram)
+antes de agendar o próximo — nunca dois pedidos pendentes ao mesmo tempo — medido: último passo em 104 ms,
+bem abaixo do intervalo de 500 ms (2 passos/s) usado como cadência.
+
+**Nenhuma das três camadas reais do inquilino demo** (Municípios de SP, Linhas de transmissão SP,
+Subestações SP) tem campo de data tipado — "Subestações SP" tem `dt_entrada`, mas como `text`. A prova
+acima rodou sobre uma camada de TESTE semeada só para isto (`scripts/comparar_demo_tempo.py criar`:
+100.000 pontos, `data_evento timestamptz`, ~3% NULL de propósito, 1/4 das linhas gravadas com fuso
+diferente de UTC via `AT TIME ZONE` para provar que a normalização de fuso não muda o resultado) —
+**apagada ao final deste item** (`scripts/comparar_demo_tempo.py apagar`, regra do item: nada de dado de
+teste esquecido no inquilino demo). Sem essa camada (ou outra com campo de data tipado), a seção "Tempo"
+mostra "nenhuma camada com campo de data disponível" e o resto do painel funciona normalmente.
+
+### 27.3 O que ficou de fora
+
+- Controle de tempo para a série RASTER (STAC) — é o item irmão L1-04-serie-temporal, ainda `pendente`;
+  a hipótese original deste item já prevê que os dois usem o MESMO controle de tela quando o L1-04
+  existir, mas o controle hoje só liga em camada vetorial;
+- a hipótese original também citava filtrar por parâmetro na função de tile do Martin; descartado a
+  favor do canal de consulta (27.2) — o motor Esri-compatível já dá filtragem no servidor + contagem
+  exata pela mesma chamada, com menos código novo e paridade Esri de graça (`docs/PARIDADE.md`);
+- indicador de carregamento na lupa enquanto o mapa B monta (27.1);
+- alça arrastável na divisão do "lado a lado" (hoje fixa em 50/50; só cortina tem alça).

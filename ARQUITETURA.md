@@ -1111,3 +1111,71 @@ cog.py` (`ProdutoCOG.comando`), `app/imagens/ingestao.py` (`_item_stac` monta e 
 rotas_imagens.py` (2 rotas + bloco `proveniencia` em `GET /api/imagens/<item>`), `app/jobs/tipos.py`
 (registro dos 2 jobs novos), migração `20260910T2345_imagens_proveniencia_evento_tipo.sql`, testes
 `tests/api/imagens/test_proveniencia.py` (20 casos).
+
+---
+
+## 21. Comparar: cortina, lado a lado, lupa e tempo (item L2-01-j-comparacao-cortina-tempo)
+
+Módulo novo `web/js/sig/comparar.js`, sem NENHUMA rota de backend nova. Duas peças independentes:
+
+**Motor de comparação espacial** (`MotorComparacao`): reaproveita `Catalogo` (`web/js/mapa/catalogo.js`)
+em DUAS instâncias — uma por mapa secundário (`#comparar-mapa-a`/`#comparar-mapa-b`, dois `maplibregl.
+Map` novos com o mesmo estilo de base de `construirEstilo({tipo:'raster'})`) — em vez de reescrever
+lógica de fonte/TileJSON/ordem de camada. Os quatro modos (cortina vertical, cortina horizontal, lado a
+lado, lupa) são só geometria CSS por cima do MESMO par de mapas sincronizados:
+- cortina: os dois mapas cheios e sobrepostos, `#comparar-mapa-b` recortado por `clip-path: inset(...)`
+  cuja posição a alça arrastável escreve numa custom property (`--comparar-clip`);
+- lado a lado: os dois em metades reais (`right:50%`/`left:50%`), sem `clip-path`;
+- lupa: só o mapa B existe como container pequeno (260 px, `border-radius:50%`), o mapa PRINCIPAL
+  (`window.plat.sig.map`) continua a tela normal — o "mapa A" da lupa é o mapa principal de verdade, não
+  uma terceira instância.
+
+Sincronismo: `_sincronizar(origemRef, destinoRef)` registra `'move'` nos dois lados e copia
+centro/zoom/bearing/pitch com `jumpTo` (sem animação — `easeTo` perderia passo em movimento contínuo),
+com uma trava booleana (`ocupado`) para o laço de retroalimentação: `jumpTo` dispara `'move'` de novo,
+de forma SÍNCRONA, e sem a trava os dois mapas alternam `'move'` para sempre. Medido: diferença de
+centro entre os dois mapas depois de 20 movimentos aleatórios (centro/zoom/rotação, só no mapa A) =
+**0,0 grau nos 20** (`window.plat.sig.comparar.motor.diferencaMaximaCentro`/`.movimentosSincronizados`,
+expostos para o e2e ler direto, sem parsear DOM).
+
+Achado corrigido em 10/09 (achado do e2e, não do adversário — a suíte não tinha rodado ainda quando
+escrito): `_aplicarVisual()` (que põe a classe `modo-<x>` no container — dela depende
+`.comparar-area.modo-lupa { pointer-events: none }` em `sig.css`, que é o que deixa o `pointermove`
+alcançar o mapa principal por baixo do container cheio de `#comparar-area`) só era chamada no ramo
+cortina/lado-a-lado de `ligar()`; no ramo lupa a classe nunca mudava e a lupa ficava presa no canto
+0,0 — corrigido chamando `_aplicarVisual()` uma vez, incondicional, antes do `if (modo === 'lupa')`.
+
+**Controle de tempo** (`MotorTempo`): NENHUMA mudança na função de tile do Martin
+(`plat.camada_tile_garantir`) nem no schema — a hipótese original do item cogitava filtro por parâmetro
+na função de tile; descartado a favor de reusar a operação `query` do FeatureServer Esri-compatível já
+existente (`app/consulta/motor.py`/`where_ast.py`, item L2-04-c), que já faz filtragem 100% no servidor
+com `where` parametrizado e `returnCountOnly`. Cada passo monta `<campo> >= TIMESTAMP '...' AND <campo> <
+TIMESTAMP '...'` (dialeto Esri de `where_ast`, literal `TIMESTAMP` vira `datetime` Python NAIVE — por
+isso o cliente sempre manda o instante em UTC, `Date.toISOString().slice(0,19).replace('T',' ')`; a
+sessão do Postgres desta instância é `Etc/UTC`, conferido `SHOW TIME ZONE`, então naive=UTC é seguro) e
+faz DUAS chamadas em paralelo: `returnCountOnly=true` (contagem exibida) e `f=geojson&returnGeometry=
+true&outFields=*&resultRecordCount=5000` (o que desenha, camada `circle` numa fonte GeoJSON só). Nulo
+nunca aparece em janela nenhuma (comparação com NULL é sempre falsa no SQL); fuso de origem do dado não
+importa (o campo é `timestamptz`, a comparação é sobre o instante armazenado). Medido contra `COUNT(*)`
+direto no banco (não contra a mesma rota — provaria só que a rota concorda consigo mesma): 5 passos
+instantânea + 3 acumulativa, **8/8 batendo exatamente** (ver MANUAL.md §27.2). "Reproduzir" é um laço que
+AWAITS cada `_aoPasso` inteiro antes de agendar o próximo (nunca `setInterval` cego) — medido: último
+passo 104-322 ms, sempre abaixo do intervalo de 500 ms (2 passos/s) usado como cadência.
+
+Bancada: nenhuma das 3 camadas reais do inquilino demo tem campo de data TIPADO (`dt_entrada` de
+"Subestações SP" é `text`). `scripts/comparar_demo_tempo.py criar/apagar` semeia/remove uma camada de
+TESTE (100.000 pontos, `data_evento timestamptz`, ~3% NULL, 1/4 das linhas gravadas via `AT TIME ZONE` de
+4 fusos diferentes de UTC) só para provar o controle — apagada ao final deste item (marca
+`comparar-demo-l2-01-j` no `dados` do item, mesmo padrão de `scripts/martin_demo_camadas.py`).
+
+Fora deste item (nomeado): controle de tempo para série raster/STAC (item irmão L1-04-serie-temporal,
+`pendente` — a hipótese original prevê o MESMO controle de tela quando ele existir); alça arrastável no
+divisor do "lado a lado" (hoje fixo 50/50); indicador de carregamento na lupa enquanto o mapa B monta
+(existe uma janela de 1-3 s em que o círculo não segue o cursor, entre `ligar()` tirar `hidden` do
+container e `_ativarSeguirCursor()` terminar de montar o mapa B + catálogo — o e2e aprendeu a esperar
+`pararSync`/`_onMoveLupa` em vez do `hidden`, o produto ainda não tem um retorno visual disso).
+
+Arquivos: `web/js/sig/comparar.js` (novo), `web/sig.html` (ícone + painel "Comparar" + containers dos
+mapas secundários), `web/sig.css` (`.comparar-*`), `web/js/sig/sig.js` (import + chamada de
+`instalarComparar`, atalho `c`), `web/js/i18n/pt-BR.json` (chaves `comparar.*`), `scripts/
+comparar_demo_tempo.py` (novo, bancada), `tests/e2e/test_comparar.py` (novo, 5 casos).

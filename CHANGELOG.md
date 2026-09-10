@@ -3,6 +3,44 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 9, setembro de 2026 (item L2-01-j-comparacao-cortina-tempo: comparação — cortina, lado a lado, lupa e tempo)
+
+Quarta ferramenta do painel "Comparar" do SIG novo (`/sig`, ícone atalho `C`): cortina (swipe) vertical e
+horizontal entre dois conjuntos de camadas, lado a lado sincronizado, lupa, e controle de tempo para
+camada vetorial com campo de data — o que um parceiro compara com o concorrente em dez segundos. As
+quatro ferramentas reaproveitam `Catalogo` (mapa/catalogo.js) em duas instâncias sincronizadas por
+evento (`jumpTo` + trava contra retroalimentação) em vez de reescrever fonte/tile/ordem de camada; o
+controle de tempo não abriu rota nova nenhuma — usa a MESMA operação `query` do FeatureServer
+Esri-compatível que já existia (item L2-04-c), com filtragem 100% no servidor.
+
+Medido na instância viva (`https://demo.iagrointel.com/sig`, captura em `tests/e2e/capturas/`,
+`scratchpad/prova_final.py` reproduz a mesma sequência sem depender do `.pytest.lock`, disputado nesta
+trilha por outro item rodando em paralelo):
+
+- **sincronismo do lado a lado**: 20 movimentos aleatórios de centro/zoom/rotação só no mapa A —
+  diferença de centro entre os dois mapas = **0,0 grau em todos os 20** (`diferencaMaximaCentro` e
+  `diferencaCentroFinalLng/Lat` no resultado; zoom e rotação idênticos bit a bit);
+- **controle de tempo**: 5 passos da janela instantânea + 3 da acumulativa, os **8 batendo exatamente**
+  com `COUNT(*)` direto no banco (consulta SQL independente, não a mesma rota que a tela usa) — camada de
+  TESTE de 100.000 pontos com `data_evento timestamptz`, ~3% NULL, 1/4 gravado com fuso diferente de UTC
+  (`AT TIME ZONE`), porque nenhuma das 3 camadas reais do inquilino demo tem campo de data tipado
+  (`scripts/comparar_demo_tempo.py criar/apagar` — apagada ao final deste item);
+- **reprodução a 2 passos/s**: laço que espera cada passo terminar antes do próximo (nunca dois pedidos
+  pendentes) — último passo medido em 104-322 ms, sempre abaixo do intervalo de 500 ms;
+- **lupa**: achado e corrigido no próprio turno — `_aplicarVisual()` (que liga `pointer-events:none` no
+  container em modo lupa, condição para o cursor alcançar o mapa principal por baixo) só rodava no ramo
+  cortina/lado-a-lado; sem ela a lupa ficava presa no canto (0,0) do container. Corrigido, medido depois:
+  diferença entre o alvo do cursor e o centro do círculo = **0,01 px** (achado pelo e2e, não pelo
+  adversário — a suíte ainda não tinha rodado quando o código foi escrito pela primeira vez);
+- **0 erros de console** em toda a sequência (cortina × 2 orientações, lado a lado, lupa, tempo × 2
+  janelas, reprodução) — os 502 vistos numa rodada anterior eram `/api/imagens/.../tiles/...` de OUTRA
+  trilha (item L1-01-j) rodando no mesmo inquilino demo compartilhado sob pressão de RAM da máquina, não
+  deste item; o e2e documenta a tolerância e por quê (`tests/e2e/test_comparar.py`).
+
+Fora deste turno, nomeado: controle de tempo para série raster/STAC (item irmão L1-04-serie-temporal,
+ainda `pendente`); alça arrastável no divisor do "lado a lado" (hoje fixo 50/50); indicador de
+carregamento na lupa enquanto o mapa B monta.
+
 ## turno 9, setembro de 2026 (item L1-01-j-proveniencia-da-imagem-lastro: proveniência verificável da imagem)
 
 O "Lastro" da casa aplicado à imagem: o item raster passa a carregar, além do `file:checksum` que já
