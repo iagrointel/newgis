@@ -44,6 +44,9 @@ from app.migracao import tarefas as migracao_tarefas  # noqa: F401 — L2-08-a: 
 from app.raster import tarefas as raster_tarefas  # noqa: F401 — L1-01-b: raster.validar
 from app.relatorios import tarefas as relatorios_tarefas  # noqa: F401 — L0-07-e: relatorios.gerar (CSV do admin)
 from app.migracao import tarefas as migracao_tarefas  # noqa: F401 — L2-08-a: migracao.inventariar
+from app.conexao import (
+    tarefas_endpoints as conexao_tarefas_endpoints,  # noqa: F401 — L6-02-m: endpoints_publicos.retestar
+)
 from app.correio import tarefas as correio_tarefas  # noqa: F401 — L0-07-d: correio.enviar (somente_sistema)
 from app.ingestao import tarefas as ingestao_tarefas  # noqa: F401 — L0-04: ingestao.inspecionar/ingestao.carregar
 from app.jobs import periodicos, tipos_prova  # noqa: F401 — importação registra os tipos

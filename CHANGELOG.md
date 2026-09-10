@@ -5897,3 +5897,13 @@ Testes: `tests/unit/test_consulta_sql.py` (39 casos) e `tests/api/test_bancos_ex
 PostGIS na porta 55499, pulado sem o container). **SQL Server e Oracle ficam pendentes** (sem container
 liberado pelo dono não há teste; registrado no handoff). Limites novos em `docs/LIMITES.md`
 (`CONEXAO_PG_CONSULTA_LINHAS_MAX`, `CONEXAO_PG_CONSULTA_TEXTO_MAX`).
+## turno 4 (líder 5), setembro de 2026 (item L6-02-m-catalogo-endpoints-brasil: catálogo de conectores públicos prontos para um clique, retestado por semana)
+
+`plat.endpoint_publico` (global, escrita só por função SECURITY DEFINER) + job `endpoints_publicos.retestar`
+(semente curada + registro do acervo, toda segunda 04:00) + `GET /api/endpoints-publicos` (vivos; `?vivo=false`
+= fora do ar) + `POST /api/endpoints-publicos/{id}/adicionar` (conexão do inquilino com ficha de procedência do
+catálogo, idempotente; 409 para entrada fora do ar). "Vivo" exige o documento do protocolo (Capabilities,
+`f=json` sem `error`, `stac_version`, `links`): HTTP 200 com HTML ou erro ArcGIS conta como morto. Tela
+`/conexoes` ganha a seção "conectores públicos prontos" com a lista de fora do ar. Medido em 07/09
+(`scripts/endpoints_publicos_testar.py` → `tests/medidas/L6-02-m-catalogo-endpoints-brasil.json`): 78 verdes de
+100 candidatos; e2e adiciona 10 pela tela; 29 endereços adivinhados que nunca existiram foram podados da semente.

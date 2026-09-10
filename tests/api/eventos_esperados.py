@@ -146,6 +146,10 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("PATCH", "/api/conexoes/{id}"): ["conexoes/editar"],
     ("DELETE", "/api/conexoes/{id}"): ["conexoes/apagar"],
     ("POST", "/api/conexoes/{id}/testar"): ["conexoes/testar"],
+    # o catálogo de conectores públicos (L6-02-m) não cria um tipo de evento próprio: adicionar uma
+    # entrada do catálogo cria uma CONEXÃO, e o evento gravado é o mesmo `conexoes/criar`, com
+    # `origem: endpoint_publico` no dado do evento.
+    ("POST", "/api/endpoints-publicos/{id}/adicionar"): ["conexoes/criar"],
     ("POST", "/api/conexoes/{id}/publicar"): ["conexoes/publicar_camada"],
     ("POST", "/api/conexoes/{id}/consulta"): ["conexoes/consultar"],  # L6-02-j: consulta SQL só-leitura
     # L0-04-i (ramo wt/il004ifonte, mesclado aqui): a rota em massa registra 1 evento por camada + 1 do lote

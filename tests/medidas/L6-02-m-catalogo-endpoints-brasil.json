@@ -1,0 +1,865 @@
+{
+ "item": "L6-02-m-catalogo-endpoints-brasil",
+ "medidas": {
+  "endpoints_candidatos": {
+   "valor": 100,
+   "unidade": "endpoints",
+   "comando": "venv/bin/python scripts/endpoints_publicos_testar.py (GET do documento do protocolo por buscar_seguro + assinatura do corpo)"
+  },
+  "endpoints_verdes_na_data": {
+   "valor": 78,
+   "unidade": "endpoints",
+   "comando": "venv/bin/python scripts/endpoints_publicos_testar.py (GET do documento do protocolo por buscar_seguro + assinatura do corpo)"
+  },
+  "endpoints_vermelhos_na_data": {
+   "valor": 22,
+   "unidade": "endpoints",
+   "comando": "venv/bin/python scripts/endpoints_publicos_testar.py (GET do documento do protocolo por buscar_seguro + assinatura do corpo)"
+  },
+  "verdes_por_tipo": {
+   "valor": {
+    "wms": 20,
+    "wfs": 16,
+    "wmts": 6,
+    "esri_rest": 20,
+    "stac": 12,
+    "ogc_api": 4
+   },
+   "unidade": "endpoints",
+   "comando": "venv/bin/python scripts/endpoints_publicos_testar.py (GET do documento do protocolo por buscar_seguro + assinatura do corpo)"
+  },
+  "verdes_por_origem": {
+   "valor": {
+    "registro": 3,
+    "curadoria": 51,
+    "fila_keyless": 24
+   },
+   "unidade": "endpoints",
+   "comando": "venv/bin/python scripts/endpoints_publicos_testar.py (GET do documento do protocolo por buscar_seguro + assinatura do corpo)"
+  },
+  "duracao_s": {
+   "valor": 24.0,
+   "unidade": "s",
+   "comando": "venv/bin/python scripts/endpoints_publicos_testar.py (GET do documento do protocolo por buscar_seguro + assinatura do corpo)"
+  },
+  "job_retestar_semeados": {
+   "valor": 100,
+   "unidade": "endpoints",
+   "comando": "tests/api/test_endpoints_publicos.py::test_job_retestar (tarefas_endpoints.retestar, rede real)"
+  },
+  "job_retestar_testados": {
+   "valor": 102,
+   "unidade": "endpoints",
+   "comando": "tests/api/test_endpoints_publicos.py::test_job_retestar (tarefas_endpoints.retestar, rede real)"
+  },
+  "job_retestar_vivos": {
+   "valor": 78,
+   "unidade": "endpoints",
+   "comando": "tests/api/test_endpoints_publicos.py::test_job_retestar (tarefas_endpoints.retestar, rede real)"
+  },
+  "job_retestar_fora_do_ar": {
+   "valor": 24,
+   "unidade": "endpoints",
+   "comando": "tests/api/test_endpoints_publicos.py::test_job_retestar (tarefas_endpoints.retestar, rede real)"
+  },
+  "pagina_conexoes_ms": {
+   "valor": 343.0,
+   "unidade": "ms",
+   "comando": "playwright chromium contra a URL da trilha (tests/e2e/test_endpoints_publicos_tela.py)"
+  },
+  "conectores_adicionados_pela_tela": {
+   "valor": 10,
+   "unidade": "conexões",
+   "comando": "playwright chromium contra a URL da trilha (tests/e2e/test_endpoints_publicos_tela.py)"
+  }
+ },
+ "contexto": {
+  "carga_1min": 9.54345703125,
+  "ram_livre_gb": 6.7,
+  "medido_em": "2026-09-07T21:40:25Z"
+ },
+ "verdes": [
+  {
+   "tipo": "esri_rest",
+   "orgao": "ANA",
+   "url": "https://www.snirh.gov.br/arcgis/rest/services",
+   "http": 200,
+   "ms": 77,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "ANA",
+   "url": "https://www.snirh.gov.br/arcgis/rest/services/DADOSABERTOS/DBO_Q95/MapServer",
+   "http": 200,
+   "ms": 70,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "ANEEL",
+   "url": "https://sigel.aneel.gov.br/arcgis/rest/services",
+   "http": 200,
+   "ms": 228,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wmts",
+   "orgao": "ANP",
+   "url": "https://geomaps.anp.gov.br/geoserver/gwc/service/wmts",
+   "http": 200,
+   "ms": 354,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "ANP",
+   "url": "https://geomaps.anp.gov.br/geoserver/ows",
+   "http": 200,
+   "ms": 219,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wfs",
+   "orgao": "ANP",
+   "url": "https://geomaps.anp.gov.br/geoserver/ows",
+   "http": 200,
+   "ms": 113,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "BKG (Alemanha)",
+   "url": "https://sgx.geodatenzentrum.de/wms_topplus_open",
+   "http": 200,
+   "ms": 1956,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "stac",
+   "orgao": "CEDA",
+   "url": "https://api.stac.ceda.ac.uk",
+   "http": 200,
+   "ms": 1680,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "stac",
+   "orgao": "Copernicus Data Space",
+   "url": "https://stac.dataspace.copernicus.eu/v1",
+   "http": 200,
+   "ms": 722,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "DECEA",
+   "url": "https://geoaisweb.decea.mil.br/geoserver/ows",
+   "http": 200,
+   "ms": 1468,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wfs",
+   "orgao": "DECEA",
+   "url": "https://geoaisweb.decea.mil.br/geoserver/ows",
+   "http": 200,
+   "ms": 196,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "DLR",
+   "url": "https://geoservice.dlr.de/eoc/basemap/wms",
+   "http": 200,
+   "ms": 2370,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "stac",
+   "orgao": "Digital Earth Africa",
+   "url": "https://explorer.digitalearth.africa/stac",
+   "http": 200,
+   "ms": 1906,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "stac",
+   "orgao": "EODC",
+   "url": "https://stac.eodc.eu/api/v1",
+   "http": 200,
+   "ms": 753,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "EPE",
+   "url": "https://gisepeprd2.epe.gov.br/arcgis/rest/services",
+   "http": 200,
+   "ms": 681,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "EPE",
+   "url": "https://gisepeprd2.epe.gov.br/arcgis/rest/services/SMA/Webmap_EPE_Infraestrutura_de_Gas_Natural/MapServer",
+   "http": 200,
+   "ms": 49,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "EPE",
+   "url": "https://gisepeprd2.epe.gov.br/arcgis/rest/services/SMA/Webmap_EPE_Sistema_Eletrico_Planejado/MapServer",
+   "http": 200,
+   "ms": 46,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "stac",
+   "orgao": "ESA / Copernicus",
+   "url": "https://catalogue.dataspace.copernicus.eu/stac",
+   "http": 200,
+   "ms": 924,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "ogc_api",
+   "orgao": "Ecere",
+   "url": "https://maps.gnosis.earth/ogcapi",
+   "http": 200,
+   "ms": 584,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "stac",
+   "orgao": "Element 84 / AWS Open Data",
+   "url": "https://earth-search.aws.element84.com/v1",
+   "http": 200,
+   "ms": 609,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "ogc_api",
+   "orgao": "Environment and Climate Change Canada",
+   "url": "https://api.weather.gc.ca",
+   "http": 200,
+   "ms": 401,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "Environment and Climate Change Canada",
+   "url": "https://geo.weather.gc.ca/geomet",
+   "http": 200,
+   "ms": 780,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "Esri",
+   "url": "https://sampleserver6.arcgisonline.com/arcgis/rest/services",
+   "http": 200,
+   "ms": 536,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "Esri",
+   "url": "https://sampleserver6.arcgisonline.com/arcgis/rest/services/Census/MapServer",
+   "http": 200,
+   "ms": 528,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "Esri",
+   "url": "https://services.arcgisonline.com/arcgis/rest/services",
+   "http": 200,
+   "ms": 228,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "Exército Brasileiro (DSG)",
+   "url": "https://bdgex.eb.mil.br/mapcache",
+   "http": 200,
+   "ms": 87,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wmts",
+   "orgao": "Exército Brasileiro (DSG)",
+   "url": "https://bdgex.eb.mil.br/mapcache/wmts",
+   "http": 200,
+   "ms": 87,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wmts",
+   "orgao": "FUNAI",
+   "url": "https://geoserver.funai.gov.br/geoserver/gwc/service/wmts",
+   "http": 200,
+   "ms": 89,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "FUNAI",
+   "url": "https://geoserver.funai.gov.br/geoserver/ows",
+   "http": 200,
+   "ms": 264,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wfs",
+   "orgao": "FUNAI",
+   "url": "https://geoserver.funai.gov.br/geoserver/ows",
+   "http": 200,
+   "ms": 151,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wfs",
+   "orgao": "GeoSampa",
+   "url": "https://wfs.geosampa.prefeitura.sp.gov.br/geoserver/geoportal/wfs",
+   "http": 200,
+   "ms": 108,
+   "origem": "registro"
+  },
+  {
+   "tipo": "stac",
+   "orgao": "Google",
+   "url": "https://earthengine-stac.storage.googleapis.com/catalog/catalog.json",
+   "http": 200,
+   "ms": 183,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "wfs",
+   "orgao": "Governo do Estado de Santa Catarina",
+   "url": "https://sigsc.sc.gov.br/sigserver/SIGSC/wfs",
+   "http": 200,
+   "ms": 123,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "Governo do Estado de Santa Catarina",
+   "url": "https://sigsc.sc.gov.br/sigserver/SIGSC/wms",
+   "http": 200,
+   "ms": 111,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "Governo do Estado de São Paulo (SIMA)",
+   "url": "https://datageo.ambiente.sp.gov.br/geoserver/datageo/ows",
+   "http": 200,
+   "ms": 1756,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wfs",
+   "orgao": "Governo do Estado de São Paulo (SIMA)",
+   "url": "https://datageo.ambiente.sp.gov.br/geoserver/datageo/ows",
+   "http": 200,
+   "ms": 96,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "Governo do Estado de São Paulo (SIMA)",
+   "url": "https://datageo.ambiente.sp.gov.br/geoserver/datageowms/ows",
+   "http": 200,
+   "ms": 453,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wmts",
+   "orgao": "Governo do Estado de São Paulo (SIMA)",
+   "url": "https://datageo.ambiente.sp.gov.br/geoserver/gwc/service/wmts",
+   "http": 200,
+   "ms": 54,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "Governo do Estado do Mato Grosso (SEMA)",
+   "url": "https://geo.sema.mt.gov.br/geoserver/ows",
+   "http": 200,
+   "ms": 211,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wfs",
+   "orgao": "Governo do Estado do Mato Grosso (SEMA)",
+   "url": "https://geo.sema.mt.gov.br/geoserver/ows",
+   "http": 200,
+   "ms": 171,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "Governo do Estado do Paraná",
+   "url": "https://paranainterativo.pr.gov.br/interativo/rest/services",
+   "http": 200,
+   "ms": 73,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "Governo do Estado do Rio Grande do Sul",
+   "url": "https://iede.rs.gov.br/server/rest/services",
+   "http": 200,
+   "ms": 104,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "IAT (Paraná)",
+   "url": "https://geopr.iat.pr.gov.br/server/rest/services",
+   "http": 200,
+   "ms": 107,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "IAT (Paraná)",
+   "url": "https://geopr.iat.pr.gov.br/server/rest/services/Outorgas_Consulta_Automonitoramento_Vazao/FeatureServer",
+   "http": 200,
+   "ms": 52,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "IBGE",
+   "url": "https://geoservicos.ibge.gov.br/geoserver/CCAR/ows",
+   "http": 200,
+   "ms": 2329,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wfs",
+   "orgao": "IBGE",
+   "url": "https://geoservicos.ibge.gov.br/geoserver/CCAR/ows",
+   "http": 200,
+   "ms": 1428,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "IBGE",
+   "url": "https://geoservicos.ibge.gov.br/geoserver/ODS/ows",
+   "http": 200,
+   "ms": 1163,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wfs",
+   "orgao": "IBGE",
+   "url": "https://geoservicos.ibge.gov.br/geoserver/ODS/ows",
+   "http": 200,
+   "ms": 772,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wfs",
+   "orgao": "IBGE",
+   "url": "https://geoservicos.ibge.gov.br/geoserver/wfs",
+   "http": 200,
+   "ms": 940,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "IBGE",
+   "url": "https://geoservicos.ibge.gov.br/geoserver/wms",
+   "http": 200,
+   "ms": 1063,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "IEDE-RS",
+   "url": "https://iede.rs.gov.br/server/rest/services/METROPLAN/Glebas_e_projetos_de_parcelamento_do_solo/FeatureServer/0",
+   "http": 200,
+   "ms": 88,
+   "origem": "registro"
+  },
+  {
+   "tipo": "wfs",
+   "orgao": "INDE",
+   "url": "https://geoservicos.inde.gov.br/geoserver/wfs",
+   "http": 200,
+   "ms": 409,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "INDE",
+   "url": "https://geoservicos.inde.gov.br/geoserver/wms",
+   "http": 200,
+   "ms": 1689,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "stac",
+   "orgao": "INPE",
+   "url": "https://data.inpe.br/bdc/stac/v1",
+   "http": 200,
+   "ms": 79,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wmts",
+   "orgao": "INPE",
+   "url": "https://terrabrasilis.dpi.inpe.br/geoserver/gwc/service/wmts",
+   "http": 200,
+   "ms": 2222,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "INPE",
+   "url": "https://terrabrasilis.dpi.inpe.br/geoserver/ows",
+   "http": 200,
+   "ms": 11930,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wfs",
+   "orgao": "INPE",
+   "url": "https://terrabrasilis.dpi.inpe.br/geoserver/ows",
+   "http": 200,
+   "ms": 193,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wfs",
+   "orgao": "INPE",
+   "url": "https://terrabrasilis.dpi.inpe.br/queimadas/geoserver/ows",
+   "http": 200,
+   "ms": 178,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "stac",
+   "orgao": "Microsoft",
+   "url": "https://planetarycomputer.microsoft.com/api/stac/v1",
+   "http": 200,
+   "ms": 601,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "stac",
+   "orgao": "NASA",
+   "url": "https://cmr.earthdata.nasa.gov/cloudstac",
+   "http": 200,
+   "ms": 511,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "stac",
+   "orgao": "NASA",
+   "url": "https://cmr.earthdata.nasa.gov/stac",
+   "http": 200,
+   "ms": 1128,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "NASA",
+   "url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi",
+   "http": 200,
+   "ms": 1375,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "wmts",
+   "orgao": "NASA",
+   "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/wmts.cgi",
+   "http": 200,
+   "ms": 9247,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "stac",
+   "orgao": "OpenLandMap",
+   "url": "https://s3.eu-central-1.wasabisys.com/stac/openlandmap/catalog.json",
+   "http": 200,
+   "ms": 1045,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "OpenStreetMap / terrestris",
+   "url": "https://ows.terrestris.de/osm/service",
+   "http": 200,
+   "ms": 1027,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "Paraná Interativo",
+   "url": "https://paranainterativo.pr.gov.br/interativo/rest/services/EstudosPerimetroUrbanoExpansaoUrbana/EstudosPerimetroUrbanoExpansaoUrbana/FeatureServer/6",
+   "http": 200,
+   "ms": 64,
+   "origem": "registro"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "Prefeitura de Guarulhos",
+   "url": "https://geoserver.guarulhos.sp.gov.br:8443/geoserver/ows",
+   "http": 200,
+   "ms": 461,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wfs",
+   "orgao": "Prefeitura de Guarulhos",
+   "url": "https://geoserver.guarulhos.sp.gov.br:8443/geoserver/ows",
+   "http": 200,
+   "ms": 105,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wfs",
+   "orgao": "Prefeitura de São Paulo",
+   "url": "https://wfs.geosampa.prefeitura.sp.gov.br/geoserver/geoportal/ows",
+   "http": 200,
+   "ms": 233,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "Prefeitura do Recife",
+   "url": "https://esigportal2.recife.pe.gov.br/arcgis/rest/services",
+   "http": 200,
+   "ms": 224,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "Prefeitura do Rio de Janeiro (IPP)",
+   "url": "https://pgeo3.rio.rj.gov.br/arcgis/rest/services",
+   "http": 200,
+   "ms": 38,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "SFB (Serviço Florestal Brasileiro)",
+   "url": "https://geoserver.car.gov.br/geoserver/ows",
+   "http": 200,
+   "ms": 147,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "wfs",
+   "orgao": "SFB (Serviço Florestal Brasileiro)",
+   "url": "https://geoserver.car.gov.br/geoserver/ows",
+   "http": 200,
+   "ms": 104,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "SGB/CPRM",
+   "url": "https://geoportal.sgb.gov.br/server/rest/services",
+   "http": 200,
+   "ms": 110,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "SGB/CPRM",
+   "url": "https://geoportal.sgb.gov.br/server/rest/services/geologia/litoestratigrafia_1000000/MapServer",
+   "http": 200,
+   "ms": 494,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "SGB/CPRM",
+   "url": "https://geoportal.sgb.gov.br/server/rest/services/geologia/ocorrencias/MapServer",
+   "http": 200,
+   "ms": 85,
+   "origem": "curadoria"
+  },
+  {
+   "tipo": "ogc_api",
+   "orgao": "interactive instruments",
+   "url": "https://demo.ldproxy.net/daraa",
+   "http": 200,
+   "ms": 632,
+   "origem": "fila_keyless"
+  },
+  {
+   "tipo": "ogc_api",
+   "orgao": "pygeoapi",
+   "url": "https://demo.pygeoapi.io/master",
+   "http": 200,
+   "ms": 750,
+   "origem": "fila_keyless"
+  }
+ ],
+ "vermelhos": [
+  {
+   "tipo": "esri_rest",
+   "orgao": "ANM",
+   "url": "https://geo.anm.gov.br/arcgis/rest/services",
+   "http": null,
+   "motivo": "tempo_esgotado"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "ANM",
+   "url": "https://geo.anm.gov.br/arcgis/rest/services/SIGMINE/dados_anm/MapServer",
+   "http": null,
+   "motivo": "tempo_esgotado"
+  },
+  {
+   "tipo": "wmts",
+   "orgao": "DECEA",
+   "url": "https://geoaisweb.decea.mil.br/geoserver/gwc/service/wmts",
+   "http": 400,
+   "motivo": "http_400"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "EMODnet",
+   "url": "https://ows.emodnet-bathymetry.eu/wms",
+   "http": null,
+   "motivo": "erro_de_conexao:ConnectError"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "EOX",
+   "url": "https://tiles.maps.eox.at/wms",
+   "http": null,
+   "motivo": "erro_de_conexao:ConnectError"
+  },
+  {
+   "tipo": "wmts",
+   "orgao": "EOX",
+   "url": "https://tiles.maps.eox.at/wmts",
+   "http": null,
+   "motivo": "erro_de_conexao:ConnectError"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "ESA / VITO Terrascope",
+   "url": "https://services.terrascope.be/wms/v2",
+   "http": null,
+   "motivo": "erro_de_conexao:RemoteProtocolError"
+  },
+  {
+   "tipo": "wmts",
+   "orgao": "IBGE",
+   "url": "https://geoservicos.ibge.gov.br/geoserver/ODS/gwc/service/wmts",
+   "http": 400,
+   "motivo": "http_400"
+  },
+  {
+   "tipo": "wmts",
+   "orgao": "IBGE",
+   "url": "https://geoservicos.ibge.gov.br/geoserver/gwc/service/wmts",
+   "http": 500,
+   "motivo": "http_500"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "INCRA",
+   "url": "https://acervofundiario.incra.gov.br/i3geo/ogc.php",
+   "http": null,
+   "motivo": "tempo_esgotado"
+  },
+  {
+   "tipo": "wmts",
+   "orgao": "INDE",
+   "url": "https://geoservicos.inde.gov.br/geoserver/gwc/service/wmts",
+   "http": 400,
+   "motivo": "http_400"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "INPE",
+   "url": "https://terrabrasilis.dpi.inpe.br/queimadas/geoserver/ows",
+   "http": null,
+   "motivo": "tempo_esgotado"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "IPHAN",
+   "url": "https://geoserver.iphan.gov.br/geoserver/ows",
+   "http": null,
+   "motivo": "tempo_esgotado"
+  },
+  {
+   "tipo": "wfs",
+   "orgao": "IPHAN",
+   "url": "https://geoserver.iphan.gov.br/geoserver/ows",
+   "http": null,
+   "motivo": "tempo_esgotado"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "ONR",
+   "url": "https://gis-mapas.onr.org.br/onrgisserver/rest/services/Hosted/imoveis_georreferenciamento/FeatureServer/0",
+   "http": null,
+   "motivo": "erro_de_conexao:ConnectError"
+  },
+  {
+   "tipo": "wmts",
+   "orgao": "Prefeitura de Guarulhos",
+   "url": "https://geoserver.guarulhos.sp.gov.br:8443/geoserver/gwc/service/wmts",
+   "http": 503,
+   "motivo": "http_503"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "Prefeitura de São Paulo",
+   "url": "https://wfs.geosampa.prefeitura.sp.gov.br/geoserver/geoportal/ows",
+   "http": 200,
+   "motivo": "exception_report"
+  },
+  {
+   "tipo": "wmts",
+   "orgao": "SFB (Serviço Florestal Brasileiro)",
+   "url": "https://geoserver.car.gov.br/geoserver/gwc/service/wmts",
+   "http": 400,
+   "motivo": "http_400"
+  },
+  {
+   "tipo": "esri_rest",
+   "orgao": "USGS",
+   "url": "https://basemap.nationalmap.gov/arcgis/rest/services",
+   "http": null,
+   "motivo": "erro_de_conexao:ConnectError"
+  },
+  {
+   "tipo": "stac",
+   "orgao": "USGS",
+   "url": "https://landsatlook.usgs.gov/stac-server",
+   "http": null,
+   "motivo": "erro_de_conexao:ConnectError"
+  },
+  {
+   "tipo": "stac",
+   "orgao": "swisstopo",
+   "url": "https://data.geo.admin.ch/api/stac/v1",
+   "http": null,
+   "motivo": "erro_de_conexao:ConnectError"
+  },
+  {
+   "tipo": "wms",
+   "orgao": "swisstopo",
+   "url": "https://wms.geo.admin.ch",
+   "http": null,
+   "motivo": "erro_de_conexao:ConnectError"
+  }
+ ],
+ "gerado_em": "2026-09-07T21:50:44Z",
+ "git_sha": "a23565190ce4"
+}

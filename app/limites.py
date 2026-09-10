@@ -770,3 +770,11 @@ CORREDOR_CELULAS_GEOJSON_MAX = 20_000
 # obrigatório e explícito, teto de linhas e de texto; o statement_timeout é o mesmo de CONEXAO_PG_ESTATEMENT_TIMEOUT_MS
 CONEXAO_PG_CONSULTA_LINHAS_MAX = 5000
 CONEXAO_PG_CONSULTA_TEXTO_MAX = 4000
+# --- catálogo de conectores públicos (L6-02-m-catalogo-endpoints-brasil; app/conexao/endpoints_publicos.py):
+# o teste de "vivo" pede o documento do protocolo (GetCapabilities, f=json, raiz STAC) e confere a assinatura do
+# corpo; capabilities de órgão grande passam de 1 MiB (a INDE, o IBGE), por isso o teto próprio de bytes.
+ENDPOINT_PUBLICO_LER_TIMEOUT_S = 20.0    # leitura do documento de teste (órgão lento monta capabilities em segundos)
+ENDPOINT_PUBLICO_MAX_BYTES = 4 * 1024 * 1024  # 4 MiB: acima disso o serviço respondeu XML e conta como vivo (OGC)
+ENDPOINT_PUBLICO_RETESTE_DIAS = 7        # cadência do job endpoints_publicos.retestar (B12: "retestado por semana")
+ENDPOINT_PUBLICO_FALHAS_PARA_MORTO = 1   # 1 teste vermelho já tira da lista (vai para 'fora do ar'; volta ao passar)
+ENDPOINT_PUBLICO_PAGINA_MAX = 500        # a tela lista o catálogo inteiro de uma vez (dezenas, não milhares)
