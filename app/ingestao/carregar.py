@@ -16,9 +16,8 @@ import psycopg2.extras
 from pydantic import BaseModel
 
 from app import limites, objetos
-from app import versao as app_versao
-from app.catalogo import procedencia as mod_procedencia
 from app.ingestao.inspecionar import PREPARADORES, tabela_de
+from app.ingestao.isolamento import ambiente_isolado
 from app.jobs.registro import Cancelado, FalhaDefinitiva, tarefa
 from app.settings import settings
 
@@ -40,6 +39,25 @@ def _pg_conninfo() -> str:
     partes = psycopg2.extensions.parse_dsn(settings.PLAT_DSN)
     pares = " ".join(f"{k}={v}" for k, v in partes.items() if k in ("dbname", "host", "port", "user", "password"))
     return f"PG:{pares} application_name=plat-ingestao"
+
+
+def camada_origem_sem_geom(proposta: dict) -> str:
+    return proposta.get("camada_origem") or "camada"
+
+
+def _proposta_efetiva(proposta: dict, confirmacao: dict) -> dict:
+    """A proposta DA CAMADA que o usuário escolheu. Arquivo com N camadas guarda a proposta de cada uma em
+    `proposta["camadas"]` e copia a primeira com dado para o topo; escolher outra na confirmação tem de trocar
+    campos, geometria, CRS e validade junto — usar o topo aqui carregaria os campos da camada errada."""
+    nome = (confirmacao.get("camada") or {}).get("escolhida")
+    if not nome:
+        return proposta
+    for c in proposta.get("camadas") or []:
+        if c.get("camada_origem") == nome:
+            return {**proposta, **{k: v for k, v in c.items()
+                                   if k in ("camada_origem", "feicoes", "geometria", "crs", "campos",
+                                            "validade", "titulo")}}
+    return proposta
 
 
 def _marcar_falha(ctx, importacao_id: str, erro: str) -> None:
@@ -94,19 +112,15 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
             raise FalhaDefinitiva("importação inexistente")
         if imp["estado"] != "confirmada":
             raise FalhaDefinitiva(f"importação em estado {imp['estado']!r}; esperava 'confirmada'")
-        cur.execute("SELECT dados, criado_em FROM plat.item WHERE id = %s::uuid", (imp["arquivo_id"],))
+        cur.execute("SELECT dados FROM plat.item WHERE id = %s::uuid", (imp["arquivo_id"],))
         arq = cur.fetchone()
         if arq is None:
             raise FalhaDefinitiva("o arquivo de origem não existe mais")
         cur.execute("SELECT slug FROM plat.tenant WHERE id = %s", (ctx.tenant_id,))
         slug = cur.fetchone()["slug"]
-        # o prefixo do schema de dado inclui a INSTALAÇÃO (plat.camada_schema_prefixo, migração
-        # 20260906T1615): sem ele produção, homologação e as trilhas escreviam todas em d_<slug>
-        cur.execute("SELECT plat.camada_schema_prefixo() AS p")
-        prefixo = cur.fetchone()["p"]
 
-    schema = f"{prefixo}{slug}"
-    proposta = imp["proposta"] or {}
+    schema = f"d_{slug}"
+    proposta = _proposta_efetiva(imp["proposta"] or {}, imp["confirmacao"] or {})
     confirmacao = imp["confirmacao"] or {}
     tabela = proposta.get("nome_tabela") or tabela_de(imp["item_id"])
     item_id = str(imp["item_id"])
@@ -148,6 +162,12 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
                                or proposta.get("codificacao", {}).get("valor"))
         prep = PREPARADORES[formato](ctx, dados, encoding_confirmada)
 
+        if not (proposta.get("geometria") or {}).get("escolhida"):
+            raise FalhaDefinitiva(
+                f"a camada {camada_origem_sem_geom(proposta)!r} não tem geometria. Esta passagem só carrega "
+                "camada com geometria; tabela sem coluna espacial (planilha, CSV sem coluna de coordenada, "
+                "tabela de atributo de GeoPackage) está fora do escopo do item L0-04-c e nada foi criado."
+            )
         srid = int((confirmacao.get("crs") or {}).get("srid") or proposta.get("crs", {}).get("srid") or 0)
         if not srid:
             raise FalhaDefinitiva("CRS não confirmado: SRID ausente")
@@ -156,7 +176,8 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
         select_sql, campos_usados = _select_campos(prep, campos)
         geom = confirmacao.get("geometria") or proposta.get("geometria") or {}
         tipo_escolhido_raw = geom.get("escolhida") or "Geometry"  # o que a inspeção/usuário resolveu
-        camada_origem = proposta.get("camada_origem") or prep.get("layer")
+        camada_origem = ((confirmacao.get("camada") or {}).get("escolhida")
+                         or proposta.get("camada_origem") or prep.get("layer"))
         sql_origem = f'SELECT {select_sql} FROM "{camada_origem}"'
 
         # PROMOTE_TO_MULTI (e não o tipo singular): ST_MakeValid pode fragmentar um Polygon/LineString
@@ -165,10 +186,7 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
         # (`geometry(Polygon,…)`) recusaria esse UPDATE com "Geometry type (MultiPolygon) does not match
         # column type (Polygon)". PROMOTE_TO_MULTI cria sempre a coluna Multi* para as famílias que podem
         # fragmentar; "Geometry" (genérico, geometria mista) não promove — a coluna fica solta de propósito.
-        # o tipo ESCOLHIDO vai explícito ao ogr2ogr: com "PROMOTE_TO_MULTI" um GeoJSON cujo cabeçalho diz só
-        # "Geometry" continuava GEOMETRY na tabela, e a camada nascia como ponto (medido 10/09 com 645 municípios).
-        # "-nlt MULTIPOLYGON" promove Polygon->MultiPolygon; "-nlt POINT" etc. mantém o simples.
-        nlt = "GEOMETRY" if tipo_escolhido_raw == "Geometry" else tipo_escolhido_raw.upper()
+        nlt = "GEOMETRY" if tipo_escolhido_raw == "Geometry" else "PROMOTE_TO_MULTI"
 
         oo_args = []
         for o in prep.get("oo", []):
@@ -185,7 +203,7 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
             "--config", "PG_USE_COPY", "YES",
         ]
         ctx.progresso(25, "ogr2ogr")
-        r = ctx.subprocesso(argv)
+        r = ctx.subprocesso(argv, env=ambiente_isolado())  # AF_INET permitido: este ogr2ogr grava no Postgres
         if r.returncode != 0:
             linhas = [ln for ln in (r.stderr or "").splitlines() if ln.strip()]
             raise FalhaDefinitiva(f"ogr2ogr falhou: {(linhas[-1] if linhas else 'sem detalhe')[:200]}")
@@ -248,9 +266,6 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
         with ctx.db() as cur:
             cur.execute("SELECT plat.camada_preparar(%s, %s, %s, %s, %s)",
                         (schema, tabela, srid, tipo_escolhido_raw, ctx.usuario_id))
-            # item L2-04-a: a função de tile da camada (d_<slug>.t_<16 hex>) e a política de RLS do papel de
-            # leitura nascem aqui, com a tabela; sem isto a camada não é servível pelo Martin.
-            cur.execute("SELECT plat.camada_tile_garantir(%s, %s, %s::uuid)", (schema, tabela, item_id))
 
         # ------------------------------------------------------------ estatísticas
         ctx.progresso(80, "estatísticas")
@@ -294,28 +309,12 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
             "feicoes": int(est["feicoes"]), "extent_nativo": extent_4326, "por_campo": por_campo,
             "calculadas_em": None,
         }
-        # Procedência (item L0-09-a; ADR 0005 seção 6.3): os 4 campos que a máquina MEDE nascem preenchidos em
-        # toda camada importada — sha256 do arquivo lido de volta, data de acesso (quando o arquivo entrou),
-        # gerador e método. Os demais ficam null porque só o usuário pode declará-los: inferir licença ou url do
-        # nome do arquivo é exatamente a procedência errada que a regra da casa proíbe (D17).
-        nome_original = (arq["dados"] or {}).get("nome_original")
-        procedencia = mod_procedencia.normalizar({
-            "fonte": nome_original, "url": None, "licenca": None,
-            "data_do_dado": None,
-            "data_de_acesso": arq["criado_em"].date().isoformat() if arq["criado_em"] else None,
-            "gerador": f"plat ingestao.carregar {app_versao.versao()}",
-            "sha256": sha_real,
-            "comando_reexecucao": f"sha256sum {nome_original}" if nome_original else None,
-            "metodo": "ogr2ogr + ST_MakeValid", "confianca": None,
-            "limites": proposta.get("avisos", []), "frescor": None, "proxima_verificacao": None,
-            "responsavel": None,
-            "origem": {
-                "fonte": "declarado",          # nome do arquivo: o usuário é quem o nomeou
-                "data_de_acesso": "medido",    # quando o arquivo entrou na plataforma
-                "gerador": "medido", "sha256": "medido", "metodo": "medido", "limites": "medido",
-            },
-            "job_id": str(ctx.job_id), "importacao_id": iid,
-        })
+        procedencia = {
+            "fonte": (arq["dados"] or {}).get("nome_original"), "url": None, "licenca": None,
+            "data_do_dado": None, "data_de_acesso": None, "gerador": "plat ingestao.carregar v1",
+            "sha256": sha_real, "metodo": "ogr2ogr + ST_MakeValid", "confianca": None,
+            "limites": proposta.get("avisos", []), "job_id": str(ctx.job_id), "importacao_id": iid,
+        }
         item_dados = {
             "schema": schema, "tabela": tabela, "geometria": tipo_escolhido_raw,
             "srid": srid,
@@ -342,13 +341,10 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
                 "'arquivo_de_camada', %s) ON CONFLICT DO NOTHING",
                 (imp["arquivo_id"], item_id, ctx.tenant_id),
             )
-            # uso_bytes NÃO é somado aqui: quem contabiliza é o gatilho plat.item_uso_bytes (migração
-            # 20260906T1615), que soma no INSERT do item e DEVOLVE no DELETE. Antes a soma vivia neste
-            # ponto e não havia caminho nenhum de devolução — a cota do inquilino só subia.
             cur.execute(
-                "UPDATE plat.tenant SET uso_reservado_bytes = greatest(0, uso_reservado_bytes - %s) "
-                "WHERE id = %s",
-                (reservado, ctx.tenant_id),
+                "UPDATE plat.tenant SET uso_reservado_bytes = greatest(0, uso_reservado_bytes - %s), "
+                "uso_bytes = uso_bytes + %s WHERE id = %s",
+                (reservado, tamanho_bytes, ctx.tenant_id),
             )
             cur.execute(
                 "UPDATE plat.importacao SET estado = 'concluida', relatorio = %s, item_id = %s::uuid, "

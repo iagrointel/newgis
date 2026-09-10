@@ -1,8 +1,13 @@
 """Gera os arquivos de teste da ingestão vetorial (item L0-04-ingest-vetor; ADR 0005 seção 19) a partir de DADO
 REAL já no repositório (`web/dados/basemap/guarulhos.pmtiles`, OSM/ODbL, cobertura do solo e lugares de
-Guarulhos) — sem baixar nada novo (disco a 98%). Roda sem rede e sem banco; escreve em `tests/dados/gerados/`
-(no .gitignore). Os 4 formatos desta passagem (shapefile.zip, gpkg, geojson, csv) mais os 3 ataques exigidos:
-shapefile sem `.prj`, GeoJSON com polígono auto-intersectado, CSV com vírgula decimal."""
+Guarulhos) — sem baixar nada novo (disco a 91%). Roda sem rede e sem banco; escreve em `tests/dados/gerados/`
+(no .gitignore).
+
+Cobre os 9 formatos do portão do L0-04-d (shapefile zipado, GeoPackage, GeoJSON, GeoJSONSeq, KML, KMZ, CSV,
+GPX, XLSX) mais os 4 que o portão do L0-04-b pede a mais (GML, FlatGeobuf, DXF, File Geodatabase zipada), e os
+arquivos de ataque exigidos: shapefile sem `.prj`, GeoJSON com polígono auto-intersectado, CSV com vírgula
+decimal, CSV com aspas desbalanceadas, GeoPackage com 3 camadas, KMZ com 3 pastas, XLSX com 2 planilhas,
+CSV de 300 colunas e 0 linhas."""
 
 from __future__ import annotations
 
@@ -125,6 +130,125 @@ def gerar_csv_aspas_desbalanceadas() -> None:
     (SAIDA / "csv_aspas.csv").write_text(texto, encoding="utf-8")
 
 
+
+def gerar_geojsonseq(cobertura_geojson: Path) -> None:
+    """GeoJSONSeq: uma feição por linha. Formato do portão do L0-04-d (GeoJSON/GeoJSONSeq)."""
+    destino = SAIDA / "cobertura.geojsonl"
+    destino.unlink(missing_ok=True)
+    _ogr2ogr("-f", "GeoJSONSeq", str(destino), str(cobertura_geojson))
+
+
+def gerar_kml_e_kmz(cobertura_geojson: Path) -> None:
+    """KML de uma camada e KMZ com TRÊS pastas (cláusula literal do portão do L0-04-d: 'KMZ com 3 pastas gera
+    3 camadas'). O driver LIBKML escreve uma pasta por camada."""
+    kml = SAIDA / "cobertura.kml"
+    kml.unlink(missing_ok=True)
+    _ogr2ogr("-f", "LIBKML", str(kml), str(cobertura_geojson), "-nln", "cobertura")
+
+    # KMZ com 3 PASTAS. O `-update -append` do LIBKML sobre .kmz SUBSTITUI o documento em vez de acrescentar
+    # (medido: sai 1 camada, a última). O KMZ é escrito à mão: um doc.kml com três <Folder>, que é exatamente
+    # o que o driver lê como três camadas. Coordenadas reais de lugares de Guarulhos (OSM), não inventadas.
+    lugares = json.loads((SAIDA / "_lugares_subset.geojson").read_text(encoding="utf-8"))["features"]
+    pontos = []
+    for f in lugares:
+        g = f.get("geometry") or {}
+        if g.get("type") == "Point":
+            pontos.append((f["properties"].get("name") or "sem nome", g["coordinates"]))
+        elif g.get("type") == "MultiPoint" and g["coordinates"]:
+            pontos.append((f["properties"].get("name") or "sem nome", g["coordinates"][0]))
+    if len(pontos) < 3:
+        raise RuntimeError("o subconjunto de lugares não tem pontos suficientes para as 3 pastas do KMZ")
+    partes = ['<?xml version="1.0" encoding="UTF-8"?>', '<kml xmlns="http://www.opengis.net/kml/2.2"><Document>']
+    for i, nome_pasta in enumerate(("pasta_um", "pasta_dois", "pasta_tres")):
+        partes.append(f"<Folder><name>{nome_pasta}</name>")
+        for nome, (lon, lat) in pontos[i::3]:
+            seguro = str(nome).replace("&", "e").replace("<", "(").replace(">", ")")
+            partes.append(f"<Placemark><name>{seguro}</name>"
+                          f"<Point><coordinates>{lon},{lat},0</coordinates></Point></Placemark>")
+        partes.append("</Folder>")
+    partes.append("</Document></kml>")
+    kmz = SAIDA / "tres_pastas.kmz"
+    kmz.unlink(missing_ok=True)
+    with zipfile.ZipFile(kmz, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("doc.kml", "\n".join(partes))
+
+
+def gerar_gpx(lugares_geojson: Path) -> None:
+    """GPX de pontos (o driver do GDAL grava waypoints). O GPX declara sempre WGS 84."""
+    destino = SAIDA / "lugares.gpx"
+    destino.unlink(missing_ok=True)
+    # o driver GPX só aceita Point/LineString: o subconjunto de lugares do OSM vem como MultiPoint
+    _ogr2ogr("-f", "GPX", str(destino), str(lugares_geojson), "-t_srs", "EPSG:4326", "-nln", "waypoints",
+             "-nlt", "POINT", "-explodecollections")
+
+
+def gerar_xlsx(lugares_geojson: Path) -> None:
+    """XLSX com DUAS planilhas (cláusula literal do portão do L0-04-b: 'XLSX com 2 planilhas'). Planilha é
+    tabela sem geometria: serve para provar que a recusa da carga é explícita, não silenciosa."""
+    destino = SAIDA / "duas_planilhas.xlsx"
+    destino.unlink(missing_ok=True)
+    _ogr2ogr("-f", "XLSX", str(destino), str(lugares_geojson), "-nln", "planilha_um")
+    _ogr2ogr("-f", "XLSX", "-update", "-append", str(destino), str(lugares_geojson), "-nln", "planilha_dois")
+
+
+def gerar_gml(cobertura_geojson: Path) -> None:
+    destino = SAIDA / "cobertura.gml"
+    for sufixo in (".gml", ".xsd"):
+        (SAIDA / f"cobertura{sufixo}").unlink(missing_ok=True)
+    _ogr2ogr("-f", "GML", str(destino), str(cobertura_geojson), "-nln", "cobertura")
+
+
+def gerar_flatgeobuf(cobertura_geojson: Path) -> None:
+    destino = SAIDA / "cobertura.fgb"
+    destino.unlink(missing_ok=True)
+    _ogr2ogr("-f", "FlatGeobuf", str(destino), str(cobertura_geojson), "-nln", "cobertura")
+
+
+def gerar_dxf(cobertura_geojson: Path) -> None:
+    """DXF de polilinhas. O DXF não carrega CRS: a inspeção tem de PERGUNTAR o sistema de coordenadas."""
+    destino = SAIDA / "cobertura.dxf"
+    destino.unlink(missing_ok=True)
+    _ogr2ogr("-f", "DXF", str(destino), str(cobertura_geojson))
+
+
+def gerar_gdb_zip(cobertura_geojson: Path) -> None:
+    """File Geodatabase zipada (uma `.gdb` é uma PASTA; o upload é sempre do zip)."""
+    dir_gdb = SAIDA / "_teste.gdb"
+    shutil.rmtree(dir_gdb, ignore_errors=True)
+    _ogr2ogr("-f", "OpenFileGDB", str(dir_gdb), str(cobertura_geojson), "-nln", "cobertura")
+    destino = SAIDA / "cobertura_gdb.zip"
+    destino.unlink(missing_ok=True)
+    with zipfile.ZipFile(destino, "w", zipfile.ZIP_DEFLATED) as zf:
+        for arq in sorted(dir_gdb.rglob("*")):
+            if arq.is_file():
+                zf.write(arq, f"_teste.gdb/{arq.name}")
+    shutil.rmtree(dir_gdb, ignore_errors=True)
+
+
+def gerar_gpkg_tres_camadas(cobertura_geojson: Path) -> None:
+    """GeoPackage com 3 camadas (cláusula literal do portão do L0-04-b). Antes do turno 3 a inspeção tomava
+    `camadas[0]` e as outras duas sumiam sem aviso."""
+    caminho = SAIDA / "tres_camadas.gpkg"
+    caminho.unlink(missing_ok=True)
+    _ogr2ogr("-f", "GPKG", str(caminho), str(cobertura_geojson), "-nln", "camada_um")
+    for nome in ("camada_dois", "camada_tres"):
+        _ogr2ogr("-f", "GPKG", "-update", "-append", str(caminho), str(cobertura_geojson), "-nln", nome)
+
+
+def gerar_csv_300_colunas_0_linhas() -> None:
+    """Refutação literal do L0-04-b: 'CSV com 300 colunas e 0 linhas'. A inspeção tem de DIZER o que
+    aconteceu (a tabela sairia vazia), nunca terminar em silêncio."""
+    (SAIDA / "largo_300_colunas.csv").write_text(
+        ",".join(f"col_{i}" for i in range(300)) + "\n", encoding="utf-8")
+
+
+def gerar_zips_malformados() -> None:
+    """Entrada malformada tem de virar 422 com mensagem, nunca 500 com rastro."""
+    bons = (SAIDA / "cobertura_shp.zip").read_bytes()
+    (SAIDA / "zip_corrompido.zip").write_bytes(bons[: len(bons) // 2])  # diretório central destruído
+    with zipfile.ZipFile(SAIDA / "zip_aninhado.zip", "w") as z:
+        z.writestr("dentro.zip", bons)
+
 def main() -> None:
     if not PMTILES.exists():
         raise SystemExit(f"ausente: {PMTILES} (dado da casa, não deveria faltar)")
@@ -137,6 +261,17 @@ def main() -> None:
     gerar_gravata()
     gerar_csv(lugares)
     gerar_csv_aspas_desbalanceadas()
+    gerar_geojsonseq(cobertura)
+    gerar_kml_e_kmz(cobertura)
+    gerar_gpx(lugares)
+    gerar_xlsx(lugares)
+    gerar_gml(cobertura)
+    gerar_flatgeobuf(cobertura)
+    gerar_dxf(cobertura)
+    gerar_gdb_zip(cobertura)
+    gerar_gpkg_tres_camadas(cobertura)
+    gerar_csv_300_colunas_0_linhas()
+    gerar_zips_malformados()
     cobertura.unlink()
     lugares.unlink()
     shutil.rmtree(SAIDA / "_shp_tmp", ignore_errors=True)
