@@ -1,7 +1,13 @@
 """web/vendor: uma cópia por versão, versão no nome do arquivo, sha256 e licença em VERSOES.txt
 (ADR 0001 seção 11.2 regra 3). Regra 3 estendida no item L0-14-identidade-visual (06/09/2026) para
 admitir fontes .woff2: versão Major.Minor (fontes não seguem semver de 3 dígitos como as libs JS) e
-licença OFL-1.1 (SIL Open Font License, padrão de toda fonte aberta do Google Fonts — ver VERSOES.txt)."""
+licença OFL-1.1 (SIL Open Font License, padrão de toda fonte aberta do Google Fonts — ver VERSOES.txt).
+Estendida de novo no item L2-02-e-simbolos-sprites-glifos (07/09/2026) para admitir .ttf (fontes de
+glifo de mapa, servidas ao Martin — diferentes das .woff2 acima, que são tipografia da INTERFACE).
+Estendida uma terceira vez na junção do wt/cx202c (item L2-02-b, 09/09/2026) para admitir o texto
+de licença <nome>-<versão>.LICENSE.txt: o portão do L2-02-c exige a licença Apache-Style da
+ColorBrewer EM ARQUIVO ao lado das rampas, e o arquivo é o package/LICENSE.txt do próprio pacote —
+mesma versão no nome, mesmo sha256 em VERSOES.txt, mesma disciplina de uma cópia por versão."""
 
 import hashlib
 import re
@@ -10,9 +16,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 VENDOR = ROOT / "web" / "vendor"
 LICENCAS = {"BSD-3-Clause", "MIT", "Apache-2.0", "ISC", "OFL-1.1"}
-# `.umd.js`/`.min.js` são sufixos de EMPACOTAMENTO da própria biblioteca (terra-draw publica só o UMD com esse
-# nome), não parte da versão: a convenção <nome>-<versão> continua valendo antes deles
-NOME = re.compile(r"^(?P<nome>[a-z][a-z0-9-]*)-(?P<versao>\d+\.\d+(?:\.\d+)?)(?:\.umd|\.min)?\.(js|css|woff2)$")
+NOME = re.compile(
+    r"^(?P<nome>[a-z][a-z0-9-]*)-(?P<versao>\d+\.\d+(?:\.\d+)?)(?:\.(?:js|css|woff2|ttf)|\.LICENSE\.txt)$"
+)
 
 
 def _linhas():
@@ -22,24 +28,17 @@ def _linhas():
 
 
 def test_todo_arquivo_do_vendor_esta_em_versoes_com_sha_e_licenca():
-    """Declarado em VERSOES.txt pelo caminho relativo a web/vendor/ — inclui subpasta (ex. `terra-draw/…`,
-    item L2-01-h/L2-01-k): o nome do ARQUIVO ainda segue <nome>-<versão>.js|css|woff2, só o caminho ganha
-    prefixo de diretório. Antes esta verificação usava `VENDOR.iterdir()` (só os filhos diretos), então um
-    vendor em subpasta nunca era conferido — corrigido para `rglob` percorrer a árvore inteira."""
     declarados = {}
-    for caminho, versao, sha, licenca, origem in _linhas():
-        nome = caminho.rsplit("/", 1)[-1]
+    for nome, versao, sha, licenca, origem in _linhas():
         m = NOME.match(nome)
-        assert m and m["versao"] == versao, f"nome fora da convenção <nome>-<versão>.js|css: {nome}"
+        assert m and m["versao"] == versao, f"nome fora da convenção <nome>-<versão>.<ext|LICENSE.txt>: {nome}"
         assert licenca in LICENCAS, (nome, licenca)
         assert origem.startswith("https://"), (nome, origem)
-        declarados[caminho] = sha
-    arquivos = {
-        str(p.relative_to(VENDOR)) for p in VENDOR.rglob("*") if p.is_file() and p.name != "VERSOES.txt"
-    }
+        declarados[nome] = sha
+    arquivos = {p.name for p in VENDOR.iterdir() if p.name != "VERSOES.txt"}
     assert arquivos == set(declarados), arquivos ^ set(declarados)
-    for caminho, sha in declarados.items():
-        assert hashlib.sha256((VENDOR / caminho).read_bytes()).hexdigest() == sha, caminho
+    for nome, sha in declarados.items():
+        assert hashlib.sha256((VENDOR / nome).read_bytes()).hexdigest() == sha, nome
 
 
 def test_swagger_referenciado_pela_api_existe_no_vendor():

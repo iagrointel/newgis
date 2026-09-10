@@ -1420,6 +1420,38 @@ rotas de serviço que não estavam lá), casos de varredura cruzada e eventos de
 elas, `docs/LIMITES.md` regerado com os limites da edição transacional e três linhas longas de
 `make lint` herdadas dos ramos irmãos.
 
+## turno 48, setembro de 2026 (item L2-02-b-classificacao-servidor: reentrega por junção do wt/cx202c)
+
+- O item estava **refutado** por "artefato ausente em master" (auditoria HARD-03 de 07/09) — causa de
+  integração: a família catalogo-visual (L2-02-b classificação, L2-02-c editor/rampas, L2-02-e símbolos/sprites/glifos)
+  vivia só no ramo `wt/cx202c`. Este ramo é **master `61089697` + merge do `wt/cx202c`** (bdb104d7), com a junção
+  concertada e provada na árvore junta (trilha `il202bclas`, schema `plat_til202bclas`, porta 8653).
+- Concertos de junção, todos com commit próprio: `docs/openapi.json` e `docs/LIMITES.md` regenerados (as rotas de
+  estilos/símbolos/mapas/tiles não estavam no contrato publicado); contagem de blocos `location` do modelo nginx passa a
+  ignorar comentário (o bloco de repasse opcional de tiles está documentado em comentário); regra 3 do vendor estendida
+  ao texto de licença `<nome>-<versão>.LICENSE.txt` (portão do L2-02-c exige a licença ao lado das rampas) com origem
+  https do tarball npm; ordenação de imports de `app/main.py`.
+- Verde na árvore junta: portão do L2-02-b (`tests/api/catalogo/test_classes_rota.py` +
+  `tests/unit/test_classificacao.py`, 65), suítes de símbolos/estilos do L2-02-c e L2-02-e (79), coerência
+  (`test_cruzado`/`test_eventos`/`test_docs`/`test_privilegios_declarados`/`test_instalador`/`test_vendor`/
+  `test_limites_doc`, 255 + 1 skip), `tests/adversario` (1 xfail esperado), `make lint`, `make sem-marcador`.
+
+## turno 4, setembro de 2026 (item L2-02-c-editor-simbologia-vetor: editor de simbologia no visualizador)
+
+- **Editor de simbologia** (`web/js/mapa/estilo_editor.js`, painel `#painel-estilo` na tela `/mapa`): símbolo
+  único (cor, contorno, tamanho, ícone do sprite, tracejado, seta, padrão de preenchimento), por categoria (valores
+  do servidor, cor/ícone por valor, ordem, rampa qualitativa, "outros" para o que passa de 200), por classe de cor e de
+  tamanho (método e n do L2-02-b, rampas ColorBrewer sequenciais/divergentes com inversão), proporcional, mapa de
+  calor, agrupamento (clusters no tile), efeitos (sombra, brilho; mistura registrada), faixa de escala por camada e por
+  classe; pré-visualização ao vivo pela mesma função que grava (`POST /api/estilos/compilar`); desfazer/refazer;
+  exportar/importar JSON; salvar como item `estilo` ligado à camada (`camada_id` → `estilo_de_camada`).
+- **Visualizador** desenha a camada com o estilo salvo mais recente (`/api/mapa/camadas`), com sprite e glifos do
+  inquilino; `tilejson?agrupar=<raio>` serve clusters pela função `t_<hex>_ag` (migração
+  `20260907T2110_agrupamento_tile.sql`, `plat.camada_agrupar`).
+- Esquema `estilo-v1` estendido só com campos opcionais (migração `20260907T2100_estilo_editor.sql`); compilador com
+  outros, classes de tamanho, ícone, tracejado, padrão, seta, efeitos e escala; ColorBrewer 1.7.0 no vendor com licença.
+  ADR `docs/adr/20260907T2130-editor-de-simbologia.md`; paridade contra "Apply styles" em docs/PARIDADE.md.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 ## turno 3, setembro de 2026 (item L0-02-g-checagem-privilegio-papel-id: quem concede papel tem de ter o papel)
 
@@ -4195,6 +4227,37 @@ Ainda em aberto no escopo da suíte cruzada (itens de OUTROS ramos, não deste):
 OpenAPI sem caso em `tests/api/cruzado_casos.py` — convites, SMTP da organização, redefinição de
 senha, uploads multipart, importações, geocodificador (`/api/geocodificar`, `/api/reverso`,
 `/api/sugerir`) e os `GET` de `/ogc/records`.
+## turno 3, setembro de 2026 (item L2-02-e-simbolos-sprites-glifos: biblioteca de símbolos, sprite por inquilino e glifos de fonte)
+
+Biblioteca própria de símbolos em `app/simbolos/biblioteca.py`: **153 ícones** e **10 padrões de
+preenchimento** (hachuras, pontos, tracejados), todos de produção própria sob CC0-1.0, gerados por
+composição de traço sobre moldura de categoria (energia, água, saneamento, transporte, ambiente,
+imobiliário, campo, setas, formas). Licença de cada arquivo, com sha256, em `docs/LICENCAS_SIMBOLOS.md`,
+gerado do manifesto vivo por `scripts/gerar_licencas_simbolos.py` — o arquivo não se edita à mão.
+
+Sprite por inquilino em `/api/simbolos/sprite/{slug}.json|.png`, 1x e 2x, no formato que o MapLibre
+consome, composto pela própria API. O Martin não serve o sprite porque lê o diretório uma única vez na
+subida do processo (medido com o binário v1.15.0 e `curl`, sem código nosso): um SVG acrescentado ao vivo
+não aparece. Decisão e medição em `docs/adr/20260907T1642-sprite-proprio-em-vez-de-martin.md`. Os glifos
+de fonte, que não mudam em runtime, continuam vindo do Martin de verdade (`app/simbolos/fontes.py`), sobre
+as TTF embutidas Noto Sans (OFL-1.1) e Open Sans (Apache-2.0) registradas em `web/vendor/VERSOES.txt`.
+
+Upload de SVG do inquilino saneado por `app/simbolos/validador.py`: `<script>`, referência externa e XML
+perigoso (DOCTYPE/entidade — a bomba de XML da refutação) são recusados com **422** e motivo nomeado;
+acima de 64 kB é recusado. O upload entra no sprite sob o prefixo `personalizado/`, então um ícone com o
+mesmo nome de um da base não sobrescreve nada — os dois convivem no mesmo sprite (a segunda refutação).
+Pedir o sprite de outro inquilino com token próprio dá **403 `inquilino_divergente`** (a terceira).
+
+Medido (`tests/medidas/L2-02-e-simbolos-sprites-glifos.json`, com a carga da máquina ao lado): compor o
+atlas dos 163 itens leva **0,097 s** em 1x e **0,145 s** em 2x; do POST do ícone até ele aparecer no
+`sprite.json` pelo HTTP, **0,271 s** sem reinício de processo — folga de 18x sobre os 5 s do portão, e
+isso com carga 12,38 e 0,4 GiB livres. Galeria em `/simbolos` com busca por nome e filtro por categoria;
+o e2e escolhe um ícone e vê o marcador no mapa, e uma captura real do navegador mostra os glifos da Noto
+Sans com acento português ("Nação, Água, Ímã, Coração, Codificação").
+
+Achado de fora do item, consertado de passagem: `tests/e2e/apoio.py` nomeava a captura de qualquer item
+como `L0-02-tenant-auth_*`, porque usava a constante do próprio módulo em vez do item do teste que a
+chamou. `Tela(...)` agora recebe `item=`, com o valor antigo como padrão.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 - **L7-06-d-paineis**: cinco painéis Grafana provisionados por arquivo (`deploy/grafana/paineis/*.json` + `deploy/grafana/provisioning/`), homologação própria (`deploy/paineis_homologacao.sh`) com carga curta de verdade e captura de cada painel em `tests/e2e/capturas/`. Métricas novas para o que os painéis precisavam e não existia: usuários ativos em 24 h, duração e tamanho do último backup/ensaio, uso de armazenamento e tamanho do schema de dado por inquilino.

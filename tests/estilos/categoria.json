@@ -1,59 +1,68 @@
 {
-  "corpo": {
-    "maplibre": {
-      "layers": [
-        {
-          "id": "camada",
-          "paint": {
-            "fill-color": [
-              "case",
-              [
-                "==",
-                [
-                  "get",
-                  "classe_uso"
-                ],
-                "lavoura"
-              ],
-              "#f28e2b",
-              "#e15759"
-            ],
-            "fill-opacity": 1.0
-          },
-          "type": "fill"
-        },
-        {
-          "id": "camada-contorno",
-          "paint": {
-            "line-color": "#1d3c34",
-            "line-width": 0.6
-          },
-          "type": "line"
-        }
+ "corpo": {
+  "maplibre": {
+   "version": 8,
+   "layers": [
+    {
+     "id": "camada",
+     "type": "fill",
+     "paint": {
+      "fill-color": [
+       "case",
+       [
+        "==",
+        [
+         "get",
+         "classe_uso"
+        ],
+        "lavoura"
+       ],
+       "#f28e2b",
+       [
+        "==",
+        [
+         "get",
+         "classe_uso"
+        ],
+        "pastagem"
+       ],
+       "#e15759",
+       "rgba(0,0,0,0)"
       ],
-      "version": 8
+      "fill-opacity": 1.0
+     }
     },
-    "plat_construtor": {
-      "campo": "classe_uso",
-      "campos": [
-        "classe_uso"
-      ],
-      "categorias": [
-        {
-          "cor": "#f28e2b",
-          "rotulo": "Lavoura",
-          "valor": "lavoura"
-        },
-        {
-          "cor": "#e15759",
-          "rotulo": "Pastagem",
-          "valor": "pastagem"
-        }
-      ],
-      "geometria": "poligono",
-      "tipo": "categoria",
-      "versao": 1
+    {
+     "id": "camada-contorno",
+     "type": "line",
+     "paint": {
+      "line-color": "#1d3c34",
+      "line-width": 0.6
+     }
     }
+   ]
   },
-  "esquema_versao": 1
+  "plat_construtor": {
+   "campo": "classe_uso",
+   "campos": [
+    "classe_uso"
+   ],
+   "categorias": [
+    {
+     "cor": "#f28e2b",
+     "rotulo": "Lavoura",
+     "valor": "lavoura"
+    },
+    {
+     "cor": "#e15759",
+     "rotulo": "Pastagem",
+     "valor": "pastagem"
+    }
+   ],
+   "geometria": "poligono",
+   "tipo": "categoria",
+   "versao": 1
+  }
+ },
+ "esquema_versao": 1
 }

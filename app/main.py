@@ -89,6 +89,8 @@ from app.exportacao_inquilino.rotas import router as rotas_exportacao_inquilino
 from app.crs.rotas import router as rotas_crs
 from app.edicao.rotas import router as rotas_edicao
 from app.exportacao.rotas import router as rotas_exportacao
+from app.estatistica.rotas import router as rotas_estatistica
+from app.estilos import rotas as rotas_estilos
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.imagens.rotas_imagens import router as rotas_imagens
@@ -151,6 +153,8 @@ from app.multiescala import regioes_rotas as rotas_regioes  # L3-05: localizar r
 from app.multiescala import backtest_rotas as rotas_backtest  # L3-09: backtest contra decisão real
 from app.multiescala.corredor_rotas import router as rotas_corredor
 from app.mapas_base.rotas import router as rotas_mapas_base
+from app.mapa.rotas import router as rotas_mapa
+from app.mapas.rotas import router as rotas_mapas
 from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
@@ -172,6 +176,7 @@ from app.tiles.exportacao import router as rotas_tiles_exportacao
 from app.tiles.rotas import router as rotas_tiles_martin_verificar
 from app.tiles.vector_tile_server import router as rotas_vector_tile_server
 from app.tabela.rotas import router as rotas_tabela
+from app.simbolos.rotas import router as rotas_simbolos
 from app.tiles.rotas import router as rotas_tiles
 from app.status import router as rotas_status
 from app.uploads.rotas import router as rotas_uploads
@@ -219,6 +224,17 @@ if not settings.producao:
 # o mais externo de todos: toda resposta sai com CSP/nonce, Permissions-Policy, COOP/CORP, Referrer-Policy
 # e nosniff, inclusive as que nascem de erro do middleware de corpo (item L7-03-e).
 cabecalhos.instalar(app)
+
+if not settings.producao:
+    # Em produção o nginx serve web/ em /static/ direto do disco (comentário do topo deste arquivo). Fora de
+    # produção (trilha de teste, `venv/bin/uvicorn app.main:app` sem nginx na frente) não existe esse
+    # servidor — o e2e de navegador (item L2-02-e-simbolos-sprites-glifos) precisa de /static respondendo
+    # para a página carregar MapLibre/estilo/js. Guardado por `settings.producao`: zero mudança de
+    # comportamento em produção, só liga o que já faltava para testar sem nginx (mesmo padrão já usado por
+    # outras trilhas, ex. L2-12-a).
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount("/static", StaticFiles(directory=str(WEB)), name="static_dev")
 
 ROUTERS = [
     rotas_saude,
@@ -440,6 +456,9 @@ ROUTERS = [
     # vetorial exige o sufixo `.pbf` no caminho, então as URLs do visualizador (sem sufixo) continuam
     # caindo nele normalmente.
     rotas_vector_tile_server,
+    # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,
+    # /fatores/{id}/amostras, /conjuntos/{id}/macro, /execucoes/{id}/micro, /execucoes
+    rotas_multiescala,
     # --- visualizador de mapa (L2-01-mapa-web): /api/mapa/camadas, TileJSON com token curto, repasse /tiles
     rotas_mapa,
     # --- casca do SIG (L2-01-a-casca-sig): GET /api/publico/wms/{fonte} — proxy WMS público sem sessão,
@@ -566,6 +585,14 @@ ROUTERS = [
     rotas_corredor,
     # --- motor multicritério (L3-01-a/b): /api/amc/modelos, /api/amc/conjuntos, /api/amc/execucoes
     rotas_amc,
+    # --- classificação numérica no servidor (L2-02-b): GET /api/camadas/{id}/classes; mesma rota
+    # atende classificationDef do generateRenderer Esri (L2-04)
+    rotas_estatistica,
+    # --- símbolos, sprites e glifos (L2-02-e): /api/simbolos (galeria + upload), /api/simbolos/sprite/{slug}
+    # (.json/.png, 1x e 2x), /api/simbolos/fontes/{fontstack}/{faixa}.pbf
+    rotas_simbolos,
+    # --- editor de estilo (L2-02-c): POST /api/estilos/compilar (pré-visualização pela mesma função que grava)
+    rotas_estilos.router,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

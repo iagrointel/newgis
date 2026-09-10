@@ -1,162 +1,258 @@
-/* plat · mapa — entrada da tela /mapa (item L2-01-e-mapas-base, que generaliza o item
-   L2-01-a-basemap-local-pmtiles: mapa-base único → galeria por inquilino). Módulo ES sem build; cache
-   resolvido por no-store no nginx: NUNCA ?v= nos imports. Requer sessão (ADR 0002, exigirSessao).
-   MapLibre GL JS e o protocolo pmtiles vêm de <script> clássico (window.maplibregl / window.pmtiles,
-   vendorizados em web/vendor/, VERSOES.txt) carregado ANTES deste módulo em mapa.html.
+/* plat · mapa — visualizador (item L2-01-mapa-web; o mapa-base local é o L2-01-a).
 
-   Galeria: GET /api/mapas-base devolve os itens `mapa_base` do inquilino (instalados por
-   POST /api/mapas-base/instalar, quatro fontes abertas — docs/DADO_DEMO.md), já na ordem de exibição.
-   Quatro tipos de fonte (dados.tipo): `pmtiles` (vetorial local, estilo próprio claro/escuro/cinza),
-   `osm_raster_proxy` (raster pelo proxy da casa, cache em disco), `satelite_titiler` (raster direto de um
-   TiTiler externo) e `nenhum` (fundo cor, sem fonte). O item com dados.padrao=true abre por padrão; sem
-   nenhum padrão, abre o primeiro da lista (ordem crescente, já vinda da API).
+   Módulo ES sem empacotador; cache resolvido por `no-store` no nginx — NUNCA `?v=` num import, porque
+   duas URLs para o mesmo arquivo criam duas instâncias do módulo e a aplicação morre (armadilha já paga
+   na casa). MapLibre GL JS e o protocolo PMTiles vêm de <script> clássico (window.maplibregl /
+   window.pmtiles, vendorizados em web/vendor/ com sha256 em VERSOES.txt), carregados ANTES deste módulo
+   em mapa.html: os dois não são módulos ES.
 
-   Trocar de mapa base troca o `style` inteiro do MapLibre — que descarta toda fonte/camada que não estiver
-   no novo JSON. Para as camadas OPERACIONAIS (as que representam dado do inquilino, não o mapa base)
-   sobreviverem à troca, este módulo expõe `window.platMapa.adicionarCamadaOperacional`/
-   `removerCamadaOperacional`: quem monta uma camada por cima do mapa registra aqui, e `trocarBase` guarda
-   center/zoom/bearing/pitch antes de `setStyle`, reaplica as camadas registradas no `styledata` seguinte e
-   restaura a posição com `jumpTo` (sem animação: a troca de base não é uma navegação do usuário). */
+   O que esta tela junta:
+     camadas do catálogo (Martin/PMTiles)     catalogo.js
+     árvore de camadas (ordem/grupo/escala) ../camadas.js (item L2-01-c)
+     legenda dinâmica do estilo MapLibre     ../legenda.js (item L2-01-c)
+     janela de atributos                      atributos.js
+     medição geodésica                        medicao.js
+     pesquisa de endereço e de coordenada     busca.js
+     impressão PNG/PDF com escala e norte     impressao.js
+   Navegação, barra de escala e coordenadas do cursor ficam aqui mesmo (são três controles pequenos).
+
+   `body[data-pronto="1"]` só depois do primeiro 'load' do mapa: o e2e espera por isso. */
 import '../base/componentes.js';
 import { carregar as carregarIdioma, t } from '../base/i18n.js';
 import { montarLayout, pronto } from '../base/layout.js';
+import { h, limpar } from '../base/dom.js';
 import { exigirSessao } from '../auth/sessao.js';
-import { construirEstilo, construirEstiloNenhum, construirEstiloRaster } from './estilo.js';
+import { construirEstilo } from './estilo.js';
+import { Catalogo } from './catalogo.js';
+import { Arvore } from '../camadas.js';
+import { Legenda } from '../legenda.js';
+import { instalarPopup } from './atributos.js';
+import { Medicao } from './medicao.js';
+import { interpretarCoordenada, sugerir, geocodificar } from './busca.js';
+import { paraPng, paraPdf, escalaNumerica } from './impressao.js';
+import { carregar as carregarMapa, camadasDoTopo, salvarOrdem, alternarVisivel, salvarDocumento } from './documento.js';
+import { montarPainel } from './painel_camadas.js';
+import { EditorEstilo } from './estilo_editor.js';
 
-const ROTULO_LICENCA = {
-  pmtiles: 'ODbL 1.0',
-  osm_raster_proxy: 'ODbL 1.0 / CC BY-SA 2.0',
-  satelite_titiler: 'Copernicus',
-  nenhum: '',
-};
-const CENTRO_PADRAO = [-46.593018, -23.493476]; // recorte do PMTiles local (PROVENIENCIA.md)
-const ZOOM_PADRAO = 13;
-
+const BASES = [
+  { id: 'osm-guarulhos', rotuloChave: 'mapa.base_osm_guarulhos', arquivo: 'guarulhos.pmtiles' },
+  { id: 'sem-base', rotuloChave: 'mapa.base_nenhuma', arquivo: null },
+];
+const CENTRO = [-46.593018, -23.493476];
 const el = (id) => document.getElementById(id);
 
-function absoluta(url) {
-  return /^https?:\/\//i.test(url) ? url : `${location.origin}${url}`;
-}
+function urlDado(arquivo) { return `${location.origin}/static/dados/basemap/${arquivo}`; }
 
-function atribuicaoDe(base) {
-  const rotulo = ROTULO_LICENCA[base.dados?.tipo] || '';
-  if (!base.creditos) return '';
-  return rotulo ? `${base.creditos} — ${rotulo}` : base.creditos;
-}
-
-function estiloDe(base) {
-  const dados = base.dados || {};
-  if (dados.tipo === 'pmtiles') return construirEstilo(absoluta(dados.url), dados.estilo || 'escuro');
-  if (dados.tipo === 'osm_raster_proxy' || dados.tipo === 'satelite_titiler') {
-    return construirEstiloRaster(absoluta(dados.url), atribuicaoDe(base), dados.zoom_min, dados.zoom_max);
-  }
-  return construirEstiloNenhum();
-}
-
-async function buscarGaleria() {
-  const r = await fetch('/api/mapas-base', { headers: { Accept: 'application/json' } });
-  if (!r.ok) throw new Error(`GET /api/mapas-base → ${r.status}`);
-  return r.json();
-}
-
-async function instalarGaleria() {
-  const r = await fetch('/api/mapas-base/instalar', { method: 'POST', headers: { Accept: 'application/json' } });
-  if (!r.ok) throw new Error(`POST /api/mapas-base/instalar → ${r.status}`);
-  return r.json();
-}
-
-// ---------------------------------------------------------------- camadas operacionais (sobrevivem à troca)
-const camadasOperacionais = new Map(); // layerId -> {sourceId, sourceDef, layerDef}
-
-function montarCamada(map, entrada) {
-  if (!map.getSource(entrada.sourceId)) map.addSource(entrada.sourceId, entrada.sourceDef);
-  if (!map.getLayer(entrada.layerDef.id)) map.addLayer(entrada.layerDef);
-}
-
-function adicionarCamadaOperacional(map, { sourceId, sourceDef, layerDef }) {
-  const entrada = { sourceId, sourceDef, layerDef };
-  camadasOperacionais.set(layerDef.id, entrada);
-  montarCamada(map, entrada);
-}
-
-function removerCamadaOperacional(map, layerId) {
-  camadasOperacionais.delete(layerId);
-  if (map.getLayer(layerId)) map.removeLayer(layerId);
-}
-
-function restaurarCamadasOperacionais(map) {
-  for (const entrada of camadasOperacionais.values()) montarCamada(map, entrada);
-}
-
-function trocarBase(map, base) {
-  const centro = map.getCenter();
-  const zoom = map.getZoom();
-  const bearing = map.getBearing();
-  const pitch = map.getPitch();
-  map.setStyle(estiloDe(base));
-  map.once('styledata', () => {
-    restaurarCamadasOperacionais(map);
-    map.jumpTo({ center: centro, zoom, bearing, pitch });
-  });
-}
-
-function montarSeletorBase(map, galeria) {
+function montarSeletorBase(map) {
   const sel = el('seletor-base');
-  sel.replaceChildren();
-  for (const base of galeria) {
-    const opt = document.createElement('option');
-    opt.value = base.id;
-    opt.textContent = base.titulo;
-    sel.append(opt);
+  for (const base of BASES) {
+    sel.append(h('option', { value: base.id }, t(base.rotuloChave)));
   }
-  const padrao = galeria.find((b) => b.dados?.padrao) || galeria[0];
-  if (padrao) sel.value = padrao.id;
-  sel.addEventListener('change', () => {
-    const base = galeria.find((b) => b.id === sel.value);
-    if (base) trocarBase(map, base);
-  });
-  return padrao;
+  sel.value = BASES[0].id;
+  return sel;
 }
 
-async function iniciarMapa() {
-  if (!window.maplibregl || !window.pmtiles) {
-    el('aviso').erro(t('mapa.erro_biblioteca'));
+function montarCoordenadas(map) {
+  const caixa = el('coordenadas');
+  const escrever = (lng, lat, zoom) => {
+    caixa.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)} · z${zoom.toFixed(1)} · 1:`
+      + `${escalaNumerica(lat, zoom).toLocaleString('pt-BR')}`;
+  };
+  const centro = () => { const c = map.getCenter(); escrever(c.lng, c.lat, map.getZoom()); };
+  map.on('mousemove', (ev) => escrever(ev.lngLat.lng, ev.lngLat.lat, map.getZoom()));
+  map.on('mouseout', centro);
+  map.on('zoomend', centro);
+  map.on('moveend', centro);
+  centro();
+}
+
+function marcador(map, maplibregl, lonlat, rotulo) {
+  const m = new maplibregl.Marker({ color: '#d98a2b' }).setLngLat(lonlat);
+  if (rotulo) m.setPopup(new maplibregl.Popup({ closeButton: true }).setText(rotulo));
+  m.addTo(map);
+  return m;
+}
+
+/* Documento de mapa (item L2-01-a-documento-mapa): /mapa?id=<uuid> abre um mapa do catálogo. Sem `id` a tela
+   segue sendo só o mapa-base local, como no item que a criou — nada de mapa de exemplo embutido. */
+async function iniciarDocumento(map) {
+  const id = new URLSearchParams(location.search).get('id');
+  if (!id) return;
+  const { completo, documento, erro } = await carregarMapa(id);
+  if (erro) {
+    el('aviso').erro(`${t('mapa.erro_documento')}: ${erro.mensagem}`);
     return;
   }
-  const protocolo = new window.pmtiles.Protocol();
-  window.maplibregl.addProtocol('pmtiles', protocolo.tile);
-
-  // primeira visita do inquilino: instala as fontes padrão (idempotente — item L2-01-e-mapas-base). Sem
-  // privilégio conteudo.criar a instalação falha e a galeria some vazia; a mensagem já diz o que fazer.
-  let galeria = await buscarGaleria();
-  if (galeria.length === 0) {
-    try {
-      galeria = await instalarGaleria();
-    } catch {
-      el('aviso').erro(t('mapa.erro_galeria_vazia'));
+  let doc = documento;
+  let ordem = camadasDoTopo(completo).map((c) => c.id);
+  el('mapa-nome').textContent = completo.titulo;
+  const painel = el('painel-camadas');
+  painel.hidden = false;
+  const salvar = el('salvar-mapa');
+  salvar.hidden = false;
+  if (!completo.camadas.length) {
+    el('camadas').textContent = t('mapa.sem_camadas');
+  } else {
+    montarPainel({
+      raiz: el('camadas'),
+      camadas: camadasDoTopo(completo),
+      aoReordenar: (ids) => { ordem = ids; salvar.dataset.sujo = '1'; },
+      aoAlternarVisivel: (idLocal) => { doc = alternarVisivel(doc, idLocal); salvar.dataset.sujo = '1'; },
+    });
+  }
+  salvar.addEventListener('click', async () => {
+    salvar.disabled = true;
+    const gravado = await (ordem.length ? salvarOrdem(id, doc, ordem) : salvarDocumento(id, doc));
+    salvar.disabled = false;
+    if (gravado.erro) {
+      el('aviso').erro(`${t('mapa.erro_salvar')}: ${gravado.erro.mensagem}`);
       return;
     }
+    doc = gravado.documento;
+    delete salvar.dataset.sujo;
+    el('aviso').ok(t('mapa.salvo'));
+  });
+  if (completo.extensao_inicial) {
+    const [oeste, sul, leste, norte] = completo.extensao_inicial;
+    map.fitBounds([[oeste, sul], [leste, norte]], { animate: false, padding: 20 });
   }
-  if (galeria.length === 0) {
-    el('aviso').erro(t('mapa.erro_galeria_vazia'));
-    return;
-  }
-  const inicial = galeria.find((b) => b.dados?.padrao) || galeria[0];
+}
 
-  const map = new window.maplibregl.Map({
+
+/* sprite e glifos do inquilino (item L2-02-e): URLs absolutas da própria origem; o MapLibre exige absoluta */
+let slugInquilino = null;
+function recursosDoInquilino() {
+  if (!slugInquilino) return {};
+  return {
+    sprite: `${location.origin}/api/simbolos/sprite/${encodeURIComponent(slugInquilino)}`,
+    glyphs: `${location.origin}/api/simbolos/fontes/{fontstack}/{range}.pbf`,
+  };
+}
+
+async function iniciar(usuario) {
+  slugInquilino = (usuario && usuario.inquilino && usuario.inquilino.slug) || null;
+  const maplibregl = window.maplibregl;
+  if (!maplibregl || !window.pmtiles) { el('aviso').erro(t('mapa.erro_biblioteca')); return; }
+  const protocolo = new window.pmtiles.Protocol();
+  maplibregl.addProtocol('pmtiles', protocolo.tile);
+
+  const map = new maplibregl.Map({
     container: 'mapa',
-    style: estiloDe(inicial),
-    center: CENTRO_PADRAO,
-    zoom: ZOOM_PADRAO,
+    style: construirEstilo(urlDado(BASES[0].arquivo), recursosDoInquilino()),
+    center: CENTRO,
+    zoom: 11,
     attributionControl: false,
     hash: false,
+    // obrigatório para a impressão ler o canvas depois do quadro composto (impressao.js explica)
+    preserveDrawingBuffer: true,
   });
-  map.addControl(new window.maplibregl.NavigationControl({ showCompass: true }), 'top-right');
-  map.addControl(new window.maplibregl.ScaleControl({ maxWidth: 140, unit: 'metric' }), 'bottom-left');
-  map.addControl(new window.maplibregl.AttributionControl({ compact: false }), 'bottom-right');
-
-  montarSeletorBase(map, galeria);
+  map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
+  map.addControl(new maplibregl.ScaleControl({ maxWidth: 140, unit: 'metric' }), 'bottom-left');
+  map.addControl(new maplibregl.AttributionControl({ compact: false }), 'bottom-right');
   montarCoordenadas(map);
+
+  const catalogo = new Catalogo(map);
+  const medicao = new Medicao(map, el('medicao-saida'));
+  const arvore = new Arvore(catalogo, map, el('lista-camadas'), {
+    aoEnquadrar: async (id) => {
+      const ext = await catalogo.extensao(id);
+      if (ext) map.fitBounds([[ext[0], ext[1]], [ext[2], ext[3]]], { padding: 40, duration: 0 });
+    },
+    aoErro: (e) => el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`),
+    aoMudarEscala: () => legenda.desenhar(),
+    aoAbrirPainel: (acao, id) => { if (acao === 'estilo') editor.abrir(id); },
+  });
+  const editor = new EditorEstilo({ catalogo, map, raiz: el('painel-estilo'), aoFechar: () => legenda.desenhar() });
+  const legenda = new Legenda(map, el('legenda'), () => arvore.camadasParaLegenda());
+  instalarPopup(map, catalogo, maplibregl);
+
+  el('btn-novo-grupo').addEventListener('click', () => {
+    const titulo = window.prompt('nome do grupo', 'grupo novo');
+    if (titulo !== null) arvore.criarGrupo(titulo);
+  });
+
+  // troca de mapa-base: refazer o estilo apaga as camadas do catálogo, que são re-somadas em seguida
+  const sel = montarSeletorBase(map);
+  sel.addEventListener('change', async () => {
+    const base = BASES.find((b) => b.id === sel.value) || BASES[0];
+    const ativas = [...catalogo.ativas];
+    const opacidades = new Map(catalogo.opacidade);
+    map.setStyle(base.arquivo ? construirEstilo(urlDado(base.arquivo), recursosDoInquilino())
+      : { version: 8, name: 'plat-sem-base', sources: {}, layers: [
+        { id: 'fundo', type: 'background', paint: { 'background-color': '#0b0f10' } }] });
+    await new Promise((r) => map.once('styledata', r));
+    catalogo.ativas = [];
+    catalogo.opacidade = opacidades;
+    for (const id of [...ativas].reverse()) { try { await catalogo.ligar(id); } catch { /* segue */ } }
+    catalogo.reordenar(ativas);
+  });
+
+  // --- medição
+  el('btn-distancia').addEventListener('click', () => {
+    medicao.iniciar('distancia');
+    el('btn-distancia').setAttribute('aria-pressed', medicao.modo === 'distancia' ? 'true' : 'false');
+    el('btn-area').setAttribute('aria-pressed', 'false');
+  });
+  el('btn-area').addEventListener('click', () => {
+    medicao.iniciar('area');
+    el('btn-area').setAttribute('aria-pressed', medicao.modo === 'area' ? 'true' : 'false');
+    el('btn-distancia').setAttribute('aria-pressed', 'false');
+  });
+  el('btn-medicao-limpar').addEventListener('click', () => {
+    medicao.limpar();
+    el('btn-area').setAttribute('aria-pressed', 'false');
+    el('btn-distancia').setAttribute('aria-pressed', 'false');
+  });
+
+  // --- pesquisa (endereço ou coordenada)
+  let alfinete = null;
+  const campo = el('busca-campo');
+  const lista = el('busca-sugestoes');
+  const irPara = (lat, lon, rotulo) => {
+    if (alfinete) alfinete.remove();
+    alfinete = marcador(map, maplibregl, [lon, lat], rotulo);
+    map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), 16), duration: 0 });
+    el('busca-resultado').textContent = rotulo;
+    limpar(lista);
+  };
+  const buscar = async () => {
+    const texto = campo.value.trim();
+    if (!texto) return;
+    const coord = interpretarCoordenada(texto);
+    if (coord) { irPara(coord.lat, coord.lon, `${coord.lat.toFixed(5)}, ${coord.lon.toFixed(5)}`); return; }
+    const r = await geocodificar(texto);
+    if (r) irPara(r.lat, r.lon, r.rotulo);
+    else el('busca-resultado').textContent = t('mapa.busca_sem_resultado');
+  };
+  el('busca-form').addEventListener('submit', (ev) => { ev.preventDefault(); buscar(); });
+  let pendente = null;
+  campo.addEventListener('input', () => {
+    clearTimeout(pendente);
+    const texto = campo.value.trim();
+    if (interpretarCoordenada(texto)) { limpar(lista); return; }
+    pendente = setTimeout(async () => {
+      const sugestoes = await sugerir(texto);
+      limpar(lista);
+      for (const s of sugestoes) {
+        lista.append(h('li', {}, h('button', {
+          type: 'button', class: 'sugestao',
+          onclick: () => { campo.value = s.texto; buscar(); },
+        }, s.texto)));
+      }
+    }, 250);
+  });
+
+  // --- impressão
+  const titulo = () => `${t('mapa.titulo')} — ${new Date().toLocaleDateString('pt-BR')}`;
+  const atribuicao = '© colaboradores do OpenStreetMap — ODbL 1.0';
+  el('btn-png').addEventListener('click', async () => {
+    const r = await paraPng(map, { titulo: titulo(), atribuicao, nome: 'mapa.png' });
+    el('impressao-saida').textContent = t('mapa.impressao_pronta', { formato: 'PNG', kb: Math.round(r.bytes / 1024) });
+  });
+  el('btn-pdf').addEventListener('click', async () => {
+    const r = await paraPdf(map, { titulo: titulo(), atribuicao, nome: 'mapa.pdf' });
+    el('impressao-saida').textContent = t('mapa.impressao_pronta', { formato: 'PDF', kb: Math.round(r.bytes / 1024) });
+  });
 
   map.on('error', (ev) => {
     const msg = (ev && ev.error && ev.error.message) || String(ev);
@@ -164,21 +260,16 @@ async function iniciarMapa() {
   });
 
   await new Promise((resolve) => map.once('load', resolve));
-  // ganchos para quem monta camada operacional por cima do mapa (L2-01-c e adiante) e para o e2e deste item
-  window.platMapa = { map, adicionarCamadaOperacional, removerCamadaOperacional, trocarBase, galeria };
+  try {
+    await arvore.carregar();
+    legenda.desenhar();
+  } catch (e) {
+    el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`);
+  }
+  window.plat = window.plat || {};
+  window.plat.mapa = { map, catalogo, medicao, arvore, legenda, editor };  // ponto de inspeção do e2e, nunca de negócio
+  await iniciarDocumento(map);
   document.body.dataset.pronto = '1';
-}
-
-function montarCoordenadas(map) {
-  const caixa = el('coordenadas');
-  const escrever = (lng, lat, zoom) => {
-    caixa.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)} · z${zoom.toFixed(1)}`;
-  };
-  const mostrarCentro = () => { const c = map.getCenter(); escrever(c.lng, c.lat, map.getZoom()); };
-  map.on('mousemove', (ev) => escrever(ev.lngLat.lng, ev.lngLat.lat, map.getZoom()));
-  map.on('mouseout', mostrarCentro);
-  map.on('zoomend', mostrarCentro);
-  mostrarCentro();
 }
 
 await carregarIdioma();
@@ -186,7 +277,7 @@ const usuario = await exigirSessao();
 if (usuario) {
   montarLayout({ usuario, ativo: '/mapa' });
   try {
-    await iniciarMapa();
+    await iniciar(usuario);
   } catch (e) {
     el('aviso').erro(`${t('erro.carregar')}: ${(e && e.message) || e}`);
     pronto();

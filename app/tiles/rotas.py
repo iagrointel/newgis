@@ -31,7 +31,7 @@ router = APIRouter()
 log = logging.getLogger("plat.tiles")
 
 _ESCOPO_INSUFICIENTE = "escopo_insuficiente"
-_TABELA_NA_URL = re.compile(r"/(t_[0-9a-f]{16})(?:/|$)")
+_TABELA_NA_URL = re.compile(r"/(t_[0-9a-f]{16})(?:_ag)?(?:/|$)")  # _ag = variante agrupada (L2-02-c)
 
 
 def _tabela_da_url(caminho: str) -> str | None:

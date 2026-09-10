@@ -48,6 +48,8 @@ PAGINAS = {
     # --- motor de render no servidor (L2-12-a): página headless, sem chrome, sem sessão — o servidor injeta
     # o que precisa ANTES de navegar aqui (app/render/motor.py)
     "/render/mapa": "render_mapa.html",
+    # --- símbolos, sprites e glifos (L2-02-e): galeria de ícones + upload + colocar no mapa
+    "/simbolos": "simbolos.html",
     # --- conexões externas (L6-02-a/L6-02-l/L6-05)
     "/conexoes": "conexoes.html",
     # --- chamados de suporte (L7-13-a): cliente em /chamados, operador (superadmin) em /admin/chamados
