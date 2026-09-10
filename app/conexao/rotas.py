@@ -25,7 +25,7 @@ from app.catalogo.comum import registrar_evento, uuid_ok
 from app.catalogo.modelos import Item as ItemSaida
 from app.catalogo.modelos import JobCriado
 from app.conexao import credencial as credencial_mod
-from app.conexao import google_sheets, proveniencia, seguranca
+from app.conexao import proveniencia, seguranca
 from app.conexao.modelos import (
     ArquivoUrlEntrada,
     ArquivoUrlEstado,
@@ -38,6 +38,7 @@ from app.conexao.modelos import (
     SaudeHistoricoPagina,
 )
 from app.erros import ErroAPI
+from app.seguranca_rotacao import decifrar_com_rotacao
 from app.settings import settings
 
 router = APIRouter(prefix="/api/conexoes", tags=["conexoes"])
@@ -109,35 +110,12 @@ def _config_ok(config: dict) -> None:
 
 
 def _url_ok(url: str) -> None:
-    """Recusa SSRF já na entrada (criar/editar), não só no teste: uma conexão nunca fica registrada
+    """Recusa SSRF já na entrada (criar/editar), não só no teste de saúde: uma conexão nunca fica registrada
     com URL que o proxy jamais poderia buscar."""
     try:
         seguranca.validar_url(url)
     except seguranca.ErroURLInsegura as e:
         raise ErroAPI(422, "url_insegura", f"URL recusada: {e.motivo}", {"motivo": e.motivo}) from e
-
-
-def _url_de_planilha(tipo: str, url: str) -> str:
-    """Item L6-02-i: conexão `google_sheets` só registra URL de planilha do Google, e já na forma CANÔNICA de
-    exportação CSV (`/export?format=csv`), com o gid da aba preservado — o que fica gravado é o endereço que
-    a sincronização vai baixar, não a página de edição que o usuário colou. Qualquer outra URL vira 422."""
-    if tipo != "google_sheets":
-        return url
-    try:
-        return google_sheets.url_exportacao_csv(url)
-    except google_sheets.ErroGoogleSheets as e:
-        raise ErroAPI(422, e.motivo, e.detalhe, {"motivo": e.motivo}) from e
-
-
-def _credencial_de_planilha_ok(tipo: str, credencial: str | None) -> None:
-    """A credencial de `google_sheets` é o JSON da conta de serviço: confere na ENTRADA (422 se inválido),
-    sem nunca ecoar o conteúdo na resposta — a exceção carrega só o nome do campo problemático."""
-    if tipo != "google_sheets" or credencial is None:
-        return
-    try:
-        google_sheets.validar_conta_servico(credencial)
-    except google_sheets.ErroGoogleSheets as e:
-        raise ErroAPI(422, e.motivo, e.detalhe, {"motivo": e.motivo}) from e
 
 
 @router.get("", response_model=ConexaoPagina, openapi_extra=LER)
@@ -169,9 +147,7 @@ def criar(corpo: ConexaoEntrada, request: Request, auth: Auth = autenticado("con
             403, "sem_privilegio", "a operação exige o privilégio conteudo.registrar_fonte",
             {"exigido": "conteudo.registrar_fonte"},
         )
-    corpo.url = _url_de_planilha(corpo.tipo, corpo.url)
     _url_ok(corpo.url)
-    _credencial_de_planilha_ok(corpo.tipo, corpo.credencial)
     _config_ok(corpo.config)
     credencial_cifrada = credencial_mod.cifrar(corpo.credencial, settings.PLAT_SECRET) if corpo.credencial else None
     with db.db(auth.contexto()) as cur:
@@ -206,7 +182,6 @@ def editar(id: str, corpo: ConexaoEditar, request: Request, auth: Auth = autenti
             campos.append("nome = %s")
             params.append(" ".join(corpo.nome.split()))
         if corpo.url is not None:
-            corpo.url = _url_de_planilha(r["tipo"], corpo.url)
             _url_ok(corpo.url)
             campos.append("url = %s")
             params.append(corpo.url)
@@ -221,7 +196,6 @@ def editar(id: str, corpo: ConexaoEditar, request: Request, auth: Auth = autenti
         if corpo.remover_credencial:
             campos.append("credencial_cifrada = NULL")
         elif corpo.credencial is not None:
-            _credencial_de_planilha_ok(r["tipo"], corpo.credencial)
             campos.append("credencial_cifrada = %s")
             params.append(credencial_mod.cifrar(corpo.credencial, settings.PLAT_SECRET))
         if campos:
@@ -254,34 +228,25 @@ def testar(id: str, request: Request, auth: Auth = autenticado()):
         _pode_editar(r, auth)
         url = r["url"]
 
-    # decifra a credencial só em memória, só aqui, e só para autenticar o teste — nunca volta na resposta.
-    # google_sheets: a credencial é o JSON da conta de serviço e a autenticação é a troca por access token
-    # (item L6-02-i); conta recusada pelo Google vira teste com erro e mensagem em português, nunca exceção.
+    # decifra a credencial só em memória, só aqui, e só para autenticar o teste — nunca volta na resposta
     cabecalhos = None
-    falha_credencial: str | None = None
     if r["tem_credencial"]:
         with db.db(auth.contexto()) as cur:
             cur.execute("SELECT credencial_cifrada FROM plat.conexao WHERE id = %s::uuid", (cid,))
             bruta = cur.fetchone()["credencial_cifrada"]
         try:
-            em_claro = credencial_mod.decifrar(bruta, settings.PLAT_SECRET)
-        except ValueError:
-            em_claro = None  # PLAT_SECRET trocado ou dado corrompido: testa sem credencial, nunca quebra a rota
-        try:
-            cabecalhos = google_sheets.cabecalhos_auth(r["tipo"], em_claro)
-        except google_sheets.ErroGoogleSheets as e:
-            falha_credencial = e.detalhe
+            token = decifrar_com_rotacao(
+                credencial_mod.decifrar, bruta, settings.PLAT_SECRET, settings.PLAT_SECRET_ANTERIOR
+            )
+            cabecalhos = {"Authorization": f"Bearer {token}"}
+        except Exception:  # noqa: BLE001 — PLAT_SECRET (e ANTERIOR) trocados ou dado corrompido: testa sem
+            # credencial, nunca quebra a rota (InvalidTag do AEAD não é ValueError — abrangido de propósito)
+            cabecalhos = None
 
-    if falha_credencial is not None:
-        resultado = seguranca.ResultadoBusca(
-            ok=False, status=None, mensagem=falha_credencial, url_final=r["url"],
-            latencia_ms=0, saltos=0,
-        )
-    else:
-        resultado = seguranca.buscar_seguro(
-            url, metodo="GET", timeout_conectar=limites.CONEXAO_CONECTAR_TIMEOUT_S,
-            timeout_ler=limites.CONEXAO_LER_TIMEOUT_S, cabecalhos=cabecalhos,
-        )
+    resultado = seguranca.buscar_seguro(
+        url, metodo="GET", timeout_conectar=limites.CONEXAO_CONECTAR_TIMEOUT_S,
+        timeout_ler=limites.CONEXAO_LER_TIMEOUT_S, cabecalhos=cabecalhos,
+    )
     saude = "ok" if resultado.ok else "erro"
     with db.db(auth.contexto()) as cur:
         # plat.conexao_saude_registrar (036) grava saude/saude_mensagem/... E o histórico (item L6-02-l-saude)
@@ -413,17 +378,15 @@ def _arquivo_estado(cur, cid: str) -> dict:
 def arquivo_configurar(id: str, corpo: ArquivoUrlEntrada, request: Request,
                        auth: Auth = autenticado("conteudo.publicar_camada")):
     """Marca a conexão como fonte de arquivo por URL e define o intervalo da atualização agendada (item
-    L6-02-h; `google_sheets` entra pelo item L6-02-i — a planilha vira o MESMO CSV por URL). Só faz sentido
-    em conexão no modo `copiada`: `referenciada` significa que o dado FICA no serviço de origem, e este
-    item copia o arquivo para dentro da plataforma."""
+    L6-02-h). Só faz sentido em conexão `http` no modo `copiada`: `referenciada` significa que o dado FICA no
+    serviço de origem, e este item copia o arquivo para dentro da plataforma."""
     cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
     with db.db(auth.contexto()) as cur:
         r = _carregar(cur, cid)
-        if r["tipo"] not in ("http", "google_sheets") or r["modo"] != "copiada":
+        if r["tipo"] != "http" or r["modo"] != "copiada":
             raise ErroAPI(
                 422, "conexao_incompativel",
-                f"arquivo por URL exige conexão 'http' ou 'google_sheets' no modo 'copiada'; "
-                f"esta é {r['tipo']!r}/{r['modo']!r}",
+                f"arquivo por URL exige conexão de tipo 'http' no modo 'copiada'; esta é {r['tipo']!r}/{r['modo']!r}",
                 {"tipo": r["tipo"], "modo": r["modo"]},
             )
         cur.execute("SELECT plat.conexao_arquivo_configurar(%s::uuid, %s, %s)",
