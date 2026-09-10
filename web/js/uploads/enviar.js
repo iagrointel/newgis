@@ -1,45 +1,21 @@
 /* plat — tela /uploads (item L0-04-a-upload-arquivo; ADR 0005 seção 3): upload retomável em partes de 16 MiB,
-   com barra de progresso, cota do inquilino e recusa por tipo x conteúdo. A sessão (cookie) só assina
-   `POST /api/uploads` (JSON, CSRF-seguro); o envio das partes e a conclusão exigem um TOKEN de serviço — a
-   própria tela troca a sessão por um token de escopo restrito (`POST /api/tokens`, uma vez por carregamento de
-   página, igual ao que `app.rotas_arquivos`/`app.uploads.rotas` documentam no backend) e usa esse token só em
-   memória, nunca localStorage: um recarregamento de página pede um token novo. */
-import { obter, enviar } from '../base/api.js';
+   com barra de progresso, cota do inquilino e recusa por tipo x conteúdo. A troca sessão→token e o envio em
+   si vivem em uploads/nucleo.js (compartilhado com a zona de arrasto da tela inicial, app.js). Depois que o
+   arquivo chega, esta tela publica sozinha: raster (geotiff, jp2) vira imagem; os formatos vetoriais que a
+   ingestão já lê (shapefile.zip, gpkg, geojson, csv) viram camada vetorial; os demais tipos aceitos no upload
+   (kml, kmz, gpx, xlsx, dxf, dwg, gdb.zip, parquet, fgb, gml, zip) ainda não têm publicação automática nesta
+   instalação — o arquivo fica como item 'arquivo' mesmo, e é para lá que a tela leva. */
 import { h, limpar } from '../base/dom.js';
 import { carregar, t } from '../base/i18n.js';
 import '../base/componentes.js';
 import { montarLayout, cabecalho, pronto } from '../base/layout.js';
 import { exigirSessao } from '../auth/sessao.js';
-
-const NOME_TOKEN = 'plat-uploads-tela';
+import { enviarArquivo, publicar, abortar, obterTipos, formatarBytes, extensaoDe } from './nucleo.js';
 
 await carregar();
 const usuario = await exigirSessao({ privilegio: 'conteudo.criar' });
 if (usuario) iniciar();
 pronto();
-
-let tokenServico = null;
-
-async function token() {
-  if (tokenServico) return tokenServico;
-  const r = await enviar('/api/tokens', { nome: NOME_TOKEN, escopos: ['admin:inquilino'], validade_dias: 1 });
-  if (r.status !== 201) throw new Error(r.json.mensagem || 'não foi possível preparar o envio');
-  tokenServico = r.json.token;
-  return tokenServico;
-}
-
-function formatarBytes(n) {
-  if (n === null || n === undefined) return '—';
-  const unidades = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let v = n, i = 0;
-  while (v >= 1024 && i < unidades.length - 1) { v /= 1024; i += 1; }
-  return `${v.toFixed(i === 0 ? 0 : 1)} ${unidades[i]}`;
-}
-
-function extensaoDe(nome) {
-  const i = nome.lastIndexOf('.');
-  return i >= 0 ? nome.slice(i).toLowerCase() : '';
-}
 
 async function iniciar() {
   montarLayout({ usuario, ativo: '/uploads' });
@@ -50,9 +26,7 @@ async function iniciar() {
 async function montarTela() {
   const principal = document.getElementById('principal');
   const aviso = document.getElementById('aviso');
-
-  const rTipos = await obter('/api/uploads/tipos');
-  const tipos = rTipos.status === 200 ? rTipos.json : [];
+  const tipos = await obterTipos();
 
   const selecao = h(
     'select', { id: 'upload-tipo' },
@@ -101,9 +75,7 @@ async function montarTela() {
   let uploadEmCurso = null;
   botaoCancelar.addEventListener('click', async () => {
     if (!uploadEmCurso) return;
-    try {
-      await fetch(`/api/uploads/${uploadEmCurso}`, { method: 'DELETE', credentials: 'omit', headers: { authorization: `Bearer ${await token()}` } });
-    } catch { /* melhor esforço: o periódico de 24h limpa se isto falhar */ }
+    await abortar(uploadEmCurso);
     aviso.mostrar(t('upload.cancelado'), 'info');
     resetar();
   });
@@ -127,19 +99,32 @@ async function montarTela() {
     rotuloProgresso.hidden = false;
     botaoCancelar.hidden = false;
     barra.value = 0;
+    let arquivoId = null;
     try {
-      await enviarArquivo(arquivoAtual, tipoDeclarado, {
+      const concluido = await enviarArquivo(arquivoAtual, tipoDeclarado, {
         aoIniciar: (id) => { uploadEmCurso = id; },
         aoProgredir: (feitas, total) => {
           barra.value = Math.round((feitas / total) * 100);
           rotuloProgresso.textContent = t('upload.parte_de', { n: feitas, total });
         },
       });
+      arquivoId = concluido.arquivo_id;
+      uploadEmCurso = null;
+      botaoCancelar.hidden = true;
       aviso.ok(t('upload.concluido'));
-      resultado.append(h('p', { class: 'upload-ok' }, t('upload.arquivo_pronto')));
+      const { itemId, publicado } = await publicar(arquivoId, tipoDeclarado, arquivoAtual.name, {
+        aoStatus: (msg) => { rotuloProgresso.textContent = msg; },
+        aoProgredir: (pct) => { barra.value = pct; },
+      });
+      if (publicado) {
+        aviso.ok(t('upload.publicado_ir'));
+      } else {
+        resultado.append(h('p', { class: 'upload-ok' }, t('upload.formato_sem_publicacao')));
+      }
+      location.assign(`/conteudo/${itemId}`);
     } catch (e) {
       aviso.erro(e.message || t('upload.erro_generico'));
-    } finally {
+      if (arquivoId) resultado.append(h('p', {}, h('a', { href: `/conteudo/${arquivoId}` }, t('upload.abrir_arquivo'))));
       resetar();
     }
   });
@@ -155,40 +140,4 @@ async function montarTela() {
     resultado,
   );
   principal.append(area);
-}
-
-async function enviarArquivo(arquivo, tipoDeclarado, { aoIniciar, aoProgredir }) {
-  const tk = await token();
-  const rIniciar = await enviar('/api/uploads', { nome: arquivo.name, bytes: arquivo.size, tipo_declarado: tipoDeclarado });
-  if (rIniciar.status !== 201) throw new Error(rIniciar.json.mensagem || t('upload.erro_iniciar'));
-  const { id, parte_bytes: parteBytes, partes } = rIniciar.json;
-  aoIniciar(id);
-
-  for (let n = 1; n <= partes; n += 1) {
-    const inicio = (n - 1) * parteBytes;
-    const pedaco = arquivo.slice(inicio, inicio + parteBytes);
-    const resp = await fetch(`/api/uploads/${id}/partes/${n}`, {
-      method: 'PUT',
-      credentials: 'omit',
-      headers: { authorization: `Bearer ${tk}`, 'content-type': 'application/octet-stream' },
-      body: pedaco,
-    });
-    if (!resp.ok) {
-      const corpo = await resp.json().catch(() => ({}));
-      throw new Error(corpo.mensagem || t('upload.erro_parte', { n }));
-    }
-    aoProgredir(n, partes);
-  }
-
-  const respConcluir = await fetch(`/api/uploads/${id}/concluir`, {
-    method: 'POST',
-    credentials: 'omit',
-    headers: { authorization: `Bearer ${tk}`, 'content-type': 'application/json' },
-    body: '{}',
-  });
-  if (!respConcluir.ok) {
-    const corpo = await respConcluir.json().catch(() => ({}));
-    throw new Error(corpo.mensagem || t('upload.erro_concluir'));
-  }
-  return respConcluir.json();
 }
