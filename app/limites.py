@@ -230,6 +230,14 @@ RASTER_VISUAL_MAX_LADO = 1024           # miniatura PNG (lado maior)
 RASTER_ESTATISTICA_AMOSTRA = 100_000    # pixels amostrados por banda para percentis do perfil visual
 RASTER_TILE_CACHE_DATASET_MAX = 8       # datasets abertos por processo no handler de tiles (LRU)
 RASTER_TILE_TIMEOUT_S = 30              # teto de renderização de um tile (mata a requisição, não o worker)
+# --- ingestão de modelo 3D (L1-03-modelo3d, 10/09/2026): IFC bruto enviado pelo usuário antes da conversão
+# (que roda num conversor externo — GPU box por ssh nesta instalação — por isso o teto é bem menor que o do
+# raster: o arquivo inteiro viaja por scp duas vezes, ida e volta, dentro do timeout do job).
+MODELO3D_IFC_BYTES_MAX = 512 * 1024 * 1024
+MODELO3D_XKT_BYTES_MAX = 512 * 1024 * 1024
+MODELO3D_CONVERSAO_TIMEOUT_S = 1500     # teto do ssh+scp+convert2xkt no conversor remoto (job todo tem mais margem)
+FOTO360_BYTES_MAX = 64 * 1024 * 1024
+MODELO3D_URL_VALIDADE_S = 3600          # validade da URL assinada do .xkt/.jpg entregue ao visualizador
 # --- grades aninhadas do motor multicritério (L3-19-multiescala; migração 20260906T1640_multiescala.sql):
 # macro (grosseira, ex. 1 km) triando regiões e micro (fina, ex. 100 m) gerada SÓ dentro das aprovadas.
 # ESCALA_CELULAS_MAX vale tanto para a grade macro inteira quanto para o refino micro (aprovadas × k²) — é o
@@ -275,3 +283,20 @@ ANEXO_TIPOS_PERMITIDOS = ("application/pdf", "image/gif", "image/jpeg", "image/p
 AMC_NOME_MAX = 250                # mesmo teto de ITEM_TITULO_MAX
 AMC_FATORES_MAX = 50              # mesmo teto de docs/esquemas/amc_modelo.v1.json fatores.maxItems
 AMC_CAMADAS_MAX = 50              # camadas de entrada declaradas por execução (A10)
+
+# --- integração ArcGIS Online do cliente (item L2-08-migracao-agol): credencial por inquilino em
+# `tenant.config.agol` (mesmo padrão de SMTP_* acima) e o job `agol.publicar` (app/agol/tarefas.py), portado
+# de `/home/dev/fgr/sig/pipeline/20_agol_publish.py`.
+AGOL_PORTAL_MAX = 300
+AGOL_USUARIO_MAX = 128
+AGOL_CREDENCIAL_MAX = 1024                # senha ou token, antes de cifrar
+AGOL_ROTULO_MAX = 100
+AGOL_TITULO_MAX = 250
+AGOL_CONECTAR_TIMEOUT_S = 6.0
+AGOL_LER_TIMEOUT_S = 20.0                 # teste de credencial: curto de propósito (rota síncrona)
+AGOL_PUBLICAR_TIMEOUT_S = 300.0           # addItem/publish dentro do job: upload pode ser grande
+AGOL_POLL_INTERVALO_S = 4.0               # espera do job assíncrono de publish (mesmo valor do script original)
+AGOL_POLL_TENTATIVAS_MAX = 90             # 90 x 4 s = 6 min (mesmo teto do script original: `for _ in range(90)`)
+AGOL_FEICOES_MAX = 200_000                # teto de segurança do export GeoJSON (fetchall bounded; camada maior
+# que isso é recusada com uma mensagem clara em vez de estourar a memória do worker — item novo desta portagem,
+# o script original (`20_agol_publish.py`) não tinha teto nenhum porque rodava numa única fazenda/inquilino)

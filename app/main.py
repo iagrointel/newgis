@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse
 from app import erros, limite_corpo, paginas
 from app import log as plat_log
 from app.acervo import rotas as rotas_acervo
+from app.agol import rotas as rotas_agol
 from app.amc import rotas as rotas_amc
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
@@ -59,6 +60,7 @@ from app.jobs.rotas import router as rotas_jobs
 from app.mapa.proxy_wms import router as rotas_mapa_wms_publico
 from app.mapa.rotas import router as rotas_mapa
 from app.mapas.rotas import router as rotas_mapas
+from app.modelo3d.rotas import router as rotas_modelo3d
 from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
@@ -191,6 +193,9 @@ ROUTERS = [
     # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,
     # /fatores/{id}/amostras, /conjuntos/{id}/macro, /execucoes/{id}/micro, /execucoes
     rotas_multiescala,
+    # --- modelo 3D / foto 360 (L1-03-modelo3d): /api/modelo3d/ingestoes (job IFC->xkt), /api/modelo3d/{item},
+    # /api/foto360 (síncrono, sem conversão)
+    rotas_modelo3d,
     # --- servidor de tiles vetoriais em 3 contratos (L2-04-e): TileJSON+XYZ, VectorTileServer Esri
     # (descritor, estilo, sprites/fontes, tile z/y/x) e exportação por URL (geojson/kml/csv/fgb/gpkg).
     # ORDEM IMPORTA: tem de vir ANTES de `rotas_mapa`. As duas famílias moram em /tiles/, e o repasse
@@ -224,6 +229,9 @@ ROUTERS = [
     # --- motor de análise multicritério (L3-01-a): /api/amc/modelos, /api/amc/conjuntos, /api/amc/execucoes
     rotas_amc.router,
     rotas_tiles_exportacao,
+    # --- integração ArcGIS Online do cliente (L2-08-migracao-agol): /api/agol/credencial, /api/agol/testar,
+    # /api/agol/publicacoes (job agol.publicar -> hosted feature layer na conta AGOL do inquilino)
+    rotas_agol.router,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

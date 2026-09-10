@@ -1,6 +1,9 @@
 """Importa cada módulo de tipos (o registro é preenchido na importação) e expõe REGISTRO. Linhas futuras
 acrescentam aqui a importação do seu módulo de tarefas (ex.: app.ingestao.tarefas no L0-04)."""
 
+from app.agol import (
+    tarefas as agol_tarefas,  # noqa: F401 — L2-08: agol.publicar (hosted feature layer no AGOL do cliente)
+)
 from app.catalogo import (
     tarefas as catalogo_tarefas,  # noqa: F401 — L0-03: 6 tipos catalogo.* e os periódicos do catálogo
 )
@@ -10,6 +13,7 @@ from app.imagens import ingestao as imagens_ingestao  # noqa: F401 — L1-02: im
 from app.ingestao import tarefas as ingestao_tarefas  # noqa: F401 — L0-04: ingestao.inspecionar/ingestao.carregar
 from app.jobs import periodicos, tipos_prova  # noqa: F401 — importação registra os tipos
 from app.jobs.registro import REGISTRO
+from app.modelo3d import ingestao as modelo3d_ingestao  # noqa: F401 — L1-03: modelo3d.converter (IFC -> xkt)
 from app.rede_utilidades import (
     tarefas as rede_tarefas,  # noqa: F401 — L4-04-b redes.subredes_atualizar e L4-01-c rede.importar_bdgd
 )
