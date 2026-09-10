@@ -1,6 +1,8 @@
-"""Laudo adversário do grupo G5 (turno 3). O teste afirma o comportamento SEGURO e está
-`xfail(strict=True)`: hoje FALHA (é o achado); quando alguém consertar vira XPASS e o strict derruba a
-suíte, sinalizando "remova o xfail, a guarda agora é real".
+"""Laudo adversário do grupo G5 (turno 3), CONSERTADO. O teste é o do adversário (commit e62f3db9, ramo
+`wt/adv5`), palavra por palavra; a única mudança é a retirada da marca `xfail(strict=True)`, que existia
+enquanto o achado estava aberto. Com o conserto de `buscar_seguro` (ramo `wt/cred`, caso 9 da docstring do
+módulo e ADR 0012) ele PASSA, e passa a valer como guarda permanente: se alguém devolver o reenvio da
+credencial em salto cross-host, este teste fica vermelho.
 
 ACHADO G5-1 (segurança real, item L6-02-a-modelo-conexao-e-seguranca): `app.conexao.seguranca.buscar_seguro`
 reenvia o cabeçalho `Authorization` (a credencial decifrada da conexão, usada por
@@ -11,14 +13,13 @@ laço de redirect repassa `headers=cabecalhos or {}` incondicionalmente. Um host
 open-redirect nele) que responda 302 para fora exfiltra o Bearer da casa.
 
 Reproduzir (não precisa de rede nem de banco — só do import do módulo):
-  cd /home/dev/plataforma/enterprise
+  cd /home/dev/plataforma/wt/cred
   export PLAT_SECRET=$(python3 -c "import secrets;print(secrets.token_hex(32))")
-  venv/bin/pytest /home/dev/plataforma/wt/adv5/tests/adversario/test_g5_adversario.py -q -o addopts=""
+  venv/bin/pytest tests/adversario/test_g5_adversario.py -q -o addopts=""
 """
 import socket
 
 import httpx
-import pytest
 
 from app.conexao import seguranca as s
 
@@ -71,11 +72,6 @@ class _ClienteFake:
         return _StreamFake(self._registro, url, headers or {})
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G5-1: buscar_seguro reenvia Authorization em redirect para outro HOST; correto é "
-    "retirar a credencial ao mudar de origem (esquema+host+porta), como fazem requests/httpx.",
-)
 def test_credencial_nao_vaza_em_redirect_cross_host(monkeypatch):
     registro: list[tuple[str, str | None]] = []
     monkeypatch.setattr(socket, "getaddrinfo", _gai)
