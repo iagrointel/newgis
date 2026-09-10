@@ -20,9 +20,54 @@ from __future__ import annotations
 from typing import Any
 
 from app.erros import ErroAPI
-from app.expressao.avaliador_py import ErroExpressao, analisar, avaliar_texto
+from app.expressao.avaliador_py import Binario, Campo, Chamada, ErroExpressao, No, Unario, analisar, avaliar_texto
 
 WIDGETS = {"texto", "area_texto", "numero", "inteiro", "booleano", "data", "selecao"}
+
+
+def campos_da_expressao(no: No) -> set[str]:
+    """Nomes de campo que a expressão referencia, andando a AST com pilha explícita (a mesma defesa
+    de profundidade que `analisar` já usa: nada de recursão sobre árvore vinda de fora)."""
+    vistos: set[str] = set()
+    pilha = [no]
+    while pilha:
+        atual = pilha.pop()
+        if isinstance(atual, Campo):
+            vistos.add(atual.nome)
+        elif isinstance(atual, Unario):
+            pilha.append(atual.operando)
+        elif isinstance(atual, Binario):
+            pilha.append(atual.esquerda)
+            pilha.append(atual.direita)
+        elif isinstance(atual, Chamada):
+            pilha.extend(atual.argumentos)
+    return vistos
+
+
+def _ordem_dos_calculos(calculados: dict[str, set[str]]) -> list[str]:
+    """Ordem topológica dos campos calculados. Levanta ErroAPI 422 se houver LAÇO.
+
+    Por que isto existe: um desenho com `nome = $agente` e `agente = $nome` passava na validação, era
+    PUBLICADO e, na hora de gravar, os dois campos saíam NULOS — o valor que o usuário digitou era
+    descartado em silêncio (MEDIDO em 10/09/2026 na auditoria: gravou {"nome": null, "agente": null}
+    a partir de {"nome": "A", "agente": "B"}, com HTTP 200). Perda silenciosa de dado é pior que
+    recusar o desenho, então o laço morre na validação."""
+    pendentes = {c: set(d) & set(calculados) for c, d in calculados.items()}
+    ordem: list[str] = []
+    while pendentes:
+        prontos = sorted(c for c, d in pendentes.items() if not d)
+        if not prontos:
+            laco = sorted(pendentes)
+            raise ErroAPI(
+                422, "formulario_calculo_circular",
+                "campos calculados em laço: " + ", ".join(laco), {"campos": laco},
+            )
+        for c in prontos:
+            ordem.append(c)
+            del pendentes[c]
+        for d in pendentes.values():
+            d.difference_update(prontos)
+    return ordem
 
 
 def _avaliar(expressao: str, contexto: dict, onde: str) -> Any:
@@ -104,6 +149,11 @@ def validar_desenho(desenho: dict, campos_validos: dict[str, dict]) -> None:
         raise ErroAPI(422, "formulario_invalido", "desenho precisa ter 'grupos': lista")
     ids_vistos: set[str] = set()
     campos_vistos: set[str] = set()
+    # (campo_id, propriedade, expressão) -> nomes que a expressão referencia, conferidos no fim contra
+    # o conjunto de campos que o formulário de fato conhece.
+    referencias: dict[tuple[str, str, str], set[str]] = {}
+    calculados: dict[str, set[str]] = {}
+    declarados: set[str] = set()
     for grupo in desenho["grupos"]:
         if not isinstance(grupo, dict) or not grupo.get("id") or not isinstance(grupo.get("campos"), list):
             raise ErroAPI(422, "formulario_invalido", "grupo precisa de 'id' e 'campos': lista")
@@ -125,6 +175,7 @@ def validar_desenho(desenho: dict, campos_validos: dict[str, dict]) -> None:
             if not campo or not isinstance(campo, str):
                 raise ErroAPI(422, "formulario_invalido", f"campo {cid} sem nome de atributo", {"campo": cid})
             persistido = c.get("persistido", True)
+            declarados.add(campo)
             if persistido:
                 if campo not in campos_validos:
                     raise ErroAPI(
@@ -140,13 +191,32 @@ def validar_desenho(desenho: dict, campos_validos: dict[str, dict]) -> None:
                 expr = c.get(chave)
                 if expr:
                     try:
-                        analisar(expr)
+                        arvore = analisar(expr)
                     except ErroExpressao as e:
                         raise ErroAPI(
                             422, "formulario_expressao_invalida",
                             f"expressão inválida em {cid}.{chave}: {e.mensagem}",
                             {"campo": cid, "propriedade": chave, "expressao": expr, "codigo": e.codigo},
                         ) from e
+                    referencias[(cid, chave, expr)] = campos_da_expressao(arvore)
+                    if chave == "calculo" and persistido:
+                        calculados[campo] = campos_da_expressao(arvore)
+
+    # Referência a campo que não existe. Sem esta conferência o desenho PUBLICA e a camada fica sem
+    # edição: toda gravação passa a devolver 409 `campo não permitido`, porque a expressão só é
+    # avaliada na hora de escrever. MEDIDO em 10/09/2026 na auditoria — publicar deu 200 e a gravação
+    # seguinte deu 409. O erro tem de aparecer para quem desenha, não para quem edita.
+    conhecidos = set(campos_validos) | declarados
+    for (cid, chave, expr), usados in referencias.items():
+        faltando = sorted(usados - conhecidos)
+        if faltando:
+            raise ErroAPI(
+                422, "formulario_expressao_invalida",
+                f"expressão em {cid}.{chave} usa campo que não existe: " + ", ".join(faltando),
+                {"campo": cid, "propriedade": chave, "expressao": expr, "campos": faltando,
+                 "codigo": "campo_nao_permitido"},
+            )
+    _ordem_dos_calculos(calculados)
 
 
 def validar_dados_livre(desenho: dict, valores: dict[str, Any]) -> tuple[dict, list[str]]:
