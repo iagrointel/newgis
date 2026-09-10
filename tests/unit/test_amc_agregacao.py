@@ -1,120 +1,139 @@
-"""Agregação célula → feição (`app.amc.agregacao`), item L3-01-j. Testes puros: sem banco, sem rede.
+"""Item L3-07-agregacao: agregação de grade para feição. Casos sintéticos (geometria conhecida à mão) para
+provar o mecanismo — o cross-check contra o piloto de referência (4.346 feições) está em
+`test_amc_agregacao_referencia.py`. Usa `conexao_plat_app` só porque a interseção/área é feita pelo PostGIS
+(ST_Intersection/ST_Area), nunca por reimplementar geometria em Python."""
 
-A regra sob teste tem quatro partes que costumam ser erradas em silêncio: o denominador da média é a área
-COM DADO daquele fator (não a área total), célula vetada não entra na média mas entra na fração vetada, o
-motivo que a feição carrega é o da MAIOR área vetada, e o arredondamento de empate é meio para longe do
-zero (como o banco), não meio para o par (como o numpy)."""
-
-import numpy as np
 import pytest
 
-from app.amc.agregacao import ErroAgregacao, agregar_por_feicao, arredondar_meio_para_longe_do_zero
+from app.amc import agregacao
+
+SRID = 31983  # SIRGAS 2000 / UTM 23S
+_ORIGEM = (500_000.0, 7_400_000.0)  # coordenada UTM plausível, longe de qualquer feição real
 
 
-def test_media_ponderada_por_area():
-    r = agregar_por_feicao([0, 0], [3.0, 1.0], [[100.0], [0.0]])
-    assert r.fatores[0, 0] == pytest.approx(75.0)
-    assert r.fracao_vetada[0] == 0.0
-    assert r.n_celulas.tolist() == [2]
-    assert r.area_total.tolist() == [4.0]
+def _retangulo(x0, y0, dx, dy):
+    x1, y1 = x0 + dx, y0 + dy
+    return {"type": "Polygon", "coordinates": [[[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]]}
 
 
-def test_fator_ausente_nao_vira_zero():
-    """A célula sem dado sai do denominador daquele fator; a feição não é punida por falta de dado."""
-    r = agregar_por_feicao([0, 0], [1.0, 9.0], [[80.0, np.nan], [np.nan, 20.0]])
-    assert r.fatores[0, 0] == pytest.approx(80.0)
-    assert r.fatores[0, 1] == pytest.approx(20.0)
+def _celula(i, j, veto=False, motivo=None, fatores=None):
+    """Célula de grade 100x100 m na posição (i, j) da grade a partir de `_ORIGEM`."""
+    x0, y0 = _ORIGEM[0] + i * 100, _ORIGEM[1] + j * 100
+    return (f"c{i}{j}", _retangulo(x0, y0, 100, 100), veto, motivo, fatores or {})
 
 
-def test_feicao_sem_dado_nenhum_fica_sem_nota():
-    r = agregar_por_feicao([0], [5.0], [[np.nan]])
-    assert np.isnan(r.fatores[0, 0])
+def _agregar(cur, feicao_geom, celulas, **kw):
+    fsql, fparams = agregacao.feicoes_de_geojson([("f1", feicao_geom)], SRID, srid_entrada=SRID)
+    csql, cparams = agregacao.celulas_de_geojson(celulas, SRID, srid_entrada=SRID)
+    return agregacao.agregar(cur, fsql, fparams, csql, cparams, **kw)["resultados"][0]
 
 
-def test_celula_vetada_sai_da_media_e_entra_na_fracao():
-    r = agregar_por_feicao([0, 0], [1.0, 3.0], [[100.0], [0.0]], vetado=[False, True])
-    assert r.fatores[0, 0] == pytest.approx(100.0)   # a célula vetada não puxa a média para baixo
-    assert r.fracao_vetada[0] == pytest.approx(0.75)
-    assert r.n_celulas.tolist() == [1]
+def test_feicao_cobre_metade_de_duas_celulas_media_ponderada_por_area(conexao_plat_app):
+    # feição = retângulo de 200x50 cobrindo a metade de baixo de c00 (fator 10) e a metade de baixo de
+    # c10 (fator 90); nenhuma vetada. Média esperada = (5000*10 + 5000*90) / 10000 = 50.
+    celulas = [_celula(0, 0, fatores={"f": 10.0}), _celula(1, 0, fatores={"f": 90.0})]
+    feicao = _retangulo(*_ORIGEM, 200, 50)
+    with conexao_plat_app.cursor() as cur:
+        r = _agregar(cur, feicao, celulas)
+    assert r["sem_celula"] is False
+    assert r["area_total_m2"] == pytest.approx(10_000.0, rel=1e-6)
+    assert r["n_cel"] == 2
+    assert r["fracao_vetada"] == pytest.approx(0.0)
+    assert r["veto_principal"] is None
+    assert r["fatores_media"] == pytest.approx({"f": 50.0})
+    assert r["combinacao"] == pytest.approx(50.0)
+    assert r["favorabilidade"] == pytest.approx(50.0)
+    assert r["fora_do_ranking"] is False
 
 
-def test_feicao_toda_vetada():
-    r = agregar_por_feicao([0, 0], [2.0, 2.0], [[10.0], [20.0]], vetado=[True, True],
-                           motivo_celula=["a", "b"])
-    assert r.fracao_vetada[0] == 1.0
-    assert np.isnan(r.fatores[0, 0])  # nenhuma célula não vetada: sem nota, nunca zero por falta de dado
-    assert r.motivo_veto[0] in ("a", "b")
+def test_celula_vetada_sai_do_fator_mas_conta_na_fracao_vetada(conexao_plat_app):
+    # c00 (fator 80, não vetada) e c10 (vetada, motivo 'restricao_x'); a feição toca as duas por igual.
+    celulas = [_celula(0, 0, fatores={"f": 80.0}), _celula(1, 0, veto=True, motivo="restricao_x")]
+    feicao = _retangulo(*_ORIGEM, 200, 100)
+    with conexao_plat_app.cursor() as cur:
+        r = _agregar(cur, feicao, celulas)
+    assert r["fracao_vetada"] == pytest.approx(0.5)
+    assert r["veto_principal"] == "restricao_x"
+    assert r["n_cel"] == 1  # só a célula não vetada entra em n_cel
+    assert r["n_cel_tocadas"] == 2
+    assert r["fatores_media"] == pytest.approx({"f": 80.0})
+    assert r["combinacao"] == pytest.approx(80.0)  # média do único fator com dado, sobre as não vetadas
+    assert r["favorabilidade"] == pytest.approx(40.0)  # 80 * (1 - 0,5)
 
 
-def test_motivo_e_o_da_maior_area_vetada():
-    r = agregar_por_feicao([0, 0, 0], [1.0, 5.0, 2.0], [[50.0], [50.0], [50.0]],
-                           vetado=[True, True, False], motivo_celula=["pequeno", "grande", None])
-    assert r.motivo_veto[0] == "grande"
+def test_veto_principal_e_o_de_maior_area_de_intersecao(conexao_plat_app):
+    # a feição cobre 75% de c00 (vetada, motivo 'grande') e 25% de c10 (vetada, motivo 'pequena').
+    celulas = [_celula(0, 0, veto=True, motivo="grande"), _celula(1, 0, veto=True, motivo="pequena")]
+    feicao = _retangulo(_ORIGEM[0], _ORIGEM[1], 125, 100)  # 100 m dentro de c00 + 25 m dentro de c10
+    with conexao_plat_app.cursor() as cur:
+        r = _agregar(cur, feicao, celulas)
+    assert r["veto_principal"] == "grande"
+    assert r["fracao_vetada"] == pytest.approx(1.0)
 
 
-def test_feicao_sem_veto_nao_recebe_motivo():
-    r = agregar_por_feicao([0], [1.0], [[50.0]], vetado=[False], motivo_celula=["nao_vale"])
-    assert r.motivo_veto == [None]
-    assert r.fracao_vetada[0] == 0.0
+def test_limiar_de_fracao_vetada_marca_fora_do_ranking(conexao_plat_app):
+    celulas = [_celula(0, 0, veto=True, motivo="m1"), _celula(1, 0, fatores={"f": 60.0})]
+    feicao = _retangulo(*_ORIGEM, 200, 100)
+    with conexao_plat_app.cursor() as cur:
+        r = _agregar(cur, feicao, celulas, limiar_fracao_vetada=0.5)
+    assert r["fracao_vetada"] == pytest.approx(0.5)
+    assert r["fora_do_ranking"] is True  # 0,5 >= limiar 0,5 (limite é fechado, não estrito)
+    with conexao_plat_app.cursor() as cur:
+        r2 = _agregar(cur, feicao, celulas, limiar_fracao_vetada=0.51)
+    assert r2["fora_do_ranking"] is False
 
 
-def test_feicao_sem_par_nenhum_nao_quebra():
-    """Feição declarada em `n_feicoes` sem nenhuma célula: sem nota, sem veto, área zero."""
-    r = agregar_por_feicao([0], [1.0], [[70.0]], n_feicoes=3)
-    assert np.isnan(r.fatores[1, 0]) and np.isnan(r.fatores[2, 0])
-    assert r.fracao_vetada.tolist() == [0.0, 0.0, 0.0]
-    assert r.area_total.tolist() == [1.0, 0.0, 0.0]
+def test_feicao_sem_intersecao_sai_como_sem_celula_nunca_zero(conexao_plat_app):
+    celulas = [_celula(0, 0, fatores={"f": 30.0})]
+    longe = _retangulo(0.0, 0.0, 0.0001, 0.0001)  # em graus, no meio do Atlântico: não toca a grade UTM
+    with conexao_plat_app.cursor() as cur:
+        r = _agregar(cur, longe, celulas)
+    assert r["sem_celula"] is True
+    assert r["area_total_m2"] is None
+    assert r["fracao_vetada"] is None
+    assert r["n_cel"] is None
+    assert r["n_cel_tocadas"] is None
+    assert r["veto_principal"] is None
+    assert r["fatores_media"] == {}
+    assert r["favorabilidade"] is None
+    assert r["combinacao"] is None
+    assert r["fora_do_ranking"] is False  # ausência de dado não é restrição: não confundir com veto
 
 
-def test_arredondamento_de_empate_e_para_longe_do_zero():
-    assert arredondar_meio_para_longe_do_zero(np.array([0.5, 1.5, 2.5, -0.5])).tolist() == [1, 2, 3, -1]
-    r = agregar_por_feicao([0, 0], [1.0, 1.0], [[10.0], [11.0]], arredondar=True)
-    assert r.fatores[0, 0] == 11.0  # 10,5 vira 11, não 10 (que é o que np.round faria)
+def test_caminho_inverso_feicao_para_celulas(conexao_plat_app):
+    celulas = [_celula(0, 0, fatores={"f": 10.0}), _celula(1, 0, fatores={"f": 90.0})]
+    feicao = _retangulo(*_ORIGEM, 200, 50)
+    fsql, fparams = agregacao.feicoes_de_geojson([("f1", feicao)], SRID, srid_entrada=SRID)
+    csql, cparams = agregacao.celulas_de_geojson(celulas, SRID, srid_entrada=SRID)
+    with conexao_plat_app.cursor() as cur:
+        linhas = agregacao.celulas_de_uma_feicao(cur, fsql, fparams, csql, cparams, "f1")
+    assert {c["cell_id"] for c in linhas} == {"c00", "c10"}
+    for c in linhas:
+        assert c["area_intersecao_m2"] == pytest.approx(5_000.0, rel=1e-6)
+        assert c["area_celula_m2"] == pytest.approx(10_000.0, rel=1e-6)
 
 
-def test_nulo_continua_nulo_no_arredondamento():
-    r = agregar_por_feicao([0], [1.0], [[np.nan]], arredondar=True)
-    assert np.isnan(r.fatores[0, 0])
+def test_pesos_do_modelo_recombinam_varios_fatores(conexao_plat_app):
+    # dois fatores por célula, modelo com pesos 3:1 -> combinação = (3*fa + 1*fb) / 4
+    celulas = [_celula(0, 0, fatores={"fa": 100.0, "fb": 0.0})]
+    feicao = _retangulo(*_ORIGEM, 100, 100)
+    modelo = {"fatores": [{"id": "fa", "peso": 3.0}, {"id": "fb", "peso": 1.0}]}
+    with conexao_plat_app.cursor() as cur:
+        r = _agregar(cur, feicao, celulas, modelo_definicao=modelo)
+    assert r["combinacao"] == pytest.approx(75.0)
+    assert r["favorabilidade"] == pytest.approx(75.0)
 
 
-@pytest.mark.parametrize("chamada, codigo", [
-    (dict(indice_feicao=[0], areas=[1.0, 2.0], fatores_celula=[[1.0]]), "tamanhos_incompativeis"),
-    (dict(indice_feicao=[0], areas=[-1.0], fatores_celula=[[1.0]]), "area_invalida"),
-    (dict(indice_feicao=[-1], areas=[1.0], fatores_celula=[[1.0]]), "indice_negativo"),
-    (dict(indice_feicao=[5], areas=[1.0], fatores_celula=[[1.0]], n_feicoes=2), "indice_fora_da_faixa"),
-    (dict(indice_feicao=[0], areas=[1.0], fatores_celula=[1.0]), "matriz_invalida"),
-])
-def test_contrato(chamada, codigo):
-    with pytest.raises(ErroAgregacao) as e:
-        agregar_por_feicao(**chamada)
-    assert e.value.codigo == codigo
+def test_feicao_id_duplicado_recusa():
+    with pytest.raises(agregacao.ErroAgregacao):
+        agregacao.feicoes_de_geojson([("a", _retangulo(0, 0, 1, 1)), ("a", _retangulo(1, 1, 1, 1))], SRID)
 
 
-def test_motivo_de_tamanho_errado_recusa():
-    with pytest.raises(ErroAgregacao) as e:
-        agregar_por_feicao([0], [1.0], [[1.0]], vetado=[True], motivo_celula=["a", "b"])
-    assert e.value.codigo == "motivo_incompativel"
-
-
-def test_ordem_dos_pares_nao_muda_o_resultado():
-    m = [[10.0, 20.0], [30.0, np.nan], [50.0, 60.0]]
-    a = [1.0, 2.0, 3.0]
-    idx = [0, 0, 1]
-    v = [False, True, False]
-    r1 = agregar_por_feicao(idx, a, m, vetado=v)
-    ordem = [2, 0, 1]
-    r2 = agregar_por_feicao([idx[i] for i in ordem], [a[i] for i in ordem], [m[i] for i in ordem],
-                            vetado=[v[i] for i in ordem])
-    assert np.allclose(r1.fatores, r2.fatores, equal_nan=True)
-    assert np.allclose(r1.fracao_vetada, r2.fracao_vetada)
-
-
-def test_combina_com_o_combinador_sem_conversao():
-    """A saída da agregação entra direto no combinador: matriz de fatores e fração vetada, na ordem."""
-    from app.amc.combinacao import combinar
-
-    r = agregar_por_feicao([0, 0, 1], [1.0, 1.0, 2.0], [[100.0, 50.0], [0.0, 50.0], [80.0, np.nan]],
-                            vetado=[False, True, False])
-    c = combinar(r.fatores, [1.0, 1.0], fracao_vetada=r.fracao_vetada, ids_fatores=["a", "b"])
-    assert c.fav[0] == pytest.approx(((100.0 + 50.0) / 2) * (1 - 0.5))
-    assert c.fav[1] == pytest.approx(80.0)
+def test_limiar_fora_de_zero_um_recusa(conexao_plat_app):
+    celulas = [_celula(0, 0, fatores={"f": 1.0})]
+    feicao = _retangulo(*_ORIGEM, 100, 100)
+    fsql, fparams = agregacao.feicoes_de_geojson([("f1", feicao)], SRID, srid_entrada=SRID)
+    csql, cparams = agregacao.celulas_de_geojson(celulas, SRID, srid_entrada=SRID)
+    with conexao_plat_app.cursor() as cur:
+        with pytest.raises(agregacao.ErroAgregacao):
+            agregacao.agregar(cur, fsql, fparams, csql, cparams, limiar_fracao_vetada=1.5)

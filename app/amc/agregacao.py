@@ -1,137 +1,276 @@
-"""Agregação de notas por CÉLULA para notas por FEIÇÃO, ponderada pela área de interseção.
+"""Agregação de grade para feição (item L3-07-agregacao): leva o resultado do motor, calculado por CÉLULA
+da grade, para uma FEIÇÃO qualquer (imóvel, lote, município, setor censitário — qualquer polígono que o
+usuário forneça), e o caminho inverso (feição -> células) para exibir a composição da nota.
 
-Motivo de existir (item L3-01-j): o motor multicritério trabalha sobre uma unidade de análise de cada
-vez, mas o resultado que o usuário lê é quase sempre por feição (um imóvel, um lote, um trecho) —
-enquanto os fatores foram medidos numa grade regular. A regra da casa para essa passagem, escrita no
-motor logístico de referência e reescrita aqui de forma genérica, tem três partes:
+Método (decisão do item, o mesmo que a tabela de feições do motor logístico de referência da casa já
+fazia à mão em SQL para o piloto de referência — este módulo generaliza para qualquer conjunto de
+células e qualquer fator):
 
-1. cada fator da feição é a média das células ponderada pela ÁREA DE INTERSEÇÃO, calculada só sobre as
-   células NÃO VETADAS e só sobre as células em que aquele fator tem dado (o denominador é a soma das
-   áreas com dado, nunca a área total — fator ausente não vira zero);
-2. a FRAÇÃO VETADA da feição é a área em células vetadas dividida pela área intersectada total; ela sai
-   daqui como número, para o combinador multiplicar a nota por (1 − fração) — veto é objeto separado do
-   peso (decisão A6), não um fator com nota baixa;
-3. o MOTIVO do veto que a feição carrega é o motivo da maior área vetada, não o primeiro encontrado.
+1. interseção geométrica entre a feição e cada célula que ela toca, com `ST_Area` no CRS MÉTRICO de
+   trabalho (nunca grau, nunca Web Mercator — a mesma zona UTM SIRGAS 2000 do conjunto de unidades);
+2. por fator, a média da feição é a média dos valores das células PONDERADA pela área de interseção,
+   somada só sobre as células NÃO VETADAS (célula vetada não teria nota naquele fator: o veto é tratado à
+   parte, não como um fator zerado, para não puxar a média sem necessidade);
+3. fração vetada da feição = área em células vetadas / área total intersectada (aqui SIM sobre todas as
+   células que a feição toca, vetadas ou não — é essa fração que decide o quanto da feição está sob
+   restrição);
+4. veto principal = motivo da célula vetada de MAIOR área de interseção (o veto que mais pesa na feição,
+   não o primeiro que aparecer); empate de área é desempatado por `cell_id` (determinístico — sem isso
+   duas consultas equivalentes, mas com plano de execução diferente, podem devolver motivos diferentes
+   para a mesma feição, achado rodando a refutação do item: `tests/unit/test_amc_agregacao_adversario.py`);
+5. a favorabilidade da feição é a combinação (`app.amc.combinacao.combinar`, mesmos pesos/combinador/
+   política do modelo) dos valores médios por fator, multiplicada por (1 − fração vetada) — fração vetada
+   1,0 zera a nota e não precisa de combinação nenhuma;
+6. limiar de fração vetada declarado por quem chama (nunca calculado): acima dele a feição sai do
+   ranking (`fora_do_ranking = true`), mas continua tendo os números — não é apagada;
+7. feição que não toca NENHUMA célula não é zero: sai com `sem_celula = true` e todo o resto `None`.
 
-O módulo é PURO: numpy, sem banco, sem arquivo, sem relógio. Quem lê a geometria e monta os pares
-(feição, célula, área) é o chamador.
+O módulo não abre conexão: recebe um cursor já aberto e DUAS consultas SQL prontas (não construídas a
+partir de entrada do usuário) que devolvem, cada uma, linhas já no CRS de trabalho:
 
-Sobre `arredondar`: o motor de referência grava a nota agregada como inteiro (smallint). Arredondar é
-uma decisão de ARMAZENAMENTO, não da conta, por isso é opcional aqui e o padrão é NÃO arredondar. Quando
-ligado, o critério é "meio para longe do zero" (0,5 → 1), o mesmo do `round` do Postgres, e não o
-"meio para o par" do numpy — as duas convenções discordam exatamente nos empates e essa discordância
-aparece como diferença de 1 ponto na comparação com qualquer base já materializada.
-"""
+- `celulas_sql`: `(cell_id text, geom geometry, veto boolean, motivo text, fatores jsonb)` — um fator por
+  chave do jsonb, valor numérico ou `null`; célula sem nenhum fator ainda entra na fração vetada;
+- `feicoes_sql` (opcional; ver `feicoes_de_geojson`): `(feicao_id text, geom geometry)`.
+
+Isso deixa o mesmo motor servir tanto a execução real (`app.amc.tarefas`/rotas, ver
+`celulas_de_execucao_sql`) quanto a comparação com as tabelas de células e de feições do motor de
+referência que prova o item (mesma consulta, fonte diferente: ver
+`tests/unit/test_amc_agregacao_referencia.py`)."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import json
+import time
 
-import numpy as np
+from app.amc import combinacao as mod_combinacao
+from app.amc import explicacao as mod_explicacao
 
 
 class ErroAgregacao(ValueError):
-    def __init__(self, codigo: str, mensagem: str) -> None:
+    def __init__(self, codigo: str, mensagem: str, detalhe: dict | None = None):
         super().__init__(mensagem)
-        self.codigo = codigo
-        self.mensagem = mensagem
+        self.codigo, self.mensagem, self.detalhe = codigo, mensagem, detalhe or {}
 
 
-@dataclass
-class Agregado:
-    """Uma linha por feição, na ordem de `feicoes`."""
-
-    feicoes: list
-    fatores: np.ndarray          # feição × fator, escala 0-100, nan onde nenhuma célula tinha dado
-    fracao_vetada: np.ndarray    # 0 a 1
-    motivo_veto: list            # motivo da maior área vetada, ou None
-    n_celulas: np.ndarray        # células NÃO vetadas que entraram na média
-    area_total: np.ndarray       # área intersectada total (vetada + não vetada), na unidade de entrada
-
-
-def arredondar_meio_para_longe_do_zero(x: np.ndarray) -> np.ndarray:
-    """0,5 → 1 e −0,5 → −1, como o `round` do Postgres; `np.round` daria 0 nos dois (meio para o par)."""
-    return np.where(np.isnan(x), x, np.sign(x) * np.floor(np.abs(x) + 0.5))
-
-
-def agregar_por_feicao(
-    indice_feicao,
-    areas,
-    fatores_celula,
-    *,
-    vetado=None,
-    motivo_celula=None,
-    n_feicoes: int | None = None,
-    arredondar: bool = False,
-) -> Agregado:
-    """Agrega `fatores_celula` (linha por PAR feição-célula) em uma linha por feição.
-
-    `indice_feicao[k]` é o número da feição do par k (0 a n_feicoes−1); `areas[k]` é a área de
-    interseção daquele par, em qualquer unidade coerente (só a razão importa). `fatores_celula` tem uma
-    linha por par e uma coluna por fator, com `nan` onde falta dado. `vetado[k]` diz se a célula do par
-    está vetada e `motivo_celula[k]` traz o texto do motivo.
-    """
-    idx = np.asarray(indice_feicao, dtype=np.int64)
-    a = np.asarray(areas, dtype=np.float64)
-    m = np.asarray(fatores_celula, dtype=np.float64)
-    if m.ndim != 2:
-        raise ErroAgregacao("matriz_invalida", "fatores_celula tem de ser uma matriz par × fator")
-    n_pares, n_fatores = m.shape
-    if idx.shape != (n_pares,) or a.shape != (n_pares,):
-        raise ErroAgregacao("tamanhos_incompativeis",
-                            "indice_feicao, areas e fatores_celula têm de ter o mesmo número de pares")
-    if n_pares and idx.min() < 0:
-        raise ErroAgregacao("indice_negativo", "o índice da feição não pode ser negativo")
-    if not np.all(np.isfinite(a)) or np.any(a < 0):
-        raise ErroAgregacao("area_invalida", "área de interseção tem de ser finita e não negativa")
-    n = int(n_feicoes if n_feicoes is not None else (idx.max() + 1 if n_pares else 0))
-    if n_pares and idx.max() >= n:
-        raise ErroAgregacao("indice_fora_da_faixa", "índice de feição maior que o número de feições")
-
-    v = np.zeros(n_pares, dtype=bool) if vetado is None else np.asarray(vetado, dtype=bool)
-    if v.shape != (n_pares,):
-        raise ErroAgregacao("veto_incompativel", "um sinal de veto por par feição-célula")
-
-    area_total = np.bincount(idx, weights=a, minlength=n)
-    area_vetada = np.bincount(idx, weights=np.where(v, a, 0.0), minlength=n)
-    with np.errstate(divide="ignore", invalid="ignore"):
-        fracao_vetada = np.where(area_total > 0, area_vetada / area_total, 0.0)
-    fracao_vetada = np.clip(fracao_vetada, 0.0, 1.0)
-
-    # a média por fator roda SÓ sobre célula não vetada e SÓ onde o fator tem dado
-    peso = np.where(v, 0.0, a)
-    tem = ~np.isnan(m)
-    saida = np.full((n, n_fatores), np.nan, dtype=np.float64)
-    for j in range(n_fatores):
-        p = peso * tem[:, j]
-        num = np.bincount(idx, weights=p * np.nan_to_num(m[:, j]), minlength=n)
-        den = np.bincount(idx, weights=p, minlength=n)
-        with np.errstate(divide="ignore", invalid="ignore"):
-            saida[:, j] = np.where(den > 0, num / den, np.nan)
-    if arredondar:
-        saida = arredondar_meio_para_longe_do_zero(saida)
-
-    n_celulas = np.bincount(idx, weights=(~v).astype(np.float64), minlength=n).astype(np.int64)
-
-    motivo: list = [None] * n
-    if motivo_celula is not None:
-        if len(motivo_celula) != n_pares:
-            raise ErroAgregacao("motivo_incompativel", "um motivo por par feição-célula")
-        maior = np.zeros(n, dtype=np.float64)
-        for k in np.nonzero(v)[0]:
-            i = int(idx[k])
-            texto = motivo_celula[k]
-            if texto is None:
-                continue
-            if a[k] > maior[i]:
-                maior[i] = a[k]
-                motivo[i] = texto
-
-    return Agregado(
-        feicoes=list(range(n)),
-        fatores=saida,
-        fracao_vetada=fracao_vetada,
-        motivo_veto=motivo,
-        n_celulas=n_celulas,
-        area_total=area_total,
+# ---------------------------------------------------------------------- fontes de entrada prontas
+def feicoes_de_geojson(
+    feicoes: list[tuple[str, dict]], srid_trabalho: int, srid_entrada: int = 4326,
+) -> tuple[str, dict]:
+    """SQL + parâmetros para `feicoes_sql`: reprojeta uma lista (id, GeoJSON Polygon/MultiPolygon) do
+    `srid_entrada` (4326 por padrão — o que chega do usuário) para o CRS de trabalho. `feicoes` vem do
+    pedido do usuário (GeoJSON), por isso passa por `ST_MakeValid` — geometria de upload não é confiável
+    como a do banco. `srid_entrada` só muda em teste, para descrever a geometria sintética já no próprio
+    CRS métrico (evita coordenada de grau inventada sem sentido geográfico)."""
+    if not feicoes:
+        raise ErroAgregacao("sem_feicoes", "nenhuma feição para agregar")
+    ids = [str(i) for i, _ in feicoes]
+    if len(set(ids)) != len(ids):
+        repetidos = sorted({i for i in ids if ids.count(i) > 1})
+        raise ErroAgregacao("feicao_id_duplicado", f"id de feição repetido: {', '.join(repetidos)}",
+                            {"repetidos": repetidos})
+    geojsons = [json.dumps(g) for _, g in feicoes]
+    sql = (
+        "SELECT x.feicao_id, ST_Transform(ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(x.gj), "
+        "%(srid_entrada)s)), %(srid_trabalho)s) AS geom "
+        "FROM unnest(%(feicao_ids)s::text[], %(feicao_geojsons)s::text[]) AS x(feicao_id, gj)"
     )
+    return sql, {"srid_trabalho": srid_trabalho, "srid_entrada": srid_entrada, "feicao_ids": ids,
+                 "feicao_geojsons": geojsons}
+
+
+def celulas_de_geojson(celulas: list[tuple[str, dict, bool, str | None, dict]], srid_trabalho: int,
+                       srid_entrada: int = 4326) -> tuple[str, dict]:
+    """`celulas_sql` sintética para teste/uso avulso: cada célula é
+    ``(cell_id, geojson, veto, motivo, fatores)``. Útil para testar `agregar()` sem nenhuma tabela do
+    motor — só geometria e números, do mesmo jeito que `feicoes_de_geojson` faz para a feição
+    (`srid_entrada` pelo mesmo motivo: descrever célula sintética já em metros, sem inventar grau)."""
+    if not celulas:
+        raise ErroAgregacao("sem_celulas", "nenhuma célula para agregar")
+    ids = [str(c[0]) for c in celulas]
+    geojsons = [json.dumps(c[1]) for c in celulas]
+    vetos = [bool(c[2]) for c in celulas]
+    motivos = [c[3] for c in celulas]
+    fatores = [json.dumps(c[4] or {}) for c in celulas]
+    sql = (
+        "SELECT x.cell_id, ST_Transform(ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(x.gj), "
+        "%(srid_entrada)s)), %(srid_trabalho)s) AS geom, x.veto, x.motivo, x.fatores::jsonb AS fatores "
+        "FROM unnest(%(celula_ids)s::text[], %(celula_geojsons)s::text[], %(celula_vetos)s::bool[], "
+        "%(celula_motivos)s::text[], %(celula_fatores)s::text[]) "
+        "AS x(cell_id, gj, veto, motivo, fatores)"
+    )
+    return sql, {"srid_trabalho": srid_trabalho, "srid_entrada": srid_entrada, "celula_ids": ids,
+                 "celula_geojsons": geojsons, "celula_vetos": vetos, "celula_motivos": motivos,
+                 "celula_fatores": fatores}
+
+
+def celulas_de_execucao_sql() -> str:
+    """`celulas_sql` para uma execução real do motor: célula = unidade do conjunto, veto/motivo e
+    favorabilidade JÁ COMBINADA do resultado (`plat.amc_resultado`).
+
+    Limite honesto e deliberado deste item (mesmo padrão de `app/amc/executor.py` e
+    `app/amc/explicacao.py`, que documentam os limites deles do mesmo jeito): a matriz fator-a-fator
+    JÁ TRANSFORMADA (bruto -> nota 0-100) não é persistida por célula hoje — só o `amc_fator_bruto`
+    (valor bruto, antes da transformação declarada no modelo) e o `amc_resultado.favorabilidade` (já
+    combinado com os pesos). Recompor a transformação de cada fator aqui duplicaria o escopo do item
+    L3-01-d-transformacoes (pendente, veto do próprio código: `executor.py` só resolve a transformação
+    'linear' e levanta erro claro nas outras) sem a verificação cruzada que aquele item exige.
+
+    Por isso a célula entra na agregação com UM fator sintético, `favorabilidade`, igual ao que o motor
+    já combinou — a agregação por feição vira `Σ área·favorabilidade / Σ área` sobre as células não
+    vetadas, exatamente a mesma conta que a tabela de feições do motor de referência faz para cada `f_*`
+    (a prova do item usa a tabela de células dele, que tem VÁRIOS fatores já transformados, exatamente
+    para provar que o mecanismo geométrico generaliza para N fatores — aqui a integração real começa com
+    N = 1 porque é o que o resto do motor persiste hoje). Recombinar por vários fatores no nível da
+    feição (o `modelo_definicao` continua aceito por `agregar()` para esse caso) fica pronto para quando
+    a nota por fator existir."""
+    return (
+        "SELECT u.unidade_id AS cell_id, ST_Transform(u.geom, %(srid_trabalho)s) AS geom, "
+        "r.vetado AS veto, r.motivo, "
+        "jsonb_build_object('favorabilidade', r.favorabilidade) AS fatores "
+        "FROM plat.amc_unidade u JOIN plat.amc_resultado r "
+        "  ON r.execucao_id = %(execucao_id)s AND r.unidade_id = u.unidade_id "
+        "WHERE u.conjunto_id = %(conjunto_id)s"
+    )
+
+
+# ---------------------------------------------------------------------- núcleo (SQL de interseção)
+_SQL_INTERSECAO = """
+WITH feicoes AS ({feicoes_sql}),
+celulas AS ({celulas_sql}),
+inter AS (
+    SELECT f.feicao_id, c.cell_id, c.veto, c.motivo, c.fatores,
+           ST_Area(ST_Intersection(f.geom, c.geom)) AS area_m2
+    FROM feicoes f JOIN celulas c ON ST_Intersects(f.geom, c.geom)
+    WHERE ST_Area(ST_Intersection(f.geom, c.geom)) > 0
+),
+tot AS (
+    SELECT feicao_id,
+           sum(area_m2) AS area_total_m2,
+           sum(area_m2) FILTER (WHERE veto) AS area_vetada_m2,
+           count(*) FILTER (WHERE NOT veto) AS n_cel,
+           count(*) AS n_cel_tocadas,
+           (array_agg(motivo ORDER BY area_m2 DESC, cell_id)
+             FILTER (WHERE veto AND motivo IS NOT NULL))[1] AS veto_principal
+    FROM inter GROUP BY feicao_id
+),
+expandido AS (
+    SELECT feicao_id, area_m2, kv.key AS fator, (NULLIF(kv.value, 'null'))::float8 AS valor
+    FROM inter, LATERAL jsonb_each_text(coalesce(fatores, '{{}}'::jsonb)) AS kv
+    WHERE NOT veto
+),
+medias AS (
+    SELECT feicao_id, fator, sum(area_m2 * valor) / NULLIF(sum(area_m2) FILTER (WHERE valor IS NOT NULL), 0) AS media
+    FROM expandido WHERE valor IS NOT NULL GROUP BY feicao_id, fator
+),
+medias_json AS (
+    SELECT feicao_id, jsonb_object_agg(fator, media) AS fatores_media FROM medias GROUP BY feicao_id
+)
+SELECT f.feicao_id, t.area_total_m2, t.area_vetada_m2, t.n_cel, t.n_cel_tocadas, t.veto_principal,
+       CASE WHEN t.area_total_m2 IS NULL OR t.area_total_m2 <= 0 THEN NULL
+            ELSE coalesce(t.area_vetada_m2, 0) / t.area_total_m2 END AS fracao_vetada,
+       mj.fatores_media
+FROM feicoes f
+LEFT JOIN tot t USING (feicao_id)
+LEFT JOIN medias_json mj USING (feicao_id)
+"""
+
+_SQL_CELULAS_DE_UMA_FEICAO = """
+WITH feicoes AS ({feicoes_sql}),
+celulas AS ({celulas_sql})
+SELECT c.cell_id, c.veto, c.motivo,
+       ST_Area(ST_Intersection(f.geom, c.geom)) AS area_intersecao_m2,
+       ST_Area(c.geom) AS area_celula_m2, c.fatores
+FROM feicoes f JOIN celulas c ON ST_Intersects(f.geom, c.geom)
+WHERE f.feicao_id = %(feicao_id_alvo)s AND ST_Area(ST_Intersection(f.geom, c.geom)) > 0
+ORDER BY area_intersecao_m2 DESC
+"""
+
+
+def agregar(
+    cur,
+    feicoes_sql: str,
+    feicoes_params: dict,
+    celulas_sql: str,
+    celulas_params: dict,
+    *,
+    modelo_definicao: dict | None = None,
+    pesos: dict | None = None,
+    limiar_fracao_vetada: float = 0.5,
+) -> dict:
+    """Agrega grade -> feição. `feicoes_sql`/`celulas_sql` são as consultas descritas no docstring do
+    módulo; os `_params` de cada uma são passados juntos (chaves distintas — é responsabilidade de quem
+    monta o SQL não colidir nomes de parâmetro).
+
+    Devolve `{"tempo_ms", "limiar_fracao_vetada", "resultados": [...]}`; cada resultado tem `feicao_id`,
+    `sem_celula`, `area_total_m2`, `fracao_vetada`, `veto_principal`, `n_cel`, `fatores_media`,
+    `combinacao` (nota 0-100 antes do veto, `None` se não houver peso/fator com dado),
+    `favorabilidade` (combinação × (1 − fração vetada), `None` se sem célula ou sem combinação) e
+    `fora_do_ranking` (fração vetada >= limiar; `False` quando `sem_celula`, nunca `None`)."""
+    if not (0.0 <= limiar_fracao_vetada <= 1.0):
+        raise ErroAgregacao("limiar_invalido", "limiar de fração vetada tem de estar entre 0 e 1",
+                            {"limiar_fracao_vetada": limiar_fracao_vetada})
+    params = {**feicoes_params, **celulas_params}
+    sql = _SQL_INTERSECAO.format(feicoes_sql=feicoes_sql, celulas_sql=celulas_sql)
+    t0 = time.monotonic()
+    cur.execute(sql, params)
+    linhas = cur.fetchall()
+    tempo_ms = round((time.monotonic() - t0) * 1000, 1)
+
+    fatores_ids = None
+    if modelo_definicao is not None:
+        fatores_ids = [f["id"] for f in modelo_definicao["fatores"]]
+        pesos_resolvidos = [float((pesos or {}).get(fid, next(
+            f["peso"] for f in modelo_definicao["fatores"] if f["id"] == fid))) for fid in fatores_ids]
+        combinador_esquema = (modelo_definicao.get("combinador") or {}).get("tipo", "soma_ponderada_normalizada")
+        combinador = mod_explicacao.MAPA_COMBINADOR[combinador_esquema]
+        politica = mod_explicacao.MAPA_POLITICA[modelo_definicao.get("dado_ausente", "excluir_fator")]
+
+    resultados = []
+    for linha in linhas:
+        sem_celula = linha["area_total_m2"] is None
+        item = {
+            "feicao_id": linha["feicao_id"],
+            "sem_celula": sem_celula,
+            "area_total_m2": linha["area_total_m2"],
+            "n_cel": linha["n_cel"] if not sem_celula else None,
+            "n_cel_tocadas": linha["n_cel_tocadas"] if not sem_celula else None,
+            "fracao_vetada": linha["fracao_vetada"],
+            "veto_principal": linha["veto_principal"],
+            "fatores_media": dict(linha["fatores_media"]) if linha["fatores_media"] else {},
+            "combinacao": None,
+            "favorabilidade": None,
+            "fora_do_ranking": False,
+        }
+        if not sem_celula:
+            item["fora_do_ranking"] = (linha["fracao_vetada"] or 0.0) >= limiar_fracao_vetada
+            fm = item["fatores_media"]
+            fav = None
+            if fatores_ids is not None:
+                matriz = [[fm.get(fid) for fid in fatores_ids]]
+                res = mod_combinacao.combinar(
+                    matriz, pesos_resolvidos, combinador=combinador, politica_ausente=politica,
+                    ids_fatores=fatores_ids,
+                )
+                v = res.fav[0]
+                fav = float(v) if v == v else None  # v == v descarta NaN
+            elif len(fm) == 1:
+                # sem modelo declarado: um só fator agregado é a própria combinação (peso 1, sem fuzzy) —
+                # é o caso de `celulas_de_execucao_sql`, cuja célula já traz a favorabilidade combinada.
+                (unico,) = fm.values()
+                fav = float(unico) if unico is not None else None
+            if fav is not None:
+                item["combinacao"] = round(fav, 4)
+                fracao = linha["fracao_vetada"] or 0.0
+                item["favorabilidade"] = round(fav * (1.0 - fracao), 4)
+        resultados.append(item)
+    return {"tempo_ms": tempo_ms, "limiar_fracao_vetada": limiar_fracao_vetada, "resultados": resultados}
+
+
+def celulas_de_uma_feicao(cur, feicoes_sql: str, feicoes_params: dict, celulas_sql: str, celulas_params: dict,
+                           feicao_id: str) -> list[dict]:
+    """Caminho inverso (feição -> células), para exibir a composição da nota: toda célula que a feição
+    toca, com a área de interseção e a área total da célula, ordenada da maior contribuição para a menor."""
+    params = {**feicoes_params, **celulas_params, "feicao_id_alvo": str(feicao_id)}
+    sql = _SQL_CELULAS_DE_UMA_FEICAO.format(feicoes_sql=feicoes_sql, celulas_sql=celulas_sql)
+    cur.execute(sql, params)
+    return [dict(r) for r in cur.fetchall()]
