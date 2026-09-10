@@ -451,3 +451,5 @@ ANALISE3D_AMOSTRAS_MAX = 20_000        # pontos de perfil/visada por chamada
 ANALISE3D_GDAL_TIMEOUT_S = 120         # gdal_viewshed por subprocesso, sempre com relógio
 ANALISE3D_SOLIDOS_MAX = 500            # sólidos (extrusões) por análise de sombra
 ANALISE3D_SOLIDO_VERTICES_MAX = 200    # vértices do polígono de cada sólido
+# ---------------------------------------------------------------- console da plataforma (item L0-07-f)
+PLATAFORMA_SUSPENSAO_MENSAGEM_MAX = 300   # mensagem mostrada aos membros do inquilino suspenso (503); cabe num aviso

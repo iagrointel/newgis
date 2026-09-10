@@ -3447,3 +3447,19 @@ porque o contrário devolveria mudanças a menos sem erro nenhum.
 Nenhum privilégio novo (`campo.coletar`, mais `feicoes.editar` para sincronizar) e nenhuma dependência nova.
 Detalhe e as limitações honestas: `docs/adr/20260908T1231-replicas-e-sincronizacao.md` e a seção 23 do
 `MANUAL.md`.
+## turno 8, setembro de 2026 (item L0-07-f-console-plataforma: console do superadmin, um portal com N inquilinos)
+
+Tela `/plataforma` e rotas `/api/plataforma` completas sobre o console mínimo da 003/029: listagem com uso
+(usuários ativos/cota, bytes/cota, itens/cota, jobs pendentes/rodando, último acesso), criação com admin de
+senha temporária e cotas iniciais, detalhe com administradores, cotas alteráveis pelo operador, suspensão com
+mensagem para os membros (login, sessão viva e token recebem **503 `inquilino_suspenso` com a mensagem**, nada
+apagado; reativar devolve a mesma sessão), desligamento do 2FA de um administrador de inquilino (só admin, nunca
+em `plataforma`, sessões do alvo caem), fila de jobs agregada com workers e a trilha de eventos da plataforma.
+Superadmin continua resolvido só pelo hash da sessão (`plat.plataforma_operador`); as 10 rotas `/api/plataforma`
+do OpenAPI respondem 404 a sessão comum, token e anônimo e 401 a cookie forjado (`tests/medidas/
+L0-07-f-console-plataforma.json`). Slugs reservados numa função só (`plat.slug_reservado`, inclui os caminhos de
+página da raiz); slug fora do CHECK = 422 (a API valida com a mesma expressão do CHECK; teste compara as duas).
+e2e sem nginx (`tests/e2e/frente_estatica.py`): criar `demo3` pela tela, admin de demo3 entra pela tela de login,
+suspender com mensagem, 503 com a mensagem no navegador (captura), reativar; página pronta em 152 ms. ADR
+`20260908T0124-console-da-plataforma.md`. Fica para o L0-07-c: contador simétrico de bytes no lugar de
+`sum(plat.arquivo.bytes)`.

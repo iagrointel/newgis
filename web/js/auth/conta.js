@@ -181,7 +181,7 @@ function lerComoBase64(arquivo) {
   });
 }
 
-document.getElementById('foto-arquivo').addEventListener('change', async (e) => {
+document.getElementById('foto-arquivo')?.addEventListener('change', async (e) => {
   const arquivo = e.target.files?.[0];
   e.target.value = '';
   if (!arquivo) return;
@@ -196,7 +196,7 @@ document.getElementById('foto-arquivo').addEventListener('change', async (e) => 
   f.mensagem(t('conta.foto_enviada'), 'ok');
 });
 
-document.getElementById('foto-remover').addEventListener('click', async () => {
+document.getElementById('foto-remover')?.addEventListener('click', async () => {
   const f = document.getElementById('form-dados');
   const r = await apagar('/api/eu/foto');
   if (r.status !== 200) { f.mensagem(mensagemDe(r), 'erro'); return; }
@@ -378,7 +378,7 @@ async function carregarSessoes() {
   if (r.status !== 200) { aviso.erro(mensagemDe(r)); tab.linhas = []; return; }
   tab.linhas = Array.isArray(r.json) ? r.json : (r.json.itens || []);
 }
-document.getElementById('encerrar-outras').addEventListener('click', async () => {
+document.getElementById('encerrar-outras')?.addEventListener('click', async () => {
   const aviso = document.getElementById('aviso-sessoes');
   const r = await apagar('/api/eu/sessoes?outras=1');
   if (r.status === 204) { await carregarSessoes(); aviso.ok(t('sessao.outras_encerradas')); } else aviso.erro(mensagemDe(r));

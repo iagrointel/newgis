@@ -125,6 +125,8 @@ class InquilinoCriar(Modelo):
     config: dict[str, Any] | None = None
     admin_login: str = Field(min_length=1, max_length=128, pattern=r"^[a-z0-9][a-z0-9._@-]*$")
     admin_nome: str = Field(min_length=1, max_length=200)
+    # item L0-07-f: cotas iniciais (validadas por CotasEntrada em rotas_plataforma; ausente = padrões da plataforma)
+    cotas: "CotasEntrada | None" = None
 
 
 # ---- saídas
@@ -316,3 +318,17 @@ class InquilinoCriado(Saida):
     slug: str
     admin: dict
     senha_temporaria: str
+
+
+class CotasEntrada(Modelo):
+    """Cotas de um inquilino (item L0-07-f-console-plataforma): chave ausente = mantém; nada aceita zero."""
+
+    cota_bytes: int | None = Field(default=None, ge=limites.ORG_COTA_BYTES_MIN)
+    cota_usuarios: int | None = Field(default=None, ge=limites.ORG_COTA_USUARIOS_MIN)
+    cota_jobs_dia: int | None = Field(default=None, ge=1)
+    cota_jobs_simultaneos: int | None = Field(default=None, ge=1)
+    cota_agendas: int | None = Field(default=None, ge=1)
+    cota_itens: int | None = Field(default=None, ge=1)
+
+
+InquilinoCriar.model_rebuild()

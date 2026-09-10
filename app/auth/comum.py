@@ -38,6 +38,9 @@ ERROS_DO_BANCO = {
     "contexto_de_outro_inquilino": (403, "operação fora do inquilino da sessão"),
     "superadmin_so_plataforma": (422, "superadmin só no inquilino da plataforma"),
     "usuario_inativo_ou_inquilino_suspenso": (401, "usuário inativo ou inquilino suspenso"),
+    # item L0-07-f-console-plataforma
+    "so_admin_de_inquilino": (409, "só administradores do inquilino; membro comum é atendido pelo admin dele"),
+    "plataforma_2fa_obrigatorio": (409, "o segundo fator do inquilino da plataforma não se desliga por aqui"),
 }
 
 

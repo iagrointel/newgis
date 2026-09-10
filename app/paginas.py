@@ -78,6 +78,8 @@ PAGINAS = {
     "/migracao": "migracao.html",
     # --- análise 3D (L2-09-d): visada, viewshed, perfil e sombra sobre terreno de exemplo ou próprio
     "/analise3d": "analise3d.html",
+    # --- console do superadmin (L0-07-f-console-plataforma): fora de qualquer inquilino, só superadmin de `plataforma`
+    "/plataforma": "plataforma.html",
 }
 router = APIRouter()
 
