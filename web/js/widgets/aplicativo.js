@@ -1,4 +1,5 @@
 import { montarWidgets } from './motor.js';
+import { carregarWidgetsExternos } from './externos.js';
 import { aplicarDaUrl, ligarUrl } from '../app/estado_url.js';
 
 const DEMONSTRACAO = {
@@ -50,6 +51,11 @@ async function documentoDaPagina() {
 const principal = document.getElementById('aplicativo');
 try {
   const documento = await documentoDaPagina();
+  // L5-36: widgets externos do inquilino entram no REGISTRO antes de o motor montar; falha aqui
+  // (sem sessão, rede) NÃO derruba a página — vira aviso e o resto dos widgets segue.
+  let externos = null;
+  try { externos = await carregarWidgetsExternos(); }
+  catch (erro) { externos = { registrados: [], recusados: [], avisos: [], fatal: erro.message }; }
   const motor = await montarWidgets(principal, documento, {
     antesDoBarramento: (vistas) => { aplicarDaUrl(vistas); ligarUrl(vistas); },
   });
@@ -59,6 +65,12 @@ try {
     const p = document.createElement('p'); p.dataset.tipo = e.detail.tipo; p.textContent = e.detail.mensagem;
     avisos.append(p);
   });
+  const avisarExterno = (tipo, texto) => {
+    const p = document.createElement('p'); p.dataset.tipo = tipo; p.textContent = texto; avisos.append(p);
+  };
+  if (externos.fatal) avisarExterno('widget-externo', `Widgets externos não carregaram: ${externos.fatal}`);
+  for (const r of externos.recusados) avisarExterno('widget-externo-recusado', `Widget externo “${r.nome}” recusado: ${r.motivo}`);
+  for (const a of externos.avisos) avisarExterno('widget-externo-aviso', `Widget externo “${a.nome}”: ${a.motivo}`);
   principal.append(avisos);
   window.plat = { ...(window.plat || {}), widgets: motor };
 } catch (erro) {

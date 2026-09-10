@@ -36,6 +36,9 @@ async function carregarModulos(tipos) {
   await Promise.all(tipos.map(async (tipo) => {
     const manifesto = REGISTRO.get(tipo);
     if (!manifesto) return;
+    // L5-36: pacote em sandbox NÃO importa módulo — quem define o elemento é <plat-widget-sandboxe>,
+    // e o código só corre dentro do iframe de origem opaca (texto já conferido pelo carregador)
+    if (manifesto.sandbox) return;
     try { await import(manifesto.modulo); }
     catch (erro) { falhas.set(tipo, `módulo ${manifesto.modulo} não carregou (${erro.message})`); }
   }));
@@ -81,7 +84,8 @@ export async function montarWidgets(destino, documento, {
       validarEsquema(no.configuracao || {}, manifesto.esquema_config, `widget.${no.id}.configuracao`);
       const vistaId = no.configuracao?.vista;
       if (vistaId && !vistas.has(vistaId)) throw new Error(`vista inexistente no documento: ${vistaId}`);
-      const widget = document.createElement(manifesto.elemento);
+      // L5-36: pacote em sandbox monta o HOSPEDEIRO (iframe de origem opaca) em vez do elemento do pacote
+      const widget = document.createElement(manifesto.sandbox ? 'plat-widget-sandboxe' : manifesto.elemento);
       widget.noId = no.id; widget.barramento = barramento; widget.barramentoApp = barramentoApp;
       widget.configuracao = no.configuracao || {};
       if (vistaId) widget.vista = vistas.get(vistaId);

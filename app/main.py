@@ -100,6 +100,7 @@ from app.tabela.rotas import router as rotas_tabela
 from app.tiles.rotas import router as rotas_tiles
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
+from app.widgets.rotas import router as rotas_widgets_externos
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
@@ -303,6 +304,9 @@ ROUTERS = [
     rotas_estatistica,
     # --- gráficos por camada (L2-01-i): POST /api/camadas/{id}/grafico
     rotas_graficos,
+    # --- widgets externos por inquilino (L5-36-widgets-personalizados-sdk): /api/widgets/externos instala
+    # (admin, org.configurar), lista e serve o módulo same-origin com sha256 — o SDK do parceiro carrega daqui
+    rotas_widgets_externos,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

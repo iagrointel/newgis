@@ -247,4 +247,7 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/queryAttachments"): [],
     ("POST", "/svc/{token}/rest/info"): [],  # ficha do servidor; sem credencial e sem efeito
     ("POST", "/svc/{token}/rest/generateToken"): [],  # a emissão já é registrada pelo caminho de token
+    # L5-36: instalar/desinstalar widget externo é configuração da organização — ambos narrados
+    ("POST", "/api/widgets/externos"): ["widgets/instalar"],
+    ("DELETE", "/api/widgets/externos/{nome}"): ["widgets/desinstalar"],
 }
