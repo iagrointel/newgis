@@ -394,3 +394,14 @@ class ClienteAdmin:
 
     def apagar_bucket(self, bucket_id: str) -> None:
         self._chamar("POST", f"/v2/DeleteBucket?id={bucket_id}")
+
+    # (entrega 10/09) método que `app/status.py` chama e que a fusão deixou fora: a classe ficou com a
+    # versão de um ramo e o chamador com a de outro. Recuperado de wt/il006estatu.
+    def estatisticas_cluster(self) -> dict:
+        """GetClusterStatistics (Admin API v2): número de buckets, de objetos, tamanho total e espaço livre do
+        cluster numa ÚNICA chamada. O corpo vem em `freeform` (texto de relatório, feito para gente ler) e traz
+        também o nome da máquina de armazenamento — quem consome tem de extrair os números e nunca repassar o
+        texto adiante (é o que app/status.py faz). Sem isto, medir o espaço usado exigia um GetBucketInfo por
+        bucket: medido em 07/09, 200 chamadas = 5,3 s por retrato, contra 15 ms desta."""
+        return self._chamar("GET", "/v2/GetClusterStatistics")
+
