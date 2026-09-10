@@ -1,0 +1,954 @@
+[
+ {
+  "descricao": "soma",
+  "xlsform": "${a} + ${b}",
+  "contexto": {
+   "a": 1,
+   "b": 2
+  },
+  "saida": 3,
+  "texto": "$a + $b"
+ },
+ {
+  "descricao": "subtração",
+  "xlsform": "${a} - 5",
+  "contexto": {
+   "a": 2
+  },
+  "saida": -3,
+  "texto": "$a - 5"
+ },
+ {
+  "descricao": "multiplicação",
+  "xlsform": "${a} * 2.5",
+  "contexto": {
+   "a": 4
+  },
+  "saida": 10,
+  "texto": "$a * 2.5"
+ },
+ {
+  "descricao": "div vira barra",
+  "xlsform": "${a} div 4",
+  "contexto": {
+   "a": 10
+  },
+  "saida": 2.5,
+  "texto": "$a / 4"
+ },
+ {
+  "descricao": "mod vira porcento",
+  "xlsform": "${a} mod 3",
+  "contexto": {
+   "a": 10
+  },
+  "saida": 1,
+  "texto": "$a % 3"
+ },
+ {
+  "descricao": "precedência",
+  "xlsform": "1 + 2 * 3",
+  "contexto": {},
+  "saida": 7,
+  "texto": "1 + 2 * 3"
+ },
+ {
+  "descricao": "parênteses",
+  "xlsform": "(1 + 2) * 3",
+  "contexto": {},
+  "saida": 9,
+  "texto": "(1 + 2) * 3"
+ },
+ {
+  "descricao": "unário negativo",
+  "xlsform": "-${a} + 3",
+  "contexto": {
+   "a": 1
+  },
+  "saida": 2,
+  "texto": "-$a + 3"
+ },
+ {
+  "descricao": "igual vira ==",
+  "xlsform": "${a} = 5",
+  "contexto": {
+   "a": 5
+  },
+  "saida": true,
+  "texto": "$a == 5"
+ },
+ {
+  "descricao": "diferente",
+  "xlsform": "${a} != 5",
+  "contexto": {
+   "a": 5
+  },
+  "saida": false,
+  "texto": "$a != 5"
+ },
+ {
+  "descricao": "menor",
+  "xlsform": "${a} < 5",
+  "contexto": {
+   "a": 4
+  },
+  "saida": true,
+  "texto": "$a < 5"
+ },
+ {
+  "descricao": "maior ou igual",
+  "xlsform": "${a} >= 5",
+  "contexto": {
+   "a": 5
+  },
+  "saida": true,
+  "texto": "$a >= 5"
+ },
+ {
+  "descricao": "and",
+  "xlsform": "${a} > 1 and ${a} < 10",
+  "contexto": {
+   "a": 5
+  },
+  "saida": true,
+  "texto": "$a > 1 && $a < 10"
+ },
+ {
+  "descricao": "or",
+  "xlsform": "${a} = 1 or ${a} = 2",
+  "contexto": {
+   "a": 2
+  },
+  "saida": true,
+  "texto": "$a == 1 || $a == 2"
+ },
+ {
+  "descricao": "not",
+  "xlsform": "not(${a} = 1)",
+  "contexto": {
+   "a": 1
+  },
+  "saida": false,
+  "texto": "!($a == 1)"
+ },
+ {
+  "descricao": "and com or e precedência",
+  "xlsform": "${a} = 1 or ${b} = 2 and ${c} = 3",
+  "contexto": {
+   "a": 0,
+   "b": 2,
+   "c": 3
+  },
+  "saida": true,
+  "texto": "$a == 1 || $b == 2 && $c == 3"
+ },
+ {
+  "descricao": "true()",
+  "xlsform": "true()",
+  "contexto": {},
+  "saida": true,
+  "texto": "verdadeiro"
+ },
+ {
+  "descricao": "false()",
+  "xlsform": "false()",
+  "contexto": {},
+  "saida": false,
+  "texto": "falso"
+ },
+ {
+  "descricao": "comparação de texto",
+  "xlsform": "${t} = 'sim'",
+  "contexto": {
+   "t": "sim"
+  },
+  "saida": true,
+  "texto": "$t == 'sim'"
+ },
+ {
+  "descricao": "texto vazio",
+  "xlsform": "${t} != ''",
+  "contexto": {
+   "t": ""
+  },
+  "saida": false,
+  "texto": "$t != ''"
+ },
+ {
+  "descricao": "ponto = valor do campo",
+  "xlsform": ". >= 0 and . < 150",
+  "contexto": {
+   "_valor": 20
+  },
+  "saida": true,
+  "texto": "$_valor >= 0 && $_valor < 150"
+ },
+ {
+  "descricao": "ponto acima do limite",
+  "xlsform": ". >= 0 and . < 150",
+  "contexto": {
+   "_valor": 150
+  },
+  "saida": false,
+  "texto": "$_valor >= 0 && $_valor < 150"
+ },
+ {
+  "descricao": "ponto texto",
+  "xlsform": "string-length(.) >= 3",
+  "contexto": {
+   "_valor": "abc"
+  },
+  "saida": true,
+  "texto": "Contagem(Texto($_valor)) >= 3"
+ },
+ {
+  "descricao": "ponto negativo",
+  "xlsform": ". > 0",
+  "contexto": {
+   "_valor": -1
+  },
+  "saida": false,
+  "texto": "$_valor > 0"
+ },
+ {
+  "descricao": "if verdadeiro",
+  "xlsform": "if(${a} > 1, 'sim', 'nao')",
+  "contexto": {
+   "a": 2
+  },
+  "saida": "sim",
+  "texto": "Se($a > 1, 'sim', 'nao')"
+ },
+ {
+  "descricao": "if falso",
+  "xlsform": "if(${a} > 1, 'sim', 'nao')",
+  "contexto": {
+   "a": 0
+  },
+  "saida": "nao",
+  "texto": "Se($a > 1, 'sim', 'nao')"
+ },
+ {
+  "descricao": "if aninhado",
+  "xlsform": "if(${a} > 10, 'alto', if(${a} > 5, 'medio', 'baixo'))",
+  "contexto": {
+   "a": 7
+  },
+  "saida": "medio",
+  "texto": "Se($a > 10, 'alto', Se($a > 5, 'medio', 'baixo'))"
+ },
+ {
+  "descricao": "if numérico",
+  "xlsform": "if(${a} = 1, 10, 20) + 1",
+  "contexto": {
+   "a": 1
+  },
+  "saida": 11,
+  "texto": "Se($a == 1, 10, 20) + 1"
+ },
+ {
+  "descricao": "if com nulo na condição",
+  "xlsform": "if(${a} = 1, 'x', 'y')",
+  "contexto": {
+   "a": null
+  },
+  "saida": "y",
+  "texto": "Se($a == 1, 'x', 'y')"
+ },
+ {
+  "descricao": "selected presente",
+  "xlsform": "selected(${x}, 'ba')",
+  "contexto": {
+   "x": "ba sp"
+  },
+  "saida": true,
+  "texto": "Contem(Split(Texto(SeNulo($x, '')), ' '), 'ba')"
+ },
+ {
+  "descricao": "selected ausente",
+  "xlsform": "selected(${x}, 'rj')",
+  "contexto": {
+   "x": "ba sp"
+  },
+  "saida": false,
+  "texto": "Contem(Split(Texto(SeNulo($x, '')), ' '), 'rj')"
+ },
+ {
+  "descricao": "selected em nulo",
+  "xlsform": "selected(${x}, 'ba')",
+  "contexto": {
+   "x": null
+  },
+  "saida": false,
+  "texto": "Contem(Split(Texto(SeNulo($x, '')), ' '), 'ba')"
+ },
+ {
+  "descricao": "selected em vazio",
+  "xlsform": "selected(${x}, 'ba')",
+  "contexto": {
+   "x": ""
+  },
+  "saida": false,
+  "texto": "Contem(Split(Texto(SeNulo($x, '')), ' '), 'ba')"
+ },
+ {
+  "descricao": "selected único",
+  "xlsform": "selected(${x}, 'ba')",
+  "contexto": {
+   "x": "ba"
+  },
+  "saida": true,
+  "texto": "Contem(Split(Texto(SeNulo($x, '')), ' '), 'ba')"
+ },
+ {
+  "descricao": "selected não casa prefixo",
+  "xlsform": "selected(${x}, 'b')",
+  "contexto": {
+   "x": "ba sp"
+  },
+  "saida": false,
+  "texto": "Contem(Split(Texto(SeNulo($x, '')), ' '), 'b')"
+ },
+ {
+  "descricao": "count-selected vazio",
+  "xlsform": "count-selected(${x})",
+  "contexto": {
+   "x": ""
+  },
+  "saida": 0,
+  "texto": "Se(Texto(SeNulo($x, '')) == '', 0, Contagem(Split(Texto($x), ' ')))"
+ },
+ {
+  "descricao": "count-selected nulo",
+  "xlsform": "count-selected(${x})",
+  "contexto": {
+   "x": null
+  },
+  "saida": 0,
+  "texto": "Se(Texto(SeNulo($x, '')) == '', 0, Contagem(Split(Texto($x), ' ')))"
+ },
+ {
+  "descricao": "count-selected três",
+  "xlsform": "count-selected(${x})",
+  "contexto": {
+   "x": "a b c"
+  },
+  "saida": 3,
+  "texto": "Se(Texto(SeNulo($x, '')) == '', 0, Contagem(Split(Texto($x), ' ')))"
+ },
+ {
+  "descricao": "selected-at",
+  "xlsform": "selected-at(${x}, 1)",
+  "contexto": {
+   "x": "a b c"
+  },
+  "saida": "b",
+  "texto": "Obter(Split(Texto($x), ' '), 1)"
+ },
+ {
+  "descricao": "count da repetição",
+  "xlsform": "count(${membros})",
+  "contexto": {
+   "membros": [
+    {
+     "n": 1
+    },
+    {
+     "n": 2
+    }
+   ]
+  },
+  "saida": 2,
+  "texto": "Contagem($membros)"
+ },
+ {
+  "descricao": "count vazia",
+  "xlsform": "count(${membros})",
+  "contexto": {
+   "membros": []
+  },
+  "saida": 0,
+  "texto": "Contagem($membros)"
+ },
+ {
+  "descricao": "sum de coluna",
+  "xlsform": "sum(${membros}/idade)",
+  "contexto": {
+   "membros__idade": [
+    1,
+    2,
+    3
+   ]
+  },
+  "saida": 6,
+  "texto": "Soma($membros__idade)"
+ },
+ {
+  "descricao": "sum vazia",
+  "xlsform": "sum(${membros}/idade)",
+  "contexto": {
+   "membros__idade": []
+  },
+  "saida": 0,
+  "texto": "Soma($membros__idade)"
+ },
+ {
+  "descricao": "max de coluna fica fora",
+  "xlsform": "max(${membros}/idade)",
+  "contexto": {
+   "membros__idade": [
+    4,
+    9,
+    2
+   ]
+  },
+  "saida": null,
+  "fora": true,
+  "avisos": [
+   "max"
+  ]
+ },
+ {
+  "descricao": "sum dividida pela contagem",
+  "xlsform": "sum(${m}/v) div count(${m})",
+  "contexto": {
+   "m": [
+    {
+     "v": 2
+    },
+    {
+     "v": 4
+    }
+   ],
+   "m__v": [
+    2,
+    4
+   ]
+  },
+  "saida": 3,
+  "texto": "Soma($m__v) / Contagem($m)"
+ },
+ {
+  "descricao": "string-length",
+  "xlsform": "string-length(${n})",
+  "contexto": {
+   "n": "abcd"
+  },
+  "saida": 4,
+  "texto": "Contagem(Texto($n))"
+ },
+ {
+  "descricao": "string-length de número",
+  "xlsform": "string-length(${n})",
+  "contexto": {
+   "n": 1234
+  },
+  "saida": 4,
+  "texto": "Contagem(Texto($n))"
+ },
+ {
+  "descricao": "concat",
+  "xlsform": "concat(${a}, '-', ${b})",
+  "contexto": {
+   "a": "x",
+   "b": 5
+  },
+  "saida": "x-5",
+  "texto": "Concatenar(Texto(SeNulo($a, '')), '-', Texto(SeNulo($b, '')))"
+ },
+ {
+  "descricao": "concat com nulo",
+  "xlsform": "concat('a', ${b})",
+  "contexto": {
+   "b": null
+  },
+  "saida": "a",
+  "texto": "Concatenar('a', Texto(SeNulo($b, '')))"
+ },
+ {
+  "descricao": "substr três args",
+  "xlsform": "substr('abcdef', 1, 3)",
+  "contexto": {},
+  "saida": "bc",
+  "texto": "Mid('abcdef', 1, (3) - (1))"
+ },
+ {
+  "descricao": "substr dois args",
+  "xlsform": "substr('abcdef', 2)",
+  "contexto": {},
+  "saida": "cdef",
+  "texto": "Mid('abcdef', 2)"
+ },
+ {
+  "descricao": "contains",
+  "xlsform": "contains(${t}, 'bc')",
+  "contexto": {
+   "t": "abcd"
+  },
+  "saida": true,
+  "texto": "Find('bc', $t) >= 0"
+ },
+ {
+  "descricao": "contains ausente",
+  "xlsform": "contains(${t}, 'zz')",
+  "contexto": {
+   "t": "abcd"
+  },
+  "saida": false,
+  "texto": "Find('zz', $t) >= 0"
+ },
+ {
+  "descricao": "starts-with",
+  "xlsform": "starts-with(${t}, 'ab')",
+  "contexto": {
+   "t": "abc"
+  },
+  "saida": true,
+  "texto": "Left(Texto($t), Contagem(Texto('ab'))) == Texto('ab')"
+ },
+ {
+  "descricao": "ends-with",
+  "xlsform": "ends-with(${t}, 'bc')",
+  "contexto": {
+   "t": "abc"
+  },
+  "saida": true,
+  "texto": "Right(Texto($t), Contagem(Texto('bc'))) == Texto('bc')"
+ },
+ {
+  "descricao": "upper-case",
+  "xlsform": "upper-case('ab')",
+  "contexto": {},
+  "saida": "AB",
+  "texto": "Maiuscula('ab')"
+ },
+ {
+  "descricao": "lower-case",
+  "xlsform": "lower-case('AB')",
+  "contexto": {},
+  "saida": "ab",
+  "texto": "Minuscula('AB')"
+ },
+ {
+  "descricao": "normalize-space",
+  "xlsform": "normalize-space('  a  ')",
+  "contexto": {},
+  "saida": "a",
+  "texto": "Trim('  a  ')"
+ },
+ {
+  "descricao": "string de número",
+  "xlsform": "string(${a})",
+  "contexto": {
+   "a": 5
+  },
+  "saida": "5",
+  "texto": "Texto($a)"
+ },
+ {
+  "descricao": "round duas casas",
+  "xlsform": "round(${v} div 3, 2)",
+  "contexto": {
+   "v": 10
+  },
+  "saida": 3.33,
+  "texto": "Arredondar($v / 3, 2)"
+ },
+ {
+  "descricao": "round sem casas",
+  "xlsform": "round(2.5)",
+  "contexto": {},
+  "saida": 3,
+  "texto": "Arredondar(2.5)"
+ },
+ {
+  "descricao": "int trunca",
+  "xlsform": "int(3.7)",
+  "contexto": {},
+  "saida": 3,
+  "texto": "Floor(3.7)"
+ },
+ {
+  "descricao": "number de texto",
+  "xlsform": "number('42') + 1",
+  "contexto": {},
+  "saida": 43,
+  "texto": "Numero('42') + 1"
+ },
+ {
+  "descricao": "abs",
+  "xlsform": "abs(-2)",
+  "contexto": {},
+  "saida": 2,
+  "texto": "Absoluto(-2)"
+ },
+ {
+  "descricao": "pow",
+  "xlsform": "pow(2, 3)",
+  "contexto": {},
+  "saida": 8,
+  "texto": "Potencia(2, 3)"
+ },
+ {
+  "descricao": "max de argumentos",
+  "xlsform": "max(1, 5, 3)",
+  "contexto": {},
+  "saida": 5,
+  "texto": "Maximo(1, 5, 3)"
+ },
+ {
+  "descricao": "min de argumentos",
+  "xlsform": "min(1, 5, 3)",
+  "contexto": {},
+  "saida": 1,
+  "texto": "Minimo(1, 5, 3)"
+ },
+ {
+  "descricao": "coalesce nulo",
+  "xlsform": "coalesce(${a}, 'x')",
+  "contexto": {
+   "a": null
+  },
+  "saida": "x",
+  "texto": "SeNulo($a, 'x')"
+ },
+ {
+  "descricao": "coalesce presente",
+  "xlsform": "coalesce(${a}, 'x')",
+  "contexto": {
+   "a": "y"
+  },
+  "saida": "y",
+  "texto": "SeNulo($a, 'x')"
+ },
+ {
+  "descricao": "boolean-from-string true",
+  "xlsform": "boolean-from-string('true')",
+  "contexto": {},
+  "saida": true,
+  "texto": "(Texto('true') == 'true' || Texto('true') == '1')"
+ },
+ {
+  "descricao": "boolean-from-string 1",
+  "xlsform": "boolean-from-string('1')",
+  "contexto": {},
+  "saida": true,
+  "texto": "(Texto('1') == 'true' || Texto('1') == '1')"
+ },
+ {
+  "descricao": "boolean-from-string outro",
+  "xlsform": "boolean-from-string('sim')",
+  "contexto": {},
+  "saida": false,
+  "texto": "(Texto('sim') == 'true' || Texto('sim') == '1')"
+ },
+ {
+  "descricao": "data antes de hoje",
+  "xlsform": "${data} < today()",
+  "contexto": {
+   "data": 0
+  },
+  "saida": true,
+  "texto": "$data < Floor(AgoraUTC() / 86400000) * 86400000"
+ },
+ {
+  "descricao": "data fixa comparada",
+  "xlsform": "${data} < 1000",
+  "contexto": {
+   "data": 500
+  },
+  "saida": true,
+  "texto": "$data < 1000"
+ },
+ {
+  "descricao": "now maior que zero",
+  "xlsform": "now() > 0",
+  "contexto": {},
+  "saida": true,
+  "texto": "AgoraUTC() > 0"
+ },
+ {
+  "descricao": "diferença de dias em ms",
+  "xlsform": "(${fim} - ${inicio}) div 86400000",
+  "contexto": {
+   "inicio": 0,
+   "fim": 172800000
+  },
+  "saida": 2,
+  "texto": "($fim - $inicio) / 86400000"
+ },
+ {
+  "descricao": "filtro simples",
+  "xlsform": "estado=${estado}",
+  "contexto": {
+   "_linha": {
+    "estado": "ba"
+   },
+   "estado": "ba"
+  },
+  "saida": true,
+  "texto": "Obter($_linha, 'estado') == $estado"
+ },
+ {
+  "descricao": "filtro não casa",
+  "xlsform": "estado=${estado}",
+  "contexto": {
+   "_linha": {
+    "estado": "sp"
+   },
+   "estado": "ba"
+  },
+  "saida": false,
+  "texto": "Obter($_linha, 'estado') == $estado"
+ },
+ {
+  "descricao": "filtro duplo",
+  "xlsform": "estado=${estado} and municipio=${municipio}",
+  "contexto": {
+   "_linha": {
+    "estado": "ba",
+    "municipio": "ssa"
+   },
+   "estado": "ba",
+   "municipio": "ssa"
+  },
+  "saida": true,
+  "texto": "Obter($_linha, 'estado') == $estado && Obter($_linha, 'municipio') == $municipio"
+ },
+ {
+  "descricao": "filtro com literal",
+  "xlsform": "regiao='ne'",
+  "contexto": {
+   "_linha": {
+    "regiao": "ne"
+   }
+  },
+  "saida": true,
+  "texto": "Obter($_linha, 'regiao') == 'ne'"
+ },
+ {
+  "descricao": "filtro or",
+  "xlsform": "estado=${estado} or estado='todos'",
+  "contexto": {
+   "_linha": {
+    "estado": "todos"
+   },
+   "estado": "ba"
+  },
+  "saida": true,
+  "texto": "Obter($_linha, 'estado') == $estado || Obter($_linha, 'estado') == 'todos'"
+ },
+ {
+  "descricao": "filtro coluna ausente não casa",
+  "xlsform": "estado=${estado}",
+  "contexto": {
+   "_linha": {
+    "regiao": "ne"
+   },
+   "estado": "ba"
+  },
+  "saida": false,
+  "texto": "Obter($_linha, 'estado') == $estado"
+ },
+ {
+  "descricao": "pulldata por name",
+  "xlsform": "pulldata('municipio', 'estado', 'name', ${municipio})",
+  "contexto": {
+   "municipio": "ssa",
+   "_lista_municipio": {
+    "ssa": {
+     "name": "ssa",
+     "estado": "ba"
+    }
+   }
+  },
+  "saida": "ba",
+  "texto": "Obter(Obter($_lista_municipio, Texto($municipio)), 'estado')"
+ },
+ {
+  "descricao": "pulldata chave ausente",
+  "xlsform": "pulldata('municipio', 'estado', 'name', ${municipio})",
+  "contexto": {
+   "municipio": "zzz",
+   "_lista_municipio": {
+    "ssa": {
+     "name": "ssa",
+     "estado": "ba"
+    }
+   }
+  },
+  "saida": null,
+  "texto": "Obter(Obter($_lista_municipio, Texto($municipio)), 'estado')"
+ },
+ {
+  "descricao": "nulo em aritmética propaga",
+  "xlsform": "${a} + 1",
+  "contexto": {
+   "a": null
+  },
+  "saida": null,
+  "texto": "$a + 1"
+ },
+ {
+  "descricao": "nulo comparado é nulo",
+  "xlsform": "${a} > 1",
+  "contexto": {
+   "a": null
+  },
+  "saida": null,
+  "texto": "$a > 1"
+ },
+ {
+  "descricao": "coalesce em cálculo",
+  "xlsform": "coalesce(${a}, 0) + 1",
+  "contexto": {
+   "a": null
+  },
+  "saida": 1,
+  "texto": "SeNulo($a, 0) + 1"
+ },
+ {
+  "descricao": "texto nulo é diferente de vazio",
+  "xlsform": "${t} != ''",
+  "contexto": {
+   "t": null
+  },
+  "saida": true,
+  "texto": "$t != ''"
+ },
+ {
+  "descricao": "if protege nulo",
+  "xlsform": "if(${a} = 1, 'x', 'y')",
+  "contexto": {
+   "a": null
+  },
+  "saida": "y",
+  "texto": "Se($a == 1, 'x', 'y')"
+ },
+ {
+  "descricao": "concat só nulo",
+  "xlsform": "concat(${a})",
+  "contexto": {
+   "a": null
+  },
+  "saida": "",
+  "texto": "Concatenar(Texto(SeNulo($a, '')))"
+ },
+ {
+  "descricao": "regex fica fora",
+  "xlsform": "regex(., '^[0-9]+$')",
+  "contexto": {},
+  "saida": null,
+  "fora": true,
+  "avisos": [
+   "regex"
+  ]
+ },
+ {
+  "descricao": "uuid fica fora",
+  "xlsform": "uuid()",
+  "contexto": {},
+  "saida": null,
+  "fora": true,
+  "avisos": [
+   "uuid"
+  ]
+ },
+ {
+  "descricao": "date fica fora",
+  "xlsform": "date('2020-01-01')",
+  "contexto": {},
+  "saida": null,
+  "fora": true,
+  "avisos": [
+   "date"
+  ]
+ },
+ {
+  "descricao": "pulldata por outra coluna fica fora",
+  "xlsform": "pulldata('m', 'estado', 'cod', ${x})",
+  "contexto": {},
+  "saida": null,
+  "fora": true,
+  "avisos": [
+   "pulldata"
+  ]
+ },
+ {
+  "descricao": "format-date fica fora",
+  "xlsform": "format-date(${d}, '%Y')",
+  "contexto": {},
+  "saida": null,
+  "fora": true,
+  "avisos": [
+   "format-date"
+  ]
+ },
+ {
+  "descricao": "função desconhecida fica fora",
+  "xlsform": "misterio(${a})",
+  "contexto": {},
+  "saida": null,
+  "fora": true,
+  "avisos": [
+   "misterio"
+  ]
+ },
+ {
+  "descricao": "regra composta",
+  "xlsform": "(${idade} >= 18 and selected(${docs}, 'rg')) or ${isento} = 'sim'",
+  "contexto": {
+   "idade": 17,
+   "docs": "rg cpf",
+   "isento": "sim"
+  },
+  "saida": true,
+  "texto": "($idade >= 18 && Contem(Split(Texto(SeNulo($docs, '')), ' '), 'rg')) || $isento == 'sim'"
+ },
+ {
+  "descricao": "cálculo de área",
+  "xlsform": "round(${largura} * ${comprimento}, 1)",
+  "contexto": {
+   "largura": 2.5,
+   "comprimento": 3.3
+  },
+  "saida": 8.3,
+  "texto": "Arredondar($largura * $comprimento, 1)"
+ },
+ {
+  "descricao": "idade em anos",
+  "xlsform": "int((${hoje} - ${nasc}) div 31557600000)",
+  "contexto": {
+   "hoje": 1600000000000,
+   "nasc": 600000000000
+  },
+  "saida": 31,
+  "texto": "Floor(($hoje - $nasc) / 31557600000)"
+ },
+ {
+  "descricao": "texto composto",
+  "xlsform": "concat(upper-case(${nome}), ' (', string(${n}), ')')",
+  "contexto": {
+   "nome": "ana",
+   "n": 3
+  },
+  "saida": "ANA (3)",
+  "texto": "Concatenar(Texto(SeNulo(Maiuscula($nome), '')), ' (', Texto(SeNulo(Texto($n), '')), ')')"
+ },
+ {
+  "descricao": "aspas duplas no XPath",
+  "xlsform": "${t} = \"ok\"",
+  "contexto": {
+   "t": "ok"
+  },
+  "saida": true,
+  "texto": "$t == 'ok'"
+ },
+ {
+  "descricao": "apóstrofo escapado",
+  "xlsform": "concat('d', \"'\", 'agua')",
+  "contexto": {},
+  "saida": "d'agua",
+  "texto": "Concatenar('d', '''', 'agua')"
+ }
+]

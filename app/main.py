@@ -62,6 +62,7 @@ from app.catalogo import (
     vista_camada,
 )
 from app.chamados import rotas as rotas_chamados
+from app.coleta.rotas import router as rotas_coleta
 from app.conexao import rotas as rotas_conexao
 from app.consulta import cors_servicos
 from app.consulta.rotas_diretorio import router as rotas_diretorio_esri
@@ -164,6 +165,7 @@ from app.mapas_base.rotas import router as rotas_mapas_base
 from app.mapa.rotas import router as rotas_mapa
 from app.mapas.rotas import router as rotas_mapas
 from app.multiescala.rotas import router as rotas_multiescala
+from app.odk import rotas as rotas_odk
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.mapas.rotas import router as rotas_mapas
@@ -618,6 +620,11 @@ ROUTERS = [
     # /rest/services/{ferramenta}/GPServer/*
     rotas_ferramentas.router,
     rotas_ferramentas_gp.router,
+    # --- formulário de coleta por XLSForm (L2-07-b): /api/formularios/xlsform, /api/formularios/{id},
+    # /api/formularios/{id}/respostas, /api/formularios/equivalencia
+    rotas_coleta,
+    # --- ponte opcional com o ODK Central (L2-07-e): /api/odk/pontes (publicar, sincronizar, entidades)
+    rotas_odk.router,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

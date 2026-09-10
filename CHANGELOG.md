@@ -2641,11 +2641,19 @@ XSD de referência do OGC.
 - Fica declarado como ausente, não simulado: `fields[].domain` nulo, `types`/`subtypes`/`relationships`
   vazios e `capabilities` só `Query` — as linhas L2-10-a, L2-10-b e L2-03-a não estão nesta base.
 ## turno 5, setembro de 2026 (item L2-03-edicao: fechamento — dois achados corrigidos, junção do turno 4)
+## turno 8, setembro de 2026 (item L2-07-e-odk-central-ponte: ponte opcional com o ODK Central)
 
-Retomada do turno 4 (sessão anterior morreu por limitação do servidor da API antes de registrar, comitar
-e enfileirar): conferência independente da suíte revelou dois defeitos reais, além do já corrigido pelo
-próprio turno 4. Corrigidos e cobertos por teste permanente (não script de auditoria à parte — removido,
-mesma convenção do commit `054286a`):
+Uma equipe que já coleta no ODK Collect passa a alimentar as camadas da plataforma sem trocar de aplicativo.
+`POST /api/odk/pontes` publica no ODK Central a MESMA planilha que gerou o formulário do L2-07-b (conferida
+campo a campo antes de sair) e guarda a ligação em `plat.odk_ponte`;
+`POST /api/odk/pontes/{id}/sincronizar` — e o job `odk.sincronizar`, no relógio do inquilino — lê os envios por
+OData, baixa os anexos, e grava tudo pela porta única de escrita do formulário, com `relevant`/`constraint`/
+`calculation` reavaliados no servidor. A idempotência é o `instanceID` do ODK em `plat.odk_envio`: sincronizar
+três vezes seguidas deixa 20 feições e 0 duplicatas (medido em `tests/medidas/L2-07-e-odk-central-ponte.json`).
+Envio recusado fica gravado com o motivo, nunca some. `GET /api/odk/pontes/{id}/entidades/{dataset}` traz as
+Entities do Central como lista de escolhas com as propriedades como colunas de filtro (a cascata do L2-07-b).
+A conexão é do tipo novo `odk_central` (L6-02-a): URL contra SSRF, token cifrado, e erro de credencial marcando
+a saúde da conexão na tela que já existe.
 
 1. `app/edicao/combinar.py::unir` checava `versao` declarada ANTES de checar existência/acesso do id — um
    id inexistente ou de outro inquilino, quando listado depois de um id existente sem `versao`, nunca
@@ -2658,22 +2666,35 @@ mesma convenção do commit `054286a`):
    do corpo sempre disparava antes do 422 `anexo_grande` específico rodar; o limite documentado de anexo
    era, na prática, letra morta. Reduzido para 7 MiB, com folga sob o teto de corpo mesmo codificado
    (`tests/api/test_edicao_historico_anexos.py::test_anexo_no_teto_real_ainda_da_anexo_grande_nao_corpo_grande`).
+⛔ O ODK Central de verdade NÃO foi usado: ele se instala por docker, docker não sobe nesta máquina e o disco
+está em 96 %. A prova é contra um dublê HTTP da API documentada (`tests/odk_central_duble.py`); o que o dublê
+não prova está listado no ADR `docs/adr/20260908T1130-ponte-odk-central.md`, seção "Prova".
 
-Suíte dedicada reconferida após os dois consertos: verde (mesmo comando do turno 4); `ruff` e
-`sem-marcador` verdes. Portão e veredito do item-pai continuam os do turno 4 (nenhuma cláusula mudou de
-prova, só a implementação ficou mais correta). Handoff em `laco/handoffs/T5/L2-03-edicao/`.
+## turno 4, setembro de 2026 (item L6-02-a-modelo-conexao-e-seguranca)
 
-## turno 4, setembro de 2026 (item L2-03-edicao: edição de feições no mapa — criar/mover/vértice/dividir/unir/apagar, formulário, anexos, desfazer, histórico e restauração)
+- O "Bearer da casa" passa a ser provado onde ele nasce, não só dentro de `buscar_seguro`:
+  `tests/unit/test_conexao_credencial_chamadores.py` (job `conexoes.saude_verificar`) e
+  `tests/api/test_conexoes_credencial_saltos.py` (rota `POST /api/conexoes/{id}/testar`, pela API de verdade,
+  com varredura por texto na resposta e no registro de log). Seis guardas `xfail(strict=True)` afirmam o
+  comportamento VULNERÁVEL: enquanto o conserto estiver de pé elas falham; se alguém o desfizer, elas passam
+  (XPASS) e a suíte fica vermelha.
+- `app/garage.py` deixa de seguir `Location` automaticamente nas duas chamadas que mandam `Authorization`
+  (`allow_redirects=False`): o outro caminho da casa que montava credencial e seguia redirecionamento.
+## turno 8, setembro de 2026 (item L2-07-b-formulario-de-coleta-xlsform: XLSForm vira formulário que grava feição)
 
-Constrói sobre o L2-03-a (API única de escrita) e o L2-01-mapa-web (visualizador): `web/js/mapa/edicao.js`
-inteiro novo, ligado à tela `/mapa`. Criar ponto/linha/polígono por clique; mover e editar vértice
-por arrasto (a geometria de trabalho vem sempre de `GET /api/camadas/{id}/feicoes/{globalid}`, exata,
-nunca da versão recortada por tile); apagar; formulário de atributos gerado dos mesmos `campos`/
-`regras_campo` da camada, com domínio/obrigatório espelhados no navegador — e reconferidos direto na
-API nesta rodada, sem passar pela tela, provando que a validação real mora no servidor (cláusula do
-item-pai). Aderência (checkbox "aderir a vértice próximo", tolerância de 12 px sobre feições
-renderizadas) e edição em lote (N feições selecionadas por shift-clique, um atributo aplicado a todas
-num único lote `atualizar`, reaproveitando o array heterogêneo que o L2-03-a já aceitava).
+`POST /api/formularios/xlsform` importa uma planilha XLSForm (pyxform) como item `formulario` do catálogo,
+cria a camada de destino (e uma camada filha por `begin repeat`, com `pai_globalid`) e traduz relevant,
+constraint, calculation e choice_filter do XPath para a linguagem de expressão própria por tabela de função
+com estado feito/parcial/fora (regex, date, uuid e position ficam fora, com o trecho no aviso; tabela em
+`GET /api/formularios/equivalencia`). A tela `/coleta?formulario=<id>` desenha texto, inteiro, decimal, data,
+hora, data-hora, select_one com busca, select_multiple, cascata de 3 níveis, grupos e repetições, guarda
+rascunho a cada mudança e envia; o servidor recalcula, reaplica relevância (campo não relevante vai NULL),
+restrições e obrigatoriedade e só então grava pela `POST /api/camadas/{id}/edicoes`. Cálculo circular é 422
+`dependencia_circular` na importação e no navegador. Conferido: 102 vetores XLSForm nos dois avaliadores
+(`tests/expressoes/vetores_xlsform.json`), motor JS = motor Python em 13 respostas dos 5 formulários de
+teste, 11 testes de API. Conserto no caminho: gatilho de histórico de feição (L2-03-d) quebrava com geometria
+nula (`20260907T2020_historico_geom_nula.sql`). Fora do brief: geoponto com GPS, foto, áudio, assinatura,
+código de barras, fila off-line.
 
 Histórico e restauração são novos no banco: `plat.feicao_historico` + gatilho genérico
 `feicao_historico_registrar()` ligado por `plat.camada_preparar` a TODA tabela de camada (não só a
@@ -2869,6 +2890,7 @@ Visualizador MapLibre da plataforma, com a pilha de tiles vetoriais que faltava 
   recusar a fonte inteira em silêncio; repassar `Content-Encoding: gzip` com corpo já descompactado
   entregava tile ilegível ao navegador. Registrados no ADR 20260907T0400.
 ## turno 4, setembro de 2026 (item L2-01-b-martin-tiles-vetoriais: servidor de tiles em produção, PARCIAL)
+## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Sobe o serviço Martin de verdade (v1.15.0, binário oficial, sha256 conferido; `deploy/martin.yaml`,
 `deploy/plat-martin.service`) em cima do contrato do L2-04-a, com generalização por zoom
@@ -3240,6 +3262,76 @@ responder. `docs/PARIDADE.md` e `tests/medidas/L2-04-servicos-esri-ogc.json` tê
 Fora do turno: QGIS/ArcGIS Pro/AGOL reais carregando o serviço (sem ambiente gráfico nesta máquina, mesma limitação
 já registrada para L2-04-c e para Chrome headless); OGC API Features Part 3 (CQL2), WFS-T; GML validado contra o
 XSD de referência do OGC.
+Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a partir do navegador, e por
+isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
+anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
+coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
+## turno 5, setembro de 2026 (item L2-03-edicao: fechamento — dois achados corrigidos, junção do turno 4)
+
+Retomada do turno 4 (sessão anterior morreu por limitação do servidor da API antes de registrar, comitar
+e enfileirar): conferência independente da suíte revelou dois defeitos reais, além do já corrigido pelo
+próprio turno 4. Corrigidos e cobertos por teste permanente (não script de auditoria à parte — removido,
+mesma convenção do commit `054286a`):
+
+1. `app/edicao/combinar.py::unir` checava `versao` declarada ANTES de checar existência/acesso do id — um
+   id inexistente ou de outro inquilino, quando listado depois de um id existente sem `versao`, nunca
+   chegava a 404 (ficava preso em 422 `versao_ausente`). Corrigido para existência de todos os ids primeiro,
+   depois versão de todos (`tests/api/test_edicao_dividir_unir.py::test_unir_sem_declarar_versao_de_uma_das_feicoes_e_422`
+   fecha o buraco original: `versoes` incompleto não pode mais deixar uma origem sem checagem de
+   concorrência).
+2. `limites.ANEXO_TAMANHO_MAX` (10 MiB) igual ao teto de corpo do middleware (`CORPO_MAX_PADRAO_BYTES`,
+   também 10 MiB) — como o anexo viaja em JSON com o conteúdo em base64 (~4/3 de inchaço), o 413 genérico
+   do corpo sempre disparava antes do 422 `anexo_grande` específico rodar; o limite documentado de anexo
+   era, na prática, letra morta. Reduzido para 7 MiB, com folga sob o teto de corpo mesmo codificado
+   (`tests/api/test_edicao_historico_anexos.py::test_anexo_no_teto_real_ainda_da_anexo_grande_nao_corpo_grande`).
+
+Suíte dedicada reconferida após os dois consertos: verde (mesmo comando do turno 4); `ruff` e
+`sem-marcador` verdes. Portão e veredito do item-pai continuam os do turno 4 (nenhuma cláusula mudou de
+prova, só a implementação ficou mais correta). Handoff em `laco/handoffs/T5/L2-03-edicao/`.
+
+## turno 4, setembro de 2026 (item L2-03-edicao: edição de feições no mapa — criar/mover/vértice/dividir/unir/apagar, formulário, anexos, desfazer, histórico e restauração)
+
+Constrói sobre o L2-03-a (API única de escrita) e o L2-01-mapa-web (visualizador): `web/js/mapa/edicao.js`
+inteiro novo, ligado à tela `/mapa`. Criar ponto/linha/polígono por clique; mover e editar vértice
+por arrasto (a geometria de trabalho vem sempre de `GET /api/camadas/{id}/feicoes/{globalid}`, exata,
+nunca da versão recortada por tile); apagar; formulário de atributos gerado dos mesmos `campos`/
+`regras_campo` da camada, com domínio/obrigatório espelhados no navegador — e reconferidos direto na
+API nesta rodada, sem passar pela tela, provando que a validação real mora no servidor (cláusula do
+item-pai). Aderência (checkbox "aderir a vértice próximo", tolerância de 12 px sobre feições
+renderizadas) e edição em lote (N feições selecionadas por shift-clique, um atributo aplicado a todas
+num único lote `atualizar`, reaproveitando o array heterogêneo que o L2-03-a já aceitava).
+
+Histórico e restauração são novos no banco: `plat.feicao_historico` + gatilho genérico
+`feicao_historico_registrar()` ligado por `plat.camada_preparar` a TODA tabela de camada (não só a
+escrita que passa pela API — SQL direto, importação e réplica também ficam registrados), migração
+`20260907T1025`. Restaurar reaplica pela MESMA porta de escrita (`_inserir`/`_atualizar` de
+`app.edicao.servico`) — feição existente vira `UPDATE`, feição apagada vira `INSERT` com o MESMO
+`globalid` (referência externa nunca quebra); a própria restauração grava um marcador
+`operacao='restaurar'` a mais no histórico, que nunca é reescrito.
+
+Anexos (`plat.feicao_anexo`, migração `20260907T1035`): limite de tamanho e de tipo aplicados no
+SERVIDOR em duas etapas (tamanho da string base64 antes de decodificar, depois o tamanho real) e
+contra o conteúdo de fato (item L7-03-b) — um PDF disfarçado de PNG é recusado mesmo com
+`content_type` mentindo. Objeto guardado no Garage por trás do adaptador já existente (`app.objetos`).
+
+Dividir/unir (`app/edicao/combinar.py`): geometria estrutural nunca sai do MVT (recortado/generalizado
+por tile) — as duas operações leem a geometria exata do banco e usam `ST_Union`/`ST_LineMerge`/
+`ST_LineSubstring`. `unir` funciona para qualquer família de geometria; `dividir` está escopado a
+LineString/MultiLineString de uma parte só nesta passagem (dividir polígono por linha de corte fica
+de fora, registrado no ADR, não escondido).
+
+Dois defeitos de infraestrutura achados e corrigidos nesta rodada (não só no código do item):
+`app/garage.py::criar_chave` devolvia um dicionário sem `accessKeyId` no caminho de reaproveitamento
+(`ListKeys` usa a chave `id`, `CreateKey` usa `accessKeyId`) — crashava com `KeyError` em vez de um
+erro que diz o que aconteceu; e `docs/gerar_limites.py` ficaria não determinístico se um limite fosse
+guardado como `frozenset` (a ordem de iteração de um set do Python varia entre execuções) — corrigido
+trocando `ANEXO_TIPOS_PERMITIDOS` para tupla ordenada antes de existir um segundo caso.
+
+ADR: `docs/adr/20260907T1123-historico-restauracao-anexos-feicao.md`. Medidas em
+`tests/medidas/L2-03-edicao.json` — sem cláusula numérica de tempo neste item; a suíte dedicada (75
+testes de API/unit) e o e2e dedicado (6 cláusulas no chromium do playwright, 0 erro de console) estão
+registrados lá com o comando exato. Fronteira honesta e vereditos completos no handoff do item.
+
 ## turno 3, setembro de 2026 (item L2-03-a-api-edicao-transacional: edição transacional de feições — única porta de escrita)
 
 `POST /api/camadas/{id}/edicoes` (`app/edicao/`): equivalente do `applyEdits` da Esri e, a partir
@@ -4398,6 +4490,31 @@ Viewer escrita em `docs/PARIDADE_FERRAMENTAS_VETOR.md`. Decisões em
 O executor passou a aceitar parâmetro de LISTA de camadas (`GPMultiValue:GPFeatureRecordSetLayer`, usado pelo
 `mesclar`) e a achatar essa lista ao escrever proveniência e `derivado_de`: a camada mesclada aponta para
 todas as origens.
+## turno 4, setembro de 2026 (item L2-01-mapa-web: visualizador de mapa próprio, do Martin à impressão)
+
+Visualizador MapLibre da plataforma, com a pilha de tiles vetoriais que faltava chegar a `master`.
+
+- **Servidor de tiles**: Martin 1.15.0 (musl, sha256 do pacote fixado em `deploy/martin_instalar.sh`) como
+  unidade `plat-martin` em `127.0.0.1:8151`, publicando SÓ funções (`auto_publish.tables: false`) — a
+  tabela crua da camada nunca é exposta. Papel de leitura `plat_leitor` (LOGIN, sem BYPASSRLS, sem ser
+  dono), `plat.contexto_por_token` e a função de tile por camada com RLS vieram do trabalho dos itens
+  L2-01-b/L2-04-a, que nunca tinha sido juntado.
+- **API do mapa** (`app/mapa/`): `GET /api/mapa/camadas` com estilo MapLibre e legenda geradas da
+  simbologia; `GET /api/mapa/camadas/{id}/tilejson` cunhando token de 12 h com escopo de UMA camada;
+  repasse `GET /tiles/{esquema}/{funcao}/{z}/{x}/{y}` com a mesma autorização do `auth_request` do nginx
+  (uma implementação, duas portas); `plat.camada_extensao` para o "enquadrar".
+- **Tela `/mapa`**: lista de camadas com ordem (arrastar e por botão), opacidade, ligar/desligar e
+  enquadrar; legenda; janela de atributos (campo nulo aparece marcado, multi-geometria não se repete);
+  medição geodésica de distância e área; pesquisa de endereço (CNEFE) e de coordenada em decimal e em
+  grau-minuto-segundo; escala, coordenadas e escala numérica 1:N; troca de mapa-base; impressão em PNG e
+  em PDF com escala, barra de escala e seta de norte.
+- **`GET /api/geocodificar`**: geocodificar é leitura e agora tem o verbo certo (o POST continua).
+- Medido com 1.000.000 de feições: 2,4 s do clique ao primeiro desenho, 1,5 s de zoom até `idle`, 61 MB
+  de heap; 10 camadas ao mesmo tempo em 4,3 s, pan em 302 ms, 24,8 MB. Tile z8 pelo repasse: 406 ms
+  frio, 21 ms quente. Detalhe em `tests/medidas/L2-01-mapa-web.json`.
+- Dois defeitos reais achados pelos testes e corrigidos: `attribution: undefined` fazia o MapLibre
+  recusar a fonte inteira em silêncio; repassar `Content-Encoding: gzip` com corpo já descompactado
+  entregava tile ilegível ao navegador. Registrados no ADR 20260907T0400.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 - **L7-06-d-paineis**: cinco painéis Grafana provisionados por arquivo (`deploy/grafana/paineis/*.json` + `deploy/grafana/provisioning/`), homologação própria (`deploy/paineis_homologacao.sh`) com carga curta de verdade e captura de cada painel em `tests/e2e/capturas/`. Métricas novas para o que os painéis precisavam e não existia: usuários ativos em 24 h, duração e tamanho do último backup/ensaio, uso de armazenamento e tamanho do schema de dado por inquilino.

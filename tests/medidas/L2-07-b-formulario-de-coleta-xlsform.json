@@ -1,0 +1,31 @@
+{
+ "item": "L2-07-b-formulario-de-coleta-xlsform",
+ "medidas": {
+  "coleta_abrir_ms": {
+   "valor": 150.2,
+   "unidade": "ms",
+   "comando": "e2e Pixel 7 (tests/e2e/test_coleta_pixel7.py)",
+   "carga_1min": 11.72,
+   "ram_livre_gb": 7.0,
+   "medido_em": "2026-09-07T20:32:47Z",
+   "nota": "medido sob carga acima de 8 (12 nucleos): tempo de abertura de tela, nao clausula de desempenho"
+  },
+  "vetores_xlsform": {
+   "valor": 102,
+   "unidade": "vetores",
+   "comando": "tests/unit/test_coleta_xpath.py (Python = JavaScript)"
+  },
+  "respostas_motor_js_igual_python": {
+   "valor": 13,
+   "unidade": "respostas",
+   "comando": "tests/unit/test_coleta_motor_equivalencia.py"
+  },
+  "xlsforms_importados": {
+   "valor": 5,
+   "unidade": "formulários",
+   "comando": "tests/api/test_coleta.py::test_importa_os_cinco_xlsforms_de_teste"
+  }
+ },
+ "gerado_em": "2026-09-07T20:32:47Z",
+ "git_sha": "1a769c413687"
+}

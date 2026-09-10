@@ -144,6 +144,8 @@ PAGINAS = {
     "/executar": "executar.html",
     # --- provedores de login e regras de provisionamento (L0-08-e-mapeamento-provisionamento)
     "/admin/logins": "admin/logins.html",
+    # --- formulário de coleta (L2-07-b-formulario-de-coleta-xlsform)
+    "/coleta": "coleta.html",
 }
 router = APIRouter()
 

@@ -1,0 +1,44 @@
+{
+ "item": "L2-07-e-odk-central-ponte",
+ "medidas": {
+  "envios_com_foto_aplicados": {
+   "valor": 20,
+   "unidade": "envios",
+   "comando": "tests/api/test_odk_ponte.py::test_vinte_envios_com_foto_viram_vinte_feicoes",
+   "nota": "20 envios do dublê viram 20 feições, 40 linhas na camada filha da repetição e 20 anexos"
+  },
+  "duplicatas_apos_tres_sincronizacoes": {
+   "valor": 0,
+   "unidade": "feições",
+   "comando": "tests/api/test_odk_ponte.py::test_sincronizar_de_novo_nao_duplica",
+   "nota": "3 rodadas seguidas: 20 aplicados, depois 0/20 repetidos duas vezes; a camada fica com 20"
+  },
+  "anexos_com_sha256_conferido": {
+   "valor": 3,
+   "unidade": "anexos",
+   "comando": "tests/api/test_odk_ponte.py::test_sha256_do_anexo_bate_com_o_que_veio_do_central",
+   "nota": "sha256 dos bytes baixados do Central == sha256 gravado em plat.feicao_anexo"
+  },
+  "urls_de_ssrf_recusadas": {
+   "valor": 7,
+   "unidade": "URLs",
+   "comando": "tests/unit/test_odk_central_cliente.py::test_ssrf_a_conexao_apontada_para_dentro_nao_sai_da_maquina",
+   "nota": "loopback, localhost, metadado de nuvem, RFC1918, IPv6 loopback, file://, userinfo na URL; o transporte explode se for usado"
+  },
+  "testes_do_item": {
+   "valor": 40,
+   "unidade": "testes",
+   "comando": "roda_teste.sh tests/unit/test_odk_conversao.py tests/unit/test_odk_central_cliente.py tests/api/test_odk_ponte.py tests/api/test_odk_job.py"
+  },
+  "rotas_da_varredura_cruzada": {
+   "valor": 233,
+   "unidade": "rotas",
+   "comando": "tests/api/test_cruzado.py (100 % de cobertura; as 5 rotas novas deste item incluídas)"
+  }
+ },
+ "gerado_em": "2026-09-08T11:31:58Z",
+ "carga_1min": 6.03,
+ "ram_livre_gb": 6,
+ "git_sha": "ec3a310be29c",
+ "nota": "nenhuma cláusula deste item é de desempenho; a carga fica registrada como contexto da rodada"
+}

@@ -129,13 +129,6 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/importacoes"): ["importacoes/criar"],
     ("PUT", "/api/importacoes/{id}/confirmar"): ["importacoes/confirmar"],
     ("DELETE", "/api/importacoes/{id}"): [],
-    # ---- ferramentas de análise (L2-05-a): execução em processo publica o item e registra analises/executar;
-    # acima do custo síncrono vira job (jobs/criar). No GPServer, execute é sempre em processo e submitJob sempre
-    # job; cancel reaproveita a fila (jobs/cancelar).
-    ("POST", "/api/ferramentas/{nome}/executar"): ["analises/executar", "jobs/criar"],
-    ("POST", "/rest/services/{ferramenta}/GPServer/{tarefa}/execute"): ["analises/executar"],
-    ("POST", "/rest/services/{ferramenta}/GPServer/{tarefa}/submitJob"): ["jobs/criar"],
-    ("POST", "/rest/services/{ferramenta}/GPServer/{tarefa}/jobs/{job_id}/cancel"): ["jobs/cancelar"],
     # ---- geocodificador (L2-11-a/b): cálculo sobre dado aberto CNEFE/IBGE, sem tabela de inquilino e sem
     # dono humano para narrar — mesma decisão já usada acima em /api/rota, /api/matriz, /api/isocrona.
     ("POST", "/api/geocodificar"): [],
@@ -168,25 +161,19 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
     # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
     ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
-    # ---- documento de mapa (L2-01-a): as rotas de /api/mapas são atalhos tipados sobre as do catálogo
-    # (criar_item / editar_item), então o evento é o MESMO do item — não existe vocabulário "mapas/*"
-    ("POST", "/api/mapas"): ["itens/adicionar"],
-    ("PUT", "/api/mapas/{id}"): ["itens/atualizar"],
-    # ---- motor de análise multicritério (L3-01-a)
-    ("POST", "/api/amc/modelos/validar"): [],  # confere o documento e não grava nada: nada a registrar
-    ("POST", "/api/amc/modelos"): ["amc/modelo_criar"],
-    ("PUT", "/api/amc/modelos/{id}"): ["amc/modelo_editar"],
-    ("DELETE", "/api/amc/modelos/{id}"): ["amc/modelo_apagar"],
-    ("POST", "/api/amc/conjuntos"): ["amc/conjunto_criar"],
-    ("DELETE", "/api/amc/conjuntos/{id}"): ["amc/conjunto_apagar"],
-    ("POST", "/api/amc/execucoes"): ["amc/execucao_criar"],
-    ("DELETE", "/api/amc/execucoes/{id}"): ["amc/execucao_apagar"],
-    # ---- OGC API Features Part 4 (L2-04-g): a escrita entra pela MESMA porta da edição transacional
-    # (app/edicao/servico.py), logo o evento é `camadas/editar`, um por chamada
-    ("POST", "/ogc/features/{item_id}/collections/{colecao_id}/items"): ["camadas/editar"],
-    ("PUT", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): ["camadas/editar"],
-    ("PATCH", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): ["camadas/editar"],
-    ("DELETE", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): ["camadas/editar"],
-    # o POST do FeatureServer query é LEITURA (o Esri manda consulta por POST quando o where é grande)
-    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/query"): [],
+    # --- formulário de coleta (L2-07-b)
+    ("POST", "/api/formularios/xlsform"): ["formularios/importar"],
+    ("POST", "/api/formularios/{id}/respostas"): ["formularios/responder", "camadas/editar"],
+    # L2-03-edicao: as rotas de edição de feição vieram no mesmo ramo do L2-07-b e ainda não estavam
+    # declaradas aqui (o docs/openapi.json do ramo não tinha sido regerado, então o teste não as via).
+    ("POST", "/api/camadas/{id}/feicoes/unir"): ["camadas/unir"],
+    ("POST", "/api/camadas/{id}/feicoes/dividir"): ["camadas/dividir"],
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/historico/{historico_id}/restaurar"): ["camadas/restaurar"],
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/anexos"): ["camadas/anexo_enviar"],
+    ("DELETE", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): ["camadas/anexo_apagar"],
+    # L2-07-e (ponte ODK Central): publicar registra `odk/publicar`; sincronizar registra `odk/sincronizar` e,
+    # por dentro, os mesmos eventos que uma resposta de formulário registra (a escrita é a mesma porta).
+    ("POST", "/api/odk/pontes"): ["odk/publicar"],
+    ("POST", "/api/odk/pontes/{id}/sincronizar"): ["odk/sincronizar", "formularios/responder", "camadas/editar",
+                                                   "camadas/anexo_enviar"],
 }

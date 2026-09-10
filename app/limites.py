@@ -178,6 +178,8 @@ SSO_RESPOSTA_MAX = 262144        # teto do corpo SAMLResponse decodificado (256 
 # e o proxy nunca vira um jeito de esgotar a máquina com um serviço lento de propósito (ADR 0012).
 CONEXAO_TIPOS = (
     "wms", "wmts", "wfs", "ogc_api", "esri_rest", "stac", "geoparquet", "pmtiles", "xyz", "postgres_fdw", "s3", "http",
+    "wms", "wmts", "wfs", "ogc_api", "esri_rest", "stac", "geoparquet", "pmtiles", "postgres_fdw", "s3", "http",
+    "odk_central",
 )
 CONEXAO_MODOS = ("referenciada", "copiada")
 CONEXAO_NOME_MAX = 200
@@ -263,6 +265,19 @@ CONEXAO_WMS_FEICAO_MAX_BYTES = 2 * 1024 * 1024         # 2 MiB: resposta de GetF
 CONEXAO_WMS_LARGURA_MAX = 2048
 CONEXAO_WMS_ALTURA_MAX = 2048
 CONEXAO_WMTS_TILE_MAX_BYTES = 4 * 1024 * 1024          # 4 MiB: um único tile (256/512 px), nunca a pirâmide
+# --- ponte com o ODK Central (L2-07-e-odk-central-ponte; app/odk/): conexão do tipo `odk_central`, publicação do
+# XLSForm e leitura dos envios por OData. Os tempos são maiores que os do teste de saúde porque aqui há
+# transferência de verdade (planilha, página de envios, anexo), e continuam pequenos o bastante para o job não
+# prender o worker: quem tem muito envio pagina, não espera uma resposta gigante.
+ODK_LER_TIMEOUT_S = 30.0
+ODK_PAGINA_ENVIOS = 100                    # $top do OData por página (o Central aceita até 1000; 100 é o padrão dele)
+ODK_ENVIOS_MAX_POR_EXECUCAO = 1000         # teto de envios lidos numa sincronização (o resto fica para a próxima)
+ODK_PAGINAS_MAX = 50                       # trava contra paginação que nunca termina (página sempre cheia)
+ODK_RESPOSTA_MAX_BYTES = 8 * 1024 * 1024   # página de OData / lista de entidades
+# a planilha publicada é a MESMA que a importação aceita (XLSFORM_TAMANHO_MAX) e o anexo puxado é o mesmo que a
+# API de anexo aceita (ANEXO_TAMANHO_MAX): dois tetos para a mesma coisa deixariam passar aqui o que a outra
+# porta recusa, e o envio só quebraria depois de baixado.
+ODK_ENTIDADES_MAX = 5000                   # entidades lidas de um dataset para virar lista de escolhas
 
 # --- ingestão vetorial (L0-04; ADR 0005, reduzido a 4 formatos: shapefile.zip, gpkg, geojson, csv)
 INGESTAO_AMOSTRA_VALIDADE = 1000          # feições lidas na amostra de ST_IsValid (ogr2ogr -limit, MEDIDO no ADR)
@@ -872,3 +887,10 @@ REDE_MATRIZ_PARES_MAX = 1_000_000     # N×M declarado (1.000×1.000); o serviç
 REDE_SNAP_PONTOS_MAX = 500            # pontos por execução de conectar à rede (1 chamada /nearest por ponto)
 REDE_K_MAX = 20                       # K de "K instalações mais próximas"
 REDE_ALOCAR_P_MAX = 25                # P instalações escolhidas por localizar-alocar (heurística gulosa)
+
+# --- formulário de coleta por XLSForm (L2-07-b-formulario-de-coleta-xlsform; app/coleta)
+XLSFORM_TAMANHO_MAX = 2 * 1024 * 1024    # 2 MiB por planilha (formulários reais têm dezenas de KiB)
+FORMULARIO_CAMPOS_MAX = 500              # perguntas por formulário (mesmo teto de campos da camada)
+FORMULARIO_LISTA_MAX = 5_000             # linhas por lista de escolhas (cascata de município cabe)
+FORMULARIO_REPETICOES_MAX = 200          # linhas por repetição numa única resposta
+FORMULARIO_ANEXOS_MAX = 20               # anexos por resposta
