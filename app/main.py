@@ -146,6 +146,7 @@ from app.mapa.rotas import router as rotas_mapa
 from app.mapa.selecao import router as rotas_selecao
 from app.migracao.rotas import router as rotas_migracao
 from app.modelos3d.rotas import router as rotas_modelos3d
+from app.mapas.rotas import router as rotas_mapas
 from app.multiescala.rotas import router as rotas_multiescala
 from app.paineis.rotas import router as rotas_paineis
 from app.mapa.rotas import router as rotas_mapa
@@ -205,6 +206,8 @@ from app.rede_utilidades.rotas_areas_sujas import router as rotas_rede_areas_suj
 from app.rede_utilidades.rotas_regras import router as rotas_rede_regras
 from app.rede_utilidades.rotas_osm import router as rotas_rede_osm
 from app.rede_utilidades.rotas_topologia import router as rotas_rede_topologia
+from app.rede_utilidades.rotas_esri_un import router as rotas_rede_un_esri
+from app.rede_utilidades.rotas_identificadores import router as rotas_rede_identificadores
 from app.rotas_arquivos import router as rotas_arquivos
 from app.rotas_temas import router as rotas_temas
 from app.rotas_videos import router as rotas_videos
@@ -512,6 +515,10 @@ ROUTERS = [
     # --- topologia derivada da rede de utilidades (L4-01-b): /api/rede/{rede_id}/feicoes/{pontos,linhas}
     # (as camadas de rede, editáveis) e /api/rede/{rede_id}/topologia/{habilitar,nos,arestas} (o índice derivado)
     rotas_rede_topologia,
+    # --- identidade e numeração de ativos (L4-28): /api/rede/{id}/ativos (+renomeacoes), /api/rede/{id}/faixas
+    # e a fachada Esri /rest/services/{nome}/UtilityNetworkServer/unitIdentifiers (query, reserve)
+    rotas_rede_identificadores,
+    rotas_rede_un_esri,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,

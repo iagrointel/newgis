@@ -54,7 +54,7 @@ CONTAGENS = (
     "(SELECT count(*) FROM plat.rede_regra rg WHERE rg.rede_id = r.id) AS n_regras"
 )
 SQL_BASE = (
-    "SELECT r.id, r.nome, r.disciplina, r.descricao, r.tolerancia_m, r.pacote_codigo, r.pacote_nome, r.pacote_versao, "
+    "SELECT r.id, r.nome, r.disciplina, r.descricao, r.pacote_codigo, r.pacote_nome, r.pacote_versao, "
     "r.pacote_esquema_versao, r.pacote_fonte, r.pacote_sha256, r.pacote_bytes, r.importado_em, r.criado_em, "
     f"r.atualizado_em, r.dono_id, u.login AS dono_login, u.nome AS dono_nome, {CONTAGENS} "
     "FROM plat.rede r JOIN plat.usuario u ON u.id = r.dono_id"
@@ -74,7 +74,6 @@ def _json(r: dict) -> dict:
         "nome": r["nome"],
         "disciplina": r["disciplina"],
         "descricao": r["descricao"],
-        "tolerancia_m": float(r["tolerancia_m"]),
         "pacote": pacote,
         "contagens": {s: r[f"n_{s}"] for s in pacote_mod.SECOES},
         "dono": {"id": r["dono_id"], "login": r["dono_login"], "nome": r["dono_nome"]},
@@ -132,7 +131,7 @@ def baixar_pacote_instalado(codigo: str, auth: Auth = autenticado(escopo_token="
 
 
 @router.get("", response_model=RedePagina, openapi_extra=LER)
-def listar(auth: Auth = autenticado(escopo_token="rede:ler")):
+def listar(auth: Auth = autenticado(escopo_token="catalogo:ler")):
     with db.db(auth.contexto()) as cur:
         cur.execute("SELECT count(*) AS n FROM plat.rede")
         total = cur.fetchone()["n"]
@@ -141,14 +140,13 @@ def listar(auth: Auth = autenticado(escopo_token="rede:ler")):
 
 
 @router.post("", response_model=Rede, status_code=201, openapi_extra=EDITAR)
-def criar(corpo: RedeEntrada, request: Request, auth: Auth = autenticado("rede.editar", escopo_token="rede:editar")):
+def criar(corpo: RedeEntrada, request: Request, auth: Auth = autenticado("rede.editar")):
     with db.db(auth.contexto()) as cur:
         try:
             cur.execute(
-                "INSERT INTO plat.rede(tenant_id, nome, disciplina, descricao, tolerancia_m, dono_id) "
-                "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
-                (auth.tenant_id, " ".join(corpo.nome.split()), corpo.disciplina, corpo.descricao,
-                 corpo.tolerancia_m, auth.usuario_id),
+                "INSERT INTO plat.rede(tenant_id, nome, disciplina, descricao, dono_id) "
+                "VALUES (%s, %s, %s, %s, %s) RETURNING id",
+                (auth.tenant_id, " ".join(corpo.nome.split()), corpo.disciplina, corpo.descricao, auth.usuario_id),
             )
             rede_id = str(cur.fetchone()["id"])
         except psycopg2.errors.UniqueViolation as e:
@@ -161,13 +159,13 @@ def criar(corpo: RedeEntrada, request: Request, auth: Auth = autenticado("rede.e
 
 
 @router.get("/{rede_id}", response_model=Rede, openapi_extra=LER)
-def ver(rede_id: str, auth: Auth = autenticado(escopo_token="rede:ler")):
+def ver(rede_id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
     with db.db(auth.contexto()) as cur:
         return _json(_carregar(cur, _uuid_ok(rede_id)))
 
 
 @router.delete("/{rede_id}", status_code=204, openapi_extra=EDITAR)
-def apagar(rede_id: str, request: Request, auth: Auth = autenticado("rede.editar", escopo_token="rede:editar")):
+def apagar(rede_id: str, request: Request, auth: Auth = autenticado("rede.editar")):
     rid = _uuid_ok(rede_id)
     with db.db(auth.contexto()) as cur:
         r = _carregar(cur, rid)
@@ -208,9 +206,7 @@ def _importar_pacote_sincrono(rid: str, bruto: bytes, auth: Auth, request: Reque
 
 
 @router.post("/{rede_id}/pacote", response_model=ImportacaoResultado, status_code=201, openapi_extra=EDITAR)
-async def importar_pacote(
-    rede_id: str, request: Request, auth: Auth = autenticado("rede.editar", escopo_token="rede:editar")
-):
+async def importar_pacote(rede_id: str, request: Request, auth: Auth = autenticado("rede.editar")):
     """Importa o pacote de ativos. Substitui o catálogo INTEIRO da rede, numa transação: ou entra tudo, ou nada.
     Só a leitura do corpo fica no laço de eventos (rápida, I/O); validação e gravação vão para o threadpool."""
     rid = _uuid_ok(rede_id)
@@ -219,7 +215,7 @@ async def importar_pacote(
 
 
 @router.get("/{rede_id}/pacote", openapi_extra=LER, response_class=Response)
-def exportar_pacote(rede_id: str, auth: Auth = autenticado(escopo_token="rede:ler")):
+def exportar_pacote(rede_id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
     """O pacote da rede, reconstruído das tabelas e serializado na forma canônica — nunca o arquivo recebido."""
     rid = _uuid_ok(rede_id)
     with db.db(auth.contexto()) as cur:
