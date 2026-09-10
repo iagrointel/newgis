@@ -1364,3 +1364,73 @@ não foi apagada, só deixou de ser a padrão.
 - NBR de verdade (falta banda SWIR marcada na ingestão desta plataforma).
 
 Ver `docs/PARIDADE.md` e `CHANGELOG.md` para a tabela cláusula a cláusula e os números medidos.
+
+## 26. Proveniência verificável da imagem — Lastro (item L1-01-j-proveniencia-da-imagem-lastro)
+
+Todo item raster carrega, ao lado dos dados, a prova de como cada objeto foi produzido — não uma
+descrição em prosa, um dado que qualquer um pode CONFERIR de novo. É o conceito de "Lastro" da casa
+(dossiê protocolável com claim reexecutável) aplicado à imagem.
+
+### 26.1 O que o item STAC ganha
+
+Além de `file:checksum` (multihash sha256, já existia desde o L1-01-a) em cada asset, o item novo grava:
+
+| campo | o que é |
+|---|---|
+| `processing:software` | mapa nome → versão do GDAL, rio-cogeo, rasterio e `plat`, MEDIDO na hora da conversão (não uma constante) |
+| `processing:lineage` | texto explicando o pipeline, em português, sem jargão de código |
+| `plat:cadeia` | um passo por perfil convertido (científico, visual): o argv EXATO do(s) `gdal_translate` que rodou, o sha256 de entrada (do bruto) e o sha256 de saída (do COG) |
+| `plat:cadeia_origem` | `ingestao` (cadeia medida na hora) · `reexecucao_retroativa` (medida depois, reexecutando) · ausente (item ainda não passou por nenhum dos dois) |
+| `plat:manifesto_sha256` | sha256 do item STAC inteiro, MENOS essa própria chave — qualquer edição em qualquer campo (bbox, checksum de asset, propriedade) quebra este hash |
+
+A extensão `processing` (`https://stac-extensions.github.io/processing/v1.2.0/schema.json`) entra em
+`stac_extensions` — qualquer cliente STAC genérico, não só esta plataforma, sabe ler os dois primeiros
+campos da tabela.
+
+### 26.2 Conferir
+
+`POST /api/imagens/<item>/conferir` (sessão ou token `imagens:ler`) baixa CADA asset com `file:checksum`
+de volta do balde em stream (nunca o objeto inteiro em RAM — o científico de uma cena chega a centenas de
+MB), recalcula o sha256 e compara com o registrado; recalcula também `plat:manifesto_sha256`. Devolve
+divergência POR ATIVO:
+
+```json
+{"item_id": "...", "ok": true, "ativos": [
+  {"asset": "cientifico", "ok": true, "sha256_registrado": "...", "sha256_recalculado": "..."},
+  {"asset": "visual", "ok": true, "...": "..."}
+], "manifesto_registrado": "...", "manifesto_recalculado": "...", "manifesto_ok": true}
+```
+
+Um byte trocado no objeto (mesmo do mesmo tamanho) faz `ok=false` só naquele ativo — os outros continuam
+`ok=true`, porque a divergência é medida ativo a ativo, nunca um veredito único e cego para o item inteiro.
+Na tela, a ficha do item raster (aba "Visão geral") mostra a cadeia em texto simples — comando, sha256 de
+entrada/saída de cada passo — com um botão "conferir" que chama esta rota e mostra o resultado.
+
+### 26.3 Preenchimento retroativo (itens ingeridos antes deste item)
+
+Um item ingerido ANTES deste item existir não tem `plat:cadeia`/`plat:manifesto_sha256`. Dois caminhos,
+o mesmo mecanismo por trás dos dois:
+
+- **Sem reconversão** (rápido, só metadado): `POST /api/imagens/proveniencia/preencher-pendentes`
+  (`{"limite": N}`, perfil editor+) varre até N itens do inquilino que ainda não têm `plat:cadeia_origem`
+  (consulta direta no jsonb do pgstac — nunca itera item já preenchido) e grava `processing:software` a
+  partir do `plat:versoes` que a ingestão original JÁ media, `processing:lineage` retroativo e o
+  manifesto. `plat:cadeia` fica AUSENTE de propósito: o comando exato da ingestão original não foi
+  capturado, e os percentis 2-98 que parametrizam o perfil visual não sobreviveram em nenhum campo do
+  item antigo — inventar um argv plausível seria medição fabricada. O mesmo item a item pela fila:
+  job `imagens.preencher_proveniencia` (`{"item_id": "..."}`).
+- **Com reconversão** (job `imagens.reexecutar`, fila, pesado): baixa o BRUTO já armazenado, reconverte
+  os dois perfis com o `cog.py` ATUAL e compara o sha256 obtido com o registrado — é a prova de
+  determinismo. Bate → `plat:cadeia` fica com o comando MEDIDO de verdade (`cadeia_origem=
+  reexecucao_retroativa`). Não bate → o item registra `plat:reexecucao` com os dois sha256 lado a lado e,
+  quando aplicável, a comparação de estatísticas (min/max/mean/std) entre a reconversão e o que já estava
+  registrado — nunca sobrescreve os assets/checksums originais.
+
+### 26.4 O que ainda não faz
+
+- `plat raster reexecutar <item>`/`verificar <item>` como comando de linha só (hoje: job de fila +
+  rota HTTP — cobre o mesmo caso de uso, forma diferente);
+- reexecução em lote (hoje: um item por chamada do job `imagens.reexecutar`; a varredura de metadado SEM
+  reconversão é que é em lote);
+- reconstrução de `plat:cadeia` real para item retroativo SEM rodar `imagens.reexecutar` — não existe
+  atalho, e não deveria existir (ver 26.3).

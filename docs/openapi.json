@@ -9227,6 +9227,138 @@
     "x-privilegio": "conteudo.registrar_fonte"
    }
   },
+  "/api/conexoes/{id}/descobrir": {
+   "post": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Descobrir",
+    "description": "Sonda o serviço agora (`GetCapabilities`/`/collections`/`f=json`, conforme o tipo) e SUBSTITUI a lista\nguardada de camadas (item L6-02-conectores-vivos): a lista de hoje reflete o que o serviço declara HOJE,\nnunca uma mistura com uma descoberta antiga que uma camada tenha sumido do serviço. Sem rede fora de\n`app.conexao.seguranca.buscar_seguro` (mesmo caminho auditado contra SSRF do teste de saúde).",
+    "operationId": "descobrir_api_conexoes__id__descobrir_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DescobrirResultado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   }
+  },
+  "/api/conexoes/{id}/camadas": {
+   "get": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Camadas",
+    "description": "Lista a última descoberta GUARDADA (sem sondar o serviço de novo); `POST /descobrir` é quem atualiza.",
+    "operationId": "camadas_api_conexoes__id__camadas_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CamadasPagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/conexoes/{id}/tile": {
+   "get": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Tile",
+    "operationId": "tile_api_conexoes__id__tile_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
   "/api/arquivos/_varredura": {
    "get": {
     "tags": [
@@ -14774,6 +14906,91 @@
     "x-privilegio": "proprio"
    }
   },
+  "/api/imagens/{item_id}/conferir": {
+   "post": {
+    "tags": [
+     "imagens"
+    ],
+    "summary": "Imagem Conferir",
+    "description": "Confere a proveniência do item: rebaixa cada asset com `file:checksum` do balde EM STREAM (nunca o\nobjeto inteiro em RAM — o COG científico de uma cena chega a centenas de MB), recalcula o sha256 e\ncompara com o registrado; recalcula também `plat:manifesto_sha256`. Devolve divergência por ativo — é o\nmecanismo que torna a proveniência do Lastro CONFERÍVEL, não prometida (a mesma ideia por trás de\n`imagens.reexecutar`, que além de conferir também reconverte).",
+    "operationId": "imagem_conferir_api_imagens__item_id__conferir_post",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/imagens/proveniencia/preencher-pendentes": {
+   "post": {
+    "tags": [
+     "imagens"
+    ],
+    "summary": "Proveniencia Preencher Pendentes",
+    "description": "Rota de administração do preenchimento retroativo (item L1-01-j, cláusula 3): busca até `limite`\nitens do inquilino cujo `plat:cadeia_origem` ainda NÃO existe (`prov.itens_pendentes`, filtro no jsonb\ndo pgstac — nunca itera item já preenchido) e preenche, SEM reconverter — mesma lógica de\n`imagens.preencher_proveniencia`, mas inline (é leitura+escrita de metadado, nunca GDAL, então cabe\nnuma requisição só). Item que precisa da cadeia MEDIDA de verdade (não reconstruída) segue precisando\nde `imagens.reexecutar` (fila, pesado). MEDIDO (10/09): sem o filtro de pendência, uma varredura\nrepetida numa base com muito item já preenchido custava 165 s para ~217 itens só para descartar todos;\ncom o filtro, uma base já preenchida volta em milissegundos com 0 pendente.",
+    "operationId": "proveniencia_preencher_pendentes_api_imagens_proveniencia_preencher_pendentes_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PreencherPendentesEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.publicar_camada"
+   }
+  },
   "/svc/{token}/stac/": {
    "get": {
     "tags": [
@@ -15627,6 +15844,195 @@
     "x-privilegio": "proprio"
    }
   },
+  "/svc/{token}/stac/mosaicos": {
+   "post": {
+    "tags": [
+     "stac"
+    ],
+    "summary": "registra um mosaico (busca STAC nomeada; item L1-07)",
+    "operationId": "mosaico_registrar_svc__token__stac_mosaicos_post",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": true,
+        "title": "Corpo"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   },
+   "get": {
+    "tags": [
+     "stac"
+    ],
+    "summary": "lista os mosaicos do inquilino",
+    "operationId": "mosaicos_listar_svc__token__stac_mosaicos_get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/stac/mosaicos/{mosaico_id}": {
+   "get": {
+    "tags": [
+     "stac"
+    ],
+    "summary": "detalhe de um mosaico",
+    "operationId": "mosaico_ver_svc__token__stac_mosaicos__mosaico_id__get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "mosaico_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Mosaico Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   },
+   "delete": {
+    "tags": [
+     "stac"
+    ],
+    "summary": "remove o registro de um mosaico",
+    "operationId": "mosaico_remover_svc__token__stac_mosaicos__mosaico_id__delete",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "mosaico_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Mosaico Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
   "/svc/{token}/raster/{item}/tilejson.json": {
    "get": {
     "tags": [
@@ -15748,6 +16154,25 @@
        ],
        "title": "Asset"
       }
+     },
+     {
+      "name": "predef",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 59
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "nome de predefinição de renderização (L1-02-f)",
+       "title": "Predef"
+      },
+      "description": "nome de predefinição de renderização (L1-02-f)"
      }
     ],
     "responses": {
@@ -15952,6 +16377,26 @@
        ],
        "title": "Asset"
       }
+     },
+     {
+      "name": "predef",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 59,
+         "pattern": "^[a-z0-9][a-z0-9-]{0,58}$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "nome de predefinição de renderização (item L1-02-f)",
+       "title": "Predef"
+      },
+      "description": "nome de predefinição de renderização (item L1-02-f)"
      }
     ],
     "responses": {
@@ -16230,6 +16675,26 @@
        ],
        "title": "Asset"
       }
+     },
+     {
+      "name": "predef",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 59,
+         "pattern": "^[a-z0-9][a-z0-9-]{0,58}$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "nome de predefinição de renderização (item L1-02-f)",
+       "title": "Predef"
+      },
+      "description": "nome de predefinição de renderização (item L1-02-f)"
      }
     ],
     "responses": {
@@ -16402,6 +16867,26 @@
        ],
        "title": "Asset"
       }
+     },
+     {
+      "name": "predef",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 59,
+         "pattern": "^[a-z0-9][a-z0-9-]{0,58}$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "nome de predefinição de renderização (item L1-02-f)",
+       "title": "Predef"
+      },
+      "description": "nome de predefinição de renderização (item L1-02-f)"
      }
     ],
     "responses": {
@@ -16582,6 +17067,26 @@
        ],
        "title": "Asset"
       }
+     },
+     {
+      "name": "predef",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 59,
+         "pattern": "^[a-z0-9][a-z0-9-]{0,58}$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "nome de predefinição de renderização (item L1-02-f)",
+       "title": "Predef"
+      },
+      "description": "nome de predefinição de renderização (item L1-02-f)"
      }
     ],
     "responses": {
@@ -16608,14 +17113,13 @@
     "x-privilegio": "proprio"
    }
   },
-  "/svc/{token}/mosaico/{colecao}/{z}/{x}/{y}": {
+  "/svc/{token}/raster/{item}/predefinicoes.json": {
    "get": {
     "tags": [
      "tiles"
     ],
-    "summary": "ladrilho do mosaico de uma coleção (mais recente por cima)",
-    "description": "Mosaico simples e declarado: as cenas da coleção que tocam o ladrilho, da mais recente para a mais\nantiga, e o PRIMEIRO pixel com dado vence (`first`). Não há linha de costura nem escolha por atributo\n(decisão C9 do conceito: Seamline e Closest to Viewpoint ficam FORA, com motivo).",
-    "operationId": "tile_mosaico_svc__token__mosaico__colecao___z___x___y__get",
+    "summary": "predefinições de renderização disponíveis para o item (fábrica + custom do inquilino)",
+    "operationId": "predefinicoes_do_item_svc__token__raster__item__predefinicoes_json_get",
     "parameters": [
      {
       "name": "token",
@@ -16627,12 +17131,831 @@
       }
      },
      {
-      "name": "colecao",
+      "name": "item",
       "in": "path",
       "required": true,
       "schema": {
        "type": "string",
-       "title": "Colecao"
+       "title": "Item"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/raster/{item}/legenda.json": {
+   "get": {
+    "tags": [
+     "tiles"
+    ],
+    "summary": "legenda (estrutura) da predefinição pedida ou padrão do item",
+    "operationId": "legenda_json_svc_svc__token__raster__item__legenda_json_get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "item",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item"
+      }
+     },
+     {
+      "name": "predef",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 59,
+         "pattern": "^[a-z0-9][a-z0-9-]{0,58}$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "nome de predefinição de renderização (item L1-02-f)",
+       "title": "Predef"
+      },
+      "description": "nome de predefinição de renderização (item L1-02-f)"
+     },
+     {
+      "name": "asset",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(visual|cientifico)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Asset"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/raster/{item}/legenda.png": {
+   "get": {
+    "tags": [
+     "tiles"
+    ],
+    "summary": "legenda (imagem) da predefinição pedida ou padrão do item",
+    "operationId": "legenda_png_svc_svc__token__raster__item__legenda_png_get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "item",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item"
+      }
+     },
+     {
+      "name": "predef",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 59,
+         "pattern": "^[a-z0-9][a-z0-9-]{0,58}$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "nome de predefinição de renderização (item L1-02-f)",
+       "title": "Predef"
+      },
+      "description": "nome de predefinição de renderização (item L1-02-f)"
+     },
+     {
+      "name": "asset",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(visual|cientifico)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Asset"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/mosaico/{mosaico_id}/tilejson.json": {
+   "get": {
+    "tags": [
+     "tiles"
+    ],
+    "summary": "TileJSON 3.0.0 do mosaico registrado (item L1-07)",
+    "operationId": "mosaico_tilejson_svc__token__mosaico__mosaico_id__tilejson_json_get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "mosaico_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Mosaico Id"
+      }
+     },
+     {
+      "name": "formato",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "pattern": "^(png|jpg|jpeg|webp)$",
+       "default": "png",
+       "title": "Formato"
+      }
+     },
+     {
+      "name": "expressao",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 200
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Expressao"
+      }
+     },
+     {
+      "name": "bandas",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 32
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Bandas"
+      }
+     },
+     {
+      "name": "faixa",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 64
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Faixa"
+      }
+     },
+     {
+      "name": "colormap",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 40
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Colormap"
+      }
+     },
+     {
+      "name": "asset",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(visual|cientifico)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Asset"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/mosaico/{mosaico_id}/wmts/1.0.0/WMTSCapabilities.xml": {
+   "get": {
+    "tags": [
+     "tiles"
+    ],
+    "summary": "WMTS 1.0.0 GetCapabilities do mosaico registrado (forma REST)",
+    "operationId": "mosaico_wmts_rest_svc__token__mosaico__mosaico_id__wmts_1_0_0_WMTSCapabilities_xml_get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "mosaico_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Mosaico Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/mosaico/{mosaico_id}/wmts": {
+   "get": {
+    "tags": [
+     "tiles"
+    ],
+    "summary": "WMTS 1.0.0 KVP do mosaico registrado (GetCapabilities e GetTile)",
+    "operationId": "mosaico_wmts_kvp_svc__token__mosaico__mosaico_id__wmts_get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "mosaico_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Mosaico Id"
+      }
+     },
+     {
+      "name": "SERVICE",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "WMTS",
+       "title": "Service"
+      }
+     },
+     {
+      "name": "REQUEST",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "GetCapabilities",
+       "title": "Request"
+      }
+     },
+     {
+      "name": "TILEMATRIX",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tilematrix"
+      }
+     },
+     {
+      "name": "TILEROW",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tilerow"
+      }
+     },
+     {
+      "name": "TILECOL",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tilecol"
+      }
+     },
+     {
+      "name": "FORMAT",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Format"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/mosaico/{mosaico_id}/pegadas": {
+   "get": {
+    "tags": [
+     "tiles"
+    ],
+    "summary": "pegadas (footprints) do mosaico registrado, em GeoJSON — item L1-07",
+    "operationId": "mosaico_pegadas_svc__token__mosaico__mosaico_id__pegadas_get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "mosaico_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Mosaico Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/mosaico/{alvo}/{z}/{x}/{y}.{ext}": {
+   "get": {
+    "tags": [
+     "tiles"
+    ],
+    "summary": "ladrilho do mosaico com extensão no caminho (uuid de busca registrada ou coleção)",
+    "operationId": "tile_mosaico_ext_svc__token__mosaico__alvo___z___x___y___ext__get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "alvo",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Alvo"
+      }
+     },
+     {
+      "name": "z",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Z"
+      }
+     },
+     {
+      "name": "x",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "X"
+      }
+     },
+     {
+      "name": "y",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Y"
+      }
+     },
+     {
+      "name": "ext",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ext"
+      }
+     },
+     {
+      "name": "expressao",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 200
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Expressao"
+      }
+     },
+     {
+      "name": "bandas",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 32
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Bandas"
+      }
+     },
+     {
+      "name": "faixa",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 64
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Faixa"
+      }
+     },
+     {
+      "name": "colormap",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 40
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Colormap"
+      }
+     },
+     {
+      "name": "asset",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(visual|cientifico)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Asset"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 12,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "metodo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "override da seleção persistida: first|last|lowest|highest|mean|median|stdev (aceita aliases em português)",
+       "title": "Metodo"
+      },
+      "description": "override da seleção persistida: first|last|lowest|highest|mean|median|stdev (aceita aliases em português)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/mosaico/{alvo}/{z}/{x}/{y}": {
+   "get": {
+    "tags": [
+     "tiles"
+    ],
+    "summary": "ladrilho do mosaico (uuid de busca registrada — L1-07 — ou nome de coleção)",
+    "operationId": "tile_mosaico_svc__token__mosaico__alvo___z___x___y__get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "alvo",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Alvo"
       }
      },
      {
@@ -16763,14 +18086,38 @@
       "in": "query",
       "required": false,
       "schema": {
-       "type": "integer",
-       "maximum": 12,
-       "minimum": 1,
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 12,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
        "description": "máximo de cenas candidatas por ladrilho",
-       "default": 6,
        "title": "Limite"
       },
       "description": "máximo de cenas candidatas por ladrilho"
+     },
+     {
+      "name": "metodo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "override da seleção persistida: first|last|lowest|highest|mean|median|stdev (aceita aliases em português)",
+       "title": "Metodo"
+      },
+      "description": "override da seleção persistida: first|last|lowest|highest|mean|median|stdev (aceita aliases em português)"
      }
     ],
     "responses": {
@@ -16839,6 +18186,73 @@
      }
     },
     "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/cog/{item}/{asset}.tif": {
+   "get": {
+    "tags": [
+     "imagens"
+    ],
+    "summary": "Servir Cog",
+    "operationId": "servir_cog_svc__token__cog__item___asset__tif_get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "item",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item"
+      }
+     },
+     {
+      "name": "asset",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Asset"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       },
+       "image/tiff; application=geotiff; profile=cloud-optimized": {}
+      }
+     },
+     "206": {
+      "content": {
+       "image/tiff; application=geotiff; profile=cloud-optimized": {}
+      },
+      "description": "Partial Content"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
     "x-privilegio": "proprio"
    }
   },
@@ -17200,7 +18614,7 @@
      "imagens-esri"
     ],
     "summary": "ladrilho no padrão de caminho do ArcGIS (level/row/col == z/y/x)",
-    "description": "Mesmo ladrilho do item L1-02 (`rotas_tiles._servir`, sem reescrever nada) — só o caminho muda\npara o padrão que o Pro usa ao pedir ladrilho de um `ImageServer` (`level/row/col`, sempre PNG,\nsempre grade WebMercatorQuad). `renderingRule`/`bandIds` não são aceitos aqui pelo mesmo motivo do\nexportImage.",
+    "description": "Mesmo ladrilho do item L1-02 (`rotas_tiles._servir`, sem reescrever nada) — só o caminho muda\npara o padrão que o Pro usa ao pedir ladrilho de um `ImageServer` (`level/row/col`, sempre PNG,\nsempre grade WebMercatorQuad). `renderingRule` (item L1-02-f) é repassado para `_servir` como\n`predef=` na forma mínima `{\"rasterFunction\":\"<nome>\"}` (a MESMA validação de `export_image`, ver\n`_nome_da_rendering_rule`); `bandIds` continua fora (não é o mesmo mecanismo de `bandas=`).",
     "operationId": "tile_esri_svc__token__rest_services__item__ImageServer_tile__level___row___col__get",
     "parameters": [
      {
@@ -17294,7 +18708,7 @@
     "tags": [
      "wms"
     ],
-    "summary": "WMS 1.3.0 (GetCapabilities e GetMap)",
+    "summary": "WMS 1.3.0 (GetCapabilities, GetMap e GetLegendGraphic)",
     "operationId": "wms_kvp_svc__token__wms_get",
     "parameters": [
      {
@@ -17329,6 +18743,255 @@
     },
     "x-auth": "T",
     "x-privilegio": "proprio"
+   }
+  },
+  "/api/imagens/{item_id}/predefinicoes": {
+   "get": {
+    "tags": [
+     "imagens-predefinicoes"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_imagens__item_id__predefinicoes_get",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   },
+   "post": {
+    "tags": [
+     "imagens-predefinicoes"
+    ],
+    "summary": "Criar",
+    "operationId": "criar_api_imagens__item_id__predefinicoes_post",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PredefinicaoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "conteudo.publicar_camada"
+   }
+  },
+  "/api/imagens/{item_id}/predefinicoes/{nome}": {
+   "put": {
+    "tags": [
+     "imagens-predefinicoes"
+    ],
+    "summary": "Atualizar",
+    "operationId": "atualizar_api_imagens__item_id__predefinicoes__nome__put",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     },
+     {
+      "name": "nome",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Nome"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PredefinicaoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "conteudo.publicar_camada"
+   },
+   "delete": {
+    "tags": [
+     "imagens-predefinicoes"
+    ],
+    "summary": "Apagar",
+    "operationId": "apagar_api_imagens__item_id__predefinicoes__nome__delete",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     },
+     {
+      "name": "nome",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Nome"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "conteudo.publicar_camada"
+   }
+  },
+  "/api/imagens/{item_id}/predefinicoes/{nome}/tornar-padrao": {
+   "post": {
+    "tags": [
+     "imagens-predefinicoes"
+    ],
+    "summary": "Tornar Padrao",
+    "description": "Marca `nome` como a predefinição padrão do item — a que resolve quando ninguém passa `predef=`/\n`STYLES=`/`renderingRule` nenhum. Fábrica pode virar padrão (não precisa existir na tabela: só grava\no nome quando é CUSTOM; um padrão de fábrica é lido direto de `pred.FABRICA`, sem linha — ver\n`padrao_do_item`/`_predef_publicada` em rotas_tiles.py). Trocar o padrão NÃO apaga a predefinição\nanterior nem quebra uma URL que já a nomeia explicitamente (portão do item).",
+    "operationId": "tornar_padrao_api_imagens__item_id__predefinicoes__nome__tornar_padrao_post",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     },
+     {
+      "name": "nome",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Nome"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "conteudo.publicar_camada"
    }
   },
   "/api/multiescala/conjuntos": {
@@ -24063,6 +25726,77 @@
     "title": "CamadaEntrada",
     "description": "Proveniência DECLARADA de uma camada de entrada (A10): id do item/fonte, sha256 ou 'nao_registrado',\ncontagem ou null. A resolução automática (medir de verdade a camada hospedada) é do item de extração\n(L3-01-c); aqui a execução só CONGELA o que foi declarado no momento em que rodou."
    },
+   "CamadaExterna": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "titulo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Titulo"
+     },
+     "crs": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Crs"
+     },
+     "extensao": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Extensao"
+     },
+     "descoberta_em": {
+      "type": "string",
+      "title": "Descoberta Em"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "nome",
+     "descoberta_em"
+    ],
+    "title": "CamadaExterna"
+   },
+   "CamadasPagina": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/CamadaExterna"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "total",
+     "itens"
+    ],
+    "title": "CamadasPagina"
+   },
    "CategoriaNo": {
     "properties": {
      "id": {
@@ -25632,6 +27366,49 @@
      "srid"
     ],
     "title": "Crs"
+   },
+   "DescobrirResultado": {
+    "properties": {
+     "ok": {
+      "type": "boolean",
+      "title": "Ok"
+     },
+     "mensagem": {
+      "type": "string",
+      "title": "Mensagem"
+     },
+     "url_sondada": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Url Sondada"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/CamadaExterna"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "ok",
+     "mensagem",
+     "total",
+     "itens"
+    ],
+    "title": "DescobrirResultado"
    },
    "DiagramaEntrada": {
     "properties": {
@@ -30041,6 +31818,111 @@
     "type": "object",
     "title": "PontoTracado",
     "description": "Um ponto de partida ou barreira: por feição (`feicao_id` + `terminal`, obrigatório quando a feição tem\nmais de um terminal) OU por coordenada (`lon`/`lat`, com `tolerancia_m` própria ou a da rede)."
+   },
+   "PredefinicaoEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,58}$",
+      "title": "Nome"
+     },
+     "titulo": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Titulo"
+     },
+     "descricao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Descricao"
+     },
+     "bandas": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "integer"
+        },
+        "type": "array",
+        "maxItems": 4,
+        "minItems": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bandas"
+     },
+     "colormap": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 40
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Colormap"
+     },
+     "esticamento": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Esticamento"
+     },
+     "nodata_transparente": {
+      "type": "boolean",
+      "title": "Nodata Transparente",
+      "default": true
+     },
+     "opacidade": {
+      "type": "number",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Opacidade",
+      "default": 1.0
+     },
+     "resampling": {
+      "type": "string",
+      "title": "Resampling",
+      "default": "nearest"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "nome",
+     "titulo"
+    ],
+    "title": "PredefinicaoEntrada"
+   },
+   "PreencherPendentesEntrada": {
+    "properties": {
+     "limite": {
+      "type": "integer",
+      "maximum": 2000.0,
+      "minimum": 1.0,
+      "title": "Limite",
+      "default": 200
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "PreencherPendentesEntrada"
    },
    "Privilegio": {
     "properties": {

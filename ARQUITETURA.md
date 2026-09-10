@@ -1045,3 +1045,60 @@ pegadas do mosaico), `app/imagens/rotas_stac.py` (CRUD de `/stac/mosaicos`), mig
 `20260910T2330_mosaico.sql` e `20260910T2340_mosaico_tipo_item.sql`, testes
 `tests/api/imagens/test_mosaico.py` e `tests/api/imagens/apoio_mosaico.py` (semeadura de grade
 adjacente sintética).
+
+## 20. Proveniência verificável da imagem — Lastro (item L1-01-j-proveniencia-da-imagem-lastro)
+
+`app/imagens/proveniencia.py` concentra as três peças do Lastro aplicado à imagem: (1) montagem —
+`montar_cadeia_ingestao`/`preencher_propriedades_proveniencia`/`selar_manifesto`, chamadas por
+`ingestao._item_stac` no MESMO job que já converte (nenhum round-trip extra: o argv de cada
+`gdal_translate` já é conhecido ali, `cog.ProdutoCOG` ganhou o campo `comando` só para isto); (2)
+conferência — `conferir_item`, que resta CADA asset do balde em stream (`objetos.sha256_remoto`, novo,
+mesmo padrão de `parte_concluir`) e compara com `file:checksum`, ativo a ativo; (3) canonicalização —
+`canonicalizar`/`manifesto_sha256` (`json.dumps(sort_keys=True, separators=(",",":"),
+ensure_ascii=False)`, documentado na íntegra no docstring do módulo porque o hash só é reproduzível se
+gerar e conferir usarem a MESMA serialização).
+
+Achado que decidiu a forma do campo: `pgstac.create_item`/`update_item` DESCARTA chave de `properties`
+com valor `null` na gravação (STAC convencionalmente omite campo ausente em vez de `null`). Uma ficha
+selada com `"plat:cadeia": null` local e gravada como tal teria o manifesto calculado sobre um dict que
+o banco NUNCA devolve de volta igual — `conferir_item` acusaria divergência de manifesto em todo item
+sem cadeia, sempre, sem byte nenhum alterado. `preencher_propriedades_proveniencia(cadeia=None, ...)`
+por isso OMITE a chave (`novas.pop("plat:cadeia", None)`) em vez de gravar `null`; o lado de leitura
+(`properties.get("plat:cadeia")`) devolve `None` de qualquer jeito, então nenhum consumidor externo
+percebe a diferença — só a geração/conferência do manifesto precisava saber.
+
+Dois caminhos de preenchimento retroativo, ambos usando `preencher_leve`/o próprio `conferir_item` por
+baixo:
+- **leve** (`app/imagens/reexecucao.py::imagens_preencher_proveniencia`, job, e
+  `POST /api/imagens/proveniencia/preencher-pendentes`, rota síncrona de administração): só metadado —
+  `processing:software` vem do `plat:versoes` que a ingestão original JÁ media (não uma medição nova),
+  `plat:cadeia` fica ausente. `prov.itens_pendentes` busca só na coleção `<tenant_id>-imagens`
+  (`content -> 'properties' ? 'plat:cadeia_origem'` no jsonb do pgstac) — NUNCA "toda coleção do
+  inquilino": `pgstac.items` é particionado POR coleção, e esta trilha compartilhada tinha 236 coleções
+  (a maioria efêmera, de outras suítes de teste) e 16.713 itens pendentes fora de escopo; escopar para
+  só `imagens` levou a mesma varredura de 165 s para 2,8 s (MEDIDO, ver CHANGELOG).
+- **pesado** (`app/imagens/reexecucao.py::imagens_reexecutar`, job só de fila, nunca rota HTTP — GDAL
+  não roda dentro de uma requisição nesta casa): baixa o bruto já armazenado, reconverte com o `cog.py`
+  ATUAL, compara sha256 obtido × registrado. Bate → `plat:cadeia` fica com o argv MEDIDO de verdade
+  (`cadeia_origem=reexecucao_retroativa`); os assets/checksums originais NUNCA são sobrescritos, batam
+  ou não — a comparação mora só em `plat:reexecucao`, ao lado.
+
+`app/imagens/pgstac.py` ganhou `item_atualizar` (fino sobre `pgstac.update_item`, mesmas duas checagens
+de posse de `item_criar`: coleção do inquilino, item já existe).
+
+Rotas: `POST /api/imagens/<item>/conferir` (sessão/token `imagens:ler`, síncrona — conferir é leitura
+em stream, nunca GDAL) e `POST /api/imagens/proveniencia/preencher-pendentes` (`conteudo.publicar_camada`).
+`GET /api/imagens/<item>` ganhou o bloco `proveniencia` na resposta; `web/js/catalogo/tipos/raster.js`
+mostra a cadeia em texto simples na aba Visão geral com um botão "conferir".
+
+Fora deste item (nomeado): `plat raster reexecutar/verificar <item>` como comando de linha só (hoje:
+job de fila + rota HTTP cobrem o mesmo caso de uso); reexecução em lote (só um item por chamada); rodada
+de adversário independente separada (os dois achados de build/performance vieram do próprio teste de
+integração deste turno, não de um agente adversário à parte).
+
+Arquivos: `app/imagens/proveniencia.py` (novo), `app/imagens/reexecucao.py` (novo, 2 jobs), `app/imagens/
+cog.py` (`ProdutoCOG.comando`), `app/imagens/ingestao.py` (`_item_stac` monta e sela a proveniência),
+`app/imagens/pgstac.py` (`item_atualizar`), `app/objetos.py` (`sha256_remoto`), `app/imagens/
+rotas_imagens.py` (2 rotas + bloco `proveniencia` em `GET /api/imagens/<item>`), `app/jobs/tipos.py`
+(registro dos 2 jobs novos), migração `20260910T2345_imagens_proveniencia_evento_tipo.sql`, testes
+`tests/api/imagens/test_proveniencia.py` (20 casos).

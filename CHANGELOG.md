@@ -3,6 +3,63 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 9, setembro de 2026 (item L1-01-j-proveniencia-da-imagem-lastro: proveniência verificável da imagem)
+
+O "Lastro" da casa aplicado à imagem: o item raster passa a carregar, além do `file:checksum` que já
+existia, a extensão `processing` (`processing:software` — versões de GDAL/rio-cogeo/rasterio/`plat`
+MEDIDAS na hora da conversão, não uma constante — e `processing:lineage`, texto em português), um bloco
+`plat:cadeia` (um passo por perfil convertido, o argv EXATO de cada `gdal_translate`, sha256 de entrada e
+de saída) e `plat:manifesto_sha256` (sha256 do item STAC inteiro MENOS essa própria chave — canonicalização
+fixa em `app/imagens/proveniencia.py`: `json.dumps(sort_keys=True, separators=(",",":"),
+ensure_ascii=False)`). `app/imagens/cog.py` ganhou `ProdutoCOG.comando` (o argv que cada conversão rodou);
+`app/imagens/ingestao.py` monta a cadeia e sela o manifesto no MESMO job que já converte, sem round-trip
+extra.
+
+Conferência: `POST /api/imagens/<item>/conferir` (`app/imagens/proveniencia.conferir_item`) baixa CADA
+asset com checksum de volta do balde em stream (`objetos.sha256_remoto`, nunca o objeto inteiro em RAM),
+recalcula o sha256 e compara — divergência POR ATIVO, nunca um veredito único para o item inteiro; um byte
+trocado num ativo não esconde nem contamina o veredito dos outros. Preenchimento retroativo dos itens
+ingeridos antes deste item, dois caminhos: `POST /api/imagens/proveniencia/preencher-pendentes` (rota de
+administração, só metadado — `processing:software` do `plat:versoes` que a ingestão original JÁ media,
+`plat:cadeia` fica AUSENTE de propósito, nunca fabricado) e o job de fila `imagens.reexecutar` (pesado:
+baixa o bruto, reconverte com o `cog.py` ATUAL e compara o sha256 obtido com o registrado — a prova de
+determinismo do portão).
+
+Achado de build que quase quebrou o próprio manifesto: `pgstac.create_item`/`update_item` DESCARTA
+qualquer chave de `properties` com valor `null` na gravação — uma ficha selada com `"plat:cadeia": null`
+tinha o hash calculado sobre um dict que o banco nunca devolve de volta igual, e `conferir_item` acusava
+divergência de manifesto em TODO item sem cadeia, sempre, sem nenhum byte alterado. Corrigido: `cadeia=None`
+OMITE a chave em vez de gravar `null` (`preencher_propriedades_proveniencia`); achado pelo próprio teste
+de integração deste item (não pelo adversário — não houve rodada de adversário separada neste turno).
+Segundo achado, de performance: a 1ª varredura de `preencher-pendentes` sem filtro levou 165 s escaneando
+217 itens em 236 coleções (`pgstac.items` é particionado POR coleção, e esta trilha compartilhada acumulou
+centenas de coleções efêmeras de outras suítes de teste — 16.713 itens pendentes fora do escopo real);
+escopado para só a coleção `<tenant_id>-imagens` (`prov.itens_pendentes`), a mesma varredura caiu para
+2,8 s.
+
+Prova na instância viva (127.0.0.1:8184, restart de API e worker): os 2 itens raster reais do demo
+(Sentinel-2B Guarulhos, Ortofoto Mogi das Cruzes — o 3º item listado antes era um duplicado já apagado)
+preenchidos e conferidos, **0 divergências em 2 itens / 8 ativos** (a demo não tem 10 itens raster reais;
+número relatado é o real, não inventado). `imagens.reexecutar` rodado de verdade sobre a Ortofoto Mogi
+pela fila (job `0ba788c2…`, 10,5 s): **determinismo PROVADO** — sha256 do COG científico e do visual
+reconvertidos bateram exatamente com os já registrados, mesmo argv (`NUM_THREADS=ALL_CPUS` incluído).
+8 itens de teste (fixtures deste turno, sem dado real) apagados da coleção `1-imagens` ao final.
+
+`tests/api/imagens/test_proveniencia.py` (20 casos, sem depender de GDAL/upload real — a montagem do
+item passa pela MESMA `ingestao._item_stac` que `imagens.ingestar` chama, com objetos reais no balde):
+unidades de canonicalização/manifesto/cadeia; item novo nasce com os campos; conferência acusa divergência
+quando o adversário edita 1 byte do objeto (refutação literal do item) e os OUTROS ativos continuam `ok`;
+item de outro inquilino invisível (404) no painel e na conferência; preenchimento leve idempotente; rota
+de administração preenche item retroativo e a conferência bate depois. `venv/bin/ruff check app` limpo
+nos arquivos deste item (7 erros pré-existentes em `app/jobs/tipos_prova.py`, não tocado, não são deste
+turno).
+
+Fora deste turno, nomeado: `plat raster reexecutar/verificar <item>` como comando de linha só (hoje: job
+de fila + rota HTTP, mesmo caso de uso); reexecução em lote (hoje: um item por chamada de
+`imagens.reexecutar`; só a varredura SEM reconversão é em lote); nenhuma rodada de adversário
+independente separada (achados de build/perf vieram do próprio teste de integração — P8 do portão fica
+para o gerente do próximo turno confirmar com um agente adversário à parte).
+
 ## turno 8, setembro de 2026 (item L1-07-mosaico-por-colecao-e-pegadas: mosaico por busca registrada e pegadas)
 
 Um mosaico virou uma busca STAC registrada, não mais um recorte ad-hoc: `POST /svc/<tok>/stac/mosaicos`
