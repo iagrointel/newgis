@@ -572,3 +572,14 @@ REDE_REGRA_MAX = 1_000          # regras ativas por (inquilino, perfil) numa rod
 REDE_REGRAS_OBJETOS_MAX = 50_000   # objetos de rede avaliados por rodada de cálculo
 REDE_REGRAS_ITENS_MAX = 10_000  # itens de uma validação em lote (acima disso: truncado=true)
 REDE_REGRAS_ERROS_MAX = 100     # erros de avaliação guardados no resultado de uma rodada (o total é contado)
+# --- consumidores e endereços da rede (L4-20-consumidores-e-enderecos; migração
+# 20260908T1710_consumidores_enderecos.sql): cruzamento endereço do censo × rede, consumidores a
+# jusante e regra de agregação de consumo. REDE_AGREGACAO_MIN_UCS é a regra do item: consumo só
+# aparece na API quando a agregação cobre pelo menos 5 unidades consumidoras; por unidade, nunca.
+REDE_ENDERECOS_MAX = 500_000        # teto de endereços por geração (proteção de RAM/tempo da consulta)
+REDE_RAIO_REDE_MAX_M = 2_000.0      # raio máximo de busca de rede a partir do endereço
+REDE_RAIO_PADRAO_M = 700.0          # portão do item: endereço com rede a até 700 m
+REDE_RAIO_BT_PADRAO_M = 135.0       # presença de baixa tensão (calibração na base da cooperativa de teste)
+REDE_JUSANTE_TRECHOS_MAX = 200_000  # teto de trechos por cálculo de jusante (grafo em memória)
+REDE_JUSANTE_NO_MAX = 200_000       # teto de nós do grafo
+REDE_AGREGACAO_MIN_UCS = 5          # regra do adversário: agregação mínima exibida quando há consumo

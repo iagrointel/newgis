@@ -357,4 +357,7 @@ ROTAS_SEM_EVENTO: dict[tuple[str, str], str] = {
     ("PUT", "/api/uploads/{id}/partes/{n}"):
         "uma parte de um envio retomável: o envio inteiro já é narrado por uploads/iniciar, uploads/concluir e "
         "uploads/abortar; um evento por parte encheria a auditoria de ruído (um arquivo de 1 GiB são 128 partes)",
+    # ---- consumidores e endereços da rede (L4-20): as duas rotas de escrita geram evento de domínio
+    ("POST", "/api/rede/consumidores/enderecos-sem-rede"): ["rede/enderecos_sem_rede"],
+    ("POST", "/api/rede/consumidores/jusante/calcular"): ["rede/jusante_calcular"],
 }

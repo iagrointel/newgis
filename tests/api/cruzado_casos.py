@@ -909,6 +909,28 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"ponto": [-46.5330, -23.4628], "minutos": 10, "perfil": "carro"},
         proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
     ),
+    # ---- L4-20 consumidores e endereços da rede: dado do próprio inquilino (RLS), nunca de B; a
+    # geração usa raios mínimos (1 m) para a varredura não recarregar a camada inteira do inquilino A
+    ("POST", "/api/rede/consumidores/enderecos-sem-rede"): Caso(
+        lambda p: "/api/rede/consumidores/enderecos-sem-rede",
+        lambda p: {"raio_rede_m": 1.0, "raio_bt_m": 1.0},
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("GET", "/api/rede/consumidores/enderecos-sem-rede"): Caso(
+        lambda p: "/api/rede/consumidores/enderecos-sem-rede?limite=5",
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("GET", "/api/rede/consumidores/uc/{id}"): Caso(
+        lambda p: f"/api/rede/consumidores/uc/{UUID_NULO}",
+    ),
+    ("GET", "/api/rede/consumidores/trecho/{id}"): Caso(
+        lambda p: f"/api/rede/consumidores/trecho/{UUID_NULO}",
+    ),
+    ("POST", "/api/rede/consumidores/jusante/calcular"): Caso(
+        lambda p: "/api/rede/consumidores/jusante/calcular",
+        lambda p: {},
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
     # ---- LDAP/Active Directory (L0-08-d): login é público (mesmo padrão de /api/login); a configuração do
     # provedor age só sobre o inquilino do chamador (proprio), nunca sobre B
     ("POST", "/api/login/ldap"): Caso(

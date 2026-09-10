@@ -947,6 +947,23 @@ rule do ArcGIS Pro escrita com fontes datadas (`docs/PARIDADE_REGRAS_ATRIBUTO.md
 de constraint é invertida de propósito (recusa no lado verdadeiro deixa o nulo do lado seguro com lógica de
 três valores); sem `$datastore` e sem ganchos de edição, lacunas declaradas. Decisões em
 `docs/adr/20260908T1945-regras-atributo-de-rede.md`.
+## turno plataforma-48, setembro de 2026 (item L4-20-consumidores-e-enderecos: consumidores como ativo terminal e endereços sem rede, 10.914 contra 10.911 da casa)
+
+Seis tabelas `plat.rede_*` (trechos de média e baixa tensão, transformadores, unidades consumidoras,
+consumo anual, endereços do censo e a camada `rede_endereco_sem_rede`) com RLS por inquilino e
+nenhum campo identificável — a origem é um recorte de distribuidora que só existe no ambiente da
+trilha (`PLAT_REDE_ESQUEMA_COOP`), nunca no git. Cinco rotas em `/api/rede/consumidores`: gerar e
+listar os endereços sem rede, ficha da unidade e do trecho, e o cálculo de consumidores a jusante
+(árvore de largura por circuito; trecho em malha fica com NULL e é reportado). Consumo só em
+agregado por transformador ou circuito, com mínimo de 5 unidades — abaixo disso a resposta traz
+`motivo`. A geração da camada sobre 182.750 endereços levou o POST acima do teto da suíte (600 s)
+duas vezes antes de o perfil apontar o plano ruim: sob RLS o `EXISTS` de baixa tensão escolhia o
+índice btree e varria ~13 mil linhas por endereço (118 s só ali). A forma final é KNN puro nos dois
+lados (`LATERAL`, `ORDER BY geometria_calc <-> ... LIMIT 1`, raio como filtro depois), que só o
+índice espacial serve. Medido (`tests/medidas/L4-20-consumidores-e-enderecos.json`): 10.914
+endereços contra 10.911 da camada de referência da casa (0,03 %), geração em 6,4 s, jusante sobre
+44.268 trechos de média em 3,6 s, unidade+API verdes. Detalhes e o histórico do plano ruim em
+`docs/adr/20260908T1900-consumidores-e-enderecos-sem-rede.md`.
 
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 

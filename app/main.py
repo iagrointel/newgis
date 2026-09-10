@@ -88,6 +88,7 @@ from app.paineis.rotas import router as rotas_paineis
 from app.mapa.rotas import router as rotas_mapa
 from app.mapas.rotas import router as rotas_mapas
 from app.multiescala.rotas import router as rotas_multiescala
+from app.rede.consumidores_rotas import router as rotas_rede_consumidores
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rede_utilidades.rotas_config_tracado import router as rotas_rede_config_tracado
@@ -275,6 +276,9 @@ ROUTERS = [
     # --- fluxo de potência do alimentador (L4-07): /api/rede/{rede_id}/subrede/{nome}/fluxo
     # (POST analisa no OpenDSS com os parâmetros declarados, GET a tabela) e .../fluxo/camada
     rotas_rede_fluxo,
+    # --- consumidores e endereços da rede (L4-20): camada de endereços sem rede próxima, ficha de
+    # unidade consumidora (sem campo identificável) e consumidores a jusante por trecho de média tensão
+    rotas_rede_consumidores,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,
