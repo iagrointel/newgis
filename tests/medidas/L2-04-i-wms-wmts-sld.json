@@ -1,0 +1,87 @@
+{
+ "item": "L2-04-i-wms-wmts-sld",
+ "medidas": {
+  "getmap_3857_cobertura_diferente_pct": {
+   "valor": 0.0,
+   "unidade": "%",
+   "comando": "pixels com cobertura diferente entre GetMap 3857 e o raster de referência montado das feições do FeatureServer (320x320, 60 polígonos)"
+  },
+  "getmap_3857_cor_interior_diferente_pct": {
+   "valor": 1.29,
+   "unidade": "%",
+   "comando": "pixels do INTERIOR (erosão 5x5) com cor diferente da referência; a borda fica de fora porque o servidor desenha contorno do estilo com antisserrilhado"
+  },
+  "getmap_1024x768_quente_p95_ms": {
+   "valor": 882.1,
+   "unidade": "ms",
+   "comando": "12 GetMap 1024x768 seguidos sobre camada de 100 mil pontos (TestClient em processo), caixa deslocada a cada pedido; p95"
+  },
+  "getmap_1024x768_quente_mediana_ms": {
+   "valor": 793.6,
+   "unidade": "ms",
+   "comando": "mesma medida, mediana"
+  },
+  "getmap_1024x768_frio_ms": {
+   "valor": 1118.0,
+   "unidade": "ms",
+   "comando": "primeiro GetMap da camada no processo (sem plano de consulta nem estilo em cache)"
+  },
+  "carga_1min": {
+   "valor": 9.86,
+   "unidade": "load",
+   "comando": "os.getloadavg()[0] no instante da medida"
+  },
+  "semeadura_100k_s": {
+   "valor": 8.9,
+   "unidade": "s",
+   "comando": "INSERT ... generate_series(1, 100000) + ANALYZE na trilha"
+  },
+  "wmts_prerender_z0_z14_s": {
+   "valor": 40.5,
+   "unidade": "s",
+   "comando": "job wmts.publicar em camada de 100000 pontos, z0-z14 sobre a extensão da camada"
+  },
+  "wmts_prerender_tiles": {
+   "valor": 836,
+   "unidade": "tiles",
+   "comando": "tiles com feição gravados no PMTiles"
+  },
+  "wmts_prerender_bytes": {
+   "valor": 3022766,
+   "unidade": "bytes",
+   "comando": "tamanho do arquivo PMTiles no bucket"
+  },
+  "wmts_prerender_tiles_vazios": {
+   "valor": 0,
+   "unidade": "tiles",
+   "comando": "tiles sem nenhuma feição (não entram no arquivo)"
+  },
+  "wmts_tile_prerenderizado_p95_ms": {
+   "valor": 121.7,
+   "unidade": "ms",
+   "comando": "GetTile z12 servido do PMTiles por Range (10 pedidos, TestClient em processo)"
+  },
+  "cliente_gdal_getcapabilities_wms_ms": {
+   "valor": 92.6,
+   "unidade": "ms",
+   "comando": "gdalinfo WMS:<GetCapabilities> lendo as capacidades do serviço vivo desta trilha"
+  },
+  "cliente_gdal_getmap_ms": {
+   "valor": 128.5,
+   "unidade": "ms",
+   "comando": "gdal_translate baixando 256x256 do GetMap por um XML GDAL_WMS (driver WMS do GDAL)"
+  },
+  "cliente_qgis": {
+   "valor": 0,
+   "unidade": "presente",
+   "comando": "which qgis/qgis_process/qgis-bin: nenhum encontrado nesta máquina; a cláusula do portão foi cumprida com os drivers WMS/WMTS do GDAL (mesma pilha OGC), e o QGIS fica pendente"
+  },
+  "cliente_gdal_wmts_tile_ms": {
+   "valor": 82.9,
+   "unidade": "ms",
+   "comando": "gdal_translate baixando ladrilhos do endereço RESTful do WMTS (driver de ladrilho do GDAL)"
+  }
+ },
+ "gerado_em": "2026-09-08T12:33:34Z",
+ "git_sha": "4d885ef22774"
+}

@@ -274,6 +274,21 @@ carregada saíram do código para `PLAT_REDE_REFERENCIA_GDB`, `PLAT_REDE_REFEREN
 variáveis os testes de medida pulam com a razão escrita, em vez de estourar. Os textos passam a dizer
 "distribuidora de referência" e "cooperativa de teste", e o nome do arquivo saiu da medida gravada — só o
 sha256 identifica o pacote.
+## turno 8, setembro de 2026 (item L2-04-i-wms-wmts-sld: WMS 1.3.0 e WMTS 1.0.0 por token)
+
+A camada hospedada passa a ser servida como IMAGEM para qualquer cliente OGC, além de feição: `/wms/{item}`
+com `GetCapabilities`, `GetMap` (png/png8/jpeg, transparência, estilos, `SLD_BODY`, 9 CRS e a ordem de eixo do
+1.3.0), `GetFeatureInfo` (json/html/texto/GML) e `GetLegendGraphic`; `/wmts/{item}` em KVP e RESTful na grade
+`GoogleMapsCompatible`, a mesma dos tiles do visualizador. A imagem sai de um rasterizador próprio (Pillow)
+sobre as feições da caixa, com o estilo do L2-02-a — a cor do WMS é a mesma do mapa da casa. O job
+`wmts.publicar` pré-renderiza a camada num PMTiles raster no bucket do inquilino, e o `GetTile` passa a servir
+por leitura de faixa. Os dois `GetCapabilities` validam contra a XSD oficial do OGC, em cache local
+(`docs/xsd/baixar_ogc_servicos.py`, rodado pelo `install.sh`). Medido em `tests/medidas/L2-04-i-wms-wmts-sld.json`:
+GetMap 1024x768 quente p95 882 ms e frio 1.118 ms sobre 100 mil pontos; pré-renderização z0-z14 de 100 mil
+feições em 40,5 s (836 tiles, 3,0 MB); GetMap em 3857 com 0 % de cobertura diferente do raster de referência.
+Rajada de imagens grandes é enfileirada por orçamento de megapixels, com 503 `ServerBusy` no excedente.
+Paridade: `docs/PARIDADE.md`; ADR `20260908T1900-wms-wmts`.
+
 ## turno 4, setembro de 2026 (item L2-04-d-featureserver-edicao-anexos: escrita pelo protocolo Esri sobre a porta única)
 
 `applyEdits` (na camada e no serviço), `addFeatures`/`updateFeatures`/`deleteFeatures`, `calculate`, os seis
@@ -3346,6 +3361,40 @@ ADR 0018 (número provisório — vários worktrees paralelos reivindicam 0018 n
 renumerar no merge). Documentação: `docs/OBSERVABILIDADE.md` (novo), `MANUAL.md` seção 22,
 `ARQUITETURA.md` corrigido (as linhas de `plat-martin` estavam desatualizadas — diziam "não existe"
 desde antes do item L2-01-b ter mesclado o serviço de verdade).
+## turno 4, setembro de 2026 (item L2-12-a-motor-render-servidor: motor de render no servidor, PNG/PDF por chromium headless)
+
+Pool de páginas do chromium do playwright (`app/render/motor.py::Motor`) mantidas quentes, uma por processo
+(`google-chrome` do sistema nunca é usado — regra da casa, ele quebra nesta máquina). Fila com teto
+(`PLAT_RENDER_FILA_MAX`, 429 acima do limite) e um teto de tempo único para fila + execução
+(`PLAT_RENDER_TIMEOUT_S`). Isolamento de rede por interceptação de rota (só `127.0.0.1`/`::1`/`localhost` e o
+host de `PLAT_URL_PUBLICA` em produção passam; o resto é abortado antes de sair da máquina). Token interno
+HMAC de curta duração (`app/render/token.py`, TTL cortado a 60 s mesmo se pedirem mais) mais bloqueio por
+host (`request.client.host` tem de ser loopback) para uma futura chamada da página headless a uma rota
+interna. `POST /api/render/mapa` (extensão/zoom/tamanho/DPI/formato) devolve PNG ou PDF; a página headless
+(`web/render_mapa.html` + `web/js/mapa/render_entrada.js`) importa o MESMO `web/js/mapa/estilo.js` do
+visualizador interativo — WYSIWYG de verdade, não uma cópia. ADR 0023.
+
+Achado real rodando a medida de p95 sob carga (não hipotético): um `goto` que estoura o timeout deixava a
+MESMA página presa, e as navegações seguintes nela falhavam também — exatamente o cenário da refutação do
+item ("mata o processo do chromium no meio e confere recuperação do pool"). Consertado ANTES do adversário:
+`Motor._pagina_de_reposicao` fecha a página envenenada e abre uma nova no lugar; provado isolado
+(`test_pool_se_recupera_de_pagina_que_travou_no_meio`, contra um socket que aceita e nunca responde) e
+também exercido pela medida de p95 (12 falhas em 33 tentativas de "quente" e o motor nunca ficou preso).
+
+Medido (`tests/medidas/L2-12-a-motor-render-servidor.json`, `test_frio_e_quente_p95_da_demo_1024x768`):
+frio p95 **1.347,8 ms** (2/2 amostras, teto do portão 3.000 ms — **passa**); quente p95 **1.400,2 ms** sobre
+21 amostras que terminaram de 33 tentadas (teto do portão 1.000 ms — **não passa**), medido com a máquina
+sob `uptime` ~20-23 de carga e `free` com 0 GB livres/swap cheio (dezenas de outras trilhas do laço rodando
+ao mesmo tempo; `laco/vivo/leases` no momento confirma). Não repetido em janela mais calma por orçamento de
+turno — fica nomeado para o adversário/próximo turno decidir se remede antes de fechar.
+`tests/api/test_render.py` (7/7, servidor uvicorn real + chromium real, login com 2FA de verdade — achado:
+a conta semeada de `plataforma` exige 2FA, sem isso o teste via 401 sem entender por quê) e
+`tests/unit/test_motor_render.py` (7/8, só o de p95 falha pelo motivo acima) cobrem: PNG do tamanho pedido,
+PDF gerado, PNG 300 DPI de A4 (2.480×3.508), fila recusando acima do limite, 20 pedidos simultâneos com
+pool respeitado e todos < 30 s, página headless sem alcançar host externo (`fetch` para host de fora
+resolve com falha de rede, não trava), token interno com TTL ≤ 60 s e bloqueio por host, e recuperação de
+página travada.
+
 ## turno 4, setembro de 2026 (item L2-12-a-motor-render-servidor: motor de render no servidor, PNG/PDF por chromium headless)
 
 Pool de páginas do chromium do playwright (`app/render/motor.py::Motor`) mantidas quentes, uma por processo

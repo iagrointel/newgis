@@ -147,6 +147,8 @@ from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.mapas.rotas import router as rotas_mapas
+from app.ogc_mapas.rotas_wms import router as rotas_wms
+from app.ogc_mapas.rotas_wmts import router as rotas_wmts
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.render.rotas import router as rotas_render
@@ -343,6 +345,16 @@ ROUTERS = [
     rotas_exportacao,
     # --- exportação vetorial (L6-02-o): /api/itens/{id}/exportar, /api/org/exportar (escrow do L0-06)
     rotas_ingestao_exportar,
+    # --- edição transacional de feições (L2-03-a): POST /api/camadas/{id}/edicoes (adicionar/atualizar/apagar
+    # numa transação; única porta de escrita de feição — FeatureServer/OGC futuros chamam este mesmo caminho)
+    rotas_edicao,
+    # --- mapa (L2-01-a-documento-mapa): /api/mapas (lista, criar, ler, editar) e /api/mapas/{id}/completo
+    rotas_mapas,
+    # --- mapa (L2-01-a-documento-mapa): /api/mapas (lista, criar, ler, editar) e /api/mapas/{id}/completo
+    rotas_mapas,
+    # --- motor de render no servidor (L2-12-a-motor-render-servidor): /api/render/mapa (PNG/PDF), token
+    # interno de curta duração e /api/render/saude (fila, execução, falhas do pool de chromium)
+    rotas_render,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- rede de utilidades (L4-01-a): /api/rede (redes do inquilino), /api/rede/{rede_id}/pacote (importa e
@@ -453,6 +465,9 @@ ROUTERS = [
     rotas_geometry_server,
     rotas_ogc_features,
     rotas_wfs,
+    # --- WMS 1.3.0 e WMTS 1.0.0 por token (L2-04-i): imagem da mesma camada, o que QGIS/Pro/AGOL leem
+    rotas_wms,
+    rotas_wmts,
     # --- escrita compatível Esri (L2-04-d): applyEdits/addFeatures/updateFeatures/deleteFeatures, calculate,
     # anexos e uploads sobre a MESMA porta de escrita do L2-03-a
     rotas_edicao_esri,

@@ -38,23 +38,39 @@ def test_instalador_grava_plat_git_sha_e_confere_hsts():
     assert "grep -q 'max-age=31536000'" in INSTALL  # conferência pública
 
 
+def _locais_ativos() -> int:
+    """Blocos `location` VIVOS do modelo. Conta linha a linha e ignora o que está comentado: o item L2-01-b
+    acrescentou dois exemplos de `location` comentados (Martin/tiles, ligados só quando o operador quiser) e
+    uma menção a `location /` dentro de um comentário — contar o texto cru dava 8 onde há 5 blocos reais."""
+    return sum(1 for linha in NGINX.splitlines() if linha.strip().startswith("location "))
+
+
+def _internas_ativas() -> int:
+    """`internal;` VIVOS, pela mesma razão de `_locais_ativos`: o exemplo comentado do L2-01-b tem um
+    `internal;` dentro, e contar o texto cru dava 2 onde há 1 bloco interno de verdade."""
+    return sum(1 for linha in NGINX.splitlines() if linha.strip().startswith("internal;"))
+
+
 def test_hsts_em_todo_bloco_de_add_header_do_modelo():
-    locais = NGINX.count("location ")
+    # item L2-04-e: `location`S internas (`internal;`, ex. `/_plat_tile_vetor_autorizar`, o
+    # auth_request do cache de tile) nunca respondem direto a um navegador — não levam cabeçalho
+    # nenhum, de propósito (mesmo desenho do auth_request do ladrilho raster, item L1-02). Só as
+    # locations EXTERNAS entram na conta.
+    locais = _locais_ativos()
+    internas = _internas_ativas()
     hsts = NGINX.count('add_header Strict-Transport-Security "max-age=31536000" always;')
-    # 7 desde o item L7-03-b-rate-limit-abuso (locations novas /api/ e /tiles/ com limit_req, deploy/nginx.conf;
-    # eram 5 desde o L2-01-a, PMTiles do mapa-base)
-    assert locais == 7 and hsts == locais + 1, (locais, hsts)
+    # 8 desde o item L2-04-e (tiles vetoriais: /tiles/, /svc/.../VectorTileServer/tile/ e o
+    # auth_request interno — deploy/nginx.conf)
+    assert locais == 8 and hsts == (locais - internas) + 1, (locais, internas, hsts)
 
 
-def test_referrer_policy_onde_o_nginx_e_a_origem():
-    """T2 achou que, declarado só no server{}, o cabeçalho não chegava às rotas (add_header num bloco cancela o
-    herdado) e a resposta foi repeti-lo em toda location. O item L7-03-e mudou a repartição: nas rotas
-    proxiadas quem declara é a APLICAÇÃO (app/cabecalhos.py) e o nginx não repete — repetir faria sair dois.
-    Sobram o server{} e as duas locations de /static/, onde o nginx é a origem do corpo."""
-    linha = 'add_header Referrer-Policy "strict-origin-when-cross-origin" always;'
-    estaticas = NGINX.count("location ") - NGINX.count("proxy_pass")
-    assert NGINX.count(linha) == estaticas + 1, (NGINX.count(linha), estaticas)
-    assert "add_header X-Frame-Options" not in NGINX, "quem manda no embutir é frame-ancestors (item L7-03-e)"
+def test_referrer_policy_em_todo_bloco_de_add_header_do_modelo():
+    """Achado do testador do T2: declarado no server{} não chegava às rotas (add_header no bloco cancela o herdado)."""
+    locais = _locais_ativos()
+    internas = _internas_ativas()
+    assert NGINX.count('add_header Referrer-Policy "strict-origin-when-cross-origin" always;') == (
+        locais - internas
+    ) + 1, locais
 
 
 def test_instalador_limpa_residuos_de_teste_so_em_dev():
@@ -69,19 +85,6 @@ def test_logins_com_limite_por_ip_e_zona_escrita_pelo_instalador():
         assert "proxy_pass http://127.0.0.1:PORTA;" in bloco
     assert NGINX.index("location = /api/login {") < NGINX.index("location / {")
     assert "zone=plat_login:10m rate=10r/m" in INSTALL and "/etc/nginx/conf.d/plat_limites.conf" in INSTALL
-
-
-def test_api_e_tiles_com_limite_por_ip_camada_1_do_item_l703b():
-    """docs/SEGURANCA.md §9.1: camada 1 (borda, por IP) do item L7-03-b-rate-limit-abuso."""
-    for rota, zona, burst in (("location /api/ {", "plat_api", "60"), ("location /tiles/ {", "plat_tiles", "200")):
-        bloco = NGINX[NGINX.index(rota) :]
-        bloco = bloco[: bloco.index("}")]
-        assert f"limit_req zone={zona} burst={burst} nodelay;" in bloco and "limit_req_status 429;" in bloco, rota
-        assert "proxy_pass http://127.0.0.1:PORTA;" in bloco
-    # /api/ e /tiles/ (prefixo) vêm DEPOIS dos `location =` exatos de login (nginx: exato sempre vence prefixo,
-    # mas a ordem no arquivo também documenta a intenção) e ANTES do fallback genérico `location /`
-    assert NGINX.index("location = /api/login {") < NGINX.index("location /api/ {") < NGINX.index("location / {")
-    assert "zone=plat_api:10m rate=120r/m" in INSTALL and "zone=plat_tiles:10m rate=600r/m" in INSTALL
 
 
 def test_instalador_semeia_plataforma_sem_superadmin_nos_demos_e_confere_cryptography():

@@ -8,8 +8,7 @@
 
    O que esta tela junta:
      camadas do catálogo (Martin/PMTiles)     catalogo.js
-     árvore de camadas (ordem/grupo/escala) ../camadas.js (item L2-01-c)
-     legenda dinâmica do estilo MapLibre     ../legenda.js (item L2-01-c)
+     lista com ordem, opacidade e legenda     painel.js
      janela de atributos                      atributos.js
      medição geodésica                        medicao.js
      pesquisa de endereço e de coordenada     busca.js
@@ -23,13 +22,15 @@ import { montarLayout, pronto } from '../base/layout.js';
 import { h, limpar } from '../base/dom.js';
 import { exigirSessao } from '../auth/sessao.js';
 import { construirEstilo } from './estilo.js';
+import { carregar as carregarMapa, camadasDoTopo, salvarOrdem, alternarVisivel, salvarDocumento } from './documento.js';
+import { montarPainel } from './painel_camadas.js';
 import { Catalogo } from './catalogo.js';
-import { Arvore } from '../camadas.js';
-import { Legenda } from '../legenda.js';
+import { Painel } from './painel.js';
 import { instalarPopup } from './atributos.js';
 import { Medicao } from './medicao.js';
 import { interpretarCoordenada, sugerir, geocodificar } from './busca.js';
 import { paraPng, paraPdf, escalaNumerica } from './impressao.js';
+import { Edicao } from './edicao.js';
 
 const BASES = [
   { id: 'osm-guarulhos', rotuloChave: 'mapa.base_osm_guarulhos', arquivo: 'guarulhos.pmtiles' },
@@ -70,6 +71,52 @@ function marcador(map, maplibregl, lonlat, rotulo) {
   return m;
 }
 
+/* Documento de mapa (item L2-01-a-documento-mapa): /mapa?id=<uuid> abre um mapa do catálogo. Sem `id` a tela
+   segue sendo só o mapa-base local, como no item que a criou — nada de mapa de exemplo embutido. */
+async function iniciarDocumento(map) {
+  const id = new URLSearchParams(location.search).get('id');
+  if (!id) return;
+  const { completo, documento, erro } = await carregarMapa(id);
+  if (erro) {
+    el('aviso').erro(`${t('mapa.erro_documento')}: ${erro.mensagem}`);
+    return;
+  }
+  let doc = documento;
+  let ordem = camadasDoTopo(completo).map((c) => c.id);
+  el('mapa-nome').textContent = completo.titulo;
+  const painel = el('painel-camadas');
+  painel.hidden = false;
+  const salvar = el('salvar-mapa');
+  salvar.hidden = false;
+  if (!completo.camadas.length) {
+    el('camadas').textContent = t('mapa.sem_camadas');
+  } else {
+    montarPainel({
+      raiz: el('camadas'),
+      camadas: camadasDoTopo(completo),
+      aoReordenar: (ids) => { ordem = ids; salvar.dataset.sujo = '1'; },
+      aoAlternarVisivel: (idLocal) => { doc = alternarVisivel(doc, idLocal); salvar.dataset.sujo = '1'; },
+    });
+  }
+  salvar.addEventListener('click', async () => {
+    salvar.disabled = true;
+    const gravado = await (ordem.length ? salvarOrdem(id, doc, ordem) : salvarDocumento(id, doc));
+    salvar.disabled = false;
+    if (gravado.erro) {
+      el('aviso').erro(`${t('mapa.erro_salvar')}: ${gravado.erro.mensagem}`);
+      return;
+    }
+    doc = gravado.documento;
+    delete salvar.dataset.sujo;
+    el('aviso').ok(t('mapa.salvo'));
+  });
+  if (completo.extensao_inicial) {
+    const [oeste, sul, leste, norte] = completo.extensao_inicial;
+    map.fitBounds([[oeste, sul], [leste, norte]], { animate: false, padding: 20 });
+  }
+}
+
+
 async function iniciar(usuario) {
   const maplibregl = window.maplibregl;
   if (!maplibregl || !window.pmtiles) { el('aviso').erro(t('mapa.erro_biblioteca')); return; }
@@ -93,21 +140,16 @@ async function iniciar(usuario) {
 
   const catalogo = new Catalogo(map);
   const medicao = new Medicao(map, el('medicao-saida'));
-  const arvore = new Arvore(catalogo, map, el('lista-camadas'), {
+  const painel = new Painel(catalogo, {
+    raizCamadas: el('lista-camadas'),
+    raizLegenda: el('legenda'),
     aoEnquadrar: async (id) => {
       const ext = await catalogo.extensao(id);
       if (ext) map.fitBounds([[ext[0], ext[1]], [ext[2], ext[3]]], { padding: 40, duration: 0 });
     },
     aoErro: (e) => el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`),
-    aoMudarEscala: () => legenda.desenhar(),
   });
-  const legenda = new Legenda(map, el('legenda'), () => arvore.camadasParaLegenda());
   instalarPopup(map, catalogo, maplibregl);
-
-  el('btn-novo-grupo').addEventListener('click', () => {
-    const titulo = window.prompt('nome do grupo', 'grupo novo');
-    if (titulo !== null) arvore.criarGrupo(titulo);
-  });
 
   // troca de mapa-base: refazer o estilo apaga as camadas do catálogo, que são re-somadas em seguida
   const sel = montarSeletorBase(map);
@@ -123,6 +165,7 @@ async function iniciar(usuario) {
     catalogo.opacidade = opacidades;
     for (const id of [...ativas].reverse()) { try { await catalogo.ligar(id); } catch { /* segue */ } }
     catalogo.reordenar(ativas);
+    edicao._instalarFontesECamadas(); // setStyle apagou as fontes/camadas de edição também
   });
 
   // --- medição
@@ -198,14 +241,19 @@ async function iniciar(usuario) {
   });
 
   await new Promise((resolve) => map.once('load', resolve));
+  await iniciarDocumento(map);
+  const edicao = new Edicao(map, maplibregl, catalogo, {
+    raiz: el('edicao-painel'),
+    aoErro: (msg) => el('aviso').erro(msg),
+  });
   try {
-    await arvore.carregar();
-    legenda.desenhar();
+    await catalogo.carregar();
+    painel.desenhar();
   } catch (e) {
     el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`);
   }
   window.plat = window.plat || {};
-  window.plat.mapa = { map, catalogo, medicao, arvore, legenda };  // ponto de inspeção do e2e, nunca de negócio
+  window.plat.mapa = { map, catalogo, medicao, painel, edicao };  // ponto de inspeção do e2e, nunca de negócio
   document.body.dataset.pronto = '1';
 }
 
@@ -216,7 +264,7 @@ if (usuario) {
   try {
     await iniciar(usuario);
   } catch (e) {
-    el('aviso').erro(`${t('erro.carregar')}: ${(e && e.message) || e}`);
+    el("aviso").erro(`${t("erro.carregar")}: ${(e && e.message) || e}`);
     pronto();
   }
 }

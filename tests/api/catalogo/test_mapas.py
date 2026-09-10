@@ -173,7 +173,17 @@ def test_apagar_estilo_usado_por_mapa_da_409(sessao_a, itens_a, camadas_a):
 
 # ---------------------------------------------------------------- /completo
 def test_completo_resolve_camadas_estilo_e_campos(sessao_a, itens_a, camadas_a, conexao_plat_app):
-    estilo = itens_a.criar("estilo", dados={"esquema_versao": 1, "corpo": {"version": 8, "layers": []}})
+    # item L2-02-a-modelo-estilo: o corpo de um item `estilo` é sempre {plat_construtor, maplibre}; o
+    # servidor recompila `maplibre` a partir do construtor na gravação (app/estilos/validador.py), então
+    # o que este teste confere aqui é o que fica gravado de fato, não o que foi mandado no POST.
+    from app.estilos import compilador
+
+    pc = {"tipo": "unico", "geometria": "poligono", "versao": 1, "simbolo": {"cor": "#4e79a7"}}
+    maplibre_canonico = compilador.compilar(pc)
+    estilo = itens_a.criar(
+        "estilo",
+        dados={"esquema_versao": 1, "corpo": {"plat_construtor": pc, "maplibre": maplibre_canonico}},
+    )
     c = camada(camadas_a[0], estilo={"ref": estilo["id"]}, opacidade=0.5, visivel=False)
     mid = criar_mapa(sessao_a, itens_a, camadas=[c], mapa_base={"id": "osm-guarulhos"}).json()["id"]
 
@@ -184,7 +194,9 @@ def test_completo_resolve_camadas_estilo_e_campos(sessao_a, itens_a, camadas_a, 
     (saida,) = j["camadas"]
     assert saida["ref"] == camadas_a[0] and saida["tipo"] == "camada_vetorial"
     assert saida["opacidade"] == 0.5 and saida["visivel"] is False
-    assert saida["estilo"]["origem"] == "item" and saida["estilo"]["corpo"] == {"version": 8, "layers": []}
+    assert saida["estilo"]["origem"] == "item"
+    assert saida["estilo"]["corpo"]["plat_construtor"] == pc
+    assert saida["estilo"]["corpo"]["maplibre"] == maplibre_canonico
     assert saida["tiles"]["pronto"] is False  # nenhum servidor de tiles instalado nesta máquina
     assert saida["dominios"] == {}
 

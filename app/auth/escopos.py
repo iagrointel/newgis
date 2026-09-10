@@ -6,22 +6,14 @@ import re
 from app.erros import ErroAPI
 
 UUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
-# (entrega 10/09/2026) Este arquivo é registro com `merge=union` no .gitattributes. A fusão de 146 ramos
-# concatenou a expressão regular DOZE vezes e deixou `re.compile` com parêntese desbalanceado — o app não
-# subia. Reconstruído aqui como UNIÃO real: todo escopo que qualquer ramo fundido introduziu, uma definição
-# só. Os três que aceitam `:<uuid>` seguem na expressão abaixo e no COM_UUID original, mais adiante.
-ESCOPOS_SEM_UUID = (
-    "admin:inquilino", "amc:usar", "analise3d:usar", "campo:usar",
-    "catalogo:ler", "conteudo:criar", "crs:usar", "geocodificar:usar",
-    "imagens:escrever", "imagens:ler", "jobs:executar", "multiescala:usar",
-    "rota:usar",
-)
 ESCOPO = re.compile(
-    rf"^(catalogo:ler|camada:(ler|editar)(:{UUID})?|tiles:ler(:{UUID})?|"
-    rf"admin:inquilino|amc:usar|analise3d:usar|campo:usar|catalogo:ler|conteudo:criar|crs:usar|geocodificar:usar|imagens:escrever|imagens:ler|jobs:executar|multiescala:usar|rota:usar)$"
+    rf"^(catalogo:ler|camada:(ler|editar)(:{UUID})?|tiles:ler(:{UUID})?|jobs:executar|rota:usar|"
+    rf"geocodificar:usar|multiescala:usar|amc:usar|admin:inquilino)$"
 )
-
-ESCOPO_EXIGE_PRIVILEGIO = {"conteudo:criar": "conteudo.criar"}
+ESCOPOS_SEM_UUID = (
+    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
+    "geocodificar:usar", "multiescala:usar", "amc:usar", "admin:inquilino",
+)
 DESCRICAO = {
     "catalogo:ler": "listar e ler metadado de itens que o dono pode ler",
     "camada:ler": "ler feições e atributos de camada legível pelo dono (opcional :<uuid> de uma camada)",
@@ -31,45 +23,10 @@ DESCRICAO = {
     "rota:usar": "calcular rota, matriz origem-destino e isócrona (L2-11-c; dado de teste, sem PII)",
     "geocodificar:usar": "geocodificar, geocodificar reverso e sugerir endereço (L2-11-b; dado aberto CNEFE, "
     "sem PII); mesmo escopo cobre o GeocodeServer compatível Esri",
-    "imagens:ler": "buscar e ler coleções/itens STAC do catálogo de imagens do dono (L1-01-a), via "
-    "/svc/<token>/stac/; nunca vê coleção de outro inquilino",
-    "imagens:escrever": "criar coleção e item STAC no catálogo de imagens do dono (L1-01-a); quem tem este "
-    "escopo também lê (checado em app/imagens/rotas_stac.py, não em escopos.cobre)",
     "multiescala:usar": "criar área de estudo, fator e amostra, e rodar execução macro/micro do motor "
     "multicritério em grades aninhadas (L3-19-multiescala; dado e execução do próprio inquilino)",
     "amc:usar": "criar e executar modelo multicritério (exige analise.amc no dono; L3-01-a)",
-    "imagens:ler": "buscar e ler coleções/itens STAC do catálogo de imagens do dono (L1-01-a), via "
-    "/svc/<token>/stac/; nunca vê coleção de outro inquilino",
-    "imagens:escrever": "criar coleção e item STAC no catálogo de imagens do dono (L1-01-a); quem tem este "
-    "escopo também lê (checado em app/imagens/rotas_stac.py, não em escopos.cobre)",
-    "analise3d:usar": "rodar linha de visada, bacia visual (viewshed), perfil de elevação e sombra sobre "
-    "o terreno do próprio inquilino (L2-09-d; salvar como item exige conteudo.criar além do escopo)",
-    "multiescala:usar": "criar área de estudo, fator e amostra, e rodar execução macro/micro do motor "
-    "multicritério em grades aninhadas (L3-19-multiescala; dado e execução do próprio inquilino)",
-    "crs:usar": "listar CRS, ler definição proj4 e transformar coordenada/bbox (L2-17-crs-transformacoes; "
-    "serviço transversal sem estado por inquilino)",
-    "conteudo:criar": "criar/editar os próprios itens por token (upload de arquivo em partes, L0-04-a): exige "
-    "que o dono do token já tenha o privilégio conteudo.criar (editor ou admin), não é exclusivo de admin",
-    "campo:usar": "PWA de campo (L2-07-a): ler os mapas de campo do dono e sincronizar coletas; "
-    "emitido por POST /api/campo/sessao com validade de 30 dias, revogável como todo token de serviço",
     "admin:inquilino": "tudo o que o dono pode fazer pela API, exceto gerir tokens, senha, 2FA e sessões",
-}
-
-# --- perfis de chave de API (item L7-08-d): os quatro nomes que o portal oferece na criação de chave são
-# APELIDOS de conjuntos do vocabulário acima, nunca escopos novos. O vocabulário fechado de `ESCOPO` não
-# muda: ele já é o que o servidor confere em `exigir_escopo`, e inventar um segundo eixo de nomes daria
-# duas verdades sobre a mesma chave. `leitura` é o perfil da chave de demonstração do portal.
-PERFIS_DE_CHAVE = {
-    "leitura": (
-        ("catalogo:ler", "camada:ler", "tiles:ler"),
-        "ler catálogo, feições e tiles; nenhuma escrita",
-    ),
-    "edicao": (
-        ("catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar"),
-        "o de leitura mais editar feições e executar jobs",
-    ),
-    "tiles": (("tiles:ler",), "só tiles vetoriais e raster (chave de aplicação de mapa)"),
-    "admin": (("admin:inquilino",), "tudo o que o dono pode fazer pela API, exceto gerir token, senha, 2FA e sessão"),
 }
 
 
