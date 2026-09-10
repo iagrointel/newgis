@@ -1793,6 +1793,7 @@
   "mapa.tabela": "Tabela",
   "mapa.tela_cheia": "tela cheia",
   "mapa.titulo": "Mapa",
+  "modo.faixa_rotulo": "Manutenção em andamento, somente leitura:",
   "motor.ajuda": "motor multicritério de grades aninhadas: uma área de estudo, fatores com escala declarada e peso escolhido, uma grade grossa (macro) e o refino (micro) só onde a macro aprovou",
   "motor.amostras": "amostras",
   "motor.amostras_ajuda": "cole linhas \"lon, lat, valor\" ou gere uma grade 6×6 com valor constante sobre a área",

@@ -4,7 +4,8 @@
 import { chamar, obter, mensagemDe } from '../base/api.js';
 import { h, limpar } from '../base/dom.js';
 import { loja, tem } from '../base/estado.js';
-import { definirIdioma, idiomaAtual, normalizarIdioma, t } from '../base/i18n.js';
+import { t } from '../base/i18n.js';
+import { aplicarFaixaModo } from '../base/modo.js';
 
 export const CHAVE_INQUILINO = 'plat_inquilino';
 export const CHAVE_SESSAO = 'plat_sessao';
@@ -20,10 +21,7 @@ export function sessaoProvavel() { return ler(CHAVE_SESSAO) === '1'; }
 
 export function urlLogin(proximo = location.pathname + location.search) {
   const p = new URLSearchParams();
-  /* item L7-03-e: sem o inquilino na URL, a tela de login perde de quem é a organização — e, quando a página
-     está EMBUTIDA no sítio do cliente, o frame-ancestors da resposta seguinte já não conhece o inquilino e o
-     navegador recusa o quadro no meio do caminho. O localStorage vem primeiro; a URL atual é a rede de baixo. */
-  const slug = inquilinoLembrado() || new URLSearchParams(location.search).get('inquilino') || '';
+  const slug = inquilinoLembrado();
   if (slug) p.set('inquilino', slug);
   if (proximo && proximo !== '/entrar') p.set('proximo', proximo);
   const q = p.toString();
@@ -66,9 +64,7 @@ export async function exigirSessao({ privilegio, permitirPendencia = false } = {
   marcarSessao(true);
   if (usuario.inquilino?.slug) lembrarInquilino(usuario.inquilino.slug);
   loja.definir({ usuario });
-  // preferência de idioma da conta (UX-02): vale sobre o do navegador e fica lembrada para as telas públicas
-  const pref = normalizarIdioma(usuario.idioma_preferido);
-  if (pref && pref !== idiomaAtual()) await definirIdioma(pref);
+  aplicarFaixaModo();  // L7-33: faixa com o motivo quando a plataforma/o inquilino está em manutenção
   const destino = caminhoPendencia(usuario.pendencias);
   if (destino && !permitirPendencia) { location.replace(destino); return null; }
   if (privilegio && !tem(privilegio, usuario)) { semPermissao(privilegio); return null; }

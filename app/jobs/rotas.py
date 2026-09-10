@@ -75,9 +75,7 @@ class Job(BaseModel):
     proveniencia: Any | None = None
     memoria_mb: int
     timeout_s: int
-    # item L0-05-e: posição na fila do inquilino (1 = o próximo quando chegar a vez dele); só preenchida
-    # quando estado = 'pendente', senão null (rodando/estados finais não têm posição)
-    posicao_fila: int | None = None
+    somente_leitura: bool = False
 
 
 class ListaJobs(BaseModel):
@@ -106,6 +104,7 @@ class TipoJob(BaseModel):
     versao: int
     perfil_minimo: str
     parametros_schema: dict
+    somente_leitura: bool = False
 
 
 class LinhaLog(BaseModel):
@@ -198,7 +197,7 @@ def resumo_jobs(request: Request, auth: Auth = AUTH_VER):
 
 @router.get("/api/jobs/tipos", response_model=list[TipoJob], responses=ERROS, openapi_extra=XV, tags=["jobs"])
 def tipos_de_job(request: Request, auth: Auth = AUTH_VER):
-    return _sem_cache(servico.tipos(sessao_de(auth)))
+    return _sem_cache(servico.tipos())
 
 
 @router.get("/api/jobs/{job_id}", response_model=Job, responses=ERROS, openapi_extra=XV, tags=["jobs"])

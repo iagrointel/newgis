@@ -1,0 +1,12 @@
+{
+ "item": "L7-33-modo-somente-leitura",
+ "medidas": {
+  "job_2min_terminou_sob_modo_s": {
+   "valor": 120.1,
+   "unidade": "s",
+   "comando": "prova.progresso(120s) iniciado antes do modo, concluído com o modo ligado no meio da execução"
+  }
+ },
+ "gerado_em": "2026-09-07T14:34:21Z",
+ "git_sha": "88ed424c53b2"
+}

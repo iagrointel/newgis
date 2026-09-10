@@ -47,6 +47,7 @@ class Tarefa:
     perfil_minimo: str
     ferramentas: tuple[str, ...]
     somente_sistema: bool
+    somente_leitura: bool
 
 
 REGISTRO: dict[str, Tarefa] = {}
@@ -71,14 +72,25 @@ def ordem_perfil(perfil: str) -> int:
 def tarefa(*, nome: str, descricao: str, parametros: type[BaseModel], pesado: bool = False, memoria_mb: int = 256,
            timeout_s: int = 3600, tentativas: int = 3, chave: Callable[[dict], str | None] | None = None,
            executor: str = "local", versao: int = 1, threads_blas: int = 1, perfil_minimo: str = "editor",
-           ferramentas: tuple[str, ...] = (), somente_sistema: bool = False):
+           ferramentas: tuple[str, ...] = (), somente_sistema: bool = False, somente_leitura: bool = False):
     """Decorador de registro. Recusa na importação (ErroRegistro) tudo o que a seção 3.1 do ADR 0003 proíbe.
 
     `somente_sistema=True` (item L0-07-d-smtp-convites) marca um tipo que só o PRÓPRIO backend enfileira
     (`app/jobs/sistema.py::enfileirar`), nunca `POST /api/jobs`: sem a marca, qualquer usuário com
     `jobs.executar` poderia criar `correio.enviar` com destinatário/assunto/texto arbitrários e usar o SMTP
     do inquilino como canhão de spam/phishing — `app/jobs/servico.py::criar` recusa com 403 antes de chegar
-    à fila (achado desta sessão ao desenhar o item, não do adversário — registrado aqui para não se repetir)."""
+    à fila (achado desta sessão ao desenhar o item, não do adversário — registrado aqui para não se repetir).
+
+    `somente_leitura=True` (item L7-33-modo-somente-leitura) declara que o tipo NUNCA altera dado do
+    inquilino — só lê e materializa artefato no armazenamento (hoje `catalogo.exportar_lista`). É o que
+    permite duas travessias durante o modo de manutenção, que para todo o resto fecha: `POST /api/jobs`
+    com esse tipo passa pelo middleware de app/modo.py e o job sai da fila mesmo com o inquilino pausado
+    (cláusula de `plat.job_pegar`, migração 20260906T2109). Marcar um tipo que escreve em tabela do
+    inquilino quebra o contrato do modo — a marca é recusada em `somente_sistema` (tipo interno nem
+    passa pela rota, a isenção não lhe diz respeito)."""
+    if somente_leitura and somente_sistema:
+        raise ErroRegistro(f"{nome}: somente_leitura não combina com somente_sistema "
+                           "(tipo interno não passa pela rota, a isenção do modo não lhe diz respeito)")
     if not PADRAO_NOME.match(nome):
         raise ErroRegistro(f"nome de tipo fora do padrão <area>.<verbo>: {nome!r}")
     if nome in REGISTRO:
@@ -112,7 +124,7 @@ def tarefa(*, nome: str, descricao: str, parametros: type[BaseModel], pesado: bo
             nome=nome, descricao=descricao, parametros=parametros, funcao=funcao, pesado=pesado,
             memoria_mb=memoria_mb, timeout_s=timeout_s, tentativas=tentativas, chave=chave, executor=executor,
             versao=versao, threads_blas=threads_blas, perfil_minimo=perfil_minimo, ferramentas=tuple(ferramentas),
-            somente_sistema=somente_sistema,
+            somente_sistema=somente_sistema, somente_leitura=somente_leitura,
         )
         return funcao
 
@@ -141,5 +153,5 @@ def descrever(t: Tarefa) -> dict:
         "nome": t.nome, "descricao": t.descricao, "pesado": t.pesado, "memoria_mb": t.memoria_mb,
         "timeout_s": t.timeout_s, "tentativas": t.tentativas, "executor": t.executor, "versao": t.versao,
         "perfil_minimo": t.perfil_minimo, "parametros_schema": esquema_parametros(t),
-        "somente_sistema": t.somente_sistema,
+        "somente_sistema": t.somente_sistema, "somente_leitura": t.somente_leitura,
     }
