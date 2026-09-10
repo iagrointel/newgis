@@ -260,6 +260,82 @@ Pro 3.4 escrita com fontes datadas (`docs/PARIDADE_PARCELAS.md`); decisões em
 `docs/adr/20260908T2210-parcelas.md`. Visões `v_parcela_atual`/`v_parcela_historico` com
 `security_invoker` — a visão responde com a RLS de quem consulta, senão o histórico vazaria inquilino
 pela porta do dono.
+## turno 5, setembro de 2026 (item L5-20-sites-paginas-publicas: site do inquilino em /s/<inquilino>/)
+
+O inquilino monta um site por arrasto e o publica numa URL pública própria. O documento do site é o MESMO
+envelope de app e painel (`corpo.nos`, lista plana, aninhamento por `pai`), montado no MESMO editor de
+arrasto do L5-08 com uma paleta nova: `pagina` na raiz, `secao` dentro da página, cartão dentro da seção,
+mais `cabecalho`, `menu` e `rodape`, que pertencem ao site inteiro. São nove cartões — texto, imagem,
+galeria de itens do catálogo com filtro, mapa incorporado, aplicativo, busca de conteúdo, chamada com
+botão, estatísticas e conteúdo incorporado por https.
+
+A página publicada é renderizada NO SERVIDOR e não depende de JavaScript: `curl` sem navegador já lê o
+texto de cada cartão, e a página não tem uma linha de `<script>` (`tests/api/catalogo/test_site.py`). A
+galeria e a busca são formulários `GET` respondidos já filtrados; a estatística é contagem feita no pedido;
+o mapa e o aplicativo são quadros para a vitrine `/p/` do L5-14, com link equivalente ao lado. Medido no
+site de teste: **3 páginas publicadas e os 9 tipos de cartão presentes no HTML**
+(`tests/medidas/L5-20-sites-paginas-publicas.json`).
+
+Tudo o que a página anônima lê passa por função `SECURITY DEFINER` que filtra `acesso = 'publico'` e
+`plat.tenant_permite_publico` — a definição de "compartilhado com todos" nesta plataforma. O adversário
+procurou o item privado de três maneiras (filtro por tipo na galeria, busca pelo título exato e citação por
+uuid num cartão): **0 item privado vazado**; o cartão que aponta para item que deixou de ser público diz que
+o conteúdo não está compartilhado, em vez de mostrá-lo.
+
+`noindex, nofollow` é o padrão, no cabeçalho `X-Robots-Tag` e no `<meta>`; `index, follow` só com a opção
+ligada explicitamente na tela, que traz o aviso ao lado. Como o `add_header` do nginx acrescenta em vez de
+substituir, `deploy/nginx.conf` ganhou um `location /s/` sem o `X-Robots-Tag` herdado — nesse caminho quem
+decide é a aplicação; em homologação a exceção não existe, de propósito. A página manda ainda
+`default-src 'self'` com `frame-src` limitado às origens que AQUELA página declara.
+
+Acessibilidade da página publicada: auditoria axe-core 4.12.1 (o motor que o Lighthouse usa nessa
+categoria) nas etiquetas WCAG 2.0/2.1 A e AA, ponderada por impacto = **100 de 100, 0 violação crítica ou
+séria**. Não é o binário do Lighthouse, que não está instalado nesta máquina; a medida diz isso no campo
+`comando`. A cor do texto sobre a marca do inquilino é escolhida no servidor pelo contraste (WCAG 1.4.3),
+para que um inquilino de cor clara não fique com texto branco sobre fundo claro.
+
+Paridade escrita contra "Create a site" e os cartões do Hub em `docs/PARIDADE.md`, com a ressalva de método
+registrada: a doc do Hub monta o conteúdo por JavaScript e não devolve texto ao `curl`, então a coluna Esri
+vem da leitura do papel esri, nunca de citação literal de página estática.
+
+## turno 5, setembro de 2026 (item L5-37-pacotes-modelos-entre-inquilinos: pacote de documentos e galeria de modelos)
+
+`GET /api/itens/{id}/pacote` devolve um zip com `manifesto.json` e um `documentos/<id>.json` por documento
+do fecho de dependências: o app, o mapa, o estilo, o formulário, o fluxo. Item cujo tipo tem
+`tem_dado_fisico` (camada, vista, imagem, arquivo, rede) NÃO entra — é declarado como FONTE, com os campos,
+a geometria e o SRID que o documento assume, e nada mais. Por isso o pacote do app de teste (2 documentos,
+3 fontes) tem **1.622 bytes** (`tests/medidas/L5-37-pacotes-modelos-entre-inquilinos.json`): não há dado
+dentro, o que o torna transportável entre inquilinos e entre instalações.
+
+`POST /api/pacotes/verificar` é a tela do "antes de importar": não escreve nada e devolve, por fonte, a
+diferença de esquema **campo a campo** (`campo_ausente`, `tipo_diferente`, `geometria_diferente` bloqueiam;
+`srid_diferente` é reportado e não bloqueia, porque reprojetar é rotina e o documento não guarda
+coordenada). `POST /api/pacotes/importar` só passa quando a análise diz `pronto`, e faz tudo numa transação.
+
+Na importação, cada identificador é regerado — UUID de documento e ULID de nó — e todas as referências são
+reescritas numa passada só; importar o mesmo pacote duas vezes dá dois conjuntos de itens sem nenhum id em
+comum. A trava de segurança é a mesma passada: **todo UUID citado em qualquer lugar do documento** tem de
+ser outro documento do pacote ou uma fonte mapeada para item que o inquilino de destino enxerga; qualquer
+outro faz a importação inteira parar com `referencia_desconhecida`, sem criar nada. A leitura do zip
+reaproveita literalmente `app/ingestao/formatos.py::conferir_zip` (a guarda que o upload de dado já usa),
+então `../`, caminho absoluto, link simbólico, zip aninhado e zip-bomba são recusados antes de qualquer
+`json.loads`. A assinatura é o sha256 da forma canônica do manifesto (a mesma do L5-05, reproduzível com
+`jq -cS | sha256sum`), e o manifesto traz o sha256 de cada documento: um byte trocado em qualquer lugar
+vira `pacote_adulterado`.
+
+Galeria de modelos: `plat.pacote_modelo` (migração `20260908T1055`) guarda o zip em `bytea` — pacote é
+pequeno e a galeria tem de funcionar no appliance, onde pode não haver armazenamento de objetos. Escopo
+`inquilino` (só quem publicou vê) ou `plataforma` (todos veem); quem recusa o escopo `plataforma` de quem
+não é superadmin é a POLÍTICA DE LINHA, não um `if` da rota. Modelo é imutável: republicar é publicar outro.
+Tela `/modelos` lista a galeria, aceita zip do disco, monta o mapeamento fonte a fonte por seleção e mostra
+as diferenças de esquema antes do botão de importar.
+
+Limitação honesta, registrada aqui para ninguém prometer o que não existe: a parte "do canal" da hipótese
+(parceiro publica modelo para OS INQUILINOS DELE) ficou de fora porque não existe hierarquia de inquilino
+nesta plataforma — há `plataforma` e há `inquilino`, e nada entre os dois. Quando o item que criar a relação
+parceiro→inquilinos chegar, é um valor a mais no `CHECK` do escopo e uma cláusula a mais na política.
+
+## turno 5, setembro de 2026 (item L5-14-publicacao-links-embed: publicação de documento de construtor — links e embed)
 
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 

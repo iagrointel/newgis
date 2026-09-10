@@ -1,0 +1,37 @@
+{
+ "item": "L5-20-sites-paginas-publicas",
+ "medidas": {
+  "itens_privados_vazados": {
+   "valor": 0,
+   "unidade": "itens",
+   "comando": "galeria, filtro por tipo e busca pelo título exato do item privado"
+  },
+  "noindex_padrao": {
+   "valor": true,
+   "unidade": "booleano",
+   "comando": "PUT /api/itens/<id>/site sem 'indexavel' -> X-Robots-Tag: noindex, nofollow"
+  },
+  "paginas_publicadas": {
+   "valor": 3,
+   "unidade": "páginas",
+   "comando": "GET /s/<inquilino>/{,dados,mapas} = 200"
+  },
+  "cartoes_no_html": {
+   "valor": 9,
+   "unidade": "tipos de cartão",
+   "comando": "classes cartao-<tipo> presentes no HTML das 3 páginas"
+  },
+  "acessibilidade_pontuacao": {
+   "valor": 100.0,
+   "unidade": "0-100",
+   "comando": "axe-core 4.12.1 (motor da categoria de acessibilidade do Lighthouse) sobre /s/<inquilino>/, etiquetas wcag2a/wcag2aa/wcag21a/wcag21aa, auditorias ponderadas por impacto (critical 10, serious 7, moderate 3, minor 1); o binário do Lighthouse não está instalado nesta máquina"
+  },
+  "acessibilidade_violacoes_criticas_serias": {
+   "valor": 0,
+   "unidade": "violações",
+   "comando": "axe.run() na página publicada, filtro impact in (critical, serious)"
+  }
+ },
+ "gerado_em": "2026-09-08T12:06:31Z",
+ "git_sha": "4486c56bf9cb"
+}

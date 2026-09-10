@@ -67,9 +67,11 @@ from app.catalogo import (
     rotas_lixeira,
     rotas_miniatura,
     rotas_ogc,
+    rotas_pacote,
     rotas_pastas,
     rotas_presenca,  # L5-13: presença em documento (SSE)
     rotas_publicacao,
+    rotas_site,
     transferencia,
     vista_camada,
 )
@@ -339,6 +341,11 @@ ROUTERS = [
     rotas_publicacao.router,
     # --- atualização viva de painel e mapa (L2-06-d): /api/eventos/camadas (SSE)
     rotas_vivo,
+    # --- site do inquilino (L5-20): /api/itens/{id}/site e a vitrine /s/{inquilino}/[caminho]
+    rotas_site.router,
+    # --- pacote entre inquilinos e galeria de modelos (L5-37): /api/itens/{id}/pacote, /api/pacotes/verificar,
+    # /api/pacotes/importar, /api/modelos
+    rotas_pacote.router,
     # --- catálogo externo OGC API Records (L0-09-metadado-catalogo): /ogc/records; token catalogo:ler, nunca aberto
     rotas_ogc.router,
     # --- layout de impressão (L2-12-b): /api/layouts, página headless do quadro e Export Web Map Task (Esri)

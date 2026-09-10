@@ -166,6 +166,11 @@ PAGINAS = {
     "/amc/criterios-feicao": "amc_criterios_feicao.html",
     # --- motor AMC: explicação da nota de uma unidade (L3-01-f-explicacao)
     "/amc/explicacao/{execucao_id}/{unidade_id}": "amc_explicacao.html",
+    # --- galeria de modelos e importação de pacote (L5-37-pacotes-modelos-entre-inquilinos)
+    "/modelos": "modelos.html",
+    # --- construtor de site do inquilino (L5-20-sites-paginas-publicas): ?item=<id de item de tipo site>.
+    # A página PUBLICADA não está aqui: /s/<inquilino>/... é renderizada no servidor (app/catalogo/rotas_site.py).
+    "/sites": "sites.html",
 }
 router = APIRouter()
 

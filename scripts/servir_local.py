@@ -3,10 +3,10 @@ produção é papel do nginx (ADR 0001 seção 4.3). Serve para abrir as telas d
 o e2e de identidade visual (tests/e2e/test_estilo.py) sem nginx. Nunca substitui a unidade plat-api.
 Uso: set -a; source <env da trilha>; set +a; venv/bin/python scripts/servir_local.py --porta 8157
 
-Com `--cert`/`--chave` sobe em HTTPS (certificado auto-assinado serve). Isso importa para o e2e que
-exercita ESCRITA sob cookie: a defesa de CSRF do ADR 0002 compara o cabeçalho Origin do navegador com
-PLAT_URL_PUBLICA, que o settings exige em https — em http a escrita voltaria 403 origem_invalida por
-causa do ambiente, não do produto."""
+Com `--cert`/`--chave` serve por TLS. Isso é necessário no e2e que ESCREVE pela tela: a defesa de CSRF
+(app/auth/sessao.py::checar_escrita_sob_cookie) compara o cabeçalho `Origin` do navegador com
+`PLAT_URL_PUBLICA`, que é obrigatoriamente `https://` — sem TLS, todo PATCH/PUT feito pelo navegador volta
+403 origem_invalida. Certificado autoassinado serve (o navegador do teste abre com ignore_https_errors)."""
 
 import argparse
 import sys
@@ -30,8 +30,8 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--porta", type=int, default=8157)
     p.add_argument("--host", default="127.0.0.1")
-    p.add_argument("--cert", default=None, help="certificado TLS (PEM); com --chave, sobe em https")
+    p.add_argument("--cert", default=None, help="certificado TLS (PEM); com --chave, serve por https")
     p.add_argument("--chave", default=None, help="chave privada do certificado (PEM)")
     a = p.parse_args()
-    tls = {"ssl_certfile": a.cert, "ssl_keyfile": a.chave} if (a.cert and a.chave) else {}
-    uvicorn.run(servidor, host=a.host, port=a.porta, log_level="warning", access_log=False, **tls)
+    uvicorn.run(servidor, host=a.host, port=a.porta, log_level="warning", access_log=False,
+                ssl_certfile=a.cert, ssl_keyfile=a.chave)

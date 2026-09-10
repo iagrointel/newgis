@@ -1094,3 +1094,24 @@ PARCELA_UNIR_MAX = 50                 # parcelas por união (merge)
 PARCELA_ATRIBUICAO_MAX = 1_000        # feições por assignFeaturesToRecord
 PARCELA_AJUSTE_LINHAS_MAX = 10_000    # linhas observadas numa rede de ajuste LSA (item 03)
 PARCELA_QUALIDADE_FACES_MAX = 500     # faces de lacuna devolvidas pela camada de qualidade
+
+# --- pacotes e galeria de modelos (L5-37-pacotes-modelos-entre-inquilinos; migração 20260908T1055).
+# Um pacote é só JSON (documentos, estilos, fluxos, formulários) e as fontes DECLARADAS: nenhum dado de
+# feição, nenhuma imagem. Por isso o teto de bytes é pequeno de propósito — pacote grande é sinal de que
+# alguém pôs dado dentro. O teto de documentos e o de profundidade freiam a caminhada no grafo de
+# dependências antes de ela virar consulta sem fim.
+PACOTE_DOCUMENTOS_MAX = 200
+PACOTE_PROFUNDIDADE_MAX = 8
+PACOTE_BYTES_MAX = 4 * 1024 * 1024
+PACOTE_MODELOS_MAX = 200           # modelos na galeria por inquilino (o de escopo plataforma conta no dele)
+PACOTE_NOME_MAX = 200              # CHECK(length(nome) BETWEEN 1 AND 200) da migração
+PACOTE_DESCRICAO_MAX = 2000
+
+# --- site do inquilino (L5-20-sites-paginas-publicas): tetos do documento e do que a página pública consulta
+SITE_PAGINAS_MAX = 50            # páginas por site (o menu do cabeçalho fica ilegível muito antes disso)
+SITE_NOS_MAX = 400               # nós do documento inteiro (páginas + seções + cartões)
+SITE_TEXTO_MAX = 4000            # caracteres do cartão de texto e do rodapé
+SITE_GALERIA_ITENS_MAX = 60      # teto duro do cartão de galeria e da busca (o mesmo do LIMIT da função SQL)
+SITE_GALERIA_ITENS_PADRAO = 12
+SITE_INCORPORADO_ALTURA_MIN = 120
+SITE_INCORPORADO_ALTURA_MAX = 1200

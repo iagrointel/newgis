@@ -195,7 +195,7 @@ def test_tipo_item_e_vocabulario_sem_escrita(conexao_plat_app, cliente, sessao_a
         "conexao",
         "arquivo",
         "modelo_amc",
-        "ferramenta_resultado",
+        "site",
     } == nomes
     assert all(t["esquema"].get("additionalProperties") is False for t in r.json())
     ids = ids_por_slug(conexao_plat_app)

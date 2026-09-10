@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Modelos · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/estilo/tokens.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="tela instrumento modelos">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1 data-i18n="modelos.titulo">Modelos</h1>
+    <plat-aviso id="aviso"></plat-aviso>
+    <section id="galeria" aria-labelledby="galeria-titulo">
+      <h2 id="galeria-titulo" data-i18n="modelos.galeria">Galeria</h2>
+      <div id="lista"></div>
+    </section>
+    <section id="importar" aria-labelledby="importar-titulo" hidden>
+      <h2 id="importar-titulo" data-i18n="modelos.importar">Importar</h2>
+      <div id="analise"></div>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/js/catalogo/modelos.js"></script>
+</body>
+</html>

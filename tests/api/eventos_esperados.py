@@ -74,6 +74,15 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("PUT", "/api/itens/{id}/relacoes"): ["itens/relacoes"],
     ("PUT", "/api/itens/{id}/compartilhamento"): ["compartilhamento/alterar"],
     ("POST", "/api/itens/{id}/links"): ["compartilhamento/link_criar"],
+    # ---- publicação de documento de construtor (L5-14-publicacao-links-embed; vocabulário na migração
+    # 20260907T1410_publicacao_documento.sql). As três leituras da família (`GET .../publicacao`,
+    # `.../visualizacoes`, `.../exportacao`) não entram aqui: só rota de escrita é exigida.
+    ("POST", "/api/itens/{id}/publicacao"): ["publicacao/publicar"],
+    ("DELETE", "/api/itens/{id}/publicacao"): ["publicacao/despublicar"],
+    # ---- site do inquilino (L5-20-sites-paginas-publicas; vocabulário na migração
+    # 20260908T1134_site_paginas_publicas.sql). O GET não é escrita e não registra evento.
+    ("PUT", "/api/itens/{id}/site"): ["site/publicar"],
+    ("DELETE", "/api/itens/{id}/site"): ["site/despublicar"],
     ("DELETE", "/api/itens/{id}/links/{lid}"): ["compartilhamento/link_revogar"],
     ("POST", "/api/pastas"): ["pastas/criar"],
     ("PUT", "/api/pastas/{id}"): ["pastas/renomear", "pastas/mover"],
@@ -158,17 +167,12 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
-    # ---- fachada ParcelFabricServer da malha de parcelas (L4-parcelas-02-fluxos-cogo): cada
-    # operação narra o próprio evento (vocabulário semeado em 20260908T2330_parcelas_fluxos.sql);
-    # a malha é tabela do inquilino com dono humano, então toda escrita narra.
-    ("POST", "/api/parcelas/fabrica/build"): ["parcelas/build"],
-    ("POST", "/api/parcelas/fabrica/divide"): ["parcelas/divide"],
-    ("POST", "/api/parcelas/fabrica/merge"): ["parcelas/merge"],
-    ("POST", "/api/parcelas/fabrica/clip"): ["parcelas/clip"],
-    ("POST", "/api/parcelas/fabrica/createSeeds"): ["parcelas/create_seeds"],
-    ("POST", "/api/parcelas/fabrica/reconstructFromSeeds"): ["parcelas/reconstruct_from_seeds"],
-    ("POST", "/api/parcelas/fabrica/assignFeaturesToRecord"): ["parcelas/assign_features_to_record"],
-    ("POST", "/api/parcelas/fabrica/analyzeByLSA"): ["parcelas/analyze_lsa"],
-    ("POST", "/api/parcelas/fabrica/applyLSA"): ["parcelas/apply_lsa"],
-    ("POST", "/api/parcelas/qualidade"): ["parcelas/qualidade"],
+    # ---- pacote entre inquilinos e galeria de modelos (L5-37-pacotes-modelos-entre-inquilinos; vocabulário na
+    # migração 20260908T1055_pacote_modelo.sql). `verificar` é a tela de antes de importar: não escreve nada e
+    # por isso não narra evento. A exportação narra `pacotes/exportar`, mas é um GET e não entra nesta tabela
+    # (que cobre as rotas de escrita).
+    ("POST", "/api/pacotes/verificar"): [],
+    ("POST", "/api/pacotes/importar"): ["pacotes/importar"],
+    ("POST", "/api/modelos"): ["modelos/publicar"],
+    ("DELETE", "/api/modelos/{id}"): ["modelos/apagar"],
 }
