@@ -1,0 +1,82 @@
+{
+ "item": "L2-01-i-graficos-de-camada",
+ "medidas": {
+  "barras_1mi_p95_ms": {
+   "valor": 113.7,
+   "unidade": "ms",
+   "comando": "20 pedidos POST /api/camadas/{id}/grafico {\"tipo\": \"barras\", \"campo\": \"categoria\", \"estatistica\": \"avg\", \"campo_y\": \"valor\"}"
+  },
+  "barras_1mi_mediana_ms": {
+   "valor": 97.1,
+   "unidade": "ms",
+   "comando": "idem, mediana"
+  },
+  "barras_1mi_bytes": {
+   "valor": 425,
+   "unidade": "bytes",
+   "comando": "tamanho da resposta"
+  },
+  "pizza_1mi_p95_ms": {
+   "valor": 93.6,
+   "unidade": "ms",
+   "comando": "20 pedidos POST /api/camadas/{id}/grafico {\"tipo\": \"pizza\", \"campo\": \"categoria\"}"
+  },
+  "pizza_1mi_mediana_ms": {
+   "valor": 91.3,
+   "unidade": "ms",
+   "comando": "idem, mediana"
+  },
+  "pizza_1mi_bytes": {
+   "valor": 377,
+   "unidade": "bytes",
+   "comando": "tamanho da resposta"
+  },
+  "histograma_1mi_p95_ms": {
+   "valor": 168.2,
+   "unidade": "ms",
+   "comando": "20 pedidos POST /api/camadas/{id}/grafico {\"tipo\": \"histograma\", \"campo\": \"valor\", \"faixas\": 10}"
+  },
+  "histograma_1mi_mediana_ms": {
+   "valor": 164.1,
+   "unidade": "ms",
+   "comando": "idem, mediana"
+  },
+  "histograma_1mi_bytes": {
+   "valor": 883,
+   "unidade": "bytes",
+   "comando": "tamanho da resposta"
+  },
+  "dispersao_1mi_p95_ms": {
+   "valor": 106.2,
+   "unidade": "ms",
+   "comando": "20 pedidos POST /api/camadas/{id}/grafico {\"tipo\": \"dispersao\", \"campo\": \"fid\", \"campo_y\": \"valor\"}"
+  },
+  "dispersao_1mi_mediana_ms": {
+   "valor": 99.8,
+   "unidade": "ms",
+   "comando": "idem, mediana"
+  },
+  "dispersao_1mi_bytes": {
+   "valor": 49820,
+   "unidade": "bytes",
+   "comando": "tamanho da resposta"
+  },
+  "contagem_filtro_1mi_p95_ms": {
+   "valor": 72.4,
+   "unidade": "ms",
+   "comando": "20 pedidos POST /api/camadas/{id}/grafico {\"tipo\": \"contagem\", \"filtro\": \"categoria = 'norte'\"}"
+  },
+  "contagem_filtro_1mi_mediana_ms": {
+   "valor": 65.6,
+   "unidade": "ms",
+   "comando": "idem, mediana"
+  },
+  "contagem_filtro_1mi_bytes": {
+   "valor": 199,
+   "unidade": "bytes",
+   "comando": "tamanho da resposta"
+  }
+ },
+ "gerado_em": "2026-09-08T00:59:57Z",
+ "git_sha": "979462b5d22d"
+}

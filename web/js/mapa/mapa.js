@@ -14,6 +14,7 @@
      medição geodésica                        medicao.js
      pesquisa de endereço e de coordenada     busca.js
      impressão PNG/PDF com escala e norte     impressao.js
+     gráficos por camada (agregados no servidor) graficos.js + grafico_svg.js (item L2-01-i)
    Navegação, barra de escala e coordenadas do cursor ficam aqui mesmo (são três controles pequenos).
 
    `body[data-pronto="1"]` só depois do primeiro 'load' do mapa: o e2e espera por isso. */
@@ -30,7 +31,7 @@ import { instalarPopup } from './atributos.js';
 import { Medicao } from './medicao.js';
 import { interpretarCoordenada, sugerir, geocodificar } from './busca.js';
 import { paraPng, paraPdf, escalaNumerica } from './impressao.js';
-import '../widgets/mapa.js';
+import { PainelGraficos } from './graficos.js';
 
 const BASES = [
   { id: 'osm-guarulhos', rotuloChave: 'mapa.base_osm_guarulhos', arquivo: 'guarulhos.pmtiles' },
@@ -87,12 +88,6 @@ async function iniciar(usuario) {
     // obrigatório para a impressão ler o canvas depois do quadro composto (impressao.js explica)
     preserveDrawingBuffer: true,
   });
-  const recipiente = el('mapa');
-  recipiente.addEventListener('plat-mapa-enquadrar', ({ detail }) => {
-    if (Array.isArray(detail?.extensao) && detail.extensao.length === 4) {
-      map.fitBounds([[detail.extensao[0], detail.extensao[1]], [detail.extensao[2], detail.extensao[3]]]);
-    }
-  });
   map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
   map.addControl(new maplibregl.ScaleControl({ maxWidth: 140, unit: 'metric' }), 'bottom-left');
   map.addControl(new maplibregl.AttributionControl({ compact: false }), 'bottom-right');
@@ -107,8 +102,12 @@ async function iniciar(usuario) {
     },
     aoErro: (e) => el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`),
     aoMudarEscala: () => legenda.desenhar(),
+    aoAbrirPainel: (acao, id) => { if (acao === 'grafico') graficos.abrir(id); },
   });
   const legenda = new Legenda(map, el('legenda'), () => arvore.camadasParaLegenda());
+  const graficos = new PainelGraficos(map, catalogo, el('graficos'), {
+    aoErro: (e) => el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`),
+  });
   instalarPopup(map, catalogo, maplibregl);
 
   el('btn-novo-grupo').addEventListener('click', () => {
@@ -203,12 +202,6 @@ async function iniciar(usuario) {
     const msg = (ev && ev.error && ev.error.message) || String(ev);
     el('aviso').erro(`${t('mapa.erro_carregar')}: ${msg}`);
   });
-  map.on('moveend', () => {
-    const limites = map.getBounds();
-    recipiente.emitir?.('mapa.extensao_alterada', {
-      extensao: [limites.getWest(), limites.getSouth(), limites.getEast(), limites.getNorth()],
-    });
-  });
 
   await new Promise((resolve) => map.once('load', resolve));
   try {
@@ -218,7 +211,7 @@ async function iniciar(usuario) {
     el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`);
   }
   window.plat = window.plat || {};
-  window.plat.mapa = { map, catalogo, medicao, arvore, legenda };  // ponto de inspeção do e2e, nunca de negócio
+  window.plat.mapa = { map, catalogo, medicao, arvore, legenda, graficos };  // ponto de inspeção do e2e, nunca de negócio
   document.body.dataset.pronto = '1';
 }
 

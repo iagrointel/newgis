@@ -1,0 +1,57 @@
+{
+ "item": "L2-06-c-acoes-seletores-filtros-cruzados",
+ "medidas": {
+  "latencia_p95_gatilho_acao_10k_ms": {
+   "valor": 0.054,
+   "unidade": "ms",
+   "comando": "tests/app/executar_painel_js.mjs: 200 disparos de filtro_mudou do seletor com 10.000 feições nas 4 vistas alvo (3 da mesma fonte + 1 por atributo); p95 de barramento.medidas — portão <= 100 ms (carga_1min=13.86, ram_livre_gb=5.2828826904296875, medido_em=2026-09-09T01:56:46Z)"
+  },
+  "latencia_max_gatilho_acao_10k_ms": {
+   "valor": 1.567,
+   "unidade": "ms",
+   "comando": "mesma série do p95, o disparo mais lento dos 200"
+  },
+  "latencia_p95_pior_caso_atributo_10k_ms": {
+   "valor": 2.077,
+   "unidade": "ms",
+   "comando": "pior caso adversarial (50 disparos): a ORIGEM tem as 10.000 feições e o filtro é avaliado em memória feição a feição (caminho que o painel real não usa — ele filtra em SQL no servidor)"
+  },
+  "ciclo_ab_ba_cortes_por_200_disparos": {
+   "valor": 200,
+   "unidade": "avisos",
+   "comando": "A filtra B e B filtra A: um ciclo_cortado por disparo (a mensagem re-dispachada pelo causador é cortada em 1 volta); 200 disparos terminam"
+  },
+  "selecao_5000_gatilho_ms": {
+   "valor": 0.88,
+   "unidade": "ms",
+   "comando": "definirSelecao(5000 ids) + disparar selecao_mudou com ação por atributo; in-list sai deduplicado (5000 ids → valores distintos da seleção)"
+  },
+  "parametros_url_por_vista": {
+   "valor": 2,
+   "unidade": "parâmetros",
+   "comando": "estadoDasVistas → paramsDoEstado → estadoDosParams → aplicarEstado ida e volta; nome do parâmetro v.v:<id do elemento> (prefixo v. do L5-07 + id de vista v:<id>)"
+  },
+  "carga_1min": {
+   "valor": 13.86,
+   "unidade": "load",
+   "comando": "os.getloadavg()[0] no momento da medição (2026-09-09T01:56:46Z)"
+  },
+  "ram_livre_gb": {
+   "valor": 5.2828826904296875,
+   "unidade": "GB",
+   "comando": "MemAvailable de /proc/meminfo no momento da medição"
+  },
+  "medido_em": {
+   "valor": "2026-09-09T01:56:46Z",
+   "unidade": "data UTC",
+   "comando": "carimbo da medição de latência deste arquivo"
+  },
+  "e2e_seletor_filtra_quatro_elementos": {
+   "valor": 4,
+   "unidade": "elementos",
+   "comando": "tests/e2e/test_painel_interacoes.py::test_seletor_de_categoria_filtra_indicador_grafico_tabela_e_mapa (indicador comum, indicador de água por atributo, gráfico, tabela e mapa = 5 alvos da mensagem m1)"
+  }
+ },
+ "gerado_em": "2026-09-09T03:01:21Z",
+ "git_sha": "b99460784bc2"
+}

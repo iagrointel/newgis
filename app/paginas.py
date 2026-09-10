@@ -35,6 +35,8 @@ PAGINAS = {
     "/sig": "sig.html",
     # --- publicação de documento do construtor (L5-06): o mesmo motor usado pelo construtor
     "/aplicativo": "aplicativo.html",
+    # --- documento de painel (L2-06-a-modelo-painel-fontes)
+    "/paineis/{id}": "painel.html",
     # --- conexões externas (L6-02-a/L6-02-l/L6-05)
     "/conexoes": "conexoes.html",
     # --- SMTP, convite de membro e redefinição de senha (L0-07-d-smtp-convites): públicas, sem sessão

@@ -555,6 +555,54 @@ nova sem tela e fora da linha de base; `--registrar` cria um item UX-<n> por gru
 - Segurança: `web/js/widgets/seguro.js` (URL, domínio, sandbox, Markdown, `{campo}`), `htmlSeguro` com `proibir`
   (corta `<style>`); e2e injeta 10 vetores XSS em texto, cartão, botão, imagem, menu e embed — nenhum executa,
   console sem erro. ADR `docs/adr/20260907T2245-widgets-de-pagina-e-menu.md`; paridade em docs/PARIDADE.md.
+## codex cx1, setembro de 2026 (item L2-06-c-acoes-seletores-filtros-cruzados: gatilho e ação entre elementos do painel, filtro cruzado por SQL no servidor)
+
+O painel ganhou o barramento do L5-07 (verbatim, um só para a plataforma) e a ponte que liga elemento a elemento:
+elemento `seletor` (categoria, número com faixa, data com presets, feição) e documento `mensagens` (gatilho →
+ações `filtrar`/`selecionar`/`limpar_*`/`zoom`/`pan`/`piscar`/`popup`/`abrir`/`fechar`/`definir_parametro`). A
+mesma mensagem valida nos DOIS lados: `app/paineis/interacoes.py` (422 `grafo_invalido` com a regra quebrada —
+relação obrigatória em ação de dado, inclusive na mesma fonte, porque linha de painel não tem coluna de id) roda
+os mesmos casos do `modelo.js` real em node (`tests/app/executar_painel_js.mjs`). O filtro dinâmico de cada ação
+entra pelo CQL2 já auditado com um nó novo (`separar_espacial`: `s_intersects` só na forma de retângulo alinhado,
+virando `ST_MakeEnvelope` com parâmetro — geometria nunca vira texto) e todo campo citado passa pela lista branca
+da fonte. Estado no URL por vista (`v.v:`), então a URL copiada reabre com os mesmos seletores. Medido em
+`tests/medidas/L2-06-c-acoes-seletores-filtros-cruzados.json`: latência gatilho→ação **p95 0,054 ms com 10.000
+feições** (portão ≤ 100 ms; pior caso com relação por atributo 2,08 ms), ciclo A↔B cortado em uma volta
+(200 disparos, 200 cortes), 5.000 seleções em 0,88 ms, e o e2e confere cada contagem da tela contra COUNT(*) na
+tabela da camada, na MESMA conexão do contexto (a tabela tem RLS forçada por inquilino). Defeito corrigido no
+caminho: filtro de execução com parte vazia montava `WHERE () AND (...)` e dava erro de sintaxe
+(`app/paineis/dados.py`); ADR `docs/adr/20260909T0045-interacoes-do-painel.md`.
+
+## codex cx1, setembro de 2026 (item L2-06-b-elementos-basicos: doze tipos de elemento no painel, todos com número do servidor)
+
+Indicador (nove estatísticas, formato, ícone, cor por faixa, modo "uma feição"), gráfico serial (barras, linhas e
+área; por categoria ou por data com o fuso do inquilino; várias séries; empilhado), pizza/rosca, tabela (colunas
+com ordenação, ou agrupada com subtotal e total geral vindos do servidor), lista paginada, mapa, detalhes, texto
+rico com markdown seguro, legenda e cabeçalho. Nenhum número é calculado no navegador: tudo passa pelo motor de
+agregação do L2-06-e por `app/paineis/dados.py`. O mapa publica a extensão dos pontos que desenhou e ela vira
+condição espacial em todas as fontes do painel. Medido em `tests/medidas/L2-06-b-elementos-basicos.json`: lista de
+10.000 feições a **66,8 ms por página** (p95 no navegador, portão ≤ 300 ms), extensão do mapa recortando 10.000
+para 999 feições e 14 elementos com captura própria. Dois defeitos de plataforma corrigidos no caminho: a ordem
+dos parâmetros do SQL de agregação (gráfico por mês MAIS filtro global dava 500) e o repintar com resposta
+atrasada (o painel voltava ao filtro anterior). Paridade contra a lista de elementos dos Dashboards em
+`docs/PARIDADE.md`; ADR `docs/adr/20260908T1500-elementos-do-painel.md`.
+
+## codex cx1, setembro de 2026 (item L2-01-i-graficos-de-camada: cinco gráficos por camada agregados no servidor, clique que seleciona no mapa)
+
+`POST /api/camadas/{id}/grafico` ao lado da rota de estatísticas do L2-06-e (mesmo item, colunas, filtro,
+extensão e cache; `compilar_filtro` passou a ser partilhado): barras/pizza com N maiores + `outros` calculado
+na mesma consulta, linha por faixa de data pelo motor do L2-06-e, histograma com bordas de `numpy.histogram`
+reproduzidas em float8 no Postgres (`width_bucket` nas bordas; contagens e bordas idênticas nos testes),
+dispersão com `regr_*` sobre todas as linhas e amostra por `TABLESAMPLE` (reta igual à do `numpy.polyfit` a
+1e-6), e `contagem` para a seleção. Achado de desempenho com migração própria: a política de RLS
+`tenant_id = plat.tenant_atual()` impedia varredura paralela em toda camada hospedada (função PARALLEL UNSAFE
+por padrão) — o histograma de 1 mi de pontos levava 551 ms; com `20260908T0100_funcoes_contexto_parallel_safe`
+os cinco pedidos do portão ficam entre 72 e 168 ms p95 (`tests/medidas/L2-01-i-graficos-de-camada.json`).
+No visualizador: bloco "Gráficos" e botão ▥ na árvore, SVG próprio puro (`grafico_svg.js`, árvore convertida por
+`createElementNS`, ≤ 40 kB nos piores casos por tetos de desenho), tabela oculta e CSV dos mesmos dados, PNG por
+canvas, guardado por camada em localStorage, clique que seleciona no mapa (filtro SQL-92 para a contagem no
+servidor + expressão MapLibre numa camada de destaque). Testes: 31 de API, 16 unitários no node, 6 e2e com 12
+capturas.
 
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 

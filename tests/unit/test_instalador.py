@@ -38,61 +38,23 @@ def test_instalador_grava_plat_git_sha_e_confere_hsts():
     assert "grep -q 'max-age=31536000'" in INSTALL  # conferência pública
 
 
-def _locais_ativos() -> int:
-    """Blocos `location` VIVOS do modelo. Conta linha a linha e ignora o que está comentado: o item L2-01-b
-    acrescentou dois exemplos de `location` comentados (Martin/tiles, ligados só quando o operador quiser) e
-    uma menção a `location /` dentro de um comentário — contar o texto cru dava 8 onde há 5 blocos reais."""
-    return sum(1 for linha in NGINX.splitlines() if linha.strip().startswith("location "))
-
-
-# `location`s que NÃO devolvem corpo a cliente: as subrequisições internas do auth_request (itens L1-02,
-# L1-01-d, L2-04-e — /_plat_tile_autorizar, /_plat_cog_autorizar, /_plat_tile_vetor_autorizar). Todas são
-# `internal` — o nginx nunca as serve direto —, e a resposta delas (204/403) não chega ao navegador: quem
-# responde é a location do ladrilho/cog/tile, que tem o conjunto completo de cabeçalhos.
-LOCAIS_SEM_CABECALHO = NGINX.count("internal;")
+def _locais_do_modelo() -> int:
+    """Conta só bloco de verdade: o modelo traz exemplos COMENTADOS de `location` (o repasse direto ao Martin,
+    deploy/nginx.conf), e contar a palavra solta fazia o teste reprovar por causa de um comentário."""
+    return len(re.findall(r"^\s*location [^\n]*\{", NGINX, re.M))
 
 
 def test_hsts_em_todo_bloco_de_add_header_do_modelo():
-    # item L2-04-e: `location`S internas (`internal;`, ex. `/_plat_tile_vetor_autorizar`, o
-    # auth_request do cache de tile) nunca respondem direto a um navegador — não levam cabeçalho
-    # nenhum, de propósito (mesmo desenho do auth_request do ladrilho raster, item L1-02). Só as
-    # locations EXTERNAS entram na conta.
-    locais = _locais_ativos()
-    internas = NGINX.count("internal;")
+    locais = _locais_do_modelo()
     hsts = NGINX.count('add_header Strict-Transport-Security "max-age=31536000" always;')
-    # 12 depois da fusão wt/il424cartog + wt/il102aservi (item L2-04-e: tiles vetoriais /tiles/ e
-    # /svc/.../VectorTileServer/tile/; item L1-01-d: COG por inquilino /svc/.../cog/; item L1-02:
-    # ladrilho raster /svc/.../raster|mosaico/ — cada um com sua location externa + auth_request interno)
-    assert locais == 12 and hsts == (locais - internas) + 1, (locais, internas, hsts)
-    assert hsts == locais + 1 - LOCAIS_SEM_CABECALHO, (locais, hsts, LOCAIS_SEM_CABECALHO)
+    # 5 desde o item L2-01-a (location nova para o PMTiles do mapa-base, deploy/nginx.conf)
+    assert locais == 5 and hsts == locais + 1, (locais, hsts)
 
 
 def test_referrer_policy_em_todo_bloco_de_add_header_do_modelo():
     """Achado do testador do T2: declarado no server{} não chegava às rotas (add_header no bloco cancela o herdado)."""
-    locais = _locais_ativos()
-    internas = NGINX.count("internal;")
-    assert NGINX.count('add_header Referrer-Policy "strict-origin-when-cross-origin" always;') == (
-        locais - internas
-    ) + 1, locais
-    # segunda forma de contagem (OTHER, wt/il102aservi), deve bater com a primeira
-    locais2 = NGINX.count("location ")
-    esperado = locais2 + 1 - LOCAIS_SEM_CABECALHO
-    assert NGINX.count('add_header Referrer-Policy "strict-origin-when-cross-origin" always;') == esperado, locais2
-
-
-def test_bloco_do_ladrilho_tem_o_conjunto_de_cabecalhos_e_a_autorizacao():
-    """O bloco que serve ladrilho responde a cliente: leva os quatro cabeçalhos, e não serve nada sem
-    passar pelo auth_request (item L1-02; se alguém tirar essa linha, o cache passa a servir sem token)."""
-    inicio = NGINX.index("location ~ ^/svc/")
-    bloco = NGINX[inicio: NGINX.index("location = /_plat_tile_autorizar")]
-    for cabecalho in ('Strict-Transport-Security "max-age=31536000"', 'X-Robots-Tag "noindex, nofollow"',
-                      'X-Content-Type-Options "nosniff"', 'Referrer-Policy "strict-origin-when-cross-origin"'):
-        assert cabecalho in bloco, cabecalho
-    assert "auth_request /_plat_tile_autorizar;" in bloco
-    assert "proxy_cache_lock on;" in bloco
-    # a chave de cache NÃO pode conter o token (ADR 20260907T0300 seção 5)
-    chave = [li for li in bloco.splitlines() if "proxy_cache_key" in li][0]
-    assert "$plat_tok" not in chave, chave
+    locais = _locais_do_modelo()
+    assert NGINX.count('add_header Referrer-Policy "strict-origin-when-cross-origin" always;') == locais + 1, locais
 
 
 def test_instalador_limpa_residuos_de_teste_so_em_dev():

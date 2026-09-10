@@ -1,0 +1,45 @@
+{
+ "item": "L2-06-e-estatisticas-servidor",
+ "assinado_por": "backend/dados/testador (retomada apos queda por cota, worktree wt/il206eestat)",
+ "gerado_em": "2026-09-07T13:22:16Z",
+ "git_sha": "325b004",
+ "maquina": "12 vCPU, load_1min medido 15,8-16,0 no momento da medida de desempenho (muitos agentes concorrentes)",
+ "medidas": {
+  "consultas_referencia_batem_com_sql_a_mao": {
+   "valor": 10,
+   "unidade": "consultas",
+   "comando": "roda_teste.sh 'tests/api/catalogo/test_estatisticas.py::test_consulta_de_referencia_bate_com_sql_a_mao' -q -> 10 passed (sum/avg/percentil90/count_distinct/having/min+max/count/stddev/variance/filtro+sum, cada uma comparada linha a linha, arredondada a 1e-6, contra o SQL escrito a mao)"
+  },
+  "faixa_de_mes_fuso_fronteira": {
+   "valor": "PASSOU",
+   "unidade": "boolean",
+   "comando": "test_faixa_de_mes_respeita_fronteira_do_fuso: 31/07 23:30 America/Sao_Paulo cai em julho, 01/08 00:05 America/Sao_Paulo cai em agosto"
+  },
+  "cache_hit_segundo_pedido_ms": {
+   "valor": "<20",
+   "unidade": "ms",
+   "comando": "test_cache_hit_no_segundo_pedido_igual: 1o pedido cache=false, 2o pedido idem cache=true e dt <= 0,020s; linhas identicas"
+  },
+  "grupo_acima_do_limite_422": {
+   "valor": "PASSOU",
+   "unidade": "boolean",
+   "comando": "test_grupo_acima_do_limite_e_422: 10.005 grupos possiveis (limite 10.000) -> 422 limite_de_grupos_excedido"
+  },
+  "mesma_rota_alimenta_outstatistics": {
+   "valor": "PASSOU",
+   "unidade": "boolean",
+   "comando": "test_mesma_rota_alimenta_outstatistics: traduzir_outstatistics(payload Esri) -> POST na mesma rota -> mesmas linhas que o pedido canonico equivalente"
+  },
+  "agregacao_1mi_100cat_p95_ms": {
+   "valor": null,
+   "unidade": "ms",
+   "comando": "NAO MEDIDA: test_um_milhao_de_linhas_100_categorias_p95 (marcador 'lento') pulou por regra propria (carga_1min > 8) em duas tentativas as 13:21 UTC, load_1min=15,81 e 15,98 (12 vCPU; ~14 sessoes/agentes concorrentes na trilha). O teste esta escrito e roda no CI/turno seguinte quando a maquina esvaziar (bash roda_teste.sh tests/api/catalogo/test_estatisticas.py::test_um_milhao_de_linhas_100_categorias_p95 -m lento -q, com PLAT_GRAVAR_MEDIDAS=1). A agregacao e feita 100% em SQL (GROUP BY no Postgres, nao leitura em massa por cursor de tupla em Python) e as 10 consultas de referencia (ate 600 linhas) respondem em poucos ms cada, mas o alvo de <=500ms p95 em 1 milhao de linhas fica pendente de medicao honesta."
+  }
+ },
+ "refutacao_adversario": {
+  "percentil_150": "test_percentil_150_reprova -> 422",
+  "agrupar_por_geometria": "test_agrupar_por_geometria_reprova -> 422 (campo geom nunca exposto em colunas)",
+  "50_estatisticas_no_pedido": "test_50_estatisticas_no_mesmo_pedido: 50 estatisticas -> 200; 51 -> 422 estatisticas_demais",
+  "comparacao_com_sql_direto": "coberta pelas 10 consultas de referencia (clausula 1) e por test_mesma_rota_alimenta_outstatistics; nao ha uma comparacao adicional de 50 estatisticas simultaneas contra SQL a mao alem dessas"
+ }
+}

@@ -1,0 +1,632 @@
+/* plat · painel — os ELEMENTOS BÁSICOS do painel (item L2-06-b-elementos-basicos): indicador, gráfico serial,
+   pizza/rosca, tabela (com agrupamento e subtotal), lista paginada, mapa, detalhes, texto rico, legenda e
+   cabeçalho. O item L2-06-c-acoes-seletores-filtros-cruzados acrescenta o `seletor` e os CLIQUES que viram
+   GATILHO: clicar numa barra/ponto/fatia do gráfico, numa linha de tabela/lista ou num ponto do mapa chama
+   `ctx.definirSelecaoElemento(el.id, [id])`, e a mudança do seletor chama `ctx.definirFiltroElemento(el.id,
+   filtro)` — quem transforma isso em mensagem do barramento é `render.js` + `interacoes.js`.
+   Um módulo por responsabilidade: aqui ficam o PEDIDO de cada elemento (o que o servidor precisa agregar)
+   e o DESENHO do resultado; `render.js` só monta a grade e faz uma requisição por fonte.
+
+   Regras do item, valendo para todos:
+   - nenhum número é calculado aqui: contagem, soma, média, subtotal e total vêm do motor do L2-06-e pelo
+     `app/paineis/dados.py`; este módulo só formata;
+   - todo elemento tem estado "sem dado" EXPLÍCITO (`data-vazio="1"` + mensagem visível), nunca um quadro em
+     branco nem um zero inventado;
+   - todo elemento gráfico (indicador, serial, pizza, mapa) publica a TABELA EQUIVALENTE do mesmo dado, ligada
+     por `aria-describedby` — quem usa leitor de tela lê os números, não "gráfico". */
+import { h, limpar } from '../base/dom.js';
+import { paraDom } from '../mapa/grafico_svg.js';
+import { desenharSerie, tabelaDaSerie, rotuloDeChave } from './serie_svg.js';
+
+let seq = 0;
+const proximoId = (prefixo) => `${prefixo}-${(seq += 1)}`;
+
+export const TIPOS_COM_FONTE = new Set([
+  'indicador', 'grafico', 'serial', 'pizza', 'tabela', 'lista', 'mapa', 'detalhes', 'texto_rico', 'seletor',
+]);
+
+/* presets do seletor de período (mesma lista de `app/paineis/interacoes.py` — paridade de validação) */
+export const PRESETS_DATA = ['ultimos_7_dias', 'ultimos_30_dias', 'ultimos_90_dias', 'este_ano'];
+const ROTULO_PRESET = {
+  ultimos_7_dias: 'últimos 7 dias', ultimos_30_dias: 'últimos 30 dias',
+  ultimos_90_dias: 'últimos 90 dias', este_ano: 'este ano',
+};
+
+function isoDePreset(nome, agora = new Date()) {
+  if (nome === 'este_ano') return `${agora.getUTCFullYear()}-01-01T00:00:00Z`;
+  const dias = nome === 'ultimos_7_dias' ? 7 : nome === 'ultimos_30_dias' ? 30 : nome === 'ultimos_90_dias' ? 90 : null;
+  if (dias === null) return nome;  // já é uma data ISO (opção "desde <data>" restaurada da URL)
+  return new Date(agora.getTime() - dias * 86400000).toISOString();
+}
+
+/** true quando o elemento participa de um PEDIDO de dado (o seletor de lista fixa, de número ou de
+ * período não pede nada ao servidor — desenha na montagem, como legenda e cabeçalho). */
+export function precisaPedido(el) {
+  if (!TIPOS_COM_FONTE.has(el.tipo) || !el.fonte) return false;
+  return pedidoDoElemento(el) !== null;
+}
+
+/* ------------------------------------------------------------------ formatação */
+export function formatarNumero(v, op = {}) {
+  if (v === null || v === undefined) return '—';
+  const n = Number(v);
+  if (!Number.isFinite(n)) return String(v);
+  const casas = op.casas === undefined || op.casas === null ? 2 : Math.max(0, Math.min(6, op.casas));
+  let texto = n.toLocaleString('pt-BR', { minimumFractionDigits: op.casas === undefined ? 0 : casas,
+    maximumFractionDigits: casas });
+  if (op.percentual) texto += ' %';
+  return `${op.prefixo || ''}${texto}${op.sufixo ? ` ${op.sufixo}` : ''}`;
+}
+
+export function valorDeCelula(v) {
+  if (v === null || v === undefined) return '';
+  return String(v);
+}
+
+/** cor da faixa a que o valor pertence: `faixas: [{de, ate, cor}]` (de/ate opcionais, ate exclusivo) */
+export function corDaFaixa(valor, faixas) {
+  if (valor === null || valor === undefined || !Array.isArray(faixas)) return null;
+  const n = Number(valor);
+  if (!Number.isFinite(n)) return null;
+  for (const f of faixas) {
+    const de = f.de === undefined || f.de === null ? -Infinity : Number(f.de);
+    const ate = f.ate === undefined || f.ate === null ? Infinity : Number(f.ate);
+    if (n >= de && n < ate) return f.cor || null;
+  }
+  return null;
+}
+
+/** substitui {campo} pelo valor da linha — texto puro, nunca marcação (o valor vem do dado do inquilino) */
+export function preencherModelo(modelo, linha) {
+  return String(modelo || '').replace(/\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (_, campo) => {
+    const v = (linha || {})[campo];
+    return v === null || v === undefined ? '' : String(v);
+  });
+}
+
+/* ------------------------------------------------------------------ pedidos por tipo */
+export function pedidoDoElemento(elemento) {
+  const op = elemento.opcoes || {};
+  const tipo = elemento.tipo;
+  if (tipo === 'indicador') {
+    if (op.modo === 'uma_feicao') {
+      return { agregacao: 'uma_feicao', campos: op.campos, ordenacao: op.ordenacao };
+    }
+    return { agregacao: 'indicador', estatistica: op.estatistica || op.agregacao || 'contagem',
+      campo: op.campo, percentil: op.percentil };
+  }
+  if (tipo === 'grafico') {  // compatibilidade com o L2-06-a (barras de uma série por categoria)
+    return { agregacao: 'categorias', campo: op.campo_rotulo, agregacao_valor: op.agregacao || 'contagem',
+      campo_valor: op.campo, max_categorias: op.max_categorias || 8 };
+  }
+  if (tipo === 'serial' || tipo === 'pizza') {
+    const pedido = { agregacao: 'serie', limite: op.max_categorias || (op.faixa_data ? 60 : 20) };
+    if (op.faixa_data) pedido.faixa_data = op.faixa_data;
+    else pedido.grupo = op.grupo || op.campo_rotulo;
+    pedido.series = op.series || [{ estatistica: op.estatistica || op.agregacao || 'contagem', campo: op.campo,
+      rotulo: op.rotulo }];
+    if (tipo === 'pizza') pedido.series = pedido.series.slice(0, 1);
+    return pedido;
+  }
+  if (tipo === 'tabela') {
+    if (op.grupos && op.grupos.length) {
+      return { agregacao: 'grupos', grupos: op.grupos, series: op.series
+        || [{ estatistica: op.estatistica || 'contagem', campo: op.campo }], limite: op.max_linhas || 100,
+      ordenacao: op.ordenacao_grupos };
+    }
+    return { agregacao: 'linhas', campos: op.campos, limite: op.max_linhas || 50, ordenacao: op.ordenacao,
+      total: true };
+  }
+  if (tipo === 'lista') {
+    // geometria: true dá __lon/__lat às linhas (sem virar coluna visível — `dados.py` só acrescenta ao
+    // SELECT): a seleção de uma linha vira feição com geometria e alimenta ações de zoom/pan do barramento
+    return { agregacao: 'linhas', campos: op.campos, limite: op.por_pagina || 25, ordenacao: op.ordenacao,
+      total: true, deslocamento: 0, geometria: true };
+  }
+  if (tipo === 'mapa') {
+    return { agregacao: 'linhas', campos: op.campos, limite: op.max_pontos || 500, geometria: true };
+  }
+  if (tipo === 'detalhes') {
+    return { agregacao: 'uma_feicao', campos: op.campos, ordenacao: op.ordenacao };
+  }
+  if (tipo === 'seletor') {  // item L2-06-c: só o seletor que LÊ opções da fonte faz pedido
+    if (Array.isArray(op.valores) && op.valores.length) return null;  // lista fixa do autor
+    if (op.modo === 'numero' || op.modo === 'data') return null;      // limites/presets do cliente
+    if (op.modo === 'feicao') {
+      return op.campo ? { agregacao: 'linhas', campos: [op.campo], limite: op.max_opcoes || 50 } : null;
+    }
+    return op.campo ? { agregacao: 'categorias', campo: op.campo, max_categorias: op.max_opcoes || 50 } : null;
+  }
+  if (tipo === 'texto_rico') {
+    return op.campos && op.campos.length
+      ? { agregacao: 'uma_feicao', campos: op.campos, ordenacao: op.ordenacao }
+      : null;
+  }
+  return null;
+}
+
+/* ------------------------------------------------------------------ peças comuns */
+export function semDado(mensagem = 'sem dado para este filtro') {
+  return h('p', { class: 'painel-sem-dado', role: 'status' }, mensagem);
+}
+
+/** tabela equivalente (oculta ou em <details>), devolvida junto com o id para o `aria-describedby` */
+export function tabelaEquivalente(cabecalho, linhas, { visivel = false, rotulo = 'tabela do gráfico' } = {}) {
+  const id = proximoId('painel-tab');
+  const tabela = h('table', { class: 'painel-tabela painel-tabela-equivalente', id },
+    h('caption', { class: 'sr-only' }, rotulo),
+    h('thead', {}, h('tr', {}, ...cabecalho.map((c) => h('th', { scope: 'col' }, String(c))))),
+    h('tbody', {}, ...linhas.map((l) => h('tr', {}, ...l.map((v) => h('td', {}, valorDeCelula(v)))))));
+  if (visivel) return { id, no: tabela };
+  return { id, no: h('details', { class: 'painel-equivalente' },
+    h('summary', {}, 'ver como tabela'), tabela) };
+}
+
+/* ------------------------------------------------------------------ um render por tipo */
+function renderIndicador(corpo, el, resultado) {
+  const op = el.opcoes || {};
+  let valor = null;
+  if (resultado && resultado.tipo === 'numero') valor = resultado.valor;
+  else if (resultado && resultado.tipo === 'feicao') valor = (resultado.valores || {})[op.campo];
+  if (valor === null || valor === undefined) { corpo.append(semDado(op.texto_sem_dado || 'sem valor')); return true; }
+  const cor = corDaFaixa(valor, op.faixas);
+  const caixa = h('p', { class: 'painel-indicador' });
+  if (op.icone) caixa.append(h('span', { class: 'painel-indicador-icone', 'aria-hidden': 'true' }, op.icone));
+  const numero = h('span', { class: 'painel-indicador-valor' }, formatarNumero(valor, op));
+  if (cor) numero.style.color = cor;
+  caixa.append(numero);
+  if (op.rotulo) caixa.append(h('span', { class: 'painel-indicador-rotulo' }, op.rotulo));
+  corpo.append(caixa);
+  if (resultado.tipo === 'feicao' && op.campos_detalhe) {
+    const linhas = op.campos_detalhe.map((c) => [c, (resultado.valores || {})[c]]);
+    corpo.append(tabelaEquivalente(['campo', 'valor'], linhas, { rotulo: 'feição do indicador' }).no);
+  }
+  return false;
+}
+
+function renderSerial(corpo, el, resultado, ctx) {
+  const op = el.opcoes || {};
+  if (!resultado || resultado.tipo !== 'serie' || !(resultado.chaves || []).length) {
+    corpo.append(semDado(op.texto_sem_dado)); return true;
+  }
+  const t = tabelaDaSerie(resultado);
+  const eq = tabelaEquivalente(t.cabecalho, t.linhas, { rotulo: el.titulo || 'dados do gráfico' });
+  const svg = paraDom(desenharSerie(resultado, {
+    tipo: op.forma || 'barras', empilhado: !!op.empilhado, titulo: el.titulo || 'gráfico',
+    mensagemVazio: op.texto_sem_dado || 'sem dado',
+  }));
+  svg.setAttribute('aria-describedby', eq.id);
+  ligarSelecaoPorChave(svg, el, ctx);  // L2-06-c: clicar numa barra/ponto é gatilho de seleção
+  corpo.append(svg, eq.no);
+  return false;
+}
+
+/** L2-06-c: marca como `.painel-selecionado` as marcas gráficas cujo `data-chave`/`data-id` está na
+ * seleção da vista do elemento e transforma o clique nelas em `ctx.definirSelecaoElemento(el.id, [id])`
+ * (clicar de novo na mesma marca limpa — o alternar é do `definirSelecaoElemento`, em render.js). */
+function ligarSelecaoPorChave(svg, el, ctx) {
+  const vista = ctx.vista ? ctx.vista(el.id) : null;
+  const marcados = vista ? vista.selecao : new Set();
+  for (const b of svg.querySelectorAll('[data-chave],[data-id]')) {
+    const chave = b.getAttribute('data-chave') ?? b.getAttribute('data-id');
+    if (marcados.has(chave)) b.classList.add('painel-selecionado');
+  }
+  svg.addEventListener('click', (e) => {
+    const alvo = e.target.closest('[data-chave],[data-id]');
+    if (!alvo || !ctx.definirSelecaoElemento) return;
+    const chave = alvo.getAttribute('data-chave') ?? alvo.getAttribute('data-id');
+    if (alvo.getAttribute('data-outros') === '1') return;  // fatia "outros" não é uma categoria
+    ctx.definirSelecaoElemento(el.id, [chave]);
+  });
+}
+
+function renderPizza(corpo, el, resultado, ctx) {
+  const op = el.opcoes || {};
+  const serie = resultado && resultado.tipo === 'serie' ? (resultado.series || [])[0] : null;
+  const chaves = (resultado && resultado.chaves) || [];
+  if (!serie || !chaves.length) { corpo.append(semDado(op.texto_sem_dado)); return true; }
+  const dados = {
+    tipo: 'pizza', campo: resultado.chave, estatistica: 'valor',
+    series: chaves.map((chave, i) => ({ chave: rotuloDeChave(chave, resultado.granularidade),
+      n: serie.valores[i], valor: serie.valores[i] })),
+    total: null, nulos: 0,
+  };
+  const eq = tabelaEquivalente([resultado.chave || 'categoria', serie.rotulo],
+    chaves.map((c, i) => [rotuloDeChave(c, resultado.granularidade), serie.valores[i]]),
+    { rotulo: el.titulo || 'dados do gráfico' });
+  // importação tardia evita carregar o desenho de pizza em painel que não tem pizza
+  return import('../mapa/grafico_svg.js').then(({ desenhar }) => {
+    const svg = paraDom(desenhar(dados, { rosca: op.rosca !== false, titulo: el.titulo || 'gráfico de pizza',
+      mensagemVazio: op.texto_sem_dado || 'sem dado' }));
+    svg.setAttribute('aria-describedby', eq.id);
+    ligarSelecaoPorChave(svg, el, ctx);
+    corpo.append(svg, eq.no);
+    return false;
+  });
+}
+
+function ordenarLinhas(linhas, campo, direcao) {
+  if (!campo) return linhas;
+  const sinal = direcao === 'desc' ? -1 : 1;
+  return [...linhas].sort((a, b) => {
+    const va = a[campo]; const vb = b[campo];
+    if (va === vb) return 0;
+    if (va === null || va === undefined) return 1;
+    if (vb === null || vb === undefined) return -1;
+    const na = Number(va); const nb = Number(vb);
+    if (Number.isFinite(na) && Number.isFinite(nb)) return (na - nb) * sinal;
+    return String(va).localeCompare(String(vb), 'pt-BR') * sinal;
+  });
+}
+
+function renderTabela(corpo, el, resultado, ctx) {
+  const op = el.opcoes || {};
+  if (resultado && resultado.tipo === 'grupos') {
+    const linhas = resultado.linhas || [];
+    if (!linhas.length) { corpo.append(semDado(op.texto_sem_dado)); return true; }
+    const grupos = resultado.grupos || [];
+    const series = resultado.series || [];
+    const tabela = h('table', { class: 'painel-tabela painel-tabela-agrupada' },
+      h('thead', {}, h('tr', {}, ...grupos.map((g) => h('th', { scope: 'col' }, g)),
+        ...series.map((s) => h('th', { scope: 'col', class: 'num' }, s.rotulo)))),
+      h('tbody', {}, ...linhas.map((linha) => h('tr', {},
+        ...grupos.map((g) => h('td', {}, valorDeCelula(linha[g]))),
+        ...series.map((s) => h('td', { class: 'num' }, formatarNumero(linha[s.alias], op)))))),
+      h('tfoot', {}, h('tr', { class: 'painel-total' },
+        h('th', { scope: 'row', colspan: String(Math.max(1, grupos.length)) }, op.rotulo_total || 'total'),
+        ...series.map((s) => h('td', { class: 'num' }, formatarNumero((resultado.total || {})[s.alias], op))))));
+    corpo.append(tabela);
+    return false;
+  }
+  const colunas = (resultado && resultado.colunas) || [];
+  const linhasBrutas = (resultado && resultado.linhas) || [];
+  if (!linhasBrutas.length) { corpo.append(semDado(op.texto_sem_dado)); return true; }
+  const estado = ctx.estado(el.id, { campo: (op.ordenacao || {}).campo, direcao: (op.ordenacao || {}).direcao });
+  // o id de seleção é a POSIÇÃO na resposta (linha de painel não tem chave estável — ver interacoes.js);
+  // a ordenação do cliente reordena as linhas mas PRESERVA o id original de cada uma
+  const linhas = ordenarLinhas(linhasBrutas.map((linha, i) => ({ ...linha, __id: String(i) })),
+    estado.campo, estado.direcao);
+  const vista = ctx.vista ? ctx.vista(el.id) : null;
+  const marcados = vista ? vista.selecao : new Set();
+  const tabela = h('table', { class: 'painel-tabela' });
+  const cabecalho = h('tr', {});
+  for (const c of colunas) {
+    const th = h('th', { scope: 'col', 'aria-sort': estado.campo === c ? (estado.direcao === 'desc' ? 'descending' : 'ascending') : 'none' });
+    const bt = h('button', { type: 'button', class: 'painel-ordenar', 'data-campo': c }, c);
+    bt.addEventListener('click', () => {
+      estado.direcao = estado.campo === c && estado.direcao === 'asc' ? 'desc' : 'asc';
+      estado.campo = c;
+      ctx.repintar(el.id);
+    });
+    th.append(bt);
+    cabecalho.append(th);
+  }
+  tabela.append(h('thead', {}, cabecalho));
+  tabela.append(h('tbody', {}, ...linhas.map((linha) => {
+    const tr = h('tr', { 'data-id': linha.__id, class: marcados.has(linha.__id) ? 'painel-selecionado' : '' },
+      ...colunas.map((c) => h('td', {}, valorDeCelula(linha[c]))));
+    tr.addEventListener('click', () => { if (ctx.definirSelecaoElemento) ctx.definirSelecaoElemento(el.id, [linha.__id]); });
+    return tr;
+  })));
+  corpo.append(tabela);
+  if (resultado.total !== undefined && resultado.total !== null) {
+    corpo.append(h('p', { class: 'painel-rodape-tabela' },
+      `${formatarNumero(linhas.length)} de ${formatarNumero(resultado.total)} registro(s)`));
+  }
+  return false;
+}
+
+function renderLista(corpo, el, resultado, ctx) {
+  const op = el.opcoes || {};
+  const linhas = (resultado && resultado.linhas) || [];
+  if (!linhas.length) { corpo.append(semDado(op.texto_sem_dado)); return true; }
+  const vista = ctx.vista ? ctx.vista(el.id) : null;
+  const marcados = vista ? vista.selecao : new Set();
+  const lista = h('ul', { class: 'painel-lista' });
+  linhas.forEach((linha, i) => {
+    const id = String(i);
+    const item = h('li', { class: `painel-lista-item${marcados.has(id) ? ' painel-selecionado' : ''}`,
+      'data-id': id });
+    if (op.icone) item.append(h('span', { class: 'painel-lista-icone', 'aria-hidden': 'true' }, op.icone));
+    const texto = h('div', { class: 'painel-lista-texto' },
+      h('span', { class: 'painel-lista-titulo' }, preencherModelo(op.modelo_titulo || `{${(resultado.colunas || [])[0] || ''}}`, linha)));
+    if (op.modelo_detalhe) texto.append(h('span', { class: 'painel-lista-detalhe' }, preencherModelo(op.modelo_detalhe, linha)));
+    item.append(texto);
+    item.addEventListener('click', () => { if (ctx.definirSelecaoElemento) ctx.definirSelecaoElemento(el.id, [id]); });
+    lista.append(item);
+  });
+  corpo.append(lista);
+  const total = resultado.total;
+  if (total !== undefined && total !== null && total > (resultado.limite || 0)) {
+    const desloc = resultado.deslocamento || 0;
+    const pagina = Math.floor(desloc / (resultado.limite || 1)) + 1;
+    const paginas = Math.max(1, Math.ceil(total / (resultado.limite || 1)));
+    const barra = h('div', { class: 'painel-paginacao' });
+    const btAnterior = h('button', { type: 'button', class: 'pequeno', disabled: desloc <= 0,
+      'data-acao': 'anterior' }, 'anterior');
+    const btProxima = h('button', { type: 'button', class: 'pequeno', disabled: pagina >= paginas,
+      'data-acao': 'proxima' }, 'próxima');
+    btAnterior.addEventListener('click', () => ctx.paginar(el.id, Math.max(0, desloc - (resultado.limite || 0))));
+    btProxima.addEventListener('click', () => ctx.paginar(el.id, desloc + (resultado.limite || 0)));
+    barra.append(btAnterior,
+      h('span', { class: 'painel-paginacao-texto', 'aria-live': 'polite' },
+        `página ${formatarNumero(pagina)} de ${formatarNumero(paginas)} · ${formatarNumero(total)} registro(s)`),
+      btProxima);
+    corpo.append(barra);
+  }
+  return false;
+}
+
+const PROJ = { LARGURA: 420, ALTURA: 240, MARGEM: 10 };
+
+function renderMapa(corpo, el, resultado, ctx) {
+  const op = el.opcoes || {};
+  const linhas = (resultado && resultado.linhas) || [];
+  const pontos = linhas.filter((l) => Number.isFinite(Number(l.__lon)) && Number.isFinite(Number(l.__lat)))
+    .map((l) => ({ lon: Number(l.__lon), lat: Number(l.__lat), linha: l }));
+  if (!pontos.length) { corpo.append(semDado(op.texto_sem_dado || 'sem feição com geometria neste filtro')); return true; }
+  const estado = ctx.estado(el.id, {});
+  const vista = ctx.vista ? ctx.vista(el.id) : null;
+  const marcados = vista ? vista.selecao : new Set();
+  const piscados = new Set((estado.piscar || []).map((f) => f.id));
+  const lons = pontos.map((p) => p.lon); const lats = pontos.map((p) => p.lat);
+  const env = [Math.min(...lons), Math.min(...lats), Math.max(...lons), Math.max(...lats)];
+  const dx = (env[2] - env[0]) || 0.01; const dy = (env[3] - env[1]) || 0.01;
+  // a caixa do ESTADO (zoom/pan vindos de ação de widget do barramento, ver interacoes.js) vence o
+  // envelope do dado; pontos fora da caixa ficam fora do desenho
+  const caixa = Array.isArray(estado.caixa) ? estado.caixa : [env[0] - dx * 0.06, env[1] - dy * 0.06, env[2] + dx * 0.06, env[3] + dy * 0.06];
+  const visivel = (p) => p.lon >= caixa[0] && p.lon <= caixa[2] && p.lat >= caixa[1] && p.lat <= caixa[3];
+  const largura = (caixa[2] - caixa[0]) || 0.01; const altura = (caixa[3] - caixa[1]) || 0.01;
+  const px = (lon) => PROJ.MARGEM + ((lon - caixa[0]) / largura) * (PROJ.LARGURA - 2 * PROJ.MARGEM);
+  const py = (lat) => PROJ.ALTURA - PROJ.MARGEM - ((lat - caixa[1]) / altura) * (PROJ.ALTURA - 2 * PROJ.MARGEM);
+  const filhos = pontos.map((p, i) => ({
+    tag: 'circle',
+    atrs: { cx: Math.round(px(p.lon) * 100) / 100, cy: Math.round(py(p.lat) * 100) / 100, r: 4,
+      class: `painel-mapa-ponto${marcados.has(String(i)) ? ' painel-selecionado' : ''}${piscados.has(String(i)) ? ' painel-piscar' : ''}`,
+      'data-id': String(i) },
+    filhos: [{ tag: 'title', atrs: {}, filhos: [preencherModelo(op.modelo_titulo || '', p.linha) || `${p.lon}, ${p.lat}`] }],
+  })).filter((_, i) => visivel(pontos[i]));
+  const svg = paraDom({ tag: 'svg', atrs: { viewBox: `0 0 ${PROJ.LARGURA} ${PROJ.ALTURA}`, class: 'painel-mapa',
+    role: 'img', 'aria-label': el.titulo || 'mapa', 'data-extensao': caixa.map((v) => v.toFixed(5)).join(',') },
+  filhos });
+  const eq = tabelaEquivalente(['longitude', 'latitude'], pontos.slice(0, 200).map((p) => [p.lon, p.lat]),
+    { rotulo: el.titulo || 'pontos do mapa' });
+  svg.setAttribute('aria-describedby', eq.id);
+  ligarSelecaoPorChave(svg, el, ctx);  // clicar num ponto é gatilho de seleção (o data-id é a posição)
+  if (estado.popup && estado.popup.propriedades) {
+    const texto = preencherModelo(op.modelo_titulo || '', estado.popup.propriedades)
+      || Object.entries(estado.popup.propriedades).slice(0, 4).map(([c, v]) => `${c}: ${valorDeCelula(v)}`).join(' · ');
+    const popup = h('div', { class: 'painel-mapa-popup', role: 'status' }, texto);
+    const caixaMapa = h('div', { class: 'painel-mapa-caixa' });
+    caixaMapa.append(svg, popup);
+    corpo.append(caixaMapa);
+  } else {
+    corpo.append(svg);
+  }
+  // "extensão como filtro": a extensão visível vira condição espacial nas OUTRAS fontes do painel
+  const barra = h('div', { class: 'painel-mapa-acoes' });
+  const btFiltrar = h('button', { type: 'button', class: 'pequeno', 'data-acao': 'filtrar-extensao' },
+    op.rotulo_filtrar || 'filtrar pela extensão');
+  const btLimpar = h('button', { type: 'button', class: 'pequeno texto', 'data-acao': 'limpar-extensao' },
+    op.rotulo_limpar || 'limpar extensão');
+  btFiltrar.addEventListener('click', () => ctx.filtrarExtensao(caixa));
+  btLimpar.addEventListener('click', () => ctx.filtrarExtensao(null));
+  barra.append(btFiltrar, btLimpar);
+  corpo.append(barra, eq.no);
+  return false;
+}
+
+function renderDetalhes(corpo, el, resultado) {
+  const op = el.opcoes || {};
+  const valores = resultado && resultado.tipo === 'feicao' ? resultado.valores : null;
+  if (!valores) { corpo.append(semDado(op.texto_sem_dado || 'nenhuma feição selecionada')); return true; }
+  const campos = op.campos || (resultado.campos || []);
+  corpo.append(h('dl', { class: 'painel-detalhes' },
+    ...campos.flatMap((c) => [h('dt', {}, c), h('dd', {}, valorDeCelula(valores[c]))])));
+  return false;
+}
+
+/* markdown mínimo e SEGURO: só **negrito**, *itálico*, `código`, listas e parágrafos — nunca HTML do dado */
+export function markdownSeguro(texto) {
+  const linhas = String(texto || '').split(/\r?\n/);
+  const nos = [];
+  let lista = null;
+  const inline = (s) => {
+    const partes = [];
+    const re = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
+    let ultimo = 0; let m;
+    while ((m = re.exec(s)) !== null) {
+      if (m.index > ultimo) partes.push(s.slice(ultimo, m.index));
+      const t = m[0];
+      if (t.startsWith('**')) partes.push(h('strong', {}, t.slice(2, -2)));
+      else if (t.startsWith('`')) partes.push(h('code', {}, t.slice(1, -1)));
+      else partes.push(h('em', {}, t.slice(1, -1)));
+      ultimo = m.index + t.length;
+    }
+    if (ultimo < s.length) partes.push(s.slice(ultimo));
+    return partes;
+  };
+  for (const linha of linhas) {
+    const item = /^\s*[-*]\s+(.*)$/.exec(linha);
+    if (item) {
+      if (!lista) { lista = h('ul', {}); nos.push(lista); }
+      lista.append(h('li', {}, ...inline(item[1])));
+      continue;
+    }
+    lista = null;
+    const titulo = /^(#{1,3})\s+(.*)$/.exec(linha);
+    if (titulo) { nos.push(h(`h${titulo[1].length + 2}`, {}, ...inline(titulo[2]))); continue; }
+    if (linha.trim()) nos.push(h('p', {}, ...inline(linha)));
+  }
+  return nos;
+}
+
+function renderTextoRico(corpo, el, resultado) {
+  const op = el.opcoes || {};
+  const pedeFeicao = !!(op.campos && op.campos.length);
+  const valores = resultado && resultado.tipo === 'feicao' ? resultado.valores : null;
+  // texto rico ligado a campos: sem feição no filtro, o estado é "sem dado" — nunca o modelo com os
+  // {campos} trocados por vazio ("maior valor: em"), que pareceria um dado de verdade
+  if (pedeFeicao && !valores) { corpo.append(semDado(op.texto_sem_dado || 'sem feição para o texto')); return true; }
+  const texto = preencherModelo(op.texto || '', valores || {});
+  if (!texto.trim()) { corpo.append(semDado(op.texto_sem_dado || 'sem texto')); return true; }
+  corpo.append(...markdownSeguro(texto));
+  return false;
+}
+
+function renderLegenda(corpo, el) {
+  const op = el.opcoes || {};
+  const itens = op.itens || [];
+  if (!itens.length) { corpo.append(semDado(op.texto_sem_dado || 'sem itens de legenda')); return true; }
+  corpo.append(h('ul', { class: 'painel-legenda' }, ...itens.map((i) => h('li', {},
+    h('span', { class: 'painel-legenda-cor', style: `background:${i.cor || 'transparent'}`, 'aria-hidden': 'true' }),
+    h('span', {}, i.rotulo || '')))));
+  return false;
+}
+
+function renderCabecalho(corpo, el, _resultado, ctx) {
+  const op = el.opcoes || {};
+  const caixa = h('div', { class: 'painel-cabecalho' });
+  if (op.logo) caixa.append(h('img', { class: 'painel-logo', src: op.logo, alt: op.logo_alt || '' }));
+  const textos = h('div', {});
+  if (op.titulo) textos.append(h('h2', { class: 'painel-cabecalho-titulo' }, op.titulo));
+  if (op.subtitulo) textos.append(h('p', { class: 'painel-cabecalho-sub' }, op.subtitulo));
+  if (op.mostrar_atualizacao !== false) {
+    textos.append(h('p', { class: 'painel-atualizado', 'data-papel': 'atualizado', 'aria-live': 'polite' },
+      ctx.textoAtualizacao()));
+  }
+  caixa.append(textos);
+  corpo.append(caixa);
+  return false;
+}
+
+/* --------------------------------------------------------------- seletor (item L2-06-c) */
+/** Lê o valor do seletor a partir do filtro CQL2 que a vista guarda (restauração da URL): '=' e 'in' de
+ * um valor viram o valor do controle; intervalo numérico vira {min,max}; '>=' de data ISO vira a data. */
+export function valorInicialDoSeletor(filtro, modo) {
+  const vazio = modo === 'numero' ? { min: '', max: '' } : '';
+  if (!filtro) return vazio;
+  const eNumero = (x) => typeof x === 'number' && Number.isFinite(x);
+  if (modo === 'numero') {
+    const partes = filtro.op === 'and' && Array.isArray(filtro.args) ? filtro.args : [filtro];
+    const minmax = { min: '', max: '' };
+    for (const p of partes) {
+      if (!p || !Array.isArray(p.args) || !p.args[0] || typeof p.args[0].property !== 'string') continue;
+      if (p.op === '>=' && eNumero(p.args[1])) minmax.min = String(p.args[1]);
+      if (p.op === '<=' && eNumero(p.args[1])) minmax.max = String(p.args[1]);
+    }
+    return minmax;
+  }
+  if (filtro.op === '=' && filtro.args && typeof filtro.args[1] !== 'object') return String(filtro.args[1]);
+  if (filtro.op === 'in' && Array.isArray(filtro.args?.[1]) && filtro.args[1].length === 1) return String(filtro.args[1][0]);
+  if (modo === 'data' && filtro.op === '>=' && typeof filtro.args?.[1] === 'string') return filtro.args[1];
+  return vazio;
+}
+
+function renderSeletor(corpo, el, resultado, ctx) {
+  const op = el.opcoes || {};
+  const modo = op.modo || 'categoria';
+  const campo = op.campo;
+  const vista = ctx.vista ? ctx.vista(el.id) : null;
+  const inicial = valorInicialDoSeletor(vista ? vista.filtroDinamico : null, modo);
+  const aplicar = (filtro) => { if (ctx.definirFiltroElemento) ctx.definirFiltroElemento(el.id, filtro); };
+  const caixa = h('div', { class: 'painel-seletor' });
+
+  // número: dois campos (mínimo e máximo) — intervalo vira `and` de >= e <= (nunca `between`: o
+  // servidor de painel não aceita esse operador no filtro por pedido)
+  if (modo === 'numero') {
+    const rotulo = op.rotulo || el.titulo || 'valor';
+    const de = h('input', { type: 'number', class: 'painel-seletor-num', placeholder: 'mínimo',
+      'aria-label': `mínimo de ${rotulo}`, value: inicial.min });
+    const ate = h('input', { type: 'number', class: 'painel-seletor-num', placeholder: 'máximo',
+      'aria-label': `máximo de ${rotulo}`, value: inicial.max });
+    let temporizador = null;
+    const disparar = () => {
+      clearTimeout(temporizador);
+      temporizador = setTimeout(() => {
+        const partes = [];
+        if (de.value !== '' && Number.isFinite(Number(de.value))) partes.push({ op: '>=', args: [{ property: campo }, Number(de.value)] });
+        if (ate.value !== '' && Number.isFinite(Number(ate.value))) partes.push({ op: '<=', args: [{ property: campo }, Number(ate.value)] });
+        aplicar(partes.length === 0 ? null : partes.length === 1 ? partes[0] : { op: 'and', args: partes });
+      }, 250);
+    };
+    de.addEventListener('input', disparar);
+    ate.addEventListener('input', disparar);
+    caixa.append(h('div', { class: 'painel-seletor-faixa' }, de, h('span', { class: 'painel-seletor-ate' }, 'a'), ate));
+    corpo.append(caixa);
+    return false;
+  }
+
+  // período: presets (a data-limite é calculada no cliente na HORA da escolha e o filtro guarda a data
+  // exata — a URL reabre com a MESMA data, não recalcula)
+  if (modo === 'data') {
+    const presets = Array.isArray(op.presets) && op.presets.length ? op.presets : [...PRESETS_DATA];
+    const sel = h('select', { class: 'painel-seletor-controle', 'aria-label': op.rotulo || el.titulo || 'período' });
+    sel.append(h('option', { value: '' }, op.rotulo_todos || 'todo o período'));
+    for (const p of presets) sel.append(h('option', { value: p }, ROTULO_PRESET[p] || p));
+    if (typeof inicial === 'string' && inicial && !presets.some((p) => isoDePreset(p) === inicial)) {
+      sel.append(h('option', { value: inicial }, `desde ${inicial.slice(0, 10)}`));
+    }
+    sel.value = typeof inicial === 'string' ? inicial : '';
+    sel.addEventListener('change', () => {
+      aplicar(sel.value ? { op: '>=', args: [{ property: campo }, isoDePreset(sel.value)] } : null);
+    });
+    caixa.append(sel);
+    corpo.append(caixa);
+    return false;
+  }
+
+  // categoria e feição: um <select>; a primeira opção "todos" limpa o filtro (valor null na vista)
+  let valores = [];
+  if (Array.isArray(op.valores) && op.valores.length) valores = op.valores;
+  else if (modo === 'feicao' && resultado && resultado.tipo === 'linhas') {
+    valores = (resultado.linhas || []).map((l) => l[campo]);
+  } else if (resultado && resultado.tipo === 'categorias') {
+    valores = (resultado.linhas || []).map((l) => l.categoria);
+  } else {
+    corpo.append(semDado(op.texto_sem_dado || 'sem opções para o seletor')); return true;
+  }
+  const unicos = [...new Set(valores.filter((v) => v !== null && v !== undefined).map((v) => String(v)))];
+  const sel = h('select', { class: 'painel-seletor-controle', 'aria-label': op.rotulo || el.titulo || 'filtro' });
+  sel.append(h('option', { value: '' }, op.rotulo_todos || 'todos'));
+  for (const v of unicos) sel.append(h('option', { value: v }, v));
+  sel.value = typeof inicial === 'string' && inicial ? inicial : '';
+  if (sel.value && !unicos.includes(sel.value)) sel.append(h('option', { value: sel.value }, sel.value));
+  sel.addEventListener('change', () => {
+    aplicar(sel.value && campo ? { op: '=', args: [{ property: campo }, sel.value] } : null);
+  });
+  caixa.append(sel);
+  corpo.append(caixa);
+  return false;
+}
+
+const RENDER = {
+  indicador: renderIndicador,
+  grafico: renderSerial,        // o `grafico` do L2-06-a passa a desenhar em SVG, com tabela equivalente
+  serial: renderSerial,
+  pizza: renderPizza,
+  tabela: renderTabela,
+  lista: renderLista,
+  mapa: renderMapa,
+  detalhes: renderDetalhes,
+  seletor: renderSeletor,
+  texto_rico: renderTextoRico,
+  legenda: renderLegenda,
+  cabecalho: renderCabecalho,
+};
+
+/** Desenha um elemento no seu `corpo`; devolve true quando ficou no estado "sem dado". */
+export function renderElemento(corpo, elemento, resultado, ctx) {
+  limpar(corpo);
+  const f = RENDER[elemento.tipo];
+  if (!f) { corpo.textContent = '—'; return false; }
+  // o `grafico` do L2-06-a devolve `{tipo:'categorias'}`: converte para a forma de série antes de desenhar
+  // (o seletor NÃO: ele lê as categorias como estão, uma opção por linha)
+  let dado = resultado;
+  if (resultado && resultado.tipo === 'categorias' && elemento.tipo !== 'seletor') {
+    dado = { tipo: 'serie', chave: (elemento.opcoes || {}).campo_rotulo || 'categoria', granularidade: null,
+      chaves: (resultado.linhas || []).map((l) => l.categoria),
+      series: [{ alias: 's0', rotulo: 'valor', valores: (resultado.linhas || []).map((l) => l.valor) }] };
+  }
+  return f(corpo, elemento, dado, ctx);
+}

@@ -347,3 +347,12 @@ LAYOUT_INLINE_BYTES_MAX = 256 * 1024        # documento de layout inline num ped
 # resposta é 413 dizendo o número medido e como estreitar, nunca um arquivo pela metade.
 TRACADO_EXPORTACAO_MAX = 50_000     # elementos por exportação ou por camada salva
 TRACADO_HISTORICO_MAX = 20          # "os 20 últimos traçados do usuário" (portão do item)
+# --- gráficos por camada (L2-01-i-graficos-de-camada; rota POST /api/camadas/{id}/grafico): a agregação é
+# sempre no servidor e a resposta nunca carrega a tabela crua — estes tetos são o que garante "nenhuma
+# resposta > 1 MB" mesmo numa camada de 1 milhão de linhas ou de 5.000 categorias.
+GRAFICO_CATEGORIAS_PADRAO = 50        # barras/pizza: categorias maiores mostradas; o resto vira UM grupo "outros"
+GRAFICO_CATEGORIAS_MAX = 500
+GRAFICO_FAIXAS_MAX = 200              # histograma: faixas de largura igual
+GRAFICO_AMOSTRA_PADRAO = 2_000        # dispersão: pontos desenhados (a regressão usa TODAS as linhas)
+GRAFICO_AMOSTRA_MAX = 5_000
+GRAFICO_RESPOSTA_BYTES_MAX = 1_000_000  # teto declarado (refutação do item); conferido por teste, não por corte

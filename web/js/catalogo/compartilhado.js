@@ -7,6 +7,7 @@ import '../base/componentes.js';
 import { h, limpar, htmlSeguro } from '../base/dom.js';
 import { aoTraduzir, aplicar, carregar as carregarIdioma, t } from '../base/i18n.js';
 import { pronto } from '../base/layout.js';
+import { montarBarraFiltros, montarPainel, parametrosUrlDaLocalizacao } from '../paineis/render.js';
 import * as api from './api.js';
 import { bytes, dataHora, elipse } from './formato.js';
 
@@ -74,6 +75,20 @@ function renderizar(r) {
   document.title = `${elipse(it.titulo, 60)} · ${t('app.nome')}`;
   sec.append(fichaItem(it, { podeBaixar: r.permite_download, downloadUrl: r.download_url, miniaturaUrl: api.compartilhadoMiniaturaUrl(token, it.id) }));
   sec.hidden = false;
+
+  if (it.tipo === 'painel') {
+    const corpo = (it.dados && it.dados.corpo) || {};
+    const grade = el('painel-grade');
+    const filtrosEl = el('painel-filtros');
+    grade.hidden = false;
+    const iniciaisUrl = parametrosUrlDaLocalizacao(corpo.parametros_url);
+    const buscarDados = (fonteId, pedidos, filtroExecucao) =>
+      api.painelDadosCompartilhado(token, it.id, fonteId, { pedidos, filtro_execucao: filtroExecucao });
+    const instancia = montarPainel(grade, corpo, buscarDados, iniciaisUrl);
+    montarBarraFiltros(filtrosEl, corpo.filtros, iniciaisUrl, (campo, valor) => instancia.atualizarFiltro(campo, valor));
+    await instancia.aguardarPrimeiraCarga;
+  }
+
   const incluidos = Array.isArray(r.itens_incluidos) ? r.itens_incluidos : [];
   const secInc = el('incluidos');
   if (incluidos.length) {

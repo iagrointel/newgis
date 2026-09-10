@@ -1,0 +1,17 @@
+{
+ "item": "L2-06-a-modelo-painel-fontes",
+ "medidas": {
+  "primeira_pintura_painel_ms": {
+   "valor": 28,
+   "unidade": "ms",
+   "comando": "first-contentful-paint de /paineis/{id} com o painel de exemplo (9 elementos, chromium)"
+  },
+  "pagina_painel_pronta_ms": {
+   "valor": 858.1,
+   "unidade": "ms",
+   "comando": "goto('/paineis/{id}') até body[data-pronto=1]"
+  }
+ },
+ "gerado_em": "2026-09-09T03:01:16Z",
+ "git_sha": "b99460784bc2"
+}

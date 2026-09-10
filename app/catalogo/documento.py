@@ -86,10 +86,18 @@ def validar_grafo(tipo: str, dados) -> None:
     ligação (`origem`/`alvo`) apontando para um id que não está em `corpo.nos`. O formato de cada campo (tipo do
     nó, tipos de `corpo`/`nos`/`ligacoes`) já é responsabilidade do JSON Schema do tipo (`tipos.validar`,
     chamado ANTES desta função nas duas rotas que escrevem `dados`); aqui só entra o que precisa da lista
-    inteira para ser conferido."""
+    inteira para ser conferido. No painel, vale também a validação das INTERAÇÕES do L2-06-c
+    (`app.paineis.interacoes`: `corpo.mensagens` e elemento `seletor` — a mensagem específica de cada
+    regra quebrada vai no detalhe do 422, que é o que a tela do editor mostra)."""
     corpo = _corpo_do_documento(tipo, dados)
     if corpo is None:
         return
+    erros_interacoes: list = []
+    if tipos.familia_de(tipo) == "painel":
+        # import tardio: app.paineis não pode entrar no import de catálogo (ciclo de módulo)
+        from app.paineis.interacoes import validar_interacoes
+
+        erros_interacoes, _avisos = validar_interacoes(corpo)
     nos = corpo.get("nos", [])
     if not isinstance(nos, list):
         return
@@ -123,16 +131,10 @@ def validar_grafo(tipo: str, dados) -> None:
                             "regra": "referencia_pendente",
                         }
                     )
+    if erros_interacoes:
+        erros.extend(erros_interacoes)
     if erros:
         raise ErroAPI(422, "grafo_invalido", f"grafo do documento ({tipo}) inválido", erros)
-    if tipo == "app":
-        # item L5-07: fontes, vistas e mensagens — a API recusa o que o construtor recusaria (relação entre
-        # fontes diferentes ausente ou com tipos que não casam, referências pendentes, CQL2 malformado)
-        from app.app_modelo.validar import validar_modelo
-
-        erros_modelo, _avisos = validar_modelo(corpo)
-        if erros_modelo:
-            raise ErroAPI(422, "modelo_invalido", "fontes, vistas ou mensagens do aplicativo inválidas", erros_modelo)
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -158,20 +160,29 @@ def _migrar_app_v1_v2(dados: dict) -> dict:
     return {**dados, "corpo": corpo, "esquema_versao": 2}
 
 
-def _migrar_app_v2_v3(dados: dict) -> dict:
-    """v2→v3 (item L5-07): `corpo` ganha `fontes`, `vistas` e `mensagens` vazias — nenhum nó nem ligação muda."""
+def _migrar_painel_v2_v3(dados: dict) -> dict:
+    """v2→v3 (`docs/esquemas/painel-v2.json` → `painel-v3.json`, item L2-06-a-modelo-painel-fontes,
+    migração `20260906T2145_documento_painel.sql`): o tipo `painel` ganha o modelo de painel de verdade
+    (grade, elementos, fontes-vista, filtros globais, parâmetros de URL, tema) por cima do grafo genérico
+    v2. `nos`/`ligacoes`/`mapa_id`/`mapas` continuam aceitos (opcionais, v3 os herda do v2 sem exigi-los);
+    documento v2 sem nada disso ganha as listas/objetos vazios na leitura, nunca perde `nos`/`ligacoes`
+    existentes (útil só quando o documento v2 vier a ser reaproveitado como base de um painel — hoje os
+    dois tipos de `corpo` coexistem no mesmo objeto até o usuário editar e gravar a forma nova)."""
     corpo = dict(dados.get("corpo") or {})
+    corpo.setdefault("grade", {"colunas": 12, "linha_px": 36})
+    corpo.setdefault("tema", {"modo": "claro"})
     corpo.setdefault("fontes", [])
-    corpo.setdefault("vistas", [])
-    corpo.setdefault("mensagens", [])
+    corpo.setdefault("elementos", [])
+    corpo.setdefault("filtros", [])
+    corpo.setdefault("parametros_url", [])
     return {**dados, "corpo": corpo, "esquema_versao": 3}
 
 
 # registro fechado: (tipo, versão de origem) -> função que devolve o documento na versão seguinte
 _MIGRACOES = {
     ("painel", 1): _migrar_painel_v1_v2,
+    ("painel", 2): _migrar_painel_v2_v3,
     ("app", 1): _migrar_app_v1_v2,
-    ("app", 2): _migrar_app_v2_v3,
 }
 
 _TETO_PASSOS = 50  # mesma ordem de grandeza de outras cadeias da casa; documento real nunca chega perto disso

@@ -4,6 +4,7 @@ plat.log_acesso: app.auth.middleware) e monta os routers. O nginx serve web/ em 
 (ADR 0001 seção 4.3); a API responde /, as páginas de app.paginas, /saude e /api/.
 Cada trilha acrescenta o seu router na lista ROUTERS (uma linha por trilha; ordem = ordem de montagem)."""
 
+import os
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -50,6 +51,8 @@ from app.consulta.rotas_wfs import router as rotas_wfs
 from app.correio.rotas_smtp import router as rotas_smtp
 from app.edicao.rotas import router as rotas_edicao
 from app.exportacao.rotas import router as rotas_exportacao
+from app.estatistica.rotas import router as rotas_estatistica
+from app.estatistica.rotas_graficos import router as rotas_graficos
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.imagens.rotas_imagens import router as rotas_imagens
@@ -68,6 +71,7 @@ from app.mapa.promover import router as rotas_promover
 from app.mapa.rotas import router as rotas_mapa
 from app.mapa.selecao import router as rotas_selecao
 from app.multiescala.rotas import router as rotas_multiescala
+from app.paineis.rotas import router as rotas_paineis
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rede_utilidades.rotas_config_tracado import router as rotas_rede_config_tracado
@@ -111,6 +115,14 @@ limite_corpo.instalar(app)
 # CORS aberto só em /svc, /ogc e /tiles (item L2-04-b): lá a credencial é o token da URL, nunca o cookie.
 cors_servicos.instalar(app)
 
+if os.environ.get("PLAT_SERVIR_STATIC_DEV") == "1":
+    # SÓ para e2e de trilha isolada (uvicorn solto na porta do item, sem nginx na frente): em produção e em
+    # homologação o nginx serve web/ em /static/ direto do disco (ADR 0001 seção 4.3) e esta variável nunca
+    # é setada. Nunca monta por cima de uma rota /api existente (StaticFiles fica só em /static).
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount("/static", StaticFiles(directory=str(WEB)), name="static-dev")
+
 ROUTERS = [
     rotas_saude,
     # --- identidade (L0-02)
@@ -141,6 +153,8 @@ ROUTERS = [
     rotas_categorias.router,
     rotas_favoritos.router,
     rotas_lixeira.router,
+    # --- documento de painel (L2-06-a-modelo-painel-fontes): dados por fonte, sessão/token e link anônimo
+    rotas_paineis,
     # --- catálogo externo OGC API Records (L0-09-metadado-catalogo): /ogc/records; token catalogo:ler, nunca aberto
     rotas_ogc.router,
     # --- layout de impressão (L2-12-b): /api/layouts, página headless do quadro e Export Web Map Task (Esri)
@@ -271,6 +285,10 @@ ROUTERS = [
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
     # --- QR local para o widget compartilhar (L5-01-d)
     rotas_qr.router,
+    # --- agregação estatística (L2-06-e): POST /api/camadas/{id}/estatisticas
+    rotas_estatistica,
+    # --- gráficos por camada (L2-01-i): POST /api/camadas/{id}/grafico
+    rotas_graficos,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
