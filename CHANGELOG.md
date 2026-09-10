@@ -56,6 +56,31 @@ consistência); `collections-selection`, `dataset-tilesets`, formatos vetorial/c
 (OpenAPI próprio desta família), HTML, dimensão `datetime` por coleção; teste com ArcGIS Pro/QGIS reais
 (decisão D20 do dono).
 
+**Rodada do adversário independente (mesmo turno, contexto próprio — nunca viu o código nem o
+raciocínio acima): veredito PARCIAL.** Confirmou, sem confiar no autor: byte-a-byte idêntico em 10
+combinações adicionais de zoom (não só as do autor), isolamento entre inquilinos em toda a superfície
+(collections/tileset/tile/map), grade inválida sempre 404 limpo, SSRF/injeção/traversal sempre
+recusados, 22 testes próprios verdes. Achou DOIS bugs reais, os dois CORRIGIDOS nesta mesma passagem
+com teste de regressão: (1) `bbox=nan,nan,nan,nan`/`-inf,-inf,inf,inf` não levantam `ValueError` em
+`float()` — escapavam da checagem de "invertido" e só quebravam dentro de `tiles.recorte`, saindo como
+502 `leitura_falhou` (categoria errada); corrigido com `math.isfinite` explícito, 400 `bbox_invalido`.
+(2) `crs=EPSG:4326; DROP TABLE x` passava o `startswith("EPSG:")` inteiro (com o texto depois do
+número) e só quebrava dentro de `CRS.from_user_input`, ecoando a exceção crua no corpo do 502;
+corrigido — o texto após `EPSG:` tem de ser só dígitos, senão 400 `crs_invalido` antes de qualquer
+parser. Também mediu, sem corrigir (fora do escopo de uma fachada sobre motor de pixel compartilhado,
+registrado em `docs/PARIDADE.md`): `/map` no TETO PERMITIDO (4096×4096) renderiza em ~27 s nesta
+bancada — idêntico ao `GetMap` do WMS no mesmo tamanho (~34 s), o mesmo `tiles.recorte` por baixo dos
+dois; e zoom abaixo do `minzoom` nativo do item é lento (até 18 s) tanto no XYZ quanto no OGC —
+pré-existente no motor `tiles.ladrilho` do item L1-02 base, reproduzido idêntico nos dois caminhos.
+
+Fechando a lacuna que o próprio portão previa e a suíte original ainda não cobria ("…ou em teste
+próprio contra o JSON Schema da spec"): nova suíte `tests/api/imagens/test_ogc_tiles_schema.py` (5
+casos) valida landing, conformance, `tileMatrixSets` (lista), `tileMatrixSet` (definição) e tileset
+metadata contra o documento OpenAPI **bundled** oficial de OGC API — Tiles Part 1
+(`tests/dados/ogc_schemas/ogcapi-tiles-1.bundled.json`, baixado 10/09/2026 de
+`schemas.opengis.net`, sem depender de rede em execução) — validação de esquema de verdade, não
+asserção de campo escrita à mão. Suíte final: **29 + 5 = 34 casos**, todos verdes.
+
 ## turno 9, setembro de 2026 (item L2-01-j-comparacao-cortina-tempo: comparação — cortina, lado a lado, lupa e tempo)
 
 Quarta ferramenta do painel "Comparar" do SIG novo (`/sig`, ícone atalho `C`): cortina (swipe) vertical e

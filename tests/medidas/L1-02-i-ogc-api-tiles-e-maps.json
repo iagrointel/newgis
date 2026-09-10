@@ -2,9 +2,19 @@
  "item": "L1-02-i-ogc-api-tiles-e-maps",
  "medidas": {
   "suite_pytest": {
-   "valor": 22,
+   "valor": 29,
    "unidade": "testes_passando",
-   "comando": "flock laco/.pytest.lock venv/bin/pytest tests/api/imagens/test_ogc_tiles.py -q -> 22 passed; também rodado junto com test_tiles_token.py + test_mosaico.py sem regressão (test_wms.py tem 2 falhas PRE-EXISTENTES não relacionadas a este item, reproduzidas isoladamente antes de qualquer mudança deste item)"
+   "comando": "flock laco/.pytest.lock venv/bin/pytest tests/api/imagens/test_ogc_tiles.py -q -> 29 passed (22 originais + 2 regressao dos achados do adversario + 5 de schema, ver ogc_tiles_schema abaixo); também rodado junto com test_tiles_token.py + test_mosaico.py sem regressão (test_wms.py tem 2 falhas PRE-EXISTENTES não relacionadas a este item, reproduzidas isoladamente antes de qualquer mudança deste item)"
+  },
+  "suite_schema_ogc": {
+   "valor": 5,
+   "unidade": "testes_passando",
+   "comando": "flock laco/.pytest.lock venv/bin/pytest tests/api/imagens/test_ogc_tiles_schema.py -q -> 5 passed: landing, conformance, tileMatrixSets (lista), tileMatrixSet (definicao) e tileset metadata validados contra tests/dados/ogc_schemas/ogcapi-tiles-1.bundled.json (JSON Schema oficial da spec, baixado 10/09/2026), nao campo a campo escrito a mao"
+  },
+  "adversario_independente": {
+   "valor": "PARCIAL",
+   "unidade": "veredito",
+   "comando": "agente adversario com contexto proprio (nunca viu o raciocinio do autor), atacou repositorio + instancia viva demo.iagrointel.com; achou 2 bugs reais (bbox NaN/Infinity e crs com lixo apos EPSG: caindo em 502 leitura_falhou em vez de 400 do cliente) -> AMBOS CORRIGIDOS nesta mesma passagem, com teste de regressao; confirmou byte-a-byte em 10 combinacoes adicionais de zoom, isolamento entre inquilinos em toda superficie, grade invalida sempre 404, SSRF/injecao sempre recusados; registrou (nao corrigiu, fora do escopo de uma fachada) 2 limitacoes herdadas do motor de pixel compartilhado (tiles.py): /map no teto permitido de 4096x4096 leva ~27s (identico ao GetMap do WMS no mesmo tamanho, ~34s) e zoom abaixo do minzoom nativo do item e lento (ate 18s) tanto no XYZ quanto no OGC"
   },
   "ladrilho_item_byte_a_byte_vs_xyz_live": {
    "valor": 1,
@@ -32,5 +42,5 @@
    "comando": "GET /svc/<tok>/ogc/tiles/tileMatrixSets/NaoExiste -> 404 tileMatrixSet_invalido; GET /svc/tokeninvalido/ogc/tiles -> 403 (live, medido)"
   }
  },
- "adversario": "laco/handoffs/T9/L1-02-i-ogc-api-tiles-e-maps/refutacao.json (ver relatorio do adversario independente)"
+ "adversario": "veredito PARCIAL, texto completo do relatório no CHANGELOG.md (turno 9, item L1-02-i) — agente adversário independente lançado via ferramenta Agent, sem arquivo próprio de handoff nesta passagem"
 }

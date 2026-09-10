@@ -1578,7 +1578,11 @@ próprio desta família, sem HTML, sem dimensão de tempo por coleção — ver 
   `collections-selection` (tile combinando várias coleções);
 - teste com ArcGIS Pro/QGIS reais: PENDENTE (decisão D20) — o que existe hoje prova a FORMA do
   protocolo e a identidade byte-a-byte com o XYZ/WMS já em produção, não a compatibilidade final com o
-  cliente real.
+  cliente real;
+- um pedido de `/map` no TAMANHO MÁXIMO permitido (4096×4096) é lento (~27 s nesta bancada) — o mesmo
+  custo que o `GetMap` do WMS já tem no mesmo tamanho (motor de leitura compartilhado, seção 22); pedir
+  um recorte menor é sempre rápido. Zoom muito abaixo da resolução nativa do item também é lento, nos
+  dois protocolos (XYZ e OGC) igualmente.
 
 Ver `docs/PARIDADE.md`, seção do item, para a tabela cláusula a cláusula e o ADR
 `docs/adr/20260910T2056-ogc-api-tiles-e-maps.md` para as decisões de escopo.

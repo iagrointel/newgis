@@ -306,6 +306,30 @@ def test_mapa_bbox_ausente_e_invertido_sao_recusados_com_mensagem(token_ogc, ras
     assert invertido.status_code == 400 and invertido.json()["erro"] == "bbox_invalido"
 
 
+def test_mapa_bbox_nao_finito_e_recusado_400_nunca_502(token_ogc, raster_demo):
+    """Achado do adversário independente (turno 9): `float("nan")`/`float("inf")` não levantam
+    `ValueError` — "nan,nan,nan,nan" e "-inf,-inf,inf,inf" passavam da checagem de invertido (NaN nunca
+    compara >=; -inf < inf é sempre verdadeiro) e só quebravam DENTRO de `tiles.recorte()`, saindo como
+    502 `leitura_falhou` — categoria errada (é entrada do cliente, não falha de armazenamento)."""
+    c, tok, item = _cliente(), token_ogc["token"], raster_demo["item_id"]
+    for bbox in ("nan,nan,nan,nan", "-inf,-inf,inf,inf", "1,2,inf,4"):
+        r = c.get(f"/svc/{tok}/ogc/tiles/collections/{item}/map", params={"bbox": bbox})
+        assert r.status_code == 400, (bbox, r.status_code, r.text)
+        assert r.json()["erro"] == "bbox_invalido", (bbox, r.text)
+
+
+def test_mapa_crs_com_lixo_apos_epsg_e_recusado_400_nunca_502(token_ogc, raster_demo):
+    """Achado do adversário independente (turno 9): `crs=EPSG:4326; DROP TABLE ...` passava o teste
+    `startswith("EPSG:")` inteiro (inclusive o texto depois do número) e só quebrava dentro de
+    `CRS.from_user_input`, saindo como 502 com o texto da exceção ecoado no corpo."""
+    c, tok, item = _cliente(), token_ogc["token"], raster_demo["item_id"]
+    for crs in ("EPSG:4326; DROP TABLE x", "EPSG:", "EPSG:abc", "EPSG:4326abc"):
+        r = c.get(f"/svc/{tok}/ogc/tiles/collections/{item}/map",
+                 params={"bbox": "-48,-16,-47,-15", "crs": crs})
+        assert r.status_code == 400, (crs, r.status_code, r.text)
+        assert r.json()["erro"] == "crs_invalido", (crs, r.text)
+
+
 def test_mapa_recusa_mosaico_sem_fingir_suporte(token_ogc, raster_demo):
     c, tok, colecao = _cliente(), token_ogc["token"], raster_demo["colecao"]
     r = c.get(f"/svc/{tok}/ogc/tiles/collections/{colecao}/map", params={"bbox": "-48,-16,-47,-15"})

@@ -1230,6 +1230,26 @@ mosaico") e devolvia `422 mapa_nao_suportado` em vez de `403` — corrigido para
 `_resolver_colecao` primeiro (que já dá o 403 honesto) e só recusar por tipo depois de confirmar que o
 item pertence ao inquilino.
 
+Mais dois achados, estes do ADVERSÁRIO INDEPENDENTE (contexto próprio, não viu o código nem o
+raciocínio acima — só o item, o portão e a instância viva): (c) `bbox=nan,nan,nan,nan` e
+`bbox=-inf,-inf,inf,inf` não levantam `ValueError` em `float()` — passavam da checagem de "invertido"
+(NaN nunca compara `>=`; `-inf < inf` é sempre verdadeiro) e só quebravam DENTRO de `tiles.recorte`,
+saindo como 502 `leitura_falhou` (categoria errada: é entrada do cliente, não falha de leitura).
+Corrigido com `math.isfinite` explícito antes de qualquer outra checagem, 400 `bbox_invalido`;
+(d) `crs=EPSG:4326; DROP TABLE x` passava o `startswith("EPSG:")` inteiro — com o texto depois do
+número incluso — e só quebrava dentro de `CRS.from_user_input`, ecoando a exceção crua no corpo do
+502. Corrigido: o texto depois de `EPSG:` tem de ser só dígitos, senão 400 `crs_invalido` antes de
+chegar perto de qualquer parser.
+
+O adversário também mediu (não corrigido, registrado em `docs/PARIDADE.md`): o TETO PERMITIDO do
+`/map` (4096×4096) renderiza em ~27 s nesta bancada — idêntico ao `GetMap` do WMS no mesmo tamanho
+(~34 s), porque os dois chamam o MESMO `tiles.recorte`; não é regressão desta fachada, é o custo do
+motor de base, que este item nem piora nem resolve (resolver pediria um teto de pixels PRÓPRIO menor
+que o do WMS, o que quebraria a paridade byte-a-byte que é o próprio portão do item). E que zoom
+abaixo do `minzoom` nativo do item é catastroficamente lento (até 18 s) tanto no XYZ quanto no
+equivalente OGC — pré-existente no motor `tiles.ladrilho` do item 18, reproduzido idêntico nos dois
+caminhos, fora do escopo de uma fachada.
+
 Fora deste item (nomeado, não escondido — `docs/PARIDADE.md`): OGC API Maps sobre mosaico (compor um
 retângulo arbitrário de várias cenas exigiria motor de composição por bbox livre — o que existe,
 `ladrilho_composto`, só compõe por CÉLULA da grade); tileset metadata do mosaico AD-HOC sem registro
@@ -1238,5 +1258,6 @@ esquecimento); `collections-selection`, `dataset-tilesets`, formatos vetorial/co
 (OpenAPI próprio desta família), HTML, dimensão `datetime` por coleção.
 
 Arquivos: `app/imagens/ogc_tiles.py` (novo), `app/imagens/rotas_ogc_tiles.py` (novo, registrado em
-`app/main.py`), `tests/api/imagens/test_ogc_tiles.py` (novo, 22 casos), `docs/adr/20260910T2056-
-ogc-api-tiles-e-maps.md`.
+`app/main.py`), `tests/api/imagens/test_ogc_tiles.py` (29 casos) e `tests/api/imagens/
+test_ogc_tiles_schema.py` (5 casos, JSON Schema oficial — `tests/dados/ogc_schemas/`), `docs/adr/
+20260910T2056-ogc-api-tiles-e-maps.md`.

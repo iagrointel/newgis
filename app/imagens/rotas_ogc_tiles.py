@@ -21,6 +21,7 @@ desde antes do L1-07) — ver `_resolver_colecao`. Mesma porta de entrada do res
 
 from __future__ import annotations
 
+import math
 import re
 
 from fastapi import APIRouter, Query, Request
@@ -235,7 +236,14 @@ def _crs_normalizar(valor: str | None) -> str:
     if v.upper() in ("CRS84", "OGC:CRS84") or v == CRS84_URI:
         return "EPSG:4326"
     if v.upper().startswith("EPSG:"):
-        return v.upper()
+        resto = v[5:].strip()
+        if not resto.isdigit():
+            # achado do adversário independente (turno 9): "EPSG:4326; DROP TABLE ..." passava batido
+            # por este prefixo e só quebrava dentro de `CRS.from_user_input`, saindo como 502
+            # leitura_falhou (categoria errada — é entrada do cliente, não falha de armazenamento) e
+            # ecoando o texto da exceção no corpo. Recusa aqui, 400, categoria certa, nada ecoado.
+            raise ErroAPI(400, "crs_invalido", f"CRS não reconhecido: {valor!r}", {"crs": valor})
+        return f"EPSG:{resto}"
     m = re.search(r"/EPSG/\d+/(\d+)$", v)
     if m:
         return f"EPSG:{m.group(1)}"
@@ -259,6 +267,13 @@ def _bbox_map(valor: str | None) -> tuple[float, float, float, float]:
         a, b, c, d = (float(p) for p in partes)
     except ValueError as e:
         raise ErroAPI(400, "bbox_invalido", "bbox precisa ser 4 números", {"bbox": valor}) from e
+    # achado do adversário independente (turno 9): `float("nan")`/`float("inf")` não levantam
+    # ValueError — "nan,nan,nan,nan" e "-inf,-inf,inf,inf" passavam da checagem de invertido (NaN nunca
+    # compara >=, e -inf < inf é sempre verdadeiro) e só quebravam dentro de `tiles.recorte()`, saindo
+    # como 502 leitura_falhou (categoria errada) em vez de 400 do cliente.
+    if not all(math.isfinite(v) for v in (a, b, c, d)):
+        raise ErroAPI(400, "bbox_invalido", "bbox precisa ser 4 números finitos (nem NaN, nem infinito)",
+                      {"bbox": valor})
     if a >= c or b >= d:
         raise ErroAPI(400, "bbox_invalido", "bbox invertido: minx/miny precisam ser < maxx/maxy",
                       {"bbox": valor})
