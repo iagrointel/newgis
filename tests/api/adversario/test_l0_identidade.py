@@ -65,8 +65,7 @@ def test_l0_02a_cookie_com_um_caractere_trocado_e_401(sessao_a):
 def test_l0_02a_cookie_de_demo_nao_abre_nada_de_demo2(sessao_a, sessao_b, ids):
     """Não há inquilino na URL nas rotas atuais (o inquilino vem da sessão); o cruzamento possível é por id de
     objeto: item, usuário e grupo de demo2 pedidos pela sessão de demo têm de sumir (404/403), nunca 200."""
-    corpo = {"tipo": "mapa", "titulo": f"{PREFIXO_TESTE} adv b", "dados": DADOS_POR_TIPO["mapa"]}
-    r = sessao_b.post("/api/itens", json=corpo)
+    r = sessao_b.post("/api/itens", json={"tipo": "mapa", "titulo": f"{PREFIXO_TESTE} adv b", "dados": DADOS_POR_TIPO["mapa"]})
     assert r.status_code == 201, r.text
     item_b = r.json()["id"]
     try:
@@ -74,7 +73,7 @@ def test_l0_02a_cookie_de_demo_nao_abre_nada_de_demo2(sessao_a, sessao_b, ids):
             r = sessao_a.get(url)
             assert r.status_code in (403, 404), (url, r.status_code, r.text[:200])
             r = sessao_a.put(url, json={"titulo": "x"} if "itens" in url else {"nome": "x"})
-            assert r.status_code in (403, 404, 422), (url, r.status_code, r.text[:120])
+            assert r.status_code in (403, 404, 422), (url, r.status_code, r.text[:200])
             r = sessao_a.delete(url)
             assert r.status_code in (403, 404), (url, r.status_code, r.text[:200])
     finally:
@@ -89,8 +88,7 @@ def test_l0_02a_200_logins_em_60s_nao_vazam_hash_nem_senha_no_log(cred, caplog, 
     t0 = time.time()
     c = novo_cliente()
     for i in range(200):
-        tentativa = senha if i % 2 else "errada-" + senha
-        r = c.post("/api/login", json={"inquilino": "demo", "login": login, "senha": tentativa})
+        r = c.post("/api/login", json={"inquilino": "demo", "login": login, "senha": senha if i % 2 else "errada-" + senha})
         assert r.status_code in (200, 401, 423, 429), r.text[:200]
     assert time.time() - t0 < 60, "200 logins levaram mais de 60 s (não é o que a refutação mede)"
     texto = "\n".join(rec.getMessage() for rec in caplog.records)
@@ -109,8 +107,7 @@ def test_l0_02b_bloqueio_por_usuario_nao_derruba_o_admin(usuarios_a, cred):
     alvo = novo_cliente()
     codigos = []
     for _ in range(6):
-        corpo = {"inquilino": slug, "login": u["login"], "senha": "errada-" + senha}
-        codigos.append(alvo.post("/api/login", json=corpo).status_code)
+        codigos.append(alvo.post("/api/login", json={"inquilino": slug, "login": u["login"], "senha": "errada-" + senha}).status_code)
     assert 423 in codigos, codigos
     r = alvo.post("/api/login", json={"inquilino": slug, "login": u["login"], "senha": senha})
     assert r.status_code == 423, (r.status_code, r.text[:200])
@@ -232,8 +229,7 @@ def _token(sessao, **kw) -> dict:
 
 def test_l0_02d_token_de_demo_nao_le_item_de_demo2(sessao_a, sessao_b, cliente):
     tok = _token(sessao_a)
-    corpo = {"tipo": "mapa", "titulo": f"{PREFIXO_TESTE} adv tok b", "dados": DADOS_POR_TIPO["mapa"]}
-    r = sessao_b.post("/api/itens", json=corpo)
+    r = sessao_b.post("/api/itens", json={"tipo": "mapa", "titulo": f"{PREFIXO_TESTE} adv tok b", "dados": DADOS_POR_TIPO["mapa"]})
     item_b = r.json()["id"]
     try:
         r = com_token(cliente, tok["token"], "GET", f"/api/itens/{item_b}")
@@ -295,9 +291,6 @@ def test_l0_02d_token_pedido_por_editor_nao_ganha_escopo_admin(usuarios_a):
 
 
 # ---------------------------------------------------------------- L0-02-g checagem de privilégio do papel
-@pytest.mark.xfail(strict=True, reason="H3-L0-01 (ALERTA-1): master não tem _nao_conceder_alem_do_proprio — o "
-                   "conserto do L0-02-g (6ad841bf) ficou em wt/valida; ao entrar em master este teste passa a XPASS "
-                   "e o marcador tem de sair")
 def test_l0_02g_ator_nao_atribui_papel_com_um_privilegio_a_mais_que_o_seu(sessao_a, usuarios_a):
     """Refutação do item, ao pé da letra: R2 = R1 + UM privilégio que o ator não tem. Como todo privilégio de
     gerir membros é administrativo (docs/PRIVILEGIOS.md), o ator é um admin de perfil com o papel R1 (subconjunto

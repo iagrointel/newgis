@@ -137,13 +137,12 @@ def test_ator_restrito_nao_promove_editor_a_administrador_sem_papel(terreno):
 
 
 def test_ator_restrito_nao_escapa_pelo_lote(terreno):
+    """O lote confere ANTES de alterar qualquer alvo: escalada é negada com 403, não contada em `recusados`."""
     r = terreno["ator"].post(
         "/api/usuarios/lote",
         json={"ids": [terreno["alvos"]["admin"]], "acao": "papel", "papel_id": terreno["papeis"]["alvo"]},
     )
-    assert r.status_code == 200, r.text
-    assert r.json()["alterados"] == 0, r.text
-    assert r.json()["recusados"][0]["erro"] == "privilegio_proprio_insuficiente", r.text
+    assert r.status_code == 403 and _erro(r) == "privilegio_proprio_insuficiente", r.text
 
 
 # ---------------------------------------------------------------- o que a regra NÃO pode quebrar
