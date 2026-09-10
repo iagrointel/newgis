@@ -533,12 +533,13 @@ def _bbox_do_tile(z: int, x: int, y: int) -> tuple[float, float, float, float]:
 
 
 def _servir_composto(request: Request, auth, feicoes: list[dict], z: int, x: int, y: int, formato: str,
-                     expressao, bandas, faixa, colormap, asset) -> Response:
+                     expressao, bandas, faixa, colormap, asset, metodo: str | None = None) -> Response:
     """COMPÕE o ladrilho de todas as cenas candidatas num só (`tiles.ladrilho_composto`, item L1-07):
-    a ordem já vem do `sortby` registrado/pedido ("mais recente" por padrão) e o primeiro pixel COM
-    DADO vence, PIXEL A PIXEL — não cena a cena: é isto que faz a junta entre duas cenas mostrar as
-    duas, em vez de uma cena inteira com o resto em branco. Regras adicionais de seleção (`median`/
-    `mean`/`lock raster`/"mais recente sem nuvem") são do item irmão L1-08, fora deste turno (ADR §1).
+    a ordem já vem do `sortby` registrado/pedido ("mais recente" por padrão); `metodo` escolhe a REGRA
+    de seleção de pixel (padrão `primeira` — a primeira cena COM DADO vence, PIXEL A PIXEL, não cena a
+    cena: é isto que faz a junta entre duas cenas mostrar as duas, em vez de uma cena inteira com o
+    resto em branco). `mediana`/`media`/`maxima`/`minima` são o mínimo do item irmão L1-08 — "travar
+    cena" e "mais recente sem nuvem" (SCL) ficam fora deste turno (ADR §1, `tiles.METODOS_COMPOSICAO`).
     Candidata cujo item não resolve fonte (excluído/de outro estado) é ignorada, não derruba o tile."""
     if not feicoes:
         return Response(status_code=204, headers={"Cache-Control": CACHE_TILE})
@@ -555,7 +556,8 @@ def _servir_composto(request: Request, auth, feicoes: list[dict], z: int, x: int
     inicio = time.perf_counter()
     try:
         corpo = tiles.ladrilho_composto(fontes, z, x, y, formato=formato, expressao=expressao,
-                                        bandas=_bandas(bandas), rescale=_faixa(faixa), colormap=colormap)
+                                        bandas=_bandas(bandas), rescale=_faixa(faixa), colormap=colormap,
+                                        metodo=metodo)
     except tiles.ForaDaCobertura:
         return Response(status_code=204, headers={"Cache-Control": CACHE_TILE})
     except tiles.ErroTile as e:
@@ -572,13 +574,14 @@ def _servir_composto(request: Request, auth, feicoes: list[dict], z: int, x: int
 
 def _tile_mosaico_impl(
     request: Request, token: str, alvo: str, z: int, x: int, y: int, formato: str,
-    expressao, bandas, faixa, colormap, asset, limite: int | None,
+    expressao, bandas, faixa, colormap, asset, limite: int | None, metodo: str | None = None,
 ) -> Response:
     """`alvo` é um uuid de mosaico REGISTRADO (item L1-07: `POST /svc/<token>/stac/mosaicos`, busca com
     várias coleções/bbox/datetime/filtro CQL2/ordenação) OU o nome completo de uma coleção
     (`<tenant_id>-<slug>`, comportamento ad-hoc anterior a este item: a coleção INTEIRA, sem registro,
     sempre ordenada por data desc) — ver ADR 20260910T2330 §4. As duas formas nunca colidem porque um
-    nome de coleção nunca é um uuid sintaticamente válido."""
+    nome de coleção nunca é um uuid sintaticamente válido. `metodo` = regra de seleção de pixel do
+    item L1-08 (mínimo), ver `tiles.METODOS_COMPOSICAO`."""
     if mo.eh_uuid(alvo):
         auth = _autorizar(request, token, alvo)  # escopo FINO: tiles:ler:<uuid-do-mosaico>
         with db.db(auth.contexto_leitura()) as cur:
@@ -589,7 +592,7 @@ def _tile_mosaico_impl(
             feicoes = mo.candidatas_para_tile(cur, linha, _bbox_do_tile(z, x, y),
                                               limite or linha["criterios"].get("limite") or mo.LIMITE_TILE_PADRAO)
         return _servir_composto(request, auth, feicoes, z, x, y, formato, expressao, bandas, faixa,
-                                  colormap, asset)
+                                  colormap, asset, metodo)
 
     colecao = alvo
     auth = _autorizar(request, token)
@@ -601,7 +604,7 @@ def _tile_mosaico_impl(
         busca = ps.buscar(cur, {"collections": [colecao], "bbox": [oeste, sul, leste, norte],
                                 "limit": limite or 6, "sortby": [{"field": "datetime", "direction": "desc"}]})
     return _servir_composto(request, auth, busca.get("features") or [], z, x, y, formato, expressao,
-                              bandas, faixa, colormap, asset)
+                              bandas, faixa, colormap, asset, metodo)
 
 
 # As DUAS rotas de ladrilho (`.{ext}` e sem extensão) são registradas DEPOIS das rotas literais
@@ -714,9 +717,12 @@ def mosaico_wmts_kvp(
     if formato is None:
         raise ErroAPI(422, "formato_desconhecido", "FORMAT aceito: image/png, image/jpeg, image/webp",
                       {"FORMAT": format_})
-    z = int(str(tilematrix).split(":")[-1])
-    return tile_mosaico(request, token, mosaico_id, z, int(tilecol), int(tilerow), formato,
-                        None, None, None, None, None, None)
+    try:
+        z = int(str(tilematrix).split(":")[-1])
+    except ValueError as e:
+        raise ErroAPI(422, "tile_invalido", "TILEMATRIX deve indicar um zoom inteiro") from e
+    return _tile_mosaico_impl(request, token, mosaico_id, z, tilecol, tilerow, formato,
+                             None, None, None, None, None, None)
 
 
 @router.get("/svc/{token}/mosaico/{mosaico_id}/pegadas", openapi_extra=X,
@@ -739,12 +745,14 @@ def tile_mosaico_ext(
     colormap: str | None = Query(None, max_length=40),
     asset: str | None = Query(None, pattern="^(visual|cientifico)$"),
     limite: int | None = Query(None, ge=1, le=mo.LIMITE_TILE_MAX),
+    metodo: str | None = Query(None, description="regra de seleção de pixel (item L1-08, mínimo): "
+                               "primeira|mediana|media|maxima|minima"),
 ):
     if ext not in tiles.FORMATOS:
         raise ErroAPI(404, "formato_desconhecido", f"formato de ladrilho desconhecido: {ext}",
                       {"aceitos": sorted(tiles.FORMATOS)})
     return _tile_mosaico_impl(request, token, alvo, z, x, y, ext, expressao, bandas, faixa, colormap,
-                              asset, limite)
+                              asset, limite, metodo)
 
 
 @router.get("/svc/{token}/mosaico/{alvo}/{z}/{x}/{y}", openapi_extra=X,
@@ -759,9 +767,11 @@ def tile_mosaico(
     asset: str | None = Query(None, pattern="^(visual|cientifico)$"),
     limite: int | None = Query(None, ge=1, le=mo.LIMITE_TILE_MAX,
                                description="máximo de cenas candidatas por ladrilho"),
+    metodo: str | None = Query(None, description="regra de seleção de pixel (item L1-08, mínimo): "
+                               "primeira|mediana|media|maxima|minima"),
 ):
     return _tile_mosaico_impl(request, token, alvo, z, x, y, formato, expressao, bandas, faixa,
-                              colormap, asset, limite)
+                              colormap, asset, limite, metodo)
 
 
 # ---------------------------------------------------------------------------- autorização para o nginx

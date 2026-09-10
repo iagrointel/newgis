@@ -23,7 +23,7 @@ from morecantile import tms as tms_registry
 from rasterio.crs import CRS
 from rasterio.session import AWSSession
 from rio_tiler.colormap import cmap as colormaps
-from rio_tiler.errors import TileOutsideBounds
+from rio_tiler.errors import EmptyMosaicError, TileOutsideBounds
 from rio_tiler.io import Reader
 
 TMS = tms_registry.get("WebMercatorQuad")
@@ -272,6 +272,25 @@ def recorte(
             )
 
 
+METODOS_COMPOSICAO = {
+    # item L1-08 (mínimo): 4 dos 7 métodos citados na hipótese — os que o rio-tiler já embute prontos,
+    # sem exigir máscara de nuvem (SCL) nem "travar cena", que ficam de fora deste turno. Nomes em
+    # português na API (`metodo=`); o valor é resolvido para a classe do rio_tiler aqui, uma vez só.
+    "primeira": "FirstMethod", "mediana": "MedianMethod", "media": "MeanMethod",
+    "maxima": "HighestMethod", "minima": "LowestMethod",
+}
+
+
+def _metodo_composicao(nome: str | None):
+    from rio_tiler.mosaic.methods import defaults
+
+    chave = nome or "primeira"
+    classe = METODOS_COMPOSICAO.get(chave)
+    if classe is None:
+        raise ErroTile(f"método de composição desconhecido: {chave} (aceitos: {', '.join(sorted(METODOS_COMPOSICAO))})")
+    return getattr(defaults, classe)
+
+
 def ladrilho_composto(
     fontes: list[Fonte],
     z: int,
@@ -284,23 +303,27 @@ def ladrilho_composto(
     rescale: list[tuple[float, float]] | None = None,
     colormap: str | None = None,
     tamanho: int = TAMANHO,
+    metodo: str | None = None,
 ) -> bytes:
     """Ladrilho de VÁRIAS fontes candidatas compostas num só (item L1-07: mosaico de busca
     registrada). Reaproveita `rio_tiler.mosaic.mosaic_reader` — a MESMA função que o `titiler.mosaic`/
-    `titiler-pgstac` usam por baixo (ver ADR 20260910T2330 §1) — com o método `FirstMethod`: "primeira
-    fonte com dado vence" aplicado PIXEL A PIXEL (não cena a cena): onde a primeira fonte da lista não
-    cobre o ladrilho (ou cobre só em parte), o(s) pixel(s) que faltam vêm da segunda, da terceira, e
-    assim por diante — é o que faz o ladrilho da JUNTA entre duas cenas mostrar as duas, em vez de
-    escolher uma cena inteira e deixar o resto transparente (o defeito do mosaico "cena inteira" que
-    este item substitui). Levanta `ForaDaCobertura` quando NENHUMA fonte cobre o ladrilho."""
+    `titiler-pgstac` usam por baixo (ver ADR 20260910T2330 §1) — com o método de seleção de pixel
+    escolhido por `metodo` (padrão `primeira`: "primeira fonte com dado vence", item L1-07) aplicado
+    PIXEL A PIXEL (não cena a cena): onde a primeira fonte da lista não cobre o ladrilho (ou cobre só
+    em parte), o(s) pixel(s) que faltam vêm da segunda, da terceira, e assim por diante — é o que faz
+    o ladrilho da JUNTA entre duas cenas mostrar as duas, em vez de escolher uma cena inteira e deixar
+    o resto transparente (o defeito do mosaico "cena inteira" que este item substitui). `mediana`/
+    `media`/`maxima`/`minima` são o MÍNIMO do item irmão L1-08 (regras de seleção): "travar cena" e
+    "mais recente sem nuvem" (dependem de máscara SCL) ficam fora deste turno. Levanta
+    `ForaDaCobertura` quando NENHUMA fonte cobre o ladrilho; `ErroTile` se `metodo` for desconhecido."""
     if formato not in RENDER:
         raise ErroTile(f"formato de ladrilho desconhecido: {formato}")
     if expressao is not None:
         ok, motivo = expressao_valida(expressao)
         if not ok:
             raise ErroTile(f"expressão recusada: {motivo}")
+    metodo_classe = _metodo_composicao(metodo)
     from rio_tiler.mosaic import mosaic_reader
-    from rio_tiler.mosaic.methods.defaults import FirstMethod
 
     cm = _colormap(colormap)
     indices_pedidos = bandas if (bandas and not expressao) else None
@@ -313,14 +336,16 @@ def ladrilho_composto(
                     indices = (1, 2, 3)
                 return src.tile(xx, yy, zz, tilesize=tamanho, expression=expressao, indexes=indices)
 
-    # threads capo em 4 (não o padrão cpu*5 do rio-tiler): esta máquina roda com poucos GB livres e
-    # várias trilhas ao mesmo tempo (laco/estado.json, seção "recursos e limites") — um ladrilho não
-    # precisa de dezenas de threads para compor no máximo 6-12 candidatas (limite do item).
-    img, usadas = mosaic_reader(
-        fontes, _ler, x, y, z, pixel_selection=FirstMethod, threads=min(4, max(1, len(fontes))),
-        allowed_exceptions=(TileOutsideBounds,),
-    )
-    if not usadas:
+    # Uma fonte por vez limita buffers GDAL e resultados pendentes a um tile de 256×256.
+    # chunk_size=1 também permite parar assim que FirstMethod preencher o ladrilho.
+    try:
+        img, usadas = mosaic_reader(
+            fontes, _ler, x, y, z, pixel_selection=metodo_classe, threads=1, chunk_size=1,
+            allowed_exceptions=(TileOutsideBounds,),
+        )
+    except EmptyMosaicError as e:
+        raise ForaDaCobertura("nenhuma cena candidata contém pixels neste ladrilho") from e
+    if not usadas or not img.mask.any():
         raise ForaDaCobertura(f"nenhuma das {len(fontes)} cena(s) candidata(s) cobre o ladrilho {z}/{x}/{y}")
     if rescale:
         img.rescale(rescale)
@@ -348,7 +373,7 @@ def informacao(fonte: Fonte) -> dict:
 
 
 __all__ = [
-    "COLORMAPS", "ErroTile", "ForaDaCobertura", "Fonte", "FORMATOS", "TMS", "TAMANHO",
+    "COLORMAPS", "ErroTile", "ForaDaCobertura", "Fonte", "FORMATOS", "METODOS_COMPOSICAO", "TMS", "TAMANHO",
     "bandas_da_expressao", "env_gdal", "expressao_valida", "informacao", "ladrilho", "ladrilho_composto",
     "recorte", "preparar_ambiente_s3", "sessao_s3",
 ]

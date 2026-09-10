@@ -17,6 +17,35 @@ from tests.api.conftest import PREFIXO_TESTE
 Z_JUNTA_PADRAO = 13
 
 
+@pytest.fixture(scope="session", autouse=True)
+def limpeza_de_residuos():
+    """As fixtures deste módulo removem seus próprios recursos. Não varrer o prefixo zt de
+    outras rodadas concorrentes nem inicializar o 2FA do superadmin para testar mosaicos."""
+    yield
+
+
+def _sessao_isolada(admin):
+    from tests.api.conftest import Usuarios
+
+    usuarios = Usuarios(admin)
+    try:
+        cliente, _, _ = usuarios.sessao(perfil="admin")
+        yield cliente
+    finally:
+        usuarios.limpar()
+
+
+@pytest.fixture(scope="session")
+def sessao_a(sessao_a):
+    """Tokens da rodada pertencem a um usuário temporário, sem disputar a cota do admin demo."""
+    yield from _sessao_isolada(sessao_a)
+
+
+@pytest.fixture(scope="session")
+def sessao_b(sessao_b):
+    yield from _sessao_isolada(sessao_b)
+
+
 def _cliente():
     from fastapi.testclient import TestClient
 
@@ -251,6 +280,32 @@ def test_tilejson_e_wmts_do_mosaico(token_tiles_mosaico_a, mosaico_a):
     assert mosaico_a["id"] in cap.text
 
 
+@pytest.mark.parametrize("formato,ext", [("image/png", "png"), ("image/jpeg", "jpg"), ("image/webp", "webp")])
+def test_wmts_gettile_equivale_ao_xyz(token_tiles_mosaico_a, mosaico_a, formato, ext):
+    c, tok = _cliente(), token_tiles_mosaico_a["token"]
+    base = f"/svc/{tok}/mosaico/{mosaico_a['id']}"
+    z, x, y = _tile_da_junta()
+    wmts = c.get(f"{base}/wmts", params={
+        "SERVICE": "WMTS", "REQUEST": "GetTile", "TILEMATRIX": f"WebMercatorQuad:{z}",
+        "TILEROW": y, "TILECOL": x, "FORMAT": formato,
+    })
+    xyz = c.get(f"{base}/{z}/{x}/{y}.{ext}")
+    sem_ext = c.get(f"{base}/{z}/{x}/{y}", params={"formato": ext})
+    assert wmts.status_code == xyz.status_code == sem_ext.status_code == 200
+    assert wmts.headers["content-type"] == formato
+    assert wmts.content == xyz.content == sem_ext.content
+
+
+@pytest.mark.parametrize("matriz", ["invalida", "WebMercatorQuad:abc", "-1", "10000"])
+def test_wmts_matriz_invalida_devolve_422(token_tiles_mosaico_a, mosaico_a, matriz):
+    c, tok = _cliente(), token_tiles_mosaico_a["token"]
+    r = c.get(f"/svc/{tok}/mosaico/{mosaico_a['id']}/wmts", params={
+        "REQUEST": "GetTile", "TILEMATRIX": matriz, "TILEROW": 0, "TILECOL": 0,
+    })
+    assert r.status_code == 422
+    assert r.json()["erro"] == "tile_invalido"
+
+
 # ---------------------------------------------------------------- cláusula: pegadas com data/nuvem
 def test_pegadas_tem_a_contagem_certa_com_data_e_nuvem(token_tiles_mosaico_a, mosaico_a, grade_a):
     c, tok = _cliente(), token_tiles_mosaico_a["token"]
@@ -266,6 +321,23 @@ def test_pegadas_tem_a_contagem_certa_com_data_e_nuvem(token_tiles_mosaico_a, mo
         assert f["geometry"]["type"] == "Polygon"
         assert f["properties"]["datetime"] is not None  # o que o popup mostra
         assert f["properties"]["eo:cloud_cover"] is not None
+
+
+def test_pegadas_paginadas_preservam_geometria_do_catalogo(tenant_id_a, mosaico_a, grade_a):
+    from app import db
+    from app.imagens import mosaico as mo
+    from app.imagens import pgstac as ps
+
+    with db.db(db.Contexto(tenant_id=tenant_id_a, usuario_id=0, login="teste")) as cur:
+        linha = mo.obter(cur, tenant_id_a, mosaico_a["id"])
+        fc = mo.pegadas(cur, linha, limite=2)
+        assert len(fc["features"]) == len(grade_a["itens"])
+        assert {f["id"] for f in fc["features"]} == {it["item_id"] for it in grade_a["itens"]}
+        for f in fc["features"]:
+            stac = ps.item_obter(cur, tenant_id_a, grade_a["colecao"], f["id"])
+            assert f["geometry"] == stac["geometry"]
+            assert f["properties"]["datetime"] == stac["properties"]["datetime"]
+            assert f["properties"]["eo:cloud_cover"] == stac["properties"]["eo:cloud_cover"]
 
 
 # ---------------------------------------------------------------- cláusula: isolamento por inquilino
@@ -302,3 +374,107 @@ def test_token_com_escopo_so_no_mosaico_nao_ve_item_avulso(token_tiles_mosaico_a
     recusado = c.get(f"/svc/{tok}/raster/{item_avulso}/{z}/{x}/{y}.png")
     assert recusado.status_code == 403, recusado.text
     assert recusado.json()["erro"] == "escopo_insuficiente"
+
+
+# ---------------------------------------------------------------- item irmão L1-08 (mínimo): regras de seleção
+# Valores ESCOLHIDOS para distinguir os 4 métodos entre si: item 0 (mais recente) = 20, item 1 = 90,
+# item 2 (mais antigo) = 10 -> mediana=20, média=40, máxima=90, mínima=10 — todos diferentes.
+VALORES_SOBREPOSTAS = [20, 90, 10]
+
+
+def _tile_central(z: int = 15) -> tuple[int, int, int]:
+    """Ladrilho que cobre o CENTRO da célula sobreposta (mesmo canto/lado de `apoio_mosaico`, sem
+    deslocamento de grade — as 3 cenas de `semear_sobrepostas` estão todas no mesmo lugar). `z=15`
+    (tile ≈1,2 km) fica bem DENTRO do quadrante de 4 km — em z=12 (tile ≈9,8 km) o ladrilho pega muito
+    mais área que a célula tem dado, e a maior parte vem mascarada/preta, o que quase zerava a média."""
+    import pyproj
+
+    from app.imagens import tiles
+    from tests.api.imagens.apoio_mosaico import CANTO_LAT, CANTO_LON, LADO_PX, RESOLUCAO
+
+    lado_m = LADO_PX * RESOLUCAO
+    x0, y0 = pyproj.Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform(
+        CANTO_LON, CANTO_LAT)
+    centro_x, centro_y = x0 + lado_m / 2, y0 - lado_m / 2
+    lon, lat = pyproj.Transformer.from_crs("EPSG:3857", "EPSG:4326", always_xy=True).transform(
+        centro_x, centro_y)
+    t = tiles.TMS.tile(lon, lat, z)
+    return z, t.x, t.y
+
+
+@pytest.fixture(scope="module")
+def sobrepostas_a(tenant_id_a):
+    from tests.api.imagens.apoio_mosaico import apagar_grade, semear_sobrepostas
+
+    dados = semear_sobrepostas(tenant_id_a, "demo", VALORES_SOBREPOSTAS)
+    yield dados
+    apagar_grade(tenant_id_a, dados)
+
+
+@pytest.fixture(scope="module")
+def mosaico_sobreposto_a(token_stac_a, sobrepostas_a):
+    c, tok = _cliente(), token_stac_a["token"]
+    r = c.post(f"/svc/{tok}/stac/mosaicos",
+              json={"nome": f"{PREFIXO_TESTE} sobrepostas L1-08", "collections": [sobrepostas_a["colecao"]]})
+    assert r.status_code == 201, r.text
+    dados = r.json()
+    yield dados
+    c.delete(f"/svc/{tok}/stac/mosaicos/{dados['id']}")
+
+
+@pytest.fixture(scope="module")
+def token_tiles_sobreposto_a(sessao_a, mosaico_sobreposto_a):
+    r = sessao_a.post("/api/tokens", json={"nome": f"{PREFIXO_TESTE}-tiles-sobreposto",
+                                           "escopos": [f"tiles:ler:{mosaico_sobreposto_a['id']}"]})
+    assert r.status_code == 201, r.text
+    dados = r.json()
+    yield dados
+    sessao_a.delete(f"/api/tokens/{dados['id']}")
+
+
+def _pixel_medio(conteudo: bytes) -> float:
+    import io
+
+    from PIL import Image
+
+    img = Image.open(io.BytesIO(conteudo)).convert("L")
+    dados = img.getdata()
+    return sum(dados) / len(dados)
+
+
+@pytest.mark.parametrize("metodo,valor_esperado", [
+    ("mediana", 20), ("media", 40), ("maxima", 90), ("minima", 10),
+])
+def test_metodo_de_composicao_do_l1_08_minimo(token_tiles_sobreposto_a, mosaico_sobreposto_a, metodo, valor_esperado):
+    """Item irmão L1-08 (mínimo, este turno): 3 cenas sintéticas SOBREPOSTAS de valores 20/90/10 — com
+    `faixa=0,100` explícita (sem isso o realce por min/máx do próprio ladrilho apaga o sinal, já que
+    todo pixel do tile tem o MESMO valor composto), `mediana` devolve 20, `media` 40, `máxima` 90,
+    `mínima` 10 — a medição exata que o portão do L1-08 pede, não só "parece diferente"."""
+    c, tok = _cliente(), token_tiles_sobreposto_a["token"]
+    z, x, y = _tile_central()
+    r = c.get(f"/svc/{tok}/mosaico/{mosaico_sobreposto_a['id']}/{z}/{x}/{y}.png",
+             params={"metodo": metodo, "faixa": "0,100"})
+    assert r.status_code == 200, r.text
+    pixel = _pixel_medio(r.content)
+    esperado_pixel = round(valor_esperado / 100 * 255)
+    assert abs(pixel - esperado_pixel) <= 5, (metodo, pixel, esperado_pixel)
+
+
+def test_metodo_desconhecido_e_recusado_nunca_500(token_tiles_sobreposto_a, mosaico_sobreposto_a):
+    c, tok = _cliente(), token_tiles_sobreposto_a["token"]
+    z, x, y = _tile_central()
+    r = c.get(f"/svc/{tok}/mosaico/{mosaico_sobreposto_a['id']}/{z}/{x}/{y}.png",
+             params={"metodo": "nao-existe"})
+    assert r.status_code == 422, r.text
+    assert r.json()["erro"] == "ladrilho_invalido"
+
+
+def test_metodo_padrao_e_primeira_cena_mais_recente(token_tiles_sobreposto_a, mosaico_sobreposto_a):
+    """Sem `metodo=`, o padrão continua sendo `primeira` (item L1-07): a cena MAIS RECENTE (valor 20,
+    índice 0 de VALORES_SOBREPOSTAS) vence — mesma regra de antes do L1-08, comportamento não mudou."""
+    c, tok = _cliente(), token_tiles_sobreposto_a["token"]
+    z, x, y = _tile_central()
+    r = c.get(f"/svc/{tok}/mosaico/{mosaico_sobreposto_a['id']}/{z}/{x}/{y}.png", params={"faixa": "0,100"})
+    assert r.status_code == 200, r.text
+    pixel = _pixel_medio(r.content)
+    assert abs(pixel - round(20 / 100 * 255)) <= 5, pixel
