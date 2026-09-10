@@ -5855,3 +5855,16 @@ issuer, client_id, client_secret cifrado, redirect_uri fixa, escopos). Provado c
 (formato do roteiro, 6 casos, inclusive id_token de outro issuer com 'gold' = 401); e2e da tela 51 ms. **Teste real
 com credencial do órgão: pendente em `docs/PARIDADE.md`** (cadastro exige ofício). ADR `20260908T0630-govbr-login-unico.md`.
 Este ramo contém `wt/cx2l008e` (e por ele `wt/cx008`).
+## turno 4, setembro de 2026 (item L3-09-backtest-decisao-real: o modelo contra a escolha que já aconteceu)
+
+`app/amc/backtest.py` compara o ranking de uma execução do motor multicritério com escolhas reais: percentil das
+escolhas, nulo por permutação (N sorteios de igual número de unidades), AUC (Mann-Whitney, empate meio) com
+p-valor de uma cauda, e preferência revelada por fator (`evitamento`, sinal e ordem, nunca peso).
+`POST /api/multiescala/execucoes/{id}/backtest` recebe as escolhas por camada hospedada ou por lista de pontos,
+conta as que caem fora da grade e devolve o relatório. Ressalvas no corpo do relatório, nunca em rodapé:
+concordância com o passado não é acerto futuro, distância confunde, e camada mais nova que a decisão sai marcada
+ANACRÔNICA. Medido sobre dado aberto (`tests/medidas/L3-09-backtest-decisao-real.json`): 602 galpões OSM com área
+> 5.000 m² numa janela de 30 km × 22 km, grade de 500 m, modelo de um fator (proximidade de via arterial) —
+AUC 0,718, percentil mediano 74,8, p-valor 0,002 em 500 permutações; escolhas do próprio modelo AUC 1,000 e ao
+acaso 0,4993 (desvio medido 0,0145). Refutação: escolhas = todas as células devolvem `auc: null` com a frase, e
+escolhas fora da grade aparecem em `n_fora`. ADR `docs/adr/20260908T1600-backtest-decisao-real.md`.

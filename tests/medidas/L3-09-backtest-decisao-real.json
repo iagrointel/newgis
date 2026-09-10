@@ -1,0 +1,52 @@
+{
+ "item": "L3-09-backtest-decisao-real",
+ "medidas": {
+  "auc_aleatoria_media": {
+   "valor": 0.4993,
+   "unidade": "auc",
+   "comando": "20 tiradas de 500 escolhas ao acaso em 5.000 unidades"
+  },
+  "auc_aleatoria_desvio": {
+   "valor": 0.0145,
+   "unidade": "auc",
+   "comando": "desvio-padrão medido das 20 tiradas (teórico ≈ 0,014)"
+  },
+  "galpoes_osm_na_janela": {
+   "valor": 602,
+   "unidade": "galpoes",
+   "comando": "OSM, prédio industrial com área > 5.000 m², 30 km × 22 km"
+  },
+  "auc_galpoes_osm": {
+   "valor": 0.7179,
+   "unidade": "auc",
+   "comando": "modelo de 1 fator (proximidade de via arterial) × galpões reais"
+  },
+  "percentil_mediano_galpoes": {
+   "valor": 74.77,
+   "unidade": "percentil",
+   "comando": "mediana das escolhas no ranking"
+  },
+  "p_valor_galpoes": {
+   "valor": 0.001996007984031936,
+   "unidade": "p",
+   "comando": "nulo por permutação, 500 sorteios de igual número de unidades"
+  },
+  "celulas_da_grade": {
+   "valor": 2715,
+   "unidade": "celulas",
+   "comando": "grade macro de 500 m com nota"
+  },
+  "auc_escolhas_do_modelo": {
+   "valor": 1.0,
+   "unidade": "auc",
+   "comando": "as células mais favoráveis da execução como escolhas"
+  },
+  "auc_escolhas_ao_acaso": {
+   "valor": 0.5173,
+   "unidade": "auc",
+   "comando": "mesmo número de células sorteadas na mesma grade"
+  }
+ },
+ "gerado_em": "2026-09-08T13:01:03Z",
+ "git_sha": "33be09441f2f"
+}

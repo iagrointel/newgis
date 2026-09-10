@@ -144,6 +144,7 @@ from app.relatorios.rotas import router as rotas_relatorios
 from app.mapas.rotas import router as rotas_mapas
 from app.migracao.rotas import router as rotas_migracao
 from app.multiescala import regioes_rotas as rotas_regioes  # L3-05: localizar regiões
+from app.multiescala import backtest_rotas as rotas_backtest  # L3-09: backtest contra decisão real
 from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
@@ -545,6 +546,7 @@ ROUTERS = [
     # só uvicorn sem nginx na frente)
     rotas_campo,
     rotas_stac,
+    rotas_backtest.router,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

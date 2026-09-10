@@ -756,4 +756,7 @@ PROVISIONAMENTO_REGRAS_MAX = 200          # regras (valores do IdP mapeados) por
 PROVISIONAMENTO_GRUPOS_POR_REGRA = 50     # grupos internos por regra
 PROVISIONAMENTO_GRUPOS_IDP_MAX = 1000     # valores do atributo de grupos lidos do IdP por login (o resto é ignorado)
 PROVISIONAMENTO_VALOR_MAX = 200           # tamanho de um valor de grupo do IdP
+# ---- L3-09-backtest-decisao-real: comparar o ranking do modelo com as escolhas reais
+BACKTEST_PONTOS_MAX = 50_000          # escolhas por chamada (a grade regional de teste tem ~600)
+BACKTEST_PERMUTACOES_MAX = 20_000     # sorteios do nulo por chamada (a rota é síncrona)
 
