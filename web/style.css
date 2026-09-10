@@ -318,3 +318,13 @@ body.instrumento dd, body.instrumento .mono, body.instrumento .tabela td.mono, b
 .formulario-visita label { display: grid; gap: 4px; font-size: .85rem; color: var(--fraco); }
 .aviso-fila-local { background: var(--painel-2); border: 1px solid var(--borda-forte); border-radius: var(--raio);
   padding: var(--e2) var(--e3); margin: var(--e2) 0; font-size: .9rem; }
+
+/* --- telemetria da rede de utilidades (item L4-13-integracao-telemetria): ficha do ativo */
+.ficha-secao { margin: 0 0 var(--e4); }
+.ficha-secao h2 { font-size: 1rem; margin: 0 0 var(--e2); }
+.rede-medicao-ficha .lista-definicao { display: grid; grid-template-columns: max-content 1fr; gap: var(--e1) var(--e3); margin: 0; }
+.rede-medicao-ficha .lista-definicao dt { color: var(--fraco); }
+.rede-medicao-ficha tr.alarme td { color: var(--erro, #c0392b); font-weight: 600; }
+.rede-medicao-ficha .alarme-texto { color: var(--erro, #c0392b); font-weight: 600; }
+.grafico-linha { stroke: var(--acento); stroke-width: 2; }
+.grafico-eixo { stroke: var(--borda-forte); stroke-width: 1; }

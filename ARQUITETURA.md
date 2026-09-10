@@ -1261,3 +1261,72 @@ Arquivos: `app/imagens/ogc_tiles.py` (novo), `app/imagens/rotas_ogc_tiles.py` (n
 `app/main.py`), `tests/api/imagens/test_ogc_tiles.py` (29 casos) e `tests/api/imagens/
 test_ogc_tiles_schema.py` (5 casos, JSON Schema oficial — `tests/dados/ogc_schemas/`), `docs/adr/
 20260910T2056-ogc-api-tiles-e-maps.md`.
+
+## 23. Telemetria da rede de utilidades (item L4-13-integracao-telemetria)
+
+Módulo novo `app/rede_medicao/` (modelos/servico/rotas/tarefas), sem depender de nenhuma tabela de
+`app/rede_utilidades/` por FK — `ativo` é um uuid opaco, a mesma decisão de desenho do módulo campo
+(`plat.campo_alvo`): a medição referencia a feição por id, nunca a exige viva. Isso deixa o módulo
+reutilizável para qualquer ativo (trafo, poste, caixa), não só rede elétrica.
+
+`plat.rede_medicao` particionada nativamente por mês (`PARTITION BY RANGE (ts)`), decisão espelhando
+`plat.evento` (migração 003 + trinco de `20260907T0240_ddl_concorrente_trinco.sql`): função
+`rede_medicao_particao_garantir(mes)` SECURITY DEFINER com `pg_advisory_xact_lock` antes do DDL (a
+corrida acontece na primeira escrita de cada mês); cada partição nova leva `REVOKE ALL FROM plat_app`
++ RLS/policy próprias — acesso direto à tabela-partição pelo nome fica bloqueado, o caminho normal
+(SELECT/INSERT nomeando o pai) usa só a policy do pai (documentado: privilégio e RLS de uma consulta
+por tabela particionada são checados contra a relação NOMEADA na consulta, não contra a partição onde
+a linha acaba caindo — por isso `p_rede_medicao_inserir` só existe no pai e ainda assim vale para toda
+gravação roteada por ele). Diferença para `evento`: aqui INSERT fica liberado para `plat_app` direto
+(sem função SECURITY DEFINER de escrita) porque a ingestão já é por sessão com RLS de tenant, sem
+necessidade de um caminho de escrita mais privilegiado.
+
+Catálogo de grandeza (`plat.rede_medicao_grandeza`, como `evento_tipo`: só o backend semeia,
+`REVOKE INSERT/UPDATE/DELETE FROM plat_app`) fecha o vocabulário e a unidade esperada de cada
+grandeza — a "recusa honesta" do portão é FK + conferência de unidade em Python
+(`servico.publicar_leituras`), nunca uma lista solta duplicada em dois lugares. `carregamento_pct` é
+`tipo='derivado'`: a mesma tabela de leituras serve tanto o que o sensor manda quanto o que o motor de
+alarme calcula, então a ficha do ativo e o gráfico de 7 dias reusam o mesmo mecanismo sem rota nem
+tabela paralela — só o `fonte='motor_alarme'` diferencia a origem.
+
+Alarme (`avaliar_alarme_carregamento`) roda SÍNCRONO, dentro da própria rota de publicação, não como
+job periódico — decisão deliberada: o portão pede "última leitura em ≤ 5 s" e "o alarme disparando"
+na mesma prova; um periódico de 30 s a 1 min teria uma folga desnecessária contra esse número, e o
+custo por publicação é baixo (algumas consultas SELECT + no máximo alguns INSERTs de leituras
+derivadas). Achado do turno: a primeira versão computava `carregamento_pct` só para a leitura MAIS
+RECENTE de cada chamada — funciona para um sensor publicando em tempo real, mas quebra para um lote
+com histórico (o simulador desta prova manda 65 min de uma vez; um sensor que ficou offline e manda o
+atraso todo faz o mesmo). Corrigido: a função recalcula `carregamento_pct` para cada `ts` de corrente
+na janela de retrospecto (`REDE_MEDICAO_ALARME_LOOKBACK_MIN` = 90 min) que ainda não tem o derivado,
+não só o último — sem isso a série de carregamento tinha um ponto só e o "surto contínuo de 30 min"
+nunca teria como existir. `plat.rede_medicao_alarme_estado` guarda só o ESTADO atual (`disparado`,
+`desde`) para que reavaliar com o alarme já ativo não reabra o evento a cada leitura — dispara/resolve
+só na transição.
+
+Agregação a jusante (`agregado_jusante`) não duplica nenhum motor de traçado: chama
+`app.rede_utilidades.fluxo.tracar_fluxo(cur, tenant_id, rede_id, "jusante", [{"feicao_id": ativo,
+"terminal": ...}], [])` tal como está (item L4-18) e filtra os elementos devolvidos por
+`grupo == GRUPO_TRAFO`. Sem `direcao_fluxo` gravado em nenhum trecho (a rede de demonstração não é
+"rede simples"), a direção default cai em `'digitalizada'` (ordem dos vértices) — documentado no
+próprio `fluxo.py`, não uma decisão nova deste item. `terminal` existe porque um dispositivo ponto com
+2+ terminais na MESMA coordenada gera um nó de topologia por terminal, e só um se conecta ao trecho
+(medido: a topologia liga sempre ao nó do `terminal_num` que "ganhou" a fusão por tolerância — no
+pacote `eletrica-br` isso é o terminal 1 quando os terminais colidem no mesmo ponto); sem informar,
+`_resolver_ponto` (já existente em `tracado.py`) devolve `422 terminal_ambiguo`.
+
+Privilégio novo `rede.medir` (grupo `rede`, ao lado de `rede.tracar`/`rede.editar`) — perfis campo/
+editor/admin, espelhado em `app/auth/privilegios.py` (vocabulário 47→48,
+`tests/api/test_privilegios_declarados.py` confere).
+
+Tela `/rede/medicao/ficha` (`web/rede_medicao_ficha.html` + `web/js/rede/medicao_ficha.js`) é
+standalone, fora do visualizador de mapa principal (`/mapa`, `/sig`): decisão de escopo para não mexer
+em código de mapa compartilhado por outras trilhas em curso no mesmo worktree. Usa `estiloVazio()`
+(o mesmo truque de `web/js/rede/diagrama.js`: um `background` MapLibre sem fonte de tile) — o ponto do
+ativo é o que importa, não um mapa-base.
+
+Arquivos: `db/migracoes/20260910T2351_rede_medicao.sql`, `app/rede_medicao/{__init__,modelos,servico,
+rotas,tarefas}.py`, `app/main.py`/`app/jobs/tipos.py`/`app/paginas.py` (registro), `app/limites.py`
+(seção `REDE_MEDICAO_*`), `app/auth/privilegios.py` (`rede.medir`), `web/rede_medicao_ficha.html`,
+`web/js/rede/medicao_ficha.js`, `web/js/i18n/pt-BR.json` (chaves `rede_medicao.ficha.*`),
+`web/style.css` (seção telemetria), `scripts/rede_medicao_simulador.py`, `tests/api/
+test_rede_medicao.py` (11 casos).

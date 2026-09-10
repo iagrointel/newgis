@@ -58,6 +58,11 @@ PAGINAS = {
     "/construtor": "construtor.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
     "/executar": "executar.html",
+    # --- construtor de formulário de atributos, arrasta-e-solta (L5-03-form-builder)
+    "/camadas/{id}/formulario": "formulario_construtor.html",
+    # --- telemetria da rede de utilidades (L4-13-integracao-telemetria): última leitura, gráfico de 7 dias
+    # e alarme no mapa — ?ativo=<uuid> obrigatório, &rede_id=<uuid> opcional (mostra o mapa)
+    "/rede/medicao/ficha": "rede_medicao_ficha.html",
 }
 router = APIRouter()
 

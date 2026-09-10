@@ -1586,3 +1586,74 @@ próprio desta família, sem HTML, sem dimensão de tempo por coleção — ver 
 
 Ver `docs/PARIDADE.md`, seção do item, para a tabela cláusula a cláusula e o ADR
 `docs/adr/20260910T2056-ogc-api-tiles-e-maps.md` para as decisões de escopo.
+
+## 29. Telemetria da rede de utilidades — ficha do ativo (item L4-13-integracao-telemetria)
+
+Medição ligada a um ATIVO (o `id` de uma feição — trafo, poste, qualquer coisa; a leitura não exige
+que a feição continue existindo na camada), com corrente, tensão e temperatura publicadas por
+sensor/conector e um alarme declarado de carregamento.
+
+### 29.1 Publicar leitura
+
+`POST /api/rede/medicao/leituras` — lote (até 2.000):
+
+```json
+{"leituras": [
+  {"ativo": "<uuid>", "cod_id": "TR-0001", "ts": "2026-09-10T21:18:50Z", "fonte": "sonda",
+   "grandeza": "corrente_a", "valor": 23.3, "unidade": "A", "bruta": {}}
+]}
+```
+
+Grandezas aceitas (`GET /api/rede/medicao/grandezas`): `corrente_a/b/c` (A, a cada 5 min),
+`tensao_a/b/c` (V, agregada a cada 10 min — PRODIST Módulo 8), `temperatura` (C). `carregamento_pct`
+(%) é DERIVADA: só o motor de alarme escreve; publicar de fora é recusado como `grandeza_desconhecida`.
+Reenviar o mesmo `(ativo, grandeza, ts)` não duplica — a resposta traz `aceitas`/`duplicadas`. `ts` no
+futuro (além de 120 s de tolerância de relógio) e `unidade` que não bate com a da grandeza são
+recusados item a item, com mensagem, sem derrubar o resto do lote.
+
+### 29.2 Placa do ativo (nameplate)
+
+`PUT /api/rede/medicao/ativos/{ativo}` com `kva_nominal` e `tensao_nominal_v` — sem isso o motor de
+alarme não tem contra o que comparar a corrente e não calcula carregamento. `GET` do mesmo caminho lê
+de volta (`placa_cadastrada: false` quando ainda não há placa).
+
+### 29.3 Ficha do ativo (`/rede/medicao/ficha?ativo=<uuid>&rede_id=<uuid opcional>`)
+
+Última leitura de cada grandeza (`GET .../ativos/{ativo}/ultimas`) e gráfico de 7 dias
+(`GET .../ativos/{ativo}/serie?grandeza=&dias=`, padrão 7) — a tela atualiza sozinha a cada 5 s.
+Quando `rede_id` é passado, um mapa (MapLibre, estilo vazio — só o marcador, sem tile de fundo) mostra
+o ponto do ativo na posição real, colorido: vermelho = alarme de carregamento ativo, verde = normal,
+cinza = sem placa cadastrada (sem carregamento para colorir).
+
+### 29.4 Alarme declarado: carregamento > 100% por 30 min
+
+Roda dentro da própria chamada de publicação (não depende de job periódico): calcula
+`carregamento_pct` = √3 × tensão nominal × corrente média ÷ 1.000 ÷ kVA nominal × 100 para todo
+instante de corrente dentro da janela de retrospecto (90 min) que ainda não tem o derivado — não só o
+mais recente, porque um lote com histórico (sensor que ficou offline e manda o atraso todo) precisa da
+série completa para o surto contínuo existir. Acha o início do trecho contínuo acima de 100%; se já
+tem 30 min e o ponto mais recente continua acima, o alarme está ativo. Dispara `rede_medicao/
+alarme_disparado` só na TRANSIÇÃO (reavaliar com o alarme já ativo não gera um segundo evento);
+`rede_medicao/alarme_resolvido` quando volta a ≤ 100%. Os dois aparecem em `GET /api/eventos?
+tipo=rede_medicao/alarme_disparado` (privilégio `org.log_ver`, admin).
+
+### 29.5 Agregação a jusante
+
+`GET /api/rede/medicao/jusante?rede_id=&ativo=&grandeza=&janela_min=&terminal=` soma a leitura mais
+recente (dentro de `janela_min`, padrão 15) de `grandeza` entre os transformadores de distribuição
+alcançados a JUSANTE de `ativo` pela topologia derivada (item L4-01-b — a rede precisa ter passado por
+`POST /api/rede/{id}/topologia/habilitar`). Reusa `app.rede_utilidades.fluxo.tracar_fluxo` sem
+modificação. `terminal` desambigua um dispositivo com mais de um terminal na mesma coordenada (ex.:
+trafo com alta=1/baixa=2 — a topologia liga o trecho ao terminal que "ganhou" o nó compartilhado, nem
+sempre o de baixa; a rota devolve `422 terminal_ambiguo` com a instrução quando não informado e há
+mais de um).
+
+### 29.6 Simulador de prova
+
+`venv/bin/python scripts/rede_medicao_simulador.py --provar` — 20 sensores de trafo reais da rede de
+demonstração, backfill de corrente/temperatura/tensão comprimido no tempo (o `ts` de cada leitura é o
+do sensor, não o de quem publica), mede publicar→ficha e mostra o alarme disparando. `--limpar` apaga
+leitura/placa/estado de alarme dos ativos que tocou (nunca a rede em si).
+
+Ver `docs/PARIDADE.md`, seção do item, e `docs/adr/` para as decisões de escopo (grandeza fechada em
+catálogo, `ativo` sem FK, alarme síncrono em vez de job periódico).

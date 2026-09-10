@@ -187,7 +187,11 @@ def main() -> None:
 
     trafos = achar_trafos(sess, rede_id, args.sensores)
     ativo_sobrecarga = trafos[0]["properties"]["id"]
-    kvas = [random.choice([15, 30, 45, 75, 112.5]) for _ in trafos]
+    # o trafo da demonstração de sobrecarga recebe a MENOR placa do catálogo de propósito — o fator de
+    # sobrecarga (1.8x a corrente-base, ver gerar_backfill) tem de ficar acima de 100% de carregamento
+    # não importa qual base aleatória caiu para ele (15 kVA / √3·380V ≈ 22,8 A nominal; a base sorteada
+    # vai de 15 a 40 A, então mesmo o pior caso fica bem acima de 100% com o fator de 1,8x)
+    kvas = [15.0] + [random.choice([15, 30, 45, 75, 112.5]) for _ in trafos[1:]]
     configurar_placas(sess, trafos, kvas)
     print(f"placa cadastrada em {len(trafos)} trafo(s); sobrecarga simulada em {ativo_sobrecarga}")
 
@@ -227,11 +231,16 @@ def main() -> None:
         r.raise_for_status()
         print(f"gráfico de 7 dias: {r.json()['n']} pontos de corrente_a para {alvo}")
 
+        # um dispositivo ponto tem 2 terminais na mesma coordenada (ex.: trafo alta=1/baixa=2); a topologia
+        # liga o trecho ao nó do terminal 1 quando os dois colidem no mesmo ponto (medido em
+        # tests/api/test_rede_medicao.py::test_agregado_jusante_soma_trafos)
         r = sess.get(f"{BASE_URL}/api/rede/medicao/jusante", params={
-            "rede_id": rede_id, "ativo": trafos[0]["properties"]["id"], "grandeza": "corrente_a",
+            "rede_id": rede_id, "ativo": trafos[0]["properties"]["id"], "grandeza": "corrente_a", "terminal": 1,
         })
-        r.raise_for_status()
-        print("agregação a jusante:", r.json())
+        if r.status_code == 200:
+            print("agregação a jusante:", r.json())
+        else:
+            print(f"agregação a jusante: {r.status_code} {r.text} (rede sem topologia habilitada?)")
 
 
 if __name__ == "__main__":

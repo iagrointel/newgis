@@ -175,42 +175,77 @@ def avaliar_alarme_carregamento(cur, auth, request, ativo: str) -> dict | None:
 
     1. lê a placa (kVA/tensão nominal) — sem ela não há carregamento a calcular, devolve None (não é erro:
        nem todo ativo tem placa cadastrada);
-    2. lê a corrente mais recente de cada fase publicada, calcula carregamento_pct e GRAVA como leitura
-       derivada (fonte=motor_alarme) — é o que a ficha do ativo e o gráfico de 7 dias mostram;
-    3. olha os últimos REDE_MEDICAO_ALARME_LOOKBACK_MIN minutos da série carregamento_pct (a que acabou de
-       ganhar o ponto novo) e acha o INÍCIO do surto contínuo acima de 100% (a corrida volta ao primeiro
-       ponto, a partir do fim, que ainda está acima de 100%); se esse início já tem
-       REDE_MEDICAO_ALARME_JANELA_MIN minutos e o ponto mais recente continua acima de 100%, o alarme está
-       ativo — dispara `rede_medicao/alarme_disparado` só na TRANSIÇÃO (rodar de novo com o alarme já ativo
-       não escreve um segundo evento); volta a ≤100% dispara `rede_medicao/alarme_resolvido`."""
+    2. calcula carregamento_pct para cada ts distinto de corrente dentro da janela de retrospecto
+       (REDE_MEDICAO_ALARME_LOOKBACK_MIN) que ainda não tem o derivado — não só o mais recente: um
+       publicador pode mandar um LOTE com histórico (o simulador desta prova manda 65 min de uma vez; um
+       sensor de verdade que ficou offline e manda o atraso todo faz exatamente isso), e sem recalcular o
+       passado inteiro a série de carregamento_pct fica com um ponto só, o "surto contínuo de 30 min" nunca
+       teria como ser visto — é o que a leitura derivada e o gráfico de 7 dias mostram;
+    3. olha os últimos REDE_MEDICAO_ALARME_LOOKBACK_MIN minutos da série carregamento_pct (agora completa)
+       e acha o INÍCIO do surto contínuo acima de 100% (a corrida volta ao primeiro ponto, a partir do fim,
+       que ainda está acima de 100%); se esse início já tem REDE_MEDICAO_ALARME_JANELA_MIN minutos e o
+       ponto mais recente continua acima de 100%, o alarme está ativo — dispara
+       `rede_medicao/alarme_disparado` só na TRANSIÇÃO (rodar de novo com o alarme já ativo não escreve um
+       segundo evento); volta a ≤100% dispara `rede_medicao/alarme_resolvido`."""
     placa = ativo_config_obter(cur, ativo)
     if placa is None or placa["kva_nominal"] is None or placa["tensao_nominal_v"] is None:
         return None
+    tensao_nominal_v = float(placa["tensao_nominal_v"])
+    kva_nominal = float(placa["kva_nominal"])
+
     cur.execute(
-        "SELECT DISTINCT ON (grandeza) grandeza, valor, ts FROM plat.rede_medicao "
-        "WHERE ativo = %s::uuid AND grandeza = ANY(%s) ORDER BY grandeza, ts DESC",
+        "SELECT max(ts) AS ate FROM plat.rede_medicao WHERE ativo = %s::uuid AND grandeza = ANY(%s)",
         (ativo, list(GRANDEZAS_CORRENTE)),
     )
-    linhas = cur.fetchall()
-    if not linhas:
+    r = cur.fetchone()
+    if r is None or r["ate"] is None:
         return None
-    correntes = {r["grandeza"]: r["valor"] for r in linhas}
-    ts_leitura = max(r["ts"] for r in linhas)
+    ts_leitura = r["ate"]
+    desde = ts_leitura - datetime.timedelta(minutes=limites.REDE_MEDICAO_ALARME_LOOKBACK_MIN)
+
+    cur.execute(
+        "SELECT ts, grandeza, valor FROM plat.rede_medicao WHERE ativo = %s::uuid AND grandeza = ANY(%s) "
+        "AND ts BETWEEN %s AND %s ORDER BY ts",
+        (ativo, list(GRANDEZAS_CORRENTE), desde, ts_leitura),
+    )
+    por_ts: dict[datetime.datetime, dict[str, float]] = {}
+    for linha in cur.fetchall():
+        por_ts.setdefault(linha["ts"], {})[linha["grandeza"]] = linha["valor"]
+    if not por_ts:
+        return None
+
+    cur.execute(
+        "SELECT ts FROM plat.rede_medicao WHERE ativo = %s::uuid AND grandeza = %s AND ts BETWEEN %s AND %s",
+        (ativo, GRANDEZA_CARREGAMENTO, desde, ts_leitura),
+    )
+    ja_calculado = {linha["ts"] for linha in cur.fetchall()}
+
+    meses = {ts.date().replace(day=1) for ts in por_ts if ts not in ja_calculado}
+    for mes in meses:
+        cur.execute("SELECT plat.rede_medicao_particao_garantir(%s)", (mes,))
+    pct_por_ts: dict[datetime.datetime, float] = {}
+    for ts, correntes in sorted(por_ts.items()):
+        if ts in ja_calculado:
+            continue
+        try:
+            pct_por_ts[ts] = _carregamento_pct(correntes, tensao_nominal_v, kva_nominal)
+        except ValueError:
+            continue
+        cur.execute(
+            "INSERT INTO plat.rede_medicao(tenant_id, ativo, cod_id, ts, fonte, grandeza, valor, unidade, "
+            "leitura) VALUES (%s, %s::uuid, %s, %s, %s, %s, %s, %s, %s) "
+            "ON CONFLICT (tenant_id, ativo, grandeza, ts) DO NOTHING",
+            (auth.tenant_id, ativo, placa["cod_id"], ts, FONTE_MOTOR_ALARME, GRANDEZA_CARREGAMENTO,
+             pct_por_ts[ts], "%", jsonb({"correntes_a": correntes, "kva_nominal": kva_nominal,
+                                        "tensao_nominal_v": tensao_nominal_v})),
+        )
+    if not pct_por_ts and not ja_calculado:
+        return None
     try:
-        pct = _carregamento_pct(correntes, float(placa["tensao_nominal_v"]), float(placa["kva_nominal"]))
+        pct = pct_por_ts.get(ts_leitura) or _carregamento_pct(por_ts[ts_leitura], tensao_nominal_v, kva_nominal)
     except ValueError:
         return None
-    cur.execute("SELECT plat.rede_medicao_particao_garantir(%s)", (ts_leitura.date().replace(day=1),))
-    cur.execute(
-        "INSERT INTO plat.rede_medicao(tenant_id, ativo, cod_id, ts, fonte, grandeza, valor, unidade, leitura) "
-        "VALUES (%s, %s::uuid, %s, %s, %s, %s, %s, %s, %s) "
-        "ON CONFLICT (tenant_id, ativo, grandeza, ts) DO NOTHING",
-        (auth.tenant_id, ativo, placa["cod_id"], ts_leitura, FONTE_MOTOR_ALARME, GRANDEZA_CARREGAMENTO, pct,
-         "%", jsonb({"correntes_a": correntes, "kva_nominal": float(placa["kva_nominal"]),
-                     "tensao_nominal_v": float(placa["tensao_nominal_v"])})),
-    )
 
-    desde = ts_leitura - datetime.timedelta(minutes=limites.REDE_MEDICAO_ALARME_LOOKBACK_MIN)
     cur.execute(
         "SELECT ts, valor FROM plat.rede_medicao WHERE ativo = %s::uuid AND grandeza = %s "
         "AND ts BETWEEN %s AND %s ORDER BY ts",

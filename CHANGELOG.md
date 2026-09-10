@@ -2295,3 +2295,61 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
   pede); histórico de versão de uma predefinição editada (edita substitui o corpo, `versao` sobe, mas
   não guarda a versão anterior — só a troca de PADRÃO entre predefinições distintas preserva a URL
   antiga, não a edição de uma já publicada).
+
+## L4-13-integracao-telemetria (10/09/2026)
+- `plat.rede_medicao` particionada por mês (`PARTITION BY RANGE (ts)`, mesmo padrão de `plat.evento`:
+  função `rede_medicao_particao_garantir` SECURITY DEFINER com `pg_advisory_xact_lock`, RLS própria em
+  cada partição, REVOKE ALL de acesso direto à partição — SEM TimescaleDB, proibido para dado de
+  cliente nesta casa). `ativo` é só o `id` (uuid) de uma feição, sem FK: a mesma decisão de desenho do
+  módulo campo, uma leitura de algo que saiu da camada continua sendo um fato.
+- Catálogo fechado `plat.rede_medicao_grandeza` (8 grandezas: corrente/tensão por fase, temperatura —
+  `tipo='bruto'` — e `carregamento_pct` — `tipo='derivado'`, só o motor de alarme escreve). Placa do
+  ativo (kVA/tensão nominal) em `plat.rede_medicao_ativo`, sem depender de nenhuma tabela de feição.
+- `POST /api/rede/medicao/leituras`: lote (até 2.000), idempotente por `(tenant, ativo, grandeza, ts)`
+  — `ON CONFLICT DO NOTHING`, reenviar não duplica —, recusa item a item (nunca o lote inteiro) por
+  `ts_futuro` (tolerância de 120 s de relógio do sensor), `grandeza_desconhecida` e
+  `unidade_incompativel`, sempre com mensagem. `PUT/GET /api/rede/medicao/ativos/{ativo}` (placa),
+  `.../ultimas` (última leitura por grandeza) e `.../serie` (série por período, padrão 7 dias) — a
+  ficha do ativo. `GET /api/rede/medicao/jusante` soma a leitura mais recente de uma grandeza entre os
+  transformadores alcançados a jusante de um ponto pela topologia derivada (reusa
+  `app.rede_utilidades.fluxo.tracar_fluxo`, sem mudar nada nele).
+- Motor de alarme "carregamento > 100% por 30 min" (`servico.py::avaliar_alarme_carregamento`) roda
+  DENTRO da própria chamada de publicação, para cada ativo tocado que já tem placa cadastrada — sem
+  depender de job periódico. Calcula `carregamento_pct` (S(kVA) ≈ √3×V×I_média ÷ 1000, sobre kVA
+  nominal) para cada `ts` de corrente na janela de retrospecto que ainda não tem o derivado (não só o
+  mais recente — um lote com histórico, como o do simulador desta prova ou um sensor que ficou
+  offline, precisa da série completa para o "surto contínuo de 30 min" existir). `plat.
+  rede_medicao_alarme_estado` guarda só o ESTADO atual (evita reabrir o mesmo alarme a cada leitura);
+  dispara `rede_medicao/alarme_disparado` na transição, `rede_medicao/alarme_resolvido` quando volta a
+  ≤ 100%.
+- Privilégio novo `rede.medir` (perfis campo/editor/admin — migração e espelho em
+  `app/auth/privilegios.py`, vocabulário 47→48). Tarefa periódica `rede_medicao.particoes_criar`
+  registrada PAUSADA (`ativa=false`; o mês corrente e o seguinte já existem desde a migração).
+- Tela `/rede/medicao/ficha?ativo=<uuid>&rede_id=<uuid opcional>` (`web/rede_medicao_ficha.html` +
+  `web/js/rede/medicao_ficha.js`): última leitura de cada grandeza, gráfico de 7 dias (SVG inline, sem
+  biblioteca) e — quando `rede_id` é passado — um mapa MapLibre (estilo vazio, só o marcador) com o
+  ponto do ativo colorido (vermelho = alarme ativo, verde = normal, cinza = sem placa); atualiza
+  sozinha a cada 5 s.
+- Simulador `scripts/rede_medicao_simulador.py`: 20 sensores de trafo reais da rede
+  `lancamento-demo-utilidades` (35 trafos disponíveis), corrente por fase a cada 5 min, temperatura a
+  cada 5 min, tensão a cada 10 min; `--provar` mede publicar→ficha e mostra o alarme disparando com
+  histórico simulado; `--limpar` apaga leitura/placa/estado de alarme dos ativos que tocou (nunca a
+  rede em si).
+- Medido na instância viva (127.0.0.1:8184, tenant `demo`, 10/09/2026): 1.540 leituras (65 min de
+  histórico × 20 trafos) publicadas em 0,7 s; publicar → aparecer na ficha do ativo = **0,089 s**
+  (portão pede ≤ 5 s); alarme disparou em 8 dos 20 trafos simulados com carregamento acima de 100%
+  (ex.: 151,5%, desde 30 min antes do fim do backfill); gráfico de 7 dias com 15 pontos.
+- 11 testes novos em `tests/api/test_rede_medicao.py`: idempotência (mesmo lote 2×, mesmo trio dentro
+  do mesmo lote), recusa com mensagem (ts futuro, grandeza desconhecida, unidade incompatível,
+  `carregamento_pct` publicada de fora), isolamento entre inquilinos usando o MESMO `ativo` uuid nos
+  dois lados (leitura, série e placa — cláusula inegociável), ficha do ativo (última leitura por
+  grandeza, série filtra por janela), alarme dispara/resolve/NÃO dispara antes de 30 min contínuos,
+  agregação a jusante com uma rede mínima real (2 trafos, 2 trechos).
+- Paridade Esri (`docs/PARIDADE.md`): GeoEvent Server e ArcGIS Velocity fazem streaming/regra sobre
+  telemetria, mas não têm uma tabela de medição por ativo nativa dentro do Utility Network — registrado
+  como ALÉM da capacidade Esri equivalente, não paridade.
+- Fora deste turno: MQTT/ingestão por fluxo (a rota é HTTP; L2-14-tempo-real é quem cobre ingestão de
+  fluxo em geral); agregação a jusante por ALIMENTADOR/subrede nomeada (a agregação existe e está
+  testada, mas parte de um `ativo` ponto de partida — subrede/controlador automático depende de
+  L4-04-a/b, não construído para a rede de demonstração desta trilha); retenção/expurgo de partição
+  antiga (a de `plat.evento` existe como molde, não copiada aqui por não ser exigida pelo portão).
