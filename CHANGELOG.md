@@ -2685,6 +2685,7 @@ XSD de referência do OGC.
   vazios e `capabilities` só `Query` — as linhas L2-10-a, L2-10-b e L2-03-a não estão nesta base.
 ## turno 5, setembro de 2026 (item L2-03-edicao: fechamento — dois achados corrigidos, junção do turno 4)
 ## turno 8, setembro de 2026 (item L2-07-e-odk-central-ponte: ponte opcional com o ODK Central)
+## turno 4, setembro de 2026 (item L2-04-d-featureserver-edicao-anexos: escrita pelo protocolo Esri sobre a porta única)
 
 Uma equipe que já coleta no ODK Collect passa a alimentar as camadas da plataforma sem trocar de aplicativo.
 `POST /api/odk/pontes` publica no ODK Central a MESMA planilha que gerou o formulário do L2-07-b (conferida
@@ -3305,6 +3306,126 @@ responder. `docs/PARIDADE.md` e `tests/medidas/L2-04-servicos-esri-ogc.json` tê
 Fora do turno: QGIS/ArcGIS Pro/AGOL reais carregando o serviço (sem ambiente gráfico nesta máquina, mesma limitação
 já registrada para L2-04-c e para Chrome headless); OGC API Features Part 3 (CQL2), WFS-T; GML validado contra o
 XSD de referência do OGC.
+Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
+medição honesta achou nela. `PLAT_DSN`, `PLAT_GARAGE_ADMIN_TOKEN` e `PLAT_SECRET_ANTERIOR` saíram do
+`.env` para `/etc/plat/segredos` (root 0600) entregues por `LoadCredential=` do systemd — o `.env` fica
+só com configuração, e o Makefile injeta os segredos no pytest (a falta de `PLAT_DSN` na injeção tinha
+deixado a suíte vermelha na coleta desde 06/09 à noite). `scripts/plat segredo rotacionar <nome>`
+rotaciona os 5 segredos: PLAT_SECRET com dupla-chave (o valor antigo vira `PLAT_SECRET_ANTERIOR` por 24
+h, sessões sobrevivem), PLAT_DSN e PLAT_DSN_WORKER com `ALTER ROLE` + reinício das consumidoras,
+PLAT_GARAGE_ADMIN_TOKEN com restart do Garage + API, e a chave S3 de um inquilino sem reiniciar nada.
+Em todos, o valor antigo deixa de autenticar (prova por `psycopg2.connect` com a senha velha depois da
+rotação). A cláusula "0 erro 5xx durante a rotação" é medida pelo **k6** (v2.2.0,
+`scripts/k6_saude_5xx.js`, martelo externo ao processo medido): 0 respostas 5xx em 276-762 requisições
+por rotação (`tests/medidas/L7-19.json`). Chegar ao zero exigiu trocar o mecanismo depois de duas
+medições ruins: "restart em cadeia" deixou 57 respostas 500 na janela entre o `ALTER ROLE` e o restart
+da segunda unidade, e "parar tudo antes" deixou 1.334, porque com ativação por soquete a própria
+conexão do cliente religa o serviço com a credencial velha (e `mask --runtime` não impede a religação
+de unidade estática, medido em spike). O mecanismo final é uma janela `trust` de segundos no pg_hba
+(só a role, só 127.0.0.1, linha marcada, removida por `finally`): velho e novo autenticam durante a
+troca, e a senha velha morre quando a janela fecha. A API passa a subir por ativação por soquete
+(`deploy/plat-api.socket`, uvicorn `--fd 3` com 2 workers — spike medido: conexão durante o stop
+espera ~1 s e recebe 200, nunca refused/502). O adversário independente refutou a primeira versão e os achados que eram do item viraram conserto
+neste mesmo turno: a janela trust abre dentro do `try` (linha nunca fica para trás no pg_hba, checado a
+cada prova), a rotação de PLAT_SECRET reinicia também o worker (ele carrega a chave uma vez na subida e
+decifra dentro de jobs), e o ANTERIOR expira de verdade — timer `plat-segredo-expira.timer` esvazia o
+arquivo e reinicia API e worker na virada das 24 h (janela efetiva 24 h-24 h 59 min). Os achados que são
+contaminação do ambiente ANTERIOR ao item (segredos reais semeados no journal por comandos de outras
+operações; `.env` de worktrees de trilha com valores reais, um deles modo 664; segredos em
+`/proc/<pid>/environ` de processos de trilha) ficaram registrados em `refutacao.json` e viraram itens
+próprios do backlog com dono nomeado — o desenho do produto em si saiu limpo: unidades plat-* só veem os
+segredos por `LoadCredential=`, repositório e histórico git com 0 ocorrências, `.env` raiz sem segredo.
+Runbook em `docs/RUNBOOKS/segredos.md` (procedimento por segredo, janela trust declarada, ressalva do
+garage.toml do daemon, que é da frente plataforma/pipeline e o produto nunca lê em operação).
+## turno 3, setembro de 2026 (item L3-19-multiescala: grades aninhadas do motor multicritério)
+
+Construído do zero neste turno (RESGATE da sessão executora derrubada por cota só tinha a migração,
+`app/multiescala/{crs,motor}.py` ainda sem rota nenhuma). Duas execuções ligadas: `POST
+/api/multiescala/conjuntos/{id}/macro` gera a grade grosseira sobre a área de estudo inteira e roda a
+combinação; `POST /api/multiescala/execucoes/{id}/micro` gera a grade fina SÓ dentro das células macro
+aprovadas (aritmético — a query de geração junta a região aprovada ANTES de expandir as sub-células, nunca
+gera tudo para descartar depois) e roda a mesma combinação nela. `GET /api/multiescala/execucoes/{id}`
+devolve o relatório por fator com `escala`/`escala_grosseira`/`razao_escala`, calculado pelo motor a partir
+de `resolucao_fonte_m` (declarada no fator) x `resolucao_grade_m` (da execução) — o cliente nunca envia
+esse campo. CRUD completo: `/conjuntos`, `/fatores`, `/fatores/{id}/amostras` (carga em lote),
+`/execucoes`; `DELETE` de conjunto e fator (cascata pelas FKs da migração), acrescentados neste turno para
+a varredura cruzada ter como limpar o que cria. Escopo de token novo `multiescala:usar`
+(`app/auth/escopos.py`). ADR `docs/adr/20260906T1640-grades-aninhadas-multiescala.md`.
+
+Um defeito de FRAMEWORK achado e corrigido, fora do arquivo deste item mas bloqueando-o:
+`app/schema_ambiente.py::CursorSchemaAmbiente` reescreve `plat.` → `plat_t<trilha>.` em `execute` e
+`callproc`, mas não em `executemany` (psycopg2 implementa em C e não chama `execute` de volta) —
+`POST /api/multiescala/fatores/{id}/amostras` falhava com `permission denied for schema plat` em qualquer
+trilha. A MESMA lacuna já quebrava `POST /api/papeis` (não deste item), convertida por `erro_do_banco` num
+403 "operação fora do inquilino da sessão" que parecia RLS cruzada e não era — reproduzido e confirmado
+antes de mexer. Corrigido na classe (um método a mais, mesmo corpo de `execute`), vale para as duas rotas.
+
+Um defeito do próprio teste (não do motor) achado rodando de verdade: uma área de estudo desenhada só um
+pouco maior que a resolução da grade (~1,35-1,47 km sobre 1 km) produz uma célula-fatia cujo CENTRO
+nominal (usado para achar o bloco de dado) cai FORA da extensão real da amostra — 2 das 4 células macro
+ficavam sem nota, não por bug, porque nenhuma amostra alcançava o bloco que aquela célula ia procurar.
+Corrigido aumentando a área de teste para 1.900 x 1.900 m (documentado no ADR, decisão B, para o próximo
+teste desta família não tropeçar na mesma coisa).
+
+Medido de verdade (`PLAT_GRAVAR_MEDIDAS=1`, `tests/medidas/L3-19-multiescala.json`), 10/10 testes passam
+duas vezes seguidas: grade macro de 1 km sobre estudo de 1.900x1.900 m dá 4 células, top_pct 50% aprova 2;
+grade micro de 100 m (k=10) gera exatamente 200 células (2 aprovadas × 10²) contra 400 possíveis (4×10²) —
+economia de 50,0%; o mesmo fator (1.000 m de escala nativa) sai `própria` na grade de 1 km e `grosseira`
+na grade de 100 m da MESMA execução ligada, sem o cliente declarar nada de diferente — é a refutação do
+item. `tests/api/multiescala/test_multiescala.py`: 10/10.
+
+**Fora do portão deste turno, registrado no ADR**: `docs/openapi.json` comitado não inclui
+`/api/multiescala/*` (regeneração é pendência do gerente após os merges); os 11 casos da varredura cruzada
+já estão em `tests/api/cruzado_casos.py` (conferidos à mão contra o app rodando — todas as 11 rotas
+recusam ou isolam o cross-tenant corretamente) e passam a valer em `test_cobertura_100_por_cento`/
+`test_rota_nao_cruza` assim que `make openapi` rodar contra a árvore juntada. `L3-01-b-unidades`
+(dependência declarada) segue PARCIAL num ramo não juntado (`wt/amc`); este item não depende dele em
+código (CRS resolvido de forma própria em `app/multiescala/crs.py`), só na hipótese conceitual.
+## turno 5, setembro de 2026 (item L5-01-a-layout-paginas: páginas e layout do app)
+
+Sobre o editor de arrasto do L5-08: paleta nova (`web/js/editor/paleta_paginas.js`) com `pagina` (tela cheia
+× rolável; `caminho`/`titulo`/`ordem`/`oculta`/`inicial`), `cabecalho`, `rodape`, `menu`, os widgets de
+layout do Experience Builder (`linha`, `coluna`, `grade`, `acordeao`, `painel_fixo`, `painel_lateral`) e
+`janela` (`modal`/`ancorada`) + `secao_vistas`/`vista`. Executor novo (`web/js/executor/{executor,paginas}.js`
++ tela `/executar?item=<id>&pagina=<caminho>`, `app/paginas.py`) que renderiza o MESMO documento como app de
+verdade: nav entre páginas por `history.pushState`, `<dialog>` nativo para janela modal, painel lateral que
+recolhe sem `display:none`, grade em CSS Grid `fr`. `web/js/editor/tela.js` escolhe a paleta pelo `tipo` do
+item (`app` → paleta de páginas; o resto continua com a paleta comum do L5-08) — única mudança num arquivo
+que outro item também toca.
+
+Medido (`tests/medidas/L5-01-a-layout-paginas.json`, e2e `tests/e2e/test_layout_paginas.py`): app de 2
+páginas (Central tela-cheia com mapa, Detalhes rolável com painel lateral/grade/janela) montado só por
+arrasto (2.245,1 ms); menu navega e a URL muda por página, F5 reabre na página certa; painel lateral
+recolhe/expande; grade mantém a razão 8:4 entre dois filhos em 1200 px (2,016) e 600 px (2,033) — diferença
+0,017; janela modal abre pelo botão e fecha por Esc (`<dialog>` nativo). Refutação do adversário: 6 níveis
+alternando linha/coluna, com irmão ao lado do 1º nível, em 3 larguras de viewport (1280/800/320) — 0 px de
+estouro horizontal e nenhum nível com largura, altura, `display` ou `visibility` zerados (a correção que fez
+isso passar foi `min-width:0`/`min-height:0` em todo item flexível, ADR
+`20260907T1355-paginas-e-layout-do-app`). Achado corrigido no caminho: `drag_and_drop` sobre o SELETOR do
+contêiner-alvo mira o CENTRO da caixa — quando o contêiner já tem um filho de largura 12/12, o centro cai
+sobre o filho e o `drop` do HTML5 é entregue a ele, não ao contêiner (o novo nó entra um nível mais fundo do
+que o pedido); o teste agora solta sempre no FUNDO do contêiner, como o e2e do L5-08 já fazia na raiz.
+Paridade contra "Add and manage pages" e "Layout widgets" (doc EXB) em `docs/PARIDADE.md`.
+
+## turno 4, setembro de 2026 (item L5-08-editor-arrasto: primitivas de edição compartilhadas pelos construtores)
+
+Editor de arrasto próprio em `web/js/editor/` (5 módulos, 43.771 bytes medidos; 0 byte de biblioteca de
+arrasto — `web/vendor/VERSOES.txt` segue sem SortableJS, dnd-kit ou GridStack) e tela `/construtor?item=<id>`
+sobre o documento do L5-05. Paleta→tela e tela→tela por HTML5 Drag and Drop; alça de largura por Pointer
+Events com `setPointerCapture`; árvore de estrutura, painel de propriedades gerado do JSON Schema do tipo e
+menu "mover para" para quem só tem toque. Largura sempre em COLUNAS da grade de 12, nunca em pixel.
+
+Medido (`tests/medidas/L5-08-editor-arrasto.json`, e2e `tests/e2e/test_editor_arrasto.py` contra a base da
+trilha): o MESMO layout de 5 componentes montado só por arrasto (787,5 ms) e só por teclado e menus
+(134,0 ms) grava dois documentos idênticos — diferença 0 depois de trocar cada ULID por `n1..nN` na ordem de
+profundidade (o ULID é aleatório por construção, D2). Redimensionar por arrasto levou o mapa de 8 para 4
+colunas nos dois caminhos; `"px"` não aparece no documento gravado. A árvore reflete o aninhamento
+(aria-level 1/2/2/1/1). O painel recusa zoom 99 num campo `maximum: 22`: mensagem no campo, `aria-invalid`,
+e o documento salvo depois continua com 12. Refutação do adversário no mesmo arquivo: soltar um contêiner
+dentro de um descendente dele é recusado com motivo ("dentro de si"), soltar fora da tela não muda nada, o
+menu de mover não oferece destino dentro do próprio nó, e o layout inteiro se monta só por toque no viewport
+Pixel 7 (onde o HTML5 Drag and Drop não dispara). 0 erro de console em todos os caminhos.
+
 Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a partir do navegador, e por
 isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
@@ -4558,6 +4679,50 @@ Visualizador MapLibre da plataforma, com a pilha de tiles vetoriais que faltava 
 - Dois defeitos reais achados pelos testes e corrigidos: `attribution: undefined` fazia o MapLibre
   recusar a fonte inteira em silêncio; repassar `Content-Encoding: gzip` com corpo já descompactado
   entregava tile ilegível ao navegador. Registrados no ADR 20260907T0400.
+## turno 4, setembro de 2026 (item L2-04-servicos-esri-ogc: diretório do FeatureServer, OGC API Features e WFS 2.0)
+
+Construído em volta da operação `query` do FeatureServer (item L2-04-c, `wt/fsquery`, ADR 0018) sem reescrevê-la:
+`app/consulta/rotas_servico.py` (descritor de serviço `.../FeatureServer?f=json` e de camada `.../FeatureServer/0
+?f=json` — `fields`, `geometryType`, `objectIdField`, `fullExtent`), `app/consulta/rotas_ogc_features.py` (OGC API
+Features Part 1: landing, conformance, collections, items com bbox/limit/offset, item único, GeoJSON puro) e
+`app/consulta/rotas_wfs.py` (WFS 2.0 KVP: GetCapabilities validado pelo cliente real `owslib.wfs.WebFeatureService`,
+DescribeFeatureType mínimo, GetFeature em GeoJSON e GML 3.2 simples). `applyEdits`/anexos/`queryRelatedRecords`/
+`relationships` ficam de fora — dependem de L2-03-edicao e L2-10-b, nenhum construído (ADR 0019).
+
+Bateria de 13 ataques (item_id com aspas/comentário SQL/`;`, bbox com sub-select/`pg_sleep()`/função não prevista,
+BBOX do WFS com injeção, `REQUEST` desconhecida, `feature_id` não inteiro, unicode no item_id, cross-tenant nas 3
+raízes): **13/13 recusados com 400/404, nenhum 500**. Dois achados corrigidos no mesmo turno: (1) `item_id::uuid`
+sem validar antes deixava o Postgres levantar exceção sem handler → 500 real, inclusive na `/query` original do
+L2-04-c — corrigido com validação de UUID compartilhada; (2) landing/conformance do OGC API Features respondiam 200
+para item de outro inquilino (sem vazar dado, mas sem checar posse) — corrigido tocando `plat.item` sob RLS antes de
+responder. `docs/PARIDADE.md` e `tests/medidas/L2-04-servicos-esri-ogc.json` têm a tabela cláusula a cláusula.
+
+Fora do turno: QGIS/ArcGIS Pro/AGOL reais carregando o serviço (sem ambiente gráfico nesta máquina, mesma limitação
+já registrada para L2-04-c e para Chrome headless); OGC API Features Part 3 (CQL2), WFS-T; GML validado contra o
+XSD de referência do OGC.
+
+## turno 3, setembro de 2026 (item L2-04-b-featureserver-catalogo-metadados: diretório de serviços Esri por token)
+
+- Diretório de serviços compatível com Esri em `/svc/{token}/rest/...`: `rest/info`, `rest/generateToken`,
+  `rest/services` (pastas do catálogo), `rest/services/{pasta}`, `FeatureServer`, `FeatureServer/{id}`,
+  `FeatureServer/layers`, `FeatureServer/info/itemInfo` e `FeatureServer/info/metadata` (ISO 19139).
+  O token vai no caminho porque é uma URL que se entrega e o cliente navega sozinho a partir dela;
+  a consequência está declarada no ADR `20260907T1955-diretorio-servicos-esri-por-token.md`.
+- O FeatureServer não foi reescrito: `app/consulta/rotas_servico.py` passou a expor
+  `descritor_do_servico`/`descritor_da_camada` e o diretório as chama. O descritor da camada ganhou
+  `indexes` (lidos de `pg_index`), `editFieldsInfo`, `types`/`subtypes`/`typeIdField`, `timeInfo`,
+  `ownershipBasedAccessControlForFeatures` e `domain` por campo. `currentVersion` foi de 11.3 para 11.4.
+- `app/consulta/formato_esri.py`: `f=json|pjson|html` e `callback` (JSONP) num lugar só. `f` desconhecido
+  é 400 e nunca 500; nome de callback fora de identificador simples é recusado, nunca ecoado.
+- `app/consulta/renderizador.py`: estilo MapLibre → `drawingInfo`. Cor constante vira `simple`,
+  `["match", …]` vira `uniqueValue`, `["step", …]` vira `classBreaks`, `layout.text-field` vira
+  `labelingInfo`. Expressão fora desses casos não é aproximada: sai `simple` cinza com o motivo.
+- `app/consulta/cors_servicos.py`: CORS aberto em `/svc`, `/ogc` e `/tiles` — e só. Em `/api` a
+  credencial é o cookie de sessão, e abrir ali seria falsificação de requisição entre sítios legível.
+- O `drawingInfo` lê a relação `estilo_de_camada` (item de tipo `estilo` → camada), declarada pelo
+  `PUT /api/itens/{estilo}/relacoes` que já existia; nada foi acrescentado ao catálogo por causa disto.
+- Fica declarado como ausente, não simulado: `fields[].domain` nulo, `types`/`subtypes`/`relationships`
+  vazios e `capabilities` só `Query` — as linhas L2-10-a, L2-10-b e L2-03-a não estão nesta base.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 - **L7-06-d-paineis**: cinco painéis Grafana provisionados por arquivo (`deploy/grafana/paineis/*.json` + `deploy/grafana/provisioning/`), homologação própria (`deploy/paineis_homologacao.sh`) com carga curta de verdade e captura de cada painel em `tests/e2e/capturas/`. Métricas novas para o que os painéis precisavam e não existia: usuários ativos em 24 h, duração e tamanho do último backup/ensaio, uso de armazenamento e tamanho do schema de dado por inquilino.
@@ -6688,3 +6853,30 @@ indisponível, 403 negado; nunca um código cru. e2e `tests/e2e/test_login_ldap_
 real (configura, importa `gg-plataforma-leitura` = 1 encontrado, entra como usuária da rede em 125,6 ms), axe 0
 violações sérias nas duas telas, capturas 390/1280. `docs/COBERTURA_UI.md` regenerado: 26 → 23 lacunas de
 escrita. Textos em pt-BR, en e es.
+## turno 4, setembro de 2026 (item L2-13-a-versoes-ramo-reconciliar: versionamento por ramo)
+
+Camada marcada como versionada aceita RAMOS de trabalho paralelos, no molde do *branch versioning* do
+ArcGIS Enterprise. Ler num ramo mostra as edições dele mais o padrão como estava no momento em que o
+ramo nasceu; reconciliar compara os dois lados desde esse momento e lista as feições alteradas dos
+dois; resolver decide `ramo`, `padrão` ou `manual` campo a campo; publicar (post) leva as linhas do
+ramo para o padrão e fecha ou rebaseia o ramo; apagar descarta tudo.
+
+Onde as linhas do ramo moram: numa tabela companheira `c_<uuid16>__ramo`, e não em colunas novas na
+tabela da camada. O motivo está no ADR 20260908T1323 e vale repetir: todo caminho de leitura que já
+existe (FeatureServer, OGC, WFS, tiles, exportação, união/divisão) lê a tabela sem filtro de versão, e
+com as colunas lá dentro o não-vazamento passaria a depender de lembrar de corrigir cada um. Assim ele
+é estrutural. O momento histórico do padrão vem de `plat.feicao_historico` (item L2-03-d), reusado
+inteiro.
+
+No protocolo Esri: `gdbVersion` na consulta e no `applyEdits`, `historicMoment` na consulta (os dois
+como troca da RELAÇÃO lida, no motor), e um `VersionManagementServer` com `versions`, `versionInfos`,
+`create`, `reconcile`, `conflicts`, `post`, `delete` e as sessões `startReading`/`stopReading`/
+`startEditing`/`stopEditing`. As doze chamadas da sequência do cliente Python `arcgis` foram rodadas
+por `tests/esri/cliente_arcgis_versoes.py`, todas ok; o pacote `arcgis` em si NÃO está instalado nesta
+máquina e o script diz isso em vez de fingir. ArcGIS Pro de verdade continua pendente (D20).
+
+Tela nova `/versoes`: diff lado a lado do conflito (base, ramo, padrão nas mesmas três colunas em toda
+feição, com o lado que mudou marcado por classe e não só por cor) e a decisão gravada por feição.
+
+Limite declarado: 50 ramos abertos por camada (`VERSOES_POR_CAMADA_MAX`), e a camada pode declarar um
+teto menor em `dados.versionamento.ramos_max`.

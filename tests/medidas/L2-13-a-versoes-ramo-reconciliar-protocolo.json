@@ -1,0 +1,68 @@
+{
+ "item": "L2-13-a-versoes-ramo-reconciliar",
+ "gerado_em": "2026-09-08T13:23:26Z",
+ "cliente": "http (sequência do arcgis.features._version reproduzida)",
+ "camada": "b6f45694-0b35-463b-ae11-6af5209f3662",
+ "passos": [
+  {
+   "passo": "descritor do VersionManagementServer",
+   "estado": "ok",
+   "evidencia": "{\"currentVersion\": 11.4, \"defaultVersionName\": \"sde.DEFAULT\", \"defaultVersionGuid\": \"{00000000-0000-0000-0000-000000000000}\", \"capabilities\": \"Create,Delete,Read,Edit,Reconcile,Post\", \"size\": 0}"
+  },
+  {
+   "passo": "versions lista o padrão",
+   "estado": "ok",
+   "evidencia": "{\"versions\": [{\"versionName\": \"sde.DEFAULT\", \"versionGuid\": \"{00000000-0000-0000-0000-000000000000}\", \"versionId\": \"0\", \"description\": \"vers\\u00e3o padr\\u00e3o da camada\", \"isOwner\": false, \"parentVersionName\": null, \"access\": \"public\", \"state\": \"open\"}]}"
+  },
+  {
+   "passo": "create devolve versionInfo com versionGuid entre chaves",
+   "estado": "ok",
+   "evidencia": "{\"success\": true, \"versionInfo\": {\"versionName\": \"zt-arcgis-6d14dd\", \"versionGuid\": \"{BF0435AB-942B-4CCB-86CC-1BC222837E40}\", \"versionId\": \"bf0435ab-942b-4ccb-86cc-1bc222837e40\", \"description\": \"\", \"created\": \"2026-09-08 13:23:25.876546+00:00\", \"modified\": \"2026-09-08 13:23:25.876546+00:00\", \"reconc"
+  },
+  {
+   "passo": "startReading aceita e ecoa sessionId",
+   "estado": "ok",
+   "evidencia": "{\"success\": true, \"moment\": 1788873805888, \"sessionId\": \"{7720449F-CD50-4C76-8259-6F87A80453C3}\"}"
+  },
+  {
+   "passo": "startEditing aceita e ecoa sessionId",
+   "estado": "ok",
+   "evidencia": "{\"success\": true, \"moment\": 1788873805900, \"sessionId\": \"{7720449F-CD50-4C76-8259-6F87A80453C3}\"}"
+  },
+  {
+   "passo": "stopEditing aceita e ecoa sessionId",
+   "estado": "ok",
+   "evidencia": "{\"success\": true, \"moment\": 1788873805911, \"sessionId\": \"{7720449F-CD50-4C76-8259-6F87A80453C3}\"}"
+  },
+  {
+   "passo": "stopReading aceita e ecoa sessionId",
+   "estado": "ok",
+   "evidencia": "{\"success\": true, \"moment\": 1788873805922, \"sessionId\": \"{7720449F-CD50-4C76-8259-6F87A80453C3}\"}"
+  },
+  {
+   "passo": "reconcile devolve success, hasConflicts e moment",
+   "estado": "ok",
+   "evidencia": "{\"success\": true, \"hasConflicts\": false, \"moment\": 1788873805933, \"conflictCount\": 0}"
+  },
+  {
+   "passo": "conflicts devolve a lista por camada",
+   "estado": "ok",
+   "evidencia": "{\"conflicts\": []}"
+  },
+  {
+   "passo": "post devolve success e moment",
+   "estado": "ok",
+   "evidencia": "{\"success\": true, \"moment\": 1788873805953, \"summary\": {\"versao_id\": \"bf0435ab-942b-4ccb-86cc-1bc222837e40\", \"modo\": \"fechar\", \"inserida\": 0, \"atualizada\": 0, \"apagada\": 0, \"ja_ausente\": 0}}"
+  },
+  {
+   "passo": "delete apaga o ramo",
+   "estado": "ok",
+   "evidencia": "{\"success\": true, \"versionGuid\": \"{73A7E678-1FA2-46DD-9B73-EA0D82FDBBBC}\"}"
+  },
+  {
+   "passo": "o ramo apagado sai da lista",
+   "estado": "ok",
+   "evidencia": "[\"sde.DEFAULT\", \"zt-arcgis-6d14dd\"]"
+  }
+ ]
+}

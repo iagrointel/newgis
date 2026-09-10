@@ -902,3 +902,11 @@ MODELO3D_TIMEOUT_S = 1800
 MODELO3D_NOME_MAX = 200                      # mesmo teto de CHECK(length(nome)<=200) da migração
 MODELO3D_ELEMENTOS_PAGINA_MAX = 500          # elementos por página em GET /api/modelos/{id}/elementos
 MODELO3D_PAGINA_MAX = 200                    # modelos por página em GET /api/modelos
+
+# --- versionamento por ramo (item L2-13-a): teto de ramos ABERTOS por camada. A camada pode declarar o
+# seu próprio teto menor em `dados.versionamento.ramos_max`; este é o máximo que ela pode declarar e o
+# valor usado quando ela não declara nada. Não é um limite físico: cada ramo aberto acrescenta uma perna
+# ao UNION de nada (a leitura consulta UM ramo por vez), mas cada ramo aberto é uma reconciliação a
+# fazer, e um número redondo declarado vale mais que um teto implícito descoberto quando dói.
+VERSOES_POR_CAMADA_MAX = 50
+VERSAO_NOME_MAX = 128

@@ -198,6 +198,8 @@ from app.tiles.vector_tile_server import router as rotas_vector_tile_server
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
 from app.widgets.rotas import router as rotas_widgets_externos
+from app.versionamento.rotas import router as rotas_versionamento
+from app.versionamento.rotas_esri import router as rotas_versionamento_esri
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
@@ -633,6 +635,20 @@ ROUTERS = [
     rotas_coleta,
     # --- ponte opcional com o ODK Central (L2-07-e): /api/odk/pontes (publicar, sincronizar, entidades)
     rotas_odk.router,
+    rotas_consulta_servico,
+    # --- diretório de serviços Esri por token (L2-04-b): /svc/{token}/rest/info|generateToken|services
+    rotas_diretorio_esri,
+    rotas_ogc_features,
+    rotas_wfs,
+    # (a raiz completa do diretório de serviço é o L2-04-b, ainda não construído)
+    rotas_consulta_esri,
+    # --- escrita compatível Esri (L2-04-d): applyEdits/addFeatures/updateFeatures/deleteFeatures, calculate,
+    # anexos e uploads sobre a MESMA porta de escrita do L2-03-a
+    rotas_edicao_esri,
+    # --- versionamento por ramo (L2-13-a): API própria (/api/camadas/{id}/versoes...) e o
+    # VersionManagementServer compatível com a Esri sobre as MESMAS funções
+    rotas_versionamento,
+    rotas_versionamento_esri,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

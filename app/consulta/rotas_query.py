@@ -24,6 +24,7 @@ from app.consulta import campos as campos_mod
 from app.consulta import motor, serializar
 from app.consulta.geometria_esri import sr_wkid
 from app.erros import ErroAPI
+from app.versionamento import consulta as versao_consulta
 
 router = APIRouter(tags=["consulta-esri"])
 PREFIXO = "/rest/services/{item_id}/FeatureServer/{camada_id}"
@@ -137,7 +138,10 @@ async def _query(request: Request, item_id: str, camada_id: str) -> Response:
         geom_pg = dados.get("geometria")
         geometria_tipo_esri = serializar.GEOM_PG_PARA_ESRI.get(geom_pg)
 
-        prep = motor.preparar_pedido(p, meta, srid_nativo)
+        origem_sql, origem_params = versao_consulta.origem(
+            cur, item_id, dados, auth, p.gdbVersion, p.historicMoment
+        )
+        prep = motor.preparar_pedido(p, meta, srid_nativo, origem_sql, origem_params)
         if p.outStatistics:
             res = motor.executar_estatisticas(cur, schema, tabela, prep, p, sr_wkid(p.outSR) or srid_nativo)
         elif p.returnCountOnly and not p.returnExtentOnly:

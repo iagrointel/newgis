@@ -41,6 +41,9 @@ class FeicaoApagar(Modelo):
 
 class EdicoesEntrada(Modelo):
     modo: str = Field(default="transacao", pattern="^(transacao|parcial)$")
+    # ramo de versão em que a edição entra (item L2-13-a): identificador ou nome do ramo. Ausente = a
+    # edição vai para o PADRÃO, que é o comportamento de sempre desta rota.
+    versao: str | None = Field(default=None, min_length=1, max_length=128)
     crs: Crs | None = None  # ausente = geometria já está no SRID da camada
     corrigir_geometria: bool = False  # ST_MakeValid + relatório; sem isto, polígono inválido é 422 (portão cl.5)
     adicionar: list[FeicaoAdicionar] = Field(default_factory=list, max_length=limites.EDICAO_LOTE_MAX)

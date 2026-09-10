@@ -142,6 +142,8 @@ PAGINAS = {
     "/estilo-guia": "estilo_guia.html",
     # --- construtor por arrasto (L5-08-editor-arrasto): ?item=<id de item app/painel>
     "/construtor": "construtor.html",
+    # --- ramos de versão e diff de reconciliação (L2-13-a): ?camada=<id>
+    "/versoes": "versoes.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
     "/executar": "executar.html",
     # --- provedores de login e regras de provisionamento (L0-08-e-mapeamento-provisionamento)

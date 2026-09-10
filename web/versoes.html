@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Ramos de versão · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/estilo/tokens.css">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/versoes.css">
+</head>
+<body class="tela instrumento versoes">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1 data-i18n="versoes.titulo">Ramos de versão</h1>
+    <plat-aviso id="aviso"></plat-aviso>
+    <form id="versoes-barra" class="barra">
+      <label for="versoes-camada" data-i18n="versoes.camada">Camada versionada</label>
+      <select id="versoes-camada"></select>
+      <label for="versoes-ramo" data-i18n="versoes.ramo">Ramo</label>
+      <select id="versoes-ramo"></select>
+      <button type="button" id="btn-reconciliar" data-i18n="versoes.reconciliar">Reconciliar</button>
+      <button type="button" id="btn-publicar" data-i18n="versoes.publicar">Publicar no padrão</button>
+    </form>
+    <p id="versoes-resumo" class="resumo"></p>
+    <section id="conflitos" aria-live="polite"></section>
+  </main>
+</div>
+<script type="module" src="/static/js/versoes/painel.js"></script>
+</body>
+</html>
