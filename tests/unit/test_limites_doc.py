@@ -42,3 +42,16 @@ def test_corpo_max_padrao_e_upload_documentados_com_o_numero_do_codigo():
     md = gerar_limites.DESTINO.read_text(encoding="utf-8")
     assert f"`{limites.CORPO_MAX_PADRAO_BYTES!r}`" in md
     assert f"`{limites.CORPO_MAX_UPLOAD_BYTES!r}`" in md
+
+
+def test_gerar_markdown_e_deterministico_entre_chamadas():
+    """09/09 (plataforma-48, achado ao vivo na fila): set/frozenset não tem ordem de iteração
+    estável entre processos Python diferentes (hash aleatorizado por padrão) — sem ordenar antes
+    de imprimir, o arquivo gerado "mudava" a cada rodada sem nenhuma mudança real de código,
+    reprovando lotes inteiros à toa (3 ramos diferentes, mesma constante, ordens diferentes de
+    repr()). Chamar o gerador várias vezes NO MESMO processo já bastava para pegar isso, porque
+    o bug era na ordem de iteração do set em si, não em algo que dependesse de reiniciar o Python."""
+    a = gerar_limites.gerar_markdown()
+    b = gerar_limites.gerar_markdown()
+    c = gerar_limites.gerar_markdown()
+    assert a == b == c, "gerar_markdown() não é determinístico — provável set/frozenset sem ordenar antes do repr()"
