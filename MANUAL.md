@@ -1707,3 +1707,31 @@ se a imagem for reingerida, o sha256 muda e o endereço muda junto. O endereço 
 22.1) continua com cache curto (5 min), porque sem o sha256 no caminho o conteúdo por trás dele pode
 mudar sem avisar. Detalhe completo, achados de bancada e o que falta configurar na conta Cloudflare
 real: `docs/CDN.md`.
+## 23. SDK JavaScript e exemplos no navegador (item L7-08-c-sdk-js)
+
+O SDK JavaScript é um único módulo ES servido pela instalação em `/static/sdk/plat.js` (publicado também em
+`sdk/js/plat.js`), sem dependência e sem CDN. Uso mínimo numa página da própria instalação:
+
+```html
+<script type="module">
+  import { Plataforma } from '/static/sdk/plat.js';
+  const p = new Plataforma(location.origin, 'plat_...');        // token de serviço (Minha conta -> Tokens)
+  const pagina = await p.itens.listar({ tipo: 'camada_vetorial', limite: 20 });
+  const mapa = new maplibregl.Map({ container: 'mapa', transformRequest: p.maplibre.transformRequest,
+                                    style: p.maplibre.estilo(null, { basemapUrl: '/static/dados/basemap/guarulhos.pmtiles' }) });
+  mapa.on('load', async () => {
+    const item = await p.itens.obter(pagina.itens[0].id);
+    mapa.addSource('item', p.maplibre.fonte(item));          // extensão do item, PMTiles ou catálogo
+    mapa.addLayer(p.maplibre.camada(item, { id: 'item' }));
+    p.maplibre.enquadrar(mapa, item);
+  });
+</script>
+```
+
+Regras que o SDK aplica sozinho: Bearer nunca junto com o cookie de sessão (a API recusa os dois com 400
+`autenticacao_ambigua`); retentativa só em 429/502/503/504 e erro de rede; erro sempre como `ErroPlataforma`
+(`status`, `tipo`, `titulo`, `detalhe`, `instancia` = `req_id`); `.tokens` só com sessão (a da página ou a de
+`Plataforma.entrar()`). Os 10 exemplos ficam em `/static/sdk/exemplos/01_login.html` … `10_catalogo_no_mapa.html`,
+cada um com formulário (inquilino, login, senha) e CSP estrita na própria página; a tabela está em
+`sdk/js/README.md`. O que não existe: feições por camada e tiles dinâmicos (L2-04) e CORS (a API é same-origin;
+de outra origem use Node ou o SDK Python).

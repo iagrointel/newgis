@@ -96,6 +96,7 @@ class MoverEntrada(Modelo):
 
 
 class LoteEntrada(Modelo):
+    model_config = ConfigDict(title="LoteEntradaCatalogo")
     ids: list[str] = Field(min_length=1, max_length=limites.LOTE_MAX)
     acao: str = Field(pattern="^(mover|apagar|restaurar|tags|categorias|proteger|desproteger|status|compartilhar)$")
     pasta_id: str | None = Field(default=None, pattern=UUID_PADRAO)
@@ -202,6 +203,7 @@ class Item(Saida):
 
 
 class Pagina(Saida):
+    model_config = ConfigDict(title="PaginaCatalogo")
     total: int
     itens: list[Any]
     proximo_cursor: str | None = None
@@ -233,6 +235,7 @@ class TipoItem(Saida):
 
 
 class LoteSaida(Saida):
+    model_config = ConfigDict(title="LoteSaidaCatalogo")
     feitos: int
     recusados: list[dict]
 

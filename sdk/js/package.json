@@ -1,0 +1,10 @@
+{
+  "name": "plat-sdk",
+  "version": "0.1.0",
+  "description": "SDK JavaScript da plataforma SIG plat (análise / beta privado): módulo ES sem dependência, só fetch",
+  "type": "module",
+  "main": "plat.js",
+  "exports": { ".": "./plat.js" },
+  "license": "SEE LICENSE IN ../../LICENSE",
+  "private": true
+}

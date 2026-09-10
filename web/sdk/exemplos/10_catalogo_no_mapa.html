@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data: blob:; worker-src blob:; child-src blob:; font-src 'self'; base-uri 'none'; form-action 'self'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SDK JS — exemplo 10: MapLibre: estilo(mapa) e catálogo OGC como fonte autenticada</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/vendor/maplibre-gl-4.7.1.css">
+<link rel="stylesheet" href="/static/sdk/exemplos/exemplos.css">
+</head>
+<body data-exemplo="10_catalogo_no_mapa">
+<main>
+<h1>Exemplo 10/10 — MapLibre: estilo(mapa) e catálogo OGC como fonte autenticada</h1>
+<p class="doc">estilo(mapaItem) monta o estilo; catalogo({bbox}) lê /ogc/records com o Bearer posto por transformRequest.</p>
+<form id="form" autocomplete="off">
+<label>inquilino <input name="inquilino" value="demo"></label>
+<label>login <input name="login" value="admin"></label>
+<label>senha <input name="senha" type="password"></label>
+<button type="submit">rodar</button>
+</form>
+<div id="mapa"></div>
+<pre id="saida"></pre>
+</main>
+<script src="/static/vendor/maplibre-gl-4.7.1.js"></script>
+<script src="/static/vendor/pmtiles-4.5.0.js"></script>
+<script type="module" src="/static/sdk/exemplos/10_catalogo_no_mapa.js"></script>
+</body>
+</html>

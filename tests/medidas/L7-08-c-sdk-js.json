@@ -1,0 +1,117 @@
+{
+ "item": "L7-08-c-sdk-js",
+ "medidas": {
+  "cores_na_captura_09": {
+   "valor": 1618,
+   "unidade": "contagem",
+   "comando": "PIL getcolors() sobre L7-08-c_09_mapa_extensao.png"
+  },
+  "pagina_pronta_ms_01": {
+   "valor": 138.6,
+   "unidade": "ms",
+   "comando": "01_login.html no chromium do playwright (tests/e2e/test_sdk_js.py)"
+  },
+  "exemplo_ms_01": {
+   "valor": 206.2,
+   "unidade": "ms",
+   "comando": "01_login.html no chromium do playwright (tests/e2e/test_sdk_js.py)"
+  },
+  "pagina_pronta_ms_02": {
+   "valor": 122.0,
+   "unidade": "ms",
+   "comando": "02_listar_itens.html no chromium do playwright (tests/e2e/test_sdk_js.py)"
+  },
+  "exemplo_ms_02": {
+   "valor": 312.7,
+   "unidade": "ms",
+   "comando": "02_listar_itens.html no chromium do playwright (tests/e2e/test_sdk_js.py)"
+  },
+  "pagina_pronta_ms_03": {
+   "valor": 122.0,
+   "unidade": "ms",
+   "comando": "03_criar_atualizar_apagar.html no chromium do playwright (tests/e2e/test_sdk_js.py)"
+  },
+  "exemplo_ms_03": {
+   "valor": 348.4,
+   "unidade": "ms",
+   "comando": "03_criar_atualizar_apagar.html no chromium do playwright (tests/e2e/test_sdk_js.py)"
+  },
+  "pagina_pronta_ms_04": {
+   "valor": 130.5,
+   "unidade": "ms",
+   "comando": "04_paginacao.html no chromium do playwright (tests/e2e/test_sdk_js.py)"
+  },
+  "exemplo_ms_04": {
+   "valor": 910.2,
+   "unidade": "ms",
+   "comando": "04_paginacao.html no chromium do playwright (tests/e2e/test_sdk_js.py)"
+  },
+  "pagina_pronta_ms_05": {
+   "valor": 147.9,
+   "unidade": "ms",
+   "comando": "05_tokens_de_servico.html no chromium do playwright (tests/e2e/test_sdk_js.py)"
+  },
+  "exemplo_ms_05": {
+   "valor": 336.2,
+   "unidade": "ms",
+   "comando": "05_tokens_de_servico.html no chromium do playwright (tests/e2e/test_sdk_js.py)"
+  },
+  "pagina_pronta_ms_06": {
+   "valor": 125.2,
+   "unidade": "ms",
+   "comando": "06_jobs.html no chromium do playwright (tests/e2e/test_sdk_js.py)"
+  },
+  "exemplo_ms_06": {
+   "valor": 1331.5,
+   "unidade": "ms",
+   "comando": "06_jobs.html no chromium do playwright (tests/e2e/test_sdk_js.py)"
+  },
+  "pagina_pronta_ms_07": {
+   "valor": 123.3,
+   "unidade": "ms",
+   "comando": "07_compartilhamento.html no chromium do playwright (tests/e2e/test_sdk_js.py)"
+  },
+  "exemplo_ms_07": {
+   "valor": 337.7,
+   "unidade": "ms",
+   "comando": "07_compartilhamento.html no chromium do playwright (tests/e2e/test_sdk_js.py)"
+  },
+  "pagina_pronta_ms_08": {
+   "valor": 121.4,
+   "unidade": "ms",
+   "comando": "08_erros_e_escopo.html no chromium do playwright (tests/e2e/test_sdk_js.py)"
+  },
+  "exemplo_ms_08": {
+   "valor": 309.2,
+   "unidade": "ms",
+   "comando": "08_erros_e_escopo.html no chromium do playwright (tests/e2e/test_sdk_js.py)"
+  },
+  "pagina_pronta_ms_09": {
+   "valor": 227.7,
+   "unidade": "ms",
+   "comando": "09_mapa_extensao.html no chromium do playwright (tests/e2e/test_sdk_js.py)"
+  },
+  "exemplo_ms_09": {
+   "valor": 959.8,
+   "unidade": "ms",
+   "comando": "09_mapa_extensao.html no chromium do playwright (tests/e2e/test_sdk_js.py)"
+  },
+  "cores_na_captura_10": {
+   "valor": 1936,
+   "unidade": "contagem",
+   "comando": "PIL getcolors() sobre L7-08-c_10_catalogo_no_mapa.png"
+  },
+  "pagina_pronta_ms_10": {
+   "valor": 226.5,
+   "unidade": "ms",
+   "comando": "10_catalogo_no_mapa.html no chromium do playwright (tests/e2e/test_sdk_js.py)"
+  },
+  "exemplo_ms_10": {
+   "valor": 1043.2,
+   "unidade": "ms",
+   "comando": "10_catalogo_no_mapa.html no chromium do playwright (tests/e2e/test_sdk_js.py)"
+  }
+ },
+ "gerado_em": "2026-09-08T06:59:28Z",
+ "git_sha": "2d7004dcd3eb"
+}

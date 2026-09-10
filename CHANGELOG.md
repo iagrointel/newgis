@@ -2537,6 +2537,36 @@ enxergarem menos rotas do que a aplicação tem (G4-01). Migração
 copiado) teve as marcas `xfail` destes oito achados trocadas por teste comum; `tests/api/test_g4_conserto.py`
 cobre o que o ataque não podia medir de fora (ciclo completo do apagar, permissão de banco, caminho legítimo
 do teto). Os demais 16 achados do laudo (G4-02/03/11 a 24) pertencem a outros itens/trilhas e ficam de fora.
+## turno 3, setembro de 2026 (item L7-08-b-sdk-python: SDK Python gerado do OpenAPI)
+
+SDK `plat` em `sdk/python/`: `plat_gerado/` gerado por `openapi-python-client` a partir de
+`docs/openapi.json` (nunca editado à mão; `scripts/gerar_sdk.sh` regenera; `sdk/python/config_geracao.yaml`
+é a única fonte de nomes) e `plat/` escrito à mão por cima (`Plataforma(url, token)`, `.itens`, `.camadas`,
+`.mapas` — visões de `.itens` por tipo, não rotas próprias —, `.jobs.esperar()`, `.tokens`, erros como
+Problem Details/RFC 9457 traduzidos do contrato real `{"erro","mensagem","detalhe","req_id"}`, ADR 0002
+§14). `pip install ./sdk/python` empacota os dois pacotes num só `pyproject.toml` (setuptools, `src`
+layout). 10 exemplos executáveis (`sdk/python/exemplos/`) que SÃO os testes (`tests/sdk/test_exemplos.py`,
+19 testes no total com cobertura/regeneração/adversário) rodando contra a API real da trilha (uvicorn de
+verdade em `:8278`, worker real só para o exemplo de jobs) e o inquilino `demo` semeado.
+
+Achado real corrigido, não do SDK e sim do OpenAPI da própria API: três pares de classes Pydantic com
+o MESMO nome Python em módulos diferentes (`Pagina`, `LoteEntrada`, `LoteSaida` — um em
+`app/auth/modelos.py`, outro em `app/catalogo/modelos.py`) tinham o MESMO `title` no schema (FastAPI já
+desambigua a chave do componente, `app__auth__modelos__Pagina` vs `app__catalogo__modelos__Pagina`, mas
+não o `title`), o que impedia QUALQUER geração de SDK (`openapi-python-client` recusa "duplicate models
+with name"). Corrigido com `model_config = ConfigDict(title="...")` explícito nas 6 classes — só o
+`title` do schema muda, nenhum tipo/obrigatoriedade/nome Python — e `docs/openapi.json` regenerado
+(2 linhas de diff). Sem esse conserto não existe SDK gerado possível para esta API, de nenhum gerador.
+
+Medido (`tests/medidas/L7-08-b-sdk-python.json`): 196/196 operações do OpenAPI com módulo gerado
+(`sync_detailed`/`asyncio_detailed`); regeneração byte-a-byte reproduzível (`tests/sdk/test_regeneracao.py`,
+gerado numa pasta irmã do repositório — fora dele o post-hook `ruff format` do gerador usa outro
+`target-version` e o diff vira ruído de ambiente, não do gerador); os 10 exemplos passam contra a API
+real; adversário (token de escopo `catalogo:ler` tentando escrever, token de um inquilino lendo item de
+outro, varredura de rota sem método) — `tests/sdk/refutacao.json`: **PASSA**. Tabela de paridade contra
+`ArcGIS API for Python` em `docs/PARIDADE.md`. Dependência aberta `L2-04-servicos-esri-ogc` (FeatureServer
+real) deixa `features.FeatureLayer.query/edit_features` fora desta trilha, nomeado — `.camadas`/`.mapas`
+não fingem uma rota que não existe. ADR `docs/adr/20260907T1541-sdk-python.md`.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
@@ -4012,3 +4042,28 @@ por tipo, acessos por dia (SVG sem biblioteca), pedidos e agendas na mesma tela.
 subprocesso (`tests/medidas/L0-07-e-relatorios.json`): relatório de itens com 10.001 itens em **0,6 s** de job
 (0,63 s de parede, carga 4,39, 7 GB livres); página pronta em 107 ms. Dado pessoal: e-mail só de domínio
 corporativo configurado; sem CPF no modelo (teste procura). ADR `20260908T0155-relatorios-do-admin.md`.
+## turno 4 (líder 5), setembro de 2026 (item L7-11-b-appliance-sem-internet: e2e inteiro atrás de um proxy de captura, 0 pedido a host externo)
+
+`tests/operacao/proxy_captura.py` (proxy HTTP em fluxo, com túnel CONNECT só para a própria instalação; todo
+outro host é recusado e contado) + `scripts/appliance_offline_medir.py` (roda `tests/e2e` inteiro com o navegador
+atrás do proxy, `PLAT_E2E_PROXY` lido por `tests/e2e/conftest.py`, grava `tests/medidas/L7-11-b-*.json`).
+Medido: 2.676 pedidos pelo proxy, **0 a host externo**, mapa-base PMTiles local apareceu, 33 e2e verdes (3
+falhas reproduzem igual sem o proxy: ambiente da trilha). `tests/unit/test_appliance_sem_cdn.py` prende o
+estático: nenhum HTML/JS/CSS carrega `http(s)://`, bibliotecas e fontes vendorizadas com sha256, Swagger local.
+`docs/APPLIANCE.md`: o que não funciona offline e a mensagem exata da tela (conectores, CSW, catálogo público,
+imagens, e-mail, OSRM, certbot), CA interna, rede `--internal` do compose (não executada: imagens do perfil
+appliance pendentes por disco, D21). `tests/operacao/frente_estatica.py` faz o papel do nginx para e2e em trilha.
+
+## turno 4, setembro de 2026 (item L7-08-c-sdk-js: SDK JavaScript e ajudantes MapLibre)
+
+`web/sdk/plat.js` (também `sdk/js/plat.js`): módulo ES sem dependência, só `fetch`, com o mesmo modelo do SDK
+Python — `Plataforma(url, token)`, `Plataforma.entrar()`, `.itens/.camadas/.mapas` (paginação por cursor em
+`todos()`), `.jobs.esperar()`, `.tokens`, retentativa em 429/502/503/504, `ErroPlataforma` (RFC 9457). Ajudantes
+MapLibre em `.maplibre`: `fonte(item)`, `camada(item)`, `estilo(mapaItem)`, `catalogo({bbox})`,
+`transformRequest`, `enquadrar`. Regra medida e embutida: Bearer nunca junto com o cookie (a API responde 400
+`autenticacao_ambigua`). 10 exemplos HTML em `/static/sdk/exemplos/` com CSP `default-src 'none'` na página,
+sem inline; são o e2e (`tests/e2e/test_sdk_js.py`, 13 verdes no Chromium: os 10 exemplos, token revogado com a
+mensagem exata, script inline bloqueado pela CSP, capturas dos dois mapas com >1.600 cores). Unidade em Node
+(`tests/sdk_js/plat.test.mjs`, 13, via `tests/unit/test_sdk_js.py`). Paridade contra o ArcGIS Maps SDK for
+JavaScript em `docs/PARIDADE.md`; ADR `docs/adr/20260908T0705-sdk-javascript.md`; `sdk/js/README.md`. Fora:
+feições por camada e tiles dinâmicos (dependem do L2-04); CORS (a API é same-origin).

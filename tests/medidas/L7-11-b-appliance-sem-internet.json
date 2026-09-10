@@ -1,0 +1,65 @@
+{
+ "item": "L7-11-b-appliance-sem-internet",
+ "medidas": {
+  "pedidos_pelo_proxy": {
+   "valor": 2676,
+   "unidade": "pedidos",
+   "comando": "tests/e2e -q -m lento -p no:cacheprovider --base-url http://127.0.0.1:8985 --tb=line --junitxml=/home/dev/plataforma/wt/cx5l711b/var/e2e_offline.xml (navegador atrás de tests/operacao/proxy_captura.py)"
+  },
+  "pedidos_a_host_externo": {
+   "valor": 0,
+   "unidade": "pedidos",
+   "comando": "tests/e2e -q -m lento -p no:cacheprovider --base-url http://127.0.0.1:8985 --tb=line --junitxml=/home/dev/plataforma/wt/cx5l711b/var/e2e_offline.xml (navegador atrás de tests/operacao/proxy_captura.py)"
+  },
+  "hosts_externos_vistos": {
+   "valor": [],
+   "unidade": "hosts",
+   "comando": "tests/e2e -q -m lento -p no:cacheprovider --base-url http://127.0.0.1:8985 --tb=line --junitxml=/home/dev/plataforma/wt/cx5l711b/var/e2e_offline.xml (navegador atrás de tests/operacao/proxy_captura.py)"
+  },
+  "e2e_passaram": {
+   "valor": 33,
+   "unidade": "testes",
+   "comando": "tests/e2e -q -m lento -p no:cacheprovider --base-url http://127.0.0.1:8985 --tb=line --junitxml=/home/dev/plataforma/wt/cx5l711b/var/e2e_offline.xml (navegador atrás de tests/operacao/proxy_captura.py)"
+  },
+  "e2e_falharam": {
+   "valor": 3,
+   "unidade": "testes",
+   "comando": "tests/e2e -q -m lento -p no:cacheprovider --base-url http://127.0.0.1:8985 --tb=line --junitxml=/home/dev/plataforma/wt/cx5l711b/var/e2e_offline.xml (navegador atrás de tests/operacao/proxy_captura.py)"
+  },
+  "e2e_pulados": {
+   "valor": 1,
+   "unidade": "testes",
+   "comando": "tests/e2e -q -m lento -p no:cacheprovider --base-url http://127.0.0.1:8985 --tb=line --junitxml=/home/dev/plataforma/wt/cx5l711b/var/e2e_offline.xml (navegador atrás de tests/operacao/proxy_captura.py)"
+  },
+  "mapa_base_apareceu": {
+   "valor": true,
+   "unidade": "bool",
+   "comando": "tests/e2e/test_mapa.py verde atrás do proxy"
+  },
+  "duracao_s": {
+   "valor": 228.3,
+   "unidade": "s",
+   "comando": "tests/e2e -q -m lento -p no:cacheprovider --base-url http://127.0.0.1:8985 --tb=line --junitxml=/home/dev/plataforma/wt/cx5l711b/var/e2e_offline.xml (navegador atrás de tests/operacao/proxy_captura.py)"
+  },
+  "compose_rede_internal_docker": {
+   "valor": "não executado",
+   "unidade": "prova",
+   "comando": "docker network create --internal + perfil appliance do compose: 5 imagens pendentes por disco (94 %, D21); a prova é o e2e atrás do proxy de captura contra a instalação em processo"
+  }
+ },
+ "contexto": {
+  "base_url": "http://127.0.0.1:8985",
+  "resumo_pytest": "FAILED tests/e2e/test_rotacao_segredos.py::test_chave_s3_por_inquilino_rotaciona_sem_reiniciar_nada_e_invalida_a_antiga",
+  "medido_em": "2026-09-08T02:50:11Z",
+  "falhas": [
+   "tests/e2e/test_i18n_cru.py::test_nenhuma_chave_crua_nas_telas[chromium]",
+   "tests/e2e/test_tarefas.py::test_lista_progresso_ao_vivo_e_detalhe[chromium]",
+   "tests/e2e/test_rotacao_segredos.py::test_chave_s3_por_inquilino_rotaciona_sem_reiniciar_nada_e_invalida_a_antiga"
+  ],
+  "falhas_reproduzem_sem_proxy": true,
+  "nota_falhas": "as 3 falhas (i18n_cru, tarefas progresso ao vivo, rotação da chave S3) reprovam IGUAL sem o proxy na mesma trilha (ambiente: sem segredos de produção para a rotação, SSE de progresso e i18n em trilha); nenhuma envolve recurso externo",
+  "servidor": "uvicorn da trilha :8984 + tests/operacao/frente_estatica.py :8985 (serve /static/ com Range, reescreve Origin) + 1 worker"
+ },
+ "gerado_em": "2026-09-08T02:50:11Z",
+ "git_sha": "9ac92cde4a8b"
+}

@@ -1,0 +1,22 @@
+# SDK Python "plat" (item L7-08-b-sdk-python). `plat_gerado` é gerado do OpenAPI, nunca editado à
+# mão (ver ../../scripts/gerar_sdk.sh); `plat` é a camada ergonômica escrita à mão (src/plat/).
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "plat"
+version = "0.1.0"
+description = "SDK Python da plataforma SIG (análise / beta privado) — cliente gerado do OpenAPI + camada ergonômica"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Uso interno iAgroSat LTDA" }
+dependencies = [
+    "httpx>=0.23.1,<0.29.0",
+    "attrs>=22.2.0",
+    "python-dateutil>=2.8.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["plat", "plat.*", "plat_gerado", "plat_gerado.*"]
