@@ -25,6 +25,7 @@ from app.acervo import rotas as rotas_acervo
 from app.amc import rotas as rotas_amc
 from app.analise3d.rotas import router as rotas_analise3d
 from app.amc.rotas_pareto import router as rotas_amc_pareto
+from app.amc.rotas import router as rotas_amc
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
 from app.auth import sso as rotas_sso
@@ -559,6 +560,8 @@ ROUTERS = [
     rotas_backtest.router,
     # --- traçado de custo mínimo sobre a grade do multicritério (L3-10): /api/multiescala/execucoes/{id}/corredor
     rotas_corredor,
+    # --- motor multicritério (L3-01-a/b): /api/amc/modelos, /api/amc/conjuntos, /api/amc/execucoes
+    rotas_amc,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

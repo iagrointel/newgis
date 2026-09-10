@@ -786,3 +786,18 @@ CSW_LER_TIMEOUT_S = 20.0                 # leitura de GetRecords/GetRecordById (
 CSW_TEXTO_MAX = 1000                     # corte de resumo/licença/linhagem guardados na ficha (config <= 8 KiB)
 CSW_PALAVRAS_MAX = 30                    # palavras-chave guardadas por registro
 CSW_TEXTO_BUSCA_MAX = 200                # tamanho do texto livre da busca (vira AnyText like '%...%')
+# --- motor multicritério (L3-01-a/b; ADR 0016, decisões A1/A3/A7 do L3L6_CONCEITO). Os tetos de unidade e de
+# área não são arbitrários: MEDIDO 06/09/2026 nesta máquina, uma grade quadrada de 250 m sobre 2.000 km²
+# (32.000 células) leva ~13 s e ocupa ~19 MB; `df -h /mnt/pgdata` mostra 98 % de uso, então 1 milhão de
+# unidades num conjunto (≈ 600 MB com geometria e índice) é o máximo que cabe com folga. Acima disso a API
+# recusa com `grade_grande_demais` e diz para aumentar o lado ou reduzir a área, nunca corta em silêncio
+AMC_LADO_M_MIN = 10.0                 # abaixo disso a grade deixa de ser unidade de análise e vira pixel
+AMC_LADO_M_MAX = 100_000.0            # 100 km: célula maior que isto não cabe em nenhuma zona UTM sem distorcer
+AMC_AREA_ESTUDO_KM2_MAX = 2_000_000.0 # ~1/4 do Brasil: acima disso a zona UTM única do centróide perde sentido
+AMC_UNIDADES_MAX = 1_000_000          # unidades por conjunto (grade ou feições)
+AMC_FEICOES_INLINE_MAX = 20_000       # feições por envio síncrono de conjunto do tipo 'feicoes'
+AMC_MODELOS_POR_INQUILINO = 500       # modelos vivos (apagado_em IS NULL) por inquilino
+AMC_CONJUNTOS_POR_INQUILINO = 200     # conjuntos de unidades por inquilino
+AMC_VERSOES_POR_MODELO = 500          # versões de um modelo (cada edição cria uma; imutáveis, nunca apagadas)
+AMC_UNIDADES_PAGINA_MAX = 5_000       # unidades por página em GET /api/amc/conjuntos/{id}/unidades
+AMC_RESULTADOS_PAGINA_MAX = 5_000     # linhas por página em GET /api/amc/execucoes/{id}/resultados
