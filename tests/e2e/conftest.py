@@ -4,13 +4,16 @@ backend não publica /api/login (o frontend foi escrito contra o ADR 0002 antes 
 import httpx
 import pytest
 
-from tests.e2e.apoio import credenciais, local
+from tests.e2e.apoio import credenciais
 
 
 @pytest.fixture(scope="session")
-def browser_context_args(browser_context_args, base_url):
+def browser_context_args(browser_context_args):
+    # ignore_https_errors: numa trilha (worktree) o nginx da frente usa certificado autoassinado
+    # (receita do handoff T8); com certificado de verdade a opção não muda nada, só relaxa a
+    # validação que o próprio navegador faria contra uma autoridade reconhecida.
     return {**browser_context_args, "locale": "pt-BR", "viewport": {"width": 1280, "height": 800},
-            "ignore_https_errors": local(base_url)}
+            "ignore_https_errors": True}
 
 
 @pytest.fixture(scope="session")
@@ -18,7 +21,7 @@ def rotas_api(base_url, url_publica_resolve) -> set[str]:
     if not url_publica_resolve:
         pytest.skip(f"{base_url} não resolve nesta máquina")
     try:
-        r = httpx.get(f"{base_url}/api/openapi.json", timeout=15, verify=not local(base_url))
+        r = httpx.get(f"{base_url}/api/openapi.json", timeout=15)
     except httpx.HTTPError as e:
         pytest.skip(f"{base_url}/api/openapi.json inacessível: {e}")
     if r.status_code != 200:
@@ -48,7 +51,7 @@ def credenciais_demo(api_auth) -> tuple[str, str, str]:
 def admin_api(playwright, base_url, credenciais_demo):
     """contexto de API já autenticado como admin de demo (cookie), para preparar e limpar dados dos e2e."""
     slug, login, senha = credenciais_demo
-    ctx = playwright.request.new_context(base_url=base_url, ignore_https_errors=local(base_url))
+    ctx = playwright.request.new_context(base_url=base_url)
     r = ctx.post("/api/login", data={"inquilino": slug, "login": login, "senha": senha})
     assert r.status == 200 and r.json().get("ok") is True, (r.status, r.text())
     yield ctx

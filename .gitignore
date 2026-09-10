@@ -44,3 +44,9 @@ tests/e2e/capturas/*.pdf
 
 # bancada local efêmera da trilha (Martin/nginx próprios, fora de qualquer unidade systemd de outra trilha)
 deploy/local/
+# manual gerado (item L7-04-a): artefatos de build; a fonte é docs/manual/*.md + capturas do e2e
+# (web/dados/manual.json é GERADO mas commitado: o painel de ajuda e a suíte leem do repositório)
+docs/manual/index.html
+docs/manual/impressao.html
+docs/manual/manual.pdf
+docs/manual/capturas/

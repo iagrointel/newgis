@@ -1,0 +1,29 @@
+{
+ "item": "L7-04-a-manual-capturas-geradas",
+ "medidas": {
+  "ajuda_abrir_ms": {
+   "valor": 56.1,
+   "unidade": "ms",
+   "comando": "clique em #botao-ajuda até .ajuda-item visível no chromium do playwright"
+  },
+  "ajuda_busca_20_ms": {
+   "valor": 5.1,
+   "unidade": "ms",
+   "comando": "window.platAjuda.buscar com 20 perguntas no chromium do playwright"
+  },
+  "manual_secoes_pdf": {
+   "valor": 17,
+   "unidade": "páginas",
+   "comando": "pdfinfo docs/manual/manual.pdf (1 capa + 16 seções, uma por tela; conferido página a página com pdftoppm -r 60 e leitura das imagens)"
+  },
+  "manual_pdf_bytes": {
+   "valor": 3357446,
+   "unidade": "bytes",
+   "comando": "stat docs/manual/manual.pdf após make manual (weasyprint do ~/.local por subprocesso)"
+  }
+ },
+ "gerado_em": "2026-09-08T19:18:39Z",
+ "git_sha": "610896979710",
+ "assinado_por": "construtor (turno plataforma-48, trilha il704amanua; e2e playwright chromium 1280x800 contra nginx TLS da trilha :8690 -> uvicorn :8691)",
+ "maquina": "12 vCPU, 23 GB RAM (8,6 GB disponíveis), carga 1 min 3,28, disco / com 21 GB livres; PostgreSQL 16 em iagro_sat (schema plat_til704amanua), worker da trilha em :8692; 12+ sessões concorrentes na máquina"
+}

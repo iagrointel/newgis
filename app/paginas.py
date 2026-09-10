@@ -91,3 +91,17 @@ def _registrar(caminho: str, arquivo: str) -> None:
 
 for _caminho, _arquivo in PAGINAS.items():
     _registrar(_caminho, _arquivo)
+
+
+# --- manual gerado (L7-04-a-manual-capturas-geradas): docs/manual/index.html (site estático, noindex).
+# Fica fora de web/ por ser artefato de build (make manual), servido com X-Robots-Tag: noindex;
+# arquivo ausente = 404 (nunca uma casca), mesma regra de servir().
+@router.get("/manual", include_in_schema=False)
+async def manual():
+    caminho = ROOT / "docs" / "manual" / "index.html"
+    if not caminho.is_file():
+        raise ErroAPI(404, "pagina_inexistente", "manual não gerado (rode make manual)")
+    return FileResponse(
+        caminho, media_type="text/html; charset=utf-8",
+        headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow"},
+    )
