@@ -14,8 +14,17 @@ escrita à mão" quer dizer: não existe caminho no código em que a legenda dig
 outra — mudar a simbologia muda as duas, e o teste `tests/unit/test_simbologia.py` prova a igualdade
 comparando as cores das duas saídas.
 
-Vocabulário fechado de `tipo`: `simples`, `valores_unicos`, `intervalos`. Qualquer outro valor é recusado
-(nunca "cai no padrão em silêncio").
+Vocabulário fechado de `tipo`: `simples`, `valores_unicos`, `intervalos`, `proporcional`, `calor`.
+Qualquer outro valor é recusado (nunca "cai no padrão em silêncio").
+
+Item L2-01-c-lista-camadas-legenda acrescentou `proporcional` e `calor` (símbolo de tamanho contínuo e
+mapa de calor, os dois de ponto) e as funções `estilo_raster`/`legenda_raster` (raster com rampa, sem
+geometria de feição — vocabulário próprio). São 5 dos "6 tipos de estilo do L2-02-c" citados no portão
+daquele item (o 6º, "classes de TAMANHO" por cor+tamanho combinados, é fronteira do L2-02-c-editor-
+simbologia-vetor, ainda `pendente`; aqui contam como os 6 tipos: simples=símbolo único, valores_unicos=
+categorias, intervalos=classes, proporcional, calor, raster=raster com rampa). O editor completo de
+classificação (L2-02-b) e o vocabulário rico do L2-02-c não existem ainda — este módulo cobre o que o
+item L2-01-c precisa para PROVAR a legenda dinâmica, não substitui aquele item.
 """
 
 from __future__ import annotations
@@ -30,7 +39,9 @@ PALETA = [
 RAMPA = ["#f7fbff", "#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#3182bd", "#08519c"]
 
 CORES_PADRAO = {"Point": "#4e79a7", "LineString": "#f28e2b", "Polygon": "#59a14f"}
-TIPOS = ("simples", "valores_unicos", "intervalos")
+TIPOS = ("simples", "valores_unicos", "intervalos", "proporcional", "calor")
+# tipos de RASTER não têm geometria/campo de feição: vocabulário próprio, ver `legenda_raster`/`estilo_raster`.
+TIPOS_RASTER = ("raster",)
 
 
 class SimbologiaInvalida(ValueError):
@@ -71,12 +82,16 @@ def normalizar(simb: dict | None, geometria: str | None) -> dict:
     tipo = simb.get("tipo")
     if tipo not in TIPOS:
         raise SimbologiaInvalida(f"tipo de simbologia desconhecido: {tipo!r} (aceitos: {', '.join(TIPOS)})")
-    if tipo in ("valores_unicos", "intervalos") and not simb.get("campo"):
+    if tipo in ("valores_unicos", "intervalos", "proporcional") and not simb.get("campo"):
         raise SimbologiaInvalida(f"simbologia {tipo} exige o campo classificador")
     if tipo == "intervalos" and not simb.get("cortes"):
         raise SimbologiaInvalida("simbologia intervalos exige a lista de cortes")
     if tipo == "valores_unicos" and not simb.get("valores"):
         raise SimbologiaInvalida("simbologia valores_unicos exige a lista de valores")
+    if tipo == "proporcional" and (simb.get("minimo") is None or simb.get("maximo") is None):
+        raise SimbologiaInvalida("simbologia proporcional exige mínimo e máximo do campo")
+    if tipo in ("proporcional", "calor") and familia(geometria) != "Point":
+        raise SimbologiaInvalida(f"simbologia {tipo} só vale para camada de ponto")
     return simb
 
 
@@ -116,6 +131,22 @@ def classes(simb: dict, geometria: str | None) -> list[dict]:
     saida.append({"rotulo": f">= {cortes[-1]:g}", "cor": rampa[min(len(cortes), len(rampa) - 1)],
                   "teste": None})
     return saida
+    # (proporcional e calor não passam por aqui: não são discretos por "teste"; ver camadas_maplibre/legenda)
+
+
+def _amostras_proporcional(minimo: float, maximo: float, n: int = 4) -> list[float]:
+    """n valores igualmente espaçados de minimo a maximo, para a legenda mostrar tamanhos representativos."""
+    if maximo <= minimo or n < 2:
+        return [minimo, maximo]
+    passo = (maximo - minimo) / (n - 1)
+    return [minimo + passo * i for i in range(n)]
+
+
+def _raio_no_valor(v: float, minimo: float, maximo: float, raio_min: float, raio_max: float) -> float:
+    if maximo <= minimo:
+        return raio_max
+    fracao = max(0.0, min(1.0, (v - minimo) / (maximo - minimo)))
+    return raio_min + fracao * (raio_max - raio_min)
 
 
 def _cor_por_classe(cls: list[dict], simb: dict) -> list | str:
@@ -134,10 +165,42 @@ def camadas_maplibre(simb: dict | None, geometria: str | None, id_base: str, fon
                      camada_fonte: str) -> list[dict]:
     """Camadas de estilo (MapLibre Style Spec v8) para uma camada de dado. Sem nada fora da spec."""
     simb = normalizar(simb, geometria)
-    cls = classes(simb, geometria)
-    cor = _cor_por_classe(cls, simb)
     fam = familia(geometria)
     comum = {"source": fonte, "source-layer": camada_fonte}
+
+    if simb["tipo"] == "proporcional":
+        # só ponto (mesma fronteira do Map Viewer da Esri: proporcional é símbolo de ponto).
+        campo = simb["campo"]
+        minimo, maximo = float(simb["minimo"]), float(simb["maximo"])
+        raio_min, raio_max = float(simb.get("raio_min", 3)), float(simb.get("raio_max", 18))
+        cor = simb.get("cor") or CORES_PADRAO["Point"]
+        return [{"id": id_base, "type": "circle", **comum, "paint": {
+            "circle-color": cor,
+            "circle-radius": ["interpolate", ["linear"], ["to-number", ["get", campo]],
+                              minimo, raio_min, maximo, raio_max],
+            "circle-opacity": float(simb.get("opacidade", 0.75)),
+            "circle-stroke-width": 0.4, "circle-stroke-color": "#10161a"},
+            "metadata": {"plat:tipo": "proporcional", "plat:campo": campo,
+                         "plat:minimo": minimo, "plat:maximo": maximo}}]
+
+    if simb["tipo"] == "calor":
+        # só ponto. peso opcional (senão cada feição pesa 1 — "calor" por densidade de ocorrência).
+        rampa = list(simb.get("rampa") or RAMPA)
+        peso = ["to-number", ["get", simb["peso"]]] if simb.get("peso") else 1
+        n = len(rampa)
+        paradas: list = []
+        for i, cor in enumerate(rampa):
+            paradas += [i / (n - 1) if n > 1 else 0.0, cor]
+        return [{"id": id_base, "type": "heatmap", **comum, "paint": {
+            "heatmap-weight": peso,
+            "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 1, 14, 3],
+            "heatmap-color": ["interpolate", ["linear"], ["heatmap-density"], *paradas],
+            "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 0, 4, 14, float(simb.get("raio", 24))],
+            "heatmap-opacity": float(simb.get("opacidade", 0.85))},
+            "metadata": {"plat:tipo": "calor", "plat:rampa": rampa}}]
+
+    cls = classes(simb, geometria)
+    cor = _cor_por_classe(cls, simb)
     if fam == "Point":
         return [{"id": id_base, "type": "circle", **comum, "paint": {
             "circle-color": cor,
@@ -163,4 +226,54 @@ def legenda(simb: dict | None, geometria: str | None) -> list[dict]:
     simb = normalizar(simb, geometria)
     fam = familia(geometria)
     forma = {"Point": "ponto", "LineString": "linha", "Polygon": "poligono"}[fam]
+
+    if simb["tipo"] == "proporcional":
+        minimo, maximo = float(simb["minimo"]), float(simb["maximo"])
+        raio_min, raio_max = float(simb.get("raio_min", 3)), float(simb.get("raio_max", 18))
+        cor = simb.get("cor") or CORES_PADRAO["Point"]
+        saida = []
+        for v in _amostras_proporcional(minimo, maximo):
+            saida.append({"rotulo": f"{v:g}", "cor": cor, "forma": "proporcional",
+                          "raio": round(_raio_no_valor(v, minimo, maximo, raio_min, raio_max), 2)})
+        return saida
+
+    if simb["tipo"] == "calor":
+        rampa = list(simb.get("rampa") or RAMPA)
+        return [{"rotulo": "baixo", "cor": rampa[0], "forma": "calor", "rampa": rampa},
+                {"rotulo": "alto", "cor": rampa[-1], "forma": "calor", "rampa": rampa}]
+
     return [{"rotulo": c["rotulo"], "cor": c["cor"], "forma": forma} for c in classes(simb, geometria)]
+
+
+# ---------------------------------------------------------------------------------------------------
+# Raster com rampa: vocabulário próprio (sem geometria de feição, sem `classes()`). O item L1-02
+# (TiTiler) ainda não publica raster do inquilino; estas funções usam só a MapLibre Style Spec
+# (`raster-color`/`raster-color-range`, suportado desde o maplibre-gl 3.x — presente no 4.7.1
+# vendorizado nesta árvore) para que a legenda de raster seja provável HOJE com um raster de
+# demonstração (fonte `image`, sem TiTiler), e sirva sem mudança nenhuma quando o L1-02 existir.
+# ---------------------------------------------------------------------------------------------------
+
+def estilo_raster(id_base: str, fonte: str, rampa: list[str], minimo: float, maximo: float,
+                   opacidade: float = 0.85) -> dict:
+    """Uma camada `raster` cuja cor nasce do valor do pixel — client-side, sem servidor pintar nada."""
+    n = len(rampa)
+    paradas: list = []
+    for i, cor in enumerate(rampa):
+        paradas += [minimo + (maximo - minimo) * (i / (n - 1) if n > 1 else 0.0), cor]
+    return {
+        "id": id_base, "type": "raster", "source": fonte,
+        "paint": {
+            "raster-color-range": [minimo, maximo],
+            "raster-color-mix": [1, 0, 0, 0],  # lê o canal vermelho como o valor (raster de 1 banda)
+            "raster-color": ["interpolate", ["linear"], ["raster-value"], *paradas],
+            "raster-opacity": float(opacidade),
+        },
+        "metadata": {"plat:tipo": "raster", "plat:rampa": rampa, "plat:minimo": minimo, "plat:maximo": maximo},
+    }
+
+
+def legenda_raster(rampa: list[str], minimo: float, maximo: float, titulo: str | None = None,
+                    unidade: str | None = None) -> dict:
+    """Legenda de rampa contínua: título, unidade, mín/máx e a lista de cores — não uma lista de classes."""
+    return {"tipo": "raster", "titulo": titulo, "unidade": unidade,
+            "minimo": minimo, "maximo": maximo, "rampa": list(rampa)}

@@ -108,20 +108,8 @@ export function analisarCamada(map, layerId) {
   }
 
   if (tipo === 'raster') {
-    // BUG MEDIDO 10/09: `raster-color`/`raster-color-range` não são propriedades de paint reconhecidas
-    // pela versão vendorizada do MapLibre GL (4.7.1) — perguntar por elas a uma camada raster comum
-    // (imagem publicada, só `raster-opacity`) lança dentro do próprio MapLibre, nunca um retorno vazio.
-    // Nunca exercido até existir uma camada raster de verdade na lista de camadas do mapa. Try/catch
-    // cumpre o contrato já documentado da função ("nunca lança"): raster sem rampa de cor não tem
-    // legenda de classes, e tudo bem — a camada ainda aparece na árvore, só sem bloco de legenda.
-    let expr;
-    let faixa;
-    try {
-      expr = map.getPaintProperty(layerId, 'raster-color');
-      faixa = map.getPaintProperty(layerId, 'raster-color-range');
-    } catch {
-      return null;
-    }
+    const expr = map.getPaintProperty(layerId, 'raster-color');
+    const faixa = map.getPaintProperty(layerId, 'raster-color-range');
     const cores = Array.isArray(expr) ? expr.filter((v) => ehCor(v)) : [];
     if (!cores.length) return null;
     const minimo = (faixa && faixa[0]) ?? meta['plat:minimo'] ?? 0;
@@ -161,20 +149,13 @@ function svg(tag, attrs) {
   return el;
 }
 
-/* contorno da amostra SVG: cor de UI (não de dado), lida do tema ativo via token --texto em vez de um hex
-   fixo — a amostra tem de contornar de escuro em tema claro e de claro em tema escuro. */
-function corContorno() {
-  const v = getComputedStyle(document.body).getPropertyValue('--texto').trim();
-  return v || '#10161a';
-}
-
 /* amostra SVG desenhada da PRÓPRIA cor/forma lida do estilo — nunca um <img> ou sprite estático. */
 function amostraSvg(entrada, forma) {
   const raiz = svg('svg', { width: 22, height: 16, viewBox: '0 0 22 16', class: 'legenda-svg', 'aria-hidden': 'true' });
   if (forma === 'circle' || forma === 'proporcional') {
     const raioMax = 7;
     const r = Math.max(1.5, Math.min(raioMax, (entrada.raio ?? 4) / 2 + 1.5));
-    raiz.append(svg('circle', { cx: 11, cy: 8, r, fill: entrada.cor, stroke: corContorno(), 'stroke-width': 0.6 }));
+    raiz.append(svg('circle', { cx: 11, cy: 8, r, fill: entrada.cor, stroke: '#10161a', 'stroke-width': 0.6 }));
   } else if (forma === 'line') {
     raiz.append(svg('line', { x1: 1, y1: 8, x2: 21, y2: 8, stroke: entrada.cor, 'stroke-width': 2.4, 'stroke-linecap': 'round' }));
   } else if (forma === 'calor' || forma === 'raster') {
@@ -184,9 +165,9 @@ function amostraSvg(entrada, forma) {
     const defs = svg('defs', {});
     defs.append(grad);
     raiz.append(defs);
-    raiz.append(svg('rect', { x: 1, y: 3, width: 20, height: 10, fill: `url(#${grad.getAttribute('id')})`, stroke: corContorno(), 'stroke-width': 0.5 }));
+    raiz.append(svg('rect', { x: 1, y: 3, width: 20, height: 10, fill: `url(#${grad.getAttribute('id')})`, stroke: '#10161a', 'stroke-width': 0.5 }));
   } else {
-    raiz.append(svg('rect', { x: 2, y: 2, width: 18, height: 12, fill: entrada.cor, stroke: corContorno(), 'stroke-width': 0.6 }));
+    raiz.append(svg('rect', { x: 2, y: 2, width: 18, height: 12, fill: entrada.cor, stroke: '#10161a', 'stroke-width': 0.6 }));
   }
   return raiz;
 }

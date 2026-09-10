@@ -78,7 +78,7 @@ export class Arvore {
     chaveDocumento = CHAVE_PADRAO,
     aoEnquadrar = () => {},
     aoErro = () => {},
-    aoAbrirPainel = () => {}, // (acao: 'tabela'|'propriedades'|'estilo'|'grafico', camadaId) — painéis de itens irmãos
+    aoAbrirPainel = () => {}, // (acao: 'tabela'|'propriedades'|'estilo', camadaId) — os painéis são de itens irmãos
     aoMudarEscala = () => {}, // chamado quando a faixa de escala de alguma camada muda ou o zoom muda
   } = {}) {
     this.catalogo = catalogo;
@@ -191,12 +191,6 @@ export class Arvore {
     if (!no) return;
     if (no.tipo === 'camada') {
       try { await this.catalogo.alternar(no.id); } catch (e) { this.aoErro(e); }
-      // "a mais recente entra no topo": a camada que acabou de ser ligada sobe para o topo do seu grupo, como o
-      // catálogo já faz em `ativas` (unshift) — sem isto a árvore e o mapa discordam da ordem de desenho
-      if (this.catalogo.ativas.includes(no.id)) {
-        const achado = encontrar(this.itens, chave);
-        if (achado && achado.indice > 0) achado.pai.splice(0, 0, achado.pai.splice(achado.indice, 1)[0]);
-      }
     } else {
       // grupo: liga tudo se algo estiver desligado, senão desliga tudo
       const ids = achatar(no.itens);
@@ -395,7 +389,7 @@ export class Arvore {
         btn('▲', 'subir', 'subir'), btn('▼', 'descer', 'descer'),
         btn('⤢', 'enquadrar', 'enquadrar'), btn('✎', 'renomear', 'renomear no mapa'),
         btn('⌗', 'tabela', 'mostrar tabela'), btn('ℹ', 'propriedades', 'propriedades'),
-        btn('◐', 'estilo', 'estilo'), btn('▥', 'grafico', 'gráfico'), btn('✕', 'remover', 'remover'));
+        btn('◐', 'estilo', 'estilo'), btn('✕', 'remover', 'remover'));
       const faixa = this._controleDeEscala(no);
       li.append(cabecalho, h('div', { class: 'arvore-linha-controles' }, opacidade, linhaBotoes), faixa);
       if (f.n_feicoes !== undefined && f.n_feicoes !== null) {
@@ -444,7 +438,7 @@ export class Arvore {
       if (novo !== null) this.renomearCamada(no.chave, novo);
       return null;
     }
-    if (acao === 'tabela' || acao === 'propriedades' || acao === 'estilo' || acao === 'grafico') {
+    if (acao === 'tabela' || acao === 'propriedades' || acao === 'estilo') {
       this.aoAbrirPainel(acao, no.id);
       this.raiz.dispatchEvent(new CustomEvent('plat:abrir-painel', { detail: { acao, camada: no.id }, bubbles: true }));
       return null;
