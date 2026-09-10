@@ -26,14 +26,19 @@ from app.auth import comum as auth_comum
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo.comum import registrar_evento
 from app.erros import ErroAPI
+from app.rede_utilidades import categorias as categorias_mod
 from app.rede_utilidades import deposito, instalados
 from app.rede_utilidades import pacote as pacote_mod
 from app.rede_utilidades.modelos import (
+    CategoriasEntrada,
+    FeicaoEntrada,
     ImportacaoResultado,
+    LigacaoEntrada,
     PacoteInstaladoLista,
     Rede,
     RedeEntrada,
     RedePagina,
+    RestricoesEntrada,
 )
 
 router = APIRouter(prefix="/api/rede", tags=["rede de utilidades"])
@@ -54,7 +59,7 @@ CONTAGENS = (
     "(SELECT count(*) FROM plat.rede_regra rg WHERE rg.rede_id = r.id) AS n_regras"
 )
 SQL_BASE = (
-    "SELECT r.id, r.nome, r.disciplina, r.descricao, r.tolerancia_m, r.pacote_codigo, r.pacote_nome, r.pacote_versao, "
+    "SELECT r.id, r.nome, r.disciplina, r.descricao, r.pacote_codigo, r.pacote_nome, r.pacote_versao, "
     "r.pacote_esquema_versao, r.pacote_fonte, r.pacote_sha256, r.pacote_bytes, r.importado_em, r.criado_em, "
     f"r.atualizado_em, r.dono_id, u.login AS dono_login, u.nome AS dono_nome, {CONTAGENS} "
     "FROM plat.rede r JOIN plat.usuario u ON u.id = r.dono_id"
@@ -74,7 +79,6 @@ def _json(r: dict) -> dict:
         "nome": r["nome"],
         "disciplina": r["disciplina"],
         "descricao": r["descricao"],
-        "tolerancia_m": float(r["tolerancia_m"]),
         "pacote": pacote,
         "contagens": {s: r[f"n_{s}"] for s in pacote_mod.SECOES},
         "dono": {"id": r["dono_id"], "login": r["dono_login"], "nome": r["dono_nome"]},
@@ -145,10 +149,9 @@ def criar(corpo: RedeEntrada, request: Request, auth: Auth = autenticado("rede.e
     with db.db(auth.contexto()) as cur:
         try:
             cur.execute(
-                "INSERT INTO plat.rede(tenant_id, nome, disciplina, descricao, tolerancia_m, dono_id) "
-                "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
-                (auth.tenant_id, " ".join(corpo.nome.split()), corpo.disciplina, corpo.descricao,
-                 corpo.tolerancia_m, auth.usuario_id),
+                "INSERT INTO plat.rede(tenant_id, nome, disciplina, descricao, dono_id) "
+                "VALUES (%s, %s, %s, %s, %s) RETURNING id",
+                (auth.tenant_id, " ".join(corpo.nome.split()), corpo.disciplina, corpo.descricao, auth.usuario_id),
             )
             rede_id = str(cur.fetchone()["id"])
         except psycopg2.errors.UniqueViolation as e:
@@ -184,14 +187,6 @@ def _importar_pacote_sincrono(rid: str, bruto: bytes, auth: Auth, request: Reque
     if len(bruto) > PACOTE_MAX_BYTES:
         raise ErroAPI(413, "pacote_grande_demais",
                       f"o pacote passa de {PACOTE_MAX_BYTES} bytes ({len(bruto)})")
-    # A REDE PRIMEIRO, o corpo depois: quem não pode ver esta rede recebe 404 sem que o corpo diga nada
-    # sobre ela. Sem esta consulta, um pacote malformado apontado para a rede de OUTRO inquilino devolvia
-    # 422 de esquema — a resposta dependia do corpo antes da autorização, e a varredura cruzada A→B
-    # reprovava (`tests/api/test_cruzado.py`). É uma leitura barata, sob RLS, fora do laço de eventos.
-    with db.db(auth.contexto()) as cur:
-        cur.execute("SELECT 1 FROM plat.rede WHERE id = %s::uuid", (rid,))
-        if cur.fetchone() is None:
-            raise ErroAPI(404, "rede_inexistente", "rede inexistente")
     try:
         doc = pacote_mod.ler(bruto)
     except pacote_mod.ErroPacote as e:
@@ -241,31 +236,79 @@ def exportar_pacote(rede_id: str, auth: Auth = autenticado(escopo_token="catalog
     )
 
 
-# ---------------------------------------------------------------- importação BDGD por job (item L4-01-c)
-from pydantic import BaseModel as _BaseModel  # noqa: E402
-from pydantic import Field as _Field  # noqa: E402
-
-from app.jobs import servico as _jobs_servico  # noqa: E402  fim do módulo: evita ciclo rede -> jobs -> rede
-from app.jobs.contexto import sessao_de as _sessao_de  # noqa: E402
+# --- categorias, restrições, feição e traçado de isolamento (item L4-06-d-categorias-e-restricoes) -----------
 
 
-class ImportarBdgdEntrada(_BaseModel):
-    caminho: str = _Field(min_length=1, max_length=1024,
-                          description="pacote .gdb.zip ou pasta .gdb dentro de PLAT_BDGD_RAIZ")
-    seguir_com_bloqueio: bool = True
-
-
-@router.post("/{rede_id}/importar-bdgd", status_code=202, openapi_extra=EDITAR)
-def importar_bdgd(rede_id: str, corpo: ImportarBdgdEntrada, request: Request, auth: Auth = autenticado("rede.editar")):
-    """Enfileira `rede.importar_bdgd`: contrato de dado, carga com contagem conferida, unidade do COMP
-    e órfãos, com progresso em /api/jobs/{id}. O caminho é local e restrito a PLAT_BDGD_RAIZ (D21:
-    o job nunca baixa da ANEEL)."""
+@router.put("/{rede_id}/tipos/{tipo_id}/categorias", openapi_extra=EDITAR)
+def redefinir_categorias(rede_id: str, tipo_id: str, corpo: CategoriasEntrada, request: Request,
+                          auth: Auth = autenticado("rede.editar")):
+    """Substitui as categorias de um tipo de ativo já carregado. Toda feição do tipo é marcada suja (a
+    contagem volta na resposta); remover 'controlador' de tipo com feição de controlador ativo é recusado."""
+    rid, tid = _uuid_ok(rede_id), _uuid_ok(tipo_id)
     with db.db(auth.contexto()) as cur:
-        _carregar(cur, rede_id)  # 404 se a rede não é do inquilino
-    job = _jobs_servico.criar(_sessao_de(auth), "rede.importar_bdgd",
-                              {"rede_id": rede_id, "caminho": corpo.caminho,
-                               "seguir_com_bloqueio": corpo.seguir_com_bloqueio})
+        _carregar(cur, rid)
+        try:
+            resultado = categorias_mod.redefinir_categorias(cur, auth.tenant_id, rid, tid, corpo.categorias)
+        except psycopg2.Error as e:
+            raise auth_comum.erro_do_banco(e) from e
+        registrar_evento(cur, request, "redes/categorias_definir", "rede_tipo", tid, resultado)
+        return resultado
+
+
+@router.put("/{rede_id}/tipos/{tipo_id}/restricoes", openapi_extra=EDITAR)
+def redefinir_restricoes(rede_id: str, tipo_id: str, corpo: RestricoesEntrada, request: Request,
+                          auth: Auth = autenticado("rede.editar")):
+    """Substitui as restrições de feição de um tipo de ativo (`sem_ponto_partida`, `sem_terminal`)."""
+    rid, tid = _uuid_ok(rede_id), _uuid_ok(tipo_id)
     with db.db(auth.contexto()) as cur:
-        registrar_evento(cur, request, "redes/importar_bdgd", "rede", rede_id,
-                         {"job_id": job["id"], "caminho": corpo.caminho})
-    return {"job_id": job["id"], "estado": job.get("estado", "pendente")}
+        _carregar(cur, rid)
+        try:
+            resultado = categorias_mod.redefinir_restricoes(cur, auth.tenant_id, rid, tid, corpo.restricoes)
+        except psycopg2.Error as e:
+            raise auth_comum.erro_do_banco(e) from e
+        registrar_evento(cur, request, "redes/restricoes_definir", "rede_tipo", tid, resultado)
+        return resultado
+
+
+@router.post("/{rede_id}/feicoes", status_code=201, openapi_extra=EDITAR)
+def criar_feicao(rede_id: str, corpo: FeicaoEntrada, request: Request, auth: Auth = autenticado("rede.editar")):
+    """Instancia uma feição de rede (ativo real) a partir de um tipo do catálogo. Nasce suja, como na
+    topologia Esri — a área suja como extensão espacial é item seguinte (L4-03-d)."""
+    rid, tid = _uuid_ok(rede_id), _uuid_ok(corpo.tipo_id)
+    with db.db(auth.contexto()) as cur:
+        _carregar(cur, rid)
+        try:
+            resultado = categorias_mod.criar_feicao(
+                cur, auth.tenant_id, rid, tid, corpo.codigo, corpo.controlador_ativo
+            )
+        except psycopg2.Error as e:
+            raise auth_comum.erro_do_banco(e) from e
+        registrar_evento(cur, request, "redes/feicao_criar", "rede_feicao", resultado["id"],
+                         {"tipo_id": tid, "codigo": corpo.codigo, "controlador_ativo": corpo.controlador_ativo})
+        return resultado
+
+
+@router.post("/{rede_id}/feicoes/{feicao_id}/ligar", status_code=201, openapi_extra=EDITAR)
+def ligar_feicoes(rede_id: str, feicao_id: str, corpo: LigacaoEntrada, request: Request,
+                   auth: Auth = autenticado("rede.editar")):
+    """Cria a ligação de conectividade entre duas feições da mesma rede (aresta não dirigida)."""
+    rid, fid, pid = _uuid_ok(rede_id), _uuid_ok(feicao_id), _uuid_ok(corpo.para_feicao_id)
+    with db.db(auth.contexto()) as cur:
+        _carregar(cur, rid)
+        try:
+            resultado = categorias_mod.ligar_feicoes(cur, auth.tenant_id, rid, fid, pid)
+        except psycopg2.Error as e:
+            raise auth_comum.erro_do_banco(e) from e
+        registrar_evento(cur, request, "redes/feicoes_ligar", "rede_feicao_ligacao", resultado["id"], resultado)
+        return resultado
+
+
+@router.get("/{rede_id}/feicoes/{feicao_id}/isolamento", openapi_extra=LER)
+def isolamento(rede_id: str, feicao_id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """Traçado de isolamento a partir da feição: passeio pela conectividade que para em toda feição cuja
+    categoria seja 'dispositivo_de_protecao', e recusa (422) partir de feição cujo tipo tem a restrição
+    'sem_ponto_partida' (o caso do portão é a unidade consumidora)."""
+    rid, fid = _uuid_ok(rede_id), _uuid_ok(feicao_id)
+    with db.db(auth.contexto()) as cur:
+        _carregar(cur, rid)
+        return categorias_mod.isolar(cur, rid, fid)

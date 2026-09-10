@@ -278,28 +278,11 @@ def test_toda_rota_de_escrita_de_rede_exige_rede_editar_no_openapi_e_na_pratica(
     esquema = app.openapi()
     escritas = [(c, m) for c, ops in esquema["paths"].items() if c.startswith("/api/rede")
                 for m in ops if m in ("post", "put", "patch", "delete")]
-    # 4 rotas do catálogo e da importação (POST /api/rede, DELETE /api/rede/{id}, POST .../pacote,
-    # POST .../importar-bdgd), 5 da topologia derivada e da edição (POST .../feicoes/{pontos,linhas},
-    # os dois applyEdits e .../topologia/habilitar), 1 de traçado, 2 de rede simples (POST
-    # /api/rede/simples e .../promover) e 4 de controlador de subrede. O número cresce a cada item novo
-    # da linha L4 que escreva rede — o que a asserção abaixo protege é que TODA rota nova venha com
-    # x-privilegio=rede.editar, não a contagem exata.
-    assert len(escritas) == 25, escritas
-    # POST /api/rede/{rede_id}/tracar é CONSULTA com verbo de escrita: manda os pontos de partida no corpo
-    # e não grava nada na rede, por isso pede leitura (rls:visibilidade) e não rede.editar. O mesmo vale
-    # para exportar o resultado e repetir um traçado do histórico (item L4-02-f). Salvar o resultado como
-    # camada é a única que foge das duas: não escreve na rede, escreve no CATÁLOGO, e por isso pede o
-    # privilégio do catálogo (conteudo.criar) — dar-lhe rede.editar deixaria criar item de catálogo a quem
-    # não pode criar item de catálogo.
-    excecoes = {
-        ("/api/rede/{rede_id}/tracar", "post"): "rls:visibilidade",
-        ("/api/rede/{rede_id}/tracar/exportar", "post"): "rls:visibilidade",
-        ("/api/rede/{rede_id}/tracados/{execucao_id}/repetir", "post"): "rls:visibilidade",
-        ("/api/rede/{rede_id}/tracar/camada", "post"): "conteudo.criar",
-    }
+    # 3 rotas do L4-01-a (criar rede, apagar rede, importar pacote) + 4 do L4-06-d (categorias, restrições,
+    # criar feição, ligar feições) — o traçado de isolamento é GET (leitura), não entra nesta contagem.
+    assert len(escritas) == 7, escritas
     for c, m in escritas:
-        esperado = excecoes.get((c, m), "rede.editar")
-        assert esquema["paths"][c][m].get("x-privilegio") == esperado, (c, m)
+        assert esquema["paths"][c][m].get("x-privilegio") == "rede.editar", (c, m)
     rid = _rede_com_pacote(sessao_a, limpar_redes, "priv")
     visual, _, _ = usuarios_a.sessao("visualizador")
     assert visual.get(f"/api/rede/{rid}").status_code == 200

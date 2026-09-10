@@ -17,13 +17,15 @@ import json
 import psycopg2
 import pytest
 
-from tests.api.test_leitor_tiles import (  # noqa: F401  (fixtures usadas por injeção)
-    _schema,
-    _tile,
-    camadas,
-    instalador,
-    leitor,
-)
+from tests.api import test_leitor_tiles as _base
+
+# fixtures e ajudantes do arquivo do construtor, reexportados para o pytest achá-los por nome
+# (atribuição, e não `from ... import`, para o nome do parâmetro homônimo não virar F811 no ruff)
+_schema = _base._schema
+_tile = _base._tile
+camadas = _base.camadas
+instalador = _base.instalador
+leitor = _base.leitor
 
 
 def _conta(cur, c):

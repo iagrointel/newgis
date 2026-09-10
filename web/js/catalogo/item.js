@@ -13,26 +13,10 @@ import { bytes, elipse, quando, dataHora, rotuloAcesso, rotuloStatus, rotuloOrig
 import { icone, iconeDoTipo } from './icones.js';
 import { camposDoEsquema, dadosDosValores, aplicarErros, errosDoServidor, resumoDados } from './item_dados.js';
 import { abrirCompartilhar } from './item_compartilhar.js';
-import { abrirExportar } from './item_exportar.js';
 import { abrirTransferencia } from './item_transferir.js';
 import * as versoes from './item_versoes.js';
 import * as relacoes from './item_relacoes.js';
 import { seletorPasta, caminhoDe } from './pastas.js';
-import * as tipoCamadaVetorial from './tipos/camada_vetorial.js';
-import * as tipoRaster from './tipos/raster.js';
-
-/* módulos de painel por tipo (tipo_item.modulo_front): resumo + prévia no mapa (aba Visão geral) e URL de
-   serviço para cliente externo (aba Compartilhamento). Só os dois tipos que hospedam dado servível hoje —
-   os demais (arquivo, conexão, mapa…) seguem só com o formulário genérico do esquema (aba Dados). */
-const MODULOS_TIPO = { camada_vetorial: tipoCamadaVetorial, raster: tipoRaster };
-
-/* preenche `alvo` com o que `carregar()` (assíncrono) devolve, sem travar o render síncrono do resto do
-   painel: mostra "carregando…" e troca pelo conteúdo real (ou pelo erro real) assim que chega. */
-function preencherAssincrono(alvo, carregar) {
-  alvo.append(h('p', { class: 'fraco' }, t('catalogo.carregando')));
-  carregar().then((no) => { if (alvo.isConnected) { limpar(alvo); alvo.append(no); } })
-    .catch((e) => { if (alvo.isConnected) { limpar(alvo); alvo.append(h('p', { class: 'erro' }, e.message || String(e))); } });
-}
 
 let item = null;
 let aba = 'visao';
@@ -47,21 +31,16 @@ export function idAberto() { return item ? item.id : null; }
 
 export async function abrir(id, { empurrarUrl = true, abaInicial } = {}) {
   const d = painel();
-  const estado = h('plat-estado', { id: 'item-estado' });
-  const corpo = h('div', { class: 'item-painel' }, estado);
-  queueMicrotask(() => estado.carregando(t('catalogo.carregando')));
+  const corpo = h('div', { class: 'item-painel' }, h('p', { class: 'fraco' }, t('catalogo.carregando')));
   if (!d.aberto) {
-    // aoFechar mesmo sem item carregado (uuid inexistente/negado): a URL volta a /conteudo e o estado da tela zera
-    d.abrir({ titulo: t('catalogo.item'), corpo }).then(() => { const era = item; item = null; aoFechar(era); });
+    d.abrir({ titulo: t('catalogo.item'), corpo }).then(() => { const era = item; item = null; if (era) aoFechar(era); });
   } else { limpar(d.corpo); d.corpo.append(corpo); }
   if (empurrarUrl && location.pathname !== `/conteudo/${id}`) history.pushState({ item: id }, '', `/conteudo/${id}`);
   try {
     item = await api.obter(id);
   } catch (e) {
-    if (e.status === 403) estado.negado(e.message);
-    else if (e.status === 404) estado.mostrar({ tipo: 'erro', titulo: t('catalogo.item_inexistente'), texto: t('catalogo.item_inexistente_texto') });
-    else estado.erro({ status: e.status, json: { mensagem: e.message, req_id: e.reqId } }, [{ id: 'tentar', rotulo: t('estado.tentar_de_novo'), classe: 'primario' }]);
-    estado.addEventListener('acao', () => abrir(id, { empurrarUrl: false }), { once: true });
+    limpar(corpo);
+    corpo.append(h('plat-aviso', { 'data-tipo': 'erro', role: 'alert' }, e.status === 404 ? t('catalogo.item_inexistente') : e.message));
     ctx.definir({ itemAberto: id });
     return;
   }
@@ -142,14 +121,7 @@ function abrirEm() {
   const destinos = Array.isArray(item.abre_em) ? item.abre_em : [];
   if (!destinos.length) return null;
   const s = h('select', { id: 'item-abrir-em', 'aria-label': t('catalogo.abrir_em') }, h('option', { value: '' }, t('catalogo.abrir_em')), ...destinos.map((d) => h('option', { value: d }, t(`catalogo.abrir_${d}`) === `catalogo.abrir_${d}` ? d : t(`catalogo.abrir_${d}`))));
-  s.addEventListener('change', () => {
-    if (!s.value) return;
-    if (s.value === 'mapa') { location.assign(item.tipo === 'mapa' ? `/mapa?id=${encodeURIComponent(item.id)}` : '/mapa'); return; }
-    const mod = MODULOS_TIPO[item.tipo];
-    if (mod && typeof mod.abrir === 'function') { mod.abrir(item); return; }
-    avisoPainel().mostrar(t('catalogo.abrir_em_futuro', { destino: s.options[s.selectedIndex].textContent }), 'info');
-    s.value = '';
-  });
+  s.addEventListener('change', () => { if (!s.value) return; avisoPainel().mostrar(t('catalogo.abrir_em_futuro', { destino: s.options[s.selectedIndex].textContent }), 'info'); s.value = ''; });
   return s;
 }
 
@@ -165,18 +137,8 @@ function cabecalho() {
       h('h3', { id: 'item-titulo' }, item.titulo),
       h('div', { class: 'meta' }, h('span', {}, iconeDoTipo(tipo, { tamanho: 14 }), ' ', rotuloTipo(item.tipo)), h('span', {}, nomeDono(item.dono)), h('span', { title: dataHora(item.modificado_em) }, t('catalogo.modificado_ha', { quando: quando(item.modificado_em) })), h('span', {}, rotuloAcesso(item)), ...selos),
       h('div', { class: 'item-ids' }, h('span', {}, 'uuid ', h('code', { id: 'item-uuid' }, item.id)), botaoCopiar(item.id, null, { copiar: t('acao.copiar'), copiado: t('acao.copiado'), selecionado: t('acao.selecionado') }), h('span', {}, 'URL'), botaoCopiar(url, null, { copiar: t('acao.copiar'), copiado: t('acao.copiado'), selecionado: t('acao.selecionado') })),
-      h('div', { class: 'acoes' }, botaoFavorito(), item.pode_compartilhar ? botaoCompartilhar() : null, botaoExportar(), abrirEm(), menuMais()),
+      h('div', { class: 'acoes' }, botaoFavorito(), item.pode_compartilhar ? botaoCompartilhar() : null, abrirEm(), menuMais()),
       pontuacao()));
-}
-
-/* Exportar: só para camada vetorial hospedada e só para quem tem o privilégio (item L0-04-h-exportar). O
-   servidor decide de novo (403/404) — este teste aqui é só para não mostrar um botão que sempre falharia. */
-function botaoExportar() {
-  if (item.tipo !== 'camada_vetorial' || (item.dados || {}).fonte !== 'hospedada') return null;
-  if (!tem('conteudo.exportar')) return null;
-  const b = h('button', { type: 'button', class: 'pequeno', id: 'item-exportar' }, t('exportar.botao'));
-  b.addEventListener('click', () => abrirExportar(item, { aoMudar: (p) => { mudou(p); render(); } }));
-  return b;
 }
 
 function botaoCompartilhar() {
@@ -279,6 +241,38 @@ function descricaoHtml() {
   return div;
 }
 
+/* ---------- procedência (item L0-09-a): o bloco campo a campo, com a etiqueta de origem, e a pontuação 0-10
+   (a mesma régua do registro do acervo da casa). Item sem bloco mostra "sem procedência registrada": ausência
+   de registro não é 0/10. ---------- */
+const CAMPOS_PROCEDENCIA = ['fonte', 'url', 'licenca', 'data_do_dado', 'data_de_acesso', 'gerador', 'sha256',
+  'comando_reexecucao', 'metodo', 'confianca', 'limites', 'frescor', 'proxima_verificacao', 'responsavel'];
+
+function valorProcedencia(v) {
+  if (Array.isArray(v)) return v.join(' · ');
+  return String(v);
+}
+
+function blocoProcedencia() {
+  const proc = (item.dados && item.dados.procedencia) || null;
+  const resumo = item.procedencia || {};
+  const raiz = h('section', { class: 'procedencia', 'data-campo': 'procedencia' });
+  const nota = resumo.completude_texto || null;
+  raiz.append(h('h3', {}, t('catalogo.procedencia'), nota ? h('span', { class: 'chip' }, nota) : null));
+  raiz.append(h('p', { class: 'fraco' }, t('catalogo.procedencia_ajuda')));
+  if (!proc || !Object.keys(proc).length) {
+    raiz.append(h('p', { class: 'fraco vazio' }, t('catalogo.procedencia_sem_bloco')));
+    return raiz;
+  }
+  const origem = proc.origem || {};
+  for (const campo of CAMPOS_PROCEDENCIA) {
+    const v = proc[campo];
+    if (v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length)) continue;
+    const marca = origem[campo] ? h('span', { class: 'chip origem', 'data-origem': origem[campo] }, t(`catalogo.procedencia_${origem[campo]}`)) : null;
+    raiz.append(linhaCampo(t(`catalogo.proc_${campo}`), h('span', {}, valorProcedencia(v), marca ? ' ' : '', marca), { chave: `procedencia_${campo}` }));
+  }
+  return raiz;
+}
+
 function abaVisao() {
   const raiz = h('div', { class: 'visao' });
   raiz.append(
@@ -296,14 +290,7 @@ function abaVisao() {
     linhaCampo(t('catalogo.col_modificado'), h('span', {}, dataHora(item.modificado_em), item.modificado_por ? ` · ${item.modificado_por.login || ''}` : '', ` · ${t('catalogo.versao')} ${item.versao_atual ?? 0}`), { chave: 'modificado' }),
     linhaCampo(t('catalogo.usado_por'), h('span', {}, String(item.usado_por ?? 0), ' · ', t('catalogo.criado_a_partir_de'), ' ', String(item.criado_a_partir_de ?? 0)), { chave: 'relacoes' }),
   );
-  const mod = MODULOS_TIPO[item.tipo];
-  if (mod && typeof mod.previa === 'function') {
-    const secao = h('div', { class: 'tipo-secao' }, h('h4', {}, t('catalogo.previa_e_dados')));
-    const alvo = h('div');
-    secao.append(alvo);
-    raiz.append(secao);
-    preencherAssincrono(alvo, () => mod.previa(item));
-  }
+  raiz.append(blocoProcedencia());
   return raiz;
 }
 
@@ -402,14 +389,6 @@ function abaCompartilhamento() {
   const raiz = h('div', { class: 'compartilhamento' });
   raiz.append(linhaCampo(t('catalogo.nivel_acesso'), h('span', {}, rotuloAcesso(item)), { chave: 'acesso' }), linhaCampo(t('catalogo.links'), h('span', {}, String(item.links_ativos ?? 0)), { chave: 'links' }));
   if (item.pode_compartilhar) { const b = botaoCompartilhar(); b.classList.add('primario'); raiz.append(h('div', { class: 'botoes' }, b)); } else raiz.append(h('p', { class: 'fraco' }, t('catalogo.sem_permissao_compartilhar')));
-  const mod = MODULOS_TIPO[item.tipo];
-  if (mod && typeof mod.compartilhar === 'function') {
-    const secao = h('div', { class: 'tipo-secao' }, h('h4', {}, t('catalogo.servico_externo')));
-    const alvo = h('div');
-    secao.append(alvo);
-    raiz.append(secao);
-    preencherAssincrono(alvo, () => mod.compartilhar(item));
-  }
   return raiz;
 }
 

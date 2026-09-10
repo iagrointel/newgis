@@ -12,7 +12,6 @@ instalador gera (tmp_path_factory nesta suíte, /etc/plat/segredos em produção
 import hashlib
 import json
 import os
-import pathlib
 import re
 import secrets
 import subprocess
@@ -66,25 +65,7 @@ def instalador(env, tmp_path_factory):
 
     if subprocess.run(["sudo", "-n", "true"], capture_output=True).returncode != 0:
         pytest.skip("sem sudo sem senha: o instalador do papel de leitura mexe no pg_hba.conf")
-    # ACHADO 07/09 (item L2-01-mapa-web): com um credential NOVO a cada rodada, o instalador gera senha
-    # nova e faz ALTER ROLE — o que derruba, no meio do dia, qualquer serviço já ligado com o papel de
-    # leitura desta base (o Martin da trilha e a própria API, que guardam o DSN antigo). Em produção isso
-    # não acontece porque o CRED_DIR é fixo (/etc/plat/segredos) e o script reusa a senha existente.
-    # PLAT_CRED_DIR permite ao ambiente de teste apontar para o MESMO credential dos serviços vivos; sem
-    # ela, o comportamento antigo (diretório temporário) continua valendo.
-    cred = pathlib.Path(os.environ["PLAT_CRED_DIR"]) if os.environ.get("PLAT_CRED_DIR") \
-        else tmp_path_factory.mktemp("cred_leitor")
-    # Mesmo achado, segunda metade (medido 08/09 ao juntar com master): a trilha NÃO exporta
-    # PLAT_CRED_DIR, só PLAT_DSN_LEITOR. Sem credential no diretório temporário o instalador sorteia
-    # senha nova e faz ALTER ROLE; a partir dali o DSN que o resto da suíte já tem na mão (o pool de
-    # app/db_leitor, usado pelo repasse /tiles/... de tests/api/test_mapa_api.py, que roda DEPOIS
-    # nesta mesma sessão) autentica com "password authentication failed" e o tile vira 503. Semeia-se
-    # aqui o credential com o DSN que o ambiente já usa: o script reusa a senha (passo c) e confere que
-    # ela vale (passo e), e nada é rodado. Sem PLAT_DSN_LEITOR no ambiente, o comportamento antigo fica.
-    alvo = cred / "PLAT_DSN_LEITOR"
-    if not os.environ.get("PLAT_CRED_DIR") and os.environ.get("PLAT_DSN_LEITOR") and not alvo.exists():
-        alvo.write_text(os.environ["PLAT_DSN_LEITOR"].strip(), encoding="utf-8")
-        alvo.chmod(0o600)
+    cred = tmp_path_factory.mktemp("cred_leitor")
 
     def rodar():
         return subprocess.run(
@@ -528,9 +509,6 @@ def test_varredura_cruzada_nas_funcoes_de_tile(env, leitor, camadas, medida):
                             mvt = _tile(cur, alvo, token=token)
                             com_dado += 1 if mvt else 0
                         except psycopg2.Error as e:
-                            # rollback ANTES do assert: o `leitor` é de escopo de módulo — transação abortada
-                            # que sobreviva ao falho envenena os testes seguintes com InFailedSqlTransaction
-                            leitor.rollback()
                             assert any(m in str(e) for m in ("tile_de_outro_inquilino", "escopo_insuficiente")), e
                     leitor.rollback()
                 chamadas += 1

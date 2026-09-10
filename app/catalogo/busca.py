@@ -23,8 +23,12 @@ CAMPOS_TEXTO = {
     "resumo": "to_tsvector({cfg}, coalesce(i.resumo, ''))",
     "descricao": "to_tsvector({cfg}, coalesce(i.descricao, ''))",
 }
-CAMPOS_EXATOS = {"dono", "tipo", "familia", "status", "acesso", "pasta", "categoria", "grupo", "id", "origem"}
+CAMPOS_EXATOS = {"dono", "tipo", "familia", "status", "acesso", "pasta", "categoria", "grupo", "id", "origem",
+                 "licenca"}
 CAMPOS_INTERVALO = {"criado": "i.criado_em", "modificado": "i.modificado_em"}
+# item L0-09-a: intervalo NUMÉRICO (0-10), não de data — a pontuação de procedência é a mesma régua da
+# acervo.v_completude, calculada em SQL por plat.procedencia_pontuacao(dados)
+CAMPOS_INTERVALO_NUMERO = {"procedencia": "plat.procedencia_pontuacao(i.dados)"}
 STATUS = {"autoritativo", "obsoleto", "nenhum"}
 ACESSOS = {"privado", "inquilino", "publico"}
 ORIGENS = {"hospedado", "referenciado"}
@@ -212,6 +216,22 @@ class _Parser:
                 raise ErroSintaxe("campo_invalido", f"campo '{c}' não aceita intervalo", {"campo": c, "valor": ""})
             self.params.append(tok.valor)
             return CAMPOS_TEXTO[c].format(cfg=CFG) + f" @@ websearch_to_tsquery({CFG}, %s)"
+        if c in CAMPOS_INTERVALO_NUMERO:
+            col = CAMPOS_INTERVALO_NUMERO[c]
+            if tok.intervalo:
+                a, b = tok.intervalo
+                partes = []
+                if a != "*":
+                    self.params.append(_numero(c, a))
+                    partes.append(f"{col} >= %s")
+                if b != "*":
+                    self.params.append(_numero(c, b))
+                    partes.append(f"{col} <= %s")
+                return "(" + " AND ".join(partes) + ")" if partes else f"{col} IS NOT NULL"
+            if tok.valor.lower() in ("nenhuma", "ausente"):
+                return f"{col} IS NULL"
+            self.params.append(_numero(c, tok.valor))
+            return f"{col} >= %s"
         if c in CAMPOS_INTERVALO:
             if not tok.intervalo:
                 raise ErroSintaxe(
@@ -260,6 +280,13 @@ class _Parser:
                 raise ErroSintaxe("campo_invalido", f"origem inválida: {v}", {"campo": c, "valor": v})
             self.params.append(v)
             return "i.origem = %s"
+        if c == "licenca":
+            # licença registrada NO BLOCO de procedência (item L0-09-a), não o campo livre `termos_de_uso`:
+            # texto vazio já virou NULL na escrita, então `licenca:nenhuma` é de fato "não registrada"
+            if v.lower() in ("nenhuma", "ausente"):
+                return "plat.procedencia_licenca(i.dados) IS NULL"
+            self.params.append(v)
+            return "plat.procedencia_licenca(i.dados) ILIKE '%%' || %s || '%%'"
         if c == "id":
             if not UUID_RE.match(v):
                 raise ErroSintaxe("campo_invalido", "id exige uuid", {"campo": c, "valor": v})
@@ -289,6 +316,21 @@ class _Parser:
                 "OR lower(k.caminho) LIKE %s || '/%%')"
             )
         raise ErroSintaxe("campo_invalido", f"campo desconhecido: {c}", {"campo": c, "valor": v})
+
+
+def _numero(campo: str, valor: str) -> float:
+    """Valor numérico de um campo de intervalo numérico (item L0-09-a: `procedencia:[5 TO 10]`)."""
+    try:
+        n = float(valor.replace(",", "."))
+    except ValueError as e:
+        raise ErroSintaxe(
+            "campo_invalido", f"número inválido em {campo}: {valor}", {"campo": campo, "valor": valor}
+        ) from e
+    if not 0 <= n <= 10:
+        raise ErroSintaxe(
+            "campo_invalido", f"{campo} vai de 0 a 10", {"campo": campo, "valor": valor}
+        )
+    return n
 
 
 def _data(campo: str, valor: str, fim: bool) -> datetime.datetime:

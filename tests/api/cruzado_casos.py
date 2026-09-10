@@ -179,6 +179,9 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     r = sessao_b.post(f"/api/rede/{rede_b['id']}/pacote", content=instalados.bruto("agua-epanet"),
                       headers={"Content-Type": "application/json"})
     assert r.status_code == 201, r.text
+    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
+                      job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
+                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b, rede_b=rede_b)
     # L3-19-multiescala: conjunto + fator + execução macro de B (sem amostra: 0 aprovadas, mas a execução
     # existe de verdade para os casos GET/POST cross-tenant de /execucoes e /execucoes/{id}/micro)
     r = sessao_b.post("/api/multiescala/conjuntos",
@@ -1127,6 +1130,9 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: f"/api/rede/{p.rede_b['id']}/subrede/zt-inexistente/fluxo"),
     ("GET", "/api/rede/{rede_id}/subrede/{nome}/fluxo/camada"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/subrede/zt-inexistente/fluxo/camada"),
+    ("POST", "/api/rede/{rede_id}/pacote"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/pacote", lambda p: {"esquema": "plat.rede.pacote"},
+    ),
     ("GET", "/api/org"): Caso(lambda p: "/api/org", proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
     ("PUT", "/api/org"): Caso(
         lambda p: "/api/org", _corpo_org_atual, proprio=True, aceita=frozenset({200}), verificar=_sem_marca,

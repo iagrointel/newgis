@@ -152,8 +152,8 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | versão do esquema | 1 |
 | disciplina | eletrica |
 | fonte | https://dadosabertos.aneel.gov.br/dataset/base-de-dados-geografica-da-distribuidora-bdgd |
-| tamanho | 98820 bytes |
-| sha256 | `dc7f4b7957026b7ab621046a69cdcc830c945872414ceac246f1807b33c131a7` |
+| tamanho | 96372 bytes |
+| sha256 | `036423f672a5f1710e41624fa707561924999e68fde7e8de691c19d491de74c1` |
 
 ### Redes de domínio e tiers
 
@@ -170,7 +170,8 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 |---|---|---|
 | `conducao` | Condução | Conduz sem transformar nem interromper. |
 | `consumo` | Consumo | Ponto final que retira energia da rede. |
-| `controlador` | Controlador | Pode controlar uma subrede: o terminal do ativo é fonte (ou sumidouro) de um tier. Também ajusta grandeza elétrica sem interromper o circuito. |
+| `controlador` | Controlador | Ajusta grandeza elétrica (tensão, reativo) sem interromper o circuito. |
+| `derivacao` | Derivação | Ponto de derivação no meio do trecho (equivalente ao 'subnetwork tap' do modelo Esri): a derivação sai da linha principal e o traçado de subrede para nela. Só pode ser atribuída a tipo de ativo de ponto com um único terminal. |
 | `dispositivo_de_protecao` | Dispositivo de proteção | Interrompe sozinho diante de defeito. |
 | `estrutura_de_suporte` | Estrutura de suporte | Sustenta o condutor e o equipamento; não conduz. |
 | `fonte` | Fonte | Onde a energia entra na rede; o traçado a montante termina aqui. |
@@ -198,7 +199,7 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | `chave_de_media_tensao` | ponto | UNSEMT | 1 | `chave_faca` | Chave faca | media_tensao | seccionamento | — |
 | `chave_de_media_tensao` | ponto | UNSEMT | 2 | `chave_fusivel` | Chave fusível | media_tensao | dispositivo_de_protecao, seccionamento | — |
 | `chave_de_media_tensao` | ponto | UNSEMT | 3 | `religador` | Religador | media_tensao | controlador, dispositivo_de_protecao | — |
-| `chave_de_media_tensao` | ponto | UNSEMT | 4 | `disjuntor` | Disjuntor | media_tensao | controlador, dispositivo_de_protecao | — |
+| `chave_de_media_tensao` | ponto | UNSEMT | 4 | `disjuntor` | Disjuntor | media_tensao | dispositivo_de_protecao | — |
 | `chave_de_media_tensao` | ponto | UNSEMT | 5 | `seccionalizador` | Seccionalizador | media_tensao | dispositivo_de_protecao, seccionamento | — |
 | `equipamento_do_transformador` | sem_geometria | EQTRMT | 1 | `equipamento_do_transformador` | Equipamento do transformador | media_tensao | transformacao | — |
 | `geracao_distribuida` | ponto | UGBT_tab, UGMT_tab | 1 | `geracao_em_baixa_tensao` | Geração em baixa tensão | baixa_tensao | geracao, medicao | — |
@@ -209,13 +210,13 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | `ponto_notavel` | ponto | PONNOT | 3 | `ponto_notavel_nao_classificado` | Ponto notável ainda não classificado | estrutura | estrutura_de_suporte | — |
 | `ramal_de_ligacao` | linha | RAMLIG | 1 | `ramal_de_ligacao` | Ramal de ligação | baixa_tensao | conducao | — |
 | `regulador_de_tensao` | ponto | UNREMT | 1 | `regulador_de_tensao` | Regulador de tensão | media_tensao | controlador | — |
-| `subestacao` | ponto | SUB | 1 | `subestacao_de_distribuicao` | Subestação de distribuição | subtransmissao | controlador, fonte | — |
-| `transformador_de_distribuicao` | ponto | UNTRMT | 1 | `transformador_de_distribuicao` | Transformador de distribuição | media_tensao | controlador, transformacao | T |
-| `transformador_de_distribuicao` | ponto | UNTRMT | 2 | `banco_de_transformadores` | Banco de transformadores | media_tensao | controlador, transformacao | B |
-| `transformador_de_distribuicao` | ponto | UNTRMT | 3 | `transformador_nao_classificado` | Transformador ainda não classificado | media_tensao | controlador, transformacao | — |
+| `subestacao` | ponto | SUB | 1 | `subestacao_de_distribuicao` | Subestação de distribuição | subtransmissao | fonte | — |
+| `transformador_de_distribuicao` | ponto | UNTRMT | 1 | `transformador_de_distribuicao` | Transformador de distribuição | media_tensao | transformacao | T |
+| `transformador_de_distribuicao` | ponto | UNTRMT | 2 | `banco_de_transformadores` | Banco de transformadores | media_tensao | transformacao | B |
+| `transformador_de_distribuicao` | ponto | UNTRMT | 3 | `transformador_nao_classificado` | Transformador ainda não classificado | media_tensao | transformacao | — |
 | `trecho_de_baixa_tensao` | linha | SSDBT | 1 | `trecho_de_baixa_tensao` | Trecho de baixa tensão | baixa_tensao | conducao | — |
 | `trecho_de_media_tensao` | linha | SSDMT | 1 | `trecho_de_media_tensao` | Trecho de média tensão | media_tensao | conducao | — |
-| `unidade_consumidora` | ponto | UCBT_tab, UCMT_tab | 1 | `consumidor_de_baixa_tensao` | Consumidor de baixa tensão | baixa_tensao | consumo, medicao | — |
+| `unidade_consumidora` | ponto | UCBT_tab, UCMT_tab | 1 | `consumidor_de_baixa_tensao` | Consumidor de baixa tensão | baixa_tensao | consumo, derivacao, medicao | — |
 | `unidade_consumidora` | ponto | UCBT_tab, UCMT_tab | 2 | `consumidor_de_media_tensao` | Consumidor de média tensão | baixa_tensao | consumo, medicao | — |
 
 ### Atributos: mapeamento coluna a coluna
@@ -268,7 +269,7 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | UGBT_tab | `CONJ` | `geracao_distribuida` | `ugbt_conj` | conjunto elétrico | texto | — | não | sim |  |
 | UGBT_tab | `CTMT` | `geracao_distribuida` | `ugbt_ctmt` | circuito de média tensão (alimentador) | texto | — | não | sim |  |
 | UGBT_tab | `DAT_CON` | `geracao_distribuida` | `ugbt_dat_con` | data de conexão | data | — | não | sim |  |
-| UGBT_tab | `ENE_SUM` | `geracao_distribuida` | `ugbt_ene_sum` | energia anual | real | unidade do arquivo, detectada | não | sim | soma de ENE_01..ENE_12 feita pela extração; o Módulo 10 da ANEEL declara megawatt-hora, mas o arquivo de cada distribuidora pode vir em quilowatt-hora: a unidade é medida na importação pela ordem de grandeza contra a potência instalada e o número de unidades consumidoras, e gravada na auditoria (item L4-01-e) |
+| UGBT_tab | `ENE_SUM` | `geracao_distribuida` | `ugbt_ene_sum` | energia anual | real | MWh | não | sim | soma de ENE_01..ENE_12 feita pela extração |
 | UGBT_tab | `ENE_ZERO` | `geracao_distribuida` | `ugbt_ene_zero` | meses com energia zero | inteiro | meses | não | sim | contagem sobre ENE_01..ENE_12 feita pela extração |
 | UGBT_tab | `MUN` | `geracao_distribuida` | `ugbt_mun` | município (código IBGE) | texto | — | não | sim |  |
 | UGBT_tab | `PN_CON` | `geracao_distribuida` | `ugbt_pn_con` | ponto notável de conexão | texto | — | não | sim |  |
@@ -283,7 +284,7 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | UGMT_tab | `CONJ` | `geracao_distribuida` | `ugmt_conj` | conjunto elétrico | texto | — | não | não | coluna declarada do Módulo 10, ainda não conferida contra extração real |
 | UGMT_tab | `CTMT` | `geracao_distribuida` | `ugmt_ctmt` | circuito de média tensão (alimentador) | texto | — | não | não | coluna declarada do Módulo 10, ainda não conferida contra extração real |
 | UGMT_tab | `DAT_CON` | `geracao_distribuida` | `ugmt_dat_con` | data de conexão | data | — | não | não | coluna declarada do Módulo 10, ainda não conferida contra extração real |
-| UGMT_tab | `ENE_SUM` | `geracao_distribuida` | `ugmt_ene_sum` | energia anual | real | unidade do arquivo, detectada | não | não | soma de ENE_01..ENE_12 feita pela extração; o Módulo 10 da ANEEL declara megawatt-hora, mas o arquivo de cada distribuidora pode vir em quilowatt-hora: a unidade é medida na importação pela ordem de grandeza contra a potência instalada e o número de unidades consumidoras, e gravada na auditoria (item L4-01-e) |
+| UGMT_tab | `ENE_SUM` | `geracao_distribuida` | `ugmt_ene_sum` | energia anual | real | MWh | não | não | soma de ENE_01..ENE_12 feita pela extração |
 | UGMT_tab | `MUN` | `geracao_distribuida` | `ugmt_mun` | município (código IBGE) | texto | — | não | não | coluna declarada do Módulo 10, ainda não conferida contra extração real |
 | UGMT_tab | `PN_CON` | `geracao_distribuida` | `ugmt_pn_con` | ponto notável de conexão | texto | — | não | não | coluna declarada do Módulo 10, ainda não conferida contra extração real |
 | UGMT_tab | `POT_INST` | `geracao_distribuida` | `ugmt_pot_inst` | potência instalada | real | kVA | não | não | coluna declarada do Módulo 10, ainda não conferida contra extração real |
@@ -296,7 +297,7 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | PIP | `CONJ` | `ponto_de_iluminacao_publica` | `pip_conj` | conjunto elétrico | texto | — | não | sim |  |
 | PIP | `CONTROLE` | `ponto_de_iluminacao_publica` | `pip_controle` | tipo de controle do acionamento | texto | — | não | sim |  |
 | PIP | `CTMT` | `ponto_de_iluminacao_publica` | `pip_ctmt` | circuito de média tensão (alimentador) | texto | — | não | sim |  |
-| PIP | `ENE_SUM` | `ponto_de_iluminacao_publica` | `pip_ene_sum` | energia anual | real | unidade do arquivo, detectada | não | sim | soma de ENE_01..ENE_12 feita pela extração; o Módulo 10 da ANEEL declara megawatt-hora, mas o arquivo de cada distribuidora pode vir em quilowatt-hora: a unidade é medida na importação pela ordem de grandeza contra a potência instalada e o número de unidades consumidoras, e gravada na auditoria (item L4-01-e) |
+| PIP | `ENE_SUM` | `ponto_de_iluminacao_publica` | `pip_ene_sum` | energia anual | real | MWh | não | sim | soma de ENE_01..ENE_12 feita pela extração |
 | PIP | `ENE_ZERO` | `ponto_de_iluminacao_publica` | `pip_ene_zero` | meses com energia zero | inteiro | meses | não | sim | contagem sobre ENE_01..ENE_12 feita pela extração |
 | PIP | `MUN` | `ponto_de_iluminacao_publica` | `pip_mun` | município (código IBGE) | texto | — | não | sim |  |
 | PIP | `PN_CON` | `ponto_de_iluminacao_publica` | `pip_pn_con` | ponto notável de conexão | texto | — | não | sim |  |
@@ -320,7 +321,7 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | PONNOT | `X` | `ponto_notavel` | `ponnot_x` | longitude do ponto | real | graus | não | sim | derivada da geometria do ponto pela extração |
 | PONNOT | `Y` | `ponto_notavel` | `ponnot_y` | latitude do ponto | real | graus | não | sim | derivada da geometria do ponto pela extração |
 | RAMLIG | `COD_ID` | `ramal_de_ligacao` | `ramlig_cod_id` | código do objeto | texto | — | sim | sim |  |
-| RAMLIG | `COMP` | `ramal_de_ligacao` | `ramlig_comp` | comprimento do trecho | real | unidade do arquivo, detectada | não | sim | o Módulo 10 da ANEEL declara quilômetro, mas o arquivo de cada distribuidora pode vir em metro: a unidade é medida na importação pela razão contra o comprimento geodésico e gravada na auditoria (item L4-01-e) |
+| RAMLIG | `COMP` | `ramal_de_ligacao` | `ramlig_comp` | comprimento do trecho | real | km | não | sim |  |
 | RAMLIG | `CTMT` | `ramal_de_ligacao` | `ramlig_ctmt` | circuito de média tensão (alimentador) | texto | — | não | sim |  |
 | RAMLIG | `FAS_CON` | `ramal_de_ligacao` | `ramlig_fas_con` | fases conectadas | texto | — | não | sim |  |
 | RAMLIG | `TIP_CND` | `ramal_de_ligacao` | `ramlig_tip_cnd` | tipo de condutor (código do cadastro de condutores) | texto | — | não | sim |  |
@@ -374,14 +375,14 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | UNTRMT | `X` | `transformador_de_distribuicao` | `untrmt_x` | longitude do ponto | real | graus | não | sim | derivada da geometria do ponto pela extração |
 | UNTRMT | `Y` | `transformador_de_distribuicao` | `untrmt_y` | latitude do ponto | real | graus | não | sim | derivada da geometria do ponto pela extração |
 | SSDBT | `COD_ID` | `trecho_de_baixa_tensao` | `ssdbt_cod_id` | código do objeto | texto | — | sim | sim |  |
-| SSDBT | `COMP` | `trecho_de_baixa_tensao` | `ssdbt_comp` | comprimento do trecho | real | unidade do arquivo, detectada | não | sim | o Módulo 10 da ANEEL declara quilômetro, mas o arquivo de cada distribuidora pode vir em metro: a unidade é medida na importação pela razão contra o comprimento geodésico e gravada na auditoria (item L4-01-e) |
+| SSDBT | `COMP` | `trecho_de_baixa_tensao` | `ssdbt_comp` | comprimento do trecho | real | km | não | sim |  |
 | SSDBT | `CTMT` | `trecho_de_baixa_tensao` | `ssdbt_ctmt` | circuito de média tensão (alimentador) | texto | — | não | sim |  |
 | SSDBT | `FAS_CON` | `trecho_de_baixa_tensao` | `ssdbt_fas_con` | fases conectadas | texto | — | não | sim |  |
 | SSDBT | `TIP_CND` | `trecho_de_baixa_tensao` | `ssdbt_tip_cnd` | tipo de condutor (código do cadastro de condutores) | texto | — | não | sim |  |
 | SSDBT | `UNI_TR_MT` | `trecho_de_baixa_tensao` | `ssdbt_uni_tr_mt` | unidade transformadora de média tensão | texto | — | não | sim |  |
 | SSDBT | `WKT` | `trecho_de_baixa_tensao` | `ssdbt_wkt` | geometria do trecho | geometria | — | não | sim | geometria da linha serializada em WKT pela extração |
 | SSDMT | `COD_ID` | `trecho_de_media_tensao` | `ssdmt_cod_id` | código do objeto | texto | — | sim | sim |  |
-| SSDMT | `COMP` | `trecho_de_media_tensao` | `ssdmt_comp` | comprimento do trecho | real | unidade do arquivo, detectada | não | sim | o Módulo 10 da ANEEL declara quilômetro, mas o arquivo de cada distribuidora pode vir em metro: a unidade é medida na importação pela razão contra o comprimento geodésico e gravada na auditoria (item L4-01-e) |
+| SSDMT | `COMP` | `trecho_de_media_tensao` | `ssdmt_comp` | comprimento do trecho | real | km | não | sim |  |
 | SSDMT | `CONJ` | `trecho_de_media_tensao` | `ssdmt_conj` | conjunto elétrico | texto | — | não | sim |  |
 | SSDMT | `CTMT` | `trecho_de_media_tensao` | `ssdmt_ctmt` | circuito de média tensão (alimentador) | texto | — | não | sim |  |
 | SSDMT | `FAS_CON` | `trecho_de_media_tensao` | `ssdmt_fas_con` | fases conectadas | texto | — | não | sim |  |
@@ -402,7 +403,7 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | UCBT_tab | `DAT_CON` | `unidade_consumidora` | `ucbt_dat_con` | data de conexão | data | — | não | sim |  |
 | UCBT_tab | `DIC_SUM` | `unidade_consumidora` | `ucbt_dic_sum` | DIC anual | real | h | não | sim | soma de DIC_01..DIC_12 feita pela extração |
 | UCBT_tab | `DIC_ZERO` | `unidade_consumidora` | `ucbt_dic_zero` | meses com DIC zero | inteiro | meses | não | sim | contagem sobre DIC_01..DIC_12 feita pela extração |
-| UCBT_tab | `ENE_SUM` | `unidade_consumidora` | `ucbt_ene_sum` | energia anual | real | unidade do arquivo, detectada | não | sim | soma de ENE_01..ENE_12 feita pela extração; o Módulo 10 da ANEEL declara megawatt-hora, mas o arquivo de cada distribuidora pode vir em quilowatt-hora: a unidade é medida na importação pela ordem de grandeza contra a potência instalada e o número de unidades consumidoras, e gravada na auditoria (item L4-01-e) |
+| UCBT_tab | `ENE_SUM` | `unidade_consumidora` | `ucbt_ene_sum` | energia anual | real | MWh | não | sim | soma de ENE_01..ENE_12 feita pela extração |
 | UCBT_tab | `ENE_ZERO` | `unidade_consumidora` | `ucbt_ene_zero` | meses com energia zero | inteiro | meses | não | sim | contagem sobre ENE_01..ENE_12 feita pela extração |
 | UCBT_tab | `FAS_CON` | `unidade_consumidora` | `ucbt_fas_con` | fases conectadas | texto | — | não | sim |  |
 | UCBT_tab | `FIC_SUM` | `unidade_consumidora` | `ucbt_fic_sum` | FIC anual | real | interrupções | não | sim | soma de FIC_01..FIC_12 feita pela extração |
@@ -429,7 +430,7 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | UCMT_tab | `CONJ` | `unidade_consumidora` | `ucmt_conj` | conjunto elétrico | texto | — | não | sim |  |
 | UCMT_tab | `CTMT` | `unidade_consumidora` | `ucmt_ctmt` | circuito de média tensão (alimentador) | texto | — | não | sim |  |
 | UCMT_tab | `DAT_CON` | `unidade_consumidora` | `ucmt_dat_con` | data de conexão | data | — | não | sim |  |
-| UCMT_tab | `ENE_SUM` | `unidade_consumidora` | `ucmt_ene_sum` | energia anual | real | unidade do arquivo, detectada | não | sim | soma de ENE_01..ENE_12 feita pela extração; o Módulo 10 da ANEEL declara megawatt-hora, mas o arquivo de cada distribuidora pode vir em quilowatt-hora: a unidade é medida na importação pela ordem de grandeza contra a potência instalada e o número de unidades consumidoras, e gravada na auditoria (item L4-01-e) |
+| UCMT_tab | `ENE_SUM` | `unidade_consumidora` | `ucmt_ene_sum` | energia anual | real | MWh | não | sim | soma de ENE_01..ENE_12 feita pela extração |
 | UCMT_tab | `ENE_ZERO` | `unidade_consumidora` | `ucmt_ene_zero` | meses com energia zero | inteiro | meses | não | sim | contagem sobre ENE_01..ENE_12 feita pela extração |
 | UCMT_tab | `GRU_TAR` | `unidade_consumidora` | `ucmt_gru_tar` | grupo tarifário | texto | — | não | sim |  |
 | UCMT_tab | `MUN` | `unidade_consumidora` | `ucmt_mun` | município (código IBGE) | texto | — | não | sim |  |
@@ -468,93 +469,3 @@ Total: 214 atributos, 154 com origem conferida em extração real e 60 declarado
 | fixacao_estrutural | `ponto_notavel/1` | `trecho_de_baixa_tensao/1` | trecho de baixa tensão fixado no poste |
 | fixacao_estrutural | `ponto_notavel/1` | `trecho_de_media_tensao/1` | trecho de média tensão fixado no poste |
 | fixacao_estrutural | `ponto_notavel/2` | `trecho_de_media_tensao/1` | trecho de média tensão fixado na torre |
-
-## `transmissao-matpower` — Transmissão no vocabulário do MATPOWER
-
-Pacote de ativos de rede de transmissão/subtransmissão no vocabulário do caseformat versão 2 do MATPOWER: barra e ramo (linha e transformador de potência); o que a matriz gen declara entra como atributo da barra. Existe porque o caso do MATPOWER descreve uma rede ELÉTRICA SEM GEOMETRIA — as matrizes bus/branch/gen não têm coordenada nenhuma. Por isso todo grupo deste pacote tem geometria 'sem_geometria': a barra importada vira objeto não espacial, e nunca um ponto na coordenada (0, 0). O vocabulário de distribuição (pacote eletrica-br, da BDGD) não serve aqui: lá o objeto é o trecho de média tensão com traçado medido em campo.
-
-| campo | valor |
-|---|---|
-| versão do pacote | 1.0.0 |
-| versão do esquema | 1 |
-| disciplina | eletrica |
-| fonte | https://github.com/MATPOWER/matpower |
-| tamanho | 16738 bytes |
-| sha256 | `311229960ee0e1c49a1a12b6945165c921c2d99f000311e43cf22e5eb2f719a4` |
-
-### Redes de domínio e tiers
-
-| domínio | tipo do domínio | tier | ordem | tipo do tier | o que é |
-|---|---|---|---|---|---|
-| `transmissao` | dominio | `sistema` | 1 | hierarquico | O caso inteiro. O caseformat do MATPOWER não declara hierarquia de subrede; a área (coluna area da matriz bus) é partição, não hierarquia. |
-| `transmissao` | dominio | `area` | 2 | particionado | Partição declarada na coluna area da matriz bus. |
-
-### Categorias de rede
-
-| categoria | nome | o que significa no traçado |
-|---|---|---|
-| `barramento` | Barramento | Ponto do sistema onde a tensão é a mesma para todos os ramos que ali chegam. |
-| `consumo` | Consumo | Potência ativa e reativa retirada do sistema numa barra. |
-| `injecao` | Injeção | Elemento que injeta potência ativa no sistema. |
-| `interligacao` | Interligação | Elemento que liga duas barras e carrega potência entre elas. |
-| `transformacao` | Transformação | Elemento que liga dois níveis de tensão. |
-
-### Configurações de terminal
-
-| configuração | nome | terminais | caminhos válidos |
-|---|---|---|---|
-| `dois_terminais` | Dois terminais | 1=de, 2=para | 1→2 (fechado) |
-| `sem_terminal` | Sem terminal | — | — |
-
-### Grupos e tipos de ativo
-
-| grupo | geometria | camada de origem | código do tipo | chave | nome | tier | categorias | códigos na fonte |
-|---|---|---|---|---|---|---|---|---|
-| `barra` | sem_geometria | mpc.bus | 1 | `barra_de_carga` | Barra de carga (PQ) | sistema | barramento, consumo | 1 |
-| `barra` | sem_geometria | mpc.bus | 2 | `barra_de_geracao` | Barra de geração (PV) | sistema | barramento, injecao | 2 |
-| `barra` | sem_geometria | mpc.bus | 3 | `barra_de_referencia` | Barra de referência (slack) | sistema | barramento, injecao | 3 |
-| `barra` | sem_geometria | mpc.bus | 4 | `barra_isolada` | Barra isolada | sistema | barramento | 4 |
-| `ramo` | sem_geometria | mpc.branch | 1 | `linha_de_transmissao` | Linha de transmissão | sistema | interligacao | ratio=0 |
-| `ramo` | sem_geometria | mpc.branch | 2 | `transformador_de_potencia` | Transformador de potência | sistema | interligacao, transformacao | ratio<>0 |
-
-### Atributos: mapeamento coluna a coluna
-
-| camada de origem | coluna | grupo | atributo | nome | tipo | unidade | obrigatório | conferida | observação |
-|---|---|---|---|---|---|---|---|---|---|
-| mpc.bus | `area` | `barra` | `area` | área do sistema | inteiro | — | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
-| mpc.bus | `baseKV` | `barra` | `base_kv` | tensão de base da barra | real | kV | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
-| mpc.bus | `bus_i` | `barra` | `bus_i` | número da barra no caso | inteiro | — | sim | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
-| mpc.bus | `type` | `barra` | `bus_type` | tipo da barra | inteiro | — | sim | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
-| mpc.gen | `bus` | `barra` | `gen_n` | quantidade de geradores ligados à barra | inteiro | — | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte Somado por barra: o caseformat permite mais de uma linha da matriz gen na mesma barra. |
-| mpc.gen | `Pg` | `barra` | `gen_pg` | potência ativa gerada na barra | real | MW | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte Soma das linhas da matriz gen desta barra. |
-| mpc.gen | `Qg` | `barra` | `gen_qg` | potência reativa gerada na barra | real | Mvar | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte Soma das linhas da matriz gen desta barra. |
-| mpc.gen | `Vg` | `barra` | `gen_vg` | tensão de referência do gerador | real | pu | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte Da primeira linha da matriz gen desta barra. |
-| mpc.bus | `Pd` | `barra` | `pd` | potência ativa demandada | real | MW | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
-| mpc.bus | `Qd` | `barra` | `qd` | potência reativa demandada | real | Mvar | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
-| mpc.bus | `Va` | `barra` | `va` | ângulo da tensão | real | grau | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
-| mpc.bus | `Vm` | `barra` | `vm` | módulo da tensão | real | pu | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
-| mpc.branch | `angle` | `ramo` | `angle` | defasagem angular | real | grau | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
-| mpc.branch | `b` | `ramo` | `b` | susceptância total de carregamento | real | pu | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
-| mpc.branch | `fbus` | `ramo` | `f_bus` | barra de origem | inteiro | — | sim | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
-| mpc.branch | `r` | `ramo` | `r` | resistência | real | pu | sim | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
-| mpc.branch | `rateA` | `ramo` | `rate_a` | capacidade de longa duração | real | MVA | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
-| mpc.branch | `ratio` | `ramo` | `ratio` | relação de transformação | real | — | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
-| mpc.branch | `status` | `ramo` | `status` | em serviço | inteiro | — | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
-| mpc.branch | `tbus` | `ramo` | `t_bus` | barra de destino | inteiro | — | sim | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
-| mpc.branch | `x` | `ramo` | `x` | reatância | real | pu | sim | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
-
-Total: 21 atributos, 21 com origem conferida em extração real e 0 declarados da fonte sem conferência.
-
-
-### Regras de conexão
-
-| tipo de regra | de | para | o que diz |
-|---|---|---|---|
-| conectividade_no_trecho | `ramo/1` | `barra/1` | ramo ligado à barra |
-| conectividade_no_trecho | `ramo/1` | `barra/2` | ramo ligado à barra |
-| conectividade_no_trecho | `ramo/1` | `barra/3` | ramo ligado à barra |
-| conectividade_no_trecho | `ramo/1` | `barra/4` | ramo ligado à barra |
-| conectividade_no_trecho | `ramo/2` | `barra/1` | ramo ligado à barra |
-| conectividade_no_trecho | `ramo/2` | `barra/2` | ramo ligado à barra |
-| conectividade_no_trecho | `ramo/2` | `barra/3` | ramo ligado à barra |
-| conectividade_no_trecho | `ramo/2` | `barra/4` | ramo ligado à barra |

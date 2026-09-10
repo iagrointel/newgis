@@ -1,0 +1,37 @@
+{
+ "item": "L0-09-a-procedencia",
+ "medidas": {
+  "pontuacao_bloco_cheio": {
+   "valor": 10.0,
+   "unidade": "0-10",
+   "comando": "pytest tests/api/catalogo/test_procedencia.py::test_ficha_do_item_traz_bloco_e_pontuacao"
+  },
+  "casos_paridade_python_sql": {
+   "valor": 7,
+   "unidade": "blocos",
+   "comando": "pytest tests/api/catalogo/test_procedencia.py::test_pontuacao_do_python_e_do_sql_sao_a_mesma"
+  },
+  "colunas_procedencia_na_exportacao": {
+   "valor": 5,
+   "unidade": "colunas",
+   "comando": "pytest tests/api/catalogo/test_procedencia.py::test_exportacao_leva_a_procedencia"
+  },
+  "campos_medidos_em_camada_importada": {
+   "valor": 4,
+   "unidade": "de 4",
+   "comando": "pytest tests/api/ingestao/test_procedencia_ingestao.py::test_camada_importada_nasce_com_os_quatro_campos_medidos"
+  },
+  "lista_50_itens_com_selo_p95_ms": {
+   "valor": 32.3,
+   "unidade": "ms",
+   "comando": "GET /api/itens?tipo=mapa&limite=50, 20 execuções, corpus 10 mil (mediana 29.6)"
+  },
+  "sha256_estavel_no_reimporte": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "pytest tests/api/ingestao/test_procedencia_ingestao.py::test_mesmo_arquivo_duas_vezes_tem_o_mesmo_sha256"
+  }
+ },
+ "gerado_em": "2026-09-06T16:21:13Z",
+ "git_sha": "90d03c07da0c"
+}

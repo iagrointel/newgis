@@ -890,6 +890,26 @@ chamadas escrever no schema `plat` de PRODUÇÃO mesmo dentro de uma base de tri
 Medido (`tests/medidas/L0-04-h-exportar.json`, camada de 100 mil feições): tempo por formato de 0,80 s
 (FlatGeobuf) a 14,54 s (XLSX); todos os 11 formatos reabertos com a mesma contagem de 100.000 feições
 (`ogrinfo`/DuckDB conforme o formato).
+## turno 4, setembro de 2026 (item L4-06-d-categorias-e-restricoes: categorias de rede, restrição de feição, tap de subrede)
+
+Categoria `derivacao` (equivalente de *subnetwork tap*) acrescentada ao pacote `eletrica-br` (12 categorias
+no pacote, o portão pedia ≥ 8), atribuída a `unidade_consumidora/1` — ponto com um único terminal, a mesma
+condição de elegibilidade da Esri. Migração `20260906T2156_rede_categorias_restricoes.sql` entrega a feição
+instanciada (`plat.rede_feicao`, com o estado `controlador_ativo` e a marca `suja`), a ligação de
+conectividade (`plat.rede_feicao_ligacao`) e a restrição de feição por tipo (`plat.rede_tipo_restricao`,
+vocabulário `sem_ponto_partida`/`sem_terminal`). Sobre esse esquema, `app/rede_utilidades/categorias.py` (novo)
+e as rotas em `app/rede_utilidades/rotas.py`: `PUT /api/rede/{id}/tipos/{tipo_id}/categorias` redefine o
+conjunto de categorias de um tipo e marca `suja=true` em toda feição já instanciada dele (a contagem volta
+na resposta); recusa (409) remover a categoria `controlador` de um tipo com feição de controlador ATIVO — a
+refutação do item; `PUT .../restricoes` redefine as restrições de feição; `POST .../feicoes` e
+`.../feicoes/{id}/ligar` instanciam feição e ligação; `GET .../feicoes/{id}/isolamento` traça um passeio em
+largura sobre a conectividade que **para na categoria `dispositivo_de_protecao`** (a fronteira entra no
+resultado, o que está atrás dela não) e recusa (422) partir de feição cujo tipo tem `sem_ponto_partida` — o
+caso do portão é a unidade consumidora. `docs/PARIDADE.md` ganhou as linhas de *feature restrictions* e
+*subnetwork tap*, com a fronteira honesta escrita: a categoria e a condição de elegibilidade do tap existem,
+mas não há traçado de SUBREDE que pare nela (só o de isolamento, que para na proteção) — isso fica para o
+item de traçado completo. 7 testes novos em `tests/api/test_rede_categorias.py`; medidas em
+`tests/medidas/L4-06-d-categorias-e-restricoes.json`.
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
@@ -2396,6 +2416,92 @@ carimbo) e o cabeçalho opcional `-- depende: <arquivo>`; `db/migrar.sh`, `db/mi
 reprova nome fora do padrão, três dígitos novos e dependência que vem depois na ordem;
 `tests/api/test_saude.py` deixa de casar o glob de três dígitos e escreve o que "última migração" passa a
 significar (a de autoria mais recente pela chave, não a maior string nem a última aplicada no relógio).
+## turno 3, setembro de 2026 (item L0-04-h-exportar: tirar o dado da plataforma, em 11 formatos)
+
+Exportação de camada vetorial como job (`POST /api/exportacoes` → 202; `GET /api/exportacoes[/{id}]`;
+`GET /api/exportacoes/{id}/baixar`; `DELETE`), em 11 formatos: GeoPackage, GeoJSON, shapefile zipado, CSV,
+XLSX, KML, KMZ, FlatGeobuf, GML, DXF e GeoParquet. Filtro `where` (parser do L2-04-b, lista branca de campos
+do item) e `bbox`, campos escolhidos, CRS de saída por EPSG, codificação (UTF-8 ou ISO-8859-1 onde o formato
+aceita) e opções de CSV brasileiro (separador, vírgula decimal, nome das colunas de coordenada). O arquivo
+gerado vira item `arquivo` na pasta do usuário com validade de 7 dias; o periódico `exportacao.expirar`
+apaga objeto e item quando vence e deixa a linha como `expirada` (a auditoria fica). Botão **Exportar** no
+painel do item, com a caixa do dono "permitir que outros exportem" (nasce desligada, como na Esri).
+
+Duas medições mandaram no desenho (ADR 0023): (1) **a RLS do PostgreSQL vale dentro do ogr2ogr** quando o
+inquilino entra na string de conexão (`options='-c plat.tenant_id=N'`) — sem essa opção o ogr2ogr exporta
+0 feição da mesma tabela, com ela exporta exatamente as do inquilino; é o banco, não o nosso código, que
+impede a exportação de trazer linha de outro cliente. (2) **o driver LIBKML monta o documento inteiro em
+memória**: 3,5 min de CPU e 255 MB de RSS para 50 mil pontos sem terminar, contra 0,34 s do driver `KML`
+— por isso KML/KMZ usam o `KML` e o KMZ é o zip feito aqui. O GeoParquet sai pelo DuckDB porque o GDAL 3.8.4
+desta máquina não tem driver Parquet (é o único formato que o `ogrinfo` daqui não reabre; o teste o reabre
+com o DuckDB, e isso está escrito no catálogo de formatos).
+
+Arquivo grande nunca é montado em memória: `objetos.guardar_arquivo` (novo) lê o arquivo em blocos de 8 MiB
+e usa o multipart real do Garage acima de um bloco; a entrega sai em blocos de 1 MiB (`objetos.ler_stream`).
+Limites novos em `app/limites.py`: 3 exportações em curso por usuário (429 na quarta) e guarda de disco
+medida com `shutil.disk_usage` antes do primeiro byte.
+
+Dois consertos de produto que este item destravou: `CursorSchemaAmbiente` agora reescreve o schema também em
+`executemany` e `mogrify` — sem isso, `POST /api/papeis` escrevia no schema `plat` de PRODUÇÃO quando a
+suíte rodava numa base isolada (erro "permission denied for schema plat"; onde a role tivesse acesso, teria
+escrito no schema errado em silêncio) — e `docs/gerar_privilegios.py` passou a usar esse mesmo cursor.
+
+Testes: `tests/unit/test_exportacao_unidade.py` (14, sem banco: CSV brasileiro, erro do banco saneado,
+catálogo de formatos e a prova por `tracemalloc` de que 40 MiB sobem em 5 partes com pico abaixo de 3 partes)
++ `tests/api/exportacao/` (portão cláusula a cláusula sobre uma camada de 100 mil feições, mais a prova
+cruzada em três níveis de que a exportação de um inquilino não traz linha de outro) + `tests/e2e/
+test_exportar.py` (botão Exportar com captura). Medidas em `tests/medidas/L0-04-h-exportar.json`.
+
+
+## turno 3, setembro de 2026 (item L2-01-a-documento-mapa: o mapa é um documento com esquema, não um punhado de URLs)
+
+O tipo `mapa` deixa de ter `corpo` livre e passa a carregar um **JSON Schema publicado**
+(`docs/esquemas/mapa-v1.json`, gerado de `plat.tipo_item`): mapa-base, lista ordenada de camadas com
+visibilidade, opacidade, faixa de escala, grupo (até 3 níveis), estilo, popup, filtro CQL2-JSON, rótulos,
+campo de tempo e intervalo de atualização; extensão inicial, rotação, CRS de exibição fixo em 3857 e
+favoritos. Cada camada aponta o item do catálogo por **uuid** (`ref`), nunca por URL — o oposto do Web Map
+JSON da Esri, onde a URL do portal fica congelada dentro de cada mapa salvo. Rotas novas: `POST/GET/PUT
+/api/mapas`, `GET /api/mapas` e `GET /api/mapas/{id}/completo`, que devolve o documento com as camadas já
+resolvidas (título, tipo, campos, estilo, popup) em UMA chamada. Contrato no ADR 0022; de-para chave a chave
+contra a Web Map Specification em `docs/PARIDADE.md`.
+
+Medido em `tests/medidas/L2-01-a.json`: `/completo` de um mapa com **10 camadas** responde com p95 de
+**20,7 ms** (mediana 12,2 ms) em **50 chamadas**, contra o teto de 150 ms do portão. Camada de outro inquilino
+citada no documento = **404** (o mesmo 404 de uuid inexistente, sem revelar que existe); apagar camada usada
+por mapa = **409** com a lista dos mapas dependentes; 500 camadas, 5 níveis de grupo, ciclo de grupo e
+extensão fora do mundo = **422**, nenhum 200 e nenhum 500. Na tela `/mapa?id=<uuid>` a lista de camadas
+reordena arrastando (e por teclado, Alt+seta): e2e grava a ordem, recarrega a página e confere que voltou a
+mesma, com captura em `tests/e2e/capturas/L2-01-a-documento-mapa_painel_camadas.png`.
+
+⛔ Fronteira honesta: `/completo` devolve o CONTRATO da URL de tiles com `pronto: false` e o motivo — não há
+servidor de tiles vetoriais nem raster instalado nesta máquina (itens L2-01-b e L1-02) —, e `dominios` sai
+vazio com o motivo escrito, porque a camada ainda não guarda vocabulário de domínio (L0-04-c, parcial). A tela
+lista e reordena as camadas do documento; não as desenha no canvas, pelo mesmo motivo, e diz isso em cada
+linha. ⛔ Quebra declarada: documento com `corpo.camadas` como lista de uuid soltos passa a ser 422.
+
+## turno 3, setembro de 2026 (item L2-04-a-leitor-rls-martin: quem serve o tile não sabe o que é inquilino)
+
+O servidor de tiles vetoriais fala direto com o PostGIS e não tem noção de sessão, privilégio ou inquilino.
+Passa a existir um **papel de banco só de leitura** — LOGIN, sem BYPASSRLS, sem ser dono de nada, com SELECT
+nas tabelas de camada e EXECUTE nas funções de tile — e uma função `plat.contexto_por_token`, que valida o
+token de serviço, confere escopo `camada:ler` e restrição de Referer/IP, grava o uso em `plat.log_acesso` e
+põe o inquilino na transação. Cada camada ganha a sua função de tile `d_<slug>.t_<16 hex>(z, x, y,
+query_params)`, criada junto com a tabela; a primeira instrução dela é o contexto por token. Contrato no ADR
+0020; o papel, a senha e a linha do `pg_hba.conf` saem de `db/leitor_instalar.sh`, chamado pelo `install.sh`.
+
+A política de RLS do papel de leitura **não olha a GUC `plat.tenant_id` crua**: qualquer papel conectado
+escreve nela, e o papel de leitura é o mesmo para todos os inquilinos. Ela olha `plat.tenant_leitor()`, que
+exige uma prova (sha256 de um segredo que nenhum papel comum lê, mais o inquilino e o processo) emitida só
+por `contexto_por_token`. Medido em `tests/medidas/L2-04-a-leitor-rls-martin.json`: `SET plat.tenant_id` feito
+pelo próprio leitor devolve **0 linhas**; **6 chamadas cruzadas** às funções de tile com o token do outro
+inquilino devolvem **0 tiles com dado**; token revogado deixa de valer em **0,002 s**; **1 linha de log por
+chamada** de contexto aceita; segunda execução do instalador = **0 mudanças**.
+
+⛔ Fronteira honesta: a linha de log de uma RECUSA é escrita e desfeita com a transação abortada (o PostgreSQL
+não tem transação autônoma) — medida `linhas_log_de_recusa_persistidas: 0`. O rastro da recusa fica no log do
+servidor (a exceção é nomeada) e no log de acesso da API. E o Martin em si não está instalado nem configurado
+por este item: o que se entrega é o contrato de banco que ele consome.
+
 ## turno 3, setembro de 2026 (item L4-01-a-pacote-de-ativos: o esquema da rede de utilidades é dado)
 
 Primeiro item da linha L4. O esquema de uma rede de utilidades — redes de domínio, tiers, grupos e tipos de
@@ -2485,6 +2591,68 @@ campo inteiro designado da camada (`plat.camada_subtipo`). **ADR 0021**; migraç
 Testes: `tests/api/test_dominios_subtipos.py` (inclui a refutação exigida: domínio de outro inquilino = 404,
 50 mil códigos = 422, código duplicado recusado na API e no banco, trocar o tipo de campo com domínio ligado
 = 409) e `tests/e2e/test_dominios.py` (playwright, com capturas).
+## turno 3, setembro de 2026 (item L0-09-a-procedencia: bloco de procedência em todo item de dado)
+
+Todo item que carrega dado passa a ter um bloco de procedência com o vocabulário que a casa já usa no registro
+do acervo (`acervo.fonte`, 376 fontes) e no catálogo de camadas do motor logístico: fonte, endereço, licença,
+data do dado, data de acesso, gerador, sha256, comando de reexecução, método, confiança, limites, frescor,
+próxima verificação e responsável. Cada campo pode declarar a `origem`: `declarado` (alguém afirmou) ou
+`medido` (a máquina calculou). O vocabulário campo a campo está em `docs/PROCEDENCIA.md`.
+
+A pontuação é a régua da `acervo.v_completude`, sem peso novo: `round(campos / campos_possiveis * 10, 1)` sobre
+os mesmos 10 campos. Item sem bloco tem pontuação nula, nunca `0,0` — ausência de registro não é medida de zero.
+A conta existe em Python (`app/catalogo/procedencia.py`) e em SQL (`plat.procedencia_pontuacao`), e um teste
+compara as duas em 7 blocos, porque a lista do catálogo não trafega `dados` (jsonb de 58 KB em média) e lê o
+selo direto do banco.
+
+Medido (`tests/medidas/L0-09-a-procedencia.json`): camada importada por arquivo nasce com os **4 campos que a
+máquina mede** — sha256 do arquivo lido de volta, data de acesso, gerador e método — sem ninguém digitar;
+licença e endereço ficam nulos de propósito, porque deduzi-los do nome do arquivo seria a procedência errada
+que a regra D17 proíbe.
+
+Onde aparece: ficha e lista (`procedencia` no objeto item), busca (`licenca:CC`, `licenca:nenhuma`,
+`procedencia:[5 TO 10]`), filtro lateral (`?licenca=`, `?procedencia_min=`, faceta de licença) e exportação da
+lista (colunas `licenca`, `procedencia_pontuacao`, `procedencia_campos`, `procedencia_sha256`,
+`procedencia_gerador` no CSV; bloco inteiro no JSON).
+
+Refutação do adversário provada em teste: o mesmo arquivo importado duas vezes dá o mesmo sha256 (e igual ao
+`sha256sum` do arquivo de origem); um byte a mais dá hash diferente; licença preenchida com texto vazio vira
+`null`, nunca string vazia — na criação e na edição.
+
+Fronteira honesta: a exportação do inquilino inteiro em GeoPackage (`L0-06-d-exportar-inquilino`) ainda não
+existe, então a cláusula "exportação leva a procedência" está cumprida na exportação que existe hoje, a da
+lista do catálogo. A tela do item mostra o bloco e a pontuação, mas ainda não os EDITA (isso é o
+`L0-09-b-editor-iso-mgb`); hoje a edição é pelo formulário de `dados` do próprio item.
+
+## turno 3, setembro de 2026 (item L6-02-c-wfs-ogcapi: conector WFS 2.0 e OGC API - Features)
+
+Primeiro conector que LÊ dado de serviço de terceiro (ADR 0018). WFS 2.0 (GetCapabilities, DescribeFeatureType,
+GetFeature com `COUNT`/`STARTINDEX`/`BBOX`, `RESULTTYPE=hits`, saída GeoJSON e GML 3.2) e OGC API - Features
+(`/collections`, `/queryables`, `/items` com `limit`, `bbox`, `datetime` e link `rel=next`), nos dois modos:
+
+- **referenciado** — `GET /api/conexoes/{id}/colecoes`, `.../colecoes/{c}/campos` e `.../colecoes/{c}/feicoes`,
+  ao vivo, com cache de 30 s no processo (`app/conexao/cache.py`); editar ou apagar a conexão esquece o cache.
+- **copiado** — job `conexao.copiar_vetor` (`POST /api/jobs`), que traz a coleção para uma tabela PostGIS do
+  inquilino com item `camada_vetorial`, procedência e as mesmas colunas obrigatórias/RLS da ingestão de arquivo.
+
+Regra dura do desenho: **todo I/O de rede passa por `app.conexao.seguranca.buscar_seguro`** (item L6-02-a) —
+os drivers `WFS:`/`OAPIF:` do GDAL foram recusados de propósito, porque fariam a requisição fora da defesa
+contra requisição forjada pelo servidor. O `ogr2ogr` só entra depois, sobre arquivo LOCAL, e roda com
+`GDAL_HTTP_PROXY` apontando para porta fechada, de modo que nenhuma requisição sua possa sair da máquina.
+
+Medido (`tests/medidas/L6-02-c-wfs-ogcapi.json`): 50 mil feições copiadas de um WFS 2.0, com o tempo de
+download e o de carga separados; paginação conferida contra o `numberMatched` declarado; tipos de atributo
+(`xsd:int`, `xsd:double`, `xsd:boolean`, `xsd:date`) preservados como o serviço os declarou; geometria
+reprojetada de EPSG:31983 para 4326 com o CRS nativo gravado na ficha.
+
+Refutação do adversário provada: um WFS que declara 5.000.000 de feições e ignora `COUNT`/`STARTINDEX` faz a
+cópia parar no limite declarado, gravar o aviso na procedência da camada e devolver o worker à fila — três
+travas independentes (limite, página maior do que a pedida, página repetida) além dos tetos de bytes e de
+páginas.
+
+Novo em `app/conexao/seguranca.py`: `PLAT_TESTE_CONEXAO_ALVOS`, par `host:porta` exato aceito só fora de
+produção, para que a suíte fale com um WFS e um OGC API DE VERDADE subidos no loopback
+(`tests/api/conexao/servidor_ogc.py`) em vez de depender do serviço de um órgão estar de pé.
 
 ## turno 3, setembro de 2026 (item L0-04-a-upload-arquivo: upload retomável pelo navegador)
 

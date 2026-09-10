@@ -21,14 +21,14 @@ SEGREDOS=PLAT_SECRET=$$(sudo cat /etc/plat/segredos/PLAT_SECRET 2>/dev/null); \
 	[ -n "$$PLAT_DSN" ] && export PLAT_DSN; \
 	[ -n "$$PLAT_GARAGE_ADMIN_TOKEN" ] && export PLAT_GARAGE_ADMIN_TOKEN;
 
-.PHONY: check check-rapido lint sem-marcador teste e2e medidas migrar openapi vendor limites seguranca-deps homolog manual
+.PHONY: check check-rapido lint sem-marcador teste e2e medidas migrar openapi vendor limites seguranca-deps homolog pacote-rede
 
 check: lint sem-marcador limites teste e2e  ## suíte inteira (portão P3)
 
 check-rapido: lint sem-marcador limites teste  ## o que o driver roda
 
 lint:
-	$(VENV)/ruff check app tests docs/gerar_limites.py docs/gerar_manual_expressao.py
+	$(VENV)/ruff check app tests docs/gerar_limites.py docs/gerar_pacote_rede.py
 
 limites:                                    ## docs/LIMITES.md == app/limites.py (item L0-12); falha se divergir
 	$(VENV)/python docs/gerar_limites.py --check
@@ -57,6 +57,9 @@ e2e:
 medidas:                                    ## suíte inteira gravando tests/medidas/<item>.json (ADR 0001 seção 10)
 	$(SEGREDOS) PLAT_GRAVAR_MEDIDAS=1 $(VENV)/pytest --base-url $(URL_PUBLICA)
 
+pacote-rede:                                ## docs/PACOTE_REDE.md == app/rede_utilidades/pacotes/*.json (item L4-01-a); GERA (o `make check` confere via tests/unit/test_rede_pacote.py)
+	$(VENV)/python docs/gerar_pacote_rede.py
+
 vendor:                                     ## confere sha256 de web/vendor contra VERSOES.txt
 	cd web/vendor && grep -v '^\#' VERSOES.txt | awk '{print $$3"  "$$1}' | sha256sum -c
 
@@ -74,14 +77,6 @@ worker:                                     ## worker da fila em primeiro plano 
 
 e2e-worker:                                 ## testes lentos da fila (reinício por systemctl, morte do pai, job de 5 min)
 	$(SEGREDOS) $(VENV)/pytest -m lento tests/api/jobs
-
-# semáforo de testes do laço (fora do repositório; nas trilhas passe RODA_TESTE=<caminho absoluto>)
-RODA_TESTE ?= $(abspath ../laco/roda_teste.sh)
-
-manual:                                     ## item L7-04-a: valida o conjunto, regenera as capturas pelo e2e (semáforo), monta docs/manual (HTML+PDF) e web/dados/manual.json; captura de versão antiga REPROVA
-	$(VENV)/python docs/gerar_manual.py --validar
-	bash $(RODA_TESTE) $$($(VENV)/python docs/gerar_manual.py --arquivos-e2e) -m lento --base-url $(URL_PUBLICA) -q
-	$(VENV)/python docs/gerar_manual.py $(if $(findstring 1,$(MANUAL_SEM_PDF)),--sem-pdf,)
 
 homolog:                                    ## item L7-31 (docs/HOMOLOGACAO.md): migra plat_homolog, sobe API+worker em :8154 e roda o e2e isolado; derruba tudo ao final
 	bash scripts/homolog_e2e.sh
