@@ -12,7 +12,7 @@ import uuid
 
 from pydantic import BaseModel, Field, field_validator
 
-from app import limites, objetos
+from app import objetos
 from app.catalogo import destruidores, miniatura, tipos
 from app.jobs.registro import FalhaDefinitiva, tarefa
 
@@ -104,20 +104,12 @@ class ExpurgoParametros(BaseModel):
 def catalogo_lixeira_expurgar(
     ctx, dias: int = 30, ids: list[uuid.UUID] | None = None, agora: datetime.datetime | None = None
 ) -> dict:
-    # `ids` ausente (None) = varredura por idade, que é o periódico; `ids` presente e VAZIO = pedido que não
-    # resolveu nenhum item, e nunca "expurgar tudo" (achado G2-4: `if ids else None` transformava [] em NULL e
-    # plat.lixeira_expurgar(0, now(), NULL) devolvia a lixeira inteira do inquilino; o expurgo é físico).
-    if ids is not None and len(ids) == 0:
-        raise FalhaDefinitiva("lista de itens vazia: o expurgo por lista nunca significa 'toda a lixeira'")
-    alvo = None if ids is None else [str(x) for x in ids]
     with ctx.db() as cur:
         cur.execute(
             "SELECT * FROM plat.lixeira_expurgar(%s, %s, %s::uuid[])",
-            (dias, agora or datetime.datetime.now(datetime.UTC), alvo),
+            (dias, agora or datetime.datetime.now(datetime.UTC), [str(x) for x in ids] if ids else None),
         )
         candidatos = cur.fetchall()
-    if alvo is not None and len(candidatos) > len(alvo):
-        raise FalhaDefinitiva(f"{len(candidatos)} candidatos para uma lista de {len(alvo)} itens: pedido recusado")
     ctx.log("INFO", f"{len(candidatos)} itens a expurgar (dias={dias}, agora={agora or 'now'})")
     expurgados, recusados, bytes_total = 0, [], 0
     for n, c in enumerate(candidatos, 1):
@@ -128,15 +120,18 @@ def catalogo_lixeira_expurgar(
                 cur.execute("SELECT plat.item_expurgar(%s::uuid) AS ok", (iid,))
                 if not cur.fetchone()["ok"]:
                     raise destruidores.Recusado("registro já não estava na lixeira")
-                liberados_item = liberados or int(c["tamanho_bytes"] or 0)
-                bytes_total += liberados_item
-                if liberados_item and c["tipo"] == "camada_vetorial":
-                    # achado do adversário G3 (L0-04-c): uso_bytes só subia em app/ingestao/carregar.py (só
-                    # camada_vetorial incrementa — arquivo usa a cota própria do bucket no Garage, L0-11) e
-                    # nunca descia no expurgo — a cota do inquilino nunca voltava, mesmo desfazendo tudo.
+                bytes_total += liberados or int(c["tamanho_bytes"] or 0)
+                # contador SIMÉTRICO (item L0-07-c-cotas-uso, correção pós-refutação): tenant.uso_bytes só
+                # crescia (app/ingestao/carregar.py incrementa no fim da carga) e nunca descia no expurgo — um
+                # adversário provou isso apagando item para tentar "liberar" cota e a cota continuar cheia. Só
+                # camada_vetorial mexe em tenant.uso_bytes (cota de TABELA, 029); o tipo `arquivo` é bucket
+                # Garage, medido ao vivo por soma (plat.arquivo_uso_bytes, apagado_em), sem contador a
+                # dessincronizar. greatest(0, ...) porque a medição diária (plat.uso_medir) já reconcilia o
+                # valor exato pelo tamanho físico e pode ter corrigido para baixo entre a carga e o expurgo.
+                if c["tipo"] == "camada_vetorial" and liberados:
                     cur.execute(
                         "UPDATE plat.tenant SET uso_bytes = greatest(0, uso_bytes - %s) WHERE id = %s",
-                        (liberados_item, c["tenant_id"]),
+                        (liberados, c["tenant_id"]),
                     )
                 _evento(
                     cur,
@@ -146,7 +141,7 @@ def catalogo_lixeira_expurgar(
                     {
                         "item_id": iid,
                         "tipo": c["tipo"],
-                        "bytes_liberados": liberados_item,
+                        "bytes_liberados": liberados or int(c["tamanho_bytes"] or 0),
                         "titulo": (c["titulo"] or "")[:250],
                         "job_id": str(ctx.job_id),
                     },
@@ -160,40 +155,14 @@ def catalogo_lixeira_expurgar(
 
 
 # ---------------------------------------------------------------- catalogo.versoes_compactar
-LINHAS_MAX_POR_ITEM = 50  # teto de linhas de plat.item_versao por item (refutação do L0-03-l), ADR 0004 seção 11.4
-PASSOS_MAX_COMPACTACAO = 12  # cada passada divide o excedente por 10: 12 passadas cobrem 10^12 versões
-
-
 class CompactarParametros(BaseModel):
-    manter: int = Field(LINHAS_MAX_POR_ITEM, ge=1, le=1000, description="teto de LINHAS por item depois da passagem")
+    manter: int = Field(50, ge=1, le=1000)
     item_id: uuid.UUID | None = None
-
-
-def compactar_item(cur, item_id: str, teto: int = LINHAS_MAX_POR_ITEM, passos_max: int = PASSOS_MAX_COMPACTACAO):
-    """Compacta as versões de um item ATÉ ESTABILIZAR e devolve (removidas, linhas_restantes).
-
-    plat.item_versoes_compactar(item, manter) guarda as `manter` versões mais recentes e resume cada bloco de 10
-    das antigas numa linha: uma passada sobre N versões deixa manter + ceil((N - manter)/10) linhas — 146 depois de
-    1.000 PUTs com manter = 50 (achado G2-3), e o periódico rodava uma passada por dia. Repetindo a passada, o
-    excedente cai por um fator de 10 a cada vez e converge em `manter` + 1 linha (a linha compactada que resume
-    tudo o que veio antes). Por isso o teto de LINHAS é `manter` + 1: pedimos manter = teto - 1 e o item fica com
-    no máximo `teto` linhas. A função do banco não é tocada aqui (varredura das funções SECURITY DEFINER corre em
-    outra trilha)."""
-    manter = max(1, teto - 1)
-    removidas = 0
-    for _ in range(passos_max):
-        cur.execute("SELECT plat.item_versoes_compactar(%s::uuid, %s) AS n", (item_id, manter))
-        n = cur.fetchone()["n"] or 0
-        removidas += n
-        if n == 0:
-            break
-    cur.execute("SELECT count(*) AS n FROM plat.item_versao WHERE item_id = %s::uuid", (item_id,))
-    return removidas, cur.fetchone()["n"]
 
 
 @tarefa(
     nome="catalogo.versoes_compactar",
-    descricao="Compacta versões antigas de item até o teto de 50 linhas (blocos de 10 viram uma, até estabilizar)",
+    descricao="Compacta versões antigas de item (mantém as 50 mais recentes; blocos de 10 viram uma)",
     parametros=CompactarParametros,
     pesado=False,
     memoria_mb=256,
@@ -202,62 +171,20 @@ def compactar_item(cur, item_id: str, teto: int = LINHAS_MAX_POR_ITEM, passos_ma
     chave=lambda p: "versoes_compactar",
     perfil_minimo="admin",
 )
-def catalogo_versoes_compactar(
-    ctx, manter: int = LINHAS_MAX_POR_ITEM, item_id: uuid.UUID | None = None
-) -> dict:
+def catalogo_versoes_compactar(ctx, manter: int = 50, item_id: uuid.UUID | None = None) -> dict:
     with ctx.db() as cur:
         if item_id:
             itens = [str(item_id)]
         else:
             cur.execute("SELECT plat.itens_com_versoes_acima(%s) AS id", (manter,))
             itens = [str(r["id"]) for r in cur.fetchall()]
-    removidas, acima = 0, []
+    removidas = 0
     for n, iid in enumerate(itens, 1):
         with ctx.db() as cur:
-            r, linhas = compactar_item(cur, iid, manter)
-            removidas += r
-            if linhas > manter:
-                acima.append({"item_id": iid, "linhas": linhas})
+            cur.execute("SELECT plat.item_versoes_compactar(%s::uuid, %s) AS n", (iid, manter))
+            removidas += cur.fetchone()["n"]
         ctx.progresso(int(n * 100 / max(1, len(itens))), f"{n} de {len(itens)} itens")
-    return {"itens": len(itens), "versoes_removidas": removidas, "teto_linhas": manter, "acima_do_teto": acima}
-
-
-# ---------------------------------------------------------------- catalogo.notificacoes_expurgar
-class NotificacoesExpurgoParametros(BaseModel):
-    dias: int = Field(limites.NOTIFICACOES_DIAS, ge=1, le=3650)
-    agora: datetime.datetime | None = Field(None, description="relógio simulado; só em PLAT_AMBIENTE=dev")
-
-    @field_validator("agora")
-    @classmethod
-    def _so_em_dev(cls, v):
-        if v is not None:
-            from app import settings as cfg
-
-            if cfg.obter().producao:
-                raise ValueError("o parâmetro agora só é aceito em ambiente dev")
-        return v
-
-
-@tarefa(
-    nome="catalogo.notificacoes_expurgar",
-    descricao="Apaga notificações internas com mais de N dias (padrão 90; item L0-03-k)",
-    parametros=NotificacoesExpurgoParametros,
-    pesado=False,
-    memoria_mb=256,
-    timeout_s=600,
-    tentativas=1,
-    chave=lambda p: "notificacoes_expurgar",
-    perfil_minimo="admin",
-)
-def catalogo_notificacoes_expurgar(ctx, dias: int = limites.NOTIFICACOES_DIAS, agora=None) -> dict:
-    with ctx.db() as cur:
-        cur.execute(
-            "SELECT plat.notificacoes_expurgar(%s, %s) AS n",
-            (dias, agora or datetime.datetime.now(datetime.UTC)),
-        )
-        n = cur.fetchone()["n"]
-    ctx.progresso(100, f"{n} notificações apagadas")
-    return {"apagadas": int(n), "dias": dias}
+    return {"itens": len(itens), "versoes_removidas": removidas}
 
 
 # ---------------------------------------------------------------- catalogo.tags_renomear
@@ -364,55 +291,6 @@ class ExportarParametros(BaseModel):
     ids: list[uuid.UUID] | None = Field(None, max_length=100000)
 
 
-# item L0-09-a: a exportação leva a procedência. Licença registrada, pontuação 0-10 (a régua da
-# acervo.v_completude, calculada em SQL), campos preenchidos, hash do conteúdo e gerador saem em coluna
-# própria; o bloco inteiro sai no JSON. Lista exportada sem procedência é lista que ninguém consegue
-# auditar depois — é o que o portão do item chama de "exportação leva a procedência".
-COLUNAS_EXPORTACAO = (
-    "id", "tipo", "titulo", "resumo", "tags", "dono", "acesso", "status", "criado_em", "modificado_em",
-    "licenca", "procedencia_pontuacao", "procedencia_campos", "procedencia_sha256", "procedencia_gerador",
-)
-_SELECT_EXPORTACAO = (
-    "SELECT i.id, i.tipo, i.titulo, i.resumo, i.tags, u.login AS dono, i.acesso, "
-    "i.status, i.criado_em, i.modificado_em, "
-    "plat.procedencia_licenca(i.dados) AS licenca, "
-    "plat.procedencia_pontuacao(i.dados) AS procedencia_pontuacao, "
-    "plat.procedencia_campos(i.dados) AS procedencia_campos, "
-    "plat.procedencia_campo(plat.procedencia_bloco(i.dados), 'sha256') AS procedencia_sha256, "
-    "plat.procedencia_campo(plat.procedencia_bloco(i.dados), 'gerador', 'script_gerador') AS procedencia_gerador, "
-    "plat.procedencia_bloco(i.dados) AS procedencia "
-    "FROM plat.item i JOIN plat.usuario u ON u.id = i.dono_id WHERE i.apagado_em IS NULL"
-)
-
-
-def linhas_exportacao(cur, ids: list[uuid.UUID] | None = None) -> list[dict]:
-    """Linhas da exportação da lista (a mesma consulta do job, isolada para poder ser conferida em teste
-    sem subir worker nem armazenamento)."""
-    if ids:
-        cur.execute(
-            _SELECT_EXPORTACAO.replace("WHERE i.apagado_em IS NULL", "WHERE i.id = ANY (%s::uuid[]) "
-                                       "AND i.apagado_em IS NULL") + " ORDER BY i.titulo",
-            ([str(x) for x in ids],),
-        )
-    else:
-        cur.execute(_SELECT_EXPORTACAO + " ORDER BY i.titulo")
-    return [dict(r) for r in cur.fetchall()]
-
-
-def serializar_exportacao(linhas: list[dict], formato: str) -> tuple[bytes, str]:
-    if formato == "csv":
-        buf = io.StringIO()
-        w = csv.DictWriter(buf, fieldnames=list(COLUNAS_EXPORTACAO))
-        w.writeheader()
-        for r in linhas:
-            linha = dict(r)
-            linha["tags"] = ";".join(linha.get("tags") or [])
-            # o bloco inteiro só cabe no JSON; no CSV ficam as colunas, que é o que se filtra numa planilha
-            w.writerow({k: linha.get(k) for k in COLUNAS_EXPORTACAO})
-        return buf.getvalue().encode("utf-8"), "text/csv"
-    return json.dumps(linhas, ensure_ascii=False, default=str).encode("utf-8"), "application/json"
-
-
 @tarefa(
     nome="catalogo.exportar_lista",
     descricao="Exporta a lista de itens (csv/json) para um objeto do armazenamento",
@@ -424,11 +302,46 @@ def serializar_exportacao(linhas: list[dict], formato: str) -> tuple[bytes, str]
     perfil_minimo="editor",
 )
 def catalogo_exportar_lista(ctx, formato: str = "csv", ids: list[uuid.UUID] | None = None) -> dict:
-    if ids is not None and len(ids) == 0:
-        raise FalhaDefinitiva("lista de itens vazia: a exportação por lista nunca significa 'todos os itens'")
     with ctx.db() as cur:
-        linhas = linhas_exportacao(cur, ids)
-    dados, ct = serializar_exportacao(linhas, formato)
+        if ids:
+            cur.execute(
+                "SELECT i.id, i.tipo, i.titulo, i.resumo, i.tags, u.login AS dono, i.acesso, "
+                "i.status, i.criado_em, i.modificado_em "
+                "FROM plat.item i JOIN plat.usuario u ON u.id = i.dono_id WHERE i.id = ANY "
+                "(%s::uuid[]) AND i.apagado_em IS NULL ORDER BY i.titulo",
+                ([str(x) for x in ids],),
+            )
+        else:
+            cur.execute(
+                "SELECT i.id, i.tipo, i.titulo, i.resumo, i.tags, u.login AS dono, i.acesso, "
+                "i.status, i.criado_em, i.modificado_em "
+                "FROM plat.item i JOIN plat.usuario u ON u.id = i.dono_id WHERE i.apagado_em IS NULL ORDER BY i.titulo"
+            )
+        linhas = [dict(r) for r in cur.fetchall()]
+    if formato == "csv":
+        buf = io.StringIO()
+        w = csv.DictWriter(
+            buf,
+            fieldnames=[
+                "id",
+                "tipo",
+                "titulo",
+                "resumo",
+                "tags",
+                "dono",
+                "acesso",
+                "status",
+                "criado_em",
+                "modificado_em",
+            ],
+        )
+        w.writeheader()
+        for r in linhas:
+            r["tags"] = ";".join(r["tags"] or [])
+            w.writerow({k: r[k] for k in w.fieldnames})
+        dados, ct = buf.getvalue().encode("utf-8"), "text/csv"
+    else:
+        dados, ct = json.dumps(linhas, ensure_ascii=False, default=str).encode("utf-8"), "application/json"
     with ctx.db() as cur:
         o = objetos.guardar(cur, "exportacao", dados, ct, item_id=ctx.job_id)
     ctx.progresso(100, f"{len(linhas)} itens exportados")

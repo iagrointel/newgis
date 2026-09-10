@@ -15,11 +15,6 @@ from PIL import Image
 
 from tests.api.conftest import PREFIXO_TESTE
 
-# serial (07/09): muda a configuração do INQUILINO demo inteiro — cota de armazenamento, cota de usuários
-# (posta no número exato de ativos, o que impede qualquer outro worker de criar usuário) e entradas de auth.
-# Roda sozinho, na segunda invocação com -n 0.
-pytestmark = pytest.mark.serial
-
 
 def _corpo(org: dict) -> dict:
     """Corpo de PUT /api/org que reproduz exatamente o que um GET devolveu (contrato full-replace, igual ao
@@ -57,10 +52,10 @@ def test_ler_e_gravar_exige_org_configurar_editor_recebe_403(sessao_a, usuarios_
         assert chave in org, chave
     assert org["slug"] == "demo"
     assert set(org["mapa"]) == {"centro", "zoom", "basemap", "srid_padrao"}
-    # cota_bytes_teto/cota_teto entraram no conserto dos achados G4-04/G4-05: a tela precisa saber até onde o
-    # inquilino pode ir, e o teto é escrito só pela plataforma (PUT /api/plataforma/inquilinos/{id}/cotas)
+    # cota_bytes_teto/teto (item L0-07-c-cotas-uso): teto imposto pela PLATAFORMA, que este PUT nunca
+    # ultrapassa — só o superadmin move (POST /api/plataforma/inquilinos/{id}/cotas), ver tests/api/test_cotas.py
     assert set(org["armazenamento"]) == {"cota_bytes", "cota_bytes_teto", "bytes_usados"}
-    assert set(org["usuarios"]) == {"cota", "cota_teto", "ativos"}
+    assert set(org["usuarios"]) == {"cota", "teto", "ativos"}
     assert org["auth"]["senha_min"] >= 8  # a MESMA política que /api/eu já expõe (subconjunto), aqui completa
 
     c_ed, _, _ = usuarios_a.sessao("editor")
@@ -76,9 +71,7 @@ def test_gravar_altera_nome_cor_idioma_mapa_e_cota_reflete_em_arquivos(sessao_a)
     original = sessao_a.get("/api/org").json()
     try:
         novo_nome = f"{PREFIXO_TESTE}-org-{secrets.token_hex(3)}"
-        # ABAIXO da cota vigente: subir passaria do teto do inquilino (422 cota_acima_do_teto desde o conserto
-        # do G4-04), e o que este portão mede é o reflexo imediato da mudança em /api/arquivos, não a direção
-        nova_cota = original["armazenamento"]["cota_bytes"] - 111 * 1024 * 1024
+        nova_cota = original["armazenamento"]["cota_bytes"] + 111 * 1024 * 1024
         corpo = _corpo(original)
         corpo.update(
             nome=novo_nome, cor="#112233", idioma_padrao="pt-BR", centro=[-46.63, -23.55], zoom=11,

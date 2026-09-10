@@ -54,8 +54,8 @@ class OrgEntrada(Modelo):
     zoom: int | None = Field(default=None, ge=0, le=limites.ORG_ZOOM_MAX)
     basemap: str | None = Field(default=None, max_length=limites.ORG_BASEMAP_MAX)
     srid_padrao: int | None = Field(default=None, ge=1024, le=999999)
-    cota_bytes: int = Field(ge=limites.ORG_COTA_BYTES_MIN, le=limites.ORG_COTA_BYTES_TETO_MAX)
-    cota_usuarios: int = Field(ge=limites.ORG_COTA_USUARIOS_MIN, le=limites.ORG_COTA_USUARIOS_TETO_MAX)
+    cota_bytes: int = Field(ge=limites.ORG_COTA_BYTES_MIN)
+    cota_usuarios: int = Field(ge=limites.ORG_COTA_USUARIOS_MIN)
     auth: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -106,12 +106,13 @@ def _auth_completo(p: Politica) -> dict:
 
 def _org_json(cur, auth: Auth) -> dict:
     cur.execute(
-        "SELECT nome, ativo, cota_bytes, cota_bytes_teto, cota_usuarios_teto, config "
-        "FROM plat.tenant WHERE id = plat.tenant_atual()"
+        "SELECT nome, ativo, cota_bytes, cota_bytes_teto, config FROM plat.tenant WHERE id = plat.tenant_atual()"
     )
     t = cur.fetchone()
     cur.execute(
-        "SELECT plat.cota_usuarios(%s) AS cota, plat.usuarios_ativos(%s) AS ativos", (auth.tenant_id, auth.tenant_id)
+        "SELECT plat.cota_usuarios(%s) AS cota, plat.usuarios_ativos(%s) AS ativos, "
+        "plat.cota_usuarios_teto(%s) AS teto",
+        (auth.tenant_id, auth.tenant_id, auth.tenant_id),
     )
     u = cur.fetchone()
     config = t["config"] or {}
@@ -129,12 +130,14 @@ def _org_json(cur, auth: Auth) -> dict:
             "basemap": config.get("basemap"),
             "srid_padrao": config.get("srid_padrao"),
         },
+        # cota_bytes_teto/teto (item L0-07-c-cotas-uso): teto IMPOSTO PELA PLATAFORMA (só o superadmin move,
+        # plat.tenant_cotas_definir) — o inquilino edita a própria cota livremente ABAIXO do teto, nunca acima
+        # (achado do adversário 06/09: sem isso o admin do inquilino elevava a própria cota sem limite).
         "armazenamento": {
-            "cota_bytes": t["cota_bytes"],
-            "cota_bytes_teto": t["cota_bytes_teto"],
+            "cota_bytes": t["cota_bytes"], "cota_bytes_teto": t["cota_bytes_teto"],
             "bytes_usados": objetos.uso(auth.tenant_slug),
         },
-        "usuarios": {"cota": u["cota"], "cota_teto": t["cota_usuarios_teto"], "ativos": u["ativos"]},
+        "usuarios": {"cota": u["cota"], "teto": u["teto"], "ativos": u["ativos"]},
         "auth": _auth_completo(politica),
     }
 
@@ -160,25 +163,28 @@ def org_gravar(corpo: OrgEntrada, request: Request, auth: Auth = autenticado("or
     erros_auth = validar_config_auth(corpo.auth)
     if erros_auth:
         raise ErroAPI(422, "validacao", "política de senha/2FA/domínios inválida", erros_auth)
+    # teto IMPOSTO PELA PLATAFORMA (item L0-07-c-cotas-uso, correção pós-refutação de 06/09): o admin do
+    # inquilino sobe/desce a própria cota livremente, mas nunca acima do teto que só o superadmin move
+    # (plat.tenant_cotas_definir) — sem esta checagem a rota só tinha piso (Field ge=...), e um adversário
+    # provou que o admin elevava a própria cota_bytes/cota_usuarios sem limite algum.
     with db.db(auth.contexto()) as cur:
-        cur.execute(
-            "SELECT cota_bytes_teto, cota_usuarios_teto FROM plat.tenant WHERE id = plat.tenant_atual()"
-        )
-        teto = cur.fetchone()
-    # Achados G4-04 e G4-05: a rota é do admin do INQUILINO e só tinha piso. Quem escolhe o teto é a
-    # plataforma (PUT /api/plataforma/inquilinos/{id}/cotas, superadmin); aqui o inquilino escolhe abaixo dele.
-    # O gatilho tg_tenant_cota_guarda repete a regra no banco, para que nenhum caminho novo a contorne.
-    if corpo.cota_bytes > teto["cota_bytes_teto"]:
+        cur.execute("SELECT cota_bytes_teto FROM plat.tenant WHERE id = plat.tenant_atual()")
+        teto_bytes = cur.fetchone()["cota_bytes_teto"]
+        cur.execute("SELECT plat.cota_usuarios_teto(%s) AS teto", (auth.tenant_id,))
+        teto_usuarios = cur.fetchone()["teto"]
+    if corpo.cota_bytes > teto_bytes:
         raise ErroAPI(
-            422, "cota_acima_do_teto",
-            "cota_bytes acima do teto definido pela plataforma para este inquilino",
-            {"campo": "cota_bytes", "teto": teto["cota_bytes_teto"]},
+            422, "cota_bytes_acima_do_teto",
+            f"cota_bytes não pode passar do teto de {teto_bytes} bytes definido pela plataforma "
+            "(fale com o superadmin para subir o teto)",
+            {"campo": "cota_bytes", "teto": teto_bytes},
         )
-    if corpo.cota_usuarios > teto["cota_usuarios_teto"]:
+    if corpo.cota_usuarios > teto_usuarios:
         raise ErroAPI(
-            422, "cota_acima_do_teto",
-            "cota_usuarios acima do teto definido pela plataforma para este inquilino",
-            {"campo": "cota_usuarios", "teto": teto["cota_usuarios_teto"]},
+            422, "cota_usuarios_acima_do_teto",
+            f"cota_usuarios não pode passar do teto de {teto_usuarios} definido pela plataforma "
+            "(fale com o superadmin para subir o teto)",
+            {"campo": "cota_usuarios", "teto": teto_usuarios},
         )
     merge = {
         "cor": corpo.cor,

@@ -173,6 +173,17 @@ def test_expurgo_com_relogio_simulado_apaga_tabela_fisica(sessao_a, itens_a, con
         "POST /api/jobs catalogo.lixeira_expurgar (1 camada apagada há 31 dias) até concluido",
     )
     with conexao_plat_app.cursor() as cur:
+        # to_regclass(%s) não funciona numa base de TRILHA (achado do item L0-07-c-cotas-uso): o rewrite de
+        # schema (app/schema_ambiente.py) só troca texto da CONSULTA, nunca valor de bind — 'plat_trabalho'
+        # como parâmetro nunca vira 'plat_trabalho_t<nome>', então esta checagem sempre "passava" (t is None)
+        # mesmo quando a tabela física continuava viva. O schema vai NA CONSULTA (mesmo texto que o
+        # destruidor usa para o próprio DROP, app/catalogo/destruidores.py::_camada_vetorial).
+        cur.execute(
+            "SELECT count(*) AS n FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+            "WHERE n.nspname = 'plat_trabalho' AND c.relname = %s",
+            (tabela,),
+        )
+        assert cur.fetchone()["n"] == 0, "a tabela física tem de sumir no expurgo"
         # 07/09: o nome do schema vai no TEXTO da consulta, não como parâmetro — é o texto que
         # CursorSchemaAmbiente reescreve para o schema da trilha (base própria da fila/homolog);
         # como parâmetro, `plat_trabalho` batia no schema de PRODUÇÃO e dava permission denied.

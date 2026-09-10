@@ -26,10 +26,16 @@ def _camada_vetorial(cur, dados: dict, log) -> int:
     if cur.fetchone()["tem"]:
         cur.execute("SELECT plat.camada_apagar(%s, %s)", (schema, tabela))
         return 0
+    # schema/tabela vão NA CONSULTA (não como parâmetro de bind), igual ao DROP TABLE logo abaixo — item
+    # L0-07-c-cotas-uso, achado ao escrever o teste do contador simétrico: numa base de TRILHA (schema
+    # plat_trabalho_t<nome> em vez de plat_trabalho, ver app/schema_ambiente.py) o rewrite de schema só troca
+    # texto da CONSULTA, nunca valor de bind — com %s aqui a comparação nspname = 'plat_trabalho' nunca batia
+    # com o schema real da trilha, `r` saía None, e nem o DROP nem o desconto de tenant.uso_bytes rodavam,
+    # mesmo com a tabela viva (silencioso: o job terminava "concluido" com bytes_liberados=0). Seguro porque
+    # NOME já validou os dois contra `^[a-z][a-z0-9_]{1,62}$` duas linhas acima (sem aspas, sem ';', sem espaço).
     cur.execute(
-        "SELECT pg_total_relation_size(c.oid) AS b FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
-        "WHERE n.nspname = %s AND c.relname = %s",
-        (schema, tabela),
+        f"SELECT pg_total_relation_size(c.oid) AS b FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+        f"WHERE n.nspname = '{schema}' AND c.relname = '{tabela}'"
     )
     r = cur.fetchone()
     if r is None:

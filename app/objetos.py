@@ -5,8 +5,7 @@ url_assinada/assinatura_valida` que `app/catalogo/miniatura.py`, `app/catalogo/d
 desses quatro arquivos muda de comportamento por fora; só `guardar` ganha `cur` (para gravar o metadado com RLS e
 para achar o inquilino atual) e um `item_id` agora opcional (uploads genéricos, sem item dono).
 
-Isolamento entre INQUILINOS: 1 bucket por inquilino no Garage (`plat.arquivo_bucket`, alias
-`<PLAT_GARAGE_BUCKET_PREFIXO><slug>`),
+Isolamento: 1 bucket por inquilino no Garage (`plat.arquivo_bucket`, alias `<PLAT_GARAGE_BUCKET_PREFIXO><slug>`),
 criado sob demanda (`garantir_bucket`) com 2 chaves de acesso próprias (RW só a API usa; RO reservada ao L1-02
 para tiles) e cota espelhada de `tenant.cota_bytes` — o próprio Garage recusa escrita acima da cota (MEDIDO
 contra esta instância antes de escrever este módulo, ver ADR 0006 seção 3: PUT acima da cota devolve 403
@@ -41,12 +40,7 @@ from typing import Any
 from app import db
 from app.garage import ClienteAdmin, ClienteS3, ErroGarage
 from app.settings import settings
-from app.varredura_conteudo import (  # noqa: F401 — reexportados (item L7-03-b)
-    ConteudoRecusado,
-    escanear_cabecalho,
-    escanear_continuacao,
-)
-from app.varredura_conteudo import cauda as cauda_varredura  # noqa: F401 — reexportado (item L7-03-b)
+from app.varredura_conteudo import ConteudoRecusado, escanear_cabecalho  # noqa: F401 — reexportado (item L7-03-b)
 
 log = logging.getLogger("plat.objetos")
 
@@ -78,9 +72,7 @@ class ChaveInvalida(ValueError):
 
 
 class ConfiguracaoAusente(RuntimeError):
-    """Nenhum dos dois modos de provisionamento configurado: nem (PLAT_GARAGE_ADMIN_URL +
-    PLAT_GARAGE_ADMIN_TOKEN), nem (PLAT_GARAGE_CHAVE_ID + PLAT_GARAGE_CHAVE_SEGREDO). Sem um dos dois não se
-    cria bucket novo."""
+    """PLAT_GARAGE_ADMIN_URL/PLAT_GARAGE_ADMIN_TOKEN ausentes: sem eles não se cria bucket novo."""
 
 
 class CotaExcedida(RuntimeError):
@@ -100,39 +92,8 @@ def _partes(chave: str) -> dict:
 
 def _admin() -> ClienteAdmin:
     if not settings.PLAT_GARAGE_ADMIN_URL or not settings.PLAT_GARAGE_ADMIN_TOKEN:
-        raise ConfiguracaoAusente(
-            "L0-11 exige um dos dois modos: PLAT_GARAGE_ADMIN_URL + PLAT_GARAGE_ADMIN_TOKEN (produção) ou "
-            "PLAT_GARAGE_CHAVE_ID + PLAT_GARAGE_CHAVE_SEGREDO (chave própria do ambiente, item L7-31)"
-        )
+        raise ConfiguracaoAusente("PLAT_GARAGE_ADMIN_URL e PLAT_GARAGE_ADMIN_TOKEN são obrigatórios para L0-11")
     return ClienteAdmin(settings.PLAT_GARAGE_ADMIN_URL, settings.PLAT_GARAGE_ADMIN_TOKEN)
-
-
-def _tem_admin() -> bool:
-    return bool(settings.PLAT_GARAGE_ADMIN_URL and settings.PLAT_GARAGE_ADMIN_TOKEN)
-
-
-def _chave_propria() -> ClienteS3 | None:
-    """Cliente S3 da CHAVE PRÓPRIA DO AMBIENTE (item L7-31), quando ela existe. É o modo sem administração:
-    o ambiente cria os próprios buckets por `CreateBucket` do S3 e só enxerga os buckets de que essa chave é
-    dona — não lista, não lê e não escreve em bucket de outro ambiente (o Garage responde 403 AccessDenied,
-    MEDIDO nesta instância). Produção não define estas chaves e continua no modo Admin API, bit a bit igual."""
-    if not (settings.PLAT_GARAGE_CHAVE_ID and settings.PLAT_GARAGE_CHAVE_SEGREDO and settings.PLAT_GARAGE_URL):
-        return None
-    return ClienteS3(
-        settings.PLAT_GARAGE_URL,
-        settings.PLAT_GARAGE_CHAVE_ID,
-        settings.PLAT_GARAGE_CHAVE_SEGREDO,
-        settings.PLAT_GARAGE_REGIAO,
-    )
-
-
-def _uso_bytes(bucket: dict) -> int:
-    """Bytes ocupados pelo bucket. Com token de administração vem somado pelo servidor (`GetBucketInfo`);
-    sem ele (modo de chave própria) vem da listagem S3 do próprio bucket — mesmo número, um pedido a mais."""
-    if _tem_admin():
-        return int(_admin().info_bucket(bucket["bucket_id"]).get("bytes", 0))
-    cli = _cliente(bucket)
-    return cli.bytes_usados(bucket["bucket_alias"])
 
 
 def _cliente(bucket: dict, *, ro: bool = False) -> ClienteS3:
@@ -162,65 +123,22 @@ def _cota_bytes_tenant(cur, tenant_id: int) -> int:
     return int(r["cota_bytes"]) if r else 21474836480
 
 
-def _garantir_bucket_chave_propria(cur, tenant_id: int, alias: str, cli: ClienteS3, cota_bytes: int) -> dict:
-    """Cria o bucket do inquilino com a chave própria do ambiente (item L7-31): `CreateBucket` do S3, alias
-    LOCAL da chave, e a MESMA chave gravada como RW e RO em `arquivo_bucket`. Duas diferenças declaradas em
-    relação ao modo de produção, ambas consequência de não haver poder de administração aqui e ambas escritas
-    em docs/AMBIENTES.md: (1) não há par RW/RO distinto — criar chave nova é chamada de administração; (2) a
-    cota não é gravada no Garage, então quem barra o excesso é só a checagem da própria aplicação em
-    `guardar()` (em produção o Garage também barra, com 403). O `bucket_id` guardado é sintético
-    (`s3local:<alias>`) porque bucket de alias local não tem id exposto ao dono da chave; nada o usa fora das
-    chamadas de administração, que este modo não faz."""
-    criado = cli.criar_bucket(alias)
-    cur.execute(
-        "SELECT plat.arquivo_bucket_registrar(%s,%s,%s,%s,%s,%s,%s,%s)",
-        (
-            tenant_id, f"s3local:{alias}", alias,
-            cli.access_key, cli.secret_key, cli.access_key, cli.secret_key, cota_bytes,
-        ),
-    )
-    log.info(
-        "objetos: bucket %s %s para tenant_id=%s pela chave própria do ambiente (sem Admin API)",
-        alias, "criado" if criado else "reaproveitado", tenant_id,
-    )
-    return _linha_bucket(cur, tenant_id)
-
-
 def garantir_bucket(cur, tenant_id: int | None = None, tenant_slug: str | None = None) -> dict:
     """Idempotente: cria bucket + 2 chaves (RW, RO) + cota no Garage na 1ª chamada; nas seguintes só confere e
-    resincroniza a cota se `tenant.cota_bytes` mudou desde a última vez. Devolve a linha de `plat.arquivo_bucket`.
-
-    Dois modos (item L7-31): com token de administração é o de sempre, pela Admin API. Sem ele, e com a chave
-    S3 própria do ambiente configurada, o bucket nasce pelo `CreateBucket` do S3 com alias local dessa chave
-    (`_garantir_bucket_chave_propria`) — é como homologação deixou de compartilhar a credencial raiz com
-    produção. As diferenças do segundo modo estão escritas em docs/AMBIENTES.md, medidas."""
+    resincroniza a cota se `tenant.cota_bytes` mudou desde a última vez. Devolve a linha de `plat.arquivo_bucket`."""
     if tenant_id is None or tenant_slug is None:
         tenant_id, tenant_slug = _tenant_atual(cur)
     linha = _linha_bucket(cur, tenant_id)
     cota_atual = _cota_bytes_tenant(cur, tenant_id)
     if linha is not None:
         if int(linha["cota_bytes"]) != cota_atual:
-            if _tem_admin():
-                _admin().definir_cota(linha["bucket_id"], cota_atual)
+            _admin().definir_cota(linha["bucket_id"], cota_atual)
             cur.execute("SELECT plat.arquivo_bucket_cota_atualizar(%s, %s)", (tenant_id, cota_atual))
             linha = _linha_bucket(cur, tenant_id)
         return linha
-    alias = f"{settings.PLAT_GARAGE_BUCKET_PREFIXO}{tenant_slug}"
-    propria = _chave_propria()
-    if propria is not None and not _tem_admin():
-        return _garantir_bucket_chave_propria(cur, tenant_id, alias, propria, cota_atual)
     admin = _admin()
+    alias = f"{settings.PLAT_GARAGE_BUCKET_PREFIXO}{tenant_slug}"
     bucket = admin.criar_bucket(alias)
-    # Este ramo roda só quando NÃO há linha em plat.arquivo_bucket — inclusive quando a base foi recriada
-    # (restauração, trilha de teste) e o Garage sobreviveu com as chaves antigas. Nesse caso o segredo da
-    # chave de mesmo nome não está gravado em lugar nenhum (o Garage não o devolve de novo), então reusar a
-    # chave é incoerente: roda-se ROTAÇÃO — apaga-se a chave órfã e cria-se outra com o mesmo nome (L0-13).
-    # Quando a linha EXISTE (ramo de cima) nada aqui roda e a chave gravada segue valendo.
-    for sufixo in ("-rw", "-ro"):
-        orfa = admin.chave_por_nome(f"{alias}{sufixo}")
-        if orfa is not None:
-            log.warning("objetos: chave %s sem linha em arquivo_bucket (base recriada?): rotacionada", orfa["id"])
-            admin.apagar_chave(orfa["id"])
     rw = admin.criar_chave(f"{alias}-rw")
     ro = admin.criar_chave(f"{alias}-ro")
     ids_permitidos = {k["accessKeyId"] for k in bucket.get("keys", [])}
@@ -229,6 +147,9 @@ def garantir_bucket(cur, tenant_id: int | None = None, tenant_slug: str | None =
     if ro["accessKeyId"] not in ids_permitidos:
         admin.permitir(bucket["id"], ro["accessKeyId"], ler=True, escrever=False, dono=False)
     admin.definir_cota(bucket["id"], cota_atual)
+    # criar_chave é idempotente por NOME (ClienteAdmin.criar_chave): se a chave já existia, a resposta não traz
+    # `secretAccessKey` de volta (o Garage só devolve o segredo na criação) — nesse caso o segredo já gravado em
+    # plat.arquivo_bucket é o único que vale; só entra aqui na 1ª vez que este bucket é criado, então sempre é novo
     cur.execute(
         "SELECT plat.arquivo_bucket_registrar(%s,%s,%s,%s,%s,%s,%s,%s)",
         (
@@ -314,10 +235,20 @@ def guardar(
     chave = f"{tenant_slug}/{obj_key}"
     cli = _cliente(bucket)
     if cli.head(bucket["bucket_alias"], obj_key) is None:
-        usado = _uso_bytes(bucket)
-        if usado + len(dados) > bucket["cota_bytes"]:
+        # cota checada sob SELECT ... FOR UPDATE na linha do tenant (item L0-07-c-cotas-uso, refutação "20
+        # uploads paralelos"): o uso lógico é a soma dos bytes VIVOS de plat.arquivo (plat.arquivo_uso_bytes,
+        # migração 20260906T2124) — sem contador novo que possa dessincronizar, mesmo princípio da reserva do
+        # upload retomável (046). A trava serializa dois guardar concorrentes do mesmo inquilino: o 2º só lê
+        # depois do 1º commitar (e o INSERT do metadado abaixo acontece na MESMA transação). A cota maxSize do
+        # bucket no Garage segue como último obstáculo físico (objeto fantasma fora de plat.arquivo).
+        cur.execute("SELECT cota_bytes FROM plat.tenant WHERE id = %s FOR UPDATE", (tenant_id,))
+        cota = int(cur.fetchone()["cota_bytes"])
+        cur.execute("SELECT plat.arquivo_uso_bytes(%s) AS u", (tenant_id,))
+        usado = int(cur.fetchone()["u"])
+        if usado + len(dados) > cota:
             raise CotaExcedida(
-                f"cota de {bucket['cota_bytes']} bytes excedida: uso atual {usado}, objeto de {len(dados)} bytes"
+                f"cota de armazenamento excedida: uso atual {usado} bytes + objeto de {len(dados)} bytes "
+                f"passa do limite de {cota} bytes"
             )
         cli.put(bucket["bucket_alias"], obj_key, dados, content_type)
     _registrar_metadado(cur, tenant_id, classe, referencia, sha, len(dados), content_type, chave, usuario_id)
@@ -368,7 +299,7 @@ def uso(tenant_slug: str) -> int:
     bucket = _resolver_bucket_por_slug(tenant_slug)
     if bucket is None:
         return 0
-    return _uso_bytes(bucket)
+    return int(_admin().info_bucket(bucket["bucket_id"]).get("bytes", 0))
 
 
 # ---------------------------------------------------------------- assinatura HMAC (inalterado; ADR 0004 11.2)
@@ -383,10 +314,19 @@ def url_assinada(chave: str, segundos: int, segredo: str | None = None) -> str:
 
 
 def assinatura_valida(chave: str, ate: int, assinatura: str, segredo: str | None = None) -> bool:
+    """item L7-19: além do segredo atual, aceita `PLAT_SECRET_ANTERIOR` (dupla-chave, 24h após uma
+    rotação) — uma URL assinada minutos antes da troca não pode virar 403 no meio da janela de rotação."""
     if not CHAVE.match(chave) or ate < int(time.time()):
         return False
+    assinatura = assinatura or ""
     esperada = _assinar(chave, ate, segredo or settings.PLAT_SECRET)
-    return hmac.compare_digest(esperada, assinatura or "")
+    if hmac.compare_digest(esperada, assinatura):
+        return True
+    if segredo is None and settings.PLAT_SECRET_ANTERIOR:
+        esperada_anterior = _assinar(chave, ate, settings.PLAT_SECRET_ANTERIOR)
+        if hmac.compare_digest(esperada_anterior, assinatura):
+            return True
+    return False
 
 
 # ---------------------------------------------------------------- multipart (contrato ADR 0005 seção 11.3-estendida)
