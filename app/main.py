@@ -21,6 +21,7 @@ from app.amc.rotas_pareto import router as rotas_amc_pareto
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
 from app.auth import (
+    rotas_auditoria,
     rotas_convites,
     rotas_eu,
     rotas_grupos,
@@ -194,6 +195,8 @@ ROUTERS = [
     rotas_grupos.router,
     rotas_tokens.router,
     rotas_log.router,
+    # --- trilha de auditoria (L7-20): GET /api/auditoria (+ CSV/JSON), GET/PUT /api/auditoria/config
+    rotas_auditoria.router,
     rotas_plataforma.router,
     # --- configurações da organização (L0-07-a-configuracoes-org): GET/PUT /api/org; POST/DELETE /api/org/logo
     rotas_org.router,
@@ -472,6 +475,15 @@ for _router in ROUTERS:
 # item L7-08-d: `x-plat-escopo` em toda operação, derivado da dependência de autenticação da própria rota
 # (app/portal/openapi.py explica por que derivado e não declarado à mão). Tem de vir DEPOIS do include_router.
 portal_openapi.instalar(app)
+
+# /static/ é do nginx em produção (ADR 0001 seção 4.3) e assim continua. PLAT_SERVIR_ESTATICO=1 monta o
+# diretório na própria aplicação para o caso em que não há nginx na frente: o e2e de uma trilha do laço sobe
+# só o uvicorn numa porta sua, e sem isto toda folha e todo módulo da página dariam 404 no navegador (achado
+# do 1º turno, registrado em scripts/homolog_e2e.sh, que resolveu o mesmo problema pondo um nginx no meio).
+# Recusado em produção mesmo que a variável apareça: lá o nginx é a origem do estático e do Cache-Control.
+if os.environ.get("PLAT_SERVIR_ESTATICO") == "1" and not settings.producao:
+    app.mount("/static", StaticFiles(directory=WEB), name="estatico")
+
 
 # /static/ é do nginx em produção (ADR 0001 seção 4.3) e assim continua. PLAT_SERVIR_ESTATICO=1 monta o
 # diretório na própria aplicação para o caso em que não há nginx na frente: o e2e de uma trilha do laço sobe
