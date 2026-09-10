@@ -33,7 +33,14 @@ def _rodar(script: Path, *args: str, ambiente: dict) -> subprocess.CompletedProc
 
 
 def _ambiente(chave_privada: Path, confiaveis: Path, home: Path | None = None) -> dict:
-    d = {"PLAT_CHAVE_PRIVADA": str(chave_privada), "PLAT_CHAVES_CONFIAVEIS": str(confiaveis)}
+    # PLAT_AMBIENTE=dev é OBRIGATÓRIO aqui desde o endurecimento de 06/09/2026: fora de ambiente
+    # declarado de desenvolvimento, PLAT_CHAVES_CONFIAVEIS é ignorada e a lista de confiança é sempre
+    # deploy/chaves_publicas_release.txt (ver chaves_confiaveis_efetivas em scripts/plat_assinatura.py).
+    d = {
+        "PLAT_CHAVE_PRIVADA": str(chave_privada),
+        "PLAT_CHAVES_CONFIAVEIS": str(confiaveis),
+        "PLAT_AMBIENTE": "dev",
+    }
     if home is not None:
         d["HOME"] = str(home)
     return d
@@ -69,8 +76,11 @@ def test_assinar_gera_chave_na_primeira_execucao_e_registra_publica(tmp_path, pa
     assert sig.is_file()
     info = json.loads(sig.read_text())
     assert info["algoritmo"] == "ed25519"
+    assert info["formato"] == "plat-sig-2"
     assert info["chave_id"] == chave_id
-    assert info["tamanho_bytes"] == pacote.stat().st_size
+    # nome, tamanho e sha256 entraram DENTRO do que a assinatura cobre (achado 3 do adversário)
+    assert info["declaracao"]["tamanho_bytes"] == pacote.stat().st_size
+    assert info["declaracao"]["arquivo"] == pacote.name
 
     # rodar de novo não deve gerar chave nova nem duplicar a linha de confiança
     r2 = _rodar(ASSINAR, str(pacote), ambiente=ambiente)
@@ -154,26 +164,33 @@ def test_rotacao_chave_nova_so_e_aceita_depois_de_distribuida(tmp_path, pacote):
     linhas_so_antiga = confiaveis.read_text()
     assert linhas_so_antiga.count("\n") >= 1
 
-    # 2) a chave nova é gerada (em outro caminho, simulando outro host de release) e assina um pacote —
-    #    mas registrada num arquivo de confiança PRÓPRIO ainda não distribuído ao appliance
+    # 2) a chave nova é gerada (em outro caminho, simulando outro host de release, com a própria âncora
+    #    vazia) e assina um pacote. Desde o endurecimento de 06/09/2026 a ferramenta de assinatura NÃO
+    #    escreve na lista do appliance: é o achado 1 do adversário, e o teste confere isso agora.
     confiaveis_do_gerador_novo = tmp_path / "confiaveis_gerador_novo.txt"
-    confiaveis_do_gerador_novo.write_text(linhas_so_antiga)  # o gerador novo parte do que o appliance já tinha
     assert _rodar(ASSINAR, str(pacote), ambiente=_ambiente(chave_nova, confiaveis_do_gerador_novo)).returncode == 0
+    assert confiaveis.read_text() == linhas_so_antiga, "assinar mexeu na lista de confiança do appliance"
 
     # o appliance (arquivo de confiança "confiaveis", só com a antiga) recusa o pacote assinado com a nova
     r_cedo = _rodar(VERIFICAR, str(pacote), ambiente=_ambiente(chave_antiga, confiaveis))
     assert r_cedo.returncode != 0
     assert "não é confiável" in r_cedo.stderr
 
-    # 3) a "atualização" chega: a linha da chave nova é acrescentada ao arquivo do appliance (em produção
-    #    isso vem dentro de um pacote assinado com a chave ANTIGA, já provado aceito no passo 1)
-    linha_nova = [
-        linha
+    # 3) a "atualização" chega: quem OPERA a instalação confia na chave nova pelo ato explícito de
+    #    scripts/confiar_chave_release.sh (em produção essa linha viaja dentro de um pacote assinado com
+    #    a chave ANTIGA, já provado aceito no passo 1). Sem --confirmo o script recusa.
+    id_novo, publica_nova = [
+        linha.split()[:2]
         for linha in confiaveis_do_gerador_novo.read_text().splitlines()
         if linha and not linha.startswith("#")
     ][-1]
-    with confiaveis.open("a", encoding="utf-8") as f:
-        f.write(linha_nova + "\n")
+    confiar = ROOT / "scripts" / "confiar_chave_release.sh"
+    sem_confirmo = _rodar(confiar, id_novo, publica_nova, ambiente=_ambiente(chave_antiga, confiaveis))
+    assert sem_confirmo.returncode == 2 and "--confirmo" in sem_confirmo.stderr
+    r_confiar = _rodar(
+        confiar, id_novo, publica_nova, "rotacao", "--confirmo", ambiente=_ambiente(chave_antiga, confiaveis)
+    )
+    assert r_confiar.returncode == 0, r_confiar.stderr
 
     # 4) agora o mesmo pacote assinado com a chave nova passa a ser aceito
     r_tarde = _rodar(VERIFICAR, str(pacote), ambiente=_ambiente(chave_antiga, confiaveis))
@@ -231,6 +248,7 @@ def test_chave_privada_padrao_fica_fora_do_repositorio(tmp_path, pacote):
     env = dict(os.environ)
     env.pop("PLAT_CHAVE_PRIVADA", None)
     env["PLAT_CHAVES_CONFIAVEIS"] = str(confiaveis)
+    env["PLAT_AMBIENTE"] = "dev"
     env["HOME"] = str(home_falso)
     r = subprocess.run(
         ["bash", str(ASSINAR), str(pacote)], cwd=ROOT, env=env, capture_output=True, text=True, timeout=30

@@ -18,19 +18,14 @@ Environment=PYTHONNOUSERSITE=1
 # se souber o caminho. Isolamento por-unidade de verdade pediria DynamicUser= (usuário efêmero por
 # serviço); fora de escopo aqui por reescrever a dono de toda a árvore do repositório. Ver docs/SEGURANCA.md §1.
 LoadCredential=PLAT_SECRET:/etc/plat/segredos/PLAT_SECRET
-# PLAT_SECRET_ANTERIOR (item L7-19): dupla-chave de rotação, 24h. O arquivo TEM de existir sempre
-# (LoadCredential= falha a subida se o caminho não existir) — install.sh cria vazio quando não há rotação
-# em curso; settings.py trata vazio como ausente. Nunca em Environment=/argv, aqui incluído.
-LoadCredential=PLAT_SECRET_ANTERIOR:/etc/plat/segredos/PLAT_SECRET_ANTERIOR
-# PLAT_DSN (senha da role plat_app) e PLAT_GARAGE_ADMIN_TOKEN (bearer da Admin API do Garage, :3903): mesmo
-# mecanismo, mesma ACL medida acima. PLAT_GARAGE_ADMIN_TOKEN pode legitimamente estar vazio (instalação sem
-# admin_token configurado ainda) — settings.py trata arquivo vazio como chave opcional ausente.
+# item L7-19, achado 17 do adversário no turno 3: PLAT_DSN (senha da role plat_app, credencial de banco de
+# TODA consulta da aplicação) e PLAT_GARAGE_ADMIN_TOKEN (credencial raiz do armazenamento de objetos)
+# estavam em claro no .env. Saem pelo mesmo mecanismo dos dois de cima. Os arquivos são criados/migrados
+# pelo install.sh (seção d2); se algum faltar, o systemd recusa iniciar a unidade — é de propósito, um
+# segredo ausente tem de parar a partida, não virar fallback silencioso para o .env.
 LoadCredential=PLAT_DSN:/etc/plat/segredos/PLAT_DSN
 LoadCredential=PLAT_GARAGE_ADMIN_TOKEN:/etc/plat/segredos/PLAT_GARAGE_ADMIN_TOKEN
-# --fd 3: o soquete quem abre é o systemd (deploy/plat-api.socket, item L7-19) — durante `systemctl stop`
-# de uma rotação de segredo a conexão nova espera na fila do kernel (ativação sob demanda) em vez de
-# levar refused/502. Spike medido: parada de 3 s atendida com 200 em ~1 s, 0 erro.
-ExecStart=APP_DIR/venv/bin/python -m uvicorn app.main:app --fd 3 --workers 2 --proxy-headers --forwarded-allow-ips 127.0.0.1 --no-access-log
+ExecStart=APP_DIR/venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port PORTA --workers 2 --proxy-headers --forwarded-allow-ips 127.0.0.1 --no-access-log
 Restart=on-failure
 RestartSec=3
 MemoryHigh=768M

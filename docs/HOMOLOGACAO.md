@@ -134,9 +134,13 @@ turno (`laco/handoffs/T3/L7-31-homologacao.md`).
   bloqueia ninguém (não é um risco de travar produção), mas não é isolamento de verdade. A suíte de
   homologação não dispara esse tipo de job por padrão. Corrigir exigiria a mesma convenção de nome
   usada em `PLAT_SCHEMA`; fora do escopo combinado para este item.
-- **Garage (armazenamento de objeto) é o MESMO servidor**, só o prefixo de bucket muda
-  (`homolog-plat-` em vez de `plat-`) — não há disco para uma instância nova; o isolamento aqui é o
-  nome do bucket, nunca o servidor.
+- **Garage (armazenamento de objeto) é o MESMO servidor** — não há disco para uma instância nova.
+  A CREDENCIAL, porém, deixou de ser a mesma em 06/09/2026 (achado 11 do adversário do turno 3: o
+  token de administração era byte a byte igual nos dois ambientes e enxergava `plat-demo` e
+  `plat-demo2`). Homologação usa hoje uma chave S3 própria, sem poder de administração, dona só dos
+  buckets que ela mesma cria (alias local da chave). Ver **`docs/AMBIENTES.md`** e
+  `tests/unit/test_isolamento_homologacao.py`. O prefixo de bucket (`homolog-plat-`) continua
+  existindo, mas como defesa em profundidade: ele separa o nome, não o poder.
 - **OSRM, Martin/TiTiler e o GPU box continuam compartilhados** — são serviços de leitura (rota,
   tile, hardware), não guardam dado de inquilino; reusar não fura o isolamento de PRODUTO.
 

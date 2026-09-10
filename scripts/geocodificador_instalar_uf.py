@@ -35,7 +35,6 @@ from dotenv import dotenv_values
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from app.geocodificador.normalizacao import expandir_abreviacoes  # noqa: E402
-from app.schema_ambiente import CursorSchemaAmbiente  # noqa: E402 -- depois do sys.path acima; fábrica única (item F9), a reinvenção local do L2-11-a foi removida
 
 BASE_CNEFE = (
     "https://ftp.ibge.gov.br/Cadastro_Nacional_de_Enderecos_para_Fins_Estatisticos/Censo_Demografico_2022/"
@@ -59,22 +58,18 @@ def _log(msg: str) -> None:
 
 
 def _dsn() -> str:
-    """PLAT_DSN do ambiente do processo (trilha: `laco/trilha_ambiente.sh` grava um .env de trilha e o
-    chamador faz `set -a; source ...`) OU do `.env` da raiz, nesta ordem — não usa `app.settings`: este
-    script não precisa de PLAT_SECRET/segredos systemd, que desde o item L7-19 não moram mais no .env
-    (exigi-los aqui quebraria a carga sem motivo). O ambiente vence porque é o único jeito de uma trilha
-    (que não tem `.env` na raiz do worktree) apontar este script para o Postgres certo sem editar o script."""
+    """PLAT_DSN do ambiente do processo, e só então do .env (não usa app.settings: este script não precisa de
+    PLAT_SECRET nem dos outros segredos do systemd, que desde o item L7-19 não moram mais no .env — exigi-los
+    aqui quebraria a carga sem motivo). O ambiente vem primeiro porque o próprio PLAT_DSN saiu do .env no
+    conserto do achado 17: hoje ele mora em /etc/plat/segredos/PLAT_DSN e quem roda este script à mão o
+    injeta com `PLAT_DSN=$(sudo cat /etc/plat/segredos/PLAT_DSN) venv/bin/python scripts/...`."""
     dsn = os.environ.get("PLAT_DSN") or dotenv_values(ROOT / ".env").get("PLAT_DSN")
     if not dsn:
-        raise SystemExit("PLAT_DSN ausente (nem no ambiente, nem em .env)")
+        raise SystemExit(
+            "PLAT_DSN ausente: informe no ambiente (PLAT_DSN=$(sudo cat /etc/plat/segredos/PLAT_DSN) ...) "
+            "ou deixe-o no .env"
+        )
     return dsn
-
-
-def _conectar():
-    """Conexao com a fabrica de cursor do ambiente. Sem ela, tanto o `INSERT INTO plat.geo_uf` quanto o
-    `COPY plat.geo_endereco ... FROM STDIN` (lotes de 20.000) gravavam no `plat` de PRODUCAO a partir de
-    qualquer trilha (achado F9; o COPY e o F2, coberto agora por `CursorSchemaAmbiente.copy_expert`)."""
-    return psycopg2.connect(_dsn(), cursor_factory=CursorSchemaAmbiente)
 
 
 def medir_tamanho(cliente: httpx.Client, url: str) -> int:
@@ -156,7 +151,7 @@ def instalar(sigla: str, *, teto_bytes: int, forcar: bool, arquivo_local: str | 
         municipios = buscar_municipios(cliente, cod_uf)
     _log(f"{len(municipios)} municípios de {sigla} (IBGE localidades)")
 
-    con = _conectar()
+    con = psycopg2.connect(_dsn())
     con.autocommit = False
     try:
         with con.cursor() as cur:
