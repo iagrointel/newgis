@@ -840,7 +840,7 @@
   "org.mapa_ajuda": "centro, zoom e mapa-base com que um mapa novo abre neste inquilino",
   "org.salvo": "configuração salva",
   "org.seguranca": "Senha e segundo fator",
-  "org.seguranca_ajuda": "a mesma política que /conta já mostra a cada membro ao trocar a senha (tenant.config.auth)",
+  "org.seguranca_ajuda": "a mesma política que /conta já mostra a cada membro ao trocar a senha",
   "org.senha_expira_dias": "senha expira em N dias (0 = nunca)",
   "org.senha_historico": "não repetir as últimas N senhas",
   "org.senha_maiuscula": "exigir letra maiúscula",

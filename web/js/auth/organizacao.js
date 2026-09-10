@@ -14,6 +14,11 @@ import { exigirSessao } from './sessao.js';
 
 const IDIOMAS = [{ valor: 'pt-BR', rotulo: 'Português (Brasil)' }];
 let atual = null;
+// declarado aqui (não mais lá embaixo, perto de montarSmtp): iniciar() já dispara carregarSmtp() por baixo de
+// um `await` no TOPO do módulo, então uma declaração `let` mais abaixo no arquivo ainda está na TDZ quando o
+// primeiro `await` devolve o controle — TypeError "Cannot access 'smtpAtual' before initialization" (achado
+// na varredura QA de 10/09, tela /admin/organizacao nunca chegava a montar a seção de SMTP).
+let smtpAtual = null;
 
 await carregar();
 const usuario = await exigirSessao({ privilegio: 'org.configurar' });
@@ -206,9 +211,8 @@ document.getElementById('logo-remover').addEventListener('click', async () => {
 
 /* ---------------------------------------------------------------- SMTP (item L0-07-d-smtp-convites):
    endpoint PRÓPRIO (/api/org/smtp), fora de /api/org — a senha nunca volta na resposta (só
-   senha_configurada: bool); "host" vazio apaga o override do inquilino (volta à instalação/caminho manual). */
-let smtpAtual = null;
-
+   senha_configurada: bool); "host" vazio apaga o override do inquilino (volta à instalação/caminho manual).
+   `smtpAtual` está declarado lá em cima, junto de `atual` (motivo na TDZ). */
 async function carregarSmtp() {
   const r = await obter('/api/org/smtp');
   if (r.status !== 200) { document.getElementById('aviso').erro(`${t('smtp.erro_carregar')}: ${mensagemDe(r)}`); return; }

@@ -150,7 +150,7 @@ async function carregar() {
   limpar(corpo);
   if (!s.itens.length) {
     corpo.append(h('tr', {}, h('td', { colspan: '7', class: 'ajuda' },
-      'nenhuma conexão ainda — crie uma pela API (POST /api/conexoes) ou aguarde o conector por protocolo (L6-02-b em diante).')));
+      'nenhuma conexão configurada ainda; fale com a equipe iAgroIntel para conectar um serviço externo.')));
     return;
   }
   for (const c of s.itens) corpo.append(linha(c));
@@ -182,6 +182,13 @@ async function principal() {
   layout(usuario);
   await carregar();
 }
+
+// achado na varredura QA de 10/09: o botão existia na tela (web/conexoes.html) sem NENHUM ouvinte — clicar não
+// fazia nada, sem explicação. A criação pela tela ainda não existe (só POST /api/conexoes); em vez de um botão
+// morto, ele agora diz isso.
+document.getElementById('conexao-nova')?.addEventListener('click', () => {
+  aviso('lista-aviso', 'a criação de conexão pela tela ainda não está disponível; fale com a equipe iAgroIntel para conectar um serviço externo.', 'atencao');
+});
 
 await carregarIdioma();
 try {
