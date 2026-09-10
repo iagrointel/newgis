@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Estilo · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/estilo/tokens.css">
+<link rel="stylesheet" href="/static/estilo/base.css">
+<link rel="stylesheet" href="/static/estilo/componentes.css">
+<link rel="stylesheet" href="/static/estilo/pagina_estilo.css">
+<script src="/static/js/base/tema.js"></script>
+</head>
+<body class="tela estilo">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1>Estilo <span class="contagem" id="estilo-origem"></span></h1>
+    <p class="aviso-beta">análise / beta privado · sistema de design vivo, gerado de <code>web/estilo/tokens.css</code> no momento em que esta página abre</p>
+    <plat-aviso id="aviso"></plat-aviso>
+
+    <div class="estilo-controles cartao" id="controles">
+      <div class="controle"><span class="campo-rotulo">tema</span><div id="controle-tema"></div></div>
+      <div class="controle"><span class="campo-rotulo">densidade</span><div id="controle-densidade" class="seletor-tema" role="group" aria-label="densidade"></div></div>
+      <div class="controle"><span class="campo-rotulo">tema efetivo</span><span id="tema-efetivo" class="mono"></span></div>
+    </div>
+
+    <section class="cartao instrumento-moldura" id="sec-identidade" aria-labelledby="t-identidade">
+      <h2 id="t-identidade">o traço: a régua</h2>
+      <p>Todo número que esta plataforma mostra carrega a sua procedência: de que rota veio, em que instante e, quando existe, o comando que o gerou. É a mesma regra da casa para documento (número sai de script, com o comando), agora na interface. Passe o cursor ou o foco de teclado sobre qualquer número sublinhado por uma régua.</p>
+      <dl class="regua-demo" id="regua-demo"></dl>
+      <p class="fraco">Onde está hoje: contagem no título de cada lista, faixa da paginação, versão e saúde da página inicial, razão de contraste desta página, e a linha de procedência no rodapé de toda tela (as últimas chamadas à API com rota, código, hora UTC e duração).</p>
+    </section>
+
+    <section class="cartao" id="sec-paleta" aria-labelledby="t-paleta">
+      <h2 id="t-paleta">paleta <span class="contagem" id="paleta-n"></span></h2>
+      <p class="fraco">Cores do tema em uso. A razão de contraste é medida aqui, no navegador, pela fórmula do WCAG 2 sobre a cor calculada; AA exige 4,5:1 para texto e 3:1 para texto grande. Troque o tema acima para medir a outra paleta.</p>
+      <div class="paleta" id="paleta"></div>
+      <h3>cartografia (cor fixa, não segue o tema)</h3>
+      <div class="paleta" id="paleta-carta"></div>
+    </section>
+
+    <section class="cartao" id="sec-tipografia" aria-labelledby="t-tipografia">
+      <h2 id="t-tipografia">tipografia</h2>
+      <div class="familias" id="familias"></div>
+      <h3>escala</h3>
+      <div class="escala" id="escala"></div>
+    </section>
+
+    <section class="cartao" id="sec-espaco" aria-labelledby="t-espaco">
+      <h2 id="t-espaco">grade de espaçamento <span class="contagem" id="espaco-densidade"></span></h2>
+      <p class="fraco">Passo de 4 px multiplicado pela densidade (compacta 0,75 · normal 1 · confortável 1,25). Toda margem, preenchimento e vão do produto é um destes.</p>
+      <div class="espacos" id="espacos"></div>
+    </section>
+
+    <section class="cartao" id="sec-forma" aria-labelledby="t-forma">
+      <h2 id="t-forma">forma</h2>
+      <div class="formas" id="formas"></div>
+    </section>
+
+    <section class="cartao" id="sec-icones" aria-labelledby="t-icones">
+      <h2 id="t-icones">ícones <span class="contagem" id="icones-n"></span></h2>
+      <p class="fraco">Uma família só, desenhada em <code>web/js/base/icones.js</code>: caixa 24, traço 1,6, pontas redondas, cor corrente. Nenhum emoji e nenhum glifo de texto no produto.</p>
+      <div class="icones" id="icones"></div>
+    </section>
+
+    <section class="cartao" id="sec-componentes" aria-labelledby="t-componentes">
+      <h2 id="t-componentes">componentes e estados</h2>
+      <p class="fraco">Os 6 componentes de base, cada um nos 7 estados: repouso, foco visível, ativo, desativado, carregando, vazio e erro. São os elementos reais do produto, não desenhos.</p>
+      <div id="componentes"></div>
+    </section>
+
+    <section class="cartao" id="sec-tokens" aria-labelledby="t-tokens">
+      <h2 id="t-tokens">todos os tokens <span class="contagem" id="tokens-n"></span></h2>
+      <div class="tabela-rolagem"><table class="tabela" id="tokens-tabela"><caption class="sr-only">tokens de web/estilo/tokens.css</caption><thead><tr><th scope="col">token</th><th scope="col">escuro</th><th scope="col">claro</th><th scope="col">em uso agora</th></tr></thead><tbody></tbody></table></div>
+    </section>
+  </main>
+</div>
+<plat-dialogo id="dialogo-demo"></plat-dialogo>
+<script type="module" src="/static/js/estilo/estilo.js"></script>
+</body>
+</html>

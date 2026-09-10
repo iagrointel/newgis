@@ -6,11 +6,12 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Papéis · plat</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-<script src="/static/js/base/tema_cedo.js"></script>
-<link rel="stylesheet" href="/static/style.css">
-<script src="/static/vendor/dompurify-3.4.14.js"></script>
+<link rel="stylesheet" href="/static/estilo/tokens.css">
+<link rel="stylesheet" href="/static/estilo/base.css">
+<link rel="stylesheet" href="/static/estilo/componentes.css">
+<script src="/static/js/base/tema.js"></script>
 </head>
-<body class="tela" data-ajuda="papeis">
+<body class="tela">
 <a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
 <div class="app">
   <aside id="lateral" class="lateral"></aside>
@@ -18,8 +19,6 @@
     <h1 data-i18n="papeis.titulo">Papéis</h1>
     <div class="linha-ferramentas" id="ferramentas"></div>
     <plat-aviso id="aviso"></plat-aviso>
-    <p id="evento-registrado" class="evento-registrado" hidden aria-live="polite"></p>
-    <plat-estado id="estado" hidden></plat-estado>
     <section class="cartao" aria-labelledby="t-perfis"><h2 id="t-perfis" data-i18n="papeis.perfis">Perfis (teto de privilégios)</h2>
       <plat-tabela id="tabela-perfis" legenda="perfis"></plat-tabela></section>
     <section class="cartao" aria-labelledby="t-personalizados"><h2 id="t-personalizados" data-i18n="papeis.personalizados">Papéis personalizados</h2>

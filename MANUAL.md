@@ -2304,3 +2304,21 @@ Nada é gravado: a rota responde a uma pergunta sobre a execução; para guardar
 Exportação de VISTA de camada (o tipo `vista_de_camada` existe no catálogo, mas o item `L0-04-j` que o
 implementa ainda não foi entregue — quando for, o filtro da vista entra como mais um `where` neste mesmo
 motor) e exportação de camada REFERENCIADA (recusada com 422 `camada_nao_hospedada`, nunca silenciosa).
+---
+
+## 21. Identidade visual, tema e a régua (item L0-14-identidade-visual)
+
+A página `/estilo` (com ou sem sessão) é o sistema de design vivo: lê `web/estilo/tokens.css` no momento em que
+abre e desenha a paleta do tema em uso com a razão de contraste medida no navegador, a escala tipográfica, a
+grade de espaçamento, a forma, a família de ícones inteira e os 6 componentes de base nos 7 estados. O que se lê
+nela é o que está no arquivo; não existe cópia.
+
+Tema: os três botões na barra lateral (sistema, claro, escuro) valem para todas as telas e ficam guardados no
+navegador (`localStorage`, chave `plat_tema`); "sistema" segue a preferência do sistema operacional. Densidade
+(compacta, normal, confortável) escolhe-se em `/estilo` (chave `plat_densidade`).
+
+A régua: todo número mostrado com uma régua embaixo (traços em âmbar) carrega a procedência. Passe o cursor ou
+leve o foco de teclado até ele para ver a rota que o produziu, o instante (UTC) e, quando existe, o comando de
+conferência na linha de comando. No rodapé de toda tela com sessão, a linha "régua" lista as últimas chamadas à
+API da tela (rota, código HTTP, hora UTC, duração). Regras completas em `docs/IDENTIDADE.md`; medidas em
+`tests/medidas/L0-14.json`.

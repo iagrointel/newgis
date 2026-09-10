@@ -1,0 +1,59 @@
+/* plat — página /estilo (sistema de design vivo, item L0-14). Só o leiaute das amostras; toda cor e medida
+   vem de tokens.css. */
+.estilo-controles { display: flex; gap: var(--i-e5); align-items: center; flex-wrap: wrap; }
+.estilo-controles .controle { display: grid; gap: var(--i-e1); }
+.regua-demo { grid-template-columns: max-content max-content; gap: var(--i-e2) var(--i-e5); margin: var(--i-e3) 0; }
+.paleta { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--i-largura-coluna), 1fr)); gap: var(--i-e3); margin: var(--i-e3) 0; }
+.amostra { border: var(--i-fio) solid var(--i-linha); border-radius: var(--i-raio); overflow: hidden; background: var(--i-superficie); }
+.amostra .cor { height: var(--i-e7); display: flex; align-items: flex-end; padding: var(--i-e1) var(--i-e2); font-family: var(--i-fonte-dado); font-size: var(--i-t-1); }
+.amostra .cor-texto { background: var(--i-superficie); }
+.amostra .legenda { padding: var(--i-e2); display: grid; gap: var(--i-e0); font-size: var(--i-t0); }
+.amostra .legenda .nome { font-family: var(--i-fonte-dado); font-weight: var(--i-peso-medio); }
+.amostra .contrastes { display: flex; gap: var(--i-e2); flex-wrap: wrap; }
+.amostra .contraste { display: inline-flex; align-items: center; gap: var(--i-e0); }
+.amostra .contraste .marcador { margin: 0; }
+.familias { display: grid; gap: var(--i-e3); }
+.familia { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--i-e4); align-items: start; border: var(--i-fio) solid var(--i-linha); border-radius: var(--i-raio); padding: var(--i-e3) var(--i-e4); }
+.familia .amostra-tipo { font-size: var(--i-t6); line-height: var(--i-entrelinha-titulo); overflow-wrap: anywhere; }
+.familia .amostra-tipo.texto { font-size: var(--i-t3); line-height: var(--i-entrelinha); }
+.familia .amostra-tipo.dado { font-size: var(--i-t3); }
+.familia .motivo { font-size: var(--i-t1); }
+.familia .motivo .nome { font-family: var(--i-fonte-dado); }
+.escala { display: grid; gap: var(--i-e2); }
+.escala .degrau { display: grid; grid-template-columns: var(--i-largura-filtro) var(--i-largura-filtro) minmax(0, 1fr); gap: var(--i-e3); align-items: baseline; border-bottom: var(--i-fio) solid var(--i-linha); padding: var(--i-e1) 0; }
+.escala .degrau .nome { font-family: var(--i-fonte-dado); font-size: var(--i-t0); color: var(--i-texto-fraco); }
+.escala .degrau .valor { font-family: var(--i-fonte-dado); font-size: var(--i-t0); }
+.espacos { display: grid; gap: var(--i-e2); }
+.espacos .passo { display: grid; grid-template-columns: var(--i-largura-filtro) var(--i-largura-filtro) minmax(0, 1fr); gap: var(--i-e3); align-items: center; }
+.espacos .passo .nome, .espacos .passo .valor { font-family: var(--i-fonte-dado); font-size: var(--i-t0); }
+.espacos .passo .barra { height: var(--i-e3); background: var(--i-acento); }
+.formas { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--i-largura-coluna), 1fr)); gap: var(--i-e3); }
+.formas .forma { display: grid; gap: var(--i-e2); border: var(--i-fio) solid var(--i-linha); border-radius: var(--i-raio); padding: var(--i-e3); }
+.formas .forma .nome { font-family: var(--i-fonte-dado); font-size: var(--i-t0); color: var(--i-texto-fraco); }
+.formas .forma .amostra-forma { height: var(--i-e7); background: var(--i-superficie-2); border: var(--i-fio) solid var(--i-linha-forte); }
+.formas .forma .amostra-forma.raio { border-radius: var(--i-raio); }
+.formas .forma .amostra-forma.pilula { border-radius: var(--i-raio-pilula); }
+.formas .forma .amostra-forma.sombra { box-shadow: var(--i-sombra); border: 0; }
+.formas .forma .amostra-forma.sombra-leve { box-shadow: var(--i-sombra-leve); border: 0; }
+.formas .forma .amostra-forma.fio-forte { border-width: var(--i-fio-forte); }
+.formas .forma .amostra-forma.fio-marca { border-left-width: var(--i-fio-marca); border-left-color: var(--i-acento); }
+.formas .forma .amostra-forma.foco { outline: var(--i-foco-largura) solid var(--i-foco); outline-offset: var(--i-foco-recuo); }
+.icones { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(var(--i-largura-filtro) - var(--i-e6)), 1fr)); gap: var(--i-e2); }
+.icones .ic { display: grid; justify-items: center; gap: var(--i-e1); padding: var(--i-e2); border: var(--i-fio) solid var(--i-linha); border-radius: var(--i-raio); font-family: var(--i-fonte-dado); font-size: var(--i-t-1); color: var(--i-texto-fraco); }
+.icones .ic .icone { color: var(--i-texto); }
+.componente { margin-bottom: var(--i-e5); }
+.componente h3 { margin-bottom: var(--i-e2); }
+.estados { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(var(--i-largura-coluna) + var(--i-e8)), 1fr)); gap: var(--i-e3); }
+.estados .estado-caixa { border: var(--i-fio) solid var(--i-linha); border-radius: var(--i-raio); padding: var(--i-e3); display: grid; gap: var(--i-e2); align-content: start; min-width: 0; }
+.estados .estado-caixa > .nome { font-family: var(--i-fonte-titulo); font-weight: var(--i-peso-titulo); text-transform: uppercase; letter-spacing: var(--i-espaco-letra-titulo); font-size: var(--i-t0); color: var(--i-texto-fraco); }
+.estados .estado-caixa plat-aviso { margin: 0; }
+.estados .estado-caixa plat-tabela { font-size: var(--i-t0); }
+.estados .estado-caixa .foco-simulado { outline: var(--i-foco-largura) solid var(--i-foco); outline-offset: var(--i-foco-recuo); }
+.estados .estado-caixa .ativo-simulado { background: var(--i-acento-medio); }
+.estados .estado-caixa .primario.ativo-simulado { background: var(--i-acento); filter: brightness(.85); }
+.estados .estado-caixa .perigo.ativo-simulado { background: var(--i-erro); color: var(--i-sobre-estado); }
+.estados .estado-caixa dialog.dialogo { position: static; display: block; width: 100%; max-width: 100%; margin: 0; }
+.estados .estado-caixa dialog.dialogo:not([open]) { display: block; }
+#tokens-tabela td { font-family: var(--i-fonte-dado); font-size: var(--i-t0); }
+#tokens-tabela .cor-chip { display: inline-block; width: var(--i-e4); height: var(--i-e4); border: var(--i-fio) solid var(--i-linha-forte); vertical-align: middle; margin-right: var(--i-e1); }
+@media (max-width: 800px) { .familia { grid-template-columns: minmax(0, 1fr); } }

@@ -73,7 +73,7 @@ function no(n) {
   const temFilhas = n.filhas.length > 0;
   const aberta = abertas.has(n.id) || (n.ancestrais || []).length === 0 && n.profundidade === 0 && !temFilhas;
   const b = h('button', { type: 'button', class: 'no', 'aria-current': String(selecionada), 'aria-expanded': temFilhas ? String(aberta) : undefined },
-    h('span', { class: 'alternar' }, temFilhas ? (aberta ? '▾' : '▸') : ''),
+    h('span', { class: 'alternar' }, temFilhas ? icone(aberta ? 'chevron_baixo' : 'chevron_dir', { tamanho: 12 }) : null),
     icone(aberta && temFilhas ? 'pasta_aberta' : 'pasta', { tamanho: 14 }),
     h('span', { class: 'nome', title: n.nome }, n.nome),
     n.itens_visiveis === undefined || n.itens_visiveis === null ? null : h('span', { class: 'n' }, String(n.itens_visiveis)));

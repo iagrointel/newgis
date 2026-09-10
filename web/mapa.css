@@ -1,147 +1,31 @@
-/* plat · mapa — estilo da tela /mapa (item L2-01-a-basemap-local-pmtiles). Escopado a `body.mapa`: não toca
-   nenhuma regra de web/style.css. `.principal.mapa-tela` vira tela cheia (sem o padding/max-width das outras
-   telas); `.mapa-area` é o retângulo onde o MapLibre desenha; os dois painéis (camada base, coordenadas) são
-   sobrepostos ao canvas, no canto oposto aos controles nativos do MapLibre (navegação: canto superior direito;
-   escala e atribuição: rodapé).
+/* plat — tela /mapa (item L2-01-a-basemap-local-pmtiles). Escopado a `body.mapa`: não toca nenhuma regra de
+   web/estilo/. `.principal.mapa-tela` vira tela cheia; `.mapa-area` é o retângulo onde o MapLibre desenha; os
+   dois painéis (camada base, coordenadas) são sobrepostos ao canvas, no canto oposto aos controles nativos.
 
-   ACHADO (corrigido antes de publicar): o painel usava `color: var(--texto)` (segue o tema claro/escuro do
-   resto do produto) sobre `background: rgba(18,24,26,.86)` FIXO escuro — em navegador com preferência de
-   sistema CLARA, `--texto` vira escuro (`#12181a`, tokens.css) e o texto some contra o próprio fundo do
-   painel (MEDIDO: computed `color: rgb(18,24,26)` sobre `background-color: rgba(18,24,26,.86)`, a mesma cor).
-   O canvas do MapLibre é cartografia de cor FIXA (estilo.js, independente de tema — um mapa não reflui de
-   paleta com o SO); o painel que fica em cima dele tem de ser fixo também, não seguir `--texto`/`--fraco`/
-   `--borda` do tema. Por isso as variáveis `--mapa-*` abaixo, com os MESMOS valores hexadecimais de
-   `web/js/mapa/estilo.js` (`COR`), nunca as var(--texto) etc. da folha principal. */
-body.mapa {
-  overflow: hidden;
-  --mapa-painel: rgba(18, 24, 26, .88);
-  --mapa-borda: #3a4550;
-  --mapa-texto: #e7ece9;
-  --mapa-texto-fraco: #9aa8ae;
-}
-body.mapa .principal.mapa-tela {
-  padding: 0;
-  max-width: none;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-body.mapa .mapa-barra {
-  display: flex;
-  align-items: center;
-  gap: var(--e4);
-  padding: var(--e3) var(--e4);
-  border-bottom: 1px solid var(--borda);
-  background: var(--painel);
-}
-body.mapa .mapa-barra h1 { margin: 0; font-size: 1.1rem; }
-body.mapa .mapa-barra plat-aviso { flex: 1; }
+   O canvas do MapLibre é cartografia de cor FIXA (web/js/mapa/estilo.js lê --i-carta-* dos tokens): um mapa não
+   muda de paleta com o sistema operacional. O painel que fica sobre ele tem de ser fixo também, por isso usa
+   --i-carta-painel/--i-carta-texto e nunca --i-texto/--i-superficie do tema (achado medido: em tema claro o
+   texto sumia contra o próprio painel). */
+body.mapa { overflow: hidden; }
+body.mapa .principal.mapa-tela { padding: 0; max-width: none; height: 100vh; display: flex; flex-direction: column; }
+body.mapa .mapa-barra { display: flex; align-items: center; gap: var(--i-e4); padding: var(--i-e3) var(--i-e4); border-bottom: var(--i-fio) solid var(--i-linha); background: var(--i-superficie); margin: 0; }
+body.mapa .mapa-barra h1 { margin: 0; font-size: var(--i-t4); }
+body.mapa .mapa-barra plat-aviso { flex: 1; margin: 0; }
 body.mapa .mapa-area { position: relative; flex: 1; min-height: 0; }
 body.mapa #mapa { position: absolute; inset: 0; }
-/* o MapLibre injeta o canvas e os controles nativos dentro de #mapa; nada aqui estiliza .maplibregl-* além
-   do necessário para casar com o chrome escuro do instrumento */
-body.mapa .maplibregl-ctrl-attrib { background: var(--mapa-painel); color: var(--mapa-texto-fraco); }
-body.mapa .maplibregl-ctrl-attrib a { color: var(--mapa-texto-fraco); }
-body.mapa .maplibregl-ctrl-scale { background: var(--mapa-painel); border-color: var(--mapa-borda); color: var(--mapa-texto); }
-
+/* o MapLibre injeta o canvas e os controles nativos dentro de #mapa; nada aqui estiliza .maplibregl-* além do
+   necessário para casar com o chrome do instrumento */
+body.mapa .maplibregl-ctrl-attrib { background: var(--i-carta-painel); color: var(--i-carta-texto-fraco); }
+body.mapa .maplibregl-ctrl-attrib a { color: var(--i-carta-texto-fraco); }
+body.mapa .maplibregl-ctrl-scale { background: var(--i-carta-painel); border-color: var(--i-carta-painel-borda); color: var(--i-carta-texto); font-family: var(--i-fonte-dado); }
 body.mapa .mapa-painel {
-  position: absolute;
-  left: var(--e4);
-  z-index: 5;
-  background: var(--mapa-painel);
-  border: 1px solid var(--mapa-borda);
-  border-radius: var(--raio);
-  padding: var(--e2) var(--e3);
-  font-family: var(--mono);
-  font-size: .8rem;
-  color: var(--mapa-texto);
-  backdrop-filter: blur(2px);
+  position: absolute; left: var(--i-e4); z-index: 5;
+  background: var(--i-carta-painel); border: var(--i-fio) solid var(--i-carta-painel-borda); border-radius: var(--i-raio);
+  padding: var(--i-e2) var(--i-e3);
+  font-family: var(--i-fonte-dado); font-size: var(--i-t0); color: var(--i-carta-texto);
+  backdrop-filter: blur(var(--i-e0));
 }
-body.mapa .mapa-painel-base { top: var(--e4); display: flex; align-items: center; gap: var(--e2); font-family: var(--sans); }
-body.mapa .mapa-painel-base label { color: var(--mapa-texto-fraco); text-transform: lowercase; }
-body.mapa .mapa-painel-base select { background: #1a2224; color: var(--mapa-texto); border: 1px solid var(--mapa-borda); border-radius: var(--raio); padding: .2rem .4rem; }
-body.mapa .mapa-coordenadas { top: calc(var(--e4) + 2.4rem); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
-
-/* ------------------------------------------------------------------ item L2-01-mapa-web
-   Painel lateral do visualizador (pesquisa, camadas, legenda, medição, impressão) ao lado do mapa. É
-   CHROME do produto, não cartografia: aqui as cores voltam a ser as do tema (var(--texto), var(--painel)),
-   ao contrário dos painéis sobrepostos ao canvas, que são fixos pelo motivo explicado no topo. */
-body.mapa .mapa-corpo { display: flex; flex: 1; min-height: 0; }
-body.mapa .mapa-painel-lateral {
-  width: 21rem;
-  flex: 0 0 21rem;
-  overflow-y: auto;
-  border-right: 1px solid var(--borda);
-  background: var(--painel);
-  padding: var(--e3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--e4);
-}
-body.mapa .mapa-painel-lateral .bloco h2 {
-  margin: 0 0 var(--e2);
-  font-size: .78rem;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  color: var(--fraco);
-}
-body.mapa .mapa-painel-lateral .linha { display: flex; gap: var(--e2); align-items: center; flex-wrap: wrap; }
-body.mapa .mapa-painel-lateral .linha input[type=search] { flex: 1; min-width: 8rem; }
-body.mapa .mapa-painel-lateral .rotulo { display: block; font-size: .75rem; color: var(--fraco); margin-bottom: .25rem; }
-body.mapa .mapa-painel-lateral .saida { margin: var(--e2) 0 0; font-family: var(--mono); font-size: .8rem; }
-body.mapa .sugestoes { list-style: none; margin: var(--e2) 0 0; padding: 0; }
-body.mapa .sugestoes .sugestao {
-  display: block; width: 100%; text-align: left; background: none; border: 0;
-  color: var(--texto); padding: .3rem .2rem; font-size: .82rem; cursor: pointer; border-radius: var(--raio);
-}
-body.mapa .sugestoes .sugestao:hover, body.mapa .sugestoes .sugestao:focus { background: var(--superficie-2); }
-
-/* árvore de camadas (item L2-01-c-lista-camadas-legenda) */
-body.mapa .arvore-cabecalho-bloco { display: flex; align-items: center; justify-content: space-between; gap: var(--e2); }
-body.mapa .lista-camadas.arvore { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .2rem; }
-body.mapa .arvore-sub { list-style: none; margin: .2rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .2rem; }
-body.mapa .arvore-linha {
-  border: 1px solid transparent; border-radius: var(--raio); padding: .3rem .35rem;
-  margin-left: calc(var(--nivel, 0) * .85rem);
-}
-body.mapa .arvore-linha:focus { outline: 2px solid var(--acento); outline-offset: 1px; }
-body.mapa .arvore-linha.ativa { border-color: var(--borda); background: var(--superficie-2); }
-body.mapa .arvore-linha.alvo { border-color: var(--acento); }
-body.mapa .arvore-linha.grupo > .arvore-cabecalho { font-weight: 600; }
-/* "camada fora de escala aparece cinza": esmaece a linha inteira, sem escondê-la (o usuário precisa ver
-   que ela existe e por que não está desenhando — a geometria em si já sumiu do mapa sozinha, porque o
-   MapLibre respeita minzoom/maxzoom da própria camada de estilo). */
-body.mapa .arvore-linha.fora-de-escala { opacity: .45; filter: grayscale(1); }
-body.mapa .arvore-cabecalho { display: flex; align-items: center; gap: var(--e2); }
-body.mapa .arvore-titulo { flex: 1; font-size: .85rem; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; background: none; border: 0; color: var(--texto); padding: 0; }
-body.mapa .arvore-titulo-grupo { font-family: inherit; }
-body.mapa .arvore-conta { font-family: var(--mono); font-size: .7rem; color: var(--fraco); }
-body.mapa .arvore-linha-controles { display: flex; flex-direction: column; gap: .2rem; margin-top: .25rem; }
-body.mapa .arvore-controles { display: flex; align-items: center; gap: .2rem; flex-wrap: wrap; }
-body.mapa .arvore-controles .camada-opacidade { flex: 1; min-width: 3.5rem; }
-body.mapa .arvore-escala { display: flex; align-items: center; gap: .25rem; font-size: .68rem; color: var(--fraco); }
-body.mapa .arvore-escala input[type=number] { width: 2.6rem; background: var(--superficie); color: var(--texto); border: 1px solid var(--borda); border-radius: var(--raio); font-size: .7rem; padding: .1rem .2rem; }
-body.mapa .botao-mini {
-  background: var(--superficie); border: 1px solid var(--borda); color: var(--texto);
-  border-radius: var(--raio); font-size: .7rem; line-height: 1; padding: .25rem .35rem; cursor: pointer;
-}
-body.mapa .botao-mini[disabled] { opacity: .4; cursor: default; }
-
-/* legenda dinâmica (web/js/legenda.js) */
-body.mapa .legenda-bloco h3 { margin: var(--e2) 0 .25rem; font-size: .8rem; font-weight: 600; }
-body.mapa .legenda-unidade { margin: 0 0 .2rem; font-size: .7rem; color: var(--fraco); }
-body.mapa .legenda-faixa { margin: .2rem 0 0; font-size: .7rem; color: var(--fraco); font-family: var(--mono); }
-body.mapa .legenda-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .2rem; }
-body.mapa .legenda-lista li { display: flex; align-items: center; gap: var(--e2); font-size: .8rem; }
-body.mapa .legenda-svg { flex: 0 0 auto; }
-body.mapa .legenda .vazio { color: var(--fraco); font-size: .8rem; margin: 0; }
-
-/* janela de atributos */
-body.mapa .popup-plat .maplibregl-popup-content { background: var(--painel); color: var(--texto); border: 1px solid var(--borda); border-radius: var(--raio); max-height: 22rem; overflow: auto; }
-body.mapa .popup-plat .maplibregl-popup-tip { border-top-color: var(--painel); border-bottom-color: var(--painel); }
-body.mapa .popup-camada h3 { margin: 0 0 .25rem; font-size: .8rem; }
-body.mapa .popup-tabela { width: 100%; border-collapse: collapse; font-size: .78rem; margin-bottom: .4rem; }
-body.mapa .popup-tabela th { text-align: left; font-weight: 500; color: var(--fraco); padding: .12rem .4rem .12rem 0; vertical-align: top; }
-body.mapa .popup-tabela td { padding: .12rem 0; font-family: var(--mono); }
-body.mapa .popup-tabela td.nulo { color: var(--fraco); font-style: italic; }
-body.mapa .popup-mais { margin: 0; font-size: .75rem; color: var(--fraco); }
+body.mapa .mapa-painel-base { top: var(--i-e4); display: flex; align-items: center; gap: var(--i-e2); font-family: var(--i-fonte-texto); }
+body.mapa .mapa-painel-base label { color: var(--i-carta-texto-fraco); text-transform: lowercase; }
+body.mapa .mapa-painel-base select { background: var(--i-carta-edificacao); color: var(--i-carta-texto); border: var(--i-fio) solid var(--i-carta-painel-borda); border-radius: var(--i-raio); padding: var(--i-e1) var(--i-e2); font: inherit; }
+body.mapa .mapa-coordenadas { top: calc(var(--i-e4) + var(--i-e6) + var(--i-e2)); font-variant-numeric: tabular-nums; }
