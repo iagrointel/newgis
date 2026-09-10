@@ -25,10 +25,12 @@ export const TELAS = [
   { caminho: '/admin/organizacao', chave: 'nav.organizacao', privilegio: 'org.configurar' },
   { caminho: '/admin/categorias', chave: 'nav.categorias', privilegio: 'conteudo.categorias' },
   { caminho: '/estilo-guia', chave: 'nav.estilo_guia', privilegio: 'org.configurar' },
+  { caminho: '/admin/inquilinos', chave: 'nav.inquilinos', superadmin: true },
 ];
 
 export function telasVisiveis(usuario) {
-  return TELAS.filter((tela) => !tela.privilegio || tem(tela.privilegio, usuario));
+  // item UX-18: `superadmin: true` = só o superadmin do inquilino técnico (não é privilégio de papel)
+  return TELAS.filter((tela) => (!tela.privilegio || tem(tela.privilegio, usuario)) && (!tela.superadmin || !!usuario?.superadmin));
 }
 
 export function montarLayout({ usuario, ativo = location.pathname }) {

@@ -29,6 +29,8 @@ PAGINAS = {
     "/status": "status.html",
     # --- categorias do inquilino (UX-12-categorias-sem-controle): PUT /api/categorias e POST /api/categorias/importar
     "/admin/categorias": "admin/categorias.html",
+    # item UX-18-plataforma-sem-tela: console do superadmin (inquilinos)
+    "/admin/inquilinos": "admin/inquilinos.html",
     # --- catálogo (L0-03)
     # --- catálogo (L0-03); /c/{token} é servida por app/catalogo/rotas_compartilhamento.py (leva og:)
     "/conteudo": "conteudo.html",
