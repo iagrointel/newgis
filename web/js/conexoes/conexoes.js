@@ -156,87 +156,132 @@ async function carregar() {
   for (const c of s.itens) corpo.append(linha(c));
 }
 
-/* ---- catálogo de conectores públicos (item L6-02-m-catalogo-endpoints-brasil): GET /api/endpoints-publicos lista
-   as entradas vivas no último teste HTTP (filtro por tipo e texto); ?vivo=false é a seção "fora do ar";
-   POST /api/endpoints-publicos/{id}/adicionar cria a conexão num clique (idempotente: segundo clique reaproveita). */
-const TIPO_ROTULO = { wms: 'WMS', wfs: 'WFS', wmts: 'WMTS', esri_rest: 'ArcGIS REST', stac: 'STAC', ogc_api: 'OGC API' };
+/* ---- descoberta por catálogo CSW 2.0.2 (item L6-06-descoberta-csw): POST /api/csw/buscar lista registros ISO
+   19139 com os serviços WMS/WFS/WMTS que declaram COM endereço; POST /api/csw/conexoes cria as conexões num
+   clique. Registro sem serviço ligado: a linha diz "sem serviço ligado" e o botão fica desativado — a API também
+   recusa (422 sem_servico_ligado), a tela só não deixa o clique acontecer. */
+const csw = { url: '', texto: '', bbox: null, inicio: 1, total: 0, proximo: null };
 
-async function adicionarDoCatalogo(e, botao) {
+function bboxDoCampo(texto) {
+  const t = (texto || '').trim();
+  if (!t) return null;
+  const partes = t.split(/[,;\s]+/).filter(Boolean).map(Number);
+  if (partes.length !== 4 || partes.some((n) => Number.isNaN(n))) {
+    throw new Error('extensão precisa ter 4 números: oeste, sul, leste, norte');
+  }
+  return partes;
+}
+
+function badgeServico(s) {
+  return h('span', { class: 'marcador info', title: `${s.protocolo || 'service= na URL'} — ${s.url_declarada}` },
+    `${s.tipo.toUpperCase()}${s.camada ? ` · ${s.camada}` : ''}`);
+}
+
+function celulaServicos(reg) {
+  if (reg.sem_servico) {
+    return h('span', { class: 'marcador atencao', title: (reg.avisos || []).join('; ') }, 'sem serviço ligado');
+  }
+  return h('span', {}, ...reg.servicos.flatMap((s, i) => (i ? [' ', badgeServico(s)] : [badgeServico(s)])));
+}
+
+function detalheRegistro(reg) {
+  const dialogo = porId('dialogo');
+  const corpo = h('div', {},
+    linhaProcedencia('identificador', reg.identificador),
+    linhaProcedencia('organização', reg.organizacao),
+    linhaProcedencia('resumo', reg.resumo),
+    linhaProcedencia('data do dado', reg.data_do_dado),
+    linhaProcedencia('data do metadado', reg.data_metadado),
+    linhaProcedencia('licença (texto declarado)', reg.licenca),
+    linhaProcedencia('restrições (códigos)', (reg.restricoes || []).join(', ')),
+    linhaProcedencia('palavras-chave', (reg.palavras_chave || []).join(', ')),
+    linhaProcedencia('extensão', reg.bbox ? reg.bbox.join(', ') : null),
+    h('p', {}, h('strong', {}, 'serviços declarados com endereço: '),
+      reg.sem_servico ? h('em', {}, 'sem serviço ligado') : celulaServicos(reg)),
+    reg.avisos && reg.avisos.length ? h('p', { class: 'ajuda' }, `ressalvas: ${reg.avisos.join('; ')}`) : null);
+  dialogo.abrir({ titulo: reg.titulo || 'registro', corpo, botoes: [{ id: 'fechar', rotulo: 'fechar' }] }).then(() => {});
+}
+
+async function criarConexoesDoRegistro(reg, botao) {
   botao.disabled = true;
-  aviso('catalogo-aviso', '');
-  const r = await api.enviar(`/api/endpoints-publicos/${encodeURIComponent(e.id)}/adicionar`, {});
+  aviso('csw-aviso', '');
+  const r = await api.enviar('/api/csw/conexoes', { url: csw.url, identificador: reg.identificador });
   botao.disabled = false;
   if (r.status !== 201) {
     const erro = r.json && r.json.erro;
-    aviso('catalogo-aviso', erro === 'endpoint_fora_do_ar'
-      ? `"${e.nome}" está fora do ar no último teste do catálogo: não vira conexão por aqui`
-      : `não foi possível adicionar "${e.nome}": ${api.mensagemDe(r)}`);
+    aviso('csw-aviso', erro === 'sem_servico_ligado'
+      ? `sem serviço ligado: o registro "${reg.titulo || reg.identificador}" não declara WMS/WFS/WMTS com endereço — nenhuma conexão criada`
+      : `não foi possível criar as conexões de "${reg.titulo || reg.identificador}": ${api.mensagemDe(r)}`);
     return;
   }
-  botao.textContent = r.json.criada ? 'adicionada' : 'já existia';
-  botao.dataset.resultado = r.json.criada ? 'criada' : 'existente';
-  aviso('catalogo-aviso', r.json.criada
-    ? `conexão "${r.json.nome}" criada a partir do catálogo, com a ficha de procedência do órgão`
-    : `"${r.json.nome}" já existia: conexão reaproveitada`, 'ok');
+  const criadas = r.json.conexoes.filter((c) => c.criada).length;
+  const reaproveitadas = r.json.conexoes.length - criadas;
+  aviso('csw-aviso',
+    `${criadas} conexão(ões) criada(s)${reaproveitadas ? `, ${reaproveitadas} já existia(m)` : ''} a partir de "${reg.titulo || reg.identificador}"; a ficha de procedência veio do registro ISO`,
+    'ok');
   await carregar();
 }
 
-function linhaCatalogo(e) {
-  const bt = h('button', { type: 'button', class: 'pequeno primario' }, 'adicionar');
-  bt.addEventListener('click', () => adicionarDoCatalogo(e, bt));
-  return h('tr', { dataset: { endpoint: String(e.id), tipo: e.tipo } },
-    h('td', {}, e.orgao),
-    h('td', {}, h('span', { title: e.url }, e.nome)),
-    h('td', {}, h('span', { class: 'marcador info' }, TIPO_ROTULO[e.tipo] || e.tipo)),
-    h('td', {}, e.licenca === 'nao-declarada' ? h('em', {}, 'não declarada') : e.licenca),
-    h('td', {}, e.testado_em ? formatarData(e.testado_em) : h('em', {}, 'nunca')),
-    h('td', {}, bt));
+function linhaRegistro(reg) {
+  const btVer = h('button', { type: 'button', class: 'pequeno' }, 'ficha');
+  btVer.addEventListener('click', () => detalheRegistro(reg));
+  const btCriar = h('button', { type: 'button', class: 'pequeno primario', disabled: reg.sem_servico },
+    reg.sem_servico ? 'sem serviço ligado' : `criar ${reg.servicos.length} conexão(ões)`);
+  if (!reg.sem_servico) btCriar.addEventListener('click', () => criarConexoesDoRegistro(reg, btCriar));
+  return h('tr', { dataset: { identificador: reg.identificador || '', semServico: String(reg.sem_servico) } },
+    h('td', {}, reg.titulo || h('em', {}, 'sem título')),
+    h('td', {}, reg.organizacao || h('em', {}, 'não registrado')),
+    h('td', {}, reg.data_do_dado || h('em', {}, 'não registrado')),
+    h('td', {}, celulaServicos(reg)),
+    h('td', {}, btVer, ' ', btCriar));
 }
 
-function linhaForaDoAr(e) {
-  return h('tr', { dataset: { endpoint: String(e.id), tipo: e.tipo } },
-    h('td', {}, e.orgao),
-    h('td', {}, h('span', { title: e.url }, e.nome)),
-    h('td', {}, TIPO_ROTULO[e.tipo] || e.tipo),
-    h('td', {}, h('span', { class: 'marcador falha', title: `HTTP ${e.http === null ? '—' : e.http}` }, e.motivo || '—')),
-    h('td', {}, e.testado_em ? formatarData(e.testado_em) : h('em', {}, 'nunca')));
-}
-
-async function carregarCatalogo() {
-  aviso('catalogo-aviso', '');
-  const tipo = porId('catalogo-tipo').value;
-  const q = porId('catalogo-q').value.trim();
-  const params = api.consulta({ tipo: tipo || undefined, q: q || undefined, limite: 500 });
-  const [vivos, fora] = await Promise.all([
-    api.obter(`/api/endpoints-publicos${params}`),
-    api.obter(`/api/endpoints-publicos${params}${params ? '&' : '?'}vivo=false`),
-  ]);
-  if (vivos.status !== 200 || fora.status !== 200) {
-    if (vivos.status === 401) return;
-    aviso('catalogo-aviso', `não foi possível carregar o catálogo (${api.mensagemDe(vivos.status !== 200 ? vivos : fora)})`);
+async function buscarCsw(continuar) {
+  aviso('csw-aviso', '');
+  const form = porId('csw-form');
+  if (!continuar) {
+    csw.url = form.elements.url.value.trim();
+    csw.texto = form.elements.texto.value.trim();
+    try {
+      csw.bbox = bboxDoCampo(form.elements.bbox.value);
+    } catch (e) {
+      aviso('csw-aviso', e.message);
+      return;
+    }
+    csw.inicio = 1;
+    limpar(porId('csw-corpo'));
+  }
+  if (!csw.texto && !csw.bbox) {
+    aviso('csw-aviso', 'informe um texto e/ou uma extensão');
     return;
   }
-  porId('catalogo-total').textContent = `(${vivos.json.total})`;
-  porId('catalogo-fora-total').textContent = `(${fora.json.total})`;
-  porId('catalogo-resumo').textContent = vivos.json.testado_em_ultimo
-    ? `${vivos.json.vivos} vivos, ${vivos.json.fora_do_ar} fora do ar, ${vivos.json.nunca_testados} nunca testados; último teste ${formatarData(vivos.json.testado_em_ultimo)}`
-    : 'catálogo ainda não testado nesta instalação (o job endpoints_publicos.retestar roda toda semana)';
-  const corpo = porId('catalogo-corpo');
-  limpar(corpo);
-  if (!vivos.json.itens.length) {
-    corpo.append(h('tr', {}, h('td', { colspan: '6', class: 'ajuda' }, 'nenhum conector vivo com esse filtro')));
+  const btBuscar = porId('csw-buscar');
+  btBuscar.disabled = true;
+  const r = await api.enviar('/api/csw/buscar', {
+    url: csw.url, texto: csw.texto || null, bbox: csw.bbox, inicio: csw.inicio, maximo: 10,
+  });
+  btBuscar.disabled = false;
+  if (r.status !== 200) {
+    aviso('csw-aviso', `o catálogo não respondeu de forma utilizável: ${api.mensagemDe(r)}`);
+    return;
   }
-  for (const e of vivos.json.itens) corpo.append(linhaCatalogo(e));
-  const corpoFora = porId('catalogo-fora-corpo');
-  limpar(corpoFora);
-  for (const e of fora.json.itens) corpoFora.append(linhaForaDoAr(e));
+  csw.total = r.json.total;
+  csw.proximo = r.json.proximo;
+  const corpo = porId('csw-corpo');
+  for (const reg of r.json.registros) corpo.append(linhaRegistro(reg));
+  porId('csw-lista').hidden = false;
+  const mostrados = corpo.querySelectorAll('tr').length;
+  porId('csw-resumo').textContent = csw.total
+    ? `${mostrados} de ${csw.total} registro(s)`
+    : 'nenhum registro encontrado';
+  porId('csw-mais').hidden = !csw.proximo;
 }
 
-function ligarCatalogo() {
-  if (!document.getElementById('catalogo-cartao')) return;
-  porId('catalogo-buscar').addEventListener('click', () => carregarCatalogo());
-  porId('catalogo-tipo').addEventListener('change', () => carregarCatalogo());
-  porId('catalogo-q').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); carregarCatalogo(); } });
+function ligarCsw() {
+  const form = document.getElementById('csw-form');
+  if (!form) return;
+  form.addEventListener('submit', (e) => { e.preventDefault(); buscarCsw(false); });
+  porId('csw-mais').addEventListener('click', () => { csw.inicio = csw.proximo || 1; buscarCsw(true); });
 }
 
 function layout(usuario) {
@@ -263,9 +308,8 @@ async function principal() {
   }
   s.usuario = usuario;
   layout(usuario);
-  ligarCatalogo();
+  ligarCsw();
   await carregar();
-  await carregarCatalogo();
 }
 
 await carregarIdioma();

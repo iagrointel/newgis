@@ -6,14 +6,10 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Conexões · plat</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/static/estilo/tokens.css">
-<link rel="stylesheet" href="/static/estilo/base.css">
-<link rel="stylesheet" href="/static/estilo/componentes.css">
-<script src="/static/js/base/tema.js"></script>
+<link rel="stylesheet" href="/static/style.css">
 <link rel="stylesheet" href="/static/tarefas.css">
-<script src="/static/vendor/dompurify-3.4.14.js"></script>
 </head>
-<body class="tela conexoes" data-ajuda="conexoes">
+<body class="tela conexoes">
 <a class="pular" href="#principal">pular para o conteúdo</a>
 <div class="app">
   <aside id="lateral" class="lateral"></aside>
@@ -53,65 +49,51 @@
       </div>
     </section>
 
-    <section class="cartao" id="catalogo-cartao" aria-labelledby="t-catalogo">
-      <h2 id="t-catalogo">conectores públicos prontos <span id="catalogo-total" class="contagem">…</span></h2>
-      <p class="ajuda">catálogo de serviços públicos (WMS, WFS, WMTS, ArcGIS REST, STAC, OGC API) retestado por HTTP toda
-        semana: só entra na lista quem respondeu o documento do protocolo no último teste; entrada que falhou vai
-        para "fora do ar" e volta sozinha quando passar. "adicionar" cria a conexão com a ficha de procedência do
-        catálogo (órgão, licença, data do teste). Licença "nao-declarada" = o órgão não publica termo em página própria.</p>
-      <div class="linha-ferramentas">
-        <label for="catalogo-tipo" class="sr-only">tipo</label>
-        <select id="catalogo-tipo">
-          <option value="">todos os tipos</option>
-          <option value="wms">WMS</option>
-          <option value="wfs">WFS</option>
-          <option value="wmts">WMTS</option>
-          <option value="esri_rest">ArcGIS REST</option>
-          <option value="stac">STAC</option>
-          <option value="ogc_api">OGC API</option>
-        </select>
-        <label for="catalogo-q" class="sr-only">buscar por órgão, nome ou endereço</label>
-        <input id="catalogo-q" type="search" maxlength="200" title="órgão, nome ou endereço">
-        <button type="button" id="catalogo-buscar" class="pequeno">filtrar</button>
-        <span id="catalogo-resumo" class="ajuda"></span>
-      </div>
-      <plat-aviso id="catalogo-aviso"></plat-aviso>
+    <section class="cartao" id="csw-cartao" aria-labelledby="t-csw">
+      <h2 id="t-csw">descobrir por catálogo (CSW 2.0.2)</h2>
+      <p class="ajuda">busca por texto e/ou extensão num catálogo de metadados de terceiros (a INDE e geoportais de
+        órgãos publicam CSW). Cada registro ISO 19139 mostra os serviços WMS/WFS/WMTS que declara com endereço; um
+        clique cria as conexões com a ficha de procedência preenchida do registro. Registro sem serviço ligado não
+        cria conexão.</p>
+      <form id="csw-form" class="formulario">
+        <div class="campo">
+          <label for="csw-url">endereço do catálogo CSW</label>
+          <input id="csw-url" name="url" type="url" required maxlength="2048"
+                 value="https://metadados.inde.gov.br/geonetwork/srv/eng/csw">
+          <span class="ajuda">o da INDE respondeu em 07/09/2026 (GetRecords por GET, CQL_TEXT, ISO 19139)</span>
+        </div>
+        <div class="campo">
+          <label for="csw-texto">texto (qualquer campo do registro)</label>
+          <input id="csw-texto" name="texto" type="text" maxlength="200" title="exemplo: hidrografia">
+        </div>
+        <div class="campo">
+          <label for="csw-bbox">extensão [oeste, sul, leste, norte] em graus (opcional)</label>
+          <input id="csw-bbox" name="bbox" type="text" maxlength="80" title="exemplo: -48, -25, -46, -23">
+        </div>
+        <div class="linha-ferramentas">
+          <button type="submit" id="csw-buscar" class="primario">buscar</button>
+          <span id="csw-resumo" class="ajuda"></span>
+        </div>
+      </form>
+      <plat-aviso id="csw-aviso"></plat-aviso>
       <div class="tabela-rolagem">
-        <table id="catalogo-lista" class="tabela">
-          <caption class="sr-only">conectores públicos vivos no último teste</caption>
+        <table id="csw-lista" class="tabela" hidden>
+          <caption class="sr-only">registros encontrados no catálogo</caption>
           <thead>
             <tr>
-              <th scope="col">órgão</th>
-              <th scope="col">nome</th>
-              <th scope="col">tipo</th>
-              <th scope="col">licença</th>
-              <th scope="col">testado em</th>
+              <th scope="col">título</th>
+              <th scope="col">organização</th>
+              <th scope="col">data do dado</th>
+              <th scope="col">serviços</th>
               <th scope="col"><span class="sr-only">ações</span></th>
             </tr>
           </thead>
-          <tbody id="catalogo-corpo"></tbody>
+          <tbody id="csw-corpo"></tbody>
         </table>
       </div>
-      <details id="catalogo-fora">
-        <summary>fora do ar no último teste <span id="catalogo-fora-total" class="contagem">…</span></summary>
-        <p class="ajuda">saíram da lista acima; não viram conexão por aqui (a API recusa com 409). Voltam quando o
-          reteste semanal passar.</p>
-        <div class="tabela-rolagem">
-          <table id="catalogo-fora-lista" class="tabela">
-            <caption class="sr-only">conectores públicos fora do ar</caption>
-            <thead>
-              <tr>
-                <th scope="col">órgão</th>
-                <th scope="col">nome</th>
-                <th scope="col">tipo</th>
-                <th scope="col">motivo</th>
-                <th scope="col">testado em</th>
-              </tr>
-            </thead>
-            <tbody id="catalogo-fora-corpo"></tbody>
-          </table>
-        </div>
-      </details>
+      <div class="linha-ferramentas">
+        <button type="button" id="csw-mais" class="pequeno" hidden>mais registros</button>
+      </div>
     </section>
 
     <plat-dialogo id="dialogo"></plat-dialogo>

@@ -778,3 +778,11 @@ ENDPOINT_PUBLICO_MAX_BYTES = 4 * 1024 * 1024  # 4 MiB: acima disso o serviço re
 ENDPOINT_PUBLICO_RETESTE_DIAS = 7        # cadência do job endpoints_publicos.retestar (B12: "retestado por semana")
 ENDPOINT_PUBLICO_FALHAS_PARA_MORTO = 1   # 1 teste vermelho já tira da lista (vai para 'fora do ar'; volta ao passar)
 ENDPOINT_PUBLICO_PAGINA_MAX = 500        # a tela lista o catálogo inteiro de uma vez (dezenas, não milhares)
+# --- descoberta por catálogo CSW 2.0.2 (L6-06-descoberta-csw; app/conexao/csw.py): a INDE devolve ~9 KB por
+# registro ISO 19139 completo, logo 20 registros cabem com folga em CONEXAO_RESPOSTA_MAX_BYTES (1 MiB); o tempo
+# de leitura é maior que o do teste de saúde porque o catálogo monta a resposta (medido 3-8 s na INDE em 07/09).
+CSW_MAX_REGISTROS = 20                   # maxRecords por GetRecords (e teto do que a tela pede)
+CSW_LER_TIMEOUT_S = 20.0                 # leitura de GetRecords/GetRecordById (buscar_seguro)
+CSW_TEXTO_MAX = 1000                     # corte de resumo/licença/linhagem guardados na ficha (config <= 8 KiB)
+CSW_PALAVRAS_MAX = 30                    # palavras-chave guardadas por registro
+CSW_TEXTO_BUSCA_MAX = 200                # tamanho do texto livre da busca (vira AnyText like '%...%')

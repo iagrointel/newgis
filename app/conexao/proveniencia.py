@@ -23,7 +23,6 @@ from xml.etree.ElementTree import ParseError  # só o TIPO da exceção; o parse
 import defusedxml.ElementTree as ET_seguro
 
 from app import limites
-from app.catalogo import procedencia as procedencia_canonica
 from app.conexao import seguranca
 
 TIMEOUT_SONDA_S = 5.0
@@ -130,17 +129,6 @@ def descobrir(conexao: dict) -> Descoberta:
         achados, atribuicao, url_sondada, corpo = _sondar_xml(url, tipo)
     elif tipo in _PROTOCOLOS_JSON:
         achados, atribuicao, url_sondada, corpo = _sondar_json(url, tipo)
-    elif tipo in ("pmtiles", "xyz"):
-        # sem metadado sondável (nem GetCapabilities nem f=json existem para tiles), mas o item
-        # L6-02-g-pmtiles-xyz-tilejson EXIGE atribuição declarada pelo usuário no `config` ao criar a
-        # conexão (app.conexao.ladrilhos.validar_config) — é ela que vira o crédito da legenda, nunca None.
-        config_declarado = conexao.get("config") or {}
-        atribuicao = config_declarado.get("atribuicao")
-        achados = {"licenca": None, "fonte": atribuicao}
-        avisos.append(
-            f"protocolo {tipo!r} não tem metadado padronizado sondável; atribuição vem do config declarado "
-            "na criação da conexão, não de sondagem"
-        )
     else:
         avisos.append(
             f"protocolo {tipo!r} não tem metadado padronizado sondável; ficha só com o que a conexão já guarda"
@@ -178,20 +166,26 @@ def descobrir(conexao: dict) -> Descoberta:
         "comando_reexecucao": f"GET {url_sondada}" if url_sondada else None,
         "limites": avisos or None,
         "responsavel": None,
-        # item L0-09-a: `origem` diz, campo a campo, quem afirmou. O que veio do GetCapabilities/f=json é
-        # DECLARADO pelo serviço externo; o que esta máquina calculou (hash do corpo lido, data de acesso,
-        # método e limites da sondagem) é MEDIDO. Sem isso, ler a ficha não distingue as duas coisas.
-        "origem": {
-            "fonte": "declarado",
-            "licenca": "declarado",
-            "url": "declarado",
-            "data_de_acesso": "medido",
-            "metodo": "medido",
-            "confianca": "medido",
-            "frescor": "medido",
-            "sha256": "medido",
-            "comando_reexecucao": "medido",
-            "limites": "medido",
-        },
     }
-    return Descoberta(procedencia=procedencia_canonica.normalizar(procedencia), atribuicao=atribuicao)
+    # Conexão criada por catálogo CSW (item L6-06): o registro ISO 19139 lido na criação fica em
+    # `config.procedencia`. O que o serviço VIVO declara agora vence; o que ele não declara (licença, data do
+    # dado, responsável, frescor...) vem do registro — nunca de um padrão. O `metodo` diz de onde veio cada parte.
+    iso = (conexao.get("config") or {}).get("procedencia") if isinstance(conexao.get("config"), dict) else None
+    if isinstance(iso, dict):
+        preenchidos = []
+        for chave, valor in iso.items():
+            if chave == "limites" or valor in (None, "", [], {}):
+                continue
+            if procedencia.get(chave) is None:
+                procedencia[chave] = valor
+                preenchidos.append(chave)
+        if preenchidos:
+            procedencia["metodo"] = (
+                f"{procedencia['metodo']}; campos {', '.join(preenchidos)} preenchidos do registro ISO 19139 "
+                f"do catálogo CSW ({(iso.get('catalogo') or {}).get('url') or 'origem não registrada'})"
+            )
+        if iso.get("limites"):
+            procedencia["limites"] = (procedencia.get("limites") or []) + [f"registro ISO: {a}" for a in iso["limites"]]
+        if atribuicao is None:
+            atribuicao = iso.get("responsavel") or iso.get("fonte")
+    return Descoberta(procedencia=procedencia, atribuicao=atribuicao)

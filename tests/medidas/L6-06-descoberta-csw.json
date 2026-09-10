@@ -1,0 +1,43 @@
+{
+ "item": "L6-06-descoberta-csw",
+ "medidas": {
+  "inde_getrecords_total_tuberculose": {
+   "valor": 52,
+   "unidade": "registros",
+   "comando": "POST /api/csw/buscar texto=tuberculose (https://metadados.inde.gov.br/geonetwork/srv/eng/csw)"
+  },
+  "inde_getrecords_ms": {
+   "valor": 634,
+   "unidade": "ms",
+   "comando": "tempo de POST /api/csw/buscar maximo=5, ida e volta pela INDE"
+  },
+  "inde_conexoes_criadas_por_registro": {
+   "valor": 2,
+   "unidade": "conexões",
+   "comando": "POST /api/csw/conexoes id=fbdd4fe6-956f-4d20-bbf9-068365edabb8"
+  },
+  "inde_getrecordbyid_e_criacao_ms": {
+   "valor": 165,
+   "unidade": "ms",
+   "comando": "GetRecordById + INSERT"
+  },
+  "inde_conexoes_saude_ok_de_2": {
+   "valor": 2,
+   "unidade": "conexões",
+   "comando": "POST /api/conexoes/{id}/testar nas 2 conexões criadas"
+  },
+  "catalogos_estaduais_testados": {
+   "valor": 0,
+   "unidade": "catalogos",
+   "comando": "5 enderecos adivinhados de CSW estadual (MG, SP, SC, RS, PR) nao resolveram em 07/09; so a INDE foi verificada"
+  }
+ },
+ "gerado_em": "2026-09-07T21:13:01Z",
+ "git_sha": "9376e14718f5",
+ "contexto": {
+  "carga_1min": 12.8,
+  "ram_livre_gb": 0.6,
+  "medido_em": "2026-09-07T21:13:01Z",
+  "nota": "medidas funcionais (contagens) e tempos de ida e volta pela INDE sob carga alta da maquina; tempo nao e clausula do portao"
+ }
+}

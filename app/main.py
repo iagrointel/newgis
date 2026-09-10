@@ -74,6 +74,7 @@ from app.consulta.rotas_wfs import router as rotas_wfs
 from app.conexao import rotas_esri_rest
 from app.conexao import rotas_wms_wmts
 from app.conexao import rotas_endpoints
+from app.conexao import rotas_csw
 from app.correio.rotas_smtp import router as rotas_smtp
 from app.dominios import rotas as rotas_dominios
 from app.dominios import rotas_featureserver, rotas_feicoes
@@ -288,6 +289,8 @@ ROUTERS = [
     rotas_wms_wmts.router,
     # --- catálogo de conectores públicos (L6-02-m): /api/endpoints-publicos, /{id}, /{id}/adicionar
     rotas_endpoints.router,
+    # --- descoberta por catálogo CSW 2.0.2 (L6-06): /api/csw/buscar, /api/csw/conexoes
+    rotas_csw.router,
     # --- arquivos/objetos (L0-11): /api/arquivos genérico por inquilino; /api/objetos/{chave} já vem do catálogo
     # (rotas_compartilhamento, entrega por URL assinada)
     rotas_arquivos,
