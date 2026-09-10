@@ -175,10 +175,20 @@ def imagens_reexecutar(ctx, item_id: uuid.UUID) -> dict:
     determinismo = det_cientifico and det_visual
 
     quando = datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+    versoes_originais = props.get("plat:versoes") or {}
+    versoes_na_reexecucao = cog.versoes_software()
+    # achado do adversário independente (10/09, item L1-01-j): processing:software continua sendo
+    # versoes_originais (o que REALMENTE produziu os bytes hoje armazenados — plat:versoes nunca mentiu,
+    # foi medido ao vivo na ingestão) MESMO quando esta reexecução mediu um software diferente agora; sem
+    # este campo, a divergência entre "o que processing:software diz" e "o que plat:cadeia acabou de
+    # rodar" ficava invisível — visível só a quem soubesse comparar os dois blocos manualmente. Aqui ela
+    # vira um booleano explícito, ao lado do sha256, para NUNCA depender de alguém notar sozinho.
+    software_mudou = versoes_originais != versoes_na_reexecucao
     reexecucao: dict = {
         "quando": quando,
         "determinismo": determinismo,
-        "versoes_na_reexecucao": cog.versoes_software(),
+        "versoes_na_reexecucao": versoes_na_reexecucao,
+        "versoes_mudaram_desde_a_ingestao": software_mudou,
         "cientifico": {
             "sha256_registrado": sha_cientifico_registrado, "sha256_obtido": cientifico.sha256,
             "igual": det_cientifico,
@@ -191,8 +201,14 @@ def imagens_reexecutar(ctx, item_id: uuid.UUID) -> dict:
         # portão: "com estatísticas iguais e diferença documentada" — só mede isto quando o sha256 divergiu
         bandas_registradas = (assets.get("cientifico") or {}).get("raster:bands") or []
         reexecucao["estatisticas"] = _comparar_estatisticas(stats, bandas_registradas)
+        if software_mudou:
+            reexecucao["aviso"] = (
+                "o software mudou entre a ingestão original e esta reexecução (ver versoes_na_reexecucao "
+                "x plat:versoes) E o sha256 não bateu — não dá para separar 'o comando mudou' de 'o "
+                "software mudou' só com este resultado; processing:software continua descrevendo o que "
+                "REALMENTE produziu os bytes hoje armazenados (a ingestão original), nunca esta reexecução"
+            )
 
-    versoes_originais = props.get("plat:versoes") or {}
     cadeia_medida_agora = prov.montar_cadeia_ingestao(
         bruto_sha256=bruto_sha_registrado, cientifico=cientifico, visual=visual,
     )

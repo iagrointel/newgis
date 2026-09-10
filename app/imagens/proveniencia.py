@@ -46,7 +46,11 @@ LINEAGE_RETROATIVA = (
     "Item ingerido antes do item L1-01-j (proveniência verificável): plat:cadeia abaixo foi RECONSTRUÍDA "
     "reexecutando a mesma conversão (job imagens.reexecutar) sobre o bruto já armazenado — não foi capturada "
     "ao vivo na ingestão original. O sha256 de cada asset (file:checksum) continua sendo o original, nunca "
-    "sobrescrito por esta reconstrução; ver plat:reexecucao para o resultado medido da comparação."
+    "sobrescrito por esta reconstrução; ver plat:reexecucao para o resultado medido da comparação. "
+    "processing:software continua sendo a versão medida NA INGESTÃO original (o que realmente produziu os "
+    "bytes hoje armazenados), mesmo que esta reexecução tenha rodado com outra versão de GDAL/rio-cogeo — "
+    "conferir plat:reexecucao.versoes_mudaram_desde_a_ingestao antes de tratar processing:software e "
+    "plat:cadeia como descrevendo o MESMO software (achado do adversário independente, 10/09)."
 )
 
 LINEAGE_RETROATIVA_SEM_RECONVERSAO = (

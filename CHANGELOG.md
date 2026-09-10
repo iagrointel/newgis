@@ -54,11 +54,29 @@ de administração preenche item retroativo e a conferência bate depois. `venv/
 nos arquivos deste item (7 erros pré-existentes em `app/jobs/tipos_prova.py`, não tocado, não são deste
 turno).
 
+**Adversário independente rodou ao fim do turno (P8) — dois achados, um confirmando, um corrigido.**
+Refutação prescrita pelo item (editar 1 byte do objeto no balde com a chave RW e rodar a conferência):
+TENTOU, FALHOU — `/conferir` acusou corretamente só o ativo alterado, os outros 3 continuaram `ok`,
+`manifesto_ok` continuou `true` (o manifesto certifica os METADADOS do item, não o conteúdo do balde —
+separação deliberada, confirmada); byte restaurado, demo devolvido limpo. Achado NOVO, fora da
+refutação prescrita: `processing:software`, num item reexecutado (`cadeia_origem=
+reexecucao_retroativa`), continuava sendo o `plat:versoes` da ingestão ORIGINAL mesmo quando o GDAL/
+rio-cogeo da reexecução era outro — nada cruzava os dois blocos, e o manifesto sela essa combinação sem
+reclamar (ele prova integridade PÓS-selagem, nunca veracidade do conteúdo selado). Não é um buraco
+alcançável por um cliente da API (a função que grava `processing:software` nunca recebe versão de fora,
+só o `plat:versoes` já medido), mas era invisível quando o GDAL do host muda entre a ingestão e uma
+reexecução posterior. Corrigido: `plat:reexecucao.versoes_mudaram_desde_a_ingestao` (booleano, comparando
+`plat:versoes` × `cog.versoes_software()` medido na hora) — a divergência agora é um campo, não algo que
+só se percebe comparando dois blocos manualmente; `LINEAGE_RETROATIVA` cita o campo explicitamente. Sem
+teste automatizado novo para este campo (só verificado na instância viva, rodando `imagens.reexecutar`
+de novo sobre a Ortofoto Mogi e conferindo `versoes_mudaram_desde_a_ingestao: false`, coerente — o GDAL
+não mudou entre as duas rodadas); ver "fora deste turno" abaixo.
+
 Fora deste turno, nomeado: `plat raster reexecutar/verificar <item>` como comando de linha só (hoje: job
 de fila + rota HTTP, mesmo caso de uso); reexecução em lote (hoje: um item por chamada de
-`imagens.reexecutar`; só a varredura SEM reconversão é em lote); nenhuma rodada de adversário
-independente separada (achados de build/perf vieram do próprio teste de integração — P8 do portão fica
-para o gerente do próximo turno confirmar com um agente adversário à parte).
+`imagens.reexecutar`; só a varredura SEM reconversão é em lote); teste automatizado de
+`versoes_mudaram_desde_a_ingestao` (hoje só verificado na instância viva — precisa de um jeito de
+simular GDAL "trocado" sem depender da máquina ter duas versões instaladas).
 
 ## turno 8, setembro de 2026 (item L1-07-mosaico-por-colecao-e-pegadas: mosaico por busca registrada e pegadas)
 

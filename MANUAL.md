@@ -1424,7 +1424,11 @@ o mesmo mecanismo por trás dos dois:
   determinismo. Bate → `plat:cadeia` fica com o comando MEDIDO de verdade (`cadeia_origem=
   reexecucao_retroativa`). Não bate → o item registra `plat:reexecucao` com os dois sha256 lado a lado e,
   quando aplicável, a comparação de estatísticas (min/max/mean/std) entre a reconversão e o que já estava
-  registrado — nunca sobrescreve os assets/checksums originais.
+  registrado — nunca sobrescreve os assets/checksums originais. `processing:software` continua sendo a
+  versão medida NA INGESTÃO original (o que realmente produziu os bytes hoje armazenados), mesmo que a
+  reexecução tenha rodado com outro GDAL/rio-cogeo — achado do adversário independente (10/09): sem um
+  sinal explícito, os dois blocos podiam divergir em silêncio. `plat:reexecucao.
+  versoes_mudaram_desde_a_ingestao` (booleano) torna essa divergência visível sempre que existir.
 
 ### 26.4 O que ainda não faz
 
