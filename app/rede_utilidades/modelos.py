@@ -5,6 +5,7 @@ precisa apontar a linha do arquivo que a pessoa enviou."""
 from pydantic import BaseModel, Field
 
 from app.rede_utilidades.esquema import DISCIPLINAS
+from app.rede_utilidades.isolamento import CATEGORIAS_PADRAO as CATEGORIAS_ISOLAMENTO_PADRAO
 
 
 class RedeEntrada(BaseModel):
@@ -127,11 +128,7 @@ class TracadoEntrada(BaseModel):
     exige um único ponto em `pontos_partida` (a origem) e `destino`; `tipo=lacos` e `tipo=isolados` não
     exigem `pontos_partida` (operam sobre a rede inteira) — a validação por tipo é feita na rota, não aqui,
     porque cada tipo tem uma exigência diferente sobre a MESMA lista."""
-    tipo: str | None = Field(
-        default=None, pattern="^(conectado|subrede|lacos|caminho_curto|isolados|montante|jusante)$")
-    # item L4-02-e: quando vem `config_id`, o TIPO e todo o resto do pedido saem da configuração salva
-    # (`plat.rede_config_tracado`) e só os pontos de partida e as barreiras pontuais continuam vindo daqui.
-    config_id: str | None = Field(default=None, min_length=36, max_length=36)
+    tipo: str = Field(pattern="^(conectado|subrede|lacos|caminho_curto|isolados|montante|jusante|isolamento)$")
     pontos_partida: list[PontoTracado] = Field(default_factory=list, max_length=50)
     destino: PontoTracado | None = None
     barreiras: list[PontoTracado] = Field(default_factory=list, max_length=200)
@@ -144,6 +141,13 @@ class TracadoEntrada(BaseModel):
     # controlador com nó na topologia, do atributo `direcao_fluxo` quando não tem; 'controlador' e 'atributo'
     # impõem um dos dois. Ignorado pelos demais tipos de traçado.
     origem_direcao: str = Field(default="auto", pattern="^(auto|controlador|atributo)$")
+    # isolamento (L4-02-c): categorias de ativo que podem ser abertas para cortar (proteção e manobra, por
+    # padrão), se os elementos de além dos dispositivos que ficam sem fonte entram no resultado, e se um
+    # dispositivo sem `estado` declarado (ou com `operavel` negado) pode ser contado como ponto de corte.
+    categorias_isolamento: list[str] = Field(
+        default_factory=lambda: list(CATEGORIAS_ISOLAMENTO_PADRAO), max_length=20)
+    incluir_isolados: bool = False
+    ignorar_inoperante: bool = True
 
 
 class ElementoTracado(BaseModel):
@@ -162,14 +166,6 @@ class TracadoResultado(BaseModel):
     nos_alcancados: int
     geometria: dict | None
     duracao_ms: int
-
-
-# --- resultado do traçado: camada, exportação e histórico (item L4-02-f-resultados-e-exportacao) ---------
-
-class CamadaDoTracadoEntrada(TracadoEntrada):
-    """O mesmo pedido de traçado mais o TÍTULO da camada que vai guardar o resultado. Herda de
-    `TracadoEntrada` de propósito: salvar como camada é traçar e guardar, nunca um pedido diferente."""
-    titulo: str = Field(min_length=1, max_length=250)
 
 
 class TopoArestaModelo(BaseModel):
@@ -246,71 +242,3 @@ class Controlador(BaseModel):
     no_id: str | None
     lon: float
     lat: float
-
-
-class PropagadoresEntrada(BaseModel):
-    """Atributos que um tier propaga do controlador para os elementos da subrede (item L4-04-b). Lista vazia
-    é legítima: significa "este tier não propaga nada"."""
-
-    propagadores: list[str] = Field(default_factory=list, max_length=20)
-
-
-# --- configuração de traçado (item L4-02-e-configuracoes-de-tracado) ------------------------------------
-
-class ConfigTracadoEntrada(BaseModel):
-    """O documento salvo que preenche o pedido de traçado. `config` é validado contra o catálogo DA REDE em
-    `config_tracado.validar_documento` (atributo, categoria, grupo, tipo, operador, função e tipo de
-    resultado), e não por pydantic: a mensagem de erro precisa dizer qual atributo a rede não tem."""
-
-    codigo: str = Field(min_length=1, max_length=63, pattern="^[a-z0-9][a-z0-9_-]{0,62}$")
-    nome: str = Field(min_length=1, max_length=200)
-    descricao: str | None = Field(default=None, max_length=2000)
-    tipo: str = Field(pattern="^(conectado|subrede|montante|jusante)$")
-    config: dict = Field(default_factory=dict)
-    compartilhada: bool = True
-
-
-class ConfigTracado(BaseModel):
-    id: str
-    rede_id: str
-    codigo: str
-    nome: str
-    descricao: str | None
-    tipo: str
-    config: dict
-    origem: str
-    compartilhada: bool
-    dono_id: int | None
-    criado_em: str
-    atualizado_em: str
-
-
-class ConfigTracadoPagina(BaseModel):
-    total: int
-    itens: list[ConfigTracado]
-
-
-# --- diagrama de rede (item L4-04-d-diagrama-esquematico) -----------------------------------------------
-
-class DiagramaEntrada(BaseModel):
-    """Pedido de geração de diagrama. `origem` é validada em `diagrama._elementos_da_origem`, não aqui: as
-    três formas (subrede, traçado, seleção) têm campos diferentes, e a mensagem de erro precisa dizer qual
-    subrede/feição não existe NESTA rede — coisa que pydantic não sabe."""
-
-    nome: str = Field(min_length=1, max_length=200)
-    origem: dict = Field(default_factory=dict)
-    modelo: str = Field(default="basico", min_length=1, max_length=60)
-    layout: str | None = Field(default=None, max_length=40)
-
-
-class DiagramaLayoutEntrada(BaseModel):
-    layout: str = Field(min_length=1, max_length=40)
-
-
-class DiagramaModeloEntrada(BaseModel):
-    """Modelo (template) de diagrama do inquilino: as regras de construção e o layout padrão. As regras são
-    validadas em `diagrama._validar_regras` contra o vocabulário fechado do módulo."""
-
-    nome: str = Field(min_length=1, max_length=200)
-    regras: list[dict] = Field(default_factory=list, max_length=20)
-    layout: str = Field(min_length=1, max_length=40)

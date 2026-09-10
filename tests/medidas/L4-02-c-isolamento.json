@@ -1,0 +1,17 @@
+{
+  "p95_isolamento": {
+    "carga_1min": 10.95,
+    "medido": false,
+    "motivo": "carga acima de 8: o brief proíbe medir tempo sob disputa",
+    "ram_livre_gb": 5.0
+  },
+  "universo_da_rede_real": {
+    "conclusao": "a extração da cooperativa de teste não traz camada de dispositivo de manobra ou proteção de média tensão (nenhuma de ['unsemt', 'unsebt', 'chave', 'unremt'] existe no schema), então não há conjunto de isolamento a conferir nela; e o ramal de ligação, único caminho desenhado até a unidade consumidora, tem 0 de 26581 registros com geometria, de modo que a soma de UCBT a jusante também tem universo vazio. As duas metades desta cláusula ficam PENDENTES por falta de dado de origem, não por falta de traçado — o mesmo achado que o item irmão L4-02-b registrou para montante e jusante.",
+    "medido": true,
+    "ramais_com_geometria": 0,
+    "ramais_de_ligacao": 26581,
+    "tabelas_de_manobra_presentes": [],
+    "tabelas_do_ativo": 31,
+    "unidades_consumidoras_bt": 27587
+  }
+}

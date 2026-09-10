@@ -30,55 +30,6 @@ Medido (`tests/api/test_rede_topologia.py`): um ponto a 0,04 m de um vértice co
 0,06 m não conecta; a MESMA distância de 0,06 m conecta numa rede que declarou tolerância de 0,1 m — a régua é
 da rede, nunca uma constante global.
 
-### 2.1 Tolerância por PAR DE TIPOS (item L4-01-f)
-
-A tolerância da rede não dá conta sozinha porque a precisão da coordenada não é a mesma em toda camada. No
-ativo de referência (BDGD real), a camada de PONTO guarda a coordenada com 6 casas decimais de grau e a de
-LINHA com 13: meia unidade da última casa de 6 decimais vale 5e-7 grau, ou 0,055 m em latitude e 0,048 m
-naquela longitude — até 0,073 m de diferença entre o MESMO poste escrito nas duas camadas. Conferido no
-alimentador medido: os 50 transformadores (inclusive os 16 que a topologia não alcançava) têm uma ponta de
-trecho cuja coordenada, arredondada a 6 casas, é IGUAL à do transformador. Não é proximidade; é o mesmo
-ponto escrito com menos precisão.
-
-Por isso `plat.rede_regra.tolerancia_m` declara a tolerância DAQUELE par de tipos (NULL = a da rede). O
-pacote `eletrica-br` declara 0,10 m nos pares que envolvem dispositivo de cadastro de ponto; o par
-(trecho, trecho) fica com a tolerância da rede, sempre. Fundir duas pontas de trechos vizinhos é o que
-fabrica laço: medido no mesmo ativo, subir a tolerância da rede para 1,0 m leva os laços da média tensão de
-584 para 638.
-
-Duas travas, ambas em `topologia._admitir_pares`:
-
-1. continuação natural do mesmo grupo (trecho com trecho) vale SEMPRE pela tolerância da rede;
-2. a folga extra é sobre precisão de coordenada, nunca sobre alcance: por dispositivo, havendo candidato
-   dentro da tolerância da rede, só esses valem; não havendo, vale o mais próximo (e o que estiver a menos
-   da tolerância da rede DELE, que é o mesmo ponto físico). Sem essa segunda trava, um dispositivo de dois
-   terminais soldaria duas pontas distintas e fecharia um ciclo que a rede não tem — foi o que o teste da
-   refutação pegou (`test_a_tolerancia_do_par_nao_fabrica_laco_na_media_tensao`).
-
-Medido no ativo de referência (7 alimentadores, 9.925 trechos, 1.172 transformadores; medida completa em
-`tests/medidas/L4-01-f-alcance-do-tracado-rede-real.json`), cada alimentador na sua própria rede:
-
-| | sem a tolerância do par | com a tolerância do par |
-|---|---|---|
-| transformadores alcançados a jusante do controlador | 428 de 600 | 599 de 600 |
-| pior alcance de um alimentador | 66,67 % | 99,51 % |
-| alimentadores acima de 95 % | 1 de 5 | 5 de 5 |
-| laços na média tensão (por alimentador) | 0,0,0,0,0,1,1 | 0,0,0,0,0,1,1 |
-| nós órfãos | 1.038 | 495 |
-
-Dois dos sete alimentadores têm laço no próprio arquivo e o traçado recusa arbitrar sentido neles — antes e
-depois igualmente; o conserto não criou nem apagou laço.
-
-### 2.2 Diagnóstico do órfão por classe
-
-`GET /api/rede/{id}/topologia/diagnostico` (`app/rede_utilidades/diagnostico.py`) separa os nós órfãos em
-classes com contagem, distância medida e exemplo: `sem_camada_compativel`, `terminal_sem_par_no_dispositivo`,
-`derivacao_sem_no`, `fora_da_tolerancia_declarada`, `sem_vizinho_no_limiar`, `no_de_conexao_sem_aresta`.
-Contar órfão não diz o que consertar; a classe diz. No ativo de referência, o conserto deste item apaga as
-classes `fora_da_tolerancia_declarada` (274 nós, todos entre 0,0503 m e 0,0726 m — a faixa do arredondamento)
-e `derivacao_sem_no`; o que sobra é o segundo terminal de cada transformador, sem a camada de baixa tensão
-carregada, e dois transformadores longe da rede.
-
 ## 3. Coincidência geométrica + associação explícita
 
 Cruzar não é conectar: só os vértices DECLARADOS (as duas pontas de um trecho, o ponto de um dispositivo)
@@ -120,15 +71,15 @@ saindo de vértices de BT existentes, postes decorativos em qualquer lugar da ca
 de fronteira DELIBERADOS (transformador deslocado 1 m — prova de nó órfão; trecho degenerado — prova de
 aresta sem nó). Usada nos testes rápidos de `tests/api/test_rede_topologia*.py` (segundos, não minutos).
 
-**Escala real, marcado `lento`**: a rede real da cooperativa de teste (schema declarado em `PLAT_REDE_REFERENCIA_ESQUEMA`, ativo
-da casa, SOMENTE LEITURA — 44.268 trechos de MT, 29.244 de BT, 26.581 ramais, 5.481 trafos, 60.549 postes) NÃO
+**Escala real, marcado `lento`**: a rede real da cooperativa de teste (ativo de rede de referência da
+casa, num schema próprio do banco compartilhado, SOMENTE LEITURA — 44.268 trechos de MT, 29.244 de BT, 26.581 ramais, 5.481 trafos, 60.549 postes) NÃO
 está no repositório como arquivo (é acesso vivo ao Postgres compartilhado, exige `GRANT USAGE/SELECT` — ver
 docstring de `tests/dados/carga_bdgd.py`), mas EXISTE e é medida em `tests/api/test_rede_topologia_medida.py`
 (`pytest -m lento`), com conferência por um contador Python independente que nunca reconsulta as tabelas que
 o construtor gravou. Medido 2026-09-07 (`tests/medidas/L4-01-b-topologia-derivada.json`): 73.512 arestas reais
 (MT+BT), 80.456 nós, 3.948 órfãos, 0 arestas sem nó, 21 alimentadores com componente conexa idêntica arquivo ×
 topologia, 1.554 terminais de alta órfãos batendo exato com o arquivo. **Fronteira medida, não fabricada**:
-`<esquema>.ramlig` tem 0 dos 26.581 registros com `wkt` preenchido — o ramal de ligação entra como atributo, não
+a tabela `ramlig` do ativo de referência tem 0 dos 26.581 registros com `wkt` preenchido — o ramal de ligação entra como atributo, não
 como aresta geométrica (§6 abaixo detalha a conferência). Tempo de `habilitar` variou de ~21 s (máquina sem
 outra carga) a ~600 s (máquina com 4-8 agentes de outras trilhas disputando CPU/RAM ao mesmo tempo — swap
 100% cheio) na mesma rede de 73.512 arestas: o código processa em lotes de 4.000 linhas (§ADR 0020) e escala
@@ -152,8 +103,8 @@ incluso no próprio arquivo JSON).
   de uma chave é o item seguinte da linha L4.
 - **Desambiguação de terminal por ordem de chegada** quando um dispositivo multi-terminal só toca UM tier
   (§3.3) é uma convenção, não uma dedução dos dados — sem traçado de rede não há como fazer melhor.
-- **Ramal de ligação sem geometria no ativo real.** `<esquema>.ramlig` (BDGD da cooperativa
-  de teste) tem os 26.581 registros do arquivo mas 0 com a coluna `wkt` preenchida — medido, não suposto
+- **Ramal de ligação sem geometria no ativo real.** A tabela `ramlig` do ativo de rede de referência (BDGD
+  da cooperativa de teste) tem os 26.581 registros do arquivo mas 0 com a coluna `wkt` preenchida — medido, não suposto
   (`count(wkt)` direto na tabela). A carga (`tests/dados/carga_bdgd.py`) filtra `WHERE wkt IS NOT NULL`, o
   ramal entra como atributo (contagem do arquivo) mas não como aresta geométrica — fabricar uma linha que o
   arquivo não tem violaria a metodologia da casa. A topologia geométrica medida em escala real cobre MT + BT

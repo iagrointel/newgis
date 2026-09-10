@@ -54,6 +54,8 @@ PAGINAS = {
     "/redes/fluxo": "redes_fluxo.html",
     # --- resultado de traçado: seleção, camada, exportação e histórico (L4-02-f-resultados-e-exportacao)
     "/redes/tracado": "redes_tracado.html",
+    # --- traçado de isolamento (L4-02-c-isolamento)
+    "/redes/isolamento": "redes_isolamento.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
     "/uploads": "uploads.html",
     # --- sistema de design (UX-01-sistema-de-design): guia viva de tokens e componentes
