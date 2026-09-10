@@ -17,7 +17,6 @@ from pydantic import BaseModel
 
 from app import limites, objetos
 from app.ingestao.inspecionar import PREPARADORES, tabela_de
-from app.ingestao.isolamento import ambiente_isolado
 from app.jobs.registro import Cancelado, FalhaDefinitiva, tarefa
 from app.settings import settings
 
@@ -39,25 +38,6 @@ def _pg_conninfo() -> str:
     partes = psycopg2.extensions.parse_dsn(settings.PLAT_DSN)
     pares = " ".join(f"{k}={v}" for k, v in partes.items() if k in ("dbname", "host", "port", "user", "password"))
     return f"PG:{pares} application_name=plat-ingestao"
-
-
-def camada_origem_sem_geom(proposta: dict) -> str:
-    return proposta.get("camada_origem") or "camada"
-
-
-def _proposta_efetiva(proposta: dict, confirmacao: dict) -> dict:
-    """A proposta DA CAMADA que o usuário escolheu. Arquivo com N camadas guarda a proposta de cada uma em
-    `proposta["camadas"]` e copia a primeira com dado para o topo; escolher outra na confirmação tem de trocar
-    campos, geometria, CRS e validade junto — usar o topo aqui carregaria os campos da camada errada."""
-    nome = (confirmacao.get("camada") or {}).get("escolhida")
-    if not nome:
-        return proposta
-    for c in proposta.get("camadas") or []:
-        if c.get("camada_origem") == nome:
-            return {**proposta, **{k: v for k, v in c.items()
-                                   if k in ("camada_origem", "feicoes", "geometria", "crs", "campos",
-                                            "validade", "titulo")}}
-    return proposta
 
 
 def _marcar_falha(ctx, importacao_id: str, erro: str) -> None:
@@ -118,9 +98,13 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
             raise FalhaDefinitiva("o arquivo de origem não existe mais")
         cur.execute("SELECT slug FROM plat.tenant WHERE id = %s", (ctx.tenant_id,))
         slug = cur.fetchone()["slug"]
+        # o prefixo do schema de dado inclui a INSTALAÇÃO (plat.camada_schema_prefixo, migração
+        # 20260906T1615): sem ele produção, homologação e as trilhas escreviam todas em d_<slug>
+        cur.execute("SELECT plat.camada_schema_prefixo() AS p")
+        prefixo = cur.fetchone()["p"]
 
-    schema = f"d_{slug}"
-    proposta = _proposta_efetiva(imp["proposta"] or {}, imp["confirmacao"] or {})
+    schema = f"{prefixo}{slug}"
+    proposta = imp["proposta"] or {}
     confirmacao = imp["confirmacao"] or {}
     tabela = proposta.get("nome_tabela") or tabela_de(imp["item_id"])
     item_id = str(imp["item_id"])
@@ -162,12 +146,6 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
                                or proposta.get("codificacao", {}).get("valor"))
         prep = PREPARADORES[formato](ctx, dados, encoding_confirmada)
 
-        if not (proposta.get("geometria") or {}).get("escolhida"):
-            raise FalhaDefinitiva(
-                f"a camada {camada_origem_sem_geom(proposta)!r} não tem geometria. Esta passagem só carrega "
-                "camada com geometria; tabela sem coluna espacial (planilha, CSV sem coluna de coordenada, "
-                "tabela de atributo de GeoPackage) está fora do escopo do item L0-04-c e nada foi criado."
-            )
         srid = int((confirmacao.get("crs") or {}).get("srid") or proposta.get("crs", {}).get("srid") or 0)
         if not srid:
             raise FalhaDefinitiva("CRS não confirmado: SRID ausente")
@@ -176,8 +154,7 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
         select_sql, campos_usados = _select_campos(prep, campos)
         geom = confirmacao.get("geometria") or proposta.get("geometria") or {}
         tipo_escolhido_raw = geom.get("escolhida") or "Geometry"  # o que a inspeção/usuário resolveu
-        camada_origem = ((confirmacao.get("camada") or {}).get("escolhida")
-                         or proposta.get("camada_origem") or prep.get("layer"))
+        camada_origem = proposta.get("camada_origem") or prep.get("layer")
         sql_origem = f'SELECT {select_sql} FROM "{camada_origem}"'
 
         # PROMOTE_TO_MULTI (e não o tipo singular): ST_MakeValid pode fragmentar um Polygon/LineString
@@ -203,7 +180,7 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
             "--config", "PG_USE_COPY", "YES",
         ]
         ctx.progresso(25, "ogr2ogr")
-        r = ctx.subprocesso(argv, env=ambiente_isolado())  # AF_INET permitido: este ogr2ogr grava no Postgres
+        r = ctx.subprocesso(argv)
         if r.returncode != 0:
             linhas = [ln for ln in (r.stderr or "").splitlines() if ln.strip()]
             raise FalhaDefinitiva(f"ogr2ogr falhou: {(linhas[-1] if linhas else 'sem detalhe')[:200]}")
@@ -341,10 +318,13 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
                 "'arquivo_de_camada', %s) ON CONFLICT DO NOTHING",
                 (imp["arquivo_id"], item_id, ctx.tenant_id),
             )
+            # uso_bytes NÃO é somado aqui: quem contabiliza é o gatilho plat.item_uso_bytes (migração
+            # 20260906T1615), que soma no INSERT do item e DEVOLVE no DELETE. Antes a soma vivia neste
+            # ponto e não havia caminho nenhum de devolução — a cota do inquilino só subia.
             cur.execute(
-                "UPDATE plat.tenant SET uso_reservado_bytes = greatest(0, uso_reservado_bytes - %s), "
-                "uso_bytes = uso_bytes + %s WHERE id = %s",
-                (reservado, tamanho_bytes, ctx.tenant_id),
+                "UPDATE plat.tenant SET uso_reservado_bytes = greatest(0, uso_reservado_bytes - %s) "
+                "WHERE id = %s",
+                (reservado, ctx.tenant_id),
             )
             cur.execute(
                 "UPDATE plat.importacao SET estado = 'concluida', relatorio = %s, item_id = %s::uuid, "
