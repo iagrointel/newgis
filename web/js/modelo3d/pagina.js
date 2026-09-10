@@ -5,12 +5,20 @@
    modelo carregado — o e2e/Playwright espera por isso. */
 import '../base/componentes.js';
 import { carregar as carregarIdioma, t } from '../base/i18n.js';
-import { montarLayout, cabecalho, pronto } from '../base/layout.js';
+import { montarLayout, pronto } from '../base/layout.js';
 import { h, limpar } from '../base/dom.js';
 import { exigirSessao } from '../auth/sessao.js';
 import { obter } from '../base/api.js';
 
 const el = (id) => document.getElementById(id);
+
+/* o h1 desta tela vive dentro da barra de ferramentas (ao lado do link "voltar" e da etiqueta de origem),
+   não como filho direto de <main> — por isso não usa base/layout.js::cabecalho() (que exige `main > h1`,
+   convenção das telas de lista tipo /conteudo e /mapa, sem título por item). */
+function titulo(texto) {
+  el('modelo3d-titulo').textContent = texto;
+  document.title = `${texto} · ${t('app.nome')}`;
+}
 
 function idDaUrl() {
   const partes = location.pathname.split('/').filter(Boolean); // ['modelo', '<uuid>']
@@ -143,14 +151,14 @@ async function iniciar() {
   const caminho = tipo === 'foto360' ? `/api/foto360/${encodeURIComponent(id)}` : `/api/modelo3d/${encodeURIComponent(id)}`;
   const r = await obter(caminho);
   if (r.status !== 200) {
-    cabecalho(t('modelo3d.titulo'));
+    titulo(t('modelo3d.titulo'));
     el('aviso').erro((r.json && r.json.mensagem) || t('modelo3d.erro_item'));
     el('modelo3d-carregando').hidden = true;
     pronto();
     return;
   }
   const item = r.json;
-  cabecalho(item.titulo || t('modelo3d.titulo'));
+  titulo(item.titulo || t('modelo3d.titulo'));
   const rotuloOrigem = ROTULO_ORIGEM[item.origem];
   el('modelo3d-origem-etiqueta').textContent = rotuloOrigem ? rotuloOrigem() : '';
   if (tipo === 'foto360') {
