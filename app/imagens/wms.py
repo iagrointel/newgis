@@ -119,8 +119,6 @@ def _camada_xml(item: dict, indent: str = "      ") -> list[str]:
         linhas.append(f"{indent}  <Abstract>{escape(item['resumo'])}</Abstract>")
     for crs in CRS_SUPORTADOS:
         linhas.append(f"{indent}  <CRS>{crs}</CRS>")
-    for estilo in item.get("estilos") or []:
-        linhas += _estilo_xml(item["item_id"], estilo["nome"], estilo["titulo"], estilo["legend_href"], indent)
     linhas += [
         f"{indent}  <EX_GeographicBoundingBox>",
         f"{indent}    <westBoundLongitude>{oeste:.7f}</westBoundLongitude>",
@@ -139,6 +137,14 @@ def _camada_xml(item: dict, indent: str = "      ") -> list[str]:
             f'{indent}  <BoundingBox CRS="{crs}" minx="{minx:.7f}" miny="{miny:.7f}" '
             f'maxx="{maxx:.7f}" maxy="{maxy:.7f}"/>'
         )
+    # (10/09) `<Style>` vem DEPOIS de EX_GeographicBoundingBox e BoundingBox: a sequência de `<Layer>` no
+    # 1.3.0 (OGC 06-042, esquema oficial) é Name, Title, Abstract, KeywordList, CRS*,
+    # EX_GeographicBoundingBox, BoundingBox*, Dimension*, Attribution, AuthorityURL*, Identifier*,
+    # MetadataURL*, DataURL*, FeatureListURL*, Style*, Min/MaxScaleDenominator, Layer*. Com o Style logo
+    # após os CRS, o xmllint reprovava cada camada ("EX_GeographicBoundingBox: this element is not
+    # expected") — GetCapabilities inválido para cliente com parser estrito.
+    for estilo in item.get("estilos") or []:
+        linhas += _estilo_xml(item["item_id"], estilo["nome"], estilo["titulo"], estilo["legend_href"], indent)
     linhas.append(f"{indent}</Layer>")
     return linhas
 
@@ -178,12 +184,11 @@ def capabilities(*, base: str, titulo: str, resumo: str, camadas: list[dict], la
         f"          {onlineresource}",
         "        </Get></HTTP></DCPType>",
         "      </GetMap>",
-        "      <GetLegendGraphic>",
-        "        <Format>image/png</Format>",
-        "        <DCPType><HTTP><Get>",
-        f"          {onlineresource}",
-        "        </Get></HTTP></DCPType>",
-        "      </GetLegendGraphic>",
+        # (10/09) `GetLegendGraphic` NÃO entra em `<Request>`: no 1.3.0 ele não existe no esquema base
+        # (é do perfil SLD, `sld:GetLegendGraphic` em outro namespace), e declará-lo aqui torna o
+        # GetCapabilities INVÁLIDO para cliente com parser estrito. O caminho padrão de descoberta é o
+        # `<LegendURL>` dentro de `<Style>`, que é do esquema base e está em cada camada; a operação
+        # continua atendida quando chamada direto.
         "    </Request>",
         "    <Exception>",
         "      <Format>text/xml</Format>",

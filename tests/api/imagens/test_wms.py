@@ -43,7 +43,11 @@ def raster_demo_b(tenant_id_b, sessao_b):
 
 @pytest.fixture(scope="module")
 def token_wms(sessao_a):
-    r = sessao_a.post("/api/tokens", json={"nome": "zt-wms", "escopos": ["tiles:ler"]})
+    r = sessao_a.post("/api/tokens", json={"nome": "zt-wms",
+                                       # `imagens:ler` porque os ajudantes deste arquivo leem
+                                       # `info.json` para tirar os bounds REAIS do raster; sem ele o
+                                       # ajudante falha antes da asserção do teste (achado 10/09).
+                                       "escopos": ["tiles:ler", "imagens:ler"]})
     assert r.status_code == 201, r.text
     dados = r.json()
     yield dados
@@ -231,11 +235,15 @@ def test_camada_de_outro_inquilino_recusada_no_getmap(token_wms, raster_demo_b):
 
 
 # ---------------------------------------------------------------- cláusula: escopo insuficiente
-def test_token_sem_escopo_recusado(token_wms_sem_escopo, raster_demo):
-    c, tok, item = _cliente(), token_wms_sem_escopo["token"], raster_demo["item_id"]
-    r = c.get(f"/svc/{tok}/wms", params={"REQUEST": "GetCapabilities"})
+def test_token_sem_escopo_recusado(token_wms, token_wms_sem_escopo, raster_demo):
+    c, item = _cliente(), raster_demo["item_id"]
+    ruim = token_wms_sem_escopo["token"]
+    r = c.get(f"/svc/{ruim}/wms", params={"REQUEST": "GetCapabilities"})
     assert r.status_code == 403
-    r2 = _getmap(c, tok, item)
+    # a bbox vem de um token BOM: montá-la com o token sem escopo faria o ajudante falhar antes de chegar ao
+    # GetMap, e o teste passaria a medir o ajudante em vez da recusa (achado 10/09).
+    bbox = _bbox3857(c, token_wms["token"], item)
+    r2 = _getmap(c, ruim, item, BBOX=bbox)
     assert r2.status_code == 403
 
 
