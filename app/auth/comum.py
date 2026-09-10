@@ -2,6 +2,7 @@
 de exceção do banco (gatilhos e funções levantam códigos curtos) para ErroAPI, paginação, cookie de sessão."""
 
 import json
+import logging
 from typing import Any
 
 import psycopg2
@@ -12,6 +13,8 @@ from app import limites
 from app.auth.sessao import COOKIE, Auth, ip_de, iso
 from app.erros import ErroAPI
 from app.settings import settings
+
+log = logging.getLogger("plat.auth.comum")
 
 SQL_USUARIO = """
 SELECT u.id, u.login, u.nome, u.email, u.perfil, u.superadmin, u.ativo, u.origem, u.totp_ativo, u.trocar_senha,
@@ -126,7 +129,15 @@ def erro_do_banco(e: Exception) -> ErroAPI:
     if isinstance(e, psycopg2.errors.ForeignKeyViolation):
         return ErroAPI(409, "em_uso", "registro referenciado por outro", {"restricao": e.diag.constraint_name})
     if isinstance(e, psycopg2.errors.InsufficientPrivilege):
-        return ErroAPI(403, "sem_permissao", "operação fora do inquilino da sessão")
+        # Portão do L0-12 (achado G4-23): 403 "fora do inquilino" só quando o banco PROVA a fronteira —
+        # a mensagem da violação de RLS. Qualquer outro 42501 (GRANT faltando, schema errado, papel mal
+        # configurado) é defeito de servidor: 500 com a causa real no diário, nunca um fato não medido
+        # sobre o inquilino do chamador.
+        mensagem = (getattr(e, "diag", None) and e.diag.message_primary) or str(e)
+        if "row-level security policy" in mensagem:
+            return ErroAPI(403, "sem_permissao", "operação fora do inquilino da sessão")
+        log.exception("erro_do_banco: 42501 sem violação de RLS é configuração do servidor: %s", mensagem)
+        return ErroAPI(500, "configuracao_banco", "defeito de configuração do servidor; a causa está no diário")
     if isinstance(e, psycopg2.errors.ReadOnlySqlTransaction):
         return ErroAPI(403, "somente_leitura", "leitura de outro inquilino não permite escrita")
     raise e

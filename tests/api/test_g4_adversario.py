@@ -343,13 +343,10 @@ def test_banner_de_aviso_e_saneado(sessao_a):
 
 
 # ================================================================ L0-11 — saúde obrigatória
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G4-19 (L0-11): o portão diz '/saude marca garage como obrigatório a partir deste item'. "
-           "app/saude.py decide o status só pelo banco (linha 79: 200 if banco == 'ok' else 503); com o Garage "
-           "inalcançável a plataforma continua respondendo 200 e 'saudável'.",
-)
 def test_saude_reprova_quando_o_garage_esta_fora(cliente, monkeypatch):
+    """ACHADO G4-19 (L0-11), portão cumprido (ADR 20260908T2125): nasceu como xfail estrito apontando que
+    app/saude.py decidia o status só pelo banco; agora Garage configurado e sondado como erro reprova a
+    instalação com 503, como banco fora."""
     from app import saude as mod
 
     original = mod.sondar_servico
@@ -358,6 +355,19 @@ def test_saude_reprova_quando_o_garage_esta_fora(cliente, monkeypatch):
     r = cliente.get("/saude")
     assert r.json()["servicos"]["garage"] == "erro", r.json()["servicos"]
     assert r.status_code == 503, f"{r.status_code} com garage em erro: {r.json()['servicos']}"
+
+
+def test_saude_200_quando_garage_ausente(cliente, monkeypatch):
+    """Fronteira do ADR 20260908T2125: 'obrigatório' se aplica a instalação que DECLARA o serviço e não o
+    tem. Sem PLAT_GARAGE_URL (desenvolvimento sem objetos) o sonda fica 'ausente' e NÃO derruba o 200."""
+    import dataclasses
+
+    from app import saude as mod
+
+    monkeypatch.setattr(mod, "settings", dataclasses.replace(mod.settings, PLAT_GARAGE_URL=None))
+    r = cliente.get("/saude")
+    assert r.status_code == 200, r.text
+    assert r.json()["servicos"]["garage"] == "ausente", r.json()["servicos"]
 
 
 # ================================================================ L0-09 — metadado e catálogo
@@ -412,34 +422,44 @@ def test_todas_as_telas_usam_os_tokens_e_existe_pagina_estilo():
 
 
 # ================================================================ contrato: erro interno disfarçado de 403
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G4-23 (L0-12): app/auth/comum.py::erro_do_banco converte QUALQUER "
-           "psycopg2.errors.InsufficientPrivilege (SQLSTATE 42501 — GRANT faltando, schema errado, papel mal "
-           "configurado: defeito do servidor) em 403 sem_permissao 'operação fora do inquilino da sessão'. Pela "
-           "própria tabela de docs/CONTRATO_API.md 403 é 'sem privilégio' do chamador; aqui o servidor afirma "
-           "sobre o inquilino do usuário um fato que não mediu, e esconde erro de configuração. Medido: "
-           "POST /api/papeis devolve esse 403 quando o erro real é 'permission denied for schema plat'.",
-)
 def test_privilegio_insuficiente_do_banco_nao_vira_403_de_inquilino():
+    """ACHADO G4-23 (L0-12), GRADUADO de xfail estrito para portão: app/auth/comum.py::erro_do_banco convertia
+    QUALQUER psycopg2.errors.InsufficientPrivilege (SQLSTATE 42501 — GRANT faltando, schema errado, papel mal
+    configurado: defeito do servidor) em 403 sem_permissao 'operação fora do inquilino da sessão'. Pela própria
+    tabela de docs/CONTRATO_API.md 403 é 'sem privilégio' do chamador; o servidor afirmava sobre o inquilino do
+    usuário um fato que não mediu, e escondia erro de configuração (foi esse disfarce que escondeu o G4-24 por
+    horas). Regra agora: 403 de inquilino SÓ com violação de RLS na mensagem (test_violacao_de_rls_continua_403);
+    os demais 42501 voltam 500 configuracao_banco."""
     import psycopg2
 
     from app.auth.comum import erro_do_banco
 
     erro = erro_do_banco(psycopg2.errors.InsufficientPrivilege("permission denied for schema plat"))
     assert erro.status_code >= 500, f"{erro.status_code} {getattr(erro, 'erro', '')}"
+    assert erro.erro == "configuracao_banco", getattr(erro, "erro", "")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G4-24 (transversal, atinge a prova de isolamento): CursorSchemaAmbiente reescreve `plat.` em "
-           "execute() e callproc(), mas NÃO em executemany(). app/auth/rotas_usuarios.py usa executemany em "
-           "POST e PUT /api/papeis, então em qualquer ambiente isolado (PLAT_SCHEMA != plat: trilha ou "
-           "make homolog) essas rotas batem no schema `plat` de produção e recebem 42501. Efeito medido nesta "
-           "base: tests/api/test_cruzado.py — a varredura A->B que prova isolamento em toda rota — termina com "
-           "1 failed e 168 errors, ou seja, a garantia de isolamento não é exercida fora de produção.",
-)
+def test_violacao_de_rls_continua_403_de_inquilino():
+    """Fronteira do conserto do G4-23 (L0-12): a violação de row-level security é o banco PROVANDO a fronteira
+    do inquilino — esse 403 sem_permissao continua correto e não pode ser confundido com defeito de servidor."""
+    import psycopg2
+
+    from app.auth.comum import erro_do_banco
+
+    erro = erro_do_banco(
+        psycopg2.errors.InsufficientPrivilege('new row violates row-level security policy for table "item"')
+    )
+    assert erro.status_code == 403, f"{erro.status_code} {getattr(erro, 'erro', '')}"
+    assert erro.erro == "sem_permissao", getattr(erro, "erro", "")
+
+
 def test_cursor_de_schema_reescreve_executemany():
+    """ACHADO G4-24 (transversal, atingia a prova de isolamento): CursorSchemaAmbiente reescrevia `plat.` em
+    execute() e callproc(), mas NÃO em executemany(); app/auth/rotas_usuarios.py usa executemany em POST e PUT
+    /api/papeis, então em qualquer ambiente isolado (PLAT_SCHEMA != plat: trilha ou `make homolog`) essas rotas
+    batiam no schema `plat` de produção e recebiam 42501. O achado foi CORRIGIDO em master (a sobrecarga de
+    `executemany` está em app/schema_ambiente.py); o teste deixou de ser xfail e passou a guardar a correção —
+    se a sobrecarga sumir, ele reprova."""
     from app.schema_ambiente import CursorSchemaAmbiente
 
     assert "executemany" in CursorSchemaAmbiente.__dict__, sorted(CursorSchemaAmbiente.__dict__)

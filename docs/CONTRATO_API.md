@@ -39,6 +39,7 @@ Implementado em `app/erros.py` (`ErroAPI`, `tratar_http`, `tratar_validacao`); i
 | 422 | `validacao` (lista pydantic) ou código específico (ex. `senha_fraca`) | esquema de entrada violado |
 | 423 | `bloqueado` | conta ou recurso temporariamente bloqueado (política de senha, ADR 0002 seção 6) |
 | 429 | `muitas_tentativas` | limite de taxa (nginx, `/api/login`; ver seção 5 — ainda não na API) |
+| 500 | `configuracao_banco` | defeito de configuração do servidor (ex.: 42501 do banco sem violação de RLS — o 403 de inquilino fica só para a violação de row-level security, que prova a fronteira); a causa real vai ao diário com o mesmo `req_id` |
 | 503 | `indisponivel` (ou específico, ex. `inquilino_suspenso`) | dependência fora do ar ou inquilino suspenso |
 
 `detalhe` só aparece quando informado (nunca `null` OU chave ausente ao mesmo tempo — é uma coisa ou outra).

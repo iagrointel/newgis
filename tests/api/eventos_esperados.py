@@ -190,9 +190,16 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("PUT", "/api/rede/{rede_id}/diagrama-modelo/{codigo}"): ["redes/diagrama_modelo_definir"],
     ("POST", "/api/rede/{rede_id}/subrede/{nome}/fluxo"): ["redes/fluxo_potencia"],
     ("POST", "/api/senha/redefinir/solicitar"): [],
+    # ---- teto de cota, escrito só pela plataforma (conserto dos achados G4-04/G4-05)
+    ("PUT", "/api/plataforma/inquilinos/{id}/cotas"): ["inquilinos/cotas_teto"],
+    # ---- convite de membro por e-mail (L0-07-d-smtp-convites)
+    ("POST", "/api/convites"): ["convites/criar"],
+    ("DELETE", "/api/convites/{id}"): ["convites/cancelar"],
+    ("POST", "/api/convites/aceitar"): ["usuarios/convite_aceito"],
+    # ---- redefinição de senha por e-mail (L0-07-d-smtp-convites)
+    ("POST", "/api/senha/redefinir/solicitar"): ["usuarios/redefinir_senha_pedido"],
     ("POST", "/api/senha/redefinir/aplicar"): ["usuarios/redefinir_senha_email"],
-    # ---- SMTP por inquilino (L0-07-d-smtp-convites; ADR 0013): PUT tanto configura quanto remove o override
-    # (host="" apaga), então os dois tipos aparecem juntos.
+    # ---- SMTP por inquilino (L0-07-d-smtp-convites)
     ("PUT", "/api/org/smtp"): ["org/smtp_configurar", "org/smtp_remover"],
     ("POST", "/api/org/smtp/testar"): ["org/smtp_testar"],
     # ---- upload retomável (L0-04-a-upload-arquivo; ADR 0005 seção 3): `enviar_parte` não registra evento por
@@ -236,6 +243,9 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # ---- SMTP por inquilino (L0-07-d-smtp-convites)
     ("PUT", "/api/org/smtp"): ["org/smtp_configurar", "org/smtp_remover"],
     ("POST", "/api/org/smtp/testar"): ["org/smtp_testar"],
+    # ---- foto do próprio perfil (L0-02)
+    ("POST", "/api/eu/foto"): ["usuarios/foto_enviar"],
+    ("DELETE", "/api/eu/foto"): ["usuarios/foto_remover"],
     # ---- foto do próprio perfil (L0-02)
     ("POST", "/api/eu/foto"): ["usuarios/foto_enviar"],
     ("DELETE", "/api/eu/foto"): ["usuarios/foto_remover"],

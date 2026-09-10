@@ -987,6 +987,27 @@ comparava com a página logada — prova fraca, corrigida), diferença média 0,
 (`tests/e2e/capturas/L7-04-d-videos-por-tarefa_*.png`). Medidas: 11 vídeos, maior duração 17,7 s,
 4,6 MB, carga 1 min 5,29, RAM livre 7,0 GB (`tests/medidas/L7-04-d-videos-por-tarefa.json`, comando
 `make videos`). ADR `docs/adr/20260908T2130-videos-por-tarefa.md`.
+## turno 8, setembro de 2026 (item L0-12-contrato-api-e-limites: 42501 sem RLS deixa de virar 403 de inquilino — achado G4-23)
+
+`app/auth/comum.py::erro_do_banco` convertia QUALQUER `InsufficientPrivilege` do banco (SQLSTATE 42501)
+em `403 sem_permissao "operação fora do inquilino da sessão"` — GRANT faltando, schema errado e papel mal
+configurado saíam para o cliente como se o inquilino do usuário tivesse ultrapassado a fronteira (o
+disfarce escondeu o G4-24 por horas). Agora o 403 de inquilino exige prova: a mensagem de violação de
+row-level security. Os demais 42501 viram `500 configuracao_banco`, com a causa real no diário. O teste
+adversarial G4-23 saiu de xfail estrito para portão e a fronteira (violação de RLS continua 403) tem
+teste próprio; `docs/CONTRATO_API.md` ganhou a linha do 500.
+
+## turno 8, setembro de 2026 (item L0-11-arquivos-objetos: /saude marca o Garage como obrigatório — achado G4-19)
+
+Faltava uma cláusula do portão do L0-11: `/saude` decidia o status HTTP só pelo banco, então instalação
+com o Garage inalcançável continuava 200 "saudável" (`servicos["garage"] == "erro"` e tudo).
+`app/saude.py` agora responde 503 quando um serviço de `OBRIGATORIOS = ("garage",)` está configurado e
+não responde, declara a lista no corpo (`servicos_obrigatorios`) e a fronteira fica no ADR
+20260908T2125: sem `PLAT_GARAGE_URL` configurada o sonda fica "ausente" e não derruba o 200 (modo de
+desenvolvimento sem objetos); martin/titiler/worker continuam informativos. O teste adversarial
+`test_saude_reprova_quando_o_garage_esta_fora` saiu de `xfail(strict=True)` para portão em pé, com
+teste complementar da fronteira (`test_saude_200_quando_garage_ausente`) e o contrato do corpo
+atualizado em `tests/api/test_saude.py`.
 
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
