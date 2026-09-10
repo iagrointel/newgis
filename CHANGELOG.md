@@ -1767,6 +1767,18 @@ caso na varredura cruzada A→B, que segue em 100 % de cobertura.
 ## turno 8, setembro de 2026 (item HARD-01-varredura-de-seguranca-continua: varredura de segurança no portão)
 
 - HARD-01-varredura-de-seguranca-continua: `make seguranca` em `make check` (bandit + pip-audit + npm audit + gitleaks no histórico + trivy; ZAP baseline em `make seguranca-zap` contra instância própria), exceções com prazo em `docs/excecoes_seguranca.json`, binárias fixadas por sha256 (`deploy/ferramentas_binarias.txt`), seção 9 de docs/SEGURANCA.md gerada; consertos: defusedxml no Garage, `server_tokens off`, X-Frame-Options e Content-Security-Policy no nginx.
+## turno 48, setembro de 2026 (item L3-20-narrativa-de-resultado: resumo textual por template, com revisor que marca número sem origem)
+
+`app/amc/narrativa.py`: `narrar(documento, top_n=3)` escreve o resumo do resultado como template puro
+sobre o documento canônico `plat/amc_metodo` — uma ideia por frase, número só com origem em campo do
+documento, universo nas formas "X de 100" e "o resultado cobre Y unidades" (regra de escrita de
+03/09). A explicação de magnitude de cada nota é aritmética declarada (peso normalizado × valor do
+fator de maior contribuição). `revisar(texto, documento)` é a refutação do item automatizada: marca
+`numero_sem_origem` (a varredura cobre valores, números dentro de textos e dentro de chaves),
+`termo_proibido` (lista da regra de escrita) e `pontuacao_proibida`. O texto gerado passa com zero
+marcações; frase fabricada ("os pesos somam 17") é marcada. Sem banco, sem relógio, sem modelo de
+linguagem. Conferência à mão do texto de 3 unidades gravada em
+`tests/medidas/L3-20-narrativa-de-resultado.json`.
 
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 

@@ -1,0 +1,37 @@
+{
+ "item": "L3-20-narrativa-de-resultado",
+ "medidas": {
+  "ms_por_narracao": {
+   "valor": 0.02,
+   "unidade": "ms",
+   "comando": "venv/bin/python -c 'narrar(DOCUMENTO) x200'"
+  },
+  "numeros_no_texto_todos_no_json": {
+   "valor": true,
+   "unidade": "boleano",
+   "comando": "test_cada_numero_do_texto_existe_no_json"
+  },
+  "revisor_zero_marcacoes_no_texto_gerado": {
+   "valor": true,
+   "unidade": "boleano",
+   "comando": "test_texto_gerado_passa_no_revisor_sem_marcacao_nenhuma"
+  },
+  "texto_3_unidades_conferido_a_mao": {
+   "valor": true,
+   "unidade": "boleano",
+   "comando": "texto impresso e lido frase a frase; todo numero com origem no documento; zero termo proibido; ressalva repetida deduplicada"
+  },
+  "carga_1min": {
+   "valor": 4.34,
+   "unidade": "load1",
+   "comando": "uptime"
+  },
+  "ram_livre_gb": {
+   "valor": 9.26,
+   "unidade": "GB",
+   "comando": "free"
+  }
+ },
+ "gerado_em": "2026-09-08T18:53:19Z",
+ "git_sha": "610896979710"
+}
