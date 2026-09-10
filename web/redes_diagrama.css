@@ -70,5 +70,5 @@ body.redes-diagrama .etiqueta {
   border: 1px solid var(--borda);
 }
 
-body.redes-diagrama .etiqueta.estado-consistente { border-color: #2f7d4f; color: #2f7d4f; }
-body.redes-diagrama .etiqueta.estado-inconsistente { border-color: #b4341f; color: #b4341f; }
+body.redes-diagrama .etiqueta.estado-consistente { border-color: var(--ok); color: var(--ok); }
+body.redes-diagrama .etiqueta.estado-inconsistente { border-color: var(--falha); color: var(--falha); }
