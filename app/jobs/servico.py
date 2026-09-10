@@ -30,7 +30,9 @@ LOG_LIMITE_MAX = 2000
 PENDENTES_MAX = 200
 NIVEIS = ("DEBUG", "INFO", "AVISO", "ERRO")
 
-log = logging.getLogger("plat.jobs.servico")
+# `log` já é o nome da FUNÇÃO de leitura de log de trabalho, mais abaixo neste módulo; o registrador
+# de eventos do processo chama-se `_log` para os dois não se atropelarem.
+_log = logging.getLogger("plat.jobs.servico")
 _ceifa_em = 0.0
 
 
@@ -53,10 +55,10 @@ def ceifar_vencidos(sessao: Sessao) -> None:
             cur.execute("SELECT plat.job_ceifar_vencidos(%s) AS n", (limites.CEIFA_LIMITE_S,))
             n = cur.fetchone()["n"]
         if n:
-            log.warning("ceifa pela API: %s trabalhos sem sinal devolvidos", n,
+            _log.warning("ceifa pela API: %s trabalhos sem sinal devolvidos", n,
                         extra={"tenant_id": sessao.tenant_id})
     except Exception as e:  # noqa: BLE001 — a ceifa é higiene: nunca derruba a leitura da fila
-        log.warning("ceifa pela API falhou: %s", str(e).strip()[:200])
+        _log.warning("ceifa pela API falhou: %s", str(e).strip()[:200])
 
 SQL_JOB = """
 SELECT j.id, j.tipo, j.estado, j.progresso, j.mensagem, j.prioridade, j.pesado, j.executor, j.usuario_id,

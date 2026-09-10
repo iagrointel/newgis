@@ -16,8 +16,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-from app.limites import CHAVE_RESERVADA
 from app.jobs.registro import tarefa
+from app.limites import CHAVE_RESERVADA
 
 DIAS_JOB = 90
 DIAS_LOG = 30

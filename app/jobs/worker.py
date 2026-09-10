@@ -26,7 +26,6 @@ import psycopg2
 import psycopg2.extras
 
 from app import log as plat_log
-from app import metricas
 from app.jobs import agenda as mod_agenda
 from app.jobs import filho as mod_filho
 from app.jobs.tipos import REGISTRO
@@ -45,12 +44,16 @@ LIMITE_WORKER_S = 90
 GRACA_CANCELAMENTO_S = 30
 GRACA_KILL_S = 10
 ESPERA_PARADA_S = 20
-# "1 pesado por vez" é por INSTALAÇÃO, não por banco: o advisory lock é global no PostgreSQL, e com o
-# nome fixo "plat.job.pesado" o worker de homologação (item L7-31) e o de cada trilha isolada disputavam a
-# mesma vaga com o worker de produção — job pesado de uma base ficava pendente esperando outra base
-# terminar (medido em 06/09: carga de ingestão parada 180 s com a fila da própria base vazia). Em produção
-# o schema é `plat` e o nome do lock continua exatamente o mesmo de antes.
-LOCK_PESADO = f"{settings.PLAT_SCHEMA}.job.pesado"
+LOCK_PESADO = "plat.job.pesado"  # nome-base; a chave real leva o schema (ver _chave_pesado)
+
+
+def _chave_pesado() -> str:
+    """07/09 (achado do item L2-15-a + classe F5): a chave era CONSTANTE no cluster inteiro, então o worker
+    de uma trilha isolada segurava o "1 pesado por vez" de produção e de todas as outras trilhas. A chave
+    leva o schema do ambiente: cada base tem a sua vez de pesado."""
+    from app.settings import settings
+
+    return f"{settings.PLAT_SCHEMA}.job.pesado"
 UTC = datetime.UTC
 
 
@@ -309,41 +312,33 @@ class Worker:
         except OSError:
             f.eof = True
 
+    def _pesado_rodando(self) -> bool:
+        return any(f.pesado for f in self.filhos.values())
+
     def _pegar(self) -> None:
-        # Achado do adversário G3 (recurso partilhado, achado do gerente 06/09): `pesado_ok` só refletia a
-        # aquisição FRESCA do lock ("if not self.lock_pesado: ... pesado_ok = ..."); se `self.lock_pesado`
-        # já era True de uma volta anterior, `pesado_ok` ficava em False pelo resto da função — e as duas
-        # únicas chamadas de `_soltar_pesado()` exigem `pesado_ok` verdadeiro. Um worker que segurava o
-        # lock e ficava sem trabalho pesado próprio NUNCA MAIS o soltava (medido ao vivo: a trilha
-        # `destrava` chamando `job_pegar(nome, false)` com o lock ainda preso, travando "1 pesado por vez"
-        # para toda trilha e para produção — advisory lock é do BANCO, não do schema).
-        #
-        # `pesado_em_curso` é a segunda metade, achada testando o conserto acima com PLAT_WORKER_PROCESSOS
-        # > 1 (`worker_extra`, tests/api/jobs/test_jobs_fila.py::test_pesado_nunca_em_paralelo_com_pesado):
-        # advisory lock do Postgres é REENTRANTE na mesma sessão — chamar `pg_try_advisory_lock` de novo na
-        # MESMA conexão devolve `true` de novo, mesmo já segurando. Sem checar se já há um filho pesado em
-        # curso, um worker com 2 processos pedia (e recebia) um SEGUNDO job pesado para si mesmo enquanto o
-        # primeiro ainda rodava — dois pesados em paralelo, no MESMO worker, sem nenhuma outra trilha
-        # envolvida. `pesado_ok` só vale quando o lock está preso E não há pesado nosso em curso; o estado
-        # REAL (lock + filhos) decide tanto o pedido quanto a devolução, nunca só o que mudou nesta volta.
         while len(self.filhos) < self.processos and not self.parando:
+            # 07/09 (achado do item L2-15-a): o lock ficava preso quando o filho pesado terminava — o tick
+            # seguinte entrava com lock_pesado=True, pesado_ok=False por inicialização, e nunca soltava.
+            # Regra: `pesado_ok` sai do ESTADO REAL a cada volta (lock preso E nenhum filho pesado nosso em
+            # curso), nunca do que mudou nesta volta. Quem já tem o lock não o pede de novo: `pg_try_advisory_lock`
+            # é reentrante na mesma sessão e devolveria `true` outra vez, e soltar para retomar abriria uma
+            # janela em que outro worker leva a vez.
             if not self.lock_pesado:
-                r = self.um("SELECT pg_try_advisory_lock(hashtext(%s)) AS ok", (LOCK_PESADO,))
+                r = self.um("SELECT pg_try_advisory_lock(hashtext(%s)) AS ok", (_chave_pesado(),))
                 self.lock_pesado = bool(r and r["ok"])
-            pesado_em_curso = any(f.pesado for f in self.filhos.values())
-            pesado_ok = self.lock_pesado and not pesado_em_curso
+            pesado_ok = self.lock_pesado and not self._pesado_rodando()
             job = self.um("SELECT * FROM plat.job_pegar(%s, %s)", (self.nome, pesado_ok))
             if job is None or job.get("id") is None:
-                if self.lock_pesado and not pesado_em_curso:
+                if pesado_ok:
                     self._soltar_pesado()
                 return
-            if self.lock_pesado and not job["pesado"] and not pesado_em_curso:
+            if not job["pesado"] and pesado_ok:
                 self._soltar_pesado()
             self._lancar(job)
 
     def _soltar_pesado(self) -> None:
         if self.lock_pesado:
-            self.sql("SELECT pg_advisory_unlock(hashtext(%s))", (LOCK_PESADO,))
+            self.sql("SELECT pg_advisory_unlock(hashtext(%s))", (_chave_pesado(),))
             self.lock_pesado = False
 
     def _lancar(self, job: dict) -> None:
@@ -351,7 +346,6 @@ class Worker:
         if tarefa is None:
             self.sql("SELECT plat.job_terminar(%s, %s, 'falhou', NULL, %s, NULL)",
                      (job["id"], self.nome, f"tipo de job não registrado neste worker: {job['tipo']}"))
-            metricas.registrar_job_processado(job["tipo"], "falhou")
             return
         r, w = os.pipe()
         os.set_blocking(r, False)
@@ -441,10 +435,6 @@ class Worker:
             estado = r["estado"] if r else None
         if estado in ("concluido", "cancelado", "pendente"):
             mod_filho.apagar_dir(self.dir_jobs, job["id"])
-        # plat_jobs_processados_total (item L7-06-a): só estado FINAL de verdade — "pendente" é devolução
-        # para nova tentativa, não fim de vida do job, e não deve inflar o contador de processados.
-        if estado in ("concluido", "falhou", "cancelado"):
-            metricas.registrar_job_processado(job["tipo"], estado)
         log.info("job terminou: %s (código %s)", estado, codigo,
                  extra={"job_id": str(job["id"]), "tipo": job["tipo"], "tenant_id": job["tenant_id"],
                         "pid_filho": f.pid})
@@ -513,18 +503,10 @@ class Worker:
             if linha.startswith(("GET /saude", "HEAD /saude")):
                 corpo = json.dumps(self.estado_saude(), ensure_ascii=False).encode("utf-8")
                 status = "200 OK"
-                tipo_conteudo = "application/json; charset=utf-8"
-            elif linha.startswith(("GET /metrics", "HEAD /metrics")):
-                # item L7-06-a: mesmo contrato de cardinalidade de app/metricas.py; só as métricas DESTE
-                # processo (worker) — plat_jobs_processados_total. Sem fila (evita 2º pool de conexões
-                # só para repetir o que a API já expõe em /metrics via plat.fila_estado()).
-                corpo, tipo_conteudo = metricas.expor()
-                status = "200 OK"
             else:
                 corpo = b'{"erro": "rota_inexistente"}'
                 status = "404 Not Found"
-                tipo_conteudo = "application/json; charset=utf-8"
-            cab = (f"HTTP/1.1 {status}\r\nContent-Type: {tipo_conteudo}\r\nCache-Control: no-store\r\n"
+            cab = (f"HTTP/1.1 {status}\r\nContent-Type: application/json; charset=utf-8\r\nCache-Control: no-store\r\n"
                    f"Content-Length: {len(corpo)}\r\nConnection: close\r\n\r\n").encode("ascii")
             c.sendall(cab + (b"" if linha.startswith("HEAD") else corpo))
         except OSError:

@@ -145,10 +145,17 @@ def lock_de_pesado() -> tuple[bool, str]:
     `destrava` segurou o lock por horas com a fila da própria base vazia, e `job_pegar(nome, false)` foi
     chamado com o lock ainda preso — a mesma classe de defeito dos cinco pontos acima, num lugar novo."""
     fonte = (RAIZ / "app" / "jobs" / "worker.py").read_text(encoding="utf-8")
-    if re.search(r'LOCK_PESADO\s*=\s*"plat\.job\.pesado"\s*$', fonte, re.M):
-        return False, "LOCK_PESADO é o texto fixo 'plat.job.pesado', sem o schema da instalação"
-    if "settings.PLAT_SCHEMA" not in re.search(r"LOCK_PESADO\s*=.*", fonte).group(0):
-        return False, "LOCK_PESADO não carrega settings.PLAT_SCHEMA"
+    # A chave pode estar num literal (`LOCK_PESADO = f"{settings.PLAT_SCHEMA}.job.pesado"`) ou numa função
+    # que a monta (`def _chave_pesado()`); o que a cláusula exige é que o schema da instalação entre nela.
+    chave = "\n".join(
+        m.group(0) for m in re.finditer(r"LOCK_PESADO\s*=.*|def _chave_pesado\(.*?\n\n", fonte, re.S)
+    )
+    if not chave:
+        return False, "não achei nem LOCK_PESADO nem _chave_pesado() em app/jobs/worker.py"
+    if "settings.PLAT_SCHEMA" not in chave:
+        return False, "a chave do lock de pesado não carrega settings.PLAT_SCHEMA"
+    if re.search(r"pg_(try_)?advisory_(un)?lock\(hashtext\(%s\)\)\"?,\s*\(LOCK_PESADO,", fonte):
+        return False, "a chamada ao advisory lock ainda usa o texto fixo LOCK_PESADO"
     corpo = fonte[fonte.index("def _pegar("): fonte.index("def _soltar_pesado(")]
     if "pesado_ok = self.lock_pesado" not in " ".join(corpo.split()).replace(" = ", " = "):
         return False, ("_pegar() não recalcula pesado_ok a partir do estado real do lock a cada volta "
