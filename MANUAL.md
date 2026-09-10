@@ -1204,3 +1204,47 @@ guardado — só o identificador dele e o prefixo visível.
 - não há WMS 1.3.0 (L1-02-g), nem OGC API Tiles/Maps (L1-02-i), nem ponto/estatística/histograma
   (L1-02-h), nem predefinição de renderização gravada (L1-02-f): por enquanto a pintura vive na URL;
 - a única grade é a WebMercatorQuad (a do Google/OSM/AGOL).
+
+## 23. ImageServer compatível Esri por token (item L1-25-servico-de-imagem-esri-compativel)
+
+Pedido de abertura do dono: um cliente do canal Esri mantém o ArcGIS Enterprise/Online dele e ACRESCENTA
+a imagem desta plataforma como camada, sem pagar crédito de hospedagem de imagem no AGOL. Reusa o MESMO
+token de serviço (escopo `tiles:ler` ou `imagens:ler`) e o MESMO item do catálogo de imagens (L1-01) do
+ladrilho raster (seção 22) — é a casca de protocolo `ImageServer` por cima do que já existe.
+
+### 23.1 As URLs
+
+Com `<tok>` = o token e `<item>` = o identificador da imagem no catálogo:
+
+| para quê | endereço |
+|---|---|
+| documento do serviço (o que o Pro/AGOL lê para ACEITAR adicionar a camada) | `https://<dominio>/svc/<tok>/rest/services/<item>/ImageServer?f=json` |
+| recorte por área (`exportImage`) | `https://<dominio>/svc/<tok>/rest/services/<item>/ImageServer/exportImage?bbox=<xmin,ymin,xmax,ymax>&bboxSR=<wkid>&size=<largura,altura>&format=png` |
+| valor de pixel num ponto (`identify`) | `https://<dominio>/svc/<tok>/rest/services/<item>/ImageServer/identify?geometry=<x,y>&sr=<wkid>` |
+| ladrilho no caminho do ArcGIS (`level/row/col` == `z/y/x`) | `https://<dominio>/svc/<tok>/rest/services/<item>/ImageServer/tile/{level}/{row}/{col}` |
+
+`bboxSR`/`imageSR`/`sr` aceitam o EPSG cru, `EPSG:<n>`, ou os alias Esri `102100`/`102113` de Web
+Mercator (o que o Pro manda por padrão). `format` aceita `png`/`png8`/`png24`/`png32`/`jpg`/`jpeg`.
+
+### 23.2 O que o documento do serviço traz
+
+`extent`/`initialExtent`/`fullExtent` (com `spatialReference.wkid` NATIVO do raster — nunca reprojetado
+sem pedir), `pixelSizeX/Y`, `bandCount`, `pixelType` (`U8`..`F64`, traduzido do tipo do arquivo),
+`capabilities` (sempre só `"Image"` nesta passagem) e, quando a imagem carrega estatística de ingestão
+(L1-01), `minValues`/`maxValues`/`meanValues`/`stdvValues` por banda. Campo que não pode ser medido
+NUNCA aparece inventado — some do documento (é o caso de `minValues` para um item sem estatística).
+
+### 23.3 O que ainda não faz
+
+- `renderingRule` e `mosaicRule`: recusados com erro nomeado sempre que vêm com valor — nunca aplicados
+  nem ignorados em silêncio. Dependem dos itens L1-02-f (predefinição de renderização) e L1-07 (mosaico
+  de coleção), nenhum construído ainda;
+- `computeStatisticsHistograms`/histograma: `hasHistograms` é sempre `false` — depende do L1-02-h;
+- `rasterAttributeTable`: esta plataforma não tem tabela de atributo de raster;
+- `query` de pegadas/catálogo de mosaico: cada item é um raster único, não um mosaico multi-cena;
+- download de pixel, `measure`, edição;
+- teste com ArcGIS Pro/AGOL de verdade: PENDENTE (decisão D20) — o que existe hoje prova a FORMA do
+  protocolo (campos do documento contra o que a doc Esri descreve, alinhamento de pixel do `exportImage`
+  contra o ladrilho XYZ do L1-02, ≤ 1 px), não a compatibilidade final com o cliente real.
+
+Ver `docs/PARIDADE.md`, seção do item, para a tabela cláusula a cláusula.

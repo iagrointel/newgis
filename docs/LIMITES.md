@@ -248,6 +248,13 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `WMS_CAMADAS_MAX` | `500` | <Layer> por GetCapabilities (itens além disso não aparecem) |
 | `WMS_TIMEOUT_S` | `30` | teto de renderização de um GetMap (mesma ordem do tile) |
 
+## ImageServer compatível Esri (L1-25-servico-de-imagem-esri-compativel; app/imagens/rotas_imageserver.py):
+
+| nome | valor | explicação |
+|---|---|---|
+| `IMAGESERVER_EXPORT_LADO_MAX` | `4096` | largura/altura máximas aceitas no exportImage, em pixels |
+| `IMAGESERVER_EXPORT_LADO_PADRAO` | `400` | tamanho quando `size` não vem — mesmo default do ArcGIS Server |
+
 ## ingestão de modelo 3D (L1-03-modelo3d, 10/09/2026): IFC bruto enviado pelo usuário antes da conversão
 
 | nome | valor | explicação |
