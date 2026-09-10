@@ -35,7 +35,6 @@ import os
 import re
 import time
 
-from app import temas
 from app.catalogo import tipos
 from app.erros import ErroAPI
 
@@ -82,18 +81,45 @@ def _corpo_do_documento(tipo: str, dados) -> dict | None:
     return corpo if isinstance(corpo, dict) else None
 
 
+# o que JSON Schema do tipo `colecao` não expressa: `capa.midia` e `metadados.miniatura` viram `src`/`href`
+# na página leitora e nos `og:` da página do link, então só valem caminho da própria instalação ou http(s)
+_MIDIA_RE = re.compile(r"^(https://[^\s]+|/[^\s]*)$")
+
+
+def validar_colecao(corpo: dict) -> None:
+    """422 colecao_invalida quando `capa.midia` ou `metadados.miniatura` fogem do formato permitido
+    (caminho relativo começado por `/` ou URL https). O formato de capa/itens/tema é do JSON Schema do
+    tipo; aqui entra só a regra de seguraça que precisa do conteúdo da string."""
+    erros: list[dict] = []
+    for campo in (("capa", "midia"), ("metadados", "miniatura")):
+        secao = corpo.get(campo[0])
+        valor = secao.get(campo[1]) if isinstance(secao, dict) else None
+        if valor is not None and not (isinstance(valor, str) and _MIDIA_RE.match(valor)):
+            erros.append(
+                {
+                    "campo": f"corpo.{campo[0]}.{campo[1]}",
+                    "erro": "caminho precisa começar por / ou ser uma URL https",
+                    "regra": "midia_invalida",
+                }
+            )
+    if erros:
+        raise ErroAPI(422, "colecao_invalida", "corpo da coleção inválido", erros)
+
+
 def validar_grafo(tipo: str, dados) -> None:
     """422 grafo_invalido (mesmo contrato de app/erros.py) quando: nó sem id ULID, dois nós com o mesmo id, ou
     ligação (`origem`/`alvo`) apontando para um id que não está em `corpo.nos`. O formato de cada campo (tipo do
     nó, tipos de `corpo`/`nos`/`ligacoes`) já é responsabilidade do JSON Schema do tipo (`tipos.validar`,
     chamado ANTES desta função nas duas rotas que escrevem `dados`); aqui só entra o que precisa da lista
-    inteira para ser conferido. Item L5-10-temas-marca: `corpo.tema` presente passa pela MESMA checagem —
-    referência ({"id"}) ou definição ({"definicao"}) com tokens validados por formato em app/temas.py."""
+    inteira para ser conferido."""
+    if tipo == "colecao":
+        corpo_colecao = dados.get("corpo") if isinstance(dados, dict) else None
+        if isinstance(corpo_colecao, dict):
+            validar_colecao(corpo_colecao)
+        return
     corpo = _corpo_do_documento(tipo, dados)
     if corpo is None:
         return
-    if corpo.get("tema") is not None:
-        temas.validar_referencia_de_documento(corpo["tema"])
     nos = corpo.get("nos", [])
     if not isinstance(nos, list):
         return
@@ -154,27 +180,10 @@ def _migrar_app_v1_v2(dados: dict) -> dict:
     return {**dados, "corpo": corpo, "esquema_versao": 2}
 
 
-def _migrar_v2_v3(tipo: str, dados: dict) -> dict:
-    """v2→v3 (`20260908T1709_temas_marca.sql`, item L5-10): o esquema ganha a chave OPCIONAL `corpo.tema`.
-    Nada a migrar no dado — tema ausente continua ausente (documento sem tema renderiza com o padrão);
-    só sobe o número para a leitura parar de re-migrar. v1 já passou por v1→v2 antes (cadeia)."""
-    return {**dados, "esquema_versao": 3}
-
-
-def _migrar_painel_v2_v3(dados: dict) -> dict:
-    return _migrar_v2_v3("painel", dados)
-
-
-def _migrar_app_v2_v3(dados: dict) -> dict:
-    return _migrar_v2_v3("app", dados)
-
-
 # registro fechado: (tipo, versão de origem) -> função que devolve o documento na versão seguinte
 _MIGRACOES = {
     ("painel", 1): _migrar_painel_v1_v2,
     ("app", 1): _migrar_app_v1_v2,
-    ("painel", 2): _migrar_painel_v2_v3,
-    ("app", 2): _migrar_app_v2_v3,
 }
 
 _TETO_PASSOS = 50  # mesma ordem de grandeza de outras cadeias da casa; documento real nunca chega perto disso

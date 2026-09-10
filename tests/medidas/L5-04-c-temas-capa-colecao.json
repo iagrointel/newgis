@@ -1,0 +1,62 @@
+{
+ "item": "L5-04-c-temas-capa-colecao",
+ "medidas": {
+  "clausula_colecao_3_itens_navegavel": {
+   "valor": "passou",
+   "unidade": "cláusula",
+   "comando": "tests/e2e/test_colecao.py (chromium): leitora /colecao com 4 fichas (3 apps + camada citada), 3 cliques em #colecao-proximo até '4 de 4' e 1 em #colecao-anterior, window.__marcanavegacao intacto e navigation.length == 1 (sem recarregar a página); teclado ←/→ no leitor.js"
+  },
+  "clausula_citacao_privada_avisa_e_oferece_corrigir": {
+   "valor": "passou",
+   "unidade": "cláusula",
+   "comando": "tests/e2e/test_colecao.py: POST do link pela UI nasce minimalista e #aviso-link[data-tipo=erro] diz '4 item(ns) citado(s) ficou(foram) de fora do link'; #botao-corrigir recria o link com todos os citados e vira [data-tipo=ok] sem botão; caminho de API em tests/api/catalogo/test_colecao.py::test_link_avisos_e_corrigir (avisos nomeia o que ficou fora; recriar com itens_incluidos encerra o aviso; item sem dependência = avisos [])"
+  },
+  "clausula_og_somente_na_publica": {
+   "valor": "passou",
+   "unidade": "cláusula",
+   "comando": "tests/api/catalogo/test_colecao.py::test_og_somente_na_pagina_publica + e2e: /c/<token> leva og:title/og:description/og:image (miniatura absolutizada com PLAT_URL_PUBLICA, html.escape, cache-control no-store); /colecao e /conteudo nunca levam og:title; link inválido abre sem og:"
+  },
+  "clausula_anonimo_parcial_nao_vazio_sem_dizer": {
+   "valor": "passou",
+   "unidade": "refutação do adversário",
+   "comando": "tests/e2e/test_colecao.py: link com só os 3 apps aberto por contexto anônimo mostra '1 item(ns) citado(s) pela coleção não está(ão) no link' em #aviso, 'fora do link: camada privada' no corpo, contador '1 de 3', 0 pageerror — nunca um leitor vazio sem dizer por quê"
+  },
+  "clausula_tema_trocado_sem_reeditar_blocos": {
+   "valor": "PENDENTE",
+   "unidade": "cláusula",
+   "comando": "depende de L5-10 (temas), que NÃO está em master na data desta medição: app/temas.py, app/rotas_temas.py e web/js/temas/ não existem no worktree. O esquema do tipo colecao já carrega corpo.tema ({\"type\":\"object\"}) para conformar quando L5-10 aterrissar; nada foi fingido"
+  },
+  "navegacao_3_cliques_ms": {
+   "valor": 125.7,
+   "unidade": "ms",
+   "comando": "PLAT_GRAVAR_MEDIDAS=1 bash laco/roda_teste.sh tests/e2e/test_colecao.py --base-url http://127.0.0.1:8181"
+  },
+  "carga_1min": {
+   "valor": 2.73,
+   "unidade": "load average",
+   "comando": "uptime imediatamente após a medição de navegacao_3_cliques_ms (2026-09-08 20:42 -03)"
+  },
+  "ram_livre_gb": {
+   "valor": 9,
+   "unidade": "GB disponível",
+   "comando": "free -g (available) imediatamente após a medição de navegacao_3_cliques_ms"
+  },
+  "medido_em": {
+   "valor": "2026-09-08T20:42:11Z",
+   "unidade": "UTC",
+   "comando": "trilha il504ctemas (schema plat_til504ctemas), API uvicorn 127.0.0.1:8181, chromium headless"
+  },
+  "api_testes": {
+   "valor": "5 passaram",
+   "unidade": "testes",
+   "comando": "bash laco/roda_teste.sh tests/api/catalogo/test_colecao.py -q (relações item_de_colecao sincronizadas do corpo; 422 relacao_com_outro_inquilino para item inexistente/si mesma; formato de capa.midia/metadados.miniatura; avisos de link; og:)"
+  },
+  "e2e_testes": {
+   "valor": "1 passou (fluxo completo)",
+   "unidade": "testes",
+   "comando": "bash laco/roda_teste.sh tests/e2e/test_colecao.py --base-url http://127.0.0.1:8181 -q"
+  }
+ },
+ "gerado_em": "2026-09-08T20:42:11Z",
+ "git_sha": "610896979710"
+}

@@ -293,6 +293,9 @@ class Link(Saida):
 class LinkCriado(Link):
     token: str
     url: str
+    # dependências do item que ficaram FORA do link (o anônimo não as vê): publica mesmo assim é decisão
+    # de quem publica, mas a API avisa quem e o leitor oferece recriar o link incluindo
+    avisos: list[dict] = []
 
 
 class Compartilhado(Saida):

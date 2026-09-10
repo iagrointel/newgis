@@ -26,10 +26,10 @@ PAGINAS = {
     # --- retrato operacional (L0-06-e-status): aberta, sem sessão, noindex
     "/status": "status.html",
     # --- catálogo (L0-03)
+    # --- catálogo (L0-03); /c/{token} é servida por app/catalogo/rotas_compartilhamento.py (leva og:)
     "/conteudo": "conteudo.html",
     "/conteudo/lixeira": "conteudo_lixeira.html",
     "/conteudo/{id}": "conteudo_item.html",
-    "/c/{token}": "compartilhado.html",
     # --- mapa (L2-01-a)
     "/mapa": "mapa.html",
     # --- casca do SIG (L2-01-a-casca-sig, 10/09/2026): mapa em tela cheia, painéis flutuantes. `/mapa`
@@ -91,6 +91,8 @@ PAGINAS = {
     "/admin/atividade": "admin/atividade.html",
     # --- editor de tema do inquilino (L5-10-temas-marca)
     "/temas": "temas.html",
+    # --- leitora de coleção (L5-04-c-temas-capa-colecao): ?item=<id de item colecao>
+    "/colecao": "colecao.html",
 }
 router = APIRouter()
 
