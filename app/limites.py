@@ -609,3 +609,9 @@ ACERVO_ARQUIVO_BYTES_MAX = 2 * 1024 * 1024 * 1024  # teto por arquivo (igual a R
 ACERVO_ARQUIVO_LOTE_MAX = 50                       # arquivos por chamada de exposição em lote
 ACERVO_ARQUIVO_LOTE_BYTES_MAX = 3 * 1024 * 1024 * 1024  # soma do lote (D21: a trilha trabalha com <= 3 GB)
 ACERVO_ARQUIVO_LISTA_MAX = 500                     # linhas por página de GET /api/acervo/arquivos
+# --- geocodificação de tabela (L2-11-a-geocodificacao-csv): CSV/XLSX com endereço vira job de geocodificação em
+# lote reusando o motor do L2-11-b; teto de linhas por lote para não estourar memória do worker leve (disco a
+# 98%, sem processamento em memória sem limite — regra da trilha).
+GEOCODIFICADOR_LOTE_MAX_LINHAS = 20_000
+GEOCODIFICADOR_LOTE_LIMIAR_PENDENTE_PADRAO = 60.0   # score abaixo disso também vira pendente, mesmo com tipo bom
+GEOCODIFICADOR_LOTE_TITULO_MAX = 250

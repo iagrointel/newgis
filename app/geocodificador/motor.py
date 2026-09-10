@@ -36,39 +36,6 @@ AVISO_TIPO_ACERTO = {
 }
 
 
-class CacheLote:
-    """Memória de UM lote de geocodificação (item L2-11-a): guarda o resultado das três consultas caras
-    quando a MESMA pergunta se repete no mesmo arquivo — resolução de município/UF/CEP, busca de logradouro
-    por trigram e os pontos de um logradouro já achado. Existe para o caminho do lote NÃO ser um segundo
-    motor: `buscar` é a mesma função com um `cache` opcional; sem cache (chamada de um endereço só) o
-    comportamento é idêntico ao de antes, consulta por consulta.
-
-    O cache é por PROCESSO e por lote (nasce e morre dentro do job): nunca guarda resultado entre lotes, e
-    por isso nunca serve dado de uma instalação de UF que foi trocada no meio do caminho."""
-
-    __slots__ = ("lugar", "ruas", "pontos", "municipio", "acertos", "consultas")
-
-    def __init__(self):
-        self.lugar: dict = {}
-        self.ruas: dict = {}
-        self.pontos: dict = {}
-        self.municipio: dict = {}
-        self.acertos = 0
-        self.consultas = 0
-
-    def _pegar(self, mapa: dict, chave, calcular):
-        self.consultas += 1
-        if chave in mapa:
-            self.acertos += 1
-            return mapa[chave]
-        valor = calcular()
-        mapa[chave] = valor
-        return valor
-
-    def taxa_acerto(self) -> float:
-        return (self.acertos / self.consultas) if self.consultas else 0.0
-
-
 @dataclass
 class Candidato:
     endereco: str
@@ -134,14 +101,10 @@ def _municipios_por_nome(cur, nome: str, uf: str | None) -> list[dict]:
     return list(cur.fetchall())
 
 
-def resolver_lugar(cur, *, municipio: str | None, uf: str | None, cep: str | None,
-                   cache: "CacheLote | None" = None) -> dict:
+def resolver_lugar(cur, *, municipio: str | None, uf: str | None, cep: str | None) -> dict:
     """Resolve município/UF/CEP a partir do que o chamador informou, e levanta InconsistenciaEndereco quando
     dois sinais independentes (CEP e município, ou CEP e UF) apontam para lugares diferentes — a checagem
     roda ANTES de qualquer busca por logradouro, então nunca devolve candidato de um lugar não pedido."""
-    if cache is not None:
-        return cache._pegar(cache.lugar, (municipio, uf, cep),
-                            lambda: resolver_lugar(cur, municipio=municipio, uf=uf, cep=cep))
     municipios_cep = _municipios_do_cep(cur, cep) if cep else []
     municipios_nome = _municipios_por_nome(cur, municipio, uf) if municipio else []
 
@@ -186,9 +149,7 @@ def _endereco_texto(logradouro, numero, bairro, municipio, uf) -> str:
     return ", ".join(p for p in partes if p)
 
 
-def _municipio_uf(cur, cod_municipio: int, cache: "CacheLote | None" = None) -> tuple[str, str]:
-    if cache is not None:
-        return cache._pegar(cache.municipio, cod_municipio, lambda: _municipio_uf(cur, cod_municipio))
+def _municipio_uf(cur, cod_municipio: int) -> tuple[str, str]:
     cur.execute(
         "SELECT m.nome, u.sigla FROM plat.geo_municipio m JOIN plat.geo_uf u ON u.cod = m.cod_uf "
         "WHERE m.cod = %s",
@@ -239,8 +200,7 @@ def _melhor_face(pontos: list[dict], numero: int) -> tuple[str, dict | None]:
 
 
 def buscar(cur, *, logradouro: str | None, numero: int | None, bairro: str | None, municipio: str | None,
-           uf: str | None, cep: str | None, max_locations: int = 10,
-           cache: "CacheLote | None" = None) -> list[Candidato]:
+           uf: str | None, cep: str | None, max_locations: int = 10, cache: dict | None = None) -> list[Candidato]:
     """Busca com hierarquia de recuo (ver `_buscar_interna`); aqui só se acrescenta o AVISO em português
     de cada tipo de acerto degradado (`AVISO_TIPO_ACERTO`), num único lugar, para nenhum dos 4 caminhos de
     retorno internos esquecer de preencher `avisos` — campo teria ficado sempre vazio (achado do papel
@@ -256,63 +216,59 @@ def buscar(cur, *, logradouro: str | None, numero: int | None, bairro: str | Non
     return candidatos
 
 
-def _ruas_parecidas(cur, logradouro: str, cods_municipio, max_locations: int, cache=None) -> list[dict]:
-    """Logradouros do CNEFE parecidos com o pedido (trigram). É a consulta mais cara do motor (MEDIDO em
-    06/09: 119 ms por endereço em Boa Vista/RR, contra 40 ms da leitura dos pontos) — por isso é a primeira
-    a passar pelo cache do lote."""
-    def consultar():
-        cur.execute(
-            "SELECT cod_municipio, logradouro_norm, tipo_logradouro, nome_logradouro, "
-            "  MAX(similarity(logradouro_norm, upper(public.unaccent(%(q)s)))) AS sim "
-            "FROM plat.geo_endereco "
-            "WHERE (%(mun)s::int[] IS NULL OR cod_municipio = ANY(%(mun)s)) "
-            "  AND logradouro_norm %% upper(public.unaccent(%(q)s)) "
-            "GROUP BY cod_municipio, logradouro_norm, tipo_logradouro, nome_logradouro "
-            "HAVING MAX(similarity(logradouro_norm, upper(public.unaccent(%(q)s)))) >= %(limiar)s "
-            "ORDER BY sim DESC LIMIT %(n)s",
-            {"q": logradouro, "mun": cods_municipio, "limiar": LIMIAR_SIMILARIDADE, "n": max_locations * 3},
-        )
-        return list(cur.fetchall())
-
-    if cache is None:
-        return consultar()
-    chave = (logradouro.upper(), tuple(cods_municipio) if cods_municipio else None, max_locations)
-    return cache._pegar(cache.ruas, chave, consultar)
-
-
-def _pontos_do_logradouro(cur, cod_municipio: int, logradouro_norm: str, cache=None) -> list[dict]:
-    def consultar():
-        cur.execute(
-            "SELECT face_id, numero, cep, localidade, lat, lon FROM plat.geo_endereco "
-            "WHERE cod_municipio = %s AND logradouro_norm = %s AND numero IS NOT NULL "
-            "ORDER BY face_id, numero",
-            (cod_municipio, logradouro_norm),
-        )
-        return list(cur.fetchall())
-
-    if cache is None:
-        return consultar()
-    return cache._pegar(cache.pontos, (cod_municipio, logradouro_norm), consultar)
-
-
 def _buscar_interna(cur, *, logradouro: str | None, numero: int | None, bairro: str | None,
                      municipio: str | None, uf: str | None, cep: str | None,
-                     max_locations: int = 10,
-                     cache: "CacheLote | None" = None) -> list[Candidato]:
+                     max_locations: int = 10, cache: dict | None = None) -> list[Candidato]:
     """Busca com hierarquia de recuo. `logradouro` já deve ter passado por
-    `normalizacao.expandir_abreviacoes` (feito pela rota); a dobra de acento/caixa é feita aqui em SQL."""
-    lugar = resolver_lugar(cur, municipio=municipio, uf=uf, cep=cep, cache=cache)
+    `normalizacao.expandir_abreviacoes` (feito pela rota); a dobra de acento/caixa é feita aqui em SQL.
+    `cache` (opcional) memoiza, no escopo do chamador, o trabalho que NÃO depende do número: a busca pg_trgm
+    das vias candidatas e a leitura dos pontos de cada via. O lote CSV usa isso porque uma tabela real repete
+    a mesma via em dezenas/centenas de linhas — medido no portão do item L2-11-a (08/09), 1.000 endereços de
+    Boa Vista/RR tinham só 45 vias distintas, e cada busca trgm custa 30-250 ms de recheck de similarity no
+    GIN (32 mil candidatos de estado mortos por linha), o que punha o job em >150 s contra o portão de 120 s.
+    O resultado é o mesmo com e sem cache: as consultas são determinísticas sobre uma base que não muda
+    durante um job (a instalação do CNEFE é evento offline), e a chave inclui tudo que entra nas consultas
+    (texto da via já expandido, municípios resolvidos, teto de ruas). O default None não muda nada para os
+    outros chamadores (rotas de API, sugestão, reverso)."""
+    lugar = resolver_lugar(cur, municipio=municipio, uf=uf, cep=cep)
     cods_municipio = lugar["cods_municipio"]
 
     candidatos: list[Candidato] = []
 
     if logradouro:
-        ruas = _ruas_parecidas(cur, logradouro, cods_municipio, max_locations, cache)
+        chave_busca = ("vias", tuple(cods_municipio or ()), logradouro, max_locations)
+        ruas = cache.get(chave_busca) if cache is not None else None
+        if ruas is None:
+            cur.execute(
+                "SELECT cod_municipio, logradouro_norm, tipo_logradouro, nome_logradouro, "
+                "  MAX(similarity(logradouro_norm, upper(public.unaccent(%(q)s)))) AS sim "
+                "FROM plat.geo_endereco "
+                "WHERE (%(mun)s::int[] IS NULL OR cod_municipio = ANY(%(mun)s)) "
+                "  AND logradouro_norm %% upper(public.unaccent(%(q)s)) "
+                "GROUP BY cod_municipio, logradouro_norm, tipo_logradouro, nome_logradouro "
+                "HAVING MAX(similarity(logradouro_norm, upper(public.unaccent(%(q)s)))) >= %(limiar)s "
+                "ORDER BY sim DESC LIMIT %(n)s",
+                {"q": logradouro, "mun": cods_municipio, "limiar": LIMIAR_SIMILARIDADE, "n": max_locations * 3},
+            )
+            ruas = list(cur.fetchall())
+            if cache is not None:
+                cache[chave_busca] = ruas
         for rua in ruas:
-            pontos = _pontos_do_logradouro(cur, rua["cod_municipio"], rua["logradouro_norm"], cache)
+            chave_via = ("pontos", rua["cod_municipio"], rua["logradouro_norm"])
+            pontos = cache.get(chave_via) if cache is not None else None
+            if pontos is None:
+                cur.execute(
+                    "SELECT face_id, numero, cep, localidade, lat, lon FROM plat.geo_endereco "
+                    "WHERE cod_municipio = %s AND logradouro_norm = %s AND numero IS NOT NULL "
+                    "ORDER BY face_id, numero",
+                    (rua["cod_municipio"], rua["logradouro_norm"]),
+                )
+                pontos = list(cur.fetchall())
+                if cache is not None:
+                    cache[chave_via] = pontos
             if not pontos:
                 continue
-            nome_mun, sigla_uf = _municipio_uf(cur, rua["cod_municipio"], cache)
+            nome_mun, sigla_uf = _municipio_uf(cur, rua["cod_municipio"])
             if numero is not None:
                 tipo_acerto, ponto = _melhor_face(pontos, numero)
             else:
@@ -346,7 +302,7 @@ def _buscar_interna(cur, *, logradouro: str | None, numero: int | None, bairro: 
             {"q": bairro, "mun": cods_municipio, "n": max_locations},
         )
         for r in cur.fetchall():
-            nome_mun, sigla_uf = _municipio_uf(cur, r["cod_municipio"], cache)
+            nome_mun, sigla_uf = _municipio_uf(cur, r["cod_municipio"])
             penalidade = PENALIDADE_TIPO_ACERTO["aproximado_no_bairro"]
             candidatos.append(Candidato(
                 endereco=_endereco_texto(None, None, r["localidade"], nome_mun, sigla_uf),
@@ -375,7 +331,7 @@ def _buscar_interna(cur, *, logradouro: str | None, numero: int | None, bairro: 
             r = cur.fetchone()
             if r is None or r["centro_lat"] is None:
                 continue
-            nome_mun, sigla_uf = _municipio_uf(cur, cod, cache)
+            nome_mun, sigla_uf = _municipio_uf(cur, cod)
             candidatos.append(Candidato(
                 endereco=_endereco_texto(None, None, None, nome_mun, sigla_uf), lon=r["centro_lon"],
                 lat=r["centro_lat"], score=max(0.0, 80 - PENALIDADE_TIPO_ACERTO["aproximado_no_municipio"]),

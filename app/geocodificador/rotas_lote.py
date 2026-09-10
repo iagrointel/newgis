@@ -1,281 +1,181 @@
-"""API da geocodificação de tabela (item L2-11-a-geocodificacao-csv). Sete rotas, na ordem em que a tela usa:
-
-    POST   /api/geocodificacoes/colunas          -> colunas do arquivo + mapeamento PROPOSTO (nada é gravado)
-    POST   /api/geocodificacoes                  -> cria o lote com o mapeamento confirmado e enfileira o job
-    GET    /api/geocodificacoes                  -> lista os lotes do usuário
-    GET    /api/geocodificacoes/{id}             -> estado, contagens, resumo e ficha da base de endereços
-    GET    /api/geocodificacoes/{id}/linhas      -> linhas para a tela de revisão (filtro por estado)
-    PUT    /api/geocodificacoes/{id}/linhas/{n}  -> grava a coordenada arrastada no mapa (origem 'manual')
-    POST   /api/geocodificacoes/{id}/regeocodificar -> refaz SÓ as pendentes
-
-Duas decisões que valem registrar:
-
-1. **O teto de tamanho é conferido em bytes REAIS**, na criação (`plat.item.dados.bytes` do arquivo já
-   gravado) e outra vez dentro do job (comprimento do objeto lido do armazenamento). Confiar só no que o
-   navegador declara deixaria passar um arquivo de qualquer tamanho — o item pede a prova do teto.
-2. **O arrasto no mapa grava na linha E na camada, na mesma transação.** Se gravasse só na linha, o mapa
-   continuaria mostrando o ponto errado até a próxima re-geocodificação; se gravasse só na camada, a linha
-   voltaria a ser sobrescrita na re-geocodificação seguinte.
-"""
+"""Rotas de revisão do item L2-11-a-geocodificacao-csv: a criação do lote é a rota genérica `POST /api/jobs`
+(tipo `geocodificador.lote_csv`, ver `tarefas.py`) — aqui só o que é específico da tela de revisão: listar
+pendentes, gravar a coordenada arrastada no mapa (origem 'manual') e re-geocodificar só os pendentes."""
 
 from __future__ import annotations
 
-import json
+import re
+import time
 
 from fastapi import APIRouter, Query, Request
-from pydantic import Field
+from pydantic import BaseModel, Field
 
-from app import db, limites, objetos
+from app import db
 from app.auth.sessao import Auth, autenticado
-from app.catalogo.comum import registrar_evento, uuid_ok
-from app.catalogo.modelos import UUID_PADRAO, Modelo
+from app.catalogo.comum import jsonb, uuid_ok
 from app.erros import ErroAPI
-from app.geocodificador import tabela
-from app.jobs import servico
-from app.jobs.contexto import sessao_de
+from app.geocodificador import lote
 
-router = APIRouter(tags=["geocodificacao"])
+router = APIRouter(prefix="/api/geocodificador/lote", tags=["geocodificador"])
 LER = {"x-auth": "S/T", "x-privilegio": "proprio"}
-PUBLICAR = {"x-auth": "S", "x-privilegio": "conteudo.publicar_camada"}
-ESTADOS_LINHA = ("resolvida", "pendente", "malformada")
+EDITAR = {"x-auth": "S", "x-privilegio": "feicoes.editar"}
+_SCHEMA_OK = re.compile(r"^d_[a-z0-9_]{1,60}$")
+_TABELA_OK = re.compile(r"^c_[0-9a-f]{16}$")
 
 
-class ArquivoEntrada(Modelo):
-    arquivo_id: str = Field(pattern=UUID_PADRAO)
-
-
-class LoteEntrada(Modelo):
-    arquivo_id: str = Field(pattern=UUID_PADRAO)
-    titulo: str = Field(min_length=1, max_length=250)
-    mapeamento: dict = Field(default_factory=dict)
-
-
-class PontoManual(Modelo):
+class CoordenadaManual(BaseModel):
     lon: float = Field(..., ge=-180.0, le=180.0)
     lat: float = Field(..., ge=-90.0, le=90.0)
 
 
-def _bytes_do_arquivo(cur, arquivo_id: str) -> dict:
-    cur.execute("SELECT id, dados FROM plat.item WHERE id = %s::uuid AND tipo = 'arquivo'", (arquivo_id,))
-    arq = cur.fetchone()
-    if arq is None:
-        raise ErroAPI(404, "item_inexistente", "item de arquivo inexistente")
-    return arq["dados"] or {}
+class RegeocodificarEntrada(BaseModel):
+    limiar_pendente: float | None = Field(default=None, ge=0, le=100)
 
 
-def _ler_conferindo_teto(dados_item: dict) -> bytes:
-    """Teto conferido DUAS vezes: no tamanho gravado no item (barato, antes de trazer o objeto) e no
-    comprimento real do objeto lido (o que vale)."""
-    declarado = int(dados_item.get("bytes") or 0)
-    try:
-        tabela.conferir_tamanho(declarado)
-    except tabela.ArquivoGrandeDemais as e:
-        raise ErroAPI(413, "arquivo_grande_demais", str(e),
-                       {"bytes": declarado, "teto_bytes": limites.GEOCOD_ARQUIVO_BYTES_MAX}) from e
-    try:
-        conteudo = objetos.ler(dados_item["chave"])
-    except (FileNotFoundError, KeyError, objetos.ChaveInvalida) as e:
-        raise ErroAPI(404, "objeto_inexistente", "o objeto do arquivo não existe mais no armazenamento") from e
-    try:
-        tabela.conferir_tamanho(len(conteudo))
-    except tabela.ArquivoGrandeDemais as e:
-        raise ErroAPI(413, "arquivo_grande_demais", str(e),
-                       {"bytes": len(conteudo), "teto_bytes": limites.GEOCOD_ARQUIVO_BYTES_MAX}) from e
-    return conteudo
+def _item_geocodificacao(cur, item_id: str) -> dict:
+    """Carrega o item + a linha de `plat.geocodificacao_lote`; 404 (nunca 403) se o item não existe, não é
+    desta trilha de produto, ou pertence a outro inquilino (RLS de `plat.item` já filtra por tenant; o filtro
+    por `dados->>'fonte'` aqui é só para não confundir com camada importada por outro caminho)."""
+    cur.execute("SELECT id, titulo, dados FROM plat.item WHERE id = %s::uuid AND tipo = 'camada_vetorial'",
+                (item_id,))
+    item = cur.fetchone()
+    if item is None or (item["dados"] or {}).get("fonte") != "geocodificacao_lote":
+        raise ErroAPI(404, "item_inexistente", "camada de geocodificação inexistente")
+    cur.execute("SELECT * FROM plat.geocodificacao_lote WHERE item_id = %s::uuid", (item_id,))
+    registro = cur.fetchone()
+    if registro is None:
+        raise ErroAPI(404, "item_inexistente", "camada de geocodificação inexistente")
+    schema, tabela = item["dados"]["schema"], item["dados"]["tabela"]
+    if not (_SCHEMA_OK.match(schema) and _TABELA_OK.match(tabela)):
+        raise ErroAPI(500, "camada_corrompida", "nome de schema/tabela da camada é inválido")
+    return {"item": item, "registro": registro, "schema": schema, "tabela": tabela}
 
 
-def _lote(cur, auth: Auth, geocodificacao_id: str) -> dict:
-    gid = uuid_ok(geocodificacao_id, "geocodificacao_inexistente", "geocodificação inexistente")
-    cur.execute("SELECT * FROM plat.geocodificacao WHERE id = %s::uuid", (gid,))
-    r = cur.fetchone()
-    if r is None:
-        raise ErroAPI(404, "geocodificacao_inexistente", "geocodificação inexistente")
-    if r["usuario_id"] not in (None, auth.usuario_id) and not auth.tem("jobs.gerir_todos"):
-        raise ErroAPI(404, "geocodificacao_inexistente", "geocodificação inexistente")
-    return r
+@router.get("", openapi_extra=LER)
+def listar(limite: int = Query(50, ge=1, le=200), auth: Auth = autenticado(escopo_token="geocodificar:usar")):
+    with db.db(auth.contexto()) as cur:
+        cur.execute(
+            "SELECT g.item_id, i.titulo, g.resumo, g.limiar_pendente, g.criado_em "
+            "FROM plat.geocodificacao_lote g JOIN plat.item i ON i.id = g.item_id "
+            "ORDER BY g.criado_em DESC LIMIT %s",
+            (limite,),
+        )
+        linhas = cur.fetchall()
+    return {"itens": [
+        {"item_id": str(r["item_id"]), "titulo": r["titulo"], "resumo": r["resumo"],
+         "limiar_pendente": float(r["limiar_pendente"]), "criado_em": r["criado_em"].isoformat()}
+        for r in linhas
+    ]}
 
 
-def _lote_json(r: dict) -> dict:
+@router.get("/{item_id}", openapi_extra=LER)
+def ver(item_id: str, auth: Auth = autenticado(escopo_token="geocodificar:usar")):
+    iid = uuid_ok(item_id, "item_inexistente", "camada de geocodificação inexistente")
+    with db.db(auth.contexto()) as cur:
+        ctx = _item_geocodificacao(cur, iid)
+    r = ctx["registro"]
     return {
-        "id": str(r["id"]), "arquivo_id": str(r["arquivo_id"]),
-        "item_id": str(r["item_id"]) if r["item_id"] else None,
-        "titulo": r["titulo"], "mapeamento": r["mapeamento"], "estado": r["estado"],
-        "linhas_total": r["linhas_total"], "resolvidas": r["resolvidas"], "pendentes": r["pendentes"],
-        "malformadas": r["malformadas"], "manuais": r["manuais"], "resumo": r["resumo"],
-        "base_enderecos": r["base_enderecos"], "job_id": str(r["job_id"]) if r["job_id"] else None,
-        "erro": r["erro"], "criado_em": r["criado_em"].isoformat() if r["criado_em"] else None,
-        "atualizado_em": r["atualizado_em"].isoformat() if r["atualizado_em"] else None,
+        "item_id": iid, "titulo": ctx["item"]["titulo"],
+        "mapeamento": r["mapeamento"], "limiar_pendente": float(r["limiar_pendente"]), "resumo": r["resumo"],
+        "proveniencia_enderecos": r["proveniencia"], "criado_em": r["criado_em"].isoformat(),
     }
 
 
-@router.post("/api/geocodificacoes/colunas", openapi_extra=PUBLICAR)
-def colunas(corpo: ArquivoEntrada, auth: Auth = autenticado("conteudo.publicar_camada")):
-    """Lê só o cabeçalho e devolve as colunas + o mapeamento proposto. Não grava nada."""
+@router.get("/{item_id}/pendentes", openapi_extra=LER)
+def pendentes(item_id: str, limite: int = Query(200, ge=1, le=1000), deslocamento: int = Query(0, ge=0),
+              auth: Auth = autenticado(escopo_token="geocodificar:usar")):
+    iid = uuid_ok(item_id, "item_inexistente", "camada de geocodificação inexistente")
     with db.db(auth.contexto()) as cur:
-        dados_item = _bytes_do_arquivo(cur, uuid_ok(corpo.arquivo_id))
-    conteudo = _ler_conferindo_teto(dados_item)
-    try:
-        saida = tabela.colunas(conteudo)
-    except tabela.ArquivoIlegivel as e:
-        raise ErroAPI(422, "arquivo_ilegivel", str(e)) from e
-    saida["campos_aceitos"] = list(limites.GEOCOD_CAMPOS)
-    return saida
-
-
-@router.post("/api/geocodificacoes", status_code=202, openapi_extra=PUBLICAR)
-def criar(corpo: LoteEntrada, request: Request, auth: Auth = autenticado("conteudo.publicar_camada")):
-    arquivo_id = uuid_ok(corpo.arquivo_id)
-    with db.db(auth.contexto()) as cur:
-        dados_item = _bytes_do_arquivo(cur, arquivo_id)
-    conteudo = _ler_conferindo_teto(dados_item)
-    try:
-        cabecalho = tabela.colunas(conteudo)["colunas"]
-    except tabela.ArquivoIlegivel as e:
-        raise ErroAPI(422, "arquivo_ilegivel", str(e)) from e
-    mapeamento = corpo.mapeamento or tabela.colunas(conteudo)["mapeamento_proposto"]
-    try:
-        tabela.conferir_mapeamento(mapeamento, cabecalho)
-    except ValueError as e:
-        raise ErroAPI(422, "mapeamento_invalido", str(e), {"colunas": cabecalho}) from e
-
-    with db.db(auth.contexto()) as cur:
+        ctx = _item_geocodificacao(cur, iid)
+        schema, tabela = ctx["schema"], ctx["tabela"]
+        cur.execute(f'SELECT count(*) AS n FROM "{schema}"."{tabela}" WHERE pendente')
+        total = cur.fetchone()["n"]
         cur.execute(
-            "INSERT INTO plat.geocodificacao(tenant_id, usuario_id, arquivo_id, titulo, mapeamento) "
-            "VALUES (%s, %s, %s::uuid, %s, %s::jsonb) RETURNING id",
-            (auth.tenant_id, auth.usuario_id, arquivo_id, corpo.titulo,
-             json.dumps(mapeamento, ensure_ascii=False)),
+            f'SELECT fid, endereco_entrada, campos_entrada, ST_X(geom) AS lon, ST_Y(geom) AS lat, score, '
+            f'  tipo_acerto, erro, avisos, origem '
+            f'FROM "{schema}"."{tabela}" WHERE pendente ORDER BY fid LIMIT %s OFFSET %s',
+            (limite, deslocamento),
         )
-        gid = str(cur.fetchone()["id"])
-        registrar_evento(cur, request, "geocodificacoes/criar", "item", arquivo_id,
-                          {"geocodificacao_id": gid, "mapeamento": mapeamento})
-    job = servico.criar(sessao_de(auth), "geocodificacao.lote",
-                         {"geocodificacao_id": gid, "so_pendentes": False})
+        linhas = cur.fetchall()
+    return {
+        "total": total,
+        "itens": [
+            {"fid": r["fid"], "endereco_entrada": r["endereco_entrada"], "campos_entrada": r["campos_entrada"],
+             "lon": r["lon"], "lat": r["lat"], "score": float(r["score"]) if r["score"] is not None else None,
+             "tipo_acerto": r["tipo_acerto"], "erro": r["erro"], "avisos": r["avisos"] or [], "origem": r["origem"]}
+            for r in linhas
+        ],
+    }
+
+
+@router.patch("/{item_id}/pendentes/{fid}", openapi_extra=EDITAR)
+def gravar_manual(item_id: str, fid: int, corpo: CoordenadaManual, request: Request,
+                   auth: Auth = autenticado("feicoes.editar")):
+    """O arrasto no mapa da tela de revisão chega aqui: grava a coordenada escolhida à mão, com
+    `origem = 'manual'` (nunca sobrescreve como se fosse acerto do motor) e tira a linha da lista de
+    pendentes."""
+    iid = uuid_ok(item_id, "item_inexistente", "camada de geocodificação inexistente")
     with db.db(auth.contexto()) as cur:
-        cur.execute("UPDATE plat.geocodificacao SET job_id = %s::uuid WHERE id = %s::uuid", (job["id"], gid))
-    return {"geocodificacao_id": gid, "job_id": job["id"], "mapeamento": mapeamento}
-
-
-@router.get("/api/geocodificacoes", openapi_extra=LER)
-def listar(limite: int = Query(50, ge=1, le=200), deslocamento: int = Query(0, ge=0),
-           auth: Auth = autenticado(escopo_token="catalogo:ler")):
-    with db.db(auth.contexto()) as cur:
-        if auth.tem("jobs.gerir_todos"):
-            cur.execute("SELECT * FROM plat.geocodificacao ORDER BY criado_em DESC LIMIT %s OFFSET %s",
-                         (limite, deslocamento))
-        else:
-            cur.execute("SELECT * FROM plat.geocodificacao WHERE usuario_id = %s ORDER BY criado_em DESC "
-                         "LIMIT %s OFFSET %s", (auth.usuario_id, limite, deslocamento))
-        linhas = [_lote_json(r) for r in cur.fetchall()]
-    return {"geocodificacoes": linhas, "total": len(linhas)}
-
-
-@router.get("/api/geocodificacoes/{geocodificacao_id}", openapi_extra=LER)
-def detalhar(geocodificacao_id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
-    with db.db(auth.contexto()) as cur:
-        return _lote_json(_lote(cur, auth, geocodificacao_id))
-
-
-@router.get("/api/geocodificacoes/{geocodificacao_id}/linhas", openapi_extra=LER)
-def linhas(geocodificacao_id: str, estado: str | None = Query(None), limite: int = Query(100, ge=1),
-           deslocamento: int = Query(0, ge=0), auth: Auth = autenticado(escopo_token="catalogo:ler")):
-    if estado is not None and estado not in ESTADOS_LINHA:
-        raise ErroAPI(422, "estado_invalido", f"estado {estado!r} inválido; aceitos: {list(ESTADOS_LINHA)}")
-    limite = min(limite, limites.GEOCOD_LINHAS_PAGINA_MAX)
-    with db.db(auth.contexto()) as cur:
-        lote = _lote(cur, auth, geocodificacao_id)
-        gid = str(lote["id"])
+        ctx = _item_geocodificacao(cur, iid)
+        schema, tabela = ctx["schema"], ctx["tabela"]
         cur.execute(
-            "SELECT count(*) AS n FROM plat.geocodificacao_linha WHERE geocodificacao_id = %s::uuid "
-            "AND (%s::text IS NULL OR estado = %s)", (gid, estado, estado))
-        total = int(cur.fetchone()["n"])
-        cur.execute(
-            "SELECT n, entrada, endereco, lon, lat, score, tipo_acerto, origem, estado, motivo, avisos, "
-            "  cod_municipio, municipio, uf FROM plat.geocodificacao_linha "
-            "WHERE geocodificacao_id = %s::uuid AND (%s::text IS NULL OR estado = %s) "
-            "ORDER BY n LIMIT %s OFFSET %s", (gid, estado, estado, limite, deslocamento))
-        saida = [dict(r) for r in cur.fetchall()]
-    return {"linhas": saida, "total": total, "limite": limite, "deslocamento": deslocamento}
+            f'UPDATE "{schema}"."{tabela}" SET geom = ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326), '
+            f'  origem = \'manual\', pendente = false, erro = NULL, atualizado_em = now(), atualizado_por = %(uid)s '
+            f'WHERE fid = %(fid)s RETURNING fid',
+            {"lon": corpo.lon, "lat": corpo.lat, "uid": auth.usuario_id, "fid": fid},
+        )
+        if cur.fetchone() is None:
+            raise ErroAPI(404, "ponto_inexistente", "ponto pendente inexistente nesta camada")
+        cur.execute(f'SELECT count(*) FILTER (WHERE pendente) AS pendentes, count(*) AS total '
+                    f'FROM "{schema}"."{tabela}"')
+        contagem = cur.fetchone()
+        resumo_novo = dict(ctx["registro"]["resumo"])
+        resumo_novo["pendentes"] = contagem["pendentes"]
+        resumo_novo["resolvidos"] = contagem["total"] - contagem["pendentes"]
+        cur.execute("UPDATE plat.geocodificacao_lote SET resumo = %s WHERE item_id = %s::uuid",
+                    (jsonb(resumo_novo), iid))
+    return {"fid": fid, "lon": corpo.lon, "lat": corpo.lat, "origem": "manual", "pendentes_restantes":
+            contagem["pendentes"]}
 
 
-@router.put("/api/geocodificacoes/{geocodificacao_id}/linhas/{n}", openapi_extra=PUBLICAR)
-def ponto_manual(geocodificacao_id: str, n: int, corpo: PontoManual, request: Request,
-                  auth: Auth = autenticado("conteudo.publicar_camada")):
-    """Coordenada arrastada no mapa. Grava na linha (origem 'manual') e no ponto da camada, juntas."""
+@router.post("/{item_id}/regeocodificar", openapi_extra=EDITAR)
+def regeocodificar(item_id: str, corpo: RegeocodificarEntrada, auth: Auth = autenticado("feicoes.editar")):
+    """Re-roda o motor SÓ nas linhas ainda pendentes (origem ainda 'automatica'): um ponto já corrigido à mão
+    (`origem = 'manual'`) nunca é tocado — regra do item ('re-geocodificar só os pendentes')."""
+    iid = uuid_ok(item_id, "item_inexistente", "camada de geocodificação inexistente")
+    t0 = time.monotonic()
     with db.db(auth.contexto()) as cur:
-        lote = _lote(cur, auth, geocodificacao_id)
-        gid = str(lote["id"])
-        cur.execute(
-            "UPDATE plat.geocodificacao_linha SET lon = %s, lat = %s, origem = 'manual', "
-            "  estado = 'resolvida', score = NULL, tipo_acerto = 'manual', "
-            "  motivo = NULL, atualizado_em = now() "
-            "WHERE geocodificacao_id = %s::uuid AND n = %s RETURNING n, estado, origem, tipo_acerto",
-            (corpo.lon, corpo.lat, gid, n))
-        linha = cur.fetchone()
-        if linha is None:
-            raise ErroAPI(404, "linha_inexistente", f"a linha {n} não existe nesta geocodificação")
-        if lote["item_id"]:
-            cur.execute("SELECT dados FROM plat.item WHERE id = %s::uuid", (lote["item_id"],))
-            item = cur.fetchone()
-            if item is not None:
-                d = item["dados"] or {}
-                schema, nome_tabela = d.get("schema"), d.get("tabela")
-                if schema and nome_tabela:
-                    cur.execute(
-                        f'UPDATE "{schema}"."{nome_tabela}" SET geom = ST_SetSRID(ST_MakePoint(%s, %s), 4326), '
-                        f"geo_origem = 'manual', geo_tipo_acerto = 'manual', geo_score = NULL "
-                        f"WHERE linha = %s", (corpo.lon, corpo.lat, n))
-                    if cur.rowcount == 0:
-                        # a linha era pendente/malformada: não havia ponto na camada, agora há
-                        cur.execute(
-                            f'INSERT INTO "{schema}"."{nome_tabela}" '
-                            f'  (linha, endereco_entrada, geo_origem, geo_tipo_acerto, geom) '
-                            "SELECT l.n, coalesce(l.entrada->>'endereco', concat_ws(', ', "
-                            "  l.entrada->>'logradouro', l.entrada->>'numero', l.entrada->>'bairro', "
-                            "  l.entrada->>'municipio', l.entrada->>'uf')), 'manual', 'manual', "
-                            "  ST_SetSRID(ST_MakePoint(l.lon, l.lat), 4326) "
-                            "FROM plat.geocodificacao_linha l "
-                            "WHERE l.geocodificacao_id = %s::uuid AND l.n = %s", (gid, n))
-        cur.execute(
-            "UPDATE plat.geocodificacao SET "
-            "  resolvidas = (SELECT count(*) FROM plat.geocodificacao_linha "
-            "                WHERE geocodificacao_id = %(g)s::uuid AND estado = 'resolvida'), "
-            "  pendentes = (SELECT count(*) FROM plat.geocodificacao_linha "
-            "               WHERE geocodificacao_id = %(g)s::uuid AND estado = 'pendente'), "
-            "  malformadas = (SELECT count(*) FROM plat.geocodificacao_linha "
-            "                 WHERE geocodificacao_id = %(g)s::uuid AND estado = 'malformada'), "
-            "  manuais = (SELECT count(*) FROM plat.geocodificacao_linha "
-            "             WHERE geocodificacao_id = %(g)s::uuid AND origem = 'manual'), "
-            "  atualizado_em = now() WHERE id = %(g)s::uuid", {"g": gid})
-        registrar_evento(cur, request, "geocodificacoes/ponto_manual", "item", str(lote["arquivo_id"]),
-                          {"geocodificacao_id": gid, "linha": n, "lon": corpo.lon, "lat": corpo.lat})
-    return {"linha": n, "lon": corpo.lon, "lat": corpo.lat, "origem": "manual", "estado": "resolvida",
-            "tipo_acerto": "manual"}
-
-
-@router.post("/api/geocodificacoes/{geocodificacao_id}/regeocodificar", status_code=202,
-              openapi_extra=PUBLICAR)
-def regeocodificar(geocodificacao_id: str, request: Request,
-                    auth: Auth = autenticado("conteudo.publicar_camada")):
-    """Refaz só as linhas que não estão resolvidas (e nunca as de origem manual). Serve para depois de
-    instalar uma UF nova da base de endereços, ou de corrigir o arquivo de origem."""
-    with db.db(auth.contexto()) as cur:
-        lote = _lote(cur, auth, geocodificacao_id)
-        gid = str(lote["id"])
-        if lote["estado"] in ("na_fila", "rodando"):
-            raise ErroAPI(409, "geocodificacao_em_andamento",
-                           "esta geocodificação ainda está na fila ou rodando")
-        cur.execute(
-            "SELECT count(*) AS n FROM plat.geocodificacao_linha WHERE geocodificacao_id = %s::uuid "
-            "AND estado <> 'resolvida' AND origem IS DISTINCT FROM 'manual'", (gid,))
-        pendentes = int(cur.fetchone()["n"])
-        if pendentes == 0:
-            raise ErroAPI(409, "sem_pendentes", "não há linha pendente para refazer nesta geocodificação")
-        cur.execute("UPDATE plat.geocodificacao SET estado = 'na_fila', erro = NULL, atualizado_em = now() "
-                     "WHERE id = %s::uuid", (gid,))
-        registrar_evento(cur, request, "geocodificacoes/regeocodificar", "item", str(lote["arquivo_id"]),
-                          {"geocodificacao_id": gid, "pendentes": pendentes})
-    job = servico.criar(sessao_de(auth), "geocodificacao.lote",
-                         {"geocodificacao_id": gid, "so_pendentes": True})
-    with db.db(auth.contexto()) as cur:
-        cur.execute("UPDATE plat.geocodificacao SET job_id = %s::uuid WHERE id = %s::uuid", (job["id"], gid))
-    return {"geocodificacao_id": gid, "job_id": job["id"], "pendentes": pendentes}
+        ctx = _item_geocodificacao(cur, iid)
+        schema, tabela = ctx["schema"], ctx["tabela"]
+        limiar_atual = float(ctx["registro"]["limiar_pendente"])
+        limiar = corpo.limiar_pendente if corpo.limiar_pendente is not None else limiar_atual
+        cur.execute(f'SELECT fid, linha_origem, campos_entrada FROM "{schema}"."{tabela}" '
+                    f"WHERE pendente AND origem = 'automatica' ORDER BY fid")
+        pendentes_atuais = cur.fetchall()
+        atualizados = 0
+        cache: dict = {}  # mesmo motivo do job: vias repetidas entre pendentes não devem reconsultar o trgm
+        for linha in pendentes_atuais:
+            resultado = lote.geocodificar_campos(cur, linha["linha_origem"], linha["campos_entrada"],
+                                                  limiar_pendente=limiar, cache=cache)
+            geom = f"SRID=4326;POINT({resultado.lon} {resultado.lat})" if resultado.lon is not None else None
+            cur.execute(
+                f'UPDATE "{schema}"."{tabela}" SET '
+                "  geom = CASE WHEN %(geom)s IS NULL THEN geom ELSE ST_GeomFromEWKT(%(geom)s) END, "
+                "  score = %(score)s, tipo_acerto = %(tipo_acerto)s, cod_municipio = %(cod_municipio)s, "
+                "  pendente = %(pendente)s, erro = %(erro)s, avisos = %(avisos)s, atualizado_em = now() "
+                "WHERE fid = %(fid)s",
+                {"geom": geom, "score": resultado.score, "tipo_acerto": resultado.tipo_acerto,
+                 "cod_municipio": resultado.cod_municipio, "pendente": resultado.pendente, "erro": resultado.erro,
+                 "avisos": resultado.avisos, "fid": linha["fid"]},
+            )
+            atualizados += 1
+        cur.execute(f'SELECT count(*) FILTER (WHERE pendente) AS pendentes, count(*) AS total '
+                    f'FROM "{schema}"."{tabela}"')
+        contagem = cur.fetchone()
+        resumo_novo = dict(ctx["registro"]["resumo"])
+        resumo_novo["pendentes"] = contagem["pendentes"]
+        resumo_novo["resolvidos"] = contagem["total"] - contagem["pendentes"]
+        cur.execute("UPDATE plat.geocodificacao_lote SET resumo = %s, limiar_pendente = %s WHERE item_id = %s::uuid",
+                    (jsonb(resumo_novo), limiar, iid))
+    return {"item_id": iid, "reprocessados": atualizados, "pendentes_restantes": contagem["pendentes"],
+            "duracao_s": round(time.monotonic() - t0, 3)}

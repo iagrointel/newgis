@@ -77,6 +77,7 @@ from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.geocodificador.rotas_lote import router as rotas_geocodificacao_lote
 from app.imagens.rotas_stac import router as rotas_stac
 from app.imagens.rotas_tiles import router as rotas_tiles
+from app.geocodificador.rotas_lote import router as rotas_geocodificador_lote
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
 from app.mapa.proxy_wms import router as rotas_mapa_wms_publico
@@ -415,6 +416,9 @@ ROUTERS = [
     rotas_geocodificacao_lote,
     # --- vídeos por tarefa (L7-04-d): /api/videos (manifesto) e /videos/arquivo/{caminho}
     rotas_videos,
+    # --- geocodificação de tabela (L2-11-a): /api/geocodificador/lote/* — a criação em si é POST /api/jobs
+    # (tipo geocodificador.lote_csv); aqui só a tela de revisão (pendentes, arrasto manual, re-geocodificar)
+    rotas_geocodificador_lote,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

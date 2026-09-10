@@ -35,7 +35,7 @@ from dotenv import dotenv_values
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from app.geocodificador.normalizacao import expandir_abreviacoes  # noqa: E402
-from app.schema_ambiente import CursorSchemaAmbiente  # noqa: E402 -- depois do sys.path acima
+from app.schema_ambiente import CursorSchemaAmbiente  # noqa: E402 -- depois do sys.path acima; fábrica única (item F9), a reinvenção local do L2-11-a foi removida
 
 BASE_CNEFE = (
     "https://ftp.ibge.gov.br/Cadastro_Nacional_de_Enderecos_para_Fins_Estatisticos/Censo_Demografico_2022/"
@@ -59,16 +59,14 @@ def _log(msg: str) -> None:
 
 
 def _dsn() -> str:
-    """PLAT_DSN do .env direto (não usa app.settings: este script não precisa de PLAT_SECRET/segredos
-    systemd, que desde o item L7-19 não moram mais no .env — exigi-los aqui quebraria a carga sem motivo)."""
-    v = dict(dotenv_values(ROOT / ".env"))
-    # o AMBIENTE vence o .env: e assim que `laco/trilha_ambiente.sh` e `make homolog` apontam o script
-    # para o banco/schema isolado. Sem isto, rodar a carga de dentro de uma trilha usava a DSN de
-    # producao gravada no .env (achado F9).
-    v.update({k: val for k, val in os.environ.items() if k.startswith("PLAT_")})
-    dsn = v.get("PLAT_DSN")
+    """PLAT_DSN do ambiente do processo (trilha: `laco/trilha_ambiente.sh` grava um .env de trilha e o
+    chamador faz `set -a; source ...`) OU do `.env` da raiz, nesta ordem — não usa `app.settings`: este
+    script não precisa de PLAT_SECRET/segredos systemd, que desde o item L7-19 não moram mais no .env
+    (exigi-los aqui quebraria a carga sem motivo). O ambiente vence porque é o único jeito de uma trilha
+    (que não tem `.env` na raiz do worktree) apontar este script para o Postgres certo sem editar o script."""
+    dsn = os.environ.get("PLAT_DSN") or dotenv_values(ROOT / ".env").get("PLAT_DSN")
     if not dsn:
-        raise SystemExit("PLAT_DSN ausente em .env")
+        raise SystemExit("PLAT_DSN ausente (nem no ambiente, nem em .env)")
     return dsn
 
 
