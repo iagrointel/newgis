@@ -3304,6 +3304,22 @@ expurgo prematuro — reprovada nas três frentes (`test_adversario_nao_apaga_a_
 Fora do escopo, registrado no ADR: `pgaudit` para DDL (decisão de instância, não de migração), envio a
 SIEM (sem destino escolhido) e auditoria de leitura da camada `pessoal` (L7-12-a ainda não existe;
 gancho pronto com `origem='aplicacao'`).
+## turno 3, setembro de 2026 (item L7-06-c-logs-consulta-req-id: log consultável por pedido)
+
+`plat logs --req-id <id>` (`scripts/plat`) reúne, em ordem de relógio, as linhas que nginx, API, worker e
+Postgres escreveram sobre o MESMO pedido. O identificador nasce no `$request_id` do nginx, vai ao upstream
+em `X-Req-Id` (que sobrescreve o cabeçalho do cliente), a API o adota em vez de cunhar outro, o Postgres o
+recebe em `application_name` (`plat:<12 hex>`, que o `log_line_prefix` já registra em `%a`) e o worker o
+herda de `proveniencia.req_id` do job. Martin e TiTiler não registram identificador próprio: a ligação com
+eles é a linha do nginx que os proxia — está escrito no código para ninguém prometer o contrário.
+`plat.log_acesso` ganhou a coluna `req_id` e `GET /api/log?req_id=` filtra por ela, dentro da RLS do
+inquilino. Nível de log ajustável em tempo de execução, sem reinício, por logger ou prefixo de rota e com
+prazo: `plat log nivel DEBUG --componente app.db --por 10min`, `--listar`, `--remover`; pela API,
+`GET/POST/DELETE /api/log/nivel` (só superadmin: afeta o processo, não um inquilino). Retenção de 90 dias
+em `deploy/journald-plat.conf`. Conserto de segurança que saiu daqui: a mensagem de toda linha JSON passa
+pelo redator, e `?token=`/`?senha=` dentro de uma URL escrita numa mensagem também é redigida — sem isso o
+`httpx` deixava o valor inteiro no journal. `app/versao.py` passou a entender worktree do git.
+
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 - **L7-06-d-paineis**: cinco painéis Grafana provisionados por arquivo (`deploy/grafana/paineis/*.json` + `deploy/grafana/provisioning/`), homologação própria (`deploy/paineis_homologacao.sh`) com carga curta de verdade e captura de cada painel em `tests/e2e/capturas/`. Métricas novas para o que os painéis precisavam e não existia: usuários ativos em 24 h, duração e tamanho do último backup/ensaio, uso de armazenamento e tamanho do schema de dado por inquilino.

@@ -1,12 +1,4 @@
-#!/usr/bin/env bash
-# `plat` — ponto de entrada ÚNICO da linha de comando de administração (item L0-14-cli-admin).
-# O código vive em app/cli/; este arquivo só escolhe o interpretador da venv do projeto (nunca o do
-# sistema) e repassa os argumentos. `venv/bin/plat` é um vínculo simbólico para cá, criado pelo install.sh.
-#
-# Uso: scripts/plat --help
-set -euo pipefail
-RAIZ="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
-PY="$RAIZ/venv/bin/python"
-[ -x "$PY" ] || PY=python3
-cd "$RAIZ"
-exec "$PY" -m app.cli "$@"
+#!/bin/sh
+# `plat` — linha de comando de operação (item L7-06-c). Usa a venv do projeto, nunca o Python do sistema.
+raiz=$(cd "$(dirname "$0")/.." && pwd)
+exec "$raiz/venv/bin/python" "$raiz/scripts/plat.py" "$@"

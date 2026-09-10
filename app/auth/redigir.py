@@ -9,6 +9,10 @@ REDIGIDO = "<redigido>"
 _CABECALHO = re.compile(r"(?i)\b(cookie|authorization|set-cookie)\s*[:=]\s*([^\r\n;]+)")
 _VALOR_PLAT = re.compile(r"\bplat_[A-Za-z0-9_-]{20,}")
 _SESSAO = re.compile(r"\bplat_sessao=[0-9a-f]{64}")
+# L7-06-c: parâmetro secreto dentro de uma URL escrita no meio de uma mensagem de log. Sem isto, uma
+# biblioteca que registre a URL chamada (o httpx registra "HTTP Request: GET <url>") deixava o valor de
+# ?token= e ?senha= inteiros no journal — MEDIDO na suíte antes deste conserto.
+_PARAM_URL = re.compile(r"(?i)\b(" + "|".join(sorted(PARAMETROS_SECRETOS)) + r")=[^&\s\"\'\\]+")
 
 
 def query_redigida(query: str) -> str:
@@ -29,4 +33,5 @@ def linha_redigida(texto: str) -> str:
     """Qualquer linha de log: cabeçalhos sensíveis, cookie de sessão e token de serviço viram <redigido>."""
     texto = _CABECALHO.sub(lambda m: f"{m.group(1)}: {REDIGIDO}", texto)
     texto = _SESSAO.sub(f"plat_sessao={REDIGIDO}", texto)
+    texto = _PARAM_URL.sub(lambda m: f"{m.group(1)}={REDIGIDO}", texto)
     return _VALOR_PLAT.sub(REDIGIDO, texto)

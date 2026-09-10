@@ -5,8 +5,6 @@ resumo, agendas. Tudo sob RLS pela sessão; nenhuma função do worker é chamad
 import datetime
 import decimal
 import json
-import logging
-import time
 import uuid
 
 import psycopg2
@@ -15,7 +13,7 @@ import psycopg2.extras
 from pydantic import ValidationError
 
 from app import db as banco
-from app import limites
+from app import log as plat_log
 from app.jobs import agenda as mod_agenda
 from app.jobs.contexto import ErroServico, Sessao
 from app.jobs.registro import REGISTRO, Tarefa, chave_de, descrever, ordem_perfil, validar_parametros
@@ -30,36 +28,6 @@ LOG_LIMITE_MAX = 2000
 PENDENTES_MAX = 200
 NIVEIS = ("DEBUG", "INFO", "AVISO", "ERRO")
 
-# `log` já é o nome da FUNÇÃO de leitura de log de trabalho, mais abaixo neste módulo; o registrador
-# de eventos do processo chama-se `_log` para os dois não se atropelarem.
-_log = logging.getLogger("plat.jobs.servico")
-_ceifa_em = 0.0
-
-
-def ceifar_vencidos(sessao: Sessao) -> None:
-    """Ceifa os trabalhos do PRÓPRIO inquilino que estão `rodando` sem sinal e sem executor vivo.
-
-    Por que a leitura ceifa: `plat.job_ceifar` só era chamada de dentro do laço do worker, e o `GRANT
-    EXECUTE` era só de plat_worker. Com nenhum executor vivo ninguém ceifava — o adversário G3 mediu o
-    trabalho ainda em `rodando` 68 s depois do SIGKILL, oito segundos além do limite de sinal, e a tela
-    mostrando execução que não existia. `plat.job_ceifar_vencidos` (migração 20260906T1615) é da API, tem
-    piso de 60 s e enxerga só o inquilino do contexto. Estrangulado a uma chamada por processo a cada
-    CEIFA_API_INTERVALO_S e nunca deixa a leitura falhar por causa dela."""
-    global _ceifa_em
-    agora = time.monotonic()
-    if agora - _ceifa_em < limites.CEIFA_API_INTERVALO_S:
-        return
-    _ceifa_em = agora
-    try:
-        with banco.db(sessao.ctx) as cur:
-            cur.execute("SELECT plat.job_ceifar_vencidos(%s) AS n", (limites.CEIFA_LIMITE_S,))
-            n = cur.fetchone()["n"]
-        if n:
-            _log.warning("ceifa pela API: %s trabalhos sem sinal devolvidos", n,
-                        extra={"tenant_id": sessao.tenant_id})
-    except Exception as e:  # noqa: BLE001 — a ceifa é higiene: nunca derruba a leitura da fila
-        _log.warning("ceifa pela API falhou: %s", str(e).strip()[:200])
-
 SQL_JOB = """
 SELECT j.id, j.tipo, j.estado, j.progresso, j.mensagem, j.prioridade, j.pesado, j.executor, j.usuario_id,
        u.login AS usuario_login, j.criado_em, j.agendado_para, j.iniciado_em, j.heartbeat_em, j.terminado_em,
@@ -67,17 +35,8 @@ SELECT j.id, j.tipo, j.estado, j.progresso, j.mensagem, j.prioridade, j.pesado, 
             ELSE extract(epoch FROM (coalesce(j.terminado_em, now()) - j.iniciado_em)) END AS duracao_s,
        j.tentativa, j.max_tentativas, j.reinicios, j.cancelar_solicitado, j.cancelado_por, j.cancelado_em,
        j.worker, j.chave, j.agenda_id, j.programado_para, j.resultado, j.erro, j.linhas_log, j.parametros,
-       j.proveniencia, j.memoria_mb, j.timeout_s, pos.posicao_fila
+       j.proveniencia, j.memoria_mb, j.timeout_s
 FROM plat.job j LEFT JOIN plat.usuario u ON u.id = j.usuario_id
-LEFT JOIN LATERAL (
-  -- item L0-05-e-justica-entre-inquilinos: posição do job pendente na fila DO INQUILINO (1 = o próximo a rodar
-  -- quando chegar a vez dele), pela mesma chave que ordena a fila interna do inquilino no job_pegar
-  -- (prioridade, agendado_para, criado_em, id). Entre inquilinos não existe posição fixa: o rodízio por
-  -- inquilino (turno = max(iniciado_em)) decide a vez a cada retirada.
-  SELECT count(*) + 1 AS posicao_fila FROM plat.job a
-  WHERE a.estado = 'pendente' AND a.tenant_id = j.tenant_id
-    AND (a.prioridade, a.agendado_para, a.criado_em, a.id) < (j.prioridade, j.agendado_para, j.criado_em, j.id)
-) pos ON j.estado = 'pendente'
 """
 SQL_AGENDA = """
 SELECT a.id, a.nome, a.tipo, a.parametros, a.cron, a.fuso, a.ativa, a.proxima_em, a.ultima_em, a.ultimo_job_id,
@@ -158,7 +117,13 @@ def criar(sessao: Sessao, tipo: str, parametros, prioridade: int = 5, agendado_p
     if not isinstance(prioridade, int) or not 1 <= prioridade <= 9:
         raise ErroServico(422, "prioridade_invalida", "prioridade deve ser inteiro de 1 (primeiro) a 9")
     quando = _data(agendado_para, "agendado_para")
+    # item L7-06-c: o identificador do pedido que enfileirou o job entra na proveniência (coluna que já
+    # existe e já é mesclada, não uma coluna nova). É o que liga a linha do worker à linha da API e à do
+    # nginx em `plat logs --req-id`; sem ele o trabalho pesado fica órfão do pedido que o pediu.
     prov = {"repetido_de": str(repetido_de)} if repetido_de else None
+    rid = plat_log.req_id_atual()
+    if rid:
+        prov = {**(prov or {}), "req_id": rid}
     with banco.db(sessao.ctx) as cur:
         cur.execute("SELECT plat.cota_jobs_dia(%s) AS cota, "
                     "(SELECT count(*) FROM plat.job WHERE criado_em >= "
@@ -184,7 +149,6 @@ def criar(sessao: Sessao, tipo: str, parametros, prioridade: int = 5, agendado_p
 
 
 def obter(sessao: Sessao, job_id) -> dict:
-    ceifar_vencidos(sessao)
     dono, params = _filtro_dono(sessao)
     with banco.db(sessao.ctx) as cur:
         cur.execute(SQL_JOB + " WHERE j.id = %s" + dono, [str(job_id), *params])
@@ -196,7 +160,6 @@ def obter(sessao: Sessao, job_id) -> dict:
 
 def listar(sessao: Sessao, estado=None, tipo=None, usuario_id=None, de=None, ate=None, agenda_id=None,
            limite: int = 50, deslocamento: int = 0, ordenar: str = "criado_em:desc") -> dict:
-    ceifar_vencidos(sessao)
     cond, params = [], []
     dono, p = _filtro_dono(sessao)
     if dono:
@@ -255,16 +218,8 @@ def resumo(sessao: Sessao) -> dict:
         return serializar(cur.fetchone())
 
 
-def tipos(sessao: Sessao | None = None) -> list[dict]:
-    """Com `sessao`, devolve só os tipos que esse perfil pode criar (mesma régua de `criar`): o QA de 10/09 viu o
-    editor listar e executar os diagnósticos `prova.*`. Sem sessão (uso interno), devolve todos."""
-    itens = [descrever(t) for _, t in sorted(REGISTRO.items())]
-    if sessao is None:
-        return itens
-    if getattr(sessao, "superadmin", False):
-        return itens
-    meu = ordem_perfil(sessao.perfil)
-    return [d for d in itens if ordem_perfil(d["perfil_minimo"]) <= meu]
+def tipos() -> list[dict]:
+    return [descrever(t) for _, t in sorted(REGISTRO.items())]
 
 
 def cancelar(sessao: Sessao, job_id) -> dict:

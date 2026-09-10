@@ -12,7 +12,7 @@ import psycopg2
 import psycopg2.extras
 import psycopg2.pool
 
-from app import auditoria
+from app import log as plat_log
 from app.migracoes import chave_migracao
 from app.migracoes import listar as listar_migracoes
 from app.schema_ambiente import CursorSchemaAmbiente
@@ -35,16 +35,20 @@ class Contexto:
 
 
 def pool() -> psycopg2.pool.ThreadedConnectionPool:
-    """Cria o pool na primeira chamada (a configuração é lida só então)."""
+    """Cria o pool na primeira chamada (a configuração é lida só então).
+
+    O tamanho vem de PLAT_POOL_MIN/PLAT_POOL_MAX (padrão 1/8 = o que estava fixo aqui antes; produção não muda).
+    O banco iagro_sat é compartilhado com dezenas de frentes da casa e tem max_connections=100 com 3 reservadas
+    ao superusuário: cada trilha de teste do laço grava PLAT_POOL_MAX=2 no seu .env para que 12 trilhas em
+    paralelo caibam no orçamento de conexões (ver laco/governador.sh e laco/trilha_ambiente.sh).
+    """
     global _pool
     if _pool is None:
         with _trava:
             if _pool is None:
-                # o teto do pool é orçamento de recurso PARTILHADO: max_connections do servidor é 100 e o
-                # banco é o mesmo de outros projetos da casa. settings já lia PLAT_POOL_MIN/PLAT_POOL_MAX
-                # (padrão 1/8) e o pool ignorava as duas — cada trilha abria 8 conexões fixas.
                 _pool = psycopg2.pool.ThreadedConnectionPool(
-                    settings.PLAT_POOL_MIN, settings.PLAT_POOL_MAX, settings.PLAT_DSN)
+                    settings.PLAT_POOL_MIN, settings.PLAT_POOL_MAX, settings.PLAT_DSN
+                )
     return _pool
 
 
@@ -71,21 +75,17 @@ def _preparar(con, ctx: Contexto | None, somente_leitura: bool = False):
     con.autocommit = False
     cur = con.cursor(cursor_factory=CursorSchemaAmbiente)
     cur.execute(f"SET search_path = {settings.PLAT_SCHEMA}, public")
+    # L7-06-c: application_name = req_id curto do pedido corrente (contextvar, sem precisar que cada
+    # chamador de db() o passe); `plat logs --req-id` casa isto com app=%a de log_line_prefix e com
+    # pg_stat_activity.application_name para achar a consulta em curso de um pedido específico. Toda
+    # conexão do pool, mesmo reciclada de outro pedido, é reetiquetada aqui a cada checkout.
+    cur.execute("SET application_name = %s", (plat_log.nome_aplicacao_pg(plat_log.req_id_atual()),))
     if ctx is not None:
         cur.execute(
             "SELECT set_config('plat.tenant_id', %s, true), set_config('plat.usuario_id', %s, true), "
             "set_config('plat.login', %s, true)",
             (str(ctx.tenant_id), str(ctx.usuario_id), ctx.login),
         )
-    # trilha de auditoria (item L7-20): o contexto da requisição vira GUC de transação, para que a trigger de
-    # plat.evento e plat.auditoria_cobrir() gravem req_id/ip/token/método/rota sem que a rota passe nada.
-    req = auditoria.atual()
-    cur.execute(
-        "SELECT set_config('plat.req_id', %s, true), set_config('plat.ip', %s, true), "
-        "set_config('plat.token_id', %s, true), set_config('plat.metodo', %s, true), "
-        "set_config('plat.rota', %s, true)",
-        (req.req_id, req.ip, req.token_id, req.metodo, req.rota),
-    )
     if somente_leitura:
         # superadmin lendo outro inquilino (ADR 0002 seção 10): a transação inteira é só leitura
         cur.execute("SET LOCAL transaction_read_only = on")
@@ -112,10 +112,6 @@ def db(ctx: Contexto | None = None, somente_leitura: bool = False):
                 raise
     try:
         yield cur
-        if not somente_leitura:
-            # item L7-20: nenhuma transação de escrita fecha sem linha de auditoria. Transação só leitura
-            # (superadmin lendo outro inquilino) não pode nem tentar: o INSERT erraria por read-only.
-            auditoria.cobrir(cur)
         con.commit()
     except Exception:
         try:

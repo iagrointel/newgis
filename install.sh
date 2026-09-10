@@ -143,48 +143,17 @@ else
   echo "$CRED_DIR/PLAT_DSN_WORKER já existe (mantido)"
 fi
 sed -i '/^PLAT_DSN_WORKER=/d' .env
-# PLAT_DSN e PLAT_GARAGE_ADMIN_TOKEN (item L7-19, achado 17 do adversário no turno 3): mesmo mecanismo, dois
-# segredos a mais. PLAT_DSN é a senha da role plat_app; PLAT_GARAGE_ADMIN_TOKEN é a credencial raiz do
-# armazenamento de objetos. Migração de instalação existente: o valor sai do .env e a linha some.
-if [ ! -s "$CRED_DIR/PLAT_DSN" ]; then
-  install -m 0600 -o root -g root /dev/null "$CRED_DIR/PLAT_DSN"
-  if grep -q '^PLAT_DSN=' .env; then
-    sed -nE 's/^PLAT_DSN=//p' .env | head -n1 > "$CRED_DIR/PLAT_DSN"
-    echo "PLAT_DSN migrado do .env para $CRED_DIR"
-  else
-    printf 'postgresql://plat_app:%s@127.0.0.1:5432/%s' "$(openssl rand -hex 16)" "$DB" > "$CRED_DIR/PLAT_DSN"
-    echo "PLAT_DSN novo gerado em $CRED_DIR"
-  fi
-else
-  echo "$CRED_DIR/PLAT_DSN já existe (mantido)"
-fi
-sed -i '/^PLAT_DSN=/d' .env
-if [ ! -s "$CRED_DIR/PLAT_GARAGE_ADMIN_TOKEN" ]; then
-  install -m 0600 -o root -g root /dev/null "$CRED_DIR/PLAT_GARAGE_ADMIN_TOKEN"
-  if grep -q '^PLAT_GARAGE_ADMIN_TOKEN=.\+' .env; then
-    sed -nE 's/^PLAT_GARAGE_ADMIN_TOKEN=//p' .env | head -n1 > "$CRED_DIR/PLAT_GARAGE_ADMIN_TOKEN"
-    echo "PLAT_GARAGE_ADMIN_TOKEN migrado do .env para $CRED_DIR"
-  elif [ -n "${TOKEN:-}" ]; then
-    printf '%s' "$TOKEN" > "$CRED_DIR/PLAT_GARAGE_ADMIN_TOKEN"
-    echo "PLAT_GARAGE_ADMIN_TOKEN lido do garage.toml e gravado em $CRED_DIR"
-  else
-    echo "PLAT_GARAGE_ADMIN_TOKEN sem valor conhecido: grave-o à mão em $CRED_DIR/PLAT_GARAGE_ADMIN_TOKEN (0600, dono root)" >&2
-  fi
-else
-  echo "$CRED_DIR/PLAT_GARAGE_ADMIN_TOKEN já existe (mantido)"
-fi
-sed -i '/^PLAT_GARAGE_ADMIN_TOKEN=/d' .env
 
-echo "== d3. senha das roles alinhada aos credentials"
+echo "== d3. senha das roles alinhada aos credentials/.env"
 SENHA_WORKER=$(sed -nE 's#^postgresql://plat_worker:([^@]+)@.*#\1#p' "$CRED_DIR/PLAT_DSN_WORKER")
 [ -n "$SENHA_WORKER" ] || { echo "$CRED_DIR/PLAT_DSN_WORKER não tem a forma postgresql://plat_worker:<senha>@..." >&2; exit 1; }
 printf "ALTER ROLE plat_worker PASSWORD '%s';\n" "$SENHA_WORKER" | "${PSQL[@]}" -f -
 echo "senha de plat_worker alinhada ao credential"
-SENHA=$(sed -nE 's#^postgresql://plat_app:([^@]+)@.*#\1#p' "$CRED_DIR/PLAT_DSN")
-[ -n "$SENHA" ] || { echo "$CRED_DIR/PLAT_DSN não tem a forma postgresql://plat_app:<senha>@<host>/<db>" >&2; exit 1; }
-# sempre: a senha do banco passa a ser a do credential (idempotência de verdade; ADR risco 6)
+SENHA=$(sed -nE 's#^PLAT_DSN=postgresql://plat_app:([^@]+)@.*#\1#p' .env)
+[ -n "$SENHA" ] || { echo "PLAT_DSN no .env não tem a forma postgresql://plat_app:<senha>@..." >&2; exit 1; }
+# sempre: a senha do banco passa a ser a do .env (idempotência de verdade; ADR risco 6)
 printf "ALTER ROLE plat_app PASSWORD '%s';\n" "$SENHA" | "${PSQL[@]}" -f -
-echo "senha de plat_app alinhada ao credential"
+echo "senha de plat_app alinhada ao .env"
 # PLAT_GIT_SHA: /saude usa quando não há .git (instalação por tarball); gravado a cada execução (ADR 0001 seção 7)
 if SHA=$(sudo -u "$APP_USER" git -C "$APP_DIR" rev-parse HEAD 2>/dev/null); then
   grep -q '^PLAT_GIT_SHA=' .env && sed -i "s/^PLAT_GIT_SHA=.*/PLAT_GIT_SHA=$SHA/" .env || printf 'PLAT_GIT_SHA=%s\n' "$SHA" >> .env
@@ -237,16 +206,9 @@ echo "== f. venv"
 # agora mora em $CRED_DIR (0600, dono root; d2 acima) e o "$APP_USER" que roda este import não é root —
 # de propósito, não lê o segredo de verdade aqui. Um valor sintético de 64 hex só serve para settings.py
 # aceitar o formato e a importação prosseguir; nunca é usado por um serviço de verdade (o systemd entrega
-# o de verdade via LoadCredential=) e não é segredo, então tanto faz aparecer em `ps`. Desde o conserto do
-# achado 17 (L7-19) o PLAT_DSN também saiu do .env, e este import precisa de um valor só para o formato:
-# nada aqui abre conexão (o pool de app/db.py é preguiçoso), então o DSN sintético nunca é usado.
-"${PY[@]}" -c "import os; os.environ.setdefault('PLAT_SECRET', 'a' * 64); os.environ.setdefault('PLAT_DSN', 'postgresql://plat_app:sintetico@127.0.0.1:5432/x'); import app.main, fastapi, dotenv; assert fastapi.__file__.startswith('$APP_DIR/venv/'), fastapi.__file__" \
+# o de verdade via LoadCredential=) e não é segredo, então tanto faz aparecer em `ps`.
+"${PY[@]}" -c "import os; os.environ.setdefault('PLAT_SECRET', 'a' * 64); import app.main, fastapi, dotenv; assert fastapi.__file__.startswith('$APP_DIR/venv/'), fastapi.__file__" \
   || { echo "app.main não importa com PYTHONNOUSERSITE=1: requirements.txt incompleto" >&2; exit 1; }
-# `plat` na venv (item L0-14): quem ativa a venv passa a ter o comando no PATH; o arquivo de verdade é
-# scripts/plat, e o vínculo é refeito a cada instalação para nunca apontar para uma árvore antiga
-ln -sfn "$APP_DIR/scripts/plat" venv/bin/plat
-chown -h "$APP_USER":"$APP_USER" venv/bin/plat
-echo "venv/bin/plat -> scripts/plat"
 echo "venv: $(venv/bin/python --version) · fastapi $("${PY[@]}" -c 'import fastapi; print(fastapi.__version__)') da venv · pytest $(venv/bin/pytest --version 2>&1 | awk '{print $2}')"
 
 echo "== f2. cache do XSD ISO 19139 (item L0-09-metadado-catalogo): comitado no repo; idempotente, sem rede quando já presente"
@@ -312,20 +274,6 @@ fi
 "${PSQL[@]}" -Atc "UPDATE plat.tenant SET config = config || '{\"cota_jobs_dia\": 100000}' WHERE slug IN ('demo', 'demo2') AND coalesce((config->>'cota_jobs_dia')::int, 0) < 100000" >/dev/null
 echo "cota_jobs_dia dos inquilinos de demonstração garantida (100000)"
 
-echo "== g3. baldes por inquilino no Garage (item L1-01-d; ADR 0016)"
-# cada inquilino ATIVO ganha balde proprio com cota em bytes E em objetos (plat.tenant), chave RW (so a API usa)
-# e chave RO (TiTiler e conexao S3 do ArcGIS Pro), e o endpoint web ligado para o bloco /svc/<token>/cog/ do
-# nginx. A lista sai do psql como postgres porque a RLS de plat.tenant so deixa plat_app ver o proprio inquilino.
-# Idempotente por construcao: a 2a execucao imprime "0 criados/alterados". Sem PLAT_GARAGE_ADMIN_URL/TOKEN no
-# .env o passo nao roda (instalacao sem Garage e valida: o resto da plataforma nao depende dele).
-if grep -qE "^PLAT_GARAGE_ADMIN_TOKEN=.+" .env && grep -qE "^PLAT_GARAGE_ADMIN_URL=.+" .env; then
-  "${PSQL[@]}" -Atc "SELECT id || ' ' || slug FROM plat.tenant WHERE ativo ORDER BY id" \
-    | sudo -u "$APP_USER" env $(grep -E "^PLAT_[A-Z_]+=" .env | tr '\n' ' ') \
-        PLAT_SECRET="$(cat /etc/plat/segredos/PLAT_SECRET)" "$APP_DIR/venv/bin/python" -m app.baldes_semear
-else
-  echo "PLAT_GARAGE_ADMIN_URL/TOKEN ausentes no .env: baldes NAO semeados (instalacao sem Garage)"
-fi
-
 echo "== h. systemd $UNIDADE"
 sed -e "s#APP_DIR#$APP_DIR#g" -e "s#APP_USER#$APP_USER#g" -e "s#PORTA#$PORTA#g" deploy/plat-api.service > /etc/systemd/system/$UNIDADE.service
 systemctl daemon-reload
@@ -351,21 +299,6 @@ for i in $(seq 1 30); do
 done
 systemctl --no-pager --lines=0 status plat-worker | sed -n '1,4p'
 
-echo "== h2b. dado de demonstração (item L0-13): semeado pela PRÓPRIA API, só nos inquilinos de demonstração"
-# Só roda quando este é um ambiente de demonstração/desenvolvimento (mesma chave que decide plat.ambiente
-# acima: PLAT_AMBIENTE=dev ou PLAT_SEMENTE_DEMO=sim). Numa instalação de cliente nada é semeado.
-# O script sobe cada arquivo de dados_demo/arquivos/ pela API (POST /api/arquivos -> /api/itens ->
-# /api/importacoes), confirma a proposta e espera o job; é idempotente (reconhece pelo título).
-if [ "$SEMEAR" = true ]; then
-  MEDIDA_DEMO=tests/medidas/semente_dado_demo.json
-  sudo -u "$APP_USER" env PYTHONNOUSERSITE=1 PLAT_CREDENCIAIS_ARQUIVO="$APP_DIR/$CRED" \
-    venv/bin/python scripts/semear_dado_demo.py --base-url "http://127.0.0.1:$PORTA" --medida "$MEDIDA_DEMO" \
-    || { echo "semeadura do dado de demonstração falhou (item L0-13)" >&2; exit 6; }
-  chown "$APP_USER":"$APP_USER" "$MEDIDA_DEMO" 2>/dev/null || true
-else
-  echo "instalação sem semente de demonstração (plat.ambiente.semear_demo = false): dado de demonstração NÃO semeado"
-fi
-
 echo "== h3. systemd plat-osrm-guarulhos (item L2-11-c; recorte de teste <= 50 MB, nunca as bases de outra frente)"
 if [ ! -f osrm/guarulhos.osrm ]; then
   echo "osrm/guarulhos.osrm ausente — rode osrm/PROVENIENCIA.md (osmium+ogr2ogr+docker osrm-extract/partition/customize) antes do install.sh" >&2
@@ -387,9 +320,7 @@ if [ "$WORKER_CONTAINER" -eq 1 ]; then
   echo "   nunca no lugar dela — a API sempre exige pelo menos um worker vivo)"
   command -v docker >/dev/null 2>&1 || { echo "docker não instalado; --worker-container exige Docker (o script nunca instala Docker sozinho, decisão do dono)" >&2; exit 1; }
   docker compose version >/dev/null 2>&1 || { echo "'docker compose' (plugin v2) ausente; --worker-container exige o plugin, não o binário standalone docker-compose v1" >&2; exit 1; }
-  for SEG in PLAT_SECRET PLAT_DSN_WORKER PLAT_DSN PLAT_GARAGE_ADMIN_TOKEN; do
-    [ -r "$CRED_DIR/$SEG" ] || { echo "$CRED_DIR/$SEG ausente — rode a seção 'd' deste script antes (gera todos)" >&2; exit 1; }
-  done
+  [ -r "$CRED_DIR/PLAT_SECRET" ] && [ -r "$CRED_DIR/PLAT_DSN_WORKER" ] || { echo "$CRED_DIR/PLAT_SECRET ou PLAT_DSN_WORKER ausente — rode a seção 'd' deste script antes (gera as duas)" >&2; exit 1; }
   df -h / | tail -1
   docker compose -f deploy/docker-compose.worker.yml up -d --build
   for i in $(seq 1 60); do
@@ -402,27 +333,39 @@ else
   echo "== h4. worker em contêiner PULADO (rode com --worker-container para instalar; ver ADR 0010 e docs/ARQUITETURA.md)"
 fi
 
+echo "== h5. retenção do journal (item L7-06-c)"
+JOURNALD=/etc/systemd/journald.conf.d/plat.conf
+mkdir -p /etc/systemd/journald.conf.d
+cp deploy/journald-plat.conf "$JOURNALD.novo"
+if [ -f "$JOURNALD" ] && cmp -s "$JOURNALD" "$JOURNALD.novo"; then
+  rm -f "$JOURNALD.novo"; echo "$JOURNALD já existe (igual)"
+else
+  mv "$JOURNALD.novo" "$JOURNALD"
+  echo "$JOURNALD escrito; vale no próximo: systemctl restart systemd-journald"
+fi
+
 echo "== i. nginx"
 SITE=/etc/nginx/sites-enabled/$DOM
-# prefixo do alias do balde no Garage (PLAT_GARAGE_BUCKET_PREFIXO do .env): o bloco /svc/<token>/cog/
-# monta o Host `<prefixo><slug>.web.garage.localhost`, entao os dois tem de ser o MESMO valor
-PREFIXO_BALDE=$(grep -E "^PLAT_GARAGE_BUCKET_PREFIXO=" .env | tail -1 | cut -d= -f2-)
-PREFIXO_BALDE=${PREFIXO_BALDE:-plat-}
-mkdir -p /var/cache/nginx/plat_cog
 # zona limit_req própria: 10 tentativas/min por IP em /api/login e /api/login/2fa (ADR 0002 seção 6.2)
 LIMITES=/etc/nginx/conf.d/plat_limites.conf
-{
-  printf '# plat: limite por IP nos logins (ADR 0002 secao 6.2); escrito pelo install.sh\n'
-  printf 'limit_req_zone $binary_remote_addr zone=plat_login:10m rate=10r/m;\n'
-  printf '# plat: cache das fatias de 1 MiB do COG por inquilino (item L1-01-d; ADR 0016). keys_zone pequena\n'
-  printf '# (a chave e curta), max_size 2g: o disco desta maquina e apertado e o objeto vive no Garage, nao aqui.\n'
-  printf 'proxy_cache_path /var/cache/nginx/plat_cog levels=1:2 keys_zone=plat_cog:16m max_size=2g inactive=7d use_temp_path=off;\n'
-} > "$LIMITES.novo"
+cat > "$LIMITES.novo" <<'NGINXCONF'
+# plat: escrito pelo install.sh. Duas coisas moram aqui porque so valem no contexto http do nginx.
+# 1) limite por IP nos logins (ADR 0002 secao 6.2)
+limit_req_zone $binary_remote_addr zone=plat_login:10m rate=10r/m;
+# 2) formato de acesso em JSON por linha, com $request_id (item L7-06-c). O mesmo identificador vai ao
+#    upstream em X-Req-Id, entao a linha do nginx e a linha da API casam por igualdade, sem adivinhacao
+#    de horario. upstream_addr distingue quem atendeu (API, Martin ou TiTiler), que nao registram
+#    identificador de pedido proprio. Vai para o journal com a etiqueta plat_nginx, para `plat logs`
+#    ler tudo de um lugar so e a retencao ser a mesma dos outros servicos (SystemMaxUse/MaxRetentionSec).
+log_format plat_json escape=json '{"ts":"$time_iso8601","req_id":"$request_id","ip":"$remote_addr",'
+  '"metodo":"$request_method","rota":"$uri","consulta":"$args","status":$status,'
+  '"bytes":$body_bytes_sent,"tempo_ms":$request_time,"upstream":"$upstream_addr",'
+  '"upstream_status":"$upstream_status","agente":"$http_user_agent"}';
+NGINXCONF
 if [ -f "$LIMITES" ] && cmp -s "$LIMITES" "$LIMITES.novo"; then rm -f "$LIMITES.novo"; echo "$LIMITES já existe (igual)"; else mv "$LIMITES.novo" "$LIMITES"; echo "$LIMITES escrito"; fi
 escrever_nginx() {
   local bloco certbot_443 bloco_80
-  bloco=$(sed -e "s#DOMINIO#$DOM#g" -e "s#APP_DIR#$APP_DIR#g" -e "s#PORTA#$PORTA#g" \
-            -e "s#PREFIXO_BALDE#$PREFIXO_BALDE#g" deploy/nginx.conf)
+  bloco=$(sed -e "s#DOMINIO#$DOM#g" -e "s#APP_DIR#$APP_DIR#g" -e "s#PORTA#$PORTA#g" deploy/nginx.conf)
   if [ -f "$SITE" ] && grep -q '# managed by Certbot' "$SITE"; then
     # bloco 443: HSTS fica (modelo); as linhas do certbot são preservadas; o bloco 80 do certbot (301) fica como está
     certbot_443=$(awk '/^server[[:space:]]*\{/{n++} n==1 && /# managed by Certbot/' "$SITE")
@@ -470,26 +413,4 @@ echo "https://$DOM/saude -> HTTP $CODIGO · $ROBOTS · $HSTS"
 printf '%s' "$ROBOTS" | grep -qi noindex || { echo "X-Robots-Tag sem noindex" >&2; exit 4; }
 printf '%s' "$HSTS" | grep -q 'max-age=31536000' || { echo "sem Strict-Transport-Security no bloco 443" >&2; exit 4; }
 curl -fsS -m 5 "https://$DOM/saude" | grep -q '"workers_vivos": *[1-9]' || { echo "/saude sem worker vivo (fila.workers_vivos)" >&2; exit 4; }
-echo "== k. inquilinos de demonstração pela linha de comando (item L0-14: plat inquilino criar)"
-# Aqui a instalação usa a MESMA linha de comando que o operador usa depois, e por isso passa pelas mesmas
-# rotas, privilégios e eventos da API que já subiu na etapa h. A senha do administrador vai por ARQUIVO EM
-# MODO 600 lido pela CLI, nunca por argumento: argumento aparece em `ps` e no journal do sudo (achado 6a do
-# adversário do T1). Só em ambiente de desenvolvimento: numa instalação de cliente não se cria inquilino de
-# demonstração. Nesta linhagem do produto a migração 002 já semeia `demo` e `demo2`, então o comando quase
-# sempre responde "já existe" e não muda nada -- é justamente o comportamento que --se-nao-existir promete.
-if grep -qE '^PLAT_AMBIENTE=dev$' .env; then
-  while read -r slug login senha; do
-    case "$slug" in demo|demo2) ;; *) continue ;; esac
-    SENHA_ARQ=$(sudo -u "$APP_USER" mktemp)
-    chmod 600 "$SENHA_ARQ"
-    printf '%s\n' "$senha" | sudo -u "$APP_USER" tee "$SENHA_ARQ" >/dev/null
-    sudo -u "$APP_USER" env PYTHONNOUSERSITE=1 PLAT_CLI_URL="http://127.0.0.1:$PORTA" \
-      PLAT_CREDENCIAIS_ARQUIVO="$APP_DIR/$CRED" \
-      scripts/plat --configurar-2fa inquilino criar --se-nao-existir \
-        --slug "$slug" --nome "Inquilino de demonstração $slug" \
-        --admin-login "$login" --admin-nome "Administrador $slug" --senha-arquivo "$SENHA_ARQ"
-    rm -f "$SENHA_ARQ"
-  done < "$CRED"
-fi
-
 echo "== instalado em $((SECONDS - INICIO)) s: https://$DOM (serviços $UNIDADE :$PORTA e plat-worker :8153)"
