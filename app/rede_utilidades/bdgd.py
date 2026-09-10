@@ -8,10 +8,8 @@ UNTRMT, UNSEMT, SSDBT, RAMLIG, UCBT_tab, UCMT_tab, PONNOT) e monta a rede de neg
   `comprimento_m` NULL declarado, nunca zero disfarçado);
 - nó 'fonte' por subestação (SUB), 'dispositivo' por transformador (UNTRMT) e por chave (UNSEMT,
   com estado de manobra de P_N_OPE), 'consumidor' por unidade consumidora (UCBT_tab/UCMT_tab);
-- hierarquia de subredes DECLARADA PELO ARQUIVO: subestação (nível 1) -> alimentador (nível 2, CTMT)
-  -> transformador (nível 3, controlador da baixa tensão dele). Desde o item L4-04-c-unificar-subrede
-  ela entra em `plat.rede_subrede` com `origem='bdgd'`, na mesma tabela da subrede derivada do
-  controlador — o que o arquivo declara e o que o traçado calcula ficam lado a lado e comparáveis;
+- hierarquia de subredes: subestação (nível 1) -> alimentador (nível 2, CTMT) -> transformador
+  (nível 3, controlador da baixa tensão dele);
 - associação de conectividade explícita (o ativo com a junção onde a fonte diz que ele se liga).
   O gatilho `rede_associacao_validar` confere cada uma contra o catálogo de regras do pacote; o
   importador já filtra com a mesma régua (EXISTS no SQL do lote) para que uma distribuidora com
@@ -22,7 +20,7 @@ Contagem conferida contra o arquivo: para cada camada, o feature count lido do G
 quantidade, explicação e exemplos — nunca engolido em silêncio. O resultado é gravado em
 `plat.rede_importacao` (auditoria) e devolvido como dict.
 
-Nada fixo no código: o GDB de entrada é sempre parâmetro, nunca um caminho escrito à mão.
+Sem placeholder: nenhum caminho é fixo no código; o GDB de entrada é sempre parâmetro.
 """
 
 from __future__ import annotations
@@ -31,9 +29,8 @@ import hashlib
 import time
 from pathlib import Path
 
+import pyogrio
 from psycopg2.extras import Json, execute_values
-
-from app.rede_utilidades import unidades as unidades_mod
 
 # camadas de feição conferidas, na ordem de dependência da montagem. SUB/CTMT/SSDMT/UNTRMT/SSDBT/
 # UCBT_tab são o mínimo do portão; as demais enriquecem o mesmo modelo (chave com estado, ramal,
@@ -56,11 +53,6 @@ TIPO_POR_CAMADA = {
     "UCMT_tab": ("unidade_consumidora", 2),
 }
 
-# A hierarquia declarada pelo arquivo vive na MESMA tabela da subrede derivada do controlador desde o item
-# L4-04-c-unificar-subrede (migração 20260908T0152): `origem='bdgd'`, `estado='declarada'`, sem tier. O
-# índice único dessas linhas é PARCIAL, então o `ON CONFLICT` tem de repetir o predicado do índice.
-_CONFLITO_DECLARADA = "ON CONFLICT (rede_id, nivel, codigo_externo) WHERE origem = 'bdgd' DO NOTHING"
-
 LOTE = 5000
 EXEMPLOS_MAX = 5
 CAMPOS_TECNICOS = {"Shape_Length", "Shape_Area", "geometry"}
@@ -78,31 +70,15 @@ def _texto(v) -> str | None:
     return s or None
 
 
-def _pyogrio():
-    """Import tardio do pyogrio (GDAL/OGR): só quem lê arquivo de feição precisa dele.
-
-    A aplicação inteira é importada por `app.main` no processo da API, que não abre GDB nenhum; deixar
-    o `import pyogrio` no topo fazia `import app.main` depender de um pacote pesado e, nesta máquina,
-    presente apenas no site do usuário (~/.local) — `tests/unit/test_dependencias.py` reprovava com
-    PYTHONNOUSERSITE=1. O pacote está fixado em `requirements.txt`; este atraso é para que a falta dele
-    apareça no job que de fato lê o arquivo, e não na subida da API.
-    """
-    import pyogrio  # noqa: PLC0415 — tardio de propósito (ver docstring)
-
-    return pyogrio
-
-
 def inspecionar(caminho: str | Path) -> dict[str, int]:
     """Feature count por camada do GDB — a régua contra a qual a carga é conferida."""
     caminho = Path(caminho)
-    if not caminho.exists():
+    if not caminho.is_dir():
         raise ErroBdgd(f"arquivo não encontrado: {caminho}")
-    # pasta .gdb (o caso da ANEEL) ou um arquivo de camadas (GPKG) — o GDAL lê os dois por camada;
-    # a refutação do item L4-01-c usa GPKG para gravar a cópia com COMP em outra unidade
     contagens = {}
     for camada in CAMADAS + CAMADAS_APOIO:
         try:
-            contagens[camada] = int(_pyogrio().read_info(str(caminho), layer=camada)["features"])
+            contagens[camada] = int(pyogrio.read_info(str(caminho), layer=camada)["features"])
         except Exception:
             contagens[camada] = 0  # camada ausente no GDB da distribuidora: 0 declarado, não erro
     return contagens
@@ -114,10 +90,6 @@ def sha256_gdb(caminho: str | Path) -> str:
     visível sem ler ~100 MB por importação)."""
     caminho = Path(caminho)
     h = hashlib.sha256()
-    if caminho.is_file():  # GPKG ou outro arquivo único: hash do conteúdo inteiro
-        h.update(caminho.name.encode())
-        h.update(caminho.read_bytes())
-        return h.hexdigest()
     for arq in sorted(caminho.iterdir()):
         if not arq.is_file():
             continue
@@ -130,10 +102,9 @@ def sha256_gdb(caminho: str | Path) -> str:
 
 def _ler(caminho: str, camada: str, geometria: bool = True):
     """Lê a camada inteira como dataframe (a maior camada de uma distribuidora média fica abaixo de
-    100 mil linhas com geometria de linha — cabe na cota de memória do worker, medido na distribuidora
-    de referência)."""
+    100 mil linhas com geometria de linha — cabe na cota de memória do worker, medido na CERTEL)."""
     try:
-        return _pyogrio().read_dataframe(caminho, layer=camada, read_geometry=geometria, fid_as_index=True)
+        return pyogrio.read_dataframe(caminho, layer=camada, read_geometry=geometria, fid_as_index=True)
     except Exception as exc:
         raise ErroBdgd(f"falha ao ler a camada {camada}: {exc}") from exc
 
@@ -203,9 +174,6 @@ class _Importador:
         self.juncoes: dict[str, tuple[str, int]] = {}    # codigo -> (id, seq)
         self.arquivo: dict[str, int] = {}
         self.importacao_id: str | None = None
-        self.comp: dict[str, dict] = {}                 # camada -> unidade/fator/razão do COMP (item L4-01-c)
-        self.unidades: dict[str, dict] = {}             # campo do arquivo -> unidade declarada x detectada (L4-01-e)
-        self.kva_instalado = 0.0                        # Σ POT_NOM dos transformadores lidos (âncora da energia)
 
     # ---------- utilidades ----------
 
@@ -258,26 +226,9 @@ class _Importador:
         else:
             self.cur.execute(
                 "UPDATE plat.rede_importacao SET estado = 'concluida', contagens = %s, desvios = %s, "
-                # clock_timestamp(), não now(): duas importações da mesma rede na MESMA transação teriam o
-                # mesmo now() e quem lê "a última importação" (unidades.fatores_da_rede) escolheria no
-                # empate. O carimbo é o instante em que a carga terminou, que é o que a coluna diz.
-                "comp = %s, unidades = %s, orfaos = %s, atualizado_em = clock_timestamp(), "
-                "concluido_em = clock_timestamp() "
-                "WHERE id = %s::uuid",
-                (Json(resultado["contagens"]), Json(resultado["desvios"]),
-                 Json(resultado.get("comp") or {}), Json(resultado.get("unidades") or {}),
-                 Json(resultado.get("orfaos") or {}), self.importacao_id),
+                "atualizado_em = now(), concluido_em = now() WHERE id = %s::uuid",
+                (Json(resultado["contagens"]), Json(resultado["desvios"]), self.importacao_id),
             )
-
-    def gravar_contrato(self, relatorio: dict) -> None:
-        """O job grava o relatório do contrato de dado na mesma linha de auditoria (coluna própria,
-        migração 20260907T1330) — o contrato roda ANTES da carga, por isso não entra em `rodar`."""
-        if not self.registrar or self.importacao_id is None:
-            return
-        self.cur.execute(
-            "UPDATE plat.rede_importacao SET contrato = %s, atualizado_em = now() WHERE id = %s::uuid",
-            (Json(relatorio), self.importacao_id),
-        )
 
     # ---------- montagem ----------
 
@@ -307,8 +258,6 @@ class _Importador:
             self.progresso(80, "unidades consumidoras (UCBT/UCMT)")
             self._consumidores("UCBT_tab", geometrias)
             self._consumidores("UCMT_tab", geometrias)
-            self.progresso(92, "órfãos: UC sem trafo, trafo sem alimentador, PAC sem trecho")
-            orfaos = self._orfaos()
         except Exception as exc:
             self._fechar_auditoria(None, str(exc))
             raise
@@ -321,9 +270,6 @@ class _Importador:
             "contagens": contagens,
             "apoio": {c: {"arquivo": arquivo[c], "papel": "geometria das junções"} for c in CAMADAS_APOIO},
             "desvios": self.desvios,
-            "comp": self.comp,
-            "unidades": self.unidades,
-            "orfaos": orfaos,
             "duracao_ms": int((time.monotonic() - t0) * 1000),
             "conferido": all(c["arquivo"] == c["inserido"] for c in contagens.values()),
             "importacao_id": str(self.importacao_id) if self.importacao_id else None,
@@ -390,11 +336,10 @@ class _Importador:
                 self._desvio("fonte_duplicada", "COD_ID de subestação repetido no arquivo", cod)
                 continue
             self.cur.execute(
-                "INSERT INTO plat.rede_subrede "
-                "(tenant_id, rede_id, origem, estado, nivel, codigo_externo, nome, controlador_no_id) "
-                "VALUES (%s, %s::uuid, 'bdgd', 'declarada', 1, %s, coalesce(%s, %s), %s::uuid) "
-                + _CONFLITO_DECLARADA + " RETURNING id",
-                (self.tenant_id, self.rede_id, cod, _texto(linha.get("NOME")), cod, r["id"]),
+                "INSERT INTO plat.rede_subrede (tenant_id, rede_id, nivel, codigo_externo, nome, controlador_no_id) "
+                "VALUES (%s, %s::uuid, 1, %s, %s, %s::uuid) "
+                "ON CONFLICT (rede_id, nivel, codigo_externo) DO NOTHING RETURNING id",
+                (self.tenant_id, self.rede_id, cod, _texto(linha.get("NOME")), r["id"]),
             )
             r2 = self.cur.fetchone()
             if r2:
@@ -418,11 +363,10 @@ class _Importador:
                 )
                 continue  # o gatilho recusa nível 2 sem pai; o desvio explica a ausência
             self.cur.execute(
-                "INSERT INTO plat.rede_subrede "
-                "(tenant_id, rede_id, origem, estado, nivel, codigo_externo, nome, pai_id, atributos) "
-                "VALUES (%s, %s::uuid, 'bdgd', 'declarada', 2, %s, coalesce(%s, %s), %s::uuid, %s) "
-                + _CONFLITO_DECLARADA + " RETURNING id",
-                (self.tenant_id, self.rede_id, cod, _texto(linha.get("NOME")), cod, pai,
+                "INSERT INTO plat.rede_subrede (tenant_id, rede_id, nivel, codigo_externo, nome, pai_id, atributos) "
+                "VALUES (%s, %s::uuid, 2, %s, %s, %s::uuid, %s) "
+                "ON CONFLICT (rede_id, nivel, codigo_externo) DO NOTHING RETURNING id",
+                (self.tenant_id, self.rede_id, cod, _texto(linha.get("NOME")), pai,
                  Json(_atributos(linha))),
             )
             r = self.cur.fetchone()
@@ -478,12 +422,6 @@ class _Importador:
         codigos.discard(None)
         self._garantir_juncoes(codigos, geometrias)
 
-        # unidade do COMP declarado (item L4-01-c): a BDGD traz o comprimento do trecho em COMP, mas
-        # a unidade não é declarada no esquema — detecta-se pela razão Σ COMP / Σ geodésico da própria
-        # camada. `comprimento_m` da aresta passa a ser o COMP convertido quando a unidade é conhecida
-        # (é o comprimento do ATIVO, com flecha e caminho real); o geodésico fica em `atributos`.
-        fator_comp = self._detectar_unidade_comp(camada, df) if camada != "RAMLIG" else None
-
         tipo_id = self._tipo_id(camada)
         pendentes: list[tuple] = []
         vistos: set[str] = set()
@@ -525,13 +463,8 @@ class _Importador:
                 subrede = self.subredes.get((3, _texto(linha.get("UNI_TR_MT")) or "")) or self.subredes.get(
                     (2, _texto(linha.get("CTMT")) or "")
                 )
-            comp_m = None
-            if fator_comp is not None:
-                comp = linha.get("COMP")
-                if comp is not None and comp == comp and float(comp) > 0:
-                    comp_m = float(comp) * fator_comp
             pendentes.append((
-                self.tenant_id, self.rede_id, tipo_id, cod, no1[0], no2[0], wkb, comp_m, wkb,
+                self.tenant_id, self.rede_id, tipo_id, cod, no1[0], no2[0], wkb, wkb,
                 _texto(linha.get("FAS_CON")), subrede, Json(_atributos(linha)),
             ))
             if len(pendentes) >= LOTE:
@@ -549,172 +482,18 @@ class _Importador:
         # no_origem_seq/no_destino_seq entram como 0: o gatilho rede_aresta_validar copia os seqs
         # reais dos nós (o DDL proíbe a aplicação de preenchê-los à mão). ST_GeomFromWKB(NULL) é
         # NULL (função STRICT), então o ramal sem geometria entra com geom e comprimento NULL.
-        # 07/09 (item L4-01-c): o conflito é por (rede, TIPO, código) — na BDGD o COD_ID repete entre
-        # camadas (26.567 SSDBT com o mesmo código de um SSDMT na cooperativa de teste); e o que o
-        # ON CONFLICT descarta passa a ser CONTADO como desvio, nunca mais engolido em silêncio.
-        gravadas = execute_values(
+        execute_values(
             self.cur,
             "INSERT INTO plat.rede_aresta (tenant_id, rede_id, tipo_id, codigo_externo, no_origem_id, "
             "no_destino_id, no_origem_seq, no_destino_seq, geom, comprimento_m, fase, subrede_id, atributos) "
-            "VALUES %s ON CONFLICT (rede_id, tipo_id, codigo_externo) DO NOTHING RETURNING codigo_externo",
+            "VALUES %s ON CONFLICT (rede_id, codigo_externo) DO NOTHING",
             tuplas,
-            # comprimento_m = COMP convertido quando a unidade foi detectada (item L4-01-c);
-            # senão o geodésico da geometria; ramal sem geometria e sem COMP fica NULL.
             template="(%s, %s::uuid, %s::uuid, %s, %s::uuid, %s::uuid, 0, 0, "
                      "ST_Transform(ST_SetSRID(ST_GeomFromWKB(%s), " + str(SRID_FONTE) + "), 4326), "
-                     "COALESCE(%s::double precision, "
                      "ST_Length(ST_Transform(ST_SetSRID(ST_GeomFromWKB(%s), " + str(SRID_FONTE) + "), "
-                     "4326)::geography)), %s, %s::uuid, %s)",
+                     "4326)::geography), %s, %s::uuid, %s)",
             page_size=LOTE,
-            fetch=True,
         )
-        entrou = {r["codigo_externo"] for r in gravadas}
-        for t in tuplas:
-            if t[3] not in entrou:
-                self._desvio(
-                    "trecho_codigo_repetido_no_tipo",
-                    "COD_ID repetido dentro do mesmo tipo de trecho (o mesmo código em outro tipo é normal "
-                    "na BDGD e entra): a segunda ocorrência não é gravada",
-                    t[3],
-                )
-
-    def _detectar_unidade_comp(self, camada: str, df) -> float | None:
-        """Razão Σ COMP / Σ comprimento geodésico (WGS84, pyproj) da camada. Devolve o fator que leva COMP
-        a metros: 1 (já em metros; razão perto de 1 — medida na casa 1,024, a flecha e o caminho real
-        deixam o ativo mais longo que a reta), 1000 (COMP em km; razão perto de 0,001) ou None quando a
-        razão não cai em nenhuma faixa — aí o desvio é contado e a aresta fica com o geodésico. A faixa e a
-        classificação vivem em `app/rede_utilidades/unidades.py` (item L4-01-e), que é o mesmo lugar de
-        onde o sumário e os exportadores leem o fator depois. A refutação do item troca a unidade num
-        arquivo de teste e espera ver o fator mudar por esta medida, não por configuração."""
-        campo = f"{camada}.COMP"
-        if "COMP" not in df.columns or df.empty:
-            self.comp[camada] = {"unidade": "sem_coluna", "fator": None}
-            self.unidades[campo] = {
-                "familia": "comp", "camada": camada, "coluna": "COMP",
-                "declarada": unidades_mod.DECLARADA["comp"], "detectada": "sem_coluna",
-                "unidade": None, "fator_para_base": None, "base": unidades_mod.BASE["comp"],
-                "origem": "sem_medida", "explicacao": "a camada não tem a coluna COMP",
-            }
-            return None
-        from pyproj import Geod
-
-        geod = Geod(ellps="WGS84")
-        soma_comp = 0.0
-        soma_geo = 0.0
-        n = 0
-        for comp, geom in zip(df["COMP"], df.geometry, strict=False):
-            if comp is None or comp != comp or comp <= 0 or geom is None or geom.is_empty:
-                continue
-            try:
-                soma_geo += geod.geometry_length(geom)
-            except Exception:
-                continue
-            soma_comp += float(comp)
-            n += 1
-        medida = unidades_mod.detectar_comprimento(soma_comp, soma_geo, n)
-        medida.update({"camada": camada, "coluna": "COMP"})
-        self.unidades[campo] = medida
-        fator = medida["fator_para_base"]
-        if medida["origem"] != "detectada":
-            self._desvio("comp_unidade_indeterminada", f"{camada}: {medida['explicacao']}", None)
-        self.comp[camada] = {
-            "unidade": medida["detectada"], "fator": fator,
-            "razao_comp_sobre_geodesico": medida.get("razao_comp_sobre_geodesico"),
-            "soma_comp_declarada": medida.get("soma_comp_declarada"),
-            "soma_geodesica_m": medida.get("soma_geodesica_m"),
-            "soma_comp_convertida_m": (round(soma_comp * fator, 3) if fator else None),
-            "trechos_medidos": n,
-            "declarada_no_dicionario": unidades_mod.DECLARADA["comp"],
-        }
-        return fator
-
-    def _detectar_unidade_energia(self, camada: str, df) -> None:
-        """Unidade da energia da camada de unidade consumidora (ENE_01..ENE_12, ou ENE_SUM quando os doze
-        meses não vêm). Não há régua geométrica aqui: a ordem de grandeza é comparada com a potência
-        instalada dos transformadores já lidos (Σ POT_NOM × 8.760 h é o teto físico do ano) e com o número
-        de unidades consumidoras da camada (energia média por unidade e por mês). A decisão fica em
-        `unidades.detectar_energia`; aqui só se somam as colunas do arquivo."""
-        campo = f"{camada}.ENE"
-        colunas = [c for c in (f"ENE_{m:02d}" for m in range(1, 13)) if c in df.columns]
-        origem_colunas = colunas or ([c for c in ("ENE_SUM",) if c in df.columns])
-        if df.empty or not origem_colunas:
-            self.unidades[campo] = {
-                "familia": "ene", "camada": camada, "colunas": origem_colunas,
-                "declarada": unidades_mod.DECLARADA["ene"], "detectada": "sem_coluna", "unidade": None,
-                "fator_para_base": None, "base": unidades_mod.BASE["ene"], "origem": "sem_medida",
-                "explicacao": "a camada não tem ENE_01..ENE_12 nem ENE_SUM",
-            }
-            return
-        total = 0.0
-        for coluna in origem_colunas:
-            for valor in df[coluna]:
-                if valor is None or valor != valor:
-                    continue
-                try:
-                    v = float(valor)
-                except (TypeError, ValueError):
-                    continue
-                if v > 0:
-                    total += v
-        medida = unidades_mod.detectar_energia(total, int(len(df)), self.kva_instalado)
-        medida.update({"camada": camada, "colunas": origem_colunas})
-        self.unidades[campo] = medida
-        if medida["origem"] != "detectada":
-            self._desvio(
-                "energia_unidade_indeterminada",
-                f"{camada}: {medida['explicacao']}; quem somar energia desta rede usa a unidade declarada "
-                "pelo dicionário e diz que é declarada",
-                None,
-            )
-
-    def _orfaos(self) -> dict:
-        """Os três órfãos que o portão manda contar E listar: UC sem transformador (UNI_TR_MT que
-        não existe entre os dispositivos carregados), transformador sem alimentador (já contado
-        como desvio na carga — repetido aqui pelo mesmo nome) e ponto de acoplamento sem trecho
-        (junção sem nenhuma aresta incidente). Tudo por SQL de conjunto sobre o que foi gravado."""
-        r = self.rede_id
-        self.cur.execute(
-            "SELECT c.codigo_externo, c.atributos->>'UNI_TR_MT' AS trafo FROM plat.rede_no c "
-            "WHERE c.rede_id = %s::uuid AND c.papel = 'consumidor' "
-            "AND NULLIF(c.atributos->>'UNI_TR_MT', '') IS NOT NULL "
-            "AND NOT EXISTS (SELECT 1 FROM plat.rede_no d WHERE d.rede_id = c.rede_id "
-            "  AND d.papel = 'dispositivo' AND d.codigo_externo = c.atributos->>'UNI_TR_MT') "
-            "ORDER BY 1 LIMIT %s",
-            (r, EXEMPLOS_MAX * 4),
-        )
-        ex_uc = [{"uc": x["codigo_externo"], "trafo_declarado": x["trafo"]} for x in self.cur.fetchall()]
-        self.cur.execute(
-            "SELECT count(*) AS n FROM plat.rede_no c WHERE c.rede_id = %s::uuid AND c.papel = 'consumidor' "
-            "AND NULLIF(c.atributos->>'UNI_TR_MT', '') IS NOT NULL "
-            "AND NOT EXISTS (SELECT 1 FROM plat.rede_no d WHERE d.rede_id = c.rede_id "
-            "  AND d.papel = 'dispositivo' AND d.codigo_externo = c.atributos->>'UNI_TR_MT')",
-            (r,),
-        )
-        n_uc = int(self.cur.fetchone()["n"])
-        self.cur.execute(
-            "SELECT j.codigo_externo FROM plat.rede_no j WHERE j.rede_id = %s::uuid AND j.papel = 'juncao' "
-            "AND NOT EXISTS (SELECT 1 FROM plat.rede_aresta a WHERE a.rede_id = j.rede_id "
-            "  AND (a.no_origem_id = j.id OR a.no_destino_id = j.id)) ORDER BY 1 LIMIT %s",
-            (r, EXEMPLOS_MAX * 4),
-        )
-        ex_pac = [x["codigo_externo"] for x in self.cur.fetchall()]
-        self.cur.execute(
-            "SELECT count(*) AS n FROM plat.rede_no j WHERE j.rede_id = %s::uuid AND j.papel = 'juncao' "
-            "AND NOT EXISTS (SELECT 1 FROM plat.rede_aresta a WHERE a.rede_id = j.rede_id "
-            "  AND (a.no_origem_id = j.id OR a.no_destino_id = j.id))",
-            (r,),
-        )
-        n_pac = int(self.cur.fetchone()["n"])
-        tsa = self.desvios.get("trafo_sem_alimentador", {})
-        return {
-            "uc_sem_trafo": {"quantidade": n_uc, "exemplos": ex_uc,
-                             "explicacao": "UNI_TR_MT da UC não é COD_ID de nenhum transformador carregado"},
-            "trafo_sem_ctmt": {"quantidade": int(tsa.get("quantidade", 0)), "exemplos": tsa.get("exemplos", []),
-                               "explicacao": "CTMT do transformador não é alimentador carregado "
-                                             "(sem subrede de nível 3)"},
-            "pac_sem_trecho": {"quantidade": n_pac, "exemplos": ex_pac,
-                               "explicacao": "ponto de acoplamento (junção) sem nenhuma aresta incidente"},
-        }
 
     def _dispositivos(self, camada: str, geometrias: dict[str, bytes]) -> None:
         if not self.arquivo.get(camada):
@@ -745,15 +524,6 @@ class _Importador:
                 pno = _texto(linha.get("P_N_OPE"))
                 estado = {"A": "aberto", "F": "fechado"}.get(pno, "na")
             subrede = self.subredes.get((2, _texto(linha.get("CTMT")) or ""))
-            if camada == "UNTRMT":
-                # Σ POT_NOM (kVA) é o teto contra o qual a energia declarada é medida (item L4-01-e)
-                pot = linha.get("POT_NOM")
-                try:
-                    pot = float(pot)
-                except (TypeError, ValueError):
-                    pot = None
-                if pot is not None and pot == pot and pot > 0:
-                    self.kva_instalado += pot
             if camada == "UNTRMT" and subrede is None:
                 self._desvio(
                     "trafo_sem_alimentador",
@@ -796,76 +566,43 @@ class _Importador:
             fetch=True,
         )
         por_codigo = {r["codigo_externo"]: r["id"] for r in inseridos}
-        # 07/09 (item L4-01-c): a versão anterior fazia DUAS consultas por dispositivo (subrede de
-        # nível 3 e associação) — ~17 mil idas ao banco na cooperativa de teste, que sob carga eram
-        # os 13 minutos medidos pelo item irmão. Agora as duas viram um `execute_values` cada, no
-        # mesmo padrão que `_gravar_consumidores` já usava: a régua do gatilho continua sendo a
-        # mesma (EXISTS sobre aresta incidente com regra), só que avaliada em lote.
-        duplicados = [t[3] for t in tuplas if t[3] not in por_codigo]
-        for cod in duplicados:
-            self._desvio("dispositivo_duplicado", "COD_ID de dispositivo repetido no arquivo", cod)
-        validos = [t for t in tuplas if t[3] in por_codigo]
-        if not validos:
-            return
-        if camada == "UNTRMT":
-            # t[5] é a subrede de nível 2 (o alimentador); sem ele o desvio 'trafo_sem_alimentador'
-            # já foi contado e a subrede de nível 3 não é criada (o gatilho recusaria o órfão).
-            com_alimentador = [(self.tenant_id, self.rede_id, t[3], t[3], por_codigo[t[3]], t[5])
-                               for t in validos if t[5] is not None]
-            if com_alimentador:
-                criadas = execute_values(
-                    self.cur,
-                    "INSERT INTO plat.rede_subrede (tenant_id, rede_id, origem, estado, nome, nivel, "
-                    "codigo_externo, controlador_no_id, pai_id) VALUES %s "
-                    + _CONFLITO_DECLARADA + " RETURNING id, codigo_externo",
-                    com_alimentador,
-                    template="(%s, %s::uuid, 'bdgd', 'declarada', %s, 3, %s, %s::uuid, %s::uuid)",
-                    page_size=LOTE,
-                    fetch=True,
+        for t in tuplas:
+            cod = t[3]
+            if cod not in por_codigo:
+                self._desvio("dispositivo_duplicado", "COD_ID de dispositivo repetido no arquivo", cod)
+                continue
+            no_id = por_codigo[cod]
+            if camada == "UNTRMT" and t[5] is not None:
+                # t[5] é a subrede de nível 2 (o alimentador); sem ele o desvio 'trafo_sem_alimentador'
+                # já foi contado e a subrede de nível 3 não é criada (o gatilho recusaria o órfão).
+                self.cur.execute(
+                    "INSERT INTO plat.rede_subrede (tenant_id, rede_id, nivel, codigo_externo, "
+                    "controlador_no_id, pai_id) VALUES (%s, %s::uuid, 3, %s, %s::uuid, %s::uuid) "
+                    "ON CONFLICT (rede_id, nivel, codigo_externo) DO NOTHING RETURNING id",
+                    (self.tenant_id, self.rede_id, cod, no_id, t[5]),
                 )
-                for r3 in criadas:
-                    self.subredes[(3, r3["codigo_externo"])] = r3["id"]
-        associacoes = [(self.tenant_id, self.rede_id, por_codigo[t[3]], t[9], t[2]) for t in validos]
-        self._gravar_associacoes(
-            associacoes,
-            "dispositivo_sem_regra_na_juncao",
-            "nenhuma aresta incidente na junção do dispositivo tem regra de conectividade "
-            "com o tipo dele no catálogo (o gatilho recusaria; o desvio explica a ausência)",
-            {por_codigo[t[3]]: t[3] for t in validos},
-        )
-
-    def _gravar_associacoes(
-        self, associacoes: list[tuple], tipo_desvio: str, msg_desvio: str, cod_por_de_no: dict
-    ) -> None:
-        """`associacoes` é (tenant_id, rede_id, de_no_id, para_no_id, tipo_id): grava em lote,
-        filtrado pela mesma régua do gatilho `rede_associacao_validar` (EXISTS sobre aresta
-        incidente com regra de conectividade no catálogo). O que o EXISTS recusa — o gatilho
-        recusaria do mesmo jeito — vira desvio contado e explicado, nunca silencioso. Compartilhado
-        por `_gravar_dispositivos` e `_gravar_consumidores` (item L4-01-c: era o mesmo SQL duas
-        vezes, com o mesmo padrão de desvio)."""
-        if not associacoes:
-            return
-        gravadas = execute_values(
-            self.cur,
-            "INSERT INTO plat.rede_associacao (tenant_id, rede_id, tipo, de_no_id, para_no_id, origem) "
-            "SELECT v.tenant_id, v.rede_id::uuid, 'conectividade', v.de_no::uuid, v.para_no::uuid, 'importacao' "
-            "FROM (VALUES %s) AS v(tenant_id, rede_id, de_no, para_no, tipo_id) "
-            "WHERE EXISTS ("
-            "  SELECT 1 FROM plat.rede_aresta a JOIN plat.rede_regra r "
-            "    ON r.rede_id = v.rede_id::uuid AND r.tipo = 'conectividade_no_trecho' "
-            "   AND ((r.de_tipo_id = a.tipo_id AND r.para_tipo_id = v.tipo_id::uuid) "
-            "     OR (r.de_tipo_id = v.tipo_id::uuid AND r.para_tipo_id = a.tipo_id)) "
-            "   WHERE a.rede_id = v.rede_id::uuid "
-            "     AND (a.no_origem_id = v.para_no::uuid OR a.no_destino_id = v.para_no::uuid)"
-            ") RETURNING de_no_id",
-            associacoes,
-            page_size=LOTE,
-            fetch=True,
-        )
-        ok = {r["de_no_id"] for r in gravadas}
-        for _, _, de_no, _, _ in associacoes:
-            if de_no not in ok:
-                self._desvio(tipo_desvio, msg_desvio, cod_por_de_no.get(de_no))
+                r3 = self.cur.fetchone()
+                if r3:
+                    self.subredes[(3, cod)] = r3["id"]
+            self.cur.execute(
+                "INSERT INTO plat.rede_associacao (tenant_id, rede_id, tipo, de_no_id, para_no_id, origem) "
+                "SELECT %s, %s::uuid, 'conectividade', %s::uuid, %s::uuid, 'importacao' "
+                "WHERE EXISTS ("
+                "  SELECT 1 FROM plat.rede_aresta a JOIN plat.rede_regra r "
+                "    ON r.rede_id = %s::uuid AND r.tipo = 'conectividade_no_trecho' "
+                "   AND ((r.de_tipo_id = a.tipo_id AND r.para_tipo_id = %s::uuid) "
+                "     OR (r.de_tipo_id = %s::uuid AND r.para_tipo_id = a.tipo_id)) "
+                "   WHERE a.rede_id = %s::uuid AND (a.no_origem_id = %s::uuid OR a.no_destino_id = %s::uuid)"
+                ") RETURNING de_no_id",
+                (self.tenant_id, self.rede_id, no_id, t[9], self.rede_id, t[2], t[2], self.rede_id, t[9], t[9]),
+            )
+            if self.cur.fetchone() is None:
+                self._desvio(
+                    "dispositivo_sem_regra_na_juncao",
+                    "nenhuma aresta incidente na junção do dispositivo tem regra de conectividade "
+                    "com o tipo dele no catálogo (o gatilho recusaria; o desvio explica a ausência)",
+                    cod,
+                )
 
     def _consumidores(self, camada: str, geometrias: dict[str, bytes]) -> None:
         if not self.arquivo.get(camada):
@@ -883,7 +620,6 @@ class _Importador:
         # (índice do dataframe, fid_as_index=True) e o ponto de ligação é o PN_CON. As junções que só
         # aparecem aqui (ponta de ramal) entram pelo mesmo caminho das demais, com o mesmo desvio de
         # geometria ausente quando não há PONNOT para elas.
-        self._detectar_unidade_energia(camada, df)
         pns = {_texto(v) for v in df["PN_CON"]} - {None}
         self._garantir_juncoes(pns, geometrias)
         tipo_id = self._tipo_id(camada)
@@ -929,14 +665,6 @@ class _Importador:
             fetch=True,
         )
         id_por_codigo = {r["codigo_externo"]: r["id"] for r in inseridos}
-        for t in tuplas:
-            if t[3] not in id_por_codigo:
-                self._desvio(
-                    "consumidor_codigo_repetido",
-                    "COD_ID de unidade consumidora já gravado (repete entre UCBT_tab e UCMT_tab, ou dentro "
-                    "da mesma camada): a segunda ocorrência não é gravada",
-                    t[3],
-                )
         # o tipo do consumidor (t[2]) já é conhecido em Python — igual ao caminho de dispositivo
         # (_gravar_dispositivos), não precisa de JOIN em rede_no para descobrir de novo. A versão
         # anterior referenciava `n.tipo_id` num ON antes do JOIN que declara `n` (SQL inválido:
@@ -945,11 +673,33 @@ class _Importador:
             (self.tenant_id, self.rede_id, id_por_codigo[t[3]], t[6], t[2])
             for t in tuplas if t[3] in id_por_codigo
         ]
-        self._gravar_associacoes(
+        if not associacoes:
+            return
+        gravadas = execute_values(
+            self.cur,
+            "INSERT INTO plat.rede_associacao (tenant_id, rede_id, tipo, de_no_id, para_no_id, origem) "
+            "SELECT v.tenant_id, v.rede_id::uuid, 'conectividade', v.de_no::uuid, v.para_no::uuid, 'importacao' "
+            "FROM (VALUES %s) AS v(tenant_id, rede_id, de_no, para_no, tipo_id) "
+            "WHERE EXISTS ("
+            "  SELECT 1 FROM plat.rede_aresta a JOIN plat.rede_regra r "
+            "    ON r.rede_id = v.rede_id::uuid AND r.tipo = 'conectividade_no_trecho' "
+            "   AND ((r.de_tipo_id = a.tipo_id AND r.para_tipo_id = v.tipo_id::uuid) "
+            "     OR (r.de_tipo_id = v.tipo_id::uuid AND r.para_tipo_id = a.tipo_id)) "
+            "   WHERE a.rede_id = v.rede_id::uuid "
+            "     AND (a.no_origem_id = v.para_no::uuid OR a.no_destino_id = v.para_no::uuid)"
+            ") RETURNING de_no_id",
             associacoes,
-            "consumidor_sem_regra_na_juncao",
-            "nenhuma aresta incidente na junção do consumidor tem regra de conectividade "
-            "com o tipo dele no catálogo — na BDGD o consumidor de baixa liga pelo ramal, "
-            "e junção sem ramal incidente não tem como validar a regra",
-            {v: k for k, v in id_por_codigo.items()},
+            page_size=LOTE,
+            fetch=True,
         )
+        ok = {r["de_no_id"] for r in gravadas}
+        cod_por_id = {v: k for k, v in id_por_codigo.items()}
+        for _, _, de_no, _, _ in associacoes:
+            if de_no not in ok:
+                self._desvio(
+                    "consumidor_sem_regra_na_juncao",
+                    "nenhuma aresta incidente na junção do consumidor tem regra de conectividade "
+                    "com o tipo dele no catálogo — na BDGD o consumidor de baixa liga pelo ramal, "
+                    "e junção sem ramal incidente não tem como validar a regra",
+                    cod_por_id.get(de_no),
+                )

@@ -13,7 +13,7 @@ Três peças da família L4-01 respondem a perguntas diferentes:
 |---|---|---|
 | L4-01-a (pacote de ativos) | o que PODE existir na rede? | `rede_tipo`, `rede_regra`, `rede_dominio`, `rede_tier` |
 | L4-01-b (topologia derivada) | onde as feições se TOCAM geometricamente? | `rede_topo_no`, `rede_topo_aresta` |
-| **L4-01-modelo-rede (este)** | qual é a rede de NEGÓCIO, com conectividade DECLARADA pela fonte? | `rede_no`, `rede_aresta`, `rede_subrede` (origem `bdgd`), `rede_associacao`, `rede_importacao` |
+| **L4-01-modelo-rede (este)** | qual é a rede de NEGÓCIO, com conectividade DECLARADA pela fonte? | `rede_no`, `rede_aresta`, `rede_subrede`, `rede_associacao`, `rede_importacao` |
 
 É sobre o grafo deste item que o pgRouting corre (`plat.rede_menor_caminho`). A diferença para o item
 b: aqui a conectividade não é inferida por proximidade geométrica com tolerância — ela é lida do
@@ -29,12 +29,8 @@ recusa qualquer gravação fora do catálogo do pacote.
 - `rede_aresta` — um trecho/condutor entre dois `rede_no`, com `comprimento_m` (NULL declarado
   quando a fonte não tem geometria para aquele trecho, nunca zero disfarçado) e `no_origem_seq`/
   `no_destino_seq` copiados pelo gatilho, nunca preenchidos pela aplicação.
-- `rede_subrede` com `origem='bdgd'` — hierarquia por nível estrito (1 subestação → 2 alimentador →
-  3 transformador → 4 reservado), pai obrigatoriamente um nível acima; nível 1 é o único sem pai. Desde o
-  item L4-04-c-unificar-subrede ela mora na MESMA tabela da subrede derivada do controlador (que tem
-  `origem='controlador'`), separada pela coluna `origem` e ligada a ela por `equivalente_id` quando a
-  reconciliação encontra o par — ver o ADR 20260908T0152. Antes disso a tabela se chamava
-  `rede_subrede_bdgd`; o nome não existe mais.
+- `rede_subrede` — hierarquia por nível estrito (1 subestação → 2 alimentador → 3 transformador →
+  4 reservado), pai obrigatoriamente um nível acima; nível 1 é o único sem pai.
 - `rede_associacao` — conectividade explícita entre um ativo (dispositivo/fonte/consumidor) e uma
   junção, outro ativo ou um trecho, com `tipo` (`conectividade`/`contencao`/`fixacao`) validado contra
   `plat.rede_regra` do pacote na escrita, não depois.
@@ -55,28 +51,9 @@ distribuidora pequena sem PONNOT, sem UNSEMT, ou até sem SUB/CTMT (achado deste
 primeiras eram as únicas sem esse tratamento, corrigido) entra com contagem 0 declarada e um desvio
 único explicando, nunca com a importação inteira abortando.
 
-### 3.1 Unidade do campo numérico: medida no arquivo (item L4-01-e)
-
-O dicionário do pacote declara `COMP` em quilômetro e `ENE_SUM` em megawatt-hora (é o que o Módulo 10 da
-ANEEL escreve), mas o extrato de referência da casa traz os dois em **metro** e em **quilowatt-hora**. A
-unidade, portanto, não é fixada pela BDGD: é escolha de quem extraiu o arquivo, e por isso é MEDIDA na
-importação (`app/rede_utilidades/unidades.py`):
-
-| família | régua da medida | faixas |
-|---|---|---|
-| `comp` | razão entre Σ COMP e Σ comprimento geodésico das mesmas geometrias | metro 0,5–2 · quilômetro 0,0005–0,002 |
-| `ene` | energia anual contra Σ POT_NOM × 8.760 h **e** contra o número de unidades consumidoras | quilowatt-hora e megawatt-hora, mil vezes uma da outra |
-
-O resultado sai por campo em `plat.rede_importacao.unidades` (declarada, detectada, fator para a unidade da
-base, evidência). Quem soma (sumário por subrede) e quem exporta (OpenDSS, exportação de subrede em JSON) lê
-o fator de lá por `unidades.fatores_da_rede`. **Sem medida, nada é convertido**: fator 1 e
-`origem: nao_medida` ao lado do número — aplicar o fator do dicionário seria o erro que este tratamento
-existe para evitar. Entre uma faixa e a outra há um vão de propósito; razão que cai no vão e âncoras que
-discordam viram `indeterminada`, com desvio contado.
-
 ## 4. Achado de dado real: RAMLIG não tem segundo ponto de conexão nomeado
 
-Medido contra um extrato real de distribuidora (cooperativa de teste, `tests/dados/bdgd_extrato_etb23.gdb`,
+Medido contra um extrato real de distribuidora (Vale do Taquari/RS, `tests/dados/bdgd_extrato_etb23.gdb`,
 conferido também na BDGD completa de 2.418.764 linhas de RAMLIG): `PN_CON_2` vem **vazio em 100%** das
 linhas. O manual da ANEEL e o próprio arquivo confirmam por que: o ramal de ligação liga a rede
 (`PN_CON_1`, que casa com o `PN_CON` da unidade consumidora em ~95% dos casos medidos) direto ao
@@ -106,7 +83,7 @@ A tabela viva fica em `docs/PARIDADE.md` (linha L4). Resumo:
 | nó/aresta com atributo por *asset type* | `rede_no`/`rede_aresta` + `tipo_id` (este item) | feito |
 | *containment/attachment association* | `rede_associacao` tipo `contencao`/`fixacao` (este item) | feito, sem consumidor ainda |
 | *connectivity association* | `rede_associacao` tipo `conectividade` (este item) | feito |
-| *subnetwork* (definição, hierarquia) | `rede_subrede` origem `bdgd` (este item) | feito |
+| *subnetwork* (definição, hierarquia) | `rede_subrede` (este item) | feito |
 | *Update Subnetwork* / *Trace* | — | fora (próximos itens L4-02/L4-04) |
 | *terminal configuration* | `rede_terminal_config` (item L4-01-a) | feito |
 | importador de fonte real com contagem conferida | `bdgd.py` (este item) | parcial — ver §4 |

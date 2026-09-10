@@ -485,6 +485,9 @@ ROUTERS = [
     # --- atributos de rede (L4-01-d): /api/rede/{rede_id}/atributos/{sincronizar,propagar-fase,
     # conectividade,substituicoes,discrepancias} — fase/tensão/capacidade/is_connected/subrede
     rotas_rede_atributos,
+    # --- topologia derivada da rede de utilidades (L4-01-b): /api/rede/{rede_id}/feicoes/{pontos,linhas}
+    # (as camadas de rede, editáveis) e /api/rede/{rede_id}/topologia/{habilitar,nos,arestas} (o índice derivado)
+    rotas_rede_topologia,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,
