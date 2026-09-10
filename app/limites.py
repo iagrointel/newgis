@@ -340,3 +340,10 @@ LAYOUT_DPI_MAX = 300                        # DPI máximo de exportação (o por
 LAYOUT_QUADRO_PIXELS_MAX = 4096             # maior lado do quadro em pixels no motor de render; acima, o quadro é
                                             # desenhado neste teto e o DPI efetivo (menor) vai no relatório
 LAYOUT_INLINE_BYTES_MAX = 256 * 1024        # documento de layout inline num pedido/job (JSON)
+# --- resultado de traçado de rede de utilidades (L4-02-f-resultados-e-exportacao)
+# O traçado inteiro é montado em memória antes de virar arquivo (CSV, GeoJSON ou GeoPackage), e o
+# GeoPackage é um SQLite construído em memória: o teto abaixo é o que impede um traçado de alimentador
+# inteiro de virar consumo de RAM sem freio na máquina (a casa trabalha com 2-3 GB livres). Acima dele a
+# resposta é 413 dizendo o número medido e como estreitar, nunca um arquivo pela metade.
+TRACADO_EXPORTACAO_MAX = 50_000     # elementos por exportação ou por camada salva
+TRACADO_HISTORICO_MAX = 20          # "os 20 últimos traçados do usuário" (portão do item)

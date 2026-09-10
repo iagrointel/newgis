@@ -50,6 +50,8 @@ PAGINAS = {
     "/redes/diagrama": "redes_diagrama.html",
     # --- fluxo de potência do alimentador (L4-07-fluxo-de-potencia)
     "/redes/fluxo": "redes_fluxo.html",
+    # --- resultado de traçado: seleção, camada, exportação e histórico (L4-02-f-resultados-e-exportacao)
+    "/redes/tracado": "redes_tracado.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
     "/uploads": "uploads.html",
     # --- sistema de design (UX-01-sistema-de-design): guia viva de tokens e componentes

@@ -11,7 +11,6 @@ construção pesada vai para o threadpool (lição do achado A4 do item L4-01-a)
 import json
 import uuid as uuid_mod
 
-import psycopg2
 from fastapi import APIRouter, Request
 from starlette.concurrency import run_in_threadpool
 
@@ -20,16 +19,7 @@ from app.auth import comum as auth_comum
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo.comum import registrar_evento
 from app.erros import ErroAPI
-from app.rede_utilidades import (
-    config_tracado,
-    diagnostico,
-    direcao,
-    feicoes,
-    fluxo,
-    lacos,
-    topologia,
-    tracado,
-)
+from app.rede_utilidades import despacho, feicoes, resultados, topologia
 from app.rede_utilidades.modelos import (
     Feicao,
     FeicaoLinhaEntrada,
@@ -42,25 +32,6 @@ router = APIRouter(prefix="/api/rede", tags=["rede de utilidades — topologia"]
 LER = {"x-auth": "S/T", "x-privilegio": "rls:visibilidade"}
 EDITAR = {"x-auth": "S/T", "x-privilegio": "rede.editar"}
 LISTA_LIMITE_MAX = 2000
-# .geojson é para o MAPA desenhar a rede inteira de uma vez (o alvo, `eletrica-br`, tem 5.703 linhas/2.035
-# pontos) — teto bem acima do que `/feicoes/pontos|linhas` (paginação Esri-like) aceita.
-GEOJSON_LIMITE_PADRAO = 20000
-GEOJSON_LIMITE_MAX = 50000
-
-
-def _bbox_ok(bbox: str | None) -> tuple[float, float, float, float] | None:
-    if not bbox:
-        return None
-    partes = bbox.split(",")
-    if len(partes) != 4:
-        raise ErroAPI(422, "bbox_invalido", "bbox exige 4 números: minx,miny,maxx,maxy")
-    try:
-        minx, miny, maxx, maxy = (float(p) for p in partes)
-    except ValueError as e:
-        raise ErroAPI(422, "bbox_invalido", "bbox exige 4 números: minx,miny,maxx,maxy") from e
-    if minx >= maxx or miny >= maxy:
-        raise ErroAPI(422, "bbox_invalido", "bbox precisa de minx < maxx e miny < maxy")
-    return (minx, miny, maxx, maxy)
 
 
 def _uuid_ok(valor: str) -> str:
@@ -121,30 +92,6 @@ def listar_feicoes_linha(rede_id: str, limite: int = 200, auth: Auth = autentica
         _rede_existe(cur, rid)
         itens = feicoes.listar_linhas(cur, rid, min(limite, LISTA_LIMITE_MAX))
         return {"total": len(itens), "itens": [_feicao_json(r) for r in itens]}
-
-
-@router.get("/{rede_id}/feicoes/pontos.geojson", openapi_extra=LER)
-def geojson_feicoes_ponto(rede_id: str, limite: int = GEOJSON_LIMITE_PADRAO, bbox: str | None = None,
-                          auth: Auth = autenticado(escopo_token="catalogo:ler")):
-    """FeatureCollection dos dispositivos (pontos) da rede, para o mapa desenhar direto — mesmo controle de
-    acesso de `/feicoes/pontos` (RLS por inquilino); `bbox=minx,miny,maxx,maxy` (graus, EPSG:4326) evita
-    mandar a rede inteira quando só a área visível interessa."""
-    rid = _uuid_ok(rede_id)
-    caixa = _bbox_ok(bbox)
-    with db.db(auth.contexto()) as cur:
-        _rede_existe(cur, rid)
-        return feicoes.geojson_pontos(cur, rid, min(limite, GEOJSON_LIMITE_MAX), caixa)
-
-
-@router.get("/{rede_id}/feicoes/linhas.geojson", openapi_extra=LER)
-def geojson_feicoes_linha(rede_id: str, limite: int = GEOJSON_LIMITE_PADRAO, bbox: str | None = None,
-                          auth: Auth = autenticado(escopo_token="catalogo:ler")):
-    """FeatureCollection dos trechos (linhas) da rede — ver `geojson_feicoes_ponto`."""
-    rid = _uuid_ok(rede_id)
-    caixa = _bbox_ok(bbox)
-    with db.db(auth.contexto()) as cur:
-        _rede_existe(cur, rid)
-        return feicoes.geojson_linhas(cur, rid, min(limite, GEOJSON_LIMITE_MAX), caixa)
 
 
 @router.post("/{rede_id}/feicoes/pontos/applyEdits", status_code=200, openapi_extra=EDITAR)
@@ -268,26 +215,6 @@ def listar_arestas(rede_id: str, limite: int = 200, auth: Auth = autenticado(esc
         return {"total": len(itens), "itens": itens}
 
 
-@router.get("/{rede_id}/topologia/diagnostico", openapi_extra=LER)
-async def diagnosticar_topologia(rede_id: str, limiar_m: float = diagnostico.LIMIAR_PADRAO_M,
-                                 exemplos: int = 1,
-                                 auth: Auth = autenticado(escopo_token="catalogo:ler")):
-    """Nós órfãos da topologia separados por CLASSE, com contagem, distância medida e exemplo (item L4-01-f).
-
-    Contar órfão não diz o que consertar: cada classe tem uma causa e um conserto diferente — ver
-    `app/rede_utilidades/diagnostico.py`. Só leitura; a varredura vai ao threadpool porque percorre a camada
-    de linha com índice espacial e, em rede grande, passa de um segundo."""
-    rid = _uuid_ok(rede_id)
-    exemplos = max(0, min(int(exemplos), 20))
-
-    def trabalho():
-        with db.db(auth.contexto()) as cur:
-            _rede_existe(cur, rid)
-            return diagnostico.diagnosticar(cur, rid, limiar_m=limiar_m, exemplos=exemplos)
-
-    return await run_in_threadpool(trabalho)
-
-
 # --- área suja e traçado mínimo (refutação do item) ---------------------------------------------------------
 
 @router.get("/{rede_id}/topologia/areas-sujas", openapi_extra=LER)
@@ -386,49 +313,14 @@ def _uuid_ok_no(valor: str) -> str:
 def _tracar_sincrono(rid: str, corpo: TracadoEntrada, auth: Auth, request: Request) -> dict:
     with db.db(auth.contexto()) as cur:
         _rede_existe(cur, rid)
-        barreiras = [b.model_dump() for b in corpo.barreiras]
-        try:
-            if corpo.config_id is not None:
-                # item L4-02-e: o pedido inteiro (tipo, barreiras de condição e de filtro, filtro de saída,
-                # funções e tipo de resultado) vem da configuração salva; do corpo só valem os pontos de
-                # partida e as barreiras pontuais deste traçado.
-                ficha = config_tracado.obter(cur, rid, corpo.config_id, auth.usuario_id)
-                resultado = config_tracado.executar(
-                    cur, auth.tenant_id, rid, ficha,
-                    [p.model_dump() for p in corpo.pontos_partida], barreiras)
-            elif corpo.tipo is None:
-                raise ErroAPI(422, "tipo_obrigatorio",
-                              "informe 'tipo' ou 'config_id' (a configuração salva traz o tipo)")
-            elif corpo.tipo in tracado.TIPOS_TRACADO:
-                resultado = tracado.tracar(
-                    cur, auth.tenant_id, rid, corpo.tipo,
-                    [p.model_dump() for p in corpo.pontos_partida], barreiras,
-                )
-            elif corpo.tipo in fluxo.TIPOS_FLUXO:
-                # o sentido vem do controlador de subrede (L4-02-b) ou do atributo de fluxo (L4-18); quem
-                # escolhe é `direcao.tracar_direcao`, e a resposta sempre diz qual foi em `origem_direcao`.
-                resultado = direcao.tracar_direcao(
-                    cur, auth.tenant_id, rid, corpo.tipo,
-                    [p.model_dump() for p in corpo.pontos_partida], barreiras, corpo.origem_direcao,
-                )
-            elif corpo.tipo == "lacos":
-                resultado = lacos.detectar_lacos(cur, auth.tenant_id, rid, barreiras)
-            elif corpo.tipo == "isolados":
-                resultado = lacos.isolados(cur, auth.tenant_id, rid, corpo.categoria_controlador, barreiras)
-            elif corpo.tipo == "caminho_curto":
-                if len(corpo.pontos_partida) != 1:
-                    raise ErroAPI(422, "origem_invalida",
-                                  "caminho_curto exige exatamente um ponto em pontos_partida (a origem)")
-                if corpo.destino is None:
-                    raise ErroAPI(422, "destino_obrigatorio", "caminho_curto exige o campo 'destino'")
-                resultado = lacos.caminho_curto(
-                    cur, auth.tenant_id, rid, corpo.pontos_partida[0].model_dump(),
-                    corpo.destino.model_dump(), corpo.atributo_custo, corpo.k, barreiras,
-                )
-            else:  # nunca alcançado — o pattern do pydantic já barrou; guarda por clareza
-                raise ErroAPI(422, "tipo_invalido", f"tipo desconhecido: {corpo.tipo}")
-        except psycopg2.Error as e:  # noqa: BLE001 — erro do banco vira mensagem legível, nunca 500 cru
-            raise auth_comum.erro_do_banco(e) from e
+        # o despacho ao motor certo mora em `despacho.py` desde o item L4-02-f: as rotas de exportar, de
+        # salvar como camada e de repetir do histórico chamam o MESMO traçado que esta.
+        resultado = despacho.executar(cur, auth.tenant_id, rid, corpo, auth.usuario_id)
+        resultado["agregacoes"] = resultados.agregar(
+            resultados.tabela(cur, rid, resultado.get("elementos") or [], com_geometria=False))
+        if auth.leitura_inquilino is None:
+            resultado["execucao_id"] = despacho.registrar(
+                cur, auth.tenant_id, rid, auth.usuario_id, corpo, resultado)
         registrar_evento(cur, request, "redes/tracar", "rede", rid,
                          {"tipo": resultado.get("tipo") or corpo.tipo,
                           "config_id": corpo.config_id,

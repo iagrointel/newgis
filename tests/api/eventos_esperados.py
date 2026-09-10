@@ -138,6 +138,10 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # (applyEdits de ponto e de linha já estão declarados no bloco do L4-01-b, acima)
     ("POST", "/api/rede/{rede_id}/topologia/habilitar"): ["redes/topologia_habilitar"],
     ("POST", "/api/rede/{rede_id}/tracar"): ["redes/tracar"],
+    # ---- L4-02-f: o resultado do traçado vira arquivo, camada e histórico
+    ("POST", "/api/rede/{rede_id}/tracar/exportar"): ["redes/tracar_exportar"],
+    ("POST", "/api/rede/{rede_id}/tracar/camada"): ["redes/tracar_camada"],
+    ("POST", "/api/rede/{rede_id}/tracados/{execucao_id}/repetir"): ["redes/tracar"],
     ("POST", "/api/rede/{rede_id}/config_tracado"): ["redes/config_tracado_criar"],
     ("PUT", "/api/rede/{rede_id}/config_tracado/{config_id}"): ["redes/config_tracado_alterar"],
     ("DELETE", "/api/rede/{rede_id}/config_tracado/{config_id}"): ["redes/config_tracado_apagar"],

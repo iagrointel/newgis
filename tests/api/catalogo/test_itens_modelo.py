@@ -178,10 +178,12 @@ def test_visualizador_nao_cria_e_editor_publica_camada_so_com_privilegio(visuali
 
 def test_tipo_item_e_vocabulario_sem_escrita(conexao_plat_app, cliente, sessao_a):
     r = sessao_a.get("/api/tipos-item")
-    assert r.status_code == 200 and len(r.json()) == 14
+    assert r.status_code == 200 and len(r.json()) == 15
     nomes = {t["nome"] for t in r.json()}
     assert {
         "camada_vetorial",
+        # L4-02-f: a camada salva a partir de um traçado de rede de utilidades (sem dado físico)
+        "camada_tracado",
         "vista_de_camada",
         "raster",
         "mapa",
