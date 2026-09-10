@@ -1,0 +1,61 @@
+[
+  {
+    "item": "L3-04-restricoes",
+    "clausula": "3_restricoes_encadeadas_contagem_por_restricao_bate_com_st_intersects_independente",
+    "resultado": "passou",
+    "detalhe": "test_restricao_intersecta_bate_com_st_intersects_independente + test_tres_restricoes_encadeadas_composicao_por_ou_e_relatorio: a contagem de app.amc.restricao.avaliar() para cada uma das 3 restricoes (r_uc=2, r_ponto=1, r_fracao=1 unidades vetadas) bate, unidade a unidade, com uma consulta ST_Intersects escrita a mao no proprio arquivo de teste, fora do modulo sob teste.",
+    "comando": "bash laco/roda_teste.sh tests/unit/test_amc_restricao.py -q",
+    "medido_em": "2026-09-07T16:16:00Z"
+  },
+  {
+    "item": "L3-04-restricoes",
+    "clausula": "buffer_geografico_bate_com_st_dwithin_independente",
+    "resultado": "passou",
+    "detalhe": "test_buffer_geografico_bate_com_st_dwithin_independente: restricao com buffer_m=100 avaliada por app.amc.restricao.avaliar() bate, unidade a unidade, com ST_DWithin(geography,geography,100) recomputado a mao (5 unidades; u2 vetada a 50 m do ponto, u3 livre a 150 m, folga clara acima do limiar).",
+    "comando": "bash laco/roda_teste.sh tests/unit/test_amc_restricao.py -q",
+    "medido_em": "2026-09-07T16:16:00Z"
+  },
+  {
+    "item": "L3-04-restricoes",
+    "clausula": "relatorio_escreve_a_norma_veda_ou_vetamos_por_precaucao_a_partir_do_metadado",
+    "resultado": "passou",
+    "detalhe": "test_frase_motivo_norma_e_precaucao + test_tres_restricoes_encadeadas_composicao_por_ou_e_relatorio: frase_motivo() le so o campo 'base' da restricao (nunca inventa) e produz 'a norma veda: ...' para base=norma e 'vetamos por precaucao: ...' para base=precaucao; a composicao carrega essa frase para app.amc.combinacao.combinar, que grava o motivo na unidade vetada.",
+    "comando": "bash laco/roda_teste.sh tests/unit/test_amc_restricao.py -q",
+    "medido_em": "2026-09-07T16:16:00Z"
+  },
+  {
+    "item": "L3-04-restricoes",
+    "clausula": "e2e_3_restricoes_compostas_por_ou_ate_a_combinacao_final",
+    "resultado": "passou",
+    "detalhe": "test_tres_restricoes_encadeadas_composicao_por_ou_e_relatorio: 3 restricoes avaliadas contra o banco, compostas por OU (app.amc.restricao.compor), e passadas para app.amc.combinacao.combinar; as 4 unidades vetadas (u0,u1,u2,u4) saem com favorabilidade 0,0 e o motivo da PRIMEIRA restricao da lista que vetou; u3 fica livre com a nota do fator (80,0).",
+    "comando": "bash laco/roda_teste.sh tests/unit/test_amc_restricao.py -q",
+    "medido_em": "2026-09-07T16:16:00Z"
+  },
+  {
+    "item": "L3-04-restricoes",
+    "clausula": "refutacao_buffer_0_aceito_buffer_negativo_recusado_camada_vazia_nunca_veta_em_silencio",
+    "resultado": "passou",
+    "detalhe": "test_buffer_zero_e_aceito_como_interseccao_pura (buffer_m=0 vira intersecao pura, sem erro) + test_buffer_negativo_e_recusado (ErroRestricao 'buffer_negativo') + test_camada_vazia_nunca_veta_em_silencio (ErroRestricao 'camada_vazia' com a frase 'sem feicoes na area', nunca devolve 0 unidades vetadas por engano).",
+    "comando": "bash laco/roda_teste.sh tests/unit/test_amc_restricao.py -q",
+    "medido_em": "2026-09-07T16:16:00Z"
+  },
+  {
+    "item": "L3-04-restricoes",
+    "clausula": "restricao_nunca_e_sorteada_em_robustez",
+    "resultado": "ja_provado_por_item_anterior_reusado_sem_alteracao",
+    "detalhe": "app.amc.robustez.simular_robustez (item L3-02-a, ja no ramo base) trata `fracao_vetada` como fixa em todo sorteio (docstring do modulo, secao A6) e este item so PRODUZ essa fracao (app.amc.restricao.compor); nenhuma linha de robustez.py foi tocada por este item. Nao ha teste NOVO deste item cobrindo robustez porque o comportamento ja e do modulo dependido — citado aqui para nao reivindicar prova onde so ha reuso.",
+    "medido_em": "2026-09-07T16:16:00Z"
+  },
+  {
+    "item": "L3-04-restricoes",
+    "clausula": "suite_completa_do_item",
+    "resultado": "passou",
+    "n_testes": 12,
+    "comando": "bash laco/roda_teste.sh tests/unit/test_amc_restricao.py -q",
+    "saida": "12 passed",
+    "carga_1min": 13.89,
+    "ram_livre_gb": 0,
+    "medido_em": "2026-09-07T16:16:40Z",
+    "observacao": "carga alta (13,89 em 12 nucleos) no momento da medida, mas a clausula nao e de desempenho/tempo — e de corretude funcional (contagens e frases) — logo a carga da maquina nao compromete o resultado; registrada por transparencia (regra da casa)."
+  }
+]

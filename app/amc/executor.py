@@ -14,28 +14,20 @@ mensagem e NENHUMA linha de `amc_fator_bruto`/`amc_resultado` é gravada para el
 `amc_resultado` só são escritos juntos, no bloco final, depois que cada um dos fatores do acervo confirmou a
 assinatura de novo — nunca conclui com zero.
 
-Limite honesto e deliberado deste item (não é o L3-01-e completo, combinadores/políticas alternativos):
+Limite honesto e deliberado deste item (não é o L3-01-d/e completo, que ainda não foi construído):
 - só fatores com `camada.tipo == 'acervo'` são extraídos aqui; fator do tipo 'item' fica de fora (fora do
   escopo do portão, que fala só do acervo) e é simplesmente ignorado na combinação;
 - só os extratores de vetor com correspondência 1:1 em `app.amc.vetorial` (polígono/linha/ponto);
-- a transformação (item L3-01-d, `app.amc.transformacoes`) roda os 16 tipos declarados no esquema; para
-  `faixas` com quebra por quantil/intervalo_igual/quebras_naturais e para `ms_grande`/`ms_pequena` sem
-  media/desvio gravados, a resolução usa a amostra dos valores brutos EXTRAÍDOS NESTA execução (as mesmas
-  unidades), congelada por fator antes de transformar — outra execução com outro conjunto de unidades
-  resolve de novo, e pode dar quebras diferentes;
+- só a transformação `linear` é aplicada (a mais simples do esquema); as outras (`categoria`, `faixas`,
+  `degraus`, as funções contínuas) levantam erro claro em vez de fingir suportá-las;
 - a camada do acervo é lida só dentro da caixa envolvente das unidades (mais uma folga), não da tabela
   inteira — necessário para não varrer camadas nacionais de milhões de linhas a cada execução; a distância
   ao mais próximo, portanto, é a mais próxima DENTRO dessa caixa, documentada aqui e no handoff."""
 
-from app.acervo.publicacao import _ident, _schema_views
-from app.amc import transformacoes
+import math
 
-# `app.amc.vetorial` importa geopandas no topo, e geopandas NÃO está em requirements.txt nem na venv da
-# unidade systemd (só no site do usuário desta máquina). Importado aqui em cima, ele derrubava o import de
-# `app.main` inteiro — a aplicação não subia, e tests/unit/test_dependencias.py::
-# test_app_main_importa_sem_site_do_usuario reprovava. O extrator de vetor é UM caminho do executor, então o
-# import vive onde ele é usado: quem não extrai fator de vetor não paga a dependência, e quem extrai recebe
-# o ModuleNotFoundError no lugar certo, dizendo o que falta instalar.
+from app.acervo.publicacao import _ident, _schema_views
+from app.amc import vetorial
 from app.amc.zonal import ErroExtracao
 from app.jobs.registro import FalhaDefinitiva
 
@@ -139,34 +131,35 @@ def _ler_camada_acervo(ctx, camada_id: str, unidades: list[tuple[str, dict]], at
     return [(li["fid"], li["g"], None) for li in linhas]
 
 
-def _resolver_transformacoes(fatores_acervo: list[dict], brutos: dict) -> dict[str, dict]:
-    """Congela, por fator, a transformação com `metodo`/`media`/`desvio` já resolvidos a partir da
-    amostra de valores brutos EXTRAÍDOS NESTA execução (item L3-01-d: `resolver_quebras`/
-    `resolver_estatisticas`) — feito uma vez por fator, não por unidade."""
-    resolvidas = {}
-    for fator in fatores_acervo:
-        t = fator["transformacao"]
-        amostra = [r.get("valor") for r in brutos.get(fator["id"], {}).values()]
-        t = transformacoes.resolver_quebras(amostra, t)
-        t = transformacoes.resolver_estatisticas(amostra, t)
-        resolvidas[fator["id"]] = t
-    return resolvidas
+def _transformar(valor: float | None, transformacao: dict) -> float | None:
+    """valor bruto -> favorabilidade 0-100. Só o tipo 'linear' (limite honesto do item, ver docstring do módulo)."""
+    if valor is None or (isinstance(valor, float) and math.isnan(valor)):
+        return None
+    tipo = transformacao.get("tipo")
+    if tipo != "linear":
+        raise FalhaDefinitiva(
+            f"transformação {tipo!r} não é suportada por este item (só 'linear'); a combinação completa do "
+            f"motor (item L3-01-d) ainda não foi construída"
+        )
+    minimo, maximo = float(transformacao["minimo"]), float(transformacao["maximo"])
+    if maximo == minimo:
+        return 50.0
+    frac = (valor - minimo) / (maximo - minimo)
+    if transformacao.get("direcao", "crescente") == "decrescente":
+        frac = 1.0 - frac
+    if frac < 0:
+        abaixo = transformacao.get("abaixo")
+        return float(abaixo) if abaixo is not None else 0.0
+    if frac > 1:
+        acima = transformacao.get("acima")
+        return float(acima) if acima is not None else 100.0
+    return frac * 100.0
 
 
-def _transformar(valor, transformacao: dict) -> float | None:
-    """valor bruto -> favorabilidade 0-100, delegado à biblioteca declarativa do item L3-01-d
-    (`app.amc.transformacoes`, os 16 tipos do esquema — SQL e numpy equivalentes)."""
-    try:
-        return transformacoes.transformar_um(valor, transformacao)
-    except transformacoes.ErroTransformacao as e:
-        raise FalhaDefinitiva(f"transformação {transformacao.get('tipo')!r}: {e.mensagem}") from e
-
-
-def _combinar(fatores_acervo: list[dict], pesos: dict, brutos: dict, uid: str,
-              transformacoes_resolvidas: dict[str, dict]) -> tuple:
+def _combinar(fatores_acervo: list[dict], pesos: dict, brutos: dict, uid: str) -> tuple:
     """Soma ponderada normalizada (Σw·nota / Σw) sobre os fatores COM dado na unidade — o combinador padrão do
     esquema (`soma_ponderada_normalizada`), política `excluir_fator` para dado ausente (as duas são o padrão
-    quando o modelo não pede outra coisa; combinadores/políticas alternativos ficam para L3-01-e)."""
+    quando o modelo não pede outra coisa; combinadores/políticas alternativos ficam para L3-01-d/e)."""
     soma_peso = soma_nota = 0.0
     coberturas = []
     for fator in fatores_acervo:
@@ -177,7 +170,7 @@ def _combinar(fatores_acervo: list[dict], pesos: dict, brutos: dict, uid: str,
             coberturas.append(r.get("cobertura") or 0.0)
         if peso <= 0 or r is None or r.get("valor") is None:
             continue
-        nota = _transformar(r["valor"], transformacoes_resolvidas[fid])
+        nota = _transformar(r["valor"], fator["transformacao"])
         if nota is None:
             continue
         soma_peso += peso
@@ -260,8 +253,6 @@ def executar(ctx, execucao_id) -> dict:
             raise FalhaDefinitiva(motivo)
         feicoes = _ler_camada_acervo(ctx, camada_id, unidades, fator["camada"].get("atributo"))
         try:
-            from app.amc import vetorial  # tardio: ver a nota do import no topo deste arquivo
-
             brutos[fator["id"]] = vetorial.extrair(
                 unidades, feicoes, tipo_vetor, srid_trabalho, extrator.get("parametros") or {}
             )
@@ -280,7 +271,6 @@ def executar(ctx, execucao_id) -> dict:
             _falhar(ctx, eid, motivo)
             raise FalhaDefinitiva(motivo)
 
-    transformacoes_resolvidas = _resolver_transformacoes(fatores_acervo, brutos)
     with ctx.db() as cur:
         for fid, por_unidade in brutos.items():
             for uid, r in por_unidade.items():
@@ -292,9 +282,7 @@ def executar(ctx, execucao_id) -> dict:
                     (eid, exe["tenant_id"], uid, fid, r["valor"], r["cobertura"]),
                 )
         for uid, _g in unidades:
-            favorabilidade, cobertura, vetado, motivo = _combinar(
-                fatores_acervo, pesos, brutos, uid, transformacoes_resolvidas
-            )
+            favorabilidade, cobertura, vetado, motivo = _combinar(fatores_acervo, pesos, brutos, uid)
             cur.execute(
                 "INSERT INTO plat.amc_resultado(execucao_id, tenant_id, unidade_id, favorabilidade, vetado, motivo, "
                 "cobertura) VALUES (%s::uuid, %s, %s, %s, %s, %s, %s) "

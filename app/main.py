@@ -31,6 +31,9 @@ from app.amc.rotas import router as rotas_amc
 from app.amc.rotas_similaridade import router as rotas_similaridade
 from app.amc.rotas import router as rotas_amc_presets
 from app.amc.rotas import router as rotas_amc
+from app.acervo import rotas as rotas_acervo
+from app.amc.rotas import router as rotas_amc
+from app.amc.rotas_similaridade import router as rotas_similaridade
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
 from app.auth import sso as rotas_sso

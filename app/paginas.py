@@ -158,6 +158,8 @@ PAGINAS = {
     "/amc/explicacao/{execucao_id}/{unidade_id}": "amc_explicacao.html",
     # --- motor AMC: tela de montar/rodar/recombinar o modelo (L3-01-g-tela-motor)
     "/amc/motor": "amc_motor.html",
+    # --- motor AMC: explicação da nota de uma unidade (L3-01-f-explicacao)
+    "/amc/explicacao/{execucao_id}/{unidade_id}": "amc_explicacao.html",
 }
 router = APIRouter()
 

@@ -946,6 +946,8 @@ foi construído (item L0-04-i). `DELETE /api/conexoes/{id}` ainda não limpa `SE
 
 ### 18.3 Publicar uma camada do acervo e assinar (item L6-01-b-view-so-leitura)
 
+### 18.3 Publicar uma camada do acervo e assinar (item L6-01-b-view-so-leitura)
+
 Publicar é criar a VIEW; assinar é ganhar o direito de lê-la. São dois passos com donos diferentes.
 
 1. **A casa publica** (uma vez por camada, como `postgres`):
@@ -996,6 +998,13 @@ assinatura acontece de novo, uma vez antes de cada fator e uma vez depois do úl
 resultado é gravada se qualquer uma delas falhar. Fora do escopo: fator do tipo `item` (catálogo do
 inquilino) não é extraído por este job; raster do acervo e combinador diferente do padrão ficam para outro
 item. Ver ADR `20260907T1319`.
+`linear` do fator e combina por soma ponderada normalizada. `GET /api/amc/execucoes/{id}` mostra, por camada,
+`fonte_id`, `sha256` e `contagem` (de `acervo.linhas_exatas`). Revogar a assinatura DEPOIS de a execução
+concluir não apaga o resultado (a execução concluída é imutável); revogar DURANTE um job em andamento derruba
+o job com mensagem — a checagem da assinatura acontece de novo, uma vez antes de cada fator e uma vez depois
+do último, e nenhuma linha de resultado é gravada se qualquer uma delas falhar. Fora do escopo: fator do tipo
+`item` (catálogo do inquilino) não é extraído por este job; raster do acervo, transformação além de `linear` e
+combinador diferente do padrão ficam para o item L3-01-d/e. Ver ADR `20260907T1319`.
 
 ## 19. Ficha do acervo completa e gate de LGPD (itens L6-01-d-ficha-fonte e L6-01-f-lgpd)
 
