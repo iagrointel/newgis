@@ -159,7 +159,10 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
         # (`geometry(Polygon,…)`) recusaria esse UPDATE com "Geometry type (MultiPolygon) does not match
         # column type (Polygon)". PROMOTE_TO_MULTI cria sempre a coluna Multi* para as famílias que podem
         # fragmentar; "Geometry" (genérico, geometria mista) não promove — a coluna fica solta de propósito.
-        nlt = "GEOMETRY" if tipo_escolhido_raw == "Geometry" else "PROMOTE_TO_MULTI"
+        # o tipo ESCOLHIDO vai explícito ao ogr2ogr: com "PROMOTE_TO_MULTI" um GeoJSON cujo cabeçalho diz só
+        # "Geometry" continuava GEOMETRY na tabela, e a camada nascia como ponto (medido 10/09 com 645 municípios).
+        # "-nlt MULTIPOLYGON" promove Polygon->MultiPolygon; "-nlt POINT" etc. mantém o simples.
+        nlt = "GEOMETRY" if tipo_escolhido_raw == "Geometry" else tipo_escolhido_raw.upper()
 
         oo_args = []
         for o in prep.get("oo", []):
