@@ -1,6 +1,10 @@
 """e2e do item L2-05-a: a tela /analise gera o formulário do manifesto do buffer, roda a ferramenta sobre uma camada
 pequena do inquilino (custo abaixo do teto: em processo) e a ficha do item de resultado mostra a proveniência
-(ferramenta, versão, parâmetros, entrada com sha256) — com captura. Sem worker: o caminho síncrono basta aqui."""
+(ferramenta, versão, parâmetros, entrada com sha256) — com captura. Sem worker: o caminho síncrono basta aqui.
+
+E do item L2-05-f: a MESMA tela roda a área de serviço (isócrona), que é ferramenta de rede — o formulário sai do
+manifesto (lista de minutos, escolha de perfil e de combinação) sem nenhuma tela nova, e a ficha do resultado
+mostra a versão do grafo OSM na procedência. Também com captura."""
 
 import re
 from pathlib import Path
@@ -62,4 +66,38 @@ def test_formulario_roda_buffer_e_ficha_mostra_proveniencia(page, base_url, cred
     CAPTURAS.mkdir(parents=True, exist_ok=True)
     page.locator("[data-campo='proveniencia']").scroll_into_view_if_needed()
     page.screenshot(path=str(CAPTURAS / f"{ITEM}_proveniencia.png"))
+    tela.verificar()
+
+
+ITEM_REDE = "L2-05-f-rede-isocrona-rota-ferramentas"
+
+
+def test_formulario_roda_area_de_servico_e_ficha_mostra_o_grafo(page, base_url, credenciais_demo, camada):
+    """Cláusula 'e2e com captura' do L2-05-f: a ferramenta de rede aparece na mesma tela de análise, roda pelo
+    formulário gerado do manifesto e o resultado traz a versão do grafo OSM na procedência."""
+    slug, login, senha = credenciais_demo
+    c, criados = camada
+    tela = Tela(page, base_url)
+    page.route("**/api/ferramentas/*/executar", lambda rota: rota.fulfill(response=rota.fetch(
+        headers={k: v for k, v in rota.request.headers.items() if k.lower() != "origin"})))
+    tela.entrar(slug, login, senha, proximo="/analise")
+    tela.ir("/analise", "pagina_analise_rede_ms")
+    assert page.locator("#ferramenta option[value='area_de_servico']").count() == 1
+    page.select_option("#ferramenta", "area_de_servico")
+    page.select_option("#formulario select[name='pontos']", c["id"])
+    page.fill("#formulario input[name='minutos'], #formulario textarea[name='minutos']", "5")
+    page.fill("#formulario input[name='titulo']", "E2E area de servico 5 min")
+    page.click("#formulario button[type='submit']")
+    page.wait_for_selector("#resultado-link", timeout=60000)
+    item_id = page.get_attribute("#execucao-resultado", "data-item-id")
+    assert re.fullmatch(r"[0-9a-f-]{36}", item_id), item_id
+    criados.append(item_id)
+    page.click("#resultado-link")
+    page.wait_for_selector("body[data-pronto='1']", timeout=20000)
+    page.wait_for_selector("[data-campo='proveniencia'] .proveniencia", timeout=20000)
+    texto = page.text_content("[data-campo='proveniencia']")
+    assert "area_de_servico v1" in texto and c["id"] in texto
+    CAPTURAS.mkdir(parents=True, exist_ok=True)
+    page.locator("[data-campo='proveniencia']").scroll_into_view_if_needed()
+    page.screenshot(path=str(CAPTURAS / f"{ITEM_REDE}_area_de_servico.png"))
     tela.verificar()

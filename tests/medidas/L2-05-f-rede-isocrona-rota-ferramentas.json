@@ -1,0 +1,27 @@
+{
+ "item": "L2-05-f-rede-isocrona-rota-ferramentas",
+ "medidas": {
+  "matriz_100x100_execucao": {
+   "valor": 3.96,
+   "unidade": "s",
+   "comando": "test_matriz_100x100_em_tempo_medido (execução inteira: matriz + escrita da camada + item; carga_1min 7.68)"
+  },
+  "matriz_100x100_pares_com_rota": {
+   "valor": 10000,
+   "unidade": "pares de 10.000",
+   "comando": "test_matriz_100x100_em_tempo_medido"
+  },
+  "rota_10_paradas_ordem_original": {
+   "valor": 3583.9,
+   "unidade": "s",
+   "comando": "test_rota_de_10_paradas_otimizada_nao_custa_mais_que_a_ordem_original"
+  },
+  "rota_10_paradas_ordem_otimizada": {
+   "valor": 3521.6,
+   "unidade": "s",
+   "comando": "test_rota_de_10_paradas_otimizada_nao_custa_mais_que_a_ordem_original"
+  }
+ },
+ "gerado_em": "2026-09-08T01:39:37Z",
+ "git_sha": "3d97c0d48351"
+}

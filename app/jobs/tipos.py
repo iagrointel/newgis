@@ -29,6 +29,7 @@ from app.exportacao import tipos_job as exportacao_tipos  # noqa: F401 — L0-04
 from app.ferramentas import buffer as ferramentas_buffer  # noqa: F401 — L2-05-a: ferramenta de exemplo
 from app.ferramentas import executor as ferramentas_executor  # noqa: F401 — L2-05-a: ferramentas.executar
 from app.ferramentas import raster as ferramentas_raster  # noqa: F401 — L2-05-e: ferramentas raster
+from app.ferramentas import rede as ferramentas_rede  # noqa: F401 — L2-05-f: ferramentas de rede
 from app.ingestao import tarefas as ingestao_tarefas  # noqa: F401 — L0-04: ingestao.inspecionar/ingestao.carregar
 from app.jobs import periodicos, tipos_prova  # noqa: F401 — importação registra os tipos
 from app.jobs.registro import REGISTRO

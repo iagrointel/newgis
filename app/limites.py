@@ -860,3 +860,15 @@ FERRAMENTA_RASTER_ZONAS_MAX = 20_000          # feições de uma camada de zonas
 FERRAMENTA_RASTER_PIXELS_SAIDA_MAX = 4_000_000_000  # pixels do raster de saída (4 Gpx)
 FERRAMENTA_RASTER_FEICOES_SAIDA_MAX = 500_000  # feições de curva de nível / vetorização por execução
 FERRAMENTA_RASTER_ENTRADAS_MAX = 20           # rasters numa calculadora ou num mosaico
+# --- ferramentas de rede (L2-05-f): isócrona, rota por paradas, matriz origem-destino, K mais próximas,
+# conexão à rede (snap) e localizar-alocar. Todas chamam o serviço de rota do L2-11-c (app/rede), que fala
+# com o OSRM isolado `plat-osrm-guarulhos`; os tetos abaixo são do PEDIDO, não do grafo, e aparecem no
+# manifesto de cada ferramenta (campo `limites`) para o cliente ler antes de mandar trabalho grande.
+REDE_ISOCRONAS_MAX = 25               # origens × intervalos por execução de área de serviço
+REDE_INTERVALOS_MAX = 5               # intervalos de tempo por execução (anéis da área de serviço)
+REDE_PARADAS_MAX = 25                 # paradas por rota (mesmo teto que a otimização por /trip aguenta bem)
+REDE_MATRIZ_LADO_MAX = 1000           # N e M da matriz origem-destino, cada um
+REDE_MATRIZ_PARES_MAX = 1_000_000     # N×M declarado (1.000×1.000); o serviço parte em blocos do teto do OSRM
+REDE_SNAP_PONTOS_MAX = 500            # pontos por execução de conectar à rede (1 chamada /nearest por ponto)
+REDE_K_MAX = 20                       # K de "K instalações mais próximas"
+REDE_ALOCAR_P_MAX = 25                # P instalações escolhidas por localizar-alocar (heurística gulosa)

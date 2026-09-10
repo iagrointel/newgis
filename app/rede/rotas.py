@@ -5,9 +5,7 @@ inquilino aqui, só cálculo sobre dado aberto (OSM); a autenticação exige o e
 ou sessão de usuário — sem RLS porque não há linha de banco para isolar (P6 não se aplica: nada é
 lido/escrito por inquilino)."""
 
-import json
 import logging
-from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter
@@ -27,8 +25,7 @@ router = APIRouter(prefix="/api", tags=["rede"])
 # cálculo é sobre dado aberto (OSM), não sobre um recurso do inquilino (mesmo valor de /api/eu, /api/arquivos)
 X = {"x-auth": "S/T", "x-privilegio": "proprio"}
 
-RAIZ = Path(__file__).resolve().parents[2]
-_PROVENIENCIA = json.loads((RAIZ / "osrm" / "proveniencia.json").read_text(encoding="utf-8"))
+_PROVENIENCIA = osrm.PROVENIENCIA  # arquivo, sha256 e data do recorte OSM (fonte única em app/rede/osrm.py)
 
 
 def _ponto_valido(p: list[float]) -> list[float]:
