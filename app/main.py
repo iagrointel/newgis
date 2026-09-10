@@ -18,6 +18,7 @@ from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 
 from app import cabecalhos, erros, limite_corpo, paginas
 from app import log as plat_log
+from app.acervo import publicacao as rotas_acervo_publicacao
 from app.acervo import rotas as rotas_acervo
 from app.amc import rotas as rotas_amc
 from app.analise3d.rotas import router as rotas_analise3d
@@ -237,6 +238,8 @@ ROUTERS = [
     rotas_layout.router,
     rotas_presenca.router,
     # --- acervo da casa (L6-01-a): /api/acervo, /api/acervo/{fonte_id}, /api/acervo/{fonte_id}/adicionar
+    # publicacao ANTES de rotas_acervo: /api/acervo/camadas casaria com /api/acervo/{fonte_id} se viesse depois
+    rotas_acervo_publicacao.router,
     rotas_acervo.router,
     # --- conexão externa (L6-02-a): /api/conexoes, /api/conexoes/{id}, /api/conexoes/{id}/testar
     rotas_conexao.router,

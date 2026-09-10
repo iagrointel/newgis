@@ -82,6 +82,9 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/acervo/{fonte_id}/adicionar"): ["itens/adicionar", "acervo/adicionar_recusado_pii"],
     # L6-01-i-raster-e-arquivos: a rota de exposição enfileira jobs e registra o pedido (o job registra o item)
     ("POST", "/api/acervo/arquivos/expor"): ["acervo/arquivo_expor"],
+    # item L6-01-b: assinar/cancelar mudam quem pode LER a camada publicada — evento obrigatório
+    ("POST", "/api/acervo/camadas/{camada}/assinatura"): ["acervo/assinar"],
+    ("DELETE", "/api/acervo/camadas/{camada}/assinatura"): ["acervo/cancelar"],
     ("PUT", "/api/itens/{id}"): ["itens/atualizar", "itens/status", "itens/proteger", "itens/desproteger"],
     ("PATCH", "/api/itens/{id}"): ["itens/atualizar", "itens/status", "itens/proteger", "itens/desproteger"],
     ("DELETE", "/api/itens/{id}"): ["itens/apagar"],

@@ -11,9 +11,7 @@ sha256, método, confiança, limites, próxima_verificação) já existiam em `A
 (exemplos lidos em acervo.fonte.limites: "0 vendidos lidos; só o tempo resolve", "só fluxo, sem estoque
 RAIS") — não duplicado sob outro nome para não abrir campo que o adversário possa achar "inventado"."""
 
-from pydantic import BaseModel, ConfigDict, Field
-
-from app import limites
+from pydantic import BaseModel, ConfigDict
 
 
 class Saida(BaseModel):
@@ -90,44 +88,33 @@ class AcervoAdicionarEntrada(BaseModel):
     confirma_risco_pii: bool = False
 
 
-# ---- item L6-01-i-raster-e-arquivos: camadas de ARQUIVO do acervo (acervo.camada_arquivo, sha256 conferido)
-class AcervoArquivo(Saida):
-    caminho: str
-    nome: str | None = None
-    tipo: str                      # raster | vetor
-    extensao: str
-    bytes: int | None = None
-    sha256: str | None = None
-    feicoes: int | None = None
-    srid: str | None = None
+class AcervoCamadaPublicada(Saida):
+    """Uma view de `plat_acervo` (item L6-01-b). `assinada` é deste inquilino: a RLS de
+    plat.acervo_assinatura já recorta o LEFT JOIN, então nunca vaza a assinatura de outro."""
+
+    view_nome: str
+    acervo_camada_id: str
+    fonte_id: str
+    schema_origem: str
+    tabela_origem: str
+    coluna_geom: str
+    srid: int
+    colunas: list[str]
+    linhas_exatas: int | None = None
     tipo_geom: str | None = None
-    fonte_id: str | None = None
-    fonte_nome: str | None = None
-    orgao: str | None = None
-    dominio: str | None = None
-    licenca: str | None = None
-    publicavel: bool = False       # D17: sem licença escrita o item nasce privado e não se compartilha
-    exposto: bool = False
-    item_id: str | None = None
-    no_disco: bool | None = None   # o arquivo do registro existe nesta instalação
+    assinada: bool
 
 
-class AcervoArquivosPagina(Saida):
+class AcervoCamadaPagina(Saida):
     total: int
-    itens: list[AcervoArquivo]
-    raiz_configurada: bool
-    rasters: int
-    vetores: int
+    camadas: list[AcervoCamadaPublicada]
 
 
-class AcervoExporEntrada(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class AcervoFeicoes(Saida):
+    """GeoJSON de uma camada publicada. `features` fica vazio quando o filtro não achou nada — nunca quando
+    falta assinatura: aí a rota já devolveu 403 antes de consultar."""
 
-    caminhos: list[str] = Field(min_length=1, max_length=limites.ACERVO_ARQUIVO_LOTE_MAX)
-    titulo: str | None = Field(default=None, max_length=200)
-
-
-class AcervoExporSaida(Saida):
-    jobs: list[dict]
-    recusados: list[dict]
-
+    type: str
+    camada: str
+    total: int
+    features: list[dict]
