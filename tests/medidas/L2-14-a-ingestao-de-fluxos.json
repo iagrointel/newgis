@@ -1,0 +1,87 @@
+{
+ "item": "L2-14-a-ingestao-de-fluxos",
+ "medidas": {
+  "vazao_receptor_http": {
+   "valor": 10000,
+   "unidade": "eventos/s",
+   "comando": "roda_teste.sh tests/api/test_fluxo_vazao.py -q -m lento"
+  },
+  "eventos_enviados": {
+   "valor": 600000,
+   "unidade": "eventos",
+   "comando": "roda_teste.sh tests/api/test_fluxo_vazao.py -q -m lento"
+  },
+  "eventos_aceitos": {
+   "valor": 600000,
+   "unidade": "eventos",
+   "comando": "roda_teste.sh tests/api/test_fluxo_vazao.py -q -m lento"
+  },
+  "linhas_gravadas": {
+   "valor": 600000,
+   "unidade": "linhas",
+   "comando": "roda_teste.sh tests/api/test_fluxo_vazao.py -q -m lento"
+  },
+  "perda": {
+   "valor": 0,
+   "unidade": "eventos",
+   "comando": "roda_teste.sh tests/api/test_fluxo_vazao.py -q -m lento"
+  },
+  "atraso_mediano": {
+   "valor": 30.9,
+   "unidade": "ms",
+   "comando": "roda_teste.sh tests/api/test_fluxo_vazao.py -q -m lento"
+  },
+  "atraso_p95": {
+   "valor": 44.3,
+   "unidade": "ms",
+   "comando": "roda_teste.sh tests/api/test_fluxo_vazao.py -q -m lento"
+  },
+  "drenagem_apos_ultimo_envio": {
+   "valor": 0.4,
+   "unidade": "s",
+   "comando": "roda_teste.sh tests/api/test_fluxo_vazao.py -q -m lento"
+  },
+  "rss_plat_fluxo": {
+   "valor": 78.5,
+   "unidade": "MB",
+   "comando": "roda_teste.sh tests/api/test_fluxo_vazao.py -q -m lento"
+  },
+  "duracao_do_envio": {
+   "valor": 60.0,
+   "unidade": "s",
+   "comando": "roda_teste.sh tests/api/test_fluxo_vazao.py -q -m lento"
+  },
+  "carga_1min_antes": {
+   "valor": 6.83,
+   "unidade": "carga",
+   "comando": "roda_teste.sh tests/api/test_fluxo_vazao.py -q -m lento"
+  },
+  "carga_1min_depois": {
+   "valor": 7.18,
+   "unidade": "carga",
+   "comando": "roda_teste.sh tests/api/test_fluxo_vazao.py -q -m lento"
+  },
+  "ram_livre_gb": {
+   "valor": 6.2,
+   "unidade": "GB",
+   "comando": "roda_teste.sh tests/api/test_fluxo_vazao.py -q -m lento"
+  },
+  "nucleos": {
+   "valor": 12,
+   "unidade": "núcleos",
+   "comando": "roda_teste.sh tests/api/test_fluxo_vazao.py -q -m lento"
+  },
+  "medido_em": {
+   "valor": "2026-09-08T13:11:59Z",
+   "unidade": "instante",
+   "comando": "roda_teste.sh tests/api/test_fluxo_vazao.py -q -m lento"
+  },
+  "erros_de_escrita": {
+   "valor": 0,
+   "unidade": "lotes",
+   "comando": "roda_teste.sh tests/api/test_fluxo_vazao.py -q -m lento"
+  }
+ },
+ "gerado_em": "2026-09-08T13:11:59Z",
+ "git_sha": "7cc812400f09"
+}

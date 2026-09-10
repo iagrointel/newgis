@@ -101,6 +101,7 @@ from app.correio.rotas_smtp import router as rotas_smtp
 from app.edicao.rotas import router as rotas_edicao
 from app.ferramentas import rotas as rotas_ferramentas
 from app.ferramentas import rotas_gp as rotas_ferramentas_gp
+from app.fluxo.rotas import router as rotas_fluxos
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.imagens.rotas_imagens import router as rotas_imagens
@@ -143,6 +144,8 @@ from app.portal.rotas import router as rotas_portal
 from app.mapa.selecao import router as rotas_selecao
 from app.multiescala.rotas import router as rotas_multiescala
 from app.mapas.rotas import router as rotas_mapas
+from app.multiescala.rotas import router as rotas_multiescala
+from app.paineis.rotas import router as rotas_paineis
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rede_utilidades.rotas_config_tracado import router as rotas_rede_config_tracado
@@ -200,6 +203,7 @@ from app.versao import versao
 from app.widgets.rotas import router as rotas_widgets_externos
 from app.versionamento.rotas import router as rotas_versionamento
 from app.versionamento.rotas_esri import router as rotas_versionamento_esri
+from app.vivo.rotas import router as rotas_vivo
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
@@ -305,6 +309,8 @@ ROUTERS = [
     # --- publicação de documento de construtor (L5-14): /api/itens/{id}/publicacao(+/exportacao,+/visualizacoes),
     # vitrine pública /api/p/{inquilino}/{slug} e /p/{inquilino}/{slug}
     rotas_publicacao.router,
+    # --- atualização viva de painel e mapa (L2-06-d): /api/eventos/camadas (SSE)
+    rotas_vivo,
     # --- catálogo externo OGC API Records (L0-09-metadado-catalogo): /ogc/records; token catalogo:ler, nunca aberto
     rotas_ogc.router,
     # --- layout de impressão (L2-12-b): /api/layouts, página headless do quadro e Export Web Map Task (Esri)
@@ -409,6 +415,10 @@ ROUTERS = [
     # --- galeria de mapas base por inquilino (L2-01-e): /api/mapas-base, .../instalar, .../{id}/tornar-padrao,
     # .../osm/{z}/{x}/{y}.png (proxy raster do OSM)
     rotas_mapas_base,
+    # --- entrada de eventos em tempo real (L2-14-a): /api/fluxos (gestão da fonte, métrica, eventos
+    # gravados). Quem RECEBE evento é o processo plat-fluxo na porta 8155 (app/fluxo/receptor.py), fora
+    # desta aplicação — uma linha de registro de acesso por evento custaria mais que o próprio evento.
+    rotas_fluxos,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- rede de utilidades (L4-01-a): /api/rede (redes do inquilino), /api/rede/{rede_id}/pacote (importa e

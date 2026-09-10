@@ -13,36 +13,42 @@
    ORDEM DO DOCUMENTO (a mesma ordem de `corpo.elementos`) — nenhum JS decide o empilhamento, é puro CSS. */
 
 import { h, limpar } from '../base/dom.js';
-import { Barramento } from '../app/barramento.js';
-import * as estadoUrl from '../app/estado_url.js';
-import { TIPOS_COM_FONTE, pedidoDoElemento, precisaPedido, renderElemento } from './elementos.js';
-import { VistaElemento, ligarInteracoes } from './interacoes.js';
 
-/* item L2-06-b-elementos-basicos: os tipos de elemento, o pedido de cada um e o desenho vivem em
-   `elementos.js`; este módulo continua responsável só pela GRADE, pelo ciclo de atualização (uma requisição
-   por fonte) e pelo estado de execução (filtros globais, ordenação de tabela, paginação de lista, extensão do
-   mapa como filtro).
-   item L2-06-c-acoes-seletores-filtros-cruzados: cada elemento com fonte ganha uma VISTA (VistaElemento,
-   chave `v:<id do elemento>`) — o barramento do L5-07 (`app/barramento.js`, UM só para o app e o painel)
-   traduz `corpo.mensagens` (gatilho → ações) sobre essas vistas; o filtro CQL2 que a vista guarda entra no
-   pedido do elemento (`pedido.filtro`) e roda em SQL no servidor (app/paineis/dados.py::filtro_do_pedido);
-   o estado dos seletores/filtros vai para a URL (app/estado_url.js) — copiar a URL reabre com o mesmo
-   estado. Ação de widget (zoom/pan/piscar/popup/definir_parametro) muda o estado de execução do elemento e
-   o efeito aparece no repintar. */
+const TIPOS_COM_FONTE = new Set(['indicador', 'grafico', 'tabela']);
 
-function agruparPorFonte(elementos, ajustes = {}, vistas = null) {
+function formatarNumero(v) {
+  if (v === null || v === undefined) return '—';
+  const n = Number(v);
+  if (!Number.isFinite(n)) return String(v);
+  return n.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+}
+
+function pedidoDoElemento(elemento) {
+  const op = elemento.opcoes || {};
+  if (elemento.tipo === 'indicador') {
+    return { agregacao: op.agregacao || 'contagem', campo: op.campo };
+  }
+  if (elemento.tipo === 'grafico') {
+    return {
+      agregacao: 'categorias',
+      campo: op.campo_rotulo,
+      agregacao_valor: op.agregacao || 'contagem',
+      campo_valor: op.campo,
+      max_categorias: op.max_categorias || 8,
+    };
+  }
+  if (elemento.tipo === 'tabela') {
+    return { agregacao: 'linhas', campos: op.campos, limite: op.max_linhas || 50 };
+  }
+  return null;
+}
+
+function agruparPorFonte(elementos) {
   const porFonte = new Map();
   for (const el of elementos) {
     if (!TIPOS_COM_FONTE.has(el.tipo) || !el.fonte) continue;
     const pedido = pedidoDoElemento(el);
     if (!pedido) continue;
-    const ajuste = ajustes[el.id];
-    if (ajuste) Object.assign(pedido, ajuste);
-    // o filtro dinâmico da vista do elemento vira parte do PEDIDO (SQL no servidor). O seletor fica de
-    // fora: o filtro dele é o VALOR escolhido (que viaja pelas mensagens aos outros elementos), não uma
-    // condição sobre as próprias opções — senão o seletor colapsaria à opção escolhida.
-    const vista = vistas ? vistas.get(`v:${el.id}`) : null;
-    if (vista && vista.filtroDinamico && el.tipo !== 'seletor') pedido.filtro = vista.filtroDinamico;
     if (!porFonte.has(el.fonte)) porFonte.set(el.fonte, {});
     porFonte.get(el.fonte)[el.id] = pedido;
   }
@@ -53,15 +59,12 @@ function renderElementoVazio(elemento) {
   const div = h('div', {
     class: `painel-el painel-el-${elemento.tipo}`,
     'data-id': elemento.id,
-    'data-tipo': elemento.tipo,
     style: `--gx:${elemento.x};--gy:${elemento.y};--gw:${elemento.largura};--gh:${elemento.altura}`,
   });
   if (elemento.titulo) div.append(h('h3', { class: 'painel-el-titulo' }, elemento.titulo));
   const corpo = h('div', { class: 'painel-el-corpo', 'data-papel': 'corpo' });
   if (elemento.tipo === 'texto') {
     corpo.textContent = (elemento.opcoes || {}).texto || '';
-  } else if (!precisaPedido(elemento)) {
-    corpo.dataset.semFonte = '1';   // legenda, cabeçalho, texto rico sem campos e seletor sem pedido: desenham na montagem
   } else {
     corpo.textContent = '…';
     corpo.setAttribute('aria-busy', 'true');
@@ -70,19 +73,48 @@ function renderElementoVazio(elemento) {
   return div;
 }
 
-function corpoDoElemento(container, elemento) {
-  return container.querySelector(`.painel-el[data-id="${CSS.escape(elemento.id)}"] [data-papel="corpo"]`);
-}
-
-function pintarResultado(container, elemento, resultado, ctx) {
-  const corpo = corpoDoElemento(container, elemento);
+function pintarResultado(container, elemento, resultado) {
+  const corpo = container.querySelector(`.painel-el[data-id="${CSS.escape(elemento.id)}"] [data-papel="corpo"]`);
   if (!corpo) return;
   corpo.removeAttribute('aria-busy');
-  const caixa = corpo.closest('.painel-el');
-  const marcarVazio = (vazio) => { if (caixa) caixa.dataset.vazio = vazio ? '1' : '0'; };
-  const r = renderElemento(corpo, elemento, resultado, ctx);
-  if (r && typeof r.then === 'function') { r.then((vazio) => marcarVazio(vazio)); return; }
-  marcarVazio(r);
+  limpar(corpo);
+  if (!resultado) { corpo.textContent = '—'; return; }
+  if (resultado.tipo === 'numero') {
+    corpo.append(h('span', { class: 'painel-indicador-valor' }, formatarNumero(resultado.valor)));
+    return;
+  }
+  if (resultado.tipo === 'categorias') {
+    const linhas = resultado.linhas || [];
+    const max = Math.max(1, ...linhas.map((l) => Number(l.valor) || 0));
+    const lista = h('ul', { class: 'painel-grafico-barras' });
+    for (const linha of linhas) {
+      const pct = Math.max(2, Math.round(((Number(linha.valor) || 0) / max) * 100));
+      lista.append(
+        h(
+          'li',
+          {},
+          h('span', { class: 'painel-grafico-rotulo' }, String(linha.categoria ?? '')),
+          h('span', { class: 'painel-grafico-barra-fundo' }, h('span', { class: 'painel-grafico-barra', style: `width:${pct}%` })),
+          h('span', { class: 'painel-grafico-valor' }, formatarNumero(linha.valor)),
+        ),
+      );
+    }
+    corpo.append(lista);
+    return;
+  }
+  if (resultado.tipo === 'linhas') {
+    const colunas = resultado.colunas || [];
+    const tabela = h('table', { class: 'painel-tabela' });
+    tabela.append(h('thead', {}, h('tr', {}, ...colunas.map((c) => h('th', {}, c)))));
+    const tbody = h('tbody');
+    for (const linha of resultado.linhas || []) {
+      tbody.append(h('tr', {}, ...colunas.map((c) => h('td', {}, linha[c] === null || linha[c] === undefined ? '' : String(linha[c])))));
+    }
+    tabela.append(tbody);
+    corpo.append(tabela);
+    return;
+  }
+  corpo.textContent = '—';
 }
 
 /**
@@ -90,12 +122,22 @@ function pintarResultado(container, elemento, resultado, ctx) {
  * versão vigente). `buscarDados(fonteId, pedidos, filtroExecucao)` devolve `{resultados}`.
  * `parametrosUrlIniciais` (opcional) é `{campo: valor}` já lido de `location.search` pelo chamador (a tela
  * decide se os nomes de parâmetro vêm de query string ou de outro lugar — este módulo só recebe valores).
+ *
+ * `opcoes.assinar(camadas, aoMudar, {aoIndisponivel})` (item L2-06-d) liga a atualização viva: quando o dado
+ * muda no banco, o servidor empurra o evento e só as fontes daquela camada refazem a consulta — sem
+ * recarregar a página. É OPCIONAL: a tela anônima do link compartilhado não assina (o fluxo é autenticado) e
+ * continua no intervalo. Quando a assinatura existe, o intervalo de atualização de cada fonte fica DESLIGADO
+ * e só entra em cena se o fluxo se declarar indisponível — é o fallback por polling que o portão pede, e é
+ * assim que não se paga a consulta duas vezes.
+ * `opcoes.aoAtualizar(data)` é chamado a cada carga concluída, para o "atualizado às hh:mm:ss" do cabeçalho.
+ *
  * Devolve `{atualizarFiltro(campo, valor), destruir(), aguardarPrimeiraCarga}`.
  */
-export function montarPainel(container, corpo, buscarDados, parametrosUrlIniciais = {}) {
+export function montarPainel(container, corpo, buscarDados, parametrosUrlIniciais = {}, opcoes = {}) {
   const grade = corpo.grade || { colunas: 12, linha_px: 36 };
   const elementos = corpo.elementos || [];
   const fontesPorId = new Map((corpo.fontes || []).map((f) => [f.id, f]));
+  const porFonte = agruparPorFonte(elementos);
 
   limpar(container);
   container.classList.add('painel-grade');
@@ -107,139 +149,68 @@ export function montarPainel(container, corpo, buscarDados, parametrosUrlIniciai
 
   const filtroExecucao = { ...parametrosUrlIniciais };
   const temporizadores = [];
-  const ajustes = {};              // por elemento: paginação da lista (deslocamento)
-  const estados = new Map();       // por elemento: ordenação da tabela (só no cliente, sobre a página lida)
-  const ultimos = new Map();       // último resultado por elemento (repintar sem nova requisição)
-  const geracoes = new Map();      // número de ordem do último pedido de cada fonte (descarta resposta atrasada)
-  let atualizadoEm = null;
+  let assinatura = null;
 
-  /* L2-06-c: uma vista por elemento com fonte (chave `v:<id>`) — o estado de interação (filtro CQL2,
-     seleção) vive nela; o barramento do L5-07 executa `corpo.mensagens` sobre ela. O estado da URL é
-     aplicado ANTES de qualquer carga (as vistas já nascem com o filtro da URL; a primeira requisição
-     leva os pedidos já filtrados). */
-  const vistas = new Map();
-  for (const el of elementos) {
-    if (TIPOS_COM_FONTE.has(el.tipo)) vistas.set(`v:${el.id}`, new VistaElemento(el, fontesPorId.get(el.fonte)));
+  // camada -> fontes que a usam: o evento vivo chega por CAMADA e precisa virar refetch por FONTE
+  const fontesPorCamada = new Map();
+  for (const fonteId of porFonte.keys()) {
+    const fonte = fontesPorId.get(fonteId);
+    const ref = fonte && fonte.camada && fonte.camada.ref;
+    if (!ref) continue;
+    if (!fontesPorCamada.has(ref)) fontesPorCamada.set(ref, []);
+    fontesPorCamada.get(ref).push(fonteId);
   }
-  estadoUrl.aplicarDaUrl(vistas);
-  const barramento = new Barramento({ mensagens: corpo.mensagens || [] }, { vistas, widgets: new Map() });
-
-  const ctx = {
-    estado(id, inicial) {
-      if (!estados.has(id)) estados.set(id, { ...inicial });
-      return estados.get(id);
-    },
-    repintar(id) {
-      const el = elementos.find((e) => e.id === id);
-      if (el) pintarResultado(container, el, ultimos.get(id), ctx);
-    },
-    vista(id) {
-      return vistas.get(`v:${id}`) || null;
-    },
-    /* gatilho do seletor (filtro_mudou): muda a vista — o barramento intercepta o evento e executa as
-       mensagens (ações de dado viram filtro nas vistas dos alvos; ações de widget caem no widget) — e
-       refaz o ciclo de requisições com os filtros novos */
-    definirFiltroElemento(id, filtro) {
-      const v = vistas.get(`v:${id}`);
-      if (v) v.definirFiltro(filtro, id);
-      for (const k of Object.keys(ajustes)) delete ajustes[k].deslocamento;
-      return atualizarTudo();
-    },
-    /* gatilho de seleção (clique em barra/linha/ponto): alternar — clicar na mesma marca de novo limpa */
-    definirSelecaoElemento(id, ids) {
-      const v = vistas.get(`v:${id}`);
-      if (!v) return Promise.resolve();
-      if (v.selecao.size === 1 && v.selecao.has(ids[0])) v.limparSelecao(id);
-      else v.definirSelecao(ids, id);
-      for (const k of Object.keys(ajustes)) delete ajustes[k].deslocamento;
-      return atualizarTudo();
-    },
-    paginar(id, deslocamento) {
-      ajustes[id] = { ...(ajustes[id] || {}), deslocamento: Math.max(0, deslocamento) };
-      const el = elementos.find((e) => e.id === id);
-      if (el) return atualizarFonte(el.fonte);
-      return Promise.resolve();
-    },
-    /* extensão do mapa como filtro dos OUTROS elementos: entra no filtro de execução como caixa em
-       EPSG:4326 (`__extensao`), que o servidor transforma em condição espacial na coluna de geometria */
-    filtrarExtensao(caixa) {
-      if (!caixa) delete filtroExecucao.__extensao;
-      else filtroExecucao.__extensao = caixa.map((v) => Number(v).toFixed(6)).join(',');
-      container.dataset.extensao = filtroExecucao.__extensao || '';
-      return atualizarTudo();
-    },
-    textoAtualizacao() {
-      if (!atualizadoEm) return 'atualizando…';
-      return `atualizado às ${atualizadoEm.toLocaleTimeString('pt-BR')}`;
-    },
-  };
-
-  ligarInteracoes(container, { elementos, vistas, ctx, barramento });
-  estadoUrl.ligarUrl(vistas);   // qualquer mudança de vista reescreve a URL (replaceState)
-
-  function porFonteAtual() { return agruparPorFonte(elementos, ajustes, vistas); }
 
   async function atualizarFonte(fonteId) {
-    const pedidos = porFonteAtual().get(fonteId);
+    const pedidos = porFonte.get(fonteId);
     if (!pedidos || !Object.keys(pedidos).length) return;
-    // uma requisição por fonte, mas quem usa troca de filtro mais depressa do que o servidor responde:
-    // cada pedido leva um número de ordem e a resposta que chega atrasada é DESCARTADA (senão o painel volta
-    // a mostrar o resultado do filtro anterior — a tela mentiria sobre o filtro que está na barra)
-    const ordem = (geracoes.get(fonteId) || 0) + 1;
-    geracoes.set(fonteId, ordem);
     let resposta;
     try {
       resposta = await buscarDados(fonteId, pedidos, filtroExecucao);
-      if (geracoes.get(fonteId) !== ordem) return;
     } catch {
-      if (geracoes.get(fonteId) !== ordem) return;
       for (const elId of Object.keys(pedidos)) {
         const el = elementos.find((e) => e.id === elId);
-        if (el) { ultimos.set(elId, null); pintarResultado(container, el, null, ctx); }
+        if (el) pintarResultado(container, el, null);
       }
       return;
     }
     const resultados = (resposta && resposta.resultados) || {};
     for (const elId of Object.keys(pedidos)) {
       const el = elementos.find((e) => e.id === elId);
-      if (el) {
-        ultimos.set(elId, resultados[elId]);
-        // as feições da carga nova são o que as relações das mensagens leem (valores de campo para
-        // `atributo`, envelope para `espacial`) — a vista é atualizada ANTES do desenho
-        const vista = vistas.get(`v:${elId}`);
-        if (vista) vista.carregar(resultados[elId]);
-        pintarResultado(container, el, resultados[elId], ctx);
+      if (el) pintarResultado(container, el, resultados[elId]);
+    }
+    if (opcoes.aoAtualizar) opcoes.aoAtualizar(new Date());
+  }
+
+  async function atualizarTudo() {
+    await Promise.all([...porFonte.keys()].map((fid) => atualizarFonte(fid)));
+  }
+
+  function ligarIntervalos() {
+    if (temporizadores.length) return;
+    for (const fonteId of porFonte.keys()) {
+      const fonte = fontesPorId.get(fonteId);
+      const intervaloS = fonte && fonte.atualizacao_s;
+      if (intervaloS && intervaloS > 0) {
+        temporizadores.push(setInterval(() => atualizarFonte(fonteId), intervaloS * 1000));
       }
     }
   }
 
-  function pintarSemFonte() {
-    for (const el of elementos) {
-      if (precisaPedido(el) || el.tipo === 'texto') continue;
-      pintarResultado(container, el, null, ctx);
-    }
-  }
-
-  function marcarAtualizacao() {
-    atualizadoEm = new Date();
-    for (const alvo of container.querySelectorAll('[data-papel="atualizado"]')) {
-      alvo.textContent = ctx.textoAtualizacao();
-    }
-  }
-
-  async function atualizarTudo() {
-    await Promise.all([...porFonteAtual().keys()].map((fid) => atualizarFonte(fid)));
-    marcarAtualizacao();
-  }
-
-  pintarSemFonte();
-
-  for (const fonteId of porFonteAtual().keys()) {
-    const fonte = fontesPorId.get(fonteId);
-    const intervaloS = fonte && fonte.atualizacao_s;
-    if (intervaloS && intervaloS > 0) {
-      temporizadores.push(setInterval(() => atualizarFonte(fonteId).then(marcarAtualizacao), intervaloS * 1000));
-    }
+  if (typeof opcoes.assinar === 'function' && fontesPorCamada.size) {
+    assinatura = opcoes.assinar(
+      [...fontesPorCamada.keys()],
+      (camadasMudadas) => {
+        const alvos = new Set();
+        for (const camada of camadasMudadas) {
+          for (const fonteId of fontesPorCamada.get(camada) || []) alvos.add(fonteId);
+        }
+        for (const fonteId of alvos) atualizarFonte(fonteId);
+      },
+      { aoIndisponivel: ligarIntervalos },
+    );
+  } else {
+    ligarIntervalos();
   }
 
   const aguardarPrimeiraCarga = atualizarTudo();
@@ -247,15 +218,16 @@ export function montarPainel(container, corpo, buscarDados, parametrosUrlIniciai
   function atualizarFiltro(campo, valor) {
     if (valor === undefined || valor === null || valor === '') delete filtroExecucao[campo];
     else filtroExecucao[campo] = valor;
-    for (const id of Object.keys(ajustes)) delete ajustes[id].deslocamento;  // filtro novo volta à 1ª página
     return atualizarTudo();
   }
 
   function destruir() {
     for (const t of temporizadores) clearInterval(t);
+    temporizadores.length = 0;
+    if (assinatura) assinatura.fechar();
   }
 
-  return { atualizarFiltro, destruir, aguardarPrimeiraCarga, filtroExecucao, filtrarExtensao: ctx.filtrarExtensao };
+  return { atualizarFiltro, destruir, aguardarPrimeiraCarga, filtroExecucao };
 }
 
 /** Constrói a barra de filtros globais (`corpo.filtros`) — um controle por filtro, chamando

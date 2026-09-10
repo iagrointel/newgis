@@ -147,6 +147,14 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("DELETE", "/api/conexoes/{id}"): ["conexoes/apagar"],
     ("POST", "/api/conexoes/{id}/testar"): ["conexoes/testar"],
     ("POST", "/api/conexoes/{id}/publicar"): ["conexoes/publicar_camada"],
+    # --- entrada de eventos em tempo real (L2-14-a-ingestao-de-fluxos): a GESTÃO da fonte registra evento
+    # como qualquer objeto do inquilino; o RECEBIMENTO do evento não registra (é o processo plat-fluxo, fora
+    # desta aplicação, e uma linha de registro por evento custaria mais que o evento — está no ADR do item).
+    ("POST", "/api/fluxos"): ["fluxos/criar"],
+    ("PATCH", "/api/fluxos/{id}"): ["fluxos/editar", "fluxos/pausar", "fluxos/retomar"],
+    ("DELETE", "/api/fluxos/{id}"): ["fluxos/apagar"],
+    ("DELETE", "/api/fluxos/{id}/eventos"): ["fluxos/expurgar"],
+    ("POST", "/api/fluxos/{id}/simular"): [],  # não muda estado: aplica mapeamento e filtro e devolve
     # ---- motor multicritério em grades aninhadas (L3-19-multiescala; vocabulário nas migrações
     # 20260906T1640_multiescala.sql e 20260906T1823_multiescala_apagar.sql). Conjunto, fator e execução são
     # tabelas do inquilino com dono humano, então toda escrita narra evento; o DELETE apaga em cascata e por
@@ -161,60 +169,17 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
     # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
     ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
-    # --- edição no mapa e escrita compatível Esri (L2-03-edicao / L2-04-d): as rotas existem nesta
-    # árvore (ramos wt/il203edicao, wt/il204bfeatu e wt/il204dfeatu juntados aqui) e o registro delas
-    # faltava porque o docs/openapi.json de master ainda não as listava. Nomes lidos do código.
-    ("POST", "/api/camadas/{id}/feicoes/unir"): ["camadas/unir"],
-    ("POST", "/api/camadas/{id}/feicoes/dividir"): ["camadas/dividir"],
-    ("POST", "/api/camadas/{id}/feicoes/{globalid}/historico/{historico_id}/restaurar"): [
-        "camadas/restaurar"
-    ],
+    # As cinco linhas abaixo são das rotas do item L2-03-edicao (histórico, anexos, unir e dividir): elas
+    # existem no código daquele ramo, mas o docs/openapi.json comitado lá estava desatualizado, então o teste
+    # não as via. Ao regerar o OpenAPI depois de juntar o ramo, elas apareceram sem declaração. Os nomes de
+    # evento vêm de app/edicao/{historico,anexos,combinar}.py e de db/migracoes/20260907T1025_*.sql.
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/historico/{historico_id}/restaurar"): ["camadas/restaurar"],
     ("POST", "/api/camadas/{id}/feicoes/{globalid}/anexos"): ["camadas/anexo_enviar"],
     ("DELETE", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): ["camadas/anexo_apagar"],
-    ("POST", "/rest/services/{item_id}/FeatureServer/applyEdits"): ["camadas/editar"],
-    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/applyEdits"): ["camadas/editar"],
-    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/addFeatures"): ["camadas/editar"],
-    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/updateFeatures"): ["camadas/editar"],
-    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/deleteFeatures"): ["camadas/editar"],
-    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/calculate"): ["camadas/editar"],
-    ("POST", "/rest/services/{item_id}/FeatureServer/uploads/upload"): ["camadas/upload_esri"],
-    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/{object_id}/addAttachment"): [
-        "camadas/anexo_enviar"
-    ],
-    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/{object_id}/updateAttachment"): [
-        "camadas/anexo_enviar", "camadas/anexo_apagar"
-    ],
-    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/{object_id}/deleteAttachments"): [
-        "camadas/anexo_apagar"
-    ],
-    # POST que só existe porque o protocolo Esri manda parâmetro por formulário: são LEITURAS.
-    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/query"): [],
-    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/queryAttachments"): [],
-    ("POST", "/svc/{token}/rest/info"): [],
-    ("POST", "/svc/{token}/rest/generateToken"): [],
-    # --- versionamento por ramo (L2-13-a)
-    ("POST", "/api/camadas/{id}/versionar"): ["camadas/versionar"],
-    ("POST", "/api/camadas/{id}/versoes"): ["versoes/criar"],
-    ("DELETE", "/api/camadas/{id}/versoes/{versao}"): ["versoes/apagar"],
-    ("POST", "/api/camadas/{id}/versoes/{versao}/reconciliar"): ["versoes/reconciliar"],
-    ("POST", "/api/camadas/{id}/versoes/{versao}/conflitos/{globalid}/resolver"): ["versoes/resolver"],
-    ("POST", "/api/camadas/{id}/versoes/{versao}/publicar"): ["versoes/publicar"],
-    # VersionManagementServer: os mesmos eventos, porque chama as MESMAS funções (create/delete/
-    # reconcile/post). startReading/stopReading/startEditing/stopEditing não mudam estado nenhum e por
-    # decisão não geram evento.
-    ("POST", "/rest/services/{item_id}/VersionManagementServer/create"): ["versoes/criar"],
-    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/delete"): ["versoes/apagar"],
-    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/reconcile"): [
-        "versoes/reconciliar"
-    ],
-    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/post"): ["versoes/publicar"],
-    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/startReading"): [],
-    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/stopReading"): [],
-    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/startEditing"): [],
-    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/stopEditing"): [],
-    # leituras que o protocolo também aceita por POST (parâmetro em formulário)
-    ("POST", "/rest/services/{item_id}/VersionManagementServer"): [],
-    ("POST", "/rest/services/{item_id}/VersionManagementServer/versions"): [],
-    ("POST", "/rest/services/{item_id}/VersionManagementServer/versionInfos"): [],
-    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/conflicts"): [],
+    ("POST", "/api/camadas/{id}/feicoes/unir"): ["camadas/unir"],
+    ("POST", "/api/camadas/{id}/feicoes/dividir"): ["camadas/dividir"],
+    # ---- painel: dados por fonte (L2-06-a). São LEITURAS agregadas feitas por POST (o corpo carrega o
+    # conjunto de pedidos e o filtro, que não cabem em query string); não mudam nada, logo não narram evento.
+    ("POST", "/api/itens/{item_id}/paineis/fontes/{fonte_id}/dados"): [],
+    ("POST", "/api/compartilhado/{token}/paineis/{item_id}/fontes/{fonte_id}/dados"): [],
 }
