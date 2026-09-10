@@ -14,7 +14,7 @@ import { carregar as carregarIdioma, t } from '../base/i18n.js';
 import { pronto } from '../base/layout.js';
 import { h, limpar } from '../base/dom.js';
 import { exigirSessao } from '../auth/sessao.js';
-import { obter, enviar } from '../base/api.js';
+import { obter, enviar, alterar } from '../base/api.js';
 import { construirEstilo, camadasRede, ATRIBUICAO_OSM } from '../mapa/estilo.js';
 import { carregar as carregarMapaDoc, camadasDoTopo, salvarOrdem, alternarVisivel, salvarDocumento } from '../mapa/documento.js';
 import { Catalogo } from '../mapa/catalogo.js';
@@ -165,29 +165,49 @@ function instalarArrastoPainel(painel) {
   cabecalho.addEventListener('pointercancel', soltar);
 }
 
+/* estado aberto/fechado de cada painel, lembrado por painel (pedido do orientador 10/09: hoje o Camadas
+   abria fechado e "o mapa parece sem controle" — o padrão de fábrica é o Camadas ABERTO; qualquer outra
+   escolha do usuário, uma vez feita, vence o padrão da próxima vez que a tela abrir). */
+function chaveEstadoPainel(id) { return `plat.sig.painel.${id}.aberto`; }
+function estadoLembradoDoPainel(id) {
+  try { return window.localStorage.getItem(chaveEstadoPainel(id)); } catch { return null; }
+}
+function lembrarEstadoDoPainel(id, aberto) {
+  try { window.localStorage.setItem(chaveEstadoPainel(id), aberto ? '1' : '0'); } catch { /* melhor esforço */ }
+}
+
 function instalarPaineis() {
   const paineis = [...document.querySelectorAll('.sig-painel')];
   for (const painel of paineis) instalarArrastoPainel(painel);
 
   const icone = (id) => document.querySelector(`.sig-icone[data-painel="${id}"]`);
 
-  const posicionar = (painel) => {
+  const posicionar = (painel, id) => {
     if (painel.dataset.posicionado) return;
-    const desloc = (cascata % 6) * 26;
-    painel.style.left = `${68 + desloc}px`;
-    painel.style.top = `${16 + desloc}px`;
+    if (id === 'camadas') {
+      // "encostado à direita, como na referência" (pedido do orientador): o único painel com posição de
+      // fábrica fixa; os demais continuam em cascata a partir do canto esquerdo do mapa.
+      painel.style.right = 'var(--e4)';
+      painel.style.left = 'auto';
+      painel.style.top = 'calc(var(--e4) + 3.4rem)';
+    } else {
+      const desloc = (cascata % 6) * 26;
+      painel.style.left = `${68 + desloc}px`;
+      painel.style.top = `${16 + desloc}px`;
+      cascata += 1;
+    }
     painel.dataset.posicionado = '1';
-    cascata += 1;
   };
 
   const abrir = (id) => {
     const painel = el(`painel-${id}`);
     if (!painel) return;
-    posicionar(painel);
+    posicionar(painel, id);
     painel.hidden = false;
     zTopo += 1;
     painel.style.zIndex = String(zTopo);
     icone(id)?.setAttribute('aria-pressed', 'true');
+    lembrarEstadoDoPainel(id, true);
     const foco = painel.querySelector('input, button, [tabindex]');
     if (foco) foco.focus({ preventScroll: true });
   };
@@ -195,6 +215,7 @@ function instalarPaineis() {
     const painel = el(`painel-${id}`);
     if (painel) painel.hidden = true;
     icone(id)?.setAttribute('aria-pressed', 'false');
+    lembrarEstadoDoPainel(id, false);
   };
   const alternar = (id) => {
     const painel = el(`painel-${id}`);
@@ -213,6 +234,16 @@ function instalarPaineis() {
     const aberto = paineis.find((p) => !p.hidden && p.contains(document.activeElement));
     if (aberto) fechar(aberto.dataset.painelId);
   });
+
+  // estado de fábrica: só o painel Camadas abre sozinho; os outros respeitam o que o localStorage lembrar
+  // (sem chave gravada ainda = fechado, exceto Camadas). `abrir()` já grava a chave, então isto não duplica
+  // gravação — só decide o estado inicial da visita.
+  for (const painel of paineis) {
+    const id = painel.dataset.painelId;
+    const lembrado = estadoLembradoDoPainel(id);
+    const deveAbrir = lembrado === '1' || (lembrado === null && id === 'camadas');
+    if (deveAbrir) abrir(id);
+  }
 
   // grupos recolhíveis dentro do painel Camadas (princípio 6)
   document.querySelectorAll('.sig-grupo-cabecalho').forEach((btn) => {
@@ -322,6 +353,45 @@ function instalarFiltroCamadas() {
   });
 }
 
+/* link de serviço "honesto por tipo" (mesma regra usada ao publicar por arrasto, mais abaixo): camada
+   vetorial tem WFS de verdade (app/consulta/rotas_wfs.py); imagem publicada não tem WFS nem WMTS por essa
+   rota de sessão — copia o template XYZ que o próprio mapa já usa para desenhá-la. */
+function linkDeServico(catalogo, id) {
+  const ficha = catalogo.ficha(id) || {};
+  if (ficha.tipo === 'raster') return { url: `${location.origin}/api/imagens/${id}/tiles/{z}/{x}/{y}.png`, rotulo: 'de tiles (XYZ)' };
+  return { url: `${location.origin}/wfs/${id}`, rotulo: 'WFS' };
+}
+
+/* ícone "compartilhar" direto em cada linha de camada ativa (pedido do orientador 10/09), além do menu ⋯
+   que já existe. web/js/camadas.js não é editado nesta casca (é um dos quatro arquivos reservados para a
+   outra frente) — o botão é injetado por fora, via MutationObserver no container que a Árvore desenha,
+   sem duplicar o desenho dela nem guardar estado próprio (o observer roda de novo a cada redesenho e só
+   acrescenta o botão que ainda não existe naquela linha). Só aparece em camada ATIVA: é onde a Árvore já
+   desenha a fileira de botões (`.arvore-controles`) — camada desligada não tem link de serviço para copiar
+   enquanto não for ligada. */
+function instalarCompartilharCamadas(catalogo) {
+  const raiz = el('lista-camadas');
+  const injetar = () => {
+    raiz.querySelectorAll('li[data-tipo="camada"]').forEach((li) => {
+      const controles = li.querySelector('.arvore-controles');
+      const id = li.dataset.camada;
+      if (!controles || !id || controles.querySelector('[data-acao="compartilhar-link"]')) return;
+      controles.appendChild(h('button', {
+        type: 'button', class: 'botao-mini', dataset: { acao: 'compartilhar-link' },
+        title: 'compartilhar link de serviço', 'aria-label': 'compartilhar link de serviço',
+        onclick: (ev) => {
+          ev.stopPropagation();
+          const { url, rotulo } = linkDeServico(catalogo, id);
+          navigator.clipboard?.writeText(url).catch(() => {});
+          el('aviso').ok(`link ${rotulo} copiado`);
+        },
+      }, '⎘'));
+    });
+  };
+  new MutationObserver(injetar).observe(raiz, { childList: true, subtree: true });
+  injetar();
+}
+
 /* --------------------------------------------------------------------------------- rede de utilidades
    (grupo próprio dentro do painel Camadas — `/api/rede`, fora do documento de mapa/catálogo; mesma lógica
    de dados que /mapa usa, adaptada aos ids do painel flutuante do SIG). */
@@ -341,6 +411,20 @@ function bboxDasColecoes(colecoes) {
   let bbox = null;
   for (const fc of colecoes) for (const feicao of (fc && fc.features) || []) bbox = estenderBbox(bbox, feicao.geometry && feicao.geometry.coordinates);
   return bbox;
+}
+
+/* une várias extensões (graus, [oeste,sul,leste,norte]) numa só — usado no enquadramento inicial da tela
+   (catálogo + rede de utilidades juntos, princípio 4); ignora qualquer valor que não seja um par de
+   coordenadas válido, nunca lança. */
+function uniaoDeExtensoes(extensoes) {
+  let uniao = null;
+  for (const e of extensoes || []) {
+    if (!Array.isArray(e) || e.length !== 4 || e.some((v) => typeof v !== 'number' || !Number.isFinite(v))) continue;
+    uniao = uniao
+      ? [Math.min(uniao[0], e[0]), Math.min(uniao[1], e[1]), Math.max(uniao[2], e[2]), Math.max(uniao[3], e[3])]
+      : [...e];
+  }
+  return uniao;
 }
 
 function instalarPopupRede(map, maplibregl, redesAtivas) {
@@ -366,13 +450,15 @@ function instalarPopupRede(map, maplibregl, redesAtivas) {
   });
 }
 
-async function instalarRede(map, maplibregl) {
+async function instalarRede(map, maplibregl, { ativarTudo = false } = {}) {
   const status = el('rede-status');
   const lista = el('rede-lista');
-  const redesAtivas = new Map();
+  const redesAtivas = new Map(); // rede.id -> {..., bbox}: o bbox fica guardado para o enquadramento
+  // inicial da tela (união com as camadas do catálogo — ver `uniaoDeExtensoes` em `iniciar()`), não só
+  // para o fitBounds imediato que `ligar` já fazia.
   instalarPopupRede(map, maplibregl, redesAtivas);
 
-  const ligar = async (rede) => {
+  const ligar = async (rede, { enquadrar = true } = {}) => {
     const base = `${PREFIXO_REDE}${rede.id}`;
     const fonteLinhas = `${base}-linhas`;
     const fontePontos = `${base}-pontos`;
@@ -388,9 +474,9 @@ async function instalarRede(map, maplibregl) {
     for (const camada of camadasRede(layerLinhas, fonteLinhas, layerPontos, fontePontos)) {
       if (!map.getLayer(camada.id)) map.addLayer(camada);
     }
-    redesAtivas.set(rede.id, { fonteLinhas, fontePontos, layerLinhas, layerPontos });
     const bbox = bboxDasColecoes([rLinhas.json, rPontos.json]);
-    if (bbox) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { animate: false, padding: 40 });
+    redesAtivas.set(rede.id, { fonteLinhas, fontePontos, layerLinhas, layerPontos, bbox });
+    if (bbox && enquadrar) map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { animate: false, padding: 40 });
     return { nLinhas: rLinhas.json.features.length, nPontos: rPontos.json.features.length };
   };
   const desligar = (redeId) => {
@@ -404,32 +490,44 @@ async function instalarRede(map, maplibregl) {
   const itemRede = (rede) => {
     const caixa = h('input', { type: 'checkbox', class: 'camada-visivel', 'aria-label': `mostrar ${rede.nome}` });
     const contagem = h('span', { class: 'arvore-conta' }, '');
-    caixa.addEventListener('change', async () => {
+    const aoAlternar = async ({ enquadrar = true } = {}) => {
       caixa.disabled = true;
       try {
         if (caixa.checked) {
-          const { nLinhas, nPontos } = await ligar(rede);
+          const { nLinhas, nPontos } = await ligar(rede, { enquadrar });
           contagem.textContent = `${nLinhas.toLocaleString('pt-BR')} linhas · ${nPontos.toLocaleString('pt-BR')} pontos`;
         } else { desligar(rede.id); contagem.textContent = ''; }
       } catch (e) {
         caixa.checked = false;
         el('aviso').erro(`rede de utilidades: ${(e && e.message) || e}`);
       } finally { caixa.disabled = false; }
-    });
-    return h('li', { class: 'camada-linha' },
+    };
+    caixa.addEventListener('change', () => aoAlternar());
+    const li = h('li', { class: 'camada-linha' },
       h('div', { class: 'camada-cabecalho' }, caixa,
         h('span', { class: 'camada-titulo' }, rede.nome),
         h('span', { class: 'camada-tipo' }, rede.disciplina)),
       contagem);
+    return { li, caixa, aoAlternar };
   };
 
   try {
     const r = await obter('/api/rede?limite=200');
     if (r.status !== 200) throw new Error((r.json && r.json.mensagem) || 'falha ao listar redes de utilidades');
     const redes = r.json.itens || [];
-    if (!redes.length) { status.textContent = 'nenhuma rede de utilidades neste inquilino'; return; }
+    if (!redes.length) { status.textContent = 'nenhuma rede de utilidades neste inquilino'; return { redesAtivas, ligar, desligar }; }
     status.remove();
-    for (const rede of redes) lista.append(itemRede(rede));
+    const itens = redes.map(itemRede);
+    for (const it of itens) lista.append(it.li);
+    // "dado visível ao abrir" (princípio 4) vale para a rede também: sem documento salvo, liga tudo — o
+    // enquadramento de CADA uma é pulado aqui (`enquadrar:false`) porque o enquadramento de verdade é a
+    // UNIÃO com as camadas do catálogo, feita uma vez só depois (`uniaoDeExtensoes` em `iniciar()`).
+    if (ativarTudo) {
+      for (const it of itens) {
+        it.caixa.checked = true;
+        await it.aoAlternar({ enquadrar: false });
+      }
+    }
   } catch (e) {
     status.textContent = `rede de utilidades: ${(e && e.message) || e}`;
   }
@@ -519,7 +617,13 @@ function instalarArrastarPublicar(ctx) {
 
 /* -------------------------------------------------------------------------------------- composição
    (princípio 8): título editável + salvar grava `/api/mapas` (mesmo contrato de documento.js que /mapa
-   usa — a ordem da lista do topo para o fundo é convertida por `camadasDoTopo`/`salvarOrdem`). */
+   usa — a ordem da lista do topo para o fundo é convertida por `camadasDoTopo`/`salvarOrdem`). O campo de
+   título nunca fica `disabled` (pedido do orientador 10/09: "o clique nele edita"): sem composição ainda,
+   editar o título e sair do campo CRIA a composição com aquele título — não exige passar pelo botão
+   "nova composição" primeiro; com composição já aberta, editar o título só renomeia (PUT parcial, não
+   mexe na ordem/documento). As duas ações confirmam em `plat-aviso`, como o salvar de ordem já fazia. */
+const TITULO_PADRAO = 'Composição sem título';
+
 async function instalarComposicoes({ map, catalogo, arvore, legenda, edicao }) {
   const tituloInput = el('composicao-titulo');
   const salvarBtn = el('composicao-salvar');
@@ -536,7 +640,6 @@ async function instalarComposicoes({ map, catalogo, arvore, legenda, edicao }) {
     doc = documento;
     ordem = camadasDoTopo(completo).map((c) => c.id);
     tituloInput.value = completo.titulo;
-    tituloInput.disabled = false;
     salvarBtn.hidden = false;
     history.replaceState(null, '', `/sig?id=${encodeURIComponent(id)}`);
     if (completo.extensao_inicial) {
@@ -555,14 +658,40 @@ async function instalarComposicoes({ map, catalogo, arvore, legenda, edicao }) {
     el('aviso').ok('composição salva');
   });
 
-  el('composicao-nova').addEventListener('click', async () => {
-    const titulo = window.prompt('título da nova composição', 'mapa sem título');
-    if (titulo === null) return;
+  async function criarComposicao(titulo) {
     const criado = await enviar('/api/mapas', { titulo });
-    if (criado.status !== 201) { el('aviso').erro((criado.json && criado.json.mensagem) || 'falha ao criar composição'); return; }
+    if (criado.status !== 201) { el('aviso').erro((criado.json && criado.json.mensagem) || 'falha ao criar composição'); return null; }
     await carregarListaComposicoes();
     await abrirComposicao(criado.json.id);
+    el('aviso').ok('composição criada');
+    return criado.json.id;
+  }
+
+  el('composicao-nova').addEventListener('click', async () => {
+    tituloInput.value = TITULO_PADRAO;
+    await criarComposicao(TITULO_PADRAO);
   });
+
+  // clique no título = editar (o campo nunca é `disabled`); ao sair do campo com o texto mudado, salva —
+  // cria a composição se ainda não existir, renomeia se já existir. Enter confirma sem esperar o blur.
+  tituloInput.addEventListener('focus', () => tituloInput.select());
+  let tituloAnterior = tituloInput.value;
+  async function confirmarTitulo() {
+    const titulo = tituloInput.value.trim() || TITULO_PADRAO;
+    tituloInput.value = titulo;
+    if (titulo === tituloAnterior) return;
+    tituloAnterior = titulo;
+    if (!mapaId) {
+      await criarComposicao(titulo);
+      return;
+    }
+    const r = await alterar(`/api/mapas/${encodeURIComponent(mapaId)}`, { titulo });
+    if (r.status !== 200) { el('aviso').erro((r.json && r.json.mensagem) || 'falha ao renomear'); return; }
+    await carregarListaComposicoes();
+    el('aviso').ok('título salvo');
+  }
+  tituloInput.addEventListener('blur', confirmarTitulo);
+  tituloInput.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); tituloInput.blur(); } });
 
   async function carregarListaComposicoes() {
     const r = await obter('/api/mapas?limite=50');
@@ -618,6 +747,7 @@ async function iniciar() {
   const legenda = new Legenda(map, el('legenda'), () => arvore.camadasParaLegenda());
   instalarPopup(map, catalogo, maplibregl);
   instalarFiltroCamadas();
+  instalarCompartilharCamadas(catalogo);
   instalarMedicao(medicao);
   instalarImpressao(map);
   let edicao = null;
@@ -643,7 +773,7 @@ async function iniciar() {
     // que estavam ativas — os checkboxes do painel continuam marcados, então o estado da tela não muda.
     if (redeCtl) {
       for (const id of [...redeCtl.redesAtivas.keys()]) redeCtl.desligar(id);
-      for (const id of redesLigadas) { try { await redeCtl.ligar({ id }); } catch { /* segue */ } }
+      for (const id of redesLigadas) { try { await redeCtl.ligar({ id }, { enquadrar: false }); } catch { /* segue */ } }
     }
     definirAtribuicao(base.atribuicao);
   });
@@ -668,7 +798,24 @@ async function iniciar() {
     el('aviso').erro(`camadas: ${(e && e.message) || e}`);
   }
 
-  try { redeCtl = await instalarRede(map, maplibregl); } catch (e) { el('aviso').erro(`rede de utilidades: ${(e && e.message) || e}`); }
+  try {
+    redeCtl = await instalarRede(map, maplibregl, { ativarTudo: !temDocumento });
+  } catch (e) {
+    el('aviso').erro(`rede de utilidades: ${(e && e.message) || e}`);
+  }
+
+  // enquadramento inicial (princípio 4, corrigido 10/09 depois da revisão no demo real): sem documento de
+  // mapa salvo, a vista abre na UNIÃO de tudo que está ligado — camadas do catálogo (extensão que a
+  // listagem já trouxe) + rede de utilidades (só as que `ativarTudo` ligou acima; uma rede desligada não
+  // entra). Sem nenhuma extensão disponível, mantém a vista padrão (CENTRO/z11).
+  if (!temDocumento) {
+    const extensoesCatalogo = catalogo.disponiveis
+      .filter((f) => catalogo.ativas.includes(f.id) && Array.isArray(f.extensao) && f.extensao.length === 4)
+      .map((f) => f.extensao);
+    const extensoesRede = redeCtl ? [...redeCtl.redesAtivas.values()].map((r) => r.bbox).filter(Boolean) : [];
+    const uniao = uniaoDeExtensoes([...extensoesCatalogo, ...extensoesRede]);
+    if (uniao) map.fitBounds([[uniao[0], uniao[1]], [uniao[2], uniao[3]]], { animate: false, padding: 40 });
+  }
 
   try {
     await instalarComposicoes({ map, catalogo, arvore, legenda, edicao });
