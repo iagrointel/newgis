@@ -21,6 +21,8 @@ PAGINAS = {
     "/admin/log": "admin/log.html",
     # --- configurações da organização (L0-07-a-configuracoes-org)
     "/admin/organizacao": "admin/organizacao.html",
+    # --- backup lógico por inquilino e ensaio de restauração (L0-06-backup-status)
+    "/admin/backup": "admin/backup.html",
     # --- catálogo (L0-03)
     "/conteudo": "conteudo.html",
     "/conteudo/lixeira": "conteudo_lixeira.html",

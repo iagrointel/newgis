@@ -4,6 +4,9 @@ acrescentam aqui a importação do seu módulo de tarefas (ex.: app.ingestao.tar
 from app.agol import (
     tarefas as agol_tarefas,  # noqa: F401 — L2-08: agol.publicar (hosted feature layer no AGOL do cliente)
 )
+from app.backup import (
+    tarefas as backup_tarefas,  # noqa: F401 — L0-06: backup.executar/backup.ensaio_restauracao + periódicos
+)
 from app.catalogo import (
     tarefas as catalogo_tarefas,  # noqa: F401 — L0-03: 6 tipos catalogo.* e os periódicos do catálogo
 )

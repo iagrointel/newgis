@@ -15,6 +15,7 @@ from app import log as plat_log
 from app.acervo import rotas as rotas_acervo
 from app.agol import rotas as rotas_agol
 from app.amc import rotas as rotas_amc
+from app.backup import rotas as rotas_backup
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
 from app.auth import (
@@ -244,6 +245,10 @@ ROUTERS = [
     # --- campo (L2-07-campo): fila de trabalho, roteiro do dia e visita com foto — /api/campo/filas,
     # /api/campo/roteiros, /api/campo/visitas, portado de rs-coop/certaja/sig
     rotas_campo.router,
+    # --- backup lógico por inquilino e ensaio de restauração (L0-06-backup-status): GET /api/backup/backups,
+    # GET /api/backup/ensaios (disparar usa a fila genérica: POST /api/jobs {tipo: backup.executar|
+    # backup.ensaio_restauracao})
+    rotas_backup.router,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

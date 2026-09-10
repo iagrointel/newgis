@@ -225,6 +225,39 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `STAC_PAGINA_MAX` | `1000` | `limit` máximo aceito por pedido (pgstac pagina por token, não por offset) |
 | `STAC_COLECOES_POR_INQUILINO` | `500` | — |
 | `STAC_LOTE_ITENS_MAX` | `10000` | POST .../items:lote (semeadura de teste/ingestão em massa; ADR do item L1-01-h) |
+
+## ingestão de raster (L1-01-ingest-raster; ADR 20260906T2127): validação isolada + COG dois perfis +
+
+| nome | valor | explicação |
+|---|---|---|
+| `RASTER_DIMENSAO_MAX` | `200000` | pixels por eixo (linhas ou colunas) — acima: recusa na validação |
+| `RASTER_BANDAS_MAX` | `64` | bandas por raster — acima: recusa na validação |
+| `RASTER_BYTES_MAX` | `2147483648` | bruto aceito para ingestão (igual a UPLOAD_BYTES_MAX) |
+| `RASTER_VISUAL_MAX_LADO` | `1024` | miniatura PNG (lado maior) |
+| `RASTER_ESTATISTICA_AMOSTRA` | `100000` | pixels amostrados por banda para percentis do perfil visual |
+| `RASTER_TILE_CACHE_DATASET_MAX` | `8` | datasets abertos por processo no handler de tiles (LRU) |
+| `RASTER_TILE_TIMEOUT_S` | `30` | teto de renderização de um tile (mata a requisição, não o worker) |
+
+## WMS 1.3.0 (L1-02-g-wms-1-3-0-raster; app/imagens/wms.py, rotas_wms.py): camada fina sobre o mesmo
+
+| nome | valor | explicação |
+|---|---|---|
+| `WMS_LARGURA_MAX` | `4096` | WIDTH máximo aceito no GetMap — acima: ServiceExceptionReport |
+| `WMS_ALTURA_MAX` | `4096` | HEIGHT máximo aceito no GetMap — acima: ServiceExceptionReport |
+| `WMS_PIXELS_MAX` | `16777216` | teto de WIDTH×HEIGHT (é o que de fato protege a memória) |
+| `WMS_CAMADAS_MAX` | `500` | <Layer> por GetCapabilities (itens além disso não aparecem) |
+| `WMS_TIMEOUT_S` | `30` | teto de renderização de um GetMap (mesma ordem do tile) |
+
+## ingestão de modelo 3D (L1-03-modelo3d, 10/09/2026): IFC bruto enviado pelo usuário antes da conversão
+
+| nome | valor | explicação |
+|---|---|---|
+| `MODELO3D_IFC_BYTES_MAX` | `536870912` | — |
+| `MODELO3D_XKT_BYTES_MAX` | `536870912` | — |
+| `MODELO3D_CONVERSAO_TIMEOUT_S` | `1500` | teto do ssh+scp+convert2xkt no conversor remoto (job todo tem mais margem) |
+| `FOTO360_BYTES_MAX` | `67108864` | — |
+| `MODELO3D_URL_VALIDADE_S` | `3600` | validade da URL assinada do .xkt/.jpg entregue ao visualizador |
+
 ## grades aninhadas do motor multicritério (L3-19-multiescala; migração 20260906T1640_multiescala.sql):
 
 | nome | valor | explicação |
@@ -240,3 +273,66 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## edição transacional de feições (L2-03-a-api-edicao-transacional; POST /api/camadas/{id}/edicoes, única
+
+| nome | valor | explicação |
+|---|---|---|
+| `EDICAO_LOTE_MAX` | `2000` | — |
+| `EDICAO_ATRIBUTOS_MAX` | `500` | campos por feição num único pedido (mesmo teto de INGESTAO_CAMPOS_MAX) |
+| `EDICAO_TEXTO_MAX` | `65536` | 64 KiB por valor de campo texto (mesma ordem de ITEM_DESCRICAO_MAX) |
+| `EDICAO_REGRA_CAMPO_MAX` | `500` | entradas em dados.regras_campo (mesmo teto de campos da camada) |
+| `EDICAO_DOMINIO_VALORES_MAX` | `1000` | valores aceitos por regra de domínio codificado |
+| `EDICAO_SRID_MAX` | `999999` | mesmo teto do esquema de camada_vetorial (029_ingestao_vetor.sql) |
+
+## edição no mapa: histórico/restauração e anexos por feição (item L2-03-edicao)
+
+| nome | valor | explicação |
+|---|---|---|
+| `HISTORICO_LISTA_MAX` | `500` | entradas devolvidas por consulta (mais recentes primeiro) |
+| `ANEXO_TAMANHO_MAX` | `7340032` | 7 MiB por anexo — NÃO 10: o envio é JSON com o conteúdo em base64 |
+| `ANEXO_TIPOS_PERMITIDOS` | `('application/pdf', 'image/gif', 'image/jpeg', 'image/png', 'image/webp')` | — |
+
+## motor multicritério, modelo (L3-01-a-modelo-dado; laco/decomposicao/L3L6_CONCEITO.md decisões A1/A4/A10).
+
+| nome | valor | explicação |
+|---|---|---|
+| `AMC_NOME_MAX` | `250` | mesmo teto de ITEM_TITULO_MAX |
+| `AMC_FATORES_MAX` | `50` | mesmo teto de docs/esquemas/amc_modelo.v1.json fatores.maxItems |
+| `AMC_CAMADAS_MAX` | `50` | camadas de entrada declaradas por execução (A10) |
+
+## integração ArcGIS Online do cliente (item L2-08-migracao-agol): credencial por inquilino em
+
+| nome | valor | explicação |
+|---|---|---|
+| `AGOL_PORTAL_MAX` | `300` | — |
+| `AGOL_USUARIO_MAX` | `128` | — |
+| `AGOL_CREDENCIAL_MAX` | `1024` | senha ou token, antes de cifrar |
+| `AGOL_ROTULO_MAX` | `100` | — |
+| `AGOL_TITULO_MAX` | `250` | — |
+| `AGOL_CONECTAR_TIMEOUT_S` | `6.0` | — |
+| `AGOL_LER_TIMEOUT_S` | `20.0` | teste de credencial: curto de propósito (rota síncrona) |
+| `AGOL_PUBLICAR_TIMEOUT_S` | `300.0` | addItem/publish dentro do job: upload pode ser grande |
+| `AGOL_POLL_INTERVALO_S` | `4.0` | espera do job assíncrono de publish (mesmo valor do script original) |
+| `AGOL_POLL_TENTATIVAS_MAX` | `90` | 90 x 4 s = 6 min (mesmo teto do script original: `for _ in range(90)`) |
+| `AGOL_FEICOES_MAX` | `200000` | teto de segurança do export GeoJSON (fetchall bounded; camada maior |
+
+## campo: fila de trabalho, roteiro e visita com foto (item L2-07-campo), portado de rs-coop/certaja/sig
+
+| nome | valor | explicação |
+|---|---|---|
+| `CAMPO_FILA_ALVOS_MAX` | `5000` | feições por fila (mesma ordem de grandeza de EDICAO_LOTE_MAX x2) |
+| `CAMPO_ROTEIRO_PARADAS_MAX` | `60` | mesmo teto do sistema de origem ("no máximo 60 paradas por rota") |
+| `CAMPO_FOTO_BYTES_MAX` | `10485760` | mesmo teto de MINIATURA_BYTES_MAX; a foto é reamostrada abaixo disso |
+| `CAMPO_FOTO_PIXELS_MAX` | `40000000` | contra bomba de descompressão (mesma técnica de MINIATURA_PIXELS_MAX) |
+| `CAMPO_FOTO_LADO_MAX` | `2400` | px do maior lado após redimensionar (mesmo valor do sistema de origem) |
+| `CAMPO_ROTA_VELOCIDADE_KMH` | `35` | estimativa de fallback (linha reta) quando não há motor de rota real; |
+
+## backup lógico por inquilino e ensaio de restauração (item L0-06-backup-status; app/backup/), portado de
+
+| nome | valor | explicação |
+|---|---|---|
+| `BACKUP_DUMP_BYTES_MAX` | `2147483648` | 2 GiB |
+| `BACKUP_DUMP_TIMEOUT_S` | `3600` | pg_dump -Fc do schema do inquilino |
+| `BACKUP_DRILL_TIMEOUT_S` | `3600` | download + pg_restore em schema temporário + COUNT(*) |
+| `BACKUP_LISTA_MAX` | `200` | linhas por página em GET /api/backup/backups e /ensaios |
