@@ -155,6 +155,17 @@ button.favorito:hover { color: var(--atencao); }
 .compartilhado-pagina { max-width: 900px; margin: 0 auto; }
 .compartilhado-pagina .mini { max-width: 100%; border-radius: var(--raio); border: 1px solid var(--borda); }
 
+/* painel do item por tipo (tipos/camada_vetorial.js, tipos/raster.js): resumo + prévia no mapa (aba Visão
+   geral) e URL de serviço (aba Compartilhamento) */
+.tipo-secao { margin-top: var(--e3); padding-top: var(--e3); border-top: 1px solid var(--borda); }
+.tipo-secao p.erro, .item-abas p.erro { color: var(--falha); }
+.tipo-secao h4 { margin: 0 0 var(--e2); font-size: .9rem; color: var(--fraco); text-transform: uppercase; letter-spacing: .04em; }
+.tipo-resumo { display: grid; gap: 0; margin-bottom: var(--e2); }
+.tipo-mapa { height: 260px; border-radius: var(--raio); border: 1px solid var(--borda); overflow: hidden; }
+.tipo-compartilhar .campo-linha { grid-template-columns: 160px minmax(0, 1fr); }
+.linha-url { display: flex; gap: var(--e1); align-items: center; }
+.linha-url .campo-url { flex: 1; min-width: 0; font-family: var(--mono); font-size: .8rem; padding: var(--e1) var(--e2); background: var(--fundo-2); border: 1px solid var(--borda); border-radius: var(--raio); color: inherit; }
+
 @media (max-width: 900px) {
   .conteudo-grade { grid-template-columns: minmax(0, 1fr); }
   .coluna[open] { margin-bottom: var(--e2); }

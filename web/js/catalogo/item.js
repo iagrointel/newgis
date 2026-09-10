@@ -17,6 +17,21 @@ import { abrirTransferencia } from './item_transferir.js';
 import * as versoes from './item_versoes.js';
 import * as relacoes from './item_relacoes.js';
 import { seletorPasta, caminhoDe } from './pastas.js';
+import * as tipoCamadaVetorial from './tipos/camada_vetorial.js';
+import * as tipoRaster from './tipos/raster.js';
+
+/* módulos de painel por tipo (tipo_item.modulo_front): resumo + prévia no mapa (aba Visão geral) e URL de
+   serviço para cliente externo (aba Compartilhamento). Só os dois tipos que hospedam dado servível hoje —
+   os demais (arquivo, conexão, mapa…) seguem só com o formulário genérico do esquema (aba Dados). */
+const MODULOS_TIPO = { camada_vetorial: tipoCamadaVetorial, raster: tipoRaster };
+
+/* preenche `alvo` com o que `carregar()` (assíncrono) devolve, sem travar o render síncrono do resto do
+   painel: mostra "carregando…" e troca pelo conteúdo real (ou pelo erro real) assim que chega. */
+function preencherAssincrono(alvo, carregar) {
+  alvo.append(h('p', { class: 'fraco' }, t('catalogo.carregando')));
+  carregar().then((no) => { if (alvo.isConnected) { limpar(alvo); alvo.append(no); } })
+    .catch((e) => { if (alvo.isConnected) { limpar(alvo); alvo.append(h('p', { class: 'erro' }, e.message || String(e))); } });
+}
 
 let item = null;
 let aba = 'visao';
@@ -121,7 +136,14 @@ function abrirEm() {
   const destinos = Array.isArray(item.abre_em) ? item.abre_em : [];
   if (!destinos.length) return null;
   const s = h('select', { id: 'item-abrir-em', 'aria-label': t('catalogo.abrir_em') }, h('option', { value: '' }, t('catalogo.abrir_em')), ...destinos.map((d) => h('option', { value: d }, t(`catalogo.abrir_${d}`) === `catalogo.abrir_${d}` ? d : t(`catalogo.abrir_${d}`))));
-  s.addEventListener('change', () => { if (!s.value) return; avisoPainel().mostrar(t('catalogo.abrir_em_futuro', { destino: s.options[s.selectedIndex].textContent }), 'info'); s.value = ''; });
+  s.addEventListener('change', () => {
+    if (!s.value) return;
+    if (s.value === 'mapa') { location.assign(item.tipo === 'mapa' ? `/mapa?id=${encodeURIComponent(item.id)}` : '/mapa'); return; }
+    const mod = MODULOS_TIPO[item.tipo];
+    if (mod && typeof mod.abrir === 'function') { mod.abrir(item); return; }
+    avisoPainel().mostrar(t('catalogo.abrir_em_futuro', { destino: s.options[s.selectedIndex].textContent }), 'info');
+    s.value = '';
+  });
   return s;
 }
 
@@ -258,6 +280,14 @@ function abaVisao() {
     linhaCampo(t('catalogo.col_modificado'), h('span', {}, dataHora(item.modificado_em), item.modificado_por ? ` · ${item.modificado_por.login || ''}` : '', ` · ${t('catalogo.versao')} ${item.versao_atual ?? 0}`), { chave: 'modificado' }),
     linhaCampo(t('catalogo.usado_por'), h('span', {}, String(item.usado_por ?? 0), ' · ', t('catalogo.criado_a_partir_de'), ' ', String(item.criado_a_partir_de ?? 0)), { chave: 'relacoes' }),
   );
+  const mod = MODULOS_TIPO[item.tipo];
+  if (mod && typeof mod.previa === 'function') {
+    const secao = h('div', { class: 'tipo-secao' }, h('h4', {}, t('catalogo.previa_e_dados')));
+    const alvo = h('div');
+    secao.append(alvo);
+    raiz.append(secao);
+    preencherAssincrono(alvo, () => mod.previa(item));
+  }
   return raiz;
 }
 
@@ -356,6 +386,14 @@ function abaCompartilhamento() {
   const raiz = h('div', { class: 'compartilhamento' });
   raiz.append(linhaCampo(t('catalogo.nivel_acesso'), h('span', {}, rotuloAcesso(item)), { chave: 'acesso' }), linhaCampo(t('catalogo.links'), h('span', {}, String(item.links_ativos ?? 0)), { chave: 'links' }));
   if (item.pode_compartilhar) { const b = botaoCompartilhar(); b.classList.add('primario'); raiz.append(h('div', { class: 'botoes' }, b)); } else raiz.append(h('p', { class: 'fraco' }, t('catalogo.sem_permissao_compartilhar')));
+  const mod = MODULOS_TIPO[item.tipo];
+  if (mod && typeof mod.compartilhar === 'function') {
+    const secao = h('div', { class: 'tipo-secao' }, h('h4', {}, t('catalogo.servico_externo')));
+    const alvo = h('div');
+    secao.append(alvo);
+    raiz.append(secao);
+    preencherAssincrono(alvo, () => mod.compartilhar(item));
+  }
   return raiz;
 }
 
