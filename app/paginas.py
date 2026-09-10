@@ -102,6 +102,8 @@ PAGINAS = {
     "/videos": "videos.html",
     # --- geocodificação de tabela (L2-11-a-geocodificacao-csv): revisão manual dos pendentes
     "/geocodificar/{item_id}": "geocodificar_revisao.html",
+    # --- migração de Portal/AGOL (L2-08-a-leitor-portal-inventario)
+    "/migracao": "migracao.html",
 }
 router = APIRouter()
 

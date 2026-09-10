@@ -39,6 +39,7 @@ from app.replica import tarefas as replica_tarefas  # noqa: F401 — L2-13-b: re
 from app.migracao import tarefas as migracao_tarefas  # noqa: F401 — L2-08-a: migracao.inventariar
 from app.raster import tarefas as raster_tarefas  # noqa: F401 — L1-01-b: raster.validar
 from app.relatorios import tarefas as relatorios_tarefas  # noqa: F401 — L0-07-e: relatorios.gerar (CSV do admin)
+from app.migracao import tarefas as migracao_tarefas  # noqa: F401 — L2-08-a: migracao.inventariar
 from app.uploads import tarefas as uploads_tarefas  # noqa: F401 — L0-04-a: uploads.expirar + periódico
 
 __all__ = ["REGISTRO"]

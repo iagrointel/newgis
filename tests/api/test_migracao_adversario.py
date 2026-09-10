@@ -16,7 +16,7 @@ import threading
 import pytest
 
 from app.migracao import relatorio
-from app.migracao.portal import ErroPortal, ErroRede
+from app.migracao.portal import ErroRede
 from tests.api.test_migracao_inventario import (  # noqa: F401 — as fixtures precisam estar no módulo
     TOKEN,
     _cursor,
@@ -102,11 +102,9 @@ def _item_apontando_para(url: str, item_id: str = ID_ALHEIO) -> dict:
 
 # ----------------------------------------------------------------------------------------- token: para onde vai
 
-@pytest.mark.xfail(strict=True, reason="ACHADO B1: o token do portal do cliente é enviado, em "
-                   "X-Esri-Authorization, para QUALQUER host que apareça no campo `url` de um item — campo que "
-                   "qualquer membro da organização escreve ao registrar um item. Um membro sem privilégio captura "
-                   "a credencial usada pelo inventário (que é de administrador, perfil_minimo='admin')")
 def test_token_nao_viaja_para_o_host_da_url_de_um_item(sessao_a, env, portal, limpar):
+    """CONSERTADO (era ACHADO B1): o token só vai para a ORIGEM do portal configurado
+    (`ClientePortal._cabecalhos` confere `seguranca._mesma_origem_de_confianca(self.base, alvo)`)."""
     with HostAlheio() as alheio:
         portal.servidor.acervo["itens"].append(
             _item_apontando_para(alheio.base + "/arcgis/rest/services/Alheio/FeatureServer"))
@@ -118,10 +116,9 @@ def test_token_nao_viaja_para_o_host_da_url_de_um_item(sessao_a, env, portal, li
                                 f"{[r['caminho'] for r in com_token]}"
 
 
-@pytest.mark.xfail(strict=True, reason="ACHADO B1b: o mesmo cabeçalho com o token acompanha o redirecionamento "
-                   "(302) para um terceiro host — `_requisitar` remonta `_cabecalhos()` a cada salto sem olhar "
-                   "se o host mudou")
 def test_token_nao_segue_redirecionamento_para_outro_host(sessao_a, env, portal, limpar):
+    """CONSERTADO (era ACHADO B1b): `_requisitar` recalcula os cabeçalhos a cada salto contra o `alvo`
+    daquele salto, nunca contra a origem anterior."""
     with HostAlheio() as destino, HostAlheio(redirecionar_para=None) as intermediario:
         intermediario.servidor.redirecionar_para = destino.base
         portal.servidor.acervo["itens"].append(
@@ -153,42 +150,64 @@ def _estado(env, tenant, usuario, inv):
         return dict(cur.fetchone())
 
 
-@pytest.mark.xfail(strict=True, reason="ACHADO B2: um item com campo fora do esperado (título com NUL, numViews "
-                   "que não é número) derruba a tarefa com exceção que NÃO é ErroPortal; a tarefa só trata "
-                   "ErroPortal, o worker esgota as 3 tentativas e o inventário fica 'rodando' para sempre, sem "
-                   "mensagem — e a tela mostra isso como leitura em curso")
 @pytest.mark.parametrize("campo,valor", [("title", "Mapa\u0000escondido"), ("numViews", "muitos")])
-def test_item_malformado_leva_o_inventario_a_falhou_com_mensagem(sessao_a, env, portal, limpar, campo, valor):
+def test_item_malformado_e_saneado_sem_travar_o_lote(sessao_a, env, portal, limpar, campo, valor):
+    """CONSERTADO (era ACHADO B2), caminho 1: campo saneável (título com NUL, `numViews` que não é
+    número) é LIMPO antes do INSERT (`_sanear`/`_inteiro_nao_negativo`) — o item não é sequer pulado, só
+    o valor ruim vira texto limpo / NULL. Preferido a pular: o item continua no inventário."""
+    total_itens = len(portal.servidor.acervo["itens"])
     portal.servidor.acervo["itens"][0][campo] = valor
     inv, job, tenant, usuario = _preparar(sessao_a, env, portal, limpar)
-    excecoes = _tres_tentativas(inv, job, tenant, usuario)
-    assert all(e is not None for e in excecoes), "o inventário passou? então o dado não era problema"
-    assert not any(isinstance(e, ErroRede) for e in excecoes)
+    _, totais = _rodar(inv, job, tenant, usuario)
     est = _estado(env, tenant, usuario, inv)
-    assert est["estado"] == "falhou" and est["mensagem"], est
+    assert est["estado"] == "concluido", est
+    assert totais["itens_pulados"] == 0, totais
+    assert totais["itens"] == total_itens, totais
 
 
-@pytest.mark.xfail(strict=True, reason="ACHADO B3: uma página de busca acima de 8 MiB (9 itens com título de 1 MB "
-                   "cabem numa página de 100) levanta `resposta_grande_demais`, que não é rede nem definitivo: "
-                   "a retomada volta SEMPRE para a mesma página, as 3 tentativas morrem no mesmo ponto e o "
-                   "inventário fica 'rodando' — não há como pular a página nem reduzir `num`")
+def test_item_irrecuperavel_e_pulado_sem_travar_o_lote(sessao_a, env, portal, limpar):
+    """CONSERTADO (era ACHADO B2), caminho 2: quando o campo do portal de terceiro é de um jeito que a
+    sanitização não antecipa (aqui, `title` como OBJETO em vez de texto — não adapta para a coluna
+    `titulo`), o item é registrado e PULADO — `fase_itens` guarda com try/except, conta em
+    `itens_pulados`, registra um AVISO no log do job, e o inventário conclui normalmente com os demais
+    itens. Isso cobre o texto do conserto: "item malformado é registrado e pulado, nunca trava o lote" —
+    travar o lote (job preso 'rodando' para sempre) é pior do que perder 1 item ruim."""
+    total_itens = len(portal.servidor.acervo["itens"])
+    portal.servidor.acervo["itens"][0]["title"] = {"nao": "e texto"}
+    inv, job, tenant, usuario = _preparar(sessao_a, env, portal, limpar)
+    _, totais = _rodar(inv, job, tenant, usuario)
+    est = _estado(env, tenant, usuario, inv)
+    assert est["estado"] == "concluido", est
+    assert totais["itens_pulados"] == 1, totais
+    assert totais["itens"] == total_itens - 1, totais
+    with _cursor(env, tenant, usuario) as cur:
+        cur.execute("SELECT mensagem FROM plat.job_log WHERE job_id = %s::uuid AND nivel = 'AVISO'", (job,))
+        avisos = [r["mensagem"] for r in cur.fetchall()]
+    assert any("pulado" in a for a in avisos), avisos
+
+
 def test_pagina_gigante_nao_prende_a_retomada_no_mesmo_ponto(sessao_a, env, portal, limpar):
+    """CONSERTADO (era ACHADO B3): `resposta_grande_demais` entrou em `MOTIVOS_DEFINITIVOS` — repetir não
+    encolhe a página, então a tarefa marca `falhou` (com mensagem) já na 1ª tentativa em vez de ficar
+    `rodando` para sempre. O erro sai encapsulado em `FalhaDefinitiva` (contrato de `app.jobs.registro`:
+    "não vale a pena repetir"), por isso a checagem é pelo TEXTO da mensagem, não pelo tipo da exceção."""
     for item in portal.servidor.acervo["itens"][:9]:
         item["title"] = "N" * (1024 * 1024)
     inv, job, tenant, usuario = _preparar(sessao_a, env, portal, limpar)
     excecoes = _tres_tentativas(inv, job, tenant, usuario)
-    assert all(isinstance(e, ErroPortal) and e.motivo == "resposta_grande_demais" for e in excecoes), excecoes
+    assert all(e is not None and "resposta_grande_demais" in str(e) for e in excecoes), excecoes
     est = _estado(env, tenant, usuario, inv)
-    assert est["estado"] == "falhou", est
+    assert est["estado"] == "falhou" and est["mensagem"], est
 
 
 # ----------------------------------------------------------------------------------------- retomada que pula
 
-@pytest.mark.xfail(strict=True, reason="ACHADO B4: a retomada continua do `start` da página e confia que a ordem "
-                   "do portal não mudou; se mudou (empate em `created`, item criado ou apagado durante a leitura), "
-                   "os itens que migraram para as páginas já lidas nunca são lidos e o inventário conclui com "
-                   "MENOS itens que o `total` que o próprio portal declarou, sem aviso")
-def test_retomada_nao_pula_itens_quando_a_ordem_do_portal_muda(sessao_a, env, limpar):
+def test_retomada_avisa_quando_a_ordem_do_portal_muda_e_perde_itens(sessao_a, env, limpar):
+    """CONSERTADO (era ACHADO B4). O texto do conserto pede "detectar e avisar (contagem esperada vs
+    obtida)", não recuperar os itens perdidos (recuperar exigiria reler o portal inteiro do zero a cada
+    retomada — fora do que este item promete). Este teste prova a detecção: o inventário AINDA conclui com
+    menos itens quando a ordem muda, mas agora nunca em silêncio — `totais["aviso"]` e a coluna `mensagem`
+    do inventário carregam a contagem esperada x obtida."""
     with PortalFalso(itens_sinteticos=250) as falso:
         inv, job, tenant, usuario = _preparar(sessao_a, env, falso, limpar, com_token=False)
         falso.configurar(falhar_apos=4)  # raiz, self, página 1 lidas; corta na página 2
@@ -200,7 +219,9 @@ def test_retomada_nao_pula_itens_quando_a_ordem_do_portal_muda(sessao_a, env, li
         _, totais = _rodar(inv, job, tenant, usuario)
     r = sessao_a.get(f"/api/migracao/inventarios/{inv}").json()
     assert r["estado"] == "concluido"
-    assert totais["itens"] == 250, f"concluído com {totais['itens']} de 250 itens, sem aviso"
+    assert totais["itens"] < 250, f"este cenário deveria mesmo perder itens: {totais['itens']} lidos"
+    assert totais.get("aviso") and "250" in totais["aviso"], totais
+    assert r["mensagem"] == totais["aviso"], "o aviso tem de sobreviver na coluna mensagem, não só nos totais"
 
 
 def test_retomada_nao_repete_item_ja_gravado(sessao_a, env, limpar):
@@ -222,10 +243,9 @@ def test_retomada_nao_repete_item_ja_gravado(sessao_a, env, limpar):
 
 # ----------------------------------------------------------------------------------------- CSV
 
-@pytest.mark.xfail(strict=True, reason="ACHADO B5: o CSV leva o título do item do portal (texto de terceiro) "
-                   "sem neutralizar prefixo de fórmula; o destinatário abre no Excel (o BOM existe para isso) e "
-                   "uma célula '=HYPERLINK(...)' ou '=cmd|...' vira fórmula executada")
 def test_csv_neutraliza_formula_no_titulo():
+    """CONSERTADO (era ACHADO B5): `relatorio._texto` prefixa `'` quando a célula começa com um dos
+    gatilhos de fórmula do Excel/Sheets (`=`, `+`, `-`, `@`)."""
     linhas = [{"item_esri_id": "a" * 32, "tipo": "Web Map", "titulo": '=HYPERLINK("http://alheio.invalido";"abra")',
                "classificacao": "migra", "classificacao_motivo": "", "dono_login": "x", "tamanho_bytes": 1,
                "contagem_total": None, "camadas": [], "dependencias": [], "num_visualizacoes": 0,
@@ -242,10 +262,9 @@ def test_csv_neutraliza_formula_no_titulo():
 
 # ----------------------------------------------------------------------------------------- tamanho declarado
 
-@pytest.mark.xfail(strict=True, reason="ACHADO B6: o AGOL devolve `size: -1` para item sem arquivo (web map, "
-                   "referência a serviço); o motor grava -1 e SOMA os -1 em `totais.bytes_declarados` e em "
-                   "`por_tipo[].bytes` — o tamanho declarado do relatório fica errado para baixo")
 def test_tamanho_menos_um_do_agol_nao_entra_na_soma(sessao_a, env, portal, limpar):
+    """CONSERTADO (era ACHADO B6): `_inteiro_nao_negativo` grava NULL para `size < 0` em vez do valor cru
+    do AGOL — `-1` não entra mais na soma de `bytes_declarados`."""
     itens = portal.servidor.acervo["itens"]
     positivos = sum(i["size"] for i in itens[3:] if i["size"] and i["size"] > 0)
     for item in itens[:3]:
@@ -300,10 +319,6 @@ def test_token_nao_aparece_em_coluna_alguma_depois_de_falha_nao_tratada(sessao_a
     assert portal.tokens_na_query == []
 
 
-@pytest.mark.xfail(strict=True, reason="ACHADO B7: a rota exige `conteudo.registrar_fonte` (o perfil editor tem), "
-                   "mas o job `migracao.inventariar` exige perfil admin; o editor recebe 403 DEPOIS de a linha do "
-                   "inventário e o evento serem gravados em transações já fechadas — fica um inventário 'pendente' "
-                   "sem job para sempre, visível na lista")
 def test_editor_com_registrar_fonte_e_recusado_antes_de_gravar_ou_cria_de_verdade(
     sessao_a, env, portal, limpar, usuarios_a,
 ):

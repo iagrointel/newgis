@@ -121,6 +121,7 @@ from app.replica.rotas import router as rotas_replicas
 from app.relacionamentos.rotas import router as rotas_relacionamentos
 from app.relatorios.rotas import router as rotas_relatorios
 from app.mapas.rotas import router as rotas_mapas
+from app.migracao.rotas import router as rotas_migracao
 from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
@@ -453,6 +454,8 @@ ROUTERS = [
     rotas_multiescala,
     # --- portal de API (L7-08-d): /portal (página, CSP própria) e /api/portal/exemplos
     rotas_portal,
+    # --- migração de Portal/AGOL (L2-08-a): /api/migracao/inventarios (leitura só-leitura do portal do cliente)
+    rotas_migracao,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
