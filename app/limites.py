@@ -993,3 +993,7 @@ CONSULTA_GRANDE_FONTES_MAX = 8           # fontes Parquet numa consulta (uma vie
 CONSULTA_GRANDE_GRADE_METROS_MIN = 10
 CONSULTA_GRANDE_GRADE_METROS_MAX = 500_000
 CONSULTA_GRANDE_LIMIAR_LINHAS_DUCKDB = 5_000_000  # acima disto a ferramenta grande é o caminho, não o PostGIS
+# --- ferramentas por job (L2-16-a-sdk-python-geo): a geometria entra no CORPO do job; o teto abaixo
+# guarda o worker (e o registro em plat.job.parametros) de um GeoJSON grande demais para buffer em memória.
+FERRAMENTA_GEOJSON_MAX_BYTES = 5_000_000  # GeoJSON de entrada por ferramenta (5 MB ≈ 1-2 milhões de vértices)
+FERRAMENTA_BUFFER_MAX_M = 100_000.0       # distância de buffer; 100 km já é análise regional, não local

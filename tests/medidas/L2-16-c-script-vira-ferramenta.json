@@ -1,0 +1,42 @@
+{
+ "item": "L2-16-c-script-vira-ferramenta",
+ "medidas": {
+  "clausula1_exemplo_publicado_com_formulario_e_captura": {
+   "valor": 3,
+   "unidade": "testes",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/test_ferramenta_script.py -q (14 passed, 1 xfailed); test_clausula1_exemplo_aparece_no_catalogo (examples/ferramentas/buffer_por_campo.py publicado via POST /api/ferramentas/script aparece em GET /api/itens?tipo=ferramenta_script), test_clausula1_formulario_gerado_do_cabecalho (GET /formulario traz 3 parametros com padrao/minimo/maximo do cabecalho e o corpo do script nao vazia), test_clausula1_e2e_captura_da_tela (chromium abre /ferramentas, h1 'Buffer por campo', formulario preenchido com padroes 100/31983, sha256 no cartao, captura em tests/medidas/capturas/L2-16-c_formulario_ferramenta.png); /static servido no teste por intercepcao de rota (producao serve por nginx, ADR 0001); sem clausula de desempenho no portao: campos carga_1min/ram_livre_gb nao se aplicam (carga da maquina nas rodadas funcionais ficou acima de 8 por disputa de outras trilhas e nenhuma medida de tempo e alegada)"
+  },
+  "clausula2_job_no_conteiner_com_item_e_procedencia": {
+   "valor": 2,
+   "unidade": "testes",
+   "comando": "idem; test_clausula2_executa_no_conteiner_e_item_com_procedencia (docker inspect Running=true durante o job; item ferramenta_resultado com procedencia origem=script, ferramenta_id, versao=1 e sha256_script igual ao do item da ferramenta; FeatureCollection com 2 buffers de area_m2>0 e resumo json), test_clausula2_log_de_execucao_visivel (GET /execucoes lista o job com estado, versao e sha256 congelados)"
+  },
+  "clausula3_422_antes_de_executar": {
+   "valor": 8,
+   "unidade": "recusas provadas",
+   "comando": "idem; test_clausula3_parametro_fora_do_tipo_e_422_sem_job recusa 7 formas (texto em numero, booleano em numero, abaixo do minimo, acima do maximo, fracionario em inteiro, parametro nao declarado, entrada item inexistente) com detalhe por campo e ZERO job enfileirado (total de /execucoes nao muda); test_clausula3_cabecalho_invalido_nao_publica_nada (422 cabecalho_invalido, nenhum item criado)"
+  },
+  "clausula4_isolamento_refutado": {
+   "valor": 5,
+   "unidade": "ataques presos",
+   "comando": "idem; test_refuta_rede_fora (socket.create_connection no contêiner falha, erro da execução), test_refuta_leitura_de_etc (open /etc/shadow dá Permission/permiss), test_refuta_laco_infinito_no_teto (while True com timeout_s=6 morre no teto com '6 s', código 124 do coreutils), test_refuta_escrita_sem_permissao (plat.saidas fora da execução -> 403 permiss, nenhum ferramenta_resultado novo), test_refuta_sha256_adulterado (POST /api/jobs com sha256 trocado -> job falhou com 'sha256'); o token do contêiner é catálogo:ler+camada:ler (L2-16-b)"
+  },
+  "clausula5_gpserver_submitjob": {
+   "valor": null,
+   "unidade": "pendente",
+   "comando": "PENDENTE declarada (test_clausula5_gpserver_pendente roda como xfail strict=False): a rota GPServer submitJob mora no ramo wt/cx205 (L2-05-a-catalogo-ferramentas-gpserver), que NÃO é ancestral de wt/il216cscrip (fila de merge só aceita fast-forward) — juntar aqui seria merge falso; o vocabulário GP já está alinhado (tipo_gp GPString/GPDouble/GPLong/GPBoolean/GPFeatureRecordSetLayer por parâmetro no cabeçalho, mesma língua do registro do L2-05-a); registrado no handoff laco/handoffs/T8/L2-16-c-script-vira-ferramenta.md"
+  },
+  "clausula6_versao_nova_nao_muda_execucao_passada": {
+   "valor": 1,
+   "unidade": "teste de retrato",
+   "comando": "idem; test_clausula6_versao_nova_nao_muda_execucao_passada: execução 1 na versão 1, publicação de versão 2 (outro texto, outro sha), a procedência e a linha de log da execução 1 CONTINUAM versao=1 com o sha256 da versão 1, execução nova sai com 202 versao=2 e a procedência dela aponta versao=2; o worker carrega o corpo de plat.item_versao na versão congelada no pedido e recusa sha256 divergente"
+  },
+  "contagem_da_suite": {
+   "valor": "14 passed, 1 xfailed",
+   "unidade": "testes da API",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/test_ferramenta_script.py tests/unit/test_cabecalho_ferramenta.py -q -> 32 passed, 1 xfailed (o x é a cláusula 5 pendente); acompanhantes verdes: test_cruzado -k ferramentas (5), test_eventos, test_docs, test_cabecalhos, test_privilegios_declarados, test_jobs_registro, test_migracoes_nome_e_dependencia; make lint e make sem-marcador ok"
+  }
+ },
+ "gerado_em": "2026-09-09T02:30:00Z",
+ "git_sha": "bfd18d99"
+}

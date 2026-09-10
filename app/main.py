@@ -102,6 +102,7 @@ from app.edicao.rotas import router as rotas_edicao
 from app.ferramentas import rotas as rotas_ferramentas
 from app.ferramentas import rotas_gp as rotas_ferramentas_gp
 from app.fluxo.rotas import router as rotas_fluxos
+from app.ferramentas.rotas_script import router as rotas_ferramentas_script
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.imagens.rotas_imagens import router as rotas_imagens
@@ -147,6 +148,7 @@ from app.multiescala.rotas import router as rotas_multiescala
 from app.mapas.rotas import router as rotas_mapas
 from app.multiescala.rotas import router as rotas_multiescala
 from app.paineis.rotas import router as rotas_paineis
+from app.notebooks.rotas import router as rotas_notebooks
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rede_utilidades.rotas_config_tracado import router as rotas_rede_config_tracado
@@ -662,6 +664,15 @@ ROUTERS = [
     # VersionManagementServer compatível com a Esri sobre as MESMAS funções
     rotas_versionamento,
     rotas_versionamento_esri,
+    # --- ferramenta de script (L2-16-c): publica script com cabeçalho declarativo como ferramenta
+    # do catálogo; executa como job no contêiner do inquilino com a versão congelada
+    rotas_ferramentas_script,
+    # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,
+    # /fatores/{id}/amostras, /conjuntos/{id}/macro, /execucoes/{id}/micro, /execucoes
+    rotas_multiescala,
+    # --- notebook por inquilino (L2-16-b): /notebooks/{slug} (proxy JupyterLab com sessão; contêiner
+    # sob demanda, rede interna, ceifa por ociosidade via job periódico notebooks.ceifar)
+    rotas_notebooks,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

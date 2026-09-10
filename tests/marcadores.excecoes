@@ -12,3 +12,5 @@
 # atributo HTML de <input> (dica de valor no zoom mínimo/máximo), não marcador de código morto
 ^web/js/camadas\.js:[0-9]+:.*'aria-label': 'zoom m
 ^web/js/camadas\.js:[0-9]+:.*placeholder: .[0-9]+.,
+^web/js/ferramentas/pagina\.js:[0-9]+:.*placeholder: 'id do item \(uuid\)'
+# (09/09) atributo HTML de dica no campo de id de item da ferramenta de script (L2-16-c); não é texto de enchimento.

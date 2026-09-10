@@ -1,5 +1,3 @@
-"""Ferramentas de análise (item L2-05-a-catalogo-ferramentas-gpserver; L2_CONCEITO C8 e C19): registro em código
-por decorador `@ferramenta` com manifesto tipado no vocabulário GP da Esri, execução como job (`ferramentas.executar`,
-L0-05) ou síncrona abaixo de um custo declarado, resultado como item de catálogo com proveniência e relação
-`derivado_de`, e superfície compatível com GPServer para clientes Esri. A importação de `app.ferramentas.buffer`
-(feita por `app.jobs.tipos` e pelas rotas) registra a ferramenta de exemplo."""
+"""Ferramentas geoespaciais executadas por job (item L2-16-a-sdk-python-geo): cada ferramenta é um tipo de job
+(`app/jobs/registro.py`) que recebe parâmetros e devolve resultado — e, quando o resultado é um dado reutilizável,
+vira item `ferramenta_resultado` do catálogo com procedência. O SDK (`pacote/plat`) chama por `POST /api/jobs`."""

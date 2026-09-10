@@ -39,6 +39,73 @@ MQTT 5 e broker próprio declarados fora.
   (XPASS) e a suíte fica vermelha.
 - `app/garage.py` deixa de seguir `Location` automaticamente nas duas chamadas que mandam `Authorization`
   (`allow_redirects=False`): o outro caminho da casa que montava credencial e seguia redirecionamento.
+## turno 48, setembro de 2026 (item L2-16-c-script-vira-ferramenta: script Python com cabeçalho declarativo vira ferramenta do catálogo)
+
+O usuário escreve um script Python cuja DOCSTRING DE MÓDULO é um YAML com o manifesto da ferramenta (nome, título,
+parâmetros e saídas) e publica com `POST /api/ferramentas/script`: o cabeçalho é validado ANTES de gravar (422
+`cabecalho_invalido`, nada é escrito) e o script vira ITEM `ferramenta_script` versionado pela máquina `item_versao`
+do L5-05 — sem registro paralelo. O formulário (`GET /formulario`) é derivado SÓ do cabeçalho (rótulo, exigência,
+padrão, mínimo/máximo e JSON Schema por parâmetro); o corpo do script não sai por ele. O vocabulário de tipos é o
+GP da família do L2-05-a (texto=GPString, numero=GPDouble, inteiro=GPLong, booleano=GPBoolean,
+item=GPFeatureRecordSetLayer). Executar (`POST /executar`, 202) valida os valores ANTES de enfileirar (422
+`parametros_invalidos` com detalhe por campo, mesma forma do `dados_invalidos` do catálogo), confere no banco que
+toda entrada do tipo `item` existe no inquilino e congela `versao` + `sha256` NO PEDIDO do job: o worker
+(`app/ferramentas/script_tarefas.py`) roda o RETRATO imutável da versão pedida, confere o sha256 do texto antes de
+rodar (diverge = FalhaDefinitiva) e executa no contêiner do inquilino (L2-16-b) com o teto do `timeout -k` do
+coreutils (124 = estouro nomeado). O script lê `entradas.json`, usa o SDK copiado para o diretório de trabalho (o
+`plat.saidas` novo grava `saida.json`) e o JOB registra o item `ferramenta_resultado` com procedência
+`origem=script, ferramenta_id, versao, sha256_script` e evento `ferramentas/script-executado` (migração
+`20260909T0049`). Refutação rodada: script que abre socket, que lê `/etc/shadow`, que grava via SDK em camada sem
+permissão e que roda além do teto todos falham presos ao escopo (e sha256 adulterado no pedido é recusado pelo
+worker); a execução de versão nova não muda execução passada nenhuma (procedência e log apontam a versão de cada
+uma). Cláusula PENDENTE declarada: chamada pelo GPServer `submitJob` depende do ramo `wt/cx205` (L2-05-a), que
+não é ancestral deste; o vocabulário GP já está alinhado. Interface `/ferramentas` com formulário renderizado do
+cabeçalho e exemplo `examples/ferramentas/buffer_por_campo.py` (buffer por feição via SDK, publicado e executado
+pela própria suíte com captura de tela). Medidas e provas em
+`tests/medidas/L2-16-c-script-vira-ferramenta.json`; paridade com Python toolbox/web tool em `docs/PARIDADE.md`.
+
+## turno 48, setembro de 2026 (item L2-16-a-sdk-python-geo: SDK Python `plat` e ferramenta por job cujo resultado vira item)
+
+Pacote Python `plat` (`pacote/`, wheel interno por `make pacote`, sem PyPI até decisão do dono): `Plataforma(url,
+token)` com quatro domínios — `catalogo`, `acervo`, `jobs` e `ferramentas`. Camada fina espelho da API (mesma
+rota, mesmos parâmetros), paginação transparente (`iterar` segue o cursor), espera de job com `ao_progresso`, e
+toda recusa vira exceção tipada por status: `ErroPermissao` (403) carrega o código nomeado da casa e o privilégio
+`.exigido`; item de outro inquilino é `NaoEncontrado`, porque a RLS da casa devolve 404 de propósito e o SDK não
+traduz 404 em 403. A ferramenta `ferramentas.buffer` é um tipo de job comum: buffer PLANO em srid MÉTRICO (srid
+geográfico é recusado na porta com pyproj; teto de distância em `app/limites.py`), e o resultado vira ITEM do
+catálogo do tipo novo `ferramenta_resultado` — com procedência (sha256 da geometria de entrada, biblioteca e
+aproximação declarada) e evento de domínio `ferramentas/buffer` (migrações `20260908T1847` e `20260908T1929`).
+`tests/sdk/` (18 testes) prova o HTTP de verdade: a suíte sobe uvicorn e worker próprios em portas efêmeras no
+schema da trilha, e os exemplos dos docstrings rodam como doctest contra essa instalação
+(`test_sdk_doctests.py`). Medida `ferramenta_buffer_fim_a_fim_s` em `tests/medidas/L2-16-a-sdk-python-geo.json`,
+gravada só com carga de 1 min ≤ 8 (a primeira tomada, sob disputa da suíte inteira, foi descartada). Paridade com
+o ArcGIS API for Python em `docs/PARIDADE.md` (seção SDK); decisões no ADR `20260908T1955-sdk-python-pacote`. As
+cláusulas do portão que dependem de FeatureServer (L2-04-c, parcial sem merge), edição transacional (L2-03-a,
+refutado), TiTiler/STAC e nbconvert ficaram PENDENTES declaradas no handoff do item.
+
+## turno 48, setembro de 2026 (item L2-16-b-jupyter-por-inquilino-isolado: notebook JupyterLab por inquilino, com isolamento medido)
+
+Cada inquilino tem um notebook próprio em `/notebooks/{slug}/` — aberto só com SESSÃO da plataforma (token de
+serviço não abre; o slug de outro inquilino é 404, não 403). O contêiner sobe sob demanda no docker da própria
+máquina (`plat-notebook`, 1,12 GB, construída por `install.sh --imagem-notebook`): partida medida em 2,21 s
+(cláusula ≤ 20 s), `--memory 2g --cpus 2`, rede docker `--internal` e o firewall do host derrubando
+contêiner→host — de dentro do kernel, a leitura de camada pela API interna funciona e conexão direta ao Postgres
+e à internet falham (o código roda no kernel pela API do Jupyter no teste). A API chega ao contêiner por gateway
+próprio (contêiner vigia segurando a rede, uvicorn em socket unix do host e uma bomba stdlib lançada por
+`nsenter` dentro da rede — nada escuta em TCP do host). O único segredo no contêiner é o token de serviço do
+usuário (escopos `catalogo:ler`+`camada:ler`, 1 dia), provado lendo `/proc/1/environ`. Processo que aloca acima
+do teto é morto pelo cgroup (rc=137 medido; se a onda do OOM levar o PID 1, o levantar seguinte devolve o
+notebook). O ceifador do worker encerra o contêiner sem uso de API por 30 min (ou vida > 12 h), revoga o token e
+apaga o volume, e a passagem seguinte pelo proxy reergue na MESMA requisição (conserto do 500 medido: com o
+contêiner morto o httpx recebia `http://:8888/...`, que ele reescreve relativo e estoura ValueError). O job
+`notebooks.executar` roda o `.ipynb` agendado com `jupyter nbconvert --execute` no mesmo contêiner e grava a
+saída HTML como item `notebook_saida` com evento `notebooks/executado` (migração `20260908T2258`: tipo, evento e
+`plat.notebook_uso`). A suíte achou e consertou quatro defeitos reais: trava não reentrante no gateway (o mesmo
+thread ficou esperando a própria trava), ordem de partida fria (IP do vigia consultado antes de existir), barra
+final faltando no `base_url` (404 medido) e `websockets` fora da venv (PYTHONNOUSERSITE=1 da casa esconde
+`~/.local`; o handshake do kernel dava 500). Medidas em `tests/medidas/L2-16-b-jupyter-por-inquilino-isolado.json`
+(partida só com carga 1 min ≤ 8); paridade com ArcGIS Notebooks em `docs/PARIDADE.md`.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a

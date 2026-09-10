@@ -11,13 +11,19 @@ INICIO=$SECONDS
 # deploy/docker-compose.worker.yml ALÉM da unidade systemd plat-worker (nunca no lugar dela — a API sempre
 # exige pelo menos um worker vivo). Aceita a flag em qualquer posição entre os argumentos posicionais; sem
 # ela o comportamento é bit a bit o de antes (só a unidade systemd).
+# --imagem-notebook (item L2-16-b-jupyter-por-inquilino-isolado, opcional): builda a imagem
+# plat-notebook:latest (deploy/notebook/contexto) com JupyterLab + SDK `plat`; o notebook por inquilino
+# falha alto na primeira subida sem ela.
 WORKER_CONTAINER=0
+IMAGEM_NOTEBOOK=0
 ARGS=()
 for arg in "$@"; do
-  if [ "$arg" = "--worker-container" ]; then WORKER_CONTAINER=1; else ARGS+=("$arg"); fi
+  if [ "$arg" = "--worker-container" ]; then WORKER_CONTAINER=1;
+  elif [ "$arg" = "--imagem-notebook" ]; then IMAGEM_NOTEBOOK=1;
+  else ARGS+=("$arg"); fi
 done
 set -- "${ARGS[@]+"${ARGS[@]}"}"
-DOM=${1:?uso: sudo bash install.sh <dominio> [porta] [--worker-container]}
+DOM=${1:?uso: sudo bash install.sh <dominio> [porta] [--worker-container] [--imagem-notebook]}
 PORTA=${2:-8150}
 APP_DIR=${APP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}
 APP_USER=${APP_USER:-$(stat -c %U "$APP_DIR")}
@@ -399,6 +405,21 @@ if [ "$WORKER_CONTAINER" -eq 1 ]; then
   docker compose -f deploy/docker-compose.worker.yml ps
 else
   echo "== h4. worker em contêiner PULADO (rode com --worker-container para instalar; ver ADR 0010 e docs/ARQUITETURA.md)"
+fi
+
+if [ "$IMAGEM_NOTEBOOK" -eq 1 ]; then
+  echo "== h5. imagem do notebook por inquilino (--imagem-notebook, item L2-16-b)"
+  command -v docker >/dev/null 2>&1 || { echo "docker não instalado; --imagem-notebook exige Docker (o script nunca instala Docker sozinho, decisão do dono)" >&2; exit 1; }
+  [ -f pacote/pyproject.toml ] || { echo "pacote/ (SDK plat) ausente na raiz; --imagem-notebook precisa dela para levar o SDK ao contêiner" >&2; exit 1; }
+  df -h / | tail -1
+  # o .dockerignore da raiz é de negação total (build do worker, L0-05-e) e não se abre; o contexto do
+  # build da imagem de notebook é deploy/notebook/contexto e o SDK é copiado para lá ANTES do build
+  rm -rf deploy/notebook/contexto/pacote
+  cp -r pacote deploy/notebook/contexto/pacote
+  docker build -t plat-notebook:latest deploy/notebook/contexto
+  docker image inspect -f 'plat-notebook:latest {{.Size}} bytes' plat-notebook:latest
+else
+  echo "== h5. imagem do notebook PULADA (rode com --imagem-notebook; item L2-16-b)"
 fi
 
 echo "== i. nginx"

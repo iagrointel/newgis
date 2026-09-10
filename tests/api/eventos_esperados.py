@@ -147,14 +147,6 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("DELETE", "/api/conexoes/{id}"): ["conexoes/apagar"],
     ("POST", "/api/conexoes/{id}/testar"): ["conexoes/testar"],
     ("POST", "/api/conexoes/{id}/publicar"): ["conexoes/publicar_camada"],
-    # --- entrada de eventos em tempo real (L2-14-a-ingestao-de-fluxos): a GESTÃO da fonte registra evento
-    # como qualquer objeto do inquilino; o RECEBIMENTO do evento não registra (é o processo plat-fluxo, fora
-    # desta aplicação, e uma linha de registro por evento custaria mais que o evento — está no ADR do item).
-    ("POST", "/api/fluxos"): ["fluxos/criar"],
-    ("PATCH", "/api/fluxos/{id}"): ["fluxos/editar", "fluxos/pausar", "fluxos/retomar"],
-    ("DELETE", "/api/fluxos/{id}"): ["fluxos/apagar"],
-    ("DELETE", "/api/fluxos/{id}/eventos"): ["fluxos/expurgar"],
-    ("POST", "/api/fluxos/{id}/simular"): [],  # não muda estado: aplica mapeamento e filtro e devolve
     # ---- motor multicritério em grades aninhadas (L3-19-multiescala; vocabulário nas migrações
     # 20260906T1640_multiescala.sql e 20260906T1823_multiescala_apagar.sql). Conjunto, fator e execução são
     # tabelas do inquilino com dono humano, então toda escrita narra evento; o DELETE apaga em cascata e por
@@ -166,20 +158,18 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
-    # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
-    # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
-    ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
-    # As cinco linhas abaixo são das rotas do item L2-03-edicao (histórico, anexos, unir e dividir): elas
-    # existem no código daquele ramo, mas o docs/openapi.json comitado lá estava desatualizado, então o teste
-    # não as via. Ao regerar o OpenAPI depois de juntar o ramo, elas apareceram sem declaração. Os nomes de
-    # evento vêm de app/edicao/{historico,anexos,combinar}.py e de db/migracoes/20260907T1025_*.sql.
-    ("POST", "/api/camadas/{id}/feicoes/{globalid}/historico/{historico_id}/restaurar"): ["camadas/restaurar"],
-    ("POST", "/api/camadas/{id}/feicoes/{globalid}/anexos"): ["camadas/anexo_enviar"],
-    ("DELETE", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): ["camadas/anexo_apagar"],
-    ("POST", "/api/camadas/{id}/feicoes/unir"): ["camadas/unir"],
-    ("POST", "/api/camadas/{id}/feicoes/dividir"): ["camadas/dividir"],
-    # ---- painel: dados por fonte (L2-06-a). São LEITURAS agregadas feitas por POST (o corpo carrega o
-    # conjunto de pedidos e o filtro, que não cabem em query string); não mudam nada, logo não narram evento.
-    ("POST", "/api/itens/{item_id}/paineis/fontes/{fonte_id}/dados"): [],
-    ("POST", "/api/compartilhado/{token}/paineis/{item_id}/fontes/{fonte_id}/dados"): [],
+    # ---- notebook por inquilino (L2-16-b): o proxy /notebooks/{slug}/{caminho} é TÚNEL do Jupyter
+    # do inquilino — tráfego de sessão interativa não narra evento de domínio da plataforma; o único
+    # evento do item nasce no job agendado (notebooks/executado, emitido pela tarefa, não pela rota)
+    ("POST", "/notebooks/{slug}/{caminho}"): [],
+    ("PUT", "/notebooks/{slug}/{caminho}"): [],
+    ("PATCH", "/notebooks/{slug}/{caminho}"): [],
+    ("DELETE", "/notebooks/{slug}/{caminho}"): [],
+    # ---- ferramenta de script (L2-16-c; vocabulário na migração 20260909T0049_script_ferramenta.sql).
+    # Publicar e publicar versão narram o MESMO evento (`ferramentas/script-publicado`) porque os dois
+    # são o mesmo fato (script publicado, com a versão no detalhe); a execução narra o pedido (o
+    # `ferramentas/script-executado` do item de resultado nasce na tarefa, não na rota).
+    ("POST", "/api/ferramentas/script"): ["ferramentas/script-publicado"],
+    ("POST", "/api/ferramentas/script/{id}/versao"): ["ferramentas/script-publicado"],
+    ("POST", "/api/ferramentas/script/{id}/executar"): ["ferramentas/script-execucao-pedida"],
 }

@@ -59,3 +59,7 @@ web/videos/
 # binário do Martin instalado por deploy/martin_instalar.sh (nunca versionado; sha256 fixado no script)
 bin/
 tests/e2e/capturas/*.pdf
+# wheel do SDK gerado por `make pacote` (item L2-16-a); o código do pacote é o versionado em pacote/plat
+pacote/dist/
+pacote/build/
+pacote/plat.egg-info/

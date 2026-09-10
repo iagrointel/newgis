@@ -68,6 +68,12 @@ from app.jobs.registro import REGISTRO
 from app.ogc_mapas import tarefas as wmts_tarefas  # noqa: F401 — L2-04-i: wmts.publicar (pré-renderização)
 from app.odk import tarefas as odk_tarefas  # noqa: F401 — L2-07-e: odk.sincronizar
 from app.modelos3d import tarefas as modelos3d_tarefas  # noqa: F401 — L2-09-c: modelo3d.converter/tileset
+from app.ferramentas import script_tarefas  # noqa: F401 — L2-16-c: ferramentas.executar_script
+from app.ferramentas import tarefas as ferramentas_tarefas  # noqa: F401 — L2-16-a: ferramentas.buffer
+from app.ingestao import tarefas as ingestao_tarefas  # noqa: F401 — L0-04: ingestao.inspecionar/ingestao.carregar
+from app.jobs import periodicos, tipos_prova  # noqa: F401 — importação registra os tipos
+from app.jobs.registro import REGISTRO
+from app.notebooks import tarefas as notebooks_tarefas  # noqa: F401 — L2-16-b: notebooks.executar/ceifar
 from app.uploads import tarefas as uploads_tarefas  # noqa: F401 — L0-04-a: uploads.expirar + periódico
 
 __all__ = ["REGISTRO"]

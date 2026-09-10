@@ -1,142 +1,198 @@
-"""Ambiente da suíte do SDK (item L7-08-b-sdk-python): sobe a API real da trilha (`app.main:app`) num
-processo uvicorn de verdade — não `TestClient` em memória — porque a prova pedida é "o SDK contra a
-API real da trilha", e o SDK fala HTTP de rede (retentativa, timeout, cookies inclusive). Sobe também
-o worker da fila só para o exemplo de jobs. Reusa um processo já de pé na mesma porta se o `git_sha`
-bater (outra chamada de teste no mesmo turno); nunca herda o servidor de OUTRA trilha."""
-
-from __future__ import annotations
+"""Fixtures do SDK (item L2-16-a-sdk-python-geo): o SDK fala HTTP DE VERDADE (requests), então a
+suíte sobe a app num servidor uvicorn em PORTA EFÊMERA (mesma app, mesmo schema da trilha, ambiente
+do processo) e um worker da fila apontando para ele — os dois em subprocesso, sempre encerrados no
+fim. Tokens de serviço são criados pela rota de sessão (POST /api/login + 2FA quando pede +
+POST /api/tokens), exatamente como um usuário faria; o SDK em si nunca vê senha."""
 
 import os
+import secrets
+import socket
 import subprocess
 import sys
 import time
+import urllib.request
 from pathlib import Path
 
-import httpx
 import pytest
+import requests
 
-RAIZ = Path(__file__).resolve().parents[2]
-PORTA_API = int(os.environ.get("PLAT_SDK_PORTA", "8278"))
-PORTA_WORKER_SAUDE = int(os.environ.get("PLAT_SDK_WORKER_PORTA", "8279"))
-URL = f"http://127.0.0.1:{PORTA_API}"
-GIT_SHA = subprocess.run(
-    ["git", "-C", str(RAIZ), "rev-parse", "HEAD"], capture_output=True, text=True, check=True
-).stdout.strip()
+ROOT = Path(__file__).resolve().parents[2]
+PACOTE = ROOT / "pacote"
+if str(PACOTE) not in sys.path:  # o pacote mora fora de app/: entra no caminho antes do import
+    sys.path.insert(0, str(PACOTE))
 
+os.environ.setdefault("PLAT_AMBIENTE", "dev")
 
-def _ambiente_da_trilha() -> dict[str, str]:
-    """`.env` da trilha (posto por `laco/trilha_ambiente.sh`) + o que falta pra subir sozinho: sem
-    isso o teste depende de alguém ter feito `source` antes, que é exatamente o que quebrou a
-    sessão anterior (retomada 07/09)."""
-    arq = os.environ.get("PLAT_SDK_ENV_ARQUIVO", "/home/dev/plataforma/laco/var/trilha/il708bsdkpy.env")
-    valores = dict(os.environ)
-    if Path(arq).exists():
-        for linha in Path(arq).read_text().splitlines():
-            linha = linha.strip()
-            if not linha or linha.startswith("#") or "=" not in linha:
-                continue
-            chave, _, valor = linha.partition("=")
-            valores.setdefault(chave, valor)
-    valores["PLAT_GIT_SHA"] = GIT_SHA
-    valores.setdefault("PLAT_JOBS_DIR", "/tmp/il708bsdkpy_jobs")
-    valores.setdefault("PLAT_WORKER_URL", f"http://127.0.0.1:{PORTA_WORKER_SAUDE}")
-    Path(valores["PLAT_JOBS_DIR"]).mkdir(parents=True, exist_ok=True)
-    return valores
+import plat  # noqa: E402
+from plat import Plataforma  # noqa: E402
+
+from tests.api.conftest import credenciais, totp_guardado  # noqa: E402
+
+# itens criados pela suíte (a casa limpa por prefixo zt; a lixeira do catálogo aceita a exclusão)
+PREFIXO = "zt-sdk-"
 
 
-def _saude(url: str, tempo_limite_s: float = 1.5) -> dict | None:
-    try:
-        r = httpx.get(f"{url}/saude", timeout=tempo_limite_s)
-        if r.status_code == 200:
-            return r.json()
-    except httpx.HTTPError:
-        pass
-    return None
+def porta_livre() -> int:
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
 
 
-def _esperar_saude(url: str, segundos: float, contexto: str) -> dict:
-    fim = time.monotonic() + segundos
-    while time.monotonic() < fim:
-        corpo = _saude(url)
-        if corpo is not None:
-            return corpo
-        time.sleep(0.3)
-    pytest.fail(f"{contexto} não respondeu /saude em {segundos}s — ver log em /tmp/il708bsdkpy_*.log")
+def _login_http(base: str, slug: str, login: str, senha: str, segredo_totp: str | None = None):
+    """Sessão HTTP com cookie, pela rota pública de login (com o passo 2FA quando o usuário liga)."""
+    s = requests.Session()
+    r = s.post(f"{base}/api/login", json={"inquilino": slug, "login": login, "senha": senha}, timeout=15)
+    if r.status_code == 200 and r.json().get("exige_2fa"):
+        from app.auth import totp
+
+        assert segredo_totp, "usuário exige 2FA e o segredo não é conhecido"
+        desafio = r.json()["desafio"]
+
+        def _tentar():
+            return s.post(f"{base}/api/login/2fa",
+                          json={"desafio": desafio, "codigo": totp.codigo(segredo_totp)}, timeout=15)
+
+        r = _tentar()
+        if r.status_code != 200:  # anti-replay do passo de 30 s: esperar o próximo e repetir
+            time.sleep(totp.PASSO_S - (time.time() % totp.PASSO_S) + 0.5)
+            r = _tentar()
+    r.raise_for_status()
+    return s
+
+
+def _criar_token(sessao, base: str, nome: str, escopos: list[str]) -> dict:
+    r = sessao.post(f"{base}/api/tokens", json={"nome": f"{PREFIXO}{nome}", "escopos": escopos,
+                                                "validade_dias": 1})
+    assert r.status_code == 201, r.text
+    return r.json()
 
 
 @pytest.fixture(scope="session")
-def url_api() -> str:
-    """URL da API da trilha (porta 8278, ver o prompt do item). Reusa um processo já respondendo
-    com o MESMO git_sha (idempotente entre rodadas de teste no mesmo turno); começa um novo senão."""
-    ambiente = _ambiente_da_trilha()
-    corpo = _saude(URL)
-    if corpo is not None and corpo.get("git_sha") == GIT_SHA[:12]:
-        yield URL
-        return
-    if corpo is not None:
-        pytest.fail(
-            f"porta {PORTA_API} já respondia com git_sha {corpo.get('git_sha')!r} != {GIT_SHA[:12]!r} "
-            "— é o servidor de OUTRA trilha ou de outro commit; pare-o antes de rodar este teste"
-        )
-    log = open("/tmp/il708bsdkpy_api.log", "w")
-    processo = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "app.main:app", "--port", str(PORTA_API), "--host", "127.0.0.1"],
-        cwd=str(RAIZ),
-        env=ambiente,
-        stdout=log,
-        stderr=subprocess.STDOUT,
-    )
-    try:
-        _esperar_saude(URL, 30, "a API da trilha (uvicorn)")
-        yield URL
-    finally:
-        processo.terminate()
+def servidor():
+    """A app inteira em subprocesso (uvicorn, porta efêmera); /saude decide quando está de pé."""
+    porta = porta_livre()
+    ambiente = dict(os.environ)
+    ambiente["PYTHONNOUSERSITE"] = "1"
+    proc = subprocess.Popen([sys.executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1",
+                             "--port", str(porta), "--log-level", "warning"], cwd=ROOT, env=ambiente,
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    base = f"http://127.0.0.1:{porta}"
+    for _ in range(120):
         try:
-            processo.wait(timeout=10)
-        except subprocess.TimeoutExpired:
-            processo.kill()
-        log.close()
+            urllib.request.urlopen(f"{base}/saude", timeout=1)
+            break
+        except OSError:
+            if proc.poll() is not None:
+                pytest.fail("servidor do SDK morreu na subida (veja o log do uvicorn)")
+            time.sleep(0.25)
+    else:
+        proc.kill()
+        pytest.fail("servidor do SDK não respondeu /saude em 30 s")
+    yield base
+    proc.terminate()
+    try:
+        proc.wait(timeout=15)
+    except subprocess.TimeoutExpired:
+        proc.kill()
 
 
 @pytest.fixture(scope="session")
-def worker_da_fila(url_api: str):
-    """Worker da fila, só para o exemplo de jobs (`07_jobs.py`) — job sem worker fica "pendente"
-    para sempre, e isso não é o que a cláusula do portão pede provar."""
-    ambiente = _ambiente_da_trilha()
-    ja_rodando = False
-    try:
-        httpx.get(f"http://127.0.0.1:{PORTA_WORKER_SAUDE}/saude", timeout=1.0)
-        ja_rodando = True
-    except httpx.HTTPError:
-        pass
-    if ja_rodando:
-        yield
-        return
-    log = open("/tmp/il708bsdkpy_worker.log", "w")
-    processo = subprocess.Popen(
-        [sys.executable, "-m", "app.jobs.worker"], cwd=str(RAIZ), env=ambiente, stdout=log, stderr=subprocess.STDOUT
-    )
-    time.sleep(2)  # sem /saude síncrono documentado no boot; o log de "worker iniciado" é o sinal
-    try:
-        yield
-    finally:
-        processo.terminate()
+def worker(servidor):
+    """Worker da fila apontando para o servidor desta suíte (jobs de ferramenta precisam de um)."""
+    porta = porta_livre()
+    ambiente = dict(os.environ)
+    ambiente.update({"PYTHONNOUSERSITE": "1", "PLAT_WORKER_NOME": f"sdk-{os.getpid()}",
+                     "PLAT_WORKER_PROCESSOS": "1", "PLAT_WORKER_URL": f"http://127.0.0.1:{porta}"})
+    saida_erro = subprocess.DEVNULL
+    if os.environ.get("PLAT_SDK_DEBUG"):
+        saida_erro = open(f"/tmp/sdk-worker-{os.getpid()}.log", "wb")  # noqa: SIM115 — só com a chave
+    proc = subprocess.Popen([sys.executable, "-m", "app.jobs.worker"], cwd=ROOT, env=ambiente,
+                            stdout=saida_erro, stderr=saida_erro)
+    for _ in range(50):
         try:
-            processo.wait(timeout=10)
-        except subprocess.TimeoutExpired:
-            processo.kill()
-        log.close()
+            urllib.request.urlopen(f"http://127.0.0.1:{porta}/saude", timeout=1)
+            break
+        except OSError:
+            if proc.poll() is not None:
+                pytest.fail("worker do SDK morreu na subida (PLAT_SDK_DEBUG=1 grava /tmp/sdk-worker-*.log)")
+            time.sleep(0.2)
+    else:
+        proc.kill()
+        pytest.fail("worker do SDK não respondeu em 10 s")
+    yield
+    proc.terminate()
+    try:
+        proc.wait(timeout=30)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+
+
+def _sessao_admin(servidor: str, slug: str):
+    creds = credenciais()
+    assert slug in creds, f"trilha sem credencial do admin {slug} (PLAT_CREDENCIAIS_ARQUIVO)"
+    login, senha = creds[slug]
+    return _login_http(servidor, slug, login, senha, totp_guardado(slug))
 
 
 @pytest.fixture(scope="session")
-def credenciais_demo() -> tuple[str, str, str]:
-    """(inquilino, login, senha) do admin de `demo`, semeado por `trilha_ambiente.sh` em
-    `laco/var/trilha/il708bsdkpy.credenciais.txt` — nunca uma senha digitada no código."""
-    arq = Path(
-        os.environ.get("PLAT_CREDENCIAIS_ARQUIVO", "/home/dev/plataforma/laco/var/trilha/il708bsdkpy.credenciais.txt")
-    )
-    for linha in arq.read_text().splitlines():
-        partes = linha.split()
-        if len(partes) >= 3 and partes[0] == "demo":
-            return "demo", partes[1], partes[2]
-    pytest.fail(f"credenciais de 'demo' não encontradas em {arq}")
+def _admin(servidor):
+    """(sessão HTTP do admin demo, token admin:inquilino, id do token) — a sessão fica para a limpeza."""
+    s = _sessao_admin(servidor, "demo")
+    tok = _criar_token(s, servidor, f"admin-{os.getpid()}", ["admin:inquilino"])
+    return s, tok["token"], tok["id"]
+
+
+@pytest.fixture(scope="session")
+def pla(servidor, _admin, worker) -> Plataforma:
+    """SDK autenticado com o token do admin demo, com worker vivo para as ferramentas."""
+    return Plataforma(servidor, _admin[1])
+
+
+@pytest.fixture(scope="session")
+def pla_demo2(servidor, worker) -> Plataforma:
+    """Segundo inquilino (demo2): a refutação do item — item de A lido por B é 404 tipado, não 403."""
+    s = _sessao_admin(servidor, "demo2")
+    tok = _criar_token(s, servidor, f"demo2-{os.getpid()}", ["admin:inquilino"])
+    try:
+        yield Plataforma(servidor, tok["token"])
+    finally:
+        s.delete(f"{servidor}/api/tokens/{tok['id']}")
+
+
+@pytest.fixture(scope="session")
+def pla_leitura(servidor, _admin, worker) -> Plataforma:
+    """Token de escopo SÓ-LEITURA cujo dono é um visualizador (o privilégio do token é o do dono)."""
+    s_admin = _admin[0]
+    login = f"zt{secrets.token_hex(4)}"
+    r = s_admin.post(f"{servidor}/api/usuarios", json={"login": login, "nome": "SDK só leitura",
+                                                       "perfil": "visualizador"})
+    assert r.status_code == 201, r.text
+    u = r.json()["usuario"]
+    temporaria = r.json()["senha_temporaria"]
+    s = _login_http(servidor, "demo", login, temporaria)
+    definitiva = "Senha-definitiva-1" + secrets.token_hex(3)
+    r = s.put(f"{servidor}/api/eu/senha", json={"atual": temporaria, "nova": definitiva})
+    assert r.status_code == 204, r.text
+    tok = _criar_token(s, servidor, f"leitura-{os.getpid()}", ["catalogo:ler"])
+    try:
+        yield Plataforma(servidor, tok["token"])
+    finally:
+        s.delete(f"{servidor}/api/tokens/{tok['id']}")
+        s_admin.delete(f"{servidor}/api/usuarios/{u['id']}")
+
+
+@pytest.fixture
+def limpar_itens(pla):
+    """Apaga os itens criados por um teste (lixeira lógica) no fim, mesmo com falha no meio."""
+    ids: list[str] = []
+    yield ids
+    for iid in ids:
+        try:
+            pla.catalogo.apagar(iid)
+        except Exception:
+            pass
+
+
+@pytest.fixture(scope="session")
+def versao_sdk():
+    return plat.__versao__

@@ -150,6 +150,8 @@ PAGINAS = {
     "/admin/logins": "admin/logins.html",
     # --- formulário de coleta (L2-07-b-formulario-de-coleta-xlsform)
     "/coleta": "coleta.html",
+    # --- ferramenta de script (L2-16-c): ?item=<id de ferramenta_script>; formulário do cabeçalho
+    "/ferramentas": "ferramenta.html",
 }
 router = APIRouter()
 

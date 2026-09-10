@@ -1,0 +1,12 @@
+{
+ "item": "L2-16-a-sdk-python-geo",
+ "medidas": {
+  "ferramenta_buffer_fim_a_fim_s": {
+   "valor": 1.077,
+   "unidade": "s",
+   "comando": "pla.ferramentas.buffer(PONTO, 100.0) — criação do job, espera e leitura do item; carga_1min=3.25, ram_livre_gb=7.75, medido_em=2026-09-08T20:22:36Z"
+  }
+ },
+ "gerado_em": "2026-09-08T20:22:37Z",
+ "git_sha": "610896979710"
+}

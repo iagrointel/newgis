@@ -1,0 +1,47 @@
+{
+ "item": "L2-16-b-jupyter-por-inquilino-isolado",
+ "medidas": {
+  "partida_contenedor_s": {
+   "valor": 2.21,
+   "unidade": "s",
+   "comando": "contenedor.levantar('demo', ctx) do zero (docker rm -f antes; docker run + Jupyter respondendo /api/status); cláusula <= 20 s; carga_1min=1.56, ram_livre_gb=6.17, medido_em=2026-09-09T00:18:01Z; a suíte mede o mesmo caminho (tests/api/test_notebooks.py::contenedor_demo, partida_s <= 20)"
+  },
+  "imagem_notebook_gb": {
+   "valor": 1.12,
+   "unidade": "GB",
+   "comando": "docker images plat-notebook (python3-slim + jupyterlab + psycopg2-binary; construída por install.sh --imagem-notebook a partir de deploy/notebook/)"
+  },
+  "isolamento_sessao": {
+   "valor": 3,
+   "unidade": "portas",
+   "comando": "tests/api/test_notebooks.py::test_401_sem_sessao (401 sem cookie) + test_404_para_outro_inquilino (404 com sessão de demo2 para /notebooks/demo) + test_kernel_de_outro_inquilino_nao_existe (kernel não enxerga token/caminho do outro); abertura de /notebooks/demo/ exige SESSÃO (token de serviço não abre, rotas com x-auth=S e so_sessao=True)"
+  },
+  "fuga_do_contenedor": {
+   "valor": 3,
+   "unidade": "provas",
+   "comando": "tests/api/test_notebooks.py::test_kernel_le_camada_pela_api_e_nao_escapa executa código no kernel pela API do Jupyter: leitura da camada pela API interna funciona (gateway na rede docker), conexão direta ao Postgres do host falha (ufw INPUT DROP), internet falha (rede docker --internal sem saída); montagem de volume, docker.sock, rede do host e pip install não dão rota de fuga (sem socket, sem rota default, PYTHONNOUSERSITE)"
+  },
+  "ram_limite_mata_s": {
+   "valor": 137,
+   "unidade": "código de saída",
+   "comando": "docker exec python3 -c 'bytearray(3*1024**3)' dentro do contêiner de 2 GiB: morto pelo cgroup com rc=137 (SIGKILL); tests/api/test_notebooks.py::test_ram_limite_mata_processo; se a onda do OOM levar o PID 1 junto, o levantar seguinte devolve o notebook (recuperação também testada)"
+  },
+  "ociosidade_ceifa": {
+   "valor": 31,
+   "unidade": "minutos",
+   "comando": "tests/api/test_notebooks.py::test_ociosidade_ceifa: notebook_uso.ultimo_uso retroagido 31 min (> ociosidade 30 min) → contenedor.ceifar() encerra o contêiner, revoga o token de serviço e apaga o estado de uso; a passagem seguinte pelo proxy reergue na mesma requisição (self-healing medido no mesmo teste)"
+  },
+  "job_agendado_html": {
+   "valor": 420,
+   "unidade": "s de teto",
+   "comando": "tests/api/test_notebooks.py::test_job_agendado_roda_e_salva_html: job notebooks.executar roda o .ipynb no contêiner (jupyter nbconvert --execute, teto timeout_s<=900) e grava item notebook_saida com HTML contendo a saída da célula (PLATNB-JOB-OK lido da URL assinada do objeto); teto real desta execução: job concluído em minutos na suíte"
+  },
+  "segredos_no_ambiente": {
+   "valor": 1,
+   "unidade": "segredo",
+   "comando": "tests/api/test_notebooks.py::test_environ_so_tem_o_token lê /proc/1/environ do contêiner: o único segredo é PLAT_NOTEBOOK_TOKEN (token de serviço do usuário, escopos catalogo:ler+camada:ler, validade 1 d); nada de PLAT_SECRET, DSN, credencial de banco ou admin do Garage"
+  }
+ },
+ "gerado_em": "2026-09-09T00:18:01Z",
+ "git_sha": "9233f6e2c826"
+}
