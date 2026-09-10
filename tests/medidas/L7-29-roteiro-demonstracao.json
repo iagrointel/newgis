@@ -1,0 +1,82 @@
+{
+ "item": "L7-29-roteiro-demonstracao",
+ "medidas": {
+  "roteiro_total_s": {
+   "valor": 71.2,
+   "unidade": "s",
+   "comando": "test_roteiro_30_minutos de ponta a ponta (chromium do playwright, instalação da trilha)"
+  },
+  "roteiro_passos": {
+   "valor": 9,
+   "unidade": "passos",
+   "comando": "docs/DEMO.md passos 1 a 9 percorridos na ordem"
+  },
+  "versao10_passos": {
+   "valor": "1,2,3,6,8,9",
+   "unidade": "lista",
+   "comando": "docs/DEMO.md seção 'Versão de 10 minutos' (subconjunto dos mesmos passos do e2e)"
+  },
+  "capturas_por_passo": {
+   "valor": 15,
+   "unidade": "arquivos",
+   "comando": "tests/e2e/capturas/L7-29-roteiro-demonstracao_pNN_*.png"
+  },
+  "carga_1min": {
+   "valor": 5.08,
+   "unidade": "carga",
+   "comando": "os.getloadavg()[0] no fim da rodada (regra de medição do laço)"
+  },
+  "ram_livre_gb": {
+   "valor": 7.4,
+   "unidade": "GB",
+   "comando": "MemAvailable de /proc/meminfo no fim da rodada"
+  },
+  "p01_inicio_ms": {
+   "valor": 82.4,
+   "unidade": "ms",
+   "comando": "duração do passo dentro de test_roteiro_30_minutos"
+  },
+  "p02_entrada_ms": {
+   "valor": 416.3,
+   "unidade": "ms",
+   "comando": "duração do passo dentro de test_roteiro_30_minutos"
+  },
+  "p03_catalogo_ms": {
+   "valor": 1370.0,
+   "unidade": "ms",
+   "comando": "duração do passo dentro de test_roteiro_30_minutos"
+  },
+  "p04_upload_ms": {
+   "valor": 730.1,
+   "unidade": "ms",
+   "comando": "duração do passo dentro de test_roteiro_30_minutos"
+  },
+  "p05_tarefas_ms": {
+   "valor": 60785.6,
+   "unidade": "ms",
+   "comando": "duração do passo dentro de test_roteiro_30_minutos"
+  },
+  "p06_mapa_ms": {
+   "valor": 4211.8,
+   "unidade": "ms",
+   "comando": "duração do passo dentro de test_roteiro_30_minutos"
+  },
+  "p07_construtor_ms": {
+   "valor": 2859.4,
+   "unidade": "ms",
+   "comando": "duração do passo dentro de test_roteiro_30_minutos"
+  },
+  "p08_auditoria_ms": {
+   "valor": 488.7,
+   "unidade": "ms",
+   "comando": "duração do passo dentro de test_roteiro_30_minutos"
+  },
+  "p09_saude_ms": {
+   "valor": 225.8,
+   "unidade": "ms",
+   "comando": "duração do passo dentro de test_roteiro_30_minutos"
+  }
+ },
+ "gerado_em": "2026-09-08T20:29:08Z",
+ "git_sha": "610896979710"
+}

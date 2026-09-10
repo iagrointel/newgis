@@ -1043,6 +1043,26 @@ número contra `metodo.numeros_do_documento` (que varre valores, textos e chaves
 primeira achou célula estourando a margem no resumo e caixas sobrepostas no fluxo, corrigidas e
 reverificadas. Conserto de infra exigido pelo item: `app/versao.py` agora lê o sha em worktree do git
 (`.git` arquivo com "gitdir:" + `commidir`), com teste.
+## turno 8, setembro de 2026 (item L7-29-roteiro-demonstracao: roteiro de 30 minutos com e2e medido, fronteira gerada do painel e revisor separado)
+
+`docs/DEMO.md` percorre o que o produto faz hoje em 9 passos (fundação L0 e mapa L2), cada um com
+duração, "o que dizer", "não prometer" e o e2e que anda o mesmo caminho; seção "Passos que o roteiro
+não percorre" responde os pedidos frequentes (dado de demonstração, imagens, edição, motor, traçado,
+acervo, medição). A lista "o que a demonstração não faz ainda" NÃO é escrita à mão: é a seção
+Fronteira de `laco/PAINEL.md` reproduzida entre marcadores, e `docs/gerar_demo.py --validar` reprova
+o documento quando o bloco commitado diverge da regeneração (unitários cobrem estrutura, versão de 10
+minutos como subconjunto na ordem e a regra de escrita de 03/09 com lista fechada de termos). O texto
+foi revisado por agente separado sem o contexto do autor (33 pontos aplicados, nenhum fato mudado) e
+o validador passou por cima do texto revisado. `tests/e2e/test_demo.py` percorre os 9 passos na
+ordem contra a instalação real com captura por passo (`L7-29-roteiro-demonstracao_pNN_*.png`) e
+reprova acima de 30 min: rodada final 71,2 s, 9 passos, 15 capturas, carga 1 min 5,08, RAM livre
+7,4 GB (`tests/medidas/L7-29-roteiro-demonstracao.json`; passo mais lento: tarefas, 60,8 s — job de
+prova de 45 s + espera de fila vazia + cancelamento pela tela). O e2e documentou o refresco da lista
+de tarefas (relê só quando o contador de ativos muda entre tiques de 10 s; a regra está no ADR
+`20260908T2030-roteiro-de-demonstracao-medido.md`) e a bancada de trilha passou a aceitar o
+certificado autoassinado no contexto do navegador (`tests/e2e/conftest.py`, sem efeito com
+certificado de verdade). As dependências do item seguem abertas (L7-01-c refutado, L3-01/L4-02/
+L5-01/L6-01 pendentes) e o texto DIZ isso em vez de fingir.
 
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
