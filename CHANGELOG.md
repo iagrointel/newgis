@@ -4786,6 +4786,91 @@ catálogo de formatos e a prova por `tracemalloc` de que 40 MiB sobem em 5 parte
 cruzada em três níveis de que a exportação de um inquilino não traz linha de outro) + `tests/e2e/
 test_exportar.py` (botão Exportar com captura). Medidas em `tests/medidas/L0-04-h-exportar.json`.
 
+## turno 3, setembro de 2026 (item L6-02-c-wfs-ogcapi: conector WFS 2.0 e OGC API - Features)
+
+Primeiro conector que LÊ dado de serviço de terceiro (ADR 0018). WFS 2.0 (GetCapabilities, DescribeFeatureType,
+GetFeature com `COUNT`/`STARTINDEX`/`BBOX`, `RESULTTYPE=hits`, saída GeoJSON e GML 3.2) e OGC API - Features
+(`/collections`, `/queryables`, `/items` com `limit`, `bbox`, `datetime` e link `rel=next`), nos dois modos:
+
+- **referenciado** — `GET /api/conexoes/{id}/colecoes`, `.../colecoes/{c}/campos` e `.../colecoes/{c}/feicoes`,
+  ao vivo, com cache de 30 s no processo (`app/conexao/cache.py`); editar ou apagar a conexão esquece o cache.
+- **copiado** — job `conexao.copiar_vetor` (`POST /api/jobs`), que traz a coleção para uma tabela PostGIS do
+  inquilino com item `camada_vetorial`, procedência e as mesmas colunas obrigatórias/RLS da ingestão de arquivo.
+
+Regra dura do desenho: **todo I/O de rede passa por `app.conexao.seguranca.buscar_seguro`** (item L6-02-a) —
+os drivers `WFS:`/`OAPIF:` do GDAL foram recusados de propósito, porque fariam a requisição fora da defesa
+contra requisição forjada pelo servidor. O `ogr2ogr` só entra depois, sobre arquivo LOCAL, e roda com
+`GDAL_HTTP_PROXY` apontando para porta fechada, de modo que nenhuma requisição sua possa sair da máquina.
+
+Medido (`tests/medidas/L6-02-c-wfs-ogcapi.json`): 50 mil feições copiadas de um WFS 2.0, com o tempo de
+download e o de carga separados; paginação conferida contra o `numberMatched` declarado; tipos de atributo
+(`xsd:int`, `xsd:double`, `xsd:boolean`, `xsd:date`) preservados como o serviço os declarou; geometria
+reprojetada de EPSG:31983 para 4326 com o CRS nativo gravado na ficha.
+
+Refutação do adversário provada: um WFS que declara 5.000.000 de feições e ignora `COUNT`/`STARTINDEX` faz a
+cópia parar no limite declarado, gravar o aviso na procedência da camada e devolver o worker à fila — três
+travas independentes (limite, página maior do que a pedida, página repetida) além dos tetos de bytes e de
+páginas.
+
+Novo em `app/conexao/seguranca.py`: `PLAT_TESTE_CONEXAO_ALVOS`, par `host:porta` exato aceito só fora de
+produção, para que a suíte fale com um WFS e um OGC API DE VERDADE subidos no loopback
+(`tests/api/conexao/servidor_ogc.py`) em vez de depender do serviço de um órgão estar de pé.
+
+## turno 3, setembro de 2026 (item L0-09-a-procedencia: bloco de procedência em todo item de dado)
+
+Todo item que carrega dado passa a ter um bloco de procedência com o vocabulário que a casa já usa no registro
+do acervo (`acervo.fonte`, 376 fontes) e no catálogo de camadas do motor logístico: fonte, endereço, licença,
+data do dado, data de acesso, gerador, sha256, comando de reexecução, método, confiança, limites, frescor,
+próxima verificação e responsável. Cada campo pode declarar a `origem`: `declarado` (alguém afirmou) ou
+`medido` (a máquina calculou). O vocabulário campo a campo está em `docs/PROCEDENCIA.md`.
+
+A pontuação é a régua da `acervo.v_completude`, sem peso novo: `round(campos / campos_possiveis * 10, 1)` sobre
+os mesmos 10 campos. Item sem bloco tem pontuação nula, nunca `0,0` — ausência de registro não é medida de zero.
+A conta existe em Python (`app/catalogo/procedencia.py`) e em SQL (`plat.procedencia_pontuacao`), e um teste
+compara as duas em 7 blocos, porque a lista do catálogo não trafega `dados` (jsonb de 58 KB em média) e lê o
+selo direto do banco.
+
+Medido (`tests/medidas/L0-09-a-procedencia.json`): camada importada por arquivo nasce com os **4 campos que a
+máquina mede** — sha256 do arquivo lido de volta, data de acesso, gerador e método — sem ninguém digitar;
+licença e endereço ficam nulos de propósito, porque deduzi-los do nome do arquivo seria a procedência errada
+que a regra D17 proíbe.
+
+Onde aparece: ficha e lista (`procedencia` no objeto item), busca (`licenca:CC`, `licenca:nenhuma`,
+`procedencia:[5 TO 10]`), filtro lateral (`?licenca=`, `?procedencia_min=`, faceta de licença) e exportação da
+lista (colunas `licenca`, `procedencia_pontuacao`, `procedencia_campos`, `procedencia_sha256`,
+`procedencia_gerador` no CSV; bloco inteiro no JSON).
+
+Refutação do adversário provada em teste: o mesmo arquivo importado duas vezes dá o mesmo sha256 (e igual ao
+`sha256sum` do arquivo de origem); um byte a mais dá hash diferente; licença preenchida com texto vazio vira
+`null`, nunca string vazia — na criação e na edição.
+
+Fronteira honesta: a exportação do inquilino inteiro em GeoPackage (`L0-06-d-exportar-inquilino`) ainda não
+existe, então a cláusula "exportação leva a procedência" está cumprida na exportação que existe hoje, a da
+lista do catálogo. A tela do item mostra o bloco e a pontuação, mas ainda não os EDITA (isso é o
+`L0-09-b-editor-iso-mgb`); hoje a edição é pelo formulário de `dados` do próprio item.
+
+## turno 3, setembro de 2026 (item L2-04-a-leitor-rls-martin: quem serve o tile não sabe o que é inquilino)
+
+O servidor de tiles vetoriais fala direto com o PostGIS e não tem noção de sessão, privilégio ou inquilino.
+Passa a existir um **papel de banco só de leitura** — LOGIN, sem BYPASSRLS, sem ser dono de nada, com SELECT
+nas tabelas de camada e EXECUTE nas funções de tile — e uma função `plat.contexto_por_token`, que valida o
+token de serviço, confere escopo `camada:ler` e restrição de Referer/IP, grava o uso em `plat.log_acesso` e
+põe o inquilino na transação. Cada camada ganha a sua função de tile `d_<slug>.t_<16 hex>(z, x, y,
+query_params)`, criada junto com a tabela; a primeira instrução dela é o contexto por token. Contrato no ADR
+0020; o papel, a senha e a linha do `pg_hba.conf` saem de `db/leitor_instalar.sh`, chamado pelo `install.sh`.
+
+A política de RLS do papel de leitura **não olha a GUC `plat.tenant_id` crua**: qualquer papel conectado
+escreve nela, e o papel de leitura é o mesmo para todos os inquilinos. Ela olha `plat.tenant_leitor()`, que
+exige uma prova (sha256 de um segredo que nenhum papel comum lê, mais o inquilino e o processo) emitida só
+por `contexto_por_token`. Medido em `tests/medidas/L2-04-a-leitor-rls-martin.json`: `SET plat.tenant_id` feito
+pelo próprio leitor devolve **0 linhas**; **6 chamadas cruzadas** às funções de tile com o token do outro
+inquilino devolvem **0 tiles com dado**; token revogado deixa de valer em **0,002 s**; **1 linha de log por
+chamada** de contexto aceita; segunda execução do instalador = **0 mudanças**.
+
+⛔ Fronteira honesta: a linha de log de uma RECUSA é escrita e desfeita com a transação abortada (o PostgreSQL
+não tem transação autônoma) — medida `linhas_log_de_recusa_persistidas: 0`. O rastro da recusa fica no log do
+servidor (a exceção é nomeada) e no log de acesso da API. E o Martin em si não está instalado nem configurado
+por este item: o que se entrega é o contrato de banco que ele consome.
 
 ## turno 3, setembro de 2026 (item L2-01-a-documento-mapa: o mapa é um documento com esquema, não um punhado de URLs)
 

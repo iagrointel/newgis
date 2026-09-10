@@ -141,6 +141,8 @@ from app.multiescala.rotas import router as rotas_multiescala
 from app.portal import openapi as portal_openapi
 from app.portal.rotas import router as rotas_portal
 from app.mapa.selecao import router as rotas_selecao
+from app.multiescala.rotas import router as rotas_multiescala
+from app.mapas.rotas import router as rotas_mapas
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rede_utilidades.rotas_config_tracado import router as rotas_rede_config_tracado
