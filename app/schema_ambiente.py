@@ -76,12 +76,13 @@ class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
 
     def executemany(self, query, vars_list):
         # mesma classe de defeito do bytes/`execute_values` acima, achada agora em `cur.executemany`
-        # (usado por `POST /api/papeis` para `plat.papel_privilegio`, app/auth/rotas_usuarios.py):
-        # psycopg2 implementa executemany em C chamando pq_execute diretamente por linha, NUNCA
-        # através do `self.execute()` Python — subclassificar só `execute()` não intercepta nada aqui.
-        # Sem esta sobrecarga, o INSERT ia com o literal `plat.` para o schema de PRODUÇÃO em qualquer
-        # ambiente isolado (trilha/homologação), e a permissão negada aparecia traduzida como "operação
-        # fora do inquilino da sessão" — não uma checagem de inquilino, um schema errado na consulta.
+        # (usado por `POST /api/papeis` para `plat.papel_privilegio`, app/auth/rotas_usuarios.py, e pelo
+        # item L3-19-multiescala em execuções de grade aninhada): psycopg2 implementa executemany em C
+        # chamando pq_execute diretamente por linha, NUNCA através do `self.execute()` Python —
+        # subclassificar só `execute()` não intercepta nada aqui. Sem esta sobrecarga, o INSERT ia com o
+        # literal `plat.` para o schema de PRODUÇÃO em qualquer ambiente isolado (trilha/homologação), e a
+        # permissão negada aparecia traduzida como "operação fora do inquilino da sessão" — não uma
+        # checagem de inquilino, um schema errado na consulta.
         if isinstance(query, (bytes, bytearray)):
             query = self._texto(query)
         if isinstance(query, str):

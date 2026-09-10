@@ -631,3 +631,4 @@ ACERVO_ARQUIVO_LISTA_MAX = 500                     # linhas por página de GET /
 GEOCODIFICADOR_LOTE_MAX_LINHAS = 20_000
 GEOCODIFICADOR_LOTE_LIMIAR_PENDENTE_PADRAO = 60.0   # score abaixo disso também vira pendente, mesmo com tipo bom
 GEOCODIFICADOR_LOTE_TITULO_MAX = 250
+ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
