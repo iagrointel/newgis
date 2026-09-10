@@ -829,3 +829,26 @@ SIMBOLO_SVG_BYTES_MAX = 64 * 1024
 SIMBOLO_NOME_MAX = 64
 SIMBOLO_CATEGORIA_MAX = 40
 SIMBOLO_GALERIA_BUSCA_MAX = 100
+# --- ferramentas de análise (L2-05-a; L2_CONCEITO C8): job por padrão, síncrono só abaixo do custo declarado
+FERRAMENTA_SINCRONO_CUSTO_MAX = 5000       # custo = feições × complexidade declarada no manifesto; acima disso só job
+FERRAMENTA_JOB_MEMORIA_MB = 1024            # RLIMIT_DATA do filho que roda uma ferramenta
+FERRAMENTA_JOB_TIMEOUT_S = 1800             # 30 min por execução; ferramenta mais longa é outro tipo de job
+BUFFER_DISTANCIA_M_MAX = 100_000            # 100 km: acima disso o buffer geodésico deixa de fazer sentido em camada
+
+# --- ferramentas vetoriais elementares (L2-05-b): o teto de feições é por ENTRADA, conferido antes de operar
+VETOR_FEICOES_MAX = 2_000_000               # acima disso a ferramenta recusa a entrada em vez de encher o disco
+PONTOS_ALEATORIOS_MAX = 10_000              # pontos sorteados por feição em pontos_aleatorios
+
+# --- ferramentas de relação entre camadas (L2-05-c): índice espacial, grade e tabela de distâncias
+SUBDIVIDIR_VERTICES = 256                   # ST_Subdivide nas entradas poligonais: partes com até tantos vértices
+GRADE_CELULAS_MAX = 250_000                 # células que agregar_pontos aceita desenhar antes de recusar o tamanho
+DISTANCIAS_PARES_MAX = 5_000_000            # pares origem x destino sem vizinhos_por_origem nem distancia_maxima
+DISTANCIAS_VIZINHOS_MAX = 1_000             # teto de vizinhos_por_origem na tabela de distâncias
+
+# --- grades, densidade, padrões espaciais e interpolação (L2-05-d)
+PADROES_FEICOES_MAX = 200_000               # Gi*, Moran e vizinho mais próximo carregam as coordenadas em memória
+H3_NIVEL_MIN = 5                            # níveis aceitos na tesselação H3 (aresta de ~ 8 km a ~ 66 m)
+H3_NIVEL_MAX = 10
+DENSIDADE_RAIO_M_MAX = 100_000              # raio do kernel: mesmo teto do buffer geodésico
+IDW_VIZINHOS_MAX = 64                       # amostras usadas por célula na interpolação por inverso da distância
+CONTORNO_LINHAS_MAX = 200_000               # isolinhas geradas antes de a ferramenta recusar o intervalo

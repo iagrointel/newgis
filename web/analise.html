@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Análise · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/tarefas.css">
+</head>
+<body class="tela analise">
+<a class="pular" href="#principal">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <div id="ferramentas" class="linha-ferramentas">
+      <h1>Análise</h1>
+    </div>
+    <p class="aviso-beta">análise / beta privado</p>
+    <plat-aviso id="aviso"></plat-aviso>
+
+    <section class="cartao" aria-labelledby="t-ferramenta">
+      <h2 id="t-ferramenta">ferramenta</h2>
+      <p class="ajuda">o formulário é gerado do manifesto da ferramenta (GET /api/ferramentas); o resultado é
+        uma camada nova no catálogo, com proveniência (ferramenta, versão, parâmetros, entradas com sha256).</p>
+      <div class="campo">
+        <label for="ferramenta">ferramenta</label>
+        <select id="ferramenta"></select>
+      </div>
+      <p id="ferramenta-descricao" class="ajuda"></p>
+      <plat-formulario id="formulario"></plat-formulario>
+    </section>
+
+    <section class="cartao" id="execucao" aria-labelledby="t-execucao" hidden>
+      <h2 id="t-execucao">execução</h2>
+      <plat-aviso id="execucao-aviso"></plat-aviso>
+      <p id="execucao-estado" aria-live="polite"></p>
+      <progress id="execucao-progresso" max="100" value="0"></progress>
+      <p id="execucao-resultado"></p>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/js/analise/analise.js"></script>
+</body>
+</html>

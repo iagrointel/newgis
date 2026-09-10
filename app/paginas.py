@@ -50,6 +50,8 @@ PAGINAS = {
     "/render/mapa": "render_mapa.html",
     # --- símbolos, sprites e glifos (L2-02-e): galeria de ícones + upload + colocar no mapa
     "/simbolos": "simbolos.html",
+    # --- ferramentas de análise (L2-05-a): formulário gerado do manifesto
+    "/analise": "analise.html",
     # --- conexões externas (L6-02-a/L6-02-l/L6-05)
     "/conexoes": "conexoes.html",
     # --- chamados de suporte (L7-13-a): cliente em /chamados, operador (superadmin) em /admin/chamados

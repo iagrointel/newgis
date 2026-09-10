@@ -129,6 +129,13 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/importacoes"): ["importacoes/criar"],
     ("PUT", "/api/importacoes/{id}/confirmar"): ["importacoes/confirmar"],
     ("DELETE", "/api/importacoes/{id}"): [],
+    # ---- ferramentas de análise (L2-05-a): execução em processo publica o item e registra analises/executar;
+    # acima do custo síncrono vira job (jobs/criar). No GPServer, execute é sempre em processo e submitJob sempre
+    # job; cancel reaproveita a fila (jobs/cancelar).
+    ("POST", "/api/ferramentas/{nome}/executar"): ["analises/executar", "jobs/criar"],
+    ("POST", "/rest/services/{ferramenta}/GPServer/{tarefa}/execute"): ["analises/executar"],
+    ("POST", "/rest/services/{ferramenta}/GPServer/{tarefa}/submitJob"): ["jobs/criar"],
+    ("POST", "/rest/services/{ferramenta}/GPServer/{tarefa}/jobs/{job_id}/cancel"): ["jobs/cancelar"],
     # ---- geocodificador (L2-11-a/b): cálculo sobre dado aberto CNEFE/IBGE, sem tabela de inquilino e sem
     # dono humano para narrar — mesma decisão já usada acima em /api/rota, /api/matriz, /api/isocrona.
     ("POST", "/api/geocodificar"): [],

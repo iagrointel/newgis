@@ -97,6 +97,8 @@ from app.consulta.rotas_servico import router as rotas_consulta_servico
 from app.consulta.rotas_wfs import router as rotas_wfs
 from app.correio.rotas_smtp import router as rotas_smtp
 from app.edicao.rotas import router as rotas_edicao
+from app.ferramentas import rotas as rotas_ferramentas
+from app.ferramentas import rotas_gp as rotas_ferramentas_gp
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.imagens.rotas_imagens import router as rotas_imagens
@@ -612,6 +614,10 @@ ROUTERS = [
     # (descritor, estilo, sprites/fontes, tile z/y/x) e exportação por URL (geojson/kml/csv/fgb/gpkg)
     rotas_vector_tile_server,
     rotas_tiles_exportacao,
+    # --- ferramentas de análise (L2-05-a): /api/ferramentas (catálogo, execução) + GPServer compatível Esri em
+    # /rest/services/{ferramenta}/GPServer/*
+    rotas_ferramentas.router,
+    rotas_ferramentas_gp.router,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

@@ -1451,6 +1451,20 @@ elas, `docs/LIMITES.md` regerado com os limites da edição transacional e três
 - Esquema `estilo-v1` estendido só com campos opcionais (migração `20260907T2100_estilo_editor.sql`); compilador com
   outros, classes de tamanho, ícone, tracejado, padrão, seta, efeitos e escala; ColorBrewer 1.7.0 no vendor com licença.
   ADR `docs/adr/20260907T2130-editor-de-simbologia.md`; paridade contra "Apply styles" em docs/PARIDADE.md.
+## turno 4, setembro de 2026 (item L2-05-a-catalogo-ferramentas-gpserver: registro de ferramentas e GPServer)
+
+- **Registro `@ferramenta`** (`app/ferramentas/registro.py`): manifesto tipado no vocabulário GP da Esri, validado
+  na importação (parâmetro sem tipo = erro de build), JSON Schema para o formulário e descritor GPServer.
+- **Executor com proveniência** (`app/ferramentas/executor.py`): mesmo caminho como job (`ferramentas.executar`)
+  e em processo abaixo do custo declarado; resultado = item `camada_vetorial` com `procedencia.ferramenta`
+  (ferramenta, versão, parâmetros, entradas com uuid + versão + sha256 de conteúdo, data, autor) e relação
+  `derivado_de`; cancelamento apaga a tabela. Ferramenta de exemplo `buffer` (geodésico, dissolver opcional).
+- **API própria** `/api/ferramentas`, `/api/ferramentas/{nome}`, `/api/ferramentas/{nome}/executar`; tela `/analise`
+  com formulário gerado do manifesto; ficha do item mostra a proveniência.
+- **GPServer compatível** `/rest/services/{ferramenta}/GPServer/{tarefa}` (execute, submitJob, jobs/{id},
+  results/{param}, cancel; `token=`; erro no formato Esri com código HTTP real).
+- Migração `20260907T2005_ferramentas.sql` (relação `derivado_de`, evento `analises/executar`); limites em
+  `app/limites.py` (seção ferramentas). ADR `docs/adr/20260907T2010-ferramentas-gpserver.md`.
 
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 ## turno 3, setembro de 2026 (item L0-02-g-checagem-privilegio-papel-id: quem concede papel tem de ter o papel)
@@ -4258,6 +4272,88 @@ Sans com acento português ("Nação, Água, Ímã, Coração, Codificação").
 Achado de fora do item, consertado de passagem: `tests/e2e/apoio.py` nomeava a captura de qualquer item
 como `L0-02-tenant-auth_*`, porque usava a constante do próprio módulo em vez do item do teste que a
 chamou. `Tela(...)` agora recebe `item=`, com o valor antigo como padrão.
+
+## turno 3, setembro de 2026 (item L2-05-d: grades, densidade, padrões espaciais e interpolação)
+
+Oito ferramentas no mesmo registro e no mesmo executor dos itens L2-05-a/b/c: `tesselacao` (grade quadrada,
+hexagonal e H3 de nível 5 a 10, tamanho em metros entre lados opostos, desenhada no UTM local, com recorte
+opcional pela área), `densidade_kernel` (pontos e linhas, quártica/gaussiana/triangular/uniforme, raio e
+célula declarados), `hot_spot` (Getis-Ord Gi* com vizinhança por distância fixa, z, p e faixa no vocabulário
+do Gi_Bin), `centro_medio` (centro médio, círculo da distância padrão e elipse de desvio padrão, com peso
+opcional), `vizinho_mais_proximo_medio` (índice R de Clark & Evans), `moran_global` (I de Moran com
+significância sob normalidade), `interpolacao_idw` e `contorno` (superfície por IDW ou triangulação de
+Delaunay e isolinhas pelo gerador do GDAL).
+
+A estatística vive em `app/ferramentas/estatistica_espacial.py`, em numpy/scipy, sem banco. O teste do item
+confere Gi* e I de Moran contra `esda`/`libpysal` na forma binária dos pesos (diferença medida de 8,9e-16 no
+z do Gi* e de 3e-16 no I), a área do hexágono contra a fórmula fechada, a integral da densidade contra o
+número de pontos (erro relativo de 1,1e-4) e contra o comprimento das linhas, o IDW contra uma implementação
+escrita de novo no teste (diferença 0) e as isolinhas relidas pelo OGR do GDAL, que é o leitor do QGIS.
+
+A saída de densidade e de IDW é camada de células enquanto o caminho de ingestão de raster do item L1-01 não
+estiver em master; a mesma conta em array já está pronta e testada para virar COG por lá. Ver a decisão 4 do
+ADR `docs/adr/20260908T0150-grades-densidade-padroes-e-interpolacao.md` e a tabela de paridade em
+`docs/PARIDADE_FERRAMENTAS_GRADE.md`.
+
+Correção de passagem no executor do L2-05-a: camada de saída com uma feição pontual quebrava a publicação
+(extensão lida do anel do GeoJSON e retângulo degenerado recusado pelo CHECK `item_extent_check`).
+
+## turno 3, setembro de 2026 (item L2-05-c-sobreposicao-agregacao: relação entre camadas)
+
+Nove ferramentas que relacionam DUAS camadas, no mesmo registro e no mesmo executor dos itens L2-05-a e
+L2-05-b: `juncao_espacial` (um-para-um com regra de mesclagem soma/média/mínimo/máximo/contagem/primeiro/
+concatenar, ou um-para-muitos; relações intersecta, contém, dentro, a X metros e mais próximo, esta com o
+identificador do vizinho e a distância geodésica), `juncao_atributo` (inner e left por igualdade de chave, com
+recusa nomeada quando os tipos das chaves não casam; a geometria da camada juntada não entra),
+`resumir_dentro` (contagem, estatísticas, medida geodésica da parte contida e separação por campo de grupo),
+`contar_dentro`, `resumir_perto` (área de proximidade geodésica em volta da referência), `agregar_pontos` (em
+polígonos existentes ou em grade quadrada/hexagonal desenhada em metros no UTM local e trazida de volta ao
+SRID da camada), `enriquecer_por_area` (repartição de campo numérico por proporção de área geodésica),
+`vizinho_mais_proximo` e `tabela_distancias`.
+
+Três decisões de comportamento, todas escritas no método da procedência do item de saída: o par candidato sai
+de `ST_Subdivide` sobre a camada de polígonos com `DISTINCT`, mas a relação e a medida são conferidas contra a
+geometria original; a contagem dupla que polígonos sobrepostos provocam é contada e declarada, e
+`atribuicao='exclusivo'` a desfaz; feição exatamente na fronteira conta nos dois polígonos vizinhos, como no
+ArcGIS e como no `intersects` do geopandas.
+
+25 testes em `tests/api/ferramentas/test_relacao.py` conferem cada ferramenta contra `geopandas.sjoin`,
+`pandas.merge`, `shapely` e `pyproj.Geod` na mesma entrada, lida de volta do banco — nenhum número esperado
+escrito à mão. Cláusulas do portão medidas: 100 pares do "mais próximo" com a distância geodésica conferida;
+a soma distribuída pela proporção de área bate com a soma original (erro relativo 6,7e-8, tolerância 1e-6).
+A cláusula de 1 milhão de pontos em 5.570 municípios em até 60 s NÃO foi medida na escala do enunciado (disco
+a 93 %, carga acima de 8 e teto de 5 mil feições por teste no brief da corrida): o que ficou medido foi 4.001
+pontos em 400 polígonos, com a carga ao lado, em `tests/medidas/L2-05-c-sobreposicao-agregacao.json`.
+Paridade com "Summarize data" do Map Viewer em `docs/PARIDADE_FERRAMENTAS_RELACAO.md`; ADR
+20260907T2210.
+
+## turno 3, setembro de 2026 (item L2-05-b-vetor-basico: 19 ferramentas vetoriais elementares em SQL/PostGIS)
+
+As operações que faltavam ao registro de ferramentas do item L2-05-a, todas como expressão SQL executada pelo
+mesmo executor (em processo abaixo do custo declarado, senão como job) e publicadas como item de camada com
+proveniência: `buffer` (agora geodésico com 48 segmentos por quarto de círculo, com distância por campo, anel
+por distância interna, método plano opcional e dissolver), `recorte`, `intersecao`, `uniao`, `diferenca`,
+`diferenca_simetrica`, `dissolver` (por campos, com soma/média/mínimo/máximo/desvio/contagem), `mesclar`
+(N camadas), `explodir`, `centroide` (centro de massa ou ponto interior), `casco` (convexo ou côncavo),
+`simplificar`, `suavizar`, `reprojetar`, `calcular_geometria` (área, perímetro, comprimento geodésicos e x/y),
+`pontos_aleatorios` (com semente), `linhas_para_pontos` (vértices ou intervalo geodésico),
+`poligonos_para_linhas` e `densificar`.
+
+Regra da casa dentro da expressão: toda operação booleana em massa recebe `ST_ReducePrecision(ST_MakeValid(g))`
+e a contagem de geometrias inválidas da entrada vai para o log e para o método gravado na procedência da
+camada de saída. Teto novo: `VETOR_FEICOES_MAX` = 2 milhões de feições por entrada, declarado no manifesto e
+conferido antes de operar; o teto de 30 min por execução já era o do job.
+
+Conferência: 29 testes novos comparam cada ferramenta com shapely (geometria plana) ou `pyproj.Geod` (medida
+geodésica) na MESMA entrada, com tolerância de área 1e-6 relativa e contagem exata; o buffer geodésico de 1 km
+em latitude −23 fica a 5,0e-5 do círculo de referência calculado com `pyproj.Geod` (o portão aceita 5e-4).
+Medidas em `tests/medidas/L2-05-b-vetor-basico.json`. Paridade com "Manage data" e "Use proximity" do Map
+Viewer escrita em `docs/PARIDADE_FERRAMENTAS_VETOR.md`. Decisões em
+`docs/adr/20260907T2119-ferramentas-vetoriais-elementares.md`.
+
+O executor passou a aceitar parâmetro de LISTA de camadas (`GPMultiValue:GPFeatureRecordSetLayer`, usado pelo
+`mesclar`) e a achatar essa lista ao escrever proveniência e `derivado_de`: a camada mesclada aponta para
+todas as origens.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 - **L7-06-d-paineis**: cinco painéis Grafana provisionados por arquivo (`deploy/grafana/paineis/*.json` + `deploy/grafana/provisioning/`), homologação própria (`deploy/paineis_homologacao.sh`) com carga curta de verdade e captura de cada painel em `tests/e2e/capturas/`. Métricas novas para o que os painéis precisavam e não existia: usuários ativos em 24 h, duração e tamanho do último backup/ensaio, uso de armazenamento e tamanho do schema de dado por inquilino.
