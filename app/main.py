@@ -70,6 +70,10 @@ from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.imagens.rotas_imagens import router as rotas_imagens
 from app.imagens.rotas_stac import router as rotas_stac
 from app.imagens.rotas_tiles import router as rotas_tiles
+from app.exportacao.rotas import router as rotas_exportacao
+from app.geocodificador.rotas import router as rotas_geocodificador
+from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
+from app.geocodificador.rotas_lote import router as rotas_geocodificacao_lote
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
 from app.mapa.proxy_wms import router as rotas_mapa_wms_publico
@@ -238,6 +242,8 @@ ROUTERS = [
     # --- exportação de camada (L0-04-h): /api/exportacoes (11 formatos por ogr2ogr, arquivo com validade de 7 dias)
     rotas_exportacao,
     rotas_exportacao_inquilino,
+    # --- exportação de camada (L0-04-h): /api/exportacoes (11 formatos por ogr2ogr, arquivo com validade de 7 dias)
+    rotas_exportacao,
     # --- mapa (L2-01-a-documento-mapa): /api/mapas (lista, criar, ler, editar) e /api/mapas/{id}/completo
     rotas_mapas,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
@@ -391,6 +397,9 @@ ROUTERS = [
     # --- ladrilho raster por token no caminho (L1-02): /svc/<token>/raster/<item>/{z}/{x}/{y}, WMTS,
     # TileJSON e mosaico por coleção; motor rio-tiler lendo COG no Garage por /vsis3
     rotas_tiles,
+    # --- geocodificação de tabela (L2-11-a): /api/geocodificacoes (mapear colunas -> lote ->
+    # camada de pontos com colunas de qualidade -> revisão manual do que ficou pendente)
+    rotas_geocodificacao_lote,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

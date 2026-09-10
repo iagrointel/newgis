@@ -93,6 +93,8 @@ PAGINAS = {
     "/temas": "temas.html",
     # --- leitora de coleção (L5-04-c-temas-capa-colecao): ?item=<id de item colecao>
     "/colecao": "colecao.html",
+    # --- revisão da geocodificação de tabela (L2-11-a-geocodificacao-csv)
+    "/geocodificacoes/{geocodificacao_id}": "geocodificacao.html",
 }
 router = APIRouter()
 

@@ -81,4 +81,6 @@ for arq in "${arquivos[@]}"; do
   ms=$(( ($(date +%s%N) - t0) / 1000000 ))
   if [ "$modo" = inserir ]; then echo "aplicada   $nome (${ms} ms)"; aplicadas=$((aplicadas+1)); else echo "reaplicada $nome (${ms} ms)"; reaplicadas=$((reaplicadas+1)); fi
 done
+# pgstac (item L1-01-a; ADR 0011): passo à parte, depois das migrações SQL (a 046 cria plat.versao_pgstac)
+bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/migrar_pgstac.sh"
 echo "migracoes: aplicadas $aplicadas · reaplicadas $reaplicadas · iguais $puladas · pendentes 0"

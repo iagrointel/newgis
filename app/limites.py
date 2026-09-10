@@ -272,6 +272,19 @@ RASTER_ESTATISTICA_AMOSTRA = 100_000    # pixels amostrados por banda para perce
 RASTER_TILE_CACHE_DATASET_MAX = 8       # datasets abertos por processo no handler de tiles (LRU)
 RASTER_TILE_TIMEOUT_S = 30              # teto de renderização de um tile (mata a requisição, não o worker)
 # --- exportação de camada (L0-04-h-exportar; ADR 0018). Os tempos e tetos abaixo saem de MEDIÇÃO nesta
+# --- geocodificação de tabela enviada pelo usuário (L2-11-a-geocodificacao-csv). O teto de tamanho é medido
+# em BYTES REAIS do objeto (não no que o navegador declara) e em LINHAS: os dois existem porque um arquivo
+# pequeno pode ter muitas linhas (CSV de 20 MB com endereço curto passa de 300 mil linhas) e o custo do lote é
+# por LINHA, não por byte. Quem estoura qualquer um dos dois é recusado ANTES de começar (nunca no meio).
+GEOCOD_ARQUIVO_BYTES_MAX = 32 * 1024 * 1024   # 32 MiB do arquivo enviado (D21: o laço trabalha com <= 3 GB)
+GEOCOD_LINHAS_MAX = 200_000                   # linhas de dado (sem o cabeçalho)
+GEOCOD_AMOSTRA_COLUNAS_BYTES = 256 * 1024     # só este pedaço é lido para propor o mapeamento de colunas
+GEOCOD_LOTE_GRAVACAO = 500                    # linhas por INSERT em lote (execute_values)
+GEOCOD_CAMPO_TEXTO_MAX = 300                  # valor de célula acima disso é truncado com aviso na linha
+GEOCOD_LINHAS_PAGINA_MAX = 500                # teto da listagem da tela de revisão
+GEOCOD_CAMPOS = ("endereco", "logradouro", "numero", "bairro", "municipio", "uf", "cep")
+
+# --- exportação de camada (L0-04-h-exportar; ADR 0016). Os tempos e tetos abaixo saem de MEDIÇÃO nesta
 # máquina em 06/09/2026 sobre uma camada de 100 mil pontos (ver tests/medidas/L0-04-h-exportar.json), não de
 # estimativa: ogr2ogr escreve GPKG/GeoJSON/shapefile/CSV/XLSX/KML/FlatGeobuf/GML/DXF de 50 mil feições em
 # 0,2-0,7 s cada. A exceção medida é o driver LIBKML: 3,5 min de CPU e 255 MB de RSS para as MESMAS 50 mil
