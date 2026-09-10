@@ -27,6 +27,22 @@ CREATE TABLE IF NOT EXISTS plat.backup_drill (
   origem           text NOT NULL DEFAULT 'manual',
   criado_em        timestamptz NOT NULL DEFAULT now()
 );
+-- (entrega 10/09) a fusão trouxe DOIS desenhos de plat.backup_drill; o CREATE acima foi ignorado por já existir.
+-- A tabela passa a ser a união dos dois, aditivamente:
+ALTER TABLE plat.backup_drill ADD COLUMN IF NOT EXISTS tenant_id int;
+ALTER TABLE plat.backup_drill ADD COLUMN IF NOT EXISTS backup_id bigint;
+ALTER TABLE plat.backup_drill ADD COLUMN IF NOT EXISTS esquema text;
+ALTER TABLE plat.backup_drill ADD COLUMN IF NOT EXISTS inquilino_slug text;
+ALTER TABLE plat.backup_drill ADD COLUMN IF NOT EXISTS arquivo text;
+ALTER TABLE plat.backup_drill ADD COLUMN IF NOT EXISTS dump_em timestamptz;
+ALTER TABLE plat.backup_drill ADD COLUMN IF NOT EXISTS linhas bigint;
+ALTER TABLE plat.backup_drill ADD COLUMN IF NOT EXISTS posteriores jsonb NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE plat.backup_drill ADD COLUMN IF NOT EXISTS objetos_conferidos int NOT NULL DEFAULT 0;
+ALTER TABLE plat.backup_drill ADD COLUMN IF NOT EXISTS ok boolean;
+ALTER TABLE plat.backup_drill ADD COLUMN IF NOT EXISTS mensagem text;
+ALTER TABLE plat.backup_drill ADD COLUMN IF NOT EXISTS duracao_drill_s numeric(10,2);
+ALTER TABLE plat.backup_drill ADD COLUMN IF NOT EXISTS origem text NOT NULL DEFAULT 'manual';
+
 CREATE INDEX IF NOT EXISTS ix_backup_drill_em ON plat.backup_drill (criado_em DESC);
 
 ALTER TABLE plat.backup_drill ENABLE ROW LEVEL SECURITY;
