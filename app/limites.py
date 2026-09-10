@@ -230,6 +230,21 @@ RASTER_VISUAL_MAX_LADO = 1024           # miniatura PNG (lado maior)
 RASTER_ESTATISTICA_AMOSTRA = 100_000    # pixels amostrados por banda para percentis do perfil visual
 RASTER_TILE_CACHE_DATASET_MAX = 8       # datasets abertos por processo no handler de tiles (LRU)
 RASTER_TILE_TIMEOUT_S = 30              # teto de renderização de um tile (mata a requisição, não o worker)
+
+# --- WMS 1.3.0 (L1-02-g-wms-1-3-0-raster; app/imagens/wms.py, rotas_wms.py): camada fina sobre o mesmo
+# leitor de pixel do ladrilho (`recorte()` em tiles.py, irmã de `ladrilho()`) — GetMap é um recorte
+# arbitrário (bbox+CRS+tamanho do cliente), não uma célula da grade WebMercator. WMS_PIXELS_MAX é o
+# teto que protege RAM/CPU do processo (um GetMap grande demais lê e reprojeta o COG inteiro na hora);
+# 4096×4096 cobre a maior tela física comum (4K) com folga e ainda cabe em RAM sem swap nesta máquina
+# apertada. WMS_CAMADAS_MAX limita quantos `<Layer>` o GetCapabilities enumera por token: cada camada
+# custa uma leitura do STAC (bbox), então sem teto um token com muitos itens deixaria o documento lento
+# e enorme — 500 é acima de qualquer inquilino de demonstração hoje, revisar quando houver caso real.
+WMS_LARGURA_MAX = 4096                  # WIDTH máximo aceito no GetMap — acima: ServiceExceptionReport
+WMS_ALTURA_MAX = 4096                   # HEIGHT máximo aceito no GetMap — acima: ServiceExceptionReport
+WMS_PIXELS_MAX = 4096 * 4096            # teto de WIDTH×HEIGHT (é o que de fato protege a memória)
+WMS_CAMADAS_MAX = 500                   # <Layer> por GetCapabilities (itens além disso não aparecem)
+WMS_TIMEOUT_S = 30                      # teto de renderização de um GetMap (mesma ordem do tile)
+
 # --- ingestão de modelo 3D (L1-03-modelo3d, 10/09/2026): IFC bruto enviado pelo usuário antes da conversão
 # (que roda num conversor externo — GPU box por ssh nesta instalação — por isso o teto é bem menor que o do
 # raster: o arquivo inteiro viaja por scp duas vezes, ida e volta, dentro do timeout do job).
@@ -300,3 +315,23 @@ AGOL_POLL_TENTATIVAS_MAX = 90             # 90 x 4 s = 6 min (mesmo teto do scri
 AGOL_FEICOES_MAX = 200_000                # teto de segurança do export GeoJSON (fetchall bounded; camada maior
 # que isso é recusada com uma mensagem clara em vez de estourar a memória do worker — item novo desta portagem,
 # o script original (`20_agol_publish.py`) não tinha teto nenhum porque rodava numa única fazenda/inquilino)
+
+# --- campo: fila de trabalho, roteiro e visita com foto (item L2-07-campo), portado de rs-coop/certaja/sig
+CAMPO_FILA_ALVOS_MAX = 5_000               # feições por fila (mesma ordem de grandeza de EDICAO_LOTE_MAX x2)
+CAMPO_ROTEIRO_PARADAS_MAX = 60             # mesmo teto do sistema de origem ("no máximo 60 paradas por rota")
+CAMPO_FOTO_BYTES_MAX = 10 * 1024 * 1024    # mesmo teto de MINIATURA_BYTES_MAX; a foto é reamostrada abaixo disso
+CAMPO_FOTO_PIXELS_MAX = 40_000_000         # contra bomba de descompressão (mesma técnica de MINIATURA_PIXELS_MAX)
+CAMPO_FOTO_LADO_MAX = 2400                 # px do maior lado após redimensionar (mesmo valor do sistema de origem)
+CAMPO_ROTA_VELOCIDADE_KMH = 35             # estimativa de fallback (linha reta) quando não há motor de rota real;
+# DECLARADA, nunca medida — o sistema de origem já rotula isso como estimativa no aviso devolvido
+
+# --- backup lógico por inquilino e ensaio de restauração (item L0-06-backup-status; app/backup/), portado de
+# `/home/dev/fgr/sig/pipeline/backup.sh`/`restore_test.sh`. Disco a 99% nesta máquina (CLAUDE.md) — o código
+# NUNCA pode presumir que o schema do inquilino continua pequeno como o de demonstração: o dump é recusado
+# (FalhaDefinitiva, arquivo apagado) acima deste teto, ANTES do upload. Mesma ordem de grandeza de
+# RASTER_BYTES_MAX/UPLOAD_BYTES_MAX (2 GiB) — não há hoje um schema de inquilino perto disso, mas o teto tem
+# de existir mesmo assim (é o que o item pede: "o código não pode presumir").
+BACKUP_DUMP_BYTES_MAX = 2 * 1024 * 1024 * 1024   # 2 GiB
+BACKUP_DUMP_TIMEOUT_S = 3600                     # pg_dump -Fc do schema do inquilino
+BACKUP_DRILL_TIMEOUT_S = 3600                    # download + pg_restore em schema temporário + COUNT(*)
+BACKUP_LISTA_MAX = 200                           # linhas por página em GET /api/backup/backups e /ensaios

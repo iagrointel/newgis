@@ -29,6 +29,7 @@ from app.auth import (
     rotas_tokens,
     rotas_usuarios,
 )
+from app.campo import rotas as rotas_campo
 from app.catalogo import (
     rotas_categorias,
     rotas_compartilhamento,
@@ -53,8 +54,10 @@ from app.edicao.rotas import router as rotas_edicao
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.imagens.rotas_imagens import router as rotas_imagens
+from app.imagens.rotas_imageserver import router as rotas_imageserver
 from app.imagens.rotas_stac import router as rotas_stac
 from app.imagens.rotas_tiles import router as rotas_tiles
+from app.imagens.rotas_wms import router as rotas_wms
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
 from app.mapa.proxy_wms import router as rotas_mapa_wms_publico
@@ -190,6 +193,12 @@ ROUTERS = [
     # --- ladrilho raster por token no caminho (L1-02): /svc/<token>/raster/<item>/{z}/{x}/{y}, WMTS,
     # TileJSON e mosaico por coleção; motor rio-tiler lendo COG no Garage por /vsis3
     rotas_tiles,
+    # --- ImageServer compatível Esri por token (L1-25): /svc/<token>/rest/services/<item>/ImageServer,
+    # exportImage, identify e tile/<z>/<y>/<x> — reusa a autorização e o motor do L1-02, acima
+    rotas_imageserver,
+    # --- WMS 1.3.0 por token (L1-02-g-wms-1-3-0-raster): /svc/<token>/wms (GetCapabilities/GetMap),
+    # mesma porta de entrada do WMTS, leitura de pixel por `tiles.recorte` (bbox arbitrário, não tile)
+    rotas_wms,
     # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,
     # /fatores/{id}/amostras, /conjuntos/{id}/macro, /execucoes/{id}/micro, /execucoes
     rotas_multiescala,
@@ -232,6 +241,9 @@ ROUTERS = [
     # --- integração ArcGIS Online do cliente (L2-08-migracao-agol): /api/agol/credencial, /api/agol/testar,
     # /api/agol/publicacoes (job agol.publicar -> hosted feature layer na conta AGOL do inquilino)
     rotas_agol.router,
+    # --- campo (L2-07-campo): fila de trabalho, roteiro do dia e visita com foto — /api/campo/filas,
+    # /api/campo/roteiros, /api/campo/visitas, portado de rs-coop/certaja/sig
+    rotas_campo.router,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
