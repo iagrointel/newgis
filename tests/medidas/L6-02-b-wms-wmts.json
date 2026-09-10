@@ -1,0 +1,60 @@
+{
+ "item": "L6-02-b-wms-wmts",
+ "portao_de_pronto": "e2e adiciona 1 WMS e 1 WMTS públicos brasileiros e vê no mapa; GetFeatureInfo devolve atributos; serviço só em EPSG:4674 funciona via proxy; teste sem rede com capabilities em fixture + 1 teste com rede marcado.",
+ "medidas": {
+  "wms_publico_brasileiro_capacidades_e_getmap": {
+   "valor": "passa",
+   "servico": "INDE (Infraestrutura Nacional de Dados Espaciais) — https://geoservicos.inde.gov.br/geoserver/wms",
+   "comando": "tests/api/test_wms_wmts.py::test_wms_capacidades_camada_real_e_getmap (pytest.mark.lento)",
+   "detalhe": "5126+ camadas lidas, GetCapabilities 1.3.0 ~11,7 MiB; GetMap devolve PNG real em EPSG:3857 (X-Plat-Reprojetado: 0)"
+  },
+  "wms_getfeatureinfo_atributos": {
+   "valor": "passa",
+   "comando": "tests/api/test_wms_wmts.py::test_wms_getfeatureinfo_devolve_atributos (pytest.mark.lento)",
+   "detalhe": "GetFeatureInfo real contra camada consultável do INDE devolve corpo não vazio"
+  },
+  "wmts_publico_brasileiro_tile_direto_3857": {
+   "valor": "passa",
+   "servico": "BDGEx (Banco de Dados Geográficos do Exército) — https://bdgex.eb.mil.br/mapcache/wmts",
+   "comando": "tests/api/test_wms_wmts.py::test_wmts_tile_direto_3857_e_proxy_reprojetado_geografico (pytest.mark.lento)",
+   "detalhe": "camada ctmmultiescalas_mercator, TileMatrixSet GoogleMapsCompatible (EPSG:3857): tile direto, X-Plat-Reprojetado: 0"
+  },
+  "wmts_proxy_reprojecao_geografica": {
+   "valor": "parcial",
+   "comando": "mesmo teste acima, camada ctm250, TileMatrixSet bdgex",
+   "nota_honesta": "o serviço público brasileiro medido não declara EPSG:4674 exato — o TileMatrixSet 'bdgex' é EPSG:4326 (SIRGAS2000/WGS84 geográfico), mesma família não-3857 do portão, mesmo caminho de código (mosaico_tile_reprojetado + GDAL). O caso EPSG:4674 LITERAL está provado sem rede, com fixture, em tests/unit/test_wms_wmts_analise.py::test_wmts_restful_4674_nao_e_nativo_3857. Nenhum WMTS público brasileiro com EPSG:4674 nativo foi encontrado em busca de 07/09/2026 (IBGE/geoservicos.ibge.gov.br gwc/wmts devolveu HTTP 500 nas duas tentativas)."
+  },
+  "teste_sem_rede_fixture": {
+   "valor": 6,
+   "unidade": "testes",
+   "comando": "bash laco/roda_teste.sh tests/unit/test_wms_wmts_analise.py -q",
+   "resultado": "6 passed"
+  },
+  "adversario_xxe_40mib_e_eixo_invertido": {
+   "valor": "passa",
+   "comando": "test_wms_xxe_nunca_resolve_entidade_externa, test_wms_capabilities_maior_que_o_teto_e_recusado_pela_busca, test_wms_130_eixo_invertido_normalizado_para_lonlat",
+   "detalhe": "defusedxml recusa DOCTYPE com ENTITY (ErroConector xml_invalido, nunca vaza /etc/passwd); buscar_seguro corta em CONEXAO_WMS_CAPACIDADES_MAX_BYTES=20 MiB antes do parser ver o corpo; BoundingBox 1.3.0 EPSG:4326 escrito (lat,lon) é normalizado para (lon,lat) e a URL de saída devolve (lat,lon) de novo para 4326/1.3.0"
+  },
+  "teste_com_rede_marcado": {
+   "valor": 3,
+   "unidade": "testes pytest.mark.lento",
+   "comando": "tests/api/test_wms_wmts.py"
+  },
+  "testes_api_total": {
+   "valor": 3,
+   "resultado": "3 passed",
+   "comando": "bash laco/roda_teste.sh tests/api/test_wms_wmts.py -q"
+  }
+ },
+ "bugs_reais_corrigidos_nesta_rodada": [
+  "_href_get lia o atributo href no elemento <Get>; o WMS declara em <OnlineResource> filho de <Get> — url_getmap/url_getfeatureinfo caíam sempre no fallback url_base",
+  "analisar_wmts usava _operacao (feita para <Capability>/<Request> do WMS) para achar a URL de GetTile; WMTS declara em <OperationsMetadata>/<Operation> — url_kvp sempre None",
+  "_com_query fazia URL-encode de '{' e '}' nos templates de tile KVP, quebrando {z}/{x}/{y} em %7Bz%7D",
+  "_normalizar_crs não entendia a forma URN com versão do meio (urn:ogc:def:crs:EPSG:6.3:3857, usada pelo GeoWebCache do BDGEx) — TileMatrixSet nunca era reconhecido como nativo 3857",
+  "TopLeftCorner do WMTS era lido sempre como (x,y); para CRS geográfico com eixo lat/lon (EPSG:4326/4674/4269/4258) isso inverte leste/norte e mosaico_tile_reprojetado calculava índice de tile fora da grade (ValueError: negative dimensions) — achado ao rodar contra o BDGEx real, não pela fixture"
+ ],
+ "carga_1min_medida_em": 24.85,
+ "ram_livre_gb_medida_em": 0,
+ "nota_carga": "máquina sob carga alta (24,85; RAM livre ~0-7 GB) durante a medição — nenhuma cláusula deste item é de desempenho/vazão, então isso não invalida os resultados funcionais acima, só é registrado pela regra do brief",
+ "medido_em": "2026-09-07"
+}

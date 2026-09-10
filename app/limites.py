@@ -234,6 +234,18 @@ ESRI_REST_PAGINAS_MAX = 50                        # teto de segurança mesmo com
 ESRI_REST_FEICOES_MAX = 20000                     # teto de segurança do modo referenciado (consulta ao vivo)
 ESRI_REST_IMAGEM_MAX_BYTES = 8 * 1024 * 1024      # 8 MiB: uma única imagem export/exportImage
 ESRI_REST_IMAGEM_LADO_MAX = 2048                  # largura/altura máximas pedidas ao serviço (px)
+# --- WMS/WMTS externo (L6-02-b-wms-wmts): GetCapabilities pode ser grande (catálogo com centenas de camadas);
+# o teto abaixo é DELIBERADAMENTE maior que CONEXAO_RESPOSTA_MAX_BYTES (a de saúde, que só confere status) mas
+# ainda finito — o adversário do item manda 40 MiB de propósito, e a resposta certa é recusar com motivo, nunca
+# carregar tudo em memória. defusedxml nunca resolve entidade externa (XXE), independente do tamanho.
+CONEXAO_WMS_CAPACIDADES_MAX_BYTES = 20 * 1024 * 1024   # 20 MiB
+CONEXAO_WMS_CAPACIDADES_TIMEOUT_S = 15.0
+CONEXAO_WMS_MAPA_MAX_BYTES = 8 * 1024 * 1024           # 8 MiB: uma única imagem GetMap/tile, nunca um mosaico
+CONEXAO_WMS_MAPA_TIMEOUT_S = 20.0
+CONEXAO_WMS_FEICAO_MAX_BYTES = 2 * 1024 * 1024         # 2 MiB: resposta de GetFeatureInfo (texto/GML/JSON)
+CONEXAO_WMS_LARGURA_MAX = 2048
+CONEXAO_WMS_ALTURA_MAX = 2048
+CONEXAO_WMTS_TILE_MAX_BYTES = 4 * 1024 * 1024          # 4 MiB: um único tile (256/512 px), nunca a pirâmide
 
 # --- ingestão vetorial (L0-04; ADR 0005, reduzido a 4 formatos: shapefile.zip, gpkg, geojson, csv)
 INGESTAO_AMOSTRA_VALIDADE = 1000          # feições lidas na amostra de ST_IsValid (ogr2ogr -limit, MEDIDO no ADR)
