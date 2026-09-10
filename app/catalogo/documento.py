@@ -36,6 +36,7 @@ import re
 import time
 
 from app.catalogo import tipos
+from app.cena import documento as cena_documento
 from app.erros import ErroAPI
 
 # Crockford base32, 26 caracteres, primeiro em 0-7 (timestamp de 48 bits nunca estoura o 7º bit do 1º caractere)
@@ -43,7 +44,7 @@ ULID_RE = re.compile(r"^[0-7][0-9A-HJKMNP-TV-Z]{25}$")
 _CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
 # famílias de plat.tipo_item cujo `corpo` segue o formato {"nos": [...], "ligacoes": [...]} validado aqui
-FAMILIAS_GRAFO = {"app", "painel", "narrativa"}
+FAMILIAS_GRAFO = {"app", "painel"}
 
 
 def gerar_ulid() -> str:
@@ -81,42 +82,16 @@ def _corpo_do_documento(tipo: str, dados) -> dict | None:
     return corpo if isinstance(corpo, dict) else None
 
 
-# o que JSON Schema do tipo `colecao` não expressa: `capa.midia` e `metadados.miniatura` viram `src`/`href`
-# na página leitora e nos `og:` da página do link, então só valem caminho da própria instalação ou http(s)
-_MIDIA_RE = re.compile(r"^(https://[^\s]+|/[^\s]*)$")
-
-
-def validar_colecao(corpo: dict) -> None:
-    """422 colecao_invalida quando `capa.midia` ou `metadados.miniatura` fogem do formato permitido
-    (caminho relativo começado por `/` ou URL https). O formato de capa/itens/tema é do JSON Schema do
-    tipo; aqui entra só a regra de seguraça que precisa do conteúdo da string."""
-    erros: list[dict] = []
-    for campo in (("capa", "midia"), ("metadados", "miniatura")):
-        secao = corpo.get(campo[0])
-        valor = secao.get(campo[1]) if isinstance(secao, dict) else None
-        if valor is not None and not (isinstance(valor, str) and _MIDIA_RE.match(valor)):
-            erros.append(
-                {
-                    "campo": f"corpo.{campo[0]}.{campo[1]}",
-                    "erro": "caminho precisa começar por / ou ser uma URL https",
-                    "regra": "midia_invalida",
-                }
-            )
-    if erros:
-        raise ErroAPI(422, "colecao_invalida", "corpo da coleção inválido", erros)
-
-
 def validar_grafo(tipo: str, dados) -> None:
     """422 grafo_invalido (mesmo contrato de app/erros.py) quando: nó sem id ULID, dois nós com o mesmo id, ou
     ligação (`origem`/`alvo`) apontando para um id que não está em `corpo.nos`. O formato de cada campo (tipo do
     nó, tipos de `corpo`/`nos`/`ligacoes`) já é responsabilidade do JSON Schema do tipo (`tipos.validar`,
     chamado ANTES desta função nas duas rotas que escrevem `dados`); aqui só entra o que precisa da lista
     inteira para ser conferido."""
-    if tipo == "colecao":
-        corpo_colecao = dados.get("corpo") if isinstance(dados, dict) else None
-        if isinstance(corpo_colecao, dict):
-            validar_colecao(corpo_colecao)
-        return
+    # o tipo `cena` (L2-09-b) tem a mesma natureza — regras que precisam do documento inteiro e que o
+    # JSON Schema não expressa — e entra pela MESMA porta, para não haver dois lugares onde um item é
+    # conferido antes de gravar. Para qualquer outro tipo a chamada não faz nada.
+    cena_documento.validar(tipo, dados)
     corpo = _corpo_do_documento(tipo, dados)
     if corpo is None:
         return
@@ -153,32 +128,6 @@ def validar_grafo(tipo: str, dados) -> None:
                             "regra": "referencia_pendente",
                         }
                     )
-    # vista móvel (item L5-15-vista-movel-responsivo): cada chave de vista_movel.nos é o id de um nó de RAIZ
-    # (D1 do item: só a raiz tem override manual, um contêiner aninhado herda o reflow do pai) que precisa
-    # existir e não ter `pai`. JSON Schema não expressa "é filho da raiz", por isso entra aqui, junto da
-    # mesma checagem de referência pendente que `ligacoes` já faz.
-    vista_movel = corpo.get("vista_movel")
-    if isinstance(vista_movel, dict):
-        raizes = {n.get("id") for n in nos if isinstance(n, dict) and n.get("pai") is None and n.get("id") in validos}
-        nos_movel = vista_movel.get("nos")
-        if isinstance(nos_movel, dict):
-            for nid in nos_movel:
-                if nid not in validos:
-                    erros.append(
-                        {
-                            "campo": f"corpo.vista_movel.nos.{nid}",
-                            "erro": f"vista móvel aponta para nó inexistente: {nid}",
-                            "regra": "referencia_pendente",
-                        }
-                    )
-                elif nid not in raizes:
-                    erros.append(
-                        {
-                            "campo": f"corpo.vista_movel.nos.{nid}",
-                            "erro": "vista móvel só configura nó de raiz (contêiner aninhado herda o reflow)",
-                            "regra": "vista_movel_fora_da_raiz",
-                        }
-                    )
     if erros:
         raise ErroAPI(422, "grafo_invalido", f"grafo do documento ({tipo}) inválido", erros)
 
@@ -206,29 +155,10 @@ def _migrar_app_v1_v2(dados: dict) -> dict:
     return {**dados, "corpo": corpo, "esquema_versao": 2}
 
 
-def _migrar_painel_v2_v3(dados: dict) -> dict:
-    """v2->v3 (item L5-15-vista-movel-responsivo, `docs/esquemas/painel-v3.json`): documento sem vista móvel
-    configurada ganha o padrão explícito 'reflow puro' (`manual: false`) na LEITURA — o visualizador (item
-    L5-15) já trata a ausência da chave do mesmo jeito, mas gravar o padrão aqui deixa o documento
-    autoexplicativo depois da primeira leitura, igual ao que a 028 já fazia para `nos`/`ligacoes`."""
-    corpo = dict(dados.get("corpo") or {})
-    corpo.setdefault("vista_movel", {"manual": False, "nos": {}})
-    return {**dados, "corpo": corpo, "esquema_versao": 3}
-
-
-def _migrar_app_v2_v3(dados: dict) -> dict:
-    """Mesma migração de `_migrar_painel_v2_v3`, para o tipo `app`."""
-    corpo = dict(dados.get("corpo") or {})
-    corpo.setdefault("vista_movel", {"manual": False, "nos": {}})
-    return {**dados, "corpo": corpo, "esquema_versao": 3}
-
-
 # registro fechado: (tipo, versão de origem) -> função que devolve o documento na versão seguinte
 _MIGRACOES = {
     ("painel", 1): _migrar_painel_v1_v2,
     ("app", 1): _migrar_app_v1_v2,
-    ("painel", 2): _migrar_painel_v2_v3,
-    ("app", 2): _migrar_app_v2_v3,
 }
 
 _TETO_PASSOS = 50  # mesma ordem de grandeza de outras cadeias da casa; documento real nunca chega perto disso

@@ -64,6 +64,7 @@ from app.jobs import periodicos, tipos_prova  # noqa: F401 — importação regi
 from app.jobs.registro import REGISTRO
 from app.ogc_mapas import tarefas as wmts_tarefas  # noqa: F401 — L2-04-i: wmts.publicar (pré-renderização)
 from app.odk import tarefas as odk_tarefas  # noqa: F401 — L2-07-e: odk.sincronizar
+from app.modelos3d import tarefas as modelos3d_tarefas  # noqa: F401 — L2-09-c: modelo3d.converter/tileset
 from app.uploads import tarefas as uploads_tarefas  # noqa: F401 — L0-04-a: uploads.expirar + periódico
 
 __all__ = ["REGISTRO"]

@@ -1509,6 +1509,28 @@ elas, `docs/LIMITES.md` regerado com os limites da edição transacional e três
   results/{param}, cancel; `token=`; erro no formato Esri com código HTTP real).
 - Migração `20260907T2005_ferramentas.sql` (relação `derivado_de`, evento `analises/executar`); limites em
   `app/limites.py` (seção ferramentas). ADR `docs/adr/20260907T2010-ferramentas-gpserver.md`.
+## turno 8, setembro de 2026 (item L2-09-b-cena-extrusao-slides: documento de cena 3D, extrusão por atributo e slides)
+
+O tipo de item `cena`, que existia desde a migração 011 com envelope vazio, ganhou esquema próprio
+(`db/migracoes/20260908T0601_cena_esquema.sql`): câmera, terreno com exagero, iluminação por data e
+hora, atmosfera, camadas com extrusão por atributo e slides. Nenhuma tabela nova e nenhuma rota nova de
+documento — a cena é criada, versionada e publicada pelas rotas genéricas de `/api/itens`, e o esquema
+continua na versão 1 porque todo documento que já existia (corpo vazio) segue válido. O que o JSON
+Schema não expressa (id repetido, slide que cita camada ausente, extrusão sem altura, base acima do
+topo) entra por `app/cena/documento.py`, chamado da MESMA porta que valida o grafo dos construtores.
+
+A tela `/cena` usa o mesmo MapLibre do visualizador 2D — `fill-extrusion` para volume, `setTerrain`
+para relevo, `setSky` e `setLight` para atmosfera e luz —, sem nenhuma segunda biblioteca 3D. Altura
+vem de um atributo, com escala explícita, e é presa em 0 quando o valor é nulo, ausente ou negativo
+(sem isso o MapLibre desenha caixa invertida em silêncio). Slide é vista salva no corpo do documento:
+nome, câmera, camadas visíveis, hora e miniatura JPEG feita do próprio canvas; restaurar usa `jumpTo`,
+não `flyTo`, para a vista voltar igual.
+
+A posição do Sol é calculada no servidor (`app/cena/sol.py`, algoritmo do NOAA) e exposta em
+`GET /api/cena/sol`, com a luz já no formato do estilo. A conferência do teste não é contra a própria
+implementação: é contra a fórmula do Astronomical Almanac, escrita dentro do teste, em três datas e
+horas, mais o invariante do ponto subsolar. Decisão de desenho em
+`docs/adr/20260908T0620-documento-de-cena-3d.md`.
 
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 ## turno 3, setembro de 2026 (item L0-02-g-checagem-privilegio-papel-id: quem concede papel tem de ter o papel)
@@ -1643,6 +1665,27 @@ presentes; a mesma restauração numa base sem `unaccent` não cria a tabela `it
 `tests/api/test_instalador_extensoes_base_nova.py`, `tests/unit/test_extensoes_lista.py`, o ADR
 `docs/adr/20260907T2248-lista-unica-de-extensoes.md` e `tests/medidas/L7-01-d-instalador-extensoes.json`.
 O `install.sh` inteiro segue sem teste que o rode: ele instala pacotes e escreve unidades do systemd.
+## turno 3, setembro de 2026 (item L2-09-c-modelos-gltf-ifc-3dtiles: modelos 3D no mapa)
+
+Modelo de projeto posicionado no globo, sem nenhuma biblioteca AGPL. Três caminhos, um pacote
+(`app/modelos3d/`): **glTF binário** posicionado por longitude, latitude, altura, rotação e escala,
+desenhado por camada personalizada do MapLibre com three.js 0.185.1 (MIT, vendorizado); **IFC** lido em
+Python puro — elementos com identificador global, tipo, pavimento e propriedades em
+`plat.modelo3d_elemento`, geometria convertida de malha tesselada e de sólido de extrusão, e o que não
+converte sai CONTADO em `elementos_sem_forma` (arquivo aberto da buildingSMART: 13 elementos, 11 com
+forma); e **OGC 3D Tiles 1.1** gerado do glTF com divisão em quadrantes, servido por URI relativa a
+partir de `GET /api/modelos/{id}/3dtiles/{caminho}`.
+
+Oito rotas novas em `/api/modelos`, duas tarefas de fila (`modelo3d.converter`, `modelo3d.tileset`), duas
+tabelas com RLS por inquilino, e o bloco `modelos` acrescentado ao esquema do documento de cena. Modelo
+com recurso externo (textura fora do arquivo) é recusado nos dois lados — servidor e navegador.
+
+Medido: caixa desenhada pelo navegador contra a calculada pelo servidor, **0,097 m** de erro (folga do
+portão: 0,5 m); validador oficial `3d-tiles-validator` 0.6.1 com **0 erros e 0 avisos** nas árvores de 1 e
+de 8 tiles, e reprovando o controle negativo; **58,7 quadros/s** com o modelo na tela (carga 9,5, sem
+GPU); IFC sintético de 50 MB com 62.038 elementos em 19,4 s e pico de 679 MB, dentro do teto de 1.024 MB
+do trabalhador. `make check` ganhou `make sem-agpl`. i3s fica de fora, declarado (sem produtor aberto na
+pilha); consumo do tileset pelo cliente pesado do concorrente segue pendente da decisão D20.
 
 ## turno 3, setembro de 2026 (item L3-19-multiescala: grades aninhadas do motor multicritério)
 

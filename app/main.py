@@ -63,6 +63,7 @@ from app.catalogo import (
 )
 from app.chamados import rotas as rotas_chamados
 from app.coleta.rotas import router as rotas_coleta
+from app.cena.rotas import router as rotas_cena
 from app.conexao import rotas as rotas_conexao
 from app.consulta import cors_servicos
 from app.consulta.rotas_diretorio import router as rotas_diretorio_esri
@@ -129,6 +130,7 @@ from app.mapa.promover import router as rotas_promover
 from app.mapa.rotas import router as rotas_mapa
 from app.mapa.selecao import router as rotas_selecao
 from app.migracao.rotas import router as rotas_migracao
+from app.modelos3d.rotas import router as rotas_modelos3d
 from app.multiescala.rotas import router as rotas_multiescala
 from app.paineis.rotas import router as rotas_paineis
 from app.mapa.rotas import router as rotas_mapa
@@ -485,6 +487,10 @@ ROUTERS = [
     rotas_mapa,
     # --- seleção e filtro (L2-01-h): /valores, /filtrar (CQL2-JSON), /selecionar, /selecao-espacial
     rotas_selecao,
+    # --- cena 3D (L2-09-b-cena-extrusao-slides): posição do Sol para a iluminação da cena
+    rotas_cena,
+    # --- modelos 3D (L2-09-c): /api/modelos, elementos do IFC por GUID, glTF e árvore OGC 3D Tiles
+    rotas_modelos3d,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
     rotas_tiles,
     # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,

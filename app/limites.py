@@ -894,3 +894,11 @@ FORMULARIO_CAMPOS_MAX = 500              # perguntas por formulário (mesmo teto
 FORMULARIO_LISTA_MAX = 5_000             # linhas por lista de escolhas (cascata de município cabe)
 FORMULARIO_REPETICOES_MAX = 200          # linhas por repetição numa única resposta
 FORMULARIO_ANEXOS_MAX = 20               # anexos por resposta
+# ---------------------------------------------------------------- modelos 3D (item L2-09-c)
+MODELO3D_ARQUIVO_BYTES = 200 * 1024 * 1024   # teto do IFC/GLB de entrada; a refutação do item usa 50 MB
+MODELO3D_GLB_BYTES = 300 * 1024 * 1024       # teto do glTF binário PRODUZIDO pela conversão
+MODELO3D_MEMORIA_MB = 1024                   # teto do trabalhador (PLAT_WORKER_MEMORIA_MB): o grafo do IFC
+MODELO3D_TIMEOUT_S = 1800
+MODELO3D_NOME_MAX = 200                      # mesmo teto de CHECK(length(nome)<=200) da migração
+MODELO3D_ELEMENTOS_PAGINA_MAX = 500          # elementos por página em GET /api/modelos/{id}/elementos
+MODELO3D_PAGINA_MAX = 200                    # modelos por página em GET /api/modelos

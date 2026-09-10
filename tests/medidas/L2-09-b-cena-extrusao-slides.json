@@ -1,0 +1,42 @@
+{
+ "item": "L2-09-b-cena-extrusao-slides",
+ "medidas": {
+  "slide_erro_maximo_grau": {
+   "valor": 0.0,
+   "unidade": "grau",
+   "comando": "tests/e2e/test_cena_3d.py::test_tres_slides_restauram_camera_e_camadas"
+  },
+  "fps_cena_demo": {
+   "valor": 8.3,
+   "unidade": "quadros/s",
+   "comando": "tests/e2e/test_cena_3d.py::test_quadros_por_segundo_da_cena"
+  },
+  "carga_1min_no_teste_de_fps": {
+   "valor": 8.73,
+   "unidade": "carga",
+   "comando": "os.getloadavg"
+  },
+  "ram_livre_gb_no_teste_de_fps": {
+   "valor": 4.59,
+   "unidade": "GB",
+   "comando": "/proc/meminfo MemAvailable"
+  },
+  "renderizador_do_teste_de_fps": {
+   "valor": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+   "unidade": "texto",
+   "comando": "WEBGL_debug_renderer_info"
+  },
+  "feicoes_conferidas_atributo_contra_banco": {
+   "valor": 3824,
+   "unidade": "feições",
+   "comando": "tests/e2e/test_cena_3d.py::test_a_altura_desenhada_e_a_do_atributo"
+  },
+  "erro_relativo_da_medicao_de_altura": {
+   "valor": 0.0,
+   "unidade": "fração",
+   "comando": "tests/e2e/test_cena_3d.py::test_medicao_de_altura_confere_com_a_altura_conhecida"
+  }
+ },
+ "gerado_em": "2026-09-08T11:20:48Z",
+ "git_sha": "a61254c04365"
+}

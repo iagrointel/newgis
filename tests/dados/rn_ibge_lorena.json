@@ -1,0 +1,186 @@
+{
+  "fonte": "IBGE geoservicos.ibge.gov.br WFS CGED:V_INDE_RN_2 (rede altimetrica, pontos RN), consultado 07/09/2026, bbox regiao Lorena-SP/serra da Mantiqueira; altitude oficial ALT_ORTO ou ALT_NORMAL (nivelamento geometrico), datum Imbituba",
+  "nota": "valor alt_glo30_m eh a leitura do proprio COG GLO-30 no ponto (rasterio.sample), gravado aqui so como referencia de comparacao rapida; o teste real relê o COG na hora",
+  "pontos": [
+    {
+      "estacao": "114A",
+      "lat": -22.26805556,
+      "lon": -44.88111111,
+      "alt_ibge_m": 890.9073,
+      "alt_glo30_m": 904.232,
+      "municipio": "Itamonte",
+      "fonte_alt": "Nivelamento Geométrico"
+    },
+    {
+      "estacao": "114B",
+      "lat": -22.28,
+      "lon": -44.8725,
+      "alt_ibge_m": 891.4317,
+      "alt_glo30_m": 892.22,
+      "municipio": "Itamonte",
+      "fonte_alt": "Nivelamento Geométrico"
+    },
+    {
+      "estacao": "114C",
+      "lat": -22.28388889,
+      "lon": -44.87,
+      "alt_ibge_m": 906.3323,
+      "alt_glo30_m": 899.917,
+      "municipio": "Itamonte",
+      "fonte_alt": "Nivelamento Geométrico"
+    },
+    {
+      "estacao": "113P",
+      "lat": -22.15694444,
+      "lon": -44.96416667,
+      "alt_ibge_m": 1040.5974,
+      "alt_glo30_m": 1028.493,
+      "municipio": "Pouso Alto",
+      "fonte_alt": "Nivelamento Geométrico"
+    },
+    {
+      "estacao": "113Q",
+      "lat": -22.17277778,
+      "lon": -44.965,
+      "alt_ibge_m": 917.7364,
+      "alt_glo30_m": 971.525,
+      "municipio": "Pouso Alto",
+      "fonte_alt": "Nivelamento Geométrico"
+    },
+    {
+      "estacao": "113F",
+      "lat": -22.08194444,
+      "lon": -44.94305556,
+      "alt_ibge_m": 1041.0094,
+      "alt_glo30_m": 1084.682,
+      "municipio": "Pouso Alto",
+      "fonte_alt": "Nivelamento Geométrico"
+    },
+    {
+      "estacao": "113G",
+      "lat": -22.08916667,
+      "lon": -44.95666667,
+      "alt_ibge_m": 925.6307,
+      "alt_glo30_m": 926.152,
+      "municipio": "Pouso Alto",
+      "fonte_alt": "Nivelamento Geométrico"
+    },
+    {
+      "estacao": "113H",
+      "lat": -22.10444444,
+      "lon": -44.95666667,
+      "alt_ibge_m": 945.1668,
+      "alt_glo30_m": 929.274,
+      "municipio": "Pouso Alto",
+      "fonte_alt": "Nivelamento Geométrico"
+    },
+    {
+      "estacao": "113I",
+      "lat": -22.12138889,
+      "lon": -44.96194444,
+      "alt_ibge_m": 964.7923,
+      "alt_glo30_m": 964.032,
+      "municipio": "Pouso Alto",
+      "fonte_alt": "Nivelamento Geométrico"
+    },
+    {
+      "estacao": "113J",
+      "lat": -22.14055556,
+      "lon": -44.97055556,
+      "alt_ibge_m": 931.4123,
+      "alt_glo30_m": 932.711,
+      "municipio": "Pouso Alto",
+      "fonte_alt": "Nivelamento Geométrico"
+    },
+    {
+      "estacao": "113K",
+      "lat": -22.14777778,
+      "lon": -44.99333333,
+      "alt_ibge_m": 917.033,
+      "alt_glo30_m": 913.197,
+      "municipio": "Pouso Alto",
+      "fonte_alt": "Nivelamento Geométrico"
+    },
+    {
+      "estacao": "113L",
+      "lat": -22.14444444,
+      "lon": -45.01444444,
+      "alt_ibge_m": 913.1753,
+      "alt_glo30_m": 908.892,
+      "municipio": "São Lourenço",
+      "fonte_alt": "Nivelamento Geométrico"
+    },
+    {
+      "estacao": "113M",
+      "lat": -22.12888889,
+      "lon": -45.01944444,
+      "alt_ibge_m": 944.6399,
+      "alt_glo30_m": 910.889,
+      "municipio": "São Lourenço",
+      "fonte_alt": "Nivelamento Geométrico"
+    },
+    {
+      "estacao": "113R",
+      "lat": -22.1875,
+      "lon": -44.97611111,
+      "alt_ibge_m": 889.7623,
+      "alt_glo30_m": 891.048,
+      "municipio": "Pouso Alto",
+      "fonte_alt": "Nivelamento Geométrico"
+    },
+    {
+      "estacao": "113S",
+      "lat": -22.19527778,
+      "lon": -44.97166667,
+      "alt_ibge_m": 879.2192,
+      "alt_glo30_m": 882.489,
+      "municipio": "Pouso Alto",
+      "fonte_alt": "Nivelamento Geométrico"
+    },
+    {
+      "estacao": "113T",
+      "lat": -22.20694444,
+      "lon": -44.95583333,
+      "alt_ibge_m": 898.7299,
+      "alt_glo30_m": 948.44,
+      "municipio": "Pouso Alto",
+      "fonte_alt": "Nivelamento Geométrico"
+    },
+    {
+      "estacao": "113U",
+      "lat": -22.22138889,
+      "lon": -44.94416667,
+      "alt_ibge_m": 966.9367,
+      "alt_glo30_m": 938.231,
+      "municipio": "Pouso Alto",
+      "fonte_alt": "Nivelamento Geométrico"
+    },
+    {
+      "estacao": "113V",
+      "lat": -22.22972222,
+      "lon": -44.9325,
+      "alt_ibge_m": 891.8147,
+      "alt_glo30_m": 903.111,
+      "municipio": "Pouso Alto",
+      "fonte_alt": "Nivelamento Geométrico"
+    },
+    {
+      "estacao": "113X",
+      "lat": -22.25277778,
+      "lon": -44.93138889,
+      "alt_ibge_m": 881.7335,
+      "alt_glo30_m": 884.822,
+      "municipio": "Pouso Alto",
+      "fonte_alt": "Nivelamento Geométrico"
+    },
+    {
+      "estacao": "113Y",
+      "lat": -22.25666667,
+      "lon": -44.92472222,
+      "alt_ibge_m": 885.3974,
+      "alt_glo30_m": 888.699,
+      "municipio": "Pouso Alto",
+      "fonte_alt": "Nivelamento Geométrico"
+    }
+  ]
+}

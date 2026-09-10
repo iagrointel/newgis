@@ -14,66 +14,29 @@ from app.erros import ErroAPI
 def _uuids(valores) -> list[str]:
     saida = []
     for v in valores or []:
-        if isinstance(v, dict):
-            # `ref` é a chave do documento de mapa (item L2-01-a): a camada do mapa aponta para o item do
-            # catálogo por `ref`, e o `id` dela é o id LOCAL da entrada no documento (ULID), não um uuid.
-            v = v.get("ref") or v.get("id") or v.get("item_id") or v.get("camada_id")
-        try:
-            u = str(uuid.UUID(str(v)))
-        except (ValueError, TypeError):
-            continue
-        if u not in saida:
-            saida.append(u)
+        # dicionário: o primeiro dos campos conhecidos que SEJA um uuid. Não basta o primeiro que
+        # exista: no documento de cena (L2-09-b) `id` é o identificador da camada DENTRO da cena (ULID,
+        # citado pelos slides) e o item do catálogo está em `camada_id` — com `or`, o ULID vencia e a
+        # relação da cena com a camada nunca era registrada.
+        candidatos = [v.get("id"), v.get("item_id"), v.get("camada_id")] if isinstance(v, dict) else [v]
+        for candidato in candidatos:
+            try:
+                u = str(uuid.UUID(str(candidato)))
+            except (ValueError, TypeError):
+                continue
+            if u not in saida:
+                saida.append(u)
+            break
     return saida
-
-
-# tipo de relação de um destino do documento de mapa/cena, pela FAMÍLIA do item de destino. Existe porque
-# `plat.relacao_tipo` limita as famílias aceitas por tipo de relação (`camada_de_mapa` não aceita `documento`
-# nem `ferramenta`), e o extrator não tem cursor para descobrir a família — quem resolve é `sincronizar`.
-AUTO_MAPA = "auto:mapa"
-FAMILIA_RELACAO_MAPA = {
-    "camada": "camada_de_mapa",
-    "raster": "camada_de_mapa",
-    "rede": "camada_de_mapa",
-    "documento": "estilo_de_mapa",
-    "ferramenta": "servico_de_mapa",
-}
 
 
 def _mapa(dados: dict) -> list[tuple[str, str, int | None]]:
-    """Camadas do documento (na ordem), depois estilos/popups e a base referenciada. O documento de mapa do item
-    L2-01-a aponta para o item do catálogo por `ref`; `camadas` também aceita a forma antiga (lista de uuid)."""
     corpo = dados.get("corpo") or {}
-    camadas = corpo.get("camadas") or []
-    saida = [(u, AUTO_MAPA, i) for i, u in enumerate(_uuids(camadas))]
-    ja = {u for u, _t, _p in saida}
-    extras = []
-    for c in camadas:
-        if not isinstance(c, dict):
-            continue
-        for chave in ("estilo", "popup"):
-            alvo = c.get(chave)
-            if isinstance(alvo, dict):
-                extras.extend(_uuids([alvo.get("ref")]))
-    base = corpo.get("mapa_base")
-    if isinstance(base, dict):
-        extras.extend(_uuids([base.get("ref")]))
-    posicao = len(saida)
-    for u in dict.fromkeys(extras):
-        if u not in ja:
-            saida.append((u, AUTO_MAPA, posicao))
-            ja.add(u)
-            posicao += 1
-    return saida
+    return [(u, "camada_de_mapa", i) for i, u in enumerate(_uuids(corpo.get("camadas")))]
 
 
 def _vista(dados: dict) -> list[tuple[str, str, int | None]]:
     return [(u, "vista_de_camada", None) for u in _uuids([dados.get("camada_id")])]
-
-
-def _estilo(dados: dict) -> list[tuple[str, str, int | None]]:
-    """estilo -> camada (item L2-02-c): `dados.camada_id` liga o estilo à camada que ele desenha."""
-    return [(u, "estilo_de_camada", None) for u in _uuids([dados.get("camada_id")])]
 
 
 def _app(dados: dict) -> list[tuple[str, str, int | None]]:
@@ -96,41 +59,19 @@ def _rede(dados: dict) -> list[tuple[str, str, int | None]]:
     ]
 
 
-def _narrativa(dados: dict) -> list[tuple[str, str, int | None]]:
-    from app.catalogo import narrativa
-
-    return narrativa.relacoes(dados)
-
-
 EXTRATORES: dict[str, Callable[[dict], list[tuple[str, str, int | None]]]] = {
     "mapa": _mapa,
     "cena": _mapa,
     "vista_de_camada": _vista,
-    "estilo": _estilo,
     "app": _app,
     "painel": _app,
-    "narrativa": _narrativa,
     "modelo_amc": _amc,
     "rede": _rede,
 }
 
 
-# tipos cujo extrator é OPCIONAL: sem a chave em `dados`, o item aceita relações declaradas à mão pelo PUT de
-# relações (estilo solto/reutilizável, item L2-02-c); com a chave, valem só as do documento, como nos demais
-EXTRATORES_OPCIONAIS = {"estilo"}
-
-
 def tem_extrator(tipo: str) -> bool:
     return tipo in EXTRATORES
-
-
-def relacoes_pelo_documento(tipo: str, dados: dict | None) -> bool:
-    """True quando as relações deste item saem de `dados` (e o PUT manual deve ser recusado)."""
-    if tipo not in EXTRATORES:
-        return False
-    if tipo in EXTRATORES_OPCIONAIS:
-        return bool(extrair(tipo, dados or {}))
-    return True
 
 
 def extrair(tipo: str, dados: dict) -> list[tuple[str, str, int | None]]:
@@ -138,34 +79,9 @@ def extrair(tipo: str, dados: dict) -> list[tuple[str, str, int | None]]:
     return f(dados or {}) if f else []
 
 
-def _resolver_auto(cur, desejadas: list[tuple[str, str, int | None]]) -> list[tuple[str, str, int | None]]:
-    """Troca o tipo `auto:mapa` pelo tipo de relação da família do destino, em UMA consulta. Destino que a RLS
-    esconde some da lista: quem grava o documento já levou 404 antes (app/mapas/documento.py), e aqui o silêncio
-    é o mesmo do gatilho — nunca confirmar a existência de item de outro inquilino."""
-    autos = sorted({d for d, t, _p in desejadas if t == AUTO_MAPA})
-    if not autos:
-        return desejadas
-    cur.execute(
-        "SELECT i.id::text AS id, t.familia FROM plat.item i JOIN plat.tipo_item t ON t.nome = i.tipo "
-        "WHERE i.id = ANY (%s::uuid[]) AND i.apagado_em IS NULL",
-        (autos,),
-    )
-    familia = {r["id"]: r["familia"] for r in cur.fetchall()}
-    saida = []
-    for destino, tipo, posicao in desejadas:
-        if tipo != AUTO_MAPA:
-            saida.append((destino, tipo, posicao))
-            continue
-        resolvido = FAMILIA_RELACAO_MAPA.get(familia.get(destino))
-        if resolvido:
-            saida.append((destino, resolvido, posicao))
-    return saida
-
-
 def sincronizar(cur, tenant_id: int, item_id: str, desejadas: list[tuple[str, str, int | None]]) -> dict:
     """Iguala plat.item_relacao(origem = item_id) à lista (destino, tipo, posicao). Destino que o ator não lê = 422
     (mesmo código do gatilho: não confirma existência). Devolve {inseridas, removidas, atualizadas}."""
-    desejadas = _resolver_auto(cur, desejadas)
     cur.execute("SELECT destino, tipo, posicao FROM plat.item_relacao WHERE origem = %s::uuid", (item_id,))
     atuais = {(str(r["destino"]), r["tipo"]): r["posicao"] for r in cur.fetchall()}
     alvo = {(d, t): p for d, t, p in desejadas}
