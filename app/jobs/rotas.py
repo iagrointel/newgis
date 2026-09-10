@@ -75,6 +75,9 @@ class Job(BaseModel):
     proveniencia: Any | None = None
     memoria_mb: int
     timeout_s: int
+    # item L0-05-e: posição na fila do inquilino (1 = o próximo quando chegar a vez dele); só preenchida
+    # quando estado = 'pendente', senão null (rodando/estados finais não têm posição)
+    posicao_fila: int | None = None
 
 
 class ListaJobs(BaseModel):

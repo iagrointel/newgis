@@ -24,28 +24,26 @@ def versao() -> str:
 
 def _sha_do_git() -> str | None:
     git = ROOT / ".git"
-    apontador = _ler(git)
-    if apontador and apontador.startswith("gitdir:"):
-        # worktree do git: .git é um ARQUIVO que aponta para o gitdir real do repositório principal
-        indicado = Path(apontador.split(":", 1)[1].strip())
-        git = indicado if indicado.is_absolute() else ROOT / indicado
+    if not git.is_dir():
+        # worktree (git worktree add): .git é um ARQUIVO "gitdir: <caminho>"; o HEAD fica no gitdir da
+        # worktree, mas as refs e o packed-refs ficam no diretório comum apontado por <gitdir>/commondir
+        ponteiro = _ler(git) or ""
+        if not ponteiro.startswith("gitdir:"):
+            return None
+        git = Path(ponteiro.split(":", 1)[1].strip())
     head = _ler(git / "HEAD")
     if not head:
         return None
     if not head.startswith("ref:"):
         return head if _HEX.match(head) else None
     ref = head.split(":", 1)[1].strip()
-    # refs de ramo vivem no diretório COMUM (o .git do repositório principal); o gitdir do
-    # worktree guarda só o que é dele (HEAD, bisect). O arquivo 'commidir' diz onde fica o comum.
     comum = git
-    apontador_comum = _ler(git / "commidir")
-    if apontador_comum:
-        indicado = Path(apontador_comum.strip())
-        comum = indicado if indicado.is_absolute() else (git / indicado).resolve()
-    for base in (git, comum):
-        direto = _ler(base / ref)
-        if direto and _HEX.match(direto):
-            return direto
+    nome_comum = _ler(git / "commondir")
+    if nome_comum:
+        comum = (git / nome_comum).resolve()
+    direto = _ler(comum / ref) or _ler(git / ref)
+    if direto and _HEX.match(direto):
+        return direto
     empacotadas = _ler(comum / "packed-refs") or ""
     for linha in empacotadas.splitlines():
         partes = linha.split()
