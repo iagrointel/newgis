@@ -7,12 +7,12 @@
    "comando": "4000 tipos com grupo inexistente"
   },
   "segundos_da_recusa_422": {
-   "valor": 1.2,
+   "valor": 14.1,
    "unidade": "s",
    "comando": "POST /api/rede/{id}/pacote"
   },
   "pior_latencia_de_saude_durante_a_recusa": {
-   "valor": 0.19,
+   "valor": 13.61,
    "unidade": "s",
    "comando": "GET /saude concorrente"
   },
@@ -22,16 +22,16 @@
    "comando": "10 mil atributos"
   },
   "segundos_da_importacao_valida_grande": {
-   "valor": 4.4,
+   "valor": 4.1,
    "unidade": "s",
    "comando": "POST pacote"
   },
   "pior_latencia_de_saude_durante_importacao_valida": {
-   "valor": 0.16,
+   "valor": 3.86,
    "unidade": "s",
    "comando": "GET /saude"
   }
  },
- "gerado_em": "2026-09-06T18:38:02Z",
- "git_sha": "ded6baf71b78"
+ "gerado_em": "2026-09-06T18:06:16Z",
+ "git_sha": "0a11a61349a1"
 }
