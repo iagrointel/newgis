@@ -1,282 +1,184 @@
-/* plat · acervo — entrada da tela /acervo (item L6-01-c-tela-acervo; equivalente do Living Atlas do Esri).
-   Módulo ES sem build; cache resolvido por no-store no nginx: NUNCA ?v= nos imports (armadilha conhecida do
-   laço). Lista `GET /api/acervo` (domínio + busca por nome/órgão), ficha completa `GET /api/acervo/{fonte_id}`,
-   "adicionar ao meu mapa" `POST /api/acervo/{fonte_id}/adicionar` — cria item tipo `conexao`, nunca copia dado
-   (regra do L6-01-a/b: publicação sem cópia). Regra D17 (repetida aqui): fonte sem licença ESCRITA nunca chega
-   a esta tela — o backend já filtra; esta tela não tenta "completar" a lista com nada que a API não devolveu.
-   body[data-pronto="1"] após a 1ª carga (contrato dos e2e, tests/e2e/apoio.py::Tela.ir).
+/* plat · acervo — entrada da tela /acervo (item L6-01-h-frescor-verificacao).
+   Módulos ES sem build; o cache é resolvido por no-store no nginx: NUNCA ?v= nos imports (duas URLs do mesmo
+   módulo = duas instâncias, a tela morre — regra da casa).
 
-   Item UX-10-acervo-sem-tela: os quatro estados do sistema de design (UX-01) na lista (<plat-estado id="lista-estado">:
-   carregando com esqueleto, vazio com "limpar filtros", erro com "tentar de novo", negado) e no controle "adicionar ao
-   meu mapa", que vive DENTRO da ficha com o seu próprio <plat-estado id="adicionar-estado">: 403 vira negado com o
-   privilégio exigido, 409 vira o diálogo de confirmação de risco de dado pessoal, 413/422/5xx mostram a mensagem da
-   API com a referência — nunca o número cru, nunca tela quebrada (refutação do item). Quem não tem
-   conteudo.registrar_fonte vê o estado negado antes mesmo de clicar. */
-import { confirmar } from '../base/componentes.js';
-import { tem } from '../base/estado.js';
-import { h, limpar, marcador } from '../base/dom.js';
-import { carregar as carregarIdioma, t, formatarData, formatarNumero } from '../base/i18n.js';
-import { montarLayout, cabecalho, pronto } from '../base/layout.js';
-import { exigirSessao, irParaLogin } from '../auth/sessao.js';
-import { obter, enviar, mensagemDe } from '../base/api.js';
-import { exigeAtribuicao, rotuloLicenca } from './licencas.js';
+   Mostra as camadas do registro do acervo (`plat.acervo_camada`, item L6-01-a) com o estado de VERIFICAÇÃO
+   calculado por `plat.v_acervo_camada_frescor`: quem está com "verificação vencida" e por quê, a última
+   contagem exata, a variação contra a verificação anterior e o histórico das 12 verificações que o job
+   mantém por camada. Nenhum número é calculado aqui: tudo vem da API, que lê a view. */
+import * as api from '../base/api.js';
+import '../base/componentes.js';
+import { loja } from '../base/estado.js';
+import { carregar as carregarIdioma, formatarData } from '../base/i18n.js';
+import { cabecalho, montarLayout, pronto } from '../base/layout.js';
+import { h, limpar } from '../base/dom.js';
+import { caminhoPendencia, irParaLogin, lembrarInquilino, marcarSessao } from '../auth/sessao.js';
+import { AVISO_VENCIDA, selo } from './frescor.js';
 
-const el = (id) => document.getElementById(id);
-const LIMITE = 24;
-let estado = { dominio: '', q: '', deslocamento: 0, total: 0 };
-let dialogo;
 let saindo = false;
+const s = { camadas: [], usuario: null };
+
+function porId(id) {
+  const n = document.getElementById(id);
+  if (!n) throw new Error(`elemento #${id} ausente na página`);
+  return n;
+}
+
+function aviso(id, texto, tipo = 'erro') {
+  const n = document.getElementById(id);
+  if (!n) return;
+  if (texto) n.mostrar(texto, tipo);
+  else n.limpar();
+}
+
+function numero(v) {
+  if (v === null || v === undefined) return '—';
+  return Number(v).toLocaleString('pt-BR');
+}
+
+function celulaContagem(c) {
+  if (c.contagem_estado === 'contado') return h('span', {}, numero(c.linhas_exatas));
+  if (c.contagem_estado === 'nao_contado_no_prazo') {
+    return h('span', { class: 'marcador atencao', title: 'COUNT(*) não terminou no prazo de 25 s' },
+      'não contado no prazo');
+  }
+  if (c.contagem_estado === 'erro') return h('span', { class: 'marcador falha' }, 'erro na contagem');
+  return h('span', { class: 'ajuda' }, 'ainda não contada');
+}
+
+function celulaVariacao(c) {
+  if (c.variacao_pct === null || c.variacao_pct === undefined) {
+    return h('span', { class: 'ajuda', title: 'sem as duas contagens não há variação' }, '—');
+  }
+  const texto = `${c.variacao_pct > 0 ? '+' : ''}${c.variacao_pct.toFixed(2).replace('.', ',')} %`;
+  return h('span', { class: c.mudanca_relevante ? 'marcador atencao' : '' }, texto);
+}
+
+async function verHistorico(c) {
+  const dialogo = porId('dialogo');
+  const r = await api.obter(`/api/acervo/camadas/${c.acervo_camada_id.split('/').map(encodeURIComponent).join('/')}/verificacoes`);
+  if (r.status !== 200) {
+    aviso('camadas-aviso', `não foi possível ler o histórico de ${c.acervo_camada_id}: ${api.mensagemDe(r)}`);
+    return;
+  }
+  const itens = r.json.verificacoes || [];
+  const corpo = h('div', {},
+    h('p', {}, `${c.schema_nome}.${c.tabela} — ${itens.length} verificação(ões) no histórico (o job mantém as 12 mais recentes)`),
+    itens.length
+      ? h('table', { class: 'tabela' },
+          h('thead', {}, h('tr', {}, h('th', {}, 'quando'), h('th', {}, 'contagem'), h('th', {}, 'linhas'),
+            h('th', {}, 'variação'), h('th', {}, 'hash'))),
+          h('tbody', {}, ...itens.map((v) => h('tr', {},
+            h('td', {}, formatarData(v.verificada_em)),
+            h('td', {}, v.contagem_estado),
+            h('td', {}, v.linhas_exatas === null || v.linhas_exatas === undefined ? '—' : numero(v.linhas_exatas)),
+            h('td', {}, v.variacao_pct === null || v.variacao_pct === undefined
+              ? '—' : `${v.variacao_pct.toFixed(2).replace('.', ',')} %`),
+            h('td', {}, v.hash_estado)))))
+      : h('p', { class: 'ajuda' }, 'nenhuma verificação registrada ainda para esta camada'));
+  dialogo.abrir({ titulo: 'histórico de verificação', corpo, botoes: [{ id: 'fechar', rotulo: 'fechar' }] });
+}
+
+function linhaCamada(c) {
+  const btHistorico = h('button', { type: 'button', class: 'pequeno' }, 'histórico');
+  btHistorico.addEventListener('click', () => verHistorico(c));
+  return h('tr', { 'data-camada': c.acervo_camada_id, 'data-vencida': c.verificacao_vencida ? '1' : '0' },
+    h('td', {}, h('code', {}, `${c.schema_nome}.${c.tabela}`)),
+    h('td', {}, c.fonte_nome || c.fonte_id),
+    h('td', {}, selo(c, h)),
+    h('td', {}, celulaContagem(c)),
+    h('td', {}, celulaVariacao(c)),
+    h('td', {}, c.verificada_em ? formatarData(c.verificada_em) : h('span', { class: 'ajuda' }, 'nunca')),
+    h('td', {}, btHistorico));
+}
+
+async function carregarCamadas() {
+  aviso('camadas-aviso', '');
+  const filtro = porId('filtro-vencida').value;
+  const busca = filtro === '' ? '' : `?vencida=${filtro}`;
+  const r = await api.obter(`/api/acervo/camadas${busca}`);
+  if (r.status !== 200) {
+    if (r.status === 401) return;
+    aviso('camadas-aviso', `não foi possível carregar as camadas do acervo (${api.mensagemDe(r)})`);
+    return;
+  }
+  s.camadas = r.json.itens || [];
+  porId('camadas-total').textContent = `(${r.json.total})`;
+  porId('camadas-vencidas').textContent = r.json.vencidas
+    ? `${r.json.vencidas} de ${r.json.total} com ${AVISO_VENCIDA}`
+    : `nenhuma camada com ${AVISO_VENCIDA} neste recorte`;
+  const corpo = porId('camadas-corpo');
+  limpar(corpo);
+  if (!s.camadas.length) {
+    corpo.append(h('tr', {}, h('td', { colspan: '7', class: 'ajuda' },
+      'nenhuma camada neste recorte — o registro é montado por scripts/acervo_sync.py')));
+    return;
+  }
+  for (const c of s.camadas) corpo.append(linhaCamada(c));
+}
+
+async function carregarMudancas() {
+  aviso('mudancas-aviso', '');
+  const r = await api.obter('/api/acervo/frescor/mudancas');
+  if (r.status !== 200) {
+    if (r.status === 401) return;
+    aviso('mudancas-aviso', `não foi possível carregar o relatório de mudanças (${api.mensagemDe(r)})`);
+    return;
+  }
+  const itens = r.json.itens || [];
+  porId('mudancas-total').textContent = `(${r.json.total})`;
+  const corpo = porId('mudancas-corpo');
+  limpar(corpo);
+  if (!itens.length) {
+    corpo.append(h('tr', {}, h('td', { colspan: '5', class: 'ajuda' },
+      'nenhuma contagem variou mais de 5 % desde a verificação anterior')));
+    return;
+  }
+  for (const m of itens) {
+    corpo.append(h('tr', { 'data-camada': m.acervo_camada_id },
+      h('td', {}, h('code', {}, `${m.schema_nome}.${m.tabela}`)),
+      h('td', {}, numero(m.linhas_anteriores)),
+      h('td', {}, numero(m.linhas_exatas)),
+      h('td', {}, h('span', { class: 'marcador atencao' },
+        `${m.variacao_pct > 0 ? '+' : ''}${m.variacao_pct.toFixed(2).replace('.', ',')} %`)),
+      h('td', {}, formatarData(m.verificada_em))));
+  }
+}
+
+function layout(usuario) {
+  montarLayout({ usuario: usuario || { inquilino: {}, login: '', nome: '', perfil: '' }, ativo: '/acervo' });
+  if (!usuario) {
+    const pessoa = document.querySelector('#lateral .pessoa');
+    if (pessoa) pessoa.hidden = true;
+  }
+  cabecalho('Acervo');
+}
+
+async function principal() {
+  const r = await api.obter('/api/eu');
+  if (r.status === 401) { saindo = true; irParaLogin(); return; }
+  const usuario = r.status === 200 ? r.json : null;
+  if (usuario) {
+    marcarSessao(true);
+    if (usuario.inquilino && usuario.inquilino.slug) lembrarInquilino(usuario.inquilino.slug);
+    loja.definir({ usuario });
+    const destino = caminhoPendencia(usuario.pendencias);
+    if (destino) { saindo = true; location.replace(destino); return; }
+  } else {
+    aviso('aviso', `dados da sessão indisponíveis (GET /api/eu devolveu ${r.status}); a tela segue com a API do acervo`, 'atencao');
+  }
+  s.usuario = usuario;
+  layout(usuario);
+  porId('filtro-vencida').addEventListener('change', () => carregarCamadas());
+  await carregarCamadas();
+  await carregarMudancas();
+}
 
 await carregarIdioma();
-const usuario = await exigirSessao();
-if (usuario) {
-  try { await iniciar(); } catch (e) { if (!(e && e.status === 401)) el('aviso').erro(`${t('acervo.erro_listar')}: ${(e && e.message) || e}`); }
-}
-if (!saindo) pronto();
-
-async function iniciar() {
-  montarLayout({ usuario, ativo: '/acervo' });
-  cabecalho(t('acervo.titulo'));
-  dialogo = el('ficha');
-  montarBusca();
-  montarEstadoLista();
-  await montarDominios();
-  montarPaginacao();
-  await carregarLista();
-}
-
-function montarBusca() {
-  const busca = el('busca');
-  busca.addEventListener('buscar', (e) => {
-    const q = e.detail.q;
-    if (q === estado.q) return;
-    estado = { ...estado, q, deslocamento: 0 };
-    carregarLista();
-  });
-}
-
-async function montarDominios() {
-  const sel = el('dominio-filtro');
-  limpar(sel);
-  sel.append(h('option', { value: '' }, t('acervo.dominio_todos')));
-  let dominios = [];
-  try {
-    const r = await obter('/api/acervo/dominios');
-    if (r.status === 401) { aoSemSessao(); return; }
-    if (r.status >= 400) throw new Error(mensagemDe(r));
-    dominios = r.json || [];
-  } catch (e) {
-    el('aviso').erro(`${t('acervo.erro_dominios')}: ${e.message || e}`);
-    return;
-  }
-  for (const d of dominios) {
-    sel.append(h('option', { value: d.dominio }, `${d.dominio} (${formatarNumero(d.fontes)})`));
-  }
-  sel.addEventListener('change', () => {
-    estado = { ...estado, dominio: sel.value, deslocamento: 0 };
-    carregarLista();
-  });
-}
-
-function montarPaginacao() {
-  el('paginacao').addEventListener('mudar', (e) => {
-    estado = { ...estado, deslocamento: e.detail.deslocamento };
-    carregarLista();
-  });
-}
-
-function aoSemSessao() { saindo = true; irParaLogin(); }
-
-function limparFiltros() {
-  estado = { ...estado, dominio: '', q: '', deslocamento: 0 };
-  el('dominio-filtro').value = '';
-  const campo = el('busca').querySelector('input');
-  if (campo) campo.value = '';
-  carregarLista();
-}
-
-function montarEstadoLista() {
-  el('lista-estado').addEventListener('acao', (e) => {
-    if (e.detail.id === 'limpar') limparFiltros();
-    else if (e.detail.id === 'tentar') carregarLista();
-  });
-}
-
-async function carregarLista() {
-  const grade = el('grade');
-  const estadoLista = el('lista-estado');
-  limpar(grade);
-  estadoLista.carregando(t('acervo.carregando'));
-  grade.setAttribute('aria-busy', 'true');
-  const q = new URLSearchParams();
-  if (estado.dominio) q.set('dominio', estado.dominio);
-  if (estado.q) q.set('q', estado.q);
-  q.set('limite', String(LIMITE));
-  q.set('deslocamento', String(estado.deslocamento));
-  let pagina;
-  const r = await obter(`/api/acervo?${q.toString()}`);
-  grade.setAttribute('aria-busy', 'false');
-  if (r.status === 401) { aoSemSessao(); return; }
-  if (r.status >= 400 || r.status === 0) {
-    // 403 vira "negado" e 0 vira "sem rede" dentro do próprio componente; o resto é erro com referência
-    estadoLista.erro(r, [{ id: 'tentar', rotulo: t('estado.tentar_de_novo'), classe: 'primario' }]);
-    el('contagem').textContent = '';
-    return;
-  }
-  pagina = r.json;
-  estado = { ...estado, total: pagina.total };
-  el('contagem').textContent = t('acervo.contagem', { n: formatarNumero(pagina.total) });
-  el('paginacao').atualizar({ total: pagina.total, limite: LIMITE, deslocamento: estado.deslocamento });
-  limpar(grade);
-  if (!pagina.itens.length) {
-    const filtrado = !!(estado.dominio || estado.q);
-    estadoLista.mostrar({
-      tipo: 'vazio',
-      titulo: t('acervo.vazio_titulo'),
-      texto: estado.dominio && !estado.q ? t('acervo.dominio_vazio') : t('acervo.vazio'),
-      acoes: filtrado ? [{ id: 'limpar', rotulo: t('acervo.limpar_filtros') }] : [],
-    });
-  } else {
-    estadoLista.limpar();
-    for (const item of pagina.itens) grade.append(cartao(item));
-  }
-}
-
-// O cartão traz uma ETIQUETA curta de licença; o texto livre de `licenca` (às vezes uma frase inteira do órgão)
-// fica no atributo title e completo na ficha. Etiqueta é rótulo, não parágrafo: com a frase dentro dela o cartão
-// deixava de caber num visor de celular (medido: corpo de 729 px num visor de 390 px).
-function marcadorLicenca(item) {
-  const curada = rotuloLicenca(item.licenca_curada_tipo);
-  const m = marcador(
-    curada || (item.licenca ? t('acervo.licenca_texto_livre') : t('acervo.licenca_nao_declarada')),
-    exigeAtribuicao(item.licenca_curada_tipo) ? 'atencao' : 'ok',
-  );
-  if (!curada && item.licenca) m.title = item.licenca;
-  return m;
-}
-
-function cartao(item) {
-  const b = h('button', { type: 'button', class: 'acervo-cartao', 'data-fonte-id': item.fonte_id }, [
-    h('h2', {}, item.nome),
-    h('p', { class: 'acervo-cartao-orgao' }, item.orgao || '—'),
-    h('div', { class: 'acervo-cartao-marcadores' }, [
-      marcador(item.dominio, 'info'),
-      marcadorLicenca(item),
-    ]),
-    h('p', { class: 'acervo-cartao-linha' }, `${t('acervo.frescor')}: ${item.frescor || t('acervo.frescor_nao_registrado')}`),
-    h('p', { class: 'acervo-cartao-linha' }, `${t('acervo.registros')}: ${formatarNumero(item.registros_estimados)} · ${t('acervo.tabelas')}: ${formatarNumero(item.numero_tabelas)}`),
-  ]);
-  b.addEventListener('click', () => abrirFicha(item.fonte_id));
-  return b;
-}
-
-function campo(rotulo, valor) {
-  if (valor === null || valor === undefined || valor === '') return null;
-  return h('div', { class: 'acervo-campo' }, h('dt', {}, rotulo), h('dd', {}, valor));
-}
-
-async function abrirFicha(fonteId) {
-  let ficha;
-  try {
-    const r = await obter(`/api/acervo/${encodeURIComponent(fonteId)}`);
-    if (r.status === 401) { aoSemSessao(); return; }
-    if (r.status === 404) { el('aviso').erro(t('acervo.erro_ficha')); return; }
-    if (r.status >= 400) throw new Error(mensagemDe(r));
-    ficha = r.json;
-  } catch (e) {
-    el('aviso').erro(`${t('acervo.erro_ficha')}: ${e.message || e}`);
-    return;
-  }
-
-  const dl = h('dl', { class: 'acervo-ficha' }, [
-    campo(t('acervo.orgao'), ficha.orgao),
-    campo(t('acervo.dominio'), ficha.dominio),
-    campo(t('acervo.licenca'), rotuloLicenca(ficha.licenca_curada_tipo) || ficha.licenca || t('acervo.licenca_nao_declarada')),
-    campo(t('acervo.frescor'), ficha.frescor || t('acervo.frescor_nao_registrado')),
-    campo(t('acervo.registros'), formatarNumero(ficha.registros_estimados)),
-    campo(t('acervo.tabelas'), formatarNumero(ficha.numero_tabelas)),
-    campo(t('acervo.data'), ficha.data_dado || t('acervo.data_nao_registrada')),
-    campo(t('acervo.ficha_metodo'), ficha.metodo),
-    campo(t('acervo.ficha_confianca'), ficha.confianca),
-    campo(t('acervo.ficha_limites'), ficha.limites),
-    campo(t('acervo.ficha_sha256'), ficha.sha256),
-    campo(t('acervo.ficha_comando'), ficha.comando_reexecucao),
-    campo(t('acervo.ficha_proxima_verificacao'), ficha.proxima_verificacao ? formatarData(ficha.proxima_verificacao, true) : null),
-    campo(t('acervo.ficha_completude'), ficha.completude_texto || t('acervo.ficha_completude_nao_registrada')),
-    campo(t('acervo.ficha_endpoints'), `${formatarNumero(ficha.endpoints_confirmados_vivos)} / ${formatarNumero(ficha.endpoints_total)}`),
-  ].filter(Boolean));
-
-  const corpo = h('div', {}, [
-    dl,
-    exigeAtribuicao(ficha.licenca_curada_tipo)
-      ? h('p', { class: 'acervo-atribuicao', role: 'note' }, t('acervo.atribuicao_obrigatoria', { licenca: ficha.licenca_curada_tipo }))
-      : null,
-    h('h3', {}, t('acervo.ficha_previsualizacao')),
-    previa(ficha),
-    controleAdicionar(ficha),
-  ].filter(Boolean));
-
-  await dialogo.abrir({ titulo: `${t('acervo.ficha_titulo')} — ${ficha.nome}`, corpo, botoes: [] });
-}
-
-/* o controle da rota de escrita POST /api/acervo/{fonte_id}/adicionar (UX-10): botão + estado próprio, dentro
-   da ficha, que fica aberta enquanto a chamada corre e enquanto houver um erro a ler */
-function controleAdicionar(ficha) {
-  const estadoCtl = h('plat-estado', { id: 'adicionar-estado', hidden: true });
-  const botao = h('button', { type: 'button', class: 'primario', id: 'acervo-adicionar', dataset: { id: 'adicionar' } }, t('acervo.adicionar'));
-  const caixa = h('div', { class: 'acervo-adicionar' }, h('h3', {}, t('acervo.adicionar_titulo')), botao, estadoCtl);
-  if (!tem('conteudo.registrar_fonte')) {
-    botao.disabled = true;
-    estadoCtl.negado(t('acervo.negado_registrar', { privilegio: 'conteudo.registrar_fonte' }));
-    return caixa;
-  }
-  botao.addEventListener('click', () => adicionar(ficha, false, { botao, estadoCtl }));
-  // "tentar de novo" do estado de erro: um ouvinte só, ligado uma vez (não um por erro)
-  estadoCtl.addEventListener('acao', (e) => { if (e.detail.id === 'tentar') adicionar(ficha, false, { botao, estadoCtl }); });
-  return caixa;
-}
-
-function previa(ficha) {
-  const vivo = (ficha.endpoints || []).find((ep) => ep.vivo && ep.url);
-  if (!vivo) return h('p', { class: 'acervo-previa-vazia' }, t('acervo.previsualizacao_sem_endpoint'));
-  return h('p', {}, h('a', { href: vivo.url, target: '_blank', rel: 'noopener noreferrer' }, vivo.url));
-}
-
-async function adicionar(ficha, confirmaPii = false, { botao, estadoCtl } = {}) {
-  const corpo = confirmaPii ? { confirma_risco_pii: true } : undefined;
-  if (botao) { botao.disabled = true; botao.setAttribute('aria-busy', 'true'); }
-  estadoCtl?.carregando(t('acervo.adicionar_carregando'));
-  const r = await enviar(`/api/acervo/${encodeURIComponent(ficha.fonte_id)}/adicionar`, corpo);
-  if (botao) { botao.disabled = false; botao.removeAttribute('aria-busy'); }
-  if (r.status === 401) { aoSemSessao(); return; }
-  if (r.status === 409 && r.json && r.json.erro === 'confirmacao_pii_exigida') {
-    estadoCtl?.limpar();
-    const ok = await confirmar(
-      t('acervo.pii_confirma_titulo'),
-      (r.json.detalhe && r.json.detalhe.risco_pii_motivo) || t('acervo.risco_pii'),
-      { ok: t('acervo.pii_confirmar'), perigo: true },
-    );
-    if (ok) await adicionar(ficha, true, { botao, estadoCtl });
-    return;
-  }
-  if (r.status === 403) {
-    // negado, com o privilégio que falta nomeado (o detalhe da API traz `exigido`)
-    const exigido = (r.json && r.json.detalhe && r.json.detalhe.exigido) || 'conteudo.registrar_fonte';
-    estadoCtl?.negado(`${r.json?.mensagem || t('estado.negado_texto')} (${exigido})`);
-    if (botao) botao.disabled = true;
-    return;
-  }
-  if (r.status >= 400 || r.status === 0) {
-    // 413 cota, 422 corpo, 404 fonte, 5xx: a mensagem da API nomeada e a referência, no próprio controle
-    estadoCtl?.erro(r, [{ id: 'tentar', rotulo: t('estado.tentar_de_novo') }]);
-    return;
-  }
-  estadoCtl?.limpar();
-  dialogo.fechar('adicionado');
-  const aviso = el('aviso');
-  limpar(aviso);
-  aviso.dataset.tipo = 'ok';
-  aviso.setAttribute('role', 'status');
-  aviso.hidden = false;
-  aviso.append(`${t('acervo.adicionar_ok')} — `, h('a', { href: '/mapa', id: 'acervo-ver-no-mapa' }, t('acervo.ver_no_mapa')));
+try {
+  await principal();
+} catch (e) {
+  if (!(e && e.status === 401)) aviso('aviso', `não foi possível carregar a tela (${(e && e.status) || 'rede'}): ${(e && e.message) || e}`);
+} finally {
+  if (!saindo) pronto();
 }

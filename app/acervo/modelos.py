@@ -11,7 +11,7 @@ sha256, método, confiança, limites, próxima_verificação) já existiam em `A
 (exemplos lidos em acervo.fonte.limites: "0 vendidos lidos; só o tempo resolve", "só fluxo, sem estoque
 RAIS") — não duplicado sob outro nome para não abrir campo que o adversário possa achar "inventado"."""
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 
 class Saida(BaseModel):
@@ -31,6 +31,15 @@ class AcervoCartao(Saida):
     proxima_verificacao: str | None = None
     risco_pii: bool = False
     risco_pii_motivo: str | None = None
+    # item L6-01-h: aviso de frescor agregado das camadas EXPOSTAS da fonte (plat.v_acervo_fonte_frescor).
+    # Fonte sem camada exposta fica com camadas_expostas = 0 e verificacao_vencida = false — "não se aplica",
+    # nunca "em dia" (a tela distingue os dois pelo número de camadas).
+    verificacao_vencida: bool = False
+    motivo_vencida: str | None = None
+    camadas_expostas: int = 0
+    camadas_vencidas: int = 0
+    verificada_em: str | None = None
+    endpoints_mortos: int = 0
 
 
 class AcervoEndpoint(Saida):
@@ -88,89 +97,94 @@ class AcervoAdicionarEntrada(BaseModel):
     confirma_risco_pii: bool = False
 
 
-class AcervoCamadaPublicada(Saida):
-    """Uma view de `plat_acervo` (item L6-01-b). `assinada` é deste inquilino: a RLS de
-    plat.acervo_assinatura já recorta o LEFT JOIN, então nunca vaza a assinatura de outro.
-    Item L6-01-e: os campos `licenca_*` são o que a tela mostra e o que o aceite grava — o
-    `licenca_sha256` é o que o chamador ecoa no POST de assinatura para provar que clicou no texto que o
-    servidor gravou. Todos None quando a fonte não tem licença curada (aí a assinatura é recusada)."""
+# ---------------------------------------------------------------- frescor (item L6-01-h-frescor-verificacao)
+class AcervoCamadaFrescor(Saida):
+    """Uma camada do registro com o estado de verificação. `linhas_exatas` é NULL quando a contagem não coube
+    no prazo de 25 s — a tela escreve "não contado no prazo", nunca zero, e `reltuples` não aparece aqui."""
 
-    view_nome: str
     acervo_camada_id: str
     fonte_id: str
-    schema_origem: str
-    tabela_origem: str
-    coluna_geom: str
-    srid: int
-    colunas: list[str]
+    schema_nome: str
+    tabela: str
+    estado: str
+    fonte_nome: str | None = None
+    fonte_dominio: str | None = None
+    fonte_licenca: str | None = None
+    fonte_frescor: str | None = None
+    proxima_verificacao: str | None = None
+    verificada_em: str | None = None
+    contagem_estado: str | None = None
     linhas_exatas: int | None = None
-    tipo_geom: str | None = None
-    assinada: bool
-    licenca_tipo: str | None = None
-    licenca_texto: str | None = None
-    licenca_url: str | None = None
-    licenca_sha256: str | None = None
+    linhas_anteriores: int | None = None
+    variacao_pct: float | None = None
+    mudanca_relevante: bool | None = None
+    hash_estado: str | None = None
+    endpoints_testados: int = 0
+    endpoints_mortos: int = 0
+    endpoint_morto: bool = False
+    prazo_da_fonte_vencido: bool = False
+    nunca_verificada: bool = True
+    verificacao_antiga: bool = False
+    verificacao_vencida: bool = False
+    motivo_vencida: str | None = None
 
 
-class AcervoCamadaPagina(Saida):
+class AcervoCamadaFrescorPagina(Saida):
     total: int
-    camadas: list[AcervoCamadaPublicada]
+    vencidas: int
+    itens: list[AcervoCamadaFrescor]
 
 
-class AcervoFeicoes(Saida):
-    """GeoJSON de uma camada publicada. `features` fica vazio quando o filtro não achou nada — nunca quando
-    falta assinatura: aí a rota já devolveu 403 antes de consultar."""
+class AcervoVerificacao(Saida):
+    verificada_em: str
+    contagem_estado: str
+    linhas_exatas: int | None = None
+    linhas_anteriores: int | None = None
+    variacao_pct: float | None = None
+    mudanca_relevante: bool = False
+    hash_estado: str
+    hash_valor: str | None = None
+    duracao_ms: int = 0
+    execucao_id: int | None = None
 
-    type: str
-    camada: str
+
+class AcervoVerificacaoHistorico(Saida):
+    camada: AcervoCamadaFrescor
     total: int
-    features: list[dict]
+    verificacoes: list[AcervoVerificacao]
 
 
-class AcervoAssinaturaEntrada(BaseModel):
-    """Corpo OBRIGATÓRIO de POST /api/acervo/camadas/{camada}/assinatura (item L6-01-e). O clique na
-    licença chega como `aceite_licenca=true` + o sha256 do texto que estava na tela: o servidor só grava se
-    o sha bater com o texto atual da fonte — sha defasado é 409 (a tela relê e mostra o texto novo).
-    Default False/"": nunca se aceita sozinho."""
-
-    model_config = ConfigDict(extra="forbid")
-    aceite_licenca: bool = False
-    licenca_sha256: str = Field(default="", max_length=64)
-
-
-class AcervoAssinaturaSaida(Saida):
-    """Resposta do POST de assinatura: o que ficou gravado (quem/quando vivem em plat.acervo_assinatura;
-    `assinado_em` volta aqui para a tela mostrar sem nova consulta)."""
-
-    camada: str
-    assinada: bool
-    licenca_tipo: str | None = None
-    licenca_sha256: str | None = None
-    assinado_em: str | None = None
-
-
-class AcervoUsoLinha(Saida):
-    """Uso de uma camada pelo inquilino no recorte pedido (dia ou mês)."""
-
-    view_nome: str | None = None
+class AcervoMudanca(Saida):
     acervo_camada_id: str
-    consultas: int
-    feicoes: int
-    dias: int | None = None  # só no recorte mensal: em quantos dias do mês houve leitura
+    fonte_id: str
+    schema_nome: str
+    tabela: str
+    verificada_em: str
+    linhas_anteriores: int | None = None
+    linhas_exatas: int | None = None
+    variacao_pct: float | None = None
+    execucao_id: int | None = None
 
 
-class AcervoUsoDia(Saida):
-    dia: str
-    total_consultas: int
-    total_feicoes: int
-    camadas: list[AcervoUsoLinha]
+class AcervoMudancaPagina(Saida):
+    total: int
+    limiar_pct: float
+    itens: list[AcervoMudanca]
 
 
-class AcervoUsoMensal(Saida):
-    """Relatório mensal de uso do acervo pelo inquilino — entrada do item L7-09."""
+class AcervoExecucao(Saida):
+    id: int
+    iniciada_em: str
+    concluida_em: str | None = None
+    duracao_ms: int | None = None
+    camadas_expostas: int = 0
+    camadas_verificadas: int = 0
+    camadas_nao_contadas: int = 0
+    endpoints_testados: int = 0
+    endpoints_responderam: int = 0
+    mudancas: int = 0
 
-    ano: int
-    mes: int
-    total_consultas: int
-    total_feicoes: int
-    camadas: list[AcervoUsoLinha]
+
+class AcervoExecucaoPagina(Saida):
+    total: int
+    itens: list[AcervoExecucao]

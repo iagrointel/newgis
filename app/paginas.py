@@ -54,6 +54,8 @@ PAGINAS = {
     "/analise": "analise.html",
     # --- cena 3D (L2-09-b-cena-extrusao-slides): ?item=<id de item cena>
     "/cena": "cena.html",
+    # --- acervo da casa e frescor das camadas (L6-01-a/L6-01-h)
+    "/acervo": "acervo.html",
     # --- conexões externas (L6-02-a/L6-02-l/L6-05)
     "/conexoes": "conexoes.html",
     # --- chamados de suporte (L7-13-a): cliente em /chamados, operador (superadmin) em /admin/chamados

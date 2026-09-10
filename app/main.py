@@ -38,6 +38,7 @@ from app.amc.rotas_similaridade import router as rotas_similaridade
 from app.amc.rotas import router as rotas_amc
 from app.amc.rotas import router as rotas_amc
 from app.amc.rotas_similaridade import router as rotas_similaridade
+from app.acervo import rotas_frescor as rotas_acervo_frescor
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
 from app.auth import sso as rotas_sso
@@ -354,6 +355,9 @@ ROUTERS = [
     # --- acervo da casa (L6-01-a): /api/acervo, /api/acervo/{fonte_id}, /api/acervo/{fonte_id}/adicionar
     # publicacao ANTES de rotas_acervo: /api/acervo/camadas casaria com /api/acervo/{fonte_id} se viesse depois
     rotas_acervo_publicacao.router,
+    # --- frescor do acervo (L6-01-h): /api/acervo/camadas e /api/acervo/frescor/*; ANTES de rotas_acervo,
+    # senão /api/acervo/{fonte_id} engoliria os dois caminhos (o FastAPI resolve pela ordem de inclusão)
+    rotas_acervo_frescor.router,
     rotas_acervo.router,
     # --- conexão externa (L6-02-a): /api/conexoes, /api/conexoes/{id}, /api/conexoes/{id}/testar
     rotas_conexao.router,

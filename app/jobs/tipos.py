@@ -16,6 +16,7 @@ from app.amc import (
 )
 from app.amc import tarefas as amc_tarefas  # noqa: F401 — L3-01-b: amc.gerar_unidades
 from app.amc import tarefas as amc_tarefas  # noqa: F401 — L3-01-b: amc.gerar_unidades; L3-02-a: amc.robustez_pesos
+from app.acervo import tarefas as acervo_tarefas  # noqa: F401 — L6-01-h: acervo.frescor_verificar + periódico
 from app.catalogo import (
     tarefas as catalogo_tarefas,  # noqa: F401 — L0-03: 6 tipos catalogo.* e os periódicos do catálogo
 )

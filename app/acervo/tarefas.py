@@ -1,259 +1,191 @@
-"""Job `acervo.expor_arquivo` (item L6-01-i-raster-e-arquivos): põe UM arquivo do acervo da casa no catálogo do
-inquilino, com o sha256 conferido antes de qualquer escrita (`app/acervo/arquivos.py::conferir`).
+"""Verificação periódica de FRESCOR das camadas do acervo da casa (item L6-01-h-frescor-verificacao;
+migração 20260906T1617_acervo_frescor.sql). Reaproveita o relógio do L0-05 no mesmo molde de
+`app/conexao/tarefas.py` (L6-02-l) e de `app/catalogo/periodicos.py`: um tipo registrado por `@tarefa`, um
+periódico acrescentado à lista do worker por um módulo PRÓPRIO (`app/acervo/periodicos.py`) — nenhum arquivo
+do L0-05 é editado.
 
-Duas rotas de exposição, escolhidas pela extensão:
-- **raster** (.tif/.tiff/.vrt): item `raster` + item STAC cujo asset aponta para `acervo://<caminho>` — o arquivo
-  NÃO é copiado para o balde (guardrail de disco D21: o acervo já ocupa 3,6 GB neste disco; copiar dobraria).
-  O ladrilho por token (item L1-02) lê o arquivo local pelo mesmo motor rio-tiler, sem sessão S3.
-- **vetor** (.geojson/.gpkg/.shp/.parquet/...): ingestão ÚNICA para PostGIS com `ogr2ogr` na mesma tabela
-  `d_<slug>.c_<hash>` que a ingestão do L0-04 usa (`plat.camada_schema_garantir` + `plat.camada_preparar`),
-  virando item `camada_vetorial` com `fonte: hospedada`.
-Em ambos, a linha de `plat.acervo_arquivo_exposto` guarda o hash CONFERIDO (não o do registro) e o instante.
-Item de fonte sem licença escrita (D17) nasce privado e com `uso_restrito: true` em `dados`."""
+O que a rodada faz, por camada EXPOSTA do registro (`plat.acervo_camada`, item L6-01-a):
 
-from __future__ import annotations
+  1. `COUNT(*)` EXATO sob `SET LOCAL statement_timeout` de 25 s (o prazo por tabela que a casa já usa em
+     `contagem2.py` e em `scripts/acervo_sync.py`). Estourar o prazo é um ESTADO PRÓPRIO
+     (`nao_contado_no_prazo`), nunca zero e nunca `reltuples`: a estimativa não entra no histórico, porque foi
+     exatamente a diferença entre estimativa e contagem que revelou as duas tabelas fantasma da casa em 01/09.
+  2. Hash de conteúdo, quando a camada tem comando de reexecução registrado e a contagem coube no teto de
+     `LIMITE_HASH_LINHAS` linhas. O hash é o da função `plat.acervo_camada_hash` (soma de linhas ordenadas,
+     documentada na migração), NÃO o `COPY ... | sha256sum` que a casa guarda em `acervo.fonte.sha256_cmd`:
+     medido em 06/09/2026, a maioria daqueles comandos ainda é um MODELO com `<schema>.<tabela>` por preencher
+     e os executáveis são canos de shell com `sudo`, que o worker não tem e nunca deve ter. Executar texto de
+     shell vindo de uma tabela seria execução de comando arbitrário; o que se compara aqui é o hash desta
+     rodada contra o da rodada anterior — divergiu, o conteúdo mudou.
+  3. Teste HTTP dos endereços confirmados das fontes que têm camada exposta, pelo `buscar_seguro` de
+     `app/conexao/seguranca.py` (defesa de SSRF, sem seguir redirecionamento às cegas), com `User-Agent` que
+     identifica a plataforma e um TETO POR RODADA (`LIMITE_ENDPOINTS`): a verificação é de dezenas de
+     endereços, nunca uma varredura em massa contra órgão público.
+
+Tudo é gravado em `plat` pelas funções SECURITY DEFINER da migração. ⛔ `acervo.*` é só leitura: nenhuma
+linha deste arquivo escreve lá.
+
+Trinco: o tipo roda com `chave=None` DE PROPÓSITO. A `chave` de `plat.job` é global (índice `ix_job_chave` da
+004 e o casamento `r.chave = j.chave` do despachante da 006 não têm `tenant_id`), então chave constante deixa
+qualquer inquilino ocupar o trinco do periódico da plataforma — foi por isso que o item L0-05-d-periodicos foi
+refutado em 06/09. A exclusão mútua desta rodada mora em `plat.acervo_frescor_execucao`, num índice único
+parcial POR `tenant_id`, e as funções ainda exigem o inquilino técnico `plataforma`. `somente_sistema=True`
+fecha a porta de `POST /api/jobs`.
+"""
 
 import datetime
-import json
-import uuid
+import time
 
 import psycopg2
-import psycopg2.extras
-from pydantic import BaseModel
+import psycopg2.errors
+from pydantic import BaseModel, Field
 
-from app import limites
-from app.acervo import arquivos as arq
-from app.jobs.registro import FalhaDefinitiva, tarefa
-from app.settings import settings
+from app.jobs.registro import tarefa
+from app.limites import CONEXAO_CONECTAR_TIMEOUT_S, CONEXAO_LER_TIMEOUT_S
 
-SLUG_COLECAO = "acervo"
-TIPO_COG = "image/tiff; application=geotiff; profile=cloud-optimized"
-
-
-class ExporParametros(BaseModel):
-    caminho: str
-    titulo: str | None = None
-
-
-def _jsonb(valor):
-    return psycopg2.extras.Json(valor, dumps=lambda v: json.dumps(v, ensure_ascii=False, default=str))
+TIMEOUT_CONTAGEM_MS = 25_000       # prazo por tabela, igual ao contagem2.py da casa
+TIMEOUT_HASH_MS = 25_000
+LIMITE_HASH_LINHAS = 1_000_000     # acima disto o hash de conteúdo não cabe no prazo: fica declarado, não estimado
+LIMITE_CAMADAS = 1_000
+LIMITE_ENDPOINTS = 40              # dezenas por rodada, nunca varredura em massa contra órgão público
+INTERVALO_RECHECAGEM_DIAS = 6      # o periódico é semanal; 6 dias evita pular uma semana por atraso de minutos
+PRAZO_TOTAL_S = 1_740.0            # 29 min, com folga sob o portão de 30 min
+MANTER_HISTORICO = 12              # portão: histórico de 12 verificações por camada
+AGENTE = "plat-acervo-frescor/1.0 (verificacao de frescor do acervo; plataforma interna)"
 
 
-def _pg_conninfo() -> str:
-    partes = psycopg2.extensions.parse_dsn(settings.PLAT_DSN)
-    pares = " ".join(f"{k}={v}" for k, v in partes.items() if k in ("dbname", "host", "port", "user", "password"))
-    return f"PG:{pares} application_name=plat-acervo"
+class FrescorParametros(BaseModel):
+    limite_camadas: int = Field(LIMITE_CAMADAS, ge=1, le=10_000)
+    limite_endpoints: int = Field(LIMITE_ENDPOINTS, ge=0, le=200)
+    intervalo_dias: int = Field(INTERVALO_RECHECAGEM_DIAS, ge=0, le=365)
+    manter: int = Field(MANTER_HISTORICO, ge=1, le=100)
+    prazo_s: float = Field(PRAZO_TOTAL_S, ge=1.0, le=3_600.0)
+    timeout_contagem_ms: int = Field(TIMEOUT_CONTAGEM_MS, ge=100, le=120_000)
 
 
-def registro_de(cur, caminho: str) -> dict | None:
-    cur.execute(
-        "SELECT caminho, nome, fonte_id, fonte_nome, orgao, dominio, licenca, frescor, data_dado, "
-        "script_gerador, comando_reexecucao, bytes, sha256, feicoes, srid, tipo_geom, extensao, tipo, publicavel "
-        "FROM plat.acervo_arquivo WHERE caminho = %s", (caminho,),
-    )
-    return cur.fetchone()
+def _contar(ctx, camada_id: str, timeout_ms: int) -> tuple[str, int | None]:
+    """COUNT(*) exato; o prazo é armado no CLIENTE (`SET LOCAL`) porque o Postgres arma o cronômetro de
+    `statement_timeout` no início do comando de cliente — um SET dentro da função não valeria para a própria
+    chamada em curso. Estouro devolve ('nao_contado_no_prazo', None), nunca zero."""
+    try:
+        with ctx.db() as cur:
+            cur.execute("SET LOCAL statement_timeout = %s", (timeout_ms,))
+            cur.execute("SELECT plat.acervo_camada_contar(%s) AS n", (camada_id,))
+            return "contado", int(cur.fetchone()["n"])
+    except psycopg2.errors.QueryCanceled:
+        return "nao_contado_no_prazo", None
+    except psycopg2.Error as e:
+        ctx.log("AVISO", f"contagem de {camada_id} falhou: {str(e).strip()[:200]}")
+        return "erro", None
 
 
-def _procedencia(r: dict, sha_conferido: str) -> dict:
-    return {
-        "origem": "acervo", "protocolo": "arquivo", "caminho": r["caminho"], "fonte_id": r["fonte_id"],
-        "fonte": r["fonte_nome"], "orgao": r["orgao"], "dominio": r["dominio"], "licenca": r["licenca"],
-        "frescor": r["frescor"], "script_gerador": r["script_gerador"],
-        "comando_reexecucao": r["comando_reexecucao"], "sha256": sha_conferido,
-    }
+def _hash(ctx, camada_id: str, comando: str | None, linhas: int | None,
+          hash_anterior: str | None) -> tuple[str, str | None]:
+    if not (comando or "").strip():
+        return "sem_comando", None
+    if linhas is None:
+        return "nao_recalculado_sem_contagem", None
+    if linhas > LIMITE_HASH_LINHAS:
+        return "nao_recalculado_tabela_grande", None
+    try:
+        with ctx.db() as cur:
+            cur.execute("SET LOCAL statement_timeout = %s", (TIMEOUT_HASH_MS,))
+            cur.execute("SELECT plat.acervo_camada_hash(%s) AS h", (camada_id,))
+            valor = cur.fetchone()["h"]
+    except psycopg2.errors.QueryCanceled:
+        return "nao_recalculado_tabela_grande", None
+    except psycopg2.Error as e:
+        ctx.log("AVISO", f"hash de {camada_id} falhou: {str(e).strip()[:200]}")
+        return "erro", None
+    if hash_anterior is not None and valor != hash_anterior:
+        return "divergente", valor
+    return "recalculado", valor
 
 
-def _tags(r: dict) -> list[str]:
-    """`acervo` + o fonte_id (slug). O DOMÍNIO da fonte não vira tag: o vocabulário do acervo tem vírgula
-    ("Empresas, trabalho e renda") e `plat.tags_validas` recusa vírgula em tag."""
-    tags = ["acervo"]
-    if r.get("fonte_id"):
-        tags.append(str(r["fonte_id"])[:128])
-    return tags
+def _testar_endpoints(ctx, execucao: int, limite: int, intervalo: datetime.timedelta,
+                      manter: int) -> tuple[int, int]:
+    """Teste HTTP dos endereços confirmados das fontes com camada exposta. Devolve (testados, responderam)."""
+    from app.conexao import seguranca
 
-
-def _titulo(r: dict, pedido: str | None) -> str:
-    base = (pedido or r["nome"] or r["caminho"]).strip()
-    return (base[:190] + "…") if len(base) > 195 else base
-
-
-def _dados_comuns(r: dict, sha: str) -> dict:
-    """`uso_restrito` (D17): fonte sem licença escrita — o item existe para a casa, mas compartilhar é recusado."""
-    return {"procedencia": _procedencia(r, sha), "uso_restrito": not r["publicavel"]}
-
-
-def _srid_de(r: dict) -> int:
-    bruto = (r.get("srid") or "").strip()
-    for parte in bruto.replace(":", " ").split():
-        if parte.isdigit():
-            return int(parte)
-    return 4326
-
-
-def _expor_raster(ctx, cur, r: dict, a: arq.Arquivo, sha: str, titulo: str, usuario_id: int) -> str:
-    from app.imagens import pgstac as ps
-    from app.imagens import raster_item as ri
-
-    item_id = str(uuid.uuid4())
-    colecao = ps.nome_colecao(ctx.tenant_id, SLUG_COLECAO)
-    if ps.colecao_obter(cur, ctx.tenant_id, colecao) is None:
-        ps.colecao_criar(cur, ctx.tenant_id, SLUG_COLECAO, {
-            "title": "Acervo da casa", "description": "Rasters do acervo da casa expostos por referência (L6-01-i)."})
-    info = _info_raster(a)
-    asset = {"href": f"acervo://{a.caminho}", "type": TIPO_COG, "roles": ["data"]}
-    stac = {
-        "type": "Feature", "stac_version": "1.0.0", "id": item_id, "collection": colecao,
-        "geometry": info["geometria"], "bbox": info["bbox"],
-        "properties": {"datetime": info["datetime"], "title": titulo,
-                       "proj:epsg": info["epsg"], "plat:acervo_caminho": a.caminho,
-                       "plat:sha256": sha, "plat:fonte_id": r["fonte_id"]},
-        "assets": {"cientifico": asset, "visual": dict(asset, roles=["visual"])},
-        "links": [],
-    }
-    ps.item_criar(cur, ctx.tenant_id, colecao, stac)
-    ri.espelhar(cur, ctx.tenant_id, colecao, item_id, {
-        "sha256": sha, "perfil": "cientifico", "bytes": a.absoluto.stat().st_size, "estado": "ativo"})
-    dados = {**_dados_comuns(r, sha), "colecao": colecao, "stac_id": item_id, "perfil": "cientifico",
-             "origem": "referenciada", "srid_nativo": info["epsg"],
-             "bandas": [{"nome": f"banda_{i}"} for i in range(1, info["bandas"] + 1)]}
-    cur.execute(
-        "INSERT INTO plat.item(id, tenant_id, tipo, titulo, dono_id, dados, tamanho_bytes, acesso, "
-        "criado_por, modificado_por, tags) VALUES (%s::uuid, %s, 'raster', %s, %s, %s, %s, 'privado', %s, %s, %s)",
-        (item_id, ctx.tenant_id, titulo, usuario_id, _jsonb(dados), a.absoluto.stat().st_size,
-         usuario_id, usuario_id, _tags(r)),
-    )
-    return item_id
-
-
-def _info_raster(a: arq.Arquivo) -> dict:
-    """Extensão, EPSG e nº de bandas lidos do próprio arquivo (rasterio); geometria em 4326 para o STAC."""
-    import rasterio
-    from rasterio.warp import transform_bounds
-
-    with rasterio.open(a.absoluto) as src:
-        epsg = src.crs.to_epsg() if src.crs else None
-        bandas = src.count
-        if epsg:
-            oeste, sul, leste, norte = transform_bounds(src.crs, "EPSG:4326", *src.bounds, densify_pts=21)
-        else:
-            oeste, sul, leste, norte = -180.0, -90.0, 180.0, 90.0
-    bbox = [round(oeste, 6), round(sul, 6), round(leste, 6), round(norte, 6)]
-    geometria = {"type": "Polygon", "coordinates": [[
-        [bbox[0], bbox[1]], [bbox[2], bbox[1]], [bbox[2], bbox[3]], [bbox[0], bbox[3]], [bbox[0], bbox[1]]]]}
-    # o instante do dado é o mtime do arquivo: o registro do acervo não tem datetime por arquivo
-    mt = datetime.datetime.fromtimestamp(a.absoluto.stat().st_mtime, datetime.UTC)
-    return {"bbox": bbox, "geometria": geometria, "epsg": epsg or 4326, "bandas": bandas,
-            "datetime": mt.isoformat(timespec="seconds").replace("+00:00", "Z")}
-
-
-def _expor_vetor(ctx, cur_slug: str, r: dict, a: arq.Arquivo, sha: str, titulo: str, usuario_id: int, ctx_db) -> str:
-    """ogr2ogr → `d_<slug>.c_<hash>` (mesma tabela e preparação da ingestão do L0-04)."""
-    item_id = str(uuid.uuid4())
-    schema = f"d_{cur_slug}"
-    tabela = "c_" + uuid.uuid4().hex[:16]
-    srid = _srid_de(r)
-    with ctx_db() as cur:
-        cur.execute("SELECT plat.camada_schema_garantir(%s)", (cur_slug,))
-    argv = [
-        "ogr2ogr", "-f", "PostgreSQL", _pg_conninfo(), str(a.absoluto),
-        "-nln", f"{schema}.{tabela}", "-nlt", "PROMOTE_TO_MULTI",
-        "-lco", "GEOMETRY_NAME=geom", "-lco", "FID=fid", "-lco", "FID64=YES",
-        "-lco", "SPATIAL_INDEX=NONE", "-lco", "PRECISION=NO", "-lco", "LAUNDER=NO",
-        "-a_srs", f"EPSG:{srid}", "--config", "PG_USE_COPY", "YES",
-    ]
-    ctx.progresso(40, "ogr2ogr")
-    res = ctx.subprocesso(argv)
-    if res.returncode != 0:
-        linhas = [ln for ln in (res.stderr or "").splitlines() if ln.strip()]
-        raise FalhaDefinitiva(f"ogr2ogr falhou: {(linhas[-1] if linhas else 'sem detalhe')[:200]}")
-    with ctx_db() as cur:
-        cur.execute("SELECT plat.camada_preparar(%s, %s, %s, %s, %s)", (schema, tabela, srid, "Geometry", usuario_id))
-        cur.execute(f'SELECT count(*) AS n FROM "{schema}"."{tabela}"')
-        n = cur.fetchone()["n"]
-        cur.execute(
-            "SELECT type FROM geometry_columns WHERE f_table_schema=%s AND f_table_name=%s "
-            "AND f_geometry_column='geom'", (schema, tabela),
+    if limite <= 0:
+        return 0, 0
+    with ctx.db() as cur:
+        cur.execute("SELECT * FROM plat.acervo_frescor_endpoints(%s, %s)", (intervalo, limite))
+        alvos = cur.fetchall()
+    responderam = 0
+    for alvo in alvos:
+        ctx.verificar()
+        r = seguranca.buscar_seguro(
+            alvo["url"], metodo="GET", timeout_conectar=CONEXAO_CONECTAR_TIMEOUT_S,
+            timeout_ler=CONEXAO_LER_TIMEOUT_S, cabecalhos={"User-Agent": AGENTE},
         )
-        linha_geom = cur.fetchone()
-        cur.execute(
-            "SELECT column_name AS nome, data_type AS tipo FROM information_schema.columns "
-            "WHERE table_schema=%s AND table_name=%s AND column_name NOT IN "
-            "('fid','geom','globalid','versao','tenant_id','criado_em','atualizado_em','criado_por','atualizado_por') "
-            "ORDER BY ordinal_position", (schema, tabela),
-        )
-        campos = [{"nome": c["nome"], "tipo": c["tipo"]} for c in cur.fetchall()]
-        dados = {**_dados_comuns(r, sha), "schema": schema, "tabela": tabela,
-                 "geometria": (linha_geom or {}).get("type") or "Geometry", "srid": srid,
-                 "campos": campos, "fonte": "hospedada", "edicao": {"habilitada": False},
-                 "estatisticas": {"feicoes": n}}
-        cur.execute(
-            "INSERT INTO plat.item(id, tenant_id, tipo, titulo, dono_id, dados, acesso, criado_por, "
-            "modificado_por, tags) VALUES (%s::uuid, %s, 'camada_vetorial', %s, %s, %s, 'privado', %s, %s, %s)",
-            (item_id, ctx.tenant_id, titulo, usuario_id, _jsonb(dados), usuario_id, usuario_id, _tags(r)),
-        )
-    return item_id
+        if r.ok:
+            responderam += 1
+        with ctx.db() as cur:
+            cur.execute(
+                "SELECT plat.acervo_frescor_registrar_endpoint(%s, %s, %s, %s, %s, %s, %s, %s)",
+                (execucao, alvo["fonte_id"], alvo["url"], r.ok, r.status, r.mensagem, r.latencia_ms, manter),
+            )
+    return len(alvos), responderam
 
 
 @tarefa(
-    nome="acervo.expor_arquivo",
-    descricao="Expõe um arquivo do acervo da casa no catálogo (sha256 conferido; raster por referência, vetor "
-              "ingerido uma vez para PostGIS)",
-    parametros=ExporParametros, pesado=False, memoria_mb=1024, timeout_s=3600, tentativas=1,
-    chave=lambda p: f"acervo.expor:{p.get('caminho')}", perfil_minimo="editor", versao=1,
+    nome="acervo.frescor_verificar",
+    descricao="Frescor do acervo: COUNT(*) com prazo, hash de conteúdo e teste HTTP dos endereços das camadas expostas",
+    parametros=FrescorParametros, pesado=False, memoria_mb=256, timeout_s=2400, tentativas=1,
+    chave=None, perfil_minimo="admin", somente_sistema=True,
 )
-def acervo_expor_arquivo(ctx, caminho: str, titulo: str | None = None) -> dict:
-    if not arq.configurado():
-        raise FalhaDefinitiva("esta instalação não tem raiz de arquivos do acervo configurada")
+def acervo_frescor_verificar(ctx, limite_camadas: int = LIMITE_CAMADAS, limite_endpoints: int = LIMITE_ENDPOINTS,
+                             intervalo_dias: int = INTERVALO_RECHECAGEM_DIAS, manter: int = MANTER_HISTORICO,
+                             prazo_s: float = PRAZO_TOTAL_S,
+                             timeout_contagem_ms: int = TIMEOUT_CONTAGEM_MS) -> dict:
+    inicio = time.monotonic()
+    intervalo = datetime.timedelta(days=intervalo_dias)
     with ctx.db() as cur:
-        r = registro_de(cur, caminho)
-        if r is None:
-            raise FalhaDefinitiva(f"caminho {caminho!r} não está no registro do acervo")
-        cur.execute("SELECT id FROM plat.usuario WHERE id = %s", (ctx.usuario_id,))
-        dono = cur.fetchone()
-        usuario_id = dono["id"] if dono else None
-        cur.execute("SELECT slug FROM plat.tenant WHERE id = %s", (ctx.tenant_id,))
-        slug = cur.fetchone()["slug"]
-        cur.execute("SELECT item_id::text AS item_id, tipo, sha256_conferido, bytes, publicavel "
-                    "FROM plat.acervo_arquivo_exposto WHERE caminho = %s", (caminho,))
-        ja = cur.fetchone()
-    if ja:
-        # idempotente: o mesmo caminho exposto duas vezes devolve o item que já existe, no MESMO formato
-        return {"caminho": caminho, "item_id": ja["item_id"], "tipo": ja["tipo"], "sha256": ja["sha256_conferido"],
-                "publicavel": bool(ja["publicavel"]), "bytes": ja["bytes"], "ja_exposto": True,
-                "teto_bytes": limites.ACERVO_ARQUIVO_BYTES_MAX}
-    if usuario_id is None:
-        raise FalhaDefinitiva("job sem usuário dono: a exposição precisa de um autor")
-    ctx.progresso(10, "conferindo sha256")
+        cur.execute("SELECT plat.acervo_frescor_abrir() AS id")
+        execucao = int(cur.fetchone()["id"])
     try:
-        a = arq.conferir(dict(r))
-    except arq.ArquivoRecusado as e:
         with ctx.db() as cur:
-            motivo = json.dumps({"caminho": caminho, "erro": e.erro}, ensure_ascii=False)
-            cur.execute("SELECT plat.evento_registrar(%s, 'item', NULL, %s::jsonb, NULL, NULL)",
-                        ("acervo/arquivo_recusar", motivo))
-        raise FalhaDefinitiva(f"arquivo recusado ({e.erro}): {e.mensagem}") from e
-    sha = a.sha256_registro  # conferir() só devolve quando o hash do disco é igual a este
-    titulo_final = _titulo(dict(r), titulo)
-    ctx.progresso(30, f"expondo {a.tipo}")
-    if a.tipo == "raster":
+            cur.execute("SELECT * FROM plat.acervo_frescor_candidatas(%s, %s)", (intervalo, limite_camadas))
+            candidatas = cur.fetchall()
+        verificadas = nao_contadas = mudancas = divergencias = 0
+        historico_minimo = None
+        for i, c in enumerate(candidatas):
+            ctx.verificar()
+            if time.monotonic() - inicio > prazo_s:
+                ctx.log("AVISO", f"prazo de {prazo_s:.0f}s atingido com {len(candidatas) - i} camadas por verificar")
+                break
+            t0 = time.monotonic()
+            estado, linhas = _contar(ctx, c["acervo_camada_id"], timeout_contagem_ms)
+            hash_estado, hash_valor = _hash(ctx, c["acervo_camada_id"], c["comando_reexecucao"], linhas,
+                                            c["hash_anterior"])
+            duracao = int((time.monotonic() - t0) * 1000)
+            with ctx.db() as cur:
+                cur.execute(
+                    "SELECT * FROM plat.acervo_frescor_registrar_camada(%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    (execucao, c["acervo_camada_id"], estado, linhas, hash_estado, hash_valor,
+                     c["comando_reexecucao"], duracao, manter),
+                )
+                r = cur.fetchone()
+            verificadas += 1
+            nao_contadas += int(estado != "contado")
+            mudancas += int(bool(r["mudanca_relevante"]))
+            divergencias += int(hash_estado == "divergente")
+            historico_minimo = r["historico"] if historico_minimo is None else min(historico_minimo, r["historico"])
+            ctx.progresso(int((i + 1) / max(len(candidatas), 1) * 90),
+                          f"{i + 1}/{len(candidatas)} camadas verificadas")
+        testados, responderam = _testar_endpoints(ctx, execucao, limite_endpoints, intervalo, manter)
+    finally:
         with ctx.db() as cur:
-            item_id = _expor_raster(ctx, cur, dict(r), a, sha, titulo_final, usuario_id)
-    else:
-        item_id = _expor_vetor(ctx, slug, dict(r), a, sha, titulo_final, usuario_id, ctx.db)
-    with ctx.db() as cur:
-        cur.execute(
-            "INSERT INTO plat.acervo_arquivo_exposto(tenant_id, caminho, item_id, tipo, sha256_registro, "
-            "sha256_conferido, bytes, publicavel, exposto_por) "
-            "VALUES (plat.tenant_atual(), %s, %s::uuid, %s, %s, %s, %s, %s, %s)",
-            (caminho, item_id, a.tipo, sha, sha, a.absoluto.stat().st_size, bool(r["publicavel"]), usuario_id),
-        )
-        cur.execute(
-            "SELECT plat.evento_registrar(%s, 'item', %s, %s::jsonb, NULL, NULL)",
-            ("acervo/arquivo_expor", item_id,
-             json.dumps({"caminho": caminho, "tipo": a.tipo, "sha256": sha, "fonte_id": r["fonte_id"],
-                         "publicavel": bool(r["publicavel"])}, ensure_ascii=False)),
-        )
-    ctx.progresso(100, "exposto")
-    return {"caminho": caminho, "item_id": item_id, "tipo": a.tipo, "sha256": sha,
-            "publicavel": bool(r["publicavel"]), "bytes": a.absoluto.stat().st_size,
-            "teto_bytes": limites.ACERVO_ARQUIVO_BYTES_MAX}
+            cur.execute("SELECT plat.acervo_frescor_fechar(%s)", (execucao,))
+    duracao_total_s = time.monotonic() - inicio
+    ctx.progresso(100, f"{verificadas} camadas, {testados} endereços, {mudancas} mudanças acima de 5 %")
+    return {
+        "execucao_id": execucao, "camadas_candidatas": len(candidatas), "camadas_verificadas": verificadas,
+        "camadas_nao_contadas": nao_contadas, "mudancas": mudancas, "hashes_divergentes": divergencias,
+        "endpoints_testados": testados, "endpoints_responderam": responderam,
+        "historico_minimo": historico_minimo, "duracao_s": round(duracao_total_s, 1),
+    }
+
+
+from app.acervo import periodicos  # noqa: E402,F401 — importar acrescenta o periódico semanal à lista do worker
