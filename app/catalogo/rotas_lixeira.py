@@ -12,6 +12,7 @@ from app.catalogo.comum import item_json, item_ou_404, ligar_lixeira, registrar_
 from app.catalogo.modelos import EsvaziarEntrada, Item, JobCriado, Pagina
 from app.catalogo.rotas_itens import _params_lista, carregar_varios, listar_ids
 from app.erros import ErroAPI
+from app.imagens import ciclo_vida  # L1-01-i: restauração do item de imagem devolve o STAC e reativa o espelho
 from app.jobs import servico
 from app.jobs.contexto import sessao_de
 
@@ -52,9 +53,13 @@ def restaurar(id: str, request: Request, auth: Auth = autenticado()):
         r = item_ou_404(cur, iid)
         if r["apagado_em"] is None:
             raise ErroAPI(409, "nao_esta_na_lixeira", "o item não está na lixeira")
+        if (r["tipo"] or "") == "raster":
+            ciclo_vida.checar_restauravel(cur, auth.tenant_id, r)  # 409 se a retenção venceu (objetos já se foram)
         cur.execute("SELECT plat.item_lixeira(%s::uuid, false) AS ok", (iid,))
         if not cur.fetchone()["ok"]:
             raise ErroAPI(404, "item_inexistente", "item inexistente")
+        if (r["tipo"] or "") == "raster":
+            ciclo_vida.ao_restaurar(cur, auth.tenant_id, r)  # devolve o corpo STAC ao pgstac e reativa o espelho
         registrar_evento(cur, request, "itens/restaurar", "item", iid, {"titulo": r["titulo"][:250]})
         return item_json(item_ou_404(cur, iid), auth)
 

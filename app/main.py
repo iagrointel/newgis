@@ -316,6 +316,13 @@ ROUTERS = [
     # --- widgets externos por inquilino (L5-36-widgets-personalizados-sdk): /api/widgets/externos instala
     # (admin, org.configurar), lista e serve o módulo same-origin com sha256 — o SDK do parceiro carrega daqui
     rotas_widgets_externos,
+    # --- catálogo de imagens STAC por inquilino (L1-01-a): /svc/<token>/stac/*, token de serviço no PATH
+    # (pgstac + convenção de nome de coleção `<tenant_id>-<slug>`; plat.raster_item com RLS)
+    rotas_stac,
+    # --- imagens por sessão (L1-01, ciclo de vida): GET /api/imagens/{id} (painel do raster) e
+    # /api/imagens/{id}/tiles/{z}/{x}/{y}.png — as URLs que o Conteúdo e o mapa consomem com cookie;
+    # a exclusão na lixeira esconde o item pela RLS e os tiles passam a responder 404 (cláusula L1-01-i)
+    rotas_imagens,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

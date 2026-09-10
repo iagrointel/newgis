@@ -1,11 +1,12 @@
 """Destruidores por tipo (ADR 0004 seção 9.1): o expurgo chama o destruidor do tipo ANTES do DELETE físico do item.
 camada_vetorial → plat.camada_apagar(schema, tabela) quando a função do L0-04 existir, senão DROP TABLE direto (a
-tabela pertence a plat_app); arquivo e miniatura → objeto pelo adaptador; raster → recusa até o L1-01 entregar
-(o item fica na lixeira com aviso no log, nunca se apaga o registro sem o dado)."""
+tabela pertence a plat_app); arquivo e miniatura → objeto pelo adaptador; raster → o ciclo de vida do item de
+imagem (L1-01-i): objetos do balde + item STAC + linha do espelho, com os bytes liberados para o evento."""
 
 import re
 
 from app import objetos
+from app.imagens import ciclo_vida
 
 NOME = re.compile(r"^[a-z][a-z0-9_]{1,62}$")
 # contrato de plat.camada_tile_garantir/camada_tile_apagar (migração 20260906T1546): schema do inquilino e
@@ -73,7 +74,7 @@ def _arquivo(cur, dados: dict, log) -> int:
 
 
 def _raster(cur, dados: dict, log) -> int:
-    raise Recusado("raster: o destruidor (pgstac + objetos) é do L1-01; o item fica na lixeira")
+    return ciclo_vida.expurgar(cur, dados or {}, log)
 
 
 DESTRUIDORES = {"camada_vetorial": _camada_vetorial, "vista_de_camada": _vista_de_camada,

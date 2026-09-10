@@ -50,7 +50,8 @@ from app.catalogo.modelos import (
     VersaoCompleta,
 )
 from app.erros import ErroAPI
-from app.regras import motor as regras_motor
+from app.imagens import ciclo_vida  # L1-01-i: item de imagem na lixeira guarda STAC e agenda objetos
+from app.jobs import sistema
 from app.settings import settings
 
 router = APIRouter(tags=["catalogo"])
@@ -558,10 +559,7 @@ def criar(corpo: ItemEntrada, request: Request, auth: Auth = autenticado("conteu
     tipos.obter(corpo.tipo)
     _publicar_tipo(auth, corpo.tipo)
     tipos.validar(corpo.tipo, corpo.dados)
-    if corpo.tipo == "camada_vetorial":
-        regras_motor.compilar(corpo.dados)  # L2-10-d: expressão, campo e ciclo das regras, 422 nomeado
     documento.validar_grafo(corpo.tipo, corpo.dados)
-    documento.validar_desenho(corpo.tipo, corpo.dados)
     _classificacao(auth, corpo.classificacao, novo=True)
     iid = str(uuid.UUID(corpo.id)) if corpo.id else str(uuid.uuid4())
     ext_sql, ext_params = _extent_sql(corpo.extent)
@@ -697,10 +695,7 @@ def editar_item(
     dados = campos.get("dados", r["dados"])
     if "dados" in campos:
         tipos.validar(r["tipo"], dados)
-        if r["tipo"] == "camada_vetorial":
-            regras_motor.compilar(dados)  # L2-10-d
         documento.validar_grafo(r["tipo"], dados)
-        documento.validar_desenho(r["tipo"], dados)
     if "classificacao" in campos:
         _classificacao(auth, campos["classificacao"], novo=False)
     cats = (
@@ -801,6 +796,17 @@ def editar_parcial(id: str, request: Request, corpo: dict = Body(...), auth: Aut
 
 
 # ---------------------------------------------------------------- exclusão lógica (lixeira) e lote
+def _raster_ao_apagar(cur, item: dict) -> None:
+    """Item de IMAGEM indo à lixeira (L1-01-i): guarda o corpo STAC no espelho, tira o item do pgstac e agenda
+    o apagamento dos objetos do balde para o fim da retenção (RASTER_LIXEIRA_DIAS). Itens de outro tipo
+    passam direto. Roda na MESMA transação da lixeira: se a rota falhar, nada saiu do STAC."""
+    if (item.get("tipo") or "") != "raster":
+        return
+    cur.execute("SELECT current_setting('plat.tenant_id', true) AS t")
+    tenant_id = int(cur.fetchone()["t"] or 0)
+    ciclo_vida.ao_ir_para_lixeira(cur, tenant_id, item, sistema.enfileirar)
+
+
 def apagar_item(cur, request: Request, auth: Auth, iid: str, cascata: bool, forcado: bool = False) -> list[str]:
     """Envia o item (e, com cascata, os dependentes na ordem) para a lixeira. Devolve os ids apagados."""
     r = item_ou_404(cur, iid)
@@ -817,8 +823,10 @@ def apagar_item(cur, request: Request, auth: Auth, iid: str, cascata: bool, forc
             )
     apagados = []
     for dep in ordem["ordem"] if cascata else []:
+        dep_item = comum.carregar(cur, str(dep["id"]))  # ANTES da lixeira: a RLS esconde depois
         cur.execute("SELECT plat.item_lixeira(%s::uuid, true) AS ok", (dep["id"],))
         if cur.fetchone()["ok"]:
+            _raster_ao_apagar(cur, dep_item or {})
             apagados.append(dep["id"])
             registrar_evento(
                 cur, request, "itens/apagar", "item", dep["id"], {"cascata": True, "de": iid, "forcado": forcado}
@@ -826,6 +834,7 @@ def apagar_item(cur, request: Request, auth: Auth, iid: str, cascata: bool, forc
     cur.execute("SELECT plat.item_lixeira(%s::uuid, true) AS ok", (iid,))
     if not cur.fetchone()["ok"]:
         raise ErroAPI(404, "item_inexistente", "item inexistente")
+    _raster_ao_apagar(cur, r)
     apagados.append(iid)
     props = {"cascata": cascata, "titulo": r["titulo"][:250]}
     if forcado:

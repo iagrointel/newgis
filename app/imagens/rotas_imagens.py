@@ -28,15 +28,16 @@ from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from PIL import Image
 from pydantic import Field
-from rasterio import Affine
 from rasterio.vrt import WarpedVRT
 from rasterio.warp import Resampling
+from rasterio.windows import from_bounds
 
 from app import db, limites, objetos
 from app.auth.sessao import Auth, autenticado
 from app.catalogo.comum import registrar_evento, uuid_ok
 from app.catalogo.modelos import Modelo
 from app.erros import ErroAPI
+from app.imagens import formatos
 from app.imagens import pgstac as ps
 from app.jobs import servico
 from app.jobs.contexto import sessao_de
@@ -45,7 +46,9 @@ router = APIRouter(tags=["imagens"])
 LER = {"x-auth": "S/T", "x-privilegio": "proprio"}
 PUBLICAR = {"x-auth": "S/T", "x-privilegio": "conteudo.publicar_camada"}
 SEM_CACHE = {"Cache-Control": "no-store, must-revalidate"}
-TILE_CACHE = {"Cache-Control": "private, max-age=300", "X-Robots-Tag": "noindex, nofollow"}
+# no-cache (e não max-age): o tile pode ser guardado, mas TEM de revalidar por ETag — um item excluído e
+# recriado (reingestão nova, chave de COG nova) nunca serve o tile velho de um cache intermediário (L1-01-i)
+TILE_CACHE = {"Cache-Control": "private, no-cache", "X-Robots-Tag": "noindex, nofollow"}
 
 
 _TMS = morecantile.tms.get("WebMercatorQuad")
@@ -131,17 +134,10 @@ class _CacheDatasets:
                         velho.close()
                     except Exception:  # noqa: BLE001 — fechar dataset expulso nunca derruba um tile
                         pass
-            # BUG MEDIDO 10/09: nesta versão do rasterio (1.5.0), `WarpedVRT.read(boundless=True)` recusa
-            # INCONDICIONALMENTE ("WarpedVRT does not permit boundless reads") — nunca exercido até o mapa
-            # ligar uma camada raster de verdade (só o `/svc/.../raster/...` baseado em rio-tiler tinha
-            # cobertura de teste). O jeito certo, que qualquer tiler de COG usa: o VRT de destino já É o
-            # ladrilho — `transform`/`width`/`height` do PRÓPRIO tile — a leitura nunca sai dos limites do
-            # VRT e o GDAL mascara sozinho o que cai fora da cobertura da imagem de origem.
-            transform_do_tile = Affine((direita - esquerda) / _TILE_PX, 0.0, esquerda,
-                                        0.0, (baixo - cima) / _TILE_PX, cima)
-            with WarpedVRT(ds, crs="EPSG:3857", resampling=Resampling.bilinear,
-                            transform=transform_do_tile, width=_TILE_PX, height=_TILE_PX) as vrt:
-                return vrt.read(masked=True)
+            with WarpedVRT(ds, crs="EPSG:3857", resampling=Resampling.bilinear) as vrt:
+                janela = from_bounds(esquerda, baixo, direita, cima, vrt.transform)
+                return vrt.read(window=janela, out_shape=(vrt.count, _TILE_PX, _TILE_PX),
+                                boundless=True, masked=True)
 
 
 _CACHE = _CacheDatasets(limites.RASTER_TILE_CACHE_DATASET_MAX)
@@ -202,6 +198,20 @@ class IngestaoEntrada(Modelo):
     arquivo_id: str = Field(pattern=r"^[0-9a-fA-F-]{36}$")
     titulo: str | None = Field(default=None, min_length=1, max_length=250)
     epsg_declarado: int | None = Field(default=None, ge=1, le=999999)
+    guardar_original: bool = Field(
+        default=False,
+        description="manter o bruto no armazenamento após os COGs validados (ocupa cota); padrão: apagar",
+    )
+
+
+# ---------------------------------------------------------------- tabela de formatos (a MESMA do código)
+@router.get("/api/imagens/formatos", openapi_extra=LER)
+def formatos_de_entrada():
+    """A tabela canônica de formatos de entrada raster (`app.imagens.formatos.lista()`): aceitos com a
+    georreferência de cada um e recusados com a mensagem exata (ECW/MrSID sem SDK no GDAL desta
+    instalação; GeoPDF e HDF5 com razão medida). A tela de upload lê ESTA rota — nunca mantém lista à
+    mão: tabela da tela diferente da tabela do código é a refutação nomeada do item L1-01-f."""
+    return formatos.lista()
 
 
 @router.post("/api/imagens/ingestoes", status_code=202, openapi_extra=PUBLICAR)
@@ -213,6 +223,7 @@ def ingestao_criar(corpo: IngestaoEntrada, request: Request, auth: Auth = autent
             raise ErroAPI(404, "item_inexistente", "item de arquivo inexistente")
     job = servico.criar(sessao_de(auth), "imagens.ingestar", {
         "arquivo_id": arquivo_id, "titulo": corpo.titulo, "epsg_declarado": corpo.epsg_declarado,
+        "guardar_original": corpo.guardar_original,
     })
     with db.db(auth.contexto()) as cur:
         registrar_evento(cur, request, "imagens/ingestar", "item", arquivo_id, {"job_id": job["id"]})
@@ -242,9 +253,6 @@ def imagem_ver(item_id: str, auth: Auth = autenticado(escopo_token="imagens:ler"
         "tem_miniatura": bool(item["miniatura_chave"]),
         "miniatura_url": f"/api/itens/{item['id']}/miniatura",
         "tiles_url": f"/api/imagens/{item['id']}/tiles/{{z}}/{{x}}/{{y}}.png",
-        # item L2-01-mapa-web (10/09): a imagem entra na lista de camadas do mapa junto com os vetores;
-        # o front usa isto para ordenar "as N mais recentes" quando decide o padrão de visibilidade.
-        "criado_em": item["criado_em"].isoformat() if item["criado_em"] else None,
     }
     if stac is not None:
         props = stac.get("properties") or {}
@@ -264,28 +272,29 @@ def imagem_ver(item_id: str, auth: Auth = autenticado(escopo_token="imagens:ler"
 
 # ---------------------------------------------------------------- tiles
 @router.get("/api/imagens/{item_id}/tiles/{z}/{x}/{y}.png", openapi_extra=LER)
-def tile(item_id: str, z: int, x: int, y: int, auth: Auth = autenticado(escopo_token="imagens:ler")):
+def tile(item_id: str, z: int, x: int, y: int, request: Request,
+         auth: Auth = autenticado(escopo_token="imagens:ler")):
     if z < 0 or z > 24 or x < 0 or y < 0 or x >= 2 ** z or y >= 2 ** z:
         raise ErroAPI(422, "tile_invalido", f"coordenada de tile inválida: z={z} x={x} y={y}")
     with db.db(auth.contexto()) as cur:
         item = _item_raster(cur, item_id)
         chave = _chave_visual(cur, auth.tenant_id, item["dados"] or {})
+    # validador do tile: a CHAVE do COG visual (leva o sha256 do conteúdo, 8 hex) + as coordenadas —
+    # reingestão gera chave nova, então ETag novo e o 304 velho nunca é reaproveitado
+    etag = f'"tile-{chave}-{z}-{x}-{y}"'
+    cabecalhos = {**TILE_CACHE, "ETag": etag}
+    if (request.headers.get("if-none-match") or "").strip() == etag:
+        return Response(status_code=304, headers=cabecalhos)
     try:
-        # BUG MEDIDO 10/09: `_TMS.tile(x, y, z)` calcula um tile A PARTIR DE lng/lat — chamá-lo com
-        # índices de tile (x=1518 não é longitude válida) sempre disparava `PointOutsideTMSBounds` e
-        # devolvia um `Tile` sem `.left/.bottom/...` (`AttributeError`), nunca exercido até o mapa
-        # ligar a camada raster de verdade. O índice já É o tile — o que falta é a CAIXA dele em metros
-        # (`ler_janela` abre o VRT em EPSG:3857, não em graus), que é `xy_bounds`, não `.tile()`; mesmo
-        # padrão já usado em app/imagens/rotas_tiles.py.
-        caixa = _TMS.xy_bounds(morecantile.Tile(x, y, z))
+        t = _TMS.tile(x, y, z)
     except morecantile.errors.InvalidZoomError as e:
         raise ErroAPI(422, "tile_invalido", str(e)) from e
     try:
-        futuro = _POOL.submit(_CACHE.ler_janela, chave, caixa.left, caixa.bottom, caixa.right, caixa.top)
+        futuro = _POOL.submit(_CACHE.ler_janela, chave, t.left, t.bottom, t.right, t.top)
         arr = futuro.result(timeout=limites.RASTER_TILE_TIMEOUT_S)
     except FuturoTimeout:
         raise ErroAPI(504, "tile_tempo_esgotado",
                       f"a renderização do tile passou de {limites.RASTER_TILE_TIMEOUT_S} s") from None
     except (rasterio.errors.RasterioError, FileNotFoundError, objetos.ChaveInvalida) as e:
         raise ErroAPI(502, "tile_falhou", f"não foi possível ler o COG do item: {str(e)[:200]}") from e
-    return Response(_png_de(arr), media_type="image/png", headers=TILE_CACHE)
+    return Response(_png_de(arr), media_type="image/png", headers=cabecalhos)

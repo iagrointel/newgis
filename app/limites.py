@@ -79,6 +79,8 @@ BUSCA_REFORCO_STATUS = 0.25
 ITENS_PAGINA_MAX = 200
 ITENS_DESLOCAMENTO_MAX = 10_000
 LIXEIRA_DIAS = 30
+RASTER_LIXEIRA_DIAS = 7  # retenção da lixeira do item de IMAGEM: os objetos ficam no balde 7 dias após a
+# exclusão (janela de restauração); depois o job imagens.raster_apagar_objetos libera o espaço (L1-01-i)
 COTA_ITENS = 100_000  # padrão por inquilino, tenant.config.catalogo.cota_itens
 USADO_POR_PROFUNDIDADE_MAX = 5
 
@@ -389,3 +391,28 @@ REPLICA_ANEXOS_BYTES_MAX = 64 * 1024 * 1024  # 64 MiB de anexo embutido no pacot
 REPLICA_POR_USUARIO = 20                  # réplicas vivas por usuário (cada uma segura um pacote no armazenamento)
 REPLICA_NOME_MAX = 200                    # CHECK(length(nome) BETWEEN 1 AND 200) da migração
 REPLICA_FILTRO_MAX = 2_000                # CHECK(length(filtro) <= 2000) da migração
+# --- imagens/STAC (L1-01-a-pgstac-e-stac-api-por-inquilino; app/imagens/): catálogo é o pgstac (schema
+# `pgstac`, global ao banco), isolado por inquilino por convenção de nome de coleção `<tenant_id>-<slug>`,
+# nunca por RLS do pgstac (ele não tem). STAC_SLUG_MAX é o que sobra de 63 bytes (limite de identificador do
+# Postgres, embora `id` do pgstac seja `text` livre — o teto aqui é POLÍTICA, não do banco) depois do prefixo
+# `<tenant_id>-`: numa instalação com tenant_id de até 6 dígitos, 58 caracteres de slug cabem com folga no
+# CHECK de plat.raster_item.colecao.
+STAC_SLUG_MAX = 58
+STAC_ITEM_ID_MAX = 256
+STAC_PAGINA_PADRAO = 10      # `limit` padrão da busca (mesmo padrão da spec STAC API Item Search)
+STAC_PAGINA_MAX = 1000       # `limit` máximo aceito por pedido (pgstac pagina por token, não por offset)
+STAC_COLECOES_POR_INQUILINO = 500
+STAC_LOTE_ITENS_MAX = 10_000  # POST .../items:lote (semeadura de teste/ingestão em massa; ADR do item L1-01-h)
+
+# --- ingestão de raster (L1-01-ingest-raster; ADR 20260906T2127): validação isolada + COG dois perfis +
+# STAC no pgstac. RASTER_DIMENSAO_MAX/RASTER_BANDAS_MAX são recusa da validação (acima disto o COG não é
+# manejável pelo appliance: 200k×200k px uint8 já são 40 GB por banda); RASTER_VISUAL_MAX_LADO só limita a
+# MINIATURA/estatística amostrada, nunca o COG. TILE_CACHE_DATASET_MAX limita datasets abertos por processo
+# no handler de tiles (mínimo honesto até o TiTiler do L1-02).
+RASTER_DIMENSAO_MAX = 200_000           # pixels por eixo (linhas ou colunas) — acima: recusa na validação
+RASTER_BANDAS_MAX = 64                  # bandas por raster — acima: recusa na validação
+RASTER_BYTES_MAX = 2 * 1024 * 1024 * 1024  # bruto aceito para ingestão (igual a UPLOAD_BYTES_MAX)
+RASTER_VISUAL_MAX_LADO = 1024           # miniatura PNG (lado maior)
+RASTER_ESTATISTICA_AMOSTRA = 100_000    # pixels amostrados por banda para percentis do perfil visual
+RASTER_TILE_CACHE_DATASET_MAX = 8       # datasets abertos por processo no handler de tiles (LRU)
+RASTER_TILE_TIMEOUT_S = 30              # teto de renderização de um tile (mata a requisição, não o worker)

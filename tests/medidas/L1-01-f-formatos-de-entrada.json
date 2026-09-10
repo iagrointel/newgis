@@ -1,0 +1,41 @@
+{
+ "item": "L1-01-f-formatos-de-entrada",
+ "medidas": {
+  "tabela_da_rota_igual_ao_codigo": {
+   "valor": {
+    "aceitos": 12,
+    "recusados": 4
+   },
+   "unidade": "formatos",
+   "comando": "GET /api/imagens/formatos == app.imagens.formatos.lista()"
+  },
+  "cogs_validos_fora_do_job": {
+   "valor": {
+    "geotiff_sintetico.tif": {
+     "bytes": 1172,
+     "cog_valido_strict": true
+    },
+    "mosaico_4cenas.zip": {
+     "bytes": 2046,
+     "cog_valido_strict": true
+    }
+   },
+   "unidade": "itens",
+   "comando": "rio_cogeo.cog_validate(strict=True) sobre o asset cientifico baixado do balde"
+  },
+  "mosaico_4_cenas": {
+   "valor": {
+    "cenas": 4,
+    "dimensoes": [
+     192,
+     144
+    ],
+    "bytes_cientifico": 2046
+   },
+   "unidade": "item",
+   "comando": "imagens_ingestar sobre tests/dados/raster/mosaico_4cenas.zip"
+  }
+ },
+ "gerado_em": "2026-09-09T00:02:22Z",
+ "git_sha": "bc71718b44d0"
+}

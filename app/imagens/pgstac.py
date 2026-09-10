@@ -13,6 +13,7 @@ import re
 from typing import Any
 
 import psycopg2
+import psycopg2.sql
 
 from app import limites
 from app.catalogo.comum import jsonb
@@ -91,6 +92,26 @@ def item_obter(cur, tenant_id: int, colecao_id: str, item_id: str) -> dict | Non
     r = cur.fetchone()
     conteudo = r["item"] if r else None
     return conteudo  # get_item devolve null (não erro) quando não existe
+
+
+def item_apagar(cur, item_id: str, colecao: str) -> None:
+    """`pgstac.delete_item` (ao contrário de `get_item`/`create_item`, que já trazem o schema na própria
+    definição) resolve `items` SEM qualificar: depende do search_path de quem chama. Troca o search_path
+    por dentro da transação (`SET LOCAL`, mesmo contrato de `_entrar_no_pgstac`) e DEVOLVE o anterior antes
+    de sair — quem chama segue usando o banco do app na mesma transação."""
+    cur.execute("SHOW search_path")
+    anterior = cur.fetchone()["search_path"]
+    _entrar_no_pgstac(cur)
+    cur.execute("SELECT pgstac.delete_item(%s, %s) AS ok", (item_id, colecao))
+    # `anterior` vem de SET search_path do app.db.py (ex.: `plat_t<algo>, public`) — nunca contém $user;
+    # reconstituído como identificadores para sobreviver a maiúsculas e a nomes compostos
+    cur.execute(
+        psycopg2.sql.SQL("SET LOCAL search_path = {}").format(
+            psycopg2.sql.SQL(", ").join(
+                psycopg2.sql.Identifier(p.strip()) for p in anterior.split(",")
+            )
+        )
+    )
 
 
 def item_criar(cur, tenant_id: int, colecao_id: str, corpo: dict[str, Any]) -> dict:

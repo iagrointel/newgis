@@ -619,6 +619,51 @@ lista de escolas (atributo)" montado só pelo painel, 8 capturas, exportação c
 Refutação (`tests/unit/test_app_acoes.py`): 30 ações em cadeia, p95 0,47 ms por volta e profundidade 31, ciclo
 fechado só avisa e para (filtro idempotente); renomear campo quebra a relação nomeadamente nos dois validadores.
 Quadro gatilhos × alvos × ações vs os 8 gatilhos do EXB em `docs/PARIDADE.md`. ADR `20260908T1200`.
+## 8 de setembro de 2026 (item L1-01-f-formatos-de-entrada: a lista fechada de formatos, com arquivo aberto provando cada um)
+
+A ingestão de imagem ganha contrato de entrada. `app.imagens.formatos` é a tabela única — 12 formatos
+aceitos (GeoTIFF/BigTIFF, JPEG 2000, Erdas Imagine, ENVI, ASCII Grid, PNG/JPEG com world file, netCDF
+1 variável × 1 tempo, GRIB 1 mensagem, Zarr, KMZ superoverlay e o zip contêiner de mosaico) e os
+recusados com mensagem dirigida (ECW/MrSID por SDK proprietário ausente; GeoPDF, HDF5, netCDF com eixo
+de tempo apontando o L1-19, ASCII com vírgula decimal). A rota GET /api/imagens/formatos devolve
+`formatos.lista()` e a tela de upload lê a mesma tabela (i18n pt-BR) — teste de API compara resposta e
+código, tabela diferente é a refutação nomeada. O portão inteiro roda contra o job real, o Garage e o
+pgstac da trilha (`tests/api/imagens/test_formatos_entrada.py`, 22 testes; arquivos de teste em
+`tests/dados/raster/` com licença anotada): cada formato aceito vira COG válido (o científico do
+GeoTIFF e o do MOSAICO revalidados fora do job com `cog_validate --strict`), zip com 4 cenas vira 1
+item com 1 COG mosaicado (192×144 da união, identidade de mosaico preservada — achado: o VRT dizia
+"1 cena"), zip com CRS diferentes recusa dizendo quais (EPSG:31983 × EPSG:4326, com o nome de cada
+arquivo), JP2 de 12 bits importa com UInt16 preservado, IMG com `.rrd` importa. Quatro achados de
+produto do ramo base, consertados e medidos aqui: (1) CRÍTICO — `pgstac.update_collection_extents()`
+falhava no schema da trilha e o `except` Python capturava, mas a transação Postgres ficava ABORTADA: o
+commit virava ROLLBACK e o item raster inteiro se perdia silenciosamente (21 itens 'arquivo', zero
+'raster'); conserto por SAVEPOINT/ROLLBACK TO SAVEPOINT. (2) O cadeado de sidecar
+(`GDAL_DISABLE_READDIR_ON_OPEN`) impede o driver ENVI de achar o `.hdr` irmão — e o mesmo cadeado
+quebrava a 2ª etapa da conversão visual, porque o VRT REFERENCIA o `.dat`; `ambiente_isolado(*fontes)`
+cede pela FONTE ORIGINAL (`cog._rodar(fonte=...)`). (3) Upload canônico (`objetos.guardar`, chave
+`<slug>/<classe>/<sha256>.<ext>`) × objeto de imagem (`objetos_raster`, chave `<slug>/<item>/...`) são
+contratos distintos — misturá-los chegava ao job como "o objeto não existe mais no armazenamento".
+(4) A rota POST /api/imagens/ingestoes (L1-01-i) registrava o evento `imagens/ingestar` sem cadastro em
+`plat.evento_tipo` — FK reprovava, 500 em todo POST; migração 20260908T2350 registra o tipo. ADR
+20260908T2357. Ressalva do merge: `openapi.json` ficou obsoleto quanto à rota de formatos (turno de
+outro item) e o caso cruzado de GET /api/imagens/formatos fica deliberadamente fora (rota só de
+leitura, coberta pelo teste de igualdade com a tabela).
+
+## 8 de setembro de 2026 (item L1-01-i-ciclo-de-vida-exclusao-e-coleta-de-lixo: lixeira de 7 dias, expurgo pelo catálogo e `plat raster gc`)
+
+O item de imagem ganha fim de linha. Excluir pelo navegador esconde o item pela RLS (tile responde 404 em
+0,016 s, `tests/medidas/L1-01-i-ciclo-de-vida-exclusao-e-coleta-de-lixo.json`), tira o corpo STAC do pgstac
+guardando-o em `plat.raster_item.stac` (migração 20260908T1911) e enfileira o apagamento dos objetos para
+daqui a 7 dias; restaurar dentro da retenção devolve tudo (o objeto nunca saiu do balde) e fora dela devolve
+409 `objetos_ja_apagados`. O expurgo do catálogo passa a ter destruidor do tipo 'raster' (objetos + STAC +
+espelho, bytes liberados no evento). O CLI `plat raster gc` lista órfãos, quebrados e lixeira vencida e
+registra o relatório como job concluído em Tarefas — fora do worker, pelo caminho honesto da máquina de
+estados: `plat.job_registrar_concluido` (migração 20260908T1932, SECURITY DEFINER) nasce pendente, vira
+'rodando' se ninguém pegou e conclui por `plat.job_terminar`; a enumeração de inquilinos da CLI usa
+`plat.tenants_para_manutencao()`, porque a RLS de `plat.tenant` deixa a tabela vazia para o app sem sessão.
+A coleta LISTA e RELATA; apagar órfão é decisão humana. Refutação: 3 itens, apaga 2, o 3º intacto byte a
+byte, e o COG excluído não volta pela URL antiga (403 dentro da retenção — barra até a fatia em cache do
+nginx; 404 por ausência depois). ADR 20260908T1955.
 
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
