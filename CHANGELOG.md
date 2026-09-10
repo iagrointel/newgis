@@ -2017,3 +2017,14 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
 - `comprimento_m` da aresta passa a ser o COMP convertido (o comprimento do ATIVO); o geodésico fica em `atributos`. Cláusula "km de MT = Σ COMP ± 0,1 %" verdadeira por construção.
 - Migração `20260907T1330_rede_importacao_contrato.sql`: colunas `contrato`, `comp`, `orfaos` (jsonb) em `plat.rede_importacao`.
 - `inspecionar`/`sha256_gdb` aceitam arquivo único (GPKG) além de pasta `.gdb`.
+
+## L1-02-g-wms-1-3-0-raster (10/09/2026)
+- WMS 1.3.0 por token (`GET /svc/<token>/wms`, `app/imagens/rotas_wms.py` + `app/imagens/wms.py`): `GetCapabilities` (uma `<Layer>` por item raster que o token alcança, `EX_GeographicBoundingBox`, `BoundingBox` em EPSG:4326 e EPSG:3857) e `GetMap` (LAYERS/CRS/BBOX/WIDTH/HEIGHT/FORMAT/TRANSPARENT), reusando a mesma porta de entrada do WMTS (`_autorizar`, token no caminho, cache de 5 s).
+- `tiles.recorte()` em `app/imagens/tiles.py`, ao lado de `ladrilho()`: leitura de um bbox arbitrário (não uma célula de grade) via `rio_tiler.io.Reader.part`, para o CRS/tamanho que o cliente pedir no GetMap.
+- Eixo invertido do WMS 1.3.0 em EPSG:4326 (BBOX = lat,lon nesse CRS, x,y normal em EPSG:3857) tratado em `wms.py::bbox_do_parametro`/`bbox_para_atributo` e testado nos dois CRS.
+- Isolamento entre inquilinos: a lista de camadas visíveis é calculada uma vez por token (tenant_id + escopo) e usada tanto no GetCapabilities quanto na validação do GetMap — camada fora dela vira `LayerNotDefined`, a mesma mensagem para "não existe" e "não é sua".
+- Erro de domínio (CRS inexistente, tamanho acima do teto, BBOX degenerado, STYLES desconhecido, operação não suportada) sempre em `ServiceExceptionReport` (XML da spec), nunca 500 mudo; `SLD`/`SLD_BODY` só é consultado como string, nunca entra num parser de XML (defesa estrutural contra XXE).
+- `app/limites.py`: seção WMS (`WMS_LARGURA_MAX`/`WMS_ALTURA_MAX`/`WMS_PIXELS_MAX` = 4096×4096, `WMS_CAMADAS_MAX` = 500).
+- XSD oficial do WMS 1.3.0 (`capabilities_1_3_0.xsd`, `exceptions_1_3_0.xsd`) trazido para `tests/dados/ogc_xsd/wms/1.3.0/` a partir do commit `b0b52199f` (já no object store do repositório, cache de XSD do item L2-04-i) — sem depender de rede para validar.
+- `tests/api/imagens/test_wms.py` (21 casos): GetCapabilities válido no XSD oficial, GetMap com tamanho exato, JPEG sem transparência, fora-da-cobertura em branco, eixo invertido 4326×3857, isolamento entre inquilinos, token sem escopo/inválido, e os abusos do adversário (WIDTH gigante, BBOX invertido de verdade, CRS inexistente, STYLES arbitrário, SLD_BODY com XXE).
+- Fora desta passagem (ver `docs/PARIDADE.md`): `GetFeatureInfo`, `TIME`/dimensão, `GetLegendGraphic` (depende de L1-02-f, ainda pendente).
