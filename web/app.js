@@ -21,11 +21,14 @@ async function mostrarVersao() {
   texto('versao-ambiente', r.json.ambiente);
 }
 
+/* linha de estado única (pílula) — a porta do produto não é lugar de despejar JSON de saúde; o corpo
+   completo continua disponível, só que dentro de <details id="detalhes-tecnicos"> fechado por padrão. */
 async function mostrarSaude() {
   const r = await obterJSON('/saude');
-  const estado = document.getElementById('saude-estado');
-  estado.textContent = r.status === 200 ? 'ok' : `${r.status} ${r.json.banco || ''}`.trim();
-  estado.className = `estado ${r.status === 200 ? 'ok' : 'falha'}`;
+  const ok = r.status === 200;
+  const pilula = document.getElementById('saude-pilula');
+  pilula.textContent = ok ? t('inicio.servico_ok') : t('inicio.servico_indisponivel');
+  pilula.className = `estado ${ok ? 'ok' : 'falha'}`;
   document.getElementById('saude-json').textContent = formatarJSON(r.json);
 }
 
@@ -173,6 +176,7 @@ async function mostrarEntrada() {
   montarLayout({ usuario, ativo: '/' });
   const sec = document.getElementById('entrada');
   document.getElementById('entrada-texto').textContent = t('inicio.ola', { nome: usuario.nome || usuario.login, inquilino: usuario.inquilino?.nome || '' });
+  document.getElementById('conteudo-logado').hidden = false;
   montarPassos();
   montarAtalhos(usuario);
   sec.hidden = false;

@@ -20,28 +20,29 @@
     </header>
     <section id="entrada" aria-label="entrada" hidden>
       <p id="entrada-texto"></p>
-      <div class="passos-3" id="passos"></div>
-      <div class="cartao" id="enviar-cartao">
-        <h2 data-i18n="inicio.enviar_titulo">Envie</h2>
-        <div id="enviar-area"></div>
+      <div id="conteudo-logado" hidden>
+        <div class="passos-3" id="passos"></div>
+        <div class="cartao" id="enviar-cartao">
+          <h2 data-i18n="inicio.enviar_titulo">Envie</h2>
+          <div id="enviar-area"></div>
+        </div>
+        <div class="cartao" id="recentes-cartao">
+          <h2 data-i18n="inicio.recentes_titulo">Publicados recentemente</h2>
+          <div id="recentes-lista"></div>
+        </div>
+        <nav class="linha-atalhos" id="atalhos" aria-label="atalhos"></nav>
       </div>
-      <div class="cartao" id="recentes-cartao">
-        <h2 data-i18n="inicio.recentes_titulo">Publicados recentemente</h2>
-        <div id="recentes-lista"></div>
-      </div>
-      <nav class="linha-atalhos" id="atalhos" aria-label="atalhos"></nav>
     </section>
-    <section id="versao" aria-label="versão">
+    <p id="estado-resumo" class="fraco"><span id="saude-pilula" class="estado">…</span></p>
+    <details id="detalhes-tecnicos" class="cartao">
+      <summary data-i18n="inicio.detalhes_tecnicos">detalhes técnicos</summary>
       <dl>
         <dt>versão</dt><dd id="versao-numero">…</dd>
         <dt>git</dt><dd id="versao-git">…</dd>
         <dt>ambiente</dt><dd id="versao-ambiente">…</dd>
       </dl>
-    </section>
-    <section id="saude" aria-label="saúde">
-      <h2>saúde <span id="saude-estado" class="estado">…</span></h2>
       <pre id="saude-json">…</pre>
-    </section>
+    </details>
   </main>
 </div>
 <script type="module" src="/static/app.js"></script>
