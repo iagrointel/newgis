@@ -430,14 +430,20 @@ async function iniciar(usuario) {
   });
   try {
     await arvore.carregar();
+    // Sem documento de mapa (`?id=`), o catálogo não pode abrir vazio (pedido do dono 10/09: "tem de
+    // haver dado visível") — liga as camadas mais recentes do inquilino; documento salvo no navegador ou
+    // escolha explícita do usuário (`ativarPadrao` só age se nada estiver ligado) nunca é sobrescrita.
+    if (!temDocumento) await arvore.ativarPadrao(8);
     legenda.desenhar();
     // Sem documento de mapa (`?id=`), a vista inicial enquadra as camadas do inquilino em vez de abrir
     // sempre no recorte de Guarulhos (medido 10/09: camada fora de Guarulhos ficava "sobre o nada"). A
     // extensão vem da listagem (`/api/mapa/camadas`, ficha resumida — só quando a ingestão já a gravou;
     // camada sem extensão é ignorada, nunca medida aqui); sem nenhuma extensão disponível, mantém a vista
-    // padrão do recorte (CENTRO/z11), como antes.
+    // padrão do recorte (CENTRO/z11), como antes. Prioriza as camadas VISÍVEIS (ligadas); sem nenhuma
+    // ativa ainda, cai para a união de todas as disponíveis — não deixa a vista sem enquadramento nenhum.
     if (!temDocumento) {
-      const uniao = uniaoDeExtensoes(catalogo.disponiveis);
+      const visiveis = catalogo.disponiveis.filter((f) => catalogo.ativas.includes(f.id));
+      const uniao = uniaoDeExtensoes(visiveis.length ? visiveis : catalogo.disponiveis);
       if (uniao) map.fitBounds([[uniao[0], uniao[1]], [uniao[2], uniao[3]]], { animate: false, padding: 40 });
     }
   } catch (e) {

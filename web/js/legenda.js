@@ -108,8 +108,20 @@ export function analisarCamada(map, layerId) {
   }
 
   if (tipo === 'raster') {
-    const expr = map.getPaintProperty(layerId, 'raster-color');
-    const faixa = map.getPaintProperty(layerId, 'raster-color-range');
+    // BUG MEDIDO 10/09: `raster-color`/`raster-color-range` não são propriedades de paint reconhecidas
+    // pela versão vendorizada do MapLibre GL (4.7.1) — perguntar por elas a uma camada raster comum
+    // (imagem publicada, só `raster-opacity`) lança dentro do próprio MapLibre, nunca um retorno vazio.
+    // Nunca exercido até existir uma camada raster de verdade na lista de camadas do mapa. Try/catch
+    // cumpre o contrato já documentado da função ("nunca lança"): raster sem rampa de cor não tem
+    // legenda de classes, e tudo bem — a camada ainda aparece na árvore, só sem bloco de legenda.
+    let expr;
+    let faixa;
+    try {
+      expr = map.getPaintProperty(layerId, 'raster-color');
+      faixa = map.getPaintProperty(layerId, 'raster-color-range');
+    } catch {
+      return null;
+    }
     const cores = Array.isArray(expr) ? expr.filter((v) => ehCor(v)) : [];
     if (!cores.length) return null;
     const minimo = (faixa && faixa[0]) ?? meta['plat:minimo'] ?? 0;

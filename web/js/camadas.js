@@ -151,6 +151,25 @@ export class Arvore {
     this._sincronizarDisponiveis();
   }
 
+  /* padrão de visibilidade ao abrir o mapa (10/09, pedido do dono: "ao abrir o mapa tem de haver dado
+     visível" — o catálogo não pode abrir com tudo desmarcado). Só age se NADA estiver ligado ainda (não
+     pisa em documento salvo no navegador nem em escolha explícita do usuário); mais de `maximo` camadas
+     disponíveis, liga só as mais recentes (`criado_em`, vindo do servidor — ver app/mapa/rotas.py e
+     app/imagens/rotas_imagens.py). Chamado por quem monta a tela (web/js/mapa/mapa.js), não pelo
+     `carregar()`: esta árvore também serve o widget do L5-01-b, que pode não querer este comportamento. */
+  async ativarPadrao(maximo = 8) {
+    if (this.catalogo.ativas.length) return;
+    const candidatas = [...this.catalogo.disponiveis]
+      .sort((a, b) => new Date(b.criado_em || 0) - new Date(a.criado_em || 0))
+      .slice(0, maximo);
+    for (const f of [...candidatas].reverse()) { // reverso: a mais recente liga por último e fica no topo
+      try { await this.catalogo.ligar(f.id); } catch (e) { this.aoErro(e); }
+    }
+    this._aplicarOrdemNoMapa();
+    this.desenhar();
+    this.salvar();
+  }
+
   // ------------------------------------------------------------------------------------- grupo/estrutura
   criarGrupo(titulo) {
     const g = noGrupo(titulo, []);
@@ -378,6 +397,12 @@ export class Arvore {
           no.aberto ? '▾ ' : '▸ ', this.tituloExibido(no))
       : h('label', { class: 'arvore-titulo camada-titulo', for: `chk-${no.chave}`, title: this.tituloExibido(no) }, this.tituloExibido(no));
     const cabecalho = h('div', { class: 'arvore-cabecalho' }, caixa, tituloEl);
+    if (no.tipo === 'camada') {
+      // badge de tipo (Vetor · Imagem): reusa a classe `.camada-tipo` já estilizada (mono, --fraco) da
+      // lista de rede em mapa.js — mesma linguagem visual, sem CSS novo.
+      const ficha = this.catalogo.ficha(no.id) || {};
+      cabecalho.append(h('span', { class: 'camada-tipo' }, ficha.tipo === 'raster' ? 'Imagem' : 'Vetor'));
+    }
 
     if (no.tipo === 'camada' && ativa) {
       const f = this.catalogo.ficha(no.id) || {};

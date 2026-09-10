@@ -87,6 +87,9 @@ def _ficha(cur, linha: dict, completo: bool) -> dict:
     ficha = {
         "id": str(linha["id"]),
         "titulo": linha["titulo"],
+        # item L2-01-mapa-web (10/09): visibilidade padrão ao abrir o mapa escolhe as "8 mais recentes" —
+        # o front (web/js/camadas.js) ordena por este campo; sem ele cairia na ordem alfabética da consulta.
+        "criado_em": linha["criado_em"].isoformat() if linha["criado_em"] else None,
         "geometria": geometria,
         "familia": simb_mod.familia(geometria),
         "srid": dados.get("srid"),
