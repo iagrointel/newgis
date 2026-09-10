@@ -250,4 +250,15 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # L5-36: instalar/desinstalar widget externo é configuração da organização — ambos narrados
     ("POST", "/api/widgets/externos"): ["widgets/instalar"],
     ("DELETE", "/api/widgets/externos/{nome}"): ["widgets/desinstalar"],
+    # L2-13-b: criar registra a réplica (o pacote em si é job), sincronizar registra o lote,
+    # apagar registra a remoção. Baixar o pacote é leitura: sem evento de domínio (o log de acesso cobre).
+    ("POST", "/api/replicas"): ["replicas/criar"],
+    ("POST", "/api/replicas/{id}/sincronizar"): ["replicas/sincronizar"],
+    ("DELETE", "/api/replicas/{id}"): ["replicas/apagar"],
+    # L2-04-k: as rotas Esri são a MESMA fachada — o evento é o do mecanismo de réplica da casa.
+    # extractChanges é leitura de janela, não conta como sincronização: sem evento de domínio.
+    ("POST", "/rest/services/{item_id}/FeatureServer/createReplica"): ["replicas/criar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/synchronizeReplica"): ["replicas/sincronizar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/unRegisterReplica"): ["replicas/apagar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/extractChanges"): [],
 }

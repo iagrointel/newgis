@@ -51,6 +51,7 @@ from app.consulta.rotas_mapserver import router as rotas_mapserver_esri
 from app.consulta.rotas_ogc_features import router as rotas_ogc_features
 from app.consulta.rotas_query import router as rotas_consulta_esri
 from app.consulta.rotas_servico import router as rotas_consulta_servico
+from app.consulta.rotas_sync_esri import router as rotas_sync_esri
 from app.consulta.rotas_wfs import router as rotas_wfs
 from app.correio.rotas_smtp import router as rotas_smtp
 from app.edicao.rotas import router as rotas_edicao
@@ -90,6 +91,7 @@ from app.rede_utilidades.rotas_simples import router as rotas_rede_simples
 from app.rede_utilidades.rotas_subredes import router as rotas_rede_subredes
 from app.rede_utilidades.rotas_topologia import router as rotas_rede_topologia
 from app.regras.rotas import router as rotas_regras  # L2-10-d: regras de atributo por camada
+from app.replica.rotas import router as rotas_replicas
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
@@ -191,6 +193,7 @@ ROUTERS = [
     # mais o pacote de mapa; arquivo com validade de 7 dias)
     rotas_exportacao,
     rotas_regras,
+    rotas_replicas,   # L2-13-b: réplicas para trabalho desconectado
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- rede de utilidades (L4-01-a): /api/rede (redes do inquilino), /api/rede/{rede_id}/pacote (importa e
@@ -270,6 +273,12 @@ ROUTERS = [
     # serviço/camada (`?f=json`), `/ogc/features/{item}` e `/wfs/{item}`. applyEdits/attachments/
     # relationships ficam de fora (dependem de L2-03-edicao e L2-10-b, nenhum construído).
     rotas_consulta_esri,
+    # --- escrita compatível Esri (L2-04-d): applyEdits/addFeatures/updateFeatures/deleteFeatures, calculate,
+    # anexos e uploads sobre a MESMA porta de escrita do L2-03-a
+    rotas_edicao_esri,
+    # --- sincronização de réplica no protocolo Esri (L2-04-k): createReplica/synchronizeReplica/
+    # extractChanges/replicas/unRegisterReplica sobre o mecanismo de réplica do L2-13-b
+    rotas_sync_esri,
     rotas_consulta_servico,
     # --- diretório de serviços Esri por token (L2-04-b): /svc/{token}/rest/info|generateToken|services
     rotas_diretorio_esri,

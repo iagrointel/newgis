@@ -1256,6 +1256,24 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("DELETE", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): Caso(
         lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}/anexos/{UUID_NULO}"
     ),
+    # ---- réplicas de trabalho desconectado (L2-13-b): a lista é do próprio chamador (só as réplicas do
+    # dono, ou de todo o inquilino com conteudo.ver_tudo — nunca de outro inquilino, a RLS de plat.replica
+    # decide). Criar aponta uma camada que não é de A nem de B: morre no 404 da camada, sem gravar réplica
+    # (a transação da rota desfaz o INSERT que veio antes). Os demais são por id inexistente.
+    ("POST", "/api/replicas"): Caso(
+        lambda p: "/api/replicas",
+        lambda p: {"nome": "zt-cruzado", "camadas": [{"camada_id": UUID_NULO}]},
+    ),
+    ("GET", "/api/replicas"): Caso(
+        lambda p: "/api/replicas", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("GET", "/api/replicas/{id}"): Caso(lambda p: f"/api/replicas/{UUID_NULO}"),
+    ("DELETE", "/api/replicas/{id}"): Caso(lambda p: f"/api/replicas/{UUID_NULO}"),
+    ("GET", "/api/replicas/{id}/pacote"): Caso(lambda p: f"/api/replicas/{UUID_NULO}/pacote"),
+    ("POST", "/api/replicas/{id}/sincronizar"): Caso(
+        lambda p: f"/api/replicas/{UUID_NULO}/sincronizar",
+        lambda p: {"idempotencia": "zt-cruzado-replica", "camadas": []},
+    ),
     # ---- visualizador de mapa (L2-01-mapa-web): a lista é do próprio chamador; o resto é por id
     ("GET", "/api/mapa/camadas"): Caso(
         lambda p: "/api/mapa/camadas", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
@@ -1342,6 +1360,35 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     ("POST", "/rest/services/{item_id}/FeatureServer/uploads/upload"): Caso(
         lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/uploads/upload"
+    ),
+    # ---- sincronização de réplica no protocolo Esri (L2-04-k) sobre o mecanismo do L2-13-b
+    ("POST", "/rest/services/{item_id}/FeatureServer/createReplica"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/createReplica",
+        lambda p: {"layers": "0", "dataFormat": "sqlite", "transportType": "esriTransportTypeUrl"},
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/synchronizeReplica"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/synchronizeReplica",
+        lambda p: {"replicaID": UUID_NULO, "syncDirection": "download", "edits": "[]"},
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/extractChanges"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/extractChanges",
+        lambda p: {"replicaID": UUID_NULO, "layerServerGens": [{"id": 0, "serverGen": 0}]},
+    ),
+    ("GET", "/rest/services/{item_id}/FeatureServer/replicas"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/replicas"
+    ),
+    ("GET", "/rest/services/{item_id}/FeatureServer/replicas/{replica_id}"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/replicas/{UUID_NULO}"
+    ),
+    ("GET", "/rest/services/{item_id}/FeatureServer/replicas/{replica_id}/pacote"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/replicas/{UUID_NULO}/pacote"
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/unRegisterReplica"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/unRegisterReplica",
+        lambda p: {"replicaID": UUID_NULO},
+    ),
+    ("GET", "/rest/services/{item_id}/FeatureServer/jobs/{job_id}"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/jobs/{UUID_NULO}"
     ),
     ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/applyEdits"): Caso(
         lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/applyEdits", lambda p: {"adds": []}

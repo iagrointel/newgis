@@ -1,0 +1,93 @@
+{
+ "item": "L2-13-b-replicas-sincronizacao",
+ "medidas": {
+  "replica_100k_segundos": {
+   "valor": 1.97,
+   "unidade": "s",
+   "comando": "pytest tests/api/test_replicas.py::test_cem_mil_feicoes_em_replica_com_tempo_medido"
+  },
+  "replica_100k_feicoes": {
+   "valor": 100000,
+   "unidade": "feicoes",
+   "comando": "generate_series + replicas.criar"
+  },
+  "replica_100k_pacote_bytes": {
+   "valor": 32763904,
+   "unidade": "bytes",
+   "comando": "objetos.guardar do GeoPackage"
+  },
+  "replica_100k_carga_1min": {
+   "valor": 7.85888671875,
+   "unidade": "carga",
+   "comando": "os.getloadavg() no instante da medida (12 núcleos)"
+  }
+ },
+ "gerado_em": "2026-09-08T12:55:57Z",
+ "git_sha": "4dc968688c39",
+ "portao_de_pronto": [
+  {
+   "clausula": "réplica de 2 camadas com filtro -> GeoPackage abre no GDAL com as contagens do filtro",
+   "estado": "feito",
+   "prova": "tests/api/test_replicas.py::test_replica_de_duas_camadas_com_filtro_abre_no_gdal_com_as_contagens (7 feições na camada 1, filtro grupo='norte' deixa 3; camada 2 leva 4; ogrinfo -json devolve driverShortName=GPKG e featureCount 3 e 4)"
+  },
+  {
+   "clausula": "editar 20 feições no GeoPackage (por ogr) e sincronizar sobe 20 e baixa as mudanças do servidor feitas no intervalo",
+   "estado": "feito",
+   "prova": "tests/api/test_replicas.py::test_sincronizar_sobe_vinte_editadas_no_gpkg_e_baixa_o_que_o_servidor_mudou (UPDATE por ogrinfo -dialect SQLITE dentro do .gpkg; subidas.atualizadas=20; a descida traz a feição alterada e a apagada no servidor, e NÃO devolve as 20 que o próprio cliente subiu)"
+  },
+  {
+   "clausula": "conflito por versão divergente resolvido pela política (3 casos testados)",
+   "estado": "feito",
+   "prova": "test_conflito_politica_servidor_vence (não sobrescreve, resolucao=servidor), test_conflito_politica_cliente_vence (sobrescreve com a versão atual do servidor, resolucao=cliente), test_conflito_politica_pergunta_nao_aplica_e_devolve_o_atual (resolucao=pendente, devolve a feição atual)"
+  },
+  {
+   "clausula": "segunda sincronização do mesmo lote = 0 aplicadas (idempotência)",
+   "estado": "feito",
+   "prova": "test_mesmo_lote_repetido_aplica_zero_e_devolve_a_mesma_resposta (mesma chave de idempotência: repetida=true, mesma resposta, geração não avança, uma única linha na tabela de camada)"
+  },
+  {
+   "clausula": "geração avança monotonicamente",
+   "estado": "feito",
+   "prova": "test_geracao_avanca_monotonicamente (4 sincronizações -> 1,2,3,4, sem repetição) e test_ponteiro_da_camada_avanca_e_nao_reenvia_a_mesma_mudanca (desde da 2ª = ate da 1ª, 0 mudanças)"
+  },
+  {
+   "clausula": "réplica de A não baixa camada de B",
+   "estado": "feito",
+   "prova": "test_replica_de_a_nao_alcanca_camada_de_b (404 item_inexistente ao pedir camada de demo2 em demo), test_replica_de_b_e_404_para_a (ler, baixar pacote e sincronizar réplica de B: 404; não aparece na lista de A), test_sincronizar_camada_que_nao_e_da_replica_da_404 (camada do MESMO inquilino fora do recorte declarado: 404 e nada escrito)"
+  },
+  {
+   "clausula": "100 mil feições em réplica em tempo medido",
+   "estado": "feito",
+   "prova": "test_cem_mil_feicoes_em_replica_com_tempo_medido: 100.000 feições exportadas em 1,97 s, pacote de 32.763.904 bytes, com carga de 1 min = 7,86 em 12 núcleos (medida tirada SOB disputa; o número real com a máquina livre só pode ser melhor)"
+  },
+  {
+   "clausula": "QField abrindo o GeoPackage = teste manual registrado com data e versão (não bloqueia)",
+   "estado": "não feito — registrado, não bloqueia",
+   "prova": "não há aparelho Android nem QField nesta máquina, e o portão diz que a cláusula não bloqueia. O que foi provado por máquina é a FORMA que o QField (GDAL/QGIS) exige: driver GPKG, CRS declarado por projjson na camada de feições, e as tabelas de serviço registradas em gpkg_contents com data_type 'attributes' (sem esse registro o QGIS não as lista) — test_pacote_tem_a_forma_que_o_qfield_le. GDAL desta máquina: 3.8.4 (2024-02-08). O teste no aparelho fica para quem tiver o QField instalado; a data e a versão ficam registradas aqui quando ele for feito."
+  }
+ ],
+ "refutacao": [
+  {
+   "pedido": "adversário sobe mudança com versão antiga sem política 'cliente vence' e confere que não sobrescreve",
+   "estado": "feito",
+   "prova": "test_conflito_politica_servidor_vence e test_conflito_politica_pergunta_nao_aplica_e_devolve_o_atual: nos dois o servidor continua com 'v2-servidor' depois da sincronização"
+  },
+  {
+   "pedido": "sincroniza réplica expirada",
+   "estado": "feito",
+   "prova": "test_replica_expirada_recusa_sincronizacao: 409 replica_expirada, nenhuma feição gravada; a resposta nomeia a validade (30 d) e a retenção do rastreio (45 d)"
+  },
+  {
+   "pedido": "sobe 1 mi de mudanças (limite declarado)",
+   "estado": "feito com ressalva",
+   "prova": "test_lote_acima_do_teto_declarado_e_recusado: o teto é REPLICA_SINCRONIZAR_LOTE_MAX = 2.000 por camada (<= EDICAO_LOTE_MAX), recusado em 422 pelo pydantic antes de tocar no banco. O teste manda 2.001, não 1.000.000: um milhão de itens não passa do teto de corpo (CORPO_MAX_PADRAO_BYTES) e cairia num 413 do middleware, que é OUTRO caminho de recusa — o teste exercita o teto do item, que é o declarado."
+  }
+ ],
+ "limitacoes_honestas": [
+  "O relógio da réplica é plat.feicao_historico.id, atribuído no INSERT e não na confirmação da transação: uma transação concorrente que confirme depois da nossa leitura pode ter id menor que a geração nova e só aparecer na sincronização seguinte. Atrasa uma mudança, nunca a perde (o ponteiro só avança até o que foi lido).",
+  "Anexos: o pacote leva o METADADO dos anexos da feição (nome, tipo, bytes, sha256), não o conteúdo binário. Baixar a foto exige rede. Embutir o binário estouraria o teto declarado do pacote de campo.",
+  "Feição que sai do recorte (filtro ou extensão) desce como 'apagar': da janela desta réplica ela deixou de existir. É o comportamento do extract-changes da Esri sobre um replica filter, e não é uma exclusão no servidor.",
+  "A retenção do rastreio (45 dias) é DECLARADA e imposta pela validade da réplica (30 dias); não existe ainda job periódico que expurgue plat.feicao_historico. Quando existir, o expurgo tem de respeitar essa retenção.",
+  "Nenhuma cláusula foi medida com a máquina calma: a carga de 1 min estava em 7,86 (12 núcleos) durante a medida de 100 mil feições. O número passou com folga mesmo assim, e isso conta a favor."
+ ]
+}
