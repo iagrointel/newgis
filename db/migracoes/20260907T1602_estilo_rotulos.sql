@@ -1,4 +1,13 @@
-{
+-- Estende o esquema do tipo `estilo` com o vocabulario completo de rotulos (item
+-- L2-02-d-rotulos): classes com filtro/faixa de escala, texto por campo ou por expressao da
+-- linguagem do L2-10-c, fonte/tamanho/cor/halo, ancora e deslocamento (ponto), rotulo ao longo da
+-- linha com repeticao, posicao no poligono, varias linhas, maiusculas, unidade, prioridade e
+-- permitir_sobreposicao. Substitui o bloco simples {visivel, campo, cor, tamanho} da migracao
+-- 20260907T1148_estilo_modelo.sql (nenhum estilo gravado ainda por nenhum construtor: mesmo
+-- raciocinio das migracoes anteriores da familia, apertar o esquema nao migra conteudo).
+-- Idempotente (UPDATE com o esquema completo).
+
+UPDATE plat.tipo_item SET esquema = $esquema_estilo${
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Estilo de camada em duas partes (ADR do item L2-02-a; C2 do L2_CONCEITO): `maplibre` = layers da MapLibre Style Spec v8 puras, validadas pelo pacote oficial no servidor; `plat_construtor` = o que o editor precisa para reabrir o estilo (tipo, campo, método, cortes, rampa, símbolo, rótulos, faixa de escala, transparência).",
@@ -262,57 +271,12 @@
               "additionalProperties": false,
               "description": "tipo raster: vocabulário de parâmetros de URL do TiTiler (C2 do L2_CONCEITO; L1-02 documenta)",
               "properties": {
-                "bandas": {
-                  "description": "composição de bandas para o ladrilho (1 banda = cinza/rampa; 3 = RGB); índice 1-based",
-                  "items": {
-                    "maximum": 64,
-                    "minimum": 1,
-                    "type": "integer"
-                  },
-                  "maxItems": 4,
-                  "minItems": 1,
-                  "type": "array"
-                },
                 "colormap_name": {
                   "maxLength": 64,
                   "type": "string"
                 },
-                "esticamento": {
-                  "additionalProperties": false,
-                  "description": "método usado para PROPOR o rescale gravado (a rota /estatisticas.json do L1-02 calcula os números; este bloco só registra qual método o editor usou, para reabrir a mesma escolha)",
-                  "properties": {
-                    "metodo": {
-                      "enum": [
-                        "minmax",
-                        "percentil_2_98",
-                        "desvio_padrao",
-                        "nenhum"
-                      ],
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "metodo"
-                  ],
-                  "type": "object"
-                },
                 "expression": {
                   "maxLength": 500,
-                  "type": "string"
-                },
-                "nodata": {
-                  "description": "nodata declarado pelo editor para documentação/legenda; o ladrilho usa o nodata do próprio COG (não há parâmetro de sobrescrita no L1-02 hoje)",
-                  "type": [
-                    "number",
-                    "null"
-                  ]
-                },
-                "resampling": {
-                  "description": "reamostragem pedida pelo editor; L1-02 ainda só serve o padrão do rio-tiler (vizinho) — 'bilinear' fica registrado no documento para quando o ladrilho aceitar (ver docs/PARIDADE.md)",
-                  "enum": [
-                    "vizinho",
-                    "bilinear"
-                  ],
                   "type": "string"
                 },
                 "rescale": {
@@ -746,4 +710,5 @@
   ],
   "title": "documento de estilo do plat (estilo-v1)",
   "type": "object"
-}
+}$esquema_estilo$::jsonb
+WHERE nome = 'estilo';

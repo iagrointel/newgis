@@ -1,0 +1,55 @@
+{
+  "item": "L2-02-d-rotulos",
+  "medidas": {
+    "faixa_de_escala_minzoom_nativo": {
+      "comando": "compilador.compilar com rotulos.classes[0].escala_max=5000000",
+      "unidade": "zoom",
+      "valor": 6.805
+    },
+    "glifos_martin_1a_chamada_ms": {
+      "comando": "urllib GET /font/Noto Sans Regular/0-255 (Martin de teste desta suíte, 1ª chamada)",
+      "unidade": "ms",
+      "valor": 15.09
+    },
+    "glifos_martin_2a_chamada_cache_ms": {
+      "comando": "idem, 2ª chamada (mesmo processo Martin, cache em memória)",
+      "unidade": "ms",
+      "valor": 1.109
+    },
+    "glifos_martin_2a_chamada_e_hit": {
+      "comando": "ms_cache < ms_fria acima",
+      "unidade": "bool",
+      "valor": true
+    },
+    "identidade_dois_modos_100_feicoes": {
+      "comando": "venv/bin/pytest tests/unit/test_rotulos_servidor.py::TestIdentidadeDoisModos -q",
+      "unidade": "bool",
+      "valor": "ok"
+    },
+    "prioridade_colisao_pixels_pretos_vs_vermelhos": {
+      "comando": "amostragem de pixel na captura rotulo_prioridade_colisao.png (Pillow)",
+      "unidade": "pixels",
+      "valor": "455 x 0"
+    },
+    "rotulo_2_classes_com_filtro_layers": {
+      "comando": "compilador.compilar(pc) com 2 classes filtradas",
+      "unidade": "layers de rótulo",
+      "valor": 2
+    },
+    "rotulo_expressao_nao_compilavel_texto_servidor": {
+      "comando": "app.estilos.rotulos_servidor.pre_calcular('TextoNumero($area_ha, 1)', [{'area_ha': 1234.5}])",
+      "unidade": "texto",
+      "valor": "1.234,5 ha"
+    },
+    "rotulo_linha_symbol_placement": {
+      "comando": "compilador.compilar com geometria linha + ao_longo_da_linha",
+      "unidade": "texto",
+      "valor": "line"
+    },
+    "rotulo_por_campo": {
+      "comando": "pytest tests/e2e/test_rotulos_render.py::test_rotulo_por_campo",
+      "unidade": "bool",
+      "valor": "ok"
+    }
+  }
+}

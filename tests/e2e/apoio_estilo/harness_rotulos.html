@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../../../web/vendor/maplibre-gl-4.7.1.css" />
+<style>html,body,#mapa{margin:0;padding:0;width:800px;height:600px;}</style>
+</head>
+<body>
+<div id="mapa"></div>
+<script src="../../../web/vendor/maplibre-gl-4.7.1.js"></script>
+<script>
+// Arnês do item L2-02-d-rotulos: ao contrário de harness_estilo.html (que sintetiza a fonte
+// GeoJSON a partir de plat_construtor), aqui o teste manda o documento de estilo MapLibre COMPLETO
+// (fonte incluída, com as propriedades exatas que quer testar — inclusive a coluna pré-calculada
+// do servidor, quando o rótulo não é compilável) via `window.ROTULO_TESTE`, porque o objetivo é
+// controlar posição/anchor/prioridade/coluna feição a feição, não gerar dado sintético genérico.
+var cfg = window.ROTULO_TESTE;
+var map = new maplibregl.Map({
+  container: "mapa",
+  style: cfg.style,
+  center: cfg.center || [-46.9, -22.9],
+  zoom: cfg.zoom != null ? cfg.zoom : 9,
+  preserveDrawingBuffer: true,
+  attributionControl: false, // sem o controle padrão: o texto "MapLibre" no canto atrapalha a amostragem de pixel dos testes de colisão/prioridade
+});
+window.mapaRotulo = map;
+map.on("idle", function () {
+  document.body.setAttribute("data-pronto", "1");
+});
+map.on("error", function (e) {
+  document.body.setAttribute("data-erro", (e && e.error && e.error.message) || "erro desconhecido");
+});
+</script>
+</body>
+</html>
