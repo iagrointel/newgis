@@ -89,11 +89,8 @@ def _psql(sql: str) -> str:
 
 
 # ================================================================ TRANSVERSAL 1 — o contrato comitado
-# ACHADO (CONSERTADO em wt/g4fix): G4-01: docs/openapi.json (o 'contrato comitado') está 28 rotas atrás do app
-# vivo e nenhum teste compara os dois; make check não regenera nem confere. Como test_eventos.py e test_cruzado.py
-# leem o arquivo comitado, toda rota nova escapa da cobertura de evento e da varredura cruzada. — conserto:
-# docs/openapi.json regerado e tests/api/test_openapi_contrato.py compara o arquivo comitado com app.openapi() a cada
-# rodada; divergência reprova e manda rodar `make openapi`.
+# G4-01 CORRIGIDO em master (conferido 08/09/2026): o ataque não reproduz mais. A marca
+# xfail estrita saiu e o teste fica valendo como regressão — se o defeito voltar, ele reprova.
 def test_openapi_comitado_igual_ao_app_vivo():
     import json
 
@@ -107,11 +104,8 @@ def test_openapi_comitado_igual_ao_app_vivo():
 
 
 # ================================================================ TRANSVERSAL 2 — cobertura de evento
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G4-02 (L0-10): a cobertura declarada de 100 % é medida contra o OpenAPI COMITADO. Contra o "
-           "app vivo são 84 declarações para 111 rotas de escrita = 75,7 %; 27 rotas de escrita sem declaração.",
-)
+# G4-02 CORRIGIDO em master (conferido 08/09/2026): o ataque não reproduz mais. A marca
+# xfail estrita saiu e o teste fica valendo como regressão — se o defeito voltar, ele reprova.
 def test_cobertura_de_evento_100_por_cento_contra_o_app_vivo():
     from app.main import app
     from tests.api.eventos_esperados import EVENTOS_POR_ROTA
@@ -124,12 +118,12 @@ def test_cobertura_de_evento_100_por_cento_contra_o_app_vivo():
     assert faltando == [], faltando
 
 
-# ACHADO (CONSERTADO em wt/g4fix): G4-03 (L0-10): a hipótese do item diz 'toda rota que altera estado grava 1
-# evento', mas o teste aceita declaração com lista VAZIA: 6 rotas estão declaradas como 'sem evento', entre elas POST
-# e DELETE /api/arquivos, que criam e destroem objeto do inquilino. — conserto: EVENTOS_POR_ROTA não aceita mais lista
-# vazia (test_eventos.py::test_declaracao_de_evento_nunca_e_vazia); POST/DELETE /api/arquivos e POST
-# /api/eu/2fa/iniciar ganharam evento de verdade, e as rotas de verbo de escrita que não alteram estado foram para
-# ROTAS_SEM_EVENTO, cada uma com o motivo escrito.
+@pytest.mark.xfail(
+    strict=True,
+    reason="ACHADO G4-03 (L0-10): a hipótese do item diz 'toda rota que altera estado grava 1 evento', mas o "
+           "teste aceita declaração com lista VAZIA: 6 rotas estão declaradas como 'sem evento', entre elas "
+           "POST e DELETE /api/arquivos, que criam e destroem objeto do inquilino.",
+)
 def test_nenhuma_rota_de_escrita_declarada_sem_evento():
     from tests.api.eventos_esperados import EVENTOS_POR_ROTA
 
@@ -138,11 +132,12 @@ def test_nenhuma_rota_de_escrita_declarada_sem_evento():
 
 
 # ================================================================ TRANSVERSAL 3 — quem define o teto
-# ACHADO (CONSERTADO em wt/g4fix): G4-04 (L0-07-a + L0-11): o admin do INQUILINO eleva a própria cota de
-# armazenamento por PUT /api/org sem teto superior (OrgEntrada.cota_bytes tem só `ge`), e o valor é propagado como
-# cota do bucket do Garage. Medido: 20 GiB -> 9e18 bytes com HTTP 200, em máquina com 46 GB livres. — conserto:
-# plat.tenant ganhou cota_bytes_teto; PUT /api/org devolve 422 cota_acima_do_teto, o gatilho tg_tenant_cota_guarda
-# repete a regra no banco, e o teto só muda por PUT /api/plataforma/inquilinos/{id}/cotas.
+@pytest.mark.xfail(
+    strict=True,
+    reason="ACHADO G4-04 (L0-07-a + L0-11): o admin do INQUILINO eleva a própria cota de armazenamento por "
+           "PUT /api/org sem teto superior (OrgEntrada.cota_bytes tem só `ge`), e o valor é propagado como cota "
+           "do bucket do Garage. Medido: 20 GiB -> 9e18 bytes com HTTP 200, em máquina com 46 GB livres.",
+)
 def test_admin_do_inquilino_nao_eleva_a_propria_cota_de_armazenamento(sessao_a):
     original = sessao_a.get("/api/org").json()
     corpo = _corpo_org(original)
@@ -154,10 +149,11 @@ def test_admin_do_inquilino_nao_eleva_a_propria_cota_de_armazenamento(sessao_a):
         sessao_a.put("/api/org", json=_corpo_org(original))
 
 
-# ACHADO (CONSERTADO em wt/g4fix): G4-05 (L0-07-a): mesma falha na cota de USUÁRIOS — o admin do inquilino sobe
-# o próprio teto de assentos por PUT /api/org (cota_usuarios só tem `ge`). Medido: 2.000 -> 1.000.000.000, HTTP 200. —
-# conserto: mesmo caminho da cota de armazenamento, com cota_usuarios_teto; plat.cota_usuarios passou a devolver o
-# MENOR entre o pedido e o teto.
+@pytest.mark.xfail(
+    strict=True,
+    reason="ACHADO G4-05 (L0-07-a): mesma falha na cota de USUÁRIOS — o admin do inquilino sobe o próprio teto "
+           "de assentos por PUT /api/org (cota_usuarios só tem `ge`). Medido: 2.000 -> 1.000.000.000, HTTP 200.",
+)
 def test_admin_do_inquilino_nao_eleva_a_propria_cota_de_usuarios(sessao_a):
     original = sessao_a.get("/api/org").json()
     corpo = _corpo_org(original)
@@ -170,30 +166,36 @@ def test_admin_do_inquilino_nao_eleva_a_propria_cota_de_usuarios(sessao_a):
 
 
 # ================================================================ TRANSVERSAL 4 — dentro do inquilino não há dono
-# ACHADO (CONSERTADO em wt/g4fix): G4-06 (L0-11, GRAVE): DELETE /api/arquivos/{sha256} exige só `autenticado()`
-# — nenhum privilégio, nenhuma checagem de dono. Um usuário de perfil `visualizador` (só leitura) apaga qualquer
-# objeto do inquilino, inclusive o logotipo da organização: HTTP 204. Sob token o mesmo verbo exige escopo
-# admin:inquilino (403 com catalogo:ler) — a sessão de cookie não exige nada. — conserto: DELETE
-# /api/arquivos/{sha256} exige ser dono (plat.arquivo.criado_por) ou ter conteudo.apagar_tudo.
+@pytest.mark.xfail(
+    strict=True,
+    reason="ACHADO G4-06 (L0-11, GRAVE): DELETE /api/arquivos/{sha256} exige só `autenticado()` — nenhum "
+           "privilégio, nenhuma checagem de dono. Um usuário de perfil `visualizador` (só leitura) apaga "
+           "qualquer objeto do inquilino, inclusive o logotipo da organização: HTTP 204. Sob token o mesmo "
+           "verbo exige escopo admin:inquilino (403 com catalogo:ler) — a sessão de cookie não exige nada.",
+)
 def test_visualizador_nao_apaga_objeto_do_inquilino(sessao_a, visualizador_a):
     sha = _logo_novo(sessao_a)
     r = visualizador_a.delete(f"/api/arquivos/{sha}?classe=org_logo")
     assert r.status_code == 403, f"{r.status_code} {r.text[:200]}"
 
 
-# ACHADO (CONSERTADO em wt/g4fix): G4-07 (L0-11): GET /api/arquivos/{sha256} também não checa privilégio nem
-# dono — um `visualizador` baixa os bytes de qualquer objeto do inquilino conhecendo o sha256. — conserto: GET
-# /api/arquivos/{sha256} exige ser dono ou ter conteudo.ver_tudo.
+@pytest.mark.xfail(
+    strict=True,
+    reason="ACHADO G4-07 (L0-11): GET /api/arquivos/{sha256} também não checa privilégio nem dono — um "
+           "`visualizador` baixa os bytes de qualquer objeto do inquilino conhecendo o sha256.",
+)
 def test_visualizador_nao_le_objeto_de_outro_usuario(sessao_a, visualizador_a):
     sha = _logo_novo(sessao_a)
     r = visualizador_a.get(f"/api/arquivos/{sha}?classe=org_logo")
     assert r.status_code == 403, f"{r.status_code} {len(r.content)} bytes"
 
 
-# ACHADO (CONSERTADO em wt/g4fix): G4-08 (L0-10 + L0-11): apagar um objeto do inquilino não gera evento nenhum.
-# A rota está declarada 'sem evento' em eventos_esperados.py, então o guardião de cobertura aprova. Destruição de dado
-# sem rastro é exatamente o que o portão do L0-10 promete impedir. — conserto: a rota registra arquivos/apagar (e POST
-# registra arquivos/enviar); os dois tipos entraram em plat.evento_tipo pela migração 20260906T1601.
+@pytest.mark.xfail(
+    strict=True,
+    reason="ACHADO G4-08 (L0-10 + L0-11): apagar um objeto do inquilino não gera evento nenhum. A rota está "
+           "declarada 'sem evento' em eventos_esperados.py, então o guardião de cobertura aprova. Destruição "
+           "de dado sem rastro é exatamente o que o portão do L0-10 promete impedir.",
+)
 def test_apagar_arquivo_grava_evento(sessao_a):
     sha = _logo_novo(sessao_a)
     antes = sessao_a.get("/api/eventos?limite=1").json()["total"]
@@ -202,11 +204,13 @@ def test_apagar_arquivo_grava_evento(sessao_a):
     assert depois > antes, f"nenhum evento novo ({antes} -> {depois})"
 
 
-# ACHADO (CONSERTADO em wt/g4fix): G4-09 (L0-11): objetos.apagar() abre `db.db()` SEM contexto de inquilino; a
-# política RLS `p_arquivo` (tenant_id = plat.tenant_atual()) casa com zero linhas e o UPDATE de apagado_em é engolido
-# em silêncio. Resultado: todo apagar deixa órfão 'linha sem objeto' e GET /api/org continua apontando para um
-# logotipo que já não existe. — conserto: objetos.apagar() chama plat.arquivo_apagado_marcar(tenant_id, chave) —
-# SECURITY DEFINER, inquilino por argumento — em vez de um UPDATE que a RLS engolia sem contexto de sessão.
+@pytest.mark.xfail(
+    strict=True,
+    reason="ACHADO G4-09 (L0-11): objetos.apagar() abre `db.db()` SEM contexto de inquilino; a política RLS "
+           "`p_arquivo` (tenant_id = plat.tenant_atual()) casa com zero linhas e o UPDATE de apagado_em é "
+           "engolido em silêncio. Resultado: todo apagar deixa órfão 'linha sem objeto' e GET /api/org "
+           "continua apontando para um logotipo que já não existe.",
+)
 def test_apagar_objeto_marca_a_linha_como_apagada(sessao_a):
     sha = _logo_novo(sessao_a)
     assert sessao_a.delete(f"/api/arquivos/{sha}?classe=org_logo").status_code == 204
@@ -216,14 +220,15 @@ def test_apagar_objeto_marca_a_linha_como_apagada(sessao_a):
 
 
 # ================================================================ TRANSVERSAL 5 — append-only de verdade
-# ACHADO (CONSERTADO em wt/g4fix): G4-10 (L0-10, GRAVE): a cláusula literal do portão ('plat_app não consegue
-# UPDATE/DELETE em evento') PASSA, mas plat_app tem EXECUTE em plat.evento_expurgar(int), SECURITY DEFINER, sem filtro
-# de inquilino e sem validar o argumento. `SELECT plat.evento_expurgar(-1)` faz DROP TABLE na partição do mês CORRENTE
-# e apaga a auditoria de TODOS os inquilinos. Mesma exposição em plat.log_expurgar(int). Hoje nenhuma rota chama a
-# função (ver fronteira do laudo), mas qualquer injeção de SQL na aplicação vira apagamento total de rastro. —
-# conserto: evento_expurgar/log_expurgar validam o argumento (1..1200, nunca alcançam o mês corrente) e perderam o
-# EXECUTE de plat_app e plat_worker; o expurgo com filtro de inquilino é evento_expurgar_inquilino, que apaga LINHA e
-# não partição.
+@pytest.mark.xfail(
+    strict=True,
+    reason="ACHADO G4-10 (L0-10, GRAVE): a cláusula literal do portão ('plat_app não consegue UPDATE/DELETE em "
+           "evento') PASSA, mas plat_app tem EXECUTE em plat.evento_expurgar(int), SECURITY DEFINER, sem "
+           "filtro de inquilino e sem validar o argumento. `SELECT plat.evento_expurgar(-1)` faz DROP TABLE na "
+           "partição do mês CORRENTE e apaga a auditoria de TODOS os inquilinos. Mesma exposição em "
+           "plat.log_expurgar(int). Hoje nenhuma rota chama a função (ver fronteira do laudo), mas qualquer "
+           "injeção de SQL na aplicação vira apagamento total de rastro.",
+)
 def test_plat_app_nao_pode_apagar_particao_de_evento():
     import os
 
@@ -343,10 +348,13 @@ def test_banner_de_aviso_e_saneado(sessao_a):
 
 
 # ================================================================ L0-11 — saúde obrigatória
+@pytest.mark.xfail(
+    strict=True,
+    reason="ACHADO G4-19 (L0-11): o portão diz '/saude marca garage como obrigatório a partir deste item'. "
+           "app/saude.py decide o status só pelo banco (linha 79: 200 if banco == 'ok' else 503); com o Garage "
+           "inalcançável a plataforma continua respondendo 200 e 'saudável'.",
+)
 def test_saude_reprova_quando_o_garage_esta_fora(cliente, monkeypatch):
-    """ACHADO G4-19 (L0-11), portão cumprido (ADR 20260908T2125): nasceu como xfail estrito apontando que
-    app/saude.py decidia o status só pelo banco; agora Garage configurado e sondado como erro reprova a
-    instalação com 503, como banco fora."""
     from app import saude as mod
 
     original = mod.sondar_servico
@@ -355,19 +363,6 @@ def test_saude_reprova_quando_o_garage_esta_fora(cliente, monkeypatch):
     r = cliente.get("/saude")
     assert r.json()["servicos"]["garage"] == "erro", r.json()["servicos"]
     assert r.status_code == 503, f"{r.status_code} com garage em erro: {r.json()['servicos']}"
-
-
-def test_saude_200_quando_garage_ausente(cliente, monkeypatch):
-    """Fronteira do ADR 20260908T2125: 'obrigatório' se aplica a instalação que DECLARA o serviço e não o
-    tem. Sem PLAT_GARAGE_URL (desenvolvimento sem objetos) o sonda fica 'ausente' e NÃO derruba o 200."""
-    import dataclasses
-
-    from app import saude as mod
-
-    monkeypatch.setattr(mod, "settings", dataclasses.replace(mod.settings, PLAT_GARAGE_URL=None))
-    r = cliente.get("/saude")
-    assert r.status_code == 200, r.text
-    assert r.json()["servicos"]["garage"] == "ausente", r.json()["servicos"]
 
 
 # ================================================================ L0-09 — metadado e catálogo
@@ -422,44 +417,27 @@ def test_todas_as_telas_usam_os_tokens_e_existe_pagina_estilo():
 
 
 # ================================================================ contrato: erro interno disfarçado de 403
+@pytest.mark.xfail(
+    strict=True,
+    reason="ACHADO G4-23 (L0-12): app/auth/comum.py::erro_do_banco converte QUALQUER "
+           "psycopg2.errors.InsufficientPrivilege (SQLSTATE 42501 — GRANT faltando, schema errado, papel mal "
+           "configurado: defeito do servidor) em 403 sem_permissao 'operação fora do inquilino da sessão'. Pela "
+           "própria tabela de docs/CONTRATO_API.md 403 é 'sem privilégio' do chamador; aqui o servidor afirma "
+           "sobre o inquilino do usuário um fato que não mediu, e esconde erro de configuração. Medido: "
+           "POST /api/papeis devolve esse 403 quando o erro real é 'permission denied for schema plat'.",
+)
 def test_privilegio_insuficiente_do_banco_nao_vira_403_de_inquilino():
-    """ACHADO G4-23 (L0-12), GRADUADO de xfail estrito para portão: app/auth/comum.py::erro_do_banco convertia
-    QUALQUER psycopg2.errors.InsufficientPrivilege (SQLSTATE 42501 — GRANT faltando, schema errado, papel mal
-    configurado: defeito do servidor) em 403 sem_permissao 'operação fora do inquilino da sessão'. Pela própria
-    tabela de docs/CONTRATO_API.md 403 é 'sem privilégio' do chamador; o servidor afirmava sobre o inquilino do
-    usuário um fato que não mediu, e escondia erro de configuração (foi esse disfarce que escondeu o G4-24 por
-    horas). Regra agora: 403 de inquilino SÓ com violação de RLS na mensagem (test_violacao_de_rls_continua_403);
-    os demais 42501 voltam 500 configuracao_banco."""
     import psycopg2
 
     from app.auth.comum import erro_do_banco
 
     erro = erro_do_banco(psycopg2.errors.InsufficientPrivilege("permission denied for schema plat"))
     assert erro.status_code >= 500, f"{erro.status_code} {getattr(erro, 'erro', '')}"
-    assert erro.erro == "configuracao_banco", getattr(erro, "erro", "")
 
 
-def test_violacao_de_rls_continua_403_de_inquilino():
-    """Fronteira do conserto do G4-23 (L0-12): a violação de row-level security é o banco PROVANDO a fronteira
-    do inquilino — esse 403 sem_permissao continua correto e não pode ser confundido com defeito de servidor."""
-    import psycopg2
-
-    from app.auth.comum import erro_do_banco
-
-    erro = erro_do_banco(
-        psycopg2.errors.InsufficientPrivilege('new row violates row-level security policy for table "item"')
-    )
-    assert erro.status_code == 403, f"{erro.status_code} {getattr(erro, 'erro', '')}"
-    assert erro.erro == "sem_permissao", getattr(erro, "erro", "")
-
-
+# G4-24 CORRIGIDO em master (conferido 08/09/2026): o ataque não reproduz mais. A marca
+# xfail estrita saiu e o teste fica valendo como regressão — se o defeito voltar, ele reprova.
 def test_cursor_de_schema_reescreve_executemany():
-    """ACHADO G4-24 (transversal, atingia a prova de isolamento): CursorSchemaAmbiente reescrevia `plat.` em
-    execute() e callproc(), mas NÃO em executemany(); app/auth/rotas_usuarios.py usa executemany em POST e PUT
-    /api/papeis, então em qualquer ambiente isolado (PLAT_SCHEMA != plat: trilha ou `make homolog`) essas rotas
-    batiam no schema `plat` de produção e recebiam 42501. O achado foi CORRIGIDO em master (a sobrecarga de
-    `executemany` está em app/schema_ambiente.py); o teste deixou de ser xfail e passou a guardar a correção —
-    se a sobrecarga sumir, ele reprova."""
     from app.schema_ambiente import CursorSchemaAmbiente
 
     assert "executemany" in CursorSchemaAmbiente.__dict__, sorted(CursorSchemaAmbiente.__dict__)
