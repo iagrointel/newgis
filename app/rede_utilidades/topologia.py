@@ -307,6 +307,9 @@ def habilitar(cur, tenant_id: int, rede_id: str, usuario_id: int | None) -> dict
 
     cur.execute("DELETE FROM plat.rede_topo_aresta WHERE rede_id = %s::uuid", (rede_id,))
     cur.execute("DELETE FROM plat.rede_topo_no WHERE rede_id = %s::uuid", (rede_id,))
+    # a reconstrução total resolve TODA área suja pendente da rede — por isso elas morrem aqui, junto do
+    # índice velho (a manutenção incremental, reconstruir só a área, é fronteira honesta desta passagem).
+    cur.execute("DELETE FROM plat.rede_topo_area_suja WHERE rede_id = %s::uuid", (rede_id,))
 
     _inserir_lote(
         cur,

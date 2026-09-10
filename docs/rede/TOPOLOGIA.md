@@ -62,19 +62,34 @@ cadastrado cujo terminal não encontrou nenhum trecho compatível dentro da tole
 trechos degenerados (origem == destino, comprimento zero) — não entram na candidatura de nó de propósito
 (um trecho de comprimento zero não tem "lado A" e "lado B" para decidir).
 
-## 5. Escala e a medida de tempo — GERADOR SINTÉTICO, não a BDGD
+## 5. Escala e a medida de tempo — dois caminhos, dois arquivos de medida
 
-A rede real de teste (44.268 trechos de MT, 29.244 de BT, 26.581 ramais, 5.481 trafos, 60.549 postes) NÃO está
-no repositório e não vai estar (disco apertado, regra do laço). `tests/dados/gerar_rede.py` gera uma rede
-FICTÍCIA nas mesmas ordens de grandeza, com semente determinística (a mesma semente sempre produz os mesmos
-dados) — uma árvore de MT com passos aleatórios, transformadores nascendo em vértices da árvore com sub-árvore
-de BT, ramais saindo de vértices de BT existentes, postes decorativos em qualquer lugar da caixa, mais um
-punhado de casos de fronteira DELIBERADOS (transformador deslocado 1 m — prova de nó órfão; trecho degenerado
-— prova de aresta sem nó). **Toda contagem e todo tempo citados aqui são do gerador, não da BDGD.**
+**Rápido, todo turno**: `tests/dados/gerar_rede.py` gera uma rede FICTÍCIA nas mesmas ordens de grandeza da
+cooperativa de teste, com semente determinística (a mesma semente sempre produz os mesmos dados) — uma árvore
+de MT com passos aleatórios, transformadores nascendo em vértices da árvore com sub-árvore de BT, ramais
+saindo de vértices de BT existentes, postes decorativos em qualquer lugar da caixa, mais um punhado de casos
+de fronteira DELIBERADOS (transformador deslocado 1 m — prova de nó órfão; trecho degenerado — prova de
+aresta sem nó). Usada nos testes rápidos de `tests/api/test_rede_topologia*.py` (segundos, não minutos).
+
+**Escala real, marcado `lento`**: a rede real da cooperativa de teste (schema `certaja` do `iagro_sat`, ativo
+da casa, SOMENTE LEITURA — 44.268 trechos de MT, 29.244 de BT, 26.581 ramais, 5.481 trafos, 60.549 postes) NÃO
+está no repositório como arquivo (é acesso vivo ao Postgres compartilhado, exige `GRANT USAGE/SELECT` — ver
+docstring de `tests/dados/carga_bdgd.py`), mas EXISTE e é medida em `tests/api/test_rede_topologia_medida.py`
+(`pytest -m lento`), com conferência por um contador Python independente que nunca reconsulta as tabelas que
+o construtor gravou. Medido 2026-09-07 (`tests/medidas/L4-01-b-topologia-derivada.json`): 73.512 arestas reais
+(MT+BT), 80.456 nós, 3.948 órfãos, 0 arestas sem nó, 21 alimentadores com componente conexa idêntica arquivo ×
+topologia, 1.554 terminais de alta órfãos batendo exato com o arquivo. **Fronteira medida, não fabricada**:
+`certaja.ramlig` tem 0 dos 26.581 registros com `wkt` preenchido — o ramal de ligação entra como atributo, não
+como aresta geométrica (§6 abaixo detalha a conferência). Tempo de `habilitar` variou de ~21 s (máquina sem
+outra carga) a ~600 s (máquina com 4-8 agentes de outras trilhas disputando CPU/RAM ao mesmo tempo — swap
+100% cheio) na mesma rede de 73.512 arestas: o código processa em lotes de 4.000 linhas (§ADR 0020) e escala
+linear; a variação é do ambiente compartilhado, não do algoritmo — os dois tempos estão no arquivo de medida.
 
 Achado de performance registrado no ADR 0020 §5: `ST_DWithin` sobre `geom::geography` não usa o índice GIST;
 corrigido com um pré-filtro por `ST_DWithin(geom, geom, graus)` (geometria pura, usa o índice) seguido da
-conferência exata em `geography`. Números medidos em `tests/medidas/L4-01-b.json` (comando incluso).
+conferência exata em `geography`. Números do gerador sintético só no próprio teste (`tests/api/test_rede_topologia.py`,
+não escritos em arquivo); números da escala real em `tests/medidas/L4-01-b-topologia-derivada.json` (comando
+incluso no próprio arquivo JSON).
 
 ## 6. Fronteira honesta
 
@@ -88,6 +103,12 @@ conferência exata em `geography`. Números medidos em `tests/medidas/L4-01-b.js
   de uma chave é o item seguinte da linha L4.
 - **Desambiguação de terminal por ordem de chegada** quando um dispositivo multi-terminal só toca UM tier
   (§3.3) é uma convenção, não uma dedução dos dados — sem traçado de rede não há como fazer melhor.
+- **Ramal de ligação sem geometria no ativo real.** `certaja.ramlig` (schema `certaja`, BDGD da cooperativa
+  de teste) tem os 26.581 registros do arquivo mas 0 com a coluna `wkt` preenchida — medido, não suposto
+  (`count(wkt)` direto na tabela). A carga (`tests/dados/carga_bdgd.py`) filtra `WHERE wkt IS NOT NULL`, o
+  ramal entra como atributo (contagem do arquivo) mas não como aresta geométrica — fabricar uma linha que o
+  arquivo não tem violaria a metodologia da casa. A topologia geométrica medida em escala real cobre MT + BT
+  + transformador + poste (139.542 elementos reais, com trafo/poste como pontos e MT/BT como arestas).
 
 ## 7. Paridade com o ArcGIS (*Enable Network Topology*)
 
