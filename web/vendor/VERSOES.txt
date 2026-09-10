@@ -5,6 +5,8 @@ maplibre-gl-4.7.1.css  4.7.1  576b085fdd9487a65a19215328c1e086c07ce5bf6da09b666b
 swagger-ui-bundle-5.32.15.js  5.32.15  a7e344f2770b2f07527ce828e0951626983b8f2dcdb7a826689c0232023f995b  Apache-2.0  https://registry.npmjs.org/swagger-ui-dist/-/swagger-ui-dist-5.32.15.tgz (npm pack swagger-ui-dist@5.32.15, 05/09/2026; arquivo package/swagger-ui-bundle.js)
 swagger-ui-5.32.15.css  5.32.15  d7f39f764aa18c7b47dd05b9af5613e373e4ac0f3557c2693d52d0abc2464d76  Apache-2.0  https://registry.npmjs.org/swagger-ui-dist/-/swagger-ui-dist-5.32.15.tgz (npm pack swagger-ui-dist@5.32.15, 05/09/2026; arquivo package/swagger-ui.css)
 dompurify-3.4.14.js  3.4.14  c2f26ea4fc0d88141c9aa430eb515ac86fce59418ceebd85fa475b87a8d6c3e6  Apache-2.0  https://registry.npmjs.org/dompurify/-/dompurify-3.4.14.tgz (npm pack dompurify@3.4.14, 05/09/2026; arquivo package/dist/purify.min.js; licença dupla "MPL-2.0 OR Apache-2.0", adotada a Apache-2.0; obrigatório pelo L5_CONCEITO D23)
+proj4-2.22.0.js  2.22.0  af7df653d91ea591f33d26fb958990bbd3071b2db644a4edaba441cc9861a474  MIT  https://registry.npmjs.org/proj4/-/proj4-2.22.0.tgz (npm pack proj4@2.22.0, 07/09/2026; arquivo package/dist/proj4.js, UMD com global `proj4`; conversão de coordenadas no navegador conferida contra ST_Transform, item L2-01-f)
+proj4-2.22.0.LICENSE.md  2.22.0  d514fd8b286fc00a5c97a29f8a99b73f1a4053bbdd00c400aee5f24a1b6b301e  MIT  mesmo pacote, arquivo package/LICENSE.md
 # Fontes (item L0-14-identidade-visual, 06/09/2026): entram como .woff2 único em web/vendor/, versão lida
 # do name-table do arquivo (Major.Minor da fonte, sem 3º dígito — fontes não seguem semver, ao contrário
 # das libs JS acima). Licença OFL-1.1 (SIL Open Font License) ACRESCENTADA à lista de licenças admitidas

@@ -774,6 +774,17 @@ L2-03-edicao) com prévia, aplicação, acompanhamento do job e erro nomeado. Me
 1.000 igual a ST_Area/10000 (desvio 0), histórico gerado para as 100.000. Migrações: evento `camadas/lote`;
 `camada_schema_garantir` só concede USAGE quando falta (evita "tuple concurrently updated" no d_demo partilhado).
 ADR `docs/adr/20260908T0830-edicao-em-lote-calculo-de-campo.md`.
+## turno 4, setembro de 2026 (item L2-01-f-navegacao-medicao-coordenadas: navegação, medição e coordenadas)
+
+- **Medição no elipsoide** (`web/js/mapa/medicao.js`): Vincenty (GRS80) para distância; área por geodésicas
+  densificadas + projeção equivalente local (proj4js 2.22.0 no vendor); segmentos parciais na tela e cópia;
+  erro ≤ 0,1 % contra `ST_Length/ST_Area(geography)` em 5 segmentos e 3 polígonos (teste no node contra o PostGIS).
+- **Coordenada do cursor em CRS escolhido** (`web/js/mapa/crs.js`: 4326, 4674, 31981-31985, 5880, 3857; definições
+  de `spatial_ref_sys`, conferidas), UTM 22S ≤ 1 cm de `ST_Transform`; clique copia.
+- **Ir para** aceita decimal com vírgula e sinal tipográfico, GMS e `x y EPSG:NNNN`; malformado recebe mensagem.
+- **Navegação** (`web/js/mapa/navegacao.js`): favoritos (nome + extensão + rotação, localStorage por mapa),
+  histórico voltar/avançar, norte, tela cheia, minha localização com círculo de precisão, atalhos documentados.
+  e2e com 9 capturas; ADR `docs/adr/20260907T2330-navegacao-medicao-coordenadas.md`; paridade em PARIDADE.md.
 
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
