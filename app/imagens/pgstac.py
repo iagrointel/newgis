@@ -195,6 +195,14 @@ def parametros_busca(
             raise ErroAPI(422, "limit_invalido", "limit precisa ser >= 1", {"recebido": limit})
         limit = min(limit, limites.STAC_PAGINA_MAX)  # acima do teto: a spec manda usar o teto, não recusar
 
+    if collections is not None:
+        if not isinstance(collections, list) or not all(isinstance(c, str) for c in collections):
+            # achado do adversário do item L1-07 (10/09): `[c for c in collections if c in permitidas]`
+            # com um dict/list dentro de `collections` levantava `TypeError: unhashable type` cru (500) —
+            # entrada do cliente nunca pode alcançar essa comparação sem ser texto primeiro.
+            raise ErroAPI(422, "collections_invalido", "collections precisa ser uma lista de nomes (texto)",
+                          {"recebido": collections})
+
     permitidas = set(colecoes_do_tenant(cur, tenant_id))
     if collections:
         pedidas = [c for c in collections if c in permitidas]

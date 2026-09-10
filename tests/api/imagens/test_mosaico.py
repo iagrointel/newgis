@@ -118,6 +118,48 @@ def test_filtro_cql2_malformado_nao_vira_500(token_stac_a, grade_a):
     assert r.status_code == 422, r.text  # nunca 500 por entrada do cliente
 
 
+def test_filtro_cql2_semanticamente_quebrado_e_recusado_NO_REGISTRO(token_stac_a, grade_a):
+    """Achado do adversário independente (10/09): `filter` como string crua ou `args` fora de lista é
+    JSON sintaticamente válido, `pgstac.search_query` (só calcula hash/where) não recusava, e o
+    registro dava 201 — o mosaico só quebrava depois, ao servir o primeiro tile/pegada. `registrar()`
+    agora roda uma busca de teste (limit=1) na mesma transação: registro malformado nunca mais devolve
+    201 "de mentira"."""
+    c, tok = _cliente(), token_stac_a["token"]
+    for filtro_ruim in (
+        "isto não é um filtro",
+        {"op": "=", "args": "nao é uma lista"},
+        [{"op": "=", "args": [1, 1]}],
+    ):
+        r = c.post(f"/svc/{tok}/stac/mosaicos", json={
+            "nome": "x", "collections": [grade_a["colecao"]], "filter": filtro_ruim,
+        })
+        assert r.status_code == 422, (filtro_ruim, r.status_code, r.text)
+
+
+def test_collections_com_item_nao_texto_nunca_vira_500(token_stac_a, grade_a):
+    """Achado do adversário independente (10/09): `collections: [123, null, {}]` batia em
+    `[c for c in collections if c in permitidas]` (app/imagens/pgstac.py) com `TypeError: unhashable
+    type` cru (500) — a validação de tipo agora vem ANTES dessa comparação."""
+    c, tok = _cliente(), token_stac_a["token"]
+    r = c.post(f"/svc/{tok}/stac/mosaicos", json={
+        "nome": "x", "collections": [123, None, {}],
+    })
+    assert r.status_code == 422, r.text
+    assert r.json()["erro"] == "collections_invalido"
+
+
+def test_z_x_y_absurdo_no_tile_do_mosaico_nunca_vira_500(token_tiles_mosaico_a, mosaico_a):
+    """Achado do adversário independente (10/09): `z` negativo ou muito grande fazia `morecantile`
+    (`_bbox_do_tile`) estourar `OverflowError` cru (500), byte a byte igual a `Internal Server Error`
+    sem envelope de erro — em vez de 422. Cobre as duas rotas (com e sem extensão) e os dois lados
+    (z fora da faixa, x/y fora da grade do zoom pedido)."""
+    c, tok = _cliente(), token_tiles_mosaico_a["token"]
+    for z, x, y in ((-1, 0, 0), (10000, 0, 0), (5, -1, 0), (5, 10_000_000, 0)):
+        r = c.get(f"/svc/{tok}/mosaico/{mosaico_a['id']}/{z}/{x}/{y}.png")
+        assert r.status_code == 422, (z, x, y, r.status_code, r.text)
+        assert r.json()["erro"] == "tile_invalido", (z, x, y, r.text)
+
+
 # ---------------------------------------------------------------- cláusula: listar/detalhe
 @pytest.fixture(scope="module")
 def mosaico_a(token_stac_a, grade_a):

@@ -81,6 +81,14 @@ def registrar(cur, tenant_id: int, usuario_id: int | None, corpo: dict[str, Any]
     hash_pgstac = cur.fetchone()["hash"]
     cur.execute("SET LOCAL search_path = plat, public")  # devolve o search_path da sessão (app/db.py)
 
+    # achado do adversário independente (10/09): `pgstac.search_query` só calcula hash/where/orderby —
+    # NÃO executa a busca, então um filtro CQL2 sintaticamente aceitável mas semanticamente quebrado
+    # (`filter` como string crua, `args` fora de lista) passava no registro (201) e só quebrava depois,
+    # ao servir o primeiro tile/pegada. Uma busca de teste (limit=1) AQUI, na mesma transação, garante
+    # que "registrado com sucesso" significa "esta busca RODA de verdade" — `ps.buscar` já converte
+    # erro do banco em 422 `busca_invalida`, nunca deixa a exceção crua escapar.
+    ps.buscar(cur, {**payload, "limit": 1})
+
     criterios = {
         "bbox": corpo.get("bbox"), "datetime": corpo.get("datetime"),
         "filter": corpo.get("filter"), "filter-lang": corpo.get("filter-lang"),

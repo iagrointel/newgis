@@ -513,7 +513,22 @@ def legenda_png_svc(request: Request, token: str, item: str, predef: str | None 
 
 
 # ---------------------------------------------------------------------------- mosaico (ad-hoc OU busca registrada)
+def _validar_tile(z: int, x: int, y: int) -> None:
+    """Achado do adversário independente do item L1-07 (10/09): `z` negativo ou muito grande (ex. -1,
+    10000) fazia `morecantile` calcular `matrixWidth` com overflow e levantar `OverflowError` CRU (500)
+    dentro de `_bbox_do_tile` — nunca chegava a `ErroAPI`. `z/x/y` são sempre da grade WebMercatorQuad
+    (`tiles.TMS`, decisão C4 do L1-02): fora da faixa válida é pedido malformado, 422, nunca 500."""
+    if not (tiles.TMS.minzoom <= z <= tiles.TMS.maxzoom):
+        raise ErroAPI(422, "tile_invalido", f"z fora da faixa {tiles.TMS.minzoom}-{tiles.TMS.maxzoom}",
+                      {"z": z})
+    teto = 2**z
+    if not (0 <= x < teto) or not (0 <= y < teto):
+        raise ErroAPI(422, "tile_invalido", f"x/y fora da grade do zoom {z} (0 a {teto - 1})",
+                      {"z": z, "x": x, "y": y, "teto": teto - 1})
+
+
 def _bbox_do_tile(z: int, x: int, y: int) -> tuple[float, float, float, float]:
+    _validar_tile(z, x, y)
     return tiles.TMS.bounds(tiles.TMS.tile(0, 0, 0).__class__(x=x, y=y, z=z))
 
 
