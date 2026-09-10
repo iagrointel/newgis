@@ -1,10 +1,6 @@
 """Modelos de entrada e saída das rotas de rede de utilidades. O PACOTE em si não passa por pydantic: entra e
 sai como bytes, validado pelo esquema JSON (`app/rede_utilidades/esquema.py`), porque a mensagem de erro
-precisa apontar a linha do arquivo que a pessoa enviou. O mesmo vale para o CSV de regras (mensagem com a
-linha da planilha). O applyEdits, ao contrário, é JSON de API e passa por pydantic com extra="forbid":
-campo a mais no corpo (por exemplo um hipotético "ignorar_regras") é 422 na entrada, não silêncio."""
-
-from typing import Any
+precisa apontar a linha do arquivo que a pessoa enviou."""
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -15,6 +11,8 @@ class RedeEntrada(BaseModel):
     nome: str = Field(min_length=1, max_length=200)
     disciplina: str = Field(pattern="^(" + "|".join(DISCIPLINAS) + ")$")
     descricao: str | None = Field(default=None, max_length=2000)
+    # cláusula 1 do portão L4-01-b: tolerância de coincidência é parâmetro DA REDE, não da instalação.
+    tolerancia_m: float = Field(default=0.05, gt=0, le=10)
 
 
 class Rede(BaseModel):
@@ -22,8 +20,8 @@ class Rede(BaseModel):
     nome: str
     disciplina: str
     descricao: str | None
+    tolerancia_m: float
     pacote: dict | None
-    regras_ativas: bool
     contagens: dict
     dono: dict
     criado_em: str
@@ -62,134 +60,116 @@ class ImportacaoResultado(BaseModel):
     contagens: dict
 
 
-# --- applyEdits e ativação de regras (item L4-03-a-regras-de-conectividade) ---------------------------------
+# --- topologia derivada (item L4-01-b-topologia-derivada) -------------------------------------------------
 
-MAX_POR_LOTE = 1000  # teto declarado de operações de cada tipo num applyEdits
-
-
-class FeicaoAdicionar(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    grupo: str = Field(min_length=1, max_length=62)
-    tipo: int = Field(ge=1, le=32767)
-    geometria: dict[str, Any] | None = None  # GeoJSON da geometria (Point/LineString, WGS84)
-    atributos: dict[str, Any] = Field(default_factory=dict)
-    terminal_inicio: str | None = Field(default=None, min_length=1, max_length=62)
-    terminal_fim: str | None = Field(default=None, min_length=1, max_length=62)
+class FeicaoPontoEntrada(BaseModel):
+    tipo_codigo: int = Field(ge=1, le=32767)
+    grupo: str = Field(min_length=1, max_length=63)
+    lon: float = Field(ge=-180, le=180)
+    lat: float = Field(ge=-90, le=90)
+    fase_bitmask: int | None = Field(default=None, ge=0, le=7)
+    atributos: dict = Field(default_factory=dict)
 
 
-class FeicaoAtualizar(BaseModel):
-    """Grupo e tipo NÃO mudam (mudança de classe é apagar + adicionar); só geometria, atributos e os
-    terminais declarados nas pontas."""
-    model_config = ConfigDict(extra="forbid")
-
-    id: str = Field(min_length=36, max_length=36)
-    geometria: dict[str, Any] | None = None
-    atributos: dict[str, Any] | None = None
-    terminal_inicio: str | None = Field(default=None, min_length=1, max_length=62)
-    terminal_fim: str | None = Field(default=None, min_length=1, max_length=62)
+class FeicaoLinhaEntrada(BaseModel):
+    tipo_codigo: int = Field(ge=1, le=32767)
+    grupo: str = Field(min_length=1, max_length=63)
+    coordenadas: list[tuple[float, float]] = Field(min_length=2, max_length=2000)
+    fase_bitmask: int | None = Field(default=None, ge=0, le=7)
+    atributos: dict = Field(default_factory=dict)
 
 
-class AssociacaoAdicionar(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    tipo: str = Field(pattern="^(contencao|estrutura)$")
-    de: str = Field(min_length=36, max_length=36)
-    para: str = Field(min_length=36, max_length=36)
-
-
-class AssociacoesLote(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    adicionar: list[AssociacaoAdicionar] = Field(default_factory=list, max_length=MAX_POR_LOTE)
-    apagar: list[str] = Field(default_factory=list, max_length=MAX_POR_LOTE)
+class Feicao(BaseModel):
+    id: str
+    tipo_id: str
+    fase_bitmask: int | None
+    atributos: dict
+    criado_em: str
 
 
-class ApplyEditsEntrada(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    adicionar: list[FeicaoAdicionar] = Field(default_factory=list, max_length=MAX_POR_LOTE)
-    atualizar: list[FeicaoAtualizar] = Field(default_factory=list, max_length=MAX_POR_LOTE)
-    apagar: list[str] = Field(default_factory=list, max_length=MAX_POR_LOTE)
-    associacoes: AssociacoesLote = Field(default_factory=AssociacoesLote)
-
-
-class AtivacaoEntrada(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    ativa: bool
-
-
-class ApplyEditsResultado(BaseModel):
+class TopologiaResumo(BaseModel):
     rede_id: str
-    regras_ativas: bool
-    adicionadas: list[str]
-    atualizadas: int
-    apagadas: int
-    associacoes_adicionadas: int
-    associacoes_apagadas: int
-    conexoes: int  # conexões derivadas novas (jj + je) gravadas neste lote
-    area_sujas_criadas: int = 0  # item L4-03-d-areas-sujas-e-validacao: 1 por feição tocada com geometria
+    tolerancia_m: float
+    nos: int
+    arestas: int
+    nos_orfaos: int
+    arestas_sem_no: int
+    duracao_ms: int
+    construido_em: str
 
 
-class ValidacaoResultado(BaseModel):
+class TopoNo(BaseModel):
+    id: str
+    papel: str
+    tipo_id: str | None
+    origem_id: str | None
+    terminal_num: int | None
+    grau: int
+    lon: float
+    lat: float
+
+
+class TopoArestaModelo(BaseModel):
+    id: str
+    grupo_id: str
+    tipo_id: str | None
+    origem_id: str
+    no_origem_id: str | None
+    no_destino_id: str | None
+    comprimento_m: float
+    fase_bitmask: int | None
+    atributos: dict
+
+
+# --- conector OpenStreetMap power=* (item L4-05-g-osm-power) -----------------------------------------------
+
+class MunicipioGeoJson(BaseModel):
+    """Polígono do recorte territorial em GeoJSON (EPSG:4326). Aceita Geometry, Feature ou
+    FeatureCollection tal como vem da fonte (ex.: malha municipal do IBGE) — os campos extras
+    (`geometry`, `features`, `properties`) passam intactos para o conector, que decide a forma."""
+
+    model_config = ConfigDict(extra="allow")
+
+    type: str = Field(min_length=1, max_length=40)
+
+
+class ImportacaoOsmEntrada(BaseModel):
+    caminho: str = Field(min_length=1, max_length=2000)
+    municipio: MunicipioGeoJson
+    nome_municipio: str = Field(min_length=1, max_length=200)
+
+
+class ImportacaoOsmResultado(BaseModel):
     rede_id: str
-    regras_ativas: bool
-    conexoes_avaliadas: int
-    associacoes_avaliadas: int
-    total_erros: int
-    erros: list[dict]  # cada erro traz codigo, mensagem e a lista de feições envolvidas
+    licenca: str
+    aviso: str
+    contagens: dict
+    trechos_gerados: int
+    fixacoes: int
+    fora_do_limite: dict
+    desvios: dict
+    duracao_ms: int
+    conferido: bool
+    importacao_id: str | None
 
 
-class AtivacaoResultado(BaseModel):
-    rede_id: str
-    regras_ativas: bool
-
-
-class ImportacaoRegrasResultado(BaseModel):
-    rede_id: str
-    total: int
+class ImportacaoFicha(BaseModel):
+    id: str
+    fonte: str
+    caminho: str
+    distribuidora: str | None
+    municipio: str | None
     sha256: str
-    bytes: int
+    licenca: str | None
+    aviso: str | None
+    estado: str
+    contagens: dict | None
+    desvios: dict | None
+    erro: str | None
+    criado_em: str
+    concluido_em: str | None
 
 
-# --- áreas sujas e validação incremental (item L4-03-d-areas-sujas-e-validacao) -----------------------------
-
-class ValidacaoExtensaoEntrada(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    extensao: dict[str, Any] | None = None  # GeoJSON de polígono; None = todas as áreas sujas ativas ("tudo")
-
-
-class ValidacaoExtensaoResultado(BaseModel):
-    rede_id: str
-    versao_edicao: int
-    areas_processadas: int
-    areas_ativas_restantes: int
-    feicoes_em_escopo: int
-    feicoes_total: int
-    total_erros: int
-    erros: list[dict]
-    tempo_ms: float
-    carga_1min: float
-    ram_livre_gb: float
-    medido_em: str
-
-
-class TracadoResultado(BaseModel):
-    rede_id: str
-    cruza_area_suja: bool
-    bloqueado: bool
-    modo: str
-    area_suja: dict | None = None
-
-
-class ModoTracadoEntrada(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    modo: str = Field(pattern="^(avisar|bloquear)$")
-
-
-class ModoTracadoResultado(BaseModel):
-    rede_id: str
-    modo: str
+class ImportacaoFichaLista(BaseModel):
+    total: int
+    itens: list[ImportacaoFicha]

@@ -203,6 +203,8 @@ from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rede_utilidades.rotas_areas_sujas import router as rotas_rede_areas_sujas
 from app.rede_utilidades.rotas_regras import router as rotas_rede_regras
+from app.rede_utilidades.rotas_osm import router as rotas_rede_osm
+from app.rede_utilidades.rotas_topologia import router as rotas_rede_topologia
 from app.rotas_arquivos import router as rotas_arquivos
 from app.rotas_temas import router as rotas_temas
 from app.rotas_videos import router as rotas_videos
@@ -501,6 +503,12 @@ ROUTERS = [
     # --- área suja e validação incremental (L4-03-d): /api/rede/{id}/areas_sujas, /validar_extensao,
     # /erros, /tracar e a comporta /area_sujas/modo (só rede.administrar)
     rotas_rede_areas_sujas,
+    # --- topologia derivada da rede de utilidades (L4-01-b): /api/rede/{rede_id}/feicoes/{pontos,linhas}
+    # (as camadas de rede, editáveis) e /api/rede/{rede_id}/topologia/{habilitar,nos,arestas} (o índice derivado)
+    rotas_rede_topologia,
+    # --- conector OpenStreetMap power=* da rede de utilidades (L4-05-g): POST /api/rede/{rede_id}/importar-osm
+    # e GET /api/rede/{rede_id}/importacoes (ficha da importação, fonte 'osm' na MESMA auditoria da BDGD)
+    rotas_rede_osm,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,

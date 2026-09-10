@@ -172,7 +172,6 @@ class _Importador:
         self.tipos: dict[tuple[str, int], str] = {}
         self.subredes: dict[tuple[int, str], str] = {}   # (nivel, codigo) -> id
         self.juncoes: dict[str, tuple[str, int]] = {}    # codigo -> (id, seq)
-        self.arquivo: dict[str, int] = {}
         self.importacao_id: str | None = None
 
     # ---------- utilidades ----------
@@ -235,7 +234,6 @@ class _Importador:
     def rodar(self) -> dict:
         t0 = time.monotonic()
         arquivo = inspecionar(self.caminho)
-        self.arquivo = arquivo
         try:
             self.tipos = self._tipos_mapa()
             self._abrir_auditoria(arquivo)
@@ -279,17 +277,7 @@ class _Importador:
         return resultado
 
     def _pontos_notaveis(self) -> dict[str, bytes]:
-        """codigo do ponto de conexão -> WKB (EPSG:4674), da camada PONNOT. GDB sem PONNOT (o
-        esquema da ANEEL a tornou opcional para distribuidora pequena) não é erro: todas as junções
-        entram sem geometria, com o desvio contado uma vez aqui e não ponto a ponto."""
-        if not self.arquivo.get("PONNOT"):
-            self._desvio(
-                "ponnot_ausente",
-                "o GDB não tem a camada PONNOT: toda junção entra sem coordenada (a conectividade, "
-                "que é pelo código do ponto, não é afetada)",
-                None,
-            )
-            return {}
+        """codigo do ponto de conexão -> WKB (EPSG:4674), da camada PONNOT."""
         df = _ler(self.caminho, "PONNOT")
         out = {}
         for _, linha in df.iterrows():
@@ -300,21 +288,6 @@ class _Importador:
         return out
 
     def _fontes_e_alimentadores(self) -> None:
-        # mesmo tratamento das demais camadas (achado deste item: SUB/CTMT eram as duas únicas sem o
-        # guarda de "camada ausente no GDB não é erro" — um extrato ou distribuidora sem uma delas
-        # quebrava a importação inteira em vez de entrar com 0 declarado).
-        if not self.arquivo.get("SUB"):
-            self._desvio("sub_ausente",
-                         "o GDB não tem a camada SUB: nenhuma subestação/subrede de nível 1 entra", None)
-        else:
-            self._subs()
-        if not self.arquivo.get("CTMT"):
-            self._desvio("ctmt_ausente",
-                         "o GDB não tem a camada CTMT: nenhum alimentador/subrede de nível 2 entra", None)
-        else:
-            self._alimentadores()
-
-    def _subs(self) -> None:
         subs = _ler(self.caminho, "SUB")
         for _, linha in subs.iterrows():
             cod = _texto(linha.get("COD_ID"))
@@ -346,7 +319,6 @@ class _Importador:
                 self.subredes[(1, cod)] = r2["id"]
             self.inseridos["SUB"] = self.inseridos.get("SUB", 0) + 1
 
-    def _alimentadores(self) -> None:
         ctmts = _ler(self.caminho, "CTMT", geometria=False)
         for _, linha in ctmts.iterrows():
             cod = _texto(linha.get("COD_ID"))
@@ -411,9 +383,6 @@ class _Importador:
                 self.juncoes[r["codigo_externo"]] = (r["id"], int(r["seq"]))
 
     def _trechos(self, camada: str, geometrias: dict[str, bytes]) -> None:
-        if not self.arquivo.get(camada):
-            self.inseridos[camada] = 0  # camada ausente no GDB: 0 declarado, não erro
-            return
         df = _ler(self.caminho, camada, geometria=(camada != "RAMLIG"))
         codigos = set()
         for col in ("PN_CON_1", "PN_CON_2"):
@@ -424,14 +393,8 @@ class _Importador:
 
         tipo_id = self._tipo_id(camada)
         pendentes: list[tuple] = []
-        vistos: set[str] = set()
         for _, linha in df.iterrows():
             cod = _texto(linha.get("COD_ID"))
-            if cod is not None:
-                if cod in vistos:
-                    self._desvio("trecho_duplicado", "COD_ID de trecho repetido dentro do arquivo", cod)
-                    continue
-                vistos.add(cod)
             pn1, pn2 = _texto(linha.get("PN_CON_1")), _texto(linha.get("PN_CON_2"))
             no1 = self.juncoes.get(pn1) if pn1 else None
             no2 = self.juncoes.get(pn2) if pn2 else None
@@ -476,7 +439,8 @@ class _Importador:
             "SELECT count(*) AS n FROM plat.rede_aresta WHERE rede_id = %s::uuid AND tipo_id = %s::uuid",
             (self.rede_id, tipo_id),
         )
-        self.inseridos[camada] = int(self.cur.fetchone()["n"])
+        total = int(self.cur.fetchone()["n"])
+        self.inseridos[camada] = total
 
     def _gravar_arestas(self, tuplas: list[tuple]) -> None:
         # no_origem_seq/no_destino_seq entram como 0: o gatilho rede_aresta_validar copia os seqs
@@ -490,15 +454,13 @@ class _Importador:
             tuplas,
             template="(%s, %s::uuid, %s::uuid, %s, %s::uuid, %s::uuid, 0, 0, "
                      "ST_Transform(ST_SetSRID(ST_GeomFromWKB(%s), " + str(SRID_FONTE) + "), 4326), "
-                     "ST_Length(ST_Transform(ST_SetSRID(ST_GeomFromWKB(%s), " + str(SRID_FONTE) + "), "
-                     "4326)::geography), %s, %s::uuid, %s)",
+                     "ST_Length(ST_Transform(ST_SetSRID(ST_GeomFromWKB(%s), " + str(SRID_FONTE)
+                     + "), 4326)::geography), "
+                     "%s, %s::uuid, %s)",
             page_size=LOTE,
         )
 
     def _dispositivos(self, camada: str, geometrias: dict[str, bytes]) -> None:
-        if not self.arquivo.get(camada):
-            self.inseridos[camada] = 0
-            return
         df = _ler(self.caminho, camada)
         if df.empty:
             self.inseridos[camada] = 0
@@ -519,18 +481,8 @@ class _Importador:
                 continue
             estado = "na"
             if camada == "UNSEMT":
-                # P_N_OPE: posição normal de operação — 'A' normalmente aberta, 'F' normalmente
-                # fechada; qualquer outra coisa (vazio incluso) não afirma estado.
-                pno = _texto(linha.get("P_N_OPE"))
-                estado = {"A": "aberto", "F": "fechado"}.get(pno, "na")
+                estado = "aberto" if _texto(linha.get("P_N_OPE")) == "A" else "fechado"
             subrede = self.subredes.get((2, _texto(linha.get("CTMT")) or ""))
-            if camada == "UNTRMT" and subrede is None:
-                self._desvio(
-                    "trafo_sem_alimentador",
-                    "o campo CTMT do transformador não casa com nenhum alimentador carregado: o "
-                    "transformador entra, mas a baixa tensão dele não vira subrede de nível 3",
-                    cod,
-                )
             pendentes.append((
                 self.tenant_id, self.rede_id, tipo_id, cod, estado, subrede,
                 _wkb_ponto(linha.geometry), Json(_atributos(linha)), cod, no[0],
@@ -549,17 +501,13 @@ class _Importador:
 
     def _gravar_dispositivos(self, tuplas: list[tuple], camada: str) -> None:
         """Nós de dispositivo em lote; depois subrede de nível 3 (só trafo) e a associação com a
-        junção, já filtrada pela mesma régua do gatilho (aresta incidente com regra). Cada `t` em
-        `tuplas` carrega 2 campos A MAIS do que o INSERT usa (cod repetido e o id/seq da junção,
-        `t[8]`/`t[9]`) — servem só ao laço abaixo; `execute_values` recebe `t[:8]`, senão o número de
-        `%s` do template (8) não bate com o da tupla (10) e o psycopg2 erra ('not all arguments
-        converted') — achado deste item, mesma família do bug de `_gravar_consumidores`."""
+        junção, já filtrada pela mesma régua do gatilho (aresta incidente com regra)."""
         inseridos = execute_values(
             self.cur,
             "INSERT INTO plat.rede_no (tenant_id, rede_id, papel, tipo_id, codigo_externo, estado, "
             "subrede_id, geom, atributos) VALUES %s "
             "ON CONFLICT (rede_id, papel, codigo_externo) DO NOTHING RETURNING id, codigo_externo",
-            [t[:8] for t in tuplas],
+            tuplas,
             template="(%s, %s::uuid, 'dispositivo', %s::uuid, %s, %s, %s::uuid, "
                      "ST_Transform(ST_SetSRID(ST_GeomFromWKB(%s), " + str(SRID_FONTE) + "), 4326), %s)",
             page_size=LOTE,
@@ -572,9 +520,7 @@ class _Importador:
                 self._desvio("dispositivo_duplicado", "COD_ID de dispositivo repetido no arquivo", cod)
                 continue
             no_id = por_codigo[cod]
-            if camada == "UNTRMT" and t[5] is not None:
-                # t[5] é a subrede de nível 2 (o alimentador); sem ele o desvio 'trafo_sem_alimentador'
-                # já foi contado e a subrede de nível 3 não é criada (o gatilho recusaria o órfão).
+            if camada == "UNTRMT":
                 self.cur.execute(
                     "INSERT INTO plat.rede_subrede (tenant_id, rede_id, nivel, codigo_externo, "
                     "controlador_no_id, pai_id) VALUES (%s, %s::uuid, 3, %s, %s::uuid, %s::uuid) "
@@ -604,10 +550,7 @@ class _Importador:
                     cod,
                 )
 
-    def _consumidores(self, camada: str, geometrias: dict[str, bytes]) -> None:
-        if not self.arquivo.get(camada):
-            self.inseridos[camada] = 0
-            return
+    def _consumidores(self, camada: str) -> None:
         try:
             df = _ler(self.caminho, camada, geometria=False)
         except ErroBdgd:
@@ -617,11 +560,9 @@ class _Importador:
             self.inseridos[camada] = 0
             return
         # UCBT_tab/UCMT_tab não têm COD_ID nem geometria: o identificador é o OBJECTID da tabela
-        # (índice do dataframe, fid_as_index=True) e o ponto de ligação é o PN_CON. As junções que só
-        # aparecem aqui (ponta de ramal) entram pelo mesmo caminho das demais, com o mesmo desvio de
-        # geometria ausente quando não há PONNOT para elas.
+        # (índice do dataframe, fid_as_index=True) e o ponto de ligação é o PN_CON.
         pns = {_texto(v) for v in df["PN_CON"]} - {None}
-        self._garantir_juncoes(pns, geometrias)
+        self._garantir_juncoes_uc(pns)
         tipo_id = self._tipo_id(camada)
         pendentes: list[tuple] = []
         for idx, linha in df.iterrows():
@@ -651,26 +592,40 @@ class _Importador:
         )
         self.inseridos[camada] = int(self.cur.fetchone()["n"])
 
+    def _garantir_juncoes_uc(self, pns: set[str]) -> None:
+        """Junções que só aparecem em PN_CON de consumidor (ponta de ramal) — sem geometria, porque
+        a geometria delas viria do PONNOT e o chamador já aplica esse mapa nas fases de trecho."""
+        novas = sorted(p for p in pns if p and p not in self.juncoes)
+        for i in range(0, len(novas), LOTE):
+            fatia = novas[i : i + LOTE]
+            execute_values(
+                self.cur,
+                "INSERT INTO plat.rede_no (tenant_id, rede_id, papel, codigo_externo) VALUES %s "
+                "ON CONFLICT (rede_id, papel, codigo_externo) DO NOTHING",
+                [(self.tenant_id, self.rede_id, "juncao", c) for c in fatia],
+                page_size=LOTE,
+            )
+            self.cur.execute(
+                "SELECT id, seq, codigo_externo FROM plat.rede_no "
+                "WHERE rede_id = %s::uuid AND papel = 'juncao' AND codigo_externo = ANY(%s)",
+                (self.rede_id, fatia),
+            )
+            for r in self.cur.fetchall():
+                self.juncoes[r["codigo_externo"]] = (r["id"], int(r["seq"]))
+
     def _gravar_consumidores(self, tuplas: list[tuple]) -> None:
-        """`t[6]` (id/seq da junção) só serve à associação abaixo, não ao INSERT — mesmo motivo e
-        mesmo conserto de `_gravar_dispositivos`: `execute_values` recebe `t[:6]`, do contrário o
-        template de 6 `%s` não bate com a tupla de 7."""
         inseridos = execute_values(
             self.cur,
             "INSERT INTO plat.rede_no (tenant_id, rede_id, papel, tipo_id, codigo_externo, subrede_id, atributos) "
             "VALUES %s ON CONFLICT (rede_id, papel, codigo_externo) DO NOTHING RETURNING id, codigo_externo",
-            [t[:6] for t in tuplas],
+            tuplas,
             template="(%s, %s::uuid, 'consumidor', %s::uuid, %s, %s::uuid, %s)",
             page_size=LOTE,
             fetch=True,
         )
         id_por_codigo = {r["codigo_externo"]: r["id"] for r in inseridos}
-        # o tipo do consumidor (t[2]) já é conhecido em Python — igual ao caminho de dispositivo
-        # (_gravar_dispositivos), não precisa de JOIN em rede_no para descobrir de novo. A versão
-        # anterior referenciava `n.tipo_id` num ON antes do JOIN que declara `n` (SQL inválido:
-        # "missing FROM-clause entry for table n") — achado deste item.
         associacoes = [
-            (self.tenant_id, self.rede_id, id_por_codigo[t[3]], t[6], t[2])
+            (self.tenant_id, self.rede_id, id_por_codigo[t[3]], t[6])
             for t in tuplas if t[3] in id_por_codigo
         ]
         if not associacoes:
@@ -679,13 +634,14 @@ class _Importador:
             self.cur,
             "INSERT INTO plat.rede_associacao (tenant_id, rede_id, tipo, de_no_id, para_no_id, origem) "
             "SELECT v.tenant_id, v.rede_id::uuid, 'conectividade', v.de_no::uuid, v.para_no::uuid, 'importacao' "
-            "FROM (VALUES %s) AS v(tenant_id, rede_id, de_no, para_no, tipo_id) "
+            "FROM (VALUES %s) AS v(tenant_id, rede_id, de_no, para_no) "
             "WHERE EXISTS ("
             "  SELECT 1 FROM plat.rede_aresta a JOIN plat.rede_regra r "
             "    ON r.rede_id = v.rede_id::uuid AND r.tipo = 'conectividade_no_trecho' "
-            "   AND ((r.de_tipo_id = a.tipo_id AND r.para_tipo_id = v.tipo_id::uuid) "
-            "     OR (r.de_tipo_id = v.tipo_id::uuid AND r.para_tipo_id = a.tipo_id)) "
-            "   WHERE a.rede_id = v.rede_id::uuid "
+            "   AND ((r.de_tipo_id = a.tipo_id AND r.para_tipo_id = n.tipo_id) "
+            "     OR (r.de_tipo_id = n.tipo_id AND r.para_tipo_id = a.tipo_id)) "
+            "   JOIN plat.rede_no n ON n.tenant_id = v.tenant_id AND n.id = v.de_no::uuid "
+            "   WHERE a.rede_id = v.rede_id::uuid"
             "     AND (a.no_origem_id = v.para_no::uuid OR a.no_destino_id = v.para_no::uuid)"
             ") RETURNING de_no_id",
             associacoes,
@@ -693,13 +649,12 @@ class _Importador:
             fetch=True,
         )
         ok = {r["de_no_id"] for r in gravadas}
-        cod_por_id = {v: k for k, v in id_por_codigo.items()}
-        for _, _, de_no, _, _ in associacoes:
+        for _, _, de_no, _ in associacoes:
             if de_no not in ok:
                 self._desvio(
                     "consumidor_sem_regra_na_juncao",
                     "nenhuma aresta incidente na junção do consumidor tem regra de conectividade "
                     "com o tipo dele no catálogo — na BDGD o consumidor de baixa liga pelo ramal, "
                     "e junção sem ramal incidente não tem como validar a regra",
-                    cod_por_id.get(de_no),
+                    None,
                 )

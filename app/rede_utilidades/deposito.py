@@ -11,8 +11,6 @@ inclusive como null."""
 
 import json
 
-from app.rede_utilidades.esquema import GEOMETRIA_JUNCAO
-
 CHAVE_PACOTE = ("codigo", "nome", "versao", "disciplina", "descricao", "fonte")
 
 
@@ -119,16 +117,13 @@ def importar(cur, tenant_id: int, rede_id: str, doc: dict, usuario_id: int, sha2
         )
 
     for r in doc["regras"]:
-        via = r.get("via")
+        de_g, _, de_c = r["de"].partition("/")
+        pa_g, _, pa_c = r["para"].partition("/")
         cur.execute(
-            "INSERT INTO plat.rede_regra(tenant_id, rede_id, tipo, de_tipo_id, para_tipo_id, via_tipo_id, "
-            "de_terminal, para_terminal, via_terminal, descricao) "
-            "VALUES (%s, %s::uuid, %s, %s, %s, %s, %s, %s, %s, %s)",
-            (tenant_id, rede_id, r["tipo"], tipos[(r["de"]["grupo"], r["de"]["tipo"])],
-             tipos[(r["para"]["grupo"], r["para"]["tipo"])],
-             tipos[(via["grupo"], via["tipo"])] if via else None,
-             _texto(r["de"].get("terminal")), _texto(r["para"].get("terminal")),
-             _texto(via.get("terminal")) if via else None, _texto(r.get("descricao"))),
+            "INSERT INTO plat.rede_regra(tenant_id, rede_id, tipo, de_tipo_id, para_tipo_id, descricao) "
+            "VALUES (%s, %s::uuid, %s, %s, %s, %s)",
+            (tenant_id, rede_id, r["tipo"], tipos[(de_g, int(de_c))], tipos[(pa_g, int(pa_c))],
+             _texto(r.get("descricao"))),
         )
 
     return {
@@ -178,8 +173,8 @@ def exportar(cur, rede_id: str) -> dict | None:
     cur.execute("SELECT grupo_id, tipo_id, codigo, nome, tipo_dado, unidade, obrigatorio, origem "
                 "FROM plat.rede_atributo WHERE rede_id = %s::uuid", (rede_id,))
     atributos = [dict(r) for r in cur.fetchall()]
-    cur.execute("SELECT tipo, de_tipo_id, para_tipo_id, via_tipo_id, de_terminal, para_terminal, via_terminal, "
-                "descricao FROM plat.rede_regra WHERE rede_id = %s::uuid", (rede_id,))
+    cur.execute("SELECT tipo, de_tipo_id, para_tipo_id, descricao FROM plat.rede_regra WHERE rede_id = %s::uuid",
+                (rede_id,))
     regras = [dict(r) for r in cur.fetchall()]
 
     meta = {"codigo": rede["pacote_codigo"], "nome": rede["pacote_nome"], "versao": rede["pacote_versao"],
@@ -187,28 +182,9 @@ def exportar(cur, rede_id: str) -> dict | None:
     _com(meta, "descricao", rede["pacote_descricao"])
     _com(meta, "fonte", rede["pacote_fonte"])
 
-    def _ref(tipo_id, terminal=None):
-        """Lado de regra na forma 2: {grupo, tipo, terminal?}. Na junção-aresta a JUNÇÃO vai no lado `de`;
-        linha antiga (pré-versão 2) pode ter gravado a aresta em `de` — a exportação normaliza pela
-        geometria do grupo, com a mesma regra da conversão de pacote versão 1."""
+    def _alvo(tipo_id):
         t = tipos[tipo_id]
-        ref = {"grupo": grupos[t["grupo_id"]]["codigo"], "tipo": t["codigo"]}
-        if terminal is not None:
-            ref["terminal"] = terminal
-        return ref
-
-    def _regra(r):
-        de_ref = _ref(r["de_tipo_id"], r["de_terminal"])
-        para_ref = _ref(r["para_tipo_id"], r["para_terminal"])
-        if r["tipo"] == "juncao_aresta":
-            geo_de = grupos[tipos[r["de_tipo_id"]]["grupo_id"]]["geometria"]
-            geo_para = grupos[tipos[r["para_tipo_id"]]["grupo_id"]]["geometria"]
-            if geo_para in GEOMETRIA_JUNCAO and geo_de not in GEOMETRIA_JUNCAO:
-                de_ref, para_ref = para_ref, de_ref
-        doc_r = {"tipo": r["tipo"], "de": de_ref, "para": para_ref}
-        if r["via_tipo_id"] is not None:
-            doc_r["via"] = _ref(r["via_tipo_id"], r["via_terminal"])
-        return _com(doc_r, "descricao", r["descricao"])
+        return f"{grupos[t['grupo_id']]['codigo']}/{t['codigo']}"
 
     return {
         "esquema": "plat.rede.pacote",
@@ -253,92 +229,9 @@ def exportar(cur, rede_id: str) -> dict | None:
                  "origem", a["origem"])
             for a in atributos
         ],
-        "regras": [_regra(r) for r in regras],
+        "regras": [
+            _com({"tipo": r["tipo"], "de": _alvo(r["de_tipo_id"]), "para": _alvo(r["para_tipo_id"])},
+                 "descricao", r["descricao"])
+            for r in regras
+        ],
     }
-
-
-# --- regras avaliáveis e feições (item L4-03-a-regras-de-conectividade) --------------------------------------
-
-
-def carregar_regras(cur, rede_id: str) -> list:
-    """As regras da rede como `regras.Regra`, com as chaves naturais (codigo do grupo, codigo do tipo) no
-    lugar dos uuids internos — é a chave estável que a avaliação, a mensagem de recusa e o CSV usam."""
-    from app.rede_utilidades.regras import Regra
-
-    cur.execute(
-        "SELECT rg.id, rg.tipo, rg.de_terminal, rg.para_terminal, rg.via_terminal, rg.descricao, "
-        "gd.codigo AS de_grupo, td.codigo AS de_tipo, gp.codigo AS para_grupo, tp.codigo AS para_tipo, "
-        "gv.codigo AS via_grupo, tv.codigo AS via_tipo "
-        "FROM plat.rede_regra rg "
-        "JOIN plat.rede_tipo td ON td.id = rg.de_tipo_id "
-        "JOIN plat.rede_grupo gd ON gd.id = td.grupo_id "
-        "JOIN plat.rede_tipo tp ON tp.id = rg.para_tipo_id "
-        "JOIN plat.rede_grupo gp ON gp.id = tp.grupo_id "
-        "LEFT JOIN plat.rede_tipo tv ON tv.id = rg.via_tipo_id "
-        "LEFT JOIN plat.rede_grupo gv ON gv.id = tv.grupo_id "
-        "WHERE rg.rede_id = %s::uuid ORDER BY rg.tipo, gd.codigo, td.codigo, gp.codigo, tp.codigo",
-        (rede_id,),
-    )
-    return [
-        Regra(
-            id=str(r["id"]), tipo=r["tipo"],
-            de=(r["de_grupo"], r["de_tipo"]), para=(r["para_grupo"], r["para_tipo"]),
-            de_terminal=r["de_terminal"], para_terminal=r["para_terminal"],
-            via=(r["via_grupo"], r["via_tipo"]) if r["via_grupo"] is not None else None,
-            via_terminal=r["via_terminal"], descricao=r["descricao"],
-        )
-        for r in cur.fetchall()
-    ]
-
-
-def mapas_catalogo(cur, rede_id: str) -> dict:
-    """Os quatro mapas que a validação de CSV e o applyEdits usam, todos por chave natural:
-    tipos_por_grupo {grupo: {codigo: chave}}, terminais {(grupo, codigo): {nomes de terminal}},
-    geometrias {grupo: geometria}, ids {(grupo, codigo): uuid do tipo}, grupo_ids {grupo: uuid}."""
-    cur.execute("SELECT id, codigo FROM plat.rede_grupo WHERE rede_id = %s::uuid", (rede_id,))
-    grupo_ids = {r["codigo"]: str(r["id"]) for r in cur.fetchall()}
-    cur.execute(
-        "SELECT t.id, g.codigo AS grupo, g.geometria, t.codigo, t.chave, tc.terminais "
-        "FROM plat.rede_tipo t JOIN plat.rede_grupo g ON g.id = t.grupo_id "
-        "LEFT JOIN plat.rede_terminal_config tc ON tc.id = t.terminal_id "
-        "WHERE t.rede_id = %s::uuid",
-        (rede_id,),
-    )
-    tipos_por_grupo: dict = {}
-    terminais: dict = {}
-    geometrias: dict = {}
-    ids: dict = {}
-    for r in cur.fetchall():
-        tipos_por_grupo.setdefault(r["grupo"], {})[r["codigo"]] = r["chave"]
-        geometrias[r["grupo"]] = r["geometria"]
-        ids[(r["grupo"], r["codigo"])] = str(r["id"])
-        nomes = {t["nome"] for t in (r["terminais"] or [])}
-        if nomes:
-            terminais[(r["grupo"], r["codigo"])] = nomes
-    return {"tipos_por_grupo": tipos_por_grupo, "terminais": terminais,
-            "geometrias": geometrias, "ids": ids, "grupo_ids": grupo_ids}
-
-
-def regras_ativas(cur, rede_id: str) -> bool:
-    cur.execute("SELECT regras_ativas FROM plat.rede WHERE id = %s::uuid", (rede_id,))
-    return cur.fetchone()["regras_ativas"]
-
-
-def definir_regras_ativas(cur, rede_id: str, ativa: bool) -> None:
-    cur.execute("UPDATE plat.rede SET regras_ativas = %s WHERE id = %s::uuid", (ativa, rede_id))
-
-
-def substituir_regras(cur, tenant_id: int, rede_id: str, regras: list[dict], ids: dict) -> int:
-    """Substitui o conjunto INTEIRO de regras pelo validado no CSV, na transação do chamador. As conexões e
-    associações já gravadas ficam (regra_id vira NULL pelo ON DELETE SET NULL): a regra nova vale da próxima
-    edição em diante, e a validação em lote reavalia o que já existe contra o conjunto novo."""
-    cur.execute("DELETE FROM plat.rede_regra WHERE rede_id = %s::uuid", (rede_id,))
-    for r in regras:
-        cur.execute(
-            "INSERT INTO plat.rede_regra(tenant_id, rede_id, tipo, de_tipo_id, para_tipo_id, via_tipo_id, "
-            "de_terminal, para_terminal, via_terminal) VALUES (%s, %s::uuid, %s, %s, %s, %s, %s, %s, %s)",
-            (tenant_id, rede_id, r["tipo"], ids[(r["de"][0], r["de"][1])], ids[(r["para"][0], r["para"][1])],
-             ids[(r["via"][0], r["via"][1])] if r["via"] else None,
-             r["de_terminal"], r["para_terminal"], r["via_terminal"]),
-        )
-    return len(regras)

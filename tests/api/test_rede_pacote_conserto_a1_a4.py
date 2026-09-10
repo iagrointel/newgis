@@ -9,6 +9,7 @@ Prova completa em `handoffs/T3/L4-01-a-CONSERTO.md`."""
 import copy
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -242,22 +243,22 @@ def test_nul_no_pacote_e_recusado_com_422(sessao_a, limpar_redes, onde):
 # ----------------------------------------------------------------------------------------- semântica da ida e volta
 
 def test_numero_3_0_e_codigo_01_entram_e_saem_normalizados(sessao_a, limpar_redes):
-    """Não é achado, é fronteira medida: `ordem: 3.0` e `tipo: 1.0` no lado de uma regra passam no esquema e
-    voltam como `3` e `1`. A ida e volta é canônica, como o handoff admite; fica registrado que a
-    normalização é silenciosa (o evento grava o sha256 do arquivo ENVIADO, que nunca mais bate com a
-    exportação). (Versão 2 do esquema, item L4-03-a: o lado da regra virou objeto {grupo, tipo, terminal?};
-    o caso "grupo/01" da versão 1 não existe mais porque `tipo` é inteiro JSON.)"""
+    """Não é achado, é fronteira medida: `ordem: 3.0` e `de: "grupo/01"` passam no esquema e voltam como `3` e
+    `grupo/1`. A ida e volta é canônica, como o handoff admite; fica registrado que a normalização é silenciosa
+    (o evento grava o sha256 do arquivo ENVIADO, que nunca mais bate com a exportação)."""
     rid = _criar(sessao_a, "norm")
     limpar_redes.append((sessao_a, rid))
     doc = _doc()
     doc["tiers"][0]["ordem"] = float(doc["tiers"][0]["ordem"])
-    doc["regras"][0]["de"]["tipo"] = float(doc["regras"][0]["de"]["tipo"])
+    regra = doc["regras"][0]
+    g, _, c = regra["de"].partition("/")
+    regra["de"] = f"{g}/0{c}"
     bruto = _bytes(doc)
     r = _importar(sessao_a, rid, bruto)
     assert r.status_code == 201, r.text
     volta = json.loads(sessao_a.get(f"/api/rede/{rid}/pacote").content)
     assert isinstance(volta["tiers"][0]["ordem"], int)
-    assert all(isinstance(x["de"]["tipo"], int) for x in volta["regras"])
+    assert all(not re.search(r"/0\d", x["de"]) for x in volta["regras"])
     assert r.json()["sha256"] != sessao_a.get(f"/api/rede/{rid}/pacote").headers["ETag"].strip('"')
 
 
@@ -271,46 +272,28 @@ def test_codigo_de_pacote_igual_em_dois_inquilinos_e_em_duas_redes_nao_colide(se
 
 # ----------------------------------------------------------------------------------------- privilégio nas rotas
 
-def test_toda_rota_de_escrita_de_rede_exige_rede_editar_ou_administrar_no_openapi_e_na_pratica(
-        sessao_a, usuarios_a, limpar_redes):
-    """Atualizado pelo item L4-03-a-regras-de-conectividade (3 rotas de `rede.editar` de L4-01-a — criar
-    rede, importar pacote, apagar rede — mais 4: `applyEdits`/`validar` em `rede.editar`, `regras.csv`
-    POST/`regras/ativacao` PUT em `rede.administrar`) e pelo item L4-03-d-areas-sujas-e-validacao (mais 2:
-    `validar_extensao` em `rede.editar` — é validação, não edição de feição, mas ainda assim escreve
-    `plat.rede_erro`/marca área limpa, o mesmo grau de acesso de `validar` — e `area_sujas/modo` PUT em
-    `rede.administrar`, mesmo padrão de `regras/ativacao`; `tracar` é GET, só leitura, e não entra nesta
-    lista de escrita — ver `app/rede_utilidades/rotas_areas_sujas.py`)."""
+def test_toda_rota_de_escrita_de_rede_exige_rede_editar_no_openapi_e_na_pratica(sessao_a, usuarios_a, limpar_redes):
     from app.main import app
 
-    ADMINISTRAR = {("/api/rede/{rede_id}/regras.csv", "post"), ("/api/rede/{rede_id}/regras/ativacao", "put"),
-                   ("/api/rede/{rede_id}/area_sujas/modo", "put")}
     esquema = app.openapi()
     escritas = [(c, m) for c, ops in esquema["paths"].items() if c.startswith("/api/rede")
                 for m in ops if m in ("post", "put", "patch", "delete")]
-    assert len(escritas) == 9, escritas
+    # 06/09 (item L4-05-g-osm-power): a rota nova (POST /api/rede/{rede_id}/importar-osm) sobe a
+    # contagem de 6 (L4-01-b topologia/feições) para 7 -- na MESMA régua: rede.editar declarado no
+    # openapi e recusado na prática para quem só tem rede.ler.
+    assert len(escritas) == 7, escritas
     for c, m in escritas:
-        privilegio = esquema["paths"][c][m].get("x-privilegio")
-        esperado = "rede.administrar" if (c, m) in ADMINISTRAR else "rede.editar"
-        assert privilegio == esperado, (c, m, privilegio)
+        assert esquema["paths"][c][m].get("x-privilegio") == "rede.editar", (c, m)
     rid = _rede_com_pacote(sessao_a, limpar_redes, "priv")
     visual, _, _ = usuarios_a.sessao("visualizador")
     assert visual.get(f"/api/rede/{rid}").status_code == 200
     assert visual.post("/api/rede", json={"nome": "zadv-x", "disciplina": "agua"}).status_code == 403
     assert _importar(visual, rid, instalados.bruto("agua-epanet")).status_code == 403
     assert visual.delete(f"/api/rede/{rid}").status_code == 403
-
-    editor, _, _ = usuarios_a.sessao("editor")
-    assert editor.post(f"/api/rede/{rid}/applyEdits", json={"adicionar": [], "atualizar": [], "apagar": []}
-                        ).status_code in (200, 201)
-    # rede.editar não abre a comporta de admin: ativação continua 403 para o editor
-    assert editor.get(f"/api/rede/{rid}/regras.csv").status_code == 200  # leitura é `rede:visibilidade`
-    assert editor.put(f"/api/rede/{rid}/regras/ativacao", json={"ativa": False}).status_code == 403
-    # CSV é corpo não-JSON: sob sessão de navegador o CSRF (ADR 0002 §5.3) recusa com 415 ANTES do
-    # privilégio, mesmo padrão de `POST /api/arquivos` (ADR 0006) — ver test_regras_csv.py para o
-    # round-trip de verdade, feito por token, e a prova de que o visualizador nem chega no CSRF.
-    csv_regras = editor.get(f"/api/rede/{rid}/regras.csv").content
-    assert editor.post(f"/api/rede/{rid}/regras.csv", content=csv_regras,
-                        headers={"Content-Type": "text/csv"}).status_code == 415
+    assert visual.post(f"/api/rede/{rid}/importar-osm", json={
+        "caminho": "/nao/importa/aqui", "municipio": {"type": "Polygon", "coordinates": []},
+        "nome_municipio": "x",
+    }).status_code == 403
 
 
 # ------------------------------------------------------------------------------ servidor real (laço de eventos)

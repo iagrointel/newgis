@@ -5472,6 +5472,82 @@ este item). **Fronteira honesta**: a `descricao` da regra (só existe no pacote 
 ao round-trip de CSV — não é uma das 13 colunas da Esri, e o teste prova os dois lados. `via_terminal`
 está no esquema e no CSV mas nenhuma regra do pacote elétrico o usa — pendência nomeada, não testada
 com dado real. Paridade contra ArcGIS Pro/AGOL reais continua `pendente` (decisão D20).
+## turno 3, setembro de 2026 (item L4-05-g-osm-power: conector OpenStreetMap power=* como rede de baixa confiança)
+
+`POST /api/rede/{rede_id}/importar-osm` monta a rede power=* (linha, torre, poste, transformador,
+subestação, geração distribuída) de UM município a partir de um extrato `.pbf`/`.osm` já na máquina, sobre
+o pacote `eletrica-br` já importado na rede. Cada elemento grava `fonte = 'OSM'` nos atributos e a ficha da
+importação (`GET .../importacoes`) mostra sempre a licença ODbL e o aviso "cadastro comunitário, não
+oficial" — nunca dado oficial disfarçado de oficial. A topologia vem só dos refs do extrato (nunca de
+coincidência geométrica): uma via vira um ou mais trechos, cortada nos vértices compartilhados com outra
+via, nas pontas, e em nó tipado que muda o dono do trecho (transformador/subestação/gerador); torre e
+poste fixam no trecho sem cortar, pela mesma regra de fixação estrutural do catálogo. Contagem sempre
+conferida por etiqueta contra o que o extrato tinha dentro do recorte — o que não entra vira desvio
+explicado, nunca silêncio. Leitura do extrato em fluxo (osmium `tags-filter` linha a linha) com **teto
+declarado de 300 mil elementos** (`MAX_ELEMENTOS`): acima dele o subprocesso é encerrado e a importação
+falha com erro explicado, nunca acumulando sem fim (regra dura da casa: extração de OSM nunca em memória
+sem limite — já derrubou o banco desta máquina uma vez). Teste: `tests/api/test_rede_osm.py` (6 casos,
+extrato sintético `tests/dados/taquari_power.osm` sobre o limite oficial de Taquari-RS); refutação provada
+em `test_nunca_liga_no_de_outra_fonte_por_coincidencia` — um nó de outra fonte na MESMA coordenada de um
+vértice que o OSM corta não recebe associação nenhuma da importação.
+
+De quebra, um conserto que vale para qualquer importador em lote da casa: `psycopg2.extras.execute_values`
+monta a consulta em **bytes**, e o reescritor de schema de homologação/trilha (`app/schema_ambiente.py`)
+só tratava `str` — todo `INSERT ... VALUES %s` em lote (usado por este conector e por `bdgd.py`) ia sempre
+para o schema `plat` de produção em vez do schema isolado da trilha, e falhava com "permission denied for
+schema plat" em qualquer ambiente que não fosse produção. Corrigido decodificando bytes antes de reescrever.
+
+## turno 3, setembro de 2026 (item L4-01-a-pacote-de-ativos: o esquema da rede de utilidades é dado)
+
+Primeiro item da linha L4. O esquema de uma rede de utilidades — redes de domínio, tiers, grupos e tipos de
+ativo, categorias de rede, atributos e configurações de terminal — passa a ser um **pacote de ativos**: um
+documento JSON versionado, importado para dez tabelas `plat.rede_*` do inquilino (`POST
+/api/rede/{rede_id}/pacote`) e exportado de volta a partir delas (`GET .../pacote`). O contrato está no ADR
+0019; o mapeamento coluna a coluna, em `docs/PACOTE_REDE.md`, gerado do próprio dado.
+
+A exportação é **reconstruída das tabelas**, nunca o arquivo recebido — dos 96.042 bytes importados do pacote
+`eletrica-br`, saem os mesmos 96.042 bytes, e um teste altera uma linha no banco para mostrar que a exportação
+muda junto (`test_a_exportacao_vem_das_tabelas_e_nao_do_arquivo_recebido`). Pacote recusado sai com a lista
+inteira de problemas, cada um com o caminho (`tipos[41].grupo`) e a **linha do arquivo enviado**.
+
+Dois pacotes vêm com a instalação: `eletrica-br` (2 domínios, 4 tiers, 14 grupos, 24 tipos, 214 atributos, 24
+regras) cobrindo as 13 camadas de rede da BDGD do Módulo 10 do PRODIST, e `agua-epanet` (1 domínio, 2 tiers, 6
+grupos, 14 tipos, 41 atributos, 16 regras) no vocabulário do EPANET 2.2.
+
+⛔ Fronteira honesta declarada no próprio dado: dos 214 atributos do pacote elétrico, **154 têm a coluna de
+origem conferida contra uma extração real** (11 camadas) e **60 são declarados do documento da fonte, sem
+conferência** (`SUB`, `UNSEMT`, `UNCRMT`, `UNREMT`, `UGMT_tab`); o pacote de água é inteiramente declarado.
+Nenhum atributo com `conferida = false` deve decidir carga de dado sem antes conferir o dicionário da entrega.
+Topologia, traçado e subrede não existem ainda — este item entrega só o catálogo do esquema.
+
+## turno 3, setembro de 2026 (item L4-01-a-pacote-de-ativos: conserto pós-adversário, refutado -> corrigido)
+
+O adversário independente do turno 3 (`handoffs/T3/ataque-L4-portal-ADVERSARIO.md` §1) refutou o item com
+seis achados; todos corrigidos, com a mesma bateria de teste virando regressão permanente
+(`tests/api/test_rede_pacote_conserto_a1_a4.py`, `tests/api/test_fk_composta_por_inquilino.py`).
+
+**A1** (a FK não era filtrada pela RLS): as 10 tabelas `plat.rede_*` ganharam FK **composta** `(tenant_id,
+id)` (`db/migracoes/20260906T1815_rede_fk_por_inquilino.sql`) — um inquilino não pendura mais linha própria
+em `tipo`/`domínio` de outro pelo uuid alheio. A trava (`test_fk_composta_por_inquilino.py`) varre
+`pg_constraint` do schema inteiro, não só a rede; achou 55 FKs do mesmo padrão em outras tabelas do produto,
+documentadas como fora de escopo (não corrigidas aqui).
+
+**A2/A2b** (seção repetida entrava em silêncio e a linha apontada era a errada): `localizador.py` foi
+reescrito para construir um mapa de offsets numa única passada — a última ocorrência de uma chave
+sobrescreve a anterior, como `json.loads`, então a linha apontada é sempre a da seção que a validação de
+fato usou; `pacote._chave_repetida` recusa com 422 qualquer chave repetida, em qualquer profundidade.
+
+**A3** (NUL em `texto`/`jsonb` derrubava a importação com 500): `pacote._procurar_nul` recusa com 422 antes
+de a string chegar ao psycopg2.
+
+**A4** (a rota travava o laço de eventos e a localização de linha era quadrática): `POST
+.../{rede_id}/pacote` só lê o corpo no laço de eventos; validação e gravação vão para
+`run_in_threadpool`. O mesmo mapa de offsets do conserto A2b tornou a localização de linha linear (medido:
+pacote de 4 mil erros, 14,1 s → 1,2 s; pior `/saude` concorrente, 13,6 s → 0,19 s —
+`tests/medidas/L4-01-a.json`). Tornar a concorrência real expôs um `DeadlockDetected` não tratado em duas
+importações simultâneas na MESMA rede; corrigido com `SELECT ... FOR UPDATE` na linha da rede
+(`_travar_rede`), que serializa a substituição do catálogo sem 500.
+
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 - **L7-06-d-paineis**: cinco painéis Grafana provisionados por arquivo (`deploy/grafana/paineis/*.json` + `deploy/grafana/provisioning/`), homologação própria (`deploy/paineis_homologacao.sh`) com carga curta de verdade e captura de cada painel em `tests/e2e/capturas/`. Métricas novas para o que os painéis precisavam e não existia: usuários ativos em 24 h, duração e tamanho do último backup/ensaio, uso de armazenamento e tamanho do schema de dado por inquilino.
@@ -5987,6 +6063,35 @@ páginas.
 Novo em `app/conexao/seguranca.py`: `PLAT_TESTE_CONEXAO_ALVOS`, par `host:porta` exato aceito só fora de
 produção, para que a suíte fale com um WFS e um OGC API DE VERDADE subidos no loopback
 (`tests/api/conexao/servidor_ogc.py`) em vez de depender do serviço de um órgão estar de pé.
+
+## turno 3, setembro de 2026 (item L4-01-a-pacote-de-ativos: conserto pós-adversário, refutado -> corrigido)
+
+O adversário independente do turno 3 (`handoffs/T3/ataque-L4-portal-ADVERSARIO.md` §1) refutou o item com
+seis achados; todos corrigidos, com a mesma bateria de teste virando regressão permanente
+(`tests/api/test_rede_pacote_conserto_a1_a4.py`, `tests/api/test_fk_composta_por_inquilino.py`).
+
+**A1** (a FK não era filtrada pela RLS): as 10 tabelas `plat.rede_*` ganharam FK **composta** `(tenant_id,
+id)` (`db/migracoes/20260906T1815_rede_fk_por_inquilino.sql`) — um inquilino não pendura mais linha própria
+em `tipo`/`domínio` de outro pelo uuid alheio. A trava (`test_fk_composta_por_inquilino.py`) varre
+`pg_constraint` do schema inteiro, não só a rede; achou 55 FKs do mesmo padrão em outras tabelas do produto,
+documentadas como fora de escopo (não corrigidas aqui).
+
+**A2/A2b** (seção repetida entrava em silêncio e a linha apontada era a errada): `localizador.py` foi
+reescrito para construir um mapa de offsets numa única passada — a última ocorrência de uma chave
+sobrescreve a anterior, como `json.loads`, então a linha apontada é sempre a da seção que a validação de
+fato usou; `pacote._chave_repetida` recusa com 422 qualquer chave repetida, em qualquer profundidade.
+
+**A3** (NUL em `texto`/`jsonb` derrubava a importação com 500): `pacote._procurar_nul` recusa com 422 antes
+de a string chegar ao psycopg2.
+
+**A4** (a rota travava o laço de eventos e a localização de linha era quadrática): `POST
+.../{rede_id}/pacote` só lê o corpo no laço de eventos; validação e gravação vão para
+`run_in_threadpool`. O mesmo mapa de offsets do conserto A2b tornou a localização de linha linear (medido:
+pacote de 4 mil erros, 14,1 s → 1,2 s; pior `/saude` concorrente, 13,6 s → 0,19 s —
+`tests/medidas/L4-01-a.json`). Tornar a concorrência real expôs um `DeadlockDetected` não tratado em duas
+importações simultâneas na MESMA rede; corrigido com `SELECT ... FOR UPDATE` na linha da rede
+(`_travar_rede`), que serializa a substituição do catálogo sem 500.
+
 
 ## turno 3, setembro de 2026 (item L0-04-a-upload-arquivo: upload retomável pelo navegador)
 
