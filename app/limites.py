@@ -179,6 +179,20 @@ CONEXAO_VETOR_CACHE_TTL_S = 30.0              # cache curto da consulta referenc
 CONEXAO_VETOR_CACHE_ENTRADAS = 128            # entradas guardadas no processo; a mais velha sai
 COPIA_MEMORIA_MB = 1024                       # job conexao.copiar_vetor (ogr2ogr + reprojeção)
 COPIA_TIMEOUT_S = 3600
+# --- fonte de dado registrada: conector postgres_fdw (L0-04-i-fonte-registrada; ver
+# docs/adr/20260907T0148-fonte-registrada-postgres-fdw.md). Conexão TCP direta
+# a um Postgres/PostGIS de cliente (não HTTP: `pgfdw.py` reusa `seguranca.resolver_ips_bloqueando_categorias`,
+# nunca `buscar_seguro`). Diferente do bloqueio de SSRF de `CONEXAO_TIPOS` http-like, aqui só link_local/
+# multicast/nao_especificado são bloqueados por categoria de IP (uma rede privada/VPN é um alvo LEGÍTIMO para
+# o Postgres de um cliente); o próprio iagro_sat é bloqueado por LISTA EXPLÍCITA (nome do banco + host/porta/
+# banco do PLAT_DSN desta própria instalação), não por faixa de IP — ver `pgfdw.validar_alvo`.
+CONEXAO_PG_CATEGORIAS_BLOQUEADAS = frozenset({"link_local", "multicast", "nao_especificado"})
+CONEXAO_PG_BANCOS_PROIBIDOS = frozenset({"iagro_sat"})  # nome do banco de produção da casa, em qualquer host
+CONEXAO_PG_CONECTAR_TIMEOUT_S = 5
+CONEXAO_PG_ESTATEMENT_TIMEOUT_MS = 8000       # listar tabelas/colunas nunca trava a rota
+CONEXAO_PG_TABELAS_MAX = 500                  # teto de tabelas devolvidas por GET .../tabelas
+CONEXAO_PG_COLUNAS_MAX = 300                  # teto de colunas por tabela publicada
+CONEXAO_PG_PUBLICAR_LOTE_MAX = 50             # teto de tabelas por chamada de publicar-em-massa
 
 # --- ingestão vetorial (L0-04; ADR 0005, reduzido a 4 formatos: shapefile.zip, gpkg, geojson, csv)
 INGESTAO_AMOSTRA_VALIDADE = 1000          # feições lidas na amostra de ST_IsValid (ogr2ogr -limit, MEDIDO no ADR)

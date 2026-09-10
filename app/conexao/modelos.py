@@ -97,50 +97,46 @@ class PublicarCamadaEntrada(Modelo):
     titulo: str | None = Field(default=None, min_length=1, max_length=250)
 
 
-# --- conector de feição externa (item L6-02-c-wfs-ogcapi): WFS 2.0 e OGC API - Features no modo REFERENCIADO.
-# A cópia (modo copiado) não tem rota própria: é o job `conexao.copiar_vetor` por `POST /api/jobs`, como toda
-# tarefa pesada da plataforma.
+# --- item L0-04-i-fonte-registrada: conector postgres_fdw ("fonte de dado registrada", "bulk publish")
+
+class TabelaExterna(Saida):
+    tabela: str
+    n_colunas: int
+    comentario: str | None = None
+    geometria_coluna: str | None = None
+    geometria_tipo: str | None = None
+    srid: int | None = None
 
 
-class ColecaoSaida(Saida):
-    nome: str
-    titulo: str | None = None
-    crs_nativo: str | None = None       # verbatim do serviço ("urn:ogc:def:crs:EPSG::4674"); None = não declarou
-    srid_nativo: int | None = None
-    srid_entregue: int
-    extent_4326: list[float] | None = None
-    formatos: list[str] = []
+class TabelasExternasSaida(Saida):
+    schema_remoto: str
+    itens: list[TabelaExterna]
 
 
-class ColecoesPagina(Saida):
-    total: int
-    itens: list[ColecaoSaida]
-    do_cache: bool = False
+class PublicarEmMassaEntrada(Modelo):
+    tabelas: list[str] = Field(min_length=1, max_length=limites.CONEXAO_PG_PUBLICAR_LOTE_MAX)
+    schema_remoto: str = Field(default="public", min_length=1, max_length=63)
 
 
-class CampoSaida(Saida):
-    nome: str            # já normalizado (o mesmo normalizador da ingestão de arquivo)
-    origem: str          # nome como o serviço o chama
-    tipo: str            # tipo de coluna PostgreSQL a que ele corresponde
-    tipo_declarado: str  # o que o serviço declarou, verbatim
-    origem_do_tipo: str  # describefeaturetype | queryables | amostra (inferido, nunca declarado)
+class PublicarEmMassaItemSaida(Saida):
+    tabela: str
+    ok: bool
+    item_id: str | None = None
+    erro: str | None = None
 
 
-class CamposSaida(Saida):
-    colecao: str
-    itens: list[CampoSaida]
-    do_cache: bool = False
+class PublicarEmMassaSaida(Saida):
+    itens: list[PublicarEmMassaItemSaida]
 
 
-class FeicoesSaida(Saida):
-    """GeoJSON + o que a paginação apurou. `numero_matched` é o total DECLARADO pelo serviço (pode ser None:
-    nem todo serviço declara) e `numberReturned` é o que veio nesta resposta — os dois juntos, nunca um só."""
+class CamadaDaConexaoItem(Saida):
+    id: str
+    titulo: str
+    schema_tabela: str
+    tabela: str
+    estado_fonte: str  # "ok" | "fonte_indisponivel" | "nunca_testada" (portão: "camada continua no catálogo
+                        # com estado 'fonte indisponível'" quando a conexão de origem cai)
 
-    type: str = "FeatureCollection"
-    features: list[dict]
-    numberReturned: int  # noqa: N815 — nome do padrão OGC API - Features, não do repositório
-    numberMatched: int | None = None  # noqa: N815
-    colecao: str
-    srid_entregue: int
-    do_cache: bool = False
-    avisos: list[str] = []
+
+class CamadaDaConexaoSaida(Saida):
+    itens: list[CamadaDaConexaoItem]

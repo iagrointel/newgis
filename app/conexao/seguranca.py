@@ -27,8 +27,6 @@ Mecanismo (os 8 casos do adversário do item, na ordem do portão):
 from __future__ import annotations
 
 import ipaddress
-import logging
-import os
 import socket
 import ssl
 import typing
@@ -41,13 +39,11 @@ import httpcore
 import httpx
 
 from app import limites
-from app.settings import settings
 
 _ESQUEMAS_PERMITIDOS = {"http", "https"}
 # faixas que ipaddress.is_private/is_reserved/etc. NÃO cobrem em toda versão do Python — CGNAT (RFC 6598) é o
 # gap mais citado (100.64.0.0/10, usado por alguns provedores e por metadado de nuvem alternativo)
 _REDES_EXTRAS_BLOQUEADAS = (ipaddress.ip_network("100.64.0.0/10"),)
-log = logging.getLogger("plat.conexao")
 _RESOLVEDOR = ThreadPoolExecutor(max_workers=8, thread_name_prefix="plat-conexao-dns")
 
 
@@ -84,37 +80,6 @@ def _categoria_bloqueada(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> s
         if ip in rede:
             return "privado"
     return None
-
-
-def alvos_de_teste() -> frozenset[tuple[str, int]]:
-    """`PLAT_TESTE_CONEXAO_ALVOS` = "127.0.0.1:41871,127.0.0.1:41872": pares host:porta que a validação deixa
-    passar mesmo caindo numa faixa bloqueada. Aceita SÓ fora de produção (mesma regra de
-    `app.auth.sessao.ajuste_de_teste`); em `producao` é ignorada com aviso no log.
-
-    Por que existe: o conector de feição externa (item L6-02-c) precisa de um WFS 2.0 e de um OGC API Features
-    de VERDADE para o teste, e a regra da casa proíbe que a suíte dependa de serviço de terceiro para passar.
-    O servidor de teste sobe no loopback, e o único jeito de o mesmo código de produção falar com ele é este.
-    A folga é a MENOR possível: par host:porta exato (nem o host inteiro, nem a faixa), fora de produção, e
-    nada mais da validação é dispensado — esquema, userinfo, revalidação de cada redirecionamento e o pino de
-    IP contra rebinding continuam valendo. Uma porta não declarada no loopback (8150, por exemplo) segue
-    recusada mesmo com a variável ligada."""
-    bruto = os.environ.get("PLAT_TESTE_CONEXAO_ALVOS", "").strip()
-    if not bruto:
-        return frozenset()
-    if settings.producao:
-        log.warning("PLAT_TESTE_CONEXAO_ALVOS ignorada em producao")
-        return frozenset()
-    pares = set()
-    for pedaco in bruto.split(","):
-        pedaco = pedaco.strip()
-        if not pedaco or ":" not in pedaco:
-            continue
-        host, _, porta = pedaco.rpartition(":")
-        try:
-            pares.add((host.strip(), int(porta)))
-        except ValueError:
-            log.warning("PLAT_TESTE_CONEXAO_ALVOS: par invalido %r", pedaco)
-    return frozenset(pares)
 
 
 def _resolver_host(host: str, porta: int) -> list[str]:
@@ -160,11 +125,10 @@ def validar_url(url: str) -> URLValidada:
     # IP literal na URL: ipaddress já resolve sem DNS; ainda assim passa pelo mesmo `_resolver_host` embaixo
     # (getaddrinfo aceita IP literal e devolve ele mesmo), então a checagem de categoria é uma só, adiante.
     ips = _resolver_host(host, porta)
-    liberado = (host, porta) in alvos_de_teste()  # só fora de producao, só o par exato declarado
     for ip_str in ips:
         ip = ipaddress.ip_address(ip_str)
         categoria = _categoria_bloqueada(ip)
-        if categoria is not None and not liberado:
+        if categoria is not None:
             raise ErroURLInsegura(f"ip_bloqueado:{categoria}:{ip_str}", url)
     return URLValidada(url=url, esquema=partes.scheme.lower(), host=host, porta=porta, ips=tuple(ips))
 
@@ -300,18 +264,17 @@ def buscar_seguro(
     )
 
 
-def _mesma_origem_de_confianca(anterior: str, novo: str) -> bool:
-    """Mesmo host (case-insensitive) e não é uma queda de https para http; porta diferente já é outro
-    serviço. Copiada (mesma lógica, não reinventada) do conserto que o item de conexão externa fez para
-    credencial que atravessa redirecionamento (linhagem ADR 0012 — modelo de conexão externa); usada aqui
-    pelo item L2-08-a-leitor-portal-inventario para decidir se o token do Portal/AGOL pode ir num pedido:
-    só para a origem do portal configurado, nunca para o host de um item de terceiro nem para onde um
-    redirecionamento aponte."""
-    a, b = urlsplit(anterior), urlsplit(novo)
-    if (a.hostname or "").lower() != (b.hostname or "").lower():
-        return False
-    if a.scheme.lower() == "https" and b.scheme.lower() != "https":
-        return False
-    porta_a = a.port or (443 if a.scheme.lower() == "https" else 80)
-    porta_b = b.port or (443 if b.scheme.lower() == "https" else 80)
-    return porta_a == porta_b
+def resolver_ips_bloqueando_categorias(host: str, porta: int, categorias_bloqueadas: frozenset[str]) -> tuple[str, ...]:
+    """Resolve `host` (DNS, com timeout) e recusa se algum IP resolvido cair numa das `categorias_bloqueadas`
+    (as mesmas de `_categoria_bloqueada`: loopback/link_local/multicast/nao_especificado/reservado/privado).
+    Usado por conectores que não são HTTP (item L0-04-i-fonte-registrada: `app/conexao/pgfdw.py`, conexão
+    TCP direta a um Postgres externo) — a defesa de SSRF é a MESMA função de resolução do módulo HTTP; só a
+    lista de categorias bloqueadas muda (um Postgres de cliente pode estar numa rede privada/VPN, o que um
+    serviço HTTP arbitrário não deveria estar, então o conector Postgres bloqueia menos categorias e some
+    a diferença com uma lista explícita de alvo proibido — ver `pgfdw.validar_alvo`)."""
+    ips = _resolver_host(host, porta)
+    for ip_str in ips:
+        categoria = _categoria_bloqueada(ipaddress.ip_address(ip_str))
+        if categoria is not None and categoria in categorias_bloqueadas:
+            raise ErroURLInsegura(f"ip_bloqueado:{categoria}:{ip_str}", host)
+    return tuple(ips)
