@@ -144,16 +144,18 @@ function celulaExtensao(extensao) {
 }
 
 function preverCamada(conexao, camada) {
-  // só wms tem o bastante (LAYERS + BBOX geográfico em EPSG:4326) para montar um GetMap sem contexto de
-  // mapa; wmts/esri_rest têm proxy (ver TIPOS_COM_PROXY), mas escolher tile/zoom pede um mapa de verdade —
-  // fica para a fatia que liga isto ao MapLibre (web/js/mapa/mapa.js).
+  // só wms tem o bastante (LAYERS + BBOX geográfico) para montar um GetMap sem contexto de mapa; wmts/
+  // esri_rest têm proxy (ver TIPOS_COM_PROXY), mas escolher tile/zoom pede um mapa de verdade — fica para a
+  // fatia que liga isto ao MapLibre (web/js/mapa/mapa.js).
   if (conexao.tipo !== 'wms') return;
   const extensao = camada.extensao;
   const bbox = extensao ? `${extensao.minx},${extensao.miny},${extensao.maxx},${extensao.maxy}` : '-74,-34,-28.8,5.3';
-  const crs = (extensao && extensao.crs) || 'EPSG:4326';
+  // CRS:84 (não EPSG:4326): `app.conexao.descoberta` sempre guarda a extensão geográfica em ordem
+  // lon,lat,lon,lat; no WMS 1.3.0 o BBOX de EPSG:4326 é lat,lon (eixo invertido, achado real do T3 em
+  // app/conexao/wms_wmts.py) — CRS:84 é o MESMO datum, mas o OGC define eixo lon,lat sempre, sem ambiguidade.
   const params = new URLSearchParams({
     SERVICE: 'WMS', VERSION: '1.3.0', REQUEST: 'GetMap', LAYERS: camada.nome, STYLES: '',
-    CRS: crs, BBOX: bbox, WIDTH: '512', HEIGHT: '512', FORMAT: 'image/png', TRANSPARENT: 'true',
+    CRS: 'CRS:84', BBOX: bbox, WIDTH: '512', HEIGHT: '512', FORMAT: 'image/png', TRANSPARENT: 'true',
   });
   const src = `/api/conexoes/${encodeURIComponent(conexao.id)}/tile?${params.toString()}`;
   const corpo = h('div', {},
