@@ -16,6 +16,7 @@ from app import log as plat_log
 from app.acervo import rotas as rotas_acervo
 from app.amc import rotas as rotas_amc
 from app.analise3d.rotas import router as rotas_analise3d
+from app.amc.rotas_pareto import router as rotas_amc_pareto
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
 from app.auth import (
@@ -358,6 +359,8 @@ ROUTERS = [
     rotas_analise3d,
     # --- relatórios do admin e painel Atividade (L0-07-e-relatorios): /api/relatorios, /api/atividade
     rotas_relatorios,
+    # --- motor multicritério, fronteira de Pareto (L3-08-pareto): /api/amc/pareto e /api/amc/pareto/camada
+    rotas_amc_pareto,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

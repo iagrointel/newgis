@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Fronteira de Pareto · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/estilo/tokens.css">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/vendor/maplibre-gl-4.7.1.css">
+<link rel="stylesheet" href="/static/mapa.css">
+<link rel="stylesheet" href="/static/amc_pareto.css">
+</head>
+<body class="tela instrumento mapa">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <div class="linha-ferramentas mapa-barra">
+      <h1 data-i18n="pareto.titulo">Fronteira de Pareto</h1>
+      <label for="execucao" data-i18n="pareto.execucao">execução</label>
+      <select id="execucao"></select>
+      <button id="rodar" type="button" data-i18n="pareto.rodar">ordenar</button>
+      <button id="baixar" type="button" disabled data-i18n="pareto.baixar">baixar a fronteira</button>
+      <plat-aviso id="aviso"></plat-aviso>
+    </div>
+    <p class="pareto-explicacao" data-i18n="pareto.explicacao">
+      A ordenação não usa peso nenhum. Uma unidade domina outra quando é pelo menos igual em todos os
+      objetivos e melhor em pelo menos um; a 1ª ordem é o que ninguém domina. Arraste um retângulo no
+      gráfico para realçar as mesmas unidades no mapa.
+    </p>
+    <div class="pareto-corpo">
+      <section class="pareto-lado">
+        <h2 data-i18n="pareto.objetivos">objetivos (2 a 4)</h2>
+        <div id="objetivos" class="objetivos"></div>
+        <p id="resumo" class="pareto-resumo"></p>
+        <p id="selecao" class="pareto-selecao">0 unidades escovadas</p>
+        <p id="aviso-pesos" class="pareto-aviso-pesos"></p>
+      </section>
+      <section class="pareto-grafico">
+        <div class="pareto-eixo-y" id="eixo-y"></div>
+        <svg id="grafico" role="img" aria-label="dispersão dos objetivos"></svg>
+        <div class="pareto-eixo-x" id="eixo-x"></div>
+      </section>
+      <section class="pareto-mapa">
+        <div id="mapa" aria-label="mapa das unidades" role="application"></div>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="/static/vendor/maplibre-gl-4.7.1.js"></script>
+<script src="/static/vendor/pmtiles-4.5.0.js"></script>
+<script type="module" src="/static/js/amc/pareto_tela.js"></script>
+</body>
+</html>

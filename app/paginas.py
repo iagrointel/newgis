@@ -64,6 +64,8 @@ PAGINAS = {
     "/uploads": "uploads.html",
     # --- sistema de design (UX-01-sistema-de-design): guia viva de tokens e componentes
     "/estilo-guia": "estilo_guia.html",
+    # --- fronteira de Pareto do motor multicritério (L3-08-pareto): ?execucao=<id>
+    "/amc/pareto": "amc_pareto.html",
     # --- construtor por arrasto (L5-08-editor-arrasto): ?item=<id de item app/painel>
     "/construtor": "construtor.html",
     # --- construtor de camada por esquema (L5-31)

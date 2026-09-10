@@ -1,0 +1,19 @@
+/* plat · tela /amc/pareto (item L3-08-pareto). Três colunas: escolha dos objetivos, gráfico de
+   dispersão e mapa. Cores da paleta escura de estilo/tokens.css; a cor por ordem de fronteira é
+   declarada uma vez em web/js/amc/pareto.js e repetida aqui só para o retângulo da escova. */
+.pareto-explicacao { margin: 0 1rem .5rem; max-width: 70ch; color: var(--i-texto-fraco, #8fa19c); }
+.pareto-corpo { display: grid; grid-template-columns: 16rem minmax(20rem, 1fr) minmax(20rem, 1fr);
+  gap: 1rem; padding: 0 1rem 1rem; align-items: stretch; min-height: 26rem; }
+.pareto-lado h2 { font-size: 1rem; margin: 0 0 .5rem; }
+.objetivos { display: flex; flex-direction: column; gap: .35rem; }
+.objetivo { display: grid; grid-template-columns: auto 1fr auto; gap: .4rem; align-items: center; }
+.pareto-resumo, .pareto-selecao { margin: .75rem 0 0; }
+.pareto-aviso-pesos { margin: .75rem 0 0; font-style: italic; color: var(--i-texto-fraco, #8fa19c); }
+.pareto-grafico { display: grid; grid-template-rows: auto 1fr auto; gap: .25rem; }
+.pareto-grafico svg { width: 100%; height: 100%; min-height: 22rem; background: var(--i-superficie-2, #182420);
+  border: 1px solid var(--i-linha, #263133); touch-action: none; }
+.pareto-eixo-x, .pareto-eixo-y { color: var(--i-texto-fraco, #8fa19c); font-size: .85rem; }
+.pareto-grafico .ponto { stroke: none; }
+.pareto-grafico .ponto.escovado { stroke: #ffffff; stroke-width: 2; }
+.pareto-grafico .escova { fill: rgba(217, 138, 43, .15); stroke: #d98a2b; stroke-dasharray: 4 3; }
+.pareto-mapa #mapa { width: 100%; height: 100%; min-height: 22rem; }

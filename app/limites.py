@@ -469,3 +469,9 @@ RELATORIO_JANELA_DIAS = 366       # janela máxima de um relatório: 12 meses
 RELATORIO_LINHAS_MAX = 10_000     # linhas por relatório; acima disso o CSV é cortado e o resultado diz truncado
 RELATORIO_POR_TIPO_HORA = 1       # pedidos por tipo por hora pela API (agenda disparada pelo worker não conta)
 
+# --- fronteira de Pareto do motor multicritério (L3-08-pareto): análise sem agregação, 2 a 4 objetivos.
+# A resposta traz uma linha por unidade (id, ordem, valores) e a camada traz a geometria da fronteira, as duas
+# em memória; 50.000 unidades × 4 objetivos são ~1,6 MB de número mais a geometria, dentro do teto de corpo da
+# API. Acima disso a rota recusa com o número dizendo por quê, em vez de a máquina engasgar (o teto de célula
+# do motor de grades é 250.000, cinco vezes maior de propósito: gerar a grade é barato, devolvê-la não é).
+PARETO_UNIDADES_MAX = 50_000
