@@ -14286,6 +14286,375 @@
     "x-privilegio": "rede.editar"
    }
   },
+  "/api/rede/medicao/leituras": {
+   "post": {
+    "tags": [
+     "rede_medicao"
+    ],
+    "summary": "Publicar Leituras",
+    "description": "Lote de leituras de sensor. Idempotente por (ativo, grandeza, ts): reenviar não duplica. Recusa item a\nitem (nunca o lote inteiro) por ts futuro, grandeza/unidade desconhecida — resposta sempre 201, com o\ndetalhe de quem foi aceito/duplicado/rejeitado. Depois de gravar, roda o motor de alarme (carregamento >\n100% por 30 min) para cada ativo tocado que já tem placa cadastrada — é o que deixa a ficha do ativo e o\nalarme quase em tempo real, sem depender de um job periódico.",
+    "operationId": "publicar_leituras_api_rede_medicao_leituras_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LeiturasLote"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.medir"
+   }
+  },
+  "/api/rede/medicao/ativos/{ativo}": {
+   "put": {
+    "tags": [
+     "rede_medicao"
+    ],
+    "summary": "Configurar Ativo",
+    "description": "Placa do ativo (kVA/tensão nominal): sem ela o motor de alarme não calcula carregamento — não é erro\n(nem todo ativo tem placa cadastrada ainda), só fica sem essa leitura derivada.",
+    "operationId": "configurar_ativo_api_rede_medicao_ativos__ativo__put",
+    "parameters": [
+     {
+      "name": "ativo",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ativo"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AtivoConfigEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.medir"
+   },
+   "get": {
+    "tags": [
+     "rede_medicao"
+    ],
+    "summary": "Ver Ativo",
+    "operationId": "ver_ativo_api_rede_medicao_ativos__ativo__get",
+    "parameters": [
+     {
+      "name": "ativo",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ativo"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Ver Ativo Api Rede Medicao Ativos  Ativo  Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/medicao/ativos/{ativo}/ultimas": {
+   "get": {
+    "tags": [
+     "rede_medicao"
+    ],
+    "summary": "Ultimas Leituras",
+    "description": "Última leitura de cada grandeza publicada para este ativo — o que a ficha do ativo mostra no topo.",
+    "operationId": "ultimas_leituras_api_rede_medicao_ativos__ativo__ultimas_get",
+    "parameters": [
+     {
+      "name": "ativo",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ativo"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Ultimas Leituras Api Rede Medicao Ativos  Ativo  Ultimas Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/medicao/ativos/{ativo}/serie": {
+   "get": {
+    "tags": [
+     "rede_medicao"
+    ],
+    "summary": "Serie",
+    "description": "Série de `grandeza` nos últimos `dias` dias (padrão 7 — o gráfico da ficha do ativo).",
+    "operationId": "serie_api_rede_medicao_ativos__ativo__serie_get",
+    "parameters": [
+     {
+      "name": "ativo",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ativo"
+      }
+     },
+     {
+      "name": "grandeza",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Grandeza"
+      }
+     },
+     {
+      "name": "dias",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 7,
+       "title": "Dias"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Serie Api Rede Medicao Ativos  Ativo  Serie Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/medicao/jusante": {
+   "get": {
+    "tags": [
+     "rede_medicao"
+    ],
+    "summary": "Agregado Jusante",
+    "description": "Soma a leitura mais recente (até `janela_min` min) de `grandeza` entre os transformadores de\ndistribuição alcançados a JUSANTE de `ativo` pela topologia derivada da rede — exemplo do portão: soma\ndas correntes dos trafos de um alimentador. `terminal` desambigua um dispositivo com mais de um\nterminal (ex.: um trafo tem alta=1/baixa=2; partir do lado de baixa é o normal para \"o que ele\nalimenta\").",
+    "operationId": "agregado_jusante_api_rede_medicao_jusante_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "ativo",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ativo"
+      }
+     },
+     {
+      "name": "grandeza",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "corrente_a",
+       "title": "Grandeza"
+      }
+     },
+     {
+      "name": "janela_min",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 15,
+       "title": "Janela Min"
+      }
+     },
+     {
+      "name": "terminal",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Terminal"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Agregado Jusante Api Rede Medicao Jusante Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/medicao/grandezas": {
+   "get": {
+    "tags": [
+     "rede_medicao"
+    ],
+    "summary": "Grandezas",
+    "operationId": "grandezas_api_rede_medicao_grandezas_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Grandezas Api Rede Medicao Grandezas Get"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
   "/api/geocodificar": {
    "post": {
     "tags": [
@@ -18718,6 +19087,650 @@
       "schema": {
        "type": "string",
        "title": "Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/ogc/tiles": {
+   "get": {
+    "tags": [
+     "ogc-tiles"
+    ],
+    "summary": "OGC API Tiles/Maps — landing",
+    "operationId": "ogc_tiles_landing",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/ogc/tiles/conformance": {
+   "get": {
+    "tags": [
+     "ogc-tiles"
+    ],
+    "summary": "classes de conformidade declaradas (só as realmente cumpridas)",
+    "operationId": "conformance_svc__token__ogc_tiles_conformance_get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/ogc/tiles/tileMatrixSets": {
+   "get": {
+    "tags": [
+     "ogc-tiles"
+    ],
+    "summary": "grades de ladrilho servidas",
+    "operationId": "tile_matrix_sets_svc__token__ogc_tiles_tileMatrixSets_get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/ogc/tiles/tileMatrixSets/{tile_matrix_set_id}": {
+   "get": {
+    "tags": [
+     "ogc-tiles"
+    ],
+    "summary": "definição da grade — esquema OGC 17-083r4 (a definição real, não só o nome)",
+    "operationId": "tile_matrix_set_um_svc__token__ogc_tiles_tileMatrixSets__tile_matrix_set_id__get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "tile_matrix_set_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Tile Matrix Set Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/ogc/tiles/collections": {
+   "get": {
+    "tags": [
+     "ogc-tiles"
+    ],
+    "summary": "coleções (itens raster) visíveis a este token — mosaico nunca é enumerado, só endereçado",
+    "operationId": "collections_svc__token__ogc_tiles_collections_get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/ogc/tiles/collections/{item}": {
+   "get": {
+    "tags": [
+     "ogc-tiles"
+    ],
+    "summary": "metadados da coleção (item raster ou mosaico registrado)",
+    "operationId": "colecao_svc__token__ogc_tiles_collections__item__get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "item",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/ogc/tiles/collections/{item}/map/tiles/{tile_matrix_set_id}": {
+   "get": {
+    "tags": [
+     "ogc-tiles"
+    ],
+    "summary": "metadados do conjunto de ladrilhos (tileset) da coleção",
+    "operationId": "tileset_svc__token__ogc_tiles_collections__item__map_tiles__tile_matrix_set_id__get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "item",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item"
+      }
+     },
+     {
+      "name": "tile_matrix_set_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Tile Matrix Set Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/ogc/tiles/collections/{item}/map/tiles/{tile_matrix_set_id}/{tile_matrix}/{tile_row}/{tile_col}.{ext}": {
+   "get": {
+    "tags": [
+     "ogc-tiles"
+    ],
+    "summary": "ladrilho (map tile) com extensão no caminho",
+    "operationId": "tile_map_ext_svc__token__ogc_tiles_collections__item__map_tiles__tile_matrix_set_id___tile_matrix___tile_row___tile_col___ext__get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "item",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item"
+      }
+     },
+     {
+      "name": "tile_matrix_set_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Tile Matrix Set Id"
+      }
+     },
+     {
+      "name": "tile_matrix",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Tile Matrix"
+      }
+     },
+     {
+      "name": "tile_row",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Tile Row"
+      }
+     },
+     {
+      "name": "tile_col",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Tile Col"
+      }
+     },
+     {
+      "name": "ext",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ext"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/ogc/tiles/collections/{item}/map/tiles/{tile_matrix_set_id}/{tile_matrix}/{tile_row}/{tile_col}": {
+   "get": {
+    "tags": [
+     "ogc-tiles"
+    ],
+    "summary": "ladrilho (map tile)",
+    "operationId": "tile_map_svc__token__ogc_tiles_collections__item__map_tiles__tile_matrix_set_id___tile_matrix___tile_row___tile_col__get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "item",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item"
+      }
+     },
+     {
+      "name": "tile_matrix_set_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Tile Matrix Set Id"
+      }
+     },
+     {
+      "name": "tile_matrix",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Tile Matrix"
+      }
+     },
+     {
+      "name": "tile_row",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Tile Row"
+      }
+     },
+     {
+      "name": "tile_col",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Tile Col"
+      }
+     },
+     {
+      "name": "f",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "pattern": "^(png|jpg|jpeg|webp)$",
+       "default": "png",
+       "title": "F"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/ogc/tiles/collections/{item}/map": {
+   "get": {
+    "tags": [
+     "ogc-tiles"
+    ],
+    "summary": "OGC API Maps — recorte por bbox/crs/width/height (a irmã do GetMap do WMS)",
+    "operationId": "mapa_svc__token__ogc_tiles_collections__item__map_get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "item",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item"
+      }
+     },
+     {
+      "name": "bbox",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "minx,miny,maxx,maxy no CRS do parâmetro crs",
+       "title": "Bbox"
+      },
+      "description": "minx,miny,maxx,maxy no CRS do parâmetro crs"
+     },
+     {
+      "name": "crs",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "CRS do bbox e da imagem de saída (mesmo uso do CRS do WMS GetMap)",
+       "title": "Crs"
+      },
+      "description": "CRS do bbox e da imagem de saída (mesmo uso do CRS do WMS GetMap)"
+     },
+     {
+      "name": "width",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "default": 800,
+       "title": "Width"
+      }
+     },
+     {
+      "name": "height",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "default": 600,
+       "title": "Height"
+      }
+     },
+     {
+      "name": "f",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "pattern": "^(png|jpe?g)$",
+       "default": "png",
+       "title": "F"
       }
      }
     ],
@@ -24700,6 +25713,364 @@
     "x-privilegio": "campo.coletar"
    }
   },
+  "/api/camadas/{id}/campos": {
+   "get": {
+    "tags": [
+     "formulario"
+    ],
+    "summary": "Campos Da Camada",
+    "description": "Paleta do construtor: atributos reais da camada (nome/tipo/alias) — o campo do desenho tem de\ncasar com um destes, ou ser declarado `persistido: false` (portão cláusula 2).",
+    "operationId": "campos_da_camada_api_camadas__id__campos_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Campos Da Camada Api Camadas  Id  Campos Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/camadas/{id}/formulario": {
+   "get": {
+    "tags": [
+     "formulario"
+    ],
+    "summary": "Formulario Publicado",
+    "description": "Formulário PUBLICADO da camada — o que a edição web e o PWA de campo renderizam. `desenho: null`\nquando a camada não tem formulário publicado ainda (a tela cai para o formulário genérico de sempre,\ncampo a campo sem grupo/condicional/cálculo).",
+    "operationId": "formulario_publicado_api_camadas__id__formulario_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Formulario Publicado Api Camadas  Id  Formulario Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "post": {
+    "tags": [
+     "formulario"
+    ],
+    "summary": "Formulario Criar Ou Renomear",
+    "operationId": "formulario_criar_ou_renomear_api_camadas__id__formulario_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/FormularioCriar"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Formulario Criar Ou Renomear Api Camadas  Id  Formulario Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.criar|conteudo.editar_tudo"
+   }
+  },
+  "/api/camadas/{id}/formulario/versoes": {
+   "get": {
+    "tags": [
+     "formulario"
+    ],
+    "summary": "Formulario Versoes",
+    "operationId": "formulario_versoes_api_camadas__id__formulario_versoes_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Formulario Versoes Api Camadas  Id  Formulario Versoes Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.criar|conteudo.editar_tudo"
+   },
+   "post": {
+    "tags": [
+     "formulario"
+    ],
+    "summary": "Formulario Salvar Versao",
+    "operationId": "formulario_salvar_versao_api_camadas__id__formulario_versoes_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/VersaoSalvar"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Formulario Salvar Versao Api Camadas  Id  Formulario Versoes Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.criar|conteudo.editar_tudo"
+   }
+  },
+  "/api/camadas/{id}/formulario/versoes/{versao}": {
+   "get": {
+    "tags": [
+     "formulario"
+    ],
+    "summary": "Formulario Versao Ver",
+    "operationId": "formulario_versao_ver_api_camadas__id__formulario_versoes__versao__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "versao",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Versao"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Formulario Versao Ver Api Camadas  Id  Formulario Versoes  Versao  Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.criar|conteudo.editar_tudo"
+   }
+  },
+  "/api/camadas/{id}/formulario/versoes/{versao}/publicar": {
+   "post": {
+    "tags": [
+     "formulario"
+    ],
+    "summary": "Formulario Publicar",
+    "operationId": "formulario_publicar_api_camadas__id__formulario_versoes__versao__publicar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "versao",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Versao"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Formulario Publicar Api Camadas  Id  Formulario Versoes  Versao  Publicar Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.criar|conteudo.editar_tudo"
+   }
+  },
   "/api/backup/backups": {
    "get": {
     "tags": [
@@ -25563,6 +26934,51 @@
      "conteudo"
     ],
     "title": "AnexoEntrada"
+   },
+   "AtivoConfigEntrada": {
+    "properties": {
+     "cod_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 80
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cod Id"
+     },
+     "kva_nominal": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 1000000.0,
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Kva Nominal"
+     },
+     "tensao_nominal_v": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 1000000.0,
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tensao Nominal V"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "AtivoConfigEntrada"
    },
    "AtributoRede": {
     "properties": {
@@ -28615,6 +30031,20 @@
     ],
     "title": "FilaOrdem"
    },
+   "FormularioCriar": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 250,
+      "minLength": 1,
+      "title": "Nome",
+      "default": "Formulário"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "FormularioCriar"
+   },
    "Foto360Entrada": {
     "properties": {
      "arquivo_id": {
@@ -29901,6 +31331,91 @@
      "job_id"
     ],
     "title": "JobCriado"
+   },
+   "LeituraEntrada": {
+    "properties": {
+     "ativo": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "title": "Ativo"
+     },
+     "cod_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 80
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cod Id"
+     },
+     "ts": {
+      "type": "string",
+      "maxLength": 40,
+      "minLength": 1,
+      "title": "Ts",
+      "description": "ISO-8601, relógio do sensor"
+     },
+     "fonte": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,39}$",
+      "title": "Fonte",
+      "description": "ex.: simulador, sonda, conector"
+     },
+     "grandeza": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,39}$",
+      "title": "Grandeza"
+     },
+     "valor": {
+      "type": "number",
+      "title": "Valor"
+     },
+     "unidade": {
+      "type": "string",
+      "maxLength": 10,
+      "minLength": 1,
+      "title": "Unidade"
+     },
+     "bruta": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Bruta",
+      "description": "leitura crua do sensor, nunca interpretada"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "ativo",
+     "ts",
+     "fonte",
+     "grandeza",
+     "valor",
+     "unidade"
+    ],
+    "title": "LeituraEntrada"
+   },
+   "LeiturasLote": {
+    "properties": {
+     "leituras": {
+      "items": {
+       "$ref": "#/components/schemas/LeituraEntrada"
+      },
+      "type": "array",
+      "maxItems": 2000,
+      "minItems": 1,
+      "title": "Leituras"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "leituras"
+    ],
+    "title": "LeiturasLote"
    },
    "LinhaLog": {
     "properties": {
@@ -34670,6 +36185,21 @@
      "corpo"
     ],
     "title": "VersaoCompleta"
+   },
+   "VersaoSalvar": {
+    "properties": {
+     "desenho": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Desenho"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "desenho"
+    ],
+    "title": "VersaoSalvar"
    },
    "VisitaCriar": {
     "properties": {

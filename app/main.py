@@ -53,6 +53,7 @@ from app.consulta.rotas_servico import router as rotas_consulta_servico
 from app.consulta.rotas_wfs import router as rotas_wfs
 from app.correio.rotas_smtp import router as rotas_smtp
 from app.edicao.rotas import router as rotas_edicao
+from app.formulario.rotas import router as rotas_formulario
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.imagens.rotas_cog import router as rotas_cog
@@ -71,6 +72,7 @@ from app.mapas.rotas import router as rotas_mapas
 from app.modelo3d.rotas import router as rotas_modelo3d
 from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
+from app.rede_medicao.rotas import router as rotas_rede_medicao
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rede_utilidades.rotas_config_tracado import router as rotas_rede_config_tracado
 from app.rede_utilidades.rotas_controladores import router as rotas_rede_controladores
@@ -192,6 +194,10 @@ ROUTERS = [
     # --- diagrama de rede (L4-04-d): /api/rede/{rede_id}/diagrama (gerar), /diagramas, /diagrama/{id},
     # .../layout, .../exportar (json|svg|png) e os modelos em /diagrama-modelos
     rotas_rede_diagrama,
+    # --- telemetria da rede de utilidades (L4-13-integracao-telemetria): /api/rede/medicao/leituras (publicar
+    # lote), /api/rede/medicao/ativos/{ativo} (placa), .../ultimas e .../serie (ficha do ativo), .../jusante
+    # (agregação pela topologia derivada, acima)
+    rotas_rede_medicao,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,
@@ -262,6 +268,10 @@ ROUTERS = [
     # --- campo (L2-07-campo): fila de trabalho, roteiro do dia e visita com foto — /api/campo/filas,
     # /api/campo/roteiros, /api/campo/visitas, portado de rs-coop/certaja/sig
     rotas_campo.router,
+    # --- construtor de formulário de atributos, arrasta-e-solta (L5-03-form-builder):
+    # /api/camadas/{id}/campos, /formulario, /formulario/versoes* — usado pelo construtor, pela
+    # edição web (L2-03) e pelo PWA de campo (acima) através do mesmo motor (app/formulario/motor.py)
+    rotas_formulario,
     # --- backup lógico por inquilino e ensaio de restauração (L0-06-backup-status): GET /api/backup/backups,
     # GET /api/backup/ensaios (disparar usa a fila genérica: POST /api/jobs {tipo: backup.executar|
     # backup.ensaio_restauracao})

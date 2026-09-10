@@ -362,3 +362,24 @@ BACKUP_DUMP_BYTES_MAX = 2 * 1024 * 1024 * 1024   # 2 GiB
 BACKUP_DUMP_TIMEOUT_S = 3600                     # pg_dump -Fc do schema do inquilino
 BACKUP_DRILL_TIMEOUT_S = 3600                    # download + pg_restore em schema temporário + COUNT(*)
 BACKUP_LISTA_MAX = 200                           # linhas por página em GET /api/backup/backups e /ensaios
+
+# --- construtor de formulário de atributos, arrasta-e-solta (item L5-03-form-builder): uma camada tem no
+# máximo um plat.formulario, N versões; o desenho é grupo->campo com condicional/cálculo em expressão
+# (item L2-10-c-linguagem-expressao). Tetos de negação-de-serviço do próprio desenho (a expressão em si já
+# tem os seus, em app/expressao/avaliador_py.py: MAX_TEXTO/MAX_TOKENS/MAX_PROFUNDIDADE).
+FORMULARIO_GRUPOS_MAX = 40
+FORMULARIO_CAMPOS_POR_GRUPO_MAX = 60
+FORMULARIO_DESENHO_BYTES_MAX = 512 * 1024   # jsonb bruto (nome+rótulo+expressões de até 60x40 campos cabe longe disso)
+FORMULARIO_VERSOES_MAX = 200                # rascunhos guardados por formulário (histórico do construtor)
+
+# --- telemetria da rede de utilidades (item L4-13-integracao-telemetria): leitura ligada ao ativo,
+# particionada por mês (plat.rede_medicao). Lote pequeno de propósito — é publicação de sensor (20 sensores
+# x poucas grandezas por tick), não upload em massa; o mesmo teto do item de campo (CAMPO_FILA_ALVOS_MAX) é
+# ordem de grandeza maior do que qualquer simulador/gateway real manda de uma vez.
+REDE_MEDICAO_LOTE_MAX = 2_000                 # leituras por POST /api/rede/medicao/leituras
+REDE_MEDICAO_JANELA_FUTURO_S = 120            # tolerância de relógio do sensor (refutação "timestamp futuro")
+REDE_MEDICAO_SERIE_DIAS_PADRAO = 7            # janela padrão do gráfico da ficha do ativo
+REDE_MEDICAO_SERIE_DIAS_MAX = 92              # mesmo teto de LOG_JANELA_DIAS
+REDE_MEDICAO_SERIE_PONTOS_MAX = 20_000        # linhas devolvidas por série (amostragem simples acima disso)
+REDE_MEDICAO_ALARME_JANELA_MIN = 30           # "carregamento > 100% por 30 min" (portão do item)
+REDE_MEDICAO_ALARME_LOOKBACK_MIN = 90         # quanto de histórico o motor olha para achar o início do surto

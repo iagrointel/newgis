@@ -20,6 +20,9 @@ from app.ingestao import tarefas as ingestao_tarefas  # noqa: F401 — L0-04: in
 from app.jobs import periodicos, tipos_prova  # noqa: F401 — importação registra os tipos
 from app.jobs.registro import REGISTRO
 from app.modelo3d import ingestao as modelo3d_ingestao  # noqa: F401 — L1-03: modelo3d.converter (IFC -> xkt)
+from app.rede_medicao import (
+    tarefas as rede_medicao_tarefas,  # noqa: F401 — L4-13: rede_medicao.particoes_criar + periódico (pausado)
+)
 from app.rede_utilidades import (
     tarefas as rede_tarefas,  # noqa: F401 — L4-04-b redes.subredes_atualizar e L4-01-c rede.importar_bdgd
 )
