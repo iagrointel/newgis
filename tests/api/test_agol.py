@@ -32,7 +32,7 @@ def _criar_camada_hospedada(sessao, titulo: str, schema: str = "d_demo") -> str:
     """Uma tabela mínima com 1 polígono + o item `camada_vetorial` (`fonte: hospedada`) que aponta para ela —
     o mesmo par tabela+item que uma importação de verdade deixa (`tests/api/apoio_camada_teste.py`, mesma
     receita, prefixo próprio `zt_agol_` para não colidir com as tabelas de outro item de teste)."""
-    tabela = f"{PREFIXO_TABELA}{titulo}"
+    tabela = f"{PREFIXO_TABELA}{titulo}".replace("-", "_")
     con = _conexao()
     try:
         with con.cursor() as cur:
@@ -58,9 +58,10 @@ def _criar_camada_hospedada(sessao, titulo: str, schema: str = "d_demo") -> str:
 
 
 def _criar_camada_referenciada(sessao, titulo: str) -> str:
+    tabela = ("nao_existe_" + titulo).replace("-", "_")
     r = sessao.post("/api/itens", json={
         "tipo": "camada_vetorial", "titulo": titulo,
-        "dados": {"schema": "public", "tabela": "nao_existe_" + titulo, "geometria": "Polygon", "srid": 4326,
+        "dados": {"schema": "public", "tabela": tabela, "geometria": "Polygon", "srid": 4326,
                   "campos": [], "fonte": "referenciada"},
     })
     assert r.status_code == 201, r.text

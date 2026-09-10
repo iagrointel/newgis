@@ -79,7 +79,11 @@ def credencial_gravar(corpo: CredencialEntrada, request: Request,
             tipo = corpo.tipo
             credencial_alterada = True
 
-        usuario = corpo.usuario.strip() or atual.get("usuario")
+        # portal/usuario/rotulo são SUBSTITUIÇÃO TOTAL a cada PUT (mesmo desenho de `app/correio/rotas_smtp.py`
+        # para SMTP): quem chama sempre reenvia o estado inteiro que quer (a tela pré-preenche com o GET
+        # anterior). Só `credencial`/`tipo` têm o desenho "None preserva a cifra, string vazia apaga" — o
+        # valor em claro não pode ser reexibido para conferência, ao contrário de portal/usuario/rotulo.
+        usuario = corpo.usuario.strip() or None
         if tipo == "senha" and not usuario:
             raise ErroAPI(422, "validacao", "credencial por senha exige o usuário da organização",
                          {"campo": "usuario"})
