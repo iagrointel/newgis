@@ -19,7 +19,6 @@ linha do tenant que serializa duas reservas concorrentes."""
 from __future__ import annotations
 
 import datetime
-import hashlib
 import uuid
 
 from fastapi import APIRouter, Request, Response
@@ -31,6 +30,7 @@ from app.catalogo import tipos as tipos_item
 from app.catalogo.comum import jsonb, registrar_evento
 from app.catalogo.modelos import Modelo
 from app.erros import ErroAPI
+from app.uploads import disco
 from app.uploads import tipos as tipos_upload
 
 router = APIRouter(tags=["uploads"])
@@ -124,6 +124,9 @@ def iniciar(corpo: UploadCriar, request: Request, auth: Auth = autenticado("cont
             422, "tipo_desconhecido", f"tipo declarado {corpo.tipo_declarado!r} não reconhecido nesta instalação",
             {"aceitos": sorted(tipos_upload.TIPOS)},
         )
+    # espaço no disco de trabalho antes de qualquer coisa (item L1-01-e): o envio grava cada parte em disco
+    # antes de mandá-la ao Garage, e recusar aqui é muito mais barato que recusar na parte 300 de 320
+    disco.exigir_espaco(min(corpo.bytes, limites.UPLOAD_PARTE_BYTES))
     partes_total = -(-corpo.bytes // limites.UPLOAD_PARTE_BYTES)  # ceil
     expira_em = datetime.datetime.now(UTC) + datetime.timedelta(hours=limites.UPLOAD_EXPIRA_HORAS)
     with db.db(auth.contexto()) as cur:
@@ -201,41 +204,47 @@ async def enviar_parte(id: str, n: int, request: Request, auth: Auth = autentica
             f"parte {n}: Content-Length {declarado} diferente do esperado ({esperado} bytes)",
             {"esperado": esperado, "recebido": declarado},
         )
-    dados = bytearray()
-    async for pedaco in request.stream():
-        dados += pedaco
-        if len(dados) > esperado:
+    disco.exigir_espaco(esperado)
+    with disco.arquivo_temporario(f"parte-{n}") as caminho:
+        recebido, sha_calculado, inicio = await disco.gravar_em_fluxo(request.stream(), caminho, esperado)
+        if recebido > esperado:
             raise ErroAPI(
                 422, "tamanho_parte_invalido", f"parte {n}: corpo maior que o Content-Length declarado",
                 {"esperado": esperado},
             )
-    if len(dados) != esperado:
-        raise ErroAPI(
-            422, "tamanho_parte_invalido", f"parte {n}: recebido {len(dados)} bytes, esperado {esperado}",
-            {"esperado": esperado, "recebido": len(dados)},
-        )
-    sha_calculado = hashlib.sha256(dados).hexdigest()
-    sha_header = (request.headers.get("x-parte-sha256") or "").strip().lower()
-    if sha_header and sha_header != sha_calculado:
-        raise ErroAPI(
-            422, "parte_sha256_divergente", f"parte {n}: X-Parte-SHA256 não bate com o conteúdo recebido",
-        )
-    with db.db(auth.contexto()) as cur:
-        # relê sob a MESMA conexão: o estado pode ter mudado entre a checagem acima e o corpo ter terminado de
-        # chegar (upload grande, corpo lento) — nunca grava parte de upload já concluído/abortado
-        up = _carregar(cur, auth, id)
-        if up["estado"] != "iniciado":
-            raise ErroAPI(409, "estado_invalido", f"upload em estado {up['estado']!r}; esperava 'iniciado'")
-        etag = objetos.parte_enviar(cur, up["upload_s3_id"], n, bytes(dados))
-        cur.execute(
-            "INSERT INTO plat.upload_parte(upload_id, n, bytes, etag, sha256) VALUES (%s::uuid,%s,%s,%s,%s) "
-            "ON CONFLICT (upload_id, n) DO UPDATE SET bytes = EXCLUDED.bytes, etag = EXCLUDED.etag, "
-            "sha256 = EXCLUDED.sha256, recebida_em = now()",
-            (id, n, len(dados), etag, sha_calculado),
-        )
-        cur.execute("UPDATE plat.upload SET atualizado_em = now() WHERE id = %s::uuid", (id,))
-        cur.execute("SELECT n FROM plat.upload_parte WHERE upload_id = %s::uuid", (id,))
-        recebidas = {r["n"] for r in cur.fetchall()}
+        if recebido != esperado:
+            raise ErroAPI(
+                422, "tamanho_parte_invalido", f"parte {n}: recebido {recebido} bytes, esperado {esperado}",
+                {"esperado": esperado, "recebido": recebido},
+            )
+        sha_header = (request.headers.get("x-parte-sha256") or "").strip().lower()
+        if sha_header and sha_header != sha_calculado:
+            raise ErroAPI(
+                422, "parte_sha256_divergente", f"parte {n}: X-Parte-SHA256 não bate com o conteúdo recebido",
+            )
+        if n == 1:
+            # a validação começa aqui, sem esperar a última parte ser copiada (item L1-01-e): o que os
+            # primeiros bytes provam, provam agora, e o cliente para de gastar rede num arquivo condenado
+            try:
+                tipos_upload.verificar_inicio(up["tipo_declarado"], inicio)
+            except tipos_upload.ConteudoNaoCorresponde as e:
+                raise ErroAPI(422, "conteudo_nao_corresponde", str(e)) from e
+        with db.db(auth.contexto()) as cur:
+            # relê sob a MESMA conexão: o estado pode ter mudado entre a checagem acima e o corpo ter
+            # terminado de chegar (upload grande, corpo lento); nunca grava parte de upload já concluído
+            up = _carregar(cur, auth, id)
+            if up["estado"] != "iniciado":
+                raise ErroAPI(409, "estado_invalido", f"upload em estado {up['estado']!r}; esperava 'iniciado'")
+            etag = objetos.parte_enviar_arquivo(cur, up["upload_s3_id"], n, caminho, sha_calculado)
+            cur.execute(
+                "INSERT INTO plat.upload_parte(upload_id, n, bytes, etag, sha256) VALUES (%s::uuid,%s,%s,%s,%s) "
+                "ON CONFLICT (upload_id, n) DO UPDATE SET bytes = EXCLUDED.bytes, etag = EXCLUDED.etag, "
+                "sha256 = EXCLUDED.sha256, recebida_em = now()",
+                (id, n, recebido, etag, sha_calculado),
+            )
+            cur.execute("UPDATE plat.upload SET atualizado_em = now() WHERE id = %s::uuid", (id,))
+            cur.execute("SELECT n FROM plat.upload_parte WHERE upload_id = %s::uuid", (id,))
+            recebidas = {r["n"] for r in cur.fetchall()}
     faltam = [i for i in range(1, up["partes_total"] + 1) if i not in recebidas]
     return {"n": n, "recebidas": len(recebidas), "faltam": faltam}
 

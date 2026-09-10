@@ -1,0 +1,55 @@
+{
+ "item": "L0-02-g-checagem-privilegio-papel-id",
+ "medidas": {
+  "rotas_openapi": {
+   "valor": 138,
+   "unidade": "rotas",
+   "comando": "len(paths×methods) de docs/openapi.json"
+  },
+  "rotas_cobradas_na_dependencia": {
+   "valor": 41,
+   "unidade": "rotas",
+   "comando": "x-privilegio nomeado único igual ao privilégio capturado pelo fecho de autenticado()"
+  },
+  "rotas_cobradas_no_corpo": {
+   "valor": 72,
+   "unidade": "rotas",
+   "comando": "declaração especial ou alternativa: dependência sem privilégio, cobrança no corpo da rota"
+  },
+  "rotas_declaracao_incompleta": {
+   "valor": 8,
+   "unidade": "rotas",
+   "comando": "cobram na dependência um privilégio que a declaração não menciona (lista congelada no teste)"
+  },
+  "rotas_403_sem_o_privilegio": {
+   "valor": 41,
+   "unidade": "rotas",
+   "comando": "chamada real com papel = todos os privilégios menos o declarado → 403 sem_privilegio"
+  },
+  "rotas_alternativas_nao_provadas": {
+   "valor": 31,
+   "unidade": "rotas",
+   "comando": "rotas de privilégio alternativo cobrado depois de carregar o recurso: fora do alcance deste item"
+  },
+  "refutacao_privilegios_testados": {
+   "valor": 47,
+   "unidade": "privilégios",
+   "comando": "para cada privilégio: papel do ator = todos menos ele, papel alvo = todos"
+  },
+  "refutacao_chamadas_403": {
+   "valor": 94,
+   "unidade": "chamadas",
+   "comando": "POST e PUT /api/usuarios por privilégio; nenhuma 2xx"
+  },
+  "refutacao_motivos": {
+   "valor": {
+    "privilegio_proprio_insuficiente": 92,
+    "sem_privilegio": 2
+   },
+   "unidade": "chamadas por erro",
+   "comando": "privilegio_proprio_insuficiente = conferência nova; sem_privilegio = portão de privilégio"
+  }
+ },
+ "gerado_em": "2026-09-06T15:59:45Z",
+ "git_sha": "90d03c07da0c"
+}
