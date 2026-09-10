@@ -300,6 +300,7 @@ async function iniciar(usuario) {
   maplibregl.addProtocol('pmtiles', protocolo.tile);
 
   const map = new maplibregl.Map({
+    locale: { 'NavigationControl.ZoomIn': 'aproximar', 'NavigationControl.ZoomOut': 'afastar', 'NavigationControl.ResetBearing': 'norte para cima', 'ScaleControl.Meters': 'm', 'ScaleControl.Kilometers': 'km', 'AttributionControl.ToggleAttribution': 'atribuição', 'FullscreenControl.Enter': 'tela cheia', 'FullscreenControl.Exit': 'sair da tela cheia' },
     container: 'mapa',
     style: construirEstilo(descritorBase(BASES[0])),
     center: CENTRO,
