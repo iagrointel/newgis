@@ -42,7 +42,26 @@ def _nome_servico(tenant_slug: str, item_id: str) -> str:
     chave=lambda p: p.get("item_id"),  # duas publicações do MESMO item não correm em paralelo (item L0-19)
 )
 def agol_publicar(ctx, item_id: uuid.UUID, titulo: str | None = None) -> dict:
+    """Ponto de entrada registrado pelo `@tarefa`: delega a `_publicar` e garante, em QUALQUER exceção (item
+    inexistente, credencial ausente, falha do ArcGIS Online, cancelamento...), que `plat.agol_publicacao` sai
+    de 'publicando'/'pendente' para 'erro' — achado desta portagem: uma falha ANTES do primeiro
+    `publicacao.registrar(estado='publicando')` (ex.: item apagado entre o pedido e a execução do job) deixava
+    a linha presa em 'pendente' para sempre, e a tela mentia "publicação na fila" de um job que já morreu."""
     item_id_s = str(item_id)
+    try:
+        return _publicar(ctx, item_id_s, titulo)
+    except Exception as e:
+        try:
+            with ctx.db() as cur:
+                publicacao.registrar(cur, ctx.tenant_id, item_id_s, job_id=str(ctx.job_id), estado="erro",
+                                     mensagem=str(e)[:2000])
+        except Exception:
+            ctx.log("AVISO", "não foi possível gravar o estado de erro em plat.agol_publicacao (o item pode "
+                             "ter sido apagado entre o pedido de publicação e a execução do job)")
+        raise
+
+
+def _publicar(ctx, item_id_s: str, titulo: str | None) -> dict:
     with ctx.db() as cur:
         cur.execute(
             "SELECT id, titulo, dados FROM plat.item WHERE id = %s::uuid AND tipo = 'camada_vetorial'",
@@ -106,9 +125,9 @@ def agol_publicar(ctx, item_id: uuid.UUID, titulo: str | None = None) -> dict:
             dormir=ctx.dormir, progresso=lambda pct, msg: ctx.progresso(pct, msg),
         )
     except cliente.ErroAGOL as e:
-        with ctx.db() as cur:
-            publicacao.registrar(cur, ctx.tenant_id, item_id_s, job_id=str(ctx.job_id), estado="erro",
-                                 mensagem=str(e)[:2000])
+        # o wrapper de `agol_publicar` grava o estado='erro' em plat.agol_publicacao para QUALQUER exceção
+        # (inclusive esta) — aqui só converte para FalhaDefinitiva (não vale repetir: credencial errada ou
+        # ArcGIS Online recusando o pedido não conserta na próxima tentativa).
         raise FalhaDefinitiva(f"publicação no ArcGIS Online falhou: {e}") from e
     finally:
         credencial = token = None  # noqa: F841 — nunca sobrevive além deste bloco (log/exceção nunca as usam)
