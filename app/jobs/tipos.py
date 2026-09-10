@@ -14,6 +14,8 @@ from app.imagens import (  # noqa: F401 — L1-01-i: periódico semanal do raste
 )
 from app.imagens import tarefas as imagens_tarefas  # noqa: F401 — L1-01-i: raster_apagar_objetos + raster_gc
 from app.edicao import tarefas as edicao_tarefas  # noqa: F401 — L2-03-f: camadas.lote (edição em lote como job)
+from app.exportacao import tipos_job as exportacao_tipos  # noqa: F401 — L0-04-h: exportacao.gerar + periódico
+from app.exportacao_inquilino import tipos_job as exportacao_inquilino_tipos  # noqa: F401 — L0-06-d
 from app.ingestao import tarefas as ingestao_tarefas  # noqa: F401 — L0-04: ingestao.inspecionar/ingestao.carregar
 from app.jobs import periodicos, tipos_prova  # noqa: F401 — importação registra os tipos
 from app.jobs.registro import REGISTRO

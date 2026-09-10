@@ -1250,6 +1250,7 @@ mandou.
 
 `gpkg · geojson · geojsonseq · shapefile (zip) · csv · xlsx · kml · kmz · fgb (FlatGeobuf) · gml · dxf ·
 filegdb (File Geodatabase em zip) · mvt (zip) · pmtiles · geoparquet`, mais o `pacote` de mapa (§22.7).
+`gpkg · geojson · shapefile (zip) · csv · xlsx · kml · kmz · fgb (FlatGeobuf) · gml · dxf · geoparquet`.
 DXF não guarda atributo (o driver recusa criar campo); CSV e XLSX não guardam geometria (o CSV ganha
 colunas de X/Y, ou WKT quando pedido) — limites do FORMATO, declarados em `GET /api/exportacoes/formatos`
 e mostrados no diálogo antes de escolher. GeoParquet sai por um processo próprio (`app.exportacao.parquet_cli`,
@@ -1622,3 +1623,6 @@ O e-mail de resposta/resolução sai pelo SMTP da instalação (job da fila, wor
 suporte → cliente, no idioma preferido da conta do cliente; o assunto nunca leva texto do cliente, só o
 número do chamado. A volta do cliente é pelo próprio produto (comentário no chamado) — o banner cobre
 quem não tem e-mail na conta.
+Exportação de VISTA de camada (o tipo `vista_de_camada` existe no catálogo, mas o item `L0-04-j` que o
+implementa ainda não foi entregue — quando for, o filtro da vista entra como mais um `where` neste mesmo
+motor) e exportação de camada REFERENCIADA (recusada com 422 `camada_nao_hospedada`, nunca silenciosa).

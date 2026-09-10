@@ -115,10 +115,12 @@ export const linkRevogar = (itemId, linkId) => chamar('DELETE', `${I(itemId)}/li
 export const compartilhado = (token) => chamar('GET', `/api/compartilhado/${id(token)}`);
 export const compartilhadoMiniaturaUrl = (token, itemId) => `/api/compartilhado/${id(token)}/itens/${id(itemId)}/miniatura`;
 
-/* painel (L2-06-a): dados de UMA fonte, agrupando todos os elementos que a usam num só POST por ciclo */
-export const painelDados = (itemId, fonteId, corpo) => chamar('POST', `${I(itemId)}/paineis/fontes/${id(fonteId)}/dados`, corpo);
-export const painelDadosCompartilhado = (token, itemId, fonteId, corpo) =>
-  chamar('POST', `/api/compartilhado/${id(token)}/paineis/${id(itemId)}/fontes/${id(fonteId)}/dados`, corpo);
+/* exportação de camada (item L0-04-h-exportar) */
+export const exportacaoFormatos = () => chamar('GET', '/api/exportacoes/formatos');
+export const exportacaoCriar = (corpo) => chamar('POST', '/api/exportacoes', corpo);
+export const exportacaoObter = (exportacaoId) => chamar('GET', `/api/exportacoes/${id(exportacaoId)}`);
+export const exportacaoLista = (filtros = {}) => chamar('GET', `/api/exportacoes${consulta(filtros)}`);
+export const exportacaoApagar = (exportacaoId) => chamar('DELETE', `/api/exportacoes/${id(exportacaoId)}`);
 
 /* pastas */
 export const pastasArvore = () => chamar('GET', '/api/pastas/arvore');

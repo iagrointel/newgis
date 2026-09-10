@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plataforma.invalido/esquemas/exportacao_inquilino.schema.json",
+  "title": "catalogo.json da exportação completa do inquilino (item L0-06-d-exportar-inquilino)",
+  "type": "object",
+  "required": ["versao_esquema", "tenant_id", "itens", "pastas", "grupos", "compartilhamentos", "relacoes", "usuarios"],
+  "additionalProperties": false,
+  "properties": {
+    "versao_esquema": {"type": "integer", "const": 1},
+    "tenant_id": {"type": "integer"},
+    "itens": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "tipo", "titulo", "dono_id", "dados", "acesso"],
+        "properties": {
+          "id": {"type": "string"},
+          "tipo": {"type": "string"},
+          "titulo": {"type": "string"},
+          "resumo": {"type": ["string", "null"]},
+          "descricao": {"type": ["string", "null"]},
+          "tags": {"type": "array", "items": {"type": "string"}},
+          "dono_id": {"type": "integer"},
+          "pasta_id": {"type": ["string", "null"]},
+          "dados": {"type": "object"},
+          "acesso": {"type": "string"},
+          "status": {"type": ["string", "null"]},
+          "origem": {"type": "string"},
+          "tamanho_bytes": {"type": "integer"},
+          "criado_em": {"type": ["string", "null"]},
+          "criado_por": {"type": ["integer", "null"]},
+          "modificado_em": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "pastas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "nome", "dono_id"],
+        "properties": {
+          "id": {"type": "string"}, "pai_id": {"type": ["string", "null"]}, "nome": {"type": "string"},
+          "dono_id": {"type": "integer"}, "criado_em": {"type": "string"}
+        }
+      }
+    },
+    "grupos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "nome", "dono_id", "membros", "itens"],
+        "properties": {
+          "id": {"type": "string"}, "nome": {"type": "string"}, "resumo": {"type": ["string", "null"]},
+          "visibilidade": {"type": "string"}, "entrada": {"type": "string"}, "contribuicao": {"type": "string"},
+          "dono_id": {"type": "integer"}, "criado_em": {"type": "string"},
+          "membros": {"type": "array", "items": {"type": "object"}},
+          "itens": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "compartilhamentos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "item_id", "prefixo"],
+        "properties": {
+          "id": {"type": "string"}, "item_id": {"type": "string"}, "prefixo": {"type": "string"},
+          "nome": {"type": ["string", "null"]}, "criado_em": {"type": ["string", "null"]},
+          "expira_em": {"type": ["string", "null"]}, "permite_download": {"type": "boolean"},
+          "revogado_em": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "relacoes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["origem", "destino", "tipo"],
+        "properties": {
+          "origem": {"type": "string"}, "destino": {"type": "string"}, "tipo": {"type": "string"},
+          "posicao": {"type": ["integer", "null"]}
+        }
+      }
+    },
+    "usuarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "login", "nome", "perfil"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "integer"}, "login": {"type": "string"}, "nome": {"type": "string"},
+          "email": {"type": ["string", "null"]}, "perfil": {"type": "string"},
+          "superadmin": {"type": "boolean"}, "ativo": {"type": "boolean"},
+          "papel_id": {"type": ["integer", "null"]}, "origem": {"type": "string"},
+          "idioma_preferido": {"type": "string"}, "criado_em": {"type": ["string", "null"]}
+        }
+      }
+    }
+  }
+}

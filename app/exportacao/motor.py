@@ -33,7 +33,6 @@ import psycopg2.extensions
 
 from app import limites
 from app.consulta import where_ast
-from app.consulta.cql2 import compilar_cql2
 from app.exportacao.formatos import Formato
 from app.settings import settings
 
@@ -76,9 +75,6 @@ def montar_select(
     srid_tabela: int,
     colunas_brancas: dict[str, str],
     com_geometria: bool = True,
-    ids: list | None = None,
-    filtro_cql2: dict | None = None,
-    colunas_cql2: dict | None = None,
 ) -> str:
     """Comando SQL COMPLETO (sem parâmetro) para o `-sql` do ogr2ogr. Levanta `where_ast.ErroWhere` para
     filtro malformado e `psycopg2.Error` para o que só o banco recusa (tipo incompatível, função inexistente)
@@ -88,16 +84,6 @@ def montar_select(
         selecionadas.append(f'"{coluna_geom}"')
     condicoes: list[str] = []
     params: list = []
-    if ids is not None:
-        # exportação DA SELEÇÃO do mapa (item L2-01-l): a lista de fid entra como UM parâmetro (array), não
-        # como N literais concatenados — 200 mil fids num `IN (...)` viram megabytes de texto de SQL, e o
-        # `= ANY(%s)` usa o índice da chave primária do mesmo jeito.
-        condicoes.append('"fid" = ANY(%s)')
-        params.append([int(v) for v in ids])
-    if filtro_cql2 is not None:
-        consulta_cql2 = compilar_cql2(filtro_cql2, colunas_cql2 or {})
-        condicoes.append(f"({consulta_cql2.sql})")
-        params.extend(consulta_cql2.params)
     if where:
         consulta = where_ast.compilar_where(where, colunas_brancas)
         condicoes.append(f"({consulta.sql})")
@@ -142,17 +128,10 @@ def argumentos_ogr2ogr(
     nome_camada: str,
     srid_saida: int | None,
     codificacao: str,
-    geometria: str | None = None,
 ) -> list[str]:
     argv = ["ogr2ogr", "-f", formato.driver, str(destino), conninfo, "-sql", sql, "-nln", nome_camada]
-    alvo_crs = crs_de_saida(formato, srid_saida)
-    if alvo_crs:
-        argv += ["-t_srs", f"EPSG:{int(alvo_crs)}"]
-    if formato.exige_tipo_geometria and geometria:
-        # o `-sql` sobre PostgreSQL entrega a camada com geometria "desconhecida"; o OpenFileGDB recusa
-        # ("ERROR 6: Unsupported geometry type", medido em 07/09/2026) e precisa do tipo declarado, que o
-        # item de catálogo já guarda em `dados.geometria`
-        argv += ["-nlt", geometria]
+    if srid_saida:
+        argv += ["-t_srs", f"EPSG:{int(srid_saida)}"]
     for opcao in formato.lco:
         argv += ["-lco", opcao]
     for opcao in formato.dsco:
@@ -164,41 +143,13 @@ def argumentos_ogr2ogr(
     return argv
 
 
-def crs_de_saida(formato: Formato, srid_pedido: int | None) -> int | None:
-    """EPSG que o ogr2ogr vai receber, já obedecendo a política do formato (bloco CRS de `formatos.py`).
-
-    Formato de CRS preso devolve o CRS preso mesmo quando ninguém pediu nada: sem isso, uma camada em
-    SIRGAS 2000 / UTM sairia com coordenada projetada dentro de um GeoJSON que se declara WGS 84. Quem
-    pede um CRS INCOMPATÍVEL com o formato é recusado na entrada da rota (422), não aqui."""
-    if formato.crs_saida == "4326":
-        return 4326
-    if formato.crs_saida == "3857":
-        return 3857
-    if formato.crs_saida == "nenhum":
-        return int(srid_pedido) if srid_pedido else None
-    return int(srid_pedido) if srid_pedido else None
-
-
-def nome_camada_seguro(nome: str, formato: Formato) -> str:
-    """Nome da CAMADA dentro do arquivo. O OpenFileGDB recusa hífen e ponto ("Invalid layer name",
-    medido em 07/09/2026 com o nome `zt-sel-filegdb`), então para ele — e só para ele — o nome é
-    reduzido a letras, dígitos e sublinhado, começando por letra."""
-    if not formato.nome_camada_alfanumerico:
-        return nome
-    limpo = "".join(c if (c.isalnum() or c == "_") else "_" for c in nome).strip("_")
-    if not limpo or not limpo[0].isalpha():
-        limpo = "camada_" + limpo
-    return limpo[:60]
-
-
-def zipar_diretorio(origem: Path, destino_zip: Path, nome_interno: str = "") -> None:
+def zipar_diretorio(origem: Path, destino_zip: Path) -> None:
     """Zip de todos os arquivos que o driver escreveu (shapefile: .shp/.shx/.dbf/.prj/.cpg). `write` lê do
     disco em blocos — nenhum arquivo é montado inteiro em memória."""
     with zipfile.ZipFile(destino_zip, "w", zipfile.ZIP_DEFLATED) as z:
-        for arquivo in sorted(origem.rglob("*")):
+        for arquivo in sorted(origem.iterdir()):
             if arquivo.is_file():
-                relativo = arquivo.relative_to(origem)
-                z.write(arquivo, str(Path(nome_interno) / relativo) if nome_interno else str(relativo))
+                z.write(arquivo, arquivo.name)
 
 
 def zipar_arquivo(origem: Path, destino_zip: Path, nome_interno: str) -> None:
@@ -246,8 +197,6 @@ def contar_feicoes(caminho: Path, formato: Formato, executar=None) -> int | None
         alvo = f"/vsizip/{caminho}"
     elif formato.nome == "kmz":
         alvo = f"/vsizip/{caminho}/doc.kml"
-    elif formato.caminho_interno:
-        alvo = f"/vsizip/{caminho}/{formato.caminho_interno}"
     r = subprocess.run(["ogrinfo", "-so", "-al", alvo], capture_output=True, text=True, timeout=300)
     if r.returncode != 0:
         return None
