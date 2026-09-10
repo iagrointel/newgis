@@ -786,6 +786,47 @@ ADR `docs/adr/20260908T0830-edicao-em-lote-calculo-de-campo.md`.
   histórico voltar/avançar, norte, tela cheia, minha localização com círculo de precisão, atalhos documentados.
   e2e com 9 capturas; ADR `docs/adr/20260907T2330-navegacao-medicao-coordenadas.md`; paridade em PARIDADE.md.
 
+## turno 3, setembro de 2026 (item L0-06-e-status: página aberta de estado da instalação)
+
+`GET /api/status` e a página `/status` respondem sem sessão, com `X-Robots-Tag: noindex`: estado de api,
+banco, worker, martin, titiler e garage (as mesmas sondas do health check profundo, nunca uma segunda lista),
+migrações aplicadas e pendentes, fila (na fila, executando, falhas em 24 h), última cópia de segurança, último
+ensaio de restauração, menor percentual livre de disco, espaço e objetos no armazenamento do Garage, dias
+restantes do certificado, histórico de 90 dias por serviço e percentual de disponibilidade do mês, mais o log
+de correções lido do próprio CHANGELOG. O histórico vem de `plat.status_amostra`, gravada a cada 5 minutos pelo
+periódico `status.amostrar`, que usa o MESMO retrato que a página serve; o percentual é recalculado das
+amostras a cada pedido (o teste recalcula por fora e compara). A resposta é só agregado: sem versão da
+aplicação ou de dependência, sem caminho de volume, sem alvo `host:porta`, sem slug de inquilino, sem nome de
+bucket — o detalhe continua no `/saude/profunda`, atrás de sessão de superadmin.
+
+Medidas: 1.000 pedidos em 20 conexões levaram 1,07 s, todos servidos do cache de 30 s, nenhuma consulta ao
+banco; retrato frio em 92 ms (carga 5,5-6,7 em 12 núcleos). Duas correções nasceram de medir em vez de ler:
+somar o espaço com um `GetBucketInfo` por bucket custava 5.272,8 ms por retrato e virou uma chamada única de
+estatística do cluster; e o log de correções vazava nome de dependência e caminho de arquivo do CHANGELOG (o
+teste de vazamento reprovou de verdade), então passou a ser higienizado, e a frase que só sobra em pedaços não
+entra. Cláusula do worker medida com servidor HTTP real em porta livre no lugar de `PLAT_WORKER_URL` — cai em
+31 s e volta em 31 s, dentro dos 5 minutos do portão; `systemctl stop` de unidade de produção é proibido na
+trilha e não foi usado. `tests/medidas/L0-06-e-status.json`, ADR `20260907T2257-pagina-de-estado-aberta.md`.
+
+## turno 3, setembro de 2026 (item L7-34-saude-profunda: health check profundo por componente)
+
+`GET /saude/profunda` sonda 13 componentes (banco+migrações, fila -- workers vivos e idade do job
+pendente mais antigo via nova função `plat.fila_job_mais_antigo_pendente_s`, Martin, TiTiler, Garage
+via S3 + Admin API `GetClusterHealth`, worker, nginx, certificado TLS, disco, RAM, e três declarados
+`ausente` nesta topologia: CDN, backup, licença), cada uma num pool de threads próprio com tempo
+limite de 2 s -- uma sonda pendurada nunca trava o endpoint inteiro (medido: Garage e Martin
+pendurados por um servidor TCP que aceita e nunca responde viraram `erro` em 2,02 s e 1,05 s, bem
+abaixo do limite de 10 s do portão). Resposta anônima (sem sessão, para o balanceador/CDN) só tem
+nome+estado+tempo de cada componente; sessão de superadmin vê o detalhe (alvo `host:porta`, motivo,
+contagens) -- nenhuma das duas nunca inclui DSN, token do Garage/admin ou o nome do inquilino
+(varredura de texto sobre o corpo inteiro nos dois casos). `200`/`503` conforme o pior estado entre
+os componentes; `ausente` nunca eleva o estado geral. Sem UI própria neste turno (papéis do item:
+backend, adversário) -- consumido hoje só pelo balanceador e por chamada direta de admin.
+
+Retomada de sessão que morreu antes por limite do servidor ao criar o symlink do venv no worktree
+(o código e os testes já estavam prontos no disco, sem commit); corrigidos dois testes que assumiam
+detalhe (`workers_vivos`, `volumes` de disco) na sessão anônima -- esses campos só existem na versão
+admin, então passaram a usar `sessao_plat`. `tests/medidas/L7-34-saude-profunda.json`.
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
@@ -2195,6 +2236,27 @@ XSD de referência do OGC.
   `PUT /api/itens/{estilo}/relacoes` que já existia; nada foi acrescentado ao catálogo por causa disto.
 - Fica declarado como ausente, não simulado: `fields[].domain` nulo, `types`/`subtypes`/`relationships`
   vazios e `capabilities` só `Query` — as linhas L2-10-a, L2-10-b e L2-03-a não estão nesta base.
+
+## turno 3, setembro de 2026 (item L0-06-a-dump-logico: backup lógico diário por inquilino)
+
+Fase 1 do backup, sem reiniciar o Postgres (`archive_mode` está desligado e ligá-lo exige reinício de um
+banco compartilhado com outros serviços da casa — a recuperação a ponto no tempo fica para a fase 2, com
+decisão do dono). Periódico `backup.dump_logico` às 03:00 no inquilino técnico: `pg_dump -Fc` do schema
+`plat` e de cada `d_<slug>`, um arquivo por inquilino, restaurável sozinho. Cada linha de `plat.backup`
+guarda sha256, bytes, `tempo_dump_s` e número de tabelas; a cópia vai para o bucket `plat-backup` do Garage
+(multipart acima de 32 MB) e, quando as quatro variáveis `PLAT_BACKUP_EXTERNO_*` existem, para um destino S3
+externo — configuração pela metade é recusada nomeando o que falta, em vez de mandar o dump para meio
+endereço. Junto dos dumps vai um manifesto por inquilino (chave, sha256, bytes) gravado no próprio bucket.
+
+O espaço livre é conferido ANTES de escrever qualquer byte (mínimo 10 GB por padrão); abaixo disso o job
+termina em `falhou` com os dois números na mensagem, grava o evento `backup/falha` e enfileira `correio.enviar`
+ao superadministrador — falha de backup não pode ser silêncio. Retenção 14 diários + 8 semanais por schema,
+apagando linha, arquivo e objeto do bucket juntos. O periódico `backup.verificar` (segundas 05:30) reconfere
+o sha256 de cada arquivo e lista arquivo órfão (o que está em disco sem linha em `plat.backup`).
+
+Paridade escrita contra o `webgisdr` do ArcGIS Enterprise em `docs/PARIDADE.md`: cache de tile, dado
+referenciado e armazenamento espaço-temporal estão fora dos dois lados, e pelas mesmas razões; a restauração
+por inquilino e a retenção automática são nossas e não existem lá.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 

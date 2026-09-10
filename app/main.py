@@ -102,12 +102,14 @@ from app.relacionamentos.rotas import router as rotas_relacionamentos
 from app.relatorios.rotas import router as rotas_relatorios
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
+from app.saude_profunda import router as rotas_saude_profunda
 from app.settings import settings
 from app.tiles.exportacao import router as rotas_tiles_exportacao
 from app.tiles.rotas import router as rotas_tiles_martin_verificar
 from app.tiles.vector_tile_server import router as rotas_vector_tile_server
 from app.tabela.rotas import router as rotas_tabela
 from app.tiles.rotas import router as rotas_tiles
+from app.status import router as rotas_status
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
 from app.widgets.rotas import router as rotas_widgets_externos
@@ -140,6 +142,8 @@ if os.environ.get("PLAT_SERVIR_STATIC_DEV") == "1":
 
 ROUTERS = [
     rotas_saude,
+    rotas_saude_profunda,  # L7-34-saude-profunda
+    rotas_status,  # L0-06-e-status: GET /api/status (aberto, agregado, cache de 30 s) + página /status
     # --- identidade (L0-02)
     rotas_login.router,
     rotas_eu.router,

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Estado da plataforma · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/status.css">
+</head>
+<body class="tela status" data-pronto="0">
+<a class="pular" href="#principal">pular para o conteúdo</a>
+<main id="principal" class="principal status-principal" tabindex="-1">
+  <h1>Estado da plataforma</h1>
+  <p class="aviso-beta">análise / beta privado · página interna, sem sessão · <span id="geral-texto">carregando…</span></p>
+
+  <section class="cartao" aria-labelledby="t-servicos">
+    <h2 id="t-servicos">serviços</h2>
+    <table class="tabela" id="tabela-servicos">
+      <thead><tr><th>serviço</th><th>estado</th><th>resposta (ms)</th><th>disponibilidade do mês</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="nota" id="nota-disponibilidade"></p>
+  </section>
+
+  <section class="cartao" aria-labelledby="t-historico">
+    <h2 id="t-historico">histórico de 90 dias</h2>
+    <p class="nota">uma coluna por dia; a altura é a proporção de amostras em que o serviço respondeu.
+      A verificação roda a cada 5 minutos e é gravada no banco.</p>
+    <div id="historico"></div>
+  </section>
+
+  <section class="cartao" aria-labelledby="t-numeros">
+    <h2 id="t-numeros">fila, migrações, cópia de segurança e capacidade</h2>
+    <dl class="numeros" id="numeros"></dl>
+  </section>
+
+  <section class="cartao" aria-labelledby="t-correcoes">
+    <h2 id="t-correcoes">log de correções</h2>
+    <ul class="correcoes" id="correcoes"></ul>
+  </section>
+
+  <p class="nota" id="rodape"></p>
+</main>
+<script type="module" src="/static/js/status.js"></script>
+</body>
+</html>
