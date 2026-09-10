@@ -20,6 +20,7 @@ from app import cabecalhos, erros, limite_corpo, paginas
 from app import erros, limite_corpo, modo, paginas
 from app import log as plat_log
 from app.acervo import publicacao as rotas_acervo_publicacao
+from app import telemetria as rotas_telemetria
 from app.acervo import rotas as rotas_acervo
 from app.amc import rotas as rotas_amc
 from app.analise3d.rotas import router as rotas_analise3d
@@ -291,6 +292,8 @@ ROUTERS = [
     rotas_endpoints.router,
     # --- descoberta por catálogo CSW 2.0.2 (L6-06): /api/csw/buscar, /api/csw/conexoes
     rotas_csw.router,
+    # --- telemetria opcional do appliance (L7-11-c): /api/telemetria (superadmin), /api/telemetria/receber (casa)
+    rotas_telemetria.router,
     # --- arquivos/objetos (L0-11): /api/arquivos genérico por inquilino; /api/objetos/{chave} já vem do catálogo
     # (rotas_compartilhamento, entrega por URL assinada)
     rotas_arquivos,

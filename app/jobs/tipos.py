@@ -4,6 +4,7 @@ acrescentam aqui a importação do seu módulo de tarefas (ex.: app.ingestao.tar
 from app import status_tarefas  # noqa: F401 — L0-06-e: status.amostrar + periódico de 5 min
 from app.backup import tarefas as backup_tarefas  # noqa: F401 — L0-06-a: backup.dump_logico/verificar + periódicos
 from app.acervo import tarefas as acervo_tarefas  # noqa: F401 — L6-01-i: acervo.expor_arquivo
+from app import telemetria as telemetria_tarefas  # noqa: F401 — L7-11-c: telemetria.enviar + periódico diário
 from app.catalogo import (
     tarefas as catalogo_tarefas,  # noqa: F401 — L0-03: 6 tipos catalogo.* e os periódicos do catálogo
 )

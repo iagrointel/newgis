@@ -5919,3 +5919,13 @@ Tudo por `buscar_seguro` (SSRF, 1 MiB, 20 s); XML por defusedxml; nomes/e-mails 
 gravações de teste. Medido contra a INDE em 07/09 (`tests/medidas/L6-06-descoberta-csw.json`): 52 registros
 para "tuberculose", 2 conexões (WMS+WFS) criadas de um registro e as 2 com saúde ok. Cinco endereços de
 CSW estadual adivinhados não resolveram: só a INDE está verificada.
+## turno 4 (líder 5), setembro de 2026 (item L7-11-c-telemetria-opcional: telemetria do appliance desligada por padrão, opt-in do superadmin, só agregados)
+
+`app/telemetria.py` + migração `20260908T0555`: `plat.telemetria` (1 linha por instalação, `ligada=false`, chave
+própria gerada), `GET /api/telemetria` (estado + prévia = o JSON exato que sai), `PUT` liga/desliga (superadmin,
+evento na trilha), `POST /api/telemetria/enviar` e periódico diário `telemetria.enviar` (só quando ligada;
+desligada = 0 chamadas de rede, medido); relatório com 13 campos fixos (`CAMPOS`: versão, saúde, fila,
+contagens agregadas por `plat.telemetria_contagens()`), nunca nome/geometria/conteúdo. Receptor na casa
+(`POST /api/telemetria/receber`): chave desconhecida = 403 sem gravar, campo a mais = 422, chave de outro
+appliance no cabeçalho = 422; `plat.telemetria_appliance` alimenta `GET /api/telemetria/appliances`.
+`docs/APPLIANCE.md` §5 lista os campos (teste confere). Ramo inclui o merge de `wt/cx5l711b` (dependência).

@@ -46,6 +46,12 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/plataforma/inquilinos/{id}/suspender"): ["inquilinos/suspender"],
     ("POST", "/api/plataforma/inquilinos/{id}/reativar"): ["inquilinos/reativar"],
     ("DELETE", "/api/plataforma/inquilinos/{id}"): ["inquilinos/apagar"],
+    # L7-11-c telemetria opcional (rotas de instalação, superadmin)
+    ("PUT", "/api/telemetria"): ["telemetria/ligar", "telemetria/desligar"],
+    ("POST", "/api/telemetria/enviar"): ["telemetria/enviar"],
+    ("POST", "/api/telemetria/appliances"): ["telemetria/receber"],
+    ("DELETE", "/api/telemetria/appliances/{chave}"): [],  # remoção de chave: sem contexto de inquilino no cursor
+    ("POST", "/api/telemetria/receber"): [],  # autenticado por chave de appliance, sem sessão: sem evento de domínio
     # ---- fila de jobs (L0-05; vocabulário na migração 007)
     ("POST", "/api/jobs"): ["jobs/criar"],
     ("POST", "/api/jobs/{job_id}/cancelar"): ["jobs/cancelar"],
