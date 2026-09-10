@@ -4,7 +4,8 @@ que mudam estado, migração 006) em LISTEN plat_worker; identidade `<PLAT_WORKE
 processos com o mesmo nome-base nunca roubam jobs um do outro; a ceifa é só por heartbeat vencido); laço de ≤ 1 s por
 select(); job_pegar por
 SKIP LOCKED; fork por job com pipe; heartbeat de 10 s; cancelamento por escalonamento (30 s SIGTERM, +10 s SIGKILL);
-timeout_s; "1 pesado por vez" por advisory lock de sessão; ceifa de órfãos a cada 30 s; relógio das agendas; parada
+timeout_s; "1 pesado por vez" por advisory lock de sessão, chave POR AMBIENTE (item F5, ver
+chave_lock_pesado); ceifa de órfãos a cada 30 s; relógio das agendas; parada
 limpa (SIGTERM: devolve os jobs com reinicios += 1, SIGTERM ao filho, 20 s, SIGKILL). /saude em 127.0.0.1:8153
 atendido no próprio laço (sem thread: fork com threads é armadilha)."""
 
@@ -25,7 +26,6 @@ from urllib.parse import urlparse
 import psycopg2
 import psycopg2.extras
 
-from app import limites
 from app import log as plat_log
 from app.jobs import agenda as mod_agenda
 from app.jobs import filho as mod_filho
@@ -33,14 +33,6 @@ from app.jobs.tipos import REGISTRO
 from app.schema_ambiente import CursorSchemaAmbiente
 from app.settings import settings
 from app.versao import git_sha_curto, versao
-
-
-def req_id_do_job(job: dict) -> str | None:
-    """Item L7-06-c: o identificador do pedido que enfileirou o job vive em `proveniencia.req_id`
-    (app/jobs/servico.py). Job criado por agenda ou pelo próprio sistema não tem pedido de origem e
-    devolve None — o campo simplesmente não sai na linha JSON (app/log.py só escreve o que não é nulo)."""
-    prov = job.get("proveniencia")
-    return prov.get("req_id") if isinstance(prov, dict) else None
 
 ROOT = Path(__file__).resolve().parents[2]
 log = logging.getLogger("plat.worker")
@@ -53,16 +45,22 @@ LIMITE_WORKER_S = 90
 GRACA_CANCELAMENTO_S = 30
 GRACA_KILL_S = 10
 ESPERA_PARADA_S = 20
-LOCK_PESADO = "plat.job.pesado"  # nome-base; a chave real leva o schema (ver _chave_pesado)
+LOCK_PESADO = "plat.job.pesado"
 
 
-def _chave_pesado() -> str:
-    """07/09 (achado do item L2-15-a + classe F5): a chave era CONSTANTE no cluster inteiro, então o worker
-    de uma trilha isolada segurava o "1 pesado por vez" de produção e de todas as outras trilhas. A chave
-    leva o schema do ambiente: cada base tem a sua vez de pesado."""
-    from app.settings import settings
+def chave_lock_pesado(schema: str | None = None) -> str:
+    """Chave da trava de aconselhamento do job pesado, amarrada ao AMBIENTE (item F5; laudo do
+    adversário do reescritor de schema, laco/handoffs/T4/ADVERSARIO-reescritor-schema.md).
+    hashtext(LOCK_PESADO) sozinho dava a MESMA trava em produção, homologação e em qualquer
+    trilha: pg_try_advisory_lock é do CLUSTER Postgres inteiro, nunca do schema, e o nome
+    viaja como PARÂMETRO da consulta (nunca como texto SQL) — CursorSchemaAmbiente reescreve
+    só o texto, então não havia o que reescrever. Prefixar pelo schema do ambiente
+    (settings.PLAT_SCHEMA, já usado por PLAT_DSN_WORKER/PLAT_CANAL_JOB para a mesma separação)
+    resolve: a chave fica estável dentro de um processo (o schema não muda durante a vida do
+    worker) e diferente entre ambientes, porque cada ambiente usa um schema diferente."""
+    return f"{schema or settings.PLAT_SCHEMA}:{LOCK_PESADO}"
 
-    return f"{settings.PLAT_SCHEMA}.job.pesado"
+
 UTC = datetime.UTC
 
 
@@ -328,26 +326,26 @@ class Worker:
         while len(self.filhos) < self.processos and not self.parando:
             # 07/09 (achado do item L2-15-a): o lock ficava preso quando o filho pesado terminava — o tick
             # seguinte entrava com lock_pesado=True, pesado_ok=False por inicialização, e nunca soltava.
-            # Regra: `pesado_ok` sai do ESTADO REAL a cada volta (lock preso E nenhum filho pesado nosso em
-            # curso), nunca do que mudou nesta volta. Quem já tem o lock não o pede de novo: `pg_try_advisory_lock`
-            # é reentrante na mesma sessão e devolveria `true` outra vez, e soltar para retomar abriria uma
-            # janela em que outro worker leva a vez.
-            if not self.lock_pesado:
-                r = self.um("SELECT pg_try_advisory_lock(hashtext(%s)) AS ok", (_chave_pesado(),))
-                self.lock_pesado = bool(r and r["ok"])
-            pesado_ok = self.lock_pesado and not self._pesado_rodando()
-            job = self.um("SELECT * FROM plat.job_pegar(%s, %s)", (self.nome, pesado_ok))
+            # Regra: segura o lock enquanto (e só enquanto) há filho pesado rodando.
+            if self.lock_pesado and not self._pesado_rodando():
+                self._soltar_pesado()
+            pesado_ok = self.lock_pesado
+            if not pesado_ok:
+                r = self.um("SELECT pg_try_advisory_lock(hashtext(%s)) AS ok", (chave_lock_pesado(),))
+                pesado_ok = bool(r and r["ok"])
+                self.lock_pesado = pesado_ok
+            job = self.um("SELECT * FROM plat.job_pegar(%s, %s)", (self.nome, pesado_ok and not self._pesado_rodando()))
             if job is None or job.get("id") is None:
-                if pesado_ok:
+                if pesado_ok and not self._pesado_rodando():
                     self._soltar_pesado()
                 return
-            if not job["pesado"] and pesado_ok:
+            if not job["pesado"] and pesado_ok and not self._pesado_rodando():
                 self._soltar_pesado()
             self._lancar(job)
 
     def _soltar_pesado(self) -> None:
         if self.lock_pesado:
-            self.sql("SELECT pg_advisory_unlock(hashtext(%s))", (_chave_pesado(),))
+            self.sql("SELECT pg_advisory_unlock(hashtext(%s))", (chave_lock_pesado(),))
             self.lock_pesado = False
 
     def _lancar(self, job: dict) -> None:
@@ -376,7 +374,7 @@ class Worker:
         self.filhos[pid] = Filho(pid, job, r)
         self.sql("SELECT plat.job_pid(%s, %s, %s)", (job["id"], self.nome, pid))
         log.info("job iniciado", extra={"job_id": str(job["id"]), "tipo": job["tipo"], "tenant_id": job["tenant_id"],
-                                        "pid_filho": pid, "req_id": req_id_do_job(job)})
+                                        "pid_filho": pid})
 
     # ---------------------------------------------------------------- fim de um filho
     def _proveniencia(self, job: dict, saida: dict) -> dict:
@@ -399,23 +397,7 @@ class Worker:
         ok = bool(r and r["ok"])
         if not ok:
             log.warning("job_terminar recusado (job já não era deste worker)", extra={"job_id": str(job["id"])})
-        elif estado in ("concluido", "falhou") and job.get("usuario_id"):
-            self._notificar_dono(job, estado, erro)
         return ok
-
-    def _notificar_dono(self, job: dict, estado: str, erro: str | None) -> None:
-        """Notificação interna de quem pediu o job (item L0-03-k). O worker não tem privilégio de tabela: quem
-        escreve é plat.notificar, SECURITY DEFINER com GRANT para plat_worker. Falhar aqui nunca derruba o
-        encerramento do job — o job já terminou; o sino é efeito colateral."""
-        titulo = f"Tarefa {job['tipo']} {'concluída' if estado == 'concluido' else 'falhou'}"
-        try:
-            self.um("SELECT plat.notificar(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) AS id",
-                    (job["tenant_id"], job["usuario_id"], f"jobs/{estado}", titulo, f"jobs/{job['id']}",
-                     (erro or None) and str(erro)[:1000], "/tarefas", "job", str(job["id"]),
-                     limites.NOTIFICACOES_POR_MINUTO))
-        except Exception as e:  # noqa: BLE001 — o sino nunca derruba o worker
-            log.warning("notificação do job não gravada: %s", str(e).strip()[:200],
-                        extra={"job_id": str(job["id"])})
 
     def _finalizar(self, f: Filho, codigo: int) -> None:
         job = f.job
@@ -462,7 +444,7 @@ class Worker:
             mod_filho.apagar_dir(self.dir_jobs, job["id"])
         log.info("job terminou: %s (código %s)", estado, codigo,
                  extra={"job_id": str(job["id"]), "tipo": job["tipo"], "tenant_id": job["tenant_id"],
-                        "pid_filho": f.pid, "req_id": req_id_do_job(job)})
+                        "pid_filho": f.pid})
 
     # ---------------------------------------------------------------- parada
     def _parar(self) -> None:
