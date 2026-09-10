@@ -108,6 +108,9 @@ PAGINAS = {
     "/migracao": "migracao.html",
     # --- sistema de referência (L2-17-crs-transformacoes): lista curada + reprojeção de coordenada/bbox
     "/crs": "crs.html",
+    # --- visualizador em tempo de execução (L5-15-vista-movel-responsivo): ?item=<id>, ou ?preview=1 dentro
+    # do iframe de mesma origem que o construtor monta (web/js/editor/pre_visualizacao.js)
+    "/visualizar": "visualizar.html",
 }
 router = APIRouter()
 

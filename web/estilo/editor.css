@@ -36,6 +36,23 @@
 .editor-mensagem { min-height: 1.2em; margin: 0 0 var(--e2); font-size: .85rem; color: var(--fraco); }
 .editor-mensagem[data-tipo="erro"] { color: var(--falha); }
 
+/* vista móvel (item L5-15-vista-movel-responsivo) */
+.campo-linha { display: flex; align-items: center; gap: var(--e2); font-size: .8rem; }
+.vm-lista { display: grid; gap: var(--e2); margin-top: var(--e2); }
+.vm-linha { display: grid; gap: 2px var(--e2); grid-template-columns: 1fr; padding: var(--e2); border: 1px solid var(--borda); border-radius: var(--raio); }
+.vm-linha .campo-linha input[type="number"] { width: 4.5em; }
+.vm-rotulo { font-weight: 600; font-size: .85rem; }
+
+/* fantasma do arrasto por toque (item L5-15): segue o dedo, nunca recebe ponteiro (senão o elemento sob ele
+   nunca seria achado por elementFromPoint) */
+.arrasto-fantasma { opacity: .85; box-shadow: 0 4px 12px rgba(0, 0, 0, .35); }
+
+/* pré-visualização por dispositivo (item L5-15): iframe de MESMA ORIGEM, largura fixa por dispositivo */
+.pre-visualizacao-botoes { display: flex; gap: var(--e2); margin: var(--e3) 0 var(--e2); }
+.pre-visualizacao-botoes button.ativo { border-color: var(--acento); color: var(--acento); }
+.pre-visualizacao-moldura { max-width: 100%; overflow-x: auto; border: 1px solid var(--borda); border-radius: var(--raio); background: var(--fundo-2); padding: var(--e2); }
+#pre-visualizacao-quadro { display: block; border: 0; background: #fff; }
+
 @media (max-width: 900px) {
   .editor { grid-template-columns: minmax(0, 1fr); }
   .editor-tela { grid-template-columns: repeat(12, minmax(0, 1fr)); }

@@ -151,6 +151,56 @@ export function emProfundidade(doc, paiId = null, nivel = 0, saida = []) {
   return saida;
 }
 
+/* ------------------------------------------------------------------------------------------------------------
+   vista móvel (item L5-15-vista-movel-responsivo; `db/migracoes/20260907T1505_vista_movel.sql`, esquema v3):
+   `corpo.vista_movel = {manual, nos}`, onde `nos` é um mapa id-de-nó-de-RAIZ -> {oculto, ordem, largura_colunas}.
+   `manual: true` faz esta lista PREVALECER sobre o reflow automático (portão do item); `manual: false`/ausente
+   deixa o visualizador (web/js/visualizador/visualizador.js) empilhar tudo numa coluna só, na ordem em que já
+   está. D1 do item: só nó de RAIZ tem override — um contêiner aninhado herda o reflow do próprio pai, para não
+   precisar de uma segunda árvore de aninhamento só para celular. */
+
+export function vistaMovel(doc) {
+  const vm = doc?.corpo?.vista_movel;
+  return { manual: !!vm?.manual, nos: (vm && typeof vm.nos === 'object' && vm.nos) || {} };
+}
+
+export function definirVistaMovelManual(doc, manual) {
+  const vm = vistaMovel(doc);
+  return { ...doc, corpo: { ...doc.corpo, vista_movel: { ...vm, manual: !!manual } } };
+}
+
+export function definirOverrideMovel(doc, id, patch) {
+  const no = acharNo(doc, id);
+  if (!no) throw new ErroEdicao('no_inexistente', 'nó inexistente');
+  if (no.pai) throw new ErroEdicao('vista_movel_fora_da_raiz', 'vista móvel só configura nó de raiz');
+  const vm = vistaMovel(doc);
+  const atual = { ...(vm.nos[id] || {}), ...patch };
+  for (const k of Object.keys(atual)) if (atual[k] === undefined) delete atual[k];
+  return { ...doc, corpo: { ...doc.corpo, vista_movel: { ...vm, nos: { ...vm.nos, [id]: atual } } } };
+}
+
+export function removerOverrideMovel(doc, id) {
+  const vm = vistaMovel(doc);
+  if (!(id in vm.nos)) return doc;
+  const nos2 = { ...vm.nos };
+  delete nos2[id];
+  return { ...doc, corpo: { ...doc.corpo, vista_movel: { ...vm, nos: nos2 } } };
+}
+
+/* nós de raiz visíveis na vista móvel MANUAL, na ordem em que devem aparecer: quem tem `ordem` explícita
+   nunca perde para quem não tem (por isso o padrão de quem não tem override é `indice + 1000`, não o
+   `indice` puro — um `ordem: 0` explícito tem de furar a fila na frente de TUDO que não foi configurado,
+   mesmo que o nó não configurado já estivesse na posição 0 do documento). Entre dois nós sem override
+   nenhum, o desempate é a ordem original da lista. */
+export function nosVistaMovelManual(doc) {
+  const vm = vistaMovel(doc);
+  return filhos(doc, null)
+    .map((no, i) => ({ no, ov: vm.nos[no.id] || {}, indice: i }))
+    .filter((x) => !x.ov.oculto)
+    .sort((a, b) => (a.ov.ordem ?? a.indice + 1000) - (b.ov.ordem ?? b.indice + 1000) || a.indice - b.indice)
+    .map((x) => ({ no: x.no, largura_colunas_movel: x.ov.largura_colunas ?? null }));
+}
+
 /* Forma canônica para COMPARAR dois documentos construídos por caminhos diferentes: o ULID é aleatório por
    construção (D2: gerado na criação, nunca derivado de posição), então dois documentos iguais em estrutura
    têm ids diferentes. Aqui cada id vira `n1..nN` na ordem de profundidade; tudo o mais (tipo, aninhamento,

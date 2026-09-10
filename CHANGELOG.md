@@ -2058,6 +2058,40 @@ contêiner-alvo mira o CENTRO da caixa — quando o contêiner já tem um filho 
 sobre o filho e o `drop` do HTML5 é entregue a ele, não ao contêiner (o novo nó entra um nível mais fundo do
 que o pedido); o teste agora solta sempre no FUNDO do contêiner, como o e2e do L5-08 já fazia na raiz.
 Paridade contra "Add and manage pages" e "Layout widgets" (doc EXB) em `docs/PARIDADE.md`.
+## turno 5, setembro de 2026 (item L5-15-vista-movel-responsivo: vista móvel e pré-visualização por dispositivo)
+
+Visualizador em tempo de execução (`/visualizar?item=<id>`, `web/js/visualizador/visualizador.js`, sem
+nenhuma primitiva de edição) sobre o mesmo documento do L5-05/L5-08: reflow automático de grade de 12
+colunas para 1 coluna a ≤ 600 px (puro CSS, `web/estilo/visualizador.css`), mapa sempre presente com
+bounding box não-nulo em qualquer largura, e widget `tabela` trocando de elemento semântico (`<table>` para
+`<ul>`) na mesma faixa — sem inventar dado, só a propriedade `linhas_por_pagina` que o widget já grava.
+Vista móvel MANUAL nova em `corpo.vista_movel` (esquema v3, migração `20260907T1505_vista_movel.sql`, cadeia
+de leitura v2→v3 em `documento.py`): só nó de RAIZ (D1 do item) pode ter `oculto`/`ordem`/`largura_colunas`
+próprios para o celular, e essa lista PREVALECE sobre o reflow quando `manual: true` — validado no mesmo
+lugar que a referência pendente de `ligacoes` (`validar_grafo`, regras `referencia_pendente` e
+`vista_movel_fora_da_raiz`). Painel "Vista móvel" novo no construtor (`editor.js`) edita isso por
+checkbox/número, sem gesto nenhum.
+
+Pré-visualização por dispositivo no construtor (`web/js/editor/pre_visualizacao.js`): iframe de MESMA
+ORIGEM (precedente Puck) com três larguras fixas (celular 375, tablet 768, desktop 1440) recebendo o
+documento em edição por `postMessage`, sem depender de salvar. Arrasto por TOQUE de verdade acrescentado a
+`arrasto.js` (Pointer Events com limiar de 8 px e ghost seguindo o dedo, registrado ao lado do HTML5 DnD que
+o L5-08 já tinha e que nunca dispara em toque) — paleta e cabeçalho do nó agora arrastam com um dedo real,
+além do botão "Adicionar"/menu "mover para" que o L5-08 já provava.
+
+Medido (`tests/medidas/L5-15-vista-movel-responsivo.json`, e2e `tests/e2e/test_vista_movel_responsivo.py`
+contra a base da trilha): as 3 vistas (Pixel 7, iPad (gen 7), 1440×900) do mesmo `/visualizar?item=` não têm
+rolagem horizontal e mostram o mapa com bounding box positivo; a tabela vira lista só ≤ 600 px (Pixel 7),
+continua tabela em 810 px (iPad) e 1440 px. Vista móvel manual com um nó oculto e outro com `ordem: 0`
+prevalece sobre a ordem natural do documento — o nó oculto nem aparece no DOM. Arrasto por toque no iPad
+(148,9 ms) monta o mesmo tipo de nó que o menu "Adicionar" monta sem gesto nenhum. Refutação do adversário
+(360×640, documento SEM vista móvel manual): os três nós de raiz continuam visíveis, com bounding box
+positivo e dentro da largura da tela — 0 cortado, 0 inacessível.
+
+Achado de ambiente corrigido no próprio item: `criarEditor` chama `aoMudar` uma vez, SÍNCRONO, antes de
+devolver (primeiro desenho) — declarar a referência da pré-visualização como `const` lida DEPOIS de montar
+o editor travava a tela inteira em "Cannot access before initialization" sem erro nenhum no console (só
+`pageerror`, silencioso para quem só olha `console.error`); virou `let` lido por closure.
 
 ## turno 4, setembro de 2026 (item L5-08-editor-arrasto: primitivas de edição compartilhadas pelos construtores)
 

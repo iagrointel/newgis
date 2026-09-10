@@ -17,12 +17,101 @@
 export const TIPO_NOVO = 'application/x-plat-tipo';
 export const TIPO_NO = 'application/x-plat-no';
 
+/* ------------------------------------------------------------------------------------------------------------
+   arrasto por TOQUE (item L5-15-vista-movel-responsivo): o HTML5 DnD acima nunca dispara em toque (comprovado
+   pelo L5-08 — por isso aquele item só deu alternativa de toque SEM gesto, botão "Adicionar" e menu "mover
+   para"). Este item pede o gesto de verdade em tablet, então aqui vai um SEGUNDO caminho, por Pointer Events
+   (a mesma API que já resolve o redimensionar por toque logo abaixo), registrado ao LADO do HTML5 DnD — o
+   mouse continua usando dragstart/drop; só pointerType 'touch' entra nesta rota. Um LIMIAR de 8 px antes de
+   assumir o gesto (`LIMIAR_TOQUE_PX`) é o que deixa um toque simples continuar sendo toque (seleciona,
+   dispara o `click` normal) e só um toque que ANDA vira arrasto — sem isso, tocar para selecionar um nó já
+   dispararia uma captura de ponteiro e quebraria o toque simples. */
+
+const LIMIAR_TOQUE_PX = 8;
+const ALVOS = new Map(); // Element (alvo de soltura) -> {aoSoltar, aceita, classe}
+
+function alvoTatilEm(x, y) {
+  const el = document.elementFromPoint(x, y);
+  const alvoEl = el?.closest?.('[data-alvo-arrasto="1"]');
+  if (!alvoEl || !ALVOS.has(alvoEl)) return null;
+  return { el: alvoEl, ...ALVOS.get(alvoEl) };
+}
+
+function iniciarArrastoTatil(origemEl, carga) {
+  const fantasma = origemEl.cloneNode(true);
+  fantasma.classList.add('arrasto-fantasma');
+  fantasma.removeAttribute('id');
+  fantasma.style.position = 'fixed';
+  fantasma.style.left = '0'; fantasma.style.top = '0';
+  fantasma.style.width = `${origemEl.offsetWidth}px`;
+  fantasma.style.pointerEvents = 'none';
+  fantasma.style.zIndex = '9999';
+  document.body.append(fantasma);
+  origemEl.classList.add('arrastando');
+  let ultimoAlvo = null;
+  const mover = (x, y) => {
+    fantasma.style.transform = `translate(${x - origemEl.offsetWidth / 2}px, ${y - 12}px)`;
+    const alvo = alvoTatilEm(x, y);
+    if (ultimoAlvo && ultimoAlvo.el !== alvo?.el) ultimoAlvo.el.classList.remove(ultimoAlvo.classe);
+    if (alvo && alvo.el !== ultimoAlvo?.el && alvo.aceita(carga)) alvo.el.classList.add(alvo.classe);
+    ultimoAlvo = alvo && alvo.aceita(carga) ? alvo : null;
+  };
+  const aoMover = (ev) => { ev.preventDefault(); mover(ev.clientX, ev.clientY); };
+  const encerrar = () => {
+    document.removeEventListener('pointermove', aoMover);
+    document.removeEventListener('pointerup', aoSoltar);
+    document.removeEventListener('pointercancel', aoCancelar);
+    fantasma.remove();
+    origemEl.classList.remove('arrastando');
+    if (ultimoAlvo) ultimoAlvo.el.classList.remove(ultimoAlvo.classe);
+  };
+  const aoSoltar = () => { const alvo = ultimoAlvo; encerrar(); if (alvo) alvo.aoSoltar(carga); };
+  const aoCancelar = () => encerrar();
+  document.addEventListener('pointermove', aoMover);
+  document.addEventListener('pointerup', aoSoltar);
+  document.addEventListener('pointercancel', aoCancelar);
+  return mover;
+}
+
+/* liga a origem de um arrasto por toque num elemento já `draggable` (HTML5, para mouse). `obterCarga()`
+   devolve `{tipo:'novo', valor:<tipo>}` ou `{tipo:'no', valor:<id>}` — quem chama decide. */
+function ligarOrigemToque(el, obterCarga) {
+  el.style.touchAction = 'none'; // sem isso o navegador rouba o gesto para rolar a página antes do limiar
+  let inicio = null;
+  const aoDescer = (ev) => {
+    if (ev.pointerType !== 'touch') return;
+    inicio = { x: ev.clientX, y: ev.clientY, id: ev.pointerId };
+    document.addEventListener('pointermove', aoAndar);
+    document.addEventListener('pointerup', aoSoltarSemMover);
+    document.addEventListener('pointercancel', aoSoltarSemMover);
+  };
+  const aoAndar = (ev) => {
+    if (!inicio || ev.pointerId !== inicio.id) return;
+    const dx = ev.clientX - inicio.x; const dy = ev.clientY - inicio.y;
+    if (Math.hypot(dx, dy) < LIMIAR_TOQUE_PX) return;
+    document.removeEventListener('pointermove', aoAndar);
+    document.removeEventListener('pointerup', aoSoltarSemMover);
+    document.removeEventListener('pointercancel', aoSoltarSemMover);
+    const mover = iniciarArrastoTatil(el, obterCarga());
+    mover(ev.clientX, ev.clientY);
+    inicio = null;
+  };
+  const aoSoltarSemMover = () => {
+    document.removeEventListener('pointermove', aoAndar);
+    document.removeEventListener('pointerup', aoSoltarSemMover);
+    document.removeEventListener('pointercancel', aoSoltarSemMover);
+    inicio = null; // ficou abaixo do limiar: solta como toque simples, o `click` do navegador segue seu curso
+  };
+  el.addEventListener('pointerdown', aoDescer);
+}
+
 export function ligarOrigemPaleta(el, tipo) {
   el.draggable = true;
   el.addEventListener('dragstart', (ev) => {
     ev.dataTransfer.setData(TIPO_NOVO, tipo);
     ev.dataTransfer.effectAllowed = 'copy';
   });
+  ligarOrigemToque(el, () => ({ tipo: 'novo', valor: tipo }));
 }
 
 export function ligarOrigemNo(el, id) {
@@ -36,10 +125,19 @@ export function ligarOrigemNo(el, id) {
   el.addEventListener('dragend', () => el.classList.remove('arrastando'));
 }
 
+/* toque no NÓ: só a partir do cabeçalho (`elCabecalho`), nunca do nó inteiro — o corpo do nó continua livre
+   para rolagem vertical da tela e para o toque simples de seleção (click), e a alça de largura (mais abaixo)
+   continua com o seu próprio Pointer Events sem disputar o mesmo elemento. */
+export function ligarOrigemNoToque(elCabecalho, id) {
+  ligarOrigemToque(elCabecalho, () => ({ tipo: 'no', valor: id }));
+}
+
 /* alvo de soltura. `aoSoltar({tipo, id})` recebe o que veio; devolver false marca a soltura como recusada
    (o editor mostra o motivo e o documento não muda). `aceita(carga)` decide se o alvo pisca. */
 export function ligarAlvo(el, { aoSoltar, aceita = () => true, classe = 'arrasto-sobre' }) {
   let dentro = 0;
+  el.dataset.alvoArrasto = '1';
+  ALVOS.set(el, { aoSoltar, aceita, classe });
   const carga = (ev) => {
     const t = ev.dataTransfer?.types || [];
     if (t.includes(TIPO_NOVO)) return { tipo: 'novo' };

@@ -102,7 +102,7 @@
       "type": "integer"
     },
     "tipo": {
-      "const": "painel"
+      "const": "app"
     }
   },
   "required": [
@@ -110,6 +110,6 @@
     "esquema_versao",
     "corpo"
   ],
-  "title": "Documento de construtor — painel",
+  "title": "Documento de construtor — aplicativo",
   "type": "object"
 }
