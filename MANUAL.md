@@ -2391,3 +2391,30 @@ fatores de distância se confundem entre si e com a escolha. Quando `data_camada
 Casos que a resposta nomeia em vez de esconder: com TODAS as células marcadas como escolhidas, `auc` vem `null`
 e `auc_indefinida` explica que sem não-escolhas a AUC não existe (não é 0,5 nem 1,0); com nenhuma escolha dentro
 da grade, `auc` vem `null` e `n_fora` mostra quantas ficaram de fora. Nada é gravado.
+## 22. Banco externo: PostgreSQL/PostGIS referenciado e consulta SQL do cliente (item L6-02-j-bancos-externos)
+
+Complementa a seção 18.2a (conector `postgres_fdw`). A tabela PostGIS remota aparece em
+`GET /api/conexoes/{id}/tabelas` com `geometria` (`coluna`, `tipo`, `srid`, lidos de `geometry_columns` do
+banco remoto) e é publicada como camada referenciada por `publicar-em-massa`. Sobre a mesma conexão, o
+cliente pode rodar uma consulta SQL de leitura no banco dele:
+
+```
+POST /api/conexoes/{id}/consulta    {"sql": "SELECT id, nome FROM sedes WHERE uf = 'BA' ORDER BY id LIMIT 100",
+                                      "schema_remoto": "public"}
+→ {"colunas": [...], "linhas": [[...]], "n": 100, "limite": 100, "tabelas": ["sedes"], "tempo_ms": 12}
+```
+
+Regras, todas verificadas ANTES de abrir a conexão (422 com o código entre parênteses):
+- um comando só, começando por `SELECT` ou `WITH`; sem `;`, sem comentário (`--`, `/*`), sem bloco `$$`
+  (`consulta_recusada`);
+- nenhuma palavra de escrita ou de sessão em qualquer posição — INSERT/UPDATE/DELETE/DROP/ALTER/CREATE/
+  TRUNCATE/GRANT/REVOKE/COPY/SET/LOCK/FOR UPDATE... — e nenhuma função de sistema (`pg_sleep`,
+  `pg_read_file`, `dblink`, `lo_import`, `current_setting`...) (`consulta_recusada`);
+- só tabelas que a própria conexão lista no `schema_remoto` (`tabela_fora_da_lista`); `pg_catalog`,
+  `information_schema` e outros schemas são recusados;
+- `LIMIT <n>` explícito no fim, com 1 <= n <= 5.000 (`limit_obrigatorio` / `limit_acima_do_teto`);
+- texto de até 4.000 caracteres (`consulta_longa`).
+A execução usa a conexão só-leitura do conector (`statement_timeout` de 8 s): erro do banco do cliente
+volta como 422 `consulta_invalida`, tempo esgotado como 422 `tempo_esgotado`, banco fora do ar como 503 e
+marca a saúde da conexão. O evento `conexoes/consultar` guarda tabelas, nº de linhas e tempo — nunca o texto
+da consulta nem o resultado. **SQL Server e Oracle não foram construídos** (sem container liberado; pendente).

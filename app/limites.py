@@ -766,3 +766,7 @@ BACKTEST_PERMUTACOES_MAX = 20_000     # sorteios do nulo por chamada (a rota é 
 # GEOMETRIA do corredor: unir 100 mil quadrados em PostGIS e mandar isso por HTTP é o que derruba a tela, não
 # o cálculo. Acima do teto a resposta traz a contagem e diz que omitiu a geometria.
 CORREDOR_CELULAS_GEOJSON_MAX = 20_000
+# --- consulta SQL do cliente no banco externo (L6-02-j-bancos-externos; app/conexao/consulta_sql.py): LIMIT
+# obrigatório e explícito, teto de linhas e de texto; o statement_timeout é o mesmo de CONEXAO_PG_ESTATEMENT_TIMEOUT_MS
+CONEXAO_PG_CONSULTA_LINHAS_MAX = 5000
+CONEXAO_PG_CONSULTA_TEXTO_MAX = 4000
