@@ -95,10 +95,21 @@ END $$;
 DO $$
 DECLARE papel text := plat.papel_leitor(); r record; existe_func boolean; n int := 0;
 BEGIN
+  -- (10/09/2026) O laço original varria TODO schema `d_*` do banco. Numa instalação só isso é o mesmo
+  -- conjunto; num banco compartilhado por várias instalações (o caso desta máquina: 461 schemas de trilha e
+  -- 4.047 schemas de dado) ele tenta criar política em tabela de OUTRA instalação, com esquema de versão
+  -- diferente, e a migração morre em `column "tenant_id" does not exist`. O filtro abaixo é a MESMA regra
+  -- que `camada_preparar` já exige logo acima (`plat.tenant WHERE 'd_' || slug = p_schema`): esta migração
+  -- só tem competência sobre as tabelas dos inquilinos DESTA instalação. A guarda de coluna cobre tabela
+  -- pela metade dentro da própria instalação.
   FOR r IN
     SELECT n.nspname AS esquema, c.relname AS tabela
     FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-    WHERE n.nspname ~ '^d_[a-z0-9_]{1,60}$' AND c.relname ~ '^c_[0-9a-f]{16}$' AND c.relkind = 'r'
+    JOIN plat.tenant t ON 'd_' || t.slug = n.nspname
+    WHERE c.relname ~ '^c_[0-9a-f]{16}$' AND c.relkind = 'r'
+      AND EXISTS (SELECT 1 FROM information_schema.columns ic
+                  WHERE ic.table_schema = n.nspname AND ic.table_name = c.relname
+                    AND ic.column_name = 'tenant_id')
   LOOP
     existe_func := to_regprocedure(
       format('%I.%I(integer,integer,integer,json)', r.esquema, 't_' || substr(r.tabela, 3))
