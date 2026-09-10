@@ -108,11 +108,32 @@ def resolver_camada(cur, item_id: str, nome_parametro: str) -> dict:
     }
 
 
+def resolver_fonte(cur, item_id: str, nome_parametro: str, aceita_parquet: bool) -> dict:
+    """Camada vetorial do Postgres ou, quando a ferramenta declara `limites={"aceita_parquet": True}` (as
+    ferramentas grandes do L2-15-b), item de catálogo tipo `parquet`. As duas formas devolvem `item_id`,
+    `titulo`, `versao`, `sha256` e `feicoes` — é o que o custo, a proveniência e o `derivado_de` usam."""
+    if aceita_parquet:
+        from app.consulta_grande import motor as motor_consulta_grande
+
+        try:
+            fonte = motor_consulta_grande.resolver_parquet(cur, item_id, nome_parametro)
+        except motor_consulta_grande.ErroConsulta:
+            pass  # não é item Parquet legível: tenta a camada, e o erro que sai é o dela
+        else:
+            fonte.update({"formato": "parquet", "feicoes": fonte["linhas"], "srid": fonte["crs"],
+                          "campos": [c["nome"] for c in fonte["esquema"]]})
+            return fonte
+    entrada = resolver_camada(cur, item_id, nome_parametro)
+    entrada["formato"] = "postgis"
+    return entrada
+
+
 def resolver_entradas(cur, f: registro.Ferramenta, parametros: dict) -> dict:
     entradas = {}
+    aceita_parquet = bool(f.limites.get("aceita_parquet"))
     for p in f.entradas:
         if p.tipo == "GPFeatureRecordSetLayer" and parametros.get(p.nome):
-            entradas[p.nome] = resolver_camada(cur, parametros[p.nome], p.nome)
+            entradas[p.nome] = resolver_fonte(cur, parametros[p.nome], p.nome, aceita_parquet)
         elif p.tipo == "GPRasterDataLayer" and parametros.get(p.nome):
             raise ErroExecucao(422, "raster_nao_suportado", f"{p.nome}: entrada raster depende do item L1-01")
     return entradas
@@ -149,6 +170,40 @@ def _apagar_tabela(ctx, schema: str, tabela: str) -> None:
         ctx.log("AVISO", f"não foi possível apagar {schema}.{tabela}: {e}")
 
 
+def _extent_de(geojson: str | None) -> list | None:
+    """Retângulo [xmin, ymin, xmax, ymax] a partir do GeoJSON do `ST_Extent` já em 4326.
+
+    O `ST_Extent` de uma camada NÃO devolve sempre um polígono: com uma feição só devolve um POINT, e com
+    feições colineares devolve um LINESTRING. Nesses casos o encadeamento antigo (`["coordinates"][0]` e
+    depois `c[0]`) tentava indexar um número e o job morria com "'int' object is not subscriptable" — achado
+    ao rodar a ferramenta `detectar_duplicatas` do item L2-15-b, cujo resultado é uma linha por grupo e pode,
+    legitimamente, ficar sobre uma reta. A leitura agora é por achatamento: os números do GeoJSON em ordem
+    são x, y, x, y…, qualquer que seja o tipo de geometria."""
+    if not geojson:
+        return None
+    numeros: list[float] = []
+
+    def achatar(valor):
+        if isinstance(valor, (int, float)) and not isinstance(valor, bool):
+            numeros.append(float(valor))
+            return
+        for parte in valor:
+            achatar(parte)
+
+    achatar(json.loads(geojson)["coordinates"])
+    xs, ys = numeros[0::2], numeros[1::2]
+    if not xs or not ys:
+        return None
+    if min(xs) == max(xs) or min(ys) == max(ys):
+        # a coluna `plat.item.extent` é `geometry(Polygon, 4326)`: um retângulo de lado zero (camada de uma
+        # feição só, ou feições colineares) não é polígono e a inserção seria recusada pelo tipo. Fica sem
+        # extent — melhor do que alargar a caixa por conta própria e gravar um retângulo que ninguém mediu.
+        return None
+    if -180 <= min(xs) and max(xs) <= 180 and -90 <= min(ys) and max(ys) <= 90:
+        return [min(xs), min(ys), max(xs), max(ys)]
+    return None
+
+
 def executar(ctx, f: registro.Ferramenta, parametros: dict, titulo: str | None = None, autor: dict | None = None,
              request=None) -> dict:
     """Roda a ferramenta e publica o item de resultado. `parametros` já normalizados por `validar_parametros`.
@@ -177,27 +232,15 @@ def executar(ctx, f: registro.Ferramenta, parametros: dict, titulo: str | None =
             cur.execute(f'ANALYZE "{schema}"."{tabela}"')
             campos = [c["nome"] for c in saida["campos"]]
             sha_saida = sha256_camada(cur, schema, tabela, campos)
-            # ST_XMin/ST_YMax em vez do GeoJSON do retângulo: quando todas as feições caem no MESMO ponto (ou
-            # há uma só), ST_Extent degenera em POINT e o GeoJSON não traz anel de coordenadas (achado no L2-05-f,
-            # ao conectar um único ponto à rede)
-            caixa = (f'ST_Transform(ST_SetSRID(ST_Extent(geom)::geometry, {int(saida["srid"])}), 4326)')
             cur.execute(
-                f'SELECT count(*) AS feicoes, ST_XMin({caixa}) AS x0, ST_YMin({caixa}) AS y0, '
-                f'ST_XMax({caixa}) AS x1, ST_YMax({caixa}) AS y1 FROM "{schema}"."{tabela}"'
+                f'SELECT count(*) AS feicoes, ST_AsGeoJSON(ST_Transform(ST_SetSRID(ST_Extent(geom)::geometry, '
+                f'{int(saida["srid"])}), 4326)) AS extent FROM "{schema}"."{tabela}"'
             )
             est = cur.fetchone()
             cur.execute('SELECT pg_total_relation_size(%s::regclass) AS b', (f'"{schema}"."{tabela}"',))
             tamanho = int(cur.fetchone()["b"])
         ctx.progresso(90, "publicando no catálogo")
-        extent = None
-        if est["x0"] is not None:
-            x0, y0, x1, y1 = (float(est["x0"]), float(est["y0"]), float(est["x1"]), float(est["y1"]))
-            # caixa degenerada (uma feição só, ou todas no mesmo ponto/linha) não é polígono válido e o CHECK de
-            # plat.item a recusa: o item fica sem extent em vez de ganhar uma caixa inventada
-            if -180 <= x0 and x1 <= 180 and -90 <= y0 and y1 <= 90 and x1 > x0 and y1 > y0:
-                extent = [x0, y0, x1, y1]
-            else:
-                ctx.log("INFO", "extensão degenerada (menos de duas coordenadas distintas): item sem extent")
+        extent = _extent_de(est["extent"])
         proveniencia = {
             "ferramenta": f.nome, "versao": f.versao, "parametros": parametros,
             "entradas": [{"parametro": n, "item_id": e["item_id"], "versao": e["versao"], "sha256": e["sha256"]}
@@ -213,6 +256,10 @@ def executar(ctx, f: registro.Ferramenta, parametros: dict, titulo: str | None =
                             "sha256": sha_saida, "job_id": proveniencia["job_id"], "ferramenta": proveniencia},
             "estatisticas": {"feicoes": int(est["feicoes"]), "extent_nativo": extent, "calculadas_em": None},
         }
+        if saida.get("consulta_grande"):
+            # item L2-15-b: o SQL que rodou e o sha256 de cada arquivo Parquet lido. Sem isto a camada de
+            # resultado não é reproduzível, e "proveniência" viraria só o nome da ferramenta.
+            dados["procedencia"]["consulta_grande"] = saida["consulta_grande"]
         titulo_final = (titulo or f"{f.titulo}: " + ", ".join(e["titulo"] for e in entradas.values()))[:250] or f.titulo
         with ctx.db() as cur:
             cur.execute(

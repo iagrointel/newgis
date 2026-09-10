@@ -1,0 +1,19 @@
+{
+ "item": "L2-15-a-geoparquet-bucket-catalogo",
+ "medidas": {
+  "um_milhao_feicoes": {
+   "valor": {
+    "feicoes": 1000000,
+    "duracao_s": 5.8,
+    "bytes": 8243370,
+    "carga_1min_no_inicio": 10.75,
+    "ram_livre_gb_no_inicio": 8.2,
+    "st_area_maior_diferenca": 0.0
+   },
+   "unidade": "s / bytes / diferença absoluta de área (carga e RAM medidas ANTES de disparar, ver regra do brief 'cláusula de desempenho': load average alto nesta rodada não invalida corretude, só o tempo)",
+   "comando": "tests/api/geoparquet/test_geoparquet.py::test_um_milhao_de_feicoes_reaberto_com_duckdb_conta_e_area_iguais"
+  }
+ },
+ "gerado_em": "2026-09-07T17:49:15Z",
+ "git_sha": "102997ba080e"
+}

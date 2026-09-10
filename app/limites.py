@@ -435,6 +435,11 @@ SAML_RESPOSTA_MAX = 256 * 1024           # SAMLResponse/LogoutRequest acima dist
 SAML_METADADO_MAX = 512 * 1024           # metadado do IdP lido por URL/arquivo
 SAML_METADADO_TIMEOUT_S = 8.0            # leitura do metadado do IdP por URL
 SAML_TRANSACAO_MIN = 10                  # validade do AuthnRequest/LogoutRequest emitido (plat.saml_transacao)
+# --- ferramentas de análise (L2-05-a; L2_CONCEITO C8): job por padrão, síncrono só abaixo do custo declarado
+FERRAMENTA_SINCRONO_CUSTO_MAX = 5000       # custo = feições × complexidade declarada no manifesto; acima disso só job
+FERRAMENTA_JOB_MEMORIA_MB = 1024            # RLIMIT_DATA do filho que roda uma ferramenta
+FERRAMENTA_JOB_TIMEOUT_S = 1800             # 30 min por execução; ferramenta mais longa é outro tipo de job
+BUFFER_DISTANCIA_M_MAX = 100_000            # 100 km: acima disso o buffer geodésico deixa de fazer sentido em camada
 # --- grades aninhadas do motor multicritério (L3-19-multiescala; migração 20260906T1640_multiescala.sql):
 # macro (grosseira, ex. 1 km) triando regiões e micro (fina, ex. 100 m) gerada SÓ dentro das aprovadas.
 # ESCALA_CELULAS_MAX vale tanto para a grade macro inteira quanto para o refino micro (aprovadas × k²) — é o
@@ -952,3 +957,39 @@ FLUXO_RECONEXAO_MIN_S = 1.0               # espera inicial de reconexão do cone
 FLUXO_RECONEXAO_MAX_S = 60.0              # ... com dobra a cada tentativa, até este teto
 FLUXO_MQTT_KEEPALIVE_S = 60               # keep-alive anunciado no CONNECT do MQTT 3.1.1
 FLUXO_AIS_LINHA_MAX = 1_024               # bytes de uma sentença NMEA (o padrão é 82; a folga é para lixo)
+# --- GeoParquet particionado no bucket (L2-15-a-geoparquet-bucket-catalogo). Mesmos tetos de memória/tempo/
+# disco do irmão L0-04-h (o intermediário continua sendo um GPKG do ogr2ogr); GRUPO_LINHAS_PADRAO medido
+# como ponto de partida razoável (DuckDB docs: 100k-1M linhas por row group; 50k cobre camada pequena sem
+# blocos minúsculos demais em partição fina).
+GEOPARQUET_MEMORIA_MB = 1024
+GEOPARQUET_TIMEOUT_S = 3600
+GEOPARQUET_DISCO_MIN_LIVRE_BYTES = 2 * 1024 * 1024 * 1024
+GEOPARQUET_FATOR_DISCO = 3
+GEOPARQUET_GRUPO_LINHAS_PADRAO = 50_000
+GEOPARQUET_GRUPO_LINHAS_MIN = 1_000
+GEOPARQUET_GRUPO_LINHAS_MAX = 1_000_000
+GEOPARQUET_CAMPOS_MAX = 500
+GEOPARQUET_WHERE_MAX = 4000
+GEOPARQUET_POR_USUARIO_EM_CURSO = 3
+GEOPARQUET_URL_ASSINADA_SEGUNDOS = 900   # 15 min: o bastante para DuckDB/QGIS/Pro abrirem o arquivo
+
+# --- consulta grande sobre Parquet com DuckDB (L2-15-b-consultas-duckdb-em-escala). O motor roda num processo
+# próprio, lançado pelo job (que é `pesado`: o worker já serializa "1 pesado por vez" por advisory lock, e é
+# essa trava, não uma nova, que garante UMA consulta grande de cada vez por base). MEMORIA_MB é o
+# `memory_limit` declarado ao DuckDB e THREADS o seu `threads`: os dois vão para a proveniência do resultado,
+# porque tempo medido sem eles não quer dizer nada.
+CONSULTA_GRANDE_MEMORIA_MB = 2048
+CONSULTA_GRANDE_THREADS = 4
+CONSULTA_GRANDE_TEMPO_S = 900            # teto do relógio que interrompe a consulta (con.interrupt)
+CONSULTA_GRANDE_JOB_TIMEOUT_S = 1200     # teto do JOB; folgado sobre o teto da consulta para a mensagem chegar
+CONSULTA_GRANDE_JOB_MEMORIA_MB = 3072    # RLIMIT_DATA do filho; o processo do DuckDB é neto e cabe dentro
+CONSULTA_GRANDE_LINHAS_SAIDA_MAX = 2_000_000   # resultado acima disso é recusado, nunca truncado em silêncio
+CONSULTA_GRANDE_SQL_MAX = 2_000          # caracteres do SQL livre: é o teto de GPString do
+                                         # vocabulário GP da Esri (app/ferramentas/registro.py),
+                                         # e não um número escolhido aqui — quem manda a consulta
+                                         # por cliente Esri cabe no mesmo limite da API própria
+CONSULTA_GRANDE_ARQUIVOS_MAX = 4_096     # partes Parquet de uma fonte (partição hive fina cabe aqui)
+CONSULTA_GRANDE_FONTES_MAX = 8           # fontes Parquet numa consulta (uma view cada)
+CONSULTA_GRANDE_GRADE_METROS_MIN = 10
+CONSULTA_GRANDE_GRADE_METROS_MAX = 500_000
+CONSULTA_GRANDE_LIMIAR_LINHAS_DUCKDB = 5_000_000  # acima disto a ferramenta grande é o caminho, não o PostGIS

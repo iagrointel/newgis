@@ -115,6 +115,7 @@ from app.imagens.rotas_stac import router as rotas_stac
 from app.imagens.rotas_tiles import router as rotas_tiles
 from app.geocodificador.rotas_lote import router as rotas_geocodificador_lote
 from app.imagens.rotas_stac import router as rotas_stac
+from app.geoparquet.rotas import router as rotas_geoparquet
 from app.ingestao.rotas import router as rotas_ingestao
 from app.intercambio.lote_importar import router as rotas_intercambio_lote_importar
 from app.intercambio.rotas import router as rotas_intercambio
@@ -419,6 +420,8 @@ ROUTERS = [
     # gravados). Quem RECEBE evento é o processo plat-fluxo na porta 8155 (app/fluxo/receptor.py), fora
     # desta aplicação — uma linha de registro de acesso por evento custaria mais que o próprio evento.
     rotas_fluxos,
+    # --- GeoParquet no bucket (L2-15-a): /api/geoparquet (particionado, incremental, item de catálogo duradouro)
+    rotas_geoparquet,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- rede de utilidades (L4-01-a): /api/rede (redes do inquilino), /api/rede/{rede_id}/pacote (importa e
