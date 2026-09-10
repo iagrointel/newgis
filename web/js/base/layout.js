@@ -11,6 +11,7 @@ import { sair } from '../auth/sessao.js';
    sozinho: o grupo todo pode ficar vazio e some junto). Sem colapsar (item L do pedido do dono): é só um
    separador visual para a barra não virar uma lista indiferenciada de 17 itens. */
 export const ROTULOS_GRUPO = {
+  campo: 'nav.grupo_campo',
   rede: 'nav.grupo_rede',
   conta: 'nav.grupo_conta',
   administracao: 'nav.grupo_administracao',
@@ -20,6 +21,7 @@ export const TELAS = [
   { caminho: '/', chave: 'nav.inicio' },
   { caminho: '/conteudo', chave: 'nav.conteudo' },
   { caminho: '/mapa', chave: 'nav.mapa' },
+  { caminho: '/campo/filas', chave: 'nav.campo_filas', privilegio: 'campo.coletar', grupo: 'campo' },
   /* rede de utilidades: leitura é `rls:visibilidade` no backend (app/rede_utilidades/rotas*.py LER) — não há
      privilégio "rede.ver" no catálogo (app/auth/privilegios.py só tem rede.tracar/rede.editar), então ver a
      tela é igual a Mapa/Conexões: qualquer sessão válida, sem `privilegio` aqui. */
@@ -37,6 +39,7 @@ export const TELAS = [
   { caminho: '/admin/tokens', chave: 'nav.tokens', privilegio: 'tokens.gerar', grupo: 'administracao' },
   { caminho: '/admin/log', chave: 'nav.log', privilegio: 'org.log_ver', grupo: 'administracao' },
   { caminho: '/admin/organizacao', chave: 'nav.organizacao', privilegio: 'org.configurar', grupo: 'administracao' },
+  { caminho: '/admin/backup', chave: 'nav.backup', privilegio: 'org.configurar', grupo: 'administracao' },
 ];
 
 export function telasVisiveis(usuario) {
