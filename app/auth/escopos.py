@@ -15,6 +15,11 @@ ESCOPOS_SEM_UUID = (
     "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
     "geocodificar:usar", "multiescala:usar", "admin:inquilino",
     rf"geocodificar:usar|amc:usar|admin:inquilino)$"
+    rf"geocodificar:usar|campo:usar|admin:inquilino)$"
+)
+ESCOPOS_SEM_UUID = (
+    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
+    "geocodificar:usar", "campo:usar", "admin:inquilino",
 )
 ESCOPOS_SEM_UUID = (
     "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
@@ -92,6 +97,8 @@ DESCRICAO = {
     "serviço transversal sem estado por inquilino)",
     "conteudo:criar": "criar/editar os próprios itens por token (upload de arquivo em partes, L0-04-a): exige "
     "que o dono do token já tenha o privilégio conteudo.criar (editor ou admin), não é exclusivo de admin",
+    "campo:usar": "PWA de campo (L2-07-a): ler os mapas de campo do dono e sincronizar coletas; "
+    "emitido por POST /api/campo/sessao com validade de 30 dias, revogável como todo token de serviço",
     "admin:inquilino": "tudo o que o dono pode fazer pela API, exceto gerir tokens, senha, 2FA e sessões",
 }
 

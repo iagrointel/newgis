@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1f3a5f">
+<meta name="description" content="PWA de campo: mapas atribuídos, coleta sem rede. Análise / beta privado.">
+<title>Campo · plat</title>
+<link rel="manifest" href="/campo/manifest.webmanifest">
+<link rel="icon" href="/campo/icone-192.png" type="image/png">
+<link rel="apple-touch-icon" href="/campo/icone-192.png">
+<link rel="stylesheet" href="/campo/campo.css">
+</head>
+<body class="campo" data-versao-shell="__VERSAO_SHELL__">
+<a class="pular" href="#principal">pular para o conteúdo</a>
+<header class="campo-barra">
+  <h1>Campo</h1>
+  <span id="estado-rede" class="estado-rede" role="status" aria-live="polite">verificando…</span>
+</header>
+<main id="principal" tabindex="-1">
+  <p id="aviso-token" class="aviso" hidden></p>
+  <section aria-labelledby="titulo-mapas">
+    <h2 id="titulo-mapas">Mapas de campo</h2>
+    <p id="sem-mapas" class="mensagem" hidden>nenhum mapa disponível ainda — entre com rede pelo menos uma vez.</p>
+    <ul id="lista-mapas" class="lista-mapas"></ul>
+  </section>
+  <section aria-labelledby="titulo-fila">
+    <h2 id="titulo-fila">Fila de sincronização</h2>
+    <p id="fila-contagem" class="fila-contagem">0 pendente</p>
+  </section>
+  <section aria-labelledby="titulo-armazenamento">
+    <h2 id="titulo-armazenamento">Armazenamento no dispositivo</h2>
+    <p id="armazenamento-estimativa" class="mensagem">medindo…</p>
+    <button id="pedir-persistencia" type="button" class="botao">manter dados mesmo sob pouco espaço</button>
+    <p id="persistencia-estado" class="mensagem" aria-live="polite"></p>
+  </section>
+  <section aria-labelledby="titulo-instalar" id="secao-instalar" hidden>
+    <h2 id="titulo-instalar">Instalar</h2>
+    <button id="botao-instalar" type="button" class="botao botao-primario">instalar na tela inicial</button>
+  </section>
+</main>
+<script type="module" src="/campo/app.js"></script>
+</body>
+</html>

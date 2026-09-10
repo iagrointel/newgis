@@ -39,6 +39,7 @@ from app.auth import (
     rotas_tokens,
     rotas_usuarios,
 )
+from app.campo.rotas import router as rotas_campo
 from app.catalogo import (
     camada_esquema,
     rotas_categorias,
@@ -498,6 +499,10 @@ ROUTERS = [
     # grades NTv2 do IBGE em grades_ibge/, escolhidas por área (app/crs/grades.py)
     rotas_crs,
     rotas_regioes.router,
+    # --- PWA de campo (L2-07-a): /api/campo/sessao (token de 30 dias, escopo campo:usar), /api/campo/mapas,
+    # e o shell/manifest/service worker em /campo/* (servidos aqui, não em /static/: a trilha de teste roda
+    # só uvicorn sem nginx na frente)
+    rotas_campo,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

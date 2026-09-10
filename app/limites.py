@@ -32,6 +32,7 @@ CODIGOS_RECUPERACAO = 8
 SENHA_TEMPORARIA_TAMANHO = 12
 TOKEN_PREFIXO_TAMANHO = 8  # "plat_" + 3 do segredo; o portão do L0-02-d declara 8 (achado G1-d1)
 TOKENS_POR_USUARIO = 20
+CAMPO_MAPAS_MAX = 200  # item L2-07-a-pwa-instalavel-cache: teto do que /api/campo/mapas devolve por chamada
 GRUPOS_POR_USUARIO = 512
 GRUPO_TAGS_MAX = 50
 GRUPO_NOME_MAX = 128

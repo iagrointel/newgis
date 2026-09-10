@@ -1,0 +1,69 @@
+/* plat — PWA de campo (item L2-07-a-pwa-instalavel-cache): folha própria, sem depender de /static/ (a trilha
+   de teste roda só uvicorn, sem nginx na frente) e pequena de propósito (orçamento do shell é 1,5 MB). */
+:root {
+  color-scheme: light dark;
+  --cor-fundo: #0b1622;
+  --cor-texto: #e8f0fa;
+  --cor-superficie: #142333;
+  --cor-borda: #26405c;
+  --cor-marca: #1f3a5f;
+  --cor-aviso: #7a3b12;
+  --cor-aviso-fundo: #3a2410;
+  --cor-ok: #2f6f4f;
+  --alvo-toque: 44px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  min-height: 100vh;
+}
+.pular {
+  position: absolute; left: -999px; top: 0; z-index: 10;
+  background: var(--cor-superficie); color: var(--cor-texto); padding: .5rem 1rem;
+  min-height: var(--alvo-toque); display: inline-flex; align-items: center;
+}
+.pular:focus { left: 0; }
+.campo-barra {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .75rem 1rem; background: var(--cor-marca); position: sticky; top: 0; z-index: 5;
+}
+.campo-barra h1 { font-size: 1.1rem; margin: 0; }
+.estado-rede {
+  font-size: .85rem; padding: .35rem .7rem; border-radius: 999px; min-height: var(--alvo-toque);
+  display: inline-flex; align-items: center; background: var(--cor-superficie);
+}
+.estado-rede[data-estado="online"] { background: var(--cor-ok); }
+.estado-rede[data-estado="offline"] { background: var(--cor-aviso-fundo); color: #ffd8b0; }
+main { max-width: 640px; margin: 0 auto; padding: 1rem; }
+section { margin-bottom: 1.75rem; }
+h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: .04em; color: #9fb3c8; }
+.aviso {
+  background: var(--cor-aviso-fundo); border: 1px solid var(--cor-aviso); color: #ffd8b0;
+  padding: .75rem 1rem; border-radius: .5rem;
+}
+.mensagem { color: #9fb3c8; }
+.lista-mapas { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.lista-mapas li {
+  background: var(--cor-superficie); border: 1px solid var(--cor-borda); border-radius: .5rem;
+  padding: .75rem 1rem; min-height: var(--alvo-toque); display: flex; flex-direction: column; justify-content: center;
+}
+.lista-mapas .titulo { font-weight: 600; }
+.lista-mapas .meta { font-size: .8rem; color: #9fb3c8; }
+.fila-contagem { font-size: 1.5rem; font-weight: 700; }
+.botao {
+  min-height: var(--alvo-toque); min-width: var(--alvo-toque); padding: .6rem 1.1rem;
+  border-radius: .5rem; border: 1px solid var(--cor-borda); background: var(--cor-superficie);
+  color: var(--cor-texto); font: inherit; cursor: pointer;
+}
+.botao-primario { background: var(--cor-marca); border-color: var(--cor-marca); }
+.botao:focus-visible { outline: 2px solid #6fb1ff; outline-offset: 2px; }
+@media (prefers-color-scheme: light) {
+  :root {
+    --cor-fundo: #f4f7fb; --cor-texto: #12233a; --cor-superficie: #ffffff; --cor-borda: #cfdbea;
+    --cor-aviso-fundo: #fdecd8; --cor-aviso: #b96a1c;
+  }
+  .estado-rede[data-estado="offline"] { color: #7a3b12; }
+}
