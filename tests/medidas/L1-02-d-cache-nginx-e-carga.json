@@ -1,0 +1,36 @@
+{
+  "item": "L1-02-d-cache-nginx-cdn-e-bancada-de-carga",
+  "quando": "2026-09-10T21:30-03:00",
+  "onde": "https://demo.iagrointel.com (trilha lancamento, :8184), nginx local, TiTiler em processo",
+  "alvo": {
+    "item_stac": "ea34af14-4389-4ec6-a33b-a66eb0934632",
+    "titulo": "Sentinel-2B 23KLQ Guarulhos 18/08/2026 (cor verdadeira)",
+    "cog_mb": 41,
+    "zoom": 14,
+    "bytes_medios_por_ladrilho": 130272
+  },
+  "cache": {
+    "zonas": "lanc_tiles 1500m / lanc_tiles_auth 64m (conf.d/plat-lancamento-cache.conf)",
+    "chave": "$plat_tipo|$plat_item|$plat_resto|$args (SEM o token, de propósito)",
+    "frio_depois_quente_ms": {"frio": 94.6, "quente": 18.0},
+    "proxy_cache_lock": {"pedidos_simultaneos": 20, "MISS": 1, "HIT": 19, "portao": "1 MISS", "passou": true}
+  },
+  "carga": {
+    "quente": {"ferramenta": "ab", "pedidos": 2000, "conexoes": 16, "tiles_por_s": 1051.6,
+               "falhas": 0, "ms_por_pedido": 15.2, "portao": ">= 500 tiles/s, 0 erro", "passou": true},
+    "frio_1_conexao": {"ladrilhos": 48, "todos_com_pixel": true, "segundos": 5.09,
+                       "tiles_por_s": 9.4, "cache": "48 MISS", "erros": 0,
+                       "portao": ">= 15 tiles/s", "passou": false}
+  },
+  "revogacao": {
+    "portao": "token revogado não é servido do cache, em <= 5 s",
+    "medido_s": 2.14, "resposta": 403, "passou": true,
+    "como": "auth_request /_plat_tile_autorizar antes do cache; a própria autorização é cacheada por 2 s"
+  },
+  "nao_feito": [
+    "página interna de status com taxa de acerto do cache por dia",
+    "prova de HIT na CDN em GRU (o domínio demo está com nuvem cinza na Cloudflare)",
+    "bancada de 1 a 200 conexões (só 16; a máquina tem três construtores rodando)"
+  ],
+  "defeito_encontrado": "install.sh declarava a zona `plat_tiles` como limit_req E como proxy_cache; o nginx recusa o mesmo nome para dois usos e não sobe em máquina limpa. Corrigido neste commit."
+}

@@ -1,0 +1,10 @@
+# L1-02-d — cache de ladrilho da trilha `lancamento` (demo.iagrointel.com).
+# Tamanhos REDUZIDOS em relação ao install.sh (20g/10g): o disco está a 95 % e a regra da casa é
+# <= 3 GB para o laço. Total declarado aqui: 2,6 GB.
+# ⚠ Os nomes têm prefixo `lanc_` de propósito: `plat_tiles` JÁ É uma zona de `limit_req`
+# (conf.d/plat_limites.conf:4) e o nginx recusa o mesmo nome para dois usos. O install.sh do repo
+# declara os dois com o nome `plat_tiles` — numa máquina limpa o nginx não sobe. Defeito registrado.
+proxy_cache_path /var/cache/nginx/plat_tiles            levels=1:2 keys_zone=lanc_tiles:32m            max_size=1500m inactive=14d use_temp_path=off;
+proxy_cache_path /var/cache/nginx/plat_tiles_auth       levels=1:2 keys_zone=lanc_tiles_auth:8m        max_size=64m   inactive=1m  use_temp_path=off;
+proxy_cache_path /var/cache/nginx/plat_tiles_vetor      levels=1:2 keys_zone=lanc_tiles_vetor:32m      max_size=1000m inactive=7d  use_temp_path=off;
+proxy_cache_path /var/cache/nginx/plat_tiles_vetor_auth levels=1:2 keys_zone=lanc_tiles_vetor_auth:8m  max_size=32m   inactive=1m  use_temp_path=off;
