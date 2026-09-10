@@ -129,6 +129,7 @@ from app.mapas.rotas import router as rotas_mapas
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.render.rotas import router as rotas_render
+from app.rede_utilidades.rotas_topologia import router as rotas_rede_topologia
 from app.rotas_arquivos import router as rotas_arquivos
 from app.rotas_temas import router as rotas_temas
 from app.rotas_videos import router as rotas_videos
@@ -329,6 +330,9 @@ ROUTERS = [
     # --- consumidores e endereços da rede (L4-20): camada de endereços sem rede próxima, ficha de
     # unidade consumidora (sem campo identificável) e consumidores a jusante por trecho de média tensão
     rotas_rede_consumidores,
+    # --- topologia derivada da rede de utilidades (L4-01-b): /api/rede/{rede_id}/feicoes/{pontos,linhas}
+    # (as camadas de rede, editáveis) e /api/rede/{rede_id}/topologia/{habilitar,nos,arestas} (o índice derivado)
+    rotas_rede_topologia,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,
