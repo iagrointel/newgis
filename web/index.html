@@ -12,14 +12,23 @@
 <a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
 <div class="app">
   <aside id="lateral" class="lateral"></aside>
-  <main class="painel" id="principal" tabindex="-1">
+  <main class="principal" id="principal" tabindex="-1">
     <header>
       <h1>plat</h1>
       <p class="aviso">análise / beta privado</p>
     </header>
     <section id="entrada" aria-label="entrada" hidden>
       <p id="entrada-texto"></p>
-      <div class="grade-atalhos" id="atalhos"></div>
+      <div class="passos-3" id="passos"></div>
+      <div class="cartao" id="enviar-cartao">
+        <h2 data-i18n="inicio.enviar_titulo">Envie</h2>
+        <div id="enviar-area"></div>
+      </div>
+      <div class="cartao" id="recentes-cartao">
+        <h2 data-i18n="inicio.recentes_titulo">Publicados recentemente</h2>
+        <div id="recentes-lista"></div>
+      </div>
+      <nav class="linha-atalhos" id="atalhos" aria-label="atalhos"></nav>
     </section>
     <section id="versao" aria-label="versão">
       <dl>

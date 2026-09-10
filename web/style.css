@@ -272,3 +272,17 @@ body.instrumento dd, body.instrumento .mono, body.instrumento .tabela td.mono, b
 #upload-progresso::-webkit-progress-value { background: var(--acento); border-radius: 999px; }
 #upload-rotulo-progresso { font-family: var(--mono); font-size: .85rem; color: var(--fraco); }
 .upload-ok { color: var(--ok); }
+
+/* --- tela inicial (item de porta única: enviar → organizar → compartilhar) */
+.passos-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--e3); margin-bottom: var(--e4); }
+.passos-3 .passo { background: var(--painel); border: 1px solid var(--borda); border-radius: var(--raio); padding: var(--e4); }
+.passos-3 .passo .n { display: inline-block; width: 1.75rem; height: 1.75rem; line-height: 1.75rem; text-align: center; border-radius: 50%; background: var(--painel-2); border: 1px solid var(--borda-forte); color: var(--acento); font-weight: 600; margin-bottom: var(--e2); }
+.passos-3 .passo h3 { margin: 0 0 var(--e1); font-size: 1rem; }
+.passos-3 .passo p { margin: 0; color: var(--fraco); font-size: .9rem; }
+.linha-atalhos { display: flex; flex-wrap: wrap; gap: var(--e3); margin-top: var(--e2); }
+.linha-atalhos a { color: var(--fraco); text-decoration: none; font-size: .85rem; padding: var(--e1) 0; }
+.linha-atalhos a:hover { color: var(--texto); text-decoration: underline; }
+.lista-recentes { display: grid; gap: 0; }
+.lista-recentes a { display: flex; justify-content: space-between; gap: var(--e3); padding: var(--e2) 0; border-bottom: 1px solid var(--borda); color: var(--texto); text-decoration: none; }
+.lista-recentes a:hover { color: var(--acento); }
+.lista-recentes .tipo { color: var(--fraco); font-size: .8rem; white-space: nowrap; }
