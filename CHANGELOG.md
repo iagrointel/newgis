@@ -4706,3 +4706,15 @@ histórico, mostra quem está no documento e em que nó, marca nós ocupados e a
 o nó em conflito. Medido (`tests/medidas/L5-13-edicao-concorrente.json`): 100 pares aleatórios em nós disjuntos
 sem perda (unidade e API), presença de outra aba em 1,28 s no navegador, PATCH retido 3 s fora de ordem nos dois
 sentidos com 0 alteração perdida. Sem CRDT (D12). ADR `docs/adr/20260908T1130-edicao-concorrente.md`.
+## turno 4 (líder 5), setembro de 2026 (item L7-07-b-replica-garage: Garage replicado provado com 3 nós rf=3, e a regra de quórum de 2 nós rf=2 medida)
+
+`tests/operacao/garage_cluster.py` sobe N nós do binário da instalação com segredos em arquivo 0600
+(`rpc_secret_file`/`admin_token_file`/`metrics_token_file`), zonas no layout e portas efêmeras;
+`tests/operacao/test_garage_replica.py` (lento): 1.000 objetos escritos com um nó parado, nó religado,
+re-sincronizado (5,2 s), scrub sem erro, conjunto de blocos em disco igual nos dois nós e os 1.000 sha256
+conferidos com o nó que recebeu as escritas desligado; 256 MiB re-sincronizados em 4,7 s (54 MiB/s, mesma
+máquina); cota por bucket mantida; `/metrics` só com o token. Medido também: **2 nós rf=2 mantêm a leitura mas
+recusam escrita com um nó parado** (`503 quorum of 2`) — escrita contínua exige 3 nós rf=3; e o nó religado
+só sincroniza depois de refazer `node connect` + `repair tables` (senão espera a anti-entropia de 10 min).
+`docs/RUNBOOKS/garage.md` (adicionar nó, trocar disco, ver layout, scrub por timer
+`deploy/plat-garage-scrub.{service,timer}`, cotas, o que não fazer). 10 GB de resync não medidos (D21).
