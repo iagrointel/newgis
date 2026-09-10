@@ -200,6 +200,52 @@ body.sig .app, body.sig .lateral { display: none; } /* a casca do SIG não usa a
 @media (prefers-reduced-motion: reduce) { .sig-spinner { animation-duration: 4s; } }
 @keyframes sig-girar { to { transform: rotate(360deg); } }
 
+/* -------------------------------------------------------------------------- comparar (item L2-01-j) */
+.comparar-area { position: absolute; inset: 0; z-index: 5; background: var(--fundo); }
+.comparar-area[hidden] { display: none; }
+.comparar-mapa { position: absolute; inset: 0; outline: none; }
+.comparar-mapa[hidden] { display: none; }
+
+/* cortina: os dois mapas ocupam a área inteira; o mapa B é recortado pela linha da alça — o clip é
+   puramente visual (o container mantém o tamanho real, então não precisa de resize()). */
+.comparar-area.modo-cortina-v #comparar-mapa-b,
+.comparar-area.modo-cortina-h #comparar-mapa-b { clip-path: var(--comparar-clip, inset(0 0 0 50%)); }
+
+/* lado a lado: dois mapas reais, metade da tela cada — mudam de tamanho de verdade (chama resize()). */
+.comparar-area.modo-lado-a-lado #comparar-mapa-a { right: 50%; }
+.comparar-area.modo-lado-a-lado #comparar-mapa-b { left: 50%; clip-path: none; }
+.comparar-divisor { position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: var(--acento); z-index: 6; pointer-events: none; }
+.comparar-divisor[hidden] { display: none; }
+
+/* lupa: mapa B vira um círculo pequeno que segue o cursor sobre o mapa PRINCIPAL (não o mapa A).
+   `pointer-events: none` no CONTAINER inteiro (não só no círculo) é o que faz o cursor chegar ao mapa
+   principal por baixo — sem isto o #comparar-area (cheio, z-index 5, só com o mapa A escondido) intercepta
+   TODO pointermove da área do mapa antes de ele alcançar #mapa, e a lupa nunca sai do canto (achado do
+   e2e: centro ficava sempre no default left:0/top:0, 237 px do cursor real). */
+.comparar-area.modo-lupa { pointer-events: none; }
+.comparar-mapa.comparar-lupa {
+  inset: auto; left: 0; top: 0; width: 260px; height: 260px; border-radius: 50%; overflow: hidden;
+  border: 2px solid var(--acento); box-shadow: var(--sombra); pointer-events: none; z-index: 8;
+}
+
+.comparar-alca {
+  position: absolute; z-index: 9; background: var(--acento); border: 0; padding: 0; cursor: ew-resize;
+  touch-action: none;
+}
+.comparar-alca[hidden] { display: none; }
+.modo-cortina-v .comparar-alca { top: 0; bottom: 0; width: 3px; transform: translateX(-1px); }
+.modo-cortina-h .comparar-alca { left: 0; right: 0; height: 3px; cursor: ns-resize; transform: translateY(-1px); }
+.comparar-alca::after {
+  content: ''; position: absolute; top: 50%; left: 50%; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--acento); transform: translate(-50%, -50%); box-shadow: var(--sombra);
+}
+
+.comparar-modos label { display: flex; align-items: center; gap: .3rem; font-size: .78rem; white-space: nowrap; }
+.comparar-lista { max-height: 8rem; overflow-y: auto; border: 1px solid var(--borda); border-radius: var(--raio); padding: .2rem; margin-bottom: var(--e3); }
+#comparar-aplicar { width: 100%; margin: var(--e2) 0; }
+#tempo-camada { width: 100%; margin-bottom: var(--e2); }
+#tempo-passo { width: 100%; }
+
 @media (max-width: 720px) {
   .sig-painel { width: calc(100vw - 4.5rem); left: 60px !important; }
 }

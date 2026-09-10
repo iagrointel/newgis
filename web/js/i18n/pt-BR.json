@@ -1220,11 +1220,9 @@
   "usuarios.senha_temporaria_texto": "senha temporária de {login}; o usuário troca no primeiro acesso.",
   "usuarios.senha_uma_vez": "aparece uma única vez.",
   "usuarios.titulo": "Usuários",
-
   "nav.grupo_campo": "Campo",
   "nav.campo_filas": "Filas de trabalho",
   "nav.campo_filas_desc": "fila de trabalho, roteiro do dia e visita com foto sobre uma camada do catálogo",
-
   "campo.filas.titulo": "Filas de trabalho",
   "campo.filas.ajuda": "Uma fila de trabalho é um conjunto ordenado de alvos — cada alvo é uma feição de uma camada do catálogo. Escolha a camada, marque as feições e crie a fila.",
   "campo.filas.nova": "Nova fila",
@@ -1279,5 +1277,10 @@
   "campo.visita.pendentes_sincronizar": "{n} visita(s) deste aparelho aguardando sincronização",
   "campo.visita.sincronizar_agora": "sincronizar agora",
   "campo.visita.sincronizadas": "{n} visita(s) sincronizada(s)",
-  "campo.visita.cancelar": "cancelar"
+  "campo.visita.cancelar": "cancelar",
+  "comparar.sincronismo": "sincronismo: {n} movimentos · diferença máxima de centro {dif}°",
+  "comparar.tempo_sem_camada": "nenhuma camada com campo de data disponível",
+  "comparar.tempo_contagem": "{n} feições no passo{truncado}",
+  "comparar.tempo_reproduzir": "reproduzir",
+  "comparar.tempo_pausar": "pausar"
 }

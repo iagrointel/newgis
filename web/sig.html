@@ -43,6 +43,10 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="6" y="14" width="12" height="7" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
         <span>Impressão</span>
       </button>
+      <button type="button" class="sig-icone" data-painel="comparar" aria-pressed="false" aria-label="Comparar (C)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="1" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 4v16" stroke="currentColor" stroke-width="1.8"/><path d="m8 10-3 2 3 2M16 10l3 2-3 2" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Comparar</span>
+      </button>
       <button type="button" class="sig-icone" data-painel="composicoes" aria-pressed="false" aria-label="Composições">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="3" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="13" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="13" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
         <span>Composições</span>
@@ -61,6 +65,13 @@
 
   <main class="sig-area" id="mapa-area">
     <div id="mapa" aria-label="mapa" role="application" tabindex="-1"></div>
+
+    <div id="comparar-area" class="comparar-area" hidden aria-label="comparação de camadas">
+      <div id="comparar-mapa-a" class="comparar-mapa"></div>
+      <div id="comparar-mapa-b" class="comparar-mapa"></div>
+      <div id="comparar-divisor" class="comparar-divisor" hidden aria-hidden="true"></div>
+      <button type="button" id="comparar-alca" class="comparar-alca" hidden aria-label="arrastar a cortina"></button>
+    </div>
 
     <div class="sig-titulo-composicao" id="titulo-composicao">
       <input id="composicao-titulo" type="text" value="Composição sem título" aria-label="título da composição — clique para editar">
@@ -190,6 +201,50 @@
           <button type="button" id="btn-pdf" class="botao">PDF</button>
         </div>
         <p id="impressao-saida" class="saida" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="sig-painel" id="painel-comparar" data-painel-id="comparar" hidden>
+      <header class="sig-painel-cabecalho" data-arrasto>
+        <h2>Comparar</h2>
+        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar">✕</button>
+      </header>
+      <div class="sig-painel-corpo">
+        <section class="sig-grupo" data-grupo="comparar-modo">
+          <button type="button" class="sig-grupo-cabecalho" aria-expanded="true"><span>▾ Cortina, lado a lado, lupa</span></button>
+          <div class="sig-grupo-corpo">
+            <div class="sig-linha comparar-modos" role="radiogroup" aria-label="modo de comparação">
+              <label><input type="radio" name="comparar-modo" value="desligado" checked> desligado</label>
+              <label><input type="radio" name="comparar-modo" value="cortina-v"> cortina vertical</label>
+              <label><input type="radio" name="comparar-modo" value="cortina-h"> cortina horizontal</label>
+              <label><input type="radio" name="comparar-modo" value="lado-a-lado"> lado a lado</label>
+              <label><input type="radio" name="comparar-modo" value="lupa"> lupa</label>
+            </div>
+            <p class="sig-rotulo">conjunto A — esquerda / mapa 1</p>
+            <ul id="comparar-lista-a" class="lista-camadas comparar-lista" role="list"></ul>
+            <p class="sig-rotulo">conjunto B — direita / mapa 2 / lupa</p>
+            <ul id="comparar-lista-b" class="lista-camadas comparar-lista" role="list"></ul>
+            <button type="button" id="comparar-aplicar" class="botao">aplicar</button>
+            <p id="comparar-sincronismo" class="saida mono" aria-live="polite"></p>
+          </div>
+        </section>
+        <section class="sig-grupo" data-grupo="comparar-tempo">
+          <button type="button" class="sig-grupo-cabecalho" aria-expanded="true"><span>▾ Tempo</span></button>
+          <div class="sig-grupo-corpo">
+            <label class="sig-rotulo" for="tempo-camada">camada com campo de data</label>
+            <select id="tempo-camada"></select>
+            <div class="sig-linha" role="radiogroup" aria-label="janela de tempo">
+              <label><input type="radio" name="tempo-janela" value="instantanea" checked> instantânea</label>
+              <label><input type="radio" name="tempo-janela" value="acumulativa"> acumulativa</label>
+            </div>
+            <input type="range" id="tempo-passo" min="0" max="0" value="0" step="1" aria-label="passo do tempo">
+            <div class="sig-linha">
+              <button type="button" id="tempo-tocar" class="sig-botao-mini">reproduzir</button>
+              <span id="tempo-rotulo-passo" class="mono"></span>
+            </div>
+            <p id="tempo-contagem" class="saida mono" aria-live="polite"></p>
+          </div>
+        </section>
       </div>
     </div>
 

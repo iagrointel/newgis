@@ -1,0 +1,17 @@
+{
+ "item": "L2-01-j-comparacao-cortina-tempo",
+ "medidas": {
+  "tempo_passos_conferidos_contra_count_sql": {
+   "valor": 8,
+   "unidade": "passos",
+   "comando": "5 passos na janela instantânea + 3 na acumulativa, cada um comparado a um COUNT(*) direto no banco"
+  },
+  "tempo_reproducao_ultimo_passo_ms": {
+   "valor": 110,
+   "unidade": "ms",
+   "comando": "MotorTempo.ultimaMedidaMs após clicar #tempo-tocar por 3.5s e pausar (perf.now em volta de cada _aoPasso)"
+  }
+ },
+ "gerado_em": "2026-09-10T19:29:53Z",
+ "git_sha": "e7459676480f"
+}

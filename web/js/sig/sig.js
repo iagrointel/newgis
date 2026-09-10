@@ -25,6 +25,7 @@ import { Medicao } from '../mapa/medicao.js';
 import { interpretarCoordenada, sugerir, geocodificar } from '../mapa/busca.js';
 import { paraPng, paraPdf, escalaNumerica } from '../mapa/impressao.js';
 import { Edicao } from '../mapa/edicao.js';
+import { instalarComparar } from './comparar.js';
 import { enviarArquivo, publicar, obterTipos, extensaoDe, TIPOS_RASTER } from '../uploads/nucleo.js';
 
 const el = (id) => document.getElementById(id);
@@ -261,7 +262,7 @@ function instalarPaineis() {
     const digitando = alvo && (alvo.tagName === 'INPUT' || alvo.tagName === 'TEXTAREA' || alvo.isContentEditable);
     if (digitando || ev.metaKey || ev.ctrlKey || ev.altKey) return;
     const tecla = ev.key.toLowerCase();
-    const mapa = { l: 'camadas', f: 'pesquisa', m: 'medicao', e: 'edicao' };
+    const mapa = { l: 'camadas', f: 'pesquisa', m: 'medicao', e: 'edicao', c: 'comparar' };
     if (mapa[tecla]) { ev.preventDefault(); alternar(mapa[tecla]); }
   });
 
@@ -826,8 +827,15 @@ async function iniciar() {
 
   instalarArrastarPublicar({ map, catalogo, arvore, paineis });
 
+  let comparar = null;
+  try {
+    comparar = await instalarComparar({ map, catalogo, maplibregl, el, aoErro: (e) => el('aviso').erro(`comparar: ${(e && e.message) || e}`) });
+  } catch (e) {
+    el('aviso').erro(`comparar: ${(e && e.message) || e}`);
+  }
+
   window.plat = window.plat || {};
-  window.plat.sig = { map, catalogo, medicao, arvore, legenda, edicao }; // ponto de inspeção do e2e
+  window.plat.sig = { map, catalogo, medicao, arvore, legenda, edicao, comparar }; // ponto de inspeção do e2e
   document.body.dataset.pronto = '1';
 }
 
