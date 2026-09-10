@@ -142,6 +142,27 @@ export function remover(doc, id) {
   return { ...doc, corpo: { ...doc.corpo, nos: lista, ligacoes } };
 }
 
+export function ligacoes(doc) { return doc?.corpo?.ligacoes ?? []; }
+
+/* ligação de AÇÃO entre dois nós (item L5-12-acessibilidade-i18n-construtores): `origem` clicado leva a
+   `alvo` (mesma primitiva `corpo.ligacoes` já validada pelo servidor em `documento.py::validar_grafo`, que só
+   confere que os dois ids existem no documento). Um nó tem no máximo uma ligação de ação como origem — ligar
+   de novo substitui a anterior, nunca acumula duas ligações concorrentes para o mesmo clique. */
+export function ligar(doc, origem, alvo) {
+  if (!acharNo(doc, origem)) throw new ErroEdicao('no_inexistente', 'nó de origem inexistente');
+  if (!acharNo(doc, alvo)) throw new ErroEdicao('no_inexistente', 'nó de destino inexistente');
+  if (origem === alvo) throw new ErroEdicao('ciclo', 'uma ação não pode apontar para o próprio nó');
+  const lista = ligacoes(doc).filter((l) => l.origem !== origem).concat([{ origem, alvo, tipo: 'acao' }]);
+  return { ...doc, corpo: { ...doc.corpo, ligacoes: lista } };
+}
+
+export function desligar(doc, origem) {
+  const lista = ligacoes(doc).filter((l) => l.origem !== origem);
+  return { ...doc, corpo: { ...doc.corpo, ligacoes: lista } };
+}
+
+export function ligacaoDe(doc, origem) { return ligacoes(doc).find((l) => l.origem === origem) || null; }
+
 /* ordem de exibição: pré-ordem da árvore, que é a própria ordem da lista quando o documento é bem formado. */
 export function emProfundidade(doc, paiId = null, nivel = 0, saida = []) {
   for (const n of filhos(doc, paiId)) {
