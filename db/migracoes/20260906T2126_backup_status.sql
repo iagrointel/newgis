@@ -86,6 +86,10 @@ CREATE TABLE IF NOT EXISTS plat.exportacao (
   criado_em    timestamptz NOT NULL DEFAULT now(),
   concluido_em timestamptz
 );
+-- (entrega 10/09) a fusão trouxe dois desenhos de plat.exportacao; o CREATE acima foi ignorado por já
+-- existir. A tabela passa a ser a união dos dois, aditivamente:
+ALTER TABLE plat.exportacao ADD COLUMN IF NOT EXISTS arquivo text;
+
 CREATE INDEX IF NOT EXISTS ix_exportacao_tenant_em ON plat.exportacao (tenant_id, criado_em DESC);
 
 ALTER TABLE plat.exportacao ENABLE ROW LEVEL SECURITY;

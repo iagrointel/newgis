@@ -58,6 +58,11 @@ CREATE TABLE IF NOT EXISTS plat.uso_inquilino (
   medido_em           timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (tenant_id, dia)
 );
+-- (entrega 10/09) a fusão trouxe dois desenhos de plat.uso_inquilino; o CREATE acima foi ignorado por já
+-- existir. A tabela passa a ser a união dos dois, aditivamente:
+ALTER TABLE plat.uso_inquilino ADD COLUMN IF NOT EXISTS usuarios_ativos_30d int NOT NULL DEFAULT 0;
+ALTER TABLE plat.uso_inquilino ADD COLUMN IF NOT EXISTS job_tempo_ms bigint NOT NULL DEFAULT 0;
+
 ALTER TABLE plat.uso_inquilino ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS p_uso_inquilino ON plat.uso_inquilino;
 CREATE POLICY p_uso_inquilino ON plat.uso_inquilino FOR SELECT TO plat_app

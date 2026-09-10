@@ -88,6 +88,15 @@ CREATE TABLE IF NOT EXISTS plat.rede_feicao (
   criado_em       timestamptz NOT NULL DEFAULT now(),
   atualizado_em   timestamptz NOT NULL DEFAULT now()
 );
+-- (entrega 10/09) a fusão trouxe dois desenhos de plat.rede_feicao; o CREATE acima foi ignorado por já
+-- existir. A tabela passa a ser a união dos dois, aditivamente:
+ALTER TABLE plat.rede_feicao ADD COLUMN IF NOT EXISTS grupo_id uuid;
+ALTER TABLE plat.rede_feicao ADD COLUMN IF NOT EXISTS geometria geometry(Geometry, 4326);
+ALTER TABLE plat.rede_feicao ADD COLUMN IF NOT EXISTS atributos jsonb NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE plat.rede_feicao ADD COLUMN IF NOT EXISTS terminal_inicio text;
+ALTER TABLE plat.rede_feicao ADD COLUMN IF NOT EXISTS terminal_fim text;
+ALTER TABLE plat.rede_feicao ADD COLUMN IF NOT EXISTS criado_por int;
+
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -155,6 +164,12 @@ CREATE TABLE IF NOT EXISTS plat.rede_associacao (
   regra_id       uuid,
   criado_em      timestamptz NOT NULL DEFAULT now()
 );
+-- (entrega 10/09) a fusão trouxe dois desenhos de plat.rede_associacao; o CREATE acima foi ignorado por já
+-- existir. A tabela passa a ser a união dos dois, aditivamente:
+ALTER TABLE plat.rede_associacao ADD COLUMN IF NOT EXISTS de_feicao_id uuid;
+ALTER TABLE plat.rede_associacao ADD COLUMN IF NOT EXISTS para_feicao_id uuid;
+ALTER TABLE plat.rede_associacao ADD COLUMN IF NOT EXISTS regra_id uuid;
+
 ALTER TABLE plat.rede_associacao DROP CONSTRAINT IF EXISTS rede_associacao_tenant_rede_fkey;
 ALTER TABLE plat.rede_associacao ADD CONSTRAINT rede_associacao_tenant_rede_fkey
   FOREIGN KEY (tenant_id, rede_id) REFERENCES plat.rede (tenant_id, id) ON DELETE CASCADE;
