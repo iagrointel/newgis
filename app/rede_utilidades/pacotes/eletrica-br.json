@@ -3361,7 +3361,7 @@
   }
  ],
  "esquema": "plat.rede.pacote",
- "esquema_versao": 1,
+ "esquema_versao": 2,
  "grupos": [
   {
    "camadas_fonte": [
@@ -3508,156 +3508,781 @@
  ],
  "pacote": {
   "codigo": "eletrica-br",
-  "descricao": "Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 13 camadas de rede da BDGD (Módulo 10 do PRODIST). Dez camadas têm mapeamento coluna a coluna conferido contra uma extração real de distribuidora; cinco camadas (SUB, UNSEMT, UNCRMT, UNREMT, UGMT_tab) trazem colunas declaradas do Módulo 10, ainda não conferidas — cada atributo diz qual é o seu caso em origem.conferida.",
+  "descricao": "Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 13 camadas de rede da BDGD (Módulo 10 do PRODIST). Dez camadas têm mapeamento coluna a coluna conferido contra uma extração real de distribuidora; cinco camadas (SUB, UNSEMT, UNCRMT, UNREMT, UGMT_tab) trazem colunas declaradas do Módulo 10, ainda não conferidas — cada atributo diz qual é o seu caso em origem.conferida. Desde a versão 1.1.0 as regras seguem o esquema 2: junção-aresta com terminal no lado da junção, aresta-junção-aresta (chave, religador, regulador e transformador entre trechos; ramal derivando do trecho de baixa tensão no poste), junção-junção, contenção (poste e subestação) e estrutura.",
   "disciplina": "eletrica",
   "fonte": "https://dadosabertos.aneel.gov.br/dataset/base-de-dados-geografica-da-distribuidora-bdgd",
   "nome": "Elétrica de distribuição (Brasil, BDGD Módulo 10)",
-  "versao": "1.0.0"
+  "versao": "1.1.0"
  },
  "regras": [
   {
-   "de": "ramal_de_ligacao/1",
-   "descricao": "ramal derivado do trecho de baixa tensão",
-   "para": "trecho_de_baixa_tensao/1",
-   "tipo": "conectividade_no_trecho"
+   "de": {
+    "grupo": "ramal_de_ligacao",
+    "tipo": 1
+   },
+   "descricao": "ramal de baixa tensão deriva do trecho de baixa tensão no poste (a BDGD não tem ponto de derivação)",
+   "para": {
+    "grupo": "trecho_de_baixa_tensao",
+    "tipo": 1
+   },
+   "tipo": "aresta_juncao_aresta",
+   "via": {
+    "grupo": "ponto_notavel",
+    "tipo": 1
+   }
   },
   {
-   "de": "ramal_de_ligacao/1",
-   "descricao": "consumidor de baixa tensão ligado pelo ramal",
-   "para": "unidade_consumidora/1",
-   "tipo": "conectividade_no_trecho"
+   "de": {
+    "grupo": "trecho_de_baixa_tensao",
+    "tipo": 1
+   },
+   "descricao": "vãos de baixa tensão se encontram no poste",
+   "para": {
+    "grupo": "trecho_de_baixa_tensao",
+    "tipo": 1
+   },
+   "tipo": "aresta_juncao_aresta",
+   "via": {
+    "grupo": "ponto_notavel",
+    "tipo": 1
+   }
   },
   {
-   "de": "trecho_de_baixa_tensao/1",
-   "descricao": "geração em baixa tensão ligada ao trecho de baixa tensão",
-   "para": "geracao_distribuida/1",
-   "tipo": "conectividade_no_trecho"
+   "de": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "descricao": "chave faca liga trecho de média tensão a trecho de média tensão",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "aresta_juncao_aresta",
+   "via": {
+    "grupo": "chave_de_media_tensao",
+    "tipo": 1
+   }
   },
   {
-   "de": "trecho_de_baixa_tensao/1",
-   "descricao": "luminária ligada ao trecho de baixa tensão",
-   "para": "ponto_de_iluminacao_publica/1",
-   "tipo": "conectividade_no_trecho"
+   "de": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "descricao": "chave fusível liga trecho de média tensão a trecho de média tensão",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "aresta_juncao_aresta",
+   "via": {
+    "grupo": "chave_de_media_tensao",
+    "tipo": 2
+   }
   },
   {
-   "de": "trecho_de_baixa_tensao/1",
-   "descricao": "secundário do transformador no trecho de baixa tensão",
-   "para": "transformador_de_distribuicao/1",
-   "tipo": "conectividade_no_trecho"
+   "de": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "descricao": "religador liga trecho de média tensão a trecho de média tensão",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "aresta_juncao_aresta",
+   "via": {
+    "grupo": "chave_de_media_tensao",
+    "tipo": 3
+   }
   },
   {
-   "de": "trecho_de_baixa_tensao/1",
-   "descricao": "secundário do banco no trecho de baixa tensão",
-   "para": "transformador_de_distribuicao/2",
-   "tipo": "conectividade_no_trecho"
+   "de": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "descricao": "disjuntor liga trecho de média tensão a trecho de média tensão",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "aresta_juncao_aresta",
+   "via": {
+    "grupo": "chave_de_media_tensao",
+    "tipo": 4
+   }
   },
   {
-   "de": "trecho_de_media_tensao/1",
-   "descricao": "banco de capacitores derivado do trecho de média tensão",
-   "para": "banco_de_capacitores/1",
-   "tipo": "conectividade_no_trecho"
+   "de": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "descricao": "seccionalizador liga trecho de média tensão a trecho de média tensão",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "aresta_juncao_aresta",
+   "via": {
+    "grupo": "chave_de_media_tensao",
+    "tipo": 5
+   }
   },
   {
-   "de": "trecho_de_media_tensao/1",
-   "descricao": "chave em série no trecho de média tensão",
-   "para": "chave_de_media_tensao/1",
-   "tipo": "conectividade_no_trecho"
+   "de": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "descricao": "regulador de tensão liga trecho de média tensão a trecho de média tensão",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "aresta_juncao_aresta",
+   "via": {
+    "grupo": "regulador_de_tensao",
+    "tipo": 1
+   }
   },
   {
-   "de": "trecho_de_media_tensao/1",
-   "descricao": "chave fusível em série no trecho de média tensão",
-   "para": "chave_de_media_tensao/2",
-   "tipo": "conectividade_no_trecho"
+   "de": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "descricao": "a subestação é a origem do trecho de média tensão",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "aresta_juncao_aresta",
+   "via": {
+    "grupo": "subestacao",
+    "tipo": 1
+   }
   },
   {
-   "de": "trecho_de_media_tensao/1",
-   "descricao": "religador em série no trecho de média tensão",
-   "para": "chave_de_media_tensao/3",
-   "tipo": "conectividade_no_trecho"
+   "de": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "descricao": "transformador de distribuição liga o trecho de média tensão ao trecho de baixa tensão",
+   "para": {
+    "grupo": "trecho_de_baixa_tensao",
+    "tipo": 1
+   },
+   "tipo": "aresta_juncao_aresta",
+   "via": {
+    "grupo": "transformador_de_distribuicao",
+    "tipo": 1
+   }
   },
   {
-   "de": "trecho_de_media_tensao/1",
-   "descricao": "disjuntor em série no trecho de média tensão",
-   "para": "chave_de_media_tensao/4",
-   "tipo": "conectividade_no_trecho"
+   "de": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "descricao": "banco de transformadores liga o trecho de média tensão ao trecho de baixa tensão",
+   "para": {
+    "grupo": "trecho_de_baixa_tensao",
+    "tipo": 1
+   },
+   "tipo": "aresta_juncao_aresta",
+   "via": {
+    "grupo": "transformador_de_distribuicao",
+    "tipo": 2
+   }
   },
   {
-   "de": "trecho_de_media_tensao/1",
-   "descricao": "seccionalizador em série no trecho de média tensão",
-   "para": "chave_de_media_tensao/5",
-   "tipo": "conectividade_no_trecho"
+   "de": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "descricao": "transformador não classificado liga o trecho de média tensão ao trecho de baixa tensão",
+   "para": {
+    "grupo": "trecho_de_baixa_tensao",
+    "tipo": 1
+   },
+   "tipo": "aresta_juncao_aresta",
+   "via": {
+    "grupo": "transformador_de_distribuicao",
+    "tipo": 3
+   }
   },
   {
-   "de": "trecho_de_media_tensao/1",
-   "descricao": "regulador em série no trecho de média tensão",
-   "para": "regulador_de_tensao/1",
-   "tipo": "conectividade_no_trecho"
+   "de": {
+    "grupo": "ponto_notavel",
+    "tipo": 1
+   },
+   "descricao": "banco de capacitores contido no poste",
+   "para": {
+    "grupo": "banco_de_capacitores",
+    "tipo": 1
+   },
+   "tipo": "contencao"
   },
   {
-   "de": "trecho_de_media_tensao/1",
-   "descricao": "saída da subestação alimenta o trecho de média tensão",
-   "para": "subestacao/1",
-   "tipo": "conectividade_no_trecho"
+   "de": {
+    "grupo": "ponto_notavel",
+    "tipo": 1
+   },
+   "descricao": "chave faca contida no poste",
+   "para": {
+    "grupo": "chave_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "contencao"
   },
   {
-   "de": "trecho_de_media_tensao/1",
-   "descricao": "primário do transformador no trecho de média tensão",
-   "para": "transformador_de_distribuicao/1",
-   "tipo": "conectividade_no_trecho"
+   "de": {
+    "grupo": "ponto_notavel",
+    "tipo": 1
+   },
+   "descricao": "chave fusível contida no poste",
+   "para": {
+    "grupo": "chave_de_media_tensao",
+    "tipo": 2
+   },
+   "tipo": "contencao"
   },
   {
-   "de": "trecho_de_media_tensao/1",
-   "descricao": "primário do banco no trecho de média tensão",
-   "para": "transformador_de_distribuicao/2",
-   "tipo": "conectividade_no_trecho"
+   "de": {
+    "grupo": "ponto_notavel",
+    "tipo": 1
+   },
+   "descricao": "religador contida no poste",
+   "para": {
+    "grupo": "chave_de_media_tensao",
+    "tipo": 3
+   },
+   "tipo": "contencao"
   },
   {
-   "de": "trecho_de_media_tensao/1",
-   "descricao": "consumidor de média tensão ligado ao trecho de média tensão",
-   "para": "unidade_consumidora/2",
-   "tipo": "conectividade_no_trecho"
+   "de": {
+    "grupo": "ponto_notavel",
+    "tipo": 1
+   },
+   "descricao": "seccionalizador contida no poste",
+   "para": {
+    "grupo": "chave_de_media_tensao",
+    "tipo": 5
+   },
+   "tipo": "contencao"
   },
   {
-   "de": "subestacao/1",
+   "de": {
+    "grupo": "ponto_notavel",
+    "tipo": 1
+   },
+   "descricao": "luminária contida no poste",
+   "para": {
+    "grupo": "ponto_de_iluminacao_publica",
+    "tipo": 1
+   },
+   "tipo": "contencao"
+  },
+  {
+   "de": {
+    "grupo": "ponto_notavel",
+    "tipo": 1
+   },
+   "descricao": "regulador de tensão contido no poste",
+   "para": {
+    "grupo": "regulador_de_tensao",
+    "tipo": 1
+   },
+   "tipo": "contencao"
+  },
+  {
+   "de": {
+    "grupo": "ponto_notavel",
+    "tipo": 1
+   },
+   "descricao": "transformador de distribuição contido no poste",
+   "para": {
+    "grupo": "transformador_de_distribuicao",
+    "tipo": 1
+   },
+   "tipo": "contencao"
+  },
+  {
+   "de": {
+    "grupo": "ponto_notavel",
+    "tipo": 1
+   },
+   "descricao": "transformador não classificado contido no poste",
+   "para": {
+    "grupo": "transformador_de_distribuicao",
+    "tipo": 3
+   },
+   "tipo": "contencao"
+  },
+  {
+   "de": {
+    "grupo": "ponto_notavel",
+    "tipo": 1
+   },
+   "descricao": "medidor de baixa tensão contido no poste",
+   "para": {
+    "grupo": "unidade_consumidora",
+    "tipo": 1
+   },
+   "tipo": "contencao"
+  },
+  {
+   "de": {
+    "grupo": "ponto_notavel",
+    "tipo": 1
+   },
+   "descricao": "medidor de média tensão contido no poste",
+   "para": {
+    "grupo": "unidade_consumidora",
+    "tipo": 2
+   },
+   "tipo": "contencao"
+  },
+  {
+   "de": {
+    "grupo": "subestacao",
+    "tipo": 1
+   },
    "descricao": "disjuntor contido na subestação",
-   "para": "chave_de_media_tensao/4",
+   "para": {
+    "grupo": "chave_de_media_tensao",
+    "tipo": 4
+   },
    "tipo": "contencao"
   },
   {
-   "de": "subestacao/1",
+   "de": {
+    "grupo": "subestacao",
+    "tipo": 1
+   },
    "descricao": "regulador contido na subestação",
-   "para": "regulador_de_tensao/1",
+   "para": {
+    "grupo": "regulador_de_tensao",
+    "tipo": 1
+   },
    "tipo": "contencao"
   },
   {
-   "de": "ponto_notavel/1",
+   "de": {
+    "grupo": "subestacao",
+    "tipo": 1
+   },
+   "descricao": "banco de transformadores contido na subestação",
+   "para": {
+    "grupo": "transformador_de_distribuicao",
+    "tipo": 2
+   },
+   "tipo": "contencao"
+  },
+  {
+   "de": {
+    "grupo": "ponto_notavel",
+    "tipo": 1
+   },
    "descricao": "luminária fixada no poste",
-   "para": "ponto_de_iluminacao_publica/1",
-   "tipo": "fixacao_estrutural"
+   "para": {
+    "grupo": "ponto_de_iluminacao_publica",
+    "tipo": 1
+   },
+   "tipo": "estrutura"
   },
   {
-   "de": "ponto_notavel/1",
+   "de": {
+    "grupo": "ponto_notavel",
+    "tipo": 1
+   },
    "descricao": "transformador fixado no poste",
-   "para": "transformador_de_distribuicao/1",
-   "tipo": "fixacao_estrutural"
+   "para": {
+    "grupo": "transformador_de_distribuicao",
+    "tipo": 1
+   },
+   "tipo": "estrutura"
   },
   {
-   "de": "ponto_notavel/1",
+   "de": {
+    "grupo": "ponto_notavel",
+    "tipo": 1
+   },
    "descricao": "trecho de baixa tensão fixado no poste",
-   "para": "trecho_de_baixa_tensao/1",
-   "tipo": "fixacao_estrutural"
+   "para": {
+    "grupo": "trecho_de_baixa_tensao",
+    "tipo": 1
+   },
+   "tipo": "estrutura"
   },
   {
-   "de": "ponto_notavel/1",
+   "de": {
+    "grupo": "ponto_notavel",
+    "tipo": 1
+   },
    "descricao": "trecho de média tensão fixado no poste",
-   "para": "trecho_de_media_tensao/1",
-   "tipo": "fixacao_estrutural"
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "estrutura"
   },
   {
-   "de": "ponto_notavel/2",
+   "de": {
+    "grupo": "ponto_notavel",
+    "tipo": 2
+   },
    "descricao": "trecho de média tensão fixado na torre",
-   "para": "trecho_de_media_tensao/1",
-   "tipo": "fixacao_estrutural"
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "estrutura"
+  },
+  {
+   "de": {
+    "grupo": "banco_de_capacitores",
+    "terminal": "conexao",
+    "tipo": 1
+   },
+   "descricao": "banco de capacitores derivado do trecho de média tensão",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "chave_de_media_tensao",
+    "terminal": "lado_1",
+    "tipo": 1
+   },
+   "descricao": "chave faca ligada ao trecho de média tensão pelo terminal lado_1",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "chave_de_media_tensao",
+    "terminal": "lado_2",
+    "tipo": 1
+   },
+   "descricao": "chave faca ligada ao trecho de média tensão pelo terminal lado_2",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "chave_de_media_tensao",
+    "terminal": "lado_1",
+    "tipo": 2
+   },
+   "descricao": "chave fusível ligada ao trecho de média tensão pelo terminal lado_1",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "chave_de_media_tensao",
+    "terminal": "lado_2",
+    "tipo": 2
+   },
+   "descricao": "chave fusível ligada ao trecho de média tensão pelo terminal lado_2",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "chave_de_media_tensao",
+    "terminal": "lado_1",
+    "tipo": 3
+   },
+   "descricao": "religador ligada ao trecho de média tensão pelo terminal lado_1",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "chave_de_media_tensao",
+    "terminal": "lado_2",
+    "tipo": 3
+   },
+   "descricao": "religador ligada ao trecho de média tensão pelo terminal lado_2",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "chave_de_media_tensao",
+    "terminal": "lado_1",
+    "tipo": 4
+   },
+   "descricao": "disjuntor ligada ao trecho de média tensão pelo terminal lado_1",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "chave_de_media_tensao",
+    "terminal": "lado_2",
+    "tipo": 4
+   },
+   "descricao": "disjuntor ligada ao trecho de média tensão pelo terminal lado_2",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "chave_de_media_tensao",
+    "terminal": "lado_1",
+    "tipo": 5
+   },
+   "descricao": "seccionalizador ligada ao trecho de média tensão pelo terminal lado_1",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "chave_de_media_tensao",
+    "terminal": "lado_2",
+    "tipo": 5
+   },
+   "descricao": "seccionalizador ligada ao trecho de média tensão pelo terminal lado_2",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "geracao_distribuida",
+    "terminal": "conexao",
+    "tipo": 1
+   },
+   "descricao": "geração em baixa tensão ligada ao trecho de baixa tensão",
+   "para": {
+    "grupo": "trecho_de_baixa_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "geracao_distribuida",
+    "terminal": "conexao",
+    "tipo": 2
+   },
+   "descricao": "geração em média tensão ligada ao trecho de média tensão",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "ponto_de_iluminacao_publica",
+    "terminal": "conexao",
+    "tipo": 1
+   },
+   "descricao": "luminária ligada ao trecho de baixa tensão",
+   "para": {
+    "grupo": "trecho_de_baixa_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "regulador_de_tensao",
+    "terminal": "lado_1",
+    "tipo": 1
+   },
+   "descricao": "regulador de tensão ligado ao trecho de média tensão pelo terminal lado_1",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "regulador_de_tensao",
+    "terminal": "lado_2",
+    "tipo": 1
+   },
+   "descricao": "regulador de tensão ligado ao trecho de média tensão pelo terminal lado_2",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "subestacao",
+    "terminal": "conexao",
+    "tipo": 1
+   },
+   "descricao": "saída da subestação alimenta o trecho de média tensão",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "transformador_de_distribuicao",
+    "terminal": "alta",
+    "tipo": 1
+   },
+   "descricao": "primário (AT) do transformador de distribuição no trecho de média tensão — trecho de MT só liga pelo terminal de AT",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "transformador_de_distribuicao",
+    "terminal": "baixa",
+    "tipo": 1
+   },
+   "descricao": "secundário (BT) do transformador de distribuição no trecho de baixa tensão",
+   "para": {
+    "grupo": "trecho_de_baixa_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "transformador_de_distribuicao",
+    "terminal": "alta",
+    "tipo": 2
+   },
+   "descricao": "primário (AT) do banco de transformadores no trecho de média tensão — trecho de MT só liga pelo terminal de AT",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "transformador_de_distribuicao",
+    "terminal": "baixa",
+    "tipo": 2
+   },
+   "descricao": "secundário (BT) do banco de transformadores no trecho de baixa tensão",
+   "para": {
+    "grupo": "trecho_de_baixa_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "transformador_de_distribuicao",
+    "terminal": "alta",
+    "tipo": 3
+   },
+   "descricao": "primário (AT) do transformador não classificado no trecho de média tensão — trecho de MT só liga pelo terminal de AT",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "transformador_de_distribuicao",
+    "terminal": "baixa",
+    "tipo": 3
+   },
+   "descricao": "secundário (BT) do transformador não classificado no trecho de baixa tensão",
+   "para": {
+    "grupo": "trecho_de_baixa_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "unidade_consumidora",
+    "terminal": "conexao",
+    "tipo": 1
+   },
+   "descricao": "consumidor de baixa tensão ligado pelo ramal de ligação",
+   "para": {
+    "grupo": "ramal_de_ligacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "unidade_consumidora",
+    "terminal": "conexao",
+    "tipo": 2
+   },
+   "descricao": "consumidor de média tensão ligado ao trecho de média tensão",
+   "para": {
+    "grupo": "trecho_de_media_tensao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "chave_de_media_tensao",
+    "tipo": 2
+   },
+   "descricao": "chave fusível de proteção coincidente com o transformador",
+   "para": {
+    "grupo": "transformador_de_distribuicao",
+    "tipo": 1
+   },
+   "tipo": "juncao_juncao"
+  },
+  {
+   "de": {
+    "grupo": "subestacao",
+    "tipo": 1
+   },
+   "descricao": "disjuntor de saída coincidente com a subestação",
+   "para": {
+    "grupo": "chave_de_media_tensao",
+    "tipo": 4
+   },
+   "tipo": "juncao_juncao"
   }
  ],
  "terminais": [

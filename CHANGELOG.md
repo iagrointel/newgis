@@ -5410,6 +5410,68 @@ Cláusula REFUTADA e registrada como tal: à taxa medida da estatística zonal (
 por fator), 1 milhão de células × 15 fatores levaria **10.483,9 s** — quase 3 horas contra os 1.800 s do
 portão. O motor recusa esse plano com `prazo_projetado_estourado`; o limite honesto de hoje é uma grade de
 **166.898 unidades** com 15 fatores. Move esse número o item `L3-01-c2-extracao-em-lote`.
+## turno 4, setembro de 2026 (item L4-03-d-areas-sujas-e-validacao: área suja, validação incremental e feição de erro)
+
+Continuação de L4-03-a: toda feição tocada num `applyEdits` (adicionada, atualizada ou apagada) grava uma
+**área suja** (`plat.rede_area_suja`, polígono envolvente com buffer de 2 m, carimbada com
+`plat.rede.versao_edicao`) — "editar 1 trecho cria 1 área suja visível no mapa" (`GET .../areas_sujas`,
+`FeatureCollection`). `POST .../validar_extensao` valida só a UNIÃO das áreas sujas ativas que tocam a
+extensão pedida (ou todas, com `extensao: null` — "validar tudo"): a topologia é reconstruída só dentro
+do escopo, nunca da rede inteira, e as áreas processadas viram limpas (soft-delete, `limpa_em`). **15
+códigos de erro** (2 já existiam em tempo de escrita — `sem_regra`/`terminal_errado`, L4-03-a — mais 13
+novos: `regra_inexistente`, `terminal_invalido`, `terminal_obrigatorio_ausente`, `feicao_sem_conexao`,
+`sobreposicao_dispositivo`, `ciclo_tier_hierarquico`, `subrede_sem_controlador`,
+`atributo_obrigatorio_nulo`, `geometria_invalida`, `associacao_ciclo`, `feicao_duplicada_geometria`,
+`tipo_sem_regra_no_pacote`, `atributo_tipo_invalido`) gravados como **feição de erro** em
+`plat.rede_erro` (`GET .../erros`, camada). `GET .../tracar` (feição existente ou geometria solta) avisa
+(200) ou recusa (409) quando cruza uma área suja ativa, conforme `PUT .../area_sujas/modo`
+(`avisar`/`bloquear`, `rede.administrar`) — os dois casos citam o polígono.
+
+**Bug achado e corrigido** (migração `20260907T1308_rede_conserta_fk_regra_set_null.sql`): a FK composta
+`(tenant_id, regra_id)` de `rede_conexao`/`rede_associacao` com `ON DELETE SET NULL` (item L4-03-a) zerava
+as DUAS colunas do lado referenciador — inclusive `tenant_id`, que é `NOT NULL` — e qualquer reimportação
+de CSV que removesse uma regra ainda em uso quebrava com `500`. Trocada por FK de uma coluna só
+(`regra_id -> rede_regra.id`). **Fronteira honesta**: com a FK corrigida, `regra_inexistente` fica
+inalcançável pela API (o banco garante `regra_id` sempre NULL-ou-válido) — continua no código como
+validação defensiva, documentado no ADR e não afirmado como provocado no teste. `Verify`/`Repair Network
+Topology` (validação sem gravar erro / reparo automático de geometria) ficam fora deste item. 19 testes
+novos (`tests/api/test_areas_sujas_e_validacao.py`), 2 rotas somadas a `tests/api/eventos_esperados.py`
+que faltavam desde L4-01-a (mais 2 de `/api/mapas`, gap de outro item, documentadas como `[]`), `docs/
+PARIDADE.md` com a seção da capacidade, ADR `20260907T1243-areas-sujas-e-validacao.md`.
+
+## turno 4, setembro de 2026 (item L4-03-a-regras-de-conectividade: applyEdits, validação em lote e CSV de regras)
+
+O pacote elétrico ganha um QUINTO tipo de regra (`aresta_juncao_aresta`, separado de `juncao_aresta`
+porque o papel da junção do meio é o VIA, não o terminal) e cresce de 24 para **58 regras**, cobrindo
+os cinco tipos da *utility network* Esri (*Junction-Junction*, *Junction-Edge*, *Edge-Junction-Edge*,
+*Containment*, *Structural Attachment*). A política padrão é **"sem regra = proibido"**: `POST
+/api/rede/{id}/applyEdits` deriva as conexões da geometria gravada (coincidência de ponto, tolerância
+0,5 m) e recusa com `409` — código `sem_regra` ou `terminal_errado`, mensagem citando a regra ou as
+candidatas — qualquer par de tipos sem regra; associação (contenção/estrutura) é sempre explícita e
+direcional. `POST .../validar` reavalia tudo em lote mesmo com a comporta desligada (é o instrumento
+de auditoria da carga em massa). CSV nas 13 colunas de Import/Export Rules do ArcGIS Pro 3.4
+(`regras_csv.py`): a ferramenta da Esri ACRESCENTA, esta SUBSTITUI o conjunto inteiro numa transação —
+diferença documentada no ADR 20260906T2058. A única comporta (`plat.rede.regras_ativas`) é um
+privilégio novo, `rede.administrar` (perfil admin), separado de `rede.editar`: quem edita feição não
+desliga a avaliação nem substitui o conjunto de regras por CSV.
+
+Trabalho do agente Kimi K3 (motor `regras.py`, migração, rotas, CSV — 15 commits, ~1.700 linhas)
+estava pronto no worktree mas sem prova: sem rebase contra `master` (90 mil linhas de divergência,
+toda aditiva — a linha L4 inteira e mais 4 itens ainda não tinham chegado à árvore principal), sem
+nenhum teste do item (as rotas de applyEdits/CSV/ativação ficaram fora de commit), e a resposta de
+`GET /api/rede/{id}` não expunha `regras_ativas` (só o `PUT` de ativação devolvia). Consertado neste
+turno: rebase limpo (só `CHANGELOG.md` colidiu, textual); `regras_ativas` agora sai em toda ficha de
+rede; 34 testes novos escritos e verdes (`tests/unit/test_regras_motor.py` — motor puro, sem banco;
+`tests/api/test_regras_conectividade.py` — applyEdits/validar/comporta contra a API real;
+`tests/api/test_regras_csv.py` — round-trip por token, malformação, privilégio); dois testes de
+regressão de L4-01-a atualizados para a forma nova (7 rotas de escrita, não 3; a FK de auditoria
+`rede_feicao.criado_por → usuario` entra em `PERMITIDAS` no mesmo padrão de `rede.dono_id`); ADR
+20260906T2058 escrito (não existia, só citado); `docs/PARIDADE.md` atualizado (24→58 regras,
+"parcial" → "feito"); `docs/openapi.json` regerado (0 rotas perdidas, 42 adicionadas pelo rebase +
+este item). **Fronteira honesta**: a `descricao` da regra (só existe no pacote JSON) não sobrevive
+ao round-trip de CSV — não é uma das 13 colunas da Esri, e o teste prova os dois lados. `via_terminal`
+está no esquema e no CSV mas nenhuma regra do pacote elétrico o usa — pendência nomeada, não testada
+com dado real. Paridade contra ArcGIS Pro/AGOL reais continua `pendente` (decisão D20).
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 - **L7-06-d-paineis**: cinco painéis Grafana provisionados por arquivo (`deploy/grafana/paineis/*.json` + `deploy/grafana/provisioning/`), homologação própria (`deploy/paineis_homologacao.sh`) com carga curta de verdade e captura de cada painel em `tests/e2e/capturas/`. Métricas novas para o que os painéis precisavam e não existia: usuários ativos em 24 h, duração e tamanho do último backup/ensaio, uso de armazenamento e tamanho do schema de dado por inquilino.
@@ -5602,6 +5664,7 @@ bloco (ausência de registro nunca é 0/10), com capturas 1280 e 390 em `tests/e
 CADASTRO do item — resumo, descrição, tags, escopo do L0-03), que nos itens novos de teste marca "pontuação
 2 de 10"; é outro número, com outro significado, e não entra no escopo deste item.
 
+## turno 3, setembro de 2026 (item L6-02-c-wfs-ogcapi: conector WFS 2.0 e OGC API - Features)
 ## turno 3, setembro de 2026 (item L0-04-h-exportar: tirar o dado da plataforma, em 11 formatos)
 
 Exportação de camada vetorial como job (`POST /api/exportacoes` → 202; `GET /api/exportacoes[/{id}]`;

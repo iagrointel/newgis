@@ -1,0 +1,59 @@
+{
+ "item": "L4-03-a-regras-de-conectividade",
+ "assinado_por": "gerente (rebase e prova do trabalho do agente Kimi K3, turno T4, handoff laco/handoffs/T4/L4-03-a-regras-de-conectividade.md)",
+ "gerado_em": "2026-09-07T01:55:00Z",
+ "git_sha": "ac7da355c84c6534fef98bce05e5a3552e935ea7",
+ "maquina": "12 vCPU, 23 GB RAM (574 MiB livres no momento da prova, swap 7,8/8,0 GiB), disco / a 94%; PostgreSQL 16 em iagro_sat; base própria da trilha (schema plat_tf403, laco/trilha_ambiente.sh f403 com FONTE=wt/il403aregra), com outras sessões da casa na mesma máquina",
+ "medidas": {
+  "pacote_eletrica_br_regras": {
+   "valor": 58,
+   "unidade": "linhas de regra",
+   "portao": ">= 40",
+   "comando": "python3 -c \"import json; print(len(json.load(open('app/rede_utilidades/pacotes/eletrica-br.json'))['regras']))\""
+  },
+  "pacote_eletrica_br_regras_por_tipo": {
+   "valor": {"juncao_aresta": 25, "contencao": 14, "aresta_juncao_aresta": 12, "estrutura": 5, "juncao_juncao": 2},
+   "unidade": "linhas por tipo",
+   "comando": "Counter(r['tipo'] for r in regras) sobre app/rede_utilidades/pacotes/eletrica-br.json"
+  },
+  "pacote_eletrica_br_bytes": {
+   "valor": 108260,
+   "unidade": "bytes",
+   "comando": "wc -c app/rede_utilidades/pacotes/eletrica-br.json"
+  },
+  "pacote_eletrica_br_sha256": {
+   "valor": "17bad527b2985864040bec12ccb955cb3a532f613b71e031f02e31a0a67cacb5",
+   "unidade": "hex",
+   "comando": "sha256sum app/rede_utilidades/pacotes/eletrica-br.json"
+  },
+  "testes_dedicados_do_item": {
+   "valor": 34,
+   "unidade": "casos pytest",
+   "portao": ">= 20",
+   "comando": "venv/bin/pytest tests/unit/test_regras_motor.py tests/api/test_regras_conectividade.py tests/api/test_regras_csv.py --collect-only -q -p no:cacheprovider"
+  },
+  "suite_do_item_e_regressao_vizinha": {
+   "valor": 92,
+   "unidade": "casos pytest, 0 falhas",
+   "comando": "set -a; source laco/var/trilha/f403.env; set +a; timeout 900 venv/bin/pytest tests/unit/test_regras_motor.py tests/unit/test_rede_pacote_formato.py tests/api/test_rede_pacote.py tests/api/test_rede_pacote_conserto_a1_a4.py tests/api/test_fk_composta_por_inquilino.py tests/api/test_regras_conectividade.py tests/api/test_regras_csv.py -q -p no:cacheprovider"
+  },
+  "rotas_de_escrita_de_rede": {
+   "valor": {"total": 7, "rede.editar": 5, "rede.administrar": 2},
+   "unidade": "rotas HTTP",
+   "comando": "app.main.app.openapi() filtrado por /api/rede e método post/put/patch/delete"
+  },
+  "lint": {
+   "valor": "0 erros nos arquivos do item",
+   "comando": "venv/bin/ruff check app/rede_utilidades/rotas_regras.py app/rede_utilidades/regras.py app/rede_utilidades/regras_csv.py app/rede_utilidades/deposito.py app/rede_utilidades/modelos.py app/rede_utilidades/rotas.py"
+  }
+ },
+ "cobertura_do_portao": {
+  "pacote_eletrica_br_com_40_ou_mais_regras": "feito — 58 (medida pacote_eletrica_br_regras)",
+  "exemplo_do_portao_trecho_mt_so_liga_a_trafo_pelo_terminal_at": "feito — test_pacote_eletrica_br_tem_a_regra_do_exemplo_do_portao + test_transformador_no_trecho_de_mt_pelo_terminal_baixa_e_recusado_citando_a_regra",
+  "apply_edits_recusa_com_codigo_e_mensagem_citando_a_regra": "feito — test_trecho_de_mt_direto_em_uc_de_bt_e_recusado_sem_regra_citando_a_politica e test_transformador_no_trecho_de_mt_pelo_terminal_baixa_e_recusado_citando_a_regra (409, corpo com codigo + regras_candidatas)",
+  "csv_exportado_e_reimportado_da_o_mesmo_conjunto": "feito — test_exportar_e_reimportar_da_o_mesmo_conjunto_de_regras (byte a byte no CSV e no conjunto tipo/de/para/via/terminais; descricao e fronteira honesta, documentada no ADR)",
+  "sem_regra_e_proibido_documentado": "feito — docstring de app/rede_utilidades/regras.py, ADR docs/adr/20260906T2058-regras-de-conectividade.md, docs/PARIDADE.md",
+  "20_ou_mais_casos_pytest": "feito — 34 (medida testes_dedicados_do_item)",
+  "paridade_esri_escrita": "feito — docs/PARIDADE.md linha 'regras de conexao, contencao e fixacao'; paridade contra ArcGIS Pro/AGOL reais continua pendente (decisao D20, nenhuma linha do documento vira 'feito' nessa coluna)"
+ }
+}

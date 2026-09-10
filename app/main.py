@@ -198,6 +198,11 @@ from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.render.rotas import router as rotas_render
 from app.rede_utilidades.rotas_atributos import router as rotas_rede_atributos
 from app.rede_utilidades.rotas_topologia import router as rotas_rede_topologia
+from app.mapas.rotas import router as rotas_mapas
+from app.rede.rotas import router as rotas_rede
+from app.rede_utilidades.rotas import router as rotas_rede_utilidades
+from app.rede_utilidades.rotas_areas_sujas import router as rotas_rede_areas_sujas
+from app.rede_utilidades.rotas_regras import router as rotas_rede_regras
 from app.rotas_arquivos import router as rotas_arquivos
 from app.rotas_temas import router as rotas_temas
 from app.rotas_videos import router as rotas_videos
@@ -437,6 +442,8 @@ ROUTERS = [
     rotas_fluxos,
     # --- GeoParquet no bucket (L2-15-a): /api/geoparquet (particionado, incremental, item de catálogo duradouro)
     rotas_geoparquet,
+    # --- mapa (L2-01-a-documento-mapa): /api/mapas (lista, criar, ler, editar) e /api/mapas/{id}/completo
+    rotas_mapas,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- rede de utilidades (L4-01-a): /api/rede (redes do inquilino), /api/rede/{rede_id}/pacote (importa e
@@ -488,6 +495,12 @@ ROUTERS = [
     # --- topologia derivada da rede de utilidades (L4-01-b): /api/rede/{rede_id}/feicoes/{pontos,linhas}
     # (as camadas de rede, editáveis) e /api/rede/{rede_id}/topologia/{habilitar,nos,arestas} (o índice derivado)
     rotas_rede_topologia,
+    # --- regras de conectividade (L4-03-a): applyEdits com avaliação "sem regra = proibido", validação em
+    # lote, CSV de regras nas colunas da Esri e a comporta regras_ativas (só rede.administrar)
+    rotas_rede_regras,
+    # --- área suja e validação incremental (L4-03-d): /api/rede/{id}/areas_sujas, /validar_extensao,
+    # /erros, /tracar e a comporta /area_sujas/modo (só rede.administrar)
+    rotas_rede_areas_sujas,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,

@@ -1,24 +1,17 @@
 # Privilégios da plataforma
 
 Gerado de `plat.privilegio` + `plat.perfil_privilegio` (o banco vivo) por `docs/gerar_privilegios.py` (`make privilegios`) — item L0-07-b-papeis-privilegios; não editar à mão. O vocabulário é fechado: toda rota autenticada declara um destes nomes (ou uma composição `a|b`) em `x-privilegio` no OpenAPI, e `plat.tem(privilegio)`/`plat.privilegios_de(usuario_id)` são a única forma de perguntar, em rota e em RLS (ADR 0002 seções 3, 12.1). `app/auth/privilegios.py` espelha esta mesma lista em Python (para cálculo de `perfil_minimo` sem consulta); `tests/api/test_privilegios_declarados.py` prova que os dois batem, nome a nome, teto a teto.
-
 **48 privilégios** em 12 grupos, **20 administrativos** (só entram em papel personalizado com `perfil_minimo = admin`, ou no perfil `admin` inteiro — ADR 0002 seção 3.3).
-
 ## Papéis padrão fixos (teto de cada perfil)
-
 Os quatro perfis abaixo são fixos, não são linhas de `plat.papel_personalizado` e não se apagam nem se editam (ADR 0002 seção 2.3). Um papel personalizado é sempre um SUBCONJUNTO do teto do `perfil_minimo` calculado a partir dos privilégios escolhidos — nunca um acréscimo.
-
 | perfil | privilégios no teto |
 |---|---|
 | `visualizador` | 8 |
 | `campo` | 12 |
 | `editor` | 28 |
 | `admin` | 48 |
-
 ## Vocabulário completo
-
 V = visualizador · C = campo · E = editor · A = admin · **adm** = privilégio administrativo
-
 | grupo | privilégio | descrição | adm | V | C | E | A |
 |---|---|---|---|---|---|---|---|
 | analise | `analise.amc` | criar e executar modelo multicritério | não |  |  | x | x |
@@ -69,7 +62,8 @@ V = visualizador · C = campo · E = editor · A = admin · **adm** = privilégi
 | rede | `rede.tracar` | traçado e subrede | não |  |  | x | x |
 | tokens | `tokens.gerar` | criar e revogar os próprios tokens de serviço | não | x | x | x | x |
 | tokens | `tokens.gerir_todos` | ver e revogar tokens de qualquer membro | **sim** |  |  |  | x |
-
 ## Papéis personalizados por inquilino
 Nome até 128 caracteres, descrição até 250, criados "a partir de" um conjunto de privilégios escolhido pelo administrador (nunca um privilégio que o próprio administrador não tenha — `403 privilegio_proprio_insuficiente`). O backend calcula `perfil_minimo` = o menor perfil cujo teto contém todos os privilégios pedidos; atribuir esse papel a um usuário de perfil menor é `422 papel_incompativel`. Ver `docs/adr/0002-identidade-e-acesso.md` seção 3.3 e `docs/PARIDADE.md` para a paridade linha a linha com a Esri.
-
+**48 privilégios** em 12 grupos, **21 administrativos** (só entram em papel personalizado com `perfil_minimo = admin`, ou no perfil `admin` inteiro — ADR 0002 seção 3.3).
+| `editor` | 27 |
+| rede | `rede.administrar` | ligar/desligar a avaliação de regras da rede e substituir o conjunto de regras por CSV | **sim** |  |  |  | x |

@@ -23,26 +23,23 @@ from app.catalogo import documento as catalogo_documento
 from app.catalogo import tipos as catalogo_tipos
 from app.catalogo.comum import registrar_evento, uuid_ok
 from app.catalogo.modelos import Item as ItemSaida
-from app.conexao import consulta_sql, proveniencia, seguranca
+from app.conexao import cache as cache_conexao
+from app.conexao import copia as copia_mod
 from app.conexao import credencial as credencial_mod
-from app.conexao import pgfdw as pgfdw_mod
+from app.conexao import proveniencia, seguranca, vetor_externo
 from app.conexao.modelos import (
-    CamadaDaConexaoSaida,
+    CamposSaida,
+    ColecoesPagina,
     Conexao,
     ConexaoEditar,
     ConexaoEntrada,
     ConexaoPagina,
     ConexaoTeste,
-    ConsultaSqlEntrada,
-    ConsultaSqlSaida,
+    FeicoesSaida,
     PublicarCamadaEntrada,
-    PublicarEmMassaEntrada,
-    PublicarEmMassaSaida,
     SaudeHistoricoPagina,
-    TabelasExternasSaida,
 )
 from app.erros import ErroAPI
-from app.seguranca_rotacao import decifrar_com_rotacao
 from app.settings import settings
 
 router = APIRouter(prefix="/api/conexoes", tags=["conexoes"])
@@ -113,20 +110,9 @@ def _config_ok(config: dict) -> None:
         )
 
 
-def _url_ok(url: str, tipo: str = "") -> None:
+def _url_ok(url: str) -> None:
     """Recusa SSRF já na entrada (criar/editar), não só no teste de saúde: uma conexão nunca fica registrada
-    com URL que o proxy jamais poderia buscar. `postgres_fdw` (item L0-04-i-fonte-registrada) não é HTTP: a
-    URL é `postgres://host:porta/banco` e passa por `pgfdw.validar_alvo` (lista explícita de banco proibido +
-    IP em categoria bloqueada), nunca por `seguranca.validar_url` (que recusaria qualquer coisa fora de
-    http/https já no esquema)."""
-    if tipo == "postgres_fdw":
-        try:
-            host, porta, banco = pgfdw_mod.alvo_da_url(url)
-            pgfdw_mod.validar_alvo(host, porta, banco)
-        except (pgfdw_mod.ErroAlvoProibido, ValueError) as e:
-            motivo = e.motivo if isinstance(e, pgfdw_mod.ErroAlvoProibido) else "url_malformada"
-            raise ErroAPI(422, "url_insegura", f"URL recusada: {motivo}", {"motivo": motivo}) from e
-        return
+    com URL que o proxy jamais poderia buscar."""
     try:
         seguranca.validar_url(url)
     except seguranca.ErroURLInsegura as e:
@@ -162,7 +148,7 @@ def criar(corpo: ConexaoEntrada, request: Request, auth: Auth = autenticado("con
             403, "sem_privilegio", "a operação exige o privilégio conteudo.registrar_fonte",
             {"exigido": "conteudo.registrar_fonte"},
         )
-    _url_ok(corpo.url, corpo.tipo)
+    _url_ok(corpo.url)
     _config_ok(corpo.config)
     credencial_cifrada = credencial_mod.cifrar(corpo.credencial, settings.PLAT_SECRET) if corpo.credencial else None
     with db.db(auth.contexto()) as cur:
@@ -197,7 +183,7 @@ def editar(id: str, corpo: ConexaoEditar, request: Request, auth: Auth = autenti
             campos.append("nome = %s")
             params.append(" ".join(corpo.nome.split()))
         if corpo.url is not None:
-            _url_ok(corpo.url, r["tipo"])
+            _url_ok(corpo.url)
             campos.append("url = %s")
             params.append(corpo.url)
             campos.append("saude = 'nunca_testada'")  # URL mudou: a saúde anterior não vale mais para a nova
@@ -221,6 +207,8 @@ def editar(id: str, corpo: ConexaoEditar, request: Request, auth: Auth = autenti
             except psycopg2.Error as e:
                 raise auth_comum.erro_do_banco(e) from e
             campos_alterados = [c.split(" =")[0] for c in campos]
+            # servir a resposta da URL antiga depois da edição seria mentira, não cache (item L6-02-c)
+            cache_conexao.esquecer((auth.tenant_id, cid))
             registrar_evento(cur, request, "conexoes/editar", "conexao", cid, {"campos": campos_alterados})
         return _json(_carregar(cur, cid))
 
@@ -232,6 +220,7 @@ def apagar(id: str, request: Request, auth: Auth = autenticado()):
         r = _carregar(cur, cid)
         _pode_editar(r, auth)
         cur.execute("DELETE FROM plat.conexao WHERE id = %s::uuid", (cid,))
+        cache_conexao.esquecer((auth.tenant_id, cid))
         registrar_evento(cur, request, "conexoes/apagar", "conexao", cid, {"nome": r["nome"]})
 
 
@@ -244,32 +233,21 @@ def testar(id: str, request: Request, auth: Auth = autenticado()):
         url = r["url"]
 
     # decifra a credencial só em memória, só aqui, e só para autenticar o teste — nunca volta na resposta
-    senha_ou_token = None
+    cabecalhos = None
     if r["tem_credencial"]:
         with db.db(auth.contexto()) as cur:
             cur.execute("SELECT credencial_cifrada FROM plat.conexao WHERE id = %s::uuid", (cid,))
             bruta = cur.fetchone()["credencial_cifrada"]
         try:
-            senha_ou_token = decifrar_com_rotacao(
-                credencial_mod.decifrar, bruta, settings.PLAT_SECRET, settings.PLAT_SECRET_ANTERIOR
-            )
-        except Exception:  # noqa: BLE001 — PLAT_SECRET (e ANTERIOR) trocados ou dado corrompido: testa sem
-            # credencial, nunca quebra a rota (InvalidTag do AEAD não é ValueError — abrangido de propósito)
-            senha_ou_token = None
+            token = credencial_mod.decifrar(bruta, settings.PLAT_SECRET)
+            cabecalhos = {"Authorization": f"Bearer {token}"}
+        except ValueError:
+            cabecalhos = None  # PLAT_SECRET trocado ou dado corrompido: testa sem credencial, nunca quebra a rota
 
-    if r["tipo"] == "postgres_fdw":
-        host, porta, banco = pgfdw_mod.alvo_da_url(url)
-        alvo = pgfdw_mod.AlvoPg(
-            host=host, porta=porta, banco=banco, usuario=(r["config"] or {}).get("usuario", ""),
-            schema_remoto=(r["config"] or {}).get("schema_remoto", "public"),
-        )
-        resultado = pgfdw_mod.testar_e_medir(alvo, senha_ou_token or "")
-    else:
-        cabecalhos = {"Authorization": f"Bearer {senha_ou_token}"} if senha_ou_token else None
-        resultado = seguranca.buscar_seguro(
-            url, metodo="GET", timeout_conectar=limites.CONEXAO_CONECTAR_TIMEOUT_S,
-            timeout_ler=limites.CONEXAO_LER_TIMEOUT_S, cabecalhos=cabecalhos,
-        )
+    resultado = seguranca.buscar_seguro(
+        url, metodo="GET", timeout_conectar=limites.CONEXAO_CONECTAR_TIMEOUT_S,
+        timeout_ler=limites.CONEXAO_LER_TIMEOUT_S, cabecalhos=cabecalhos,
+    )
     saude = "ok" if resultado.ok else "erro"
     with db.db(auth.contexto()) as cur:
         # plat.conexao_saude_registrar (036) grava saude/saude_mensagem/... E o histórico (item L6-02-l-saude)
@@ -373,258 +351,140 @@ def publicar_camada(
         return catalogo_comum.item_json(catalogo_comum.item_ou_404(cur, iid), auth)
 
 
-# ---------------------------------------------------------------------------------------------------------
-# item L0-04-i-fonte-registrada: conector postgres_fdw ("fonte de dado registrada" — o "data store item" da
-# Esri 11.4 / o "store" do GeoServer, restrito ao Postgres/PostGIS externo). As três rotas abaixo só existem
-# para `tipo == "postgres_fdw"`; qualquer outro tipo devolve 422 `tipo_nao_suportado`.
+# --------------------------------------------------------------------------- conector de feição externa
+# (item L6-02-c-wfs-ogcapi) — MODO REFERENCIADO: a plataforma consulta o serviço a cada pedido, com cache curto
+# (`app/conexao/cache.py`, 30 s). O MODO COPIADO não tem rota própria: é o job `conexao.copiar_vetor`, criado
+# por `POST /api/jobs` como toda tarefa pesada — assim ele herda fila, cota, cancelamento, log e progresso em
+# vez de reimplementar os cinco aqui.
 
 
-def _alvo_pg(r: dict, schema_remoto: str) -> "pgfdw_mod.AlvoPg":
-    if r["tipo"] != "postgres_fdw":
-        raise ErroAPI(422, "tipo_nao_suportado", "esta operação só existe para conexões do tipo postgres_fdw")
-    host, porta, banco = pgfdw_mod.alvo_da_url(r["url"])
-    return pgfdw_mod.AlvoPg(
-        host=host, porta=porta, banco=banco, usuario=(r["config"] or {}).get("usuario", ""),
-        schema_remoto=schema_remoto,
-    )
-
-
-def _decifrar_senha(cur, cid: str) -> str:
-    cur.execute("SELECT credencial_cifrada FROM plat.conexao WHERE id = %s::uuid", (cid,))
-    bruta = cur.fetchone()["credencial_cifrada"]
-    if not bruta:
-        return ""
-    try:
-        return credencial_mod.decifrar(bruta, settings.PLAT_SECRET)
-    except ValueError:
-        return ""  # PLAT_SECRET trocado ou dado corrompido: tenta sem credencial, nunca quebra a rota
-
-
-def _marcar_saude(cur, cid: str, ok: bool, mensagem: str) -> None:
-    """Mesma função SECURITY DEFINER de L6-02-l (036) — o teste postgres_fdw grava saúde/histórico igual ao
-    teste HTTP; é essa gravação que faz `GET /{id}/camadas` (abaixo) mostrar "fonte_indisponivel" depois de
-    uma queda, sem apagar nada do catálogo."""
-    cur.execute("SELECT plat.conexao_saude_registrar(%s::uuid, %s, %s, %s, %s)", (cid, ok, None, mensagem, None))
-
-
-@router.get("/{id}/tabelas", response_model=TabelasExternasSaida, openapi_extra=LER)
-def tabelas_externas(id: str, schema_remoto: str = "public", auth: Auth = autenticado()):
-    """Lista as tabelas base do schema `schema_remoto` do Postgres do cliente (via `pg_catalog`, nunca
-    copiando dado). Conexão fora do ar vira 503 `fonte_indisponivel` (a conexão em si continua registrada;
-    nada é apagado)."""
-    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
-    with db.db(auth.contexto()) as cur:
-        r = _carregar(cur, cid)
-        _pode_editar(r, auth)
-        senha = _decifrar_senha(cur, cid)
-    if not pgfdw_mod.identificador_ok(schema_remoto):
-        raise ErroAPI(422, "schema_invalido", "nome de schema remoto inválido")
-    alvo = _alvo_pg(r, schema_remoto)
-    try:
-        itens = pgfdw_mod.listar_tabelas(alvo, senha)
-    except pgfdw_mod.ErroFonteIndisponivel as e:
-        with db.db(auth.contexto()) as cur:
-            _marcar_saude(cur, cid, False, e.motivo)
-        raise ErroAPI(503, "fonte_indisponivel", f"não foi possível conectar à fonte: {e.motivo}") from e
-    except pgfdw_mod.ErroAlvoProibido as e:
-        raise ErroAPI(422, "alvo_proibido", f"alvo recusado: {e.motivo}", {"motivo": e.motivo}) from e
-    with db.db(auth.contexto()) as cur:
-        _marcar_saude(cur, cid, True, f"{len(itens)} tabelas listadas")
-    return {"schema_remoto": schema_remoto, "itens": itens}
-
-
-@router.post("/{id}/publicar-em-massa", response_model=PublicarEmMassaSaida, status_code=201, openapi_extra=CRIAR)
-def publicar_em_massa(
-    id: str, corpo: PublicarEmMassaEntrada, request: Request, auth: Auth = autenticado("conteudo.criar"),
-):
-    """"Bulk publish" (Esri) / criar N "stores" (GeoServer) de uma vez: uma camada `camada_vetorial`
-    REFERENCIADA por tabela pedida, sem copiar dado — cada uma vira `FOREIGN TABLE` + `VIEW` (com
-    `tenant_id`/predicado equivalente a RLS; `plat.conexao_fdw_publicar`, migração 20260907T0148) e um item de
-    catálogo. Nome de tabela é validado por identificador ANTES de qualquer SQL (o adversário do item injeta
-    no nome da tabela); se a fonte cair NO MEIO do lote, as tabelas já publicadas ficam no catálogo e as
-    restantes voltam com `erro: "fonte_indisponivel:..."` no item da lista — a chamada inteira nunca vira 503
-    sozinha quando pelo menos uma tabela já foi confirmada (o 503 do portão é para quando a fonte já está fora
-    do ar ANTES de qualquer publicação, ver `tabelas_externas` acima e o teste `test_pgfdw.py`)."""
-    if not auth.tem("conteudo.registrar_fonte"):
+def _conector(cur, cid: str, auth: Auth) -> tuple[vetor_externo.Conector, dict]:
+    """Monta o conector a partir da linha (RLS já aplicada por `_carregar`), decifrando a credencial só aqui."""
+    r = _carregar(cur, cid)
+    if r["tipo"] not in vetor_externo.TIPOS_SUPORTADOS:
         raise ErroAPI(
-            403, "sem_privilegio", "a operação exige o privilégio conteudo.registrar_fonte",
-            {"exigido": "conteudo.registrar_fonte"},
+            422, "tipo_sem_conector",
+            f"conexão do tipo {r['tipo']!r}; este conector atende {vetor_externo.TIPOS_SUPORTADOS}",
+            {"tipo": r["tipo"], "suportados": list(vetor_externo.TIPOS_SUPORTADOS)},
         )
-    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
-    with db.db(auth.contexto()) as cur:
-        r = _carregar(cur, cid)
-        senha = _decifrar_senha(cur, cid)
-        cur.execute("SELECT slug FROM plat.tenant WHERE id = %s", (auth.tenant_id,))
-        slug = cur.fetchone()["slug"]
-    if not pgfdw_mod.identificador_ok(corpo.schema_remoto):
-        raise ErroAPI(422, "schema_invalido", "nome de schema remoto inválido")
-    alvo = _alvo_pg(r, corpo.schema_remoto)
+    cabecalhos = None
+    if r["tem_credencial"]:
+        cur.execute("SELECT credencial_cifrada FROM plat.conexao WHERE id = %s::uuid", (cid,))
+        bruta = cur.fetchone()["credencial_cifrada"]
+        try:
+            cabecalhos = {"Authorization": f"Bearer {credencial_mod.decifrar(bruta, settings.PLAT_SECRET)}"}
+        except ValueError:
+            cabecalhos = None
+    return vetor_externo.Conector(tipo=r["tipo"], url=r["url"], cabecalhos=cabecalhos), r
 
-    # geometria de todas as tabelas do schema, numa única leitura (evita 1 round-trip extra por tabela); se a
-    # fonte já está fora do ar aqui, NENHUMA tabela foi tocada ainda: 503 limpo, catálogo intocado (portão).
+
+def _erro_do_conector(e: vetor_externo.ErroConector) -> ErroAPI:
+    """Falha do serviço de terceiro NUNCA vira 500 nosso: vira 502 com o motivo nomeado (o usuário precisa
+    distinguir "o serviço deles está fora" de "a plataforma quebrou")."""
+    if e.motivo == "colecao_inexistente":
+        return ErroAPI(404, "colecao_inexistente", f"a conexão não publica a coleção {e.detalhe!r}")
+    return ErroAPI(502, "servico_externo", f"o serviço externo não atendeu: {e.motivo}",
+                   {"motivo": e.motivo, "detalhe": e.detalhe[:400]})
+
+
+@router.get("/{id}/colecoes", response_model=ColecoesPagina, openapi_extra=LER)
+def listar_colecoes(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """Coleções que o serviço publica: `wfs:FeatureTypeList` do GetCapabilities (WFS 2.0) ou `GET /collections`
+    (OGC API - Features). Resposta em cache curto por (inquilino, conexão)."""
+    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
+    chave = (auth.tenant_id, cid, "colecoes")
+    guardado = cache_conexao.obter(chave)
+    if guardado is not None:
+        return {**guardado, "do_cache": True}
+    with db.db(auth.contexto()) as cur:
+        conector, _ = _conector(cur, cid, auth)
     try:
-        geometria_por_tabela = {t["tabela"]: t for t in pgfdw_mod.listar_tabelas(alvo, senha)}
-    except pgfdw_mod.ErroFonteIndisponivel as e:
-        with db.db(auth.contexto()) as cur:
-            _marcar_saude(cur, cid, False, e.motivo)
-        raise ErroAPI(503, "fonte_indisponivel", f"não foi possível conectar à fonte: {e.motivo}") from e
-    except pgfdw_mod.ErroAlvoProibido as e:
-        raise ErroAPI(422, "alvo_proibido", f"alvo recusado: {e.motivo}", {"motivo": e.motivo}) from e
-
-    resultados: list[dict] = []
-    fonte_caiu_no_meio = False
-    for nome_tabela in corpo.tabelas:
-        if fonte_caiu_no_meio:
-            resultados.append({"tabela": nome_tabela, "ok": False, "erro": "fonte_indisponivel:conexao_caiu_no_lote"})
-            continue
-        if not pgfdw_mod.identificador_ok(nome_tabela):
-            resultados.append({"tabela": nome_tabela, "ok": False, "erro": "nome_de_tabela_invalido"})
-            continue
-        try:
-            colunas = pgfdw_mod.colunas_da_tabela(alvo, senha, nome_tabela)
-        except pgfdw_mod.ErroFonteIndisponivel as e:
-            fonte_caiu_no_meio = True
-            with db.db(auth.contexto()) as cur:
-                _marcar_saude(cur, cid, False, e.motivo)
-            resultados.append({"tabela": nome_tabela, "ok": False, "erro": f"fonte_indisponivel:{e.motivo}"})
-            continue
-        except pgfdw_mod.ErroAlvoProibido as e:
-            resultados.append({"tabela": nome_tabela, "ok": False, "erro": e.motivo})
-            continue
-
-        info_geom = geometria_por_tabela.get(nome_tabela)
-        geometria = pgfdw_mod.geometria_enum(info_geom["geometria_tipo"] if info_geom else None)
-        srid = int(info_geom["srid"]) if info_geom and info_geom.get("srid") else 4326  # schema exige srid>=1
-                                                                                           # mesmo sem geometria
-        campos_schema = [{"nome": c["nome"], "tipo": (c["tipo_pg"] or "")[:64]} for c in colunas]
-        dados_item = {
-            "schema": f"d_{slug}", "tabela": "",  # preenchidos com o nome REAL logo abaixo (linha_fdw)
-            "geometria": geometria, "srid": srid, "campos": campos_schema, "fonte": "referenciada",
-            "procedencia": {
-                "conexao_id": cid, "protocolo": "postgres_fdw", "banco_remoto": alvo.banco,
-                "schema_remoto": corpo.schema_remoto, "tabela_remota": nome_tabela,
-                "metodo": "postgres_fdw (foreign table + view sobre tenant_id), sem copiar dado",
-            },
-        }
-        try:
-            with db.db(auth.contexto()) as cur:
-                cur.execute(
-                    "SELECT schema_local, tabela_local FROM plat.conexao_fdw_publicar("
-                    "%s::uuid, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s)",
-                    (
-                        cid, slug, alvo.host, alvo.porta, alvo.banco, alvo.usuario, senha, corpo.schema_remoto,
-                        nome_tabela, catalogo_comum.jsonb(colunas), auth.tenant_id,
-                    ),
-                )
-                linha_fdw = cur.fetchone()
-        except psycopg2.Error as e:
-            erro_bd = auth_comum.erro_do_banco(e).erro
-            resultados.append({"tabela": nome_tabela, "ok": False, "erro": f"erro_ao_publicar:{erro_bd}"})
-            continue
-        dados_item["schema"] = linha_fdw["schema_local"]
-        dados_item["tabela"] = linha_fdw["tabela_local"]
-        try:
-            catalogo_tipos.validar("camada_vetorial", dados_item)
-            catalogo_documento.validar_grafo("camada_vetorial", dados_item)
-        except ErroAPI as e:
-            resultados.append({"tabela": nome_tabela, "ok": False, "erro": f"dados_invalidos:{e.erro}"})
-            continue
-
-        iid = str(uuid.uuid4())
-        with db.db(auth.contexto()) as cur:
-            cur.execute(
-                "SELECT plat.cota_itens(%s) AS cota, (SELECT count(*) FROM plat.item WHERE tenant_id = %s) AS n",
-                (auth.tenant_id, auth.tenant_id),
-            )
-            rc = cur.fetchone()
-            if rc["n"] >= rc["cota"]:
-                resultados.append({"tabela": nome_tabela, "ok": False, "erro": "cota_itens"})
-                continue
-            try:
-                cur.execute(
-                    "INSERT INTO plat.item(id, tenant_id, tipo, titulo, dono_id, dados, origem, url, "
-                    "criado_por, modificado_por) "
-                    "VALUES (%s::uuid, %s, 'camada_vetorial', %s, %s, %s, 'referenciado', NULL, %s, %s)",
-                    (
-                        # url fica NULL: `plat.item.url` exige http(s) (item_url_check) — a origem real
-                        # (postgres://host:porta/banco) já está em `dados.procedencia`, que é onde a tela
-                        # de procedência olha (mesmo padrão de proveniencia.py para os outros protocolos)
-                        iid, auth.tenant_id, nome_tabela[:250], auth.usuario_id, catalogo_comum.jsonb(dados_item),
-                        auth.usuario_id, auth.usuario_id,
-                    ),
-                )
-            except psycopg2.Error as e:
-                erro_bd = auth_comum.erro_do_banco(e).erro
-                resultados.append({"tabela": nome_tabela, "ok": False, "erro": f"erro_ao_gravar:{erro_bd}"})
-                continue
-            registrar_evento(
-                cur, request, "camadas/importar", "item", iid,
-                {"conexao_id": cid, "tabela_remota": nome_tabela, "fonte": "postgres_fdw"},
-            )
-        resultados.append({"tabela": nome_tabela, "ok": True, "item_id": iid, "erro": None})
-
-    with db.db(auth.contexto()) as cur:
-        if not fonte_caiu_no_meio:
-            _marcar_saude(cur, cid, True, f"{sum(1 for x in resultados if x['ok'])}/{len(resultados)} publicadas")
-        registrar_evento(
-            cur, request, "conexoes/publicar_em_massa", "conexao", cid,
-            {"tabelas": len(corpo.tabelas), "ok": sum(1 for x in resultados if x["ok"])},
-        )
-    return {"itens": resultados}
+        cols = vetor_externo.listar_colecoes(conector)
+    except vetor_externo.ErroConector as e:
+        raise _erro_do_conector(e) from e
+    corpo = {"total": len(cols), "itens": [
+        {"nome": c.nome, "titulo": c.titulo, "crs_nativo": c.crs_nativo, "srid_nativo": c.srid_nativo,
+         "srid_entregue": c.srid_entregue, "extent_4326": c.extent_4326, "formatos": list(c.formatos)}
+        for c in cols
+    ]}
+    cache_conexao.guardar(chave, corpo)
+    return {**corpo, "do_cache": False}
 
 
-@router.get("/{id}/camadas", response_model=CamadaDaConexaoSaida, openapi_extra=LER)
-def camadas_da_conexao(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
-    """Camadas de catálogo publicadas a partir desta conexão, com o estado da FONTE (não do item) calculado
-    da última verificação de saúde — a camada em si NUNCA some daqui: "fonte_indisponivel" é o estado, não um
-    apagamento (portão: "a camada continua no catálogo com estado 'fonte indisponível'")."""
+@router.get("/{id}/colecoes/{colecao}/campos", response_model=CamposSaida, openapi_extra=LER)
+def campos_da_colecao(id: str, colecao: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """Atributos e o tipo que o SERVIÇO declara (`DescribeFeatureType` no WFS, `/queryables` no OGC API). Quando
+    o serviço não declara nada, os tipos vêm de uma amostra de uma feição e `origem_do_tipo` diz `amostra` —
+    inferido nunca é apresentado como declarado."""
     cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
+    chave = (auth.tenant_id, cid, "campos", colecao)
+    guardado = cache_conexao.obter(chave)
+    if guardado is not None:
+        return {**guardado, "do_cache": True}
     with db.db(auth.contexto()) as cur:
-        r = _carregar(cur, cid)
-        cur.execute(
-            "SELECT id, titulo, dados FROM plat.item "
-            "WHERE tenant_id = %s AND tipo = 'camada_vetorial' AND dados->'procedencia'->>'conexao_id' = %s "
-            "ORDER BY lower(titulo)",
-            (auth.tenant_id, cid),
-        )
-        linhas = cur.fetchall()
-    estado_fonte = "fonte_indisponivel" if r["saude"] == "erro" else ("ok" if r["saude"] == "ok" else "nunca_testada")
-    itens = [
-        {
-            "id": str(linha["id"]), "titulo": linha["titulo"], "schema_tabela": linha["dados"]["schema"],
-            "tabela": linha["dados"]["tabela"], "estado_fonte": estado_fonte,
-        }
-        for linha in linhas
-    ]
-    return {"itens": itens}
-
-
-@router.post("/{id}/consulta", response_model=ConsultaSqlSaida, openapi_extra=LER)
-def consulta_sql_externa(id: str, corpo: ConsultaSqlEntrada, request: Request, auth: Auth = autenticado()):
-    """Consulta SQL do cliente no banco externo dele (item L6-02-j; "query layer"): só SELECT, tabelas da lista
-    que a própria conexão enxerga, LIMIT obrigatório, conexão só-leitura com statement_timeout; tempo medido.
-    Recusa (422) ANTES de tocar o banco para tudo que não é leitura com limite."""
-    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
-    with db.db(auth.contexto()) as cur:
-        r = _carregar(cur, cid)
-        _pode_editar(r, auth)
-        senha = _decifrar_senha(cur, cid)
-    if not pgfdw_mod.identificador_ok(corpo.schema_remoto):
-        raise ErroAPI(422, "schema_invalido", "nome de schema remoto inválido")
-    alvo = _alvo_pg(r, corpo.schema_remoto)
+        conector, _ = _conector(cur, cid, auth)
     try:
-        tabelas = {t["tabela"] for t in pgfdw_mod.listar_tabelas(alvo, senha)}
-        consulta = consulta_sql.validar(corpo.sql, tabelas, corpo.schema_remoto)
-        resultado = consulta_sql.executar(alvo, senha, consulta)
-    except consulta_sql.ConsultaRecusada as e:
-        raise ErroAPI(422, e.codigo, e.mensagem) from e
-    except pgfdw_mod.ErroFonteIndisponivel as e:
-        with db.db(auth.contexto()) as cur:
-            _marcar_saude(cur, cid, False, e.motivo)
-        raise ErroAPI(503, "fonte_indisponivel", f"não foi possível conectar à fonte: {e.motivo}") from e
-    except pgfdw_mod.ErroAlvoProibido as e:
-        raise ErroAPI(422, "alvo_proibido", f"alvo recusado: {e.motivo}", {"motivo": e.motivo}) from e
+        col = vetor_externo.colecao_ou_erro(conector, colecao)
+        campos, _ = vetor_externo.descrever_campos(conector, col)
+    except vetor_externo.ErroConector as e:
+        raise _erro_do_conector(e) from e
+    normalizados = copia_mod._normalizar_campos(campos)
+    corpo = {"colecao": col.nome, "itens": [
+        {"nome": c["nome"], "origem": c["origem"], "tipo": c["tipo"], "tipo_declarado": c["tipo_declarado"],
+         "origem_do_tipo": c["origem_do_tipo"]}
+        for c in normalizados
+    ]}
+    cache_conexao.guardar(chave, corpo)
+    return {**corpo, "do_cache": False}
+
+
+@router.get("/{id}/colecoes/{colecao}/feicoes", response_model=FeicoesSaida, openapi_extra=LER)
+def feicoes_da_colecao(
+    id: str, colecao: str, bbox: str | None = None, datahora: str | None = None,
+    limite: int = limites.CONEXAO_VETOR_PREVIA_MAX,
+    auth: Auth = autenticado(escopo_token="catalogo:ler"),
+):
+    """Feições ao vivo (modo referenciado), no máximo `CONEXAO_VETOR_PREVIA_MAX` por chamada. `bbox` é
+    `minx,miny,maxx,maxy` em graus (CRS84) e `datahora` é o `datetime` do OGC API (instante ou intervalo).
+    A resposta traz `numberMatched` (o total que o serviço declara) ao lado de `numberReturned` — sem os dois
+    não dá para saber se a página é a coleção inteira."""
+    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
+    limite = max(1, min(limite, limites.CONEXAO_VETOR_PREVIA_MAX))
+    caixa = None
+    if bbox:
+        try:
+            caixa = [float(v) for v in bbox.split(",")]
+        except ValueError as e:
+            raise ErroAPI(422, "bbox_invalido", "bbox deve ser minx,miny,maxx,maxy em graus") from e
+        if len(caixa) != 4:
+            raise ErroAPI(422, "bbox_invalido", "bbox deve ter exatamente 4 números")
+    chave = (auth.tenant_id, cid, "feicoes", colecao, bbox, datahora, limite)
+    guardado = cache_conexao.obter(chave)
+    if guardado is not None:
+        return {**guardado, "do_cache": True}
     with db.db(auth.contexto()) as cur:
-        registrar_evento(cur, request, "conexoes/consultar", "conexao", cid,
-                         {"tabelas": resultado["tabelas"], "n": resultado["n"], "tempo_ms": resultado["tempo_ms"]})
-    return resultado
+        conector, _ = _conector(cur, cid, auth)
+    try:
+        col = vetor_externo.colecao_ou_erro(conector, colecao)
+        formato = vetor_externo._formato_json_wfs(col) if conector.tipo == "wfs" else "application/geo+json"
+        if conector.tipo == "wfs" and not formato:
+            raise ErroAPI(
+                422, "formato_json_indisponivel",
+                "este WFS não anuncia nenhum outputFormat JSON; use o modo copiado (job conexao.copiar_vetor), "
+                "que converte o GML localmente",
+                {"formatos": list(col.formatos)},
+            )
+        pag = vetor_externo.Paginador(conector, col, bbox=caixa, datahora=datahora,
+                                      tam_pagina=limite, limite=limite, formato_json=formato)
+        feicoes: list[dict] = []
+        for lote in pag.paginas_json():
+            feicoes.extend(lote)
+    except vetor_externo.ErroConector as e:
+        raise _erro_do_conector(e) from e
+    corpo = {
+        "type": "FeatureCollection", "features": feicoes, "numberReturned": len(feicoes),
+        "numberMatched": pag.relatorio.numero_matched, "colecao": col.nome,
+        "srid_entregue": col.srid_entregue, "avisos": pag.relatorio.avisos,
+    }
+    cache_conexao.guardar(chave, corpo)
+    return {**corpo, "do_cache": False}
