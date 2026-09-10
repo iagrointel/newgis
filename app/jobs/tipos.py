@@ -28,6 +28,9 @@ from app.rede_utilidades import (
 )
 from app.exportacao import tipos_job as exportacao_tipos  # noqa: F401 — L0-04-h: exportacao.gerar + periódico
 from app.ingestao import tarefas as ingestao_tarefas  # noqa: F401 — L0-04: ingestao.inspecionar/ingestao.carregar
+from app.intercambio import (  # noqa: F401 — L6-02-o: intercambio.exportar_camada/exportar_inquilino
+    exportar as intercambio_exportar,
+)
 from app.jobs import periodicos, tipos_prova  # noqa: F401 — importação registra os tipos
 from app.jobs.registro import REGISTRO
 from app.layout import tarefas as layout_tarefas  # noqa: F401 — L2-12-b: layout.exportar

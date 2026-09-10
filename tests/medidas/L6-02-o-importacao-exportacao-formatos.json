@@ -1,0 +1,34 @@
+{
+ "item": "L6-02-o-importacao-exportacao-formatos",
+ "medidas": {
+  "escrow_20_camadas_segundos": {
+   "valor": 5.66,
+   "unidade": "s (pedido -> arquivo pronto, 20 camadas x 100 feições)",
+   "comando": "tests/api/intercambio/test_escrow_inquilino.py::test_escrow_do_inquilino_com_20_camadas_em_tempo_medido"
+  },
+  "geojsonseq_segundos": {
+   "valor": 0.54,
+   "unidade": "s (pedido -> arquivo pronto, 2 mil feições)",
+   "comando": "tests/api/intercambio/test_exportacao.py::test_geojsonseq_ida_e_volta_geometria_e_atributos"
+  },
+  "filegdb_segundos": {
+   "valor": 0.54,
+   "unidade": "s (pedido -> zip do .gdb pronto, 2 mil feições)",
+   "comando": "tests/api/intercambio/test_exportacao.py::test_filegdb_ida_e_volta_geometria_e_atributos_e_abre_pelo_driver_do_qgis"
+  },
+  "filegdb_feicoes_relidas": {
+   "valor": 2000,
+   "unidade": "feições relidas do .gdb pelo driver OpenFileGDB (origem: 2000)",
+   "comando": "tests/api/intercambio/test_exportacao.py::test_filegdb_ida_e_volta_geometria_e_atributos_e_abre_pelo_driver_do_qgis"
+  }
+ },
+ "gerado_em": "2026-09-07T18:48:28Z",
+ "git_sha": "086408f7e849",
+ "condicoes_da_medida": {
+  "carga_1min": 14.73,
+  "carga_1min_no_fim": 13.36,
+  "ram_livre_gb": 7,
+  "medido_em": "2026-09-07T18:48:28Z",
+  "observacao": "máquina em disputa (12 núcleos, carga 13-15; o teto do brief é 8). Os tempos abaixo são LIMITE SUPERIOR: com a máquina calma seriam menores. Nenhuma cláusula do portão fixa alvo de tempo — o portão pede o tempo MEDIDO do escrow, e é este."
+ }
+}

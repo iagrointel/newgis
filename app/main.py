@@ -79,6 +79,8 @@ from app.imagens.rotas_stac import router as rotas_stac
 from app.imagens.rotas_tiles import router as rotas_tiles
 from app.geocodificador.rotas_lote import router as rotas_geocodificador_lote
 from app.ingestao.rotas import router as rotas_ingestao
+from app.intercambio.lote_importar import router as rotas_intercambio_lote_importar
+from app.intercambio.rotas import router as rotas_intercambio
 from app.jobs.rotas import router as rotas_jobs
 from app.mapa.proxy_wms import router as rotas_mapa_wms_publico
 from app.mapa.rotas import router as rotas_mapa
@@ -257,6 +259,10 @@ ROUTERS = [
     rotas_dominios.router,
     rotas_feicoes.router,
     rotas_featureserver.router,
+    # --- intercâmbio em lote (L6-02-o): /api/intercambio (formatos extra: filegdb.zip, mbtiles, pmtiles,
+    # geojsonseq; exportação do inquilino inteiro em GeoPackage + manifesto; importação em lote sobre L0-04)
+    rotas_intercambio,
+    rotas_intercambio_lote_importar,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- rede de utilidades (L4-01-a): /api/rede (redes do inquilino), /api/rede/{rede_id}/pacote (importa e

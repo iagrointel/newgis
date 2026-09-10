@@ -86,7 +86,12 @@ def test_validacoes_simples():
         registro.tarefa(nome="teste.simples", descricao="d", parametros=dict)
 
 
-def test_tipos_de_prova_estao_registrados():
+def test_tipos_de_prova_estao_registrados(monkeypatch):
+    # o teto de 512 MB do fixture `ambiente` é artificial (serve aos testes de VALIDAÇÃO logo acima); aqui
+    # importam-se os tipos DE VERDADE, que declaram até 1024 MB (exportacao.gerar, intercambio.exportar_*),
+    # e o teto tem de ser o real da instalação — o padrão documentado em .env.exemplo.
+    monkeypatch.setenv("PLAT_WORKER_MEMORIA_MB", "1536")
+    cfg.obter.cache_clear()
     from app.jobs.tipos import REGISTRO
 
     assert {"prova.progresso", "prova.memoria", "prova.falha", "prova.ignora_cancelamento", "prova.pesado",
