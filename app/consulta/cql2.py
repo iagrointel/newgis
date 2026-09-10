@@ -1,544 +1,280 @@
-"""CQL2 (OGC 21-065r2) — Part 3 do OGC API Features (item L2-04-g). Duas sintaxes de entrada, uma
-gramática só, um único gerador de SQL parametrizado: reusa a mesma garantia de segurança do
-`where_ast.py` (nenhum texto do cliente concatenado em SQL, literal sempre vira parâmetro `%s`),
-mas com o vocabulário CQL2, não o dialeto "standardized queries" da Esri: operadores de
-comparação, lógicos (and/or/not), `in`/`like`/`between`/`isNull`, espaciais
-(`s_intersects`/`s_within`/`s_dwithin`) e temporais (`t_after`/`t_before`/`t_during`).
+"""CQL2-JSON (OGC 21-065r2, "Common Query Language 2") — subconjunto restrito usado pelo construtor de
+filtro do mapa (item L2-01-h) e pela `vista_de_camada` (ADR 0004 seção 3, tabela de tipos, campo
+`filtro`, comentário "L2 C7"). O item L5-07 (barramento de mensagens do builder) ainda está `pendente`
+no laço — este módulo é o primeiro tradutor CQL2-JSON → SQL da casa, e o VOCABULÁRIO JSON aceito aqui
+é o que aquele item deve reaproveitar quando for construído (mesmo formato, nunca um segundo).
 
-Duas etapas, como o `where_ast`:
-1. `analisar_texto(texto)` (CQL2-text) ou usar o dict já pronto (CQL2-JSON) — produz a mesma AST.
-2. `compilar(no, colunas_sql, srid_nativo)` — só aqui entra a lista BRANCA de colunas (nome no
-   filtro → expressão SQL de confiança do chamador) e o SRID nativo da tabela (as funções
-   espaciais recebem GeoJSON/WKT em 4326 por convenção CQL2 e são transformadas para o SRID da
-   camada antes de comparar com a coluna `geom`).
+Vocabulário aceito — tudo fora disto é `operador_nao_permitido`, nunca ignorado nem tolerado:
 
-`compilar_cql2(bruto, linguagem, colunas_sql, srid_nativo) -> (sql, params)` é o que um endpoint
-deve chamar; aceita `filter-lang` = `cql2-text` (padrão) ou `cql2-json`.
+  lógico:      {"op": "and"|"or", "args": [nó, nó, ...]}   — aninhamento máximo `MAX_PROFUNDIDADE` (2)
+  comparação:  {"op": "="|"<>"|"<"|"<="|">"|">=", "args": [{"property": campo}, literal]}
+  texto:       {"op": "like", "args": [{"property": campo}, "padrão com % e _"]}
+  lista:       {"op": "in", "args": [{"property": campo}, [v1, v2, ...]]}
+  nulo:        {"op": "isNull", "args": [{"property": campo}]}
+  espacial:    {"op": "s_intersects", "args": [{"property": campo_geometria}, geometria GeoJSON]}
+               {"op": "s_dwithin", "args": [{"property": campo_geometria}, geometria GeoJSON, metros]}
+               (`s_dwithin` é uma EXTENSÃO declarada: o núcleo do CQL2 não tem função de distância;
+               ver ADR do item)
+  temporal relativo: função nomeada `now_menos_dias`, SÓ dentro de um argumento de comparação —
+               {"op": ">=", "args": [{"property": campo_data}, {"function": {"name": "now_menos_dias",
+               "args": [30]}}]} — equivale a "últimos 30 dias". Nenhuma outra função é aceita
+               (`FUNCOES_PERMITIDAS` é a lista branca inteira; `now_menos_dias` sozinha).
+  literal:     número, string, booleano, null, lista (só dentro de `in`)
+  referência:  {"property": "<campo>"}
+
+Duas etapas, como em `where_ast.py` (mesma disciplina, mesmo módulo de erro `ErroWhere`):
+
+1. `_validar_estrutura(no)` — só vocabulário e forma: função/operador fora da lista branca, aninhamento
+   acima do limite ou mais de `MAX_CLAUSULAS` comparações levantam ANTES de olhar qualquer coluna.
+2. `compilar_cql2(no, colunas)` — só então a lista branca de COLUNAS do chamador entra em jogo: campo
+   fora dela é `campo_nao_permitido`; valor de tipo incompatível com o tipo declarado da coluna é
+   `tipo_invalido`. Todo literal vira parâmetro `%s`; nunca é escrito no texto do SQL.
+
+`colunas` é um dict `nome_no_filtro -> {"sql": expressão SQL de confiança do chamador, "tipo": tipo
+PostgreSQL declarado ("text", "integer", "bigint", "double precision", "real", "boolean", "date",
+"timestamp with time zone", "timestamp without time zone", "geometry" — o mesmo vocabulário de
+`app.ingestao.tipos_campo`), "srid": int (só para "geometry")}`.
 """
 
 from __future__ import annotations
 
-import datetime
 import json
-import re
-from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
-MAX_TEXTO = 4000
-MAX_TOKENS = 400
-MAX_PROFUNDIDADE = 20
+from app.consulta.where_ast import ConsultaSQL, ErroWhere  # reaproveita infraestrutura de erro/retorno
 
-IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-_TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})?$")
+MAX_PROFUNDIDADE = 2  # AND/OR aninhado até 2 níveis (portão do item)
+MAX_CLAUSULAS = 100  # cláusulas de comparação/espacial; refutação ataca com 200 e espera 422
+MAX_IN = 500  # tamanho de uma lista de "in"
 
-_ESPACIAIS = {"s_intersects": "ST_Intersects", "s_within": "ST_Within", "s_dwithin": "ST_DWithin"}
-_TEMPORAIS = {"t_after", "t_before", "t_during"}
-_COMPARACAO = {"=", "<>", "!=", "<", "<=", ">", ">="}
-_COMPARACAO_SQL = {"=": "=", "<>": "<>", "!=": "<>", "<": "<", "<=": "<=", ">": ">", ">=": ">="}
+OPS_LOGICOS = {"and", "or"}
+OPS_COMPARACAO = {"=", "<>", "<", "<=", ">", ">="}
+OPS_ESPACIAIS = {"s_intersects", "s_dwithin"}
+OPS_FOLHA = OPS_COMPARACAO | {"like", "in", "isNull"} | OPS_ESPACIAIS
+FUNCOES_PERMITIDAS = {"now_menos_dias"}
 
+TIPOS_NUMERICOS = {"integer", "bigint", "smallint", "double precision", "real", "numeric"}
+TIPOS_TEMPORAIS = {"date", "timestamp", "timestamp with time zone", "timestamp without time zone"}
+TIPOS_BOOLEANOS = {"boolean"}
+TIPOS_GEOMETRICOS = {"geometry"}
 
-class ErroCql2(Exception):
-    def __init__(self, codigo: str, mensagem: str, detalhe: Any = None):
-        super().__init__(mensagem)
-        self.codigo = codigo
-        self.mensagem = mensagem
-        self.detalhe = detalhe
-
-
-# --------------------------------------------------------------------------- AST comum (JSON e text convergem aqui)
-@dataclass
-class Propriedade:
-    nome: str
+GEOJSON_TIPOS = {
+    "Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon", "GeometryCollection",
+}
 
 
-@dataclass
-class Literal:
-    valor: Any
-
-
-@dataclass
-class IntervaloAberto:
-    """`../2026-01-01` ou `2026-01-01/..` — instante indeterminado de um lado (T_BEFORE/T_DURING)."""
-
-    inicio: Any
-    fim: Any
-
-
-@dataclass
-class Comparacao:
-    op: str  # um de _COMPARACAO, "like", "between", "in", "is_null", "is_not_null"
-    operando: Propriedade
-    valor: Any = None
-    valor2: Any = None  # between/in (lista)
-
-
-@dataclass
-class Espacial:
-    op: str  # s_intersects|s_within|s_dwithin
-    operando: Propriedade
-    geometria: dict  # GeoJSON geometry dict
-    distancia: float | None = None
-
-
-@dataclass
-class Temporal:
-    op: str  # t_after|t_before|t_during
-    operando: Propriedade
-    valor: Any  # datetime/date ou IntervaloAberto
-
-
-@dataclass
-class E:
-    termos: list = field(default_factory=list)
-
-
-@dataclass
-class Ou:
-    termos: list = field(default_factory=list)
-
-
-@dataclass
-class Nao:
-    termo: Any = None
-
-
-# --------------------------------------------------------------------------- CQL2-text: tokenizador + parser
-_TOKEN_RE = re.compile(
-    r"""\s*(?:
-        (?P<parenesq>\()|(?P<parendir>\))|(?P<virgula>,)|
-        (?P<op><=|>=|<>|!=|=|<|>)|
-        (?P<string>'(?:[^']|'')*')|
-        (?P<numero>-?\d+(?:\.\d+)?)|
-        (?P<palavra>[A-Za-z_][A-Za-z0-9_]*)
-    )""",
-    re.VERBOSE,
-)
-_PALAVRAS_LOGICAS = {"and", "or", "not"}
-_PALAVRAS_FUNC = set(_ESPACIAIS) | _TEMPORAIS | {"in", "like", "between", "is", "null", "casei", "true", "false"}
-
-
-def _tokenizar(texto: str) -> list[str]:
-    if len(texto) > MAX_TEXTO:
-        raise ErroCql2("filtro_grande_demais", f"filtro CQL2 acima de {MAX_TEXTO} caracteres")
-    pos = 0
-    tokens: list[str] = []
-    while pos < len(texto):
-        m = _TOKEN_RE.match(texto, pos)
-        if not m or m.end() == pos:
-            resto = texto[pos:].strip()
-            if not resto:
-                break
-            raise ErroCql2("filtro_sintaxe", f"token inválido em CQL2-text: {resto[:30]!r}")
-        tokens.append(m.group().strip())
-        pos = m.end()
-        if len(tokens) > MAX_TOKENS:
-            raise ErroCql2("filtro_grande_demais", f"filtro CQL2 com mais de {MAX_TOKENS} tokens")
-    return [t for t in tokens if t]
-
-
-class _AnalisadorTexto:
-    def __init__(self, tokens: list[str]):
-        self.tokens = tokens
-        self.i = 0
-        self.profundidade = 0
-
-    def _olhar(self) -> str | None:
-        return self.tokens[self.i] if self.i < len(self.tokens) else None
-
-    def _tomar(self) -> str:
-        if self.i >= len(self.tokens):
-            raise ErroCql2("filtro_sintaxe", "fim inesperado do filtro CQL2")
-        t = self.tokens[self.i]
-        self.i += 1
-        return t
-
-    def _esperar(self, palavra: str) -> None:
-        t = self._tomar()
-        if t.lower() != palavra:
-            raise ErroCql2("filtro_sintaxe", f"esperava {palavra!r}, veio {t!r}")
-
-    def analisar(self):
-        no = self._expr()
-        if self.i != len(self.tokens):
-            raise ErroCql2("filtro_sintaxe", f"sobrou texto após o filtro: {self.tokens[self.i:]!r}")
-        return no
-
-    def _expr(self):
-        termos = [self._termo_and()]
-        while self._olhar() and self._olhar().lower() == "or":
-            self._tomar()
-            termos.append(self._termo_and())
-        return termos[0] if len(termos) == 1 else Ou(termos)
-
-    def _termo_and(self):
-        termos = [self._termo_not()]
-        while self._olhar() and self._olhar().lower() == "and":
-            self._tomar()
-            termos.append(self._termo_not())
-        return termos[0] if len(termos) == 1 else E(termos)
-
-    def _termo_not(self):
-        if self._olhar() and self._olhar().lower() == "not":
-            self._tomar()
-            return Nao(self._termo_not())
-        return self._primario()
-
-    def _primario(self):
-        if self._olhar() == "(":
-            self.profundidade += 1
-            if self.profundidade > MAX_PROFUNDIDADE:
-                raise ErroCql2("filtro_profundo_demais", f"parênteses aninhados acima de {MAX_PROFUNDIDADE}")
-            self._tomar()
-            no = self._expr()
-            if self._olhar() != ")":
-                raise ErroCql2("filtro_sintaxe", "parêntese não fechado")
-            self._tomar()
-            self.profundidade -= 1
-            return no
-        return self._comparacao()
-
-    def _campo(self) -> Propriedade:
-        t = self._tomar()
-        if not IDENT_RE.match(t):
-            raise ErroCql2("filtro_sintaxe", f"nome de propriedade inválido: {t!r}")
-        return Propriedade(t)
-
-    def _valor(self):
-        t = self._olhar()
-        if t is None:
-            raise ErroCql2("filtro_sintaxe", "valor ausente no filtro CQL2")
-        if t.startswith("'"):
-            self._tomar()
-            return t[1:-1].replace("''", "'")
-        if re.match(r"^-?\d", t):
-            self._tomar()
-            return float(t) if "." in t else int(t)
-        if t.lower() in ("true", "false"):
-            self._tomar()
-            return t.lower() == "true"
-        # DATE('...')/TIMESTAMP('...')/TIMESTAMP('../2026-01-01') funções literais de instante
-        if t.lower() in ("date", "timestamp", "interval"):
-            self._tomar()
-            self._esperar("(")
-            bruto = self._tomar()
-            if not bruto.startswith("'"):
-                raise ErroCql2("filtro_sintaxe", f"{t}() exige literal de texto entre parênteses")
-            self._esperar(")")
-            return _instante(bruto[1:-1].replace("''", "'"))
-        raise ErroCql2("filtro_sintaxe", f"valor não reconhecido em CQL2-text: {t!r}")
-
-    def _lista_valores(self) -> list:
-        self._esperar("(")
-        vs = [self._valor()]
-        while self._olhar() == ",":
-            self._tomar()
-            vs.append(self._valor())
-        if self._olhar() != ")":
-            raise ErroCql2("filtro_sintaxe", "lista de valores sem fechar")
-        self._tomar()
-        return vs
-
-    def _geometria_literal(self) -> dict:
-        """CQL2-text não define um dialeto próprio de geometria fora do BNF de WKT; esta
-        implementação aceita GeoJSON entre aspas simples (dialeto aceito pelo pygeofilter e mais
-        simples de compor com o resto da API, que já fala GeoJSON em toda parte)."""
-        t = self._tomar()
-        if not t.startswith("'"):
-            raise ErroCql2("filtro_sintaxe", "geometria em função espacial precisa vir entre aspas simples (GeoJSON)")
-        bruto = t[1:-1].replace("''", "'")
-        try:
-            return json.loads(bruto)
-        except json.JSONDecodeError as e:
-            raise ErroCql2("filtro_geometria_invalida", "geometria da função espacial não é GeoJSON válido") from e
-
-    def _comparacao(self):
-        if self._olhar() and self._olhar().lower() in _ESPACIAIS:
-            fname = self._tomar().lower()
-            self._esperar("(")
-            campo = self._campo()
-            self._esperar(",")
-            geom = self._geometria_literal()
-            dist = None
-            if fname == "s_dwithin":
-                self._esperar(",")
-                dv = self._valor()
-                if not isinstance(dv, (int, float)):
-                    raise ErroCql2("filtro_sintaxe", "S_DWITHIN exige distância numérica (metros)")
-                dist = float(dv)
-            self._esperar(")")
-            return Espacial(fname, campo, geom, dist)
-        if self._olhar() and self._olhar().lower() in _TEMPORAIS:
-            fname = self._tomar().lower()
-            self._esperar("(")
-            campo = self._campo()
-            self._esperar(",")
-            v = self._valor()
-            self._esperar(")")
-            return Temporal(fname, campo, v)
-        campo = self._campo()
-        t = self._olhar()
-        if t is None:
-            raise ErroCql2("filtro_sintaxe", "comparação incompleta")
-        tl = t.lower()
-        if tl == "is":
-            self._tomar()
-            neg = False
-            if self._olhar() and self._olhar().lower() == "not":
-                self._tomar()
-                neg = True
-            self._esperar("null")
-            return Comparacao("is_not_null" if neg else "is_null", campo)
-        proximo = self.tokens[self.i + 1].lower() if self.i + 1 < len(self.tokens) else ""
-        if tl == "not" and proximo in ("in", "like", "between"):
-            self._tomar()
-            no = self._comparacao_pos(campo)
-            return Nao(no)
-        return self._comparacao_pos(campo)
-
-    def _comparacao_pos(self, campo: Propriedade):
-        t = self._olhar()
-        tl = (t or "").lower()
-        if tl == "in":
-            self._tomar()
-            return Comparacao("in", campo, self._lista_valores())
-        if tl == "like":
-            self._tomar()
-            return Comparacao("like", campo, self._valor())
-        if tl == "between":
-            self._tomar()
-            v1 = self._valor()
-            self._esperar("and")
-            v2 = self._valor()
-            return Comparacao("between", campo, v1, v2)
-        if t in _COMPARACAO:
-            op = self._tomar()
-            return Comparacao(op, campo, self._valor())
-        raise ErroCql2("filtro_sintaxe", f"operador não reconhecido após propriedade: {t!r}")
-
-
-def _instante(texto: str):
-    """Converte um literal de data/hora CQL2, aceitando `../X` e `X/..` (instante indeterminado —
-    portão exige que `T_BEFORE`/`T_DURING` aceitem aberto de um lado)."""
-    if "/" in texto:
-        a, b = texto.split("/", 1)
-        return IntervaloAberto(None if a in ("..", "") else _instante(a), None if b in ("..", "") else _instante(b))
-    if _DATE_RE.match(texto):
-        return datetime.date.fromisoformat(texto)
-    if _TIMESTAMP_RE.match(texto):
-        t = texto.rstrip("Z").replace(" ", "T")
-        try:
-            return datetime.datetime.fromisoformat(t)
-        except ValueError as e:
-            raise ErroCql2("filtro_data_invalida", f"instante inválido: {texto!r}") from e
-    raise ErroCql2("filtro_data_invalida", f"instante não reconhecido (use ISO 8601): {texto!r}")
-
-
-def analisar_texto(texto: str):
-    tokens = _tokenizar(texto)
-    return _AnalisadorTexto(tokens).analisar()
-
-
-# --------------------------------------------------------------------------- CQL2-JSON: dict -> AST comum
-def _json_valor(v):
-    if isinstance(v, dict):
-        if "property" in v:
-            return Propriedade(v["property"])
-        if "date" in v:
-            return datetime.date.fromisoformat(v["date"])
-        if "timestamp" in v:
-            return _instante(v["timestamp"])
-        if "interval" in v and isinstance(v["interval"], list) and len(v["interval"]) == 2:
-            a, b = v["interval"]
-            return IntervaloAberto(
-                None if a in ("..", None) else _json_valor(a), None if b in ("..", None) else _json_valor(b)
+# =================================================================== 1. validação de estrutura/vocabulário
+def _validar_estrutura(no: Any, profundidade: int, contador: dict) -> None:
+    if not isinstance(no, dict):
+        raise ErroWhere("sintaxe_invalida", "cada nó CQL2 é um objeto {\"op\": ..., \"args\": [...]}")
+    op = no.get("op")
+    if not isinstance(op, str) or not op:
+        raise ErroWhere("sintaxe_invalida", "nó sem 'op' (string)")
+    if op in OPS_LOGICOS:
+        if profundidade > MAX_PROFUNDIDADE:
+            raise ErroWhere(
+                "expressao_complexa", f"aninhamento AND/OR acima de {MAX_PROFUNDIDADE} níveis", {"op": op}
             )
-        if v.get("type"):  # GeoJSON geometry
-            return v
-        raise ErroCql2("filtro_sintaxe", f"objeto CQL2-JSON não reconhecido: {v!r}")
-    return v
+        args = no.get("args")
+        if not isinstance(args, list) or len(args) < 2:
+            raise ErroWhere("sintaxe_invalida", f"'{op}' exige 'args' como lista com 2 ou mais elementos")
+        for a in args:
+            _validar_estrutura(a, profundidade + 1, contador)
+        return
+    if op in OPS_FOLHA:
+        contador["n"] += 1
+        if contador["n"] > MAX_CLAUSULAS:
+            raise ErroWhere("expressao_complexa", f"mais de {MAX_CLAUSULAS} cláusulas de comparação")
+        args = no.get("args")
+        if not isinstance(args, list):
+            raise ErroWhere("sintaxe_invalida", f"'{op}' exige 'args' como lista")
+        for a in args:
+            _validar_valor_ou_propriedade(a)
+        return
+    raise ErroWhere("operador_nao_permitido", f"operador não permitido: {op!r}", {"op": op})
 
 
-def analisar_json(no: dict, profundidade: int = 0):
-    if profundidade > MAX_PROFUNDIDADE:
-        raise ErroCql2("filtro_profundo_demais", f"CQL2-JSON aninhado acima de {MAX_PROFUNDIDADE}")
-    if not isinstance(no, dict) or "op" not in no:
-        raise ErroCql2("filtro_sintaxe", "CQL2-JSON precisa de {'op':..., 'args':[...]} em cada nó")
-    op = str(no["op"]).lower()
-    args = no.get("args")
-    if not isinstance(args, list):
-        raise ErroCql2("filtro_sintaxe", "CQL2-JSON: 'args' precisa ser lista")
-    if op == "and":
-        return E([analisar_json(a, profundidade + 1) for a in args])
-    if op == "or":
-        return Ou([analisar_json(a, profundidade + 1) for a in args])
-    if op == "not":
-        if len(args) != 1:
-            raise ErroCql2("filtro_sintaxe", "'not' exige exatamente 1 argumento")
-        return Nao(analisar_json(args[0], profundidade + 1))
-    if op in _ESPACIAIS:
-        if len(args) not in (2, 3):
-            raise ErroCql2("filtro_sintaxe", f"{op} exige 2 ou 3 argumentos")
-        campo = _json_valor(args[0])
-        geom = _json_valor(args[1])
-        if not isinstance(campo, Propriedade) or not isinstance(geom, dict):
-            raise ErroCql2("filtro_sintaxe", f"{op}: argumentos precisam ser (propriedade, geometria[, distância])")
-        dist = float(args[2]) if len(args) == 3 else None
-        return Espacial(op, campo, geom, dist)
-    if op in _TEMPORAIS:
-        if len(args) != 2:
-            raise ErroCql2("filtro_sintaxe", f"{op} exige 2 argumentos")
-        campo = _json_valor(args[0])
-        if not isinstance(campo, Propriedade):
-            raise ErroCql2("filtro_sintaxe", f"{op}: primeiro argumento precisa ser propriedade")
-        return Temporal(op, campo, _json_valor(args[1]))
-    if op == "isnull":
-        campo = _json_valor(args[0])
-        return Comparacao("is_null", campo)
-    if op == "between":
-        campo = _json_valor(args[0])
-        lo = _json_valor(args[1])
-        hi = _json_valor(args[2])
-        return Comparacao("between", campo, lo, hi)
-    if op == "in":
-        campo = _json_valor(args[0])
-        lista = args[1] if isinstance(args[1], list) else args[1:]
-        return Comparacao("in", campo, [_json_valor(x) for x in lista])
-    if op == "like":
-        campo = _json_valor(args[0])
-        return Comparacao("like", campo, _json_valor(args[1]))
-    if op in _COMPARACAO:
-        if len(args) != 2:
-            raise ErroCql2("filtro_sintaxe", f"{op} exige 2 argumentos")
-        a, b = _json_valor(args[0]), _json_valor(args[1])
-        if isinstance(a, Propriedade):
-            return Comparacao(op, a, b)
-        if isinstance(b, Propriedade):
-            return Comparacao(_inverter_op(op), b, a)
-        raise ErroCql2("filtro_sintaxe", f"{op} precisa de ao menos um lado ser propriedade")
-    raise ErroCql2("filtro_operador_desconhecido", f"operador CQL2-JSON não suportado: {op!r}")
+def _validar_valor_ou_propriedade(v: Any) -> None:
+    """Varre um argumento à procura de `function` não whitelisted — o único lugar onde texto livre
+    do cliente poderia nomear algo executável. Listas (para `in`) são varridas item a item."""
+    if isinstance(v, list):
+        if len(v) > MAX_IN:
+            raise ErroWhere("expressao_complexa", f"lista de 'in' com mais de {MAX_IN} valores")
+        for item in v:
+            _validar_valor_ou_propriedade(item)
+        return
+    if not isinstance(v, dict):
+        return  # número, string, bool, None: literal, nada a validar aqui
+    if "property" in v:
+        if not isinstance(v["property"], str) or not v["property"]:
+            raise ErroWhere("sintaxe_invalida", "'property' precisa ser uma string não vazia")
+        return
+    if "function" in v:
+        fn = v.get("function")
+        nome = fn.get("name") if isinstance(fn, dict) else None
+        if nome not in FUNCOES_PERMITIDAS:
+            raise ErroWhere("operador_nao_permitido", f"função não permitida: {nome!r}", {"funcao": nome})
+        return
+    # qualquer outro objeto (geometria GeoJSON de s_intersects/s_dwithin, válida ou não) é deixado para
+    # `compilar_cql2`, que sabe qual operador está pedindo geometria e devolve `tipo_invalido` — aqui
+    # só barramos o único vetor de execução (`function` fora da lista branca), nunca a forma do literal.
 
 
-def _inverter_op(op: str) -> str:
-    return {"<": ">", "<=": ">=", ">": "<", ">=": "<="}.get(op, op)
+# =================================================================== 2. compilação em SQL parametrizado
+def _normalizar_colunas(colunas: dict) -> dict:
+    norm = {}
+    for nome, info in colunas.items():
+        if isinstance(info, str):
+            norm[nome] = {"sql": info, "tipo": "text"}
+        else:
+            norm[nome] = dict(info)
+    return norm
 
 
-# --------------------------------------------------------------------------- compilação -> SQL parametrizado
-def _coluna_sql(campo: Propriedade, colunas_sql: dict) -> str:
-    if campo.nome not in colunas_sql:
-        raise ErroCql2("filtro_campo_desconhecido", f"propriedade inexistente nesta coleção: {campo.nome!r}",
-                        {"campo": campo.nome})
-    return colunas_sql[campo.nome]
+def _tipo_de(info: dict) -> str:
+    return (info.get("tipo") or "text").lower()
 
 
-def compilar(no, colunas_sql: dict, srid_nativo: int, coluna_geom_sql: str = "geom") -> tuple[str, list]:
-    if isinstance(no, E):
-        partes, params = [], []
-        for t in no.termos:
-            s, p = compilar(t, colunas_sql, srid_nativo, coluna_geom_sql)
-            partes.append(f"({s})")
-            params += p
-        return " AND ".join(partes), params
-    if isinstance(no, Ou):
-        partes, params = [], []
-        for t in no.termos:
-            s, p = compilar(t, colunas_sql, srid_nativo, coluna_geom_sql)
-            partes.append(f"({s})")
-            params += p
-        return " OR ".join(partes), params
-    if isinstance(no, Nao):
-        s, p = compilar(no.termo, colunas_sql, srid_nativo, coluna_geom_sql)
-        return f"NOT ({s})", p
-    if isinstance(no, Comparacao):
-        return _compilar_comparacao(no, colunas_sql)
-    if isinstance(no, Espacial):
-        return _compilar_espacial(no, colunas_sql, srid_nativo, coluna_geom_sql)
-    if isinstance(no, Temporal):
-        return _compilar_temporal(no, colunas_sql)
-    raise ErroCql2("filtro_sintaxe", f"nó de AST não reconhecido: {no!r}")
-
-
-def _compilar_comparacao(no: Comparacao, colunas_sql: dict) -> tuple[str, list]:
-    col = _coluna_sql(no.operando, colunas_sql)
-    if no.op == "is_null":
-        return f"{col} IS NULL", []
-    if no.op == "is_not_null":
-        return f"{col} IS NOT NULL", []
-    if no.op == "in":
-        if not isinstance(no.valor, list) or not no.valor:
-            raise ErroCql2("filtro_sintaxe", "IN exige lista não vazia")
-        return f"{col} = ANY(%s)", [list(no.valor)]
-    if no.op == "like":
-        return f"{col}::text LIKE %s", [str(no.valor)]
-    if no.op == "between":
-        return f"{col} BETWEEN %s AND %s", [no.valor, no.valor2]
-    if no.op in _COMPARACAO:
-        return f"{col} {_COMPARACAO_SQL[no.op]} %s", [no.valor]
-    raise ErroCql2("filtro_sintaxe", f"operador de comparação não reconhecido: {no.op!r}")
-
-
-def _compilar_espacial(no: Espacial, colunas_sql: dict, srid_nativo: int, coluna_geom_sql: str) -> tuple[str, list]:
-    func = _ESPACIAIS[no.op]
-    try:
-        geojson_txt = json.dumps(no.geometria)
-    except (TypeError, ValueError) as e:
-        raise ErroCql2("filtro_geometria_invalida", "geometria da função espacial não é serializável") from e
-    expr_geom = f"ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326), {srid_nativo})"
-    if no.op == "s_dwithin":
-        if no.distancia is None or no.distancia < 0:
-            raise ErroCql2("filtro_sintaxe", "S_DWITHIN exige distância >= 0 (metros)")
-        # `::geography` presume SRID 4326 (WGS84) — a coluna nativa pode estar noutro SRID (ex. 4674),
-        # então transforma ANTES de fundir os dois lados em geography, senão o Postgres recusa com
-        # "mixed SRID geometries" (achado desta trilha: o teste de S_DWITHIN estourava exatamente aqui).
-        return (
-            f"ST_DWithin(ST_Transform({coluna_geom_sql}, 4326)::geography, "
-            f"ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326)::geography, %s)",
-            [geojson_txt, no.distancia],
-        )
-    return f"{func}({coluna_geom_sql}, {expr_geom})", [geojson_txt]
-
-
-def _compilar_temporal(no: Temporal, colunas_sql: dict) -> tuple[str, list]:
-    col = _coluna_sql(no.operando, colunas_sql)
-    v = no.valor
-    if no.op == "t_after":
-        if isinstance(v, IntervaloAberto):
-            raise ErroCql2("filtro_sintaxe", "T_AFTER exige um instante só, não um intervalo")
-        return f"{col} > %s", [v]
-    if no.op == "t_before":
-        if isinstance(v, IntervaloAberto):
-            # T_BEFORE(campo, ../X) == campo < X; T_BEFORE(campo, X/..) não tem limite superior definido
-            if v.fim is not None:
-                return f"{col} < %s", [v.fim]
-            raise ErroCql2("filtro_sintaxe", "T_BEFORE com intervalo sem limite superior não é comparável")
-        return f"{col} < %s", [v]
-    if no.op == "t_during":
-        if not isinstance(v, IntervaloAberto):
-            raise ErroCql2("filtro_sintaxe", "T_DURING exige um intervalo (a/b, com a ou b podendo ser '..')")
-        partes, params = [], []
-        if v.inicio is not None:
-            partes.append(f"{col} >= %s")
-            params.append(v.inicio)
-        if v.fim is not None:
-            partes.append(f"{col} <= %s")
-            params.append(v.fim)
-        if not partes:
-            return "TRUE", []
-        return " AND ".join(partes), params
-    raise ErroCql2("filtro_sintaxe", f"operador temporal não reconhecido: {no.op!r}")
-
-
-def compilar_cql2(
-    bruto: str | dict, linguagem: str, colunas_sql: dict, srid_nativo: int, coluna_geom_sql: str = "geom"
-) -> tuple[str, list]:
-    """Ponto único de entrada: `linguagem` = 'cql2-text' (padrão) ou 'cql2-json'. Devolve
-    `(sql, params)` pronto para entrar numa cláusula `WHERE` parametrizada — nunca texto do
-    cliente concatenado."""
-    lang = (linguagem or "cql2-text").lower()
-    if lang == "cql2-json":
-        no = analisar_json(bruto if isinstance(bruto, dict) else json.loads(bruto))
-    elif lang == "cql2-text":
-        no = analisar_texto(bruto if isinstance(bruto, str) else json.dumps(bruto))
+def _checar_tipo_literal(info: dict, valor: Any) -> None:
+    if isinstance(valor, dict):
+        return  # function — já validada em _validar_valor_ou_propriedade
+    if valor is None:
+        return
+    tipo = _tipo_de(info)
+    if tipo in TIPOS_NUMERICOS:
+        if isinstance(valor, bool) or not isinstance(valor, (int, float)):
+            raise ErroWhere("tipo_invalido", f"valor não numérico para campo numérico: {valor!r}", {"valor": valor})
+    elif tipo in TIPOS_TEMPORAIS:
+        if not isinstance(valor, str) or _parse_temporal(valor) is None:
+            raise ErroWhere("tipo_invalido", f"data/hora inválida (ISO 8601): {valor!r}", {"valor": valor})
+    elif tipo in TIPOS_BOOLEANOS:
+        if not isinstance(valor, bool):
+            raise ErroWhere("tipo_invalido", f"valor não booleano para campo booleano: {valor!r}", {"valor": valor})
     else:
-        raise ErroCql2("filtro_lang_invalido", f"filter-lang não suportado: {linguagem!r} (use cql2-text/cql2-json)")
-    return compilar(no, colunas_sql, srid_nativo, coluna_geom_sql)
+        if not isinstance(valor, str):
+            raise ErroWhere("tipo_invalido", f"valor não texto para campo de texto: {valor!r}", {"valor": valor})
+
+
+def _parse_temporal(texto: str) -> datetime | None:
+    try:
+        return datetime.fromisoformat(texto.replace("Z", "+00:00"))
+    except (ValueError, AttributeError):
+        return None
+
+
+def _validar_geojson(g: Any) -> dict:
+    if not isinstance(g, dict) or g.get("type") not in GEOJSON_TIPOS:
+        raise ErroWhere("tipo_invalido", "geometria GeoJSON inválida (campo 'type' ausente ou desconhecido)")
+    if g.get("type") != "GeometryCollection" and "coordinates" not in g:
+        raise ErroWhere("tipo_invalido", "geometria GeoJSON sem 'coordinates'")
+    return g
+
+
+def compilar_cql2(no: dict, colunas: dict) -> ConsultaSQL:
+    """`no` já é o objeto Python (json.loads do corpo do pedido). `colunas` é a lista branca do
+    CHAMADOR — nunca descoberta a partir do pedido. Levanta `ErroWhere` (a rota converte em 422)."""
+    contador = {"n": 0}
+    _validar_estrutura(no, 1, contador)
+    colunas_ok = _normalizar_colunas(colunas)
+    params: list = []
+
+    def propriedade(node: Any) -> tuple[str, dict]:
+        if not (isinstance(node, dict) and "property" in node):
+            raise ErroWhere("sintaxe_invalida", "esperava {'property': campo}", {"obtido": node})
+        campo = node["property"]
+        info = colunas_ok.get(campo)
+        if info is None:
+            raise ErroWhere("campo_nao_permitido", f"campo não está na lista branca: {campo}", {"campo": campo})
+        return campo, info
+
+    def marcador_de(info: dict, valor: Any) -> str:
+        if isinstance(valor, dict) and "function" in valor:
+            fn = valor["function"]
+            nome = fn.get("name")
+            fargs = fn.get("args") or []
+            if nome == "now_menos_dias":
+                if len(fargs) != 1 or isinstance(fargs[0], bool) or not isinstance(fargs[0], (int, float)):
+                    raise ErroWhere("tipo_invalido", "now_menos_dias espera 1 argumento numérico (dias)")
+                params.append(int(fargs[0]))
+                return "(now() - make_interval(days => %s))"
+            raise ErroWhere(  # pragma: no cover
+                "operador_nao_permitido", f"função não permitida: {nome!r}", {"funcao": nome})
+        _checar_tipo_literal(info, valor)
+        params.append(valor)
+        return "%s"
+
+    def visitar(nodo: dict) -> str:
+        op = nodo["op"]
+        if op in OPS_LOGICOS:
+            partes = [visitar(a) for a in nodo["args"]]
+            juntor = " AND " if op == "and" else " OR "
+            return "(" + juntor.join(partes) + ")"
+        args = nodo.get("args") or []
+        if op == "isNull":
+            if len(args) != 1:
+                raise ErroWhere("sintaxe_invalida", "isNull espera 1 argumento")
+            _campo, info = propriedade(args[0])
+            return f"{info['sql']} IS NULL"
+        if op == "in":
+            if len(args) != 2 or not isinstance(args[1], list) or not args[1]:
+                raise ErroWhere("sintaxe_invalida", "in espera [{'property': campo}, lista não vazia]")
+            _campo, info = propriedade(args[0])
+            marcadores = ", ".join(marcador_de(info, v) for v in args[1])
+            return f"{info['sql']} IN ({marcadores})"
+        if op == "like":
+            if len(args) != 2:
+                raise ErroWhere("sintaxe_invalida", "like espera 2 argumentos")
+            _campo, info = propriedade(args[0])
+            if _tipo_de(info) not in ("text",) and _tipo_de(info) not in TIPOS_NUMERICOS:
+                pass  # like em qualquer coluna: comparação é feita por texto (cast na expressão SQL)
+            if not isinstance(args[1], str):
+                raise ErroWhere("tipo_invalido", "padrão do 'like' precisa ser texto", {"valor": args[1]})
+            params.append(args[1])
+            return f"{info['sql']}::text ILIKE %s"
+        if op in OPS_COMPARACAO:
+            if len(args) != 2:
+                raise ErroWhere("sintaxe_invalida", f"'{op}' espera 2 argumentos")
+            _campo, info = propriedade(args[0])
+            marcador = marcador_de(info, args[1])
+            sql_op = "!=" if op == "<>" else op
+            return f"{info['sql']} {sql_op} {marcador}"
+        if op in OPS_ESPACIAIS:
+            if _campo_espacial_invalido(args):
+                raise ErroWhere("sintaxe_invalida", f"'{op}' espera [{{'property': campo_geometria}}, geometria, ...]")
+            _campo, info = propriedade(args[0])
+            if _tipo_de(info) not in TIPOS_GEOMETRICOS:
+                raise ErroWhere("tipo_invalido", f"'{op}' só em campo de geometria: {_campo}", {"campo": _campo})
+            geom = _validar_geojson(args[1])
+            srid_coluna = int(info.get("srid") or 4326)
+            params.append(json.dumps(geom))
+            expr_geom = f"ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326), {srid_coluna})"
+            if op == "s_intersects":
+                if len(args) != 2:
+                    raise ErroWhere("sintaxe_invalida", "s_intersects espera 2 argumentos")
+                return f"ST_Intersects({info['sql']}, {expr_geom})"
+            # s_dwithin: distância medida em metros sobre geography (esférica), não em unidade do SRID
+            if len(args) != 3 or isinstance(args[2], bool) or not isinstance(args[2], (int, float)):
+                raise ErroWhere("sintaxe_invalida", "s_dwithin espera [propriedade, geometria, distância em metros]")
+            params.append(float(args[2]))
+            return f"ST_DWithin({info['sql']}::geography, ({expr_geom})::geography, %s)"
+        raise ErroWhere("operador_nao_permitido", f"operador não permitido: {op!r}", {"op": op})  # pragma: no cover
+
+    sql = visitar(no)
+    return ConsultaSQL(sql, params)
+
+
+def _campo_espacial_invalido(args: list) -> bool:
+    return not args or not (isinstance(args[0], dict) and "property" in args[0])
+
+
+def compilar(no: dict, colunas: dict) -> ConsultaSQL:
+    """Alias curto, mesmo nome de `where_ast.compilar` — comodidade para quem importa os dois módulos."""
+    return compilar_cql2(no, colunas)
+
+
+def contar_clausulas(no: dict) -> int:
+    """Só para teste/diagnóstico: valida e devolve quantas cláusulas de comparação o filtro tem."""
+    contador = {"n": 0}
+    _validar_estrutura(no, 1, contador)
+    return contador["n"]

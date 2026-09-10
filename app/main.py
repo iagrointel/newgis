@@ -109,6 +109,7 @@ from app.rede.consumidores_rotas import router as rotas_rede_consumidores
 from app.multiescala.rotas import router as rotas_multiescala
 from app.portal import openapi as portal_openapi
 from app.portal.rotas import router as rotas_portal
+from app.mapa.selecao import router as rotas_selecao
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rede_utilidades.rotas_config_tracado import router as rotas_rede_config_tracado
@@ -379,6 +380,8 @@ ROUTERS = [
     rotas_multiescala,
     # --- visualizador de mapa (L2-01-mapa-web): /api/mapa/camadas, TileJSON com token curto, repasse /tiles
     rotas_mapa,
+    # --- seleção e filtro (L2-01-h): /valores, /filtrar (CQL2-JSON), /selecionar, /selecao-espacial
+    rotas_selecao,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
     rotas_tiles,
     # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,
