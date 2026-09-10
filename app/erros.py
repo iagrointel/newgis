@@ -1,7 +1,15 @@
 """Contrato de erro da API (ADR 0002 seção 14, decisão D18): toda resposta de erro é
 {"erro": "<codigo_curto>", "mensagem": "<frase em português>", "detalhe": <opcional>, "req_id": "<16 hex>"}.
 Quem levanta é `ErroAPI`; os dois handlers cobrem também o HTTPException do FastAPI (404 de rota, 405) e o
-RequestValidationError (422 com a lista do pydantic). Outras trilhas importam daqui; nenhuma redefine."""
+RequestValidationError (422 com a lista do pydantic). Outras trilhas importam daqui; nenhuma redefine.
+
+Item L7-08-d (ADR 0018): a mesma resposta passou a ser também um Problem Details da RFC 9457 — tipo de
+conteúdo `application/problem+json` e os membros `type`, `title`, `status`, `detail` e `instance`. Isto é
+ACRÉSCIMO, não troca: `erro`, `mensagem`, `detalhe` e `req_id` continuam onde estavam, como membros de
+extensão (a RFC 9457 seção 3.2 admite membros de extensão), e nenhum cliente da casa precisou mudar. O
+motivo de acrescentar: a chave de API é consumida por programa de terceiro, e `type`/`status` é o que
+biblioteca de cliente sabe ler sem conhecer o vocabulário da casa. `type` é uma URN estável por código de
+erro (`urn:plat:erro:<codigo>`), nunca uma URL que alguém precise buscar."""
 
 from typing import Any
 
@@ -57,8 +65,21 @@ class ErroAPI(HTTPException):
         self.detalhe = detalhe
 
 
-def corpo_erro(request: Request, erro: str, mensagem: str, detalhe: Any = None) -> dict:
-    corpo = {"erro": erro, "mensagem": mensagem}
+TIPO_PROBLEMA = "application/problem+json"
+URN_ERRO = "urn:plat:erro:"
+
+
+def corpo_erro(request: Request, erro: str, mensagem: str, detalhe: Any = None, status: int = 400) -> dict:
+    """Problem Details da RFC 9457 com os quatro campos da casa como membros de extensão (ver o cabeçalho)."""
+    corpo = {
+        "type": URN_ERRO + erro,
+        "title": MENSAGENS_HTTP.get(status, "erro"),
+        "status": status,
+        "detail": mensagem,
+        "instance": request.url.path,
+        "erro": erro,
+        "mensagem": mensagem,
+    }
     if detalhe is not None:
         corpo["detalhe"] = detalhe
     corpo["req_id"] = getattr(request.state, "req_id", None)
@@ -67,15 +88,15 @@ def corpo_erro(request: Request, erro: str, mensagem: str, detalhe: Any = None) 
 
 async def tratar_http(request: Request, exc: HTTPException) -> JSONResponse:
     if isinstance(exc, ErroAPI):
-        corpo = corpo_erro(request, exc.erro, exc.mensagem, exc.detalhe)
+        corpo = corpo_erro(request, exc.erro, exc.mensagem, exc.detalhe, exc.status_code)
     else:
         mensagem = exc.detail if isinstance(exc.detail, str) else MENSAGENS_HTTP.get(exc.status_code, "erro")
         if mensagem == "Not Found":
             mensagem = MENSAGENS_HTTP[404]
         elif mensagem == "Method Not Allowed":
             mensagem = MENSAGENS_HTTP[405]
-        corpo = corpo_erro(request, CODIGOS_HTTP.get(exc.status_code, "erro"), mensagem)
-    return JSONResponse(corpo, status_code=exc.status_code, headers=exc.headers)
+        corpo = corpo_erro(request, CODIGOS_HTTP.get(exc.status_code, "erro"), mensagem, status=exc.status_code)
+    return JSONResponse(corpo, status_code=exc.status_code, headers=exc.headers, media_type=TIPO_PROBLEMA)
 
 
 async def tratar_validacao(request: Request, exc: RequestValidationError) -> JSONResponse:
@@ -88,8 +109,9 @@ async def tratar_validacao(request: Request, exc: RequestValidationError) -> JSO
         }
         detalhe.append(item)
     return JSONResponse(
-        corpo_erro(request, "validacao", "pedido inválido: corpo ou parâmetros fora do esquema", detalhe),
+        corpo_erro(request, "validacao", "pedido inválido: corpo ou parâmetros fora do esquema", detalhe, 422),
         status_code=422,
+        media_type=TIPO_PROBLEMA,
     )
 
 

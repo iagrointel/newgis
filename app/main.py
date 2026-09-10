@@ -10,6 +10,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app import erros, limite_corpo, paginas, rotas_qr
 from app import log as plat_log
@@ -100,6 +101,8 @@ from app.mapas.rotas import router as rotas_mapas
 from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.consumidores_rotas import router as rotas_rede_consumidores
 from app.multiescala.rotas import router as rotas_multiescala
+from app.portal import openapi as portal_openapi
+from app.portal.rotas import router as rotas_portal
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rede_utilidades.rotas_config_tracado import router as rotas_rede_config_tracado
@@ -448,11 +451,25 @@ ROUTERS = [
     # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,
     # /fatores/{id}/amostras, /conjuntos/{id}/macro, /execucoes/{id}/micro, /execucoes
     rotas_multiescala,
+    # --- portal de API (L7-08-d): /portal (página, CSP própria) e /api/portal/exemplos
+    rotas_portal,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
 for _router in ROUTERS:
     app.include_router(_router)
+
+# item L7-08-d: `x-plat-escopo` em toda operação, derivado da dependência de autenticação da própria rota
+# (app/portal/openapi.py explica por que derivado e não declarado à mão). Tem de vir DEPOIS do include_router.
+portal_openapi.instalar(app)
+
+# /static/ é do nginx em produção (ADR 0001 seção 4.3) e assim continua. PLAT_SERVIR_ESTATICO=1 monta o
+# diretório na própria aplicação para o caso em que não há nginx na frente: o e2e de uma trilha do laço sobe
+# só o uvicorn numa porta sua, e sem isto toda folha e todo módulo da página dariam 404 no navegador (achado
+# do 1º turno, registrado em scripts/homolog_e2e.sh, que resolveu o mesmo problema pondo um nginx no meio).
+# Recusado em produção mesmo que a variável apareça: lá o nginx é a origem do estático e do Cache-Control.
+if os.environ.get("PLAT_SERVIR_ESTATICO") == "1" and not settings.producao:
+    app.mount("/static", StaticFiles(directory=WEB), name="estatico")
 
 
 @app.get("/api/docs", include_in_schema=False)

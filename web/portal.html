@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Portal da API · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/estilo/tokens.css">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/portal.css">
+</head>
+<body class="tela instrumento portal">
+<a class="pular" href="#principal">pular para o conteúdo</a>
+<div class="app portal-app">
+  <aside class="lateral portal-lateral">
+    <div class="marca"><strong>plat · API</strong> <span class="aviso-beta">análise / beta privado</span></div>
+    <div class="portal-chave">
+      <label for="chave">chave de API</label>
+      <input id="chave" type="password" autocomplete="off" autocapitalize="none" spellcheck="false"
+             aria-describedby="chave-estado">
+      <p id="chave-estado" class="portal-chave-estado" aria-live="polite">nenhuma chave: só as rotas públicas respondem</p>
+    </div>
+    <div class="portal-busca">
+      <label for="filtro">filtrar rota</label>
+      <input id="filtro" type="search" autocomplete="off" aria-describedby="filtro-dica">
+      <p id="filtro-dica" class="portal-chave-estado">casa caminho, escopo ou grupo: itens · tiles · /api/eu</p>
+    </div>
+    <nav id="indice" aria-label="rotas da API"></nav>
+  </aside>
+  <main id="principal" class="principal portal-principal" tabindex="-1">
+    <h1>Portal da API <span class="contagem" id="contagem"></span></h1>
+    <plat-aviso id="aviso"></plat-aviso>
+
+    <section class="cartao" id="cartao-inicio">
+      <h2>O que é</h2>
+      <div id="descricao" class="portal-descricao"></div>
+      <h3>Escopos de chave</h3>
+      <div class="tabela-rolagem">
+        <table class="tabela" id="tabela-escopos">
+          <caption class="sr-so">escopos de chave de API</caption>
+          <thead><tr><th scope="col">escopo</th><th scope="col">o que abre</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <h3>Perfis de chave</h3>
+      <ul class="portal-perfis" id="perfis"></ul>
+    </section>
+
+    <section class="cartao" id="cartao-rota" hidden>
+      <h2><span class="portal-verbo" id="rota-verbo"></span> <span class="mono" id="rota-caminho"></span></h2>
+      <p id="rota-resumo" class="portal-resumo"></p>
+      <dl class="portal-meta">
+        <div><dt>escopo exigido</dt><dd class="mono" id="rota-escopo"></dd></div>
+        <div><dt>credencial</dt><dd class="mono" id="rota-auth"></dd></div>
+        <div><dt>privilégio do dono</dt><dd class="mono" id="rota-privilegio"></dd></div>
+      </dl>
+      <div id="rota-parametros"></div>
+      <h3>Experimentar</h3>
+      <form id="form-experimentar" class="portal-experimentar" novalidate>
+        <div class="campo">
+          <label for="exp-caminho">caminho</label>
+          <input id="exp-caminho" class="mono" type="text" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="campo" id="campo-corpo" hidden>
+          <label for="exp-corpo">corpo (JSON)</label>
+          <textarea id="exp-corpo" class="mono" rows="4" spellcheck="false"></textarea>
+        </div>
+        <div class="botoes">
+          <button type="submit" id="executar" class="primario">Executar</button>
+          <span class="portal-dica" id="exp-dica"></span>
+        </div>
+      </form>
+      <div id="resposta" class="portal-resposta" hidden>
+        <p class="portal-resposta-linha">
+          <span class="etiqueta" id="resp-status"></span>
+          <span class="mono" id="resp-tipo"></span>
+          <span class="mono" id="resp-tempo"></span>
+        </p>
+        <pre class="portal-corpo mono" id="resp-corpo" tabindex="0"></pre>
+      </div>
+      <h3>Nesta rota, em código</h3>
+      <pre class="portal-corpo mono" id="rota-curl" tabindex="0"></pre>
+    </section>
+
+    <section class="cartao" id="cartao-exemplos">
+      <h2>Exemplos executáveis <span class="contagem" id="contagem-exemplos"></span></h2>
+      <p class="portal-resumo">Programas que rodam de verdade contra esta instalação. Duas variáveis de
+        ambiente: <code class="mono">PLAT_URL</code> e <code class="mono">PLAT_CHAVE</code>.</p>
+      <div class="portal-abas" role="tablist" aria-label="linguagem dos exemplos">
+        <button type="button" role="tab" id="aba-python" aria-selected="true" aria-controls="lista-exemplos">Python</button>
+        <button type="button" role="tab" id="aba-js" aria-selected="false" aria-controls="lista-exemplos">JavaScript</button>
+      </div>
+      <ul class="portal-exemplos" id="lista-exemplos"></ul>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/js/portal/portal.js"></script>
+</body>
+</html>

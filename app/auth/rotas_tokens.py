@@ -20,7 +20,7 @@ from app.settings import settings
 router = APIRouter(prefix="/api/tokens", tags=["tokens"])
 SQL_TOKEN = """
 SELECT k.id, k.nome, k.prefixo, k.escopos, k.restricao, k.criado_em, k.expira_em, k.revogado_em, k.ultimo_uso,
-       k.ultimo_ip, k.renovado_por, k.usuario_id, u.login AS dono_login
+       k.ultimo_ip, k.usos, k.renovado_por, k.usuario_id, u.login AS dono_login
 FROM plat.token_servico k JOIN plat.usuario u ON u.id = k.usuario_id
 """
 
@@ -37,6 +37,7 @@ def _json(r: dict) -> dict:
         "revogado_em": iso(r["revogado_em"]),
         "ultimo_uso": iso(r["ultimo_uso"]),
         "ultimo_ip": r["ultimo_ip"],
+        "usos": r["usos"],  # item L7-08-d: contagem alimentada pela mesma linha que grava ultimo_uso
         "dono": {"id": r["usuario_id"], "login": r["dono_login"]},
         "renovado_por": r["renovado_por"],
     }

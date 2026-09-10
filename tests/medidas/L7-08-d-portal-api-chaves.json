@@ -1,0 +1,80 @@
+{
+ "item": "L7-08-d-portal-api-chaves",
+ "medidas": {
+  "rotas_no_openapi": {
+   "valor": 197,
+   "unidade": "rotas",
+   "comando": "GET /api/openapi.json; conta operação (caminho x verbo)"
+  },
+  "rotas_com_x_plat_escopo": {
+   "valor": 197,
+   "unidade": "rotas",
+   "comando": "GET /api/openapi.json; conta operação com a chave x-plat-escopo"
+  },
+  "rotas_sem_x_plat_escopo": {
+   "valor": 0,
+   "unidade": "rotas",
+   "comando": "mesma varredura, operações sem a chave"
+  },
+  "rotas_varridas_com_escopo_errado": {
+   "valor": 138,
+   "unidade": "rotas",
+   "comando": "tests/api/test_portal_chaves.py::test_varredura_escopo_errado_nao_devolve_200"
+  },
+  "respostas_200_indevidas": {
+   "valor": 0,
+   "unidade": "respostas",
+   "comando": "mesma varredura; contrato: zero"
+  },
+  "distribuicao_de_status_na_varredura": {
+   "valor": {
+    "403": 133,
+    "404": 5
+   },
+   "unidade": "contagem por status",
+   "comando": "mesma varredura"
+  },
+  "segundos_entre_revogar_e_negar": {
+   "valor": 0.013,
+   "unidade": "s",
+   "comando": "tests/api/test_portal_chaves.py::test_revogar_nega_em_menos_de_cinco_segundos"
+  },
+  "codigo_http_apos_revogar": {
+   "valor": 401,
+   "unidade": "código HTTP",
+   "comando": "mesma medição; o portão pedia 403, o contrato do L0-02 dá 401 token_revogado"
+  },
+  "exemplos_publicados_no_portal": {
+   "valor": 20,
+   "unidade": "programas",
+   "comando": "GET /api/portal/exemplos; arquivos de exemplos/python e exemplos/js"
+  },
+  "exemplos_executados_com_sucesso": {
+   "valor": 20,
+   "unidade": "programas",
+   "comando": "tests/e2e/test_portal.py::test_os_vinte_exemplos_rodam_de_verdade; python3 e node contra :8173"
+  },
+  "exemplos_que_falharam": {
+   "valor": 0,
+   "unidade": "programas",
+   "comando": "mesma execução; contrato: zero"
+  },
+  "recursos_externos_carregados_pelo_portal": {
+   "valor": 0,
+   "unidade": "requisições",
+   "comando": "page.on('request') no chromium do playwright; conta host != 127.0.0.1:8173"
+  },
+  "requisicoes_do_portal": {
+   "valor": 27,
+   "unidade": "requisições",
+   "comando": "mesma coleta, total de requisições"
+  },
+  "segundos_revogar_ate_negar_no_portal": {
+   "valor": 0.05,
+   "unidade": "s",
+   "comando": "tests/e2e/test_portal.py; DELETE /api/tokens/{id} até o botão Experimentar receber 401"
+  }
+ },
+ "gerado_em": "2026-09-06T18:06:41Z",
+ "git_sha": "90d03c07da0c"
+}
