@@ -215,6 +215,16 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `REDEFINICAO_MAX_JANELA` | `5` | no máximo 5 pedidos por (inquilino, e-mail) a cada REDEFINICAO_JANELA_MIN |
 | `AVISO_EXPIRACAO_DIAS` | `(90, 30, 7, 1)` | avisos de expiração de token de serviço (hipótese do item; como a Esri) |
 
+## imagens/STAC (L1-01-a-pgstac-e-stac-api-por-inquilino; app/imagens/): catálogo é o pgstac (schema
+
+| nome | valor | explicação |
+|---|---|---|
+| `STAC_SLUG_MAX` | `58` | — |
+| `STAC_ITEM_ID_MAX` | `256` | — |
+| `STAC_PAGINA_PADRAO` | `10` | `limit` padrão da busca (mesmo padrão da spec STAC API Item Search) |
+| `STAC_PAGINA_MAX` | `1000` | `limit` máximo aceito por pedido (pgstac pagina por token, não por offset) |
+| `STAC_COLECOES_POR_INQUILINO` | `500` | — |
+| `STAC_LOTE_ITENS_MAX` | `10000` | POST .../items:lote (semeadura de teste/ingestão em massa; ADR do item L1-01-h) |
 ## grades aninhadas do motor multicritério (L3-19-multiescala; migração 20260906T1640_multiescala.sql):
 
 | nome | valor | explicação |

@@ -280,6 +280,31 @@ regerar `docs/openapi.json` apareceu que a junção dos ramos de origem havia ap
 mapa e do FeatureServer do arquivo comitado; foram restauradas e cada um dos 29 (método, caminho) novos ganhou
 caso na varredura cruzada A→B, que segue em 100 % de cobertura.
 
+## turno 4, setembro de 2026 (item L1-02-tiles-token: ladrilho raster por inquilino, token no caminho)
+
+Serviço de ladrilho raster sobre o COG que a ingestão (L1-01) deixou no Garage, com o token de serviço
+no CAMINHO da URL (decisão C6 do conceito L1; ADR 20260907T0300).
+
+- `/svc/<token>/raster/<item>/{z}/{x}/{y}[.png|.jpg|.webp]` (XYZ), `/tilejson.json`, `/info.json`,
+  `/wmts` (KVP GetCapabilities e GetTile) e `/wmts/1.0.0/WMTSCapabilities.xml` (REST); mosaico da
+  coleção em `/svc/<token>/mosaico/<colecao>/{z}/{x}/{y}`.
+- Motor rio-tiler 9.4.3 lendo o COG por `/vsis3` com a chave só-leitura do balde do inquilino. Nenhuma
+  rota aceita endereço de arquivo: o caminho nasce do catálogo do inquilino do token (sem `?url=`).
+- Expressão sobre bandas por parâmetro (NDVI = `(b4-b3)/(b4+b3)`), com gramática própria antes do
+  numexpr; faixa, colormap (211 do rio-tiler), seleção de bandas e escolha do asset.
+- GetCapabilities do WMTS **valida contra o esquema oficial do OGC** (XSD vendorizado em
+  `tests/dados/ogc_xsd`, validação sem rede).
+- Cache no nginx com chave SEM o token e `auth_request` que confere token E dono do item a cada
+  requisição — sem essa conferência, um token de outro inquilino recebia o ladrilho do cache (achado
+  desta bancada, hoje é teste).
+- Registro de uso agregado por token em `plat.tile_leitura` (migração `20260907T0249_tile_leitura.sql`)
+  e leitura em `GET /api/tiles/leituras`. O token nunca é gravado, só o `token_id`.
+- Bancada: `scripts/bench_tiles.py` (carga, `proxy_cache_lock`, revogação) e
+  `scripts/prova_cliente_ogc.sh` (driver WMTS e WMS/TMS do GDAL lendo pixel do serviço).
+- Medido: **68.738 ladrilhos/s** quente com o cache do nginx (`ab -c 32`, 0 erro; o mesmo nginx serve
+  arquivo estático a 68.484/s — o serviço está no teto da máquina); frio 96 ladrilhos/s numa conexão,
+  mediana 9,8 ms; 20 pedidos simultâneos ao mesmo ladrilho frio = **1 leitura + 19 acertos**; revogar
+  o token passa a 403 em **2,86-2,90 s**. Números e comandos em `tests/medidas/L1-02-tiles-token.json`.
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
@@ -1381,6 +1406,51 @@ Latência medida: mediana de 30 `PUT /api/itens/{id}` (painel, 2 nós) = **17,3 
 `/api/tipos-item`; `/api/itens/{id}/integridade` como alvo padrão 401/403/404).
 
 Decisões em `docs/adr/0011-documento-de-construtor.md`. Detalhe: `MANUAL.md` seção 17, `ARQUITETURA.md` seção 14.
+
+## turno 3, setembro de 2026 (item L1-01-d-garage-por-inquilino: balde por inquilino com cota dupla, chave só-leitura e COG por Range)
+
+Constrói sobre o adaptador do L0-11 (ADR 0006) o que a linha de imagens precisa. **ADR 20260908T1255**; migração
+`20260908T1255_garage_por_inquilino.sql` (nome com carimbo de tempo UTC, regra fixa: a faixa de três dígitos está
+fechada).
+
+- **Cota dupla.** `plat.tenant.cota_objetos` e `plat.arquivo_bucket.cota_objetos` novas; `UpdateBucket` do Garage
+  passa a receber `quotas: {maxSize, maxObjects}`. Medido: com `maxObjects` na conta exata, o PUT seguinte volta
+  403 e a mensagem que chega à API é **"o Garage recusou a gravação: a cota de objetos do inquilino foi atingida
+  (limite do balde: N objetos)"** — em português, com o limite que o próprio Garage citou
+  (`app/garage.traduzir_erro_s3`, classe `CotaGarage`). Para bytes a instância mediu **"o Garage recusou a
+  gravação: a cota de armazenamento do inquilino foi atingida"** — sem número, porque essa mensagem do Garage não
+  cita o limite. `POST /api/arquivos` acima da cota devolve **413 `cota_excedida`**; a frase que chega ali é a da
+  checagem prévia ("cota de 500 bytes excedida: uso atual 138906, objeto de 2048 bytes"), porque ela corre antes e
+  é mais informativa — a do Garage é a que sobe quando a prévia deixa passar.
+- **Semeadura de instalação.** Passo `g3` do `install.sh` (`python -m app.baldes_semear`): balde, duas chaves,
+  as duas cotas e o endpoint web por inquilino ativo. Medido no inquilino de teste: 1ª execução **1
+  criado/alterado**, 2ª **0 criados/alterados**. A semeadura lê o balde de volta pela Admin API e reaplica quando
+  o Garage discorda do banco — foi assim que se descobriu `plat-demo` com `maxObjects: null` no Garage e 200000
+  no banco.
+- **Objeto nomeado por conteúdo, nunca sobrescrito.** `app/objetos_raster.py`: `<item_id>/<asset>_<sha8>.<ext>`,
+  `HEAD` antes de gravar, `ObjetoJaExiste` na segunda gravação do mesmo conteúdo; conteúdo novo produz chave nova
+  (medido: `demo/zt_sobrescrita/cog_c9e41e3e.tif` → `cog_ebd6a855.tif`, a versão 1 intacta). A expressão da chave
+  não admite ponto nem barra no item/asset: dez formas erradas (`..`, `../../etc`, maiúscula, sha curto) recusadas
+  no teste unitário.
+- **Chave só-leitura que sai de casa.** `GET /api/arquivos/_chave-leitura` (sessão + `org.integracoes`) entrega a
+  credencial S3 RO do balde para a conexão do ArcGIS Pro e o `/vsis3` do TiTiler; a chave RW nunca sai. Refutação
+  medida com boto3: com a chave RO, `PutObject` **403**, `DeleteObject` **403**, `CopyObject` no mesmo balde
+  **403**, `CopyObject` entre baldes **403**, `CreateMultipartUpload` **403**; `ListBuckets` responde 200 mas
+  mostra só `['plat-demo']` (o balde do outro inquilino não aparece). Contra o balde do vizinho, `GetObject`,
+  `HeadObject` e `ListObjectsV2` = **403** cada.
+- **COG por HTTPS com Range.** Bloco `/svc/<token>/cog/<slug>/...` em `deploy/nginx.conf` (`slice 1m`, cache das
+  fatias, `auth_request` contra `GET /api/arquivos/_cog/autorizar`). Provado contra um nginx PRÓPRIO de teste
+  (porta 8162, certificado autoassinado): objeto de 3.146.505 bytes, `Range: bytes=1048576-1048591` responde
+  **206** com `Content-Range: bytes 1048576-1048591/3146505`, 16 bytes conferidos contra o conteúdo gravado;
+  token inválido no caminho = **403** antes de o Garage ver a requisição. **O bloco NÃO foi aplicado no nginx do
+  sistema neste turno** — quem aplica é o gerente.
+- **Apagar devolve a cota.** `objetos_raster.apagar_item` mediu 72 objetos/138.095 bytes antes → 75/153.095 com
+  3 objetos gravados → 72/138.095 depois, com os contadores do próprio Garage (GetBucketInfo). Segunda chamada
+  devolve zeros. `objetos.apagar_bucket_do_inquilino` desfaz o balde inteiro (objetos, as duas chaves, o balde e
+  a linha), porque `plat.inquilino_apagar` só limpa o banco.
+
+Medidas em `tests/medidas/L1-01-d.json`. Testes: `tests/unit/test_objetos_raster.py` (30) e
+`tests/api/test_garage_inquilino.py`.
 
 ## turno 3, setembro de 2026 (itens L0-02-e-varredura-cruzada-rls · L0-02-f-tela-usuarios: fechamento com evidência fresca + gap real corrigido)
 
