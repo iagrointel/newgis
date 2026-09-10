@@ -1195,6 +1195,19 @@ infraestrutura é a da casa: `WorkerExtra` e `porta_livre()` de `tests/api/jobs/
 pedida ao sistema, nunca constante; processos mortos sempre por PID exato) e um `ApiTrilha` novo que
 segue o mesmo padrão para o uvicorn. **Segue aberto no item**: p95 por rota (medida pós-parada da
 superfície, conforme o próprio texto do item) e o caos de banco (wt/cx4h08).
+## turno 8, setembro de 2026 (item L0-08-b-saml: SAML 2.0 Web SSO por inquilino, SP- e IdP-initiated)
+
+`plat.provedor_saml` (vários por inquilino, metadado do IdP por URL, XML ou parâmetros; par de chaves do SP
+gerado aqui, chave privada cifrada com PLAT_SECRET), rotas `GET /api/sso/saml/metadata` (metadado do SP
+assinado, válido contra o XSD do SAML), `iniciar`, `acs`, `logout` e `slo`, mais `GET/POST/PUT/DELETE
+/api/org/saml`. Biblioteca python3-saml com `strict`, assinatura de resposta E de asserção obrigatórias,
+asserção cifrada opcional (exigível), SHA-1 recusado, desvio de relógio de 300 s (10 min à frente = 401),
+replay barrado pelo ID da asserção até o NotOnOrAfter, logout propagado nos dois sentidos (NameID +
+SessionIndex por sessão). Identidade única com o OIDC: `plat.usuario_externo_provisionar(origem, ...)`
+substitui o corpo de `oidc_provisionar`. Conferido: 16 testes com IdP sintético (sem Docker: sem assinatura,
+outra chave, relógio, replay, XML Signature Wrapping, NameID fora da regra Esri, cifra, SLO, IdP desligado não
+afeta o login local, isolamento A->B) e 5 contra o Keycloak 26 do L0-08-a (dois clientes SAML no realm de
+teste). Sem captura de tela (chromium headless quebrado nesta máquina).
 
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 ## turno 3, setembro de 2026 (item L0-02-g-checagem-privilegio-papel-id: quem concede papel tem de ter o papel)
@@ -5686,3 +5699,78 @@ em 3,42 s (N = 3) e 9,09 s (N = 10); sobre a execução real, 3 regiões sobre o
 Refutação: área maior que a disponível e N = 31 recusados com código próprio; mesma semente, resposta idêntica.
 Paridade parâmetro a parâmetro contra o Locate Regions (Pro, página lida em 08/09/2026) em `docs/PARIDADE.md`;
 ADR `docs/adr/20260908T1450-localizar-regioes.md`.
+## turno 4, setembro de 2026 (item L0-08-a-oidc: login federado OpenID Connect por inquilino)
+
+Módulo isolado `app/auth/oidc.py` (Authlib/`joserfc` 1.7.5, decisão medida contra httpx+JWT próprio em
+`docs/adr/20260907T0147-oidc-authlib.md`): Authorization Code + PKCE S256, descoberta OIDC (RFC 8414, cache
+com TTL de 1h) e validação de `id_token` em DUAS fases — assinatura via JWKS (`joserfc.jwt.decode`, refetch
+automático em `kid` desconhecido = suporte a rotação de chave) e claims à parte (`JWTClaimsRegistry`: issuer,
+audience = `client_id` do provedor, `exp`/`iat` com folga de 60 s, `nonce`) — achado do ADR: a etapa de
+assinatura sozinha NÃO detecta token expirado. `GET /api/sso/oidc/{iniciar,retorno,logout}` (rotas próprias,
+nunca `/api/login/oidc`, para não colidir com outro item em construção na mesma família); claim de
+identificador de login é `sub` (nunca email, como a doc Esri do item recomenda), gravado em
+`usuario.sujeito_externo` como `"<issuer>#<sub>"`. Transação de login (`state`/`nonce`/verificador PKCE) em
+tabela própria (`plat.oidc_transacao`, migração `20260907T0147_provedor_oidc.sql`) com consumo ATÔMICO por
+`DELETE...RETURNING` de uso único e TTL de 10 min — a defesa direta contra a refutação do item (reuso de
+`code`, troca de `state`). Um inquilino pode ter MAIS DE UM provedor OIDC (rótulo + ordem configuráveis,
+`GET/POST/PUT/DELETE /api/org/oidc`, privilégio `org.integracoes`); `client_secret` cifrado com o mesmo
+esquema AES-GCM do LDAP/TOTP (prefixo `encoidc:v1:` isolado). `GET /api/login/provedores` passou a listar os
+botões OIDC habilitados do inquilino (rótulo + id, nunca issuer/client_id).
+
+Servidor de teste: Keycloak 26.0 em contêiner Docker efêmero (`tests/oidc_fixture/`, realm
+`plataforma-teste-oidc` versionado em `realm.json`, 2 clients — um para a refutação de audiência trocada — 3
+usuários sintéticos). O fluxo completo é dirigido por `httpx` puro, sem navegador (`google-chrome
+--headless` quebrado nesta máquina); achado que exigiu tratamento especial: o Keycloak marca os cookies de
+sessão de login como `Secure` mesmo servindo `http://` puro em modo dev, e o *cookie jar* automático do
+`httpx.Client` os descarta — copiados manualmente para um cabeçalho `Cookie` explícito.
+
+17 testes verdes (11 unidade com chaves RSA sintéticas em `tests/unit/test_oidc.py` — PKCE, cifra do
+segredo, as 4 cláusulas literais do portão (assinatura errada/expirada/nonce errado/issuer errado) e a
+rotação de chave; 6 de integração em `tests/api/oidc/test_login_oidc.py`, marcados `lento`, contra o
+Keycloak real: login cai no inquilino/perfil certos com logout propagado (`X-Oidc-End-Session`), grupo não
+mapeado nunca cria sessão, reuso de `code`/`state` nunca cria segunda sessão, troca de `state` entre duas
+transações nunca cria sessão, `id_token` genuíno de OUTRO `client_id` (mesmo Keycloak, mesma chave) é
+recusado só pelo `aud`, e provedor desligado (contêiner derrubado de verdade) não impede o login local do
+admin do mesmo inquilino. Latência medida: 2 logins completos = 721 ms e 124 ms (`tests/medidas/
+L0-08-a-oidc.json`, `latencia_login_oidc_ms`; o primeiro paga a descoberta OIDC fria, o segundo já usa o
+cache). `tests/api/cruzado_casos.py` ganhou entrada para as 6 rotas novas (varredura cruzada A→B do
+portão P6) — a suíte cruzada em si segue com uma falha PRÉ-EXISTENTE e não relacionada (fixture
+`preparacao` recebe `403` em `POST /api/papeis` para o admin de `demo2` mesmo em `master` sem nenhuma
+mudança deste item, confirmado por `git stash`), documentada como fronteira honesta no handoff, não
+escondida nem contornada.
+
+### Commits
+
+| sha | mensagem |
+|---|---|
+| (este) | Login federado OpenID Connect por inquilino (item L0-08-a-oidc) |
+
+## turno 8, setembro de 2026 (item L0-08-e-mapeamento-provisionamento: regras de provisionamento por provedor de login, tela Logins)
+
+Um laço só de provisionamento para LDAP, OIDC e SAML (`app/auth/provisionamento.py`), chamado depois que o IdP
+confirma a identidade: criação automática ou só por convite prévio (o convite por e-mail do L0-07-d; sem convite
+= 403 `convite_necessario`, "peça convite"), padrões para membro novo (papel, grupos internos, pasta inicial),
+mapa **valor exato** do grupo do IdP → perfil, papel e grupos internos (grupo chamado `administrador` sem regra não
+vira nada), atualização a cada login (opcional), desligamento da conta quando o IdP deixa de mandar grupo mapeado
+(opcional), grupos regidos sincronizados a cada login (entra e sai), e `POST /api/usuarios/{id}/desregistrar`
+(vínculo removido, conta desativada, IdP intacto). Coluna `provisionamento` jsonb nas três tabelas de provedor
+(migração `20260908T0212`), funções SECURITY DEFINER para localizar/regras/desligar/convite. Tela `/admin/logins`
+(`org.integracoes`): lista LDAP/OIDC/SAML com rótulo e ordem dos botões, habilitação, criação e regras; editor de
+regras por linha; tabela de paridade com a Esri 11.4 (New member defaults, group membership) na própria tela e no
+ADR `20260908T0240-provisionamento-federado.md`. Testes: unidade (decisão pura, 500 grupos, 422 por campo),
+integração com Keycloak real (grupos e usuários criados pela API de administração dentro do teste) e e2e da tela
+com captura. Este ramo contém `wt/cx008` (OIDC + SAML) por merge.
+
+## turno 8, setembro de 2026 (item L0-08-c-govbr: gov.br como provedor OIDC, adaptador provado contra IdP sintético)
+
+gov.br (Login Único) vira um `modelo` do provedor OIDC (`plat.provedor_oidc.modelo = 'govbr'`, `api_base`),
+sem cópia do fluxo: descoberta, PKCE S256, JWKS, validação e transação de uso único são as do L0-08-a. O adaptador
+(`app/auth/govbr.py`) transforma `reliability_info` do id_token (nível bronze/prata/ouro, selos) e `amr` em valores
+`nivel:*`, `selo:<id>`, `amr:*`; sem `reliability_info`, consulta a API de confiabilidades
+(`/confiabilidades/v3/contas/{cpf}/niveis|confiabilidades?response-type=ids`) com o access_token; o mapeamento para
+perfil/papel/grupos é o do L0-08-e (regra explícita, valor exato). CPF só como pseudônimo SHA-256 (nunca em login,
+sujeito externo, evento ou log; teste procura). Tela Logins > Novo provedor OIDC com os campos do roteiro (ambiente,
+issuer, client_id, client_secret cifrado, redirect_uri fixa, escopos). Provado contra `tests/govbr_fixture/idp_falso.py`
+(formato do roteiro, 6 casos, inclusive id_token de outro issuer com 'gold' = 401); e2e da tela 51 ms. **Teste real
+com credencial do órgão: pendente em `docs/PARIDADE.md`** (cadastro exige ofício). ADR `20260908T0630-govbr-login-unico.md`.
+Este ramo contém `wt/cx2l008e` (e por ele `wt/cx008`).

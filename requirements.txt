@@ -129,3 +129,15 @@ bandit==1.9.4
 stevedore==5.9.1
 truststore==0.10.4
 # Do sistema, por decisão (pacotes dpkg conferidos pelo install.sh): python3-uvicorn 0.27.1, python3-psycopg2 2.9.9.
+# OpenID Connect (app/auth/oidc.py; item L0-08-a): Authlib decidida contra httpx+jwt próprio (docs/adr/
+# 20260907T0147-oidc-authlib.md) — usa o módulo joserfc (sucessor não-deprecado de authlib.jose) para
+# validação de JWS/JWT contra JWKS; puxa cryptography>=45 (a venv tinha 41.0.7 do dpkg; upgrade aditivo,
+# sem quebra observada em app.settings/app.senha/app.auth.totp — os únicos outros usuários de cryptography).
+authlib==1.8.0
+joserfc==1.7.5
+# --- SAML 2.0 Web SSO (L0-08-b): python3-saml (OneLogin, MIT) faz XML-DSig, XSD, EncryptedAssertion, metadado e
+# SLO; xmlsec é a ligação Python da libxmlsec (wheel manylinux com a biblioteca embutida: não exige xmlsec1 nem
+# libxmlsec1-dev no sistema, e não muda a versão de lxml/cryptography); isodate lê as datas do SAML.
+python3-saml==1.16.0
+xmlsec==1.3.17
+isodate==0.7.2

@@ -1,0 +1,17 @@
+{
+ "item": "L0-08-c-govbr",
+ "medidas": {
+  "pagina_pronta_ms_logins_govbr": {
+   "valor": 51.1,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (apoio.py Tela.ir)"
+  },
+  "nivel_ouro_vira_admin": {
+   "valor": 1,
+   "unidade": "caso",
+   "comando": "tests/api/oidc/test_govbr.py: IdP sintético com o formato do roteiro"
+  }
+ },
+ "gerado_em": "2026-09-08T06:04:30Z",
+ "git_sha": "3ebd0981a10e"
+}

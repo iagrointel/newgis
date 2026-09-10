@@ -27,6 +27,7 @@ from app.amc.rotas_pareto import router as rotas_amc_pareto
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
 from app.auth import sso as rotas_sso
+from app.auth import oidc as rotas_oidc
 from app.auth import (
     rotas_auditoria,
     rotas_convites,
@@ -34,6 +35,7 @@ from app.auth import (
     rotas_grupos,
     rotas_log,
     rotas_login,
+    rotas_logins,
     rotas_org,
     rotas_plataforma,
     rotas_redefinicao,
@@ -41,6 +43,7 @@ from app.auth import (
     rotas_usuarios,
 )
 from app.campo.rotas import router as rotas_campo
+from app.auth import saml as rotas_saml
 from app.catalogo import (
     camada_esquema,
     rotas_categorias,
@@ -227,6 +230,12 @@ ROUTERS = [
     rotas_ldap.router,
     # --- SSO OIDC/SAML (L0-08-sso): /api/login/oidc/*, /api/login/saml/*, GET/PUT /api/org/sso/{oidc,saml}
     rotas_sso.router,
+    # --- provedores de login e provisionamento (L0-08-e): GET/PUT /api/org/logins, POST /api/usuarios/{id}/desregistrar
+    rotas_logins.router,
+    # --- OpenID Connect (L0-08-a): GET /api/sso/oidc/{iniciar,retorno,logout}; GET/POST/PUT/DELETE /api/org/oidc
+    rotas_oidc.router,
+    # --- SAML 2.0 (L0-08-b): /api/sso/saml/{metadata,iniciar,acs,slo,logout}; GET/POST/PUT/DELETE /api/org/saml
+    rotas_saml.router,
     # --- SMTP, convite de membro e redefinição de senha (L0-07-d-smtp-convites): GET/PUT /api/org/smtp,
     # POST /api/org/smtp/testar; /api/convites (+ /resolver e /aceitar públicos); /api/senha/redefinir/*
     rotas_smtp,

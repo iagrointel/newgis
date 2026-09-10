@@ -407,6 +407,12 @@ EXPORTACAO_BLOCO_LEITURA_BYTES = 8 * 1024 * 1024   # leitura do arquivo pronto e
 # os que este item acrescenta.
 EXPORTACAO_INQUILINO_TIMEOUT_S = 3600 * 4          # inquilino inteiro pode ter muitas camadas; 4x o de uma só
 EXPORTACAO_INQUILINO_POR_DIA_MAX = 1               # portão do item: pedir a 2ª no mesmo dia UTC devolve 429
+# --- SAML 2.0 Web SSO por inquilino (L0-08-b-saml; app/auth/saml.py)
+SAML_DESVIO_RELOGIO_S = 300              # tolerância de relógio IdP x SP (o portão manda recusar 10 min à frente)
+SAML_RESPOSTA_MAX = 256 * 1024           # SAMLResponse/LogoutRequest acima disto = 413 (asserção real tem poucos KiB)
+SAML_METADADO_MAX = 512 * 1024           # metadado do IdP lido por URL/arquivo
+SAML_METADADO_TIMEOUT_S = 8.0            # leitura do metadado do IdP por URL
+SAML_TRANSACAO_MIN = 10                  # validade do AuthnRequest/LogoutRequest emitido (plat.saml_transacao)
 # --- grades aninhadas do motor multicritério (L3-19-multiescala; migração 20260906T1640_multiescala.sql):
 # macro (grosseira, ex. 1 km) triando regiões e micro (fina, ex. 100 m) gerada SÓ dentro das aprovadas.
 # ESCALA_CELULAS_MAX vale tanto para a grade macro inteira quanto para o refino micro (aprovadas × k²) — é o
@@ -738,4 +744,9 @@ LIMITE_TAXA_RETRY_AFTER_MIN_S = 1   # nunca manda Retry-After: 0 (RFC 6585 recom
 REGIOES_N_MAX = 30                    # o mesmo teto da referência (Locate Regions: 1-30)
 REGIOES_CELULAS_MAX = 4_000_000       # células da grade aceitas por chamada (2.000×2.000; acima disso é job)
 REGIOES_TEMPO_LIMITE_S = 120          # a rota é síncrona: acima disto o pedido é grande demais para a tela
+# ---------------------------------------------------------------- provisionamento federado (item L0-08-e)
+PROVISIONAMENTO_REGRAS_MAX = 200          # regras (valores do IdP mapeados) por provedor
+PROVISIONAMENTO_GRUPOS_POR_REGRA = 50     # grupos internos por regra
+PROVISIONAMENTO_GRUPOS_IDP_MAX = 1000     # valores do atributo de grupos lidos do IdP por login (o resto é ignorado)
+PROVISIONAMENTO_VALOR_MAX = 200           # tamanho de um valor de grupo do IdP
 

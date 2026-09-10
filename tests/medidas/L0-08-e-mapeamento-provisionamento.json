@@ -1,0 +1,17 @@
+{
+ "item": "L0-08-e-mapeamento-provisionamento",
+ "medidas": {
+  "login_gis_editores_vira_editor": {
+   "valor": 1,
+   "unidade": "caso",
+   "comando": "tests/api/oidc/test_provisionamento.py: Keycloak real"
+  },
+  "pagina_pronta_ms_logins": {
+   "valor": 57.2,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (apoio.py Tela.ir)"
+  }
+ },
+ "gerado_em": "2026-09-08T05:54:53Z",
+ "git_sha": "0adb54daae58"
+}

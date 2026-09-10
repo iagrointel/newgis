@@ -1,0 +1,26 @@
+{
+ "item": "L0-08-b-saml",
+ "medidas": {
+  "latencia_login_saml_ms": {
+   "valor": 533.7,
+   "unidade": "ms",
+   "comando": "SP-initiated contra Keycloak 26 (tests/api/saml/test_login_saml.py)",
+   "carga_1min": 12.81,
+   "ram_livre_gb": 6.2,
+   "medido_em": "2026-09-07T21:01:49Z",
+   "nota": "medido sob carga acima de 8 (12 nucleos); inclui o login no Keycloak em Docker; nao e clausula de desempenho"
+  },
+  "testes_forjados_sem_docker": {
+   "valor": 16,
+   "unidade": "testes",
+   "comando": "tests/api/saml/test_saml_forjado.py"
+  },
+  "testes_keycloak": {
+   "valor": 5,
+   "unidade": "testes",
+   "comando": "tests/api/saml/test_login_saml.py -m lento"
+  }
+ },
+ "gerado_em": "2026-09-07T21:01:49Z",
+ "git_sha": "08a3addf6283"
+}

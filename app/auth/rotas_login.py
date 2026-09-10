@@ -3,7 +3,6 @@
 → auth_falha/auth_ok → 2FA? desafio : sessão + cookie → evento usuarios/entrar → resultado no log_acesso."""
 
 import datetime
-from urllib.parse import urlsplit
 
 import psycopg2
 from fastapi import APIRouter, Request, Response
@@ -105,22 +104,14 @@ def provedores(inquilino: str):
         t = cur.fetchone()
     if t is None:
         raise ErroAPI(404, "inquilino_inexistente", "inquilino inexistente")
-    # provedores federados habilitados (L0-08-sso): OIDC e SAML entram como botão de redirecionamento
-    # (a tela /entrar renderiza {tipo, nome, url}); o LDAP fica fora de propósito — o fluxo dele é
-    # formulário com senha na própria tela, não botão que sai da página (L0-08-d)
-    externos = []
+    # botões OIDC do inquilino (item L0-08-a): rótulo + ordem, nunca o issuer/client_id (informação interna
+    # da configuração, sem valor para a tela de login); SAML/LDAP entram do mesmo jeito quando forem feitos
     with db.db() as cur:
-        for tipo in ("oidc", "saml"):
-            cur.execute("SELECT * FROM plat.provedor_sso_de(%s, %s)", (t["slug"], tipo))
-            p = cur.fetchone()
-            if p is None or not p["habilitado"]:
-                continue
-            if tipo == "oidc":
-                nome = urlsplit(p["emissor"]).hostname or p["emissor"]
-            else:
-                nome = p["idp_entidade"]
-            externos.append({"tipo": tipo, "nome": nome, "url": f"/api/login/{tipo}/iniciar?inquilino={t['slug']}"})
-    return {"inquilino": {"slug": t["slug"], "nome": t["nome"]}, "provedores": externos, "login_local": True}
+        cur.execute("SELECT provedor_id, rotulo FROM plat.provedores_oidc_de(%s)", (inquilino,))
+        oidc = [{"tipo": "oidc", "id": r["provedor_id"], "rotulo": r["rotulo"]} for r in cur.fetchall()]
+        cur.execute("SELECT provedor_id, rotulo FROM plat.provedores_saml_de(%s)", (inquilino,))  # L0-08-b
+        saml = [{"tipo": "saml", "id": r["provedor_id"], "rotulo": r["rotulo"]} for r in cur.fetchall()]
+    return {"inquilino": {"slug": t["slug"], "nome": t["nome"]}, "provedores": oidc + saml, "login_local": True}
 
 
 @router.post(
@@ -202,8 +193,12 @@ def login_2fa(corpo: Login2FAEntrada, request: Request, resposta: Response):
     with db.db(ctx) as cur:
         if corpo.codigo:
             try:
-                segredo = totp.decifrar(r["totp_secret"] or "", settings.PLAT_SECRET)
-            except Exception:  # noqa: BLE001 — segredo ilegível (PLAT_SECRET trocado): só recuperação vale
+                from app.seguranca_rotacao import decifrar_com_rotacao
+
+                segredo = decifrar_com_rotacao(
+                    totp.decifrar, r["totp_secret"] or "", settings.PLAT_SECRET, settings.PLAT_SECRET_ANTERIOR
+                )
+            except Exception:  # noqa: BLE001 — segredo ilegível (PLAT_SECRET e ANTERIOR trocados): só recuperação vale
                 segredo = None
             passo = totp.verificar(segredo, corpo.codigo, r["totp_ultimo_passo"]) if segredo else None
             if passo is not None:
