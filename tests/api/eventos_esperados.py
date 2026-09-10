@@ -147,21 +147,28 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("DELETE", "/api/conexoes/{id}"): ["conexoes/apagar"],
     ("POST", "/api/conexoes/{id}/testar"): ["conexoes/testar"],
     ("POST", "/api/conexoes/{id}/publicar"): ["conexoes/publicar_camada"],
-    # ---- mapa (L2-01-a-documento-mapa): achado ao construir L4-03-d — nenhuma das duas rotas chama
-    # `registrar_evento` (`app/mapas/rotas.py`), gap de outro item, não corrigido aqui (fora do escopo
-    # deste item); lista vazia documenta o que EXISTE, não o que deveria existir.
-    ("POST", "/api/mapas"): [],
-    ("PUT", "/api/mapas/{id}"): [],
-    # ---- rede de utilidades (L4-01-a/L4-03-a/L4-03-d): achado ao construir L4-03-d — as rotas de rede
-    # já entregues nunca tinham entrada aqui (o portão de cobertura deste arquivo não cobria `/api/rede`
-    # antes desta verificação).
-    ("POST", "/api/rede"): ["redes/criar"],
-    ("DELETE", "/api/rede/{rede_id}"): ["redes/apagar"],
-    ("POST", "/api/rede/{rede_id}/pacote"): ["redes/importar_pacote"],
-    ("POST", "/api/rede/{rede_id}/applyEdits"): ["redes/apply_edits"],
-    ("POST", "/api/rede/{rede_id}/validar"): ["redes/validar_regras"],
-    ("POST", "/api/rede/{rede_id}/regras.csv"): ["redes/importar_regras_csv"],
-    ("PUT", "/api/rede/{rede_id}/regras/ativacao"): ["redes/regras_ativacao"],
-    ("POST", "/api/rede/{rede_id}/validar_extensao"): ["redes/validar_extensao"],
-    ("PUT", "/api/rede/{rede_id}/area_sujas/modo"): ["redes/area_sujas_modo"],
+    # ---- motor multicritério em grades aninhadas (L3-19-multiescala; vocabulário nas migrações
+    # 20260906T1640_multiescala.sql e 20260906T1823_multiescala_apagar.sql). Conjunto, fator e execução são
+    # tabelas do inquilino com dono humano, então toda escrita narra evento; o DELETE apaga em cascata e por
+    # isso tem tipo próprio (`_apagar`), separado do de criação.
+    ("POST", "/api/multiescala/conjuntos"): ["multiescala/conjunto"],
+    ("DELETE", "/api/multiescala/conjuntos/{id}"): ["multiescala/conjunto_apagar"],
+    ("POST", "/api/multiescala/fatores"): ["multiescala/fator"],
+    ("DELETE", "/api/multiescala/fatores/{id}"): ["multiescala/fator_apagar"],
+    ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
+    ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
+    ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
+    # ---- fachada ParcelFabricServer da malha de parcelas (L4-parcelas-02-fluxos-cogo): cada
+    # operação narra o próprio evento (vocabulário semeado em 20260908T2330_parcelas_fluxos.sql);
+    # a malha é tabela do inquilino com dono humano, então toda escrita narra.
+    ("POST", "/api/parcelas/fabrica/build"): ["parcelas/build"],
+    ("POST", "/api/parcelas/fabrica/divide"): ["parcelas/divide"],
+    ("POST", "/api/parcelas/fabrica/merge"): ["parcelas/merge"],
+    ("POST", "/api/parcelas/fabrica/clip"): ["parcelas/clip"],
+    ("POST", "/api/parcelas/fabrica/createSeeds"): ["parcelas/create_seeds"],
+    ("POST", "/api/parcelas/fabrica/reconstructFromSeeds"): ["parcelas/reconstruct_from_seeds"],
+    ("POST", "/api/parcelas/fabrica/assignFeaturesToRecord"): ["parcelas/assign_features_to_record"],
+    ("POST", "/api/parcelas/fabrica/analyzeByLSA"): ["parcelas/analyze_lsa"],
+    ("POST", "/api/parcelas/fabrica/applyLSA"): ["parcelas/apply_lsa"],
+    ("POST", "/api/parcelas/qualidade"): ["parcelas/qualidade"],
 }

@@ -1,0 +1,22 @@
+{
+ "item": "L4-parcelas-02-fluxos-cogo",
+ "medidas": {
+  "dxf_real_segmentos": {
+   "valor": 557,
+   "unidade": "segmentos",
+   "comando": "pytest tests/api/parcelas/test_fluxos.py::test_build_a_partir_de_dxf_real PLAT_GRAVAR_MEDIDAS=1"
+  },
+  "dxf_real_faces_build": {
+   "valor": 125,
+   "unidade": "parcelas",
+   "comando": "idem"
+  },
+  "dxf_real_lote_area_m2": {
+   "valor": 525.0,
+   "unidade": "m2",
+   "comando": "idem"
+  }
+ },
+ "gerado_em": "2026-09-08T23:09:42Z",
+ "git_sha": "610896979710"
+}

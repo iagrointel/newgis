@@ -1078,3 +1078,19 @@ AMC_EXTRACAO_TIMEOUT_S = 1800         # 30 min: o prazo do portão para 1 mi de 
 # permite ao plano dizer, ANTES de enfileirar, que um trabalho não termina no prazo. Número deliberadamente
 # conservador: a medida foi feita com parte das unidades fora do raster, que custam menos que a média real.
 AMC_EXTRACAO_US_POR_UNIDADE_FATOR = 719
+
+# --- malha de parcelas (L4-parcelas-01-modelo-de-parcelas; migração 20260908T2140_parcelas.sql):
+# seis tabelas orientadas a registro (criada_por/retirada_por = linhagem, paridade com parcel
+# fabric em docs/PARIDADE_PARCELAS.md). Os tetos abaixo freiam o TAMANHO de uma rodada
+# (importação, consulta de validação, trajeto COGO de uma criação) — a linhagem não itera.
+PARCELA_IMPORT_LOTES_MAX = 50_000     # lotes por rodada de import (acima disso: 422, rodada menor)
+PARCELA_VALIDACAO_PARES_MAX = 500     # pares de sobreposição devolvidos por consulta (o total é contado)
+PARCELA_TRAJETO_MAX = 200             # segmentos COGO na criação de UMA parcela por trajeto
+PARCELA_DXF_LINHAS_MAX = 20_000       # segmentos de DXF por rodada de "copiar linhas de CAD"
+PARCELA_BUILD_LINHAS_MAX = 20_000     # linhas livres por chamada de build
+PARCELA_BUILD_FACES_MAX = 2_000       # faces fechadas aceitas em um build (acima: 422, estique a extent)
+PARCELA_DIVIDE_PARTES_MAX = 100       # partes por divisão (EqualArea/ProportionalArea/EqualWidth)
+PARCELA_UNIR_MAX = 50                 # parcelas por união (merge)
+PARCELA_ATRIBUICAO_MAX = 1_000        # feições por assignFeaturesToRecord
+PARCELA_AJUSTE_LINHAS_MAX = 10_000    # linhas observadas numa rede de ajuste LSA (item 03)
+PARCELA_QUALIDADE_FACES_MAX = 500     # faces de lacuna devolvidas pela camada de qualidade

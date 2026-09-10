@@ -162,6 +162,8 @@ from app.mapas.rotas import router as rotas_mapas
 from app.multiescala.rotas import router as rotas_multiescala
 from app.paineis.rotas import router as rotas_paineis
 from app.notebooks.rotas import router as rotas_notebooks
+from app.parcelas.rotas import router as rotas_parcelas
+from app.parcelas.rotas import router_qualidade as rotas_parcelas_qualidade
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rede_utilidades.rotas_config_tracado import router as rotas_rede_config_tracado
@@ -744,6 +746,10 @@ ROUTERS = [
     rotas_criterios_feicao,
     # --- motor multicritério (L3-01-a/b): /api/amc/modelos, /api/amc/conjuntos, /api/amc/execucoes
     rotas_amc,
+    # --- malha de parcelas, fachada ParcelFabricServer (L4-parcelas-02): /api/parcelas/fabrica/{build,
+    # divide, merge, clip, createSeeds, reconstructFromSeeds, assignFeaturesToRecord}
+    rotas_parcelas,
+    rotas_parcelas_qualidade,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

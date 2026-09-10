@@ -8,11 +8,11 @@ from app.erros import ErroAPI
 UUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 ESCOPO = re.compile(
     rf"^(catalogo:ler|camada:(ler|editar)(:{UUID})?|tiles:ler(:{UUID})?|jobs:executar|rota:usar|"
-    rf"geocodificar:usar|rede:(ler|editar|validar|analisar)|admin:inquilino)$"
+    rf"geocodificar:usar|multiescala:usar|parcelas:usar|admin:inquilino)$"
 )
 ESCOPOS_SEM_UUID = (
     "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
-    "geocodificar:usar", "rede:ler", "rede:editar", "rede:validar", "rede:analisar", "admin:inquilino",
+    "geocodificar:usar", "multiescala:usar", "parcelas:usar", "admin:inquilino",
 )
 DESCRICAO = {
     "catalogo:ler": "listar e ler metadado de itens que o dono pode ler",
@@ -23,14 +23,10 @@ DESCRICAO = {
     "rota:usar": "calcular rota, matriz origem-destino e isócrona (L2-11-c; dado de teste, sem PII)",
     "geocodificar:usar": "geocodificar, geocodificar reverso e sugerir endereço (L2-11-b; dado aberto CNEFE, "
     "sem PII); mesmo escopo cobre o GeocodeServer compatível Esri",
-    "rede:ler": "listar e ler rede de utilidades, catálogo, feições e topologia do dono (opcional :<uuid> "
-    "de uma rede; item L4-23-isolamento-por-inquilino-na-rede)",
-    "rede:editar": "criar/editar/apagar rede, importar pacote e editar feições (exige rede.editar no dono; "
-    "opcional :<uuid> de uma rede)",
-    "rede:validar": "validar a topologia e o catálogo da rede sem alterá-los (opcional :<uuid> de uma rede; "
-    "reservado para a rotina de validação da linha L4, sem rota própria nesta passagem)",
-    "rede:analisar": "traçado/alcance e demais análises de conectividade sobre a topologia (opcional :<uuid> "
-    "de uma rede)",
+    "multiescala:usar": "criar área de estudo, fator e amostra, e rodar execução macro/micro do motor "
+    "multicritério em grades aninhadas (L3-19-multiescala; dado e execução do próprio inquilino)",
+    "parcelas:usar": "rodar os fluxos da malha de parcelas do próprio inquilino na fachada "
+    "/api/parcelas/fabrica (L4-parcelas-02: build, divide, merge, clip, seeds, assignFeaturesToRecord)",
     "admin:inquilino": "tudo o que o dono pode fazer pela API, exceto gerir tokens, senha, 2FA e sessões",
 }
 
