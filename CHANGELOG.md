@@ -3,6 +3,39 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item L1-07-mosaico-por-colecao-e-pegadas: mosaico por busca registrada e pegadas)
+
+Um mosaico virou uma busca STAC registrada, não mais um recorte ad-hoc: `POST /svc/<tok>/stac/mosaicos`
+grava coleções, período, filtro CQL2 e ordenação, e devolve um id ESTÁVEL — registrar a mesma busca de
+novo devolve o mesmo id, o que é o que permite colar o endereço do mosaico num mapa salvo e ele continuar
+funcionando quando cenas novas entrarem na coleção. O registro delega ao próprio pgstac
+(`pgstac.search_query()`, a mesma função que o `POST /searches/register` do titiler-pgstac chama por
+baixo); a composição do ladrilho roda em casa, com `rio_tiler.mosaic.mosaic_reader` (`FirstMethod`) —
+pixel a pixel, não cena a cena, o que corrige o mosaico ad-hoc anterior (que escolhia uma cena inteira e
+deixava o resto do ladrilho em branco quando a junta caía dentro dele).
+
+Escopo de token agora vale também por mosaico: `tiles:ler:<uuid-do-mosaico>` serve os ladrilhos, o
+TileJSON, o WMTS e as pegadas do mosaico sem nunca abrir acesso às cenas avulsas que o compõem — medido
+na instância viva (403 no item avulso com o token do mosaico). Pegadas (`GET .../mosaico/<uuid>/pegadas`)
+devolvem GeoJSON com `id`/`datetime`/`eo:cloud_cover` por cena, contagem exata contra o que compõe a
+busca.
+
+Medido em `tests/medidas/L1-07-mosaico-por-colecao-e-pegadas.json` (`scratchpad/medir_l107.py`, grade
+sintética de 6 quadrantes adjacentes, 4 km cada, 20 m/px): ladrilho do mosaico de z8 a z14 fica entre
+**64 e 106 ms de Server-Timing** (mediana de 20 pedidos quentes: 89-127 ms; frio de processo em z8:
+13,9 s, dominado por abrir a 1ª conexão ao Garage/COG, não por escolher entre cenas). Prova pela
+instância real (`scratchpad/prova_l107_mosaico.py`, 127.0.0.1:8184): ladrilho na JUNTA entre dois
+quadrantes com `X-Plat-Cenas-Candidatas: 6` e pixel médio 0,0 de um lado × 138,5 de outro (diferença
+138,5/255) — os dois lados vieram de cenas DIFERENTES, não uma cena com o resto vazio; pegadas com 6
+feições (contagem exata); registro duas vezes com o mesmo critério devolveu o mesmo id nas duas vezes.
+
+Fora deste turno, nomeado: regras de seleção de pixel além de "primeira com dado" — mediana, média,
+travar cena, "mais recente sem nuvem" (item irmão L1-08); pegadas como camada vetorial por Martin (só
+GeoJSON pela API); tela "Coleção → Mosaico" no construtor de mapa (L2); `mosaicRule` do ImageServer
+compatível Esri (L1-25) continua recusando — o item que faltava agora existe, mas ninguém ligou o
+parâmetro Esri ao mosaico novo (`app/imagens/rotas_imageserver.py` estava sendo tocado por outra trilha
+no mesmo turno; ligar as duas juntas ficou para um próximo turno, ver `docs/PARIDADE.md`).
+
 ## turno 7, setembro de 2026 (item L4-04-d-diagrama-esquematico: diagrama de rede, regras e layouts)
 
 O esquema do alimentador deixou de ser desenho de apresentação e virou objeto do produto. Um diagrama é um
@@ -2028,3 +2061,46 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
 - XSD oficial do WMS 1.3.0 (`capabilities_1_3_0.xsd`, `exceptions_1_3_0.xsd`) trazido para `tests/dados/ogc_xsd/wms/1.3.0/` a partir do commit `b0b52199f` (já no object store do repositório, cache de XSD do item L2-04-i) — sem depender de rede para validar.
 - `tests/api/imagens/test_wms.py` (21 casos): GetCapabilities válido no XSD oficial, GetMap com tamanho exato, JPEG sem transparência, fora-da-cobertura em branco, eixo invertido 4326×3857, isolamento entre inquilinos, token sem escopo/inválido, e os abusos do adversário (WIDTH gigante, BBOX invertido de verdade, CRS inexistente, STYLES arbitrário, SLD_BODY com XXE).
 - Fora desta passagem (ver `docs/PARIDADE.md`): `GetFeatureInfo`, `TIME`/dimensão, `GetLegendGraphic` (depende de L1-02-f, ainda pendente).
+
+## L1-02-f-predefinicoes-de-renderizacao-e-legenda (10/09/2026)
+- `app/imagens/predefinicoes.py`: 6 predefinições de FÁBRICA (RGB natural, falsa-cor NIR, NDVI, NDWI,
+  NBR aproximado — PARCIAL, sem banda SWIR real nesta instalação —, relevo sombreado com hillshade
+  analítico calculado dentro do próprio ladrilho/recorte) + predefinições CUSTOM por item, guardadas em
+  `plat.render_predefinicao` (migração `20260910T1620`, RLS, JSON Schema
+  `docs/esquemas/renderizacao-v1.json`: bandas, esticamento min/max·desvio-padrão·percentil (aproximado
+  por `statistics.NormalDist`, sem recalcular pixel)·explícito, colormap nomeado do rio-tiler, nodata
+  transparente, opacidade, reamostro.
+- Aplicado nos TRÊS caminhos sem mudar o comportamento padrão de quem não passa nada: `predef=` no
+  XYZ/WMTS/TileJSON (`rotas_tiles.py`), `STYLES=` no WMS `GetMap` + `GetLegendGraphic` novo
+  (`rotas_wms.py`/`wms.py`, `<Style>`/`<LegendURL>` no `GetCapabilities`) e `renderingRule` no
+  ImageServer (`rotas_imageserver.py`) — só a forma mínima `{"rasterFunction":"<nome>"}`, forma
+  encadeada/`rasterFunctionArguments` continua recusada com erro Esri; `allowRasterFunction` agora é
+  `true` quando o item tem banda suficiente para ao menos 1 predefinição de fábrica.
+- `tiles.ladrilho()`/`tiles.recorte()` ganharam `resampling`/`nodata_transparente` (default idêntico ao
+  de antes); `predefinicoes.renderizar_hillshade` lê 1 banda e calcula sombreamento fora do pipeline de
+  `rio_tiler.render` (formula padrão azimute 315°/altitude 45°, `np.gradient`); `aplicar_opacidade` faz
+  pós-processamento de alfa por PIL só quando `opacidade<1`.
+- Legenda: `legenda_json`/`legenda_png` (mesma fonte para as duas — nunca dessincronizadas), servidas
+  por `/svc/<token>/raster/<item>/legenda.json|png` e pelo `GetLegendGraphic` do WMS.
+- CRUD de sessão em `app/imagens/rotas_predefinicoes.py` (`/api/imagens/<item>/predefinicoes`,
+  `POST .../tornar-padrao`): nome de fábrica é reservado, banda fora do item é 422
+  `predefinicao_incompativel` na hora de salvar (não só no uso).
+- `plat.item` ganhou `UNIQUE (tenant_id, id)` (faltava, item L1-02-f precisava de FK composta por
+  inquilino, regra de `tests/api/test_fk_composta_por_inquilino.py`).
+- `tests/api/imagens/test_predefinicoes.py` (22 casos): esquema/banda/colormap inválidos nunca viram
+  500, determinismo da query string, NDVI abre + legenda bate com os cortes, falsa-cor muda o pixel de
+  forma previsível (>50% dos pixels diferem), trocar a predefinição padrão muda a URL publicada sem
+  quebrar a anterior (nome explícito continua servindo), isolamento entre inquilinos, WMS `STYLES=`/
+  `GetLegendGraphic`, ImageServer `renderingRule` (forma mínima aceita, forma encadeada e nome
+  inexistente recusados sem 500). `test_imageserver_token.py` atualizado: o teste antigo que esperava
+  `renderingRule` SEMPRE recusado (400) virou dois testes (mosaicRule continua fora; renderingRule com
+  nome desconhecido é 422/400, nunca 500 — a FORMA passou a ser aceita, o CONTEÚDO ainda é validado).
+- Prova pela instância viva (127.0.0.1:8184, item Sentinel-2 real de 3 bandas): cor verdadeira × falsa
+  cor (recomposição 3-1-2, predefinição custom) — 99,46% dos 65.536 pixels do mesmo ladrilho diferem
+  (diferença média 12,7/8,9/7,1 por canal RGB); ver relatório do turno para os dois PNG e os comandos.
+- Fora deste turno: linguagem de expressão livre por predefinição do usuário (item L1-12, ainda
+  pendente — as 3 predefinições de índice usam expressão FIXA, escolhida em código, sobre a gramática
+  já existente de `tiles.py`); tabela de cor CUSTOM por intervalo (só rampa nomeada, como o portão
+  pede); histórico de versão de uma predefinição editada (edita substitui o corpo, `versao` sobe, mas
+  não guarda a versão anterior — só a troca de PADRÃO entre predefinições distintas preserva a URL
+  antiga, não a edição de uma já publicada).

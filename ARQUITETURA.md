@@ -992,3 +992,56 @@ que serve o ladrilho), `app/imagens/rotas_tiles.py` (rotas e autorização), `ap
 Três decisões que não se refazem sem ler o ADR: token no caminho (não em query, não URL que expira);
 chave de cache sem o token, o que OBRIGA a subrequisição de autorização a conferir também o dono do
 item; e recusa em 403, nunca 401.
+
+## 19. Mosaico por busca registrada e pegadas (item L1-07-mosaico-por-colecao-e-pegadas, ADR 20260910T2330)
+
+Um mosaico é uma busca STAC REGISTRADA: `app/imagens/mosaico.py::registrar` chama
+`pgstac.search_query()` (a função SQL que o `POST /searches/register` do titiler-pgstac usa por
+baixo) para obter o hash determinístico da busca (coleções, bbox, datetime, filtro CQL2, ordenação),
+e guarda a autorização numa tabela-espelho `plat.mosaico` (padrão de `raster_item.py`: pgstac guarda
+conteúdo, uma tabela própria com RLS decide quem vê o quê). O id exposto ao cliente é um `uuid`
+PRÓPRIO (não o hash md5), porque o vocabulário de escopo de token só aceita `tiles:ler:<uuid>` — todo
+mosaico registrado também vira uma linha em `plat.item` (tipo `mosaico`) com o mesmo id, o que faz um
+token poder ganhar escopo fino `tiles:ler:<uuid-do-mosaico>` sem nunca ganhar acesso às cenas que o
+compõem (mesmo mecanismo genérico de `app/auth/escopos.py`, nada mudou lá). Idempotência (mesma busca
+→ mesmo id) vem de `UNIQUE(tenant_id, hash)` com upsert; registrar de novo uma busca cujo mosaico foi
+removido REATIVA a linha (`estado='ativo'`), não cria uma segunda.
+
+Composição do pixel roda em CASA, não delegada ao TiTiler-pgstac (que é uma pilha ASGI assíncrona com
+pool próprio, sem o padrão de RLS síncrono por `SET LOCAL plat.tenant_id` que o resto da aplicação usa
+— ver ADR §1 para a decisão completa): `app/imagens/tiles.py::ladrilho_composto` reaproveita
+`rio_tiler.mosaic.mosaic_reader` com `FirstMethod` (a mesma função que o `titiler.mosaic`/
+`titiler-pgstac` chamam por baixo) para compor VÁRIAS fontes PIXEL A PIXEL — não cena a cena: onde a
+primeira cena candidata não cobre, o pixel vem da próxima, o que faz a JUNTA entre duas cenas mostrar
+as duas, em vez de uma cena inteira com o resto em branco (o defeito do esqueleto ad-hoc de "mosaico
+da coleção" que existia antes deste item e que `app/imagens/rotas_tiles.py::_servir_composto`
+substitui, preservando a mesma URL para as duas formas — coleção inteira ad-hoc OU busca registrada,
+distinguidas pelo formato do segmento do caminho, `mo.eh_uuid`).
+
+Contrato de URL (reaproveita o prefixo já existente, ADR §4):
+```
+/svc/<token>/mosaico/<uuid-ou-colecao>/{z}/{x}/{y}[.ext]   ladrilho composto (item L1-07 se uuid)
+/svc/<token>/mosaico/<uuid>/tilejson.json                  TileJSON 3.0.0
+/svc/<token>/mosaico/<uuid>/wmts[/1.0.0/WMTSCapabilities.xml]  WMTS 1.0.0
+/svc/<token>/mosaico/<uuid>/pegadas                        GeoJSON das cenas que compõem a busca
+/svc/<token>/stac/mosaicos                                 POST registra, GET lista
+/svc/<token>/stac/mosaicos/<uuid>                          GET detalhe, DELETE remove (soft)
+```
+As rotas de ladrilho (genéricas, `{z}/{x}/{y}`) são registradas DEPOIS das rotas literais
+(`tilejson.json`/`wmts`/`pegadas`) no arquivo — as duas formas de caminho têm a MESMA quantidade de
+segmentos (`WMTSCapabilities.xml` bate no padrão `{y}.{ext}`), e o FastAPI casa pela forma do caminho
+na ordem de registro antes de validar tipo; a ordem errada dá 422 em vez de resolver a rota certa
+(defeito real desta bancada, corrigido — mesma ordem que o item L1-02 já usava para o item avulso).
+
+Fora deste item (nomeado, não escondido): regras de seleção de pixel além de "primeira com dado"
+(`median`/`mean`/`lock raster`/"mais recente sem nuvem" — item irmão L1-08); pegadas como camada
+vetorial por Martin (só GeoJSON pela API neste turno); tela "Coleção → Mosaico" no construtor de mapa
+(L2); `mosaicRule` do ImageServer compatível Esri (L1-25) continua recusando — agora por falta de
+ligação entre as duas rotas, não mais por falta do L1-07 em si.
+
+Arquivos: `app/imagens/mosaico.py` (registro/listagem/pegadas), `app/imagens/tiles.py`
+(`ladrilho_composto`), `app/imagens/rotas_tiles.py` (`_servir_composto`, rotas de tile/tilejson/wmts/
+pegadas do mosaico), `app/imagens/rotas_stac.py` (CRUD de `/stac/mosaicos`), migrações
+`20260910T2330_mosaico.sql` e `20260910T2340_mosaico_tipo_item.sql`, testes
+`tests/api/imagens/test_mosaico.py` e `tests/api/imagens/apoio_mosaico.py` (semeadura de grade
+adjacente sintética).

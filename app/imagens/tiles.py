@@ -134,6 +134,12 @@ def _colormap(nome: str | None):
     return colormaps.get(nome)
 
 
+def colormap_de(nome: str | None):
+    """Wrapper público de `_colormap` — usado fora deste módulo (ImageServer/`renderingRule`, item
+    L1-02-f) sem alcançar o nome privado."""
+    return _colormap(nome)
+
+
 def ladrilho(
     fonte: Fonte,
     z: int,
@@ -146,8 +152,15 @@ def ladrilho(
     rescale: list[tuple[float, float]] | None = None,
     colormap: str | None = None,
     tamanho: int = TAMANHO,
+    resampling: str = "nearest",
+    nodata_transparente: bool = True,
 ) -> bytes:
-    """Bytes do ladrilho já codificado. Levanta ForaDaCobertura quando o ladrilho não toca o raster."""
+    """Bytes do ladrilho já codificado. Levanta ForaDaCobertura quando o ladrilho não toca o raster.
+
+    `resampling`/`nodata_transparente` nasceram com o item L1-02-f (predefinição de renderização):
+    antes disso o reamostro era sempre `nearest` e a máscara de nodata sempre virava alfa em PNG/WEBP
+    — os dois seguem PADRÃO (comportamento idêntico ao de antes para quem não passa predefinição
+    nenhuma; portão do item: "não mude o comportamento atual sem parâmetro")."""
     if formato not in RENDER:
         raise ErroTile(f"formato de ladrilho desconhecido: {formato}")
     if expressao is not None:
@@ -163,7 +176,8 @@ def ladrilho(
                     # PNG/JPEG/WEBP não carregam mais de 3 bandas + máscara: sem escolha do cliente,
                     # vale a regra escrita do perfil visual (C3 do conceito L1) — as 3 primeiras bandas.
                     indices = (1, 2, 3)
-                img = src.tile(x, y, z, tilesize=tamanho, expression=expressao, indexes=indices)
+                img = src.tile(x, y, z, tilesize=tamanho, expression=expressao, indexes=indices,
+                               resampling_method=resampling)
             except TileOutsideBounds as e:
                 raise ForaDaCobertura(str(e)) from e
             if rescale:
@@ -175,7 +189,8 @@ def ladrilho(
                 lo = float(dados.min()) if dados.size else 0.0
                 hi = float(dados.max()) if dados.size else 1.0
                 img.rescale([(lo, hi if hi > lo else lo + 1e-9)])
-            return img.render(img_format=RENDER[formato], colormap=cm, add_mask=RENDER[formato] != "JPEG")
+            add_mask = (RENDER[formato] != "JPEG") and nodata_transparente
+            return img.render(img_format=RENDER[formato], colormap=cm, add_mask=add_mask)
 
 
 def _imagem_vazia(width: int, height: int, formato: str, transparente: bool) -> bytes:
@@ -207,6 +222,7 @@ def recorte(
     rescale: list[tuple[float, float]] | None = None,
     colormap: str | None = None,
     transparente: bool = True,
+    resampling: str = "nearest",
 ) -> bytes:
     """Bytes de um recorte arbitrário já codificado — a função IRMÃ de `ladrilho()` acima, e o motivo de
     existirem duas: `ladrilho()` lê uma célula FIXA da grade WebMercantor (z/x/y, sempre 256x256, sempre
@@ -234,7 +250,7 @@ def recorte(
             try:
                 img = src.part(
                     bbox, dst_crs=crs_obj, bounds_crs=crs_obj, indexes=indices, expression=expressao,
-                    width=width, height=height,
+                    width=width, height=height, resampling_method=resampling,
                 )
             except TileOutsideBounds:
                 return _imagem_vazia(width, height, formato, transparente)
@@ -256,6 +272,66 @@ def recorte(
             )
 
 
+def ladrilho_composto(
+    fontes: list[Fonte],
+    z: int,
+    x: int,
+    y: int,
+    *,
+    formato: str = "png",
+    expressao: str | None = None,
+    bandas: list[int] | None = None,
+    rescale: list[tuple[float, float]] | None = None,
+    colormap: str | None = None,
+    tamanho: int = TAMANHO,
+) -> bytes:
+    """Ladrilho de VÁRIAS fontes candidatas compostas num só (item L1-07: mosaico de busca
+    registrada). Reaproveita `rio_tiler.mosaic.mosaic_reader` — a MESMA função que o `titiler.mosaic`/
+    `titiler-pgstac` usam por baixo (ver ADR 20260910T2330 §1) — com o método `FirstMethod`: "primeira
+    fonte com dado vence" aplicado PIXEL A PIXEL (não cena a cena): onde a primeira fonte da lista não
+    cobre o ladrilho (ou cobre só em parte), o(s) pixel(s) que faltam vêm da segunda, da terceira, e
+    assim por diante — é o que faz o ladrilho da JUNTA entre duas cenas mostrar as duas, em vez de
+    escolher uma cena inteira e deixar o resto transparente (o defeito do mosaico "cena inteira" que
+    este item substitui). Levanta `ForaDaCobertura` quando NENHUMA fonte cobre o ladrilho."""
+    if formato not in RENDER:
+        raise ErroTile(f"formato de ladrilho desconhecido: {formato}")
+    if expressao is not None:
+        ok, motivo = expressao_valida(expressao)
+        if not ok:
+            raise ErroTile(f"expressão recusada: {motivo}")
+    from rio_tiler.mosaic import mosaic_reader
+    from rio_tiler.mosaic.methods.defaults import FirstMethod
+
+    cm = _colormap(colormap)
+    indices_pedidos = bandas if (bandas and not expressao) else None
+
+    def _ler(fonte: Fonte, xx: int, yy: int, zz: int):
+        indices = indices_pedidos
+        with rasterio.Env(session=fonte.sessao, **fonte.env):
+            with Reader(fonte.caminho, tms=TMS) as src:
+                if indices is None and not expressao and src.dataset.count > 3:
+                    indices = (1, 2, 3)
+                return src.tile(xx, yy, zz, tilesize=tamanho, expression=expressao, indexes=indices)
+
+    # threads capo em 4 (não o padrão cpu*5 do rio-tiler): esta máquina roda com poucos GB livres e
+    # várias trilhas ao mesmo tempo (laco/estado.json, seção "recursos e limites") — um ladrilho não
+    # precisa de dezenas de threads para compor no máximo 6-12 candidatas (limite do item).
+    img, usadas = mosaic_reader(
+        fontes, _ler, x, y, z, pixel_selection=FirstMethod, threads=min(4, max(1, len(fontes))),
+        allowed_exceptions=(TileOutsideBounds,),
+    )
+    if not usadas:
+        raise ForaDaCobertura(f"nenhuma das {len(fontes)} cena(s) candidata(s) cobre o ladrilho {z}/{x}/{y}")
+    if rescale:
+        img.rescale(rescale)
+    elif expressao or (img.array.dtype != "uint8"):
+        dados = img.array
+        lo = float(dados.min()) if dados.size and not dados.mask.all() else 0.0
+        hi = float(dados.max()) if dados.size and not dados.mask.all() else 1.0
+        img.rescale([(lo, hi if hi > lo else lo + 1e-9)])
+    return img.render(img_format=RENDER[formato], colormap=cm, add_mask=RENDER[formato] != "JPEG")
+
+
 def informacao(fonte: Fonte) -> dict:
     """bounds em 4326, número de bandas, dtype e zoom mínimo/máximo — base do TileJSON e do WMTS."""
     with rasterio.Env(session=fonte.sessao, **fonte.env):
@@ -273,6 +349,6 @@ def informacao(fonte: Fonte) -> dict:
 
 __all__ = [
     "COLORMAPS", "ErroTile", "ForaDaCobertura", "Fonte", "FORMATOS", "TMS", "TAMANHO",
-    "bandas_da_expressao", "env_gdal", "expressao_valida", "informacao", "ladrilho", "recorte",
-    "preparar_ambiente_s3", "sessao_s3",
+    "bandas_da_expressao", "env_gdal", "expressao_valida", "informacao", "ladrilho", "ladrilho_composto",
+    "recorte", "preparar_ambiente_s3", "sessao_s3",
 ]

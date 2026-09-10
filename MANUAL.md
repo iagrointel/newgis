@@ -1158,7 +1158,8 @@ Com `<tok>` = o token e `<item>` = o identificador da imagem no catálogo:
 | WMTS (o que o QGIS e o ArcGIS pedem em "Add WMTS layer") | `https://<dominio>/svc/<tok>/raster/<item>/wmts/1.0.0/WMTSCapabilities.xml` |
 | WMTS por KVP | `https://<dominio>/svc/<tok>/raster/<item>/wmts?SERVICE=WMTS&REQUEST=GetCapabilities` |
 | extensão, bandas, tipo do dado, lista de colormaps | `https://<dominio>/svc/<tok>/raster/<item>/info.json` |
-| mosaico de uma coleção (cena mais recente por cima) | `https://<dominio>/svc/<tok>/mosaico/<colecao>/{z}/{x}/{y}.png` |
+| mosaico de uma coleção inteira, sem registro (cena mais recente por cima) | `https://<dominio>/svc/<tok>/mosaico/<colecao>/{z}/{x}/{y}.png` |
+| mosaico REGISTRADO (várias coleções/período/filtro; ver seção 24) | `https://<dominio>/svc/<tok>/mosaico/<uuid-do-mosaico>/{z}/{x}/{y}.png` |
 
 Formatos: `.png` (padrão), `.jpg`, `.webp`.
 
@@ -1171,6 +1172,7 @@ Formatos: `.png` (padrão), `.jpg`, `.webp`.
 | `faixa` | valores que viram 0 e 255, por banda | `faixa=-1,1` |
 | `colormap` | paleta (211 disponíveis; a lista está em `info.json`) | `colormap=viridis` |
 | `asset` | `visual` (8 bits, mais barato) ou `cientifico` (bandas originais) | `asset=cientifico` |
+| `predef` | nome de uma predefinição de renderização gravada (item L1-02-f, seção 25) — os parâmetros acima, se vierem junto, VENCEM a predefinição | `predef=ndvi` |
 
 O `+` da expressão precisa ir codificado como `%2B` na URL — em `+` cru o servidor lê espaço.
 Sem `bandas` e sem `expressao`, uma imagem de mais de três bandas sai com as três primeiras.
@@ -1199,10 +1201,13 @@ guardado — só o identificador dele e o prefixo visível.
 
 ### 22.5 O que ainda não faz
 
-- o mosaico serve a cena mais recente que cobre o ladrilho; não há escolha por pixel (nuvem) nem linha
-  de costura — isso é o L1-07/L1-08;
-- não há WMS 1.3.0 (L1-02-g), nem OGC API Tiles/Maps (L1-02-i), nem ponto/estatística/histograma
-  (L1-02-h), nem predefinição de renderização gravada (L1-02-f): por enquanto a pintura vive na URL;
+- o mosaico AD-HOC (coleção inteira, sem registro) serve a cena mais recente que cobre o ladrilho;
+  para várias coleções, período, filtro de nuvem e busca nomeada, ver o mosaico REGISTRADO (seção 24);
+  escolha de pixel além de "primeira cena com dado" (mediana, média, travar cena, mais recente sem
+  nuvem) é o item irmão L1-08, ainda não construído;
+- não há OGC API Tiles/Maps (L1-02-i), nem ponto/estatística/histograma (L1-02-h); WMS 1.3.0
+  (`GET /svc/<token>/wms`, ver CHANGELOG) e predefinição de renderização gravada (`predef=`, seção 25)
+  já existem;
 - a única grade é a WebMercatorQuad (a do Google/OSM/AGOL).
 
 ## 23. ImageServer compatível Esri por token (item L1-25-servico-de-imagem-esri-compativel)
@@ -1236,15 +1241,126 @@ NUNCA aparece inventado — some do documento (é o caso de `minValues` para um 
 
 ### 23.3 O que ainda não faz
 
-- `renderingRule` e `mosaicRule`: recusados com erro nomeado sempre que vêm com valor — nunca aplicados
-  nem ignorados em silêncio. Dependem dos itens L1-02-f (predefinição de renderização) e L1-07 (mosaico
-  de coleção), nenhum construído ainda;
+- `mosaicRule`: recusado com erro nomeado sempre que vem com valor — nunca aplicado nem ignorado em
+  silêncio. O item L1-07 (mosaico de coleção) agora existe (seção 24), mas NINGUÉM ligou o parâmetro
+  `mosaicRule` desta rota ao mosaico registrado ainda — a recusa continua, só que por falta da LIGAÇÃO
+  entre as duas, não mais por falta do L1-07 em si;
+- `renderingRule` na forma `{"rasterFunction":"<nome da predefinição>"}` já FUNCIONA (item L1-02-f,
+  seção 25) em `exportImage` e `tile/<z>/<y>/<x>`; qualquer OUTRA forma (com `rasterFunctionArguments`,
+  encadeamento, os nomes nativos do Pro como Stretch/Colormap/NDVI) continua recusada com erro Esri;
 - `computeStatisticsHistograms`/histograma: `hasHistograms` é sempre `false` — depende do L1-02-h;
 - `rasterAttributeTable`: esta plataforma não tem tabela de atributo de raster;
-- `query` de pegadas/catálogo de mosaico: cada item é um raster único, não um mosaico multi-cena;
+- `query` de pegadas/catálogo de mosaico: use `GET /svc/<tok>/mosaico/<uuid>/pegadas` (seção 24), fora
+  do protocolo `ImageServer` por enquanto — cada item raster avulso continua sendo um raster único;
 - download de pixel, `measure`, edição;
 - teste com ArcGIS Pro/AGOL de verdade: PENDENTE (decisão D20) — o que existe hoje prova a FORMA do
   protocolo (campos do documento contra o que a doc Esri descreve, alinhamento de pixel do `exportImage`
   contra o ladrilho XYZ do L1-02, ≤ 1 px), não a compatibilidade final com o cliente real.
 
 Ver `docs/PARIDADE.md`, seção do item, para a tabela cláusula a cláusula.
+
+## 24. Mosaico por busca registrada e pegadas (item L1-07-mosaico-por-colecao-e-pegadas)
+
+Um mosaico é uma cobertura contínua feita de várias cenas — o que separa "uma cena" de "um produto
+vendável" para o canal Esri. Em vez de recompor tudo a cada pedido, o mosaico se REGISTRA uma vez
+(coleções, período, filtro de nuvem, ordem) e ganha um endereço estável que não muda mais, mesmo que
+cenas novas entrem na coleção depois.
+
+### 24.1 Registrar
+
+`POST /svc/<tok-com-escopo-imagens:escrever>/stac/mosaicos`:
+
+```json
+{"nome": "Sentinel-2 — safra 2026", "collections": ["<tenant>-imagens"],
+ "datetime": "2026-01-01/2026-12-31", "sortby": [{"field": "datetime", "direction": "desc"}]}
+```
+
+Devolve `{"id": "<uuid>", ...}`. **Registrar a MESMA busca de novo devolve o MESMO id** (o nome pode
+mudar; o critério, não) — é assim que uma tela "Coleção → Mosaico" salva sem duplicar. `GET
+/svc/<tok>/stac/mosaicos` lista os mosaicos do inquilino; `DELETE .../mosaicos/<uuid>` remove o
+registro (as cenas continuam existindo — só o atalho do mosaico some).
+
+### 24.2 Usar
+
+Com `<uuid>` = o id devolvido no registro:
+
+| para quê | endereço |
+|---|---|
+| ladrilho composto (todas as cenas candidatas, primeiro pixel com dado vence) | `https://<dominio>/svc/<tok>/mosaico/<uuid>/{z}/{x}/{y}.png` |
+| TileJSON | `https://<dominio>/svc/<tok>/mosaico/<uuid>/tilejson.json` |
+| WMTS | `https://<dominio>/svc/<tok>/mosaico/<uuid>/wmts/1.0.0/WMTSCapabilities.xml` |
+| pegadas (de onde veio cada pedaço, para o mapa mostrar/popup) | `https://<dominio>/svc/<tok>/mosaico/<uuid>/pegadas` |
+
+O ladrilho compõe de VERDADE, pixel a pixel: onde a cena mais recente não cobre, o pixel vem da
+próxima candidata — é o que faz a JUNTA entre duas cenas mostrar as duas, em vez de uma cena inteira
+com o resto em branco. As pegadas são GeoJSON com `id`/`datetime`/`eo:cloud_cover` por cena.
+
+### 24.3 Escopo por mosaico
+
+Um token pode ganhar `tiles:ler:<uuid-do-mosaico>` sem nunca ganhar acesso a nenhuma cena avulsa que
+compõe o mosaico — o mesmo mecanismo de escopo por item que já existia para imagem única (seção 22),
+agora também para o mosaico.
+
+### 24.4 O que ainda não faz
+
+- regras de seleção de pixel além de "primeira cena com dado" — mediana, média, travar cena, "mais
+  recente sem nuvem" (item irmão L1-08);
+- pegadas como camada vetorial (Martin) — hoje só GeoJSON pela API;
+- tela "Coleção → Mosaico" no construtor de mapa — hoje o registro é só pela API;
+- `mosaicRule` do ImageServer (seção 23) não chama este mosaico ainda.
+
+Ver `docs/PARIDADE.md`, seção do item, para a tabela cláusula a cláusula.
+
+## 25. Predefinição de renderização e legenda (item L1-02-f-predefinicoes-de-renderizacao-e-legenda)
+
+Uma predefinição é um documento com bandas, esticamento, rampa de cor, nodata e opacidade JÁ escolhidos
+— o equivalente ao "raster function template" do ArcGIS. Ela substitui os parâmetros soltos de pintura
+(seção 22.2) por um NOME, e esse nome funciona nos três caminhos de serviço desta plataforma.
+
+### 25.1 As 6 predefinições de fábrica
+
+| nome | o que faz | exige |
+|---|---|---|
+| `rgb-natural` | as 3 primeiras bandas, esticadas por percentil 2-98 | 3+ bandas |
+| `falsa-cor-nir` | infravermelho no vermelho, vermelho no verde, verde no azul | 4+ bandas |
+| `ndvi` | (b4-b3)/(b4+b3), rampa `rdylgn`, faixa -1..1 | 4+ bandas |
+| `ndwi` | (b2-b4)/(b2+b4) (McFeeters), rampa `rdbu`, faixa -1..1 | 4+ bandas |
+| `nbr-aproximado` | **PARCIAL** — usa a banda 1 como substituta da SWIR (esta instalação não marca banda SWIR em nenhum item); prova o mecanismo, não é um NBR real | 4+ bandas |
+| `relevo-sombreado` | hillshade analítico (azimute 315°, altitude 45°) sobre a banda 1, calculado só dentro do ladrilho pedido | 1+ banda |
+
+`GET /svc/<token>/raster/<item>/predefinicoes.json` lista as de fábrica compatíveis com o item mais as
+CUSTOM do inquilino. Uma predefinição CUSTOM é criada, editada e apagada por sessão (nunca por token de
+serviço) em `POST/PUT/DELETE /api/imagens/<item>/predefinicoes[/<nome>]`, com o mesmo esquema de
+`docs/esquemas/renderizacao-v1.json`; `POST .../<nome>/tornar-padrao` marca qual serve quando ninguém
+passa `predef=`/`STYLES=`/`renderingRule` nenhum.
+
+### 25.2 Onde o nome funciona
+
+| caminho | parâmetro | legenda |
+|---|---|---|
+| XYZ / WMTS / TileJSON (seção 22) | `predef=<nome>` | `GET .../legenda.json` e `.../legenda.png` |
+| WMS `GetMap` (CHANGELOG) | `STYLES=<nome>` | `REQUEST=GetLegendGraphic` (`<Style>`/`<LegendURL>` já saem no `GetCapabilities`) |
+| ImageServer `exportImage`/`tile` (seção 23) | `renderingRule={"rasterFunction":"<nome>"}` | — (usar a legenda do caminho raster) |
+
+Um parâmetro explícito de bandas/faixa/colormap, quando vem JUNTO com `predef=`, vence a predefinição —
+o padrão de quem não passa nada não muda.
+
+### 25.3 Estabilidade da URL publicada
+
+O `tilejson.json`/`WMTSCapabilities.xml` de um item SEM `predef=` no pedido embutem o nome da
+predefinição PADRÃO do item (se houver uma custom marcada) na URL que devolvem. Trocar qual
+predefinição é a padrão gera uma URL NOVA na próxima vez que alguém pedir o TileJSON — a URL antiga
+(que já tem o nome escrito por extenso) continua resolvendo a MESMA predefinição de antes, porque ela
+não foi apagada, só deixou de ser a padrão.
+
+### 25.4 O que ainda não faz
+
+- expressão livre por predefinição do usuário (item L1-12, ainda pendente) — as predefinições de índice
+  (NDVI/NDWI/NBR) usam expressão FIXA, escolhida em código, sobre a gramática já existente da seção 22;
+- tabela de cor CUSTOM por intervalo — só rampa nomeada do catálogo do rio-tiler;
+- histórico de versão de uma predefinição EDITADA (editar substitui o corpo e sobe `versao`, mas não
+  guarda o corpo anterior — só TROCAR de predefinição padrão preserva a URL antiga, não editar uma já
+  publicada);
+- NBR de verdade (falta banda SWIR marcada na ingestão desta plataforma).
+
+Ver `docs/PARIDADE.md` e `CHANGELOG.md` para a tabela cláusula a cláusula e os números medidos.

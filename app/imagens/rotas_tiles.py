@@ -8,7 +8,15 @@ nunca URL que expira: o endereço é colado num mapa web de terceiro e fica lá 
     /svc/<token>/raster/<item>/wmts                           WMTS 1.0.0 KVP (GetCapabilities/GetTile)
     /svc/<token>/raster/<item>/wmts/1.0.0/WMTSCapabilities.xml  WMTS RESTful (o que o QGIS guarda)
     /svc/<token>/raster/<item>/info.json                      extensão, bandas, tipo do dado
-    /svc/<token>/mosaico/<colecao>/{z}/{x}/{y}[.ext]          mosaico da coleção (mais recente por cima)
+    /svc/<token>/mosaico/<X>/{z}/{x}/{y}[.ext]                mosaico (X = uuid de mosaico REGISTRADO,
+                                                               item L1-07 — busca STAC nomeada com
+                                                               várias coleções/filtro/ordenação; OU
+                                                               X = nome de coleção completo, o
+                                                               comportamento ad-hoc antigo, coleção
+                                                               inteira, mais recente por cima)
+    /svc/<token>/mosaico/<uuid>/tilejson.json                 TileJSON 3.0.0 do mosaico registrado
+    /svc/<token>/mosaico/<uuid>/wmts[/1.0.0/WMTSCapabilities.xml]  WMTS 1.0.0 do mosaico registrado
+    /svc/<token>/mosaico/<uuid>/pegadas                       GeoJSON das pegadas (item L1-07)
 
 Três coisas que este módulo NÃO faz, de propósito:
 1. não aceita endereço de arquivo do cliente (não existe `?url=`): o caminho do COG NASCE da consulta ao
@@ -36,7 +44,9 @@ from app.auth import sessao as sessao_auth
 from app.auth.sessao import _auth_de_token
 from app.erros import ErroAPI
 from app.imagens import leitura, tiles
+from app.imagens import mosaico as mo
 from app.imagens import pgstac as ps
+from app.imagens import predefinicoes as pred
 from app.imagens import wmts as wmts_doc
 from app.settings import settings
 
@@ -178,22 +188,63 @@ def _asset_padrao(expressao: str | None, pedido: str | None) -> str:
     return "cientifico" if expressao else "visual"
 
 
-def _consulta_render(expressao, bandas, rescale, colormap, asset) -> str:
+def _consulta_render(expressao, bandas, rescale, colormap, asset, predef=None) -> str:
     import urllib.parse
 
     itens = [(k, v) for k, v in (("expressao", expressao), ("bandas", bandas), ("faixa", rescale),
-                                 ("colormap", colormap), ("asset", asset)) if v]
+                                 ("colormap", colormap), ("asset", asset), ("predef", predef)) if v]
     return urllib.parse.urlencode(itens)
 
 
+def _resolver_predef(auth, item: str, predef: str, expressao, bandas, colormap, asset):
+    """`predef` (item L1-02-f) -> (`Resolvido`, asset efetivo). Usa SEMPRE o asset científico quando o
+    cliente não pediu o visual explicitamente: uma predefinição controla esticamento/bandas a partir da
+    estatística do item, e o asset visual já vem pré-esticado em 8 bits — a mesma razão pela qual uma
+    `expressao=` explícita hoje já força o científico (`_asset_padrao`)."""
+    asset_efetivo = asset or "cientifico"
+    _, stac = _fonte_do_item(auth, item, asset_efetivo)
+    with db.db(auth.contexto_leitura()) as cur:
+        resolvido = pred.resolver(cur, auth.tenant_id, item, predef, stac, asset_efetivo)
+    return resolvido, asset_efetivo
+
+
 def _servir(request: Request, auth, item: str, z: int, x: int, y: int, formato: str,
-            expressao, bandas, faixa, colormap, asset) -> Response:
+            expressao, bandas, faixa, colormap, asset, *, predef: str | None = None) -> Response:
+    resolvido = None
+    if predef:
+        resolvido, asset = _resolver_predef(auth, item, predef, expressao, bandas, colormap, asset)
+        if resolvido.hillshade:
+            fonte, _ = _fonte_do_item(auth, item, asset)
+            inicio = time.perf_counter()
+            try:
+                corpo = pred.renderizar_hillshade(
+                    fonte, banda=(resolvido.bandas or [1])[0], formato=formato,
+                    resampling=resolvido.resampling, nodata_transparente=resolvido.nodata_transparente,
+                    tile=(z, x, y),
+                )
+            except tiles.ForaDaCobertura:
+                leitura.contar(auth.tenant_id, auth.token_id, item, 0)
+                return Response(status_code=204, headers={"Cache-Control": CACHE_TILE})
+            except tiles.ErroTile as e:
+                leitura.contar(auth.tenant_id, auth.token_id, item, 0, erro=True)
+                raise ErroAPI(422, "ladrilho_invalido", str(e)) from e
+            ms = (time.perf_counter() - inicio) * 1000
+            leitura.contar(auth.tenant_id, auth.token_id, item, len(corpo))
+            return Response(content=corpo, media_type=tiles.FORMATOS[formato],
+                            headers={"Cache-Control": CACHE_TILE, "Server-Timing": f"ladrilho;dur={ms:.1f}"})
+        expressao = expressao or resolvido.expressao
+        bandas = bandas or (",".join(str(b) for b in resolvido.bandas) if resolvido.bandas else None)
+        colormap = colormap or resolvido.colormap
     asset_final = _asset_padrao(expressao, asset)
     fonte, _ = _fonte_do_item(auth, item, asset_final)
+    faixa_final = _faixa(faixa) if faixa else (resolvido.rescale if resolvido else None)
+    resampling = resolvido.resampling if resolvido else "nearest"
+    nodata_transparente = resolvido.nodata_transparente if resolvido else True
     inicio = time.perf_counter()
     try:
         corpo = tiles.ladrilho(fonte, z, x, y, formato=formato, expressao=expressao,
-                              bandas=_bandas(bandas), rescale=_faixa(faixa), colormap=colormap)
+                              bandas=_bandas(bandas), rescale=faixa_final, colormap=colormap,
+                              resampling=resampling, nodata_transparente=nodata_transparente)
     except tiles.ForaDaCobertura:
         leitura.contar(auth.tenant_id, auth.token_id, item, 0)
         return Response(status_code=204, headers={"Cache-Control": CACHE_TILE})
@@ -203,6 +254,8 @@ def _servir(request: Request, auth, item: str, z: int, x: int, y: int, formato: 
     except Exception as e:  # falha de leitura do armazenamento: conta como erro do token e sobe 502
         leitura.contar(auth.tenant_id, auth.token_id, item, 0, erro=True)
         raise ErroAPI(502, "leitura_falhou", f"não foi possível ler a imagem: {e}") from e
+    if resolvido and resolvido.opacidade < 1.0:
+        corpo = pred.aplicar_opacidade(corpo, formato, resolvido.opacidade)
     ms = (time.perf_counter() - inicio) * 1000
     leitura.contar(auth.tenant_id, auth.token_id, item, len(corpo))
     return Response(
@@ -217,6 +270,20 @@ def _base(token: str, item: str) -> str:
     return f"{settings.PLAT_URL_PUBLICA.rstrip('/')}/svc/{token}/raster/{item}"
 
 
+def _predef_publicada(auth, item: str, predef: str | None) -> str | None:
+    """`predef` explícito do cliente vence; sem ele, se o item tem predefinição CUSTOM marcada padrão
+    (`pred.padrao_do_item`), essa é a que fica GRAVADA na URL publicada (TileJSON/WMTS). É o mecanismo
+    do portão "trocar a predefinição padrão do item muda a URL WMTS publicada... sem quebrar a
+    anterior": o nome fica escrito por extenso na URL, nunca "o padrão de agora" implícito — uma URL já
+    publicada com `predef=x` sempre resolve `x` (que só some se for apagada), mesmo depois de outra
+    predefinição virar a padrão do item."""
+    if predef:
+        return predef
+    with db.db(auth.contexto_leitura()) as cur:
+        achado = pred.padrao_do_item(cur, auth.tenant_id, item)
+    return achado[0] if achado else None
+
+
 @router.get("/svc/{token}/raster/{item}/tilejson.json", openapi_extra=X, summary="TileJSON 3.0.0 do item")
 def tilejson(
     request: Request, token: str, item: str,
@@ -226,12 +293,14 @@ def tilejson(
     faixa: str | None = Query(None, max_length=64),
     colormap: str | None = Query(None, max_length=40),
     asset: str | None = Query(None, pattern="^(visual|cientifico)$"),
+    predef: str | None = Query(None, max_length=59, description="nome de predefinição de renderização (L1-02-f)"),
 ):
     auth = _autorizar(request, token, item)
-    asset_final = _asset_padrao(expressao, asset)
+    predef_pub = _predef_publicada(auth, item, predef)
+    asset_final = _asset_padrao(expressao, asset if not predef_pub else (asset or "cientifico"))
     fonte, stac = _fonte_do_item(auth, item, asset_final)
     info = tiles.informacao(fonte)
-    consulta = _consulta_render(expressao, bandas, faixa, colormap, asset)
+    consulta = _consulta_render(expressao, bandas, faixa, colormap, asset, predef_pub)
     url = f"{_base(token, item)}/{{z}}/{{x}}/{{y}}.{ 'jpg' if formato in ('jpg', 'jpeg') else formato}"
     if consulta:
         url += f"?{consulta}"
@@ -264,8 +333,13 @@ def info_json(request: Request, token: str, item: str,
 
 
 # ---------------------------------------------------------------------------- WMTS
-def _capabilities(token: str, item: str, auth, expressao, bandas, faixa, colormap, asset) -> str:
-    asset_final = _asset_padrao(expressao, asset)
+_PREDEF_Q = Query(None, max_length=59, pattern="^[a-z0-9][a-z0-9-]{0,58}$",
+                  description="nome de predefinição de renderização (item L1-02-f)")
+
+
+def _capabilities(token: str, item: str, auth, expressao, bandas, faixa, colormap, asset, predef=None) -> str:
+    predef_pub = _predef_publicada(auth, item, predef)
+    asset_final = _asset_padrao(expressao, asset if not predef_pub else (asset or "cientifico"))
     fonte, stac = _fonte_do_item(auth, item, asset_final)
     info = tiles.informacao(fonte)
     titulo = (stac.get("properties") or {}).get("title") or item
@@ -277,7 +351,7 @@ def _capabilities(token: str, item: str, auth, expressao, bandas, faixa, colorma
         zoom_min=0,
         zoom_max=max(info["maxzoom"], 18),
         formatos=["image/png", "image/jpeg", "image/webp"],
-        consulta=_consulta_render(expressao, bandas, faixa, colormap, asset),
+        consulta=_consulta_render(expressao, bandas, faixa, colormap, asset, predef_pub),
         resumo=f"{info['bandas']} banda(s), tipo {info['dtype']}; grade WebMercatorQuad.",
     )
 
@@ -291,9 +365,10 @@ def wmts_rest(
     faixa: str | None = Query(None, max_length=64),
     colormap: str | None = Query(None, max_length=40),
     asset: str | None = Query(None, pattern="^(visual|cientifico)$"),
+    predef: str | None = _PREDEF_Q,
 ):
     auth = _autorizar(request, token, item)
-    xml = _capabilities(token, item, auth, expressao, bandas, faixa, colormap, asset)
+    xml = _capabilities(token, item, auth, expressao, bandas, faixa, colormap, asset, predef)
     return Response(xml, media_type="application/xml",
                     headers={"Cache-Control": "no-store, must-revalidate"})
 
@@ -317,13 +392,18 @@ def wmts_kvp(
     faixa: str | None = Query(None, max_length=64),
     colormap: str | None = Query(None, max_length=40),
     asset: str | None = Query(None, pattern="^(visual|cientifico)$"),
+    predef: str | None = _PREDEF_Q,
 ):
     auth = _autorizar(request, token, item)
     if (service or "").upper() != "WMTS":
         raise ErroAPI(422, "servico_invalido", "SERVICE tem de ser WMTS", {"SERVICE": service})
+    # STYLE (WMTS) é o mesmo mecanismo de predefinição — mesma convenção do STYLES do WMS
+    # (app/imagens/rotas_wms.py): um cliente WMTS "de verdade" nomeia o estilo por `STYLE=`, não por um
+    # parâmetro inventado; `predef=` continua aceito para quem já usa a URL do XYZ/TileJSON.
+    predef_efetivo = predef or (style if style and style != "default" else None)
     operacao = (request_ or "").lower()
     if operacao == "getcapabilities":
-        xml = _capabilities(token, item, auth, expressao, bandas, faixa, colormap, asset)
+        xml = _capabilities(token, item, auth, expressao, bandas, faixa, colormap, asset, predef_efetivo)
         return Response(xml, media_type="application/xml",
                         headers={"Cache-Control": "no-store, must-revalidate"})
     if operacao != "gettile":
@@ -349,7 +429,7 @@ def wmts_kvp(
         raise ErroAPI(422, "tilematrix_invalido", "TILEMATRIX tem de ser o nível de zoom",
                       {"TILEMATRIX": tilematrix}) from e
     return _servir(request, auth, item, z, int(tilecol), int(tilerow), formato,
-                   expressao, bandas, faixa, colormap, asset)
+                   expressao, bandas, faixa, colormap, asset, predef=predef_efetivo)
 
 
 # ---------------------------------------------------------------------------- XYZ
@@ -362,12 +442,13 @@ def tile_xyz_ext(
     faixa: str | None = Query(None, max_length=64),
     colormap: str | None = Query(None, max_length=40),
     asset: str | None = Query(None, pattern="^(visual|cientifico)$"),
+    predef: str | None = _PREDEF_Q,
 ):
     if ext not in tiles.FORMATOS:
         raise ErroAPI(404, "formato_desconhecido", f"formato de ladrilho desconhecido: {ext}",
                       {"aceitos": sorted(tiles.FORMATOS)})
     auth = _autorizar(request, token, item)
-    return _servir(request, auth, item, z, x, y, ext, expressao, bandas, faixa, colormap, asset)
+    return _servir(request, auth, item, z, x, y, ext, expressao, bandas, faixa, colormap, asset, predef=predef)
 
 
 @router.get("/svc/{token}/raster/{item}/{z}/{x}/{y}", openapi_extra=X, summary="ladrilho XYZ do item")
@@ -380,47 +461,292 @@ def tile_xyz(
     faixa: str | None = Query(None, max_length=64, description="faixa de valores min,max por banda"),
     colormap: str | None = Query(None, max_length=40),
     asset: str | None = Query(None, pattern="^(visual|cientifico)$"),
+    predef: str | None = _PREDEF_Q,
 ):
     auth = _autorizar(request, token, item)
-    return _servir(request, auth, item, z, x, y, formato, expressao, bandas, faixa, colormap, asset)
+    return _servir(request, auth, item, z, x, y, formato, expressao, bandas, faixa, colormap, asset, predef=predef)
 
 
-# ---------------------------------------------------------------------------- mosaico por coleção
-@router.get("/svc/{token}/mosaico/{colecao}/{z}/{x}/{y}", openapi_extra=X,
-            summary="ladrilho do mosaico de uma coleção (mais recente por cima)")
-def tile_mosaico(
-    request: Request, token: str, colecao: str, z: int, x: int, y: int,
+# ---------------------------------------------------------------------------- predefinições de renderização (L1-02-f)
+@router.get("/svc/{token}/raster/{item}/predefinicoes.json", openapi_extra=X,
+            summary="predefinições de renderização disponíveis para o item (fábrica + custom do inquilino)")
+def predefinicoes_do_item(request: Request, token: str, item: str):
+    auth = _autorizar(request, token, item)
+    custom: list[dict] = []
+    if pred._e_uuid(item):  # noqa: SLF001 — item de fixture antiga (não-uuid) nunca tem predefinição custom
+        with db.db(auth.contexto_leitura()) as cur:
+            cur.execute(
+                "SELECT nome, titulo, versao, padrao FROM plat.render_predefinicao "
+                "WHERE tenant_id = %s AND item_id = %s::uuid AND apagado_em IS NULL ORDER BY nome",
+                (auth.tenant_id, item),
+            )
+            custom = [dict(r) for r in cur.fetchall()]
+    corpo = {"item": item, "fabrica": pred.listar_fabrica(), "custom": custom}
+    return JSONResponse(corpo, headers={"Cache-Control": "no-store, must-revalidate"})
+
+
+@router.get("/svc/{token}/raster/{item}/legenda.json", openapi_extra=X,
+            summary="legenda (estrutura) da predefinição pedida ou padrão do item")
+def legenda_json_svc(request: Request, token: str, item: str, predef: str | None = _PREDEF_Q,
+                     asset: str | None = Query(None, pattern="^(visual|cientifico)$")):
+    auth = _autorizar(request, token, item)
+    nome = _predef_publicada(auth, item, predef)
+    if not nome:
+        raise ErroAPI(422, "predefinicao_ausente",
+                      "informe predef= ou marque uma predefinição padrão para o item", {"item": item})
+    resolvido, _ = _resolver_predef(auth, item, nome, None, None, None, asset)
+    return JSONResponse(pred.legenda_json(resolvido), headers={"Cache-Control": "no-store, must-revalidate"})
+
+
+@router.get("/svc/{token}/raster/{item}/legenda.png", openapi_extra=X,
+            summary="legenda (imagem) da predefinição pedida ou padrão do item")
+def legenda_png_svc(request: Request, token: str, item: str, predef: str | None = _PREDEF_Q,
+                    asset: str | None = Query(None, pattern="^(visual|cientifico)$")):
+    auth = _autorizar(request, token, item)
+    nome = _predef_publicada(auth, item, predef)
+    if not nome:
+        raise ErroAPI(422, "predefinicao_ausente",
+                      "informe predef= ou marque uma predefinição padrão para o item", {"item": item})
+    resolvido, _ = _resolver_predef(auth, item, nome, None, None, None, asset)
+    corpo = pred.legenda_png(resolvido)
+    return Response(corpo, media_type="image/png", headers={"Cache-Control": "no-store, must-revalidate"})
+
+
+# ---------------------------------------------------------------------------- mosaico (ad-hoc OU busca registrada)
+def _bbox_do_tile(z: int, x: int, y: int) -> tuple[float, float, float, float]:
+    return tiles.TMS.bounds(tiles.TMS.tile(0, 0, 0).__class__(x=x, y=y, z=z))
+
+
+def _servir_composto(request: Request, auth, feicoes: list[dict], z: int, x: int, y: int, formato: str,
+                     expressao, bandas, faixa, colormap, asset) -> Response:
+    """COMPÕE o ladrilho de todas as cenas candidatas num só (`tiles.ladrilho_composto`, item L1-07):
+    a ordem já vem do `sortby` registrado/pedido ("mais recente" por padrão) e o primeiro pixel COM
+    DADO vence, PIXEL A PIXEL — não cena a cena: é isto que faz a junta entre duas cenas mostrar as
+    duas, em vez de uma cena inteira com o resto em branco. Regras adicionais de seleção (`median`/
+    `mean`/`lock raster`/"mais recente sem nuvem") são do item irmão L1-08, fora deste turno (ADR §1).
+    Candidata cujo item não resolve fonte (excluído/de outro estado) é ignorada, não derruba o tile."""
+    if not feicoes:
+        return Response(status_code=204, headers={"Cache-Control": CACHE_TILE})
+    asset_final = _asset_padrao(expressao, asset)
+    fontes = []
+    for f in feicoes:
+        try:
+            fonte, _ = _fonte_do_item(auth, f["id"], asset_final)
+            fontes.append(fonte)
+        except ErroAPI:
+            continue
+    if not fontes:
+        return Response(status_code=204, headers={"Cache-Control": CACHE_TILE})
+    inicio = time.perf_counter()
+    try:
+        corpo = tiles.ladrilho_composto(fontes, z, x, y, formato=formato, expressao=expressao,
+                                        bandas=_bandas(bandas), rescale=_faixa(faixa), colormap=colormap)
+    except tiles.ForaDaCobertura:
+        return Response(status_code=204, headers={"Cache-Control": CACHE_TILE})
+    except tiles.ErroTile as e:
+        raise ErroAPI(422, "ladrilho_invalido", str(e)) from e
+    except Exception as e:  # falha de leitura do armazenamento: nunca 500 cru
+        raise ErroAPI(502, "leitura_falhou", f"não foi possível ler a imagem: {e}") from e
+    ms = (time.perf_counter() - inicio) * 1000
+    return Response(
+        content=corpo, media_type=tiles.FORMATOS[formato],
+        headers={"Cache-Control": CACHE_TILE, "Server-Timing": f"ladrilho;dur={ms:.1f}",
+                "X-Plat-Cenas-Candidatas": str(len(fontes))},
+    )
+
+
+def _tile_mosaico_impl(
+    request: Request, token: str, alvo: str, z: int, x: int, y: int, formato: str,
+    expressao, bandas, faixa, colormap, asset, limite: int | None,
+) -> Response:
+    """`alvo` é um uuid de mosaico REGISTRADO (item L1-07: `POST /svc/<token>/stac/mosaicos`, busca com
+    várias coleções/bbox/datetime/filtro CQL2/ordenação) OU o nome completo de uma coleção
+    (`<tenant_id>-<slug>`, comportamento ad-hoc anterior a este item: a coleção INTEIRA, sem registro,
+    sempre ordenada por data desc) — ver ADR 20260910T2330 §4. As duas formas nunca colidem porque um
+    nome de coleção nunca é um uuid sintaticamente válido."""
+    if mo.eh_uuid(alvo):
+        auth = _autorizar(request, token, alvo)  # escopo FINO: tiles:ler:<uuid-do-mosaico>
+        with db.db(auth.contexto_leitura()) as cur:
+            linha = mo.obter(cur, auth.tenant_id, alvo)
+            if linha is None:
+                raise ErroAPI(403, "mosaico_indisponivel", "mosaico inexistente ou de outro inquilino",
+                              {"mosaico": alvo})
+            feicoes = mo.candidatas_para_tile(cur, linha, _bbox_do_tile(z, x, y),
+                                              limite or linha["criterios"].get("limite") or mo.LIMITE_TILE_PADRAO)
+        return _servir_composto(request, auth, feicoes, z, x, y, formato, expressao, bandas, faixa,
+                                  colormap, asset)
+
+    colecao = alvo
+    auth = _autorizar(request, token)
+    if not ps.colecao_pertence(colecao, auth.tenant_id):
+        raise ErroAPI(403, "colecao_indisponivel", "coleção inexistente ou de outro inquilino",
+                      {"colecao": colecao})
+    oeste, sul, leste, norte = _bbox_do_tile(z, x, y)
+    with db.db(auth.contexto_leitura()) as cur:
+        busca = ps.buscar(cur, {"collections": [colecao], "bbox": [oeste, sul, leste, norte],
+                                "limit": limite or 6, "sortby": [{"field": "datetime", "direction": "desc"}]})
+    return _servir_composto(request, auth, busca.get("features") or [], z, x, y, formato, expressao,
+                              bandas, faixa, colormap, asset)
+
+
+# As DUAS rotas de ladrilho (`.{ext}` e sem extensão) são registradas DEPOIS das rotas literais
+# (tilejson.json/wmts/pegadas, abaixo) DE PROPÓSITO: `/mosaico/{alvo}/{z}/{x}/{y}.{ext}` e
+# `/mosaico/{mosaico_id}/wmts/1.0.0/WMTSCapabilities.xml` têm a MESMA forma de caminho (4 segmentos
+# depois de `/mosaico/`, o último com um ponto literal — "WMTSCapabilities.xml" bate no padrão
+# `{y}.{ext}`) — o FastAPI casa pela FORMA do caminho, na ordem de registro, e só then tenta converter
+# os tipos; se a rota de ladrilho viesse primeiro, `wmts/1.0.0/WMTSCapabilities.xml` cairia nela com
+# z="wmts" (não converte para int) e devolvia 422 em vez de cair na rota certa (defeito real medido
+# nesta bancada, corrigido por esta ordem — ver docstring do módulo em rotas_tiles.py topo)
+# ---------------------------------------------------------------------------- TileJSON/WMTS/pegadas do mosaico
+def _mosaico_autorizado(request: Request, token: str, mosaico_id: str):
+    """(auth, linha) do mosaico — 403 tanto para uuid inválido/inexistente quanto para outro inquilino
+    (mesma regra do resto do módulo: 404 nunca, confirmaria a existência alheia)."""
+    auth = _autorizar(request, token, mosaico_id)
+    with db.db(auth.contexto_leitura()) as cur:
+        linha = mo.obter(cur, auth.tenant_id, mosaico_id)
+        if linha is None:
+            raise ErroAPI(403, "mosaico_indisponivel", "mosaico inexistente ou de outro inquilino",
+                          {"mosaico": mosaico_id})
+    return auth, linha
+
+
+def _extent_do_mosaico(cur, linha: dict) -> list[float]:
+    """bbox 4326 que envolve TODAS as pegadas do mosaico — usado pelo TileJSON/WMTS. Custa uma busca
+    (a mesma de `pegadas()`, capada em LIMITE_PEGADAS); para os tamanhos deste item (dezenas de cenas)
+    é barato. Sem nenhuma feição, cai no bbox registrado ou no mundo inteiro."""
+    fc = mo.pegadas(cur, linha)
+    boxes = [f["bbox"] for f in fc["features"] if f.get("bbox")]
+    if not boxes:
+        bbox_reg = linha["criterios"].get("bbox")
+        return list(bbox_reg) if bbox_reg else [-180.0, -90.0, 180.0, 90.0]
+    oeste = min(b[0] for b in boxes)
+    sul = min(b[1] for b in boxes)
+    leste = max(b[2] for b in boxes)
+    norte = max(b[3] for b in boxes)
+    return [oeste, sul, leste, norte]
+
+
+def _base_mosaico(token: str, mosaico_id: str) -> str:
+    return f"{settings.PLAT_URL_PUBLICA.rstrip('/')}/svc/{token}/mosaico/{mosaico_id}"
+
+
+@router.get("/svc/{token}/mosaico/{mosaico_id}/tilejson.json", openapi_extra=X,
+            summary="TileJSON 3.0.0 do mosaico registrado (item L1-07)")
+def mosaico_tilejson(
+    request: Request, token: str, mosaico_id: str,
     formato: str = Query(FORMATO_PADRAO, pattern="^(png|jpg|jpeg|webp)$"),
     expressao: str | None = Query(None, max_length=tiles.EXPRESSAO_MAX),
     bandas: str | None = Query(None, max_length=32),
     faixa: str | None = Query(None, max_length=64),
     colormap: str | None = Query(None, max_length=40),
     asset: str | None = Query(None, pattern="^(visual|cientifico)$"),
-    limite: int = Query(6, ge=1, le=12, description="máximo de cenas candidatas por ladrilho"),
 ):
-    """Mosaico simples e declarado: as cenas da coleção que tocam o ladrilho, da mais recente para a mais
-    antiga, e o PRIMEIRO pixel com dado vence (`first`). Não há linha de costura nem escolha por atributo
-    (decisão C9 do conceito: Seamline e Closest to Viewpoint ficam FORA, com motivo)."""
-    auth = _autorizar(request, token)
-    if not ps.colecao_pertence(colecao, auth.tenant_id):
-        raise ErroAPI(403, "colecao_indisponivel", "coleção inexistente ou de outro inquilino",
-                      {"colecao": colecao})
-    oeste, sul, leste, norte = tiles.TMS.bounds(tiles.TMS.tile(0, 0, 0).__class__(x=x, y=y, z=z))
+    auth, linha = _mosaico_autorizado(request, token, mosaico_id)
     with db.db(auth.contexto_leitura()) as cur:
-        busca = ps.buscar(cur, {"collections": [colecao], "bbox": [oeste, sul, leste, norte],
-                                "limit": limite, "sortby": [{"field": "datetime", "direction": "desc"}]})
-    feicoes = busca.get("features") or []
-    if not feicoes:
-        return Response(status_code=204, headers={"Cache-Control": CACHE_TILE})
-    ultima = None
-    for f in feicoes:
-        try:
-            return _servir(request, auth, f["id"], z, x, y, formato, expressao, bandas, faixa,
-                           colormap, asset)
-        except ErroAPI as e:
-            ultima = e
-            continue
-    raise ultima or ErroAPI(204, "sem_dado", "nenhuma cena da coleção cobre este ladrilho")
+        bounds = _extent_do_mosaico(cur, linha)
+    consulta = _consulta_render(expressao, bandas, faixa, colormap, asset)
+    ext = "jpg" if formato in ("jpg", "jpeg") else formato
+    url = f"{_base_mosaico(token, mosaico_id)}/{{z}}/{{x}}/{{y}}.{ext}"
+    if consulta:
+        url += f"?{consulta}"
+    corpo = {
+        "tilejson": "3.0.0",
+        "name": linha["nome"],
+        "tiles": [url],
+        "minzoom": 0,
+        "maxzoom": 22,
+        "bounds": bounds,
+        "center": [(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2, 10],
+        "scheme": "xyz",
+    }
+    return JSONResponse(corpo, headers={"Cache-Control": "no-store, must-revalidate"})
+
+
+@router.get("/svc/{token}/mosaico/{mosaico_id}/wmts/1.0.0/WMTSCapabilities.xml", openapi_extra=X,
+            summary="WMTS 1.0.0 GetCapabilities do mosaico registrado (forma REST)")
+def mosaico_wmts_rest(request: Request, token: str, mosaico_id: str):
+    auth, linha = _mosaico_autorizado(request, token, mosaico_id)
+    with db.db(auth.contexto_leitura()) as cur:
+        bounds = _extent_do_mosaico(cur, linha)
+    xml = wmts_doc.capabilities(
+        base=_base_mosaico(token, mosaico_id), identificador=mosaico_id, titulo=linha["nome"],
+        bounds=bounds, zoom_min=0, zoom_max=20, formatos=["image/png", "image/jpeg", "image/webp"],
+        consulta="", resumo=f"mosaico de {len(linha['colecoes'])} coleção(ões); grade WebMercatorQuad.",
+    )
+    return Response(xml, media_type="application/xml", headers={"Cache-Control": "no-store, must-revalidate"})
+
+
+@router.get("/svc/{token}/mosaico/{mosaico_id}/wmts", openapi_extra=X,
+            summary="WMTS 1.0.0 KVP do mosaico registrado (GetCapabilities e GetTile)")
+def mosaico_wmts_kvp(
+    request: Request, token: str, mosaico_id: str,
+    service: str = Query("WMTS", alias="SERVICE"), request_: str = Query("GetCapabilities", alias="REQUEST"),
+    tilematrix: str | None = Query(None, alias="TILEMATRIX"), tilerow: int | None = Query(None, alias="TILEROW"),
+    tilecol: int | None = Query(None, alias="TILECOL"), format_: str | None = Query(None, alias="FORMAT"),
+):
+    if (service or "").upper() != "WMTS":
+        raise ErroAPI(422, "servico_invalido", "SERVICE tem de ser WMTS", {"SERVICE": service})
+    operacao = (request_ or "").lower()
+    if operacao == "getcapabilities":
+        return mosaico_wmts_rest(request, token, mosaico_id)
+    if operacao != "gettile":
+        raise ErroAPI(422, "operacao_invalida", "REQUEST tem de ser GetCapabilities ou GetTile",
+                      {"REQUEST": request_})
+    if tilematrix is None or tilerow is None or tilecol is None:
+        raise ErroAPI(422, "parametro_ausente", "GetTile exige TILEMATRIX, TILEROW e TILECOL")
+    formato = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp"}.get(
+        (format_ or "image/png").lower())
+    if formato is None:
+        raise ErroAPI(422, "formato_desconhecido", "FORMAT aceito: image/png, image/jpeg, image/webp",
+                      {"FORMAT": format_})
+    z = int(str(tilematrix).split(":")[-1])
+    return tile_mosaico(request, token, mosaico_id, z, int(tilecol), int(tilerow), formato,
+                        None, None, None, None, None, None)
+
+
+@router.get("/svc/{token}/mosaico/{mosaico_id}/pegadas", openapi_extra=X,
+            summary="pegadas (footprints) do mosaico registrado, em GeoJSON — item L1-07")
+def mosaico_pegadas(request: Request, token: str, mosaico_id: str):
+    auth, linha = _mosaico_autorizado(request, token, mosaico_id)
+    with db.db(auth.contexto_leitura()) as cur:
+        fc = mo.pegadas(cur, linha)
+    return JSONResponse(fc, media_type="application/geo+json",
+                        headers={"Cache-Control": "no-store, must-revalidate"})
+
+
+@router.get("/svc/{token}/mosaico/{alvo}/{z}/{x}/{y}.{ext}", openapi_extra=X,
+            summary="ladrilho do mosaico com extensão no caminho (uuid de busca registrada ou coleção)")
+def tile_mosaico_ext(
+    request: Request, token: str, alvo: str, z: int, x: int, y: int, ext: str,
+    expressao: str | None = Query(None, max_length=tiles.EXPRESSAO_MAX),
+    bandas: str | None = Query(None, max_length=32),
+    faixa: str | None = Query(None, max_length=64),
+    colormap: str | None = Query(None, max_length=40),
+    asset: str | None = Query(None, pattern="^(visual|cientifico)$"),
+    limite: int | None = Query(None, ge=1, le=mo.LIMITE_TILE_MAX),
+):
+    if ext not in tiles.FORMATOS:
+        raise ErroAPI(404, "formato_desconhecido", f"formato de ladrilho desconhecido: {ext}",
+                      {"aceitos": sorted(tiles.FORMATOS)})
+    return _tile_mosaico_impl(request, token, alvo, z, x, y, ext, expressao, bandas, faixa, colormap,
+                              asset, limite)
+
+
+@router.get("/svc/{token}/mosaico/{alvo}/{z}/{x}/{y}", openapi_extra=X,
+            summary="ladrilho do mosaico (uuid de busca registrada — L1-07 — ou nome de coleção)")
+def tile_mosaico(
+    request: Request, token: str, alvo: str, z: int, x: int, y: int,
+    formato: str = Query(FORMATO_PADRAO, pattern="^(png|jpg|jpeg|webp)$"),
+    expressao: str | None = Query(None, max_length=tiles.EXPRESSAO_MAX),
+    bandas: str | None = Query(None, max_length=32),
+    faixa: str | None = Query(None, max_length=64),
+    colormap: str | None = Query(None, max_length=40),
+    asset: str | None = Query(None, pattern="^(visual|cientifico)$"),
+    limite: int | None = Query(None, ge=1, le=mo.LIMITE_TILE_MAX,
+                               description="máximo de cenas candidatas por ladrilho"),
+):
+    return _tile_mosaico_impl(request, token, alvo, z, x, y, formato, expressao, bandas, faixa,
+                              colormap, asset, limite)
 
 
 # ---------------------------------------------------------------------------- autorização para o nginx
@@ -443,7 +769,12 @@ def autorizar_subrequisicao(request: Request):
     # conserto: token de `demo2` recebeu 200 num item de `demo`).
     if item:
         if tipo == "mosaico":
-            if not ps.colecao_pertence(item, auth.tenant_id):
+            if mo.eh_uuid(item):
+                with db.db(auth.contexto_leitura()) as cur:
+                    if mo.obter(cur, auth.tenant_id, item) is None:
+                        raise ErroAPI(403, "mosaico_indisponivel", "mosaico inexistente ou de outro inquilino",
+                                      {"mosaico": item})
+            elif not ps.colecao_pertence(item, auth.tenant_id):
                 raise ErroAPI(403, "colecao_indisponivel", "coleção inexistente ou de outro inquilino",
                               {"colecao": item})
         else:
