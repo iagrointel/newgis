@@ -20,6 +20,7 @@ from fastapi import APIRouter, Request, Response
 from app import db
 from app.auth import escopos as esc
 from app.auth import sessao as auth_sessao
+from app.catalogo.tipos import TIPOS_CAMADA
 from app.consulta import campos as campos_mod
 from app.consulta import motor, serializar
 from app.consulta.geometria_esri import sr_wkid
@@ -116,10 +117,13 @@ def _item_id_valido(item_id: str) -> None:
 def _camada_do_item(cur, item_id: str) -> dict:
     _item_id_valido(item_id)
     cur.execute(
-        "SELECT dados FROM plat.item WHERE id = %s::uuid AND tipo = 'camada_vetorial'", (item_id,)
+        "SELECT dados FROM plat.item WHERE id = %s::uuid AND tipo = ANY(%s)",
+        (item_id, list(TIPOS_CAMADA)),
     )
     r = cur.fetchone()
-    if r is None:
+    # vista de camada (L5-32) só é servível quando aponta para a VIEW; item de vista sem `tabela` é registro
+    # incompleto e vale como inexistente, nunca como camada a consultar.
+    if r is None or not (r["dados"] or {}).get("tabela"):
         raise ErroAPI(404, "camada_nao_encontrada", "item inexistente, não é camada vetorial, ou sem permissão")
     return r["dados"]
 

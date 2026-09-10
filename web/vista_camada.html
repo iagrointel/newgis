@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Vista de camada · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/estilo/tokens.css">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/estilo/camada_esquema.css">
+</head>
+<body class="tela instrumento vista-camada">
+<a class="pular" href="#principal">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <div id="ferramentas" class="linha-ferramentas">
+      <h1>Vista de camada</h1>
+    </div>
+    <p class="aviso-beta">análise / beta privado</p>
+    <plat-aviso id="aviso"></plat-aviso>
+
+    <section class="cartao" aria-labelledby="t-mae">
+      <h2 id="t-mae">1. camada-mãe</h2>
+      <label>camada
+        <select id="vista-camada" aria-describedby="ajuda-mae"></select>
+      </label>
+      <p id="ajuda-mae" class="ajuda">a vista mostra o dado desta camada; nada é copiado.</p>
+    </section>
+
+    <section class="cartao" aria-labelledby="t-def">
+      <h2 id="t-def">2. definição</h2>
+      <div class="grade-formulario">
+        <label>título da vista
+          <input type="text" id="vista-titulo" maxlength="250" required>
+        </label>
+        <label>filtro
+          <input type="text" id="vista-filtro" maxlength="4000" aria-describedby="ajuda-filtro">
+        </label>
+      </div>
+      <p id="ajuda-filtro" class="ajuda">expressão no dialeto do FeatureServer sobre os campos da camada-mãe,
+        por exemplo <code>uf = 'SP'</code>. Fica congelada na vista: quem consulta só pode somar condições.</p>
+      <label class="linha-checkbox">
+        <input type="checkbox" id="vista-somente-leitura" checked> somente leitura
+      </label>
+    </section>
+
+    <section class="cartao" aria-labelledby="t-campos">
+      <h2 id="t-campos">3. campos — arraste para ocultar</h2>
+      <p class="ajuda">arraste um campo da lista da esquerda até a área “ocultos”, ou clique nele; campo oculto
+        não entra na vista, logo não aparece em consulta nenhuma. Quem não usa mouse clica no campo.</p>
+      <div class="grade-formulario">
+        <div>
+          <h3>publicados</h3>
+          <ul id="zona-visiveis" class="zona-drop" aria-label="campos publicados pela vista"></ul>
+        </div>
+        <div>
+          <h3>ocultos</h3>
+          <ul id="zona-ocultos" class="zona-drop" aria-label="campos ocultados pela vista" aria-dropeffect="move"></ul>
+          <p id="ocultos-vazio" class="ajuda">nenhum campo oculto ainda.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="cartao">
+      <button type="button" id="criar-vista" class="primario">criar vista</button>
+    </section>
+
+    <section class="cartao" id="resultado-cartao" hidden aria-labelledby="t-resultado">
+      <h2 id="t-resultado">vista criada</h2>
+      <p id="resultado-resumo"></p>
+      <div class="tabela-rolagem">
+        <table id="resultado-tabela" class="tabela">
+          <caption class="sr-only">campos publicados pela vista</caption>
+          <thead>
+            <tr><th scope="col">coluna</th><th scope="col">tipo</th></tr>
+          </thead>
+          <tbody id="resultado-corpo"></tbody>
+        </table>
+      </div>
+      <p id="resultado-servico"></p>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/js/catalogo/vista_camada.js"></script>
+</body>
+</html>

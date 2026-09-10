@@ -1,0 +1,50 @@
+{
+ "item": "L5-32-vistas-de-camada",
+ "medidas": {
+  "campos_ocultos_na_view": {
+   "valor": 0,
+   "unidade": "colunas",
+   "comando": "SELECT column_name FROM information_schema.columns (view da vista)"
+  },
+  "feicoes_fora_do_filtro_servidas": {
+   "valor": 0,
+   "unidade": "feições",
+   "comando": "GET /rest/services/<vista>/FeatureServer/0/query?where=1=1&outFields=*"
+  }
+ },
+ "gerado_em": "2026-09-08T11:50:11Z",
+ "git_sha": "29c8fbc1a591",
+ "clausulas": [
+  {
+   "clausula": "vista com filtro e 3 campos ocultos criada pela tela",
+   "estado": "parcial",
+   "prova": "tests/api/catalogo/test_vista_camada.py::test_vista_com_filtro_e_tres_campos_ocultos_e_uma_view_de_verdade (PASSOU: 3 ocultos, view real com security_invoker); tela em web/vista_camada.html + web/js/catalogo/vista_camada.js; e2e escrito em tests/e2e/test_construtor_vista.py",
+   "ressalva": "o e2e NAO rodou nesta trilha: a URL publica da trilha (PLAT_URL_PUBLICA) nao resolve e a aplicacao nao serve /static/ sozinha (mesma limitacao do e2e do L5-31). O contrato que a tela chama esta provado pelo teste de API."
+  },
+  {
+   "clausula": "consulta ao FeatureServer da vista nao devolve campo oculto nem feicao fora do filtro",
+   "estado": "feito",
+   "prova": "tests/api/catalogo/test_vista_camada.py::test_query_da_vista_nao_devolve_campo_oculto_nem_feicao_fora_do_filtro (PASSOU: where=1=1 e outFields=* devolvem 2 de 4 feicoes e nenhum dos 3 campos ocultos; contraprova na camada-mae devolve as 4 com tudo)"
+  },
+  {
+   "clausula": "vista so leitura recusa applyEdits (403)",
+   "estado": "feito",
+   "prova": "tests/api/catalogo/test_vista_camada.py::test_vista_somente_leitura_recusa_apply_edits (PASSOU: 403 no applyEdits e 403 vista_somente_leitura em POST /api/camadas/{id}/edicoes)"
+  },
+  {
+   "clausula": "compartilhar a vista com o publico nao expoe a camada-mae (teste cruzado)",
+   "estado": "feito",
+   "prova": "tests/api/catalogo/test_vista_camada.py::test_compartilhar_a_vista_com_o_publico_nao_expoe_a_camada_mae (PASSOU em inquilino descartavel com compartilhar_publico ligado: /api/publico/itens/<vista> 200 e /api/publico/itens/<mae> 404, mae continua acesso=privado, ficha publica sem os ocultos e sem o id da mae) + test_link_anonimo_da_vista_nao_abre_a_camada_mae"
+  },
+  {
+   "clausula": "refutacao: outFields=* , where=1=1 e o id da camada-mae pelo token da vista",
+   "estado": "feito",
+   "prova": "test_query_da_vista_... (outFields=*, where=1=1, OR com as UFs de fora: sempre 2 feicoes e nenhum campo oculto) e test_token_da_vista_nao_abre_a_camada_mae (token camada:ler:<vista> le a vista com 200 e recebe 403 na mae)"
+  }
+ ],
+ "limitacoes": [
+  "tiles vetoriais (Martin/leitor) ainda filtram tipo='camada_vetorial' dentro de funcoes SQL de outros itens; a vista e servida por FeatureServer, OGC Features, WFS, descritor e diretorio, nao por tile.",
+  "a ficha publica de uma camada (nao da vista) continua expondo dados.schema/dados.tabela como sempre; nao e regressao deste item.",
+  "e2e nao executavel na trilha (sem nginx/URL publica)."
+ ]
+}

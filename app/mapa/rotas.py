@@ -31,9 +31,7 @@ from fastapi.responses import Response
 from app import db
 from app.auth.sessao import Auth, autenticado, sha256_hex
 from app.erros import ErroAPI
-from app.mapa import popup as popup_mod
 from app.mapa import simbologia as simb_mod
-from app.mapa.consultas import SQL_CAMADA  # compartilhado com app/mapa/popup.py (item L2-01-d)
 from app.settings import settings
 from app.tiles.rotas import autorizar
 
@@ -45,6 +43,12 @@ X = {"x-auth": "S/T", "x-privilegio": "proprio"}
 # serviço comum (ADR 0002 seção 8). O mapa recunha sozinho ao recarregar a página.
 HORAS_TOKEN_MAPA = 12
 NOME_TOKEN = "mapa-web"
+
+SQL_CAMADA = """
+SELECT i.id, i.titulo, i.descricao, i.dados, i.criado_em
+FROM plat.item i
+WHERE i.tipo IN ('camada_vetorial', 'vista_de_camada') AND i.apagado_em IS NULL
+"""
 
 
 def _extensao(cur, dados: dict) -> list[float] | None:
@@ -93,8 +97,12 @@ def _ficha(cur, linha: dict, completo: bool) -> dict:
         "legenda": simb_mod.legenda(simb, geometria),
         "estilo": simb_mod.camadas_maplibre(simb, geometria, fonte, fonte, funcao or "camada"),
         "tilejson": f"/api/mapa/camadas/{linha['id']}/tilejson" if funcao else None,
-        # item L2-01-d-popup-runtime: forma fixa de dados.popup, com padrão quando a camada não configurou nada
-        "popup": popup_mod.normalizar(dados),
+        # item L2-03-edicao: o que a tela de edição precisa saber SEM abrir outra rota — nunca schema/tabela
+        # (isso fica só no servidor). "editavel" já resume fonte hospedada + edicao.habilitada.
+        "editavel": bool(dados.get("fonte") == "hospedada" and (dados.get("edicao") or {}).get("habilitada")),
+        "regras_campo": dados.get("regras_campo") or {},
+        "somente_proprias": bool((dados.get("edicao") or {}).get("somente_proprias")),
+        "geometria_travada": bool((dados.get("edicao") or {}).get("geometria_travada")),
     }
     if completo:
         ficha["descricao"] = linha["descricao"]

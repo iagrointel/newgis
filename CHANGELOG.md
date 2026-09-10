@@ -1010,6 +1010,226 @@ têm a cláusula a cláusula. Fora do turno: Pro/AGOL reais (D20, exige credenci
 verdade (depende de L2-02-e, não construído).
 
 ## turno 4, setembro de 2026 (item L2-04-servicos-esri-ogc: diretório do FeatureServer, OGC API Features e WFS 2.0)
+## turno 5, setembro de 2026 (item L5-31-construtor-de-camada-esquema: construtor de camada por esquema)
+
+Camada vazia criada por lista de campos arrastados (`POST /api/camadas/esquema`): tipo, tamanho, alias,
+obrigatório, valor padrão, domínio (lista código→rótulo) e índice, mais tipo de geometria e SRID. Reaproveita
+inteiramente o núcleo do L0-04-ingest-vetor — `plat.camada_schema_garantir`/`plat.camada_preparar` (a mesma
+tabela nasce com colunas obrigatórias, `FORCE ROW LEVEL SECURITY`, índice GIST e gatilhos de tenant/versão
+que uma camada importada) e `app.ingestao.nomes.normalizar` para o nome de cada campo (mesma regra de acento,
+palavra reservada e duplicata da ingestão). Alias e domínio — o que o PostgreSQL não guarda — vivem numa
+tabela nova, `plat.camada_campo_meta`, com FK simples para `plat.item(id)` e coerência de inquilino por
+gatilho `plat.tg_camada_campo_meta` (migração `20260907T1509_camada_esquema.sql`, mesmo padrão de
+`plat.item_relacao`/`plat.item_grupo`): mesmo que uma política de RLS falhasse em algum caminho futuro, o
+próprio banco recusaria uma linha de metadado apontando para item de outro inquilino. `GET /api/camadas/{id}/campos` devolve os campos no formato `fields` de um
+FeatureServer Esri (name/type/alias/length/nullable/domain) lendo tipo/tamanho/obrigatoriedade direto de
+`information_schema.columns` — nunca uma cópia que pode desalinhar do banco.
+
+Alterar esquema (`POST .../esquema/plano` mostra o plano; `PUT .../esquema` aplica) trata cada mudança por
+cláusula: adicionar campo e renomear alias sempre aplicam; alargar tamanho de texto ou tipo (`ALARGAMENTO_SEGURO`:
+inteiro→bigint→double, texto sempre aceito como destino) aplica; qualquer mudança que possa truncar ou
+invalidar dado existente (reduzir tamanho, ou um tipo fora da lista de alargamentos seguros — o caso do
+portão, texto→inteiro) só aplica se a camada estiver VAZIA; com dado, é recusada com a mensagem exata e
+NUNCA aplicada calada. Tela `/construtor-camada`: paleta de 8 tipos com Drag and Drop API nativa do HTML5 (0
+byte de biblioteca, mesmo princípio do editor de arrasto do L5-08) e clique como alternativa sem mouse — as
+duas vias produzem exatamente o mesmo campo, provado em e2e.
+
+Refutação do item (300 campos, um deles a palavra reservada `select` e outro com acento/símbolo/maiúscula):
+normalizou os 300 sem colisão de nome e sem 500; o `GET /campos` continuou respondendo certo para as 300
+colunas. Dois bugs reais achados e corrigidos ANTES do adversário: (1) a ordem de inserção tinha
+`camada_campo_meta` ANTES de `plat.item` — a própria FK para `plat.item` recusava a primeira
+gravação, sempre; (2) alargar de `text` (sem teto) para `varchar(N)` não conferia o maior valor já gravado —
+corrigido para medir `max(length(...))` antes de aceitar. Ver `docs/PARIDADE.md` para a tabela completa
+feito/parcial/fora contra a capacidade Esri.
+
+### Medições (`tests/medidas/L5-31-construtor-de-camada-esquema.json`)
+
+| medida | valor | comando |
+|---|---|---|
+| campos criados e lidos de volta em `/campos` | 5 | `GET /api/camadas/{id}/campos` |
+| refutação: 300 campos hostis (reservada, acento, duplicata) | passa | `POST /api/camadas/esquema` com 300 campos |
+| testes da suíte do item | 9/9 | `tests/api/catalogo/test_camada_esquema.py` |
+| e2e (arrasto + clique + criação, 0 erro de console) | 1/1 | `tests/e2e/test_construtor_camada.py`, capturas em `tests/e2e/capturas/L5-31-*` |
+
+### Commits
+
+Ver `git log` do ramo desta trilha (`wt/il531constr`) — migração, backend (`app/catalogo/camada_esquema.py`),
+frontend (`web/construtor_camada.html`, `web/js/catalogo/camada_esquema.js`, `web/estilo/camada_esquema.css`)
+e testes (API + e2e) num só commit por não haver como dividir sem quebrar o portão no meio.
+## turno 4, setembro de 2026 (item L2-04-d-featureserver-edicao-anexos: escrita pelo protocolo Esri sobre a porta única)
+
+`applyEdits` (na camada e no serviço), `addFeatures`/`updateFeatures`/`deleteFeatures`, `calculate`, os seis
+caminhos de anexo do protocolo Esri e `uploads/upload`, montados em
+`/rest/services/{item}/FeatureServer/0/*` (`app/consulta/rotas_edicao_esri.py` + `app/consulta/esri_edicao.py`).
+Nenhuma dessas rotas escreve em tabela de camada: todas traduzem o pedido Esri e chamam
+`app.edicao.servico.aplicar_edicoes`, a porta única de escrita do item L2-03-a — o que vale para a API da
+casa (tipo, domínio, CRS, propriedade, versão otimista) passou a valer para o cliente Esri sem cópia de regra.
+
+Três decisões, no ADR `docs/adr/20260907T2016-featureserver-escrita-esri.md`: (1) erro sai com o código HTTP
+REAL e o corpo no formato Esri, em vez do HTTP 200 com erro no corpo que a Esri usa; (2) `rollbackOnFailure`
+(padrão verdadeiro) é um `SAVEPOINT` de lote, e a resposta continua trazendo o resultado feição a feição, com
+`rolledBack`; (3) `calcExpression.sqlExpression` do `calculate` é traduzido para a linguagem de expressão da
+casa (L2-03-f) e avaliado em Python — SQL do cliente nunca chega ao banco.
+
+Migração `20260907T1927_featureserver_edicao.sql`: `origem` em `plat.feicao_historico` (preenchida pelo
+gatilho a partir do parâmetro de sessão `plat.origem`, padrão `api`), `numero bigserial` em
+`plat.feicao_anexo` (o protocolo Esri identifica anexo por inteiro; o uuid continua sendo a chave) e
+`plat.esri_upload` (o bilhete do arquivo enviado antes de existir feição-pai).
+
+Medidas em `tests/medidas/L2-04-d-featureserver-edicao-anexos.json`, com o comando exato: 26 testes de API
+dedicados, todos passando. Duas cláusulas do portão NÃO foram feitas e estão nomeadas lá: edição por QGIS
+(não instalado, sem ambiente gráfico) e a prova com o cliente Python `arcgis` (pacote não instalado). Ao
+regerar `docs/openapi.json` apareceu que a junção dos ramos de origem havia apagado as rotas de edição, de
+mapa e do FeatureServer do arquivo comitado; foram restauradas e cada um dos 29 (método, caminho) novos ganhou
+caso na varredura cruzada A→B, que segue em 100 % de cobertura.
+
+## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
+
+Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
+medição honesta achou nela. `PLAT_DSN`, `PLAT_GARAGE_ADMIN_TOKEN` e `PLAT_SECRET_ANTERIOR` saíram do
+`.env` para `/etc/plat/segredos` (root 0600) entregues por `LoadCredential=` do systemd — o `.env` fica
+só com configuração, e o Makefile injeta os segredos no pytest (a falta de `PLAT_DSN` na injeção tinha
+deixado a suíte vermelha na coleta desde 06/09 à noite). `scripts/plat segredo rotacionar <nome>`
+rotaciona os 5 segredos: PLAT_SECRET com dupla-chave (o valor antigo vira `PLAT_SECRET_ANTERIOR` por 24
+h, sessões sobrevivem), PLAT_DSN e PLAT_DSN_WORKER com `ALTER ROLE` + reinício das consumidoras,
+PLAT_GARAGE_ADMIN_TOKEN com restart do Garage + API, e a chave S3 de um inquilino sem reiniciar nada.
+Em todos, o valor antigo deixa de autenticar (prova por `psycopg2.connect` com a senha velha depois da
+rotação). A cláusula "0 erro 5xx durante a rotação" é medida pelo **k6** (v2.2.0,
+`scripts/k6_saude_5xx.js`, martelo externo ao processo medido): 0 respostas 5xx em 276-762 requisições
+por rotação (`tests/medidas/L7-19.json`). Chegar ao zero exigiu trocar o mecanismo depois de duas
+medições ruins: "restart em cadeia" deixou 57 respostas 500 na janela entre o `ALTER ROLE` e o restart
+da segunda unidade, e "parar tudo antes" deixou 1.334, porque com ativação por soquete a própria
+conexão do cliente religa o serviço com a credencial velha (e `mask --runtime` não impede a religação
+de unidade estática, medido em spike). O mecanismo final é uma janela `trust` de segundos no pg_hba
+(só a role, só 127.0.0.1, linha marcada, removida por `finally`): velho e novo autenticam durante a
+troca, e a senha velha morre quando a janela fecha. A API passa a subir por ativação por soquete
+(`deploy/plat-api.socket`, uvicorn `--fd 3` com 2 workers — spike medido: conexão durante o stop
+espera ~1 s e recebe 200, nunca refused/502). O adversário independente refutou a primeira versão e os achados que eram do item viraram conserto
+neste mesmo turno: a janela trust abre dentro do `try` (linha nunca fica para trás no pg_hba, checado a
+cada prova), a rotação de PLAT_SECRET reinicia também o worker (ele carrega a chave uma vez na subida e
+decifra dentro de jobs), e o ANTERIOR expira de verdade — timer `plat-segredo-expira.timer` esvazia o
+arquivo e reinicia API e worker na virada das 24 h (janela efetiva 24 h-24 h 59 min). Os achados que são
+contaminação do ambiente ANTERIOR ao item (segredos reais semeados no journal por comandos de outras
+operações; `.env` de worktrees de trilha com valores reais, um deles modo 664; segredos em
+`/proc/<pid>/environ` de processos de trilha) ficaram registrados em `refutacao.json` e viraram itens
+próprios do backlog com dono nomeado — o desenho do produto em si saiu limpo: unidades plat-* só veem os
+segredos por `LoadCredential=`, repositório e histórico git com 0 ocorrências, `.env` raiz sem segredo.
+Runbook em `docs/RUNBOOKS/segredos.md` (procedimento por segredo, janela trust declarada, ressalva do
+garage.toml do daemon, que é da frente plataforma/pipeline e o produto nunca lê em operação).
+## turno 3, setembro de 2026 (item L5-32-vistas-de-camada: vista de camada como VIEW do PostgreSQL)
+
+- `POST /api/camadas/{id}/vistas` cria uma vista da camada: filtro próprio, campos escondidos, só leitura ou
+  editável, extensão limitada, estilo e janela de atributos próprios. `GET`/`PUT /api/vistas/{id}` leem e
+  refazem a definição. Tela em `/vista-de-camada`, com o campo indo para "ocultos" por arrasto ou por clique.
+- A vista é uma VIEW em `d_<slug>` com `security_invoker = true`, registrada como item `vista_de_camada`
+  (tipo reservado desde `011_catalogo.sql`, agora no esquema v2). Campo oculto não é filtrado na saída: ele
+  não existe na relação consultada, então `outFields=*` não o alcança. O filtro é congelado na definição da
+  view, então `where=1=1` do cliente só se soma a ele.
+- FeatureServer, descritor de serviço, diretório Esri, OGC API Features, WFS e o mapa web servem a vista sem
+  código novo: o filtro por tipo virou `TIPOS_CAMADA` em `app/catalogo/tipos.py`.
+- Vista `somente_leitura` recusa escrita com 403 na porta única (`app.edicao.servico`), antes do atalho de
+  administrador. Vista editável nasce `WITH CASCADED CHECK OPTION`, e a violação vira 422 `fora_da_vista`.
+- Compartilhar a vista não compartilha a camada-mãe: a ficha pública da vista deixa de trazer
+  `campos_ocultos` e `camada_id`, e um token com escopo `camada:ler:<vista>` recebe 403 na camada-mãe.
+- Dívidas trazidas junto e fechadas em arquivo novo: `plat.feicao_historico_registrar()` e
+  `plat.origem_atual()` tinham EXECUTE para PUBLIC; e `plat.camada_schema_garantir` refazia o
+  `GRANT USAGE ON SCHEMA` a cada chamada, o que fazia duas trilhas escreverem a mesma linha de `pg_namespace`
+  ao mesmo tempo ("tuple concurrently updated"). Agora o GRANT só corre quando falta.
+
+## turno 3, setembro de 2026 (item L3-19-multiescala: grades aninhadas do motor multicritério)
+
+Construído do zero neste turno (RESGATE da sessão executora derrubada por cota só tinha a migração,
+`app/multiescala/{crs,motor}.py` ainda sem rota nenhuma). Duas execuções ligadas: `POST
+/api/multiescala/conjuntos/{id}/macro` gera a grade grosseira sobre a área de estudo inteira e roda a
+combinação; `POST /api/multiescala/execucoes/{id}/micro` gera a grade fina SÓ dentro das células macro
+aprovadas (aritmético — a query de geração junta a região aprovada ANTES de expandir as sub-células, nunca
+gera tudo para descartar depois) e roda a mesma combinação nela. `GET /api/multiescala/execucoes/{id}`
+devolve o relatório por fator com `escala`/`escala_grosseira`/`razao_escala`, calculado pelo motor a partir
+de `resolucao_fonte_m` (declarada no fator) x `resolucao_grade_m` (da execução) — o cliente nunca envia
+esse campo. CRUD completo: `/conjuntos`, `/fatores`, `/fatores/{id}/amostras` (carga em lote),
+`/execucoes`; `DELETE` de conjunto e fator (cascata pelas FKs da migração), acrescentados neste turno para
+a varredura cruzada ter como limpar o que cria. Escopo de token novo `multiescala:usar`
+(`app/auth/escopos.py`). ADR `docs/adr/20260906T1640-grades-aninhadas-multiescala.md`.
+
+Um defeito de FRAMEWORK achado e corrigido, fora do arquivo deste item mas bloqueando-o:
+`app/schema_ambiente.py::CursorSchemaAmbiente` reescreve `plat.` → `plat_t<trilha>.` em `execute` e
+`callproc`, mas não em `executemany` (psycopg2 implementa em C e não chama `execute` de volta) —
+`POST /api/multiescala/fatores/{id}/amostras` falhava com `permission denied for schema plat` em qualquer
+trilha. A MESMA lacuna já quebrava `POST /api/papeis` (não deste item), convertida por `erro_do_banco` num
+403 "operação fora do inquilino da sessão" que parecia RLS cruzada e não era — reproduzido e confirmado
+antes de mexer. Corrigido na classe (um método a mais, mesmo corpo de `execute`), vale para as duas rotas.
+
+Um defeito do próprio teste (não do motor) achado rodando de verdade: uma área de estudo desenhada só um
+pouco maior que a resolução da grade (~1,35-1,47 km sobre 1 km) produz uma célula-fatia cujo CENTRO
+nominal (usado para achar o bloco de dado) cai FORA da extensão real da amostra — 2 das 4 células macro
+ficavam sem nota, não por bug, porque nenhuma amostra alcançava o bloco que aquela célula ia procurar.
+Corrigido aumentando a área de teste para 1.900 x 1.900 m (documentado no ADR, decisão B, para o próximo
+teste desta família não tropeçar na mesma coisa).
+
+Medido de verdade (`PLAT_GRAVAR_MEDIDAS=1`, `tests/medidas/L3-19-multiescala.json`), 10/10 testes passam
+duas vezes seguidas: grade macro de 1 km sobre estudo de 1.900x1.900 m dá 4 células, top_pct 50% aprova 2;
+grade micro de 100 m (k=10) gera exatamente 200 células (2 aprovadas × 10²) contra 400 possíveis (4×10²) —
+economia de 50,0%; o mesmo fator (1.000 m de escala nativa) sai `própria` na grade de 1 km e `grosseira`
+na grade de 100 m da MESMA execução ligada, sem o cliente declarar nada de diferente — é a refutação do
+item. `tests/api/multiescala/test_multiescala.py`: 10/10.
+
+**Fora do portão deste turno, registrado no ADR**: `docs/openapi.json` comitado não inclui
+`/api/multiescala/*` (regeneração é pendência do gerente após os merges); os 11 casos da varredura cruzada
+já estão em `tests/api/cruzado_casos.py` (conferidos à mão contra o app rodando — todas as 11 rotas
+recusam ou isolam o cross-tenant corretamente) e passam a valer em `test_cobertura_100_por_cento`/
+`test_rota_nao_cruza` assim que `make openapi` rodar contra a árvore juntada. `L3-01-b-unidades`
+(dependência declarada) segue PARCIAL num ramo não juntado (`wt/amc`); este item não depende dele em
+código (CRS resolvido de forma própria em `app/multiescala/crs.py`), só na hipótese conceitual.
+## turno 5, setembro de 2026 (item L5-01-a-layout-paginas: páginas e layout do app)
+
+Sobre o editor de arrasto do L5-08: paleta nova (`web/js/editor/paleta_paginas.js`) com `pagina` (tela cheia
+× rolável; `caminho`/`titulo`/`ordem`/`oculta`/`inicial`), `cabecalho`, `rodape`, `menu`, os widgets de
+layout do Experience Builder (`linha`, `coluna`, `grade`, `acordeao`, `painel_fixo`, `painel_lateral`) e
+`janela` (`modal`/`ancorada`) + `secao_vistas`/`vista`. Executor novo (`web/js/executor/{executor,paginas}.js`
++ tela `/executar?item=<id>&pagina=<caminho>`, `app/paginas.py`) que renderiza o MESMO documento como app de
+verdade: nav entre páginas por `history.pushState`, `<dialog>` nativo para janela modal, painel lateral que
+recolhe sem `display:none`, grade em CSS Grid `fr`. `web/js/editor/tela.js` escolhe a paleta pelo `tipo` do
+item (`app` → paleta de páginas; o resto continua com a paleta comum do L5-08) — única mudança num arquivo
+que outro item também toca.
+
+Medido (`tests/medidas/L5-01-a-layout-paginas.json`, e2e `tests/e2e/test_layout_paginas.py`): app de 2
+páginas (Central tela-cheia com mapa, Detalhes rolável com painel lateral/grade/janela) montado só por
+arrasto (2.245,1 ms); menu navega e a URL muda por página, F5 reabre na página certa; painel lateral
+recolhe/expande; grade mantém a razão 8:4 entre dois filhos em 1200 px (2,016) e 600 px (2,033) — diferença
+0,017; janela modal abre pelo botão e fecha por Esc (`<dialog>` nativo). Refutação do adversário: 6 níveis
+alternando linha/coluna, com irmão ao lado do 1º nível, em 3 larguras de viewport (1280/800/320) — 0 px de
+estouro horizontal e nenhum nível com largura, altura, `display` ou `visibility` zerados (a correção que fez
+isso passar foi `min-width:0`/`min-height:0` em todo item flexível, ADR
+`20260907T1355-paginas-e-layout-do-app`). Achado corrigido no caminho: `drag_and_drop` sobre o SELETOR do
+contêiner-alvo mira o CENTRO da caixa — quando o contêiner já tem um filho de largura 12/12, o centro cai
+sobre o filho e o `drop` do HTML5 é entregue a ele, não ao contêiner (o novo nó entra um nível mais fundo do
+que o pedido); o teste agora solta sempre no FUNDO do contêiner, como o e2e do L5-08 já fazia na raiz.
+Paridade contra "Add and manage pages" e "Layout widgets" (doc EXB) em `docs/PARIDADE.md`.
+
+## turno 4, setembro de 2026 (item L5-08-editor-arrasto: primitivas de edição compartilhadas pelos construtores)
+
+Editor de arrasto próprio em `web/js/editor/` (5 módulos, 43.771 bytes medidos; 0 byte de biblioteca de
+arrasto — `web/vendor/VERSOES.txt` segue sem SortableJS, dnd-kit ou GridStack) e tela `/construtor?item=<id>`
+sobre o documento do L5-05. Paleta→tela e tela→tela por HTML5 Drag and Drop; alça de largura por Pointer
+Events com `setPointerCapture`; árvore de estrutura, painel de propriedades gerado do JSON Schema do tipo e
+menu "mover para" para quem só tem toque. Largura sempre em COLUNAS da grade de 12, nunca em pixel.
+
+Medido (`tests/medidas/L5-08-editor-arrasto.json`, e2e `tests/e2e/test_editor_arrasto.py` contra a base da
+trilha): o MESMO layout de 5 componentes montado só por arrasto (787,5 ms) e só por teclado e menus
+(134,0 ms) grava dois documentos idênticos — diferença 0 depois de trocar cada ULID por `n1..nN` na ordem de
+profundidade (o ULID é aleatório por construção, D2). Redimensionar por arrasto levou o mapa de 8 para 4
+colunas nos dois caminhos; `"px"` não aparece no documento gravado. A árvore reflete o aninhamento
+(aria-level 1/2/2/1/1). O painel recusa zoom 99 num campo `maximum: 22`: mensagem no campo, `aria-invalid`,
+e o documento salvo depois continua com 12. Refutação do adversário no mesmo arquivo: soltar um contêiner
+dentro de um descendente dele é recusado com motivo ("dentro de si"), soltar fora da tela não muda nada, o
+menu de mover não oferece destino dentro do próprio nó, e o layout inteiro se monta só por toque no viewport
+Pixel 7 (onde o HTML5 Drag and Drop não dispara). 0 erro de console em todos os caminhos.
+
+Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a partir do navegador, e por
+isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
+anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
+coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
+## turno 4, setembro de 2026 (item L2-04-servicos-esri-ogc: diretório do FeatureServer, OGC API Features e WFS 2.0)
 
 Construído em volta da operação `query` do FeatureServer (item L2-04-c, `wt/fsquery`, ADR 0018) sem reescrevê-la:
 `app/consulta/rotas_servico.py` (descritor de serviço `.../FeatureServer?f=json` e de camada `.../FeatureServer/0

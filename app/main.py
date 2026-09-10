@@ -30,6 +30,7 @@ from app.auth import (
     rotas_usuarios,
 )
 from app.catalogo import (
+    camada_esquema,
     rotas_categorias,
     rotas_compartilhamento,
     rotas_favoritos,
@@ -39,6 +40,7 @@ from app.catalogo import (
     rotas_ogc,
     rotas_pastas,
     transferencia,
+    vista_camada,
 )
 from app.conexao import rotas as rotas_conexao
 from app.consulta import cors_servicos
@@ -171,6 +173,12 @@ ROUTERS = [
     rotas_uploads,
     # --- ingestão vetorial (L0-04): /api/importacoes (upload -> inspeção -> confirmação -> carga -> camada)
     rotas_ingestao,
+    # --- construtor de camada por esquema (L5-31): /api/camadas/esquema, /api/camadas/{id}/esquema[/plano],
+    # /api/camadas/{id}/campos (fields no formato FeatureServer)
+    camada_esquema.router,
+    # --- vista de camada (L5-32): POST /api/camadas/{id}/vistas, GET/PUT /api/vistas/{id} (view PostgreSQL
+    # com filtro congelado e campos ocultos; servida pelo mesmo FeatureServer/OGC da camada-mãe)
+    vista_camada.router,
     # --- edição transacional de feições (L2-03-a): POST /api/camadas/{id}/edicoes (adicionar/atualizar/apagar
     # numa transação; única porta de escrita de feição — FeatureServer/OGC futuros chamam este mesmo caminho)
     rotas_edicao,

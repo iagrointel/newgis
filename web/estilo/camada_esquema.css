@@ -1,0 +1,79 @@
+/* plat — construtor de camada por esquema (item L5-31). Usa só os tokens `--i-*` de tokens.css (identidade
+   "instrumento": ver a nota no topo daquele arquivo) — nenhuma cor nova inventada aqui. */
+
+.paleta-tipos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--i-e2);
+  list-style: none;
+  margin: var(--i-e3) 0;
+  padding: 0;
+}
+
+.chip-tipo {
+  font-family: var(--i-fonte-dado);
+  font-size: .85rem;
+  padding: var(--i-e2) var(--i-e3);
+  border: 1px solid var(--i-linha);
+  border-radius: var(--i-raio);
+  background: var(--i-superficie-2);
+  color: var(--i-texto);
+  cursor: grab;
+}
+
+.chip-tipo:hover, .chip-tipo:focus-visible {
+  border-color: var(--i-acento);
+  outline: none;
+}
+
+.chip-tipo:active { cursor: grabbing; }
+
+.zona-drop {
+  list-style: none;
+  margin: var(--i-e3) 0;
+  padding: var(--i-e3);
+  min-height: 4rem;
+  border: 1px dashed var(--i-linha);
+  border-radius: var(--i-raio);
+  display: flex;
+  flex-direction: column;
+  gap: var(--i-e3);
+}
+
+.zona-drop.sobre-arraste { border-color: var(--i-acento); background: var(--i-superficie-2); }
+
+.campo-linha {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto auto auto auto auto;
+  gap: var(--i-e2);
+  align-items: end;
+  padding: var(--i-e2);
+  border: 1px solid var(--i-linha);
+  border-radius: var(--i-raio);
+  background: var(--i-superficie);
+}
+
+.campo-linha label {
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+  font-size: .75rem;
+  color: var(--i-texto-fraco);
+}
+
+.campo-linha .campo-tipo-rotulo {
+  font-family: var(--i-fonte-dado);
+  align-self: center;
+  padding: 0 var(--i-e2);
+  color: var(--i-acento);
+}
+
+.campo-linha .remover-campo {
+  align-self: center;
+  background: none;
+  border: 1px solid var(--i-erro);
+  color: var(--i-erro);
+  border-radius: var(--i-raio);
+  cursor: pointer;
+  padding: var(--i-e1) var(--i-e2);
+}

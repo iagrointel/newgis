@@ -1,0 +1,17 @@
+{
+ "item": "L5-31-construtor-de-camada-esquema",
+ "medidas": {
+  "campos_criados_e_lidos": {
+   "valor": 5,
+   "unidade": "campos",
+   "comando": "GET /api/camadas/{id}/campos"
+  },
+  "adversario_300_campos_ok": {
+   "valor": 1,
+   "unidade": "bool",
+   "comando": "POST /api/camadas/esquema com 300 campos hostis"
+  }
+ },
+ "gerado_em": "2026-09-07T15:25:01Z",
+ "git_sha": "325b004a38bd"
+}

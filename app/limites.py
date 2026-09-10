@@ -258,6 +258,7 @@ REGRAS_MENSAGEM_MAX = 500                  # mensagem configurada da restrição
 REGRAS_VALIDACAO_LOTE = 5_000              # feições por lote do job camadas.validar (cursor no servidor)
 REGRAS_VALIDACAO_ERROS_MAX = 1_000_000     # teto de erros gravados por execução (acima disso o job para e avisa)
 REGRAS_FEICOES_LEITURA_MAX = 1_000         # linhas por chamada de GET /api/camadas/{id}/feicoes
+ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
 # --- edição transacional de feições (L2-03-a-api-edicao-transacional; POST /api/camadas/{id}/edicoes, única
 # porta de escrita para navegador/PWA/FeatureServer/OGC). LOTE_MAX = 2× o tamanho medido no portão (1.000
 # feições ≤ 3 s), com folga operacional; bem abaixo do lote de 100 mil que a refutação do item manda recusar

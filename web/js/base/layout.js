@@ -12,6 +12,8 @@ export const TELAS = [
   { caminho: '/mapa', chave: 'nav.mapa' },
   { caminho: '/conexoes', chave: 'nav.conexoes' },
   { caminho: '/uploads', chave: 'nav.uploads', privilegio: 'conteudo.criar' },
+  { caminho: '/construtor-camada', chave: 'nav.construtor_camada', privilegio: 'conteudo.publicar_camada' },
+  { caminho: '/vista-de-camada', chave: 'nav.vista_camada', privilegio: 'conteudo.publicar_camada' },
   { caminho: '/conta', chave: 'nav.conta' },
   // administração (UX-06): entra com QUALQUER um dos privilégios administrativos (qualquer = lista "ou")
   { caminho: '/admin', chave: 'nav.admin', qualquer: ['membros.ver', 'papeis.gerir', 'tokens.gerir_todos', 'org.log_ver', 'org.configurar', 'org.integracoes'] },
