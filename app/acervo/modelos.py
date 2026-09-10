@@ -45,6 +45,24 @@ class AcervoEndpoint(Saida):
     vivo: bool
 
 
+class AcervoCamadaResumo(Saida):
+    """Uma linha de `plat.acervo_camada` para a fonte, na ficha (item L6-01-j-multi-servidor). `origem`
+    é o texto que a ficha mostra: 'local' quando a tabela vive neste servidor, 'servidor remoto (<nome>)'
+    quando é lida por postgres_fdw só-leitura de outra máquina da casa, e 'servidor remoto indisponível
+    (<nome>)' quando a última verificação não conseguiu falar com ela — a camada nunca desaparece nem vira
+    '0 feições' por queda de rede; `linhas_exatas` conserva a última contagem conhecida e `aviso` explica."""
+
+    servidor: str
+    schema_nome: str
+    tabela: str
+    modo_acesso: str
+    origem: str
+    linhas_exatas: int | None = None
+    aviso: str | None = None
+    fdw_verificado_em: str | None = None
+    fdw_latencia_ms: int | None = None
+
+
 class AcervoFicha(AcervoCartao):
     url: str | None = None
     url_http: str | None = None
@@ -67,6 +85,8 @@ class AcervoFicha(AcervoCartao):
     endpoints_confirmados_vivos: int = 0
     # completude por extenso ("4,5/10"), nunca só o número cru — ausência é "não registrado", nunca 0/10 silencioso
     completude_texto: str | None = None
+    # item L6-01-j-multi-servidor: camadas de `plat.acervo_camada` desta fonte, local ou em outro servidor
+    camadas: list[AcervoCamadaResumo] = []
 
 
 class AcervoPagina(Saida):
