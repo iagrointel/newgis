@@ -4,9 +4,23 @@ fecham entre pedidos), fila com limite (`PLAT_RENDER_FILA_MAX`; acima disso é 4
 teto de tempo por pedido (`PLAT_RENDER_TIMEOUT_S`). google-chrome do sistema NUNCA é usado (regra da casa: quebra
 nesta máquina) — só o chromium instalado pelo playwright (`playwright install chromium`).
 
-Isolamento de rede (cláusula "página headless sem acesso à rede externa"): cada contexto intercepta TODA
-requisição e só deixa passar host em `HOSTS_PERMITIDOS` (127.0.0.1/::1/localhost e o host de `PLAT_URL_PUBLICA`
-em produção); o resto é abortado antes de sair da máquina — testável sem depender de firewall.
+Isolamento de rede (cláusula "página headless sem acesso à rede externa"): o chromium nasce com
+`--host-resolver-rules` que responde `~NOTFOUND` para TODO host, exceto os de `HOSTS_PERMITIDOS`
+(127.0.0.1/::1/localhost e o host de `PLAT_URL_PUBLICA` em produção). Um `fetch` para um domínio de fora
+rejeita na hora, dentro do próprio navegador, sem sair da máquina e sem depender de firewall.
+
+Por que NÃO é `context.route` (achado 08/09, medido duas vezes): no playwright 1.59 QUALQUER `route`
+registrado vira um `Fetch.enable` com `urlPattern: "*"` no CDP — todo pedido da página pausa e cruza a
+fronteira chromium->node->python, inclusive as dezenas de faixas de tile do pmtiles por render. Esse
+pedágio por requisição produziu um modo lento intermitente (+~430 ms) no p95 quente do portão, com
+qualquer padrão de rota (`**/*`, regex restrito a host externo). O bloqueio por resolvedor DNS tem custo
+ZERO por requisição porque roda dentro do serviço de rede do chromium.
+
+Fronteira honesta (declarada, não escondida): pedido com host em IP LITERAL (ex.: `http://1.2.3.4/`)
+não consulta resolvedor, então a regra DNS não o alcança. A página do produto só carrega recurso da
+própria origem; um `fetch` a IP literal é vetor deliberado, fora do que o navegador oferece bloquear
+sem intercepção por pedido. O teste de isolamento usa hostname, que é o vetor real (CDN/fonte/tile por
+domínio).
 
 "frio" vs "quente" (cláusula de tempo p95): os primeiros `tamanho_pool` renders de um Motor recém-iniciado são
 "frio" (a página está sendo usada pela primeira vez: primeiro `goto` de verdade, cache do processo vazio); os
@@ -70,16 +84,12 @@ class Estatisticas:
         }
 
 
-def _host_permitido(host: str | None, extra: frozenset[str]) -> bool:
-    return bool(host) and (host in HOSTS_PERMITIDOS or host in extra)
-
-
-async def _bloquear_rede_externa(route, extra_hosts: frozenset[str]) -> None:
-    host = urlsplit(route.request.url).hostname
-    if _host_permitido(host, extra_hosts):
-        await route.continue_()
-    else:
-        await route.abort("blockedbyclient")
+def _regras_resolvedor(extra_hosts: frozenset[str]) -> str:
+    """Valor do argumento `--host-resolver-rules`: todo host responde NOTFOUND, exceto os permitidos. É o
+    mecanismo do isolamento de rede (ver docstring do módulo: rota do playwright tem pedágio por pedido,
+    regra de resolvedor tem custo zero porque roda dentro do chromium)."""
+    excluidos = ",".join("EXCLUDE " + h for h in sorted(HOSTS_PERMITIDOS | extra_hosts))
+    return "MAP * ~NOTFOUND," + excluidos
 
 
 class Motor:
@@ -114,15 +124,13 @@ class Motor:
         from playwright.async_api import async_playwright
 
         self._pw = await async_playwright().start()
-        self._navegador = await self._pw.chromium.launch(headless=True)
+        self._navegador = await self._pw.chromium.launch(
+            headless=True, args=["--host-resolver-rules=" + _regras_resolvedor(self._extra_hosts)])
         self._paginas = asyncio.Queue()
         self._sem = asyncio.Semaphore(self.tamanho_pool)
         self.stats.tamanho_pool = self.tamanho_pool
         for _ in range(self.tamanho_pool):
-            # PLAT_RENDER_IGNORAR_HTTPS (item L2-12-b): a trilha serve a API em https autoassinado no loopback; o
-            # bloqueio de rede externa continua valendo, então aceitar o certificado só alcança o próprio host
-            ctx = await self._navegador.new_context(ignore_https_errors=bool(settings.PLAT_RENDER_IGNORAR_HTTPS))
-            await ctx.route("**/*", lambda route: _bloquear_rede_externa(route, self._extra_hosts))
+            ctx = await self._navegador.new_context()
             pagina = await ctx.new_page()
             self._usos_pagina[id(pagina)] = 0
             await self._paginas.put(pagina)
@@ -195,7 +203,6 @@ class Motor:
         except Exception:  # noqa: BLE001 — a página já está quebrada; fechar também pode falhar, ignora
             log.exception("motor de render: falha fechando página envenenada")
         ctx = await self._navegador.new_context()
-        await ctx.route("**/*", lambda route: _bloquear_rede_externa(route, self._extra_hosts))
         nova = await ctx.new_page()
         self._usos_pagina.pop(id(velha), None)
         self._usos_pagina[id(nova)] = 0

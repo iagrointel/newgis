@@ -13,6 +13,7 @@ import os
 import socket
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -32,17 +33,36 @@ def subir_servidor(porta: int | None = None, timeout_s: float = 20.0) -> tuple[s
     base_url = f"http://127.0.0.1:{porta}"
     env = dict(os.environ)
     proc = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", str(porta)],
+        [sys.executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", str(porta),
+         "--no-access-log", "--log-level", "warning"],
         cwd=str(RAIZ),
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
+    # O PIPE de stdout tem ~64 KB e NINGUÉM o drena depois da partida: cada render gera dezenas de linhas
+    # de access log (a página pede estáticos e faixas de tile), o buffer enche por volta do 21º render e o
+    # uvicorn BLOQUEIA escrevendo log — o servidor inteiro para de responder e todo `goto` seguinte estoura
+    # em 15 s (medido duas vezes: 21 amostras quente OK e depois só timeout, com a máquina a carga 20 e a
+    # carga 2 — não era contenção, era o pipe; achado 08/09). --no-access-log corta o volume; a thread abaixo
+    # drena o que sobrar (o diagnóstico de partida continua lendo o que a thread guarda).
+    ultimas_saida: list[bytes] = []
+
+    def _drenar() -> None:
+        try:
+            for linha in iter(proc.stdout.readline, b""):
+                ultimas_saida.append(linha)
+                del ultimas_saida[:-200]
+        except Exception:  # noqa: BLE001 — dreno best-effort; o processo pode morrer durante o readline
+            pass
+
+    if proc.stdout is not None:
+        threading.Thread(target=_drenar, daemon=True).start()
     inicio = time.time()
     ultimo_erro = None
     while time.time() - inicio < timeout_s:
         if proc.poll() is not None:
-            saida = proc.stdout.read().decode(errors="replace") if proc.stdout else ""
+            saida = b"".join(ultimas_saida).decode(errors="replace")
             raise RuntimeError(f"uvicorn de teste morreu na partida (porta {porta}):\n{saida[-4000:]}")
         try:
             r = httpx.get(f"{base_url}/render/mapa", timeout=1.0)

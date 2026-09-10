@@ -31,12 +31,6 @@ class ErroConfiguracao(RuntimeError):
 class Settings:
     PLAT_DSN: str
     PLAT_SECRET: str
-    # item L7-19-segredos-e-certificados: dupla-chave de rotação. Durante as 24h depois de `plat segredo
-    # rotacionar PLAT_SECRET`, o valor ANTIGO fica aqui (LoadCredential=, nunca no .env) para que o que foi
-    # cifrado/assinado com ele ainda seja lido (sessão TOTP, credencial LDAP/SMTP/conexao, URL de objeto já
-    # emitida) enquanto o valor novo já assina/cifra tudo o que é gravado dali em diante. Vazio fora da
-    # janela de rotação — é o caso comum. Ver app/seguranca_rotacao.py e docs/RUNBOOKS/segredos.md.
-    PLAT_SECRET_ANTERIOR: str | None
     PLAT_AMBIENTE: str
     PLAT_URL_PUBLICA: str
     PLAT_GIT_SHA: str | None
@@ -54,14 +48,8 @@ class Settings:
     PLAT_WORKER_URL: str | None
     PLAT_WORKER_NOME: str | None
     PLAT_WORKER_PROCESSOS: int
-    # processos da API (uvicorn --workers em deploy/plat-api.service): o orçamento de conexões de eventos é
-    # da INSTALAÇÃO e precisa saber por quantos processos se reparte (app/jobs/eventos.py)
-    PLAT_API_PROCESSOS: int
     PLAT_WORKER_MEMORIA_MB: int
     PLAT_JOBS_DIR: str | None
-    # item L6-01-i: raiz dos arquivos do acervo da casa (`acervo.camada_arquivo.caminho` é relativo a ela);
-    # vazia = a casa não tem acervo de arquivo nesta instalação e as rotas do acervo de arquivo respondem vazio
-    PLAT_ACERVO_ARQUIVOS_RAIZ: str | None
     PLAT_JOB_MAX_REINICIOS: int
     PLAT_GPU_SSH: str | None
     PLAT_GPU_DIR: str | None
@@ -98,9 +86,15 @@ class Settings:
     # .env de trilha grava PLAT_POOL_MAX=2 (ver laco/trilha_ambiente.sh).
     PLAT_POOL_MIN: int
     PLAT_POOL_MAX: int
-    # antivírus opcional (item L7-03-a-antivirus-upload): endereço do clamd — caminho de socket unix
-    # (/var/run/clamav/clamd.ctl) ou host:porta (127.0.0.1:3310). Vazio = só a assinatura por bytes mágicos.
-    PLAT_CLAMD: str | None
+    # motor de render no servidor (item L2-12-a-motor-render-servidor; ADR 0023): pool de páginas do
+    # chromium do playwright mantidas quentes, fila com limite e teto de tempo por pedido, token interno
+    # de curta duração. Padrões reproduzem o que já rodava (nenhum .env existente declara estas chaves).
+    PLAT_RENDER_POOL_TAMANHO: int
+    PLAT_RENDER_FILA_MAX: int
+    PLAT_RENDER_TIMEOUT_S: int
+    PLAT_RENDER_TOKEN_TTL_S: int
+    PLAT_RENDER_MAX_PX: int
+    PLAT_RENDER_MEMORIA_MB: int
 
     @property
     def producao(self) -> bool:
@@ -177,13 +171,6 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
     segredo = _obrigatoria(valores, "PLAT_SECRET")
     if not _HEX64.match(segredo):
         raise ErroConfiguracao("PLAT_SECRET inválido: exige 64 caracteres hexadecimais (openssl rand -hex 32)")
-    segredo_anterior = _opcional(valores, "PLAT_SECRET_ANTERIOR")
-    if segredo_anterior is not None and not _HEX64.match(segredo_anterior):
-        raise ErroConfiguracao("PLAT_SECRET_ANTERIOR inválido: exige 64 caracteres hexadecimais ou vazio")
-    if segredo_anterior is not None and segredo_anterior == segredo:
-        # rotação que já passou das 24h (ou nunca aconteceu de verdade): não faz sentido tratar o
-        # mesmo valor como "atual" e "anterior" ao mesmo tempo — trata como se não houvesse anterior.
-        segredo_anterior = None
     ambiente = _obrigatoria(valores, "PLAT_AMBIENTE")
     if ambiente not in AMBIENTES:
         raise ErroConfiguracao(f"PLAT_AMBIENTE inválido: {ambiente!r}; admitidos {AMBIENTES}")
@@ -206,7 +193,6 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
     return Settings(
         PLAT_DSN=dsn,
         PLAT_SECRET=segredo,
-        PLAT_SECRET_ANTERIOR=segredo_anterior,
         PLAT_AMBIENTE=ambiente,
         PLAT_URL_PUBLICA=url,
         PLAT_GIT_SHA=_opcional(valores, "PLAT_GIT_SHA"),
@@ -221,10 +207,8 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_WORKER_URL=_opcional(valores, "PLAT_WORKER_URL"),
         PLAT_WORKER_NOME=_opcional(valores, "PLAT_WORKER_NOME"),
         PLAT_WORKER_PROCESSOS=_inteiro(valores, "PLAT_WORKER_PROCESSOS", 1, 1),
-        PLAT_API_PROCESSOS=_inteiro(valores, "PLAT_API_PROCESSOS", 2, 1),
         PLAT_WORKER_MEMORIA_MB=_inteiro(valores, "PLAT_WORKER_MEMORIA_MB", 1536, 128),
         PLAT_JOBS_DIR=_opcional(valores, "PLAT_JOBS_DIR"),
-        PLAT_ACERVO_ARQUIVOS_RAIZ=_opcional(valores, "PLAT_ACERVO_ARQUIVOS_RAIZ"),
         PLAT_JOB_MAX_REINICIOS=_inteiro(valores, "PLAT_JOB_MAX_REINICIOS", 5, 1),
         PLAT_GPU_SSH=_opcional(valores, "PLAT_GPU_SSH"),
         PLAT_GPU_DIR=_opcional(valores, "PLAT_GPU_DIR"),
@@ -248,7 +232,12 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_SMTP_ROTULO=_opcional(valores, "PLAT_SMTP_ROTULO"),
         PLAT_POOL_MIN=pool_min,
         PLAT_POOL_MAX=pool_max,
-        PLAT_CLAMD=_opcional(valores, "PLAT_CLAMD"),
+        PLAT_RENDER_POOL_TAMANHO=_inteiro(valores, "PLAT_RENDER_POOL_TAMANHO", 2, 1),
+        PLAT_RENDER_FILA_MAX=_inteiro(valores, "PLAT_RENDER_FILA_MAX", 20, 1),
+        PLAT_RENDER_TIMEOUT_S=_inteiro(valores, "PLAT_RENDER_TIMEOUT_S", 30, 1),
+        PLAT_RENDER_TOKEN_TTL_S=_inteiro(valores, "PLAT_RENDER_TOKEN_TTL_S", 60, 1),
+        PLAT_RENDER_MAX_PX=_inteiro(valores, "PLAT_RENDER_MAX_PX", 4096, 64),
+        PLAT_RENDER_MEMORIA_MB=_inteiro(valores, "PLAT_RENDER_MEMORIA_MB", 768, 128),
     )
 
 
