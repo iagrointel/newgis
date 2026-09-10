@@ -77,15 +77,6 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("PUT", "/api/itens/{id}/relacoes"): ["itens/relacoes"],
     ("PUT", "/api/itens/{id}/compartilhamento"): ["compartilhamento/alterar"],
     ("POST", "/api/itens/{id}/links"): ["compartilhamento/link_criar"],
-    # ---- publicação de documento de construtor (L5-14-publicacao-links-embed; vocabulário na migração
-    # 20260907T1410_publicacao_documento.sql). As três leituras da família (`GET .../publicacao`,
-    # `.../visualizacoes`, `.../exportacao`) não entram aqui: só rota de escrita é exigida.
-    ("POST", "/api/itens/{id}/publicacao"): ["publicacao/publicar"],
-    ("DELETE", "/api/itens/{id}/publicacao"): ["publicacao/despublicar"],
-    # ---- site do inquilino (L5-20-sites-paginas-publicas; vocabulário na migração
-    # 20260908T1134_site_paginas_publicas.sql). O GET não é escrita e não registra evento.
-    ("PUT", "/api/itens/{id}/site"): ["site/publicar"],
-    ("DELETE", "/api/itens/{id}/site"): ["site/despublicar"],
     ("DELETE", "/api/itens/{id}/links/{lid}"): ["compartilhamento/link_revogar"],
     ("POST", "/api/pastas"): ["pastas/criar"],
     ("PUT", "/api/pastas/{id}"): ["pastas/renomear", "pastas/mover"],
@@ -159,23 +150,7 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("DELETE", "/api/conexoes/{id}"): ["conexoes/apagar"],
     ("POST", "/api/conexoes/{id}/testar"): ["conexoes/testar"],
     ("POST", "/api/conexoes/{id}/publicar"): ["conexoes/publicar_camada"],
-    # ---- motor multicritério em grades aninhadas (L3-19-multiescala; vocabulário nas migrações
-    # 20260906T1640_multiescala.sql e 20260906T1823_multiescala_apagar.sql). Conjunto, fator e execução são
-    # tabelas do inquilino com dono humano, então toda escrita narra evento; o DELETE apaga em cascata e por
-    # isso tem tipo próprio (`_apagar`), separado do de criação.
-    ("POST", "/api/multiescala/conjuntos"): ["multiescala/conjunto"],
-    ("DELETE", "/api/multiescala/conjuntos/{id}"): ["multiescala/conjunto_apagar"],
-    ("POST", "/api/multiescala/fatores"): ["multiescala/fator"],
-    ("DELETE", "/api/multiescala/fatores/{id}"): ["multiescala/fator_apagar"],
-    ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
-    ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
-    ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
-    # ---- pacote entre inquilinos e galeria de modelos (L5-37-pacotes-modelos-entre-inquilinos; vocabulário na
-    # migração 20260908T1055_pacote_modelo.sql). `verificar` é a tela de antes de importar: não escreve nada e
-    # por isso não narra evento. A exportação narra `pacotes/exportar`, mas é um GET e não entra nesta tabela
-    # (que cobre as rotas de escrita).
-    ("POST", "/api/pacotes/verificar"): [],
-    ("POST", "/api/pacotes/importar"): ["pacotes/importar"],
-    ("POST", "/api/modelos"): ["modelos/publicar"],
-    ("DELETE", "/api/modelos/{id}"): ["modelos/apagar"],
+    # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
+    # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
+    ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
 }

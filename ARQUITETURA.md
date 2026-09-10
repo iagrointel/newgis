@@ -1045,6 +1045,13 @@ metadado que aponte para item de OUTRO inquilino é recusada com `metadado_de_ou
 uma política de RLS falhe silenciosamente em algum caminho futuro — defesa em profundidade, não o único
 mecanismo (a RLS de `camada_campo_meta`, `FORCE`, com a política padrão `tenant_id = plat.tenant_atual()`,
 é a linha de frente). `GET
+compatível com o `domain` de um FeatureServer Esri) — vive em `plat.camada_campo_meta`, tabela nova com
+**FK composta** `(tenant_id, item_id) REFERENCES plat.item (tenant_id, id)` em vez de só `item_id`: exigiu
+acrescentar `UNIQUE (tenant_id, id)` em `plat.item` (a PK já bastava para toda referência simples por id
+até agora). A vantagem sobre uma FK simples: mesmo que uma política de RLS falhe silenciosamente em algum
+caminho futuro, a própria constraint do banco recusa a inserção de uma linha de metadado apontando para um
+item de OUTRO inquilino — defesa em profundidade, não o único mecanismo (a RLS de `camada_campo_meta`,
+`FORCE`, com a política padrão `tenant_id = plat.tenant_atual()`, é a linha de frente). `GET
 /api/camadas/{id}/campos` junta as duas fontes: tipo/tamanho/obrigatoriedade vêm de
 `information_schema.columns` (autoridade única — nunca uma cópia que desalinha de um `ALTER TABLE` feito
 por fora), alias/domínio vêm de `camada_campo_meta`.

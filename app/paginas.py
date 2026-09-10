@@ -171,6 +171,8 @@ PAGINAS = {
     # --- construtor de site do inquilino (L5-20-sites-paginas-publicas): ?item=<id de item de tipo site>.
     # A página PUBLICADA não está aqui: /s/<inquilino>/... é renderizada no servidor (app/catalogo/rotas_site.py).
     "/sites": "sites.html",
+    # --- construtor de camada por esquema (L5-31)
+    "/construtor-camada": "construtor_camada.html",
 }
 router = APIRouter()
 

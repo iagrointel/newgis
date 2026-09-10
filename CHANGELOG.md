@@ -2597,6 +2597,66 @@ têm a cláusula a cláusula. Fora do turno: Pro/AGOL reais (D20, exige credenci
 verdade (depende de L2-02-e, não construído).
 
 ## turno 4, setembro de 2026 (item L2-04-servicos-esri-ogc: diretório do FeatureServer, OGC API Features e WFS 2.0)
+## turno 3, setembro de 2026 (item L3-02-a-monte-carlo-pesos: robustez do motor multicritério por sorteio de pesos)
+
+`app/amc/robustez.py` (puro, sem I/O): `sortear_pesos` (Dirichlet no simplex ou faixa +-k% por fator,
+declarada) e `simular_robustez`, que chama o combinador do L3-01-e (`app.amc.combinacao.combinar`) N
+vezes e agrega por unidade (minimo, media, maximo, desvio, frequencia no top-k e no decil superior,
+estavel = top-k em >=95% dos sorteios). Sorteio de peso em ordem canonica pelos IDs dos fatores (nunca
+pela posicao de entrada), remapeada de volta na saida: permutar a ordem de entrada e reexecutar com a
+mesma semente da o mesmo resultado (nota com tolerancia 1e-9 por soma de ponto flutuante nao ser
+perfeitamente associativa; ranking exato). Veto e restricao nunca sao sorteados: `fracao_vetada` fixo
+em todos os N sorteios, unidade vetada marcada com nota `-inf` antes de ordenar (exclusao do topo por
+construcao, testada com unidade que teria a nota maxima sem o veto). Job `amc.robustez_pesos`
+(`app/amc/tarefas.py`, pesado=True, timeout_s=120) registrado em `app/jobs/tipos.py`; resultado
+(agregados + semente, nunca a matriz N x unidades, conforme A9) em `job.resultado` (jsonb existente,
+sem migracao nova). Medido (`tests/medidas/L3-02-a-monte-carlo-pesos.json`): 1.000 sorteios em 5.000
+unidades x 8 fatores como job, 0,767 s (78x dentro do limite de 60 s). ADR
+`docs/adr/20260907T1245-robustez-sorteio-de-pesos.md`.
+## turno 3, setembro de 2026 (item L3-01-f-explicacao: explicação da nota do motor multicritério)
+
+`GET /api/amc/execucoes/{execucao_id}/unidades/{unidade_id}/explicacao` responde "por que esta unidade tem nota
+N": tabela fator → valor bruto (com unidade e fonte) → transformação → favorabilidade → peso → contribuição,
+mais soma, veto/motivo e cobertura (`app/amc/explicacao.py`). Recalculado a partir de `plat.amc_fator_bruto` na
+hora, nunca lido de uma tabela de explicação gravada — o mesmo combinador de `app/amc/combinacao.py` (item
+L3-01-e). Sobre 100 unidades sorteadas, |soma das contribuições − favorabilidade gravada| ≤ 0,5 (medido:
+`tests/medidas/L3-01-f-explicacao.json`). Painel em `/amc/explicacao/<execucao_id>/<unidade_id>`
+(`web/amc_explicacao.html` + `web/js/amc/explicacao_pagina.js`). Combinador fuzzy (mínimo/máximo/produto/soma
+fuzzy/gama) não decompõe em contribuições por fator por definição matemática — a tabela mostra a favorabilidade
+de cada fator sem fingir uma soma que não existe. Transformação contínua (Rescale by Function, item
+L3-01-d-transformacoes, pendente) aparece com valor bruto e observação, nunca com número fabricado. ADR
+`docs/adr/20260907T1245-explicacao-amc.md`.
+## turno 3, setembro de 2026 (item L6-04-acervo-no-motor: camada do acervo como fator no motor multicritério)
+
+Fecha o ciclo entre o motor AMC (L3-01-a/b/c) e a publicação sem cópia do acervo (L6-01-b): `app/amc/executor.py`
+(job `amc.executar`, enfileirado sozinho por `POST /api/amc/execucoes` quando o modelo tem fator `camada.tipo =
+'acervo'`) lê cada fator direto da view `plat_acervo.<view>` — nunca copia a tabela de origem — com
+`app.amc.vetorial` fazendo a extração e uma transformação `linear` levando o valor bruto a favorabilidade 0-100.
+Provado com 3 camadas REAIS já ingeridas na casa (`icmbio_unidades_conservacao`, `funai_terras_indigenas`,
+`hidro_nacional_bc250`, 1,6 mi de linhas), não dado sintético. `app/amc/camadas.py::_acervo` passou a exigir
+`plat.acervo_pode_ler` (mesmo porteiro da API de mapa) na CRIAÇÃO da execução — sem assinatura, 422
+`sem_assinatura`, execução nem nasce; o job confere a assinatura DE NOVO, uma vez antes de cada fator e uma vez
+depois do último, então revogar a assinatura NO MEIO do job (a refutação do item) derruba a execução com
+`FalhaDefinitiva` e mensagem, sem gravar nenhuma linha de `amc_fator_bruto`/`amc_resultado` — os dois só são
+escritos juntos, no bloco final, depois de todas as confirmações. Resultado de uma execução já concluída nunca é
+apagado por uma revogação posterior (gatilho `amc_resultado_guarda`, sem mudança). Proveniência
+(`amc_execucao.camadas`) ganhou o campo `fonte_id` explícito, ao lado de `sha256`/`contagem`/`contagem_origem`
+que `mod_camadas._acervo` já gravava. Limite honesto: só fatores `camada.tipo == 'acervo'` são extraídos por este
+job (fator do tipo `item` fica de fora, é ignorado na combinação); só transformação `linear`; camada lida só
+dentro da caixa envolvente das unidades + folga, não da tabela inteira (necessário para não varrer camadas
+nacionais de milhões de linhas a cada execução) — a combinação completa do motor (categorias, faixas, degraus,
+funções contínuas, combinadores alternativos) é o item L3-01-d/e, ainda não construído.
+
+Achado de merge: juntar os três worktrees de que este item depende (`wt/amc`, `wt/extrat`, `wt/t601b`, nenhum
+ainda integrado a `master`) produziu um `SyntaxError` real em `tests/api/cruzado_casos.py` — o merge automático
+(`git ort`) costurou dois `return Preparacao(...)` de branches diferentes de um jeito que partiu uma função no
+meio por uma `def` e derrubou um `),` de fechamento do dicionário `CASOS`. Sem o conserto (feito neste ramo),
+`make lint` e toda a suíte de API (que importa `tests/api/conftest.py`, que importa `cruzado_casos.py`) falhavam
+na coleta. `docs/openapi.json` continua sem nenhuma das 18 rotas `/api/amc` — débito pré-existente do próprio
+L3-01-a/b, não deste item; os dois testes que dependem dele (`test_amc_adversario_api.py` × 2,
+`test_cruzado.py::test_cobertura_100_por_cento`) seguem vermelhos, sem regressão nova. `docs/adr/0017` do
+L3-01-c também dispara `make sem-marcador` (falso positivo de uma palavra comum em português que contém a
+sequência proibida por acaso) — não é código deste item, não corrigido aqui.
 ## turno 5, setembro de 2026 (item L5-31-construtor-de-camada-esquema: construtor de camada por esquema)
 
 Camada vazia criada por lista de campos arrastados (`POST /api/camadas/esquema`): tipo, tamanho, alias,
@@ -2609,6 +2669,10 @@ tabela nova, `plat.camada_campo_meta`, com FK simples para `plat.item(id)` e coe
 gatilho `plat.tg_camada_campo_meta` (migração `20260907T1509_camada_esquema.sql`, mesmo padrão de
 `plat.item_relacao`/`plat.item_grupo`): mesmo que uma política de RLS falhasse em algum caminho futuro, o
 próprio banco recusaria uma linha de metadado apontando para item de outro inquilino. `GET /api/camadas/{id}/campos` devolve os campos no formato `fields` de um
+tabela nova, `plat.camada_campo_meta`, com FK **composta** `(tenant_id, item_id)` para `plat.item` (exigiu uma
+`UNIQUE (tenant_id, id)` nova em `plat.item`, migração `20260907T1509_camada_esquema.sql`): mesmo que uma
+política de RLS falhasse em algum caminho futuro, o próprio banco recusaria uma linha de metadado apontando
+para item de outro inquilino. `GET /api/camadas/{id}/campos` devolve os campos no formato `fields` de um
 FeatureServer Esri (name/type/alias/length/nullable/domain) lendo tipo/tamanho/obrigatoriedade direto de
 `information_schema.columns` — nunca uma cópia que pode desalinhar do banco.
 
@@ -2625,6 +2689,7 @@ Refutação do item (300 campos, um deles a palavra reservada `select` e outro c
 normalizou os 300 sem colisão de nome e sem 500; o `GET /campos` continuou respondendo certo para as 300
 colunas. Dois bugs reais achados e corrigidos ANTES do adversário: (1) a ordem de inserção tinha
 `camada_campo_meta` ANTES de `plat.item` — a própria FK para `plat.item` recusava a primeira
+`camada_campo_meta` ANTES de `plat.item` — a própria FK composta que o item pede recusava a primeira
 gravação, sempre; (2) alargar de `text` (sem teto) para `varchar(N)` não conferia o maior valor já gravado —
 corrigido para medir `max(length(...))` antes de aceitar. Ver `docs/PARIDADE.md` para a tabela completa
 feito/parcial/fora contra a capacidade Esri.

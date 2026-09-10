@@ -582,6 +582,11 @@ ROUTERS = [
     # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,
     # /fatores/{id}/amostras, /conjuntos/{id}/macro, /execucoes/{id}/micro, /execucoes
     rotas_multiescala,
+    # --- motor multicritério (L3-01-a/b): /api/amc/modelos, /api/amc/conjuntos, /api/amc/execucoes
+    rotas_amc,
+    # --- motor multicritério (AMC), localização semelhante (L3-17-similaridade): /api/amc/similaridade e
+    # /api/amc/similaridade/exportar; sem tabela própria, mesmo padrão sem-estado de rotas_rede acima
+    rotas_similaridade,
     # --- operação query do FeatureServer (L2-04-c): /rest/services/{item}/FeatureServer/{camada}/query
     # --- diretório/metadados do FeatureServer + OGC API Features Part 1 + WFS 2.0 (item
     # L2-04-servicos-esri-ogc, construído EM VOLTA da query acima, sem reescrevê-la): descritor de
