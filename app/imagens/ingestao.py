@@ -263,9 +263,17 @@ def imagens_ingestar(ctx, arquivo_id: uuid.UUID, titulo: str | None = None,
              o_cient["bytes"] + o_vis["bytes"], ctx.usuario_id, ctx.usuario_id),
         )
         miniatura_catalogo.guardar(cur, item_id, png600)
+        # extents são derivados; nunca derrubam a ingestão — mas um erro aqui deixava a TRANSAÇÃO abortada e o
+        # commit do `with` virava rollback silencioso: o job dizia "concluído" e o item nunca existia (medido
+        # 10/09 numa trilha: `relation "collections" does not exist`, porque a função do pgSTAC usa nome sem
+        # schema e depende do search_path). SAVEPOINT isola o erro; o search_path é ajustado só para a chamada.
+        cur.execute("SAVEPOINT extents")
         try:
+            cur.execute("SELECT set_config('search_path', 'pgstac,' || current_setting('search_path'), true)")
             cur.execute("SELECT pgstac.update_collection_extents()")
-        except Exception as e:  # extents são derivados; nunca derrubam a ingestão
+            cur.execute("RELEASE SAVEPOINT extents")
+        except Exception as e:
+            cur.execute("ROLLBACK TO SAVEPOINT extents")
             ctx.log("AVISO", f"update_collection_extents falhou (extent da coleção ficou mundial): {e}")
     ctx.entrada(item_id, o_cient["sha256"], "COG científico no catálogo")
 
