@@ -11,6 +11,8 @@ class RedeEntrada(BaseModel):
     nome: str = Field(min_length=1, max_length=200)
     disciplina: str = Field(pattern="^(" + "|".join(DISCIPLINAS) + ")$")
     descricao: str | None = Field(default=None, max_length=2000)
+    # cláusula 1 do portão L4-01-b: tolerância de coincidência é parâmetro DA REDE, não da instalação.
+    tolerancia_m: float = Field(default=0.05, gt=0, le=10)
 
 
 class Rede(BaseModel):
@@ -18,6 +20,7 @@ class Rede(BaseModel):
     nome: str
     disciplina: str
     descricao: str | None
+    tolerancia_m: float
     pacote: dict | None
     contagens: dict
     dono: dict
@@ -55,3 +58,159 @@ class ImportacaoResultado(BaseModel):
     sha256: str
     bytes: int
     contagens: dict
+
+
+# --- topologia derivada (item L4-01-b-topologia-derivada) -------------------------------------------------
+
+class FeicaoPontoEntrada(BaseModel):
+    tipo_codigo: int = Field(ge=1, le=32767)
+    grupo: str = Field(min_length=1, max_length=63)
+    lon: float = Field(ge=-180, le=180)
+    lat: float = Field(ge=-90, le=90)
+    fase_bitmask: int | None = Field(default=None, ge=0, le=7)
+    atributos: dict = Field(default_factory=dict)
+
+
+class FeicaoLinhaEntrada(BaseModel):
+    tipo_codigo: int = Field(ge=1, le=32767)
+    grupo: str = Field(min_length=1, max_length=63)
+    coordenadas: list[tuple[float, float]] = Field(min_length=2, max_length=2000)
+    fase_bitmask: int | None = Field(default=None, ge=0, le=7)
+    atributos: dict = Field(default_factory=dict)
+
+
+class Feicao(BaseModel):
+    id: str
+    tipo_id: str
+    fase_bitmask: int | None
+    atributos: dict
+    criado_em: str
+
+
+class TopologiaResumo(BaseModel):
+    rede_id: str
+    tolerancia_m: float
+    nos: int
+    arestas: int
+    nos_orfaos: int
+    arestas_sem_no: int
+    duracao_ms: int
+    construido_em: str
+
+
+class TopoNo(BaseModel):
+    id: str
+    papel: str
+    tipo_id: str | None
+    origem_id: str | None
+    terminal_num: int | None
+    grau: int
+    lon: float
+    lat: float
+
+
+# --- traçado (item L4-02-a-conectado-e-subrede) -------------------------------------------------------
+
+class PontoTracado(BaseModel):
+    """Um ponto de partida ou barreira: por feição (`feicao_id` + `terminal`, obrigatório quando a feição tem
+    mais de um terminal) OU por coordenada (`lon`/`lat`, com `tolerancia_m` própria ou a da rede)."""
+    feicao_id: str | None = None
+    terminal: int | None = Field(default=None, ge=1, le=8)
+    lon: float | None = Field(default=None, ge=-180, le=180)
+    lat: float | None = Field(default=None, ge=-90, le=90)
+    tolerancia_m: float | None = Field(default=None, gt=0, le=1000)
+
+
+class TracadoEntrada(BaseModel):
+    tipo: str = Field(pattern="^(conectado|subrede)$")
+    pontos_partida: list[PontoTracado] = Field(min_length=1, max_length=50)
+    barreiras: list[PontoTracado] = Field(default_factory=list, max_length=200)
+
+
+class ElementoTracado(BaseModel):
+    feicao_id: str
+    tipo_id: str | None
+    grupo: str | None
+    tipo_chave: str | None
+    tipo_nome: str | None
+    terminal: int | None
+
+
+class TracadoResultado(BaseModel):
+    tipo: str
+    elementos: list[ElementoTracado]
+    contagem: int
+    nos_alcancados: int
+    geometria: dict | None
+    duracao_ms: int
+
+
+# --- EPANET .inp (item L4-05-d-epanet-inp) -------------------------------------------------------------
+
+class EpanetImportacao(BaseModel):
+    id: str
+    rede_id: str
+    estado: str
+    nome_arquivo: str | None
+    crs_epsg: int | None
+    arquivo_sha256: str
+    arquivo_bytes_tamanho: int
+    job_id: str | None
+    contagens: dict | None
+    avisos: list | None
+    erro: str | None
+    criado_em: str
+    atualizado_em: str
+
+
+class EpanetImportacaoAceita(BaseModel):
+    importacao_id: str
+    job_id: str
+
+
+class TopoArestaModelo(BaseModel):
+    id: str
+    grupo_id: str
+    tipo_id: str | None
+    origem_id: str
+    no_origem_id: str | None
+    no_destino_id: str | None
+    comprimento_m: float
+    fase_bitmask: int | None
+    atributos: dict
+
+
+# --- gás e esgoto (item L4-05-e-gas-e-esgoto) ----------------------------------------------------------
+
+class ConferenciaEscoamento(BaseModel):
+    """Resposta da conferência de escoamento por gravidade. `alterou_a_rede` é sempre falso: a conferência
+    nomeia a divergência e nunca inverte o trecho."""
+
+    total: int
+    sob_pressao: int
+    conferidos: int
+    conformes: int
+    com_testemunha_nas_estruturas: int
+    percentual_concordancia: float | None
+    alterou_a_rede: bool
+    problemas: list[dict]
+
+
+class ConferenciaPressao(BaseModel):
+    controladores: int
+    controladores_conformes: int
+    transicoes_sem_regulador: int
+    tolerancia_m: float
+    tiers: list[dict]
+    alterou_a_rede: bool
+    problemas: list[dict]
+
+
+class TeksiImportacaoResultado(BaseModel):
+    rede_id: str
+    sha256: str
+    bytes: int
+    contagens: dict
+    gravadas: dict
+    recusadas: list[dict]
+    avisos: list[dict]

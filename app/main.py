@@ -179,6 +179,8 @@ from app.rede_utilidades.rotas_resultados import router as rotas_rede_resultados
 from app.rede_utilidades.rotas_resumos import router as rotas_rede_resumos
 from app.rede_utilidades.rotas_simples import router as rotas_rede_simples
 from app.rede_utilidades.rotas_subredes import router as rotas_rede_subredes
+from app.rede_utilidades.rotas_epanet import router as rotas_rede_epanet
+from app.rede_utilidades.rotas_gas_esgoto import router as rotas_rede_gas_esgoto
 from app.rede_utilidades.rotas_topologia import router as rotas_rede_topologia
 from app.regras.rotas import router as rotas_regras  # L2-10-d: regras de atributo por camada
 from app.replica.rotas import router as rotas_replicas
@@ -532,6 +534,12 @@ ROUTERS = [
     # e a fachada Esri /rest/services/{nome}/UtilityNetworkServer/unitIdentifiers (query, reserve)
     rotas_rede_identificadores,
     rotas_rede_un_esri,
+    # --- EPANET .inp da rede de água (L4-05-d): POST/GET /api/rede/{rede_id}/epanet (importa por job, exporta
+    # reconstruído das feições) e GET .../epanet/{importacao_id} (status do job)
+    rotas_rede_epanet,
+    # --- gás e esgoto (L4-05-e): GET /api/rede/{rede_id}/esgoto/escoamento e .../gas/pressao (conferências
+    # que só leem) e POST .../teksi (GeoPackage no esquema TEKSI vira feição no vocabulário do pacote)
+    rotas_rede_gas_esgoto,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,

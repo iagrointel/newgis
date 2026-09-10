@@ -1,0 +1,68 @@
+[TITLE]
+Fixture sintetica com todas as secoes do item L4-05-d-epanet-inp
+
+[JUNCTIONS]
+;ID              Elev        Demand
+ J1               100.0       5.0
+ J2               95.0        3.0
+ J3               90.0        2.0
+ J4               85.0        1.5
+
+[RESERVOIRS]
+;ID              Head
+ R1               150.0
+
+[TANKS]
+;ID              Elevation   InitLevel   MinLevel    MaxLevel    Diameter    MinVol      VolCurve
+ T1               120.0       5.0         0.0         10.0        20.0        0.0
+
+[PIPES]
+;ID       Node1        Node2        Length      Diameter  Roughness  MinorLoss  Status
+ P1       R1           J1           500.0       300.0     130        0          Open
+ P2       J1           J2           300.0       200.0     130        0          Open
+ P3       J2           J4           200.0       150.0     130        0          Open
+ P4       T1           J3           150.0       150.0     130        0          Open
+ P5       J3           J4           100.0       150.0     130        0          CV
+
+[PUMPS]
+;ID              Node1           Node2           Parameters
+ B1               J2              J3              HEAD C1
+
+[VALVES]
+;ID       Node1        Node2        Diameter  Type  Setting  MinorLoss
+ V1       J4           J3           150.0     PRV   20.0     0
+
+[PATTERNS]
+;ID              Multipliers
+ PAT1             1.0 1.1 0.9 1.0
+
+[CURVES]
+;ID              X-Value     Y-Value
+ C1               0.0         50.0
+ C1               10.0        40.0
+ C1               20.0        20.0
+
+[COORDINATES]
+;Node            X-Coord          Y-Coord
+ R1               100.0            50.0
+ J1               110.0            50.0
+ J2               120.0            50.0
+ J3               130.0            60.0
+ J4               130.0            50.0
+ T1               140.0            60.0
+
+[VERTICES]
+;Link            X-Coord          Y-Coord
+ P2                115.0            52.0
+
+[OPTIONS]
+ Units       LPS
+ Headloss    H-W
+
+[TIMES]
+ Duration    0
+
+[REPORT]
+ Status      No
+
+[END]

@@ -1,0 +1,79 @@
+{
+ "item": "L4-05-e-gas-e-esgoto",
+ "medido_em": "2026-09-08",
+ "maquina": {"carga_1min": 7.08, "ram_livre_gb": 4, "nota": "nenhuma cláusula do portão é de tempo ou de vazão; a carga fica registrada só como contexto das rodadas"},
+ "pacotes": {
+  "gas-br": {
+   "sha256": "d7d3ccac26d832ded8e423b068b2bc54865770b2f3b98f051b67b0df5e725843",
+   "bytes": 28749,
+   "dominios": 1, "tiers": 4, "categorias": 10, "terminais": 3, "grupos": 7, "tipos": 24,
+   "atributos": 51, "regras": 29,
+   "atributos_com_origem_conferida": 0,
+   "nota": "atributos são vocabulário próprio do pacote e não declaram coluna de origem"
+  },
+  "esgoto-teksi": {
+   "sha256": "308c5f038ad87f285804b1ce5a07f2b6b3bb9b2075c7c9399aeb0bd9bbd77e8b",
+   "bytes": 72442,
+   "dominios": 2, "tiers": 3, "categorias": 11, "terminais": 3, "grupos": 9, "tipos": 21,
+   "atributos": 104, "regras": 29,
+   "atributos_com_origem_declarada": 103,
+   "atributos_com_origem_conferida": 0,
+   "nota": "coluna de origem lida na definição de tabela do datamodel TEKSI, não em dado real: conferida = false em todos"
+  }
+ },
+ "fontes_lidas": [
+  {"o_que": "definição das tabelas do datamodel TEKSI",
+   "url": "https://raw.githubusercontent.com/teksi/wastewater/main/datamodel/changelogs/2025.0.1/03_tww_db_dss.sql",
+   "bytes": 682998,
+   "sha256": "ef78502b8d7f323118d92b5e94c991dad3c9ab9614c82251c6f407c24e80c635",
+   "baixado_em": "2026-09-08"},
+  {"o_que": "definição da view vw_tww_reach (prefixos rp_from_/rp_to_ e coluna _slope_per_mill)",
+   "url": "https://raw.githubusercontent.com/teksi/wastewater/main/datamodel/app/view/vw_tww_reach.py",
+   "sha256": "c590f4ab1c3cf857b9d5a3a91cf160abf006991dfb7312d6456b949f78e31677",
+   "baixado_em": "2026-09-08"},
+  {"o_que": "definição da view vw_tww_wastewater_structure (ws_type e prefixos co_/ma_/ss_/dp_/wn_)",
+   "url": "https://raw.githubusercontent.com/teksi/wastewater/main/datamodel/app/view/vw_tww_wastewater_structure.py",
+   "sha256": "7db21db3ac9fa9895fc46a57bdc12f358ee3b52cddfbbfd6d3398f7bf6759b8f",
+   "baixado_em": "2026-09-08"},
+  {"o_que": "fonte de paridade do gás declarada no item",
+   "url": "https://solutions.arcgis.com/utilities/gas/help/gas-utility-network-foundation/",
+   "resultado": "HTTP 200 devolvendo o índice geral do ArcGIS Solutions, não a página do modelo de gás",
+   "baixado_em": "2026-09-08"}
+ ],
+ "rede_sintetica": {
+  "elementos": 200,
+  "estruturas": 101,
+  "trechos": 99,
+  "bacias": 2,
+  "arquivo": "GeoPackage escrito por tests/dados/gerar_esgoto.py (esquema TEKSI, sqlite3 da biblioteca padrão)",
+  "gravadas_pela_api": {"pontos": 101, "linhas": 99, "recusadas": 0},
+  "escoamento": {"conferidos": 99, "conformes": 99, "percentual_concordancia": 100.0,
+                 "com_testemunha_nas_estruturas": 99, "problemas": 0}
+ },
+ "refutacao": {
+  "o_que_o_adversario_faz": "inverte a cota de um trecho (troca cota_montante por cota_jusante) e confere o que o sistema faz",
+  "resultado": "a conferência devolve 1 problema contrafluxo nomeando a feição, conformes cai de 99 para 98, alterou_a_rede continua false e a feição volta do banco com a geometria e os nós intactos, com a cota como o adversário deixou",
+  "teste": "tests/api/test_rede_gas_esgoto.py::test_adversario_inverte_a_cota_e_nada_e_corrigido_em_silencio"
+ },
+ "clausulas": [
+  {"clausula": "2 pacotes de ativos entregues com regras (>= 20 cada) e configurações de terminal",
+   "estado": "feito",
+   "prova": "tests/unit/test_gas_esgoto_pacotes.py::test_cada_pacote_tem_ao_menos_20_regras_e_configuracoes_de_terminal; 29 regras e 3 configurações de terminal em cada pacote"},
+  {"clausula": "rede de esgoto sintética de 200 elementos com cotas: jusante calculado por cota concorda com a direção declarada em 100 % dos trechos",
+   "estado": "feito",
+   "prova": "tests/api/test_rede_gas_esgoto.py::test_escoamento_concorda_em_100_por_cento_dos_99_trechos (99 de 99 trechos; os outros 101 elementos são as estruturas) e tests/unit/test_gas_esgoto_pacotes.py::test_rede_sintetica_escoa_por_gravidade_nos_99_trechos"},
+  {"clausula": "gás: regulador como controlador de tier de pressão",
+   "estado": "feito",
+   "prova": "pacote: test_gas_o_regulador_e_o_controlador_de_tier_de_pressao; motor: GET /api/rede/{id}/gas/pressao em test_gas_com_regulador_entre_tiers_passa e test_gas_acusa_regulador_que_eleva_pressao_e_emenda_sem_ele"},
+  {"clausula": "importação do esquema TEKSI (GeoPackage de exemplo do projeto) mapeada",
+   "estado": "parcial",
+   "prova": "POST /api/rede/{id}/teksi lê o GeoPackage e grava 200 feições (test_importa_geopackage_teksi_com_as_200_feicoes); o de-para sai das origens declaradas no pacote (test_mapa_teksi_sai_do_pacote_e_cobre_as_colunas_de_cota)",
+   "o_que_falta": "o exemplo publicado pelo projeto TEKSI é um dump SQL de PostGIS (datamodel/demo_data/demo_data_aletsch.sql), não um GeoPackage; o GeoPackage usado é o sintético desta casa, com as camadas e as colunas do TEKSI. As colunas foram lidas na definição de tabela do projeto, nunca em dado real: origem.conferida = false em todos os 103 atributos"},
+  {"clausula": "teste automatizado", "estado": "feito",
+   "prova": "tests/unit/test_gas_esgoto_pacotes.py (13 casos) e tests/api/test_rede_gas_esgoto.py (9 casos), rodados na base da trilha"},
+  {"clausula": "paridade contra gas utility network foundation escrita",
+   "estado": "parcial",
+   "prova": "docs/rede/PARIDADE_GAS.md, 15 linhas de elemento do modelo",
+   "o_que_falta": "a página declarada como fonte respondeu com o índice geral do ArcGIS Solutions em 08/09/2026; a tabela compara a ESTRUTURA da Utility Network e não cita campo nem código de subtipo da Esri, e nenhuma linha vale como medição contra o produto deles"}
+ ]
+}

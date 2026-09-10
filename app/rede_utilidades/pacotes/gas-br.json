@@ -1,0 +1,1199 @@
+{
+ "atributos": [
+  {
+   "codigo": "ano_de_instalacao",
+   "grupo": "city_gate",
+   "nome": "ano de instalação",
+   "obrigatorio": false,
+   "tipo_dado": "inteiro",
+   "unidade": null
+  },
+  {
+   "codigo": "capacidade",
+   "grupo": "city_gate",
+   "nome": "capacidade nominal",
+   "obrigatorio": true,
+   "tipo_dado": "real",
+   "unidade": "m3/h"
+  },
+  {
+   "codigo": "identificador",
+   "grupo": "city_gate",
+   "nome": "identificador do ativo",
+   "obrigatorio": true,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "odorizacao",
+   "grupo": "city_gate",
+   "nome": "odoriza o gás",
+   "obrigatorio": false,
+   "tipo_dado": "booleano",
+   "unidade": null
+  },
+  {
+   "codigo": "pressao_de_entrada",
+   "grupo": "city_gate",
+   "nome": "pressão de entrada de projeto",
+   "obrigatorio": true,
+   "tipo_dado": "real",
+   "unidade": "kPa"
+  },
+  {
+   "codigo": "pressao_de_saida",
+   "grupo": "city_gate",
+   "nome": "pressão de saída ajustada",
+   "obrigatorio": true,
+   "tipo_dado": "real",
+   "unidade": "kPa"
+  },
+  {
+   "codigo": "situacao",
+   "grupo": "city_gate",
+   "nome": "situação operacional",
+   "obrigatorio": false,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "tier_jusante",
+   "grupo": "city_gate",
+   "nome": "tier de pressão a jusante",
+   "obrigatorio": true,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "tier_montante",
+   "grupo": "city_gate",
+   "nome": "tier de pressão a montante",
+   "obrigatorio": true,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ano_de_instalacao",
+   "grupo": "estacao_de_medicao",
+   "nome": "ano de instalação",
+   "obrigatorio": false,
+   "tipo_dado": "inteiro",
+   "unidade": null
+  },
+  {
+   "codigo": "correcao_ptz",
+   "grupo": "estacao_de_medicao",
+   "nome": "corrige pressão, temperatura e compressibilidade",
+   "obrigatorio": false,
+   "tipo_dado": "booleano",
+   "unidade": null
+  },
+  {
+   "codigo": "identificador",
+   "grupo": "estacao_de_medicao",
+   "nome": "identificador do ativo",
+   "obrigatorio": true,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "situacao",
+   "grupo": "estacao_de_medicao",
+   "nome": "situação operacional",
+   "obrigatorio": false,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "tipo_de_medidor",
+   "grupo": "estacao_de_medicao",
+   "nome": "tecnologia do medidor",
+   "obrigatorio": false,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "vazao_maxima",
+   "grupo": "estacao_de_medicao",
+   "nome": "vazão máxima medida",
+   "obrigatorio": false,
+   "tipo_dado": "real",
+   "unidade": "m3/h"
+  },
+  {
+   "codigo": "ano_de_instalacao",
+   "grupo": "juncao_de_gas",
+   "nome": "ano de instalação",
+   "obrigatorio": false,
+   "tipo_dado": "inteiro",
+   "unidade": null
+  },
+  {
+   "codigo": "identificador",
+   "grupo": "juncao_de_gas",
+   "nome": "identificador do ativo",
+   "obrigatorio": true,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "situacao",
+   "grupo": "juncao_de_gas",
+   "nome": "situação operacional",
+   "obrigatorio": false,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "tipo_de_conexao",
+   "grupo": "juncao_de_gas",
+   "nome": "tipo de conexão",
+   "obrigatorio": false,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ano_de_instalacao",
+   "grupo": "ponto_de_entrega",
+   "nome": "ano de instalação",
+   "obrigatorio": false,
+   "tipo_dado": "inteiro",
+   "unidade": null
+  },
+  {
+   "codigo": "classe_de_consumo",
+   "grupo": "ponto_de_entrega",
+   "nome": "classe de consumo",
+   "obrigatorio": false,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "identificador",
+   "grupo": "ponto_de_entrega",
+   "nome": "identificador do ativo",
+   "obrigatorio": true,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "situacao",
+   "grupo": "ponto_de_entrega",
+   "nome": "situação operacional",
+   "obrigatorio": false,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "vazao_contratada",
+   "grupo": "ponto_de_entrega",
+   "nome": "vazão contratada",
+   "obrigatorio": false,
+   "tipo_dado": "real",
+   "unidade": "m3/h"
+  },
+  {
+   "codigo": "ano_de_instalacao",
+   "grupo": "regulador",
+   "nome": "ano de instalação",
+   "obrigatorio": false,
+   "tipo_dado": "inteiro",
+   "unidade": null
+  },
+  {
+   "codigo": "fabricante",
+   "grupo": "regulador",
+   "nome": "fabricante",
+   "obrigatorio": false,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "identificador",
+   "grupo": "regulador",
+   "nome": "identificador do ativo",
+   "obrigatorio": true,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "pressao_de_entrada",
+   "grupo": "regulador",
+   "nome": "pressão de entrada de projeto",
+   "obrigatorio": true,
+   "tipo_dado": "real",
+   "unidade": "kPa"
+  },
+  {
+   "codigo": "pressao_de_saida",
+   "grupo": "regulador",
+   "nome": "pressão de saída ajustada",
+   "obrigatorio": true,
+   "tipo_dado": "real",
+   "unidade": "kPa"
+  },
+  {
+   "codigo": "situacao",
+   "grupo": "regulador",
+   "nome": "situação operacional",
+   "obrigatorio": false,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "tem_valvula_de_bloqueio_automatico",
+   "grupo": "regulador",
+   "nome": "tem bloqueio automático por sobrepressão",
+   "obrigatorio": false,
+   "tipo_dado": "booleano",
+   "unidade": null
+  },
+  {
+   "codigo": "tier_jusante",
+   "grupo": "regulador",
+   "nome": "tier de pressão a jusante",
+   "obrigatorio": true,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "tier_montante",
+   "grupo": "regulador",
+   "nome": "tier de pressão a montante",
+   "obrigatorio": true,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "vazao_maxima",
+   "grupo": "regulador",
+   "nome": "vazão máxima",
+   "obrigatorio": false,
+   "tipo_dado": "real",
+   "unidade": "m3/h"
+  },
+  {
+   "codigo": "ano_de_instalacao",
+   "grupo": "tubulacao_de_gas",
+   "nome": "ano de instalação",
+   "obrigatorio": false,
+   "tipo_dado": "inteiro",
+   "unidade": null
+  },
+  {
+   "codigo": "comprimento",
+   "grupo": "tubulacao_de_gas",
+   "nome": "comprimento do trecho",
+   "obrigatorio": true,
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "diametro_nominal",
+   "grupo": "tubulacao_de_gas",
+   "nome": "diâmetro nominal",
+   "obrigatorio": true,
+   "tipo_dado": "real",
+   "unidade": "mm"
+  },
+  {
+   "codigo": "identificador",
+   "grupo": "tubulacao_de_gas",
+   "nome": "identificador do ativo",
+   "obrigatorio": true,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "material",
+   "grupo": "tubulacao_de_gas",
+   "nome": "material do tubo",
+   "obrigatorio": true,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "pressao_maxima_de_operacao",
+   "grupo": "tubulacao_de_gas",
+   "nome": "pressão máxima de operação admissível",
+   "obrigatorio": true,
+   "tipo_dado": "real",
+   "unidade": "kPa"
+  },
+  {
+   "codigo": "profundidade_de_assentamento",
+   "grupo": "tubulacao_de_gas",
+   "nome": "profundidade de assentamento",
+   "obrigatorio": false,
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "protecao_catodica",
+   "grupo": "tubulacao_de_gas",
+   "nome": "tem proteção catódica",
+   "obrigatorio": false,
+   "tipo_dado": "booleano",
+   "unidade": null
+  },
+  {
+   "codigo": "revestimento",
+   "grupo": "tubulacao_de_gas",
+   "nome": "revestimento externo",
+   "obrigatorio": false,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "situacao",
+   "grupo": "tubulacao_de_gas",
+   "nome": "situação operacional",
+   "obrigatorio": false,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "acionamento",
+   "grupo": "valvula_de_gas",
+   "nome": "forma de acionamento",
+   "obrigatorio": false,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ano_de_instalacao",
+   "grupo": "valvula_de_gas",
+   "nome": "ano de instalação",
+   "obrigatorio": false,
+   "tipo_dado": "inteiro",
+   "unidade": null
+  },
+  {
+   "codigo": "diametro_nominal",
+   "grupo": "valvula_de_gas",
+   "nome": "diâmetro nominal",
+   "obrigatorio": true,
+   "tipo_dado": "real",
+   "unidade": "mm"
+  },
+  {
+   "codigo": "estado",
+   "grupo": "valvula_de_gas",
+   "nome": "estado da manobra",
+   "obrigatorio": true,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "identificador",
+   "grupo": "valvula_de_gas",
+   "nome": "identificador do ativo",
+   "obrigatorio": true,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "situacao",
+   "grupo": "valvula_de_gas",
+   "nome": "situação operacional",
+   "obrigatorio": false,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "pressao_de_ajuste",
+   "grupo": "valvula_de_gas",
+   "nome": "pressão de ajuste",
+   "obrigatorio": false,
+   "tipo": 2,
+   "tipo_dado": "real",
+   "unidade": "kPa"
+  }
+ ],
+ "categorias": [
+  {
+   "codigo": "alivio",
+   "descricao": "Libera gás para a atmosfera acima de uma pressão de ajuste.",
+   "nome": "Alívio"
+  },
+  {
+   "codigo": "conducao",
+   "descricao": "Conduz sem controlar pressão nem seccionar.",
+   "nome": "Condução"
+  },
+  {
+   "codigo": "consumo",
+   "descricao": "Ponto final que retira gás da rede.",
+   "nome": "Consumo"
+  },
+  {
+   "codigo": "controle_de_pressao",
+   "descricao": "Impõe a pressão a jusante e separa dois tiers.",
+   "nome": "Controle de pressão"
+  },
+  {
+   "codigo": "fonte",
+   "descricao": "Onde o gás entra na rede; o traçado a montante termina aqui.",
+   "nome": "Fonte"
+  },
+  {
+   "codigo": "medicao",
+   "descricao": "Mede volume ou vazão sem alterar o escoamento.",
+   "nome": "Medição"
+  },
+  {
+   "codigo": "odorizacao",
+   "descricao": "Injeta odorante para tornar o vazamento perceptível.",
+   "nome": "Odorização"
+  },
+  {
+   "codigo": "protecao",
+   "descricao": "Impede escoamento em sentido indevido ou isola por falha.",
+   "nome": "Proteção"
+  },
+  {
+   "codigo": "purga",
+   "descricao": "Ponto de esvaziamento do trecho para manutenção.",
+   "nome": "Purga"
+  },
+  {
+   "codigo": "seccionamento",
+   "descricao": "Abre ou fecha o escoamento por manobra.",
+   "nome": "Seccionamento"
+  }
+ ],
+ "dominios": [
+  {
+   "codigo": "gas_distribuicao",
+   "descricao": "Do city gate ao ponto de entrega. O tier é o degrau de pressão, e quem muda de tier é o regulador.",
+   "disciplina": "gas",
+   "nome": "Gás canalizado",
+   "ordem": 1,
+   "tipo": "dominio"
+  }
+ ],
+ "esquema": "plat.rede.pacote",
+ "esquema_versao": 1,
+ "grupos": [
+  {
+   "camadas_fonte": [
+    "GasAssembly"
+   ],
+   "codigo": "city_gate",
+   "descricao": "Ponto de entrega do transporte para a distribuição: medição, filtragem, redução e odorização.",
+   "dominio": "gas_distribuicao",
+   "geometria": "ponto",
+   "nome": "City gate"
+  },
+  {
+   "camadas_fonte": [
+    "GasAssembly"
+   ],
+   "codigo": "estacao_de_medicao",
+   "descricao": "Conjunto que mede o volume entregue sem controlar a pressão.",
+   "dominio": "gas_distribuicao",
+   "geometria": "ponto",
+   "nome": "Estação de medição"
+  },
+  {
+   "camadas_fonte": [
+    "GasJunction"
+   ],
+   "codigo": "juncao_de_gas",
+   "descricao": "Conexão sem equipamento: derivação, redução de diâmetro, junta de transição.",
+   "dominio": "gas_distribuicao",
+   "geometria": "ponto",
+   "nome": "Junção de gás"
+  },
+  {
+   "camadas_fonte": [
+    "GasDevice"
+   ],
+   "codigo": "ponto_de_entrega",
+   "descricao": "Onde o gás sai da rede para a instalação do consumidor.",
+   "dominio": "gas_distribuicao",
+   "geometria": "ponto",
+   "nome": "Ponto de entrega"
+  },
+  {
+   "camadas_fonte": [
+    "GasDevice"
+   ],
+   "codigo": "regulador",
+   "descricao": "Dispositivo que reduz a pressão e, com isso, separa dois tiers: é o controlador do degrau.",
+   "dominio": "gas_distribuicao",
+   "geometria": "ponto",
+   "nome": "Regulador de pressão"
+  },
+  {
+   "camadas_fonte": [
+    "GasLine"
+   ],
+   "codigo": "tubulacao_de_gas",
+   "descricao": "Trecho de tubulação; o tier do tipo é o degrau de pressão em que o trecho opera.",
+   "dominio": "gas_distribuicao",
+   "geometria": "linha",
+   "nome": "Tubulação de gás"
+  },
+  {
+   "camadas_fonte": [
+    "GasDevice"
+   ],
+   "codigo": "valvula_de_gas",
+   "descricao": "Bloqueio, alívio, purga e retenção.",
+   "dominio": "gas_distribuicao",
+   "geometria": "ponto",
+   "nome": "Válvula de gás"
+  }
+ ],
+ "pacote": {
+  "codigo": "gas-br",
+  "descricao": "Pacote de ativos da rede de gás canalizado. O tier é o degrau de pressão (transporte, alta, média e baixa) e o regulador é o ativo que muda de tier: é ele que controla o degrau, e é por isso que a conferência de pressão da plataforma o exige em toda transição. Os atributos são o vocabulário próprio do pacote, não a cópia de um esquema externo: nenhum tem coluna de origem, e a paridade com a Gas Utility Network Foundation da Esri está escrita em docs/rede/PARIDADE_GAS.md.",
+  "disciplina": "gas",
+  "fonte": "https://solutions.arcgis.com/utilities/gas/help/gas-utility-network-foundation/",
+  "nome": "Gás canalizado (tiers por pressão)",
+  "versao": "1.0.0"
+ },
+ "regras": [
+  {
+   "de": "city_gate/1",
+   "descricao": "o medidor de transferência faz parte do conjunto do city gate",
+   "para": "estacao_de_medicao/1",
+   "tipo": "conectividade_entre_nos"
+  },
+  {
+   "de": "city_gate/1",
+   "descricao": "o regulador de city gate faz parte do conjunto do city gate",
+   "para": "regulador/1",
+   "tipo": "conectividade_entre_nos"
+  },
+  {
+   "de": "regulador/3",
+   "descricao": "regulador de ramal e medidor de faturamento no mesmo abrigo",
+   "para": "estacao_de_medicao/2",
+   "tipo": "conectividade_entre_nos"
+  },
+  {
+   "de": "regulador/4",
+   "descricao": "regulador monitor em série com o regulador de city gate",
+   "para": "regulador/1",
+   "tipo": "conectividade_entre_nos"
+  },
+  {
+   "de": "city_gate/1",
+   "descricao": "city gate recebe da rede de transporte",
+   "para": "tubulacao_de_gas/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "city_gate/1",
+   "descricao": "city gate entrega na rede de alta pressão",
+   "para": "tubulacao_de_gas/2",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "estacao_de_medicao/1",
+   "descricao": "medidor de transferência instalado na rede de alta pressão",
+   "para": "tubulacao_de_gas/2",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "estacao_de_medicao/2",
+   "descricao": "medidor de faturamento instalado no ramal de serviço",
+   "para": "tubulacao_de_gas/5",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "juncao_de_gas/1",
+   "descricao": "junção conecta tubulações no tier de transporte",
+   "para": "tubulacao_de_gas/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "juncao_de_gas/2",
+   "descricao": "junção conecta tubulações no tier de alta pressão",
+   "para": "tubulacao_de_gas/2",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "juncao_de_gas/3",
+   "descricao": "junção conecta tubulações no tier de média pressão",
+   "para": "tubulacao_de_gas/3",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "juncao_de_gas/4",
+   "descricao": "junção conecta tubulações no tier de baixa pressão",
+   "para": "tubulacao_de_gas/4",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "juncao_de_gas/4",
+   "descricao": "ramal de serviço derivado por junção na baixa pressão",
+   "para": "tubulacao_de_gas/5",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "juncao_de_gas/4",
+   "descricao": "tubulação desativada permanece ligada à junção que a derivava",
+   "para": "tubulacao_de_gas/6",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "ponto_de_entrega/1",
+   "descricao": "entrega residencial no fim do ramal de serviço",
+   "para": "tubulacao_de_gas/5",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "ponto_de_entrega/2",
+   "descricao": "entrega comercial no fim do ramal de serviço",
+   "para": "tubulacao_de_gas/5",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "ponto_de_entrega/3",
+   "descricao": "entrega industrial direto da rede de média pressão",
+   "para": "tubulacao_de_gas/3",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "regulador/1",
+   "descricao": "regulador de city gate recebe da rede de transporte",
+   "para": "tubulacao_de_gas/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "regulador/1",
+   "descricao": "regulador de city gate entrega na rede de alta pressão",
+   "para": "tubulacao_de_gas/2",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "regulador/2",
+   "descricao": "regulador de rede recebe da rede de alta pressão",
+   "para": "tubulacao_de_gas/2",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "regulador/2",
+   "descricao": "regulador de rede entrega na rede de média pressão",
+   "para": "tubulacao_de_gas/3",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "regulador/3",
+   "descricao": "regulador de ramal recebe da rede de média pressão",
+   "para": "tubulacao_de_gas/3",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "regulador/3",
+   "descricao": "regulador de ramal entrega na rede de baixa pressão",
+   "para": "tubulacao_de_gas/4",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "regulador/4",
+   "descricao": "regulador monitor fica em série na rede de alta pressão",
+   "para": "tubulacao_de_gas/2",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "valvula_de_gas/1",
+   "descricao": "válvula de bloqueio instalada na rede de média pressão",
+   "para": "tubulacao_de_gas/3",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "valvula_de_gas/1",
+   "descricao": "válvula de bloqueio instalada na rede de baixa pressão",
+   "para": "tubulacao_de_gas/4",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "valvula_de_gas/2",
+   "descricao": "válvula de alívio derivada da rede de alta pressão",
+   "para": "tubulacao_de_gas/2",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "valvula_de_gas/3",
+   "descricao": "válvula de purga derivada da rede de média pressão",
+   "para": "tubulacao_de_gas/3",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "valvula_de_gas/4",
+   "descricao": "válvula de retenção instalada na rede de alta pressão",
+   "para": "tubulacao_de_gas/2",
+   "tipo": "conectividade_no_trecho"
+  }
+ ],
+ "terminais": [
+  {
+   "caminhos_validos": [
+    {
+     "de": 1,
+     "nome": "aberto",
+     "para": 2
+    }
+   ],
+   "codigo": "dois_terminais",
+   "nome": "Dois terminais",
+   "terminais": [
+    {
+     "id": 1,
+     "montante": true,
+     "nome": "montante"
+    },
+    {
+     "id": 2,
+     "montante": false,
+     "nome": "jusante"
+    }
+   ]
+  },
+  {
+   "caminhos_validos": [
+    {
+     "de": 1,
+     "nome": "aberto",
+     "para": 2
+    },
+    {
+     "de": 2,
+     "nome": "aberto_invertido",
+     "para": 1
+    }
+   ],
+   "codigo": "dois_terminais_bidirecional",
+   "nome": "Dois terminais (sem sentido imposto)",
+   "terminais": [
+    {
+     "id": 1,
+     "montante": true,
+     "nome": "lado_1"
+    },
+    {
+     "id": 2,
+     "montante": false,
+     "nome": "lado_2"
+    }
+   ]
+  },
+  {
+   "caminhos_validos": [],
+   "codigo": "um_terminal",
+   "nome": "Um terminal",
+   "terminais": [
+    {
+     "id": 1,
+     "montante": true,
+     "nome": "conexao"
+    }
+   ]
+  }
+ ],
+ "tiers": [
+  {
+   "codigo": "transporte",
+   "descricao": "Malha de transporte a montante do city gate; a pressão mais alta da rede.",
+   "dominio": "gas_distribuicao",
+   "nome": "Transporte",
+   "ordem": 1,
+   "tipo": "hierarquico"
+  },
+  {
+   "codigo": "alta_pressao",
+   "descricao": "Entre o city gate e o regulador de rede. A subrede é o trecho alimentado por um city gate.",
+   "dominio": "gas_distribuicao",
+   "nome": "Alta pressão",
+   "ordem": 2,
+   "tipo": "hierarquico"
+  },
+  {
+   "codigo": "media_pressao",
+   "descricao": "Entre o regulador de rede e o regulador de ramal.",
+   "dominio": "gas_distribuicao",
+   "nome": "Média pressão",
+   "ordem": 3,
+   "tipo": "hierarquico"
+  },
+  {
+   "codigo": "baixa_pressao",
+   "descricao": "Do regulador de ramal ao ponto de entrega.",
+   "dominio": "gas_distribuicao",
+   "nome": "Baixa pressão",
+   "ordem": 4,
+   "tipo": "hierarquico"
+  }
+ ],
+ "tipos": [
+  {
+   "categorias": [
+    "controle_de_pressao",
+    "fonte",
+    "medicao",
+    "odorizacao"
+   ],
+   "chave": "city_gate",
+   "codigo": 1,
+   "codigos_fonte": [
+    "gasStation"
+   ],
+   "descricao": "Fronteira entre transporte e distribuição; para o traçado a montante, é fonte.",
+   "grupo": "city_gate",
+   "nome": "City gate",
+   "terminal": "dois_terminais",
+   "tier": "transporte"
+  },
+  {
+   "categorias": [
+    "medicao"
+   ],
+   "chave": "medidor_de_transferencia",
+   "codigo": 1,
+   "codigos_fonte": [
+    "gasMeter"
+   ],
+   "descricao": "Mede o volume trocado entre dois trechos da mesma rede.",
+   "grupo": "estacao_de_medicao",
+   "nome": "Medidor de transferência",
+   "terminal": "dois_terminais",
+   "tier": "alta_pressao"
+  },
+  {
+   "categorias": [
+    "consumo",
+    "medicao"
+   ],
+   "chave": "medidor_de_faturamento",
+   "codigo": 2,
+   "codigos_fonte": [
+    "gasMeter"
+   ],
+   "descricao": "Mede o volume entregue ao consumidor.",
+   "grupo": "estacao_de_medicao",
+   "nome": "Medidor de faturamento",
+   "terminal": "dois_terminais",
+   "tier": "baixa_pressao"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "juncao_de_transporte",
+   "codigo": 1,
+   "codigos_fonte": [
+    "gasJunction"
+   ],
+   "descricao": "Conexão de tubulações no tier de transporte.",
+   "grupo": "juncao_de_gas",
+   "nome": "Junção de transporte",
+   "terminal": "um_terminal",
+   "tier": "transporte"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "juncao_de_alta_pressao",
+   "codigo": 2,
+   "codigos_fonte": [
+    "gasJunction"
+   ],
+   "descricao": "Conexão de tubulações no tier de alta pressão.",
+   "grupo": "juncao_de_gas",
+   "nome": "Junção de alta pressão",
+   "terminal": "um_terminal",
+   "tier": "alta_pressao"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "juncao_de_media_pressao",
+   "codigo": 3,
+   "codigos_fonte": [
+    "gasJunction"
+   ],
+   "descricao": "Conexão de tubulações no tier de média pressão.",
+   "grupo": "juncao_de_gas",
+   "nome": "Junção de média pressão",
+   "terminal": "um_terminal",
+   "tier": "media_pressao"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "juncao_de_baixa_pressao",
+   "codigo": 4,
+   "codigos_fonte": [
+    "gasJunction"
+   ],
+   "descricao": "Conexão de tubulações no tier de baixa pressão.",
+   "grupo": "juncao_de_gas",
+   "nome": "Junção de baixa pressão",
+   "terminal": "um_terminal",
+   "tier": "baixa_pressao"
+  },
+  {
+   "categorias": [
+    "consumo"
+   ],
+   "chave": "ponto_de_entrega_residencial",
+   "codigo": 1,
+   "codigos_fonte": [
+    "gasServicePoint"
+   ],
+   "descricao": "Entrega em instalação residencial.",
+   "grupo": "ponto_de_entrega",
+   "nome": "Ponto de entrega residencial",
+   "terminal": "um_terminal",
+   "tier": "baixa_pressao"
+  },
+  {
+   "categorias": [
+    "consumo"
+   ],
+   "chave": "ponto_de_entrega_comercial",
+   "codigo": 2,
+   "codigos_fonte": [
+    "gasServicePoint"
+   ],
+   "descricao": "Entrega em instalação comercial.",
+   "grupo": "ponto_de_entrega",
+   "nome": "Ponto de entrega comercial",
+   "terminal": "um_terminal",
+   "tier": "baixa_pressao"
+  },
+  {
+   "categorias": [
+    "consumo"
+   ],
+   "chave": "ponto_de_entrega_industrial",
+   "codigo": 3,
+   "codigos_fonte": [
+    "gasServicePoint"
+   ],
+   "descricao": "Entrega em instalação industrial, em média pressão.",
+   "grupo": "ponto_de_entrega",
+   "nome": "Ponto de entrega industrial",
+   "terminal": "um_terminal",
+   "tier": "media_pressao"
+  },
+  {
+   "categorias": [
+    "controle_de_pressao"
+   ],
+   "chave": "regulador_de_city_gate",
+   "codigo": 1,
+   "codigos_fonte": [
+    "gasRegulator"
+   ],
+   "descricao": "Reduz do transporte para a alta pressão, dentro do city gate.",
+   "grupo": "regulador",
+   "nome": "Regulador de city gate",
+   "terminal": "dois_terminais",
+   "tier": "alta_pressao"
+  },
+  {
+   "categorias": [
+    "controle_de_pressao"
+   ],
+   "chave": "regulador_de_rede",
+   "codigo": 2,
+   "codigos_fonte": [
+    "gasRegulator"
+   ],
+   "descricao": "Reduz da alta para a média pressão.",
+   "grupo": "regulador",
+   "nome": "Regulador de rede",
+   "terminal": "dois_terminais",
+   "tier": "media_pressao"
+  },
+  {
+   "categorias": [
+    "controle_de_pressao"
+   ],
+   "chave": "regulador_de_ramal",
+   "codigo": 3,
+   "codigos_fonte": [
+    "gasRegulator"
+   ],
+   "descricao": "Reduz da média para a baixa pressão, junto ao consumidor.",
+   "grupo": "regulador",
+   "nome": "Regulador de ramal",
+   "terminal": "dois_terminais",
+   "tier": "baixa_pressao"
+  },
+  {
+   "categorias": [
+    "controle_de_pressao",
+    "protecao"
+   ],
+   "chave": "regulador_monitor",
+   "codigo": 4,
+   "codigos_fonte": [
+    "gasRegulator"
+   ],
+   "descricao": "Regulador em série que assume o controle se o principal falhar aberto.",
+   "grupo": "regulador",
+   "nome": "Regulador monitor",
+   "terminal": "dois_terminais",
+   "tier": "alta_pressao"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "rede_de_transporte",
+   "codigo": 1,
+   "codigos_fonte": [
+    "gasMain"
+   ],
+   "descricao": "Tubulação a montante do city gate.",
+   "grupo": "tubulacao_de_gas",
+   "nome": "Rede de transporte",
+   "terminal": "dois_terminais",
+   "tier": "transporte"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "rede_de_alta_pressao",
+   "codigo": 2,
+   "codigos_fonte": [
+    "gasMain"
+   ],
+   "descricao": "Tubulação entre o city gate e o regulador de rede.",
+   "grupo": "tubulacao_de_gas",
+   "nome": "Rede de alta pressão",
+   "terminal": "dois_terminais",
+   "tier": "alta_pressao"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "rede_de_media_pressao",
+   "codigo": 3,
+   "codigos_fonte": [
+    "gasMain"
+   ],
+   "descricao": "Tubulação entre o regulador de rede e o regulador de ramal.",
+   "grupo": "tubulacao_de_gas",
+   "nome": "Rede de média pressão",
+   "terminal": "dois_terminais",
+   "tier": "media_pressao"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "rede_de_baixa_pressao",
+   "codigo": 4,
+   "codigos_fonte": [
+    "gasMain"
+   ],
+   "descricao": "Tubulação a jusante do regulador de ramal.",
+   "grupo": "tubulacao_de_gas",
+   "nome": "Rede de baixa pressão",
+   "terminal": "dois_terminais",
+   "tier": "baixa_pressao"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "ramal_de_servico",
+   "codigo": 5,
+   "codigos_fonte": [
+    "gasService"
+   ],
+   "descricao": "Derivação da rede até o ponto de entrega de um consumidor.",
+   "grupo": "tubulacao_de_gas",
+   "nome": "Ramal de serviço",
+   "terminal": "dois_terminais",
+   "tier": "baixa_pressao"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "tubulacao_desativada",
+   "codigo": 6,
+   "codigos_fonte": [
+    "gasMainAbandoned"
+   ],
+   "descricao": "Trecho fora de operação, mantido no cadastro porque o tubo continua no solo.",
+   "grupo": "tubulacao_de_gas",
+   "nome": "Tubulação desativada",
+   "terminal": "dois_terminais",
+   "tier": "baixa_pressao"
+  },
+  {
+   "categorias": [
+    "seccionamento"
+   ],
+   "chave": "valvula_de_bloqueio",
+   "codigo": 1,
+   "codigos_fonte": [
+    "gasValve"
+   ],
+   "descricao": "Isola um trecho para manutenção; não impõe sentido de escoamento.",
+   "grupo": "valvula_de_gas",
+   "nome": "Válvula de bloqueio",
+   "terminal": "dois_terminais_bidirecional",
+   "tier": "media_pressao"
+  },
+  {
+   "categorias": [
+    "alivio"
+   ],
+   "chave": "valvula_de_alivio",
+   "codigo": 2,
+   "codigos_fonte": [
+    "gasValve"
+   ],
+   "descricao": "Abre acima da pressão de ajuste e alivia para a atmosfera.",
+   "grupo": "valvula_de_gas",
+   "nome": "Válvula de alívio",
+   "terminal": "um_terminal",
+   "tier": "alta_pressao"
+  },
+  {
+   "categorias": [
+    "purga"
+   ],
+   "chave": "valvula_de_purga",
+   "codigo": 3,
+   "codigos_fonte": [
+    "gasValve"
+   ],
+   "descricao": "Esvazia o trecho antes da intervenção.",
+   "grupo": "valvula_de_gas",
+   "nome": "Válvula de purga",
+   "terminal": "um_terminal",
+   "tier": "media_pressao"
+  },
+  {
+   "categorias": [
+    "protecao"
+   ],
+   "chave": "valvula_de_retencao",
+   "codigo": 4,
+   "codigos_fonte": [
+    "gasValve"
+   ],
+   "descricao": "Deixa passar num sentido só.",
+   "grupo": "valvula_de_gas",
+   "nome": "Válvula de retenção",
+   "terminal": "dois_terminais",
+   "tier": "alta_pressao"
+  }
+ ]
+}

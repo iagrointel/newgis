@@ -59,9 +59,6 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # ---- catálogo (L0-03; vocabulário na migração 011)
     ("POST", "/api/itens"): ["itens/adicionar"],
     ("POST", "/api/acervo/{fonte_id}/adicionar"): ["itens/adicionar", "acervo/adicionar_recusado_pii"],
-    # item L6-01-b: assinar/cancelar mudam quem pode LER a camada publicada — evento obrigatório
-    ("POST", "/api/acervo/camadas/{camada}/assinatura"): ["acervo/assinar"],
-    ("DELETE", "/api/acervo/camadas/{camada}/assinatura"): ["acervo/cancelar"],
     ("PUT", "/api/itens/{id}"): ["itens/atualizar", "itens/status", "itens/proteger", "itens/desproteger"],
     ("PATCH", "/api/itens/{id}"): ["itens/atualizar", "itens/status", "itens/proteger", "itens/desproteger"],
     ("DELETE", "/api/itens/{id}"): ["itens/apagar"],
@@ -150,7 +147,31 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("DELETE", "/api/conexoes/{id}"): ["conexoes/apagar"],
     ("POST", "/api/conexoes/{id}/testar"): ["conexoes/testar"],
     ("POST", "/api/conexoes/{id}/publicar"): ["conexoes/publicar_camada"],
-    # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
-    # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
-    ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
+    # ---- motor multicritério em grades aninhadas (L3-19-multiescala; vocabulário nas migrações
+    # 20260906T1640_multiescala.sql e 20260906T1823_multiescala_apagar.sql). Conjunto, fator e execução são
+    # tabelas do inquilino com dono humano, então toda escrita narra evento; o DELETE apaga em cascata e por
+    # isso tem tipo próprio (`_apagar`), separado do de criação.
+    ("POST", "/api/multiescala/conjuntos"): ["multiescala/conjunto"],
+    ("DELETE", "/api/multiescala/conjuntos/{id}"): ["multiescala/conjunto_apagar"],
+    ("POST", "/api/multiescala/fatores"): ["multiescala/fator"],
+    ("DELETE", "/api/multiescala/fatores/{id}"): ["multiescala/fator_apagar"],
+    ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
+    ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
+    ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
+    # ---- rede de utilidades (L4-01-a/b, L4-02-a, L4-05-d, L4-05-e; vocabulário nas migrações
+    # 20260906T1553, 20260906T2000, 20260906T2048, 20260907T1306, 20260907T1629 e 20260908T1032). As rotas de
+    # escrita desta família já existiam sem entrada aqui — o portão de cobertura só passou a alcançá-las quando
+    # `docs/openapi.json` foi regerado (item L4-05-e); o GET .../epanet e as duas conferências de gás e esgoto
+    # são leitura e não aparecem, como as demais leituras.
+    ("POST", "/api/rede"): ["redes/criar"],
+    ("DELETE", "/api/rede/{rede_id}"): ["redes/apagar"],
+    ("POST", "/api/rede/{rede_id}/pacote"): ["redes/importar_pacote"],
+    ("POST", "/api/rede/{rede_id}/feicoes/pontos"): ["redes/feicao_criar"],
+    ("POST", "/api/rede/{rede_id}/feicoes/linhas"): ["redes/feicao_criar"],
+    ("POST", "/api/rede/{rede_id}/feicoes/pontos/applyEdits"): ["redes/feicao_editar"],
+    ("POST", "/api/rede/{rede_id}/feicoes/linhas/applyEdits"): ["redes/feicao_editar"],
+    ("POST", "/api/rede/{rede_id}/topologia/habilitar"): ["redes/topologia_habilitar"],
+    ("POST", "/api/rede/{rede_id}/tracar"): ["redes/tracar"],
+    ("POST", "/api/rede/{rede_id}/epanet"): ["redes/epanet_importar"],
+    ("POST", "/api/rede/{rede_id}/teksi"): ["redes/teksi_importar"],
 }

@@ -6,6 +6,32 @@ os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutaca
 ## turno 7, setembro de 2026 (item L4-04-d-diagrama-esquematico: diagrama de rede, regras e layouts)
 ## turno 4, setembro de 2026 (item L2-05-e-raster-basico: treze ferramentas raster sobre COG)
 ## turno 3, setembro de 2026 (item L2-14-a-ingestao-de-fluxos: entrada de eventos em tempo real)
+## turno 4, setembro de 2026 (item L4-05-d-epanet-inp: arquivo EPANET .inp entra e sai da rede de água)
+
+Porta de entrada e de saída do formato que o setor de água usa: o `.inp` do EPANET. `ler_inp`/`escrever_inp`
+(`app/rede_utilidades/epanet_inp.py`) cobrem JUNCTIONS, RESERVOIRS, TANKS, PIPES, PUMPS, VALVES, COORDINATES,
+VERTICES, PATTERNS, CURVES e OPTIONS; seção fora do escopo vira aviso, nunca erro. `POST /api/rede/{id}/epanet`
+enfileira o job `rede.epanet_importar`, que grava feições sobre o pacote de ativos `agua-epanet`;
+`GET /api/rede/{id}/epanet` reconstrói o arquivo das tabelas, nunca devolve o que entrou. Migração
+`20260907T1629_rede_epanet_importacao.sql`: fila da importação, `plat.rede_epanet_curva`/`rede_epanet_padrao`
+(as curvas e os padrões que um ativo referencia por ID, e sem as quais o arquivo exportado é recusado pelo
+WNTR) e a queda do `NOT NULL` das duas colunas `geom` da rede.
+
+Medido sobre a rede de água real desta casa (`tests/medidas/L4-05-d-epanet-inp.json`): 11.119 junções,
+7 reservatórios e 14.756 trechos lidos do arquivo, 11.126 feições de ponto e 14.756 de linha gravadas,
+941.294,02 m de comprimento declarado, importação em 2,0 s. Topologia habilitada: 11.126 nós e 14.756 arestas.
+Traçado conectado a partir de um reservatório alcança 11.126 nós, exatamente o tamanho da componente conexa que
+o `networkx` calcula no próprio `.inp`. Exportar e reimportar numa rede nova dá o mesmo grafo, e o
+`wntr.sim.EpanetSimulator` 1.5.0 roda o arquivo exportado sem erro.
+
+Nó sem linha em `[COORDINATES]` entra sem geometria e com aviso, jamais como ponto em (0,0) — a refutação
+exigida pelo item é teste (`test_adversario_remove_uma_coordenada`), e a soma de comprimento dos trechos não
+muda quando a coordenada some, porque ela vem do campo Length e não da geometria. Fica declarado como parcial:
+bomba e válvula são LINK no EPANET e ganham aqui o ponto médio dos dois nós (aproximação, não medição), e a
+paridade com o "water utility network foundation" da Esri não foi medida — o modelo é fechado e licenciado.
+ADR `docs/adr/20260907T1629-epanet-inp.md`.
+
+## turno 4, setembro de 2026 (item L4-02-a-conectado-e-subrede: traçado conectado e subrede — PARCIAL)
 
 Oito tipos de fonte de evento no vocabulário fechado: receptor HTTP, WebSocket servidor, GPS de frota e sensor
 recebem; MQTT, WebSocket cliente, sondagem de URL e AIS vão buscar. Processo próprio `plat-fluxo` na porta
@@ -445,6 +471,23 @@ da 1 por construcao (ele so separa com combinador nao linear, e por isso e medid
 combinador que ignora peso por definicao torna o sorteio inocuo; empate depende da ordem de entrada; e
 linha inteira em zero quer dizer fora das 20 posicoes contadas, nunca ultimo lugar. ADR em
 `docs/adr/20260908T1029-smaa-aceitabilidade-por-posicao.md`.
+
+## turno 3, setembro de 2026 (item L4-05-e-gas-e-esgoto: pacotes de gás e de esgoto, escoamento por cota e importação TEKSI)
+
+Dois pacotes de ativos novos, entregues como dado: `gas-br` (1 domínio, 4 tiers de PRESSÃO, 7 grupos, 24 tipos,
+51 atributos, 29 regras, 3 configurações de terminal) e `esgoto-teksi` (2 domínios, tier por BACIA, 9 grupos,
+21 tipos, 104 atributos com a coluna de origem do datamodel aberto TEKSI, 29 regras). Três rotas:
+`GET /api/rede/{id}/esgoto/escoamento` confere se a ponta declarada como jusante é a mais baixa em cada trecho
+que escoa por gravidade — e NUNCA inverte nada, cada divergência sai como problema nomeado com as duas cotas;
+`GET /api/rede/{id}/gas/pressao` confere que todo regulador reduz pressão e que não há emenda entre tiers
+diferentes sem controlador de pressão ao lado; `POST /api/rede/{id}/teksi` importa um GeoPackage no esquema
+TEKSI (lido com o `sqlite3` da biblioteca padrão, sem GDAL) usando como de-para as origens declaradas no
+próprio pacote. Rede sintética de 200 elementos com cotas em `tests/dados/gerar_esgoto.py`: os 99 trechos
+concordam em 100 %, e inverter a cota de um deles derruba para 98 com o problema `contrafluxo`, sem que a
+geometria mude. ADR 20260908T1054; paridade em `docs/rede/PARIDADE_GAS.md` (com o que NÃO foi conferido dito
+em voz alta). De quebra, as 11 rotas de escrita de `/api/rede` ganharam a declaração de evento que faltava em
+`tests/api/eventos_esperados.py`, e `docs/openapi.json` voltou a bater com a aplicação.
+
 ## turno 3, setembro de 2026 (item L3-19-multiescala: grades aninhadas do motor multicritério)
 
 Construído do zero neste turno (RESGATE da sessão executora derrubada por cota só tinha a migração,

@@ -2,19 +2,21 @@
 
 É a cláusula central do portão: `POST /api/rede/{id}/topologia/habilitar` constrói a topologia da rede da
 cooperativa de teste — os 44.268 trechos de MT + 29.244 de BT + 26.581 ramais + 5.481 transformadores +
-60.549 postes do arquivo BDGD (schema `certaja`, ativo da casa, somente leitura) — em tempo medido, e a
+60.549 postes do arquivo BDGD (ativo de rede de referência da casa, somente leitura) — em tempo medido, e a
 contagem de nós/arestas/órfãos/sem-nó gravada em `plat.rede_topo_resumo` é conferida CONTRA O ARQUIVO
 (SSDMT × CTMT × UNTRMT), por um contador INDEPENDENTE (`tests/dados/carga_bdgd.py`: Python puro sobre o wkt
 cru, nunca reconsultando as tabelas que o construtor gravou).
 
-⛔ Exige o GRANT de leitura do ativo para o papel da trilha (registrado no handoff do item):
-  GRANT USAGE ON SCHEMA certaja TO <papel>; GRANT SELECT ON certaja.ssdmt, ssdbt, ramlig, trafo, ponnot,
-  ctmt, eqtrmt TO <papel>;
+⛔ O nome do schema do ativo vem de `PLAT_REDE_REFERENCIA_ESQUEMA` (ver `tests/dados/carga_bdgd.py`);
+sem a variável a medição é pulada. Exige o GRANT de leitura do ativo para o papel da trilha (registrado no
+handoff do item):
+  GRANT USAGE ON SCHEMA <schema_de_referencia> TO <papel>;
+  GRANT SELECT ON <schema_de_referencia>.ssdmt, ssdbt, ramlig, trafo, ponnot, ctmt, eqtrmt TO <papel>;
 
 Tudo que este teste mede vai para `tests/medidas/L4-01-b-topologia-derivada.json` (reescreve o arquivo a
 cada rodada — ele é o registro vivo da medição, não um cache).
 
-⛔ FRONTEIRA DECLARADA (achada ao medir, não um defeito de código): `certaja.ramlig` tem os 26.581
+⛔ FRONTEIRA DECLARADA (achada ao medir, não um defeito de código): o `ramlig` do ativo tem os 26.581
 registros do arquivo, mas 0 de 26.581 têm a coluna `wkt` preenchida (ver docstring de
 `tests/dados/carga_bdgd.py`). O ramal de ligação não tem geometria armazenada nesta extração BDGD —
 carregá-lo como aresta exigiria fabricar uma linha que o arquivo não tem. Este teste mede a topologia
@@ -277,11 +279,13 @@ def test_medida_topologia_escala_real(cred, env):
         "gerado_em": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "git_sha": sha,
         "maquina": "PostgreSQL 16 em iagro_sat; base própria da trilha "
-                   f"({os.environ.get('PLAT_SCHEMA', '?')}); fonte = schema certaja (BDGD, ativo da casa, "
+                   f"({os.environ.get('PLAT_SCHEMA', '?')}); fonte = schema do ativo de rede de "
+                   "referência (BDGD, ativo da casa, "
                    "somente leitura); outras sessões da casa na mesma máquina",
         "medidas": medida,
         "comando": "venv/bin/pytest tests/api/test_rede_topologia_medida.py -m lento -q "
-                   "(exige GRANT de leitura em certaja.* para o papel da trilha — ver docstring)",
+                   "(exige GRANT de leitura em <schema_de_referencia>.* para o papel da trilha — "
+                   "ver docstring)",
     }
     MEDIDAS.write_text(json.dumps(registro, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     assert medida["ok"], medida["clausulas"]
