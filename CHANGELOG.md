@@ -4125,6 +4125,22 @@ todo o percurso. Capturas em `tests/e2e/capturas/L6-01-c-tela-acervo_{ficha,lege
 Correção de borda na tela do mapa (item L2-01-a), achada ao medir o responsivo: painel flutuante ganhou
 `max-width: calc(100% - var(--e4) * 2)` — o seletor de camada base media 378 px e terminava em 394 px num visor
 de 390 px, empurrando a página 2 px para fora da tela.
+## turno 10, setembro de 2026 (item L0-08-a-oidc: causa-raiz do 403 nas rotas de papel em trilha/homolog)
+
+`CursorSchemaAmbiente` (item L0-08) sobrecarregava `execute` e `callproc`, mas não `executemany` — e o
+psycopg2 não roteia `executemany` pelo `execute` (laço próprio em C). A rota `POST /api/papeis` (e
+`PUT`, na edição) insere os privilégios com `executemany("INSERT INTO plat.papel_privilegio ...")`; em
+trilha/homologação o literal sobrevivia à reescrita, o INSERT batia no schema de produção e voltava
+42501 "permission denied for schema plat", convertido pela camada de erro em 403 "operação fora do
+inquilino da sessão" — falha com diagnóstico trocado, a classe que o G4-23 condenou. Sobrecarga de
+`executemany` acrescentada (`app/schema_ambiente.py`) e regressão unitária nova
+(`tests/unit/test_schema_ambiente.py`, 5 testes: executemany/execute/callproc reescritos, GUC
+`current_setting`/`set_config` preservado, schema padrão passa igual). Prova de API no ambiente da
+trilha do item: 14 casos cruzados passam (`tests/api/test_cruzado.py -k "papeis or sso or oidc"`).
+Ainda em aberto no escopo da suíte cruzada (itens de OUTROS ramos, não deste): 41 rotas publicadas no
+OpenAPI sem caso em `tests/api/cruzado_casos.py` — convites, SMTP da organização, redefinição de
+senha, uploads multipart, importações, geocodificador (`/api/geocodificar`, `/api/reverso`,
+`/api/sugerir`) e os `GET` de `/ogc/records`.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 - **L7-06-d-paineis**: cinco painéis Grafana provisionados por arquivo (`deploy/grafana/paineis/*.json` + `deploy/grafana/provisioning/`), homologação própria (`deploy/paineis_homologacao.sh`) com carga curta de verdade e captura de cada painel em `tests/e2e/capturas/`. Métricas novas para o que os painéis precisavam e não existia: usuários ativos em 24 h, duração e tamanho do último backup/ensaio, uso de armazenamento e tamanho do schema de dado por inquilino.
