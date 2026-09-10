@@ -76,3 +76,27 @@ def uuids_inexistentes(auth, escopos: list[str]) -> list[str]:
         if m and not item_legivel(auth, m.group(3)):
             ruins.append(e)
     return ruins
+
+
+# ---------------------------------------------------------------------------------------------
+# (entrega 10/09) União das definições que outros ramos acrescentaram a este mesmo arquivo e que a
+# fusão descartou ao ficar com um lado só. Ordem preservada do ramo de origem.
+
+
+# de wt/t4port
+PERFIS_DE_CHAVE = {
+    "leitura": (
+        ("catalogo:ler", "camada:ler", "tiles:ler"),
+        "ler catálogo, feições e tiles; nenhuma escrita",
+    ),
+    "edicao": (
+        ("catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar"),
+        "o de leitura mais editar feições e executar jobs",
+    ),
+    "tiles": (("tiles:ler",), "só tiles vetoriais e raster (chave de aplicação de mapa)"),
+    "admin": (("admin:inquilino",), "tudo o que o dono pode fazer pela API, exceto gerir token, senha, 2FA e sessão"),
+}
+
+
+# de wt/upload
+ESCOPO_EXIGE_PRIVILEGIO = {"conteudo:criar": "conteudo.criar"}
