@@ -205,6 +205,10 @@ CONEXAO_PG_ESTATEMENT_TIMEOUT_MS = 8000       # listar tabelas/colunas nunca tra
 CONEXAO_PG_TABELAS_MAX = 500                  # teto de tabelas devolvidas por GET .../tabelas
 CONEXAO_PG_COLUNAS_MAX = 300                  # teto de colunas por tabela publicada
 CONEXAO_PG_PUBLICAR_LOTE_MAX = 50             # teto de tabelas por chamada de publicar-em-massa
+# --- agendamento de camada copiada (L6-02-k-agendamento; app/conexao/tarefas_agendamento.py): não é outro
+# relógio, reusa plat.agenda/app/jobs/agenda.py (intervalo mínimo 15 min já em INTERVALO_MINIMO_S de lá).
+CONEXAO_COPIA_MAX_BYTES = 8 * 1024 * 1024        # bem maior que o teste de saúde, mas pequeno de propósito
+                                                   # (disco a 98% nos dois servidores, D21 do laço)
 
 # --- ingestão vetorial (L0-04; ADR 0005, reduzido a 4 formatos: shapefile.zip, gpkg, geojson, csv)
 INGESTAO_AMOSTRA_VALIDADE = 1000          # feições lidas na amostra de ST_IsValid (ogr2ogr -limit, MEDIDO no ADR)

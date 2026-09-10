@@ -8,6 +8,9 @@ from app.catalogo import (
     tarefas as catalogo_tarefas,  # noqa: F401 — L0-03: 6 tipos catalogo.* e os periódicos do catálogo
 )
 from app.conexao import tarefas as conexao_tarefas  # noqa: F401 — L6-02-l: conexoes.saude_verificar + periódico
+from app.conexao import (  # noqa: F401 — L6-02-k: conexao.atualizar_copia, agenda.avisos_enviar + periódicos
+    tarefas_agendamento as conexao_tarefas_agendamento,
+)
 from app.correio import tarefas as correio_tarefas  # noqa: F401 — L0-07-d: correio.enviar (somente_sistema)
 from app.imagens import ingestao as imagens_ingestao  # noqa: F401 — L1-02: imagens.ingestar (upload -> COG -> pgSTAC)
 from app.imagens import (  # noqa: F401 — L1-01-i: periódico semanal do raster
