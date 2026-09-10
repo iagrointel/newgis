@@ -211,8 +211,16 @@ def resumo(sessao: Sessao) -> dict:
         return serializar(cur.fetchone())
 
 
-def tipos() -> list[dict]:
-    return [descrever(t) for _, t in sorted(REGISTRO.items())]
+def tipos(sessao: Sessao | None = None) -> list[dict]:
+    """Com `sessao`, devolve só os tipos que esse perfil pode criar (mesma régua de `criar`): o QA de 10/09 viu o
+    editor listar e executar os diagnósticos `prova.*`. Sem sessão (uso interno), devolve todos."""
+    itens = [descrever(t) for _, t in sorted(REGISTRO.items())]
+    if sessao is None:
+        return itens
+    if getattr(sessao, "superadmin", False):
+        return itens
+    meu = ordem_perfil(sessao.perfil)
+    return [d for d in itens if ordem_perfil(d["perfil_minimo"]) <= meu]
 
 
 def cancelar(sessao: Sessao, job_id) -> dict:

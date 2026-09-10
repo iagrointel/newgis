@@ -195,7 +195,7 @@ def resumo_jobs(request: Request, auth: Auth = AUTH_VER):
 
 @router.get("/api/jobs/tipos", response_model=list[TipoJob], responses=ERROS, openapi_extra=XV, tags=["jobs"])
 def tipos_de_job(request: Request, auth: Auth = AUTH_VER):
-    return _sem_cache(servico.tipos())
+    return _sem_cache(servico.tipos(sessao_de(auth)))
 
 
 @router.get("/api/jobs/{job_id}", response_model=Job, responses=ERROS, openapi_extra=XV, tags=["jobs"])
