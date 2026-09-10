@@ -24,7 +24,16 @@ def normalizar_tipo_ogr(tipo: str) -> tuple[str, bool]:
     if t.startswith("3D "):
         t = t[3:].strip()
         tem_z = True
+    # OGR_GEOMETRY em OGRSQL devolve o nome em CAIXA ALTA ("POLYGON", "MULTIPOLYGON"); sem esta ponte a
+    # varredura de tipo real caía em "geometria genérica" e a camada nascia como GEOMETRY estilizada como ponto
+    # (medido 10/09: 645 municípios desenhados como círculos nos vértices).
+    t = _CANONICO.get(t.upper(), t)
     return t, tem_z
+
+
+_CANONICO = {"POINT": "Point", "MULTIPOINT": "MultiPoint", "LINESTRING": "LineString",
+             "MULTILINESTRING": "MultiLineString", "POLYGON": "Polygon", "MULTIPOLYGON": "MultiPolygon",
+             "GEOMETRYCOLLECTION": "GeometryCollection", "GEOMETRY": "Geometry"}
 
 
 def resolver(tipos_contagem: dict[str, int]) -> dict:
