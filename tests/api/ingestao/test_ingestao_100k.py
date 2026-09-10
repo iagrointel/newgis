@@ -142,8 +142,10 @@ def test_job_cancelado_no_meio_nao_deixa_tabela_orfa(ingestor_a, conexao_plat_ap
     ids = ids_por_slug(conexao_plat_app)
     _contexto_admin(conexao_plat_app, ids)
     with conexao_plat_app.cursor() as cur:
-        cur.execute("SELECT to_regclass(%s) AS reg", (f"d_demo.{tabela_de(item_id)}",))
-        assert cur.fetchone()["reg"] is None, "tabela órfã ficou em d_demo depois do cancelamento"
+        cur.execute("SELECT plat.camada_schema_prefixo() AS p")  # o schema é o da INSTALAÇÃO, não 'd_demo'
+        esq = cur.fetchone()["p"] + "demo"
+        cur.execute("SELECT to_regclass(%s) AS reg", (f"{esq}.{tabela_de(item_id)}",))
+        assert cur.fetchone()["reg"] is None, f"tabela órfã ficou em {esq} depois do cancelamento"
         cur.execute("SELECT count(*) AS n FROM plat.item WHERE id = %s::uuid AND tipo = 'camada_vetorial'",
                     (item_id,))
         assert cur.fetchone()["n"] == 0, "item de camada órfão ficou no catálogo depois do cancelamento"

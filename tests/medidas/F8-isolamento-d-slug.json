@@ -1,0 +1,17 @@
+{
+ "item": "F8-isolamento-d-slug",
+ "medidas": {
+  "schemas_de_dado_de_duas_instalacoes": {
+   "valor": "d_plat_tf8isol_demo x d_plat_tf8isolb_demo",
+   "unidade": "nome",
+   "comando": "pytest tests/api/ingestao/test_isolamento_schema_dado.py"
+  },
+  "schema_da_camada_carregada": {
+   "valor": "d_plat_tf8isol_demo",
+   "unidade": "nome",
+   "comando": "pytest tests/api/ingestao/test_isolamento_schema_dado.py"
+  }
+ },
+ "gerado_em": "2026-09-07T03:00:19Z",
+ "git_sha": "fac1db70f584"
+}

@@ -1355,6 +1355,40 @@ Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a p
 isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
 coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
+## turno 3, setembro de 2026 (F8: o schema de dado de camada passa a carregar a instalação)
+
+- `plat.camada_schema_prefixo()` (migração `20260907T0245_isolamento_schema_de_dado.sql`): o dado de
+  camada mora em `d_<slug>` em produção e em `d_plat_t<trilha>_<slug>` / `d_plat_homolog_<slug>` nas
+  instalações derivadas. Produção não muda de lugar; nada é renomeado nem apagado. ADR 0018.
+- `camada_schema_garantir`, `camada_preparar`, `tenant_criar` e `app/ingestao/carregar.py` usam o prefixo.
+- `laco/trilha_ambiente.sh`: worktree com o conserto não recebe mais privilégio nos schemas de dado de
+  produção (medido: `has_schema_privilege('plat_tf8isol_app','d_demo','USAGE')` = falso, contra
+  verdadeiro para as trilhas antigas).
+- Testes: `tests/api/ingestao/test_isolamento_schema_dado.py` (4 exigências do portão, 3 delas reprovam
+  com o código anterior); dois testes que fixavam `'d_demo'` no texto passaram a perguntar o prefixo —
+  mediam o schema de PRODUÇÃO de dentro da trilha (87 tabelas alheias contadas em 07/09/2026).
+
+## turno 4, setembro de 2026 (junção F8 x corrida-camada-schema: isolamento COM trinco)
+
+Os dois consertos acima redefinem as mesmas três funções `SECURITY DEFINER`. Como o carimbo do
+isolamento (`20260907T0245`) é posterior ao do trinco (`20260907T0240`), aplicar os dois na ordem
+deixava de pé as versões sem `pg_advisory_xact_lock` e
+`tests/api/test_camada_schema_corrida.py::test_toda_funcao_com_ddl_tem_trinco` reprovava — que é o
+aviso escrito no cabeçalho da própria migração do trinco. A migração
+`20260907T2030_isolamento_schema_de_dado_com_trinco.sql` redefine `camada_schema_garantir`,
+`camada_preparar` e `tenant_criar` uma única vez com as duas propriedades juntas, declarando
+`-- depende:` das duas anteriores. Nenhuma migração já aplicada foi editada.
+
+Duas escolhas registradas: (1) a chave do trinco de schema passa a ser o NOME DO SCHEMA
+(`plat.camada_schema_prefixo() || slug`) e não mais o slug — com o isolamento, duas instalações com o
+mesmo apelido de inquilino tocam schemas diferentes e não têm por que esperar uma pela outra;
+`camada_preparar` mantém a chave `schema.tabela`, que já carregava o prefixo. (2) o alfabeto de slug e
+de nome de schema é a união dos dois ramos (`-` do ramo do trinco, `_` e 80 caracteres do ramo do
+isolamento), para que nenhuma junção posterior perca nem um nem outro. Medido na base da trilha
+`f8isol`: `tests/api/test_camada_schema_corrida.py` e
+`tests/api/ingestao/test_isolamento_schema_dado.py` = 10 aprovados em 23,23 s, com a segunda
+instalação `f8isolb` no mesmo banco.
+
 ## turno 4, setembro de 2026 (corrida-camada-schema: DDL concorrente em função SECURITY DEFINER)
 
 Defeito de produto achado em produção-de-teste: duas sessões do MESMO inquilino publicando camada ao mesmo
