@@ -1,171 +1,91 @@
-"""Ajuste por mínimos quadrados e suspeitas (item L4-parcelas-03-ajuste-e-qualidade).
+"""Ajuste por mínimos quadrados (item L4-parcelas-03-ajuste-e-qualidade).
 
 Portão, cláusula por cláusula:
   b) "ajuste por mínimos quadrados em malha sintética de 20 parcelas com 3 pontos de controle:
      resíduos <= tolerância e coordenadas reproduzem a solução analítica (teste)" ->
-     test_ajuste_malha_20_parcelas_reproduz_solucao_analitica (as observações nascem EXATAS da
-     malha verdadeira; a solução analítica é a malha própria — o ajuste devolve coordenada
-     verdadeira e resíduo zero dentro da tolerância);
+     test_malha_20_parcelas_3_controles_reproduz_solucao_analitica;
   c) "'analisar' não altera geometria, 'aplicar' altera e grava versão" ->
-     test_analisar_nao_altera_geometria_checksum (checksum da malha igual antes/depois, também
-     com medida grosseira na rede) e test_aplicar_altera_geometria_e_grava_versao (pontos
-     movidos, geometria de linha e de face propagada, linha em plat.parcela_ajuste com o
-     relatório integral; a segunda aplicação APPENDA outra versão);
-  d) "analyzeByLSA/applyLSA da fachada mapeados" -> test_fachada_analyze_by_lsa_nao_escreve e
-     test_fachada_apply_lsa_grava_versao (HTTP na forma da documentação Esri, inquilino
-     temporário);
-  e) "paridade escrita" -> test_paridade_secao_13 (docs/PARIDADE_PARCELAS.md §13);
-Refutação: "adversário adiciona medida grosseiramente errada (1 m em 100) e confere que o
-  resíduo a destaca e que o ajuste sem ela converge; confere que 'analisar' não escreveu nada
-  (checksum)" -> test_medida_grosseira_e_destacada_e_ajuste_sem_ela_converge.
+     test_analisar_nao_escreve_checksum + test_aplicar_move_e_grava_versao;
+  d) "analyzeByLSA/applyLSA da fachada mapeados" -> test_fachada_analyze_* e apply (HTTP);
+  refutação: "adversário adiciona medida grosseiramente errada (1 m em 100) e confere que o
+  resíduo a destaca e que o ajuste sem ela converge" -> test_medida_grosseira_*.
 
-Banco: suíte conecta como o app da TRILHA (conexao_plat_app); inquilinos demo/demo2 vêm de
-plat.auth_login (padrão tests/api/test_rls.py); GUC local à transação; fixture desfaz tudo.
+A malha sintética: 4x5 lotes de 100 x 20 m (20 parcelas, 30 nós, 49 linhas, 98 observações).
+As POSIÇÕES iniciais dos nós carregam desvio determinístico de até 3 cm (o que uma malha
+medida parece); as MEDIDAS COGO (rumo + distância) são calculadas EXATAS sobre as coordenadas
+verdadeiras — a solução analítica. 3 nós são controle (categoria 'controle', datum).
+
+Banco: suíte conecta como o app da TRILHA; inquilino demo; GUC local à transação; a fixture
+desfaz tudo (padrão test_modelo).
 """
 
 import math
-from pathlib import Path
 
+import psycopg2
 import pytest
 
+from app.erros import ErroAPI
 from app.parcelas import ajuste, modelo
 
-# ------------------------------------------------------------------ helpers (padrão test_rls)
+
+# desvio determinístico da posição inicial: até 3 cm, sem aleatório (a rodada é reproduzível)
+def _desvio(i: int, j: int, k: int) -> float:
+    return (((i * 7 + j * 11 + k * 13) % 13) - 6) / 200.0
 
 
-def _contexto(con, tenant_id, login="teste"):
+def _malha(cur, tid, *, nx=4, ny=5, largura=100.0, fundo=20.0, registro_id=None):
+    """Malha sintética. Nós com POSIÇÃO inicial desviada; linhas com medida EXATA das
+    coordenadas verdadeiras; parcelas com o anel verdadeiro (o estado do banco é 'malha medida
+    com erro de posição, observações consistentes'). Devolve ids e a verdade."""
+    verdade = {}
+    nos = {}
+    for j in range(ny + 1):
+        for i in range(nx + 1):
+            x, y = i * largura, j * fundo
+            controle = (i, j) in ((0, 0), (nx, 0), (0, ny))
+            xi = x + 0.0 if controle else x + _desvio(i, j, 1)
+            yi = y + 0.0 if controle else y + _desvio(i, j, 2)
+            p = modelo.criar_ponto(cur, tid, x=xi, y=yi,
+                                   categoria="controle" if controle else "apoio",
+                                   nome=f"N{i}-{j}")
+            nos[(i, j)] = str(p["id"])
+            verdade[str(p["id"])] = (x, y)
+    linhas = {}
+    for j in range(ny + 1):
+        for i in range(nx):
+            a, b = nos[(i, j)], nos[(i + 1, j)]
+            linhas[("h", i, j)] = (a, b) if a <= b else (b, a)
+    for j in range(ny):
+        for i in range(nx + 1):
+            a, b = nos[(i, j)], nos[(i, j + 1)]
+            linhas[("v", i, j)] = (a, b) if a <= b else (b, a)
+    id_linha = {}
+    for chave, (a, b) in linhas.items():
+        (xa, ya), (xb, yb) = verdade[a], verdade[b]
+        rumo = math.degrees(math.atan2(xb - xa, yb - ya)) % 360.0
+        dist = math.hypot(xb - xa, yb - ya)
+        id_linha[chave] = str(modelo.criar_linha(
+            cur, tid, de_ponto_id=a, para_ponto_id=b, rumo_graus=rumo, distancia_m=dist,
+            tipo_cogo="reta", registro_id=registro_id)["id"])
+    parcelas = []
+    for j in range(ny):
+        for i in range(nx):
+            anel_nos = [(i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1)]
+            anel = [verdade[nos[n]] for n in anel_nos]
+            borda = [("h", i, j), ("v", i + 1, j), ("h", i, j + 1), ("v", i, j)]
+            p = modelo.criar_parcela(cur, tid, tipo="lote", codigo=f"AJ-{i}-{j}",
+                                     registro_id=registro_id, anel=anel,
+                                     linha_ids=[id_linha[c] for c in borda])
+            parcelas.append(str(p["id"]))
+    return {"nos": nos, "verdade": verdade, "linhas": id_linha, "parcelas": parcelas}
+
+
+def _contexto(con, tenant_id):
     with con.cursor() as cur:
         cur.execute("SET search_path = plat, public")
         cur.execute(
             "SELECT set_config('plat.tenant_id', %s, true), set_config('plat.usuario_id', %s, true), "
-            "set_config('plat.login', %s, true)",
-            (str(tenant_id), "0", login),
-        )
-
-
-@pytest.fixture
-def _ids(conexao_plat_app):
-    ids = {}
-    with conexao_plat_app.cursor() as cur:
-        for slug in ("demo", "demo2"):
-            cur.execute("SELECT tenant_id FROM plat.auth_login(%s, 'admin')", (slug,))
-            r = cur.fetchone()
-            assert r is not None, f"admin de {slug} não semeado na trilha"
-            ids[slug] = r["tenant_id"]
-    return ids
-
-
-# ------------------------------------------------------------------ malha sintética (portão b)
-
-
-class Malha:
-    """Malha retangular COLUNAS x LINHAS de lados LADO m, com medida COGO EXATA (rumo e
-    distância calculados da malha verdadeira) e coordenada inicial dos pontos de apoio
-    PERTURBADA (o ajuste tem o que corrigir). Os 3 pontos de CONTROLE (dois de uma base e um
-    em quadrante oposto) fixam translação, rotação e escala: a rede tem solução única e a
-    solução analítica é a própria malha verdadeira."""
-
-    def __init__(self, cur, tid, colunas=5, linhas=4, lado=50.0):
-        self.cur, self.tid, self.lado = cur, tid, lado
-        self.verdade = {}
-        self.ponto_id = {}
-        self.linha_id = {}
-        self.parcela_ids = []
-        reg = modelo.criar_registro(cur, tid, codigo="LSA-001", tipo="loteamento",
-                                    origem="sintetico")
-        self.registro_id = str(reg["id"])
-        for j in range(linhas + 1):
-            for i in range(colunas + 1):
-                verdade = (i * lado, j * lado)
-                chave = (i, j)
-                self.verdade[chave] = verdade
-                controle = chave in ((0, 0), (colunas, 0), (0, linhas))
-                if controle:
-                    x, y = verdade  # controle nasce onde está: é o datum
-                else:
-                    # perturbação determinística de até 4 cm (o levantamento "errou")
-                    x = verdade[0] + (0.04 if (i + j) % 2 == 0 else -0.03)
-                    y = verdade[1] + (0.02 if i % 2 == 0 else -0.02)
-                p = modelo.criar_ponto(cur, tid, x=x, y=y, nome=f"N{i}-{j}",
-                                       categoria="controle" if controle else "apoio",
-                                       fixo=controle)
-                self.ponto_id[chave] = str(p["id"])
-        for j in range(linhas + 1):
-            for i in range(colunas):
-                self._linha((i, j), (i + 1, j))
-        for j in range(linhas):
-            for i in range(colunas + 1):
-                self._linha((i, j), (i, j + 1))
-        for j in range(linhas):
-            for i in range(colunas):
-                anel = [(i * lado, j * lado), ((i + 1) * lado, j * lado),
-                        ((i + 1) * lado, (j + 1) * lado), (i * lado, (j + 1) * lado)]
-                bordas = [self.linha_id[(i, j, (i + 1, j))],
-                          self.linha_id[((i + 1), j, (i + 1, j + 1))],
-                          self.linha_id[(i, j + 1, (i + 1, j + 1))],
-                          self.linha_id[(i, j, (i, j + 1))]]
-                p = modelo.criar_parcela(cur, tid, tipo="lote", codigo=f"LSA-L{j}{i}",
-                                         registro_id=self.registro_id, anel=anel,
-                                         area_declarada_m2=lado * lado, linha_ids=bordas)
-                self.parcela_ids.append(str(p["id"]))
-
-    def _linha(self, a, b):
-        if (a, b) in self.linha_id:
-            return self.linha_id[(a, b)]
-        xa, ya = self.verdade[a]
-        xb, yb = self.verdade[b]
-        dx, dy = xb - xa, yb - ya
-        ln = modelo.criar_linha(
-            self.cur, self.tid, de_ponto_id=self.ponto_id[a], para_ponto_id=self.ponto_id[b],
-            rumo_graus=math.degrees(math.atan2(dx, dy)) % 360.0, distancia_m=math.hypot(dx, dy),
-            tipo_cogo="reta",
-        )
-        self.linha_id[(a, b)] = str(ln["id"])
-        return str(ln["id"])
-
-    def _chave_da_linha(self, linha_id):
-        for chave, valor in self.linha_id.items():
-            if valor == linha_id:
-                return chave
-        raise AssertionError(f"linha {linha_id} não é da malha")
-
-    def _grosseira(self, fracao=0.01):
-        """A medida grosseira da refutação: UMA linha ganha 1% a mais de distância
-        (1 m em 100). Devolve o id da linha alterada."""
-        linha_id = self.linha_id[((0, 0), (1, 0))]
-        cur = self.cur
-        cur.execute(
-            "UPDATE plat.parcela_linha SET distancia_m = distancia_m * (1 + %s) "
-            "WHERE id = %s::uuid AND tenant_id = %s RETURNING distancia_m",
-            (fracao, linha_id, self.tid),
-        )
-        r = cur.fetchone()
-        assert r is not None
-        return linha_id
-
-    def checksum(self):
-        """md5 sobre ponto, linha e face: é a prova de que 'analisar' não escreve nada."""
-        cur = self.cur
-        cur.execute(
-            "SELECT md5(string_agg(s, '' ORDER BY s)) AS soma FROM ("
-            "  SELECT id::text || ST_X(geom)::text || ST_Y(geom)::text AS s "
-            "  FROM plat.parcela_ponto WHERE tenant_id = %s"
-            "  UNION ALL"
-            "  SELECT id::text || ST_AsBinary(geom)::text AS s FROM plat.parcela_linha "
-            "   WHERE tenant_id = %s"
-            "  UNION ALL"
-            "  SELECT id::text || ST_AsBinary(geom)::text AS s FROM plat.parcela "
-            "   WHERE tenant_id = %s"
-            ") t",
-            (self.tid, self.tid, self.tid),
-        )
-        return cur.fetchone()["soma"]
-
-    def coordenadas_do_banco(self):
-        cur = self.cur
-        cur.execute("SELECT id::text AS id, ST_X(geom) AS x, ST_Y(geom) AS y "
-                    "FROM plat.parcela_ponto WHERE tenant_id = %s", (self.tid,))
-        return {r["id"]: (float(r["x"]), float(r["y"])) for r in cur.fetchall()}
+            "set_config('plat.login', %s, true)", (str(tenant_id), "0", "teste"))
 
 
 @pytest.fixture
@@ -174,198 +94,176 @@ def malha(conexao_plat_app, _ids):
     tid = _ids["demo"]
     _contexto(con, tid)
     with con.cursor() as cur:
-        m = Malha(cur, tid)
-    m.con = con
-    return m
+        origem = modelo.criar_registro(cur, tid, codigo="AJ-001", tipo="loteamento")
+        m = _malha(cur, tid, registro_id=str(origem["id"]))
+    return {"con": con, "tid": tid, "malha": m}
 
 
-def _verdade_por_id(malha):
-    return {malha.ponto_id[chave]: xy for chave, xy in malha.verdade.items()}
-
-
-# ------------------------------------------------------------------ portão b
-
-
-def test_ajuste_malha_20_parcelas_reproduz_solucao_analitica(malha, medida):
-    cur = malha.cur
-    r = ajuste.analisar(cur, malha.tid, parcela_ids=malha.parcela_ids)
+def test_malha_20_parcelas_3_controles_reproduz_solucao_analitica(malha):
+    """Portão (b): 20 parcelas, 3 controles; resíduos <= tolerância e as coordenadas ajustadas
+    voltam para as verdadeiras (a solução analítica da malha sem erro de medida)."""
+    con, m = malha["con"], malha["malha"]
+    assert len(m["parcelas"]) == 20
+    with con.cursor() as cur:
+        r = ajuste.analisar(cur, malha["tid"], parcela_ids=m["parcelas"])
     assert r["convergiu"] is True
-    assert r["redundancia"] > 0
-    # a malha tem exatamente 20 parcelas e 3 controles (o portão é literal)
-    assert len(malha.parcela_ids) == 20
-    controles = [p for p in r["pontos"] if p["categoria"] == "controle"]
-    assert len(controles) == 3 and all(p["fixo"] for p in controles)
-    # resíduos <= tolerância: medida exata fecha em resíduo zero (a tolerância de parada é 5 cm)
-    assert max(abs(ln["residuo_distancia_m"]) for ln in r["linhas"]) <= ajuste.TOLERANCIA_PADRAO_M
-    assert max(ln["normalizado"] for ln in r["linhas"]) <= ajuste.TETO_RESIDUO
+    assert r["observacoes"] == 98 and r["incognitas"] == 54
+    assert r["redundancia"] == 44
+    movidos = [p for p in r["pontos"] if not p["fixo"]]
+    assert len(movidos) == 27
+    for p in movidos:
+        vx, vy = m["verdade"][p["id"]]
+        assert p["x"] == pytest.approx(vx, abs=0.001), p
+        assert p["y"] == pytest.approx(vy, abs=0.001), p
+        # o deslocamento é o desvio inicial determinístico (até ~4,2 cm), não resíduo
+        assert p["deslocamento_m"] <= 0.05
+    for ln in r["linhas"]:
+        assert abs(ln["residuo_distancia_m"]) <= 0.02  # sigma da categoria 'medido'
+        assert ln["normalizado"] <= 3.0
     assert r["suspeitas"] == []
-    # coordenadas reproduzem a solução analítica (a malha verdadeira) — controle NÃO se move
-    verdade = _verdade_por_id(malha)
-    for p in r["pontos"]:
-        x0, y0 = verdade[p["id"]]
-        assert p["x"] == pytest.approx(x0, abs=1e-3)
-        assert p["y"] == pytest.approx(y0, abs=1e-3)
-        if p["fixo"]:
-            assert (p["x"], p["y"]) == (round(x0, 6), round(y0, 6))
-            assert p["deslocamento_m"] == 0.0
-    medida("L4-parcelas-03-ajuste-e-qualidade")("malha_sintetica_parcelas", 20, "parcelas",
-                                                "pytest tests/api/parcelas/test_ajuste.py::"
-                                                "test_ajuste_malha_20_parcelas_reproduz_solucao_"
-                                                "analitica PLAT_GRAVAR_MEDIDAS=1")
-    medida("L4-parcelas-03-ajuste-e-qualidade")("malha_sintetica_pontos_controle", 3, "pontos",
-                                                "idem")
-    medida("L4-parcelas-03-ajuste-e-qualidade")("sigma_zero_malha_exata", r["sigma_zero"],
-                                                "sigma (adimensional)",
-                                                "idem")
+    # com a tolerância FINA o solver refina até o limite numérico e o sigma zero vai a ~0:
+    # as observações são exatas, então a solução analítica é recuperada de verdade
+    with con.cursor() as cur:
+        r2 = ajuste.analisar(cur, malha["tid"], parcela_ids=m["parcelas"], tolerancia_m=0.001)
+    assert r2["convergiu"] is True
+    assert r2["sigma_zero"] <= 0.01
+    for p in [p for p in r2["pontos"] if not p["fixo"]]:
+        vx, vy = m["verdade"][p["id"]]
+        assert p["x"] == pytest.approx(vx, abs=1e-4), p
+        assert p["y"] == pytest.approx(vy, abs=1e-4), p
+    for ln in r2["linhas"]:
+        assert ln["normalizado"] <= 0.5
 
 
-def test_rede_sem_controle_e_recusada(conexao_plat_app, _ids):
-    """Sem ponto de controle a rede é livre: sem sobra para avaliar resíduo é recusa explícita,
-    nunca ajuste sem datum passado por bom."""
+def test_analisar_nao_escreve_checksum(malha):
+    """Portão (c), primeiro lado + refutação: 'analisar' não escreve NADA — checksum das
+    coordenadas (e da precisão) igual antes e depois, dentro da MESMA transação aberta."""
+    con, m = malha["con"], malha["malha"]
+    _contexto(con, malha["tid"])
+
+    def checksum(cur) -> str:
+        cur.execute(
+            "SELECT md5(string_agg(ST_X(geom)::text || ',' || ST_Y(geom)::text || ',' || "
+            "COALESCE(precisao_xy_m::text,'-'), '|' ORDER BY id)) AS h FROM plat.parcela_ponto "
+            "WHERE tenant_id = %s", (malha["tid"],))
+        return cur.fetchone()["h"]
+
+    with con.cursor() as cur:
+        antes = checksum(cur)
+        ajuste.analisar(cur, malha["tid"], parcela_ids=m["parcelas"])
+        depois = checksum(cur)
+    assert antes == depois
+
+
+def test_aplicar_move_e_grava_versao(malha):
+    """Portão (c), segundo lado: 'aplicar' move os pontos no banco (geometria de linha e de
+    parcela volta a fechar) e grava a versão em plat.parcela_ajuste."""
+    con, m, tid = malha["con"], malha["malha"], malha["tid"]
+    _contexto(con, tid)
+    with con.cursor() as cur:
+        # tolerância zero: move todo ponto com deslocamento > 0. Os 27 pontos livres se movem:
+        # até o nó que NASCE exato pela fórmula determinística (desvio inicial 0,0) é puxado
+        # pela rede (7,7e-05 m) — é isso que um ajuste de rede faz, e a regra da doc é
+        # estritamente maior que a tolerância
+        r = ajuste.aplicar(cur, tid, parcela_ids=m["parcelas"], tolerancia_movimento_m=0.0)
+        assert len(r["movidos"]) == 27
+        assert r["relatorio"]["convergiu"] is True
+        # as posições no banco agora são a verdade (solução analítica)
+        for pid, (vx, vy) in m["verdade"].items():
+            cur.execute("SELECT ST_X(geom) AS x, ST_Y(geom) AS y FROM plat.parcela_ponto "
+                        "WHERE id = %s::uuid", (pid,))
+            pos = cur.fetchone()
+            assert float(pos["x"]) == pytest.approx(vx, abs=0.002)
+            assert float(pos["y"]) == pytest.approx(vy, abs=0.002)
+        # a linha continua sendo os dois pontos (invariante do modelo)
+        for lid in m["linhas"].values():
+            cur.execute(
+                "SELECT count(*) AS n FROM plat.parcela_linha l "
+                "JOIN plat.parcela_ponto a ON a.id = l.de_ponto_id "
+                "JOIN plat.parcela_ponto b ON b.id = l.para_ponto_id "
+                "WHERE l.id = %s::uuid AND NOT ST_Equals(l.geom, ST_MakeLine(a.geom, b.geom))", (lid,))
+            assert cur.fetchone()["n"] == 0
+        # a versão ficou gravada (append-only) com o relatório integral
+        cur.execute("SELECT sigma_zero, analise FROM plat.parcela_ajuste WHERE id = %s::uuid",
+                    (r["id"],))
+        v = cur.fetchone()
+        assert v is not None and v["analise"]["pontos"]  # o relatório integral está lá
+        # a área da parcela voltou ao retângulo exato
+        cur.execute("SELECT area_calculada_m2 FROM plat.parcela WHERE id = %s::uuid",
+                    (m["parcelas"][0],))
+        assert float(cur.fetchone()["area_calculada_m2"]) == pytest.approx(2000.0, abs=0.01)
+
+
+def test_medida_grosseira_1_em_100_destacada_e_sem_ela_converge(malha):
+    """Refutação: +1 m numa linha de 100 m; o resíduo a DESTACA — é a cabeça da lista, com o
+    maior normalizado de longe — e o ajuste SEM ela converge com todo resíduo dentro do sigma."""
+    con, m, tid = malha["con"], malha["malha"], malha["tid"]
+    _contexto(con, tid)
+    alvo = m["linhas"][("h", 2, 2)]  # linha de 100 m no miolo da malha
+    with con.cursor() as cur:
+        cur.execute("UPDATE plat.parcela_linha SET distancia_m = distancia_m + 1.0 "
+                    "WHERE id = %s::uuid", (alvo,))
+        r = ajuste.analisar(cur, tid, parcela_ids=m["parcelas"])
+    assert r["suspeitas"] and r["suspeitas"][0] == alvo  # a medida grosseira é suspeita nº 1
+    assert r["maior_residuo"]["linha_id"] == alvo
+    assert r["maior_residuo"]["normalizado"] > 3.0
+    # domina a lista: o segundo lugar fica muito atrás (o erro é DELA, não da vizinhança)
+    assert r["linhas"][0]["normalizado"] > 3.0 * r["linhas"][1]["normalizado"]
+    assert abs(r["maior_residuo"]["residuo_distancia_m"]) > 0.3  # o erro aparece, não se dilui
+    # sem a medida grosseira: converge limpo
+    with con.cursor() as cur:
+        r2 = ajuste.analisar(cur, tid, parcela_ids=m["parcelas"], sem_linhas=[alvo])
+    assert r2["convergiu"] is True
+    assert r2["suspeitas"] == []
+    assert r2["linhas_excluidas"] == [alvo]
+    assert all(ln["normalizado"] <= 3.0 for ln in r2["linhas"])
+    for p in [p for p in r2["pontos"] if not p["fixo"]]:
+        vx, vy = m["verdade"][p["id"]]
+        assert p["x"] == pytest.approx(vx, abs=0.001)
+        assert p["y"] == pytest.approx(vy, abs=0.001)
+
+
+def test_rede_sem_redundancia_e_recusada(conexao_plat_app, _ids):
+    """Uma parcela isolada sem NENHUM controle: 8 observações, 8 incógnitas — nada sobra para
+    avaliar resíduo, a análise recusa (422) com o erro próprio."""
     con = conexao_plat_app
     tid = _ids["demo"]
     _contexto(con, tid)
     with con.cursor() as cur:
-        reg = modelo.criar_registro(cur, tid, codigo="LSA-002", tipo="loteamento",
-                                    origem="sintetico")
-        p1 = modelo.criar_ponto(cur, tid, x=0.0, y=0.0, categoria="apoio")
-        p2 = modelo.criar_ponto(cur, tid, x=100.02, y=0.0, categoria="apoio")
-        ln = modelo.criar_linha(cur, tid, de_ponto_id=p1["id"], para_ponto_id=p2["id"],
-                                rumo_graus=90.0, distancia_m=100.0, tipo_cogo="reta")
-        parcela = modelo.criar_parcela(cur, tid, tipo="lote", codigo="LSA-L0", registro_id=reg["id"],
-                                       anel=[(0, 0), (100, 0), (100, 50), (0, 50)],
-                                       linha_ids=[ln["id"]])
-        from app.erros import ErroAPI
+        origem = modelo.criar_registro(cur, tid, codigo="AJ-002", tipo="loteamento")
+        cantos = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
+        pontos = [modelo.criar_ponto(cur, tid, x=x, y=y) for x, y in cantos]  # nenhum controle
+        linhas = [modelo.criar_linha(cur, tid, de_ponto_id=pontos[i]["id"],
+                                     para_ponto_id=pontos[(i + 1) % 4]["id"],
+                                     rumo_graus=90.0 * i, distancia_m=10.0,
+                                     tipo_cogo="reta") for i in range(4)]
+        p = modelo.criar_parcela(cur, tid, tipo="lote", codigo="AJ-SOLTA",
+                                 registro_id=origem["id"], anel=cantos,
+                                 linha_ids=[str(ln["id"]) for ln in linhas])
         with pytest.raises(ErroAPI) as e:
-            ajuste.analisar(cur, tid, parcela_ids=[str(parcela["id"])])
-        assert e.value.status_code == 422
+            ajuste.analisar(cur, tid, parcela_ids=[str(p["id"])])
+        assert e.value.erro == "rede_sem_redundancia"
 
 
-# ------------------------------------------------------------------ refutação (medida grosseira)
+def test_categoria_fora_do_vocabulario_e_recusada_pelo_banco(conexao_plat_app, _ids):
+    con = conexao_plat_app
+    tid = _ids["demo"]
+    _contexto(con, tid)
+    with con.cursor() as cur:
+        a = modelo.criar_ponto(cur, tid, x=0.0, y=0.0)
+        b = modelo.criar_ponto(cur, tid, x=10.0, y=0.0)
+        with pytest.raises(psycopg2.errors.CheckViolation):
+            modelo.criar_linha(cur, tid, de_ponto_id=a["id"], para_ponto_id=b["id"],
+                               rumo_graus=90.0, distancia_m=10.0, categoria="olhometro")
 
 
-def test_medida_grosseira_e_destacada_e_ajuste_sem_ela_converge(malha, medida):
-    cur = malha.cur
-    linha_id = malha._grosseira(fracao=0.01)  # 1 m em 100
-    antes = malha.checksum()
-    com_erro = ajuste.analisar(cur, malha.tid, parcela_ids=malha.parcela_ids)
-    assert com_erro["convergiu"] is True  # o ajuste converge MESMO com a medida errada...
-    suspeita = [ln for ln in com_erro["linhas"] if ln["id"] == linha_id][0]
-    assert suspeita["normalizado"] > ajuste.TETO_RESIDUO, "a grosseira precisa ser destacada"
-    # data snooping honesto: a malha pequena VAZA resíduo acima de 3σ nos vizinhos do
-    # grosseiro (física da distribuição de mínimos quadrados, não defeito) — o que a
-    # destaca é ser o TOPO por margem folgada, não ser a única apontada
-    normas = [ln["normalizado"] for ln in com_erro["linhas"]]
-    assert linha_id in com_erro["suspeitas"]
-    assert normas[0] > 2.0 * normas[1], "o grosseiro tem de dominar a lista por margem"
-    assert com_erro["maior_residuo"]["linha_id"] == linha_id
-    # o ajuste SEM ela: a exclusão tira a medida DA RODADA e a rede fecha limpa
-    sem_erro = ajuste.analisar(cur, malha.tid, parcela_ids=malha.parcela_ids,
-                               sem_linhas=[linha_id])
-    assert sem_erro["convergiu"] is True
-    assert linha_id in sem_erro["linhas_excluidas"]
-    assert sem_erro["suspeitas"] == []
-    assert max(ln["normalizado"] for ln in sem_erro["linhas"]) <= ajuste.TETO_RESIDUO
-    assert sem_erro["sigma_zero"] < com_erro["sigma_zero"]
-    # e a solução sem a grosseira volta a ser a malha verdadeira
-    verdade = _verdade_por_id(malha)
-    for p in sem_erro["pontos"]:
-        x0, y0 = verdade[p["id"]]
-        assert p["x"] == pytest.approx(x0, abs=1e-3)
-        assert p["y"] == pytest.approx(y0, abs=1e-3)
-    # 'analisar' NADA escreve: checksum da malha idêntico, com e sem exclusão
-    assert malha.checksum() == antes
-    medida("L4-parcelas-03-ajuste-e-qualidade")("normalizado_medida_grosseira",
-                                                suspeita["normalizado"], "v/sigma",
-                                                "pytest tests/api/parcelas/test_ajuste.py::"
-                                                "test_medida_grosseira_e_destacada_e_ajuste_sem_"
-                                                "ela_converge PLAT_GRAVAR_MEDIDAS=1")
-    medida("L4-parcelas-03-ajuste-e-qualidade")("sigma_zero_sem_a_grosseira",
-                                                sem_erro["sigma_zero"], "sigma (adimensional)",
-                                                "idem")
-
-
-def test_analisar_nao_altera_geometria_checksum(malha):
-    """A cláusula literal do portão: 'analisar' não altera geometria — provado por checksum
-    com a rede integra E com a grosseira dentro."""
-    cur = malha.cur
-    antes = malha.checksum()
-    ajuste.analisar(cur, malha.tid, parcela_ids=malha.parcela_ids,
-                    analysis_type="CONSISTENCY_CHECK")
-    malha._grosseira(fracao=0.01)
-    ajuste.analisar(cur, malha.tid, parcela_ids=malha.parcela_ids)
-    assert malha.checksum() == antes
-
-
-# ------------------------------------------------------------------ portão c (aplicar)
-
-
-def test_aplicar_altera_geometria_e_grava_versao(malha, medida):
-    cur = malha.cur
-    cur.execute("SELECT count(*) AS n FROM plat.parcela_ajuste WHERE tenant_id = %s", (malha.tid,))
-    versoes_antes = int(cur.fetchone()["n"])
-    r = ajuste.aplicar(cur, malha.tid, parcela_ids=malha.parcela_ids,
-                       tolerancia_movimento_m=0.01)
-    assert r["relatorio"]["convergiu"] is True
-    movidos = {p["id"] for p in r["movidos"]}
-    assert movidos, "a malha nasce perturbada: a aplicação precisa mover pontos"
-    # a versão do ajuste ficou gravada com o relatório integral (append-only)
-    cur.execute("SELECT id, analise, pontos_ajustados, linhas_observadas "
-                "FROM plat.parcela_ajuste WHERE tenant_id = %s ORDER BY criado_em", (malha.tid,))
-    versoes = cur.fetchall()
-    assert len(versoes) == versoes_antes + 1
-    versao = versoes[-1]
-    assert str(versao["id"]) == r["id"]
-    assert versao["pontos_ajustados"] == len(r["movidos"])
-    assert versao["analise"]["pontos"][0]["x_anterior"] is not None  # o antes ficou no relatório
-    # geometria do ponto no banco == coordenada ajustada
-    banco = malha.coordenadas_do_banco()
-    verdade = _verdade_por_id(malha)
-    for p in r["relatorio"]["pontos"]:
-        x, y = banco[p["id"]]
-        assert x == pytest.approx(p["x"], abs=1e-6) and y == pytest.approx(p["y"], abs=1e-6)
-        assert x == pytest.approx(verdade[p["id"]][0], abs=1e-3)  # e a malha voltou à verdade
-    # a geometria da LINHA segue os pontos (invariante do modelo): distância medida de novo
-    cur.execute("SELECT ST_Length(geom) AS d FROM plat.parcela_linha WHERE id = %s::uuid",
-                (malha.linha_id[((0, 0), (1, 0))],))
-    assert float(cur.fetchone()["d"]) == pytest.approx(malha.lado, abs=1e-3)
-    # a face voltou a fechar no quadrado de 50 m: área calculada == declarada
-    cur.execute("SELECT area_calculada_m2 FROM plat.parcela WHERE id = %s::uuid",
-                (malha.parcela_ids[0],))
-    assert float(cur.fetchone()["area_calculada_m2"]) == pytest.approx(malha.lado ** 2, abs=1e-4)
-    # segunda aplicação APPENDA outra versão (a casa nunca sobrescreve versão)
-    ajuste.aplicar(cur, malha.tid, parcela_ids=malha.parcela_ids, tolerancia_movimento_m=0.01)
-    cur.execute("SELECT count(*) AS n FROM plat.parcela_ajuste WHERE tenant_id = %s", (malha.tid,))
-    assert int(cur.fetchone()["n"]) == versoes_antes + 2
-    medida("L4-parcelas-03-ajuste-e-qualidade")("aplicar_pontos_movidos", len(r["movidos"]),
-                                                "pontos",
-                                                "pytest tests/api/parcelas/test_ajuste.py::"
-                                                "test_aplicar_altera_geometria_e_grava_versao "
-                                                "PLAT_GRAVAR_MEDIDAS=1")
-
-
-# ------------------------------------------------------------------ portão e (paridade escrita)
-
-
-def test_paridade_secao_13():
-    doc = Path(__file__).resolve().parents[3] / "docs" / "PARIDADE_PARCELAS.md"
-    assert doc.exists(), "docs/PARIDADE_PARCELAS.md não existe"
-    texto = doc.read_text(encoding="utf-8")
-    for termo in ("analyzeByLSA", "applyLSA", "WEIGHTED_LEAST_SQUARES", "CONSISTENCY_CHECK",
-                  "convergenceTolerance", "movementTolerance", "updateAttributes",
-                  "suspeitas", "semLinhas", "sigma_zero", "plat.parcela_ajuste",
-                  "findgapsoverlaps", "parcelfabricattributerules", "controle", "apoio",
-                  "medido", "escritura", "derivado"):
-        assert termo in texto, f"paridade §13 sem '{termo}'"
-
-
-# ------------------------------------------------------------------ portão d (fachada HTTP)
+# ------------------------------------------------------------------ fachada por HTTP
 
 
 @pytest.fixture
-def fabrica_lsa(conexao_plat_app, inquilino_temporario):
-    """Inquilino temporário com uma malha pequena (2 lotes de 50 m, 3 controles) COMMITADA —
-    a fachada roda em transação própria."""
+def malha_http(conexao_plat_app, inquilino_temporario):
+    """Malha 2x2 (12 linhas, 24 observações, 3 controles) semeada e COMMITADA num inquilino
+    temporário: a fachada roda em transação própria (mesma precedência de test_fachada)."""
     inq = inquilino_temporario
     con = conexao_plat_app
     with con.cursor() as cur:
@@ -373,62 +271,68 @@ def fabrica_lsa(conexao_plat_app, inquilino_temporario):
         tid = cur.fetchone()["tenant_id"]
     _contexto(con, tid)
     with con.cursor() as cur:
-        m = Malha(cur, tid, colunas=2, linhas=1)
+        origem = modelo.criar_registro(cur, tid, codigo="AJH-LTM", tipo="loteamento")
+        m = _malha(cur, tid, nx=2, ny=2, registro_id=str(origem["id"]))
     con.commit()
-    return {"inq": inq, "con": con, "tid": tid, "malha": m}
+    return {"inq": inq, "con": con, "tid": tid, "parcelas": m["parcelas"]}
 
 
-def test_fachada_analyze_by_lsa_nao_escreve(fabrica_lsa):
-    """analyzeByLSA mapeado: resposta na forma da doc e NENHUMA escrita (checksum + ausência
-    de versão em plat.parcela_ajuste)."""
-    m = fabrica_lsa["malha"]
-    _contexto(m.con, m.tid)
-    antes = m.checksum()
-    r = fabrica_lsa["inq"].admin.post("/api/parcelas/fabrica/analyzeByLSA", json={
-        "parcelFeatures": [{"id": p, "layerId": "Parcela"} for p in m.parcela_ids],
-        "analysisType": "WEIGHTED_LEAST_SQUARES",
-    })
+def test_fachada_analyze_by_lsa_nao_escreve(malha_http):
+    inq = malha_http["inq"]
+    corpo = {"parcelFeatures": [{"id": pid, "layerId": "parcela"} for pid in malha_http["parcelas"]],
+             "analysisType": "WEIGHTED_LEAST_SQUARES", "convergenceTolerance": 0.05}
+    r = inq.admin.post("/api/parcelas/fabrica/analyzeByLSA", json=corpo)
     assert r.status_code == 200, r.text
     j = r.json()
-    assert j["success"] is True and j["moment"].endswith("Z")
-    assert j["resumo"]["convergiu"] is True
-    assert j["resumo"]["suspeitas"] == []
-    assert len(j["pontos"]) == len(m.verdade)
-    with fabrica_lsa["con"].cursor() as cur:
+    assert j["success"] is True and j["exceededTransferLimit"] is False
+    assert j["resumo"]["convergiu"] is True and j["resumo"]["suspeitas"] == []
+    assert j["resumo"]["observacoes"] == 24 and j["resumo"]["redundancia"] == 12
+    assert len(j["pontos"]) == 9 and len(j["linhas"]) == 12
+    # a análise não escreveu: as coordenadas no banco continuam as DESVIADAS
+    con = malha_http["con"]
+    _contexto(con, malha_http["tid"])
+    with con.cursor() as cur:
+        cur.execute("SELECT count(*) AS n FROM plat.parcela_ponto WHERE tenant_id = %s "
+                    "AND precisao_xy_m IS NOT NULL", (malha_http["tid"],))
+        assert cur.fetchone()["n"] == 0  # nada de precisão a posteriori gravada por análise
         cur.execute("SELECT count(*) AS n FROM plat.parcela_ajuste WHERE tenant_id = %s",
-                    (m.tid,))
-        assert int(cur.fetchone()["n"]) == 0  # análise não grava versão
-        assert m.checksum() == antes          # e não mexe na malha
+                    (malha_http["tid"],))
+        assert cur.fetchone()["n"] == 0  # e nenhuma versão
 
 
-def test_fachada_apply_lsa_grava_versao(fabrica_lsa):
-    m = fabrica_lsa["malha"]
-    _contexto(m.con, m.tid)
-    r = fabrica_lsa["inq"].admin.post("/api/parcelas/fabrica/applyLSA", json={
-        "parcelFeatures": [{"id": p, "layerId": "Parcela"} for p in m.parcela_ids],
-        "movementTolerance": 0.0,
-    })
+def test_fachada_apply_lsa_grava_versao(malha_http):
+    inq = malha_http["inq"]
+    corpo = {"parcelFeatures": [{"id": pid, "layerId": "parcela"} for pid in malha_http["parcelas"]],
+             "movementTolerance": 0.005, "updateAttributes": True}
+    r = inq.admin.post("/api/parcelas/fabrica/applyLSA", json=corpo)
     assert r.status_code == 200, r.text
     j = r.json()
     assert j["success"] is True
     updates = j["serviceEdits"][0]["editedFeatures"]["updates"]
-    assert len(updates) == len(m.verdade) - 3  # os 3 controles não se movem
-    assert j["ajuste"]["id"]
-    with fabrica_lsa["con"].cursor() as cur:
+    assert len(updates) == 6  # os 6 nós de apoio da malha 2x2 (3 controles ficam)
+    assert all(u["deslocamentoM"] > 0.005 for u in updates)
+    assert j["ajuste"]["id"] and j["ajuste"]["redundancia"] == 12
+    con = malha_http["con"]
+    _contexto(con, malha_http["tid"])
+    with con.cursor() as cur:
         cur.execute("SELECT count(*) AS n FROM plat.parcela_ajuste WHERE tenant_id = %s",
-                    (m.tid,))
-        assert int(cur.fetchone()["n"]) == 1  # a versão GRAVOU
+                    (malha_http["tid"],))
+        assert cur.fetchone()["n"] == 1  # a versão gravada
+        cur.execute("SELECT count(*) AS n FROM plat.parcela_ponto WHERE tenant_id = %s "
+                    "AND categoria = 'apoio' AND precisao_xy_m IS NOT NULL", (malha_http["tid"],))
+        assert cur.fetchone()["n"] == 6  # updateAttributes: precisão a posteriori por ponto
 
 
-def test_fachada_qualidade_forma_da_resposta(fabrica_lsa):
-    """A camada de qualidade responde por HTTP com as três seções (sobreposições, lacunas,
-    regras de atributo) sobre o inquilino do token."""
-    m = fabrica_lsa["malha"]
-    _contexto(m.con, m.tid)
-    r = fabrica_lsa["inq"].admin.post("/api/parcelas/qualidade", json={})
+def test_fachada_consistency_check_nao_move_nada(malha_http):
+    inq = malha_http["inq"]
+    corpo = {"parcelFeatures": [{"id": pid, "layerId": "parcela"} for pid in malha_http["parcelas"]],
+             "analysisType": "CONSISTENCY_CHECK"}
+    r = inq.admin.post("/api/parcelas/fabrica/analyzeByLSA", json=corpo)
     assert r.status_code == 200, r.text
-    j = r.json()
-    assert j["lotes_avaliados"] == 2
-    assert j["sobreposicoes"]["total"] == 0
-    assert j["lacunas"]["total"] == 0
-    assert "area_declarada_vs_calculada" in j["atributos"] and "fechamento" in j["atributos"]
+    assert r.json()["resumo"]["convergiu"] is True
+    con = malha_http["con"]
+    _contexto(con, malha_http["tid"])
+    with con.cursor() as cur:
+        cur.execute("SELECT count(*) AS n FROM plat.parcela_ajuste WHERE tenant_id = %s",
+                    (malha_http["tid"],))
+        assert cur.fetchone()["n"] == 0

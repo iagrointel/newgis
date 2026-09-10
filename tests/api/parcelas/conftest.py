@@ -28,3 +28,16 @@ def reconcessao_das_visoes(env):
     finally:
         con.close()
     yield
+
+
+@pytest.fixture
+def _ids(conexao_plat_app):
+    """tenant_id dos inquilinos de demonstração (mesma convenção de test_modelo/test_fluxos)."""
+    ids = {}
+    with conexao_plat_app.cursor() as cur:
+        for slug in ("demo", "demo2"):
+            cur.execute("SELECT tenant_id FROM plat.auth_login(%s, 'admin')", (slug,))
+            r = cur.fetchone()
+            assert r is not None, f"admin de {slug} não semeado na trilha"
+            ids[slug] = r["tenant_id"]
+    return ids

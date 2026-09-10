@@ -1,0 +1,22 @@
+{
+ "item": "L4-parcelas-03-ajuste-e-qualidade",
+ "medidas": {
+  "lotes_exemplo_avaliados": {
+   "valor": 11473,
+   "unidade": "parcelas",
+   "comando": "pytest tests/api/parcelas/test_qualidade.py::test_camada_qualidade_corpo_real_de_exemplo PLAT_GRAVAR_MEDIDAS=1"
+  },
+  "lotes_exemplo_sobreposicoes": {
+   "valor": 9432,
+   "unidade": "pares",
+   "comando": "idem; conferido com relações DE-9IM independentes"
+  },
+  "lotes_exemplo_lacunas": {
+   "valor": 250,
+   "unidade": "faces",
+   "comando": "idem; conferido com ST_Difference independente"
+  }
+ },
+ "gerado_em": "2026-09-09T02:58:13Z",
+ "git_sha": "7e3a18ddaff5"
+}
