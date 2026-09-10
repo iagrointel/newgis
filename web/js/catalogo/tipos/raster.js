@@ -4,7 +4,7 @@
    de propósito — é a porta para QGIS/ArcGIS/navegador de terceiro — então tanto a prévia quanto a seção
    Compartilhar usam o MESMO token de serviço reciclável (token_servico.js), nunca um por carregamento. */
 import { h, limpar } from '../../base/dom.js';
-import { obter } from '../../base/api.js';
+import { obter, enviar } from '../../base/api.js';
 import { botaoCopiar } from '../../base/dom.js';
 import { t } from '../../base/i18n.js';
 import { bytes } from '../formato.js';
@@ -48,6 +48,7 @@ export async function previa(item) {
     linha(t('tipo_raster.tamanho'), bytes(im.tamanho_bytes)),
     linha(t('tipo_raster.bbox'), Array.isArray(im.bbox) ? im.bbox.map((v) => v.toFixed(4)).join(', ') : '—'),
   ));
+  raiz.append(painelProveniencia(item, im.proveniencia));
   const mapaEl = h('div', { class: 'tipo-mapa', 'aria-label': t('tipo_raster.previa_mapa') });
   raiz.append(mapaEl);
   let tk;
@@ -60,6 +61,76 @@ export async function previa(item) {
   } catch {
     mapaEl.replaceWith(h('p', { class: 'fraco' }, t('tipo_raster.erro_previa')));
   }
+  return raiz;
+}
+
+/* ---------- Proveniência: a cadeia de conversão em texto simples (item L1-01-j) ----------
+   Nunca uma promessa em prosa: o que aparece aqui é o comando exato + o sha256 de entrada/saída de
+   cada passo, tirado direto de `plat:cadeia` do item STAC — e um botão "Conferir" que baixa os
+   objetos de novo e recalcula, no MESMO endpoint que `plat raster verificar` usa. */
+function linhaComando(passo) {
+  const comandos = (passo.comando || []).map((argv) => (Array.isArray(argv) ? argv.join(' ') : String(argv)));
+  return h(
+    'div', { class: 'proveniencia-passo' },
+    h('p', { class: 'proveniencia-passo-titulo' }, passo.passo),
+    ...comandos.map((c) => h('pre', { class: 'proveniencia-comando' }, c)),
+    h('p', { class: 'fraco' }, t('tipo_raster.proveniencia_entrada_saida', {
+      entrada: (passo.entrada_sha256 || '').slice(0, 16), saida: (passo.saida_sha256 || '').slice(0, 16),
+    })),
+  );
+}
+
+function painelProveniencia(item, prov) {
+  const raiz = h('div', { class: 'tipo-proveniencia' });
+  raiz.append(h('h4', {}, t('tipo_raster.proveniencia_titulo')));
+  if (!prov || !prov.manifesto_sha256) {
+    raiz.append(h('p', { class: 'fraco' }, t('tipo_raster.proveniencia_ausente')));
+    return raiz;
+  }
+  const software = Object.entries(prov.processing_software || {}).map(([k, v]) => `${k} ${v}`).join(' · ');
+  raiz.append(
+    linha(t('tipo_raster.proveniencia_origem'), t(`tipo_raster.proveniencia_origem_${prov.cadeia_origem || 'ausente'}`)),
+    linha(t('tipo_raster.proveniencia_software'), software || '—'),
+  );
+  if (Array.isArray(prov.cadeia) && prov.cadeia.length) {
+    raiz.append(...prov.cadeia.map(linhaComando));
+  } else {
+    raiz.append(h('p', { class: 'fraco' }, t('tipo_raster.proveniencia_sem_cadeia')));
+  }
+  raiz.append(linha('plat:manifesto_sha256', h('code', {}, prov.manifesto_sha256)));
+
+  const resultado = h('div', { class: 'proveniencia-resultado' });
+  const btConferir = h('button', { type: 'button', class: 'pequeno' }, t('tipo_raster.proveniencia_conferir'));
+  btConferir.addEventListener('click', async () => {
+    btConferir.disabled = true;
+    limpar(resultado);
+    resultado.append(h('p', { class: 'fraco' }, t('tipo_raster.proveniencia_conferindo')));
+    try {
+      const r = await enviar(`/api/imagens/${encodeURIComponent(item.id)}/conferir`);
+      limpar(resultado);
+      if (r.status !== 200) {
+        resultado.append(h('p', { class: 'erro' }, t('tipo_raster.proveniencia_conferir_erro')));
+        return;
+      }
+      const c = r.json;
+      resultado.append(h(
+        'p', { class: c.ok ? 'ok' : 'erro' },
+        c.ok ? t('tipo_raster.proveniencia_ok', { n: c.ativos.length })
+             : t('tipo_raster.proveniencia_divergente'),
+      ));
+      if (!c.ok) {
+        resultado.append(...c.ativos.filter((a) => !a.ok).map((a) => h(
+          'p', { class: 'fraco' }, `${a.asset}: ${a.erro || t('tipo_raster.proveniencia_sha_diverge')}`,
+        )));
+      }
+    } catch {
+      limpar(resultado);
+      resultado.append(h('p', { class: 'erro' }, t('tipo_raster.proveniencia_conferir_erro')));
+    } finally {
+      btConferir.disabled = false;
+    }
+  });
+  raiz.append(h('p', {}, btConferir), resultado);
   return raiz;
 }
 
