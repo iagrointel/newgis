@@ -1,5 +1,7 @@
-"""GET /saude e GET /api/versao (ADR 0001 seção 7). 200 só com banco ok E serviços obrigatórios ok
-(garage quando configurado — ADR 20260908T2125); 503 em banco desatualizado, erro ou obrigatório doente."""
+"""GET /saude, GET /api/versao e GET /metrics (ADR 0001 seção 7; item L7-06-a-metricas-exporters).
+200 só com banco = ok; 503 em desatualizado e erro. /metrics não exige sessão nem token: a porta 8150
+só escuta em 127.0.0.1 (systemd `plat-api.service`), o Prometheus da casa é o único cliente local, e o
+conteúdo em si nunca carrega segredo (contrato de cardinalidade em app/metricas.py)."""
 
 import datetime
 import logging
@@ -7,23 +9,17 @@ import time
 import urllib.error
 import urllib.request
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 from fastapi.responses import JSONResponse
 
-from app import db
+from app import db, metricas
 from app.settings import settings
 from app.versao import git_sha_curto, versao
 
 router = APIRouter()
 log = logging.getLogger("plat.saude")
 TIMEOUT_SERVICO_S = 1.0
-
-# Portão do L0-11 (achado G4-19): o Garage é OBRIGATÓRIO quando configurado — a plataforma guarda os
-# objetos nele, então instalação com PLAT_GARAGE_URL apontando para um objeto-store que não responde é
-# instalação doente (503), como banco fora. Fronteira: sem PLAT_GARAGE_URL o sonda fica "ausente"
-# (desenvolvimento sem objetos) e NÃO derruba o status; martin/titiler/worker continuam informativos
-# (worker vivo já é conferido por plat.fila_estado() na mesma resposta).
-OBRIGATORIOS = ("garage",)
+metricas.registrar_coletor_fila(db.db)
 
 
 def agora_iso() -> str:
@@ -66,31 +62,11 @@ def estado_banco() -> tuple[str, int, int, str | None]:
     return ("desatualizado" if pendentes else "ok"), aplicadas, pendentes, ultima
 
 
-def estado_backup_drill() -> dict:
-    """Último ensaio de restauração (item L0-06-c): data, se passou, quantos esquemas e quantas
-    divergências. Só o agregado de plat.backup_drill_status() — nem arquivo nem inquilino — porque a
-    sonda de status responde sem sessão. Informativo: não muda o status HTTP."""
-    try:
-        with db.db() as cur:
-            cur.execute("SELECT * FROM plat.backup_drill_status()")
-            r = cur.fetchone()
-    except Exception:
-        log.exception("saude: ensaio de restauração em erro")
-        return {"erro": True}
-    if r is None or r["ultimo_em"] is None:
-        return {"ultimo_em": None}
-    return {"ultimo_em": r["ultimo_em"].astimezone(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "ok": r["ok"], "esquemas": r["esquemas"], "divergencias": r["divergencias"],
-            "duracao_drill_s": float(r["duracao_drill_s"])}
-
-
 @router.get("/saude")
 def saude():
     inicio = time.perf_counter()
     banco, aplicadas, pendentes, ultima = estado_banco()
-    urls = settings.servicos()
-    servicos = {nome: sondar_servico(url) for nome, url in urls.items()}
-    doentes = [nome for nome in OBRIGATORIOS if urls.get(nome) and servicos[nome] != "ok"]
+    servicos = {nome: sondar_servico(url) for nome, url in settings.servicos().items()}
     corpo = {
         "versao": versao(),
         "git_sha": git_sha_curto(),
@@ -100,14 +76,11 @@ def saude():
         "migracoes_pendentes": pendentes,
         "ultima_migracao": ultima,
         "servicos": servicos,
-        "servicos_obrigatorios": list(OBRIGATORIOS),
         "fila": estado_fila() if banco == "ok" else {"erro": True},
-        "backup_drill": estado_backup_drill() if banco == "ok" else {"erro": True},
         "tempo_ms": round((time.perf_counter() - inicio) * 1000, 1),
         "em": agora_iso(),
     }
-    saudavel = banco == "ok" and not doentes
-    return JSONResponse(corpo, status_code=200 if saudavel else 503, headers={"Cache-Control": "no-store"})
+    return JSONResponse(corpo, status_code=200 if banco == "ok" else 503, headers={"Cache-Control": "no-store"})
 
 
 @router.get("/api/versao")
@@ -118,3 +91,9 @@ def api_versao():
 # HEAD (curl -sI, sondas) fora do esquema OpenAPI: mesma função, sem operationId duplicado
 router.add_api_route("/saude", saude, methods=["HEAD"], include_in_schema=False)
 router.add_api_route("/api/versao", api_versao, methods=["HEAD"], include_in_schema=False)
+
+
+@router.get("/metrics", include_in_schema=False)
+def metricas_prometheus():
+    corpo, tipo_conteudo = metricas.expor()
+    return Response(content=corpo, media_type=tipo_conteudo, headers={"Cache-Control": "no-store"})

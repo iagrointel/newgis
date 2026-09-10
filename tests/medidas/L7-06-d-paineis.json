@@ -1,0 +1,86 @@
+{
+  "item": "L7-06-d-paineis",
+  "medido_em": "2026-09-07T19:57:05+00:00",
+  "carga_1min": 3.87,
+  "ram_livre_gb": 7,
+  "como": "bash deploy/paineis_homologacao.sh subir (Prometheus 8314, Grafana 8315 em contêiner, postgres_exporter 8317, Martin 8318) + roda_teste.sh sobre tests/unit/test_paineis_json.py, tests/api/test_paineis_prometheus.py e tests/e2e/test_paineis.py",
+  "paineis": {
+    "plat-backup": {
+      "titulo": "Plataforma — backup e ensaio de restauração",
+      "quadros": 5,
+      "consultas": 5
+    },
+    "plat-banco": {
+      "titulo": "Plataforma — banco",
+      "quadros": 6,
+      "consultas": 6
+    },
+    "plat-objetos": {
+      "titulo": "Plataforma — objetos (Garage)",
+      "quadros": 7,
+      "consultas": 7
+    },
+    "plat-por-inquilino": {
+      "titulo": "Plataforma — por inquilino",
+      "quadros": 5,
+      "consultas": 5
+    },
+    "plat-visao-geral": {
+      "titulo": "Plataforma — visão geral",
+      "quadros": 10,
+      "consultas": 11
+    }
+  },
+  "consultas_totais": 34,
+  "consultas_com_serie_no_prometheus": 34,
+  "consultas_vazias": 0,
+  "capturas": [
+    "L7-06-d-paineis_plat-backup.png",
+    "L7-06-d-paineis_plat-banco.png",
+    "L7-06-d-paineis_plat-objetos.png",
+    "L7-06-d-paineis_plat-por-inquilino.png",
+    "L7-06-d-paineis_plat-visao-geral.png"
+  ],
+  "carga_curta": {
+    "pedidos_api": 66,
+    "job_criado": 201,
+    "token_criado": 201,
+    "upload_criado": 201,
+    "upload_parte": 200,
+    "upload_concluido": 202,
+    "martin_fontes": 1,
+    "martin_ladrilhos_ok": 8,
+    "backup_duracao_s": 0.776,
+    "backup_bytes": 89739
+  },
+  "clausulas": {
+    "cinco_paineis_sem_no_data": {
+      "veredito": "passou",
+      "prova": "tests/e2e/test_paineis.py::test_painel_carrega_sem_quadro_vazio (5 casos, 1 por painel): abre no Grafana de homologação, espera o carregamento e falha se a tela contiver 'No data'/'Sem dados'/'Datasource not found'. Captura de cada um em tests/e2e/capturas/."
+    },
+    "provisionamento_idempotente_mesmo_uid": {
+      "veredito": "passou",
+      "prova": "tests/e2e/test_paineis.py::test_provisionamento_e_idempotente: lê uid+id+provisioned dos 5, reinicia o contêiner do Grafana, espera o provedor reler e compara — igual."
+    },
+    "todo_painel_so_cita_metrica_que_existe": {
+      "veredito": "passou",
+      "prova": "tests/api/test_paineis_prometheus.py: as 33 consultas dos 5 painéis, com as variáveis resolvidas como o Grafana resolve, devolvem série; e todo NOME de métrica citado está na lista de __name__ do Prometheus (tokenizador que descarta rótulo, função e literal)."
+    },
+    "refutacao_painel_apagado_volta": {
+      "veredito": "passou, com resultado mais forte que o pedido",
+      "prova": "apagar pela mesma rota do botão da tela é RECUSADO (400 'provisioned dashboard cannot be deleted', allowUiUpdates: false); e, tirando o arquivo do diretório provisionado, o painel sai e volta com o mesmo uid quando o arquivo volta."
+    },
+    "consultas_lentas_via_pg_stat_statements": {
+      "veredito": "NAO ATENDIDA COMO ESCRITA",
+      "prova": "shared_preload_libraries deste cluster = timescaledb,pg_cron,pgaudit — pg_stat_statements está instalado mas NÃO pré-carregado, e toda leitura da view derruba o scrape inteiro do exporter. Ligar exige reiniciar um Postgres compartilhado por dezenas de frentes da casa. O quadro 'consultas lentas' foi entregue sobre pg_stat_activity (transação mais longa agora, por estado); a consulta pronta de pg_stat_statements ficou escrita em deploy/postgres_exporter_queries.yaml para quando o pré-carregamento entrar."
+    },
+    "hospedado_grafana_da_casa": {
+      "veredito": "instalado, conferido pelo banco do Grafana",
+      "prova": "bash deploy/paineis_instalar.sh copia painéis e fonte para /opt/monitoring/grafana e reinicia iagro-grafana; os 5 uid aparecem em /var/lib/grafana/grafana.db. A conferência pela API do Grafana da casa exige a senha de administrador dela, que este agente não tem."
+    }
+  },
+  "achados_sobre_a_dependencia_L7-06-a": [
+    "plat_tenant_schema_bytes e plat_tenant_conexoes_conexoes (consultas do postgres_exporter) NUNCA produzem série: a primeira faz JOIN com plat.tenant, que tem RLS, e o papel de métrica não tem BYPASSRLS (zero linha, sem erro); a segunda depende de application_name='plat:<id>', que só existe na conexão enquanto ela atende um pedido daquele inquilino. Substituídas por plat_tenant_dado_bytes e plat_bucket_* (função SECURITY DEFINER lida pela API).",
+    "As funções de tile de d_demo no Martin da casa apontam para o schema plat_tmapa, de uma trilha já apagada: toda fonte devolve 500 e o cache nem é consultado. Achado do ambiente, não do item."
+  ]
+}

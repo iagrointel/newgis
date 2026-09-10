@@ -1,0 +1,328 @@
+{
+  "uid": "plat-objetos",
+  "title": "Plataforma — objetos (Garage)",
+  "description": "Armazenamento de objeto. O Garage NÃO expõe uso por bucket em /metrics (conferido em 07/09/2026): o que ele dá é disco do nó, saúde do agrupamento e taxa por operação S3. O uso por bucket vem da contabilidade da casa (plat.arquivo_bucket + plat.arquivo), rotulada por tenant_id — nunca pelo alias do bucket, que carrega o slug.",
+  "tags": [
+    "plat"
+  ],
+  "timezone": "browser",
+  "editable": false,
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Agrupamento saudável",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "max(cluster_healthy{job=\"plat-garage\"})",
+          "refId": "A",
+          "legendFormat": "1 = saudável",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Disco livre no nó",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "sum(garage_local_disk_avail{job=\"plat-garage\"})",
+          "refId": "A",
+          "legendFormat": "livre",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Disco total no nó",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "sum(garage_local_disk_total{job=\"plat-garage\"})",
+          "refId": "A",
+          "legendFormat": "total",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Fator de replicação",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "max(garage_replication_factor{job=\"plat-garage\"})",
+          "refId": "A",
+          "legendFormat": "cópias",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Operações S3 por segundo, por tipo",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "topk(8, sum by (api_endpoint) (rate(api_s3_request_counter{job=\"plat-garage\"}[5m])))",
+          "refId": "A",
+          "legendFormat": "{{api_endpoint}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "type": "bargauge",
+      "title": "Bytes guardados por inquilino",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "plat_bucket_usado_bytes",
+          "refId": "A",
+          "legendFormat": "inquilino {{tenant_id}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "displayMode": "gradient",
+        "orientation": "horizontal"
+      }
+    },
+    {
+      "type": "bargauge",
+      "title": "Objetos por inquilino",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 13,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "plat_bucket_objetos",
+          "refId": "A",
+          "legendFormat": "inquilino {{tenant_id}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "displayMode": "gradient",
+        "orientation": "horizontal"
+      }
+    }
+  ]
+}

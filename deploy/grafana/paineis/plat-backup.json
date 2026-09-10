@@ -1,0 +1,240 @@
+{
+  "uid": "plat-backup",
+  "title": "Plataforma — backup e ensaio de restauração",
+  "description": "Última execução, duração e tamanho de cada tipo. `drill` é o ensaio de restauração. Tipo que nunca rodou NÃO cria série: o painel mostra ausência, em vez de um zero que pareceria sucesso.",
+  "tags": [
+    "plat"
+  ],
+  "timezone": "browser",
+  "editable": false,
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Horas desde o último backup OK",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "plat_backup_horas_desde_ultimo{tipo=\"backup\"}",
+          "refId": "A",
+          "legendFormat": "backup",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "h"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Horas desde o último ensaio OK",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "plat_backup_horas_desde_ultimo{tipo=\"drill\"}",
+          "refId": "A",
+          "legendFormat": "drill",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "h"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Duração da última execução",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "plat_backup_ultima_duracao_segundos",
+          "refId": "A",
+          "legendFormat": "{{tipo}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Tamanho da última execução",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "plat_backup_ultimo_bytes",
+          "refId": "A",
+          "legendFormat": "{{tipo}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Horas desde a última execução, ao longo do tempo",
+      "description": "Serrote: sobe 1 h por hora e cai a zero a cada execução OK. Reta que só sobe = a rotina parou.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "plat_backup_horas_desde_ultimo",
+          "refId": "A",
+          "legendFormat": "{{tipo}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "h"
+        },
+        "overrides": []
+      },
+      "options": {}
+    }
+  ]
+}

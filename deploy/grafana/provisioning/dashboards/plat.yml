@@ -1,0 +1,15 @@
+# Provedor de painel por ARQUIVO. Consequência buscada: painel apagado ou editado pela interface volta
+# ao que o arquivo diz em no máximo `updateIntervalSeconds`. `allowUiUpdates: false` faz o Grafana
+# recusar a gravação pela interface em vez de aceitar e depois desfazer em silêncio.
+apiVersion: 1
+providers:
+  - name: plat
+    orgId: 1
+    folder: Plataforma
+    type: file
+    disableDeletion: false
+    allowUiUpdates: false
+    updateIntervalSeconds: 20
+    options:
+      path: /var/lib/grafana/dashboards/plat
+      foldersFromFilesStructure: false

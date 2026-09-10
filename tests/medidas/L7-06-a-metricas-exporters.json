@@ -1,0 +1,37 @@
+{
+ "item": "L7-06-a-metricas-exporters",
+ "medidas": {
+  "series_novas_50_inquilinos_sinteticos": {
+   "valor": 50,
+   "unidade": "séries novas em plat_http_requests_total",
+   "comando": "tests/api/test_metricas_rota.py::test_cardinalidade_50_inquilinos_sinteticos_uma_serie_por_inquilino"
+  },
+  "cardinalidade_total_plat_http_requests_total": {
+   "valor": "<= 5000",
+   "unidade": "séries",
+   "comando": "tests/api/test_metricas_rota.py::test_cardinalidade_50_inquilinos_sinteticos_uma_serie_por_inquilino"
+  },
+  "series_novas_com_500_tokens_10_inquilinos": {
+   "valor": 10,
+   "unidade": "séries novas em plat_http_requests_total (nunca 500)",
+   "comando": "tests/api/test_metricas_rota.py::test_refutacao_500_tokens_nao_aumenta_cardinalidade_alem_dos_inquilinos_de_verdade"
+  },
+  "postgres_exporter_series_com_stat_user_tables_ligado": {
+   "valor": 231807,
+   "unidade": "linhas de /metrics (medido, motivo de estarem DESLIGADOS em produção)",
+   "comando": "curl 127.0.0.1:9187/metrics | wc -l (07/09/2026, antes de --no-collector.stat_user_tables/statio_user_tables)"
+  },
+  "postgres_exporter_series_configuracao_final": {
+   "valor": 1897,
+   "unidade": "linhas de /metrics",
+   "comando": "curl 127.0.0.1:9187/metrics | wc -l (07/09/2026, depois do ajuste)"
+  },
+  "x_req_id_martin_tempo_ate_log": {
+   "valor": "mesma requisição, mesmo valor",
+   "unidade": "correspondência exata entre X-Req-Id de resposta e a linha de plat_tiles_access.log",
+   "comando": "curl -sI https://plat.iagrointel.com/tiles/catalog && tail -1 /var/log/nginx/plat_tiles_access.log (07/09/2026)"
+  }
+ },
+ "gerado_em": "2026-09-07T14:30:00Z",
+ "git_sha": "325b004a38bd77d4b592a6b10093dfc6557e9fac"
+}

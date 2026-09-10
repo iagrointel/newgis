@@ -1,0 +1,185 @@
+{
+ "item": "L7-06-b-alertas",
+ "medido_em": "2026-09-07T18:45:13Z",
+ "carga_1min": 13.66,
+ "ram_livre_gb": 8.0,
+ "git_sha": "b120b1c401d9ec3e6ec44d9b859492768187f563",
+ "comando": "PLAT_API_METRICS=http://127.0.0.1:8305/metrics ESPERA_MAX_S=700 bash deploy/alertas_homologacao.sh tests/medidas/homologacao_bruto.json",
+ "leia_junto": {
+  "recebidos": "tests/medidas/L7-06-b-alertas.recebidos.jsonl (hora de chegada de cada entrega, crua)",
+  "alertas_do_prometheus": "tests/medidas/L7-06-b-alertas.alertas_prometheus.json (inclui o que foi INIBIDO)"
+ },
+ "medidas": {
+  "regras_versionadas": {
+   "valor": 16,
+   "unidade": "regras em deploy/alertas.yml",
+   "comando": "promtool check rules deploy/alertas.yml"
+  },
+  "casos_de_teste_das_regras": {
+   "valor": 24,
+   "unidade": "casos, todos verdes",
+   "comando": "cd deploy && promtool test rules alertas_teste.yml"
+  },
+  "amtool_check_config": {
+   "valor": "SUCCESS",
+   "unidade": "saída do amtool 0.26",
+   "comando": "amtool check-config deploy/alertmanager.yml"
+  },
+  "alertas_encenados_de_verdade": {
+   "valor": 8,
+   "unidade": "alertas provocados por ação física ou de dado",
+   "comando": "deploy/alertas_homologacao.sh"
+  },
+  "alertas_encenados_que_nao_chegaram": {
+   "valor": 0,
+   "unidade": "de 8",
+   "comando": "idem"
+  },
+  "maior_tempo_do_firing_ate_o_canal": {
+   "valor": 15.0,
+   "unidade": "segundos entre o alerta virar firing no Prometheus e chegar ao canal (limite do portão: 120)",
+   "comando": "idem; por alerta na tabela abaixo"
+  },
+  "maior_tempo_da_condicao_ate_o_canal": {
+   "valor": 613.7,
+   "unidade": "segundos entre provocar a condição e a chegada; é dominado pelo `for:` da regra (BackupAtrasado tem for: 10m), não pelo caminho de entrega",
+   "comando": "idem"
+  },
+  "prometheus_acusa_o_alertmanager_morto": {
+   "valor": 141,
+   "unidade": "segundos entre matar o Alertmanager e AlertmanagerFora ficar firing no Prometheus (for: 2m)",
+   "comando": "fase de refutação do mesmo script"
+  },
+  "alertmanager_memoria_residente": {
+   "valor": 44784,
+   "unidade": "kB, processo no ar durante a encenação",
+   "comando": "ps -eo rss,args | grep prometheus-alertmanager"
+  },
+  "volume_de_teste": {
+   "valor": "encenado: /mnt/plat_homolog_alertas em 100%",
+   "unidade": "ext4 de 64 MiB montado por loop, cheio com fallocate",
+   "comando": "df -h /mnt/plat_homolog_alertas durante a encenação"
+  }
+ },
+ "por_alerta": {
+  "Sentinela": {
+   "receptor": "canal-de-teste",
+   "severidade": "aviso",
+   "servico": "monitor",
+   "runbook": "sentinela",
+   "estado": "firing",
+   "enviado_pelo_alertmanager_com_authorization": false,
+   "alerta_comecou_em": "2026-09-07T18:32:23.916Z",
+   "chegou_no_canal_em": "2026-09-07T18:32:23.919502Z",
+   "segundos_da_condicao_ate_o_canal": -11.1,
+   "segundos_do_firing_ate_o_canal": 0.0
+  },
+  "FilaComJobLongo": {
+   "receptor": "webhook-da-equipe",
+   "severidade": "aviso",
+   "servico": "fila",
+   "runbook": "filacomjoblongo",
+   "estado": "firing",
+   "enviado_pelo_alertmanager_com_authorization": true,
+   "alerta_comecou_em": "2026-09-07T18:33:53.498Z",
+   "chegou_no_canal_em": "2026-09-07T18:34:08.503343Z",
+   "segundos_da_condicao_ate_o_canal": 93.5,
+   "segundos_do_firing_ate_o_canal": 15.0
+  },
+  "DiscoCritico": {
+   "receptor": "critico-email-e-webhook",
+   "severidade": "critico",
+   "servico": "disco",
+   "runbook": "discocritico",
+   "estado": "firing",
+   "enviado_pelo_alertmanager_com_authorization": true,
+   "alerta_comecou_em": "2026-09-07T18:34:21.643Z",
+   "chegou_no_canal_em": "2026-09-07T18:34:31.650988Z",
+   "segundos_da_condicao_ate_o_canal": 116.7,
+   "segundos_do_firing_ate_o_canal": 10.0
+  },
+  "DiscoQuaseCheio": {
+   "receptor": "webhook-da-equipe",
+   "severidade": "aviso",
+   "servico": "disco",
+   "runbook": "discoquasecheio",
+   "estado": "firing",
+   "enviado_pelo_alertmanager_com_authorization": true,
+   "alerta_comecou_em": "2026-09-07T18:34:21.643Z",
+   "chegou_no_canal_em": "2026-09-07T18:34:36.647902Z",
+   "segundos_da_condicao_ate_o_canal": 121.6,
+   "segundos_do_firing_ate_o_canal": 15.0
+  },
+  "ServicoDaPlataformaFora": {
+   "receptor": "critico-email-e-webhook",
+   "severidade": "critico",
+   "servico": "processo",
+   "runbook": "servicodaplataformafora",
+   "estado": "firing",
+   "enviado_pelo_alertmanager_com_authorization": true,
+   "alerta_comecou_em": "2026-09-07T18:34:34.29Z",
+   "chegou_no_canal_em": "2026-09-07T18:34:44.298999Z",
+   "segundos_da_condicao_ate_o_canal": 129.3,
+   "segundos_do_firing_ate_o_canal": 10.0
+  },
+  "ReplicaSemMetrica": {
+   "receptor": "critico-email-e-webhook",
+   "severidade": "critico",
+   "servico": "replica",
+   "runbook": "replicasemmetrica",
+   "estado": "firing",
+   "enviado_pelo_alertmanager_com_authorization": true,
+   "alerta_comecou_em": "2026-09-07T18:37:33.717Z",
+   "chegou_no_canal_em": "2026-09-07T18:37:43.726032Z",
+   "segundos_da_condicao_ate_o_canal": 308.7,
+   "segundos_do_firing_ate_o_canal": 10.0
+  },
+  "CertificadoPertoDeVencer": {
+   "receptor": "webhook-da-equipe",
+   "severidade": "aviso",
+   "servico": "tls",
+   "runbook": "certificadopertodevencer",
+   "estado": "firing",
+   "enviado_pelo_alertmanager_com_authorization": true,
+   "alerta_comecou_em": "2026-09-07T18:37:33.717Z",
+   "chegou_no_canal_em": "2026-09-07T18:37:48.722959Z",
+   "segundos_da_condicao_ate_o_canal": 313.7,
+   "segundos_do_firing_ate_o_canal": 15.0
+  },
+  "BackupAtrasado": {
+   "receptor": "critico-email-e-webhook",
+   "severidade": "critico",
+   "servico": "backup",
+   "runbook": "backupatrasado",
+   "estado": "firing",
+   "enviado_pelo_alertmanager_com_authorization": true,
+   "alerta_comecou_em": "2026-09-07T18:42:33.717Z",
+   "chegou_no_canal_em": "2026-09-07T18:42:43.726335Z",
+   "segundos_da_condicao_ate_o_canal": 608.7,
+   "segundos_do_firing_ate_o_canal": 10.0
+  },
+  "DrillDoMesNaoExecutado": {
+   "receptor": "webhook-da-equipe",
+   "severidade": "aviso",
+   "servico": "backup",
+   "runbook": "drilldomesnaoexecutado",
+   "estado": "firing",
+   "enviado_pelo_alertmanager_com_authorization": true,
+   "alerta_comecou_em": "2026-09-07T18:42:33.717Z",
+   "chegou_no_canal_em": "2026-09-07T18:42:48.723907Z",
+   "segundos_da_condicao_ate_o_canal": 613.7,
+   "segundos_do_firing_ate_o_canal": 15.0
+  }
+ },
+ "inibicao_verificada": {
+  "AlvoPrometheusCaido": "firing no Prometheus para 127.0.0.1:8309 e NÃO entregue ao canal: inibido por ServicoDaPlataformaFora com o mesmo `instance`, como manda alertmanager.yml"
+ },
+ "nao_encenado_no_ar": {
+  "RamDisponivelBaixa": "exigiria esgotar a memória da máquina compartilhada da casa",
+  "TaxaDeErro5xxAlta": "exigiria provocar 5xx de verdade na API; coberto só por caso determinístico",
+  "TileP95Lento": "exigiria degradar o Martin; coberto só por caso determinístico",
+  "ReplicaAtrasadaOuParada": "esta instalação não tem réplica",
+  "AlertmanagerFora": "encenado de verdade, mas por construção não pode ser ENTREGUE — o entregador é ele",
+  "PrometheusNaoConsegueFalarComAlertmanager": "coberto só por caso determinístico"
+ }
+}

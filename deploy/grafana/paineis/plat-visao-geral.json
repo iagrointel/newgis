@@ -1,0 +1,431 @@
+{
+  "uid": "plat-visao-geral",
+  "title": "Plataforma — visão geral",
+  "description": "As dez medidas que dizem se a instalação está de pé. Item L7-06-d-paineis. Análise / beta privado.",
+  "tags": [
+    "plat"
+  ],
+  "timezone": "browser",
+  "editable": false,
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "1. Latência p95 por rota (API)",
+      "description": "p95 por PADRÃO de rota do roteador (nunca o caminho com id do recurso).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (rota, le) (rate(plat_http_request_duracao_segundos_bucket[5m])))",
+          "refId": "A",
+          "legendFormat": "{{rota}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "type": "timeseries",
+      "title": "2. Ladrilhos por segundo (Martin)",
+      "description": "Consultas ao cache de coordenada de ladrilho do Martin, que é 1 por ladrilho pedido.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "sum(rate(martin_tile_cache_requests_total[5m]))",
+          "refId": "A",
+          "legendFormat": "consultas de ladrilho/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "type": "stat",
+      "title": "3. Acerto de cache de ladrilho (%)",
+      "description": "Fração das consultas de ladrilho servidas do cache do Martin nos últimos 5 min.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "100 * sum(rate(martin_tile_cache_requests_total{result=\"hit\"}[5m])) / clamp_min(sum(rate(martin_tile_cache_requests_total[5m])), 0.000001)",
+          "refId": "A",
+          "legendFormat": "acerto",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "4. Fila de jobs",
+      "description": "Agregado cross-inquilino de plat.fila_estado().",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 8,
+        "w": 9,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "plat_jobs_fila",
+          "refId": "A",
+          "legendFormat": "{{estado}}"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "plat_jobs_workers_vivos",
+          "refId": "B",
+          "legendFormat": "workers vivos"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "type": "timeseries",
+      "title": "5. Conexões abertas no banco",
+      "description": "Conexões abertas na base compartilhada, por estado (pg_stat_activity). O recorte por inquilino fica no painel 'por inquilino': ele vem de application_name, que só existe na conexão enquanto ela tem contexto de inquilino.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 15,
+        "y": 8,
+        "w": 9,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "refId": "A",
+          "expr": "sum by (state) (pg_stat_activity_count{datname=\"iagro_sat\"})",
+          "legendFormat": "{{state}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "type": "stat",
+      "title": "6. Disco usado na raiz (%)",
+      "description": "node-exporter.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "100 - 100 * node_filesystem_avail_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay\"}",
+          "refId": "A",
+          "legendFormat": "/",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "7. Memória disponível",
+      "description": "node-exporter.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 14,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "node_memory_MemAvailable_bytes",
+          "refId": "A",
+          "legendFormat": "disponível",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "8. Respostas 5xx (15 min)",
+      "description": "Soma das respostas de erro de servidor. O `or vector(0)` NÃO inventa dado: declara explicitamente zero quando nenhuma série 5xx existe, que é o caso desejado.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 14,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "sum(increase(plat_http_requests_total{status=~\"5..\"}[15m])) or vector(0)",
+          "refId": "A",
+          "legendFormat": "5xx",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "9. Usuários ativos (24 h)",
+      "description": "Usuários distintos com acesso registrado em plat.log_acesso nas últimas 24 h, agregado em todos os inquilinos.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 14,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "plat_usuarios_ativos_24h",
+          "refId": "A",
+          "legendFormat": "usuários",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "10. Jobs concluídos por estado final (1 h)",
+      "description": "Contador do worker: só job que TERMINOU de vez.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 24,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "sum by (estado_final) (increase(plat_jobs_processados_total[1h]))",
+          "refId": "A",
+          "legendFormat": "{{estado_final}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {}
+    }
+  ]
+}

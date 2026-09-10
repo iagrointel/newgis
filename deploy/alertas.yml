@@ -1,0 +1,189 @@
+# Regras de alerta da plataforma (item L7-06-b-alertas). Análise / beta privado.
+#
+# Arquivo ÚNICO para os dois modos de instalação (hospedado e appliance), como manda o
+# laco/decomposicao/L7_CONCEITO.md secao L7-06: "as REGRAS são as mesmas". Carregado pelo Prometheus
+# em `rule_files:`; o roteamento e os canais ficam em `deploy/alertmanager.yml`.
+#
+# Contrato de rótulos (o roteamento em alertmanager.yml depende dele, não invente outros):
+#   severidade = aviso | critico        -> escolhe o canal e a repetição
+#   servico    = disco | ram | fila | api | tiles | tls | backup | replica | processo | monitor
+#   runbook    = âncora dentro de docs/RUNBOOKS/alertas.md (uma seção por alerta, sem exceção;
+#                tests/unit/test_alertas_regras.py reprova regra sem seção correspondente)
+#
+# Toda regra tem caso em `deploy/alertas_teste.yml` (`promtool test rules`), que dispara a regra
+# com série sintética, e as que dão para encenar de verdade têm encenação em
+# `deploy/alertas_homologacao.sh` (encher volume de teste com fallocate, parar o Martin, atrasar o
+# backup) — ver docs/RUNBOOKS/alertas.md secao 2.
+
+groups:
+  - name: plat-infraestrutura
+    interval: 15s
+    rules:
+      - alert: DiscoQuaseCheio
+        # 85 % de uso. A Esri resolve o mesmo problema com `diskSpaceThresholdGB` = 5 GB absolutos
+        # (ArcGIS Server, propriedade da máquina); usamos porcentagem porque o appliance vai de
+        # 200 GB a 8 TB e 5 GB fixos não significam a mesma coisa nos dois.
+        expr: |
+          (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
+             / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}) > 0.85
+        for: 2m
+        labels: {severidade: aviso, servico: disco, runbook: discoquasecheio}
+        annotations:
+          resumo: "Disco {{ $labels.mountpoint }} acima de 85 por cento de uso"
+          detalhe: "Uso em {{ $value | humanizePercentage }} no ponto de montagem {{ $labels.mountpoint }}."
+
+      - alert: DiscoCritico
+        expr: |
+          (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
+             / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}) > 0.95
+        for: 2m
+        labels: {severidade: critico, servico: disco, runbook: discocritico}
+        annotations:
+          resumo: "Disco {{ $labels.mountpoint }} acima de 95 por cento de uso"
+          detalhe: "Uso em {{ $value | humanizePercentage }}. Ingestão e backup param antes de 100 por cento."
+
+      - alert: RamDisponivelBaixa
+        expr: node_memory_MemAvailable_bytes < 2 * 1024 * 1024 * 1024
+        for: 5m
+        labels: {severidade: aviso, servico: ram, runbook: ramdisponivelbaixa}
+        annotations:
+          resumo: "Menos de 2 GiB de memória disponível"
+          detalhe: "MemAvailable em {{ $value | humanize1024 }}B. O matador por falta de memória do núcleo já derrubou o Postgres desta casa antes."
+
+  - name: plat-aplicacao
+    interval: 15s
+    rules:
+      - alert: FilaComJobLongo
+        expr: plat_jobs_rodando_mais_antigo_segundos > 1800
+        for: 1m
+        labels: {severidade: aviso, servico: fila, runbook: filacomjoblongo}
+        annotations:
+          resumo: "Job na fila rodando há mais de 30 minutos"
+          detalhe: "O job mais antigo em estado rodando começou há {{ $value | humanizeDuration }}."
+
+      - alert: TaxaDeErro5xxAlta
+        # Fração de 5xx sobre o total, na janela de 5 min, acima de 1 por cento.
+        expr: |
+          sum(rate(plat_http_requests_total{status=~"5.."}[5m]))
+            / clamp_min(sum(rate(plat_http_requests_total[5m])), 0.001) > 0.01
+        for: 5m
+        labels: {severidade: critico, servico: api, runbook: taxadeerro5xxalta}
+        annotations:
+          resumo: "Mais de 1 por cento das respostas da API são 5xx"
+          detalhe: "Fração de 5xx em {{ $value | humanizePercentage }} na janela de 5 minutos."
+
+      - alert: TileP95Lento
+        # p95 do histograma nativo do Martin (martin_http_requests_duration_seconds), em segundos.
+        expr: |
+          histogram_quantile(0.95, sum by (le) (rate(martin_http_requests_duration_seconds_bucket[10m]))) > 0.5
+        for: 10m
+        labels: {severidade: aviso, servico: tiles, runbook: tilep95lento}
+        annotations:
+          resumo: "p95 de resposta de ladrilho acima de 500 ms"
+          detalhe: "p95 em {{ $value | humanizeDuration }} na janela de 10 minutos."
+
+  - name: plat-continuidade
+    interval: 30s
+    rules:
+      - alert: CertificadoPertoDeVencer
+        expr: plat_certificado_dias_restantes < 14
+        for: 5m
+        labels: {severidade: aviso, servico: tls, runbook: certificadopertodevencer}
+        annotations:
+          resumo: "Certificado TLS vence em menos de 14 dias"
+          detalhe: "Faltam {{ $value | printf \"%.1f\" }} dias. Renovação automática pode ter parado."
+
+      - alert: BackupAtrasado
+        # 26 h e não 24 h: dá uma folga de duas horas para a janela de execução diária deslizar sem
+        # acordar ninguém de madrugada por causa de dez minutos.
+        expr: plat_backup_horas_desde_ultimo{tipo="backup"} > 26
+        for: 10m
+        labels: {severidade: critico, servico: backup, runbook: backupatrasado}
+        annotations:
+          resumo: "Nenhum backup concluído com sucesso nas últimas 26 horas"
+          detalhe: "Última execução OK há {{ $value | printf \"%.1f\" }} horas."
+
+      - alert: DrillDoMesNaoExecutado
+        # 31 dias em horas. O teste de restauração vale menos que zero se ninguém o executa: o valor
+        # 999999 (nunca houve execução) cai aqui de propósito, ver app/metricas.py.
+        expr: plat_backup_horas_desde_ultimo{tipo="drill"} > 744
+        for: 10m
+        labels: {severidade: aviso, servico: backup, runbook: drilldomesnaoexecutado}
+        annotations:
+          resumo: "Ensaio de restauração não executado neste mês"
+          detalhe: "Último ensaio OK há {{ $value | printf \"%.0f\" }} horas."
+
+      - alert: ReplicaAtrasadaOuParada
+        # O atraso vem PRIMEIRO de propósito: em PromQL o operador `and` devolve o valor do lado
+        # ESQUERDO, e com `pg_replication_is_replica` à esquerda o `{{ $value }}` da mensagem saía
+        # como "1s" em vez do atraso real (achado pelo caso "replica com 10 minutos de atraso" de
+        # deploy/alertas_teste.yml, 07/09/2026).
+        expr: pg_replication_lag_seconds > 300 and on (instance) pg_replication_is_replica == 1
+        for: 2m
+        labels: {severidade: critico, servico: replica, runbook: replicaatrasadaouparada}
+        annotations:
+          resumo: "Réplica do Postgres com atraso acima de 5 minutos"
+          detalhe: "Atraso de {{ $value | humanizeDuration }}."
+
+      - alert: ReplicaSemMetrica
+        # Réplica PARADA: o exporter da réplica some do Prometheus, então a ausência da série é o
+        # sinal — `absent()` acusa o que `> 300` nunca acusaria.
+        expr: absent(pg_replication_lag_seconds)
+        for: 5m
+        labels: {severidade: critico, servico: replica, runbook: replicasemmetrica}
+        annotations:
+          resumo: "Métrica de atraso de réplica ausente"
+          detalhe: "O exporter do Postgres parou de publicar pg_replication_lag_seconds."
+
+  - name: plat-processos
+    interval: 15s
+    rules:
+      - alert: ServicoDaPlataformaFora
+        # Martin, TiTiler, Garage, worker e API: dois minutos parados viram alerta crítico.
+        expr: up{job=~"plat-.*"} == 0
+        for: 2m
+        labels: {severidade: critico, servico: processo, runbook: servicodaplataformafora}
+        annotations:
+          resumo: "Serviço {{ $labels.job }} fora do ar"
+          detalhe: "O alvo {{ $labels.instance }} do job {{ $labels.job }} não responde há 2 minutos."
+
+      - alert: AlvoPrometheusCaido
+        # Rede larga: qualquer alvo do Prometheus, inclusive os que não são da plataforma.
+        expr: up == 0
+        for: 5m
+        labels: {severidade: aviso, servico: monitor, runbook: alvoprometheuscaido}
+        annotations:
+          resumo: "Alvo {{ $labels.job }} sem resposta no Prometheus"
+          detalhe: "instance={{ $labels.instance }} com up=0 há 5 minutos."
+
+  - name: plat-alertador
+    interval: 15s
+    rules:
+      # Quem vigia o vigia. As duas regras abaixo são a resposta à refutação exigida no item:
+      # derrubar o próprio Alertmanager tem de ser percebido.
+      - alert: AlertmanagerFora
+        expr: |
+          up{job="alertmanager"} == 0
+            or absent(up{job="alertmanager"})
+        for: 2m
+        labels: {severidade: critico, servico: monitor, runbook: alertmanagerfora}
+        annotations:
+          resumo: "Alertmanager fora do ar"
+          detalhe: "O Prometheus continua avaliando regras, mas nenhum alerta sai para e-mail ou webhook. Ver /alerts na interface do Prometheus."
+
+      - alert: PrometheusNaoConsegueFalarComAlertmanager
+        expr: prometheus_notifications_alertmanagers_discovered < 1
+        for: 2m
+        labels: {severidade: critico, servico: monitor, runbook: prometheusnaoconseguefalarcomalertmanager}
+        annotations:
+          resumo: "Prometheus não enxerga nenhum Alertmanager"
+          detalhe: "prometheus_notifications_alertmanagers_discovered = {{ $value }}."
+
+      - alert: Sentinela
+        # Sempre disparando. Serve de batimento do caminho INTEIRO (regra -> Alertmanager -> canal):
+        # o receptor de teste espera esta mensagem periodicamente; a ausência dela é que denuncia.
+        expr: vector(1)
+        labels: {severidade: aviso, servico: monitor, runbook: sentinela}
+        annotations:
+          resumo: "Sentinela: o caminho de alerta está vivo"
+          detalhe: "Alerta permanente. Silêncio prolongado deste alerta significa que o caminho quebrou."

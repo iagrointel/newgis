@@ -1,0 +1,393 @@
+# Teste de unidade das regras de `deploy/alertas.yml` (item L7-06-b-alertas):
+#     promtool test rules deploy/alertas_teste.yml
+#
+# Cada uma das 16 regras tem UM caso que a dispara com série sintética e, onde faz diferença, um
+# caso que prova que ela NÃO dispara na condição vizinha (85 % e não 84 %, 26 h e não 25 h). Isto é
+# o teste determinístico da EXPRESSÃO; a encenação de verdade (encher volume com fallocate, parar o
+# Martin, atrasar o backup) está em `deploy/alertas_homologacao.sh`, e as duas provas são exigidas
+# pelo portão do item.
+
+rule_files:
+  - alertas.yml
+
+evaluation_interval: 1m
+
+tests:
+  # ---------------------------------------------------------------- disco
+  - interval: 1m
+    name: disco a 90 por cento dispara aviso e nao dispara critico
+    input_series:
+      - series: 'node_filesystem_avail_bytes{fstype="ext4",mountpoint="/mnt/teste",instance="i"}'
+        values: '10+0x10'
+      - series: 'node_filesystem_size_bytes{fstype="ext4",mountpoint="/mnt/teste",instance="i"}'
+        values: '100+0x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: DiscoQuaseCheio
+        exp_alerts:
+          - exp_labels: {severidade: aviso, servico: disco, runbook: discoquasecheio,
+                         fstype: ext4, mountpoint: /mnt/teste, instance: i}
+            exp_annotations:
+              resumo: "Disco /mnt/teste acima de 85 por cento de uso"
+              detalhe: "Uso em 90% no ponto de montagem /mnt/teste."
+      - eval_time: 5m
+        alertname: DiscoCritico
+        exp_alerts: []
+
+  - interval: 1m
+    name: disco a 84 por cento nao dispara nada
+    input_series:
+      - series: 'node_filesystem_avail_bytes{fstype="ext4",mountpoint="/mnt/teste",instance="i"}'
+        values: '16+0x10'
+      - series: 'node_filesystem_size_bytes{fstype="ext4",mountpoint="/mnt/teste",instance="i"}'
+        values: '100+0x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: DiscoQuaseCheio
+        exp_alerts: []
+
+  - interval: 1m
+    name: disco a 97 por cento dispara critico
+    input_series:
+      - series: 'node_filesystem_avail_bytes{fstype="ext4",mountpoint="/",instance="i"}'
+        values: '3+0x10'
+      - series: 'node_filesystem_size_bytes{fstype="ext4",mountpoint="/",instance="i"}'
+        values: '100+0x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: DiscoCritico
+        exp_alerts:
+          - exp_labels: {severidade: critico, servico: disco, runbook: discocritico,
+                         fstype: ext4, mountpoint: /, instance: i}
+            exp_annotations:
+              resumo: "Disco / acima de 95 por cento de uso"
+              detalhe: "Uso em 97%. Ingestão e backup param antes de 100 por cento."
+
+  # ---------------------------------------------------------------- memoria
+  - interval: 1m
+    name: memoria disponivel de 1 GiB dispara
+    input_series:
+      - series: 'node_memory_MemAvailable_bytes{instance="i"}'
+        values: '1073741824+0x10'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: RamDisponivelBaixa
+        exp_alerts:
+          - exp_labels: {severidade: aviso, servico: ram, runbook: ramdisponivelbaixa, instance: i}
+            exp_annotations:
+              resumo: "Menos de 2 GiB de memória disponível"
+              detalhe: "MemAvailable em 1GiB. O matador por falta de memória do núcleo já derrubou o Postgres desta casa antes."
+
+  - interval: 1m
+    name: memoria disponivel de 3 GiB nao dispara
+    input_series:
+      - series: 'node_memory_MemAvailable_bytes{instance="i"}'
+        values: '3221225472+0x10'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: RamDisponivelBaixa
+        exp_alerts: []
+
+  # ---------------------------------------------------------------- fila
+  - interval: 1m
+    name: job rodando ha 35 minutos dispara
+    input_series:
+      - series: 'plat_jobs_rodando_mais_antigo_segundos'
+        values: '2100+0x10'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: FilaComJobLongo
+        exp_alerts:
+          - exp_labels: {severidade: aviso, servico: fila, runbook: filacomjoblongo}
+            exp_annotations:
+              resumo: "Job na fila rodando há mais de 30 minutos"
+              detalhe: "O job mais antigo em estado rodando começou há 35m 0s."
+
+  - interval: 1m
+    name: job rodando ha 20 minutos nao dispara
+    input_series:
+      - series: 'plat_jobs_rodando_mais_antigo_segundos'
+        values: '1200+0x10'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: FilaComJobLongo
+        exp_alerts: []
+
+  # ---------------------------------------------------------------- 5xx
+  - interval: 1m
+    name: cinco por cento de 5xx dispara
+    input_series:
+      - series: 'plat_http_requests_total{rota="/api/itens",status="500",tenant="1"}'
+        values: '0+5x15'
+      - series: 'plat_http_requests_total{rota="/api/itens",status="200",tenant="1"}'
+        values: '0+95x15'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: TaxaDeErro5xxAlta
+        exp_alerts:
+          - exp_labels: {severidade: critico, servico: api, runbook: taxadeerro5xxalta}
+            exp_annotations:
+              resumo: "Mais de 1 por cento das respostas da API são 5xx"
+              detalhe: "Fração de 5xx em 5% na janela de 5 minutos."
+
+  - interval: 1m
+    name: meio por cento de 5xx nao dispara
+    input_series:
+      - series: 'plat_http_requests_total{rota="/api/itens",status="500",tenant="1"}'
+        values: '0+1x15'
+      - series: 'plat_http_requests_total{rota="/api/itens",status="200",tenant="1"}'
+        values: '0+199x15'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: TaxaDeErro5xxAlta
+        exp_alerts: []
+
+  # ---------------------------------------------------------------- p95 de tile
+  - interval: 1m
+    name: p95 de tile acima de 500 ms dispara
+    input_series:
+      - series: 'martin_http_requests_duration_seconds_bucket{le="0.1",endpoint="/t/{z}/{x}/{y}"}'
+        values: '0+0x25'
+      - series: 'martin_http_requests_duration_seconds_bucket{le="0.5",endpoint="/t/{z}/{x}/{y}"}'
+        values: '0+0x25'
+      - series: 'martin_http_requests_duration_seconds_bucket{le="1",endpoint="/t/{z}/{x}/{y}"}'
+        values: '0+10x25'
+      - series: 'martin_http_requests_duration_seconds_bucket{le="+Inf",endpoint="/t/{z}/{x}/{y}"}'
+        values: '0+10x25'
+    alert_rule_test:
+      - eval_time: 22m
+        alertname: TileP95Lento
+        exp_alerts:
+          - exp_labels: {severidade: aviso, servico: tiles, runbook: tilep95lento}
+            exp_annotations:
+              resumo: "p95 de resposta de ladrilho acima de 500 ms"
+              detalhe: "p95 em 975ms na janela de 10 minutos."
+
+  - interval: 1m
+    name: p95 de tile rapido nao dispara
+    input_series:
+      - series: 'martin_http_requests_duration_seconds_bucket{le="0.1",endpoint="/t/{z}/{x}/{y}"}'
+        values: '0+10x25'
+      - series: 'martin_http_requests_duration_seconds_bucket{le="0.5",endpoint="/t/{z}/{x}/{y}"}'
+        values: '0+10x25'
+      - series: 'martin_http_requests_duration_seconds_bucket{le="1",endpoint="/t/{z}/{x}/{y}"}'
+        values: '0+10x25'
+      - series: 'martin_http_requests_duration_seconds_bucket{le="+Inf",endpoint="/t/{z}/{x}/{y}"}'
+        values: '0+10x25'
+    alert_rule_test:
+      - eval_time: 22m
+        alertname: TileP95Lento
+        exp_alerts: []
+
+  # ---------------------------------------------------------------- certificado
+  - interval: 1m
+    name: certificado com 7 dias dispara
+    input_series:
+      - series: 'plat_certificado_dias_restantes'
+        values: '7+0x10'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: CertificadoPertoDeVencer
+        exp_alerts:
+          - exp_labels: {severidade: aviso, servico: tls, runbook: certificadopertodevencer}
+            exp_annotations:
+              resumo: "Certificado TLS vence em menos de 14 dias"
+              detalhe: "Faltam 7.0 dias. Renovação automática pode ter parado."
+
+  - interval: 1m
+    name: certificado com 60 dias nao dispara
+    input_series:
+      - series: 'plat_certificado_dias_restantes'
+        values: '60+0x10'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: CertificadoPertoDeVencer
+        exp_alerts: []
+
+  # ---------------------------------------------------------------- backup e ensaio
+  - interval: 1m
+    name: backup de 30 horas atras dispara e de 25 horas nao
+    input_series:
+      - series: 'plat_backup_horas_desde_ultimo{tipo="backup"}'
+        values: '30+0x15'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: BackupAtrasado
+        exp_alerts:
+          - exp_labels: {severidade: critico, servico: backup, runbook: backupatrasado, tipo: backup}
+            exp_annotations:
+              resumo: "Nenhum backup concluído com sucesso nas últimas 26 horas"
+              detalhe: "Última execução OK há 30.0 horas."
+
+  - interval: 1m
+    name: backup de 25 horas atras nao dispara
+    input_series:
+      - series: 'plat_backup_horas_desde_ultimo{tipo="backup"}'
+        values: '25+0x15'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: BackupAtrasado
+        exp_alerts: []
+
+  - interval: 1m
+    name: ensaio nunca executado dispara pelo valor sem prazo
+    input_series:
+      - series: 'plat_backup_horas_desde_ultimo{tipo="drill"}'
+        values: '999999+0x15'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: DrillDoMesNaoExecutado
+        exp_alerts:
+          - exp_labels: {severidade: aviso, servico: backup, runbook: drilldomesnaoexecutado, tipo: drill}
+            exp_annotations:
+              resumo: "Ensaio de restauração não executado neste mês"
+              detalhe: "Último ensaio OK há 999999 horas."
+
+  # ---------------------------------------------------------------- replica
+  - interval: 1m
+    name: replica com 10 minutos de atraso dispara
+    input_series:
+      - series: 'pg_replication_is_replica{instance="replica"}'
+        values: '1+0x10'
+      - series: 'pg_replication_lag_seconds{instance="replica"}'
+        values: '600+0x10'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ReplicaAtrasadaOuParada
+        exp_alerts:
+          - exp_labels: {severidade: critico, servico: replica, runbook: replicaatrasadaouparada, instance: replica}
+            exp_annotations:
+              resumo: "Réplica do Postgres com atraso acima de 5 minutos"
+              detalhe: "Atraso de 10m 0s."
+      - eval_time: 3m
+        alertname: ReplicaSemMetrica
+        exp_alerts: []
+
+  - interval: 1m
+    name: primario com atraso alto nao dispara porque nao e replica
+    input_series:
+      - series: 'pg_replication_is_replica{instance="primario"}'
+        values: '0+0x10'
+      - series: 'pg_replication_lag_seconds{instance="primario"}'
+        values: '600+0x10'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ReplicaAtrasadaOuParada
+        exp_alerts: []
+
+  - interval: 1m
+    name: metrica de replica ausente dispara
+    input_series:
+      - series: 'pg_up{instance="primario"}'
+        values: '1+0x10'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: ReplicaSemMetrica
+        exp_alerts:
+          - exp_labels: {severidade: critico, servico: replica, runbook: replicasemmetrica}
+            exp_annotations:
+              resumo: "Métrica de atraso de réplica ausente"
+              detalhe: "O exporter do Postgres parou de publicar pg_replication_lag_seconds."
+
+  # ---------------------------------------------------------------- processos
+  - interval: 1m
+    name: martin fora dispara servico da plataforma fora e nao o generico por inibicao de rotulo
+    input_series:
+      - series: 'up{job="plat-martin",instance="localhost:8151"}'
+        values: '1 1 0 0 0 0 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ServicoDaPlataformaFora
+        exp_alerts:
+          - exp_labels: {severidade: critico, servico: processo, runbook: servicodaplataformafora,
+                         job: plat-martin, instance: "localhost:8151"}
+            exp_annotations:
+              resumo: "Serviço plat-martin fora do ar"
+              detalhe: "O alvo localhost:8151 do job plat-martin não responde há 2 minutos."
+      - eval_time: 8m
+        alertname: AlvoPrometheusCaido
+        exp_alerts:
+          - exp_labels: {severidade: aviso, servico: monitor, runbook: alvoprometheuscaido,
+                         job: plat-martin, instance: "localhost:8151"}
+            exp_annotations:
+              resumo: "Alvo plat-martin sem resposta no Prometheus"
+              detalhe: "instance=localhost:8151 com up=0 há 5 minutos."
+
+  - interval: 1m
+    name: alvo de fora da plataforma caido dispara so o generico
+    input_series:
+      - series: 'up{job="node-exporter",instance="localhost:9100"}'
+        values: '0+0x10'
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: ServicoDaPlataformaFora
+        exp_alerts: []
+      - eval_time: 8m
+        alertname: AlvoPrometheusCaido
+        exp_alerts:
+          - exp_labels: {severidade: aviso, servico: monitor, runbook: alvoprometheuscaido,
+                         job: node-exporter, instance: "localhost:9100"}
+            exp_annotations:
+              resumo: "Alvo node-exporter sem resposta no Prometheus"
+              detalhe: "instance=localhost:9100 com up=0 há 5 minutos."
+
+  # ---------------------------------------------------------------- alertador
+  - interval: 1m
+    name: alertmanager fora dispara
+    input_series:
+      - series: 'up{job="alertmanager",instance="localhost:9093"}'
+        values: '1 1 0 0 0 0 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: AlertmanagerFora
+        exp_alerts:
+          - exp_labels: {severidade: critico, servico: monitor, runbook: alertmanagerfora,
+                         job: alertmanager, instance: "localhost:9093"}
+            exp_annotations:
+              resumo: "Alertmanager fora do ar"
+              detalhe: "O Prometheus continua avaliando regras, mas nenhum alerta sai para e-mail ou webhook. Ver /alerts na interface do Prometheus."
+
+  - interval: 1m
+    name: alertmanager que nunca existiu tambem dispara pelo ramo absent
+    input_series:
+      - series: 'up{job="plat-api",instance="localhost:8150"}'
+        values: '1+0x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: AlertmanagerFora
+        exp_alerts:
+          # `absent()` devolve o vetor com os rótulos do seletor: job="alertmanager" aparece
+          # mesmo sem alvo nenhum configurado. É isso que faz o alerta existir quando o Alertmanager
+          # NUNCA subiu, e não só quando ele caiu.
+          - exp_labels: {severidade: critico, servico: monitor, runbook: alertmanagerfora,
+                         job: alertmanager}
+            exp_annotations:
+              resumo: "Alertmanager fora do ar"
+              detalhe: "O Prometheus continua avaliando regras, mas nenhum alerta sai para e-mail ou webhook. Ver /alerts na interface do Prometheus."
+
+  - interval: 1m
+    name: prometheus sem alertmanager descoberto dispara
+    input_series:
+      - series: 'prometheus_notifications_alertmanagers_discovered'
+        values: '0+0x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: PrometheusNaoConsegueFalarComAlertmanager
+        exp_alerts:
+          - exp_labels: {severidade: critico, servico: monitor,
+                         runbook: prometheusnaoconseguefalarcomalertmanager}
+            exp_annotations:
+              resumo: "Prometheus não enxerga nenhum Alertmanager"
+              detalhe: "prometheus_notifications_alertmanagers_discovered = 0."
+
+  - interval: 1m
+    name: sentinela dispara sempre sem serie nenhuma
+    input_series: []
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: Sentinela
+        exp_alerts:
+          - exp_labels: {severidade: aviso, servico: monitor, runbook: sentinela}
+            exp_annotations:
+              resumo: "Sentinela: o caminho de alerta está vivo"
+              detalhe: "Alerta permanente. Silêncio prolongado deste alerta significa que o caminho quebrou."
