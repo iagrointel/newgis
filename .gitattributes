@@ -2,7 +2,9 @@
 # (07/09: openapi.json reprovou junção de item cujo código estava correto.)
 # 07/09 tarde: 5 ramos reprovaram de uma vez por conflito aqui, nenhum por teste. União; a fila
 # A ordem das linhas do lote fica arbitrária — de propósito: é registro, não contrato.
-app/auth/escopos.py merge=union
+# app/auth/escopos.py merge=union  # (10/09) união DESLIGADA: aqui ela concatena estrutura multilinha
+# (regex, tupla, dicionário) e produz sintaxe inválida. Registro de linha solta — limites.py,
+# main.py, paginas.py, jobs/tipos.py — continua com união, que ali é aditiva e válida.
 # app/auth/escopos.py: registro de escopos de token, um por item. Oitavo da família.
 # app/jobs/tipos.py é REGISTRO de tipos de job (um import por módulo de tarefas); mesma família.
 app/jobs/tipos.py merge=union
@@ -32,8 +34,12 @@ MANUAL.md merge=union
 # remove include_router duplicado e confere sintaxe antes da suíte.
 # Risco aceito: se a união quebrar a sintaxe, a verificação do lote reprova na hora e alto.
 SISTEMA.md merge=union
-tests/api/cruzado_casos.py merge=union
-tests/api/eventos_esperados.py merge=union
+# tests/api/cruzado_casos.py merge=union  # (10/09) união DESLIGADA: aqui ela concatena estrutura multilinha
+# (regex, tupla, dicionário) e produz sintaxe inválida. Registro de linha solta — limites.py,
+# main.py, paginas.py, jobs/tipos.py — continua com união, que ali é aditiva e válida.
+# tests/api/eventos_esperados.py merge=union  # (10/09) união DESLIGADA: aqui ela concatena estrutura multilinha
+# (regex, tupla, dicionário) e produz sintaxe inválida. Registro de linha solta — limites.py,
+# main.py, paginas.py, jobs/tipos.py — continua com união, que ali é aditiva e válida.
 # tests/api/eventos_esperados.py: registro de eventos por rota, um por item. Sétimo da família.
 # web/js/i18n/*.json: dicionário de tradução, um texto por chave — union quebra JSON; driver próprio
 web/js/i18n/*.json merge=jsonuniao
