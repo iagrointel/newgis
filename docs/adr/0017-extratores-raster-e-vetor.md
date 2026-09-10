@@ -7,7 +7,7 @@ favorabilidade é L3-01-d, a combinação é L3-01-e.
 
 ## Contexto
 
-O motor logístico de referência da casa (o SQL de fatores do piloto) já prova que extração cara/materializada + combinação barata/
+O motor logístico (`cbre/pipeline/85_fatores.sql`) já prova que extração cara/materializada + combinação barata/
 interativa funciona (decisão A2). Faltava, em Python puro e sem depender do banco para o cálculo em si, a função que
 lê um raster ou uma camada vetorial e devolve o valor bruto por unidade, com o peso de área na borda que separa o
 motor certo do aproximado (regra do portão do item).
@@ -41,7 +41,7 @@ contagem = 0, cobertura = 1,0) — diferente de "camada ausente", que aborta.
 peso acumulado alcança p/100 da soma), a mesma que os testes recomputam.
 
 **5. Vetor: reprojeção única para `srid_trabalho`, com `shapely.make_valid` antes de qualquer operação booleana**
-(METODOLOGIA "ST_MakeValid antes de operação em massa"). Geometria inválida (auto-interseção) é reparada, não
+(regra de método da casa: "ST_MakeValid antes de operação em massa"). Geometria inválida (auto-interseção) é reparada, não
 rejeitada e não ignorada — o reparo fica registrado em `avisos` por unidade. Área, comprimento e fração usam
 `geopandas.overlay`/`sjoin`/`sjoin_nearest` no CRS projetado (não graus, não Web Mercator), vetorizado por camada
 inteira em vez de laço unidade a unidade — é o que torna o vetor rápido o bastante para 73 mil unidades (o raster,

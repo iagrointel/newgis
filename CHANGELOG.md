@@ -5084,6 +5084,31 @@ nomeado em `tests/medidas/L3-01-d-transformacoes.json` — cláusula registrada 
 passada. `app/amc/executor.py` (item L6-04) agora usa esta biblioteca inteira em vez de só `linear`. 16
 gráficos gerados por `scripts/amc_transformacoes_graficos.py` em `docs/graficos/amc_transformacoes/`. ADR
 `docs/adr/20260907T1602-transformacoes-amc.md`.
+## turno 3, setembro de 2026 (item L3-02-b-sensibilidade-sobol-oat: sensibilidade global e local do motor multicritério)
+
+`app/amc/sensibilidade.py` responde duas perguntas diferentes sobre o mesmo modelo. A global são os
+índices de Sobol de primeira ordem e total sobre os pesos e os parâmetros de transformação, por amostra
+de Saltelli na sequência de Sobol do `scipy.stats.qmc` (estimador de Saltelli 2010 para a primeira
+ordem, de Jansen 1999 para o total), com N declarado, semente gravada e intervalo por reamostragem das
+linhas da amostra. A local é o tornado um fator por vez: move o peso de cada fator de −50 % a +100 % com
+os outros parados e mede quanto a lista dos k melhores muda. Sai um relatório por modelo, serializável,
+com as duas leituras, o que manda no resultado e o que é irrelevante (índice total abaixo de 0,01).
+Roda como job `amc.sensibilidade`, pela mesma razão do sorteio do item L3-02-a: o custo é N·(g+2)
+recombinações. Sem rota nova, sem migração, sem dependência nova.
+
+Medido (`tests/medidas/L3-02-b-sensibilidade-sobol-oat.json`): a função de teste de Ishigami, cujos
+índices têm forma fechada, é reproduzida com desvio máximo de **0,0004** contra a referência (N=16.384,
+81.920 avaliações em 0,009 s) — a tolerância do portão era 0,05. O relatório completo de um modelo de
+2.000 unidades × 6 fatores (N=512, 4.096 recombinações, tornado de 9 passos por fator, 100
+reamostragens) levou **1,295 s** com carga de 1 min 9,53 e 3,65 GB livres: passou com folga mesmo sob
+disputa de máquina. A refutação do fator duplicado passou nos dois alvos e deixou dois achados escritos
+como teste: somar o índice TOTAL das duas cópias conta a interação entre elas duas vezes (a conta certa
+é o índice do grupo), e repartir o peso em duas metades sem alargar a faixa por √2 derruba o índice por
+perda de variância, não por mudança do modelo.
+
+Regra de linguagem mantida do item irmão: mede-se a dependência do modelo ao peso escolhido pelo
+usuário, nunca a importância real do fator no território — a frase anda junto de todo número, e um
+teste de adversário reprova a saída que a perder.
 
 ## turno 3, setembro de 2026 (item L3-02-a-monte-carlo-pesos: robustez do motor multicritério por sorteio de pesos)
 
@@ -6279,6 +6304,9 @@ Migração `045_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RL
 Migração `045_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
 Migração `044_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
 Migração `045_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
+## turno 3, setembro de 2026 (itens L3-01-a-modelo-dado e L3-01-b-unidades: motor multicritério — modelo, proveniência e unidade de análise)
+
+Migração `20260907T1206_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
 editável) e `amc_modelo_versao` (toda versão que já existiu, imutável para a aplicação por gatilho), `amc_conjunto_unidade`
 e `amc_unidade`, `amc_execucao` (proveniência congelada), `amc_fator_bruto` e `amc_resultado` — linhas por (execução,
 unidade, fator), nunca uma coluna por fator. `amc_resultado` tem `CHECK` que impede unidade vetada de carregar número na

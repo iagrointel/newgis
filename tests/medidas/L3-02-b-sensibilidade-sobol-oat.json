@@ -1,0 +1,27 @@
+{
+ "item": "L3-02-b-sensibilidade-sobol-oat",
+ "medidas": {
+  "relatorio_n512_2000x6_job_s": {
+   "valor": 1.295,
+   "unidade": "s",
+   "comando": "amc.sensibilidade (N=512 de Saltelli = 4096 recombinações sobre 2000 unidades × 6 fatores, mais tornado de 9 passos por fator e 100 reamostragens, ContextoJob sem banco) — limite 60.0 s; carga_1min=9.53, ram_livre_gb=3.65, medido_em=2026-09-08T10:34:26Z (passou com folga mesmo sob carga alta)"
+  },
+  "tempo_global_s": {
+   "valor": 1.275,
+   "unidade": "s",
+   "comando": "parte global (índices de Sobol) do mesmo relatório; carga_1min=9.53, ram_livre_gb=3.65, medido_em=2026-09-08T10:34:26Z"
+  },
+  "tempo_local_s": {
+   "valor": 0.019,
+   "unidade": "s",
+   "comando": "parte local (tornado um fator por vez) do mesmo relatório; carga_1min=9.53, ram_livre_gb=3.65, medido_em=2026-09-08T10:34:26Z"
+  },
+  "erro_maximo_ishigami": {
+   "valor": 0.0004,
+   "unidade": "índice",
+   "comando": "maior desvio absoluto contra os índices em forma fechada (N=16384, semente 7, 81920 avaliações em 0.009 s) — tolerância do portão 0,05"
+  }
+ },
+ "gerado_em": "2026-09-08T10:34:27Z",
+ "git_sha": "0d3f673ac96b"
+}
