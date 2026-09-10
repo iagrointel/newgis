@@ -145,3 +145,48 @@ def test_token_invalido_e_401(cenario):
     c = cenario["cliente"]
     r = c.get("/svc/plat_token-que-nao-existe-em-lugar-nenhum-xyz/stac/collections")
     assert r.status_code == 401
+
+
+def test_filtro_cql2_com_colecao_de_b_nao_vaza(cenario):
+    """Teste cruzado escrito na entrega (não veio do Kimi): o adversário do item manda `collections`
+    vazio/próprio e tenta reabrir a coleção de B por dentro do FILTRO CQL2 (`filter`/`filter-lang`), que
+    é escrito direto em `saida["filter"]` por `pgstac.parametros_busca` sem passar pela interseção de
+    `collections_do_tenant`. Se o pgstac tratasse `filter` como alternativa a `collections` (em vez de um
+    predicado ANDADO por cima da lista já restrita), isto vazaria o item de B para o token de A."""
+    c, ta = cenario["cliente"], cenario["ta"]
+    filtro_cql2 = {"op": "=", "args": [{"property": "collection"}, cenario["colecao_b"]]}
+
+    r = c.post(f"/svc/{ta}/stac/search", json={"filter": filtro_cql2, "filter-lang": "cql2-json"})
+    assert r.status_code == 200, r.text
+    assert r.json()["features"] == [], r.json()
+
+    r2 = c.get(
+        f"/svc/{ta}/stac/search",
+        params={"filter": __import__("json").dumps(filtro_cql2), "filter-lang": "cql2-json"},
+    )
+    assert r2.status_code == 200, r2.text
+    assert r2.json()["features"] == [], r2.json()
+
+    # mesma tentativa, agora filtrando pelo id do item de B em vez da coleção
+    filtro_por_id = {"op": "=", "args": [{"property": "id"}, "item-b-1"]}
+    r3 = c.post(f"/svc/{ta}/stac/search", json={"filter": filtro_por_id, "filter-lang": "cql2-json"})
+    assert r3.status_code == 200, r3.text
+    assert r3.json()["features"] == [], r3.json()
+
+
+def test_collections_e_ids_de_b_juntos_no_mesmo_pedido_nao_vazam(cenario):
+    """Segundo teste cruzado escrito na entrega: A pede a própria coleção E a de B na mesma lista
+    `collections`, junto com o `id` exato do item de B em `ids` — o pedido mistura o que é seu com o
+    que não é, exatamente o formato que um cliente GIS real (QGIS/ArcGIS) montaria clicando em dois
+    catálogos ao mesmo tempo por engano."""
+    c, ta = cenario["cliente"], cenario["ta"]
+    r = c.post(
+        f"/svc/{ta}/stac/search",
+        json={"collections": [cenario["colecao_a"], cenario["colecao_b"]], "ids": ["item-a-1", "item-b-1"]},
+    )
+    assert r.status_code == 200, r.text
+    ids = [f["id"] for f in r.json()["features"]]
+    colecoes = [f["collection"] for f in r.json()["features"]]
+    assert "item-b-1" not in ids
+    assert cenario["colecao_b"] not in colecoes
+    assert ids == ["item-a-1"]

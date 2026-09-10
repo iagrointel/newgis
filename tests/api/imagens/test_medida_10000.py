@@ -10,7 +10,6 @@ import pytest
 from app import db, limites
 from app.imagens import pgstac as ps
 from app.imagens import raster_item as ri
-from tests.api.imagens import apoio_raster
 
 N_ITENS = 10_000
 # Brasil aproximado; a caixa de busca abaixo é ~1/16 da área total, o bastante para provar que o índice
@@ -33,14 +32,10 @@ def colecao_10k(token_stac_a, tenant_id_a, env):
     não como postgres): ingestão em massa é responsabilidade de um item futuro (L1-01-h), aqui só se prova
     que o catálogo AGUENTA o volume e que a busca por bbox permanece rápida."""
     ctx = db.Contexto(tenant_id_a, 0, "zt-medida")
-    # o schema `pgstac` é global ao banco: sem o nome da trilha na coleção, a trilha que rodar depois
-    # encontra os 10.000 itens da anterior, pula a semeadura e fica sem o espelho em plat.raster_item
-    # da SUA base (o teste então lia 0 no espelho).
-    slug = apoio_raster.slug_da_trilha("medida10k")
-    colecao_id = ps.nome_colecao(tenant_id_a, slug)
+    colecao_id = ps.nome_colecao(tenant_id_a, "medida10k")
     with db.db(ctx) as cur:
         if ps.colecao_obter(cur, tenant_id_a, colecao_id) is None:
-            ps.colecao_criar(cur, tenant_id_a, slug, {})
+            ps.colecao_criar(cur, tenant_id_a, "medida10k", {})
 
     xmin, ymin, xmax, ymax = BBOX_TOTAL
     lado = int(N_ITENS**0.5) + 1  # grade regular, determinística — reproduzível sem estado aleatório
@@ -63,13 +58,23 @@ def colecao_10k(token_stac_a, tenant_id_a, env):
             }
         )
     with db.db(ctx) as cur:
+        # O schema `pgstac` é GLOBAL do banco (o pypgstac não aceita nome de schema por parâmetro), enquanto
+        # `plat.raster_item` é do schema da trilha. Uma trilha vizinha que já semeou a coleção deixa
+        # `pgstac.items` cheio e o espelho DESTA base vazio; por isso as duas contagens decidem se semeia.
         cur.execute("SELECT count(*) AS n FROM pgstac.items WHERE collection = %s", (colecao_id,))
         ja = cur.fetchone()["n"]
-        if ja < N_ITENS:
-            LOTE = 1000
-            for i in range(0, len(itens), LOTE):
-                ps.itens_criar_lote(cur, colecao_id, itens[i : i + LOTE])
-                ri.espelhar_lote(cur, tenant_id_a, colecao_id, [it["id"] for it in itens[i : i + LOTE]])
+        cur.execute(
+            "SELECT count(*) AS n FROM plat.raster_item WHERE tenant_id = %s AND colecao = %s",
+            (tenant_id_a, colecao_id),
+        )
+        ja_espelhados = cur.fetchone()["n"]
+        LOTE = 1000
+        for i in range(0, len(itens), LOTE):
+            fatia = itens[i : i + LOTE]
+            if ja < N_ITENS:  # `pgstac.create_items` não é upsert: só cria quando a coleção ainda não existe
+                ps.itens_criar_lote(cur, colecao_id, fatia)
+            if ja < N_ITENS or ja_espelhados < N_ITENS:
+                ri.espelhar_lote(cur, tenant_id_a, colecao_id, [it["id"] for it in fatia])
     return colecao_id
 
 
