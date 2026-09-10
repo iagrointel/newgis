@@ -128,3 +128,4 @@ duckdb==1.5.5
 bandit==1.9.4
 stevedore==5.9.1
 truststore==0.10.4
+# Do sistema, por decisão (pacotes dpkg conferidos pelo install.sh): python3-uvicorn 0.27.1, python3-psycopg2 2.9.9.

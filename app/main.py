@@ -74,6 +74,8 @@ from app.exportacao.rotas import router as rotas_exportacao
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.geocodificador.rotas_lote import router as rotas_geocodificacao_lote
+from app.imagens.rotas_stac import router as rotas_stac
+from app.imagens.rotas_tiles import router as rotas_tiles
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
 from app.mapa.proxy_wms import router as rotas_mapa_wms_publico

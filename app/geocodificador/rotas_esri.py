@@ -102,10 +102,8 @@ def _campos_de(p: dict) -> dict:
             "cep": cep}
 
 
-@router.get(PREFIXO, openapi_extra={"x-auth": "-", "x-privilegio": "publico"},
-            operation_id="geocodificador_esri_descritor_get")
-@router.post(PREFIXO, openapi_extra={"x-auth": "-", "x-privilegio": "publico"},
-             operation_id="geocodificador_esri_descritor_post")
+@router.get(PREFIXO, openapi_extra={"x-auth": "S/T", "x-privilegio": "proprio"}, operation_id="geocodificador_esri_descritor_get")
+@router.post(PREFIXO, openapi_extra={"x-auth": "S/T", "x-privilegio": "proprio"}, operation_id="geocodificador_esri_descritor_post")
 async def descritor_servico(request: Request):
     """Descritor do locator (ADR 0013 seção 5.1) — mínimo para o QGIS/ArcGIS reconhecerem o serviço como
     GeocodeServer (capabilities, candidateFields, spatialReference); não exige autenticação (só metadado)."""
@@ -215,8 +213,7 @@ async def suggest(request: Request):
     return {"suggestions": [{"text": s["texto"], "magicKey": s["chave"], "isCollection": False} for s in sugestoes]}
 
 
-@router.api_route(f"{PREFIXO}/geocodeAddresses", methods=["POST"],
-                   openapi_extra={"x-auth": "S/T", "x-privilegio": "proprio"},
+@router.api_route(f"{PREFIXO}/geocodeAddresses", methods=["POST"], openapi_extra={"x-auth": "S/T", "x-privilegio": "proprio"},
                    operation_id="geocodificador_esri_geocode_addresses")
 async def geocode_addresses(request: Request):
     """Lote (item L2-11-a-geocodificacao-csv reusa este mesmo caminho para o motor, não esta rota HTTP).

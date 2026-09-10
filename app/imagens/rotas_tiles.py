@@ -44,11 +44,10 @@ router = APIRouter(tags=["tiles"])
 
 X = {"x-auth": "T", "x-privilegio": "proprio"}
 CACHE_TILE = "public, max-age=300"
-CACHE_TILE_IMUTAVEL = "public, max-age=31536000, immutable"
-# versao no caminho (item L7-26-cdn-tiles; hipotese do conceito L1 C6 + registro de proveniencia por
-# sha256 ja existente em plat.raster_item): "<item>@<prefixo-do-sha256>". Casa -> o byte nunca muda,
-# entao a CDN pode guardar para sempre; nao casa -> 404 (a versao pedida saiu de circulacao, nunca serve
-# dado de outra versao sob o mesmo endereco).
+# a porta serve mapa web de terceiro (docstring do módulo); sem isto o editor de estilo (e qualquer
+# cliente MapLibre fora do domínio da plataforma) não consegue usar a imagem como textura WebGL — o
+# navegador marca <img crossorigin> sem cabeçalho de resposta como falha de carregamento, não como aviso.
+CORS = "*"
 FORMATO_PADRAO = "png"
 # resolução de item -> objeto: cara (2 consultas) e estável. Cache curto em processo; a autorização NÃO
 # passa por aqui (essa é conferida a cada requisição, com o cache de 5 s do `_autorizar`).
@@ -119,27 +118,6 @@ def _chave_do_asset(item_stac: dict, asset: str) -> str:
                       "este asset não é um objeto do armazenamento da plataforma (item referenciado)",
                       {"asset": asset})
     return href[len("/api/objetos/"):]
-
-
-def _dividir_item_versionado(item: str) -> tuple[str, str | None]:
-    """"<item>" ou "<item>@<versao>" (item L7-26-cdn-tiles): a versao no caminho e o que deixa a CDN
-    guardar o ladrilho para sempre (o endereco muda quando o conteudo muda; o mesmo endereco nunca muda
-    de conteudo). "@" e caractere valido de segmento de URL, entao nao precisa de rota nova."""
-    if "@" not in item:
-        return item, None
-    base, _, versao = item.rpartition("@")
-    if not base or not versao:
-        raise ErroAPI(422, "item_invalido", "item@versao mal formado (faltou um dos dois lados)",
-                      {"item": item})
-    return base, versao
-
-
-def _sha256_atual(auth, item: str) -> str | None:
-    with db.db(auth.contexto_leitura()) as cur:
-        cur.execute("SELECT sha256 FROM plat.raster_item WHERE tenant_id = %s AND item_id = %s LIMIT 1",
-                    (auth.tenant_id, item))
-        linha = cur.fetchone()
-    return linha["sha256"] if linha else None
 
 
 def _fonte_do_item(auth, item: str, asset: str) -> tuple[tiles.Fonte, dict]:
@@ -213,37 +191,16 @@ def _consulta_render(expressao, bandas, rescale, colormap, asset) -> str:
 
 
 def _servir(request: Request, auth, item: str, z: int, x: int, y: int, formato: str,
-            expressao, bandas, faixa, colormap, asset, versao: str | None = None) -> Response:
-    """`versao` vem de `<item>@<versao>` (item L7-26-cdn-tiles): quando presente, confere contra o
-    sha256 vigente em `plat.raster_item` ANTES de ler o pixel. Casar = o byte deste endereço nunca muda
-    -> `Cache-Control: public, max-age=31536000, immutable`, ETag = o sha256 inteiro (a CDN pode guardar
-    para sempre e nunca precisa revalidar). Não casar = a versão pedida não existe mais neste endereço ->
-    404 curto, sem ler nada (nunca serve o pixel ATUAL sob o endereço de uma versão VELHA)."""
-    # ORDEM que importa (achado desta bancada, item L7-26-cdn-tiles): `_fonte_do_item` PRIMEIRO, porque
-    # é ela que confere se o item é do inquilino do token (403 sem distinguir "não existe" de "é de
-    # outro"). Checar a versão antes disso vazaria a diferença entre "versão errada" (404) e "item de
-    # outro inquilino" (403) — a MESMA classe de vazamento que a docstring do módulo já proíbe para
-    # item inexistente, só que pela porta nova que este item abriu. Confirmado na bancada: sem esta
-    # ordem, um token de OUTRO inquilino pedindo `item-de-A@versao` recebia 404 em vez de 403.
+            expressao, bandas, faixa, colormap, asset) -> Response:
     asset_final = _asset_padrao(expressao, asset)
     fonte, _ = _fonte_do_item(auth, item, asset_final)
-    sha_atual = None
-    if versao is not None:
-        sha_atual = _sha256_atual(auth, item)
-        if not sha_atual or not sha_atual.startswith(versao):
-            leitura.contar(auth.tenant_id, auth.token_id, item, 0, erro=True)
-            raise ErroAPI(404, "versao_inexistente",
-                          "esta versão do item não existe mais; peça o tilejson de novo para pegar o "
-                          "endereço vigente", {"item": item, "versao": versao})
-    cache_control = CACHE_TILE_IMUTAVEL if versao is not None else CACHE_TILE
-    headers_extra = {"ETag": f'"{sha_atual}"'} if sha_atual else {}
     inicio = time.perf_counter()
     try:
         corpo = tiles.ladrilho(fonte, z, x, y, formato=formato, expressao=expressao,
                               bandas=_bandas(bandas), rescale=_faixa(faixa), colormap=colormap)
     except tiles.ForaDaCobertura:
         leitura.contar(auth.tenant_id, auth.token_id, item, 0)
-        return Response(status_code=204, headers={"Cache-Control": cache_control, **headers_extra})
+        return Response(status_code=204, headers={"Cache-Control": CACHE_TILE, "Access-Control-Allow-Origin": CORS})
     except tiles.ErroTile as e:
         leitura.contar(auth.tenant_id, auth.token_id, item, 0, erro=True)
         raise ErroAPI(422, "ladrilho_invalido", str(e)) from e
@@ -255,14 +212,17 @@ def _servir(request: Request, auth, item: str, z: int, x: int, y: int, formato: 
     return Response(
         content=corpo,
         media_type=tiles.FORMATOS[formato],
-        headers={"Cache-Control": cache_control, "Server-Timing": f"ladrilho;dur={ms:.1f}", **headers_extra},
+        headers={
+            "Cache-Control": CACHE_TILE,
+            "Server-Timing": f"ladrilho;dur={ms:.1f}",
+            "Access-Control-Allow-Origin": CORS,
+        },
     )
 
 
 # ---------------------------------------------------------------------------- TileJSON / info
-def _base(token: str, item: str, versao: str | None = None) -> str:
-    caminho_item = f"{item}@{versao}" if versao else item
-    return f"{settings.PLAT_URL_PUBLICA.rstrip('/')}/svc/{token}/raster/{caminho_item}"
+def _base(token: str, item: str) -> str:
+    return f"{settings.PLAT_URL_PUBLICA.rstrip('/')}/svc/{token}/raster/{item}"
 
 
 @router.get("/svc/{token}/raster/{item}/tilejson.json", openapi_extra=X, summary="TileJSON 3.0.0 do item")
@@ -280,12 +240,7 @@ def tilejson(
     fonte, stac = _fonte_do_item(auth, item, asset_final)
     info = tiles.informacao(fonte)
     consulta = _consulta_render(expressao, bandas, faixa, colormap, asset)
-    # o TileJSON já entrega o endereço VERSIONADO (item L7-26-cdn-tiles) quando há sha256: é o único jeito
-    # de o cliente de mapa (QGIS, navegador) ganhar o cache de 1 ano da CDN sem precisar saber que isso
-    # existe — ele só segue a URL que o TileJSON deu.
-    versao = _sha256_atual(auth, item)
-    url = (f"{_base(token, item, versao[:12] if versao else None)}"
-           f"/{{z}}/{{x}}/{{y}}.{ 'jpg' if formato in ('jpg', 'jpeg') else formato}")
+    url = f"{_base(token, item)}/{{z}}/{{x}}/{{y}}.{ 'jpg' if formato in ('jpg', 'jpeg') else formato}"
     if consulta:
         url += f"?{consulta}"
     corpo = {
@@ -300,7 +255,10 @@ def tilejson(
         "scheme": "xyz",
         "attribution": (stac.get("properties") or {}).get("plat:atribuicao"),
     }
-    return JSONResponse(corpo, headers={"Cache-Control": "no-store, must-revalidate"})
+    return JSONResponse(corpo, headers={
+        "Cache-Control": "no-store, must-revalidate",
+        "Access-Control-Allow-Origin": CORS,
+    })
 
 
 @router.get("/svc/{token}/raster/{item}/info.json", openapi_extra=X, summary="extensão e bandas do item")
@@ -314,6 +272,30 @@ def info_json(request: Request, token: str, item: str,
     corpo["colormaps"] = sorted(tiles.COLORMAPS)
     corpo["formatos"] = sorted(set(tiles.FORMATOS.values()))
     return JSONResponse(corpo, headers={"Cache-Control": "no-store, must-revalidate"})
+
+
+@router.get("/svc/{token}/raster/{item}/estatisticas.json", openapi_extra=X,
+            summary="mín/máx/média/desvio-padrão e percentis 2-98 por banda (ou por expressão)")
+def estatisticas_json(
+    request: Request, token: str, item: str,
+    bandas: str | None = Query(None, max_length=32, description="bandas a medir, ex.: 3,2,1"),
+    expressao: str | None = Query(None, max_length=tiles.EXPRESSAO_MAX,
+                                  description="mede a expressão (ex.: NDVI) em vez das bandas cruas"),
+    asset: str | None = Query(None, pattern="^(visual|cientifico)$"),
+):
+    """Base do esticamento por percentil/desvio-padrão do editor de estilo (item L2-02-f) e da legenda
+    contínua: o editor chama esta rota, escolhe min/máx pelo método pedido e GRAVA os números no
+    `plat_construtor.parametros_raster.rescale` — a legenda nunca recalcula por conta própria, só cita
+    o que aqui saiu (mesma disciplina de fonte única do resto do módulo de estilo)."""
+    auth = _autorizar(request, token, item)
+    asset_final = _asset_padrao(expressao, asset)
+    fonte, _ = _fonte_do_item(auth, item, asset_final)
+    try:
+        corpo = tiles.estatisticas(fonte, bandas=_bandas(bandas), expressao=expressao)
+    except tiles.ErroTile as e:
+        raise ErroAPI(422, "estatistica_invalida", str(e)) from e
+    return JSONResponse(corpo, headers={"Cache-Control": "no-store, must-revalidate",
+                                        "Access-Control-Allow-Origin": CORS})
 
 
 # ---------------------------------------------------------------------------- WMTS
@@ -419,10 +401,8 @@ def tile_xyz_ext(
     if ext not in tiles.FORMATOS:
         raise ErroAPI(404, "formato_desconhecido", f"formato de ladrilho desconhecido: {ext}",
                       {"aceitos": sorted(tiles.FORMATOS)})
-    item_id, versao = _dividir_item_versionado(item)
-    auth = _autorizar(request, token, item_id)
-    return _servir(request, auth, item_id, z, x, y, ext, expressao, bandas, faixa, colormap, asset,
-                   versao=versao)
+    auth = _autorizar(request, token, item)
+    return _servir(request, auth, item, z, x, y, ext, expressao, bandas, faixa, colormap, asset)
 
 
 @router.get("/svc/{token}/raster/{item}/{z}/{x}/{y}", openapi_extra=X, summary="ladrilho XYZ do item")
@@ -436,10 +416,8 @@ def tile_xyz(
     colormap: str | None = Query(None, max_length=40),
     asset: str | None = Query(None, pattern="^(visual|cientifico)$"),
 ):
-    item_id, versao = _dividir_item_versionado(item)
-    auth = _autorizar(request, token, item_id)
-    return _servir(request, auth, item_id, z, x, y, formato, expressao, bandas, faixa, colormap, asset,
-                   versao=versao)
+    auth = _autorizar(request, token, item)
+    return _servir(request, auth, item, z, x, y, formato, expressao, bandas, faixa, colormap, asset)
 
 
 # ---------------------------------------------------------------------------- mosaico por coleção
@@ -468,7 +446,7 @@ def tile_mosaico(
                                 "limit": limite, "sortby": [{"field": "datetime", "direction": "desc"}]})
     feicoes = busca.get("features") or []
     if not feicoes:
-        return Response(status_code=204, headers={"Cache-Control": CACHE_TILE})
+        return Response(status_code=204, headers={"Cache-Control": CACHE_TILE, "Access-Control-Allow-Origin": CORS})
     ultima = None
     for f in feicoes:
         try:

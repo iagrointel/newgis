@@ -10,22 +10,10 @@ STAC ganha um id novo a cada chamada (é barato e evita colisão entre execuçõ
 
 from __future__ import annotations
 
-import os
-import re as _re
 import subprocess
 import tempfile
 import uuid
 from pathlib import Path
-
-
-def slug_da_trilha(base: str) -> str:
-    """O schema `pgstac` é GLOBAL ao banco (não é reescrito por trilha, ver db/pgstac_instalar.sh): duas
-    trilhas com os mesmos ids de inquilino escreveriam na MESMA coleção `<tenant_id>-<base>` e uma leria o
-    item da outra — que não tem linha em `plat.raster_item` na SUA base, e o serviço responde 403. O nome
-    da coleção de teste leva, por isso, o schema da trilha."""
-    schema = os.environ.get("PLAT_SCHEMA", "plat")
-    return f"{base}-{_re.sub(r'[^a-z0-9]+', '', schema.lower())}"
-
 
 LARGURA = 1024
 RESOLUCAO = 20.0
@@ -80,8 +68,7 @@ def semear_raster(tenant_id: int, slug: str) -> dict:
         with db.db(ctx) as cur:
             objeto = objetos.guardar_arquivo(cur, "raster", cog, "image/tiff", item_id=item_id,
                                              usuario_id=usuario_id)
-    slug_colecao = slug_da_trilha("imagens")
-    colecao = ps.nome_colecao(tenant_id, slug_colecao)
+    colecao = ps.nome_colecao(tenant_id, "imagens")
     tipo_cog = "image/tiff; application=geotiff; profile=cloud-optimized"
     asset = {"href": f"/api/objetos/{objeto['chave']}", "type": tipo_cog}
     stac = {
@@ -96,7 +83,7 @@ def semear_raster(tenant_id: int, slug: str) -> dict:
     }
     with db.db(ctx) as cur:
         if ps.colecao_obter(cur, tenant_id, colecao) is None:
-            ps.colecao_criar(cur, tenant_id, slug_colecao, {
+            ps.colecao_criar(cur, tenant_id, "imagens", {
                 "title": "Imagens do inquilino",
                 "description": "Coleção STAC das imagens ingeridas pela plataforma."})
         ps.item_criar(cur, tenant_id, colecao, stac)

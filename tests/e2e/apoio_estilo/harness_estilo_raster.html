@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../../../web/vendor/maplibre-gl-4.7.1.css" />
+<style>html,body,#mapa{margin:0;padding:0;width:800px;height:600px;}</style>
+</head>
+<body>
+<div id="mapa"></div>
+<script src="../../../web/vendor/maplibre-gl-4.7.1.js"></script>
+<script>
+// Arnês de renderização do tipo raster (item L2-02-f-estilo-raster): recebe, por `window.ESTILO_RASTER_TESTE`,
+// {url_tiles, bounds, opacidade}, onde `url_tiles` já é a URL XYZ REAL do serviço de ladrilho (L1-02, com o
+// token no caminho e a consulta compilada por `app/estilos/compilador.parametros_tile`) — nenhum dado sintético
+// aqui, ao contrário do harness vetorial: o objetivo deste arnês é justamente provar que os parâmetros que o
+// construtor de estilo gera abrem um ladrilho de verdade no navegador (RGB, banda única + rampa, NDVI por
+// expressão, percentil 2-98). Marca `data-pronto="1"` no <body> quando o mapa termina de desenhar (`idle`).
+var cfg = window.ESTILO_RASTER_TESTE;
+var map = new maplibregl.Map({
+  container: "mapa",
+  style: {
+    version: 8,
+    sources: {
+      camada_raster: { type: "raster", tiles: [cfg.url_tiles], tileSize: 256, bounds: cfg.bounds },
+    },
+    layers: [{ id: "camada", type: "raster", source: "camada_raster", paint: { "raster-opacity": cfg.opacidade || 1.0 } }],
+  },
+  bounds: cfg.bounds,
+  fitBoundsOptions: { padding: 10 },
+});
+window.mapaEstilo = map;
+map.on("idle", function () {
+  document.body.setAttribute("data-pronto", "1");
+});
+map.on("error", function (e) {
+  document.body.setAttribute("data-erro", (e && e.error && e.error.message) || "erro desconhecido");
+});
+</script>
+</body>
+</html>

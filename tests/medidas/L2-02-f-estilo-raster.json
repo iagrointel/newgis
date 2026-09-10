@@ -1,0 +1,62 @@
+{
+ "item": "L2-02-f-estilo-raster",
+ "assinado_por": "gerente (retomada de sessão morta; papéis raster/cartografo/frontend/adversario acumulados por esta sessão)",
+ "gerado_em": "2026-09-07T15:22:00Z",
+ "git_sha": "1c1927c58780",
+ "maquina": "12 vCPU, 23 GB RAM; disco / e /mnt/pgdata a 98%; ~8 trilhas concorrentes na máquina no momento da medição",
+ "medidas": {
+  "e2e_isolado_passou": {
+   "valor": 4,
+   "unidade": "testes",
+   "comando": "porta 8248 livre antes de rodar: bash laco/roda_teste.sh tests/api/imagens/test_estilo_raster_e2e.py -q => 4 passed (RGB, banda única + rampa, NDVI por expressão, percentil 2-98), 4 capturas em tests/e2e/capturas/estilo_raster_*.png"
+  },
+  "unit_compilador_raster_passou": {
+   "valor": 12,
+   "unidade": "testes",
+   "comando": "bash laco/roda_teste.sh tests/unit/test_estilos_compilador.py tests/api/catalogo/test_estilos.py -q => 50 passed (12 novos de raster: rescale invertido, banda fora do vocabulário, divisão por zero, expressão fora da gramática, NDVI válida, colormap desconhecido/conhecido, resampling fora do vocabulário, parametros_tile só devolve o vocabulário do L1-02, legenda usa o rescale gravado, round-trip salvo/reaberto)"
+  },
+  "rescale_invertido_recusado_api_real": {
+   "valor": 422,
+   "unidade": "código HTTP",
+   "comando": "POST /api/itens (TestClient, sessão real) com parametros_raster.rescale=[3000,0] => 422 plat_construtor_invalido, campo apontado"
+  },
+  "expressao_fora_da_gramatica_recusada_tile_real": {
+   "valor": 422,
+   "unidade": "código HTTP",
+   "comando": "curl no uvicorn real :8248 .../12/1503/2230.png?expressao=__import__('os').system('id') => 422 ladrilho_invalido: expressão com '__'"
+  },
+  "tests_api_imagens_regressao": {
+   "valor": "68 passed, 2 failed (pré-existentes, alheios ao item), 27 skipped",
+   "unidade": "testes",
+   "comando": "bash laco/roda_teste.sh tests/api/imagens tests/api/test_cabecalhos.py tests/api/test_versionamento.py tests/api/test_docs.py -q: falhas são test_medida_10000::test_10000_itens_carregados e test_privilegios::test_versao_do_pgstac_registrada_na_trilha — ambas exigem db/pgstac_instalar.sh rodado nesta trilha, sem relação com o editor de estilo raster"
+  },
+  "tests_unit_regressao": {
+   "valor": "2 falhas pré-existentes, alheias ao item",
+   "unidade": "testes",
+   "comando": "bash laco/roda_teste.sh tests/unit -q: test_jobs_registro::test_tipos_de_prova_estao_registrados (teto de memória de outro job) e test_migracoes_nome_e_dependencia (migração 049 de outro item com nome de 3 dígitos) — nenhuma toca app/estilos ou app/imagens"
+  },
+  "openapi_rotas_novas": {
+   "valor": 1,
+   "unidade": "rotas",
+   "comando": "diff paths docs/openapi.json HEAD vs regenerado: só GET /svc/{token}/raster/{item}/estatisticas.json é do item; as outras 5 novas (/api/mapas*) são de item alheio (L2-01-a) e foram deixadas de fora do patch cirúrgico para não misturar escopo"
+  },
+  "cruzado_casos_pendencia_preexistente": {
+   "valor": 17,
+   "unidade": "rotas /svc/ sem caso cruzado",
+   "comando": "grep -c svc em tests/api/cruzado_casos.py = 0: as 17 rotas /svc/... (STAC + raster, incluindo as 16 do L1-01-a/L1-02 já mescladas antes deste item) já não tinham caso cruzado; test_cobertura_100_por_cento já falhava antes deste item por essa razão — a rota nova soma 1 à mesma lista já vermelha, não muda o veredito da suíte"
+  }
+ },
+ "nao_passa": [
+  "esticamento.metodo=desvio_padrao: campo aceito e validado no documento, mas sem e2e dedicado calculando média±N·desvio (docs/PARIDADE.md marca 'parcial')",
+  "resampling e nodata: aceitos no documento para leitura/legenda; o L1-02 não expõe parâmetro de URL para nenhum dos dois hoje (docs/PARIDADE.md marca 'parcial', não fingido como feito)",
+  "P3 suíte inteira: tests/api completo não terminou uma rodada limpa nesta máquina por contenção de ~8 trilhas concorrentes disputando a mesma base (mesmo padrão de F/E aparece em módulos que este item não toca); escopo do item verificado isoladamente com porta livre e sem interferência (ver medidas acima)"
+ ],
+ "passou": [
+  "RGB, banda única com rampa, NDVI por expressão e percentil 2-98: cada um abre tile 200 PNG não vazio e renderiza no MapLibre real (harness com uvicorn de verdade, CORS liberado)",
+  "legenda mostra mín/máx reais da cena, idênticos ao que /estatisticas.json mediu (não recalculados)",
+  "estilo salvo e reaberto idêntico (parametros_raster completo, ida e volta)",
+  "adversário: rescale invertido, banda fora de 1-64, expressão com divisão por zero literal, expressão fora da gramática do TiTiler, colormap desconhecido — todos recusados na COMPILAÇÃO (nunca só na renderização), confirmado por unit test e por chamada real à API",
+  "URL de tile gerada pelo compilador só carrega expressao/bandas/faixa/colormap — nenhum outro campo do construtor vaza",
+  "paridade contra 'Style Imagery' do Map Viewer escrita cláusula a cláusula em docs/PARIDADE.md, com o que ficou fora (funções encadeadas do Image Server, classes discretas customizadas de rampa)"
+ ]
+}
