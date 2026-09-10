@@ -3,6 +3,17 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 9, setembro de 2026 (item L7-03-d-injecao-consulta: 180 payloads de injeção contra o FeatureServer/OGC, 0 execução, 2 defeitos de 500 corrigidos)
+
+`tests/seguranca/test_injecao.py`: 180 payloads (where/outFields/orderBy/groupBy/outStatistics/having/objectIds/
+OGC) contra camada importada de verdade — 0 respostas 5xx, 8 ms de latência máxima, tabela-canário e contagem
+intactas; teste estático por AST (nenhum `.execute` em `app/` interpola nome de entrada do usuário) + `bandit
+B608` em `app/consulta` fixado em 6 f-strings de lista branca. Corrigidos em `app/consulta/motor.py`: `LIKE` em
+coluna numérica e `statisticParameters.value` não numérico devolviam 500 com traceback; agora 400 nomeado
+(`_executar`, rede de segurança para erro de tipo do banco). `docs/SEGURANCA.md` §10. ZAP baseline não rodou
+(sem imagem, disco 94 %, D21). (Colhido de `wt/cx5l703d`, integrado ao `wt/lancamento` no lote L7 #1; motor.py
+aplicado por patch direto, não cherry-pick, porque a árvore de origem está 373 commits atrás.)
+
 ## turno 9, setembro de 2026 (item HARD-01-varredura-de-seguranca-continua: varredura de segurança no portão)
 
 - HARD-01-varredura-de-seguranca-continua: `make seguranca` em `make check` (bandit + pip-audit + npm audit + gitleaks no histórico + trivy; ZAP baseline em `make seguranca-zap` contra instância própria), exceções com prazo em `docs/excecoes_seguranca.json`, binárias fixadas por sha256 (`deploy/ferramentas_binarias.txt`), seção 9 de docs/SEGURANCA.md gerada; consertos: defusedxml no Garage, `server_tokens off`, X-Frame-Options e Content-Security-Policy no nginx. (Colhido de `wt/cx4h01`, turno 7/8 daquela trilha, integrado ao `wt/lancamento` no lote L7 #1.)
