@@ -242,5 +242,98 @@
    "x": 100000000000000.0
   },
   "saida": "100.000.000.000.000,00000000000000"
+ },
+ {
+  "descricao": "rede: subrede do objeto (L4-29)",
+  "entrada": "Subrede()",
+  "contexto": {
+   "rede": {
+    "subrede": "SR-CENTRO"
+   }
+  },
+  "saida": "SR-CENTRO"
+ },
+ {
+  "descricao": "rede: subrede ausente é nulo",
+  "entrada": "SeNulo(Subrede(), 'fora')",
+  "contexto": {
+   "rede": {}
+  },
+  "saida": "fora"
+ },
+ {
+  "descricao": "rede: alimentador",
+  "entrada": "Concatenar(Alimentador(), '/')",
+  "contexto": {
+   "rede": {
+    "alimentador": "AL-1042"
+   }
+  },
+  "saida": "AL-1042/"
+ },
+ {
+  "descricao": "rede: tensão herdada do alimentador",
+  "entrada": "TensaoAlimentador()",
+  "contexto": {
+   "rede": {
+    "tensao_alimentador_kv": 13.8
+   }
+  },
+  "saida": 13.8
+ },
+ {
+  "descricao": "rede: clientes a jusante somados",
+  "entrada": "ContarJusante() + 8",
+  "contexto": {
+   "rede": {
+    "jusante": 42
+   }
+  },
+  "saida": 50
+ },
+ {
+  "descricao": "rede: nível de tensão",
+  "entrada": "NivelRede() == 'mt'",
+  "contexto": {
+   "rede": {
+    "nivel": "mt"
+   }
+  },
+  "saida": true
+ },
+ {
+  "descricao": "rede: atributo pelo nome",
+  "entrada": "AtributoRede('tensao_kv')",
+  "contexto": {
+   "rede": {
+    "atributos": {
+     "tensao_kv": 13.8
+    }
+   }
+  },
+  "saida": 13.8
+ },
+ {
+  "descricao": "rede: atributo ausente é nulo",
+  "entrada": "SeNulo(AtributoRede('fase'), 'sem fase')",
+  "contexto": {
+   "rede": {
+    "atributos": {}
+   }
+  },
+  "saida": "sem fase"
+ },
+ {
+  "descricao": "rede: restrição de fecho entre tensões diferentes",
+  "entrada": "Se(TensaoAlimentador() != AtributoRede('tensao_kv'), 'recusa', 'permite')",
+  "contexto": {
+   "rede": {
+    "tensao_alimentador_kv": 13.8,
+    "atributos": {
+     "tensao_kv": 34.5
+    }
+   }
+  },
+  "saida": "recusa"
  }
 ]

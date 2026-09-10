@@ -1,0 +1,22 @@
+{
+ "item": "L4-29-regras-de-atributo-de-rede",
+ "medidas": {
+  "rodada_calculo_escritos": {
+   "valor": 1,
+   "unidade": "atributos",
+   "comando": "regras.aplicar_calculo(cur) sobre 1 trecho novo + 1 alimentador"
+  },
+  "contador_apos_duas_rodadas": {
+   "valor": 2,
+   "unidade": "unidades",
+   "comando": "regra autorreferente (AtributoRede('contador') + 1) rodada 2x: laço não existe"
+  },
+  "validacao_itens_sem_uc": {
+   "valor": 1,
+   "unidade": "itens",
+   "comando": "regras.rodar_validacao(cur) sobre 3 trafos (1 sem UC, 1 com UC, 1 sem dado)"
+  }
+ },
+ "gerado_em": "2026-09-08T19:58:30Z",
+ "git_sha": "610896979710"
+}

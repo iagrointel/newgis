@@ -692,6 +692,8 @@ MAX_VALOR_NOS = 4096
 MAX_VALOR_TEXTO = 20000
 MAX_VALOR_PROFUNDIDADE = 20
 _PROIBIDOS = {"__proto__", "prototype", "constructor"}
+# apelido público da mesma lista: quem grava nome de campo novo (ex. app/rede/regras.py) consulta aqui
+PROIBIDOS = _PROIBIDOS
 _EXT_FUNCOES: dict[str, tuple[int, int | None, str, str]] = {
     # texto (índices e contagens em pontos de código Unicode, base zero)
     "Trim": (1, 1, "remove espaços ASCII das pontas", "Trim(' a ') → 'a'"),
@@ -749,6 +751,30 @@ _EXT_FUNCOES: dict[str, tuple[int, int | None, str, str]] = {
 }
 _EXT_ARIDADES = {nome: (minimo, maximo) for nome, (minimo, maximo, _d, _e) in _EXT_FUNCOES.items()}
 TABELA_FUNCOES.update(_EXT_FUNCOES)
+
+# Rede (item L4-29-regras-de-atributo-de-rede): funções que leem a chave reservada "rede" do
+# contexto, montada por objeto pelo motor de regras de atributo (app/rede/regras.py). Nenhuma faz
+# I/O e nenhuma consulta camada: o valor vem pronto no contexto — a linguagem segue SEM rede.
+_REDE_FUNCOES: dict[str, tuple[int, int | None, str, str]] = {
+    "Subrede": (0, 0, "nome da subrede do objeto", "Subrede() → 'SR-CENTRO'"),
+    "Alimentador": (0, 0, "código do alimentador (circuito) do objeto", "Alimentador() → 'AL-1042'"),
+    "TensaoAlimentador": (
+        0,
+        0,
+        "tensão nominal do alimentador em kV, herdada em um salto",
+        "TensaoAlimentador() → 13.8",
+    ),
+    "ContarJusante": (
+        0,
+        0,
+        "clientes a jusante já calculados pelo motor (nulo se não calculado)",
+        "ContarJusante() → 42",
+    ),
+    "NivelRede": (0, 0, "nível de tensão do objeto ('mt' ou 'bt')", "NivelRede() → 'mt'"),
+    "AtributoRede": (1, 1, "atributo de rede pelo nome (nulo se ausente)", "AtributoRede('tensao_kv') → 13.8"),
+}
+_REDE_ARIDADES = {nome: (minimo, maximo) for nome, (minimo, maximo, _d, _e) in _REDE_FUNCOES.items()}
+TABELA_FUNCOES.update(_REDE_FUNCOES)
 _MESES_PT = (
     "janeiro",
     "fevereiro",
@@ -1187,6 +1213,48 @@ def _exigir_numero(v: Any, onde: str) -> float:
     return _finito(v)
 
 
+_CHAVE_REDE_POR_FUNCAO = {
+    "Subrede": "subrede",
+    "Alimentador": "alimentador",
+    "TensaoAlimentador": "tensao_alimentador_kv",
+    "ContarJusante": "jusante",
+    "NivelRede": "nivel",
+}
+
+
+def _funcao_rede(nome: str, contexto: dict, args: list[Any]) -> Any:
+    """Funções de rede (L4-29): leem `contexto["rede"]`, dicionário simples que o motor de regras
+    monta por objeto. "rede" fora do contexto é erro de PERMISSÃO (`campo_nao_permitido` — o
+    chamador não autorizou dado de rede), nunca nulo silencioso; chave ausente DENTRO de "rede" é
+    `nulo` (objeto fora de subrede, jusante ainda não calculada, atributo que este objeto não
+    tem). A leitura é pelo dicionário do contexto — nunca `getattr`, nunca protótipo."""
+    if "rede" not in contexto:
+        raise ErroExpressao("campo_nao_permitido", "campo não permitido: rede", {"campo": "rede"})
+    rede = contexto["rede"]
+    if type(rede) is not dict:
+        _falha()
+    minimo, maximo = _REDE_ARIDADES[nome]
+    if len(args) < minimo or (maximo is not None and len(args) > maximo):
+        raise ErroExpressao(
+            "aridade_invalida",
+            f"{nome} espera {minimo} argumento(s), recebeu {len(args)}",
+            {"nome": nome, "recebido": len(args)},
+        )
+    if nome == "AtributoRede":
+        chave = args[0]
+        if not isinstance(chave, str):
+            raise ErroExpressao("tipo_invalido", "AtributoRede espera texto", {"nome": nome})
+        if chave in _PROIBIDOS:
+            raise ErroExpressao("campo_nao_permitido", f"campo não permitido: {chave}", {"campo": chave})
+        atributos = rede.get("atributos")
+        if atributos is None:
+            return None
+        if type(atributos) is not dict:
+            _falha()
+        return atributos.get(chave)
+    return rede.get(_CHAVE_REDE_POR_FUNCAO[nome])
+
+
 def _chamar_funcao(nome: str, args: list[Any], onde_erro: dict) -> Any:
     if nome not in TABELA_FUNCOES:
         raise ErroExpressao("funcao_desconhecida", f"função desconhecida: {nome}", {**onde_erro, "nome": nome})
@@ -1356,6 +1424,8 @@ def avaliar(
                         return v(nodo.argumentos[i + 1])
                 return v(nodo.argumentos[-1])
             args = [v(a) for a in nodo.argumentos]
+            if nodo.nome in _REDE_ARIDADES:
+                return _funcao_rede(nodo.nome, contexto, args)
             if nodo.nome in _EXT_ARIDADES:
                 return _ext_funcao(nodo.nome, args, contador)
             return _chamar_funcao(nodo.nome, args, {"nome": nodo.nome})

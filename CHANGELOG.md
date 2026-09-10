@@ -928,6 +928,25 @@ dos metadados da coleção (miniatura absolutizada com `PLAT_URL_PUBLICA`, todo 
 3 cliques, medida com carga 2,73 e 9 GB livres) usada pela página interna `/colecao` e pela anônima. Cláusula
 "tema trocado sem reeditar blocos" fica PENDENTE por dependência: L5-10 (temas) não está em master nesta data;
 o esquema já carrega `corpo.tema` para conformar quando aterrissar (`tests/medidas/L5-04-c-temas-capa-colecao.json`).
+## turno 48, setembro de 2026 (item L4-29-regras-de-atributo-de-rede: três perfis de regra sobre a rede, sem ponto fixo)
+
+O consumidor das seis funções de rede que a linguagem de expressão ganhou neste item (`Subrede`,
+`Alimentador`, `TensaoAlimentador`, `ContarJusante`, `NivelRede`, `AtributoRede`, nos dois avaliadores,
+43→49 funções, 30→39 vetores de convergência). Motor `app/rede/regras.py` + `plat.rede_regra` (migração
+`20260908T1934_regras_atributo_rede.sql`, RLS): `calculo` escreve um atributo, `restricao` responde "posso
+fechar esta chave?" (a chave 13,8-34,5 kV recusa, medido) e `validacao` lista em lote (trafos sem UC
+listados, medido). A refutação do item — regra com laço "jusante de jusante" — morre por construção: UMA
+rodada avalia cada regra UMA vez por objeto, não existe ponto fixo (contador 0→1→2 em duas rodadas,
+`tests/medidas/L4-29-regras-de-atributo-de-rede.json`); profundidade demais corta na criação (70 `Se`
+aninhados = 422 `profundidade_excedida`) e orçamento é costura exposta (`limite_passos`/`limite_ms`,
+`limite_passos` estourado = erro NOMEADO e rodada sobrevive). Restrição é falha fechada: erro de avaliação
+RECUSA com o código nomeado; nulo nunca recusa e nunca grava. Tetos em `app/limites.py`
+(`REDE_REGRA_MAX`, `REDE_REGRAS_OBJETOS_MAX`, `REDE_REGRAS_ITENS_MAX`, `REDE_REGRAS_ERROS_MAX`) — o teto
+freia o tamanho da rodada, não a iteração, porque não existe iteração. Paridade com os perfis de attribute
+rule do ArcGIS Pro escrita com fontes datadas (`docs/PARIDADE_REGRAS_ATRIBUTO.md`): a direção do booleano
+de constraint é invertida de propósito (recusa no lado verdadeiro deixa o nulo do lado seguro com lógica de
+três valores); sem `$datastore` e sem ganchos de edição, lacunas declaradas. Decisões em
+`docs/adr/20260908T1945-regras-atributo-de-rede.md`.
 
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 

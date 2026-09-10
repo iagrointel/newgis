@@ -563,3 +563,12 @@ SSE_TOTAL = 200             # teto novo: orçamento da instalação, independent
 CEIFA_API_INTERVALO_S = 30  # a API ceifa os jobs sem sinal do PRÓPRIO inquilino no máximo a cada 30 s
 CEIFA_LIMITE_S = 60         # mesmo LIMITE_SEM_SINAL_S do worker (app/jobs/worker.py); piso na função SQL
 CHAVE_RESERVADA = "sys:"    # espaço de nome das chaves de trinco dos periódicos da plataforma
+# --- regras de atributo de rede (L4-29-regras-de-atributo-de-rede; migração 20260908T1934_regras_atributo_rede.sql):
+# perfis cálculo/restrição/validação sobre `plat.rede_objeto`. A refutação do item é o laço
+# "jusante de jusante": o motor NÃO itera — cada rodada avalia cada regra UMA vez por objeto
+# (declarado em docs/adr/20260908T1945-regras-atributo-de-rede.md), então não existe fixpoint;
+# os tetos abaixo freiam o tamanho da rodada, não a profundidade da iteração.
+REDE_REGRA_MAX = 1_000          # regras ativas por (inquilino, perfil) numa rodada
+REDE_REGRAS_OBJETOS_MAX = 50_000   # objetos de rede avaliados por rodada de cálculo
+REDE_REGRAS_ITENS_MAX = 10_000  # itens de uma validação em lote (acima disso: truncado=true)
+REDE_REGRAS_ERROS_MAX = 100     # erros de avaliação guardados no resultado de uma rodada (o total é contado)
