@@ -59,9 +59,6 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # ---- catálogo (L0-03; vocabulário na migração 011)
     ("POST", "/api/itens"): ["itens/adicionar"],
     ("POST", "/api/acervo/{fonte_id}/adicionar"): ["itens/adicionar", "acervo/adicionar_recusado_pii"],
-    # item L6-01-b: assinar/cancelar mudam quem pode LER a camada publicada — evento obrigatório
-    ("POST", "/api/acervo/camadas/{camada}/assinatura"): ["acervo/assinar"],
-    ("DELETE", "/api/acervo/camadas/{camada}/assinatura"): ["acervo/cancelar"],
     ("PUT", "/api/itens/{id}"): ["itens/atualizar", "itens/status", "itens/proteger", "itens/desproteger"],
     ("PATCH", "/api/itens/{id}"): ["itens/atualizar", "itens/status", "itens/proteger", "itens/desproteger"],
     ("DELETE", "/api/itens/{id}"): ["itens/apagar"],
@@ -161,19 +158,13 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
-    # ---- motor multicritério (L3-01-a/b/d/f/g; vocabulário na migração 20260907T1206_amc.sql). As três
-    # tabelas do inquilino com dono humano (modelo, conjunto de unidades, execução) narram toda escrita.
-    # As rotas de LEITURA que usam POST por causa do tamanho do corpo declaram lista vazia, com o motivo:
-    # não escrevem nada, logo não há o que narrar.
-    ("POST", "/api/amc/modelos"): ["amc/modelo_criar"],
-    ("PUT", "/api/amc/modelos/{modelo_id}"): ["amc/modelo_atualizar"],
-    ("DELETE", "/api/amc/modelos/{modelo_id}"): ["amc/modelo_apagar"],
-    ("POST", "/api/amc/conjuntos"): ["amc/conjunto_criar"],
-    ("DELETE", "/api/amc/conjuntos/{conjunto_id}"): ["amc/conjunto_apagar"],
-    ("POST", "/api/amc/execucoes"): ["amc/execucao_criar"],
-    ("DELETE", "/api/amc/execucoes/{execucao_id}"): ["amc/execucao_apagar"],
-    ("POST", "/api/amc/modelos/validar"): [],       # valida sem gravar: nada muda de estado
-    ("POST", "/api/amc/similaridade"): [],          # consulta; POST só porque a lista de referências é grande
-    ("POST", "/api/amc/similaridade/exportar"): [],  # a mesma consulta, servida como arquivo
-    ("POST", "/api/amc/transformacoes/previsao"): [],  # histograma de valores enviados pelo cliente; não abre banco
+    # ---- motor multicritério, presets (L3-01-h-presets; vocabulário na migração
+    # 20260908T1659_amc_preset.sql). Preset é tabela do inquilino com dono humano: toda escrita narra
+    # evento; `aplicar` também narra (foi executado com quais pesos, sobre quantas unidades) porque é a
+    # decisão analítica do usuário, não leitura.
+    ("POST", "/api/amc/presets"): ["amc/preset"],
+    ("PATCH", "/api/amc/presets/{id}"): ["amc/preset_atualizar"],
+    ("DELETE", "/api/amc/presets/{id}"): ["amc/preset_apagar"],
+    ("POST", "/api/amc/presets/importar"): ["amc/preset_importar"],
+    ("POST", "/api/amc/presets/{id}/aplicar"): ["amc/preset_aplicar"],
 }

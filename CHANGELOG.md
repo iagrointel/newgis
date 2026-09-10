@@ -105,6 +105,22 @@ thread ficou esperando a própria trava), ordem de partida fria (IP do vigia con
 final faltando no `base_url` (404 medido) e `websockets` fora da venv (PYTHONNOUSERSITE=1 da casa esconde
 `~/.local`; o handshake do kernel dava 500). Medidas em `tests/medidas/L2-16-b-jupyter-por-inquilino-isolado.json`
 (partida só com carga 1 min ≤ 8); paridade com ArcGIS Notebooks em `docs/PARIDADE.md`.
+## setembro de 2026 (item L3-01-h-presets: presets nomeados do motor multicritério, aplicação na hora sem job)
+
+Presets do AMC com CRUD por API e tela (`/amc/presets`, privilégio `analise.amc`): tabela
+`plat.amc_preset` com RLS por inquilino e visibilidade por dono no escopo `usuario` — o preset de
+outro inquilino é 404 `preset_inexistente`, provado na varredura cruzada A→B (GET/PATCH/DELETE/
+aplicar) e por colega do mesmo inquilino. Cinco integrados somente leitura nascem com o schema,
+entre eles o `pesos iguais` por contrato do item (válido para qualquer matriz). Aplicar
+(`POST /api/amc/presets/{id}/aplicar`) recebe só a matriz, roda o combinador na mesma requisição e
+devolve o resultado — nenhum `plat.job` é criado e a resposta nem menciona job; a tela nunca chama
+`/api/jobs`. Exportar devolve o documento `plat/amc_preset` normalizado; importar recusa preset com
+fator fora do modelo informado com 422 `fator_fora_do_modelo` e a lista do que falta (refutação do
+item), e ignora o `integrado` do documento (o importado nasce comum). A rota de importar fica ANTES
+de `/presets/{id}` porque o FastAPI resolve na ordem de registro. 22 testes de unidade, 12 de API,
+8 casos novos na varredura cruzada e 1 e2e playwright ponta a ponta (lista de integrados, criar,
+aplicar, exportar, importar, 0 erro de console). Página carrega em 60,8 ms até `body[data-pronto=1]`
+no chromium (`tests/medidas/L3-01-h-presets.json`).
 
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 

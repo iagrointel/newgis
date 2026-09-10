@@ -129,6 +129,8 @@ PAGINAS = {
     "/conexoes": "conexoes.html",
     # item UX-14-geocodificador-sem-tela: tela de trabalho do geocodificador (POST /api/geocodificar e /api/reverso)
     "/geocodificar": "geocodificar.html",
+    # --- motor multicritério, presets (L3-01-h-presets)
+    "/amc/presets": "amc_presets.html",
     # --- SMTP, convite de membro e redefinição de senha (L0-07-d-smtp-convites): públicas, sem sessão
     "/aceitar-convite": "aceitar_convite.html",
     "/redefinir-senha": "redefinir_senha.html",

@@ -2320,6 +2320,8 @@
   "nav.acervo_desc": "fontes de dado da casa com licença escrita e ficha de procedência; adicionar ao catálogo",
   "nav.admin": "Administração",
   "nav.admin_desc": "resumo do inquilino: usuários, grupos, papéis, tokens, cotas, diretório, acervo e log",
+  "nav.amc_presets": "Presets do motor",
+  "nav.amc_presets_desc": "conjuntos nomeados de pesos e vetos do motor multicritério, com aplicação na hora",
   "nav.analise": "Análise",
   "nav.analise_desc": "ferramentas de análise: formulário gerado do manifesto, execução como job e resultado com proveniência",
   "nav.atividade": "Atividade",

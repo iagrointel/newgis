@@ -29,6 +29,7 @@ from app.amc.rotas import router as rotas_amc
 from app.acervo import rotas as rotas_acervo
 from app.amc.rotas import router as rotas_amc
 from app.amc.rotas_similaridade import router as rotas_similaridade
+from app.amc.rotas import router as rotas_amc_presets
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
 from app.auth import sso as rotas_sso
@@ -681,6 +682,9 @@ ROUTERS = [
     # --- motor multicritério (AMC), localização semelhante (L3-17-similaridade): /api/amc/similaridade e
     # /api/amc/similaridade/exportar; sem tabela própria, mesmo padrão sem-estado de rotas_rede acima
     rotas_similaridade,
+    # --- motor multicritério, presets (L3-01-h-presets): /api/amc/presets (CRUD, aplicar sem job,
+    # exportar, importar)
+    rotas_amc_presets,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

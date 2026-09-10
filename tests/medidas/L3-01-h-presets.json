@@ -1,0 +1,12 @@
+{
+ "item": "L3-01-h-presets",
+ "medidas": {
+  "pagina_presets_ms": {
+   "valor": 60.8,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/test_amc_presets.py)"
+  }
+ },
+ "gerado_em": "2026-09-08T17:46:26Z",
+ "git_sha": "610896979710"
+}
