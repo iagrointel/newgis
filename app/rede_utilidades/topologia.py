@@ -200,7 +200,8 @@ def _pares_proximos(cur, candidatos: list[dict], tolerancia_m: float) -> list[tu
 
 def _resolver_uniao(candidatos: list[dict], pares: list, esquema: dict) -> UniaoBusca:
     uf = UniaoBusca()
-    diferido: dict = defaultdict(list)  # feicao_id do dispositivo multi-terminal -> [(meu_idx, terminal_num, outro_idx, outro_tipo_id)]
+    # feicao_id do dispositivo multi-terminal -> [(meu_idx, terminal_num, outro_idx, outro_tipo_id)]
+    diferido: dict = defaultdict(list)
 
     def n_terminais(tipo_id):
         return len(esquema["terminais_do_tipo"](tipo_id))
@@ -306,6 +307,9 @@ def habilitar(cur, tenant_id: int, rede_id: str, usuario_id: int | None) -> dict
 
     cur.execute("DELETE FROM plat.rede_topo_aresta WHERE rede_id = %s::uuid", (rede_id,))
     cur.execute("DELETE FROM plat.rede_topo_no WHERE rede_id = %s::uuid", (rede_id,))
+    # a reconstrução total resolve TODA área suja pendente da rede — por isso elas morrem aqui, junto do
+    # índice velho (a manutenção incremental, reconstruir só a área, é fronteira honesta desta passagem).
+    cur.execute("DELETE FROM plat.rede_topo_area_suja WHERE rede_id = %s::uuid", (rede_id,))
 
     _inserir_lote(
         cur,

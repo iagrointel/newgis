@@ -8,6 +8,9 @@ nesta passagem — ver docs/rede/TOPOLOGIA.md); `GET .../topologia` devolve o re
 Mesmo padrão de `rotas.py`: escrita exige `rede.editar`; leitura segue a visibilidade por inquilino (RLS);
 construção pesada vai para o threadpool (lição do achado A4 do item L4-01-a)."""
 
+import json
+import uuid as uuid_mod
+
 from fastapi import APIRouter, Request
 from starlette.concurrency import run_in_threadpool
 
@@ -31,8 +34,6 @@ LISTA_LIMITE_MAX = 2000
 
 
 def _uuid_ok(valor: str) -> str:
-    import uuid as uuid_mod
-
     try:
         return str(uuid_mod.UUID(valor))
     except (ValueError, AttributeError, TypeError) as e:
@@ -90,6 +91,39 @@ def listar_feicoes_linha(rede_id: str, limite: int = 200, auth: Auth = autentica
         _rede_existe(cur, rid)
         itens = feicoes.listar_linhas(cur, rid, min(limite, LISTA_LIMITE_MAX))
         return {"total": len(itens), "itens": [_feicao_json(r) for r in itens]}
+
+
+@router.post("/{rede_id}/feicoes/pontos/applyEdits", status_code=200, openapi_extra=EDITAR)
+async def aplicar_edicoes_ponto(rede_id: str, request: Request, auth: Auth = autenticado("rede.editar")):
+    """applyEdits da camada de dispositivos (paridade FeatureServer): `adds`/`updates`/`deletes` numa chamada,
+    geometria no JSON da Esri (`{"x":..,"y":..}`), resultado por feição. Cada feição gravada marca a área
+    suja correspondente se a topologia já foi construída (refutação do item L4-01-b)."""
+    rid = _uuid_ok(rede_id)
+    corpo = await request.json()
+    return await run_in_threadpool(_apply_edits_sincrono, rid, corpo, "ponto", auth, request)
+
+
+@router.post("/{rede_id}/feicoes/linhas/applyEdits", status_code=200, openapi_extra=EDITAR)
+async def aplicar_edicoes_linha(rede_id: str, request: Request, auth: Auth = autenticado("rede.editar")):
+    """applyEdits da camada de trechos: geometria `{"paths": [[[lon, lat], ...]]}` (um caminho por feição)."""
+    rid = _uuid_ok(rede_id)
+    corpo = await request.json()
+    return await run_in_threadpool(_apply_edits_sincrono, rid, corpo, "linha", auth, request)
+
+
+def _apply_edits_sincrono(rid: str, corpo: dict, geometria: str, auth: Auth, request: Request) -> dict:
+    if not isinstance(corpo, dict) or not any(k in corpo for k in ("adds", "updates", "deletes")):
+        raise ErroAPI(422, "pedido_invalido", "o corpo exige ao menos uma das chaves adds/updates/deletes")
+    with db.db(auth.contexto()) as cur:
+        _rede_existe(cur, rid)
+        res = feicoes.aplicar_edicoes(cur, auth.tenant_id, rid, corpo, geometria)
+        n_ok = sum(1 for k in ("addResults", "updateResults", "deleteResults")
+                   for i in res[k] if i["success"])
+        n_erro = sum(1 for k in ("addResults", "updateResults", "deleteResults")
+                     for i in res[k] if not i["success"])
+        registrar_evento(cur, request, "redes/feicao_editar", "rede", rid,
+                         {"camada": geometria, "gravadas": n_ok, "recusadas": n_erro})
+    return res
 
 
 def _habilitar_sincrono(rid: str, auth: Auth, request: Request) -> dict:
@@ -178,3 +212,96 @@ def listar_arestas(rede_id: str, limite: int = 200, auth: Auth = autenticado(esc
             for r in cur.fetchall()
         ]
         return {"total": len(itens), "itens": itens}
+
+
+# --- área suja e traçado mínimo (refutação do item) ---------------------------------------------------------
+
+@router.get("/{rede_id}/topologia/areas-sujas", openapi_extra=LER)
+def listar_areas_sujas(rede_id: str, limite: int = 200,
+                       auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """As áreas sujas abertas da rede: onde uma edição (applyEdits ou criação simples) passou DEPOIS da última
+    construção da topologia e o índice gravado é, portanto, suspeito. `habilitar` as apaga ao reconstruir."""
+    rid = _uuid_ok(rede_id)
+    with db.db(auth.contexto()) as cur:
+        _rede_existe(cur, rid)
+        cur.execute("SELECT count(*) AS n FROM plat.rede_topo_area_suja WHERE rede_id = %s::uuid", (rid,))
+        total = cur.fetchone()["n"]
+        cur.execute(
+            "SELECT id, motivo, feicao_id, criado_em, ST_AsGeoJSON(geom) AS geojson "
+            "FROM plat.rede_topo_area_suja WHERE rede_id = %s::uuid ORDER BY criado_em LIMIT %s",
+            (rid, min(limite, LISTA_LIMITE_MAX)),
+        )
+        itens = [
+            {"id": str(r["id"]), "motivo": r["motivo"],
+             "feicao_id": str(r["feicao_id"]) if r["feicao_id"] else None,
+             "criado_em": iso(r["criado_em"]), "geometria": json.loads(r["geojson"])}
+            for r in cur.fetchall()
+        ]
+        return {"total": total, "itens": itens}
+
+
+def _alcance_sincrono(rid: str, no_id: str, auth: Auth) -> dict:
+    with db.db(auth.contexto()) as cur:
+        _rede_existe(cur, rid)
+        cur.execute("SELECT 1 FROM plat.rede_topo_no WHERE id = %s::uuid AND rede_id = %s::uuid",
+                    (no_id, rid))
+        if cur.fetchone() is None:
+            raise ErroAPI(404, "no_inexistente", "este nó não existe na topologia desta rede")
+        # varredura de conectividade pura (o "traçado" desta passagem): tudo o que se alcança do nó andando
+        # pelas arestas, nos dois sentidos, sem regra de fluxo nem estado de chave (isso é o item seguinte
+        # da linha L4 — fronteira honesta, docs/rede/TOPOLOGIA.md seção 6). UNION (não ALL) sobre o id da
+        # aresta é o que garante a parada em grafo com ciclo.
+        cur.execute(
+            "WITH RECURSIVE alc(aresta_id, no_a, no_b) AS ("
+            "  SELECT a.id, a.no_origem_id, a.no_destino_id FROM plat.rede_topo_aresta a "
+            "  WHERE a.rede_id = %s::uuid AND %s::uuid IN (a.no_origem_id, a.no_destino_id)"
+            "  UNION"
+            "  SELECT a.id, a.no_origem_id, a.no_destino_id FROM plat.rede_topo_aresta a "
+            "  JOIN alc ON a.rede_id = %s::uuid "
+            "   AND (a.no_origem_id IN (alc.no_a, alc.no_b) OR a.no_destino_id IN (alc.no_a, alc.no_b))"
+            ") SELECT count(*) AS arestas, "
+            "  (SELECT count(*) FROM (SELECT no_a FROM alc UNION SELECT no_b FROM alc) n) AS nos "
+            "FROM alc",
+            (rid, no_id, rid),
+        )
+        r = cur.fetchone()
+        cur.execute(
+            "SELECT count(*) AS n FROM plat.rede_topo_area_suja WHERE rede_id = %s::uuid", (rid,))
+        areas_sujas = cur.fetchone()["n"]
+        # o traçado atravessa área suja se alguma aresta alcançada toca o polígono de uma área aberta:
+        # nesse caso o resultado acima é calculado sobre índice POSSIVELMENTE velho e não é confiável.
+        cur.execute(
+            "WITH RECURSIVE alc(aresta_id, no_a, no_b) AS ("
+            "  SELECT a.id, a.no_origem_id, a.no_destino_id FROM plat.rede_topo_aresta a "
+            "  WHERE a.rede_id = %s::uuid AND %s::uuid IN (a.no_origem_id, a.no_destino_id)"
+            "  UNION"
+            "  SELECT a.id, a.no_origem_id, a.no_destino_id FROM plat.rede_topo_aresta a "
+            "  JOIN alc ON a.rede_id = %s::uuid "
+            "   AND (a.no_origem_id IN (alc.no_a, alc.no_b) OR a.no_destino_id IN (alc.no_a, alc.no_b))"
+            ") SELECT EXISTS ("
+            "  SELECT 1 FROM plat.rede_topo_aresta a JOIN plat.rede_topo_area_suja s "
+            "   ON s.rede_id = a.rede_id AND ST_Intersects(s.geom, a.geom) "
+            "  WHERE a.id IN (SELECT aresta_id FROM alc)) AS atravessa",
+            (rid, no_id, rid),
+        )
+        atravessa = cur.fetchone()["atravessa"]
+        return {
+            "no_inicio": no_id, "nos_alcancados": r["nos"], "arestas_alcancadas": r["arestas"],
+            "areas_sujas_abertas": areas_sujas, "atravessa_area_suja": atravessa,
+        }
+
+
+@router.get("/{rede_id}/topologia/alcance", openapi_extra=LER)
+async def alcance(rede_id: str, no: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """Traçado mínimo de conectividade: o conjunto de nós/arestas alcançáveis a partir de `no`. Sem regra de
+    fluxo (montante/jusante) nem estado de chave — isso é o item seguinte da linha L4."""
+    rid = _uuid_ok(rede_id)
+    nid = _uuid_ok_no(no)
+    return await run_in_threadpool(_alcance_sincrono, rid, nid, auth)
+
+
+def _uuid_ok_no(valor: str) -> str:
+    try:
+        return str(uuid_mod.UUID(valor))
+    except (ValueError, AttributeError, TypeError) as e:
+        raise ErroAPI(404, "no_inexistente", "nó inexistente") from e
