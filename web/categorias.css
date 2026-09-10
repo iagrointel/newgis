@@ -1,0 +1,8 @@
+/* plat — tela /admin/categorias (item UX-12-categorias-sem-controle): editor da árvore, só com tokens */
+.categorias-arvore, .categorias-sub { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e2); }
+.categorias-sub { margin: var(--e2) 0 0 var(--e5); }
+.categoria-linha { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); }
+.categoria-linha .categoria-nome { flex: 1 1 14rem; min-width: 0; }
+.categoria-meta { display: inline-flex; gap: var(--e2); align-items: center; color: var(--fraco); font-size: var(--t-2); }
+.categoria-acoes { display: inline-flex; gap: var(--e1); }
+.campo-inline { display: inline-flex; align-items: center; gap: var(--e2); color: var(--fraco); font-size: var(--t-1); }

@@ -1,0 +1,37 @@
+/* plat · acervo — tela /acervo (item L6-01-c-tela-acervo). Grade responsiva de cartões, ficha em <plat-dialogo
+   modo="lateral">; nada aqui redefine tokens (import de web/style.css já traz --e*/--painel/--borda/--acento). */
+
+.acervo-filtros { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e3); margin: var(--e3) 0 var(--e4); }
+.acervo-filtros .busca { flex: 1 1 260px; }
+.acervo-filtros .busca input { width: 100%; }
+.acervo-dominio-campo { display: grid; gap: var(--e1); color: var(--fraco); font-size: var(--t-1); }
+.acervo-dominio-campo select { color: var(--texto); background: var(--painel); border: 1px solid var(--borda-forte); border-radius: var(--raio); padding: var(--e1) var(--e2); }
+
+.acervo-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: var(--e3); margin-bottom: var(--e4); }
+.acervo-vazio { color: var(--fraco); grid-column: 1 / -1; }
+
+.acervo-cartao {
+  text-align: left; display: grid; gap: var(--e2); background: var(--painel); border: 1px solid var(--borda);
+  border-radius: var(--raio); padding: var(--e3) var(--e4); color: var(--texto); font: inherit; cursor: pointer;
+}
+.acervo-cartao:hover, .acervo-cartao:focus-visible { border-color: var(--acento); }
+.acervo-cartao > * { min-width: 0; }
+.acervo-cartao h2 { margin: 0; font-size: var(--t0); overflow-wrap: anywhere; }
+.acervo-cartao-orgao { margin: 0; color: var(--fraco); font-size: var(--t-1); overflow-wrap: anywhere; }
+.acervo-cartao-marcadores { display: flex; flex-wrap: wrap; gap: var(--e1); }
+/* etiqueta é rótulo curto, mas o nome de um domínio pode ser longo: deixa quebrar em vez de esticar o cartão */
+.acervo-cartao-marcadores .marcador { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.acervo-cartao-linha { margin: 0; font-size: var(--t-2); color: var(--fraco); overflow-wrap: anywhere; }
+
+.acervo-ficha { display: grid; gap: var(--e2) var(--e4); grid-template-columns: max-content 1fr; margin: 0 0 var(--e3); }
+.acervo-ficha dt { color: var(--fraco); font-size: var(--t-2); align-self: start; }
+.acervo-ficha dd { margin: 0; word-break: break-word; }
+.acervo-campo { display: contents; }
+
+.acervo-atribuicao { background: var(--atencao-fraco); border: 1px solid var(--atencao); color: var(--atencao); border-radius: var(--raio); padding: var(--e2) var(--e3); }
+.acervo-previa-vazia { color: var(--fraco); }
+
+/* controle "adicionar ao meu mapa" dentro da ficha (item UX-10): botão + estado próprio */
+.acervo-adicionar { display: grid; gap: var(--e2); margin-top: var(--e4); padding-top: var(--e3); border-top: 1px solid var(--borda); }
+.acervo-adicionar h3 { margin: 0; font-size: var(--t-1); color: var(--fraco); }
+.acervo-adicionar button { justify-self: start; }

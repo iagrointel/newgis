@@ -7,3 +7,8 @@
 ^CHANGELOG\.md:[0-9]+:.*TODO caminho `tests/\.\.\.` citado em
 # (09/09, plataforma-48) artefato do driver merge=union: duas entradas de CHANGELOG de ramos
 # diferentes se costuram numa frase que ninguém escreveu, contendo 'TODO' (português = "cada").
+^web/js/camadas\.js:[0-9]+:.*placeholder: '(0|24)'
+# (08/09) atributo HTML de dica numérica no campo de zoom do L2-01; não é texto de enchimento. Dez ramos da fila carregam a linha.
+# atributo HTML de <input> (dica de valor no zoom mínimo/máximo), não marcador de código morto
+^web/js/camadas\.js:[0-9]+:.*'aria-label': 'zoom m
+^web/js/camadas\.js:[0-9]+:.*placeholder: .[0-9]+.,

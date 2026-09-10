@@ -104,14 +104,18 @@ def provedores(inquilino: str):
         t = cur.fetchone()
     if t is None:
         raise ErroAPI(404, "inquilino_inexistente", "inquilino inexistente")
-    # botões OIDC do inquilino (item L0-08-a): rótulo + ordem, nunca o issuer/client_id (informação interna
-    # da configuração, sem valor para a tela de login); SAML/LDAP entram do mesmo jeito quando forem feitos
+    # provedores externos nascem no L0-08: LDAP (L0-08-d) entra na lista quando o inquilino o habilitou — é o que
+    # a tela /entrar usa para oferecer "entrar com o diretório" (item UX-17); a lista vazia é o estado real
+    lista = []
     with db.db() as cur:
-        cur.execute("SELECT provedor_id, rotulo FROM plat.provedores_oidc_de(%s)", (inquilino,))
-        oidc = [{"tipo": "oidc", "id": r["provedor_id"], "rotulo": r["rotulo"]} for r in cur.fetchall()]
-        cur.execute("SELECT provedor_id, rotulo FROM plat.provedores_saml_de(%s)", (inquilino,))  # L0-08-b
-        saml = [{"tipo": "saml", "id": r["provedor_id"], "rotulo": r["rotulo"]} for r in cur.fetchall()]
-    return {"inquilino": {"slug": t["slug"], "nome": t["nome"]}, "provedores": oidc + saml, "login_local": True}
+        cur.execute("SELECT habilitado FROM plat.provedor_ldap_de(%s)", (t["slug"],))
+        ldap = cur.fetchone()
+    if ldap is not None and ldap["habilitado"]:
+        # `modo: senha` = mesmo formulário (usuário e senha) enviado a `endpoint`; provedores de redirecionamento
+        # (OIDC/SAML) virão com `url`, que a tela já trata
+        lista.append({"tipo": "ldap", "nome": "diretório da organização (LDAP)", "modo": "senha",
+                      "endpoint": "/api/login/ldap"})
+    return {"inquilino": {"slug": t["slug"], "nome": t["nome"]}, "provedores": lista, "login_local": True}
 
 
 @router.post(

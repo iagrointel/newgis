@@ -1,0 +1,27 @@
+{
+ "item": "UX-14-geocodificador-sem-tela",
+ "medidas": {
+  "estados_provados": {
+   "valor": 10,
+   "unidade": "estados",
+   "comando": "endereco:422:endereco_vazio; endereco:vazio; endereco:422:campo; endereco:negado; endereco:erro; endereco:ok; reverso:vazio; reverso:422:campo; reverso:negado; reverso:ok"
+  },
+  "violacoes_serias_axe": {
+   "valor": 0,
+   "unidade": "violações",
+   "comando": "axe-core 4.10.3 wcag2a/aa em /geocodificar inicial, /geocodificar vazio, /geocodificar erro, /geocodificar candidatos, /geocodificar reverso"
+  },
+  "erros_de_console": {
+   "valor": 0,
+   "unidade": "erros",
+   "comando": "Tela.verificar (console.error, pageerror, respostas >= 400 não declaradas)"
+  },
+  "pagina_pronta_ms_geocodificar": {
+   "valor": 56.0,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright"
+  }
+ },
+ "gerado_em": "2026-09-08T10:31:22Z",
+ "git_sha": "8a352d4c11ce"
+}

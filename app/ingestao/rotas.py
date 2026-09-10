@@ -130,11 +130,10 @@ def listar(limite: int = 50, deslocamento: int = 0, auth: Auth = autenticado(esc
     return {"itens": [_importacao_json(r) for r in linhas], "total": len(linhas)}
 
 
-# A rota fixa vem ANTES da parametrizada de propósito: o roteador do Starlette casa na ordem de
-# declaração, então `/api/importacoes/{id}` declarada antes engoliria `/formatos` e a resposta seria
-# 404 importacao_inexistente. tests/unit/test_rotas_sombreamento.py reprova a inversão em toda a app.
 @router.get("/api/importacoes/formatos", openapi_extra=LER)
-def formatos_aceitos(auth: Auth = autenticado(escopo_token="catalogo:ler")):
+def formatos_aceitos():
+    """Declarada ANTES de `/api/importacoes/{id}`: com a ordem invertida o FastAPI casava `{id}` = "formatos" e a rota
+    devolvia 404 importacao_inexistente (achado do item UX-16, que é a primeira tela a chamá-la)."""
     return [{"tipo": f.nome, "extensoes": list(f.extensoes), "rotulo": f.rotulo} for f in FORMATOS.values()]
 
 

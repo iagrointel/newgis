@@ -2418,3 +2418,65 @@ A execução usa a conexão só-leitura do conector (`statement_timeout` de 8 s)
 volta como 422 `consulta_invalida`, tempo esgotado como 422 `tempo_esgotado`, banco fora do ar como 503 e
 marca a saúde da conexão. O evento `conexoes/consultar` guarda tabelas, nº de linhas e tempo — nunca o texto
 da consulta nem o resultado. **SQL Server e Oracle não foram construídos** (sem container liberado; pendente).
+## 22. Acervo (`/acervo`, item L6-01-c-tela-acervo)
+
+A tela **Acervo** mostra as fontes oficiais que a casa já carregou e documentou. É o lugar de responder três
+perguntas antes de usar um dado: de onde ele vem, sob que licença, e quando foi atualizado pela última vez.
+
+### 22.1 Achar uma fonte
+
+O campo de busca procura no **nome** e no **órgão** (não no texto da descrição). A lista suspensa ao lado
+filtra por **domínio**: ela traz a taxonomia inteira do acervo, com a contagem de fontes visíveis entre
+parênteses. Um domínio que hoje não tem nenhuma fonte visível aparece com zero — a categoria continua na lista
+em vez de sumir.
+
+Uma fonte **sem licença escrita não aparece nesta tela**, nem na busca, nem pelo endereço direto da ficha (a
+resposta é 404, igual à de uma fonte que não existe). Isso é regra do produto, não defeito: sem licença
+registrada a casa não afirma que pode redistribuir o dado.
+
+### 22.2 A ficha
+
+Um clique no cartão abre a ficha de procedência: órgão, domínio, licença, frescor, número de tabelas e de
+registros, data do dado, método de carga, confiança, o que aquele dado **não** sustenta, sha256, comando de
+reexecução, próxima verificação, completude de procedência (x/10) e quantos endereços da fonte foram
+confirmados e estão vivos. Quando existe um endereço vivo confirmado, a pré-visualização mostra o link.
+
+### 22.3 Licença e atribuição obrigatória
+
+A etiqueta de licença do cartão traz o tipo **curado** — verificado por HTTP na página do órgão (item
+L6-01-g), de um vocabulário fechado (CC0, CC-BY, CC-BY-SA, ODbL, Copernicus, dado aberto com termo do órgão,
+licença própria, não declarada). Quando a curadoria ainda não passou pela fonte, a etiqueta diz "declarada em
+texto livre" e o texto que o órgão publicou fica no título da etiqueta e na ficha. O tipo curado nunca é
+adivinhado a partir do texto livre.
+
+Se o tipo curado for **ODbL** ou **CC-BY-SA**, a ficha mostra um aviso de **atribuição obrigatória**: usar o
+dado exige citar a fonte e o órgão.
+
+### 22.4 Adicionar ao meu mapa
+
+O botão "adicionar ao meu mapa" cria, no catálogo do seu inquilino, um item do tipo conexão que **referencia**
+a fonte — nunca copia o dado. O item guarda um instantâneo do que valia na hora de adicionar (licença, tipo
+curado, frescor, sha256, comando de reexecução). Fonte marcada com risco de dado pessoal exige uma
+confirmação explícita antes de qualquer item ser criado.
+
+Na tela **Mapa**, a legenda no canto inferior direito lista as camadas do acervo que você adicionou, com a
+licença de cada uma; para ODbL e CC-BY-SA a linha de atribuição obrigatória aparece ali, que é onde o dado é
+visto. Sem nenhuma camada adicionada, a legenda não aparece.
+
+### 22.5 O que ficou de fora
+
+A camada adicionada aparece na **legenda** e no catálogo; ela ainda não é desenhada como geometria sobre o
+mapa — isso depende do serviço de tiles das fontes do acervo, que é item de outra frente.
+
+## 26. Diretório LDAP pela tela (item UX-17-login-sem-controle)
+
+Em `/admin/organizacao`, seção "Diretório (LDAP / Active Directory)": quem tem o privilégio `org.integracoes`
+configura o servidor (`ldap://` ou `ldaps://`), a base de busca, StartTLS, a conta de serviço (a senha nunca
+volta; vazio preserva a guardada), o filtro de usuário (`{login}` é substituído), o atributo de grupos, o perfil
+padrão e o mapa grupo → perfil (uma linha por grupo: `nome-do-grupo = admin | editor | visualizador | campo`).
+Abaixo, "Importar um grupo do diretório" cria os membros como usuários desabilitados, ativados no primeiro
+login pela rede; o resultado diz encontrados, criados, já existentes e recusados. Sem o privilégio a seção mostra
+"sem permissão"; sem diretório configurado, mostra o formulário com os padrões.
+Em `/entrar`, com o diretório habilitado, aparece "Entrar com o diretório da organização (LDAP)": o botão
+alterna o modo, o "Entrar" vira "Entrar pelo diretório" e o mesmo usuário e senha vão a `POST /api/login/ldap`.
+Diretório fora do ar e diretório não configurado aparecem com a mensagem própria; senha errada marca o campo.

@@ -489,6 +489,87 @@ navegador, maior tarefa longa do fio principal 199 ms, maior intervalo entre qua
 (carga 6,42). e2e `tests/e2e/test_ux05_telas.py` (4 telas, capturas 390/1280, axe, i18n, 0 erro de console);
 suítes anteriores das quatro telas passam contra esta árvore. Cobertura regenerada: 238 rotas, 38 lacunas de escrita
 (eram 41).
+## codex cx1, setembro de 2026 (item UX-16-ingestao-sem-tela: tela /importacoes para o fluxo arquivo → camada)
+
+Fecha as lacunas "POST /api/importacoes", "PUT /api/importacoes/{id}/confirmar" e "DELETE /api/importacoes/{id} sem
+tela" do mapa de cobertura (UX-00): tela nova `/importacoes` (menu com `conteudo.publicar_camada`) — lista das
+importações (estado, formato, feições, erro), "nova importação" (item de arquivo já enviado + formato, com sugestão pela
+extensão; dispara a inspeção e a tela acompanha o job até a proposta), "conferir e carregar" (proposta editada: título,
+CRS quando o arquivo não declara, codificação, tipo de geometria, ação para geometrias inválidas, campos com tipo e
+importar/não importar; dispara a carga e a tela acompanha até `concluída`, com "ver camada") e "apagar" (com
+confirmação). Estados por `<plat-estado>` (lista: carregando, vazio com "nova importação", erro com "tentar de novo",
+negado; fluxo: inspecionando/carregando, falhou nomeado; formulários) e erro da API NOMEADO no campo
+(conteudo_nao_corresponde/formato_nao_suportado → formato; srid_inexistente → CRS; perguntas_pendentes → lista;
+estado_invalido 409 e 403 no controle). Achado de API: `GET /api/importacoes/formatos` respondia 404
+importacao_inexistente porque estava declarada depois de `/api/importacoes/{id}` — reordenada, com teste. A carga
+morria na trilha com `tuple concurrently updated` (GRANT no d_demo partilhado): a mesma migração 20260908T0815 do
+wt/cx203f entra aqui. `docs/COBERTURA_UI.md` e `docs/cobertura_ui_lacunas.json` regenerados (29 → 26). e2e
+`tests/e2e/test_importacoes_ux16.py` com o fluxo REAL (upload pela API, inspeção e carga pelo worker da trilha,
+apagar) e os erros forjados nomeados; axe 0 sérias; capturas 390/1280; pt-BR/en/es.
+
+## codex cx1, setembro de 2026 (item UX-15-geocodificador-esri-sem-controle: GeocodeServer compatível com Esri com controle na tela e URL exposta)
+
+Fecha as lacunas "POST /rest/services/Geocodificador/GeocodeServer[/findAddressCandidates|/geocodeAddresses|/reverseGeocode]
+sem controle" do mapa de cobertura (UX-00). A tela `/geocodificar` (UX-14) ganha a seção "Serviço compatível com Esri":
+a URL do GeocodeServer para copiar (com a dica do `?token=` e do escopo `geocodificar:usar`), "ver descritor" (POST no
+descritor, público), "findAddressCandidates com o endereço acima", "reverseGeocode com a coordenada abaixo" e
+"geocodeAddresses em lote" (um endereço por linha, até 500, OBJECTID + SingleLine como o cliente Esri manda) — a
+resposta aparece no formato Esri (tabela Score/Match_addr/Addr_type ou ResultID/Status, mais o JSON) e as respostas de
+negócio do protocolo (400 fora_da_distancia, 404 nao_encontrado, 422 lote_vazio/location_ausente) viram estado vazio
+NOMEADO; 403 no formato Esri (`{error:{code,message}}`) vira negado com o código; 5xx vira erro com "tentar de novo" e
+referência. A tela `/admin/tokens` expõe as URLs do GeocodeServer e do OGC API Records com o escopo exigido e botão
+copiar (o mesmo motivo que o gerador de cobertura registra para as rotas de cliente externo). `docs/COBERTURA_UI.md` e
+`docs/cobertura_ui_lacunas.json` regenerados (33 → 29). e2e `tests/e2e/test_geocodificar_esri_ux15.py` (chamadas reais
+ao descritor, candidatos, reverso e lote; forjados 200/403/500; axe 0 sérias; capturas 390/1280); pt-BR/en/es.
+
+## codex cx1, setembro de 2026 (item UX-14-geocodificador-sem-tela: tela /geocodificar para POST /api/geocodificar e /api/reverso)
+
+Fecha as lacunas "POST /api/geocodificar" e "POST /api/reverso sem controle" do mapa de cobertura (UX-00): tela nova
+`/geocodificar` (menu, sem privilégio além da sessão — as rotas exigem só o escopo `geocodificar:usar`) com dois
+`<plat-formulario>`: endereço em linha única e/ou campos estruturados (até 50 candidatos, com pontuação, tipo de
+acerto traduzido, coordenada e "ver no mapa") e coordenada para endereço (vizinho mais próximo, distância, marca
+"fora do raio"). Estados do sistema de design por `<plat-estado>`: carregando, vazio NOMEADO com a resposta real do
+motor (422 sem_correspondencia / sem_dado_instalado: o código e a mensagem, nunca o número cru), erro com "tentar de
+novo" e referência, negado (403); 422 endereco_vazio e a lista do pydantic caem no campo. `docs/COBERTURA_UI.md` e
+`docs/cobertura_ui_lacunas.json` regenerados (35 → 33). e2e `tests/e2e/test_geocodificar_ux14.py` (10 estados, dois
+deles reais contra a base sem CNEFE; axe 0 sérias; capturas 390/1280); textos em pt-BR/en/es.
+
+## codex cx1, setembro de 2026 (item UX-13-conexoes-sem-controle: a escrita de conexões com erro nomeado no controle da tela /conexoes)
+
+Fecha a lacuna "POST/PATCH/DELETE /api/conexoes sem controle" do mapa de cobertura (UX-00). A tela `/conexoes` da
+cadeia UX-05 já chamava as 8 rotas de `/api/conexoes*` (formulário `<plat-formulario>` de criar/editar, ação "apagar"
+com confirmação, testar, histórico, publicar) com os quatro estados de `<plat-estado>`; este item prova a refutação
+rota a rota e fecha o que faltava: 404 em PATCH/DELETE (conexão apagada por outra pessoa) avisa e recarrega a lista
+em vez de deixar o formulário preso (`conexoes.ja_removida` em pt-BR/en/es). `tests/e2e/test_conexoes_ux13.py`:
+lista vazia/erro/negada forjadas; POST com 403 (privilégio nomeado na mensagem do formulário), 409 (campo nome), 422
+da validação (campo apontado por `loc`), 422 config e 413 cota forjados e criação real; PATCH com 403 e 422
+url_insegura forjados e gravação real conferida por GET; DELETE com 403, 500 e 404 forjados nomeados no aviso da lista
+(role=alert, referência) e remoção real; axe 0 sérias, capturas 390/1280, 0 erro de console. `docs/COBERTURA_UI.md`
+regenerado (35 lacunas na junção, nenhuma de conexões).
+
+## codex cx1, setembro de 2026 (item UX-12-categorias-sem-controle: as rotas de escrita de categorias com controle na tela /admin/categorias)
+
+Fecha as lacunas "PUT /api/categorias" e "POST /api/categorias/importar sem controle" do mapa de cobertura (UX-00):
+tela nova `/admin/categorias` (menu, privilégio `conteudo.categorias`) sobre a cadeia UX-00..05 — editor da
+árvore de 3 níveis (nome, nova raiz/filha, subir/descer, remover bloqueado quando há itens) que grava a árvore
+inteira com ids preservados, e "Importar modelo" (ISO 19115 / INSPIRE, idempotente). Estados do sistema de design:
+`<plat-estado>` da lista (carregando, vazio com "importar modelo", erro com "tentar de novo", negado) e do
+salvar/importar, onde o erro da API aparece nomeado — 409 categoria_em_uso com os caminhos e itens, 422
+limite_categorias com "N de M", 403 negado (refutação: nunca o número cru). `docs/COBERTURA_UI.md` e
+`docs/cobertura_ui_lacunas.json` regenerados (41 → 36). e2e com axe (0 sérias), capturas 390/1280 e restauração da
+árvore original ao fim em `tests/e2e/test_categorias_ux12.py`; textos em pt-BR/en/es.
+## codex cx1, setembro de 2026 (item UX-10-acervo-sem-tela: a rota de escrita do acervo com controle nomeado na tela /acervo)
+
+Fecha a lacuna "POST /api/acervo/{fonte_id}/adicionar sem tela" do mapa de cobertura (UX-00): a tela /acervo do
+L6-01-c (juntada aqui sobre a cadeia UX-00..05, com a legenda do acervo reaplicada nos arquivos do mapa da UX-04)
+ganha os quatro estados do sistema de design — `<plat-estado>` na lista (carregando com esqueleto, vazio com
+"limpar filtros", erro com "tentar de novo" e referência, negado) e no controle "adicionar ao meu mapa", que
+passa a viver dentro da ficha com estado próprio: 403 vira negado com o privilégio exigido (e quem não tem
+`conteudo.registrar_fonte` vê o negado antes de clicar), 409 vira o diálogo de confirmação de dado pessoal
+(a confirmação repete com `confirma_risco_pii`), 413/422/5xx mostram a mensagem da API com a referência —
+nunca o número cru (refutação). `plat-estado` ganhou `data-acao` nos botões; acervo.css e a legenda do mapa
+ficaram só com tokens (guarda do UX-01 = 0). `docs/COBERTURA_UI.md` e `docs/cobertura_ui_lacunas.json`
+regenerados: 41 → 40 lacunas. e2e com axe (0 sérias) e capturas 390/1280 em `tests/e2e/test_acervo_ux10.py`.
 
 ## turno 8, setembro de 2026 (item UX-04-tela-mapa-polimento: chrome único do visualizador; ramos de painel juntados)
 
@@ -4003,6 +4084,32 @@ Ressalva honesta: nenhum WMTS público brasileiro com EPSG:4674 EXATO foi encont
 mesmo caminho de código é provado com rede real contra EPSG:4326 (mesma família geográfica, mesmo bug de
 eixo, mesma correção). A cláusula "vê no mapa" foi verificada no nível de API (GetMap devolve PNG válido
 consumível pelo MapLibre), não por Playwright — marcado como limitação, não como aprovado sem prova.
+## turno 3, setembro de 2026 (item L6-01-c-tela-acervo: tela do Acervo — busca, ficha, adicionar ao mapa e atribuição na legenda)
+
+Tela `/acervo` (`web/acervo.html`, `web/acervo.css`, `web/js/acervo/acervo.js`): filtro pelos **22 domínios**
+da taxonomia de `acervo.fonte` (medido, `tests/medidas/L6-01-c-tela-acervo.json`), busca por nome e órgão,
+cartão por fonte (órgão, domínio, etiqueta de licença, frescor, tabelas, registros) e ficha completa de
+procedência em painel lateral, com pré-visualização do endpoint vivo quando existe. Rota nova
+`GET /api/acervo/dominios` devolve a taxonomia inteira com a contagem de fontes VISÍVEIS por domínio: domínio
+sem fonte visível hoje aparece com zero, nunca some da lista.
+
+Licença curada entra na lista, na ficha e no instantâneo gravado ao adicionar (`licenca_curada_tipo`, do
+vocabulário fechado de `plat.acervo_licenca`, item L6-01-g) — nunca inferida do texto livre de `licenca`.
+ODbL e CC-BY-SA acionam o aviso de atribuição obrigatória em dois lugares: na ficha e na legenda da tela
+`/mapa`. A legenda lê `GET /api/acervo/meu-mapa`, rota nova que lista as camadas do acervo já adicionadas ao
+catálogo do inquilino (`dados->>'protocolo' = 'acervo'`, isolamento pela RLS de `plat.item`) — `GET /api/itens`
+não serve porque não devolve `dados` e não filtra por protocolo.
+
+Medido no e2e `tests/e2e/test_acervo.py` (1 teste, percurso inteiro, contra o uvicorn da trilha): 22 domínios
+no filtro; buscar "unidades de conservação" devolve **0 cartões** e as 3 fontes com esse nome no acervo — todas
+sem licença escrita — não aparecem nem têm o identificador no HTML; adicionar cria 1 item `conexao` em modo
+`referenciada` (sem cópia de dado); a legenda do mapa mostra o nome, a licença e a linha de atribuição;
+`document.body.scrollWidth` = 390 px num visor de 390 px em `/acervo` e em `/mapa`; **0 erro de console** em
+todo o percurso. Capturas em `tests/e2e/capturas/L6-01-c-tela-acervo_{ficha,legenda_no_mapa,celular}.png`.
+
+Correção de borda na tela do mapa (item L2-01-a), achada ao medir o responsivo: painel flutuante ganhou
+`max-width: calc(100% - var(--e4) * 2)` — o seletor de camada base media 378 px e terminava em 394 px num visor
+de 390 px, empurrando a página 2 px para fora da tela.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 - **L7-06-d-paineis**: cinco painéis Grafana provisionados por arquivo (`deploy/grafana/paineis/*.json` + `deploy/grafana/provisioning/`), homologação própria (`deploy/paineis_homologacao.sh`) com carga curta de verdade e captura de cada painel em `tests/e2e/capturas/`. Métricas novas para o que os painéis precisavam e não existia: usuários ativos em 24 h, duração e tamanho do último backup/ensaio, uso de armazenamento e tamanho do schema de dado por inquilino.
@@ -5929,3 +6036,17 @@ contagens agregadas por `plat.telemetria_contagens()`), nunca nome/geometria/con
 (`POST /api/telemetria/receber`): chave desconhecida = 403 sem gravar, campo a mais = 422, chave de outro
 appliance no cabeçalho = 422; `plat.telemetria_appliance` alimenta `GET /api/telemetria/appliances`.
 `docs/APPLIANCE.md` §5 lista os campos (teste confere). Ramo inclui o merge de `wt/cx5l711b` (dependência).
+## turno 4, setembro de 2026 (item UX-17-login-sem-controle: diretório LDAP com controle em tela)
+
+As três rotas do grupo `login` que só existiam no backend ganharam controle: em `/admin/organizacao`, a seção
+"Diretório (LDAP / Active Directory)" (`PUT /api/org/ldap`: servidor, base, StartTLS, conta de serviço, filtro,
+atributo de grupos, perfil padrão e mapa grupo → perfil) e o formulário "Importar um grupo do diretório"
+(`POST /api/org/ldap/importar`), com os estados do sistema de design: carregando, erro com "tentar de novo" e
+referência, negado (403, privilégio `org.integracoes`) e vazio; em `/entrar`, quando o inquilino habilitou o
+diretório, `GET /api/login/provedores` o anuncia e a tela oferece "Entrar com o diretório da organização (LDAP)"
+— o mesmo formulário enviado a `POST /api/login/ldap`, com endpoints literais no código (a credencial nunca vai a
+um caminho vindo da rede). Erros nomeados no controle: 422 no campo, 409 sem configuração, 503 diretório
+indisponível, 403 negado; nunca um código cru. e2e `tests/e2e/test_login_ldap_ux17.py` com o glauth de teste
+real (configura, importa `gg-plataforma-leitura` = 1 encontrado, entra como usuária da rede em 125,6 ms), axe 0
+violações sérias nas duas telas, capturas 390/1280. `docs/COBERTURA_UI.md` regenerado: 26 → 23 lacunas de
+escrita. Textos em pt-BR, en e es.

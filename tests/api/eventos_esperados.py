@@ -46,12 +46,6 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/plataforma/inquilinos/{id}/suspender"): ["inquilinos/suspender"],
     ("POST", "/api/plataforma/inquilinos/{id}/reativar"): ["inquilinos/reativar"],
     ("DELETE", "/api/plataforma/inquilinos/{id}"): ["inquilinos/apagar"],
-    # L7-11-c telemetria opcional (rotas de instalação, superadmin)
-    ("PUT", "/api/telemetria"): ["telemetria/ligar", "telemetria/desligar"],
-    ("POST", "/api/telemetria/enviar"): ["telemetria/enviar"],
-    ("POST", "/api/telemetria/appliances"): ["telemetria/receber"],
-    ("DELETE", "/api/telemetria/appliances/{chave}"): [],  # remoção de chave: sem contexto de inquilino no cursor
-    ("POST", "/api/telemetria/receber"): [],  # autenticado por chave de appliance, sem sessão: sem evento de domínio
     # ---- fila de jobs (L0-05; vocabulário na migração 007)
     ("POST", "/api/jobs"): ["jobs/criar"],
     ("POST", "/api/jobs/{job_id}/cancelar"): ["jobs/cancelar"],
@@ -152,14 +146,7 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("PATCH", "/api/conexoes/{id}"): ["conexoes/editar"],
     ("DELETE", "/api/conexoes/{id}"): ["conexoes/apagar"],
     ("POST", "/api/conexoes/{id}/testar"): ["conexoes/testar"],
-    # o catálogo de conectores públicos (L6-02-m) não cria um tipo de evento próprio: adicionar uma
-    # entrada do catálogo cria uma CONEXÃO, e o evento gravado é o mesmo `conexoes/criar`, com
-    # `origem: endpoint_publico` no dado do evento.
-    ("POST", "/api/endpoints-publicos/{id}/adicionar"): ["conexoes/criar"],
     ("POST", "/api/conexoes/{id}/publicar"): ["conexoes/publicar_camada"],
-    ("POST", "/api/conexoes/{id}/consulta"): ["conexoes/consultar"],  # L6-02-j: consulta SQL só-leitura
-    # L0-04-i (ramo wt/il004ifonte, mesclado aqui): a rota em massa registra 1 evento por camada + 1 do lote
-    ("POST", "/api/conexoes/{id}/publicar-em-massa"): ["camadas/importar", "conexoes/publicar_em_massa"],
     # ---- motor multicritério em grades aninhadas (L3-19-multiescala; vocabulário nas migrações
     # 20260906T1640_multiescala.sql e 20260906T1823_multiescala_apagar.sql). Conjunto, fator e execução são
     # tabelas do inquilino com dono humano, então toda escrita narra evento; o DELETE apaga em cascata e por
@@ -171,7 +158,19 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
-    # L3-10-corredor-custo-minimo: o traçado não cria tabela; o que fica é o EVENTO com os parâmetros
-    # declarados (custo máximo, vetos, vizinhança, epsilon) e as medidas — é o rastro que repete a corrida.
-    ("POST", "/api/multiescala/execucoes/{id}/corredor"): ["multiescala/corredor"],
+
+    # ---- linhagem do mapa e tabela de atributos (chegaram pela cadeia UX-04; achado na junção do UX-12):
+    ("POST", "/api/anotacoes"): [],  # anotação de feição: gatilho no banco (20260907T1655), a rota não narra evento
+    ("PATCH", "/api/anotacoes/{id}"): [],
+    ("DELETE", "/api/anotacoes/{id}"): [],
+    ("POST", "/api/exportacoes"): ["camadas/exportar", "mapas/exportar_pacote"],
+    ("DELETE", "/api/exportacoes/{exportacao_id}"): [],  # apaga o registro/arquivo da própria exportação, sem evento
+    ("PUT", "/api/camadas/{item_id}/tabela/vista"): ["camadas/vista_tabela"],
+    ("POST", "/api/camadas/{item_id}/tabela/linhas"): [],  # leitura com corpo (página de linhas)
+    ("POST", "/api/camadas/{item_id}/tabela/estatisticas"): [],  # leitura com corpo
+    ("POST", "/api/mapa/camadas/{id}/filtrar"): [],  # leitura com corpo (filtro CQL2)
+    ("POST", "/api/mapa/camadas/{id}/selecionar"): [],  # leitura com corpo (seleção espacial)
+    ("POST", "/api/mapa/selecao-espacial"): [],  # leitura com corpo
+    ("POST", "/api/mapa/pacotes/importar"): ["mapas/importar_pacote"],
+    ("POST", "/api/mapa/{mapa_id}/desenho/promover"): ["mapa/desenho_promovido"],
 }

@@ -18,8 +18,14 @@ import uuid
 import psycopg2
 from fastapi import APIRouter, Query, Request
 
-from app import cotas, db
-from app.acervo.modelos import AcervoAdicionarEntrada, AcervoFicha, AcervoPagina
+from app import db
+from app.acervo.modelos import (
+    AcervoAdicionarEntrada,
+    AcervoCamadaMapa,
+    AcervoDominio,
+    AcervoFicha,
+    AcervoPagina,
+)
 from app.auth.comum import paginacao
 from app.auth.sessao import Auth, autenticado
 from app.catalogo import comum, tipos
@@ -34,9 +40,16 @@ CAMPOS_FICHA = (
     "f.data_dado, f.data_acesso, f.script_gerador, f.sha256, f.comando_reexecucao, f.metodo, f.confianca, "
     "f.limites, f.proxima_verificacao, f.numero_tabelas, f.registros_estimados, f.bytes, f.procedencia_campos, "
     "f.procedencia_campos_possiveis, f.procedencia_pontuacao, f.atualizado_em, "
-    "coalesce(l.risco_pii, false) AS risco_pii, l.motivo AS risco_pii_motivo"
+    "coalesce(l.risco_pii, false) AS risco_pii, l.motivo AS risco_pii_motivo, "
+    # item L6-01-c-tela-acervo: licença CURADA (vocabulário fechado do L6-01-g, plat.acervo_licenca) quando
+    # existir verificação por HTTP; None (nunca '') quando a fonte só tem o texto livre de f.licenca — a tela
+    # só exige atribuição (ODbL/CC-BY-SA) sobre o tipo curado, nunca sobre o texto livre não verificado.
+    "lc.tipo AS licenca_curada_tipo"
 )
-CAMPOS_FICHA_DE = "plat.acervo_ficha f LEFT JOIN plat.acervo_lgpd l ON l.fonte_id = f.fonte_id"
+CAMPOS_FICHA_DE = (
+    "plat.acervo_ficha f LEFT JOIN plat.acervo_lgpd l ON l.fonte_id = f.fonte_id "
+    "LEFT JOIN plat.acervo_licenca lc ON lc.fonte_id = f.fonte_id"
+)
 
 
 def _completude_texto(r: dict) -> str | None:
@@ -48,24 +61,9 @@ def _completude_texto(r: dict) -> str | None:
     return f"{p:.1f}".replace(".", ",") + "/10"
 
 
-def _camada_resumo(c: dict) -> dict:
-    """`origem`: texto literal que a ficha mostra (item L6-01-j-multi-servidor) — 'local', 'servidor
-    remoto (<nome>)' quando lida por FDW, ou 'servidor remoto indisponível (<nome>)' quando a última
-    verificação não respondeu (a linha continua com a última `linhas_exatas` conhecida, nunca zerada)."""
-    j = _iso_datas(c)
-    modo, servidor = c["modo_acesso"], c["servidor"]
-    if modo == "local":
-        j["origem"] = "local"
-    elif modo == "fdw":
-        j["origem"] = f"servidor remoto ({servidor})"
-    else:
-        j["origem"] = f"servidor remoto indisponível ({servidor})"
-    return j
-
-
 def _iso_datas(r: dict) -> dict:
     j = dict(r)
-    for campo in ("url_conferida_em", "data_acesso", "proxima_verificacao", "testado_em", "fdw_verificado_em"):
+    for campo in ("url_conferida_em", "data_acesso", "proxima_verificacao", "testado_em"):
         if j.get(campo) is not None:
             j[campo] = j[campo].isoformat()
     if j.get("atualizado_em") is not None:
@@ -96,13 +94,50 @@ def listar(
         cur.execute(
             f"SELECT f.fonte_id, f.nome, f.orgao, f.dominio, f.licenca, f.frescor, f.numero_tabelas, "
             f"f.registros_estimados, f.procedencia_pontuacao, f.proxima_verificacao, "
-            f"coalesce(l.risco_pii, false) AS risco_pii, l.motivo AS risco_pii_motivo "
+            f"coalesce(l.risco_pii, false) AS risco_pii, l.motivo AS risco_pii_motivo, lc.tipo AS licenca_curada_tipo "
             f"FROM {CAMPOS_FICHA_DE} WHERE {filtro} "
             f"ORDER BY f.dominio, f.nome LIMIT %s OFFSET %s",
             [*params, lim, desl],
         )
         itens = [_iso_datas(r) for r in cur.fetchall()]
     return {"total": total, "itens": itens}
+
+
+@router.get("/api/acervo/dominios", response_model=list[AcervoDominio], openapi_extra=LER)
+def dominios(auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """22 domínios como filtro (hipótese do item L6-01-c-tela-acervo): a lista de NOMES vem da taxonomia
+    inteira de `acervo.fonte` (categoria pública, não identifica fonte nenhuma — regra D17 vale para
+    QUAL fonte existe, não para o nome de uma categoria), com a contagem de fontes VISÍVEIS (licença
+    escrita) por domínio; domínio sem fonte visível hoje aparece com fontes=0, nunca some da lista, para
+    a tela poder mostrar a categoria vazia em vez de fingir que ela não existe."""
+    with db.db(auth.contexto()) as cur:
+        cur.execute(
+            "SELECT d.dominio, coalesce(v.fontes, 0) AS fontes "
+            "FROM (SELECT DISTINCT dominio FROM acervo.fonte) d "
+            "LEFT JOIN (SELECT dominio, count(*) AS fontes FROM plat.acervo_ficha GROUP BY dominio) v "
+            "USING (dominio) ORDER BY d.dominio"
+        )
+        return cur.fetchall()
+
+
+@router.get("/api/acervo/meu-mapa", response_model=list[AcervoCamadaMapa], openapi_extra=LER)
+def meu_mapa(auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """Camadas do acervo já adicionadas ao catálogo de quem chama, para a legenda da tela /mapa (item
+    L6-01-c-tela-acervo). Rota própria porque `GET /api/itens` não devolve `dados` (campo pesado, fora de
+    `SQL_ITEM_LISTA`) e não filtra por protocolo: pela lista do catálogo a legenda teria de pedir a ficha de
+    cada item, uma chamada por camada. Aqui é uma consulta só, e o filtro `dados->>'protocolo' = 'acervo'` é
+    feito no banco. O isolamento por inquilino é o mesmo do resto do catálogo (RLS sobre `plat.item` pela
+    conexão de `auth.contexto()`), não um WHERE escrito aqui."""
+    with db.db(auth.contexto()) as cur:
+        cur.execute(
+            "SELECT i.id::text AS item_id, i.titulo, i.dados->'parametros'->>'fonte_id' AS fonte_id, "
+            "i.dados->'parametros'->>'dominio' AS dominio, i.dados->'parametros'->>'licenca' AS licenca, "
+            "i.dados->'parametros'->>'licenca_curada_tipo' AS licenca_curada_tipo "
+            "FROM plat.item i WHERE i.apagado_em IS NULL AND i.tipo = 'conexao' "
+            "AND i.dados->>'protocolo' = 'acervo' AND i.dados->'parametros'->>'fonte_id' IS NOT NULL "
+            "ORDER BY i.titulo"
+        )
+        return cur.fetchall()
 
 
 @router.get("/api/acervo/{fonte_id}", response_model=AcervoFicha, openapi_extra=LER)
@@ -131,15 +166,6 @@ def ver(fonte_id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
         j["endpoints"] = [_iso_datas(e) for e in cur.fetchall()]
         j["endpoints_total"] = contagem["total"]
         j["endpoints_confirmados_vivos"] = contagem["vivos"]
-        # item L6-01-j-multi-servidor: camadas desta fonte, local ou lidas por FDW de outro servidor da
-        # casa — a ficha nunca esconde que o dado vem de outra máquina.
-        cur.execute(
-            "SELECT servidor, schema_nome, tabela, modo_acesso, linhas_exatas, aviso, "
-            "fdw_verificado_em, fdw_latencia_ms FROM plat.acervo_camada "
-            "WHERE fonte_id = %s ORDER BY (modo_acesso <> 'local'), servidor, tabela",
-            (fonte_id,),
-        )
-        j["camadas"] = [_camada_resumo(c) for c in cur.fetchall()]
     return j
 
 
@@ -197,16 +223,14 @@ def adicionar(
     if f["risco_pii"] and not confirma_risco_pii:
         raise _recusar_pii(request, ctx, fonte_id, f["risco_pii_motivo"])
     with db.db(ctx) as cur:
-        # contar_itens_com_lixeira (item L0-07-c-cotas-uso): item na lixeira ainda não expurgado CONTA na
-        # cota — um count(*) cru via RLS esconderia o apagado e deixaria "liberar" cota sem expurgo.
-        n = cotas.contar_itens_com_lixeira(cur, auth.tenant_id)
-        cur.execute("SELECT plat.cota_itens(%s) AS cota", (auth.tenant_id,))
-        cota_itens = cur.fetchone()["cota"]
-        if n >= cota_itens:
+        cur.execute(
+            "SELECT plat.cota_itens(%s) AS cota, (SELECT count(*) FROM plat.item WHERE tenant_id = %s) AS n",
+            (auth.tenant_id, auth.tenant_id),
+        )
+        cota = cur.fetchone()
+        if cota["n"] >= cota["cota"]:
             raise ErroAPI(
-                413, "cota_itens",
-                f"cota de itens esgotada: uso atual {n} de {cota_itens} itens",
-                {"cota": cota_itens, "uso": n},
+                413, "cota_itens", f"cota de itens do inquilino esgotada ({cota['cota']})", {"cota": cota["cota"]}
             )
         dados = {
             "protocolo": "acervo",
@@ -215,6 +239,11 @@ def adicionar(
                 "fonte_id": f["fonte_id"],
                 "dominio": f["dominio"],
                 "licenca": f["licenca"],
+                # tipo do vocabulário fechado (item L6-01-g), congelado no momento de adicionar — a mesma
+                # disciplina de sha256/comando_reexecucao abaixo (snapshot, não referência viva): a tela do
+                # mapa usa ISTO para decidir a atribuição obrigatória de ODbL/CC-BY-SA na legenda (item
+                # L6-01-c), sem precisar reconsultar o acervo por fonte a cada carga do mapa.
+                "licenca_curada_tipo": f["licenca_curada_tipo"],
                 "frescor": f["frescor"],
                 "numero_tabelas": f["numero_tabelas"],
                 "registros_estimados": f["registros_estimados"],

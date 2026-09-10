@@ -1,0 +1,77 @@
+{
+ "item": "L6-01-c-tela-acervo",
+ "medidas": {
+  "pagina_pronta_ms_acervo": {
+   "valor": 150.3,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
+  },
+  "pagina_pronta_ms_acervo_celular": {
+   "valor": 281.6,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
+  },
+  "pagina_pronta_ms_mapa_celular": {
+   "valor": 1720.5,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
+  },
+  "dominios_no_filtro": {
+   "valor": 22,
+   "unidade": "contagem",
+   "comando": "opções de #dominio-filtro (menos 'todos') == SELECT count(DISTINCT dominio) FROM acervo.fonte"
+  },
+  "unidades_de_conservacao_no_acervo": {
+   "valor": 3,
+   "unidade": "contagem",
+   "comando": "SELECT count(*) FROM acervo.fonte WHERE nome ILIKE '%unidades de conserva%'"
+  },
+  "unidades_de_conservacao_na_tela": {
+   "valor": 0,
+   "unidade": "contagem",
+   "comando": "cartões em #grade após buscar 'unidades de conservação' na tela /acervo"
+  },
+  "erros_de_console": {
+   "valor": 0,
+   "unidade": "contagem",
+   "comando": "console.error + pageerror coletados pelo playwright em todo o percurso (tests/e2e/apoio.py Tela)"
+  },
+  "largura_do_corpo_em_390px": {
+   "valor": 390,
+   "unidade": "px",
+   "comando": "document.body.scrollWidth da tela /acervo com o visor em 390x844 (sem barra horizontal)"
+  },
+  "largura_do_corpo_do_mapa_em_390px": {
+   "valor": 390,
+   "unidade": "px",
+   "comando": "document.body.scrollWidth da tela /mapa com a legenda do acervo, visor 390x844"
+  },
+  "captura_ficha": {
+   "valor": "L6-01-c-tela-acervo_ficha.png",
+   "unidade": "arquivo",
+   "comando": "page.screenshot em tests/e2e/capturas/L6-01-c-tela-acervo_ficha.png"
+  },
+  "captura_legenda_no_mapa": {
+   "valor": "L6-01-c-tela-acervo_legenda_no_mapa.png",
+   "unidade": "arquivo",
+   "comando": "page.screenshot em tests/e2e/capturas/L6-01-c-tela-acervo_legenda_no_mapa.png"
+  },
+  "captura_celular": {
+   "valor": "L6-01-c-tela-acervo_celular.png",
+   "unidade": "arquivo",
+   "comando": "page.screenshot em tests/e2e/capturas/L6-01-c-tela-acervo_celular.png"
+  },
+  "carga_1min": {
+   "valor": 12.48,
+   "unidade": "media de processos prontos",
+   "comando": "os.getloadavg()[0] no fim da rodada"
+  },
+  "ram_livre_gb": {
+   "valor": 0.3,
+   "unidade": "GB",
+   "comando": "SC_AVPHYS_PAGES * SC_PAGE_SIZE no fim da rodada"
+  }
+ },
+ "gerado_em": "2026-09-07T18:11:16Z",
+ "git_sha": "0f0af7c5af43"
+}

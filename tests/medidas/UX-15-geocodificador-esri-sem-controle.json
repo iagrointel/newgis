@@ -1,0 +1,32 @@
+{
+ "item": "UX-15-geocodificador-esri-sem-controle",
+ "medidas": {
+  "estados_provados": {
+   "valor": 11,
+   "unidade": "estados",
+   "comando": "url:copiar; descritor:ok; candidatos:vazio; reverso:vazio; lote:ok; lote:vazio_no_campo; candidatos:ok; reverso:negado; lote:erro; lote:tentar_de_novo; tokens:urls"
+  },
+  "violacoes_serias_axe": {
+   "valor": 0,
+   "unidade": "violações",
+   "comando": "axe-core 4.10.3 wcag2a/aa em /geocodificar descritor Esri, /geocodificar lote Esri, /geocodificar erro Esri, /admin/tokens serviços externos"
+  },
+  "erros_de_console": {
+   "valor": 0,
+   "unidade": "erros",
+   "comando": "Tela.verificar (console.error, pageerror, respostas >= 400 não declaradas)"
+  },
+  "pagina_pronta_ms_geocodificar_esri": {
+   "valor": 40.2,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright"
+  },
+  "pagina_pronta_ms_tokens": {
+   "valor": 83.5,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright"
+  }
+ },
+ "gerado_em": "2026-09-08T10:48:23Z",
+ "git_sha": "82b3e16ba970"
+}

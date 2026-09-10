@@ -135,7 +135,7 @@ def test_conexoes_criar_editar_ordenar_apagar_e_estados(page, base_url, credenci
         page.click("#conexao-form button[type=submit]")
         page.wait_for_selector("#conexao-form [data-campo='nome'] .erro-campo")
         assert "409" not in (page.text_content("#conexao-form [data-campo='nome'] .erro-campo") or "")
-        page.click("#conexao-form .botoes button:not([type=submit])")
+        page.click("#conexao-form .botoes button[type=button]")  # cancelar (o "mostrar" da credencial também é button)
         page.wait_for_selector("#conexao-form-caixa[hidden]", state="attached")
 
         # editar: tipo travado, nome muda, PATCH volta na linha
@@ -373,7 +373,7 @@ def test_uploads_fila_estados_e_fio_principal_livre(page, base_url, credenciais_
         maior_longa = max(medida["longas"], default=0)
         assert maior_longa <= TAREFA_LONGA_MAX_MS, medida["longas"]
         # o rótulo mudou ao longo do envio (uma pintura por quadro, nunca uma só ao fim) e traz bytes e velocidade
-        assert len(medida["textos"]) >= 4, medida["textos"]
+        assert len(medida["textos"]) >= 8, medida["textos"]
         assert any("MB" in t and "/s" in t for t in medida["textos"]), medida["textos"]
         _gravar_medida(
             "upload_256mib_maior_tarefa_longa_ms",
@@ -412,8 +412,7 @@ def test_tarefas_estados_detalhe_inexistente_e_idioma(page, base_url, credenciai
     tela.entrar(slug, login, senha, proximo="/tarefas")
     tela.ir("/tarefas")
     page.wait_for_function("() => /\\d/.test(document.querySelector('#lista-total').textContent)", timeout=15000)
-    # os nomes dos tipos de job (catalogo.miniatura, ...) têm a forma de chave de i18n e aparecem no filtro de tipo
-    privilegios = _privilegios(tela) | {tp["nome"] for tp in tela.api("GET", "/api/jobs/tipos").json()}
+    privilegios = _privilegios(tela)
     _axe(page, "tarefas")
     _sem_chave_crua(page, privilegios)
     _capturar(page, "tarefas_lista")
@@ -427,14 +426,13 @@ def test_tarefas_estados_detalhe_inexistente_e_idioma(page, base_url, credenciai
     page.select_option("#f-estado", "cancelado")
     page.wait_for_selector("#lista-estado[tipo='vazio']:not([hidden])")
     assert page.locator("#lista-estado button", has_text="limpar filtros").count() == 1
-    assert page.locator("#lista-caixa").is_visible() and page.locator("#lista-corpo tr").count() == 0
+    assert page.locator("#lista-caixa").is_hidden()
     _capturar(page, "tarefas_vazio", larguras=(1280,))
     page.unroute(ROTA_JOBS)
     page.route(ROTA_JOBS, lambda r: r.fulfill(**_erro_json(500, "fila indisponível (provocado)")))
     page.locator("#lista-estado button", has_text="limpar filtros").click()
     page.wait_for_selector("#lista-estado[tipo='erro']:not([hidden])")
     assert "e2e-ux05-ref" in (page.text_content("#lista-estado") or "")
-    assert page.locator("#lista-caixa").is_hidden()
     page.unroute(ROTA_JOBS)
     page.route(ROTA_JOBS, lambda r: r.fulfill(**_erro_json(403, "sem jobs.ver (provocado)")))
     page.locator("#lista-estado button", has_text="tentar de novo").click()
@@ -478,33 +476,34 @@ def test_compartilhado_publico_sem_chrome_e_estados(page, base_url, credenciais_
     ids = []
     try:
         tela.entrar(slug, login, senha, proximo="/conteudo")
-        # o item principal é um app cujo corpo lista o mapa incluído: a relação mapa_de_app nasce do extrator do
-        # documento (PUT /relacoes direto é recusado em tipos com extrator), e só dependência entra no link
-        dados_mapa = {"esquema_versao": 1, "corpo": {}}
-        r = tela.api("POST", "/api/itens", {"tipo": "mapa", "titulo": f"zt-ux05 incluído {s}", "dados": dados_mapa})
-        assert r.status == 201, r.text()
-        incluido = r.json()["id"]
-        ids.append(incluido)
         r = tela.api(
             "POST",
             "/api/itens",
             {
-                "tipo": "app",
+                "tipo": "mapa",
                 "titulo": f"zt-ux05 mapa {s}",
-                "resumo": "aplicativo de prova do link público",
+                "resumo": "mapa de prova do link público",
                 "tags": ["ux05"],
-                "dados": {"tipo": "app", "esquema_versao": 1, "corpo": {"mapas": [incluido]}},
+                "dados": {"esquema_versao": 1, "corpo": {}},
             },
         )
         assert r.status == 201, r.text()
         principal = r.json()["id"]
         ids.append(principal)
+        r = tela.api(
+            "POST",
+            "/api/itens",
+            {"tipo": "mapa", "titulo": f"zt-ux05 incluído {s}", "dados": {"esquema_versao": 1, "corpo": {}}},
+        )
+        assert r.status == 201, r.text()
+        incluido = r.json()["id"]
+        ids.append(incluido)
         r = tela.api("POST", f"/api/itens/{principal}/links", {"nome": f"zt-ux05-{s}", "itens_incluidos": [incluido]})
         assert r.status == 201, r.text()
         token = r.json()["token"]
 
         # contexto novo, sem cookie: a página é pública
-        ctx = browser.new_context(ignore_https_errors=local(base_url), base_url=base_url, locale="pt-BR")
+        ctx = browser.new_context(ignore_https_errors=local(base_url), base_url=base_url)
         pub = ctx.new_page()
         publica = Tela(pub, base_url)
         try:

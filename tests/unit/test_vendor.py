@@ -10,7 +10,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 VENDOR = ROOT / "web" / "vendor"
 LICENCAS = {"BSD-3-Clause", "MIT", "Apache-2.0", "ISC", "OFL-1.1"}
-NOME = re.compile(r"^(?P<nome>[a-z][a-z0-9-]*)-(?P<versao>\d+\.\d+(?:\.\d+)?)\.(js|css|woff2)$")
+# `.umd.js`/`.min.js` são sufixos de EMPACOTAMENTO da própria biblioteca (terra-draw publica só o UMD com esse
+# nome), não parte da versão: a convenção <nome>-<versão> continua valendo antes deles
+NOME = re.compile(r"^(?P<nome>[a-z][a-z0-9-]*)-(?P<versao>\d+\.\d+(?:\.\d+)?)(?:\.umd|\.min)?\.(js|css|woff2)$")
 
 
 def _linhas():

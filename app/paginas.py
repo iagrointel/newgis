@@ -27,6 +27,8 @@ PAGINAS = {
     "/admin/organizacao": "admin/organizacao.html",
     # --- retrato operacional (L0-06-e-status): aberta, sem sessão, noindex
     "/status": "status.html",
+    # --- categorias do inquilino (UX-12-categorias-sem-controle): PUT /api/categorias e POST /api/categorias/importar
+    "/admin/categorias": "admin/categorias.html",
     # --- catálogo (L0-03)
     # --- catálogo (L0-03); /c/{token} é servida por app/catalogo/rotas_compartilhamento.py (leva og:)
     "/conteudo": "conteudo.html",
@@ -113,6 +115,12 @@ PAGINAS = {
     "/visualizar": "visualizar.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
     "/executar": "executar.html",
+    # --- acervo da casa (L6-01-c-tela-acervo): equivalente do Living Atlas, sobre plat.acervo_ficha
+    "/acervo": "acervo.html",
+    # --- conexões externas (L6-02-a/L6-02-l/L6-05)
+    "/conexoes": "conexoes.html",
+    # item UX-14-geocodificador-sem-tela: tela de trabalho do geocodificador (POST /api/geocodificar e /api/reverso)
+    "/geocodificar": "geocodificar.html",
     # --- SMTP, convite de membro e redefinição de senha (L0-07-d-smtp-convites): públicas, sem sessão
     "/aceitar-convite": "aceitar_convite.html",
     "/redefinir-senha": "redefinir_senha.html",
@@ -120,6 +128,10 @@ PAGINAS = {
     "/uploads": "uploads.html",
     # --- identidade visual (L0-14): página viva do sistema de design, gerada dos tokens em web/estilo/tokens.css
     "/estilo": "estilo.html",
+    # item UX-16-ingestao-sem-tela: importações (arquivo enviado -> camada vetorial)
+    "/importacoes": "importacoes.html",
+    # --- sistema de design (UX-01-sistema-de-design): guia viva de tokens e componentes
+    "/estilo-guia": "estilo_guia.html",
     # --- construtor por arrasto (L5-08-editor-arrasto): ?item=<id de item app/painel>
     "/construtor": "construtor.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
