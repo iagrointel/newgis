@@ -801,3 +801,11 @@ AMC_CONJUNTOS_POR_INQUILINO = 200     # conjuntos de unidades por inquilino
 AMC_VERSOES_POR_MODELO = 500          # versões de um modelo (cada edição cria uma; imutáveis, nunca apagadas)
 AMC_UNIDADES_PAGINA_MAX = 5_000       # unidades por página em GET /api/amc/conjuntos/{id}/unidades
 AMC_RESULTADOS_PAGINA_MAX = 5_000     # linhas por página em GET /api/amc/execucoes/{id}/resultados
+# --- importação de metadado ISO 19139 (L0-09-c-xml-iso-validacao; POST /api/itens/{id}/metadado.xml). O teto
+# de bytes é 2 MiB: o maior registro do catálogo aberto da INDE medido neste item tem 31 KiB, e o corpo padrão
+# da API (CORPO_MAX_PADRAO_BYTES, 10 MiB) é generoso demais para um documento de metadado — a refutação do item
+# manda recusar um XML de 50 MB antes de o analisador tocar nele. ELEMENTOS_MAX limita o relatório do que não
+# coube (documento com dezenas de milhares de elementos vira relatório inútil, não erro).
+METADADO_XML_BYTES_MAX = 2 * 1024 * 1024
+METADADO_XML_ELEMENTOS_MAX = 20_000
+METADADO_NAO_COUBE_MAX = 200              # linhas distintas no relatório do que não coube

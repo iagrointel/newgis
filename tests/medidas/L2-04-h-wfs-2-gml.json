@@ -1,0 +1,46 @@
+{
+ "item": "L2-04-h-wfs-2-gml",
+ "medidas": {
+  "gml_feicoes_relidas_gdal": {
+   "valor": 1000,
+   "unidade": "feições",
+   "comando": "ogr.Open sobre a saída GML 3.2 do GetFeature (COUNT=1000)"
+  },
+  "gml_geometrias_validas": {
+   "valor": 1000,
+   "unidade": "feições",
+   "comando": "OGRGeometry.IsValid() em cada feição relida"
+  },
+  "ogrinfo_wfs_feature_count": {
+   "valor": 250,
+   "unidade": "feições",
+   "comando": "ogrinfo -ro -al -so WFS:http://127.0.0.1:8366/wfs/<item>?token=<token> (servidor da trilha, camada de 250 linhas no banco) — 'Feature Count: 250' igual ao COUNT(*) do banco"
+  },
+  "ogrinfo_wfs_filtro_espacial": {
+   "valor": 60,
+   "unidade": "feições",
+   "comando": "ogrinfo -ro -q <WFS> -spat -49.06 -27.06 -49.0 -27.0 -al | grep -c OGRFeature — o driver manda fes:BBOX sem srsName e a casa lê no CRS padrão (lat/lon); esperado 60 (i=1..60)"
+  },
+  "ogrinfo_wfs_filtro_atributo": {
+   "valor": 50,
+   "unidade": "feições",
+   "comando": "ogrinfo -ro -q <WFS> -where 'area > 200' -al | grep -c OGRFeature — o driver traduz para fes:PropertyIsGreaterThan; esperado 50 (area 201..250)"
+  },
+  "ogr2ogr_exporta_gpkg": {
+   "valor": 250,
+   "unidade": "feições",
+   "comando": "ogr2ogr -f GPKG saida.gpkg <WFS> && ogrinfo -so -al saida.gpkg — 'Feature Count: 250', paginação COUNT=100/STARTINDEX pelo próprio driver"
+  },
+  "testes_do_item": {
+   "valor": 57,
+   "unidade": "casos",
+   "comando": "roda_teste.sh tests/unit/test_fes.py tests/unit/test_gml.py tests/api/test_wfs_2_gml.py — 57 verdes, saída 0"
+  }
+ },
+ "gerado_em": "2026-09-08T01:15:25Z",
+ "git_sha": "7450563e63cc",
+ "clausulas_nao_medidas": {
+  "qgis_desenha_a_camada": "QGIS não está instalado nesta máquina (nem servidor gráfico); a prova de cliente feita foi owslib (leitura do Capabilities) e o driver WFS do GDAL 3.8.4 (descoberta, paginação, filtro espacial e de atributo, exportação para GPKG).",
+  "agol_pro_teste_do_parceiro": "D20 (credencial AGOL do parceiro) segue pendente — cláusula do próprio portão declarada como teste do parceiro."
+ }
+}

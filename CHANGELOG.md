@@ -1365,6 +1365,60 @@ oficial está VAZIO (zero célula) — registrado como achado, não há contra o
 grade pequena e contra a referência, os de referência marcados `lento`) e API na trilha (11, sobre execução
 multiescala real; área de estudo retangular de propósito — num quadrado 10x10 o desvio para a faixa barata NÃO
 compensa na aritmética de peso = média × comprimento e a reta é o resultado certo).
+## turno 3, setembro de 2026 (item L0-09-c-xml-iso-validacao: importar metadado ISO 19139)
+
+A exportação de metadado ISO existia desde o item `L0-09-metadado-catalogo`; agora existe o caminho de volta.
+
+- **`POST /api/itens/{id}/metadado.xml`** recebe um metadado ISO 19139/GMD e preenche o item: título, resumo,
+  descrição, palavras-chave, créditos, termos de uso, situação e extensão pelo mesmo `editar_item` do
+  PUT/PATCH (versão, permissão e evento `itens/atualizar`); a linhagem volta para `dados.procedencia`; contato,
+  sistema de referência, formato e extensão declarada vão para `plat.item.metadado_iso`, a mesma coluna do
+  editor MGB do item irmão L0-09-b (migração idempotente e idêntica). `?aplicar=false` lê sem gravar.
+- **O XSD é parecer, não porteiro.** O registro real do catálogo aberto da INDE guardado em `tests/dados/`
+  (produtor IBGE, gerado por ArcGIS 10.3) tem 20 erros contra o XSD oficial — ordem de elementos e extensões
+  do Perfil MGB — e mesmo assim preenche 22 campos do item. XML malformado, grande demais ou com raiz que não
+  é `gmd:MD_Metadata` responde 422 com linha e coluna; erro só de XSD sai como aviso posicionado, e `?estrito=1`
+  o transforma em recusa.
+- **O que não tem onde ser guardado sai nomeado**: 69 caminhos do registro da INDE (telefone, endereço postal,
+  catálogo de feições) vêm no relatório `nao_coube`, com caminho, linha, contagem e exemplo — nenhuma gaveta
+  inventada para eles.
+- **Ida e volta fechada**: exportar e reimportar não perde campo do perfil (`metadado.diferencas` vazia nos três
+  itens do teste e na prova pela API, de um item para outro).
+- Refutação: entidade externa nunca é resolvida (sem rede, sem DTD), bomba de entidade não expande, XML de
+  50 MB é recusado pelo tamanho antes de qualquer análise, namespace errado é recusado com a raiz no texto.
+
+## turno 3, setembro de 2026 (item L2-04-h-wfs-2-gml: WFS 2.0 com filtro FES e GML 3.2 por token)
+
+O WFS que existia desde o item `L2-04-servicos-esri-ogc` respondia às três operações básicas com um
+esquema aproximado. Agora o serviço é o que um cliente de escritório adiciona por URL:
+
+- **GetCapabilities 2.0.0 e 1.1.0 válidos contra o XSD oficial do OGC**, com o esquema em cache local
+  (`docs/xsd/cache`, perfil `wfs20` do `docs/xsd/baixar_iso19139.py`: 124 arquivos, 1,9 MB, sha256 no
+  manifesto) — a validação nunca toca a rede. `owslib` lê o documento e enxerga o tipo de feição.
+- **DescribeFeatureType em XSD gerado das colunas**, importando o GML 3.2.1 oficial; o mesmo esquema
+  valida, no teste, cada feição devolvida pelo GetFeature (seis tipos de geometria, Multi* inclusas).
+- **Filtro FES 2.0** (`app/consulta/fes.py`): comparação, lógica, espacial (BBOX/Intersects/Within/
+  DWithin) e temporal, traduzidos para a MESMA árvore do CQL2 e compilados pelo MESMO
+  `cql2.compilar` — nenhum segundo gerador de SQL. XML lido por `defusedxml` (DTD, entidade e
+  referência externa recusadas), com teto de bytes, de nós e de profundidade.
+- **GetFeature** com `typeNames`, `count`/`startIndex`, `bbox`, `srsName`, `propertyName`, `sortBy`,
+  `resultType=hits` e `resourceId`; **GetPropertyValue**; consulta armazenada **GetFeatureById**.
+- **Transaction (Insert/Update/Delete)** pela porta ÚNICA de escrita da casa (`aplicar_edicoes`, item
+  L2-03-a), com o parâmetro novo `origem` marcando `"wfs"` no evento de domínio.
+- **Ordem dos eixos** resolvida num lugar só: forma de autoridade (`urn:ogc:def:crs:EPSG::4326`) é
+  latitude, longitude; forma curta e CRS84 são longitude, latitude; geometria de filtro sem
+  `srsName` usa o CRS padrão publicado — sem essa última regra o `-spat` do GDAL devolvia zero feição.
+
+Medido (`tests/medidas/L2-04-h-wfs-2-gml.json`): 1.000 feições em GML 3.2 reabertas pelo GDAL com
+geometria válida; o driver WFS do GDAL 3.8.4 lê o serviço vivo e conta 250, igual ao banco; `-spat`
+traz 60 e `-where "area > 200"` traz 50, ambos traduzidos para FES pelo próprio driver; `ogr2ogr`
+exporta as 250 para GeoPackage. 57 testes do item verdes. **Não medido:** QGIS (não instalado nesta
+máquina) e AGOL/ArcGIS Pro (D20).
+
+De quebra, o que a junção da família L2-04 tinha deixado para trás: `docs/openapi.json` regerado (19
+rotas de serviço que não estavam lá), casos de varredura cruzada e eventos declarados para todas
+elas, `docs/LIMITES.md` regerado com os limites da edição transacional e três linhas longas de
+`make lint` herdadas dos ramos irmãos.
 
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 ## turno 3, setembro de 2026 (item L0-02-g-checagem-privilegio-papel-id: quem concede papel tem de ter o papel)

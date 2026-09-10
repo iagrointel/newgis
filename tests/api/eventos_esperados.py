@@ -70,6 +70,9 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/itens/{id}/miniatura/gerar"): ["itens/miniatura"],
     ("DELETE", "/api/itens/{id}/miniatura"): ["itens/miniatura"],
     ("POST", "/api/itens/{id}/versoes/{n}/restaurar"): ["itens/atualizar", "itens/versao_restaurar"],
+    # L0-09-c: a importação de metadado ISO grava pelo MESMO editar_item do PUT/PATCH, e por isso registra os
+    # mesmos eventos; a parte que vai para plat.item.metadado_iso não é campo versionado do item.
+    ("POST", "/api/itens/{id}/metadado.xml"): ["itens/atualizar", "itens/status"],
     ("POST", "/api/itens/{id}/versoes/{n}/publicar"): ["itens/versao_publicar"],
     ("PUT", "/api/itens/{id}/relacoes"): ["itens/relacoes"],
     ("PUT", "/api/itens/{id}/compartilhamento"): ["compartilhamento/alterar"],
@@ -158,19 +161,16 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
-
-    # ---- linhagem do mapa e tabela de atributos (chegaram pela cadeia UX-04; achado na junção do UX-12):
-    ("POST", "/api/anotacoes"): [],  # anotação de feição: gatilho no banco (20260907T1655), a rota não narra evento
-    ("PATCH", "/api/anotacoes/{id}"): [],
-    ("DELETE", "/api/anotacoes/{id}"): [],
-    ("POST", "/api/exportacoes"): ["camadas/exportar", "mapas/exportar_pacote"],
-    ("DELETE", "/api/exportacoes/{exportacao_id}"): [],  # apaga o registro/arquivo da própria exportação, sem evento
-    ("PUT", "/api/camadas/{item_id}/tabela/vista"): ["camadas/vista_tabela"],
-    ("POST", "/api/camadas/{item_id}/tabela/linhas"): [],  # leitura com corpo (página de linhas)
-    ("POST", "/api/camadas/{item_id}/tabela/estatisticas"): [],  # leitura com corpo
-    ("POST", "/api/mapa/camadas/{id}/filtrar"): [],  # leitura com corpo (filtro CQL2)
-    ("POST", "/api/mapa/camadas/{id}/selecionar"): [],  # leitura com corpo (seleção espacial)
-    ("POST", "/api/mapa/selecao-espacial"): [],  # leitura com corpo
-    ("POST", "/api/mapa/pacotes/importar"): ["mapas/importar_pacote"],
-    ("POST", "/api/mapa/{mapa_id}/desenho/promover"): ["mapa/desenho_promovido"],
+    # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
+    # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
+    ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
+    # família L2-04 (serviços de camada por item): a escrita Esri/OGC/WFS não tem porta própria — toda
+    # ela chama `app.edicao.servico.aplicar_edicoes`, que registra o MESMO evento de lote, com o campo
+    # `origem` dizendo o protocolo ("api", "ogcfeat", "wfs").
+    ("POST", "/ogc/features/{item_id}/collections/{colecao_id}/items"): ["camadas/editar"],
+    ("PUT", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): ["camadas/editar"],
+    ("PATCH", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): ["camadas/editar"],
+    ("DELETE", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): ["camadas/editar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/query"): [],  # leitura por POST (protocolo Esri)
+    ("POST", "/wfs/{item_id}"): ["camadas/editar"],  # wfs:Transaction; GetFeature por POST não escreve
 }

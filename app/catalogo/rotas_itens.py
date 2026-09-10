@@ -21,7 +21,7 @@ from app import db, limites
 from app.auth.comum import campos_json, paginacao
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo import busca as mod_busca
-from app.catalogo import comum, diff, documento, metadado, metadado_mgb, relacoes, texto, tipos
+from app.catalogo import comum, diff, documento, metadado, relacoes, texto, tipos
 from app.catalogo.comum import (
     carregar,
     exigir_edicao,
@@ -40,6 +40,7 @@ from app.catalogo.modelos import (
     ItemEntrada,
     LoteEntrada,
     LoteSaida,
+    MetadadoIsoEntrada,
     MoverEntrada,
     OrdemExclusao,
     Pagina,
@@ -654,118 +655,97 @@ def metadado_iso(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler"))
     return Response(content=xml, media_type="application/xml")
 
 
-def _eventos_do_item(cur, item_id: str) -> list[dict]:
-    cur.execute(
-        "SELECT tipo, em, propriedades FROM plat.evento WHERE alvo_tipo = 'item' AND alvo_id = %s "
-        "ORDER BY em ASC LIMIT 50",
-        (str(item_id),),
-    )
-    return [dict(r) for r in cur.fetchall()]
-
-
-def _config_do_tenant(cur, tenant_id: int) -> dict:
-    cur.execute("SELECT config FROM plat.tenant WHERE id = %s", (tenant_id,))
-    r = cur.fetchone()
-    return (r["config"] or {}) if r else {}
-
-
-@router.get("/api/itens/{id}/metadado", openapi_extra=LER)
-def metadado_mgb_ver(
-    id: str, estilo: str | None = Query(default=None), auth: Auth = autenticado(escopo_token="catalogo:ler")
+@router.post("/api/itens/{id}/metadado.xml", openapi_extra=EDITAR)
+def importar_metadado_iso(
+    id: str,
+    request: Request,
+    corpo: MetadadoIsoEntrada,
+    aplicar: bool = Query(True, description="false: só lê e devolve o relatório, sem gravar"),  # noqa: B008
+    estrito: bool = Query(False, description="true: erro do XSD vira 422 em vez de aviso"),  # noqa: B008
+    auth: Auth = autenticado(),  # noqa: B008
 ):
-    """Editor ISO/MGB 2.0 (item L0-09-b-editor-iso-mgb): leitura completa (identificação sincronizada com o
-    item + parte própria de `metadado_iso` + linhagem computada de procedência/eventos), lista de campos
-    essenciais/completos que faltam, e a mesma leitura formatada no estilo do inquilino (ou no pedido pela
-    query, só para pré-visualizar outro estilo sem trocar a configuração)."""
-    with db.db(auth.contexto()) as cur:
-        r = item_ou_404(cur, id)
-        eventos = _eventos_do_item(cur, id)
-        tenant_cfg = _config_do_tenant(cur, auth.tenant_id)
-    v = metadado_mgb.visao(r, r.get("metadado_iso") or {}, eventos, settings.PLAT_URL_PUBLICA.rstrip("/"))
-    estilo_efetivo = estilo if estilo in metadado_mgb.ESTILOS else metadado_mgb.estilo_do_tenant(tenant_cfg)
-    return {
-        "estilo_do_inquilino": metadado_mgb.estilo_do_tenant(tenant_cfg),
-        "faltantes_essencial": metadado_mgb.faltantes(v, "essencial"),
-        "faltantes_completo": metadado_mgb.faltantes(v, "completo"),
-        "avisos": metadado_mgb.avisos_extent(r.get("metadado_iso") or {}, r),
-        **metadado_mgb.formatar_estilo(v, estilo_efetivo),
-    }
+    """Importa um metadado ISO 19139/GMD para dentro do item (item L0-09-c-xml-iso-validacao).
 
+    O que entra: título, resumo, descrição (purpose), palavras-chave, créditos, termos de uso, situação e
+    extensão viram campos do item pelo MESMO caminho do PUT/PATCH (`editar_item`: versão, permissão, evento
+    `itens/atualizar`); a linhagem volta para `dados.procedencia` (item L0-09-a) quando o esquema do tipo
+    aceita; contato, sistema de referência, formato e extensão declarada vão para `plat.item.metadado_iso`.
+    O que não tem onde ser guardado sai no relatório `nao_coube`, com caminho, linha e exemplo — nunca é
+    inventado um lugar para ele. `aplicar=false` devolve o mesmo relatório sem gravar nada.
 
-@router.post("/api/itens/{id}/metadado/validar", openapi_extra=LER)
-def metadado_mgb_validar(id: str, request: Request, corpo: dict = Body(default={}), auth: Auth = autenticado()):  # noqa: B008
-    """Valida um RASCUNHO (ainda não salvo) contra o obrigatório do perfil, sem gravar nada: o botão
-    'Validar' do editor. `corpo` = {"item": {...campos sincronizados opcionais}, "metadado": {...}}."""
+    O XML vai no campo `xml` de um corpo JSON, não como `application/xml`: a defesa de CSRF sob cookie (ADR
+    0002 seção 5.3, `checar_escrita_sob_cookie`) só aceita corpo JSON em escrita, e afrouxá-la para uma rota
+    de importação seria trocar uma defesa de toda a API por uma comodidade desta."""
     iid = uuid_ok(id)
-    stored = corpo.get("metadado") or {}
-    if not metadado_mgb.tamanho_ok(stored):
-        raise ErroAPI(
-            422, "metadado_grande", "metadado maior que o limite de 1 MiB",
-            {"limite_bytes": limites.METADADO_ISO_BYTES_MAX},
-        )
     try:
-        metadado_mgb.validar_estrutura(stored)
-    except metadado_mgb.ErroMetadadoInvalido as e:
-        raise ErroAPI(422, "metadado_invalido", "metadado ISO/MGB inválido", e.erros) from e
-    with db.db(auth.contexto()) as cur:
-        r = item_ou_404(cur, iid)
-        eventos = _eventos_do_item(cur, iid)
-    rascunho = dict(r)
-    item_parcial = corpo.get("item") or {}
-    for campo in ("titulo", "resumo", "tags", "creditos"):
-        if campo in item_parcial:
-            rascunho[campo] = item_parcial[campo]
-    v = metadado_mgb.visao(rascunho, stored, eventos, settings.PLAT_URL_PUBLICA.rstrip("/"))
-    return {
-        "faltantes_essencial": metadado_mgb.faltantes(v, "essencial"),
-        "faltantes_completo": metadado_mgb.faltantes(v, "completo"),
-        "avisos": metadado_mgb.avisos_extent(stored, r),
-    }
-
-
-@router.put("/api/itens/{id}/metadado", openapi_extra=EDITAR)
-def metadado_mgb_salvar(id: str, request: Request, corpo: dict = Body(...), auth: Auth = autenticado()):  # noqa: B008
-    """Salva o metadado ISO/MGB do item: campos sincronizados (`corpo.item`) passam pelo MESMO núcleo do
-    PUT/PATCH de item (`editar_item`, título incluso — regra do item: 'o título É sincronizado'); a parte
-    própria (`corpo.metadado`) é validada contra `ESQUEMA_MGB` (422 com caminho em `campo` na lista de erros)
-    e gravada em `metadado_iso`. Nunca bloqueia por campo essencial faltando (o portão é o botão Validar);
-    só bloqueia por estrutura inválida, data fora de ordem, ou tamanho acima do limite."""
-    iid = uuid_ok(id)
-    stored = corpo.get("metadado") or {}
-    if not metadado_mgb.tamanho_ok(stored):
+        analise = metadado.analisar(corpo.xml.encode("utf-8"))
+    except metadado.ErroXMLIlegivel as e:
         raise ErroAPI(
-            422, "metadado_grande", "metadado maior que o limite de 1 MiB",
-            {"limite_bytes": limites.METADADO_ISO_BYTES_MAX},
+            422,
+            "xml_invalido",
+            "XML de metadado ilegível",
+            [{"campo": "(corpo)", "erro": e.mensagem, "linha": e.linha, "coluna": e.coluna}],
+        ) from e
+    except metadado.ErroXSDAusente as e:
+        raise ErroAPI(503, "indisponivel", "cache do XSD ISO 19139 ausente nesta máquina") from e
+    if estrito and analise.avisos_xsd:
+        raise ErroAPI(
+            422,
+            "xml_invalido",
+            "XML não valida contra o XSD ISO 19139",
+            [
+                {"campo": "(corpo)", "erro": a["mensagem"], "linha": a["linha"], "coluna": a["coluna"]}
+                for a in analise.avisos_xsd[: limites.METADADO_NAO_COUBE_MAX]
+            ],
         )
-    try:
-        metadado_mgb.validar_estrutura(stored)
-    except metadado_mgb.ErroMetadadoInvalido as e:
-        raise ErroAPI(422, "metadado_invalido", "metadado ISO/MGB inválido", e.erros) from e
-    item_parcial = campos_json(corpo.get("item") or {}, set(CAMPOS_EDITAVEIS))
+    campos = dict(analise.campos)
+    nao_coube = list(analise.nao_coube)
+    procedencia = dict(analise.procedencia)
     try:
         with db.db(auth.contexto()) as cur:
-            r_antes = item_ou_404(cur, iid)
-            avisos = metadado_mgb.avisos_extent(stored, r_antes)
-            if item_parcial:
-                editar_item(cur, request, auth, iid, item_parcial)
-            exigir_edicao(cur, iid)
-            cur.execute(
-                "UPDATE plat.item SET metadado_iso = %s WHERE id = %s::uuid", [jsonb(stored), iid]
-            )
-            registrar_evento(
-                cur, request, "itens/metadado_iso_atualizar", "item", iid, {"campos": sorted(stored.keys())}
-            )
-            r = item_ou_404(cur, iid)
-            eventos = _eventos_do_item(cur, iid)
-            tenant_cfg = _config_do_tenant(cur, auth.tenant_id)
+            r = exigir_edicao(cur, iid)
+            if procedencia:
+                dados = dict(r["dados"] or {})
+                proposto = {**dados, "procedencia": {**(dados.get("procedencia") or {}), **procedencia}}
+                if tipos.erros_de(r["tipo"], proposto):
+                    nao_coube.append(
+                        {
+                            "caminho": "dataQualityInfo/DQ_DataQuality/lineage/LI_Lineage/statement",
+                            "vezes": 1,
+                            "exemplo": next(iter(procedencia.values()))[:200],
+                            "linha": 0,
+                            "motivo": f"o esquema do tipo {r['tipo']} não aceita procedencia em dados",
+                        }
+                    )
+                    procedencia = {}
+                else:
+                    campos["dados"] = proposto
+            if aplicar:
+                if campos:
+                    editar_item(cur, request, auth, iid, campos, comentario="importação de metadado ISO 19139")
+                if analise.metadado_iso:
+                    cur.execute(
+                        "UPDATE plat.item SET metadado_iso = metadado_iso || %s::jsonb WHERE id = %s::uuid",
+                        (jsonb(analise.metadado_iso), iid),
+                    )
+            cur.execute("SELECT metadado_iso FROM plat.item WHERE id = %s::uuid", (iid,))
+            guardado = (cur.fetchone() or {}).get("metadado_iso") or {}
     except psycopg2.Error as e:
         raise comum.erro_do_banco(e) from e
-    v = metadado_mgb.visao(r, r.get("metadado_iso") or {}, eventos, settings.PLAT_URL_PUBLICA.rstrip("/"))
     return {
-        "item": item_json(r, auth),
-        "avisos": avisos,
-        "estilo_do_inquilino": metadado_mgb.estilo_do_tenant(tenant_cfg),
-        **metadado_mgb.formatar_estilo(v, metadado_mgb.estilo_do_tenant(tenant_cfg)),
+        "item_id": iid,
+        "aplicado": aplicar,
+        "campos": {k: v for k, v in campos.items() if k != "dados"},
+        "procedencia": procedencia,
+        "metadado_iso": analise.metadado_iso if aplicar else {},
+        "metadado_iso_guardado": guardado,
+        "preenchidos": analise.preenchidos,
+        "identificador_arquivo": analise.identificador_arquivo,
+        "identificador_estrangeiro": bool(
+            analise.identificador_arquivo and analise.identificador_arquivo != iid
+        ),
+        "nao_coube": nao_coube,
+        "avisos_xsd": analise.avisos_xsd,
     }
 
 
