@@ -399,29 +399,61 @@ o mesmo acima do teto de uma parte (nunca abre multipart no Garage para um conte
 - O caminho de sincronização da PWA de campo (L2-07, ainda não construído) precisará da mesma barreira quando
   existir; `objetos.guardar()` já cobre automaticamente qualquer chamador futuro que passe por ele.
 
-## 10. Injeção em consulta: fechada por construção (item L7-03-d-injecao-consulta)
+## 9. Pipeline único de upload (item L7-03-a-antivirus-upload)
 
-O `where` do FeatureServer e o `havingClause` passam por `app/consulta/where_ast.py` (tokenizador → AST → SQL
-com `%s` e parâmetros; campo só da lista branca da camada); `outFields`, `orderByFields`,
-`groupByFieldsForStatistics`, `outStatistics` e `objectIds` são validados contra o esquema da camada em
-`app/consulta/motor.py` (nome fora do esquema = 400; `statisticType` fora da lista = 422; `resultOffset`/
-`resultRecordCount` só inteiros). O OGC API Features desta versão não tem `filter` (CQL2): `bbox`/`limit`/
-`offset` são numéricos validados e qualquer outro parâmetro é ignorado. Nome de schema/tabela vem sempre do
-catálogo (`plat.item`), nunca do cliente.
+Todo byte enviado pelo cliente entra por `POST /api/arquivos?classe=<classe>` (corpo cru, token de serviço) e
+passa, nesta ordem, por `app/varredura_conteudo.py`:
 
-Rede de segurança acrescentada neste item (`motor._executar`): erro de TIPO que só o Postgres descobre ao
-executar a consulta parametrizada (`fid LIKE '1%'` num bigint, percentil fora de 0-1) vira 400
-`consulta_invalida` sem texto do banco — antes era 500 com o SQL no traceback do servidor (dois defeitos
-achados pela suíte, corrigidos).
+1. **lista por rota** (`POLITICAS`): o `Content-Type` declarado tem de estar na lista da classe — decidido ANTES
+   de ler um byte do corpo (415 `conteudo_recusado`, motor `politica_de_rota`). Paridade com o
+   `uploadFileExtensionAllowedList` do ArcGIS Server (`soe, sd, sde, odc, csv, txt, zshp, kmz, geodatabase`): lá
+   a lista é por EXTENSÃO do nome; aqui é por tipo declarado E os bytes têm de bater (passo 3).
+2. **tamanho por classe** (`max_bytes`): `Content-Length` acima do teto = 413 sem ler o corpo; cliente que mente
+   no `Content-Length` é cortado pelo contador em streaming assim que passa do teto (medido em
+   `tests/seguranca/test_upload.py::test_1_byte_acima_do_plano_da_413_antes_de_ler_o_corpo`: 0 mensagens de corpo
+   lidas no primeiro caso).
+3. **bytes mágicos** (`MotorAssinaturaBasica`, §8): o tipo real (libmagic) tem de pertencer à família do
+   declarado. `.exe` renomeado para `.tif` = `application/x-dosexec` fora de `{image/tiff}` → 415.
+4. **antivírus opcional** (`MotorClamd`): com `PLAT_CLAMD` definido (socket unix ou `host:porta`), o fluxo vai
+   ao `clamd` por INSTREAM (até `CLAMD_MAX_BYTES`); `FOUND` = 415 com a assinatura no `detalhe` e evento
+   `arquivos/quarentena` na trilha (sha256, assinatura, classe, quem, de onde — nunca o conteúdo: a quarentena
+   é o registro, o objeto não é gravado). `clamd` configurado e fora do ar = 415 (nunca "passa sem varrer").
+   Opcional porque as assinaturas custam ~1,3 GiB de RAM e o appliance pode não ter; sem `PLAT_CLAMD` valem
+   só os passos 1-3 e 5.
+5. **pós-processamento do arquivo inteiro** (`pos_processar`): SVG sai SANITIZADO por lista branca
+   (`app/svg_seguro.py`: sem `script`, `foreignObject`, `a`, `animate`, manipuladores `on*`, `href` que não
+   seja `#id` ou imagem raster embutida, `style` com `url()`; XML por defusedxml); zip/KMZ passam pelas regras
+   de zip-bomba (`conferir_zip`: 1.000 entradas, 8 GiB descomprimidos, razão 100x, caminho, link) — zip acima
+   do buffer único é inspecionado pelo diretório central por leitura em intervalo e apagado do Garage se
+   suspeito.
+6. **nome**: o objeto é gravado por sha256 (`objetos.guardar`), nunca pelo nome do cliente.
+7. **entrega** (`GET /api/arquivos/{sha256}`): `Content-Disposition: attachment` para tudo que não é imagem
+   (um anexo `.html` abre como download), `inline` só para imagem da lista `inline` da classe; sempre
+   `X-Content-Type-Options: nosniff` e `Content-Security-Policy: sandbox; default-src 'none'` — mesmo um
+   polyglot GIF+HTML servido como `image/gif` não executa nada no contexto da plataforma.
 
-Prova: `tests/seguranca/test_injecao.py` — 180 payloads (sqlmap tamper: comentários, unicode, `/**/`, encoding;
-`; DROP/DELETE/UPDATE` numa tabela-canário; `UNION`; `pg_sleep`; `pg_read_file`, `lo_import`, `COPY TO
-PROGRAM`; subconsulta em `outStatistics`/`havingClause`/`objectIds`; OGC `bbox`/`limit`/`offset`/`filter`) contra
-uma camada importada de verdade: 0 respostas 5xx, latência máxima de 8 ms (nenhum `pg_sleep` executou),
-canário intacto, contagem da camada inalterada, resposta 200 só com feições da própria camada e colunas do
-esquema. Estático: `test_estatico_nenhum_sql_interpola_entrada_do_usuario` varre todo `.execute(` de `app/`
-e reprova SQL interpolado (f-string, `.format`, `%`) que cite nome de parâmetro de entrada; `bandit -t B608`
-sobre `app/consulta` acha 6 f-strings de SQL, todas com interpolação só de lista branca (`colunas_sql`,
-`where_sql` compilado, schema/tabela do catálogo) — a lista é fixada no teste, linha nova é revisão.
+Toda recusa dos passos 1, 3, 4 e 5 vira evento `arquivos/conteudo_recusado` (ou `arquivos/quarentena`) em
+`plat.evento`, com classe, tipo declarado, tipo detectado, motor, motivo, bytes e sha256 (item L7-20).
 
-Fora desta passagem: ZAP baseline (sem imagem nesta máquina, disco a 94 %, D21); `applyEdits` (item L2-03).
+### 9.1 Tipos aceitos por classe (rota `POST /api/arquivos?classe=`)
+
+| classe | tipos (`Content-Type` declarado, provado pelos bytes) | teto | inline na entrega |
+|---|---|---|---|
+| `objeto` (padrão) | image/png, image/jpeg, image/gif, image/tiff, image/webp, image/svg+xml, application/json, application/geo+json, text/csv, text/plain, text/html, application/pdf, application/zip, application/vnd.google-earth.kmz, application/vnd.google-earth.kml+xml, application/octet-stream | `ARQUIVO_BYTES_MAX` (512 MiB) | png, jpeg, gif, webp, svg |
+| `anexo` | image/png, image/jpeg, image/gif, image/webp, image/svg+xml, application/pdf, text/csv, text/plain, application/json, application/geo+json, application/zip, application/vnd.google-earth.kmz, application/vnd.google-earth.kml+xml, text/html | `ANEXO_BYTES_MAX` (100 MiB) | png, jpeg, gif, webp, svg |
+| `foto_campo` | image/jpeg, image/png, image/webp | `ANEXO_BYTES_MAX` | png, jpeg, gif, webp, svg |
+| `imagem` (logotipo, miniatura, avatar por arquivo) | image/png, image/jpeg, image/gif, image/webp, image/svg+xml | `IMAGEM_UPLOAD_BYTES_MAX` (1 MiB) | png, jpeg, gif, webp, svg |
+| `csv` | text/csv, text/plain | `ANEXO_BYTES_MAX` | — |
+
+Classe desconhecida (`?classe=zt_api` dos testes, por exemplo) cai na política `objeto`. As rotas que já
+recebem imagem por JSON/base64 (`POST /api/org/logo`, `POST /api/eu/foto`, miniatura) continuam reencodando por
+Pillow (§8.2) — nunca gravam os bytes do cliente. O upload retomável (`/api/uploads`, L0-04-a) prova o tipo por
+bytes em `app/uploads/tipos.py` com o mesmo `conferir_zip`.
+
+### 9.2 Teste do portão
+
+```
+$ pytest tests/seguranca/test_upload.py -v
+```
+
+`test_documento_lista_os_tipos_por_rota` confere que toda classe e todo tipo de `POLITICAS` aparecem nesta seção.

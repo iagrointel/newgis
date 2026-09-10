@@ -108,6 +108,18 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # anterior ("sem dono humano para narrar") deixava a destruição de dado sem rastro — foi o achado G4-08.
     ("POST", "/api/arquivos"): ["arquivos/enviar"],
     ("DELETE", "/api/arquivos/{sha256}"): ["arquivos/apagar"],
+    # ---- arquivos/objetos (L0-11): sem dono humano (usuário/grupo/token) para narrar num evento de domínio; a
+    # auditoria do objeto é a própria linha em plat.arquivo (quem gravou, quando, sha256) + plat.log_acesso da
+    # requisição (rota, ip, bytes, token_id) — o mesmo padrão de decisão já usado acima em /api/eu/2fa/iniciar
+    # L7-03-a: o envio bem-sucedido continua sem evento; a RECUSA pelo pipeline único (tipo fora da rota, bytes,
+    # zip-bomba, SVG inválido, antivírus) é o que vai para a trilha
+    ("POST", "/api/arquivos"): ["arquivos/conteudo_recusado", "arquivos/quarentena"],
+    ("DELETE", "/api/arquivos/{sha256}"): [],
+    # ---- rede de rota (L2-11-c): cálculo sobre dado aberto (OSM), sem escrita em `plat.*` e sem dono humano —
+    # não há o que narrar num evento de domínio (mesma decisão de /api/arquivos acima)
+    ("POST", "/api/rota"): [],
+    ("POST", "/api/matriz"): [],
+    ("POST", "/api/isocrona"): [],
     # ---- LDAP/Active Directory (L0-08-d): login registra a MESMA sequência do login local, reaproveitada de
     # _abrir_sessao ("usuarios/entrar"), mais o provisionamento automático (criação ou sincronização do
     # usuário a partir do diretório); administração do provedor tem vocabulário próprio ("org/*")

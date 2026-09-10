@@ -596,3 +596,11 @@ REDE_RAIO_BT_PADRAO_M = 135.0       # presença de baixa tensão (calibração n
 REDE_JUSANTE_TRECHOS_MAX = 200_000  # teto de trechos por cálculo de jusante (grafo em memória)
 REDE_JUSANTE_NO_MAX = 200_000       # teto de nós do grafo
 REDE_AGREGACAO_MIN_UCS = 5          # regra do adversário: agregação mínima exibida quando há consumo
+# --- pipeline único de upload (L7-03-a-antivirus-upload; app/varredura_conteudo.py POLITICAS): tamanho por
+# classe de upload e lista de Content-Type permitida por classe (paridade com uploadFileExtensionAllowedList da
+# Esri, que é por extensão; aqui é por tipo PROVADO pelos bytes). Anexo de feição/item cabe em 100 MiB (foto,
+# PDF, planilha); imagem de perfil/logotipo/miniatura já tem 1 MiB nos itens próprios.
+ANEXO_BYTES_MAX = 100 * 1024 * 1024
+IMAGEM_UPLOAD_BYTES_MAX = 1 * 1024 * 1024
+CLAMD_MAX_BYTES = 25 * 1024 * 1024      # StreamMaxLength padrão do clamd; acima disso só o início é varrido
+CLAMD_TIMEOUT_S = 20.0                  # clamd fora do ar = recusa (nunca "passa sem varrer" quando configurado)

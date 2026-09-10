@@ -1,0 +1,22 @@
+{
+ "item": "L7-03-a-antivirus-upload",
+ "medidas": {
+  "mensagens_de_corpo_lidas_content_length_honesto": {
+   "valor": 0,
+   "unidade": "mensagens ASGI",
+   "comando": "POST /api/arquivos?classe=imagem com Content-Length = teto+1: mensagens http.request consumidas antes do 413"
+  },
+  "mensagens_de_corpo_lidas_content_length_mentiroso": {
+   "valor": 17,
+   "unidade": "mensagens ASGI",
+   "comando": "Content-Length 1024 e corpo de 18 pedaços de 64 KiB: lidas até passar o teto de 1048576 bytes"
+  },
+  "mensagens_de_corpo_totais": {
+   "valor": 18,
+   "unidade": "mensagens ASGI",
+   "comando": "tamanho do corpo enviado, em pedaços de 64 KiB"
+  }
+ },
+ "gerado_em": "2026-09-07T22:29:21Z",
+ "git_sha": "5e89faa4268e"
+}

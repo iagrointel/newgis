@@ -22,16 +22,6 @@ _HEX64 = re.compile(r"^[0-9a-fA-F]{64}$")
 POOL_MIN_PADRAO = 1
 POOL_MAX_PADRAO = 8
 
-# item L2-01-a-casca-sig (10/09/2026): allowlist FIXA de serviços WMS públicos que `app/mapa/proxy_wms.py`
-# repassa sem sessão (bases externas para o SIG: ortofoto GeoSampa, limites IBGE, catálogo INDE). Não é um
-# campo de `Settings` de propósito — não vem do .env, não muda por inquilino, é constante da instalação
-# (o mesmo motivo por que não é validada em `carregar()`).
-WMS_PUBLICO_ALLOWLIST: dict[str, str] = {
-    "geosampa": "https://raster.geosampa.prefeitura.sp.gov.br/geoserver/geoportal/wms",
-    "ibge": "https://geoservicos.ibge.gov.br/geoserver/ows",
-    "inde": "https://geoservicos.inde.gov.br/geoserver/ows",
-}
-
 
 class ErroConfiguracao(RuntimeError):
     """Chave de configuração ausente ou inválida; a mensagem nomeia a chave."""
@@ -51,18 +41,6 @@ class Settings:
     PLAT_URL_PUBLICA: str
     PLAT_GIT_SHA: str | None
     PLAT_MARTIN_URL: str | None
-    # motor de render no servidor (item L2-12-a-motor-render-servidor; ADR 0023): pool de páginas do chromium do
-    # playwright mantidas quentes, fila com limite e teto de tempo por pedido, token interno de curta duração.
-    PLAT_RENDER_POOL_TAMANHO: int
-    PLAT_RENDER_FILA_MAX: int
-    PLAT_RENDER_TIMEOUT_S: int
-    PLAT_RENDER_TOKEN_TTL_S: int
-    PLAT_RENDER_MAX_PX: int
-    PLAT_RENDER_MEMORIA_MB: int
-    # layout (item L2-12-b): base HTTP que a página headless do quadro de mapa usa (padrão PLAT_URL_PUBLICA) e
-    # aceitação de certificado autoassinado SÓ para host de loopback (ambiente de trilha/desenvolvimento)
-    PLAT_RENDER_BASE_URL: str | None
-    PLAT_RENDER_IGNORAR_HTTPS: bool
     PLAT_TITILER_URL: str | None
     PLAT_GARAGE_URL: str | None
     # arquivos/objetos (L0-11; ADR 0006): garage vira obrigatório a partir deste item (saude.py); admin api
@@ -76,9 +54,6 @@ class Settings:
     PLAT_WORKER_URL: str | None
     PLAT_WORKER_NOME: str | None
     PLAT_WORKER_PROCESSOS: int
-    # processos da API (uvicorn --workers em deploy/plat-api.service): o orçamento de conexões de eventos é
-    # da INSTALAÇÃO e precisa saber por quantos processos se reparte (app/jobs/eventos.py)
-    PLAT_API_PROCESSOS: int
     PLAT_WORKER_MEMORIA_MB: int
     PLAT_JOBS_DIR: str | None
     PLAT_JOB_MAX_REINICIOS: int
@@ -89,17 +64,8 @@ class Settings:
     # rede de rota (L2-11-c): OSRM isolado plat-osrm-guarulhos (:5010), só recorte de teste ≤ 50 MB;
     # nunca aponta para os OSRM de outras frentes da casa (5000-5003)
     PLAT_OSRM_URL: str
-    # importação BDGD por caminho local (item L4-01-c): pasta de onde o job aceita ler pacotes .gdb.zip;
-    # vazia = desligada (D21: o job nunca baixa da ANEEL, o disco não comporta)
-    PLAT_BDGD_RAIZ: str | None
     PLAT_ROTA_MATRIZ_MAX: int
     PLAT_ROTA_ISOCRONA_MAX_PONTOS: int
-    # tiles vetoriais (L2-01-b): DSN do papel plat_leitor (LOGIN, sem BYPASSRLS), usado SÓ pela rota
-    # /internal/tiles/verificar (auth_request do nginx) para validar o token antes de o pedido chegar ao
-    # Martin — o Martin (martin-core GetTileWithQueryError) devolve 500 para QUALQUER erro do Postgres,
-    # nunca 401/403, então a checagem de "sem token = 401" tem de acontecer fora dele. Ausente = a rota
-    # devolve 503 (falha fechada: sem DSN de leitor, nenhum tile passa).
-    PLAT_DSN_LEITOR: str | None
     # item L7-31 (docs/HOMOLOGACAO.md): homologação reusa o MESMO banco iagro_sat, nunca um banco novo (disco a
     # 98%) — schema e canal de notificação viram configuráveis para que o mesmo código sirva os dois ambientes
     # sem colisão. Produção nunca declara estas 4 chaves no .env: os padrões abaixo reproduzem bit a bit o que
@@ -126,14 +92,9 @@ class Settings:
     # .env de trilha grava PLAT_POOL_MAX=2 (ver laco/trilha_ambiente.sh).
     PLAT_POOL_MIN: int
     PLAT_POOL_MAX: int
-    # backup lógico (item L0-06-a; ADR 20260906T2124): diretório dos .dump (padrão var/backups da árvore);
-    # destino externo S3 opcional — as 4 chaves juntas ou nenhuma (destino.py recusa configuração pela metade)
-    PLAT_BACKUP_DIR: str | None
-    PLAT_BACKUP_EXTERNO_URL: str | None
-    PLAT_BACKUP_EXTERNO_BUCKET: str | None
-    PLAT_BACKUP_EXTERNO_CHAVE: str | None
-    PLAT_BACKUP_EXTERNO_SEGREDO: str | None
-    PLAT_BACKUP_EXTERNO_REGIAO: str | None
+    # antivírus opcional (item L7-03-a-antivirus-upload): endereço do clamd — caminho de socket unix
+    # (/var/run/clamav/clamd.ctl) ou host:porta (127.0.0.1:3310). Vazio = só a assinatura por bytes mágicos.
+    PLAT_CLAMD: str | None
 
     @property
     def producao(self) -> bool:
@@ -244,15 +205,6 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_URL_PUBLICA=url,
         PLAT_GIT_SHA=_opcional(valores, "PLAT_GIT_SHA"),
         PLAT_MARTIN_URL=_opcional(valores, "PLAT_MARTIN_URL"),
-        PLAT_RENDER_POOL_TAMANHO=_inteiro(valores, "PLAT_RENDER_POOL_TAMANHO", 2, 1),
-        PLAT_RENDER_FILA_MAX=_inteiro(valores, "PLAT_RENDER_FILA_MAX", 20, 1),
-        PLAT_RENDER_TIMEOUT_S=_inteiro(valores, "PLAT_RENDER_TIMEOUT_S", 30, 1),
-        PLAT_RENDER_TOKEN_TTL_S=_inteiro(valores, "PLAT_RENDER_TOKEN_TTL_S", 60, 1),
-        PLAT_RENDER_MAX_PX=_inteiro(valores, "PLAT_RENDER_MAX_PX", 4096, 64),
-        PLAT_RENDER_MEMORIA_MB=_inteiro(valores, "PLAT_RENDER_MEMORIA_MB", 768, 128),
-        PLAT_RENDER_BASE_URL=_opcional(valores, "PLAT_RENDER_BASE_URL"),
-        PLAT_RENDER_IGNORAR_HTTPS=(valores.get("PLAT_RENDER_IGNORAR_HTTPS") or "").strip().lower()
-        in ("1", "sim", "true"),
         PLAT_TITILER_URL=_opcional(valores, "PLAT_TITILER_URL"),
         PLAT_GARAGE_URL=_opcional(valores, "PLAT_GARAGE_URL"),
         PLAT_GARAGE_ADMIN_URL=_opcional(valores, "PLAT_GARAGE_ADMIN_URL"),
@@ -263,7 +215,6 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_WORKER_URL=_opcional(valores, "PLAT_WORKER_URL"),
         PLAT_WORKER_NOME=_opcional(valores, "PLAT_WORKER_NOME"),
         PLAT_WORKER_PROCESSOS=_inteiro(valores, "PLAT_WORKER_PROCESSOS", 1, 1),
-        PLAT_API_PROCESSOS=_inteiro(valores, "PLAT_API_PROCESSOS", 2, 1),
         PLAT_WORKER_MEMORIA_MB=_inteiro(valores, "PLAT_WORKER_MEMORIA_MB", 1536, 128),
         PLAT_JOBS_DIR=_opcional(valores, "PLAT_JOBS_DIR"),
         PLAT_JOB_MAX_REINICIOS=_inteiro(valores, "PLAT_JOB_MAX_REINICIOS", 5, 1),
@@ -272,12 +223,10 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_RELOGIO_TESTE=_opcional(valores, "PLAT_RELOGIO_TESTE"),
         PLAT_DSN_WORKER=_dsn_worker(valores, f"{schema}_worker"),
         PLAT_OSRM_URL=(_opcional(valores, "PLAT_OSRM_URL") or "http://127.0.0.1:5010").rstrip("/"),
-        PLAT_BDGD_RAIZ=_opcional(valores, "PLAT_BDGD_RAIZ"),
         PLAT_ROTA_MATRIZ_MAX=_inteiro(valores, "PLAT_ROTA_MATRIZ_MAX", limites.ROTA_MATRIZ_MAX_PADRAO, 1),
         PLAT_ROTA_ISOCRONA_MAX_PONTOS=_inteiro(
             valores, "PLAT_ROTA_ISOCRONA_MAX_PONTOS", limites.ROTA_ISOCRONA_MAX_PONTOS_PADRAO, 4
         ),
-        PLAT_DSN_LEITOR=_opcional(valores, "PLAT_DSN_LEITOR"),
         PLAT_SCHEMA=schema,
         PLAT_SCHEMA_TRABALHO=_identificador(valores, "PLAT_SCHEMA_TRABALHO", "plat_trabalho"),
         PLAT_CANAL_JOB=_identificador(valores, "PLAT_CANAL_JOB", "plat_job"),
@@ -291,12 +240,7 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_SMTP_ROTULO=_opcional(valores, "PLAT_SMTP_ROTULO"),
         PLAT_POOL_MIN=pool_min,
         PLAT_POOL_MAX=pool_max,
-        PLAT_BACKUP_DIR=_opcional(valores, "PLAT_BACKUP_DIR"),
-        PLAT_BACKUP_EXTERNO_URL=_opcional(valores, "PLAT_BACKUP_EXTERNO_URL"),
-        PLAT_BACKUP_EXTERNO_BUCKET=_opcional(valores, "PLAT_BACKUP_EXTERNO_BUCKET"),
-        PLAT_BACKUP_EXTERNO_CHAVE=_opcional(valores, "PLAT_BACKUP_EXTERNO_CHAVE"),
-        PLAT_BACKUP_EXTERNO_SEGREDO=_opcional(valores, "PLAT_BACKUP_EXTERNO_SEGREDO"),
-        PLAT_BACKUP_EXTERNO_REGIAO=_opcional(valores, "PLAT_BACKUP_EXTERNO_REGIAO"),
+        PLAT_CLAMD=_opcional(valores, "PLAT_CLAMD"),
     )
 
 
