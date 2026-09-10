@@ -1,0 +1,205 @@
+/* plat · SIG — casca de tela cheia (item L2-01-a-casca-sig, 10/09/2026, ordem do dono "casca 10× melhor").
+   Escopado a `body.sig`: não toca nenhuma regra de web/style.css nem de web/mapa.css (que serve `/mapa`,
+   ainda no ar). Ao contrário de mapa.css, aqui o chrome NÃO usa cor fixa: painel/texto/borda vêm dos
+   tokens `--painel`/`--texto`/`--borda` já remapeados por `body.instrumento` (web/style.css) — é assim
+   que o alternador de tema (claro/escuro) da barra também troca a cor dos painéis flutuantes, não só do
+   resto do produto. O mapa (raster/vetor) continua com paleta própria fixa (estilo.js), como sempre.
+
+   Layout: barra de instrumento fixa (56 px) + área do mapa em tela cheia; painéis flutuam SOBRE o mapa,
+   nunca disputam coluna com ele — "o mapa é a tela" (princípio 1 da especificação). */
+
+html:has(body.sig), body.sig { height: 100%; }
+body.sig { margin: 0; overflow: hidden; }
+body.sig .app, body.sig .lateral { display: none; } /* a casca do SIG não usa a navegação lateral do produto */
+
+.sig-app { display: flex; height: 100vh; background: var(--fundo); }
+
+/* ---------------------------------------------------------------------------------------- barra (56 px) */
+.sig-barra {
+  width: 56px; flex: 0 0 56px;
+  display: flex; flex-direction: column; align-items: stretch;
+  background: var(--painel); border-right: 1px solid var(--borda);
+  padding: var(--e2) 0; z-index: 20; overflow-y: auto;
+}
+.sig-marca {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  text-decoration: none; color: var(--acento); margin-bottom: var(--e3); padding-bottom: var(--e2);
+  border-bottom: 1px solid var(--borda);
+}
+.sig-marca strong { font-size: .8rem; letter-spacing: .04em; }
+.sig-marca-sig { font-size: .52rem; color: var(--fraco); letter-spacing: .1em; }
+.sig-icones { display: flex; flex-direction: column; gap: 1px; }
+.sig-icone {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  width: 100%; padding: .45rem 0; background: none; border: 0; border-left: 2px solid transparent;
+  color: var(--fraco); font: inherit; font-size: .56rem; line-height: 1; cursor: pointer;
+}
+.sig-icone svg { width: 19px; height: 19px; flex: 0 0 auto; }
+.sig-icone:hover, .sig-icone:focus-visible { color: var(--texto); background: var(--painel-2); }
+.sig-icone:focus-visible { outline: 2px solid var(--foco); outline-offset: -2px; }
+.sig-icone[aria-pressed="true"] { color: var(--acento); border-left-color: var(--acento); background: var(--painel-2); }
+.sig-espaco { flex: 1; }
+#alternar-tema { border-top: 1px solid var(--borda); margin-top: var(--e2); padding-top: .5rem; }
+
+/* --------------------------------------------------------------------------------------- área do mapa */
+.sig-area { position: relative; flex: 1; min-width: 0; }
+#mapa { position: absolute; inset: 0; outline: none; }
+.sig-area .maplibregl-ctrl-attrib,
+.sig-area .maplibregl-ctrl-scale,
+.sig-area .maplibregl-ctrl-attrib.maplibregl-compact { display: none; } /* a barra inferior própria substitui os dois */
+
+.sig-titulo-composicao {
+  position: absolute; top: var(--e3); left: 50%; transform: translateX(-50%);
+  z-index: 15; display: flex; align-items: center; gap: var(--e2);
+  background: var(--painel); border: 1px solid var(--borda); border-radius: var(--raio);
+  padding: .3rem .6rem; box-shadow: var(--sombra);
+}
+.sig-titulo-composicao input {
+  background: none; border: 0; color: var(--texto); font-family: var(--sans); font-weight: 600;
+  font-size: .85rem; text-align: center; min-width: 10ch;
+}
+.sig-titulo-composicao input:not([disabled]) { border-bottom: 1px dashed var(--borda-forte); }
+
+.sig-largar {
+  position: absolute; inset: var(--e4); z-index: 40; display: flex; align-items: center; justify-content: center;
+  border: 3px dashed var(--acento); border-radius: calc(var(--raio) * 2); background: rgba(217, 138, 43, .12);
+  pointer-events: none;
+}
+.sig-largar p { font-family: var(--i-fonte-titulo); text-transform: uppercase; letter-spacing: .06em; color: var(--acento); font-size: 1.1rem; }
+
+/* ---------------------------------------------------------------------------------- painéis flutuantes */
+.sig-painel {
+  position: absolute; width: 320px; max-height: calc(100vh - 6rem);
+  display: flex; flex-direction: column;
+  background: var(--painel); border: 1px solid var(--borda); border-radius: var(--raio);
+  box-shadow: var(--sombra); z-index: 30;
+}
+.sig-painel[hidden] { display: none; }
+.sig-painel-cabecalho {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--e2);
+  padding: var(--e2) var(--e3); border-bottom: 1px solid var(--borda); cursor: grab;
+  touch-action: none; user-select: none;
+}
+.sig-painel-cabecalho:active { cursor: grabbing; }
+.sig-painel-cabecalho h2 { margin: 0; font-size: .82rem; }
+.sig-painel-fechar { background: none; border: 0; color: var(--fraco); cursor: pointer; font-size: .85rem; padding: .1rem .3rem; }
+.sig-painel-fechar:hover { color: var(--falha); }
+.sig-painel-corpo { padding: var(--e3); overflow-y: auto; }
+.sig-painel.arrastando { opacity: .85; }
+
+.sig-busca-camadas input { width: 100%; margin-bottom: var(--e3); }
+.sig-grupo { border-top: 1px solid var(--borda); padding-top: var(--e2); margin-top: var(--e2); }
+.sig-grupo:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+.sig-grupo-cabecalho-linha { display: flex; align-items: center; justify-content: space-between; gap: var(--e2); }
+.sig-grupo-cabecalho {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+  background: none; border: 0; color: var(--texto); font-size: .78rem; text-transform: uppercase;
+  letter-spacing: .06em; font-weight: 600; padding: .2rem 0; cursor: pointer;
+}
+.sig-grupo[data-fechado] .sig-grupo-corpo { display: none; }
+.sig-grupo[data-fechado] .sig-grupo-cabecalho span:first-child::first-letter { content: "▸"; }
+.sig-grupo-corpo { padding-top: var(--e2); }
+.sig-botao-mini {
+  background: var(--painel-2); border: 1px solid var(--borda); color: var(--texto);
+  border-radius: var(--raio); font-size: .68rem; padding: .2rem .4rem; cursor: pointer;
+}
+.sig-botao-mini:hover { border-color: var(--acento); }
+
+.lista-bases { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .2rem; }
+.lista-bases label { display: flex; align-items: center; gap: var(--e2); font-size: .8rem; padding: .2rem 0; cursor: pointer; }
+
+.sig-rotulo { display: block; font-size: .75rem; color: var(--fraco); margin-bottom: .25rem; }
+.sig-linha { display: flex; gap: var(--e2); align-items: center; flex-wrap: wrap; }
+.sig-linha input[type=search] { flex: 1; min-width: 8rem; }
+.saida { margin: var(--e2) 0 0; font-family: var(--mono); font-size: .8rem; }
+.sugestoes { list-style: none; margin: var(--e2) 0 0; padding: 0; }
+.sugestoes .sugestao {
+  display: block; width: 100%; text-align: left; background: none; border: 0;
+  color: var(--texto); padding: .3rem .2rem; font-size: .82rem; cursor: pointer; border-radius: var(--raio);
+}
+.sugestoes .sugestao:hover, .sugestoes .sugestao:focus { background: var(--painel-2); }
+.envio-links { display: flex; gap: var(--e2); margin-top: var(--e2); flex-wrap: wrap; }
+
+/* ---- árvore de camadas (mesma linguagem visual de mapa.css, reescopada a body.sig — os módulos que a
+   desenham, web/js/camadas.js e web/js/mapa/mapa.js's rede/legenda, não sabem em que casca vivem) ---- */
+.lista-camadas.arvore, .lista-camadas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .25rem; }
+.arvore-sub { list-style: none; margin: .2rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .2rem; }
+.arvore-linha, .camada-linha {
+  border: 1px solid transparent; border-radius: var(--raio); padding: .3rem .35rem;
+  margin-left: calc(var(--nivel, 0) * .85rem);
+}
+.arvore-linha:focus { outline: 2px solid var(--acento); outline-offset: 1px; }
+.arvore-linha.ativa, .camada-linha.ativa { border-color: var(--borda); background: var(--painel-2); }
+.arvore-linha.alvo, .camada-linha.alvo { border-color: var(--acento); }
+.arvore-linha.grupo > .arvore-cabecalho { font-weight: 600; }
+.arvore-linha.fora-de-escala { opacity: .45; filter: grayscale(1); }
+.arvore-linha.filtrada { display: none; }
+.arvore-cabecalho, .camada-cabecalho { display: flex; align-items: center; gap: var(--e2); }
+.arvore-titulo, .camada-titulo {
+  flex: 1; font-size: .85rem; cursor: pointer; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; text-align: left; background: none; border: 0; color: var(--texto); padding: 0;
+}
+.arvore-conta, .camada-conta { font-family: var(--mono); font-size: .7rem; color: var(--fraco); }
+.arvore-linha-controles { display: flex; flex-direction: column; gap: .2rem; margin-top: .25rem; }
+.arvore-controles { display: flex; align-items: center; gap: .2rem; flex-wrap: wrap; }
+.arvore-controles .camada-opacidade { flex: 1; min-width: 3.5rem; }
+.arvore-escala { display: flex; align-items: center; gap: .25rem; font-size: .68rem; color: var(--fraco); }
+.arvore-escala input[type=number] { width: 2.6rem; background: var(--fundo); color: var(--texto); border: 1px solid var(--borda); border-radius: var(--raio); font-size: .7rem; padding: .1rem .2rem; }
+.camada-tipo { grid-area: meta; font-family: var(--mono); font-size: .68rem; color: var(--fraco); border: 1px solid var(--borda); border-radius: var(--raio); padding: 0 .3rem; }
+.botao-mini {
+  background: var(--painel-2); border: 1px solid var(--borda); color: var(--texto);
+  border-radius: var(--raio); font-size: .7rem; line-height: 1; padding: .25rem .35rem; cursor: pointer;
+}
+.botao-mini[disabled] { opacity: .4; cursor: default; }
+
+/* legenda dinâmica (web/js/legenda.js) */
+.legenda-bloco h3 { margin: var(--e2) 0 .25rem; font-size: .8rem; font-weight: 600; }
+.legenda-unidade { margin: 0 0 .2rem; font-size: .7rem; color: var(--fraco); }
+.legenda-faixa { margin: .2rem 0 0; font-size: .7rem; color: var(--fraco); font-family: var(--mono); }
+.legenda-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .2rem; }
+.legenda-lista li { display: flex; align-items: center; gap: var(--e2); font-size: .8rem; }
+.legenda-svg { flex: 0 0 auto; }
+.legenda-amostra { display: inline-block; background: var(--cor); border: 1px solid rgba(0, 0, 0, .35); }
+.legenda-ponto { width: .7rem; height: .7rem; border-radius: 50%; }
+.legenda-linha { width: 1.1rem; height: .2rem; border-radius: 1px; }
+.legenda-poligono { width: 1rem; height: .7rem; border-radius: 2px; }
+.legenda .vazio { color: var(--fraco); font-size: .8rem; margin: 0; }
+
+/* janela de atributos (popup MapLibre) */
+.popup-plat .maplibregl-popup-content { background: var(--painel); color: var(--texto); border: 1px solid var(--borda); border-radius: var(--raio); max-height: 22rem; overflow: auto; }
+.popup-plat .maplibregl-popup-tip { border-top-color: var(--painel); border-bottom-color: var(--painel); }
+.popup-camada h3 { margin: 0 0 .25rem; font-size: .8rem; }
+.popup-tabela { width: 100%; border-collapse: collapse; font-size: .78rem; margin-bottom: .4rem; }
+.popup-tabela th { text-align: left; font-weight: 500; color: var(--fraco); padding: .12rem .4rem .12rem 0; vertical-align: top; }
+.popup-tabela td { padding: .12rem 0; font-family: var(--mono); }
+.popup-tabela td.nulo { color: var(--fraco); font-style: italic; }
+.popup-mais { margin: 0; font-size: .75rem; color: var(--fraco); }
+
+/* edição (item L2-03) */
+#edicao-painel select#edicao-camada { width: 100%; margin-bottom: var(--e2); }
+#edicao-painel .linha { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; margin-bottom: var(--e2); }
+#edicao-painel .campo { display: flex; flex-direction: column; gap: .15rem; margin-bottom: .35rem; font-size: .8rem; }
+#edicao-painel .campo input, #edicao-painel .campo select { font-size: .8rem; }
+.edicao-erros { list-style: none; margin: 0 0 .3rem; padding: 0; color: var(--falha); font-size: .75rem; }
+.edicao-historico, .edicao-anexos { list-style: none; margin: 0; padding: 0; font-size: .75rem; display: flex; flex-direction: column; gap: .2rem; }
+
+/* -------------------------------------------------------------------------------------- barra inferior */
+.sig-barra-inferior {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 26px; z-index: 25;
+  display: flex; align-items: center; gap: var(--e4); padding: 0 var(--e3);
+  background: var(--painel); border-top: 1px solid var(--borda); color: var(--texto-fraco, var(--fraco));
+  font-size: .72rem;
+}
+.sig-barra-inferior .mono { font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.sig-barra-inferior #atribuicao { color: var(--fraco); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sig-tarefas { display: flex; align-items: center; gap: .3rem; background: none; border: 0; color: var(--acento); font-size: .72rem; cursor: pointer; padding: 0; }
+.sig-spinner {
+  width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--borda); border-top-color: var(--acento);
+  animation: sig-girar .8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) { .sig-spinner { animation-duration: 4s; } }
+@keyframes sig-girar { to { transform: rotate(360deg); } }
+
+@media (max-width: 720px) {
+  .sig-painel { width: calc(100vw - 4.5rem); left: 60px !important; }
+}

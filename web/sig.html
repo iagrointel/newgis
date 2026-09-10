@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>SIG · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/estilo/tokens.css">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/vendor/maplibre-gl-4.7.1.css">
+<link rel="stylesheet" href="/static/sig.css">
+</head>
+<body class="instrumento sig">
+<a class="pular" href="#mapa">pular para o conteúdo</a>
+<div class="sig-app">
+  <nav class="sig-barra" aria-label="ferramentas do instrumento">
+    <a class="sig-marca" href="/conteudo" title="voltar ao catálogo">
+      <strong>plat</strong><span class="sig-marca-sig">SIG</span>
+    </a>
+    <div class="sig-icones" role="group" aria-label="painéis">
+      <button type="button" class="sig-icone" data-painel="camadas" aria-pressed="false" aria-label="Camadas (L)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="m2 13 10 5 10-5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m2 17.5 10 5 10-5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+        <span>Camadas</span>
+      </button>
+      <button type="button" class="sig-icone" data-painel="envio" aria-pressed="false" aria-label="Catálogo e envio">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+        <span>Envio</span>
+      </button>
+      <button type="button" class="sig-icone" data-painel="pesquisa" aria-pressed="false" aria-label="Pesquisar (F)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m20 20-4.5-4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span>Pesquisa</span>
+      </button>
+      <button type="button" class="sig-icone" data-painel="medicao" aria-pressed="false" aria-label="Medição (M)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17 17 4l3 3L7 20Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m9 12 2 2M12 9l2 2M6 15l2 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span>Medição</span>
+      </button>
+      <button type="button" class="sig-icone" data-painel="edicao" aria-pressed="false" aria-label="Edição (E)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 4.5 5 5L8 21H3v-5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        <span>Edição</span>
+      </button>
+      <button type="button" class="sig-icone" data-painel="impressao" aria-pressed="false" aria-label="Impressão">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="6" y="14" width="12" height="7" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+        <span>Impressão</span>
+      </button>
+      <button type="button" class="sig-icone" data-painel="composicoes" aria-pressed="false" aria-label="Composições">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="3" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="13" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="13" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+        <span>Composições</span>
+      </button>
+    </div>
+    <div class="sig-espaco"></div>
+    <button type="button" class="sig-icone" id="alternar-tema" aria-label="alternar tema claro/escuro">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5 3.5 3.5M20.5 20.5 19 19M19 5l1.5-1.5M3.5 20.5 5 19" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <span>Tema</span>
+    </button>
+    <button type="button" class="sig-icone" data-painel="conta" aria-pressed="false" aria-label="Conta">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 21c1.4-4 4.6-6 8-6s6.6 2 8 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span>Conta</span>
+    </button>
+  </nav>
+
+  <main class="sig-area" id="mapa-area">
+    <div id="mapa" aria-label="mapa" role="application" tabindex="-1"></div>
+
+    <div class="sig-titulo-composicao" id="titulo-composicao">
+      <input id="composicao-titulo" type="text" value="mapa sem título" aria-label="título da composição" disabled>
+      <button type="button" id="composicao-salvar" class="sig-botao-mini" hidden>salvar</button>
+    </div>
+
+    <div class="sig-largar" id="sig-largar" hidden aria-hidden="true">
+      <p>solte para publicar no mapa</p>
+    </div>
+
+    <div class="sig-painel" id="painel-camadas" data-painel-id="camadas" hidden>
+      <header class="sig-painel-cabecalho" data-arrasto>
+        <h2>Camadas</h2>
+        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar">✕</button>
+      </header>
+      <div class="sig-painel-corpo">
+        <div class="sig-busca-camadas">
+          <input type="search" id="camadas-busca" placeholder="buscar camada" aria-label="buscar camada">
+        </div>
+
+        <section class="sig-grupo" data-grupo="camadas">
+          <div class="sig-grupo-cabecalho-linha">
+            <button type="button" class="sig-grupo-cabecalho" aria-expanded="true"><span>▾ Camadas</span></button>
+            <button type="button" id="btn-novo-grupo" class="sig-botao-mini" aria-label="criar grupo">+ grupo</button>
+          </div>
+          <div class="sig-grupo-corpo">
+            <p class="fraco" id="camadas-vazio" hidden>nenhuma camada disponível</p>
+            <ul id="lista-camadas" class="lista-camadas arvore" role="tree" aria-label="Camadas"></ul>
+          </div>
+        </section>
+
+        <section class="sig-grupo" data-grupo="rede">
+          <button type="button" class="sig-grupo-cabecalho" aria-expanded="true">
+            <span>▾ Rede de utilidades</span>
+          </button>
+          <div class="sig-grupo-corpo">
+            <p class="fraco" id="rede-status">carregando…</p>
+            <ul id="rede-lista" class="lista-camadas" role="list"></ul>
+          </div>
+        </section>
+
+        <section class="sig-grupo" data-grupo="bases">
+          <button type="button" class="sig-grupo-cabecalho" aria-expanded="true">
+            <span>▾ Bases</span>
+          </button>
+          <div class="sig-grupo-corpo">
+            <ul id="lista-bases" class="lista-bases" role="radiogroup" aria-label="camada base"></ul>
+          </div>
+        </section>
+
+        <section class="sig-grupo" data-grupo="legenda">
+          <button type="button" class="sig-grupo-cabecalho" aria-expanded="true">
+            <span>▾ Legenda</span>
+          </button>
+          <div class="sig-grupo-corpo">
+            <div id="legenda" class="legenda"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div class="sig-painel" id="painel-envio" data-painel-id="envio" hidden>
+      <header class="sig-painel-cabecalho" data-arrasto>
+        <h2>Catálogo e envio</h2>
+        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar">✕</button>
+      </header>
+      <div class="sig-painel-corpo">
+        <p class="fraco">arraste um arquivo para cima do mapa para publicar; ou escolha aqui.</p>
+        <input type="file" id="envio-arquivo" aria-label="escolher arquivo para publicar">
+        <p id="envio-status" class="saida" aria-live="polite"></p>
+        <div id="envio-links" class="envio-links" hidden>
+          <button type="button" class="sig-botao-mini" id="envio-copiar-wfs">copiar link WFS</button>
+          <button type="button" class="sig-botao-mini" id="envio-copiar-wmts">copiar link WMTS</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sig-painel" id="painel-pesquisa" data-painel-id="pesquisa" hidden>
+      <header class="sig-painel-cabecalho" data-arrasto>
+        <h2>Pesquisar</h2>
+        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar">✕</button>
+      </header>
+      <div class="sig-painel-corpo">
+        <form id="busca-form" role="search">
+          <label class="sig-rotulo" for="busca-campo">endereço ou coordenada</label>
+          <div class="sig-linha">
+            <input id="busca-campo" name="q" type="search" autocomplete="off">
+            <button type="submit" class="botao">Ir</button>
+          </div>
+          <ul id="busca-sugestoes" class="sugestoes"></ul>
+          <p id="busca-resultado" class="saida" aria-live="polite"></p>
+        </form>
+      </div>
+    </div>
+
+    <div class="sig-painel" id="painel-medicao" data-painel-id="medicao" hidden>
+      <header class="sig-painel-cabecalho" data-arrasto>
+        <h2>Medição</h2>
+        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar">✕</button>
+      </header>
+      <div class="sig-painel-corpo">
+        <div class="sig-linha">
+          <button type="button" id="btn-distancia" class="botao" aria-pressed="false">Distância</button>
+          <button type="button" id="btn-area" class="botao" aria-pressed="false">Área</button>
+          <button type="button" id="btn-medicao-limpar" class="botao secundario">Limpar</button>
+        </div>
+        <p id="medicao-saida" class="saida" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="sig-painel" id="painel-edicao" data-painel-id="edicao" hidden>
+      <header class="sig-painel-cabecalho" data-arrasto>
+        <h2>Edição</h2>
+        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar">✕</button>
+      </header>
+      <div class="sig-painel-corpo" id="edicao-painel"></div>
+    </div>
+
+    <div class="sig-painel" id="painel-impressao" data-painel-id="impressao" hidden>
+      <header class="sig-painel-cabecalho" data-arrasto>
+        <h2>Impressão</h2>
+        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar">✕</button>
+      </header>
+      <div class="sig-painel-corpo">
+        <div class="sig-linha">
+          <button type="button" id="btn-png" class="botao">PNG</button>
+          <button type="button" id="btn-pdf" class="botao">PDF</button>
+        </div>
+        <p id="impressao-saida" class="saida" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="sig-painel" id="painel-composicoes" data-painel-id="composicoes" hidden>
+      <header class="sig-painel-cabecalho" data-arrasto>
+        <h2>Composições</h2>
+        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar">✕</button>
+      </header>
+      <div class="sig-painel-corpo">
+        <button type="button" id="composicao-nova" class="botao">nova composição</button>
+        <p class="fraco" id="composicoes-vazio" hidden>nenhuma composição salva ainda</p>
+        <ul id="composicoes-lista" class="lista-camadas" role="list"></ul>
+      </div>
+    </div>
+
+    <div class="sig-painel" id="painel-conta" data-painel-id="conta" hidden>
+      <header class="sig-painel-cabecalho" data-arrasto>
+        <h2>Conta</h2>
+        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar">✕</button>
+      </header>
+      <div class="sig-painel-corpo">
+        <p id="conta-usuario" class="saida"></p>
+        <p><a href="/conta">abrir minha conta</a></p>
+        <p><a href="/conteudo">voltar ao catálogo</a></p>
+      </div>
+    </div>
+
+    <div class="sig-barra-inferior">
+      <span id="coordenadas" class="mono">—</span>
+      <span id="escala" class="mono"></span>
+      <span id="atribuicao"></span>
+      <span class="sig-espaco"></span>
+      <button type="button" id="tarefas-indicador" class="sig-tarefas" hidden aria-label="tarefas em andamento">
+        <span class="sig-spinner" aria-hidden="true"></span> tarefas
+      </button>
+    </div>
+  </main>
+</div>
+<plat-aviso id="aviso"></plat-aviso>
+<script src="/static/vendor/maplibre-gl-4.7.1.js"></script>
+<script src="/static/vendor/pmtiles-4.5.0.js"></script>
+<script type="module" src="/static/js/sig/sig.js"></script>
+</body>
+</html>
