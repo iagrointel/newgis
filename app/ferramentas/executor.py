@@ -16,7 +16,7 @@ import psycopg2.extras
 from pydantic import BaseModel, Field
 
 from app import db as banco
-from app import limites
+from app import esquema_dado, limites
 from app.ferramentas import registro
 from app.jobs.registro import Cancelado, FalhaDefinitiva, tarefa
 
@@ -152,10 +152,10 @@ def _schema_do_inquilino(cur, tenant_id: int) -> str:
     slug = cur.fetchone()["slug"]
     # só cria/concede quando o schema ainda não existe: o GRANT dentro de camada_schema_garantir disputa com
     # outra sessão que faça DDL no mesmo schema ("tuple concurrently updated", achado nesta suíte)
-    cur.execute("SELECT to_regnamespace(%s) IS NULL AS falta", (f"d_{slug}",))
+    cur.execute("SELECT to_regnamespace(%s) IS NULL AS falta", (esquema_dado.esquema(cur, slug),))
     if cur.fetchone()["falta"]:
         cur.execute("SELECT plat.camada_schema_garantir(%s)", (slug,))
-    return f"d_{slug}"
+    return esquema_dado.esquema(cur, slug)
 
 
 def _jsonb(v):

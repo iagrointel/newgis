@@ -15,7 +15,7 @@ import psycopg2.extensions
 import psycopg2.extras
 from pydantic import BaseModel
 
-from app import limites, objetos
+from app import esquema_dado, limites, objetos
 from app import versao as app_versao
 from app.catalogo import procedencia as mod_procedencia
 from app.ingestao import georreferencia
@@ -117,8 +117,9 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
             raise FalhaDefinitiva("o arquivo de origem não existe mais")
         cur.execute("SELECT slug FROM plat.tenant WHERE id = %s", (ctx.tenant_id,))
         slug = cur.fetchone()["slug"]
+        schema = esquema_dado.esquema(cur, slug)
 
-    schema = f"d_{slug}"
+
     proposta = imp["proposta"] or {}
     confirmacao = imp["confirmacao"] or {}
     tabela = proposta.get("nome_tabela") or tabela_de(imp["item_id"])

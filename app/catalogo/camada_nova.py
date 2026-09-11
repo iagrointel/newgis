@@ -14,6 +14,7 @@ import uuid
 
 import psycopg2.extras
 
+from app import esquema_dado
 from app.erros import ErroAPI
 from app.ingestao import nomes
 from app.ingestao.inspecionar import tabela_de
@@ -67,7 +68,7 @@ def criar_camada(
     tenant_id, slug = tenant_atual(cur)
     campos_ok, mapa = normalizar_campos(campos)
     item_id = str(uuid.uuid4())
-    schema, tabela = f"d_{slug}", tabela_de(item_id)
+    schema, tabela = esquema_dado.esquema(cur, slug), tabela_de(item_id)
     # GRANT no schema compartilhado disputa o mesmo registro de catálogo entre trilhas ("tuple concurrently
     # updated"); só garante o schema quando ele ainda não existe
     cur.execute("SELECT 1 FROM pg_namespace WHERE nspname = %s", (schema,))

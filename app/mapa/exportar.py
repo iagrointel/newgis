@@ -32,7 +32,7 @@ from pathlib import Path
 from fastapi import APIRouter, Request
 from fastapi.responses import Response
 
-from app import db, limites
+from app import db, esquema_dado, limites
 from app.auth.sessao import Auth, autenticado
 from app.catalogo.comum import jsonb, registrar_evento
 from app.erros import ErroAPI
@@ -158,7 +158,7 @@ def _recriar(request: Request, auth: Auth, manifesto: dict, gpkg: Path) -> dict:
             raise ErroAPI(403, "inquilino_desconhecido", "inquilino sem schema de dado")
         slug = linha["slug"]
         cur.execute("SELECT plat.camada_schema_garantir(%s)", (slug,))
-    esquema = f"d_{slug}"
+        esquema = esquema_dado.esquema(cur, slug)
     novas: list[dict] = []
     for camada in manifesto["camadas"]:
         tabela = "c_" + uuid.uuid4().hex[:16]

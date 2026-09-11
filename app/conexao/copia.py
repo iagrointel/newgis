@@ -40,7 +40,7 @@ import psycopg2.extensions
 import psycopg2.extras
 from pydantic import BaseModel, Field
 
-from app import limites
+from app import esquema_dado, limites
 from app.conexao import credencial as credencial_mod
 from app.conexao import vetor_externo
 from app.ingestao import nomes as nomes_mod
@@ -157,7 +157,7 @@ def conexao_copiar_vetor(ctx, conexao_id: uuid.UUID, colecao: str, titulo: str |
         cur.execute("SELECT slug FROM plat.tenant WHERE id = %s", (ctx.tenant_id,))
         slug = cur.fetchone()["slug"]
 
-    schema = f"d_{slug}"
+    schema = esquema_dado.esquema(cur, slug)
     item_id = str(uuid.uuid4())
     tabela = f"c_{item_id.replace('-', '')[:16]}"
     tabela_criada = False

@@ -34,13 +34,24 @@ PERMISSIONS_POLICY = (
 REFERRER_POLICY = "strict-origin-when-cross-origin"
 # Documento HTML: script só da própria origem ou com o nonce da resposta (a Swagger UI é servida do disco,
 # sem CDN); `blob:` em worker/child porque o MapLibre cria o seu worker por blob URL.
+# Mapa base mundial: `web/js/mapa/estilo.js` usa `https://tile.openstreetmap.org/{z}/{x}/{y}.png` como
+# PADRÃO, porque o recorte local em PMTiles (`web/dados/basemap/guarulhos.pmtiles`) cobre uma cidade só.
+# Sem este host na política, o MapLibre não busca ladrilho nenhum e a tela abre com o mapa VAZIO —
+# medido em 11/09/2026: 96 erros de console, `violates ... connect-src 'self'`, e o dono viu tela morta.
+# Fica aqui, nomeado, em vez de afrouxar a política inteira. Se um dia a base for servida da nossa
+# origem, esta linha sai junto com a mudança em estilo.js.
+BASEMAP_EXTERNO = "https://tile.openstreetmap.org"
 CSP_DOCUMENTO = (
     "default-src 'self'",
     "script-src 'self' 'nonce-{nonce}'",
-    "style-src 'self'",
-    "img-src 'self' data: blob:",
+    # O MapLibre posiciona ladrilho, marcador e controle escrevendo `element.style` direto, e a política
+    # com `style-src 'self'` recusa cada um deles: 54 erros de console por carga do mapa, medidos em
+    # 11/09/2026. Não há nonce que resolva estilo escrito por JavaScript. É o afrouxamento mínimo que
+    # mantém o mapa funcionando; `script-src` continua fechado, que é o que impede execução de código.
+    "style-src 'self' 'unsafe-inline'",
+    f"img-src 'self' data: blob: {BASEMAP_EXTERNO}",
     "font-src 'self'",
-    "connect-src 'self'",
+    f"connect-src 'self' {BASEMAP_EXTERNO}",
     "worker-src 'self' blob:",
     "child-src 'self' blob:",
     "media-src 'self'",

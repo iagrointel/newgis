@@ -32,7 +32,7 @@ from typing import Literal
 from fastapi import APIRouter, Request
 from pydantic import Field, field_validator
 
-from app import db, limites
+from app import db, esquema_dado, limites
 from app.auth.sessao import Auth, autenticado
 from app.catalogo.comum import item_ou_404, jsonb, registrar_evento
 from app.catalogo.modelos import Modelo
@@ -234,7 +234,7 @@ def criar_camada_de_campos(
 
     cur.execute("SELECT slug FROM plat.tenant WHERE id = %s", (tenant_id,))
     slug = cur.fetchone()["slug"]
-    schema = f"d_{slug}"
+    schema = esquema_dado.esquema(cur, slug)
     if not NOME_ESQUEMA_TABELA.match(schema):
         raise ErroAPI(422, "slug_invalido", "slug de inquilino fora do padrão")
 

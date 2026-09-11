@@ -60,7 +60,7 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field
 
-from app import limites, objetos
+from app import esquema_dado, limites, objetos
 from app.backup import destino, drill, nucleo
 from app.jobs.contexto import ErroServico
 from app.jobs.registro import FalhaDefinitiva, tarefa
@@ -174,7 +174,7 @@ def _alvos(ctx, somente: list[str] | None) -> list[dict]:
         for slug in slugs:
             if somente is not None and slug not in somente:
                 continue
-            esquema = f"d_{slug}"
+            esquema = esquema_dado.esquema(cur, slug)
             if _schema_existe(cur, esquema):
                 alvos.append({"esquema": esquema, "slug": slug, "grupo": slug})
             else:
@@ -634,7 +634,7 @@ def _slug_e_esquema(ctx) -> tuple[str, str]:
     if r is None:
         raise FalhaDefinitiva("backup: inquilino inexistente no contexto do job")
     slug = r["slug"]
-    esquema = f"d_{slug}"
+    esquema = esquema_dado.esquema(cur, slug)
     if not _IDENT_SQL.match(esquema):
         raise FalhaDefinitiva(f"backup: nome de schema fora do padrão esperado ({esquema!r})")
     return slug, esquema

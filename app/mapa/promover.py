@@ -20,7 +20,7 @@ import psycopg2.extras
 from fastapi import APIRouter, Body, Request
 from pydantic import BaseModel, Field
 
-from app import db
+from app import db, esquema_dado
 from app.auth.sessao import Auth, autenticado
 from app.catalogo.comum import item_ou_404, jsonb, registrar_evento
 from app.erros import ErroAPI
@@ -81,7 +81,7 @@ def promover(
         slug = cur.fetchone()["slug"]
         item_id = str(uuid_mod.uuid4())
         tabela = tabela_de(item_id)
-        schema = f"d_{slug}"
+        schema = esquema_dado.esquema(cur, slug)
         geometria = _geometria_da_selecao(selecionadas)
 
         cur.execute("SELECT plat.camada_schema_garantir(%s)", (slug,))

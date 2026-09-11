@@ -14,7 +14,7 @@ import uuid
 import psycopg2
 from pydantic import BaseModel, Field, field_validator
 
-from app import limites
+from app import esquema_dado, limites
 from app.catalogo.comum import jsonb
 from app.geocodificador import lote
 from app.jobs.registro import FalhaDefinitiva, tarefa
@@ -118,12 +118,12 @@ def geocodificador_lote_csv(ctx, **parametros) -> dict:
         try:
             with ctx.db() as cur:
                 cur.execute("SELECT plat.camada_schema_garantir(%s)", (slug,))
+                schema = esquema_dado.esquema(cur, slug)
             break
         except psycopg2.errors.InternalError_ as e:
             if "concurrently updated" not in str(e) or tentativa == tentativas_schema - 1:
                 raise
             time.sleep(0.3 * (tentativa + 1))
-    schema = f"d_{slug}"
     tabela = f"c_{uuid.uuid4().hex[:16]}"
 
     ctx.progresso(5, "geocodificando")
