@@ -179,6 +179,10 @@ END $$;
 
 -- ---------------------------------------------------------------- 3. fura o isolamento: bucket de objetos
 -- Devolviam o SEGREDO S3 de escrita (chave_rw_segredo) de qualquer inquilino a partir do argumento.
+-- (entrega 10/09) a fusão de 146 ramos trouxe duas definições desta função com assinaturas
+-- diferentes; CREATE OR REPLACE não muda tipo de retorno. O DROP abaixo é o que o próprio
+-- Postgres manda no HINT. Idempotente.
+DROP FUNCTION IF EXISTS plat.arquivo_bucket_por_tenant(integer);
 
 CREATE OR REPLACE FUNCTION plat.arquivo_bucket_por_tenant(p_tenant_id int)
 RETURNS TABLE(tenant_id int, bucket_id text, bucket_alias text, chave_rw_id text, chave_rw_segredo text,
@@ -188,6 +192,10 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = plat, public AS $$
          b.chave_ro_id, b.chave_ro_segredo, b.cota_bytes
   FROM plat.arquivo_bucket b WHERE b.tenant_id = plat.inquilino_do_argumento(p_tenant_id);
 $$;
+-- (entrega 10/09) a fusão de 146 ramos trouxe duas definições desta função com assinaturas
+-- diferentes; CREATE OR REPLACE não muda tipo de retorno. O DROP abaixo é o que o próprio
+-- Postgres manda no HINT. Idempotente.
+DROP FUNCTION IF EXISTS plat.arquivo_bucket_resolver(text);
 
 CREATE OR REPLACE FUNCTION plat.arquivo_bucket_resolver(p_slug text)
 RETURNS TABLE(tenant_id int, bucket_id text, bucket_alias text, chave_rw_id text, chave_rw_segredo text,

@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS plat.rede_importacao_epanet (
 );
 CREATE INDEX IF NOT EXISTS ix_rede_importacao_epanet_tenant ON plat.rede_importacao_epanet (tenant_id);
 CREATE INDEX IF NOT EXISTS ix_rede_importacao_epanet_rede ON plat.rede_importacao_epanet (rede_id);
-ALTER TABLE plat.rede_importacao_epanet ADD CONSTRAINT rede_importacao_epanet_tenant_rede_fkey
+ALTER TABLE plat.rede_importacao_epanet DROP CONSTRAINT IF EXISTS rede_importacao_epanet_tenant_rede_fkey, ADD CONSTRAINT rede_importacao_epanet_tenant_rede_fkey
   FOREIGN KEY (tenant_id, rede_id) REFERENCES plat.rede (tenant_id, id) ON DELETE CASCADE;
 
 CREATE OR REPLACE FUNCTION plat.tg_rede_importacao_epanet_atualizado_em() RETURNS trigger
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS plat.rede_epanet_curva (
   pontos     jsonb NOT NULL CHECK (jsonb_typeof(pontos) = 'array'),
   UNIQUE (tenant_id, rede_id, curva_id)
 );
-ALTER TABLE plat.rede_epanet_curva ADD CONSTRAINT rede_epanet_curva_tenant_rede_fkey
+ALTER TABLE plat.rede_epanet_curva DROP CONSTRAINT IF EXISTS rede_epanet_curva_tenant_rede_fkey, ADD CONSTRAINT rede_epanet_curva_tenant_rede_fkey
   FOREIGN KEY (tenant_id, rede_id) REFERENCES plat.rede (tenant_id, id) ON DELETE CASCADE;
 CREATE INDEX IF NOT EXISTS ix_rede_epanet_curva_tenant ON plat.rede_epanet_curva (tenant_id);
 
@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS plat.rede_epanet_padrao (
   multiplicadores jsonb NOT NULL CHECK (jsonb_typeof(multiplicadores) = 'array'),
   UNIQUE (tenant_id, rede_id, padrao_id)
 );
-ALTER TABLE plat.rede_epanet_padrao ADD CONSTRAINT rede_epanet_padrao_tenant_rede_fkey
+ALTER TABLE plat.rede_epanet_padrao DROP CONSTRAINT IF EXISTS rede_epanet_padrao_tenant_rede_fkey, ADD CONSTRAINT rede_epanet_padrao_tenant_rede_fkey
   FOREIGN KEY (tenant_id, rede_id) REFERENCES plat.rede (tenant_id, id) ON DELETE CASCADE;
 CREATE INDEX IF NOT EXISTS ix_rede_epanet_padrao_tenant ON plat.rede_epanet_padrao (tenant_id);
 

@@ -39,6 +39,11 @@ CREATE TABLE IF NOT EXISTS plat.amc_modelo (
   criado_em      timestamptz NOT NULL DEFAULT now(),
   atualizado_em  timestamptz NOT NULL DEFAULT now()
 );
+-- (entrega 10/09) a fusão trouxe dois desenhos de plat.amc_modelo; o CREATE acima foi ignorado por já
+-- existir. A tabela passa a ser a união dos dois, aditivamente:
+ALTER TABLE plat.amc_modelo ADD COLUMN IF NOT EXISTS definicao jsonb;
+ALTER TABLE plat.amc_modelo ADD COLUMN IF NOT EXISTS executado boolean NOT NULL DEFAULT false;
+
 CREATE INDEX IF NOT EXISTS ix_amc_modelo_tenant ON plat.amc_modelo (tenant_id, atualizado_em DESC);
 
 CREATE TABLE IF NOT EXISTS plat.amc_conjunto_unidade (
@@ -52,6 +57,10 @@ CREATE TABLE IF NOT EXISTS plat.amc_conjunto_unidade (
   criado_por  int REFERENCES plat.usuario(id) ON DELETE SET NULL,
   criado_em   timestamptz NOT NULL DEFAULT now()
 );
+-- (entrega 10/09) a fusão trouxe dois desenhos de plat.amc_conjunto_unidade; o CREATE acima foi ignorado por já
+-- existir. A tabela passa a ser a união dos dois, aditivamente:
+ALTER TABLE plat.amc_conjunto_unidade ADD COLUMN IF NOT EXISTS config jsonb NOT NULL DEFAULT '{}'::jsonb;
+
 CREATE INDEX IF NOT EXISTS ix_amc_conjunto_tenant ON plat.amc_conjunto_unidade (tenant_id, criado_em DESC);
 
 CREATE TABLE IF NOT EXISTS plat.amc_execucao (
@@ -70,6 +79,11 @@ CREATE TABLE IF NOT EXISTS plat.amc_execucao (
   criado_em          timestamptz NOT NULL DEFAULT now(),
   atualizado_em      timestamptz NOT NULL DEFAULT now()
 );
+-- (entrega 10/09) a fusão trouxe dois desenhos de plat.amc_execucao; o CREATE acima foi ignorado por já
+-- existir. A tabela passa a ser a união dos dois, aditivamente:
+ALTER TABLE plat.amc_execucao ADD COLUMN IF NOT EXISTS modelo_versao_hash text;
+ALTER TABLE plat.amc_execucao ADD COLUMN IF NOT EXISTS atualizado_em timestamptz NOT NULL DEFAULT now();
+
 CREATE INDEX IF NOT EXISTS ix_amc_execucao_tenant ON plat.amc_execucao (tenant_id, criado_em DESC);
 CREATE INDEX IF NOT EXISTS ix_amc_execucao_modelo ON plat.amc_execucao (modelo_id, modelo_versao_hash);
 

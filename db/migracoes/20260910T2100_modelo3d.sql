@@ -11,8 +11,9 @@
 -- — nenhuma outra migração o havia tocado até aqui).
 ALTER TABLE plat.tipo_item DROP CONSTRAINT IF EXISTS tipo_item_familia_check;
 ALTER TABLE plat.tipo_item ADD CONSTRAINT tipo_item_familia_check
-  CHECK (familia = ANY (ARRAY['camada','raster','mapa','app','painel','formulario','fluxo','rede','arquivo',
-                              'ferramenta','documento','modelo3d']));
+  -- (união de ramos) a lista deste ramo não tinha site, narrativa, que outro ramo já semeou na tabela,
+  -- e a restrição nascia violada. A forma da escrita original foi preservada.
+  CHECK (familia = ANY (ARRAY['camada', 'raster', 'mapa', 'app', 'painel', 'formulario', 'fluxo', 'rede', 'arquivo', 'ferramenta', 'documento', 'modelo3d', 'site', 'narrativa']));
 
 INSERT INTO plat.tipo_item(nome, familia, rotulo, descricao, esquema, esquema_versao, icone, modulo_front, abre_em,
                             tem_dado_fisico, linha_dona) VALUES

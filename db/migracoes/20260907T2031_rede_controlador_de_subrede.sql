@@ -25,6 +25,13 @@ CREATE TABLE IF NOT EXISTS plat.rede_subrede (
   criado_em     timestamptz NOT NULL DEFAULT now(),
   UNIQUE (tenant_id, id)
 );
+-- (entrega 10/09) a fusão trouxe dois desenhos de plat.rede_subrede; o CREATE acima foi ignorado por já
+-- existir. A tabela passa a ser a união dos dois, aditivamente:
+ALTER TABLE plat.rede_subrede ADD COLUMN IF NOT EXISTS tier_id uuid;
+ALTER TABLE plat.rede_subrede ADD COLUMN IF NOT EXISTS estado text NOT NULL DEFAULT 'suja';
+ALTER TABLE plat.rede_subrede ADD COLUMN IF NOT EXISTS resumo jsonb NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE plat.rede_subrede ADD COLUMN IF NOT EXISTS atualizado_em timestamptz;
+
 CREATE UNIQUE INDEX IF NOT EXISTS ux_rede_subrede ON plat.rede_subrede (rede_id, tier_id, nome);
 CREATE INDEX IF NOT EXISTS ix_rede_subrede_tenant ON plat.rede_subrede (tenant_id);
 ALTER TABLE plat.rede_subrede DROP CONSTRAINT IF EXISTS rede_subrede_tenant_rede_fkey;

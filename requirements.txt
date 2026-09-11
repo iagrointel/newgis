@@ -102,6 +102,10 @@ dss_python_backend==0.14.5
 # dependência declarada, e o import dela é TARDIO (dentro da função que lê o arquivo) para que só o
 # worker do job dependa do GDAL — a API sobe sem ele. numpy/certifi/packaging, que o pyogrio exige,
 # vêm de /usr/local/lib/python3.12/dist-packages (mesmo caso do shapely, comentado no topo).
+# geopandas: importado por app/amc/vetorial.py e NUNCA estava declarado. Funcionava só porque
+# existia na pasta do usuário; a unidade systemd põe PYTHONNOUSERSITE=1 de propósito e a aplicação
+# inteira falhava no import. Medido em 11/09/2026 ao publicar a união.
+geopandas==1.1.3
 pyogrio==0.12.1
 # pandapower (item L4-05-c-pandapower-e-matpower): SÓ A SUÍTE importa, pela mesma razão do
 # opendssdirect acima. A aplicação escreve o JSON do pandapower e o `.m` do MATPOWER com a biblioteca

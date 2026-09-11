@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS plat.status_amostra (
   estado     text NOT NULL CHECK (estado IN ('ok','degradado','erro','ausente')),
   criado_em  timestamptz NOT NULL DEFAULT now()
 );
+-- (entrega 10/09) a fusão trouxe dois desenhos de plat.status_amostra; o CREATE acima foi ignorado por já
+-- existir. A tabela passa a ser a união dos dois, aditivamente:
+ALTER TABLE plat.status_amostra ADD COLUMN IF NOT EXISTS criado_em timestamptz NOT NULL DEFAULT now();
+
 CREATE INDEX IF NOT EXISTS ix_status_amostra_em ON plat.status_amostra (criado_em DESC);
 CREATE INDEX IF NOT EXISTS ix_status_amostra_servico_em ON plat.status_amostra (servico, criado_em DESC);
 

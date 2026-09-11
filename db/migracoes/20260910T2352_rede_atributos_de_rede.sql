@@ -68,13 +68,13 @@ CREATE TABLE IF NOT EXISTS plat.rede_topo_dispositivo_aresta (
 CREATE UNIQUE INDEX IF NOT EXISTS ux_rede_topo_dispositivo_aresta ON plat.rede_topo_dispositivo_aresta (tenant_id, rede_id, origem_id);
 CREATE INDEX IF NOT EXISTS ix_rede_topo_dispositivo_aresta_tenant ON plat.rede_topo_dispositivo_aresta (tenant_id);
 CREATE INDEX IF NOT EXISTS ix_rede_topo_dispositivo_aresta_rede ON plat.rede_topo_dispositivo_aresta (rede_id);
-ALTER TABLE plat.rede_topo_dispositivo_aresta ADD CONSTRAINT rede_topo_dispositivo_aresta_tenant_rede_fkey
+ALTER TABLE plat.rede_topo_dispositivo_aresta DROP CONSTRAINT IF EXISTS rede_topo_dispositivo_aresta_tenant_rede_fkey, ADD CONSTRAINT rede_topo_dispositivo_aresta_tenant_rede_fkey
   FOREIGN KEY (tenant_id, rede_id) REFERENCES plat.rede (tenant_id, id) ON DELETE CASCADE;
-ALTER TABLE plat.rede_topo_dispositivo_aresta ADD CONSTRAINT rede_topo_dispositivo_aresta_tenant_origem_fkey
+ALTER TABLE plat.rede_topo_dispositivo_aresta DROP CONSTRAINT IF EXISTS rede_topo_dispositivo_aresta_tenant_origem_fkey, ADD CONSTRAINT rede_topo_dispositivo_aresta_tenant_origem_fkey
   FOREIGN KEY (tenant_id, origem_id) REFERENCES plat.rede_feicao_ponto (tenant_id, id) ON DELETE CASCADE;
-ALTER TABLE plat.rede_topo_dispositivo_aresta ADD CONSTRAINT rede_topo_dispositivo_aresta_tenant_no1_fkey
+ALTER TABLE plat.rede_topo_dispositivo_aresta DROP CONSTRAINT IF EXISTS rede_topo_dispositivo_aresta_tenant_no1_fkey, ADD CONSTRAINT rede_topo_dispositivo_aresta_tenant_no1_fkey
   FOREIGN KEY (tenant_id, no_terminal_1_id) REFERENCES plat.rede_topo_no (tenant_id, id) ON DELETE CASCADE;
-ALTER TABLE plat.rede_topo_dispositivo_aresta ADD CONSTRAINT rede_topo_dispositivo_aresta_tenant_no2_fkey
+ALTER TABLE plat.rede_topo_dispositivo_aresta DROP CONSTRAINT IF EXISTS rede_topo_dispositivo_aresta_tenant_no2_fkey, ADD CONSTRAINT rede_topo_dispositivo_aresta_tenant_no2_fkey
   FOREIGN KEY (tenant_id, no_terminal_2_id) REFERENCES plat.rede_topo_no (tenant_id, id) ON DELETE CASCADE;
 
 -- e. regra de substituição: um dispositivo de um TIPO declarado (ex.: chave de transferência) troca o valor
@@ -96,9 +96,9 @@ CREATE TABLE IF NOT EXISTS plat.rede_atributo_substituicao (
 CREATE UNIQUE INDEX IF NOT EXISTS ux_rede_atributo_substituicao
   ON plat.rede_atributo_substituicao (rede_id, tipo_id, atributo_codigo, de_valor);
 CREATE INDEX IF NOT EXISTS ix_rede_atributo_substituicao_tenant ON plat.rede_atributo_substituicao (tenant_id);
-ALTER TABLE plat.rede_atributo_substituicao ADD CONSTRAINT rede_atributo_substituicao_tenant_rede_fkey
+ALTER TABLE plat.rede_atributo_substituicao DROP CONSTRAINT IF EXISTS rede_atributo_substituicao_tenant_rede_fkey, ADD CONSTRAINT rede_atributo_substituicao_tenant_rede_fkey
   FOREIGN KEY (tenant_id, rede_id) REFERENCES plat.rede (tenant_id, id) ON DELETE CASCADE;
-ALTER TABLE plat.rede_atributo_substituicao ADD CONSTRAINT rede_atributo_substituicao_tenant_tipo_fkey
+ALTER TABLE plat.rede_atributo_substituicao DROP CONSTRAINT IF EXISTS rede_atributo_substituicao_tenant_tipo_fkey, ADD CONSTRAINT rede_atributo_substituicao_tenant_tipo_fkey
   FOREIGN KEY (tenant_id, tipo_id) REFERENCES plat.rede_tipo (tenant_id, id) ON DELETE CASCADE;
 
 -- f. discrepância: onde a fase PROPAGADA (calculada a partir do controlador) diverge da fase DECLARADA (lida
@@ -116,9 +116,9 @@ CREATE TABLE IF NOT EXISTS plat.rede_atributo_discrepancia (
 CREATE UNIQUE INDEX IF NOT EXISTS ux_rede_atributo_discrepancia
   ON plat.rede_atributo_discrepancia (tenant_id, rede_id, aresta_id, atributo_codigo);
 CREATE INDEX IF NOT EXISTS ix_rede_atributo_discrepancia_tenant ON plat.rede_atributo_discrepancia (tenant_id);
-ALTER TABLE plat.rede_atributo_discrepancia ADD CONSTRAINT rede_atributo_discrepancia_tenant_rede_fkey
+ALTER TABLE plat.rede_atributo_discrepancia DROP CONSTRAINT IF EXISTS rede_atributo_discrepancia_tenant_rede_fkey, ADD CONSTRAINT rede_atributo_discrepancia_tenant_rede_fkey
   FOREIGN KEY (tenant_id, rede_id) REFERENCES plat.rede (tenant_id, id) ON DELETE CASCADE;
-ALTER TABLE plat.rede_atributo_discrepancia ADD CONSTRAINT rede_atributo_discrepancia_tenant_aresta_fkey
+ALTER TABLE plat.rede_atributo_discrepancia DROP CONSTRAINT IF EXISTS rede_atributo_discrepancia_tenant_aresta_fkey, ADD CONSTRAINT rede_atributo_discrepancia_tenant_aresta_fkey
   FOREIGN KEY (tenant_id, aresta_id) REFERENCES plat.rede_topo_aresta (tenant_id, id) ON DELETE CASCADE;
 
 -- g. sincronização por TRIGGER na edição (cláusula do enunciado: "por trigger na edição e por lote"). A

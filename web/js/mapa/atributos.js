@@ -321,8 +321,6 @@ export function montarTabelaPopup(feicao, campos, maxCampos = 6) {
   }
   return caixa;
 }
-  }
-}
 
 export function instalarPopup(map, catalogo, maplibregl) {
   const janela = new JanelaPopup(map, catalogo, maplibregl);

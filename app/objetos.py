@@ -513,6 +513,28 @@ def parte_enviar(cur, upload_id: str, numero: int, dados: bytes) -> str:
     return cli.multipart_enviar_parte(bucket["bucket_alias"], linha["chave_temp"], upload_id, numero, dados)
 
 
+def parte_enviar_arquivo(cur, upload_id: str, numero: int, caminho: str, sha256: str | None = None) -> str:
+    """Igual a `parte_enviar`, mas a parte já está num ARQUIVO em disco, não em memória.
+
+    Por que existe: `app/uploads/rotas.py` grava a parte recebida num temporário antes de repassá-la
+    (upload grande, corpo lento) e chama esta função — mas ela NÃO existia em ramo nenhum do
+    repositório, e por isso toda primeira parte de todo envio respondia 500 com `AttributeError`.
+    Medido em 11/09/2026 ao publicar a união; o ramo da demonstração não caía porque a versão dele de
+    `rotas.py` ainda usava a variante em memória.
+
+    Ler o arquivo inteiro para memória aqui seria repetir o problema que o temporário resolve: numa
+    máquina que já foi morta por falta de memória, uma parte de 16 MiB por trabalhador e por envio
+    simultâneo é justamente o que não se quer. `sha256` vem calculado por quem chamou e é aceito só
+    para manter a assinatura estável; a conferência de verdade é em `parte_concluir`, que relê o
+    objeto inteiro do Garage."""
+    linha = _upload_linha(cur, upload_id)
+    bucket = garantir_bucket(cur, linha["tenant_id"])
+    cli = _cliente(bucket)
+    with open(caminho, "rb") as fh:
+        dados = fh.read()
+    return cli.multipart_enviar_parte(bucket["bucket_alias"], linha["chave_temp"], upload_id, numero, dados)
+
+
 def parte_concluir(cur, upload_id: str, partes: list[tuple[int, str]]) -> dict:
     """Fecha o multipart, lê o objeto de volta EM STREAM para calcular o sha256 real (o ETag multipart do
     S3 não é um sha256 do conteúdo), copia para a chave definitiva por conteúdo e apaga o temporário.

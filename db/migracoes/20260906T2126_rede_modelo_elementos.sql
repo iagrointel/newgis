@@ -45,9 +45,9 @@ CREATE INDEX IF NOT EXISTS ix_rede_no_tenant ON plat.rede_no (tenant_id);
 CREATE INDEX IF NOT EXISTS ix_rede_no_rede ON plat.rede_no (rede_id);
 CREATE INDEX IF NOT EXISTS ix_rede_no_geom ON plat.rede_no USING gist (geom);
 CREATE INDEX IF NOT EXISTS ix_rede_no_subrede ON plat.rede_no (subrede_id);
-ALTER TABLE plat.rede_no ADD CONSTRAINT rede_no_tenant_rede_fkey
+ALTER TABLE plat.rede_no DROP CONSTRAINT IF EXISTS rede_no_tenant_rede_fkey, ADD CONSTRAINT rede_no_tenant_rede_fkey
   FOREIGN KEY (tenant_id, rede_id) REFERENCES plat.rede (tenant_id, id) ON DELETE CASCADE;
-ALTER TABLE plat.rede_no ADD CONSTRAINT rede_no_tenant_tipo_fkey
+ALTER TABLE plat.rede_no DROP CONSTRAINT IF EXISTS rede_no_tenant_tipo_fkey, ADD CONSTRAINT rede_no_tenant_tipo_fkey
   FOREIGN KEY (tenant_id, tipo_id) REFERENCES plat.rede_tipo (tenant_id, id) ON DELETE RESTRICT;
 
 -- hierarquia de subredes: nível 1 subestação, nível 2 alimentador, nível 3 transformador (a baixa
@@ -70,14 +70,14 @@ CREATE TABLE IF NOT EXISTS plat.rede_subrede (
 CREATE INDEX IF NOT EXISTS ix_rede_subrede_tenant ON plat.rede_subrede (tenant_id);
 CREATE INDEX IF NOT EXISTS ix_rede_subrede_rede ON plat.rede_subrede (rede_id);
 CREATE INDEX IF NOT EXISTS ix_rede_subrede_pai ON plat.rede_subrede (pai_id);
-ALTER TABLE plat.rede_subrede ADD CONSTRAINT rede_subrede_tenant_rede_fkey
+ALTER TABLE plat.rede_subrede DROP CONSTRAINT IF EXISTS rede_subrede_tenant_rede_fkey, ADD CONSTRAINT rede_subrede_tenant_rede_fkey
   FOREIGN KEY (tenant_id, rede_id) REFERENCES plat.rede (tenant_id, id) ON DELETE CASCADE;
-ALTER TABLE plat.rede_subrede ADD CONSTRAINT rede_subrede_tenant_pai_fkey
+ALTER TABLE plat.rede_subrede DROP CONSTRAINT IF EXISTS rede_subrede_tenant_pai_fkey, ADD CONSTRAINT rede_subrede_tenant_pai_fkey
   FOREIGN KEY (tenant_id, pai_id) REFERENCES plat.rede_subrede (tenant_id, id) ON DELETE RESTRICT;
-ALTER TABLE plat.rede_subrede ADD CONSTRAINT rede_subrede_tenant_controlador_fkey
+ALTER TABLE plat.rede_subrede DROP CONSTRAINT IF EXISTS rede_subrede_tenant_controlador_fkey, ADD CONSTRAINT rede_subrede_tenant_controlador_fkey
   FOREIGN KEY (tenant_id, controlador_no_id) REFERENCES plat.rede_no (tenant_id, id) ON DELETE SET NULL;
 
-ALTER TABLE plat.rede_no ADD CONSTRAINT rede_no_tenant_subrede_fkey
+ALTER TABLE plat.rede_no DROP CONSTRAINT IF EXISTS rede_no_tenant_subrede_fkey, ADD CONSTRAINT rede_no_tenant_subrede_fkey
   FOREIGN KEY (tenant_id, subrede_id) REFERENCES plat.rede_subrede (tenant_id, id) ON DELETE SET NULL;
 
 -- aresta: trecho/condutor entre dois nós. `no_origem_seq`/`no_destino_seq` são a cópia inteira das
@@ -112,15 +112,15 @@ CREATE INDEX IF NOT EXISTS ix_rede_aresta_origem ON plat.rede_aresta (no_origem_
 CREATE INDEX IF NOT EXISTS ix_rede_aresta_destino ON plat.rede_aresta (no_destino_id);
 CREATE INDEX IF NOT EXISTS ix_rede_aresta_geom ON plat.rede_aresta USING gist (geom);
 CREATE INDEX IF NOT EXISTS ix_rede_aresta_subrede ON plat.rede_aresta (subrede_id);
-ALTER TABLE plat.rede_aresta ADD CONSTRAINT rede_aresta_tenant_rede_fkey
+ALTER TABLE plat.rede_aresta DROP CONSTRAINT IF EXISTS rede_aresta_tenant_rede_fkey, ADD CONSTRAINT rede_aresta_tenant_rede_fkey
   FOREIGN KEY (tenant_id, rede_id) REFERENCES plat.rede (tenant_id, id) ON DELETE CASCADE;
-ALTER TABLE plat.rede_aresta ADD CONSTRAINT rede_aresta_tenant_tipo_fkey
+ALTER TABLE plat.rede_aresta DROP CONSTRAINT IF EXISTS rede_aresta_tenant_tipo_fkey, ADD CONSTRAINT rede_aresta_tenant_tipo_fkey
   FOREIGN KEY (tenant_id, tipo_id) REFERENCES plat.rede_tipo (tenant_id, id) ON DELETE RESTRICT;
-ALTER TABLE plat.rede_aresta ADD CONSTRAINT rede_aresta_tenant_no_origem_fkey
+ALTER TABLE plat.rede_aresta DROP CONSTRAINT IF EXISTS rede_aresta_tenant_no_origem_fkey, ADD CONSTRAINT rede_aresta_tenant_no_origem_fkey
   FOREIGN KEY (tenant_id, no_origem_id) REFERENCES plat.rede_no (tenant_id, id) ON DELETE CASCADE;
-ALTER TABLE plat.rede_aresta ADD CONSTRAINT rede_aresta_tenant_no_destino_fkey
+ALTER TABLE plat.rede_aresta DROP CONSTRAINT IF EXISTS rede_aresta_tenant_no_destino_fkey, ADD CONSTRAINT rede_aresta_tenant_no_destino_fkey
   FOREIGN KEY (tenant_id, no_destino_id) REFERENCES plat.rede_no (tenant_id, id) ON DELETE CASCADE;
-ALTER TABLE plat.rede_aresta ADD CONSTRAINT rede_aresta_tenant_subrede_fkey
+ALTER TABLE plat.rede_aresta DROP CONSTRAINT IF EXISTS rede_aresta_tenant_subrede_fkey, ADD CONSTRAINT rede_aresta_tenant_subrede_fkey
   FOREIGN KEY (tenant_id, subrede_id) REFERENCES plat.rede_subrede (tenant_id, id) ON DELETE SET NULL;
 
 -- associação explícita entre um nó de ativo (dispositivo/fonte/consumidor) e a rede: conectividade
@@ -140,17 +140,24 @@ CREATE TABLE IF NOT EXISTS plat.rede_associacao (
   UNIQUE (tenant_id, id),
   CHECK (num_nonnulls(para_no_id, para_aresta_id) = 1)  -- exatamente um alvo: nó ou aresta
 );
+-- (entrega 10/09) a fusão trouxe dois desenhos de plat.rede_associacao; o CREATE acima foi ignorado por já
+-- existir. A tabela passa a ser a união dos dois, aditivamente:
+ALTER TABLE plat.rede_associacao ADD COLUMN IF NOT EXISTS de_no_id uuid;
+ALTER TABLE plat.rede_associacao ADD COLUMN IF NOT EXISTS para_no_id uuid;
+ALTER TABLE plat.rede_associacao ADD COLUMN IF NOT EXISTS para_aresta_id uuid;
+ALTER TABLE plat.rede_associacao ADD COLUMN IF NOT EXISTS origem text NOT NULL DEFAULT 'explicita';
+
 CREATE INDEX IF NOT EXISTS ix_rede_associacao_tenant ON plat.rede_associacao (tenant_id);
 CREATE INDEX IF NOT EXISTS ix_rede_associacao_rede ON plat.rede_associacao (rede_id);
 CREATE INDEX IF NOT EXISTS ix_rede_associacao_de ON plat.rede_associacao (de_no_id);
 CREATE INDEX IF NOT EXISTS ix_rede_associacao_para ON plat.rede_associacao (para_no_id);
-ALTER TABLE plat.rede_associacao ADD CONSTRAINT rede_associacao_tenant_rede_fkey
+ALTER TABLE plat.rede_associacao DROP CONSTRAINT IF EXISTS rede_associacao_tenant_rede_fkey, ADD CONSTRAINT rede_associacao_tenant_rede_fkey
   FOREIGN KEY (tenant_id, rede_id) REFERENCES plat.rede (tenant_id, id) ON DELETE CASCADE;
-ALTER TABLE plat.rede_associacao ADD CONSTRAINT rede_associacao_tenant_de_fkey
+ALTER TABLE plat.rede_associacao DROP CONSTRAINT IF EXISTS rede_associacao_tenant_de_fkey, ADD CONSTRAINT rede_associacao_tenant_de_fkey
   FOREIGN KEY (tenant_id, de_no_id) REFERENCES plat.rede_no (tenant_id, id) ON DELETE CASCADE;
-ALTER TABLE plat.rede_associacao ADD CONSTRAINT rede_associacao_tenant_para_fkey
+ALTER TABLE plat.rede_associacao DROP CONSTRAINT IF EXISTS rede_associacao_tenant_para_fkey, ADD CONSTRAINT rede_associacao_tenant_para_fkey
   FOREIGN KEY (tenant_id, para_no_id) REFERENCES plat.rede_no (tenant_id, id) ON DELETE CASCADE;
-ALTER TABLE plat.rede_associacao ADD CONSTRAINT rede_associacao_tenant_aresta_fkey
+ALTER TABLE plat.rede_associacao DROP CONSTRAINT IF EXISTS rede_associacao_tenant_aresta_fkey, ADD CONSTRAINT rede_associacao_tenant_aresta_fkey
   FOREIGN KEY (tenant_id, para_aresta_id) REFERENCES plat.rede_aresta (tenant_id, id) ON DELETE CASCADE;
 
 -- auditoria da importação de uma fonte (BDGD neste item): o que o arquivo declarava, o que entrou,
@@ -176,7 +183,7 @@ CREATE TABLE IF NOT EXISTS plat.rede_importacao (
 );
 CREATE INDEX IF NOT EXISTS ix_rede_importacao_tenant ON plat.rede_importacao (tenant_id);
 CREATE INDEX IF NOT EXISTS ix_rede_importacao_rede ON plat.rede_importacao (rede_id);
-ALTER TABLE plat.rede_importacao ADD CONSTRAINT rede_importacao_tenant_rede_fkey
+ALTER TABLE plat.rede_importacao DROP CONSTRAINT IF EXISTS rede_importacao_tenant_rede_fkey, ADD CONSTRAINT rede_importacao_tenant_rede_fkey
   FOREIGN KEY (tenant_id, rede_id) REFERENCES plat.rede (tenant_id, id) ON DELETE CASCADE;
 
 -- -----------------------------------------------------------------------------------------------

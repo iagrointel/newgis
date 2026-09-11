@@ -2,6 +2,10 @@
 -- periódico jobs.uso_medir percorre. Separada da 20260906T2124_cotas_uso.sql porque plat_worker não tem
 -- política de RLS em plat.tenant (as políticas da 002 são TO plat_app), então a lista tem de vir de função
 -- SECURITY DEFINER, mesmo padrão de plat.uso_buckets_listar. Idempotente. Sem BEGIN/COMMIT.
+-- (entrega 10/09) a fusão de 146 ramos trouxe duas definições desta função com assinaturas
+-- diferentes; CREATE OR REPLACE não muda tipo de retorno. O DROP abaixo é o que o próprio
+-- Postgres manda no HINT. Idempotente.
+DROP FUNCTION IF EXISTS plat.uso_tenants_ativos();
 
 CREATE OR REPLACE FUNCTION plat.uso_tenants_ativos() RETURNS SETOF int
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = plat, public AS $$

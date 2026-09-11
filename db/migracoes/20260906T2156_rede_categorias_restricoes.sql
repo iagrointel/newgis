@@ -30,6 +30,12 @@ CREATE TABLE IF NOT EXISTS plat.rede_feicao (
   criado_em          timestamptz NOT NULL DEFAULT now(),
   atualizado_em      timestamptz NOT NULL DEFAULT now()
 );
+-- (entrega 10/09) a fusão trouxe dois desenhos de plat.rede_feicao; o CREATE acima foi ignorado por já
+-- existir. A tabela passa a ser a união dos dois, aditivamente:
+ALTER TABLE plat.rede_feicao ADD COLUMN IF NOT EXISTS codigo text;
+ALTER TABLE plat.rede_feicao ADD COLUMN IF NOT EXISTS controlador_ativo boolean NOT NULL DEFAULT false;
+ALTER TABLE plat.rede_feicao ADD COLUMN IF NOT EXISTS suja boolean NOT NULL DEFAULT true;
+
 CREATE UNIQUE INDEX IF NOT EXISTS ux_rede_feicao ON plat.rede_feicao (rede_id, tipo_id, codigo);
 CREATE INDEX IF NOT EXISTS ix_rede_feicao_tenant ON plat.rede_feicao (tenant_id);
 CREATE INDEX IF NOT EXISTS ix_rede_feicao_tipo ON plat.rede_feicao (tipo_id);

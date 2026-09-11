@@ -175,6 +175,43 @@ def _verificar_zip(tipo: str, chave: str, tamanho: int) -> None:
     # de conteúdo além disso — a inspeção decide o que fazer com o que encontrar dentro (seção 3.4 do ADR)
 
 
+def verificar_inicio(tipo_declarado: str, inicio: bytes) -> None:
+    """Mesma conferência de `verificar_conteudo`, mas sobre os PRIMEIROS BYTES que já chegaram, antes de
+    o objeto existir no Garage (item L1-01-e): o que os primeiros bytes provam, provam agora, e o
+    cliente para de gastar rede num arquivo condenado.
+
+    Por que esta função voltou a existir: `app/uploads/rotas.py:243` a chama desde sempre, mas a fusão
+    de ramos manteve a versão ANTIGA de `tipos.py`, sem ela — e toda primeira parte de todo envio
+    respondia 500 com `AttributeError`, derrubando o upload inteiro sem erro do lado que o implementa.
+    Medido em 11/09/2026 ao publicar a união.
+
+    Só decide o que dá para decidir com o cabeçalho. Formato cuja prova mora no fim do arquivo (zip, e
+    portanto shapefile zipado) passa direto aqui e é conferido depois por `verificar_conteudo`."""
+    tipo = TIPOS.get(tipo_declarado)
+    if tipo is None:
+        raise ConteudoNaoCorresponde(f"tipo declarado desconhecido nesta instalação: {tipo_declarado}")
+    if not inicio:
+        return
+    if tipo_declarado in ("geotiff", "cog"):
+        if not _e_tiff(inicio):
+            raise ConteudoNaoCorresponde(
+                f"conteúdo não corresponde ao tipo {tipo_declarado}: o arquivo é {_o_que_e(inicio)}"
+            )
+    elif tipo_declarado == "gpkg":
+        if inicio[:16] != b"SQLite format 3\x00":
+            raise ConteudoNaoCorresponde(f"conteúdo não corresponde ao tipo gpkg: o arquivo é {_o_que_e(inicio)}")
+    elif tipo_declarado == "geojson":
+        limpo = inicio.lstrip(b" \t\r\n\xef\xbb\xbf")
+        if not limpo.startswith(b"{"):
+            raise ConteudoNaoCorresponde(
+                f"conteúdo não corresponde ao tipo geojson: o arquivo é {_o_que_e(inicio)}"
+            )
+    elif tipo_declarado == "kml" and b"<kml" not in inicio[:4096] and len(inicio) >= 4096:
+        raise ConteudoNaoCorresponde(f"conteúdo não corresponde ao tipo kml: o arquivo é {_o_que_e(inicio)}")
+    elif tipo_declarado == "gpx" and b"<gpx" not in inicio[:4096] and len(inicio) >= 4096:
+        raise ConteudoNaoCorresponde(f"conteúdo não corresponde ao tipo gpx: o arquivo é {_o_que_e(inicio)}")
+
+
 def verificar_conteudo(tipo_declarado: str, chave: str, tamanho: int) -> None:
     """Levanta `ConteudoNaoCorresponde` quando os bytes não provam `tipo_declarado`. `tamanho` é o tamanho REAL
     do objeto já gravado no Garage (nunca o declarado pelo cliente)."""

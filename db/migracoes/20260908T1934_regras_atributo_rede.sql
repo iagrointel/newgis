@@ -49,6 +49,19 @@ CREATE TABLE IF NOT EXISTS plat.rede_regra (
   -- cálculo preenche um atributo; restrição e validação não preenchem nada
   CHECK ((perfil = 'calculo') = (atributo_alvo IS NOT NULL))
 );
+-- (entrega 10/09) a fusão trouxe dois desenhos de plat.rede_regra; o CREATE acima foi ignorado por já
+-- existir. A tabela passa a ser a união dos dois, aditivamente:
+ALTER TABLE plat.rede_regra ADD COLUMN IF NOT EXISTS perfil text;
+ALTER TABLE plat.rede_regra ADD COLUMN IF NOT EXISTS nome text;
+ALTER TABLE plat.rede_regra ADD COLUMN IF NOT EXISTS alvo_tipo text;
+ALTER TABLE plat.rede_regra ADD COLUMN IF NOT EXISTS expressao text;
+ALTER TABLE plat.rede_regra ADD COLUMN IF NOT EXISTS atributo_alvo text;
+ALTER TABLE plat.rede_regra ADD COLUMN IF NOT EXISTS mensagem text;
+ALTER TABLE plat.rede_regra ADD COLUMN IF NOT EXISTS prioridade int NOT NULL DEFAULT 0;
+ALTER TABLE plat.rede_regra ADD COLUMN IF NOT EXISTS ativa boolean NOT NULL DEFAULT true;
+ALTER TABLE plat.rede_regra ADD COLUMN IF NOT EXISTS criado_em timestamptz NOT NULL DEFAULT now();
+ALTER TABLE plat.rede_regra ADD COLUMN IF NOT EXISTS atualizado_em timestamptz NOT NULL DEFAULT now();
+
 CREATE INDEX IF NOT EXISTS ix_rede_regra_tenant ON plat.rede_regra (tenant_id, perfil, alvo_tipo) WHERE ativa;
 
 ALTER TABLE plat.rede_regra ENABLE ROW LEVEL SECURITY;

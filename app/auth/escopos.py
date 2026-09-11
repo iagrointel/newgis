@@ -6,13 +6,26 @@ import re
 from app.erros import ErroAPI
 
 UUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+# ⚠ Este vocabulário é a UNIÃO de todos os escopos que as rotas de fato exigem. A fusão de ramos o
+# encolheu duas vezes: em 10/09 a expressão regular nasceu concatenada doze vezes, e em 11/09 faltavam
+# QUATRO escopos que rotas vivas exigem — `conteudo:criar` (app/uploads/rotas.py, o envio de arquivo
+# inteiro), `imagens:ler` e `imagens:escrever` (app/imagens/*) e `catalogo:escrever` (app/modelos3d).
+# Sem eles, `POST /api/tokens` recusa com "escopo fora do vocabulário" e a funcionalidade morre sem
+# erro visível no lado que a implementa. Medido ao publicar a união.
+# Regra ao mexer aqui: o conjunto desta expressão tem de ser o mesmo de ESCOPOS_SEM_UUID e o mesmo das
+# chaves de DESCRICAO; `tests/unit/test_escopos_vocabulario.py` confere os três contra as rotas.
 ESCOPO = re.compile(
-    rf"^(catalogo:ler|camada:(ler|editar)(:{UUID})?|tiles:ler(:{UUID})?|jobs:executar|rota:usar|"
-    rf"geocodificar:usar|multiescala:usar|parcelas:usar|admin:inquilino)$"
+    rf"^(catalogo:(ler|escrever)|camada:(ler|editar)(:{UUID})?|tiles:ler(:{UUID})?|jobs:executar|"
+    rf"rota:usar|geocodificar:usar|multiescala:usar|parcelas:usar|conteudo:criar|"
+    rf"imagens:(ler|escrever)|rede:(ler|editar|validar|analisar)|campo:usar|crs:usar|fluxo:ler|"
+    rf"admin:inquilino)$"
 )
 ESCOPOS_SEM_UUID = (
-    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
-    "geocodificar:usar", "multiescala:usar", "parcelas:usar", "admin:inquilino",
+    "catalogo:ler", "catalogo:escrever", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar",
+    "rota:usar", "geocodificar:usar", "multiescala:usar", "parcelas:usar", "conteudo:criar",
+    "imagens:ler", "imagens:escrever", "rede:ler", "rede:editar", "rede:validar", "rede:analisar",
+    "campo:usar",
+    "crs:usar", "fluxo:ler", "admin:inquilino",
 )
 DESCRICAO = {
     "catalogo:ler": "listar e ler metadado de itens que o dono pode ler",
@@ -27,6 +40,19 @@ DESCRICAO = {
     "multicritério em grades aninhadas (L3-19-multiescala; dado e execução do próprio inquilino)",
     "parcelas:usar": "rodar os fluxos da malha de parcelas do próprio inquilino na fachada "
     "/api/parcelas/fabrica (L4-parcelas-02: build, divide, merge, clip, seeds, assignFeaturesToRecord)",
+    "catalogo:escrever": "criar e apagar itens do catálogo pela API (hoje: modelo 3D, app/modelos3d)",
+    "conteudo:criar": "enviar arquivo pelo upload retomável (exige conteudo.criar no dono); é o escopo "
+    "que a tela troca pela sessão antes de começar o envio, porque o corpo da parte é byte cru",
+    "imagens:ler": "ler imagem: ficha, ladrilho, COG por HTTPS, predefinição de renderização e STAC",
+    "imagens:escrever": "criar e alterar coleção e item STAC do próprio inquilino",
+    "rede:ler": "ler rede de utilidades: nós, arestas, subredes, diagrama e sumário",
+    "rede:editar": "criar e alterar feição de rede, topologia e subrede do próprio inquilino",
+    "rede:validar": "rodar as regras de validação de rede (conectividade, atributo, contenção)",
+    "rede:analisar": "rodar traçado (conectado, montante, jusante, isolamento), fluxo de potência, "
+    "curto-circuito e exportação para OpenDSS, pandapower, MATPOWER e EPANET",
+    "campo:usar": "fila, roteiro, visita e foto do módulo de campo (o app do aparelho usa este escopo)",
+    "crs:usar": "converter coordenada entre sistemas de referência",
+    "fluxo:ler": "ler definição e execução de fluxo de geoprocessamento",
     "admin:inquilino": "tudo o que o dono pode fazer pela API, exceto gerir tokens, senha, 2FA e sessões",
 }
 
