@@ -1,12 +1,14 @@
-/* plat · conexões — entrada da tela /conexoes (itens L6-02-l-saude, L6-05-proveniencia-camada-externa e UX-05).
-   Módulos ES sem build; o cache é resolvido por no-store no nginx: NUNCA ?v= nos imports (duas URLs do mesmo
-   módulo = duas instâncias, app morre — regra da casa).
+/* plat · conexões — entrada da tela /conexoes (itens L6-02-l-saude, L6-05-proveniencia-camada-externa,
+   L6-02-conectores-vivos e UX-05). Módulos ES sem build; o cache é resolvido por no-store no nginx: NUNCA
+   ?v= nos imports (duas URLs do mesmo módulo = duas instâncias, app morre — regra da casa).
    A tela cobre TODAS as rotas de /api/conexoes (UX-13): lista com busca e ordenação por coluna, criar e editar por
    <plat-formulario> (nome, tipo, endereço, modo, config JSON e credencial — a credencial nunca volta do servidor:
-   só "tem credencial" e a opção de remover), apagar com confirmação, testar agora, histórico (últimos 10 testes) e
-   publicar camada (item de catálogo com a ficha de procedência lida do serviço). Estados explícitos por
-   <plat-estado>: carregando, vazio (com a ação de criar), erro (com tentar de novo) e negado (403). Erros da API
-   (400 endereço recusado, 409 nome repetido, 413 cota, 422 campo a campo) aparecem nomeados no controle. */
+   só "tem credencial" e a opção de remover), apagar com confirmação, testar agora, histórico (últimos 10 testes),
+   camadas (descobrir/listar nome-título-CRS-extensão e pré-visualizar via o proxy de tile da própria conexão,
+   item L6-02-conectores-vivos) e publicar camada (item de catálogo com a ficha de procedência lida do serviço).
+   Estados explícitos por <plat-estado>: carregando, vazio (com a ação de criar), erro (com tentar de novo) e
+   negado (403). Erros da API (400 endereço recusado, 409 nome repetido, 413 cota, 422 campo a campo) aparecem
+   nomeados no controle. */
 import * as api from '../base/api.js';
 import { confirmar } from '../base/componentes.js';
 import { loja } from '../base/estado.js';
@@ -17,6 +19,9 @@ import { caminhoPendencia, irParaLogin, lembrarInquilino, marcarSessao } from '.
 
 const TIPOS = ['wms', 'wmts', 'wfs', 'ogc_api', 'esri_rest', 'stac', 'geoparquet', 'pmtiles', 'postgres_fdw', 's3', 'http'];
 const MODOS = ['referenciada', 'copiada'];
+// os 3 primeiros são os únicos com operação de tile/imagem no proxy (app/conexao/proxy.py,
+// limites.CONEXAO_PROXY_TIPOS) — só eles ganham o botão "pré-visualizar" na ficha de camadas.
+const TIPOS_COM_PROXY = new Set(['wms', 'wmts', 'esri_rest']);
 const ESTADO_CLASSE = { ok: 'ok', degradado: 'atencao', fora: 'falha', nunca_testada: 'info' };
 const ORDEM_ESTADO = { fora: 0, degradado: 1, nunca_testada: 2, ok: 3 };
 const CAMPOS = ['nome', 'tipo', 'url', 'modo', 'config', 'credencial', 'remover_credencial'];
@@ -313,15 +318,101 @@ async function salvar(valores) {
 
 /* ---------- lista ---------- */
 
+// ---------------------------------------------------------------- camadas (item L6-02-conectores-vivos)
+function celulaExtensao(extensao) {
+  if (!extensao) return '—';
+  const num = (v) => (typeof v === 'number' ? v.toFixed(4) : v ?? '—');
+  return `${num(extensao.minx)}, ${num(extensao.miny)}, ${num(extensao.maxx)}, ${num(extensao.maxy)} (${extensao.crs || 'CRS não declarado'})`;
+}
+
+function preverCamada(conexao, camada) {
+  // só wms tem o bastante (LAYERS + BBOX geográfico) para montar um GetMap sem contexto de mapa; wmts/
+  // esri_rest têm proxy (ver TIPOS_COM_PROXY), mas escolher tile/zoom pede um mapa de verdade — fica para a
+  // fatia que liga isto ao MapLibre (web/js/mapa/mapa.js).
+  if (conexao.tipo !== 'wms') return;
+  const extensao = camada.extensao;
+  const bbox = extensao ? `${extensao.minx},${extensao.miny},${extensao.maxx},${extensao.maxy}` : '-74,-34,-28.8,5.3';
+  // CRS:84 (não EPSG:4326): `app.conexao.descoberta` sempre guarda a extensão geográfica em ordem
+  // lon,lat,lon,lat; no WMS 1.3.0 o BBOX de EPSG:4326 é lat,lon (eixo invertido, achado real do T3 em
+  // app/conexao/wms_wmts.py) — CRS:84 é o MESMO datum, mas o OGC define eixo lon,lat sempre, sem ambiguidade.
+  const params = new URLSearchParams({
+    SERVICE: 'WMS', VERSION: '1.3.0', REQUEST: 'GetMap', LAYERS: camada.nome, STYLES: '',
+    CRS: 'CRS:84', BBOX: bbox, WIDTH: '512', HEIGHT: '512', FORMAT: 'image/png', TRANSPARENT: 'true',
+  });
+  const src = `/api/conexoes/${encodeURIComponent(conexao.id)}/tile?${params.toString()}`;
+  const corpo = h('div', {},
+    h('p', {}, `${camada.titulo || camada.nome} — GetMap real pelo proxy da conexão (não uma amostra salva)`),
+    h('img', { src, alt: camada.nome, style: 'max-width: 100%; border: 1px solid var(--borda, #ccc);' }));
+  porId('dialogo').abrir({ titulo: 'pré-visualização da camada', corpo, botoes: [{ id: 'fechar', rotulo: 'fechar' }] });
+}
+
+function linhaCamada(camada, conexao) {
+  let acao = h('span', { class: 'ajuda' }, '—');
+  if (TIPOS_COM_PROXY.has(conexao.tipo) && conexao.tipo === 'wms') {
+    const bt = h('button', { type: 'button', class: 'pequeno' }, 'pré-visualizar');
+    bt.addEventListener('click', () => preverCamada(conexao, camada));
+    acao = bt;
+  }
+  return h('tr', {},
+    h('td', {}, camada.nome),
+    h('td', {}, camada.titulo || '—'),
+    h('td', {}, (camada.crs || []).join(', ') || '—'),
+    h('td', {}, celulaExtensao(camada.extensao)),
+    h('td', {}, acao));
+}
+
+async function verCamadas(conexao) {
+  const dialogo = porId('dialogo');
+  const avisoLocal = h('plat-aviso');
+  const tabelaWrap = h('div', { class: 'tabela-rolagem' });
+  const btDescobrir = h('button', { type: 'button', class: 'primario' }, 'descobrir agora');
+
+  function montarTabela(itens) {
+    limpar(tabelaWrap);
+    if (!itens.length) {
+      tabelaWrap.append(h('p', { class: 'ajuda' }, 'nenhuma camada descoberta ainda — clique em "descobrir agora".'));
+      return;
+    }
+    tabelaWrap.append(h('table', { class: 'tabela' },
+      h('caption', { class: 'sr-only' }, `camadas de ${conexao.nome}`),
+      h('thead', {}, h('tr', {}, h('th', {}, 'nome'), h('th', {}, 'título'), h('th', {}, 'CRS'), h('th', {}, 'extensão'),
+        h('th', {}, h('span', { class: 'sr-only' }, 'ações')))),
+      h('tbody', {}, ...itens.map((c) => linhaCamada(c, conexao)))));
+  }
+
+  btDescobrir.addEventListener('click', async () => {
+    btDescobrir.disabled = true;
+    avisoLocal.limpar();
+    const r = await api.enviar(`/api/conexoes/${encodeURIComponent(conexao.id)}/descobrir`, {});
+    btDescobrir.disabled = false;
+    if (r.status !== 200) {
+      avisoLocal.mostrar(`não foi possível descobrir as camadas de ${conexao.nome}: ${api.mensagemDe(r)}`, 'erro');
+      return;
+    }
+    montarTabela(r.json.itens || []);
+    avisoLocal.mostrar(r.json.mensagem, 'ok');
+  });
+
+  const r0 = await api.obter(`/api/conexoes/${encodeURIComponent(conexao.id)}/camadas`);
+  if (r0.status === 200) montarTabela(r0.json.itens || []);
+  else avisoLocal.mostrar(`não foi possível ler as camadas de ${conexao.nome}: ${api.mensagemDe(r0)}`, 'erro');
+
+  const corpo = h('div', {}, h('div', { class: 'linha-ferramentas' }, btDescobrir), avisoLocal, tabelaWrap);
+  await dialogo.abrir({ titulo: `camadas de ${conexao.nome}`, corpo, botoes: [{ id: 'fechar', rotulo: 'fechar' }] });
+}
+
+/* ---------- lista ---------- */
 function linha(c) {
   const tr = h('tr', { dataset: { id: c.id, estado: c.estado_saude } });
   const btTestar = h('button', { type: 'button', class: 'pequeno acao-testar' }, t('conexoes.testar_agora'));
   btTestar.addEventListener('click', () => testarAgora(c, btTestar));
   const btHistorico = h('button', { type: 'button', class: 'pequeno acao-historico' }, t('conexoes.historico'));
   btHistorico.addEventListener('click', () => verHistorico(c));
+  const btCamadas = h('button', { type: 'button', class: 'pequeno acao-camadas' }, t('conexoes.camadas'));
+  btCamadas.addEventListener('click', () => verCamadas(c));
   const btPublicar = h('button', { type: 'button', class: 'pequeno acao-publicar' }, t('conexoes.publicar_camada'));
   btPublicar.addEventListener('click', () => publicarCamada(c, btPublicar));
-  const acoes = h('div', { class: 'acoes-linha' }, btTestar, btHistorico, btPublicar);
+  const acoes = h('div', { class: 'acoes-linha' }, btTestar, btHistorico, btCamadas, btPublicar);
   if (podeEditar(c)) {
     const btEditar = h('button', { type: 'button', class: 'pequeno texto acao-editar' }, t('acao.editar'));
     btEditar.addEventListener('click', () => abrirFormulario(c));

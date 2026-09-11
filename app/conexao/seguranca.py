@@ -192,6 +192,9 @@ class ResultadoBusca:
     # cabeçalhos de resposta do ÚLTIMO salto, em minúsculas (item L6-02-h: ETag/Last-Modified/Content-Type do
     # arquivo baixado). Só leitura; nunca inclui cabeçalho de requisição nem credencial.
     cabecalhos: dict[str, str] = field(default_factory=dict)
+    content_type: str | None = None  # cabeçalho `content-type` da resposta final (item L6-02-conectores-vivos:
+    # o proxy de tile precisa repassar o tipo real — image/png, image/jpeg, application/vnd.ogc.se_xml de erro
+    # do WMS — sem inventar um padrão); `None` quando a busca nem chegou a ter resposta (URL insegura/timeout)
 
 
 # Cabeçalhos que provam quem é o cliente: seguem para o host que o USUÁRIO escolheu, nunca para um terceiro
@@ -266,6 +269,7 @@ def buscar_seguro(
                         if guardar_corpo:
                             pedacos.append(pedaco)
                     status = r.status_code
+                    content_type = r.headers.get("content-type")
                     corpo = b"".join(pedacos) if guardar_corpo else b""
             except httpx.TimeoutException:
                 return ResultadoBusca(
@@ -293,6 +297,7 @@ def buscar_seguro(
             ok=200 <= status < 400, status=status, mensagem=f"http_{status}", url_final=alvo,
             latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto, corpo=corpo,
             cabecalhos={k.lower(): v for k, v in r.headers.items()},
+            content_type=content_type,
         )
     return ResultadoBusca(
         ok=False, status=None, mensagem="redirecionamentos_demais", url_final=alvo,

@@ -1,6 +1,6 @@
 """Tarefas da fila do item L2-09-c: converter IFC e gerar a árvore 3D Tiles.
 
-`modelo3d.converter` — lê o arquivo do armazenamento de objetos (IFC ou GLB), valida, monta/valida o GLB
+`modelos3d.converter` — lê o arquivo do armazenamento de objetos (IFC ou GLB), valida, monta/valida o GLB
 e grava: o GLB de volta no armazenamento (classe `modelo3d_glb`), uma linha por elemento em
 `plat.modelo3d_elemento` e a caixa envolvente já posicionada em `plat.modelo3d.caixa`. No fim, enfileira
 a geração do tileset se o modelo pedir.
@@ -67,7 +67,8 @@ def _chave_do_arquivo(cur, classe: str, sha256: str, referencia: str | None = No
 
 
 @tarefa(
-    nome="modelo3d.converter",
+    nome="modelos3d.converter",  # (fusão 11/09) renomeado: colidia com app/modelo3d/ingestao.py, item
+    # L1-03-modelo3d diferente (converte para .xkt via GPU remota, não GLB/3D Tiles local)
     descricao="Converte o arquivo do modelo 3D (IFC ou glTF/GLB) e grava os elementos consultáveis",
     parametros=ConverterParametros,
     pesado=True,

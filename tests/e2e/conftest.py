@@ -10,7 +10,10 @@ from tests.e2e.apoio_catalogo import ROTAS_CATALOGO
 
 @pytest.fixture(scope="session")
 def browser_context_args(browser_context_args):
-    return {**browser_context_args, "locale": "pt-BR", "viewport": {"width": 1280, "height": 800}}
+    # ignore_https_errors: bancada de trilha (worktree) usa nginx TLS com certificado autoassinado
+    # (receita no handoff da trilha); sem efeito numa instalação com certificado de verdade.
+    return {**browser_context_args, "locale": "pt-BR", "viewport": {"width": 1280, "height": 800},
+            "ignore_https_errors": True}
 
 
 @pytest.fixture(scope="session")

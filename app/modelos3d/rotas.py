@@ -114,7 +114,7 @@ def criar(corpo: dict = Body(...), auth: Auth = autenticado(escopo_token="catalo
                     (modelo["id"], json.dumps({"nome": dados["nome"], "origem": dados["origem"],
                                                "lon": dados["lon"], "lat": dados["lat"]},
                                               ensure_ascii=False)))
-    job = jobs_servico.criar(sessao_de(auth), "modelo3d.converter",
+    job = jobs_servico.criar(sessao_de(auth), "modelos3d.converter",
                              {"modelo_id": modelo["id"], "gerar_tileset": gerar_tileset})
     return {**modelo, "job_id": str(job["id"])}
 

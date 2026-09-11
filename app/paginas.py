@@ -31,6 +31,8 @@ PAGINAS = {
     "/admin/categorias": "admin/categorias.html",
     # item UX-18-plataforma-sem-tela: console do superadmin (inquilinos)
     "/admin/inquilinos": "admin/inquilinos.html",
+    # --- backup lógico por inquilino e ensaio de restauração (L0-06-backup-status)
+    "/admin/backup": "admin/backup.html",
     # --- catálogo (L0-03)
     # --- catálogo (L0-03); /c/{token} é servida por app/catalogo/rotas_compartilhamento.py (leva og:)
     "/conteudo": "conteudo.html",
@@ -38,6 +40,8 @@ PAGINAS = {
     "/conteudo/{id}": "conteudo_item.html",
     # --- mapa (L2-01-a)
     "/mapa": "mapa.html",
+    # --- modelo 3D / foto 360 (L1-03-modelo3d)
+    "/modelo/{id}": "modelo.html",
     # --- casca do SIG (L2-01-a-casca-sig, 10/09/2026): mapa em tela cheia, painéis flutuantes. `/mapa`
     # continua existindo até a casca nova estar aprovada (decisão do orientador depois das capturas).
     "/sig": "sig.html",
@@ -64,6 +68,10 @@ PAGINAS = {
     # --- SMTP, convite de membro e redefinição de senha (L0-07-d-smtp-convites): públicas, sem sessão
     "/aceitar-convite": "aceitar_convite.html",
     "/redefinir-senha": "redefinir_senha.html",
+    # --- campo (L2-07-campo): fila de trabalho, roteiro do dia e visita com foto
+    "/campo/filas": "campo_filas.html",
+    "/campo/filas/{fila_id}": "campo_fila.html",
+    "/campo/roteiros/{roteiro_id}": "campo_roteiro.html",
     # --- rede simples (L4-18-rede-simples-trace-network)
     "/redes/simples": "redes_simples.html",
     # --- controladores de subrede e tiers (L4-04-a-controladores-e-tiers)
@@ -103,7 +111,6 @@ PAGINAS = {
     # --- análise 3D (L2-09-d): visada, viewshed, perfil e sombra sobre terreno de exemplo ou próprio
     "/analise3d": "analise3d.html",
     # --- console do superadmin (L0-07-f-console-plataforma): fora de qualquer inquilino, só superadmin de `plataforma`
-    "/plataforma": "plataforma.html",
     # --- painel Atividade e relatórios do admin (L0-07-e-relatorios)
     "/admin/atividade": "admin/atividade.html",
     # --- editor de tema do inquilino (L5-10-temas-marca)
@@ -117,64 +124,58 @@ PAGINAS = {
     # --- geocodificação de tabela (L2-11-a-geocodificacao-csv): revisão manual dos pendentes
     "/geocodificar/{item_id}": "geocodificar_revisao.html",
     # --- migração de Portal/AGOL (L2-08-a-leitor-portal-inventario)
-    "/migracao": "migracao.html",
     # --- sistema de referência (L2-17-crs-transformacoes): lista curada + reprojeção de coordenada/bbox
     "/crs": "crs.html",
     # --- visualizador em tempo de execução (L5-15-vista-movel-responsivo): ?item=<id>, ou ?preview=1 dentro
     # do iframe de mesma origem que o construtor monta (web/js/editor/pre_visualizacao.js)
     "/visualizar": "visualizar.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
-    "/executar": "executar.html",
     # --- acervo da casa (L6-01-c-tela-acervo): equivalente do Living Atlas, sobre plat.acervo_ficha
-    "/acervo": "acervo.html",
     # --- conexões externas (L6-02-a/L6-02-l/L6-05)
-    "/conexoes": "conexoes.html",
     # item UX-14-geocodificador-sem-tela: tela de trabalho do geocodificador (POST /api/geocodificar e /api/reverso)
     "/geocodificar": "geocodificar.html",
     # --- motor multicritério, presets (L3-01-h-presets)
     "/amc/presets": "amc_presets.html",
     # --- SMTP, convite de membro e redefinição de senha (L0-07-d-smtp-convites): públicas, sem sessão
-    "/aceitar-convite": "aceitar_convite.html",
-    "/redefinir-senha": "redefinir_senha.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
-    "/uploads": "uploads.html",
     # --- identidade visual (L0-14): página viva do sistema de design, gerada dos tokens em web/estilo/tokens.css
     "/estilo": "estilo.html",
     # item UX-16-ingestao-sem-tela: importações (arquivo enviado -> camada vetorial)
     "/importacoes": "importacoes.html",
     # --- sistema de design (UX-01-sistema-de-design): guia viva de tokens e componentes
-    "/estilo-guia": "estilo_guia.html",
     # --- construtor por arrasto (L5-08-editor-arrasto): ?item=<id de item app/painel>
-    "/construtor": "construtor.html",
     # --- ramos de versão e diff de reconciliação (L2-13-a): ?camada=<id>
     "/versoes": "versoes.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
-    "/executar": "executar.html",
     # --- provedores de login e regras de provisionamento (L0-08-e-mapeamento-provisionamento)
     "/admin/logins": "admin/logins.html",
     # --- formulário de coleta (L2-07-b-formulario-de-coleta-xlsform)
     "/coleta": "coleta.html",
     # --- ferramenta de script (L2-16-c): ?item=<id de ferramenta_script>; formulário do cabeçalho
-    "/ferramentas": "ferramenta.html",
+    # (fusão wt/uniao x wt/lancamento, 11/09: colidia com o catálogo "/ferramentas" acima — mesmo
+    # path, dois templates; o dict do Python só guarda a última chave, então o catálogo tinha ficado
+    # inalcançável. Path próprio; web/js/catalogo/tipos/ferramenta_script.js atualizado a seguir.)
+    "/ferramenta": "ferramenta.html",
     # --- motor AMC: explicação da nota de uma unidade (L3-01-f-explicacao)
     "/amc/explicacao/{execucao_id}/{unidade_id}": "amc_explicacao.html",
     # --- motor AMC: tela de montar/rodar/recombinar o modelo (L3-01-g-tela-motor)
     "/amc/motor": "amc_motor.html",
     # --- motor AMC: explicação da nota de uma unidade (L3-01-f-explicacao)
-    "/amc/explicacao/{execucao_id}/{unidade_id}": "amc_explicacao.html",
     # --- motor AMC: explicação da nota de uma unidade (L3-01-f-explicacao)
-    "/amc/explicacao/{execucao_id}/{unidade_id}": "amc_explicacao.html",
     # --- motor AMC: critérios sobre a própria feição (L3-06-criterios-de-feicao)
     "/amc/criterios-feicao": "amc_criterios_feicao.html",
     # --- motor AMC: explicação da nota de uma unidade (L3-01-f-explicacao)
-    "/amc/explicacao/{execucao_id}/{unidade_id}": "amc_explicacao.html",
     # --- galeria de modelos e importação de pacote (L5-37-pacotes-modelos-entre-inquilinos)
     "/modelos": "modelos.html",
     # --- construtor de site do inquilino (L5-20-sites-paginas-publicas): ?item=<id de item de tipo site>.
     # A página PUBLICADA não está aqui: /s/<inquilino>/... é renderizada no servidor (app/catalogo/rotas_site.py).
     "/sites": "sites.html",
     # --- construtor de camada por esquema (L5-31)
-    "/construtor-camada": "construtor_camada.html",
+    # --- construtor de formulário de atributos, arrasta-e-solta (L5-03-form-builder)
+    "/camadas/{id}/formulario": "formulario_construtor.html",
+    # --- telemetria da rede de utilidades (L4-13-integracao-telemetria): última leitura, gráfico de 7 dias
+    # e alarme no mapa — ?ativo=<uuid> obrigatório, &rede_id=<uuid> opcional (mostra o mapa)
+    "/rede/medicao/ficha": "rede_medicao_ficha.html",
 }
 router = APIRouter()
 

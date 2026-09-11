@@ -75,3 +75,44 @@ export function caminhoSeguro(valor, padrao = '/') {
   if (typeof valor !== 'string' || !valor.startsWith('/') || valor.startsWith('//') || valor.includes('\\')) return padrao;
   return valor;
 }
+
+/* Um menu por vez, também operável por teclado e sem deixar ouvintes no documento ao fechar. */
+let fecharMenuAtual = null;
+export function menuContexto(itens, x, y) {
+  fecharMenuAtual?.();
+  const foco = document.activeElement;
+  const menu = h('ul', { class: 'menu-contexto', role: 'menu' });
+  const fechar = (restaurar = false) => {
+    menu.remove();
+    document.removeEventListener('pointerdown', fora, true);
+    document.removeEventListener('click', fora, true);
+    document.removeEventListener('keydown', teclado, true);
+    fecharMenuAtual = null;
+    if (restaurar && foco?.isConnected) foco.focus();
+  };
+  const fora = (ev) => { if (!menu.contains(ev.target)) fechar(); };
+  const teclado = (ev) => {
+    if (ev.key === 'Escape') { ev.preventDefault(); ev.stopImmediatePropagation(); fechar(true); }
+    if (ev.key === 'Tab') fechar();
+    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(ev.key)) {
+      ev.preventDefault(); ev.stopPropagation();
+      const botoes = [...menu.querySelectorAll('button')];
+      const i = botoes.indexOf(document.activeElement);
+      const proximo = ev.key === 'Home' ? 0 : ev.key === 'End' ? botoes.length - 1
+        : (i + (ev.key === 'ArrowDown' ? 1 : -1) + botoes.length) % botoes.length;
+      botoes[proximo]?.focus();
+    }
+  };
+  for (const item of itens) menu.append(h('li', { role: 'none' },
+    h('button', { type: 'button', role: 'menuitem', onclick: () => { fechar(true); item.aoClicar(); } }, item.rotulo)));
+  document.body.append(menu);
+  const r = menu.getBoundingClientRect();
+  menu.style.left = `${Math.max(0, Math.min(x, window.innerWidth - r.width))}px`;
+  menu.style.top = `${Math.max(0, Math.min(y, window.innerHeight - r.height))}px`;
+  document.addEventListener('pointerdown', fora, true);
+  document.addEventListener('click', fora, true);
+  document.addEventListener('keydown', teclado, true);
+  fecharMenuAtual = fechar;
+  menu.querySelector('button')?.focus();
+  return fechar;
+}

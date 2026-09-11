@@ -25,6 +25,32 @@ import { SEM_VALOR, valorExibicao, urlSegura } from './formato.js';
 
 const LARGURA_PAINEL_ACOPLADO = 480; // <= este valor: painel inferior, não popup flutuante (viewport 390 do portão)
 
+function valorTexto(v) {
+  if (v === null || v === undefined || v === '') return SEM_VALOR;
+  if (typeof v === 'number') return v.toLocaleString('pt-BR');
+  return String(v);
+}
+
+/* [{nome, valor, nulo}] na ordem declarada no catálogo; campos fora do catálogo entram depois. Usado pela
+   tabela reduzida do rodapé (montarTabelaPopup, abaixo) — consumidor próprio de web/js/sig/sig.js, que não
+   usa a JanelaPopup completa desta tela. */
+export function atributosDaFeicao(feicao, campos) {
+  const props = feicao.properties || {};
+  const saida = [];
+  const vistos = new Set();
+  for (const c of campos || []) {
+    const nome = c.nome ?? c;
+    vistos.add(nome);
+    const tem = Object.prototype.hasOwnProperty.call(props, nome) && props[nome] !== null;
+    saida.push({ nome, valor: tem ? valorTexto(props[nome]) : SEM_VALOR, nulo: !tem });
+  }
+  for (const [k, v] of Object.entries(props)) {
+    if (vistos.has(k) || k === '_truncado') continue;
+    saida.push({ nome: k, valor: valorTexto(v), nulo: v === null || v === undefined });
+  }
+  return saida;
+}
+
 function tituloDaFeicao(ficha, props) {
   const modelo = (ficha.popup && ficha.popup.titulo) || null;
   if (modelo) {
@@ -258,6 +284,43 @@ export class JanelaPopup {
     this.indice = 0;
     if (!this.itens.length) return;
     this.render(ev.lngLat);
+  }
+}
+
+/* tabela reduzida de atributos ("campos de destaque", até `maxCampos`) com botão "ver todos" —
+   consumidor próprio de web/js/sig/sig.js (rodapé/gaveta do mapa SIG), que não usa a JanelaPopup
+   completa desta tela (sem paginação nem campo/expressão resolvidos no servidor). */
+export function camposDestaque(campos, limite = 6) {
+  const lista = campos || [];
+  const destacados = lista.filter((c) => c.destaque === true);
+  return destacados.length ? destacados : lista.slice(0, limite);
+}
+
+/* atributosDaFeicao preserva extras para os outros consumidores. Aqui a lista reduzida é explícita,
+   senão os extras recolocariam todos os campos que acabamos de esconder. */
+export function montarTabelaPopup(feicao, campos, maxCampos = 6) {
+  const lista = campos?.length ? campos : Object.keys(feicao.properties || {})
+    .filter((nome) => nome !== '_truncado').map((nome) => ({ nome }));
+  const nomes = new Set(camposDestaque(lista, maxCampos).map((c) => c.nome ?? c));
+  const completos = atributosDaFeicao(feicao, campos);
+  const reduzidos = atributosDaFeicao(feicao, camposDestaque(lista, maxCampos)).filter((at) => nomes.has(at.nome));
+  const caixa = h('div');
+  const corpo = h('tbody');
+  const desenhar = (atributos) => {
+    limpar(corpo);
+    for (const at of atributos) corpo.append(h('tr', { dataset: { campo: at.nome, nulo: at.nulo ? '1' : '0' } },
+      h('th', { scope: 'row' }, at.nome), h('td', { class: at.nulo ? 'nulo' : '' }, at.valor)));
+  };
+  desenhar(reduzidos);
+  caixa.append(h('table', { class: 'popup-tabela' }, corpo));
+  if (completos.length > reduzidos.length) {
+    const botao = h('button', { type: 'button', class: 'popup-ver-todos', onclick: () => {
+      desenhar(completos); botao.remove();
+    } }, t('mapa.popup_ver_todos'));
+    caixa.append(botao);
+  }
+  return caixa;
+}
   }
 }
 

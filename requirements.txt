@@ -127,8 +127,7 @@ numexpr==2.14.2
 color-operations==0.4.0
 httpx2==2.12.0
 httpcore2==2.12.0
-truststore==0.10.4# Dependências fixadas da aplicação e da suíte (ADR 0001 seção 2.1, alterado em T1).
-idna==3.13
+truststore==0.10.4
 # GeoParquet da exportação de camada (item L0-04-h-exportar): o GDAL 3.8.4 desta instalação foi compilado SEM
 # o driver Parquet (conferido com `ogrinfo --formats`), então o Parquet sai pelo DuckDB, que também traz a
 # extensão `spatial` (lida do cache local ~/.duckdb/extensions; sem rede, ver o handoff do item). 21,5 MB.
@@ -138,7 +137,6 @@ duckdb==1.5.5
 # do pip-audit acima. gitleaks/trivy/zap são binários fixados em deploy/ferramentas_binarias.txt, não pacotes Python.
 bandit==1.9.4
 stevedore==5.9.1
-truststore==0.10.4
 # Do sistema, por decisão (pacotes dpkg conferidos pelo install.sh): python3-uvicorn 0.27.1, python3-psycopg2 2.9.9.
 # OpenID Connect (app/auth/oidc.py; item L0-08-a): Authlib decidida contra httpx+jwt próprio (docs/adr/
 # 20260907T0147-oidc-authlib.md) — usa o módulo joserfc (sucessor não-deprecado de authlib.jose) para

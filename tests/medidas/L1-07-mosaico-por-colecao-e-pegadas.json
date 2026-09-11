@@ -1,0 +1,99 @@
+{
+ "item": "L1-07-mosaico-por-colecao-e-pegadas",
+ "medidas": {
+  "tile_z8": {
+   "valor": 90.98,
+   "unidade": "ms",
+   "comando": "scratchpad/medir_l107.py — grade sintética 3x2 (6 cenas, 4 km/quadrante, 20 m/px), mosaico registrado, ladrilho z8, frio=13944.91 ms quente_min=85.32 ms bytes=371 cenas_candidatas=6"
+  },
+  "tile_z9": {
+   "valor": 89.4,
+   "unidade": "ms",
+   "comando": "scratchpad/medir_l107.py — grade sintética 3x2 (6 cenas, 4 km/quadrante, 20 m/px), mosaico registrado, ladrilho z9, frio=87.59 ms quente_min=87.33 ms bytes=386 cenas_candidatas=6"
+  },
+  "tile_z10": {
+   "valor": 89.06,
+   "unidade": "ms",
+   "comando": "scratchpad/medir_l107.py — grade sintética 3x2 (6 cenas, 4 km/quadrante, 20 m/px), mosaico registrado, ladrilho z10, frio=86.95 ms quente_min=85.6 ms bytes=420 cenas_candidatas=6"
+  },
+  "tile_z11": {
+   "valor": 88.81,
+   "unidade": "ms",
+   "comando": "scratchpad/medir_l107.py — grade sintética 3x2 (6 cenas, 4 km/quadrante, 20 m/px), mosaico registrado, ladrilho z11, frio=92.48 ms quente_min=85.88 ms bytes=479 cenas_candidatas=6"
+  },
+  "tile_z12": {
+   "valor": 89.83,
+   "unidade": "ms",
+   "comando": "scratchpad/medir_l107.py — grade sintética 3x2 (6 cenas, 4 km/quadrante, 20 m/px), mosaico registrado, ladrilho z12, frio=164.47 ms quente_min=86.5 ms bytes=570 cenas_candidatas=6"
+  },
+  "tile_z13": {
+   "valor": 126.54,
+   "unidade": "ms",
+   "comando": "scratchpad/medir_l107.py — grade sintética 3x2 (6 cenas, 4 km/quadrante, 20 m/px), mosaico registrado, ladrilho z13, frio=128.86 ms quente_min=121.4 ms bytes=768 cenas_candidatas=6"
+  },
+  "tile_z14": {
+   "valor": 127.51,
+   "unidade": "ms",
+   "comando": "scratchpad/medir_l107.py — grade sintética 3x2 (6 cenas, 4 km/quadrante, 20 m/px), mosaico registrado, ladrilho z14, frio=165.75 ms quente_min=124.87 ms bytes=860 cenas_candidatas=6"
+  }
+ },
+ "git_sha": "68e94508913b",
+ "bruto": {
+  "z8": {
+   "frio_ms": 13944.91,
+   "quente_ms_mediana": 90.98,
+   "quente_ms_min": 85.32,
+   "bytes": 371,
+   "x_plat_cenas_candidatas": "6",
+   "server_timing": "ladrilho;dur=81.9"
+  },
+  "z9": {
+   "frio_ms": 87.59,
+   "quente_ms_mediana": 89.4,
+   "quente_ms_min": 87.33,
+   "bytes": 386,
+   "x_plat_cenas_candidatas": "6",
+   "server_timing": "ladrilho;dur=64.9"
+  },
+  "z10": {
+   "frio_ms": 86.95,
+   "quente_ms_mediana": 89.06,
+   "quente_ms_min": 85.6,
+   "bytes": 420,
+   "x_plat_cenas_candidatas": "6",
+   "server_timing": "ladrilho;dur=64.0"
+  },
+  "z11": {
+   "frio_ms": 92.48,
+   "quente_ms_mediana": 88.81,
+   "quente_ms_min": 85.88,
+   "bytes": 479,
+   "x_plat_cenas_candidatas": "6",
+   "server_timing": "ladrilho;dur=63.2"
+  },
+  "z12": {
+   "frio_ms": 164.47,
+   "quente_ms_mediana": 89.83,
+   "quente_ms_min": 86.5,
+   "bytes": 570,
+   "x_plat_cenas_candidatas": "6",
+   "server_timing": "ladrilho;dur=66.8"
+  },
+  "z13": {
+   "frio_ms": 128.86,
+   "quente_ms_mediana": 126.54,
+   "quente_ms_min": 121.4,
+   "bytes": 768,
+   "x_plat_cenas_candidatas": "6",
+   "server_timing": "ladrilho;dur=105.8"
+  },
+  "z14": {
+   "frio_ms": 165.75,
+   "quente_ms_mediana": 127.51,
+   "quente_ms_min": 124.87,
+   "bytes": 860,
+   "x_plat_cenas_candidatas": "6",
+   "server_timing": "ladrilho;dur=105.5"
+  }
+ }
+}

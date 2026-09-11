@@ -1162,3 +1162,398 @@ reais (`scripts/bench_limite_taxa.sh`) — não inventa mecanismo novo.
 (rotas `/tiles/...`/`/svc/<token>/raster/...`) não está mesclado nesta base; a zona `plat_api` já
 protege `/tiles/` na borda mesmo sem a rota, e o escopo `tiles` da camada 2 já existe e está testado
 diretamente contra a função SQL — falta só a fiação na rota real quando aquele ramo mesclar.
+
+## 19. Mosaico por busca registrada e pegadas (item L1-07-mosaico-por-colecao-e-pegadas, ADR 20260910T2330)
+
+Um mosaico é uma busca STAC REGISTRADA: `app/imagens/mosaico.py::registrar` chama
+`pgstac.search_query()` (a função SQL que o `POST /searches/register` do titiler-pgstac usa por
+baixo) para obter o hash determinístico da busca (coleções, bbox, datetime, filtro CQL2, ordenação),
+e guarda a autorização numa tabela-espelho `plat.mosaico` (padrão de `raster_item.py`: pgstac guarda
+conteúdo, uma tabela própria com RLS decide quem vê o quê). O id exposto ao cliente é um `uuid`
+PRÓPRIO (não o hash md5), porque o vocabulário de escopo de token só aceita `tiles:ler:<uuid>` — todo
+mosaico registrado também vira uma linha em `plat.item` (tipo `mosaico`) com o mesmo id, o que faz um
+token poder ganhar escopo fino `tiles:ler:<uuid-do-mosaico>` sem nunca ganhar acesso às cenas que o
+compõem (mesmo mecanismo genérico de `app/auth/escopos.py`, nada mudou lá). Idempotência (mesma busca
+→ mesmo id) vem de `UNIQUE(tenant_id, hash)` com upsert; registrar de novo uma busca cujo mosaico foi
+removido REATIVA a linha (`estado='ativo'`), não cria uma segunda.
+
+Composição do pixel roda em CASA, não delegada ao TiTiler-pgstac (que é uma pilha ASGI assíncrona com
+pool próprio, sem o padrão de RLS síncrono por `SET LOCAL plat.tenant_id` que o resto da aplicação usa
+— ver ADR §1 para a decisão completa): `app/imagens/tiles.py::ladrilho_composto` reaproveita
+`rio_tiler.mosaic.mosaic_reader` com `FirstMethod` (a mesma função que o `titiler.mosaic`/
+`titiler-pgstac` chamam por baixo) para compor VÁRIAS fontes PIXEL A PIXEL — não cena a cena: onde a
+primeira cena candidata não cobre, o pixel vem da próxima, o que faz a JUNTA entre duas cenas mostrar
+as duas, em vez de uma cena inteira com o resto em branco (o defeito do esqueleto ad-hoc de "mosaico
+da coleção" que existia antes deste item e que `app/imagens/rotas_tiles.py::_servir_composto`
+substitui, preservando a mesma URL para as duas formas — coleção inteira ad-hoc OU busca registrada,
+distinguidas pelo formato do segmento do caminho, `mo.eh_uuid`).
+
+Contrato de URL (reaproveita o prefixo já existente, ADR §4):
+```
+/svc/<token>/mosaico/<uuid-ou-colecao>/{z}/{x}/{y}[.ext]   ladrilho composto (item L1-07 se uuid)
+/svc/<token>/mosaico/<uuid>/tilejson.json                  TileJSON 3.0.0
+/svc/<token>/mosaico/<uuid>/wmts[/1.0.0/WMTSCapabilities.xml]  WMTS 1.0.0
+/svc/<token>/mosaico/<uuid>/pegadas                        GeoJSON das cenas que compõem a busca
+/svc/<token>/stac/mosaicos                                 POST registra, GET lista
+/svc/<token>/stac/mosaicos/<uuid>                          GET detalhe, DELETE remove (soft)
+```
+As rotas de ladrilho (genéricas, `{z}/{x}/{y}`) são registradas DEPOIS das rotas literais
+(`tilejson.json`/`wmts`/`pegadas`) no arquivo — as duas formas de caminho têm a MESMA quantidade de
+segmentos (`WMTSCapabilities.xml` bate no padrão `{y}.{ext}`), e o FastAPI casa pela forma do caminho
+na ordem de registro antes de validar tipo; a ordem errada dá 422 em vez de resolver a rota certa
+(defeito real desta bancada, corrigido — mesma ordem que o item L1-02 já usava para o item avulso).
+
+Fora deste item (nomeado, não escondido): regras de seleção de pixel além de "primeira com dado"
+(`median`/`mean`/`lock raster`/"mais recente sem nuvem" — item irmão L1-08); pegadas como camada
+vetorial por Martin (só GeoJSON pela API neste turno); tela "Coleção → Mosaico" no construtor de mapa
+(L2); `mosaicRule` do ImageServer compatível Esri (L1-25) continua recusando — agora por falta de
+ligação entre as duas rotas, não mais por falta do L1-07 em si.
+
+Arquivos: `app/imagens/mosaico.py` (registro/listagem/pegadas), `app/imagens/tiles.py`
+(`ladrilho_composto`), `app/imagens/rotas_tiles.py` (`_servir_composto`, rotas de tile/tilejson/wmts/
+pegadas do mosaico), `app/imagens/rotas_stac.py` (CRUD de `/stac/mosaicos`), migrações
+`20260910T2330_mosaico.sql` e `20260910T2340_mosaico_tipo_item.sql`, testes
+`tests/api/imagens/test_mosaico.py` e `tests/api/imagens/apoio_mosaico.py` (semeadura de grade
+adjacente sintética).
+
+## 20. Proveniência verificável da imagem — Lastro (item L1-01-j-proveniencia-da-imagem-lastro)
+
+`app/imagens/proveniencia.py` concentra as três peças do Lastro aplicado à imagem: (1) montagem —
+`montar_cadeia_ingestao`/`preencher_propriedades_proveniencia`/`selar_manifesto`, chamadas por
+`ingestao._item_stac` no MESMO job que já converte (nenhum round-trip extra: o argv de cada
+`gdal_translate` já é conhecido ali, `cog.ProdutoCOG` ganhou o campo `comando` só para isto); (2)
+conferência — `conferir_item`, que resta CADA asset do balde em stream (`objetos.sha256_remoto`, novo,
+mesmo padrão de `parte_concluir`) e compara com `file:checksum`, ativo a ativo; (3) canonicalização —
+`canonicalizar`/`manifesto_sha256` (`json.dumps(sort_keys=True, separators=(",",":"),
+ensure_ascii=False)`, documentado na íntegra no docstring do módulo porque o hash só é reproduzível se
+gerar e conferir usarem a MESMA serialização).
+
+Achado que decidiu a forma do campo: `pgstac.create_item`/`update_item` DESCARTA chave de `properties`
+com valor `null` na gravação (STAC convencionalmente omite campo ausente em vez de `null`). Uma ficha
+selada com `"plat:cadeia": null` local e gravada como tal teria o manifesto calculado sobre um dict que
+o banco NUNCA devolve de volta igual — `conferir_item` acusaria divergência de manifesto em todo item
+sem cadeia, sempre, sem byte nenhum alterado. `preencher_propriedades_proveniencia(cadeia=None, ...)`
+por isso OMITE a chave (`novas.pop("plat:cadeia", None)`) em vez de gravar `null`; o lado de leitura
+(`properties.get("plat:cadeia")`) devolve `None` de qualquer jeito, então nenhum consumidor externo
+percebe a diferença — só a geração/conferência do manifesto precisava saber.
+
+Dois caminhos de preenchimento retroativo, ambos usando `preencher_leve`/o próprio `conferir_item` por
+baixo:
+- **leve** (`app/imagens/reexecucao.py::imagens_preencher_proveniencia`, job, e
+  `POST /api/imagens/proveniencia/preencher-pendentes`, rota síncrona de administração): só metadado —
+  `processing:software` vem do `plat:versoes` que a ingestão original JÁ media (não uma medição nova),
+  `plat:cadeia` fica ausente. `prov.itens_pendentes` busca só na coleção `<tenant_id>-imagens`
+  (`content -> 'properties' ? 'plat:cadeia_origem'` no jsonb do pgstac) — NUNCA "toda coleção do
+  inquilino": `pgstac.items` é particionado POR coleção, e esta trilha compartilhada tinha 236 coleções
+  (a maioria efêmera, de outras suítes de teste) e 16.713 itens pendentes fora de escopo; escopar para
+  só `imagens` levou a mesma varredura de 165 s para 2,8 s (MEDIDO, ver CHANGELOG).
+- **pesado** (`app/imagens/reexecucao.py::imagens_reexecutar`, job só de fila, nunca rota HTTP — GDAL
+  não roda dentro de uma requisição nesta casa): baixa o bruto já armazenado, reconverte com o `cog.py`
+  ATUAL, compara sha256 obtido × registrado. Bate → `plat:cadeia` fica com o argv MEDIDO de verdade
+  (`cadeia_origem=reexecucao_retroativa`); os assets/checksums originais NUNCA são sobrescritos, batam
+  ou não — a comparação mora só em `plat:reexecucao`, ao lado.
+
+`app/imagens/pgstac.py` ganhou `item_atualizar` (fino sobre `pgstac.update_item`, mesmas duas checagens
+de posse de `item_criar`: coleção do inquilino, item já existe).
+
+Rotas: `POST /api/imagens/<item>/conferir` (sessão/token `imagens:ler`, síncrona — conferir é leitura
+em stream, nunca GDAL) e `POST /api/imagens/proveniencia/preencher-pendentes` (`conteudo.publicar_camada`).
+`GET /api/imagens/<item>` ganhou o bloco `proveniencia` na resposta; `web/js/catalogo/tipos/raster.js`
+mostra a cadeia em texto simples na aba Visão geral com um botão "conferir".
+
+Adversário independente rodou ao fim do turno e achou um segundo buraco de design (não alcançável por
+cliente da API, mas real): num item com `cadeia_origem=reexecucao_retroativa`, `processing:software`
+continuava sendo o `plat:versoes` da ingestão ORIGINAL mesmo que a reexecução tivesse rodado com outro
+GDAL/rio-cogeo — nada cruzava os dois blocos, e `selar_manifesto` sela essa combinação sem reclamar (o
+manifesto prova integridade pós-selagem, nunca veracidade do conteúdo selado). Corrigido:
+`imagens_reexecutar` agora grava `plat:reexecucao.versoes_mudaram_desde_a_ingestao` (booleano,
+`plat:versoes` × `cog.versoes_software()` medido na hora) — a divergência vira campo explícito. A
+refutação PRESCRITA pelo item (1 byte trocado no balde, chave RW) foi tentada e FALHOU: `/conferir`
+acusou só o ativo certo, manifesto e outros ativos intactos.
+
+Fora deste item (nomeado): `plat raster reexecutar/verificar <item>` como comando de linha só (hoje:
+job de fila + rota HTTP cobrem o mesmo caso de uso); reexecução em lote (só um item por chamada); teste
+automatizado de `versoes_mudaram_desde_a_ingestao` (hoje só verificado na instância viva).
+
+Arquivos: `app/imagens/proveniencia.py` (novo), `app/imagens/reexecucao.py` (novo, 2 jobs), `app/imagens/
+cog.py` (`ProdutoCOG.comando`), `app/imagens/ingestao.py` (`_item_stac` monta e sela a proveniência),
+`app/imagens/pgstac.py` (`item_atualizar`), `app/objetos.py` (`sha256_remoto`), `app/imagens/
+rotas_imagens.py` (2 rotas + bloco `proveniencia` em `GET /api/imagens/<item>`), `app/jobs/tipos.py`
+(registro dos 2 jobs novos), migração `20260910T2345_imagens_proveniencia_evento_tipo.sql`, testes
+`tests/api/imagens/test_proveniencia.py` (20 casos).
+
+---
+
+## 21. Comparar: cortina, lado a lado, lupa e tempo (item L2-01-j-comparacao-cortina-tempo)
+
+Módulo novo `web/js/sig/comparar.js`, sem NENHUMA rota de backend nova. Duas peças independentes:
+
+**Motor de comparação espacial** (`MotorComparacao`): reaproveita `Catalogo` (`web/js/mapa/catalogo.js`)
+em DUAS instâncias — uma por mapa secundário (`#comparar-mapa-a`/`#comparar-mapa-b`, dois `maplibregl.
+Map` novos com o mesmo estilo de base de `construirEstilo({tipo:'raster'})`) — em vez de reescrever
+lógica de fonte/TileJSON/ordem de camada. Os quatro modos (cortina vertical, cortina horizontal, lado a
+lado, lupa) são só geometria CSS por cima do MESMO par de mapas sincronizados:
+- cortina: os dois mapas cheios e sobrepostos, `#comparar-mapa-b` recortado por `clip-path: inset(...)`
+  cuja posição a alça arrastável escreve numa custom property (`--comparar-clip`);
+- lado a lado: os dois em metades reais (`right:50%`/`left:50%`), sem `clip-path`;
+- lupa: só o mapa B existe como container pequeno (260 px, `border-radius:50%`), o mapa PRINCIPAL
+  (`window.plat.sig.map`) continua a tela normal — o "mapa A" da lupa é o mapa principal de verdade, não
+  uma terceira instância.
+
+Sincronismo: `_sincronizar(origemRef, destinoRef)` registra `'move'` nos dois lados e copia
+centro/zoom/bearing/pitch com `jumpTo` (sem animação — `easeTo` perderia passo em movimento contínuo),
+com uma trava booleana (`ocupado`) para o laço de retroalimentação: `jumpTo` dispara `'move'` de novo,
+de forma SÍNCRONA, e sem a trava os dois mapas alternam `'move'` para sempre. Medido: diferença de
+centro entre os dois mapas depois de 20 movimentos aleatórios (centro/zoom/rotação, só no mapa A) =
+**0,0 grau nos 20** (`window.plat.sig.comparar.motor.diferencaMaximaCentro`/`.movimentosSincronizados`,
+expostos para o e2e ler direto, sem parsear DOM).
+
+Achado corrigido em 10/09 (achado do e2e, não do adversário — a suíte não tinha rodado ainda quando
+escrito): `_aplicarVisual()` (que põe a classe `modo-<x>` no container — dela depende
+`.comparar-area.modo-lupa { pointer-events: none }` em `sig.css`, que é o que deixa o `pointermove`
+alcançar o mapa principal por baixo do container cheio de `#comparar-area`) só era chamada no ramo
+cortina/lado-a-lado de `ligar()`; no ramo lupa a classe nunca mudava e a lupa ficava presa no canto
+0,0 — corrigido chamando `_aplicarVisual()` uma vez, incondicional, antes do `if (modo === 'lupa')`.
+
+**Controle de tempo** (`MotorTempo`): NENHUMA mudança na função de tile do Martin
+(`plat.camada_tile_garantir`) nem no schema — a hipótese original do item cogitava filtro por parâmetro
+na função de tile; descartado a favor de reusar a operação `query` do FeatureServer Esri-compatível já
+existente (`app/consulta/motor.py`/`where_ast.py`, item L2-04-c), que já faz filtragem 100% no servidor
+com `where` parametrizado e `returnCountOnly`. Cada passo monta `<campo> >= TIMESTAMP '...' AND <campo> <
+TIMESTAMP '...'` (dialeto Esri de `where_ast`, literal `TIMESTAMP` vira `datetime` Python NAIVE — por
+isso o cliente sempre manda o instante em UTC, `Date.toISOString().slice(0,19).replace('T',' ')`; a
+sessão do Postgres desta instância é `Etc/UTC`, conferido `SHOW TIME ZONE`, então naive=UTC é seguro) e
+faz DUAS chamadas em paralelo: `returnCountOnly=true` (contagem exibida) e `f=geojson&returnGeometry=
+true&outFields=*&resultRecordCount=5000` (o que desenha, camada `circle` numa fonte GeoJSON só). Nulo
+nunca aparece em janela nenhuma (comparação com NULL é sempre falsa no SQL); fuso de origem do dado não
+importa (o campo é `timestamptz`, a comparação é sobre o instante armazenado). Medido contra `COUNT(*)`
+direto no banco (não contra a mesma rota — provaria só que a rota concorda consigo mesma): 5 passos
+instantânea + 3 acumulativa, **8/8 batendo exatamente** (ver MANUAL.md §27.2). "Reproduzir" é um laço que
+AWAITS cada `_aoPasso` inteiro antes de agendar o próximo (nunca `setInterval` cego) — medido: último
+passo 104-322 ms, sempre abaixo do intervalo de 500 ms (2 passos/s) usado como cadência.
+
+Bancada: nenhuma das 3 camadas reais do inquilino demo tem campo de data TIPADO (`dt_entrada` de
+"Subestações SP" é `text`). `scripts/comparar_demo_tempo.py criar/apagar` semeia/remove uma camada de
+TESTE (100.000 pontos, `data_evento timestamptz`, ~3% NULL, 1/4 das linhas gravadas via `AT TIME ZONE` de
+4 fusos diferentes de UTC) só para provar o controle — apagada ao final deste item (marca
+`comparar-demo-l2-01-j` no `dados` do item, mesmo padrão de `scripts/martin_demo_camadas.py`).
+
+Fora deste item (nomeado): controle de tempo para série raster/STAC (item irmão L1-04-serie-temporal,
+`pendente` — a hipótese original prevê o MESMO controle de tela quando ele existir); alça arrastável no
+divisor do "lado a lado" (hoje fixo 50/50); indicador de carregamento na lupa enquanto o mapa B monta
+(existe uma janela de 1-3 s em que o círculo não segue o cursor, entre `ligar()` tirar `hidden` do
+container e `_ativarSeguirCursor()` terminar de montar o mapa B + catálogo — o e2e aprendeu a esperar
+`pararSync`/`_onMoveLupa` em vez do `hidden`, o produto ainda não tem um retorno visual disso).
+
+Arquivos: `web/js/sig/comparar.js` (novo), `web/sig.html` (ícone + painel "Comparar" + containers dos
+mapas secundários), `web/sig.css` (`.comparar-*`), `web/js/sig/sig.js` (import + chamada de
+`instalarComparar`, atalho `c`), `web/js/i18n/pt-BR.json` (chaves `comparar.*`), `scripts/
+comparar_demo_tempo.py` (novo, bancada), `tests/e2e/test_comparar.py` (novo, 5 casos).
+
+## 22. OGC API — Tiles e OGC API — Maps por token (item L1-02-i-ogc-api-tiles-e-maps, ADR 20260910T2056)
+
+Segunda fachada sobre o MESMO motor de pixel do item 18 (`app/imagens/tiles.py`) — sem tabela nova, sem
+migração: `app/imagens/ogc_tiles.py` só monta JSON (landing, conformance, `tileMatrixSets`, coleção,
+tileset), `app/imagens/rotas_ogc_tiles.py` autoriza pela mesma porta (`rotas_tiles._autorizar`, token
+no caminho) e delega toda leitura de pixel:
+
+```
+ladrilho de item     -> rotas_tiles._servir            (a MESMA função do XYZ)
+ladrilho de mosaico  -> rotas_tiles._tile_mosaico_impl  (a MESMA função de /svc/<token>/mosaico/<alvo>/...)
+/map (bbox livre)    -> tiles.recorte()                 (a MESMA função do GetMap do WMS)
+```
+
+`{item}` no caminho de `/collections/{item}/...` resolve para item raster OU mosaico
+(`rotas_ogc_tiles._resolver_colecao`): tenta `plat.raster_item` primeiro (consulta leve, mesmo
+tenant_id do token); se não achar, tenta mosaico REGISTRADO (`mo.eh_uuid` + `mo.obter`) e por último
+coleção completa ad-hoc (`ps.colecao_pertence`, o modo pré-L1-07). As três formas nunca colidem porque
+um nome de coleção nunca é um uuid sintaticamente válido, e o item raster é sempre tentado ANTES do
+mosaico (evita a ambiguidade de um uuid de item raster também "parecer" um uuid de mosaico).
+
+Contrato de URL:
+```
+/svc/<token>/ogc/tiles                                                          landing
+/svc/<token>/ogc/tiles/conformance
+/svc/<token>/ogc/tiles/tileMatrixSets[/WebMercatorQuad]                         grade (definição REAL: TMS.model_dump())
+/svc/<token>/ogc/tiles/collections[/<item>]                                     coleções (só itens raster são ENUMERADOS)
+/svc/<token>/ogc/tiles/collections/<item>/map                                   OGC API Maps (só item raster)
+/svc/<token>/ogc/tiles/collections/<item>/map/tiles/WebMercatorQuad             tileset metadata (item + mosaico registrado)
+/svc/<token>/ogc/tiles/collections/<item>/map/tiles/WebMercatorQuad/{z}/{y}/{x}[.ext]  ladrilho (item + mosaico)
+```
+
+Duas armadilhas que valem registrar: (1) a ORDEM do caminho do ladrilho é `{tileMatrix}/{tileRow}/
+{tileCol}` = z/y/x — o INVERSO do XYZ (z/x/y) — literalmente porque a Tabela 4 da OGC 20-057 define
+assim; (2) `tileMatrixSetLimits` (por zoom, no tileset metadata) é calculado em O(1) por zoom com
+`TMS.tile()` nos DOIS CANTOS do bbox, nunca por enumeração dos ladrilhos que intersectam — um item
+cobrindo poucos graus em zoom alto teria milhões de ladrilhos, e só os dois cantos bastam para o
+retângulo de linhas/colunas.
+
+Dois achados corrigidos no próprio turno, ambos por auto-revisão antes do adversário externo: (a)
+`width`/`height` do `/map` tinham `le=` no `Query` iguais ao teto (`WMS_LARGURA_MAX`/`WMS_ALTURA_MAX`)
+— como o produto dos dois tetos é EXATAMENTE `WMS_PIXELS_MAX`, a checagem `width*height >
+WMS_PIXELS_MAX` nunca disparava (código morto) e um pedido no canto do teto (4096×4096) caía direto no
+render: medido em 142 s numa chamada. Corrigido para as MESMAS três condições OR'd de
+`rotas_wms._get_map` (`width > MAX or height > MAX or width*height > PIXELS_MAX`), sem `le=` no Query
+— a recusa acontece ANTES do render; (b) `/map` de item de outro inquilino caía direto em
+`_eh_item_raster` (que só confirma "não é raster item DESTE tenant", não distingue "não existe" de "é
+mosaico") e devolvia `422 mapa_nao_suportado` em vez de `403` — corrigido para chamar
+`_resolver_colecao` primeiro (que já dá o 403 honesto) e só recusar por tipo depois de confirmar que o
+item pertence ao inquilino.
+
+Mais dois achados, estes do ADVERSÁRIO INDEPENDENTE (contexto próprio, não viu o código nem o
+raciocínio acima — só o item, o portão e a instância viva): (c) `bbox=nan,nan,nan,nan` e
+`bbox=-inf,-inf,inf,inf` não levantam `ValueError` em `float()` — passavam da checagem de "invertido"
+(NaN nunca compara `>=`; `-inf < inf` é sempre verdadeiro) e só quebravam DENTRO de `tiles.recorte`,
+saindo como 502 `leitura_falhou` (categoria errada: é entrada do cliente, não falha de leitura).
+Corrigido com `math.isfinite` explícito antes de qualquer outra checagem, 400 `bbox_invalido`;
+(d) `crs=EPSG:4326; DROP TABLE x` passava o `startswith("EPSG:")` inteiro — com o texto depois do
+número incluso — e só quebrava dentro de `CRS.from_user_input`, ecoando a exceção crua no corpo do
+502. Corrigido: o texto depois de `EPSG:` tem de ser só dígitos, senão 400 `crs_invalido` antes de
+chegar perto de qualquer parser.
+
+O adversário também mediu (não corrigido, registrado em `docs/PARIDADE.md`): o TETO PERMITIDO do
+`/map` (4096×4096) renderiza em ~27 s nesta bancada — idêntico ao `GetMap` do WMS no mesmo tamanho
+(~34 s), porque os dois chamam o MESMO `tiles.recorte`; não é regressão desta fachada, é o custo do
+motor de base, que este item nem piora nem resolve (resolver pediria um teto de pixels PRÓPRIO menor
+que o do WMS, o que quebraria a paridade byte-a-byte que é o próprio portão do item). E que zoom
+abaixo do `minzoom` nativo do item é catastroficamente lento (até 18 s) tanto no XYZ quanto no
+equivalente OGC — pré-existente no motor `tiles.ladrilho` do item 18, reproduzido idêntico nos dois
+caminhos, fora do escopo de uma fachada.
+
+Fora deste item (nomeado, não escondido — `docs/PARIDADE.md`): OGC API Maps sobre mosaico (compor um
+retângulo arbitrário de várias cenas exigiria motor de composição por bbox livre — o que existe,
+`ladrilho_composto`, só compõe por CÉLULA da grade); tileset metadata do mosaico AD-HOC sem registro
+prévio (mesma lacuna que `mosaico_tilejson`/`mosaico_wmts_rest` já tinham — por consistência, não por
+esquecimento); `collections-selection`, `dataset-tilesets`, formatos vetorial/cobertura/netCDF, `/api`
+(OpenAPI próprio desta família), HTML, dimensão `datetime` por coleção.
+
+Arquivos: `app/imagens/ogc_tiles.py` (novo), `app/imagens/rotas_ogc_tiles.py` (novo, registrado em
+`app/main.py`), `tests/api/imagens/test_ogc_tiles.py` (29 casos) e `tests/api/imagens/
+test_ogc_tiles_schema.py` (5 casos, JSON Schema oficial — `tests/dados/ogc_schemas/`), `docs/adr/
+20260910T2056-ogc-api-tiles-e-maps.md`.
+
+## 23. Telemetria da rede de utilidades (item L4-13-integracao-telemetria)
+
+Módulo novo `app/rede_medicao/` (modelos/servico/rotas/tarefas), sem depender de nenhuma tabela de
+`app/rede_utilidades/` por FK — `ativo` é um uuid opaco, a mesma decisão de desenho do módulo campo
+(`plat.campo_alvo`): a medição referencia a feição por id, nunca a exige viva. Isso deixa o módulo
+reutilizável para qualquer ativo (trafo, poste, caixa), não só rede elétrica.
+
+`plat.rede_medicao` particionada nativamente por mês (`PARTITION BY RANGE (ts)`), decisão espelhando
+`plat.evento` (migração 003 + trinco de `20260907T0240_ddl_concorrente_trinco.sql`): função
+`rede_medicao_particao_garantir(mes)` SECURITY DEFINER com `pg_advisory_xact_lock` antes do DDL (a
+corrida acontece na primeira escrita de cada mês); cada partição nova leva `REVOKE ALL FROM plat_app`
++ RLS/policy próprias — acesso direto à tabela-partição pelo nome fica bloqueado, o caminho normal
+(SELECT/INSERT nomeando o pai) usa só a policy do pai (documentado: privilégio e RLS de uma consulta
+por tabela particionada são checados contra a relação NOMEADA na consulta, não contra a partição onde
+a linha acaba caindo — por isso `p_rede_medicao_inserir` só existe no pai e ainda assim vale para toda
+gravação roteada por ele). Diferença para `evento`: aqui INSERT fica liberado para `plat_app` direto
+(sem função SECURITY DEFINER de escrita) porque a ingestão já é por sessão com RLS de tenant, sem
+necessidade de um caminho de escrita mais privilegiado.
+
+Catálogo de grandeza (`plat.rede_medicao_grandeza`, como `evento_tipo`: só o backend semeia,
+`REVOKE INSERT/UPDATE/DELETE FROM plat_app`) fecha o vocabulário e a unidade esperada de cada
+grandeza — a "recusa honesta" do portão é FK + conferência de unidade em Python
+(`servico.publicar_leituras`), nunca uma lista solta duplicada em dois lugares. `carregamento_pct` é
+`tipo='derivado'`: a mesma tabela de leituras serve tanto o que o sensor manda quanto o que o motor de
+alarme calcula, então a ficha do ativo e o gráfico de 7 dias reusam o mesmo mecanismo sem rota nem
+tabela paralela — só o `fonte='motor_alarme'` diferencia a origem.
+
+Alarme (`avaliar_alarme_carregamento`) roda SÍNCRONO, dentro da própria rota de publicação, não como
+job periódico — decisão deliberada: o portão pede "última leitura em ≤ 5 s" e "o alarme disparando"
+na mesma prova; um periódico de 30 s a 1 min teria uma folga desnecessária contra esse número, e o
+custo por publicação é baixo (algumas consultas SELECT + no máximo alguns INSERTs de leituras
+derivadas). Achado do turno: a primeira versão computava `carregamento_pct` só para a leitura MAIS
+RECENTE de cada chamada — funciona para um sensor publicando em tempo real, mas quebra para um lote
+com histórico (o simulador desta prova manda 65 min de uma vez; um sensor que ficou offline e manda o
+atraso todo faz o mesmo). Corrigido: a função recalcula `carregamento_pct` para cada `ts` de corrente
+na janela de retrospecto (`REDE_MEDICAO_ALARME_LOOKBACK_MIN` = 90 min) que ainda não tem o derivado,
+não só o último — sem isso a série de carregamento tinha um ponto só e o "surto contínuo de 30 min"
+nunca teria como existir. `plat.rede_medicao_alarme_estado` guarda só o ESTADO atual (`disparado`,
+`desde`) para que reavaliar com o alarme já ativo não reabra o evento a cada leitura — dispara/resolve
+só na transição.
+
+Agregação a jusante (`agregado_jusante`) não duplica nenhum motor de traçado: chama
+`app.rede_utilidades.fluxo.tracar_fluxo(cur, tenant_id, rede_id, "jusante", [{"feicao_id": ativo,
+"terminal": ...}], [])` tal como está (item L4-18) e filtra os elementos devolvidos por
+`grupo == GRUPO_TRAFO`. Sem `direcao_fluxo` gravado em nenhum trecho (a rede de demonstração não é
+"rede simples"), a direção default cai em `'digitalizada'` (ordem dos vértices) — documentado no
+próprio `fluxo.py`, não uma decisão nova deste item. `terminal` existe porque um dispositivo ponto com
+2+ terminais na MESMA coordenada gera um nó de topologia por terminal, e só um se conecta ao trecho
+(medido: a topologia liga sempre ao nó do `terminal_num` que "ganhou" a fusão por tolerância — no
+pacote `eletrica-br` isso é o terminal 1 quando os terminais colidem no mesmo ponto); sem informar,
+`_resolver_ponto` (já existente em `tracado.py`) devolve `422 terminal_ambiguo`.
+
+Privilégio novo `rede.medir` (grupo `rede`, ao lado de `rede.tracar`/`rede.editar`) — perfis campo/
+editor/admin, espelhado em `app/auth/privilegios.py` (vocabulário 47→48,
+`tests/api/test_privilegios_declarados.py` confere).
+
+Tela `/rede/medicao/ficha` (`web/rede_medicao_ficha.html` + `web/js/rede/medicao_ficha.js`) é
+standalone, fora do visualizador de mapa principal (`/mapa`, `/sig`): decisão de escopo para não mexer
+em código de mapa compartilhado por outras trilhas em curso no mesmo worktree. Usa `estiloVazio()`
+(o mesmo truque de `web/js/rede/diagrama.js`: um `background` MapLibre sem fonte de tile) — o ponto do
+ativo é o que importa, não um mapa-base.
+
+Arquivos: `db/migracoes/20260910T2351_rede_medicao.sql`, `app/rede_medicao/{__init__,modelos,servico,
+rotas,tarefas}.py`, `app/main.py`/`app/jobs/tipos.py`/`app/paginas.py` (registro), `app/limites.py`
+(seção `REDE_MEDICAO_*`), `app/auth/privilegios.py` (`rede.medir`), `web/rede_medicao_ficha.html`,
+`web/js/rede/medicao_ficha.js`, `web/js/i18n/pt-BR.json` (chaves `rede_medicao.ficha.*`),
+`web/style.css` (seção telemetria), `scripts/rede_medicao_simulador.py`, `tests/api/
+test_rede_medicao.py` (11 casos).
+
+## 24. Construtor de formulário de atributos, arrasta-e-solta (item L5-03-form-builder)
+
+`plat.formulario` (1 por camada, `camada_id UNIQUE`) e `plat.formulario_versao` (N por formulário,
+`desenho` jsonb, só uma `publicado=true` por vez — índice único parcial) na migração
+`20260910T2350_formulario.sql`; RLS e GRANT no mesmo molde de `campo.sql`. Módulo `app/formulario/`:
+`modelos.py` (pydantic), `servico.py` (CRUD/publicação — `_resolver_dominios_de_camada` resolve domínio
+"vindo da camada" como SNAPSHOT na hora de publicar, uma `SELECT DISTINCT` na tabela física da camada),
+`motor.py` (validação + compilação, sem I/O), `rotas.py` (`/api/camadas/{id}/campos`, `/formulario`,
+`/formulario/versoes[/{versao}[/publicar]]`; leitura exige só `camada:ler`, escrita reusa
+`comum.exigir_edicao` — nenhum privilégio novo).
+
+Decisão central: `versao_publicar` COMPILA o desenho em três chaves de `plat.item.dados` da camada —
+`regras_campo` (obrigatório incondicional + domínio, a MESMA chave que `app/edicao/servico.py::
+validar_atributos` já lia desde o item L2-03-a: zero mudança de esquema aí) e duas chaves NOVAS,
+`form_condicionais`/`form_calculados`, lidas pela mesma função sem mudar sua assinatura — só ativa
+quando presentes (`dados.get(...)`, vazio por padrão). Isso evitou uma segunda passagem de leitura de
+banco em toda edição: o motor de validação continua puramente sobre o `dados` que a rota já carrega.
+Para o caminho de CAMPO (`app/campo/servico.py::visita_criar`, que grava `dados` jsonb LIVRE, não
+colunas de tabela), não há compilação — `app/campo/rotas.py::criar_visita` busca o desenho publicado
+(`app/formulario/servico.py::desenho_publicado`) e chama `motor.validar_dados_livre` direto sobre ele;
+antes deste item essa rota não validava `dados` nenhuma.
+
+Condicional (`visivel_se`/`obrigatorio_se`) e cálculo (`calculo`) são expressões da linguagem do item
+L2-10-c-linguagem-expressao (`app/expressao/avaliador_py.py`/`web/js/expressao/avaliador.js`,
+`$campo` + `Se`/comparação/aritmética) — a integração que `docs/EXPRESSAO.md` deixava para "itens
+futuros do L5" é este item. `avaliar_texto`/`avaliar` do lado Python roda dentro do orçamento de passos/
+tempo já existente na linguagem (nenhum limite novo); um erro de avaliação (`ErroExpressao`) vira
+`409 formulario_expressao_invalida` (config quebrada é erro do publicador, não do usuário que preenche).
+
+Front: um SÓ módulo de renderização, `web/js/formulario/motor.js` (sem I/O, só DOM + o avaliador JS),
+importado por `web/js/mapa/edicao.js` (`_montarFormulario` passa a ramificar: com desenho publicado usa
+`formularioMotor.renderizar`/`validarLocal`; sem desenho, o campo-a-campo genérico de sempre —
+mudança aditiva, zero teste existente de L2-03-edicao quebrou) e por `web/js/campo/roteiro.js`
+(`formularioVisita` ganha campos dinâmicos ao lado de status/texto/foto; sem formulário publicado o
+comportamento é o de sempre, sem `dados`). Construtor em `web/js/formulario/construtor.js` +
+`web/formulario_construtor.html` (`/camadas/{id}/formulario`, registrado em `app/paginas.py`), sobre as
+primitivas de arrasto do item L5-08-editor-arrasto (`web/js/editor/arrasto.js`) — reaproveitadas tal e
+qual, sem copiar a mecânica de `dragstart`/`dragover`/`drop`.
+
+Achado do e2e (medido, não suposto): o 3º `page.drag_and_drop` consecutivo falhava sempre (qualquer
+campo, só por posição) com o viewport padrão — o cartão de propriedades de cada campo (7 linhas) empurra
+o alvo do grupo para baixo da dobra, e o Chromium confunde o ponto de soltura com o auto-scroll no meio
+do gesto nativo de Drag and Drop; resolvido com viewport mais alto no teste (`1400×1800`) e
+`scroll_into_view_if_needed()` antes de soltar num segundo grupo. Um segundo achado do e2e: `iniciar()`
+limpava `#principal` (`limpar(principal)`) antes de reconstruir a tela, apagando o `<plat-aviso
+id="aviso">` que já vinha no HTML — `document.getElementById('aviso')` do teste (e qualquer código que
+dependesse do aviso persistir) passava a achar `null`; corrigido não limpando `#principal` (a tela só
+renderiza uma vez, nunca precisou disso).
+
+Arquivos: `db/migracoes/20260910T2350_formulario.sql`, `app/formulario/{__init__,modelos,servico,
+motor,rotas}.py`, `app/main.py`/`app/paginas.py` (registro), `app/limites.py` (seção
+`FORMULARIO_*`), `app/edicao/servico.py` (bloco novo em `validar_atributos`), `app/campo/rotas.py`
+(validação em `criar_visita`), `web/js/formulario/{motor,construtor}.js`, `web/formulario_construtor.html`,
+`web/js/mapa/edicao.js`/`web/js/campo/roteiro.js` (integração), `web/js/i18n/pt-BR.json` (chaves
+`formulario.construtor.*`), `tests/api/test_formulario.py` (13 casos), `tests/e2e/
+test_formulario_construtor.py`, `tests/api/cruzado_casos.py` (7 rotas novas, portão P6).

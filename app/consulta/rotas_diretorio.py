@@ -79,10 +79,9 @@ def _camadas_visiveis(cur) -> list[dict]:
     cada um publica: camada vetorial vira FeatureServer, mapa vira MapServer (item L2-04-f). `plat.item`
     só devolve o que o inquilino do contexto pode ler — a segregação é do banco."""
     cur.execute(
-        "SELECT i.id, i.titulo, i.resumo, i.descricao, i.tags, i.dados, i.pasta_id, p.nome AS pasta, "
-        "       CASE i.tipo WHEN 'mapa' THEN 'MapServer' ELSE 'FeatureServer' END AS servico "
+        "SELECT i.id, i.tipo, i.titulo, i.resumo, i.descricao, i.tags, i.dados, i.pasta_id, p.nome AS pasta "
         "FROM plat.item i LEFT JOIN plat.pasta p ON p.id = i.pasta_id "
-        "WHERE i.tipo IN ('camada_vetorial', 'mapa') AND i.apagado_em IS NULL "
+        "WHERE i.tipo IN ('camada_vetorial', 'mapa', 'raster') AND i.apagado_em IS NULL "
         "ORDER BY p.nome NULLS FIRST, i.titulo"
     )
     return cur.fetchall()
@@ -94,7 +93,17 @@ def _nome_pasta(r: dict) -> str:
 
 
 def _servico(r: dict, prefixo_pasta: str) -> dict:
-    return {"name": f"{prefixo_pasta}{r['id']}", "type": r.get("servico") or "FeatureServer"}
+    # (10/09) O diretório listava só FeatureServer, então o MapServer (item mapa) e o ImageServer
+    # (item L1-25) existiam mas não eram DESCOBERTOS: o cliente Esri tinha de receber a URL completa
+    # a mão em vez de navegar a raiz e clicar. Descritor de cada um segue em
+    # app/imagens/rotas_imageserver.py (raster) e no próprio módulo (mapa).
+    if r.get("tipo") == "raster":
+        tipo = "ImageServer"
+    elif r.get("tipo") == "mapa":
+        tipo = "MapServer"
+    else:
+        tipo = "FeatureServer"
+    return {"name": f"{prefixo_pasta}{r['id']}", "type": tipo}
 
 
 # ------------------------------------------------------------------ rest/info e generateToken

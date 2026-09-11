@@ -1,0 +1,12 @@
+{
+ "item": "L5-03-form-builder",
+ "medidas": {
+  "formulario_montado_por_arrasto": {
+   "valor": true,
+   "unidade": "bool",
+   "comando": "e2e: 5 campos em 2 grupos, montados por page.drag_and_drop; condicional/cálculo publicados batem com o que POST /api/campo/visitas exige/recomputa na mesma sessão"
+  }
+ },
+ "gerado_em": "2026-09-10T22:02:03Z",
+ "git_sha": "bb4ea4c081b8"
+}

@@ -170,6 +170,29 @@ class TracadoResultado(BaseModel):
     duracao_ms: int
 
 
+# --- EPANET .inp (item L4-05-d-epanet-inp) -------------------------------------------------------------
+
+class EpanetImportacao(BaseModel):
+    id: str
+    rede_id: str
+    estado: str
+    nome_arquivo: str | None
+    crs_epsg: int | None
+    arquivo_sha256: str
+    arquivo_bytes_tamanho: int
+    job_id: str | None
+    contagens: dict | None
+    avisos: list | None
+    erro: str | None
+    criado_em: str
+    atualizado_em: str
+
+
+class EpanetImportacaoAceita(BaseModel):
+    importacao_id: str
+    job_id: str
+
+
 class TopoArestaModelo(BaseModel):
     id: str
     grupo_id: str
@@ -326,27 +349,8 @@ class CamadaDoTracadoEntrada(TracadoEntrada):
     titulo: str = Field(min_length=1, max_length=250)
 
 
-# de wt/il405egasee
-class EpanetImportacao(BaseModel):
-    id: str
-    rede_id: str
-    estado: str
-    nome_arquivo: str | None
-    crs_epsg: int | None
-    arquivo_sha256: str
-    arquivo_bytes_tamanho: int
-    job_id: str | None
-    contagens: dict | None
-    avisos: list | None
-    erro: str | None
-    criado_em: str
-    atualizado_em: str
-
-
-# de wt/il405egasee
-class EpanetImportacaoAceita(BaseModel):
-    importacao_id: str
-    job_id: str
+# de wt/il405egasee — EpanetImportacao e EpanetImportacaoAceita já existem mais acima neste arquivo
+# (item L4-05-d-epanet-inp, mesmos campos); a fusão de 11/09 removeu a repetição, não as classes.
 
 
 # de wt/il405egasee

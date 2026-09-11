@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<WMT_MS_Capabilities version="1.1.1">
+  <Service>
+    <Name>WMS</Name>
+    <Title>IBGE (fixture de teste, sem namespace, eixo 1.1.1)</Title>
+  </Service>
+  <Capability>
+    <Layer>
+      <Title>BDIA</Title>
+      <SRS>EPSG:4326</SRS>
+      <Layer queryable="1">
+        <Name>BDIA:geol_area</Name>
+        <Title>Geologia - área</Title>
+        <SRS>EPSG:4674</SRS>
+        <LatLonBoundingBox minx="-73.99" miny="-33.75" maxx="-28.84" maxy="5.27"/>
+      </Layer>
+    </Layer>
+  </Capability>
+</WMT_MS_Capabilities>

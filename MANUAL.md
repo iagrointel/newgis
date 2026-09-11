@@ -1317,7 +1317,8 @@ Com `<tok>` = o token e `<item>` = o identificador da imagem no catálogo:
 | WMTS (o que o QGIS e o ArcGIS pedem em "Add WMTS layer") | `https://<dominio>/svc/<tok>/raster/<item>/wmts/1.0.0/WMTSCapabilities.xml` |
 | WMTS por KVP | `https://<dominio>/svc/<tok>/raster/<item>/wmts?SERVICE=WMTS&REQUEST=GetCapabilities` |
 | extensão, bandas, tipo do dado, lista de colormaps | `https://<dominio>/svc/<tok>/raster/<item>/info.json` |
-| mosaico de uma coleção (cena mais recente por cima) | `https://<dominio>/svc/<tok>/mosaico/<colecao>/{z}/{x}/{y}.png` |
+| mosaico de uma coleção inteira, sem registro (cena mais recente por cima) | `https://<dominio>/svc/<tok>/mosaico/<colecao>/{z}/{x}/{y}.png` |
+| mosaico REGISTRADO (várias coleções/período/filtro; ver seção 24) | `https://<dominio>/svc/<tok>/mosaico/<uuid-do-mosaico>/{z}/{x}/{y}.png` |
 
 Formatos: `.png` (padrão), `.jpg`, `.webp`.
 
@@ -1330,6 +1331,7 @@ Formatos: `.png` (padrão), `.jpg`, `.webp`.
 | `faixa` | valores que viram 0 e 255, por banda | `faixa=-1,1` |
 | `colormap` | paleta (211 disponíveis; a lista está em `info.json`) | `colormap=viridis` |
 | `asset` | `visual` (8 bits, mais barato) ou `cientifico` (bandas originais) | `asset=cientifico` |
+| `predef` | nome de uma predefinição de renderização gravada (item L1-02-f, seção 25) — os parâmetros acima, se vierem junto, VENCEM a predefinição | `predef=ndvi` |
 
 O `+` da expressão precisa ir codificado como `%2B` na URL — em `+` cru o servidor lê espaço.
 Sem `bandas` e sem `expressao`, uma imagem de mais de três bandas sai com as três primeiras.
@@ -1358,10 +1360,13 @@ guardado — só o identificador dele e o prefixo visível.
 
 ### 22.5 O que ainda não faz
 
-- o mosaico serve a cena mais recente que cobre o ladrilho; não há escolha por pixel (nuvem) nem linha
-  de costura — isso é o L1-07/L1-08;
-- não há WMS 1.3.0 (L1-02-g), nem OGC API Tiles/Maps (L1-02-i), nem ponto/estatística/histograma
-  (L1-02-h), nem predefinição de renderização gravada (L1-02-f): por enquanto a pintura vive na URL;
+- o mosaico AD-HOC (coleção inteira, sem registro) serve a cena mais recente que cobre o ladrilho;
+  para várias coleções, período, filtro de nuvem e busca nomeada, ver o mosaico REGISTRADO (seção 24);
+  escolha de pixel além de "primeira cena com dado" (mediana, média, travar cena, mais recente sem
+  nuvem) é o item irmão L1-08, ainda não construído;
+- ponto/estatística/histograma (L1-02-h) ainda não existe; WMS 1.3.0 (`GET /svc/<token>/wms`, ver
+  CHANGELOG), predefinição de renderização gravada (`predef=`, seção 25) e OGC API Tiles/Maps
+  (seção 28) já existem;
 - a única grade é a WebMercatorQuad (a do Google/OSM/AGOL).
 ## 22. Exportação de camada para outros formatos (item L0-04-h-exportar)
 
@@ -2913,3 +2918,509 @@ zip em base64; importar aceita `modelo_id` no lugar do conteúdo.
 
 Fora deste turno: modelo "do canal" (parceiro publicando para os inquilinos dele) depende de uma hierarquia
 de inquilino que ainda não existe — hoje há `plataforma` e `inquilino`, e nada entre os dois.
+
+## 23. ImageServer compatível Esri por token (item L1-25-servico-de-imagem-esri-compativel)
+
+Pedido de abertura do dono: um cliente do canal Esri mantém o ArcGIS Enterprise/Online dele e ACRESCENTA
+a imagem desta plataforma como camada, sem pagar crédito de hospedagem de imagem no AGOL. Reusa o MESMO
+token de serviço (escopo `tiles:ler` ou `imagens:ler`) e o MESMO item do catálogo de imagens (L1-01) do
+ladrilho raster (seção 22) — é a casca de protocolo `ImageServer` por cima do que já existe.
+
+### 23.1 As URLs
+
+Com `<tok>` = o token e `<item>` = o identificador da imagem no catálogo:
+
+| para quê | endereço |
+|---|---|
+| documento do serviço (o que o Pro/AGOL lê para ACEITAR adicionar a camada) | `https://<dominio>/svc/<tok>/rest/services/<item>/ImageServer?f=json` |
+| recorte por área (`exportImage`) | `https://<dominio>/svc/<tok>/rest/services/<item>/ImageServer/exportImage?bbox=<xmin,ymin,xmax,ymax>&bboxSR=<wkid>&size=<largura,altura>&format=png` |
+| valor de pixel num ponto (`identify`) | `https://<dominio>/svc/<tok>/rest/services/<item>/ImageServer/identify?geometry=<x,y>&sr=<wkid>` |
+| ladrilho no caminho do ArcGIS (`level/row/col` == `z/y/x`) | `https://<dominio>/svc/<tok>/rest/services/<item>/ImageServer/tile/{level}/{row}/{col}` |
+
+`bboxSR`/`imageSR`/`sr` aceitam o EPSG cru, `EPSG:<n>`, ou os alias Esri `102100`/`102113` de Web
+Mercator (o que o Pro manda por padrão). `format` aceita `png`/`png8`/`png24`/`png32`/`jpg`/`jpeg`.
+
+### 23.2 O que o documento do serviço traz
+
+`extent`/`initialExtent`/`fullExtent` (com `spatialReference.wkid` NATIVO do raster — nunca reprojetado
+sem pedir), `pixelSizeX/Y`, `bandCount`, `pixelType` (`U8`..`F64`, traduzido do tipo do arquivo),
+`capabilities` (sempre só `"Image"` nesta passagem) e, quando a imagem carrega estatística de ingestão
+(L1-01), `minValues`/`maxValues`/`meanValues`/`stdvValues` por banda. Campo que não pode ser medido
+NUNCA aparece inventado — some do documento (é o caso de `minValues` para um item sem estatística).
+
+### 23.3 O que ainda não faz
+
+- `mosaicRule`: recusado com erro nomeado sempre que vem com valor — nunca aplicado nem ignorado em
+  silêncio. O item L1-07 (mosaico de coleção) agora existe (seção 24), mas NINGUÉM ligou o parâmetro
+  `mosaicRule` desta rota ao mosaico registrado ainda — a recusa continua, só que por falta da LIGAÇÃO
+  entre as duas, não mais por falta do L1-07 em si;
+- `renderingRule` na forma `{"rasterFunction":"<nome da predefinição>"}` já FUNCIONA (item L1-02-f,
+  seção 25) em `exportImage` e `tile/<z>/<y>/<x>`; qualquer OUTRA forma (com `rasterFunctionArguments`,
+  encadeamento, os nomes nativos do Pro como Stretch/Colormap/NDVI) continua recusada com erro Esri;
+- `computeStatisticsHistograms`/histograma: `hasHistograms` é sempre `false` — depende do L1-02-h;
+- `rasterAttributeTable`: esta plataforma não tem tabela de atributo de raster;
+- `query` de pegadas/catálogo de mosaico: use `GET /svc/<tok>/mosaico/<uuid>/pegadas` (seção 24), fora
+  do protocolo `ImageServer` por enquanto — cada item raster avulso continua sendo um raster único;
+- download de pixel, `measure`, edição;
+- teste com ArcGIS Pro/AGOL de verdade: PENDENTE (decisão D20) — o que existe hoje prova a FORMA do
+  protocolo (campos do documento contra o que a doc Esri descreve, alinhamento de pixel do `exportImage`
+  contra o ladrilho XYZ do L1-02, ≤ 1 px), não a compatibilidade final com o cliente real.
+
+Ver `docs/PARIDADE.md`, seção do item, para a tabela cláusula a cláusula.
+
+## 24. Mosaico por busca registrada e pegadas (item L1-07-mosaico-por-colecao-e-pegadas)
+
+Um mosaico é uma cobertura contínua feita de várias cenas — o que separa "uma cena" de "um produto
+vendável" para o canal Esri. Em vez de recompor tudo a cada pedido, o mosaico se REGISTRA uma vez
+(coleções, período, filtro de nuvem, ordem) e ganha um endereço estável que não muda mais, mesmo que
+cenas novas entrem na coleção depois.
+
+### 24.1 Registrar
+
+`POST /svc/<tok-com-escopo-imagens:escrever>/stac/mosaicos`:
+
+```json
+{"nome": "Sentinel-2 — safra 2026", "collections": ["<tenant>-imagens"],
+ "datetime": "2026-01-01/2026-12-31", "sortby": [{"field": "datetime", "direction": "desc"}]}
+```
+
+Devolve `{"id": "<uuid>", ...}`. **Registrar a MESMA busca de novo devolve o MESMO id** (o nome pode
+mudar; o critério, não) — é assim que uma tela "Coleção → Mosaico" salva sem duplicar. `GET
+/svc/<tok>/stac/mosaicos` lista os mosaicos do inquilino; `DELETE .../mosaicos/<uuid>` remove o
+registro (as cenas continuam existindo — só o atalho do mosaico some).
+
+### 24.2 Usar
+
+Com `<uuid>` = o id devolvido no registro:
+
+| para quê | endereço |
+|---|---|
+| ladrilho composto (todas as cenas candidatas, primeiro pixel com dado vence) | `https://<dominio>/svc/<tok>/mosaico/<uuid>/{z}/{x}/{y}.png` |
+| TileJSON | `https://<dominio>/svc/<tok>/mosaico/<uuid>/tilejson.json` |
+| WMTS | `https://<dominio>/svc/<tok>/mosaico/<uuid>/wmts/1.0.0/WMTSCapabilities.xml` |
+| pegadas (de onde veio cada pedaço, para o mapa mostrar/popup) | `https://<dominio>/svc/<tok>/mosaico/<uuid>/pegadas` |
+
+O ladrilho compõe de VERDADE, pixel a pixel: onde a cena mais recente não cobre, o pixel vem da
+próxima candidata — é o que faz a JUNTA entre duas cenas mostrar as duas, em vez de uma cena inteira
+com o resto em branco. As pegadas são GeoJSON com `id`/`datetime`/`eo:cloud_cover` por cena.
+
+### 24.3 Escopo por mosaico
+
+Um token pode ganhar `tiles:ler:<uuid-do-mosaico>` sem nunca ganhar acesso a nenhuma cena avulsa que
+compõe o mosaico — o mesmo mecanismo de escopo por item que já existia para imagem única (seção 22),
+agora também para o mosaico.
+
+### 24.4 O que ainda não faz
+
+- regras de seleção de pixel além de "primeira cena com dado" — mediana, média, travar cena, "mais
+  recente sem nuvem" (item irmão L1-08);
+- pegadas como camada vetorial (Martin) — hoje só GeoJSON pela API;
+- tela "Coleção → Mosaico" no construtor de mapa — hoje o registro é só pela API;
+- `mosaicRule` do ImageServer (seção 23) não chama este mosaico ainda.
+
+Ver `docs/PARIDADE.md`, seção do item, para a tabela cláusula a cláusula.
+
+## 25. Predefinição de renderização e legenda (item L1-02-f-predefinicoes-de-renderizacao-e-legenda)
+
+Uma predefinição é um documento com bandas, esticamento, rampa de cor, nodata e opacidade JÁ escolhidos
+— o equivalente ao "raster function template" do ArcGIS. Ela substitui os parâmetros soltos de pintura
+(seção 22.2) por um NOME, e esse nome funciona nos três caminhos de serviço desta plataforma.
+
+### 25.1 As 6 predefinições de fábrica
+
+| nome | o que faz | exige |
+|---|---|---|
+| `rgb-natural` | as 3 primeiras bandas, esticadas por percentil 2-98 | 3+ bandas |
+| `falsa-cor-nir` | infravermelho no vermelho, vermelho no verde, verde no azul | 4+ bandas |
+| `ndvi` | (b4-b3)/(b4+b3), rampa `rdylgn`, faixa -1..1 | 4+ bandas |
+| `ndwi` | (b2-b4)/(b2+b4) (McFeeters), rampa `rdbu`, faixa -1..1 | 4+ bandas |
+| `nbr-aproximado` | **PARCIAL** — usa a banda 1 como substituta da SWIR (esta instalação não marca banda SWIR em nenhum item); prova o mecanismo, não é um NBR real | 4+ bandas |
+| `relevo-sombreado` | hillshade analítico (azimute 315°, altitude 45°) sobre a banda 1, calculado só dentro do ladrilho pedido | 1+ banda |
+
+`GET /svc/<token>/raster/<item>/predefinicoes.json` lista as de fábrica compatíveis com o item mais as
+CUSTOM do inquilino. Uma predefinição CUSTOM é criada, editada e apagada por sessão (nunca por token de
+serviço) em `POST/PUT/DELETE /api/imagens/<item>/predefinicoes[/<nome>]`, com o mesmo esquema de
+`docs/esquemas/renderizacao-v1.json`; `POST .../<nome>/tornar-padrao` marca qual serve quando ninguém
+passa `predef=`/`STYLES=`/`renderingRule` nenhum.
+
+### 25.2 Onde o nome funciona
+
+| caminho | parâmetro | legenda |
+|---|---|---|
+| XYZ / WMTS / TileJSON (seção 22) | `predef=<nome>` | `GET .../legenda.json` e `.../legenda.png` |
+| WMS `GetMap` (CHANGELOG) | `STYLES=<nome>` | `REQUEST=GetLegendGraphic` (`<Style>`/`<LegendURL>` já saem no `GetCapabilities`) |
+| ImageServer `exportImage`/`tile` (seção 23) | `renderingRule={"rasterFunction":"<nome>"}` | — (usar a legenda do caminho raster) |
+
+Um parâmetro explícito de bandas/faixa/colormap, quando vem JUNTO com `predef=`, vence a predefinição —
+o padrão de quem não passa nada não muda.
+
+### 25.3 Estabilidade da URL publicada
+
+O `tilejson.json`/`WMTSCapabilities.xml` de um item SEM `predef=` no pedido embutem o nome da
+predefinição PADRÃO do item (se houver uma custom marcada) na URL que devolvem. Trocar qual
+predefinição é a padrão gera uma URL NOVA na próxima vez que alguém pedir o TileJSON — a URL antiga
+(que já tem o nome escrito por extenso) continua resolvendo a MESMA predefinição de antes, porque ela
+não foi apagada, só deixou de ser a padrão.
+
+### 25.4 O que ainda não faz
+
+- expressão livre por predefinição do usuário (item L1-12, ainda pendente) — as predefinições de índice
+  (NDVI/NDWI/NBR) usam expressão FIXA, escolhida em código, sobre a gramática já existente da seção 22;
+- tabela de cor CUSTOM por intervalo — só rampa nomeada do catálogo do rio-tiler;
+- histórico de versão de uma predefinição EDITADA (editar substitui o corpo e sobe `versao`, mas não
+  guarda o corpo anterior — só TROCAR de predefinição padrão preserva a URL antiga, não editar uma já
+  publicada);
+- NBR de verdade (falta banda SWIR marcada na ingestão desta plataforma).
+
+Ver `docs/PARIDADE.md` e `CHANGELOG.md` para a tabela cláusula a cláusula e os números medidos.
+
+## 26. Proveniência verificável da imagem — Lastro (item L1-01-j-proveniencia-da-imagem-lastro)
+
+Todo item raster carrega, ao lado dos dados, a prova de como cada objeto foi produzido — não uma
+descrição em prosa, um dado que qualquer um pode CONFERIR de novo. É o conceito de "Lastro" da casa
+(dossiê protocolável com claim reexecutável) aplicado à imagem.
+
+### 26.1 O que o item STAC ganha
+
+Além de `file:checksum` (multihash sha256, já existia desde o L1-01-a) em cada asset, o item novo grava:
+
+| campo | o que é |
+|---|---|
+| `processing:software` | mapa nome → versão do GDAL, rio-cogeo, rasterio e `plat`, MEDIDO na hora da conversão (não uma constante) |
+| `processing:lineage` | texto explicando o pipeline, em português, sem jargão de código |
+| `plat:cadeia` | um passo por perfil convertido (científico, visual): o argv EXATO do(s) `gdal_translate` que rodou, o sha256 de entrada (do bruto) e o sha256 de saída (do COG) |
+| `plat:cadeia_origem` | `ingestao` (cadeia medida na hora) · `reexecucao_retroativa` (medida depois, reexecutando) · ausente (item ainda não passou por nenhum dos dois) |
+| `plat:manifesto_sha256` | sha256 do item STAC inteiro, MENOS essa própria chave — qualquer edição em qualquer campo (bbox, checksum de asset, propriedade) quebra este hash |
+
+A extensão `processing` (`https://stac-extensions.github.io/processing/v1.2.0/schema.json`) entra em
+`stac_extensions` — qualquer cliente STAC genérico, não só esta plataforma, sabe ler os dois primeiros
+campos da tabela.
+
+### 26.2 Conferir
+
+`POST /api/imagens/<item>/conferir` (sessão ou token `imagens:ler`) baixa CADA asset com `file:checksum`
+de volta do balde em stream (nunca o objeto inteiro em RAM — o científico de uma cena chega a centenas de
+MB), recalcula o sha256 e compara com o registrado; recalcula também `plat:manifesto_sha256`. Devolve
+divergência POR ATIVO:
+
+```json
+{"item_id": "...", "ok": true, "ativos": [
+  {"asset": "cientifico", "ok": true, "sha256_registrado": "...", "sha256_recalculado": "..."},
+  {"asset": "visual", "ok": true, "...": "..."}
+], "manifesto_registrado": "...", "manifesto_recalculado": "...", "manifesto_ok": true}
+```
+
+Um byte trocado no objeto (mesmo do mesmo tamanho) faz `ok=false` só naquele ativo — os outros continuam
+`ok=true`, porque a divergência é medida ativo a ativo, nunca um veredito único e cego para o item inteiro.
+Na tela, a ficha do item raster (aba "Visão geral") mostra a cadeia em texto simples — comando, sha256 de
+entrada/saída de cada passo — com um botão "conferir" que chama esta rota e mostra o resultado.
+
+### 26.3 Preenchimento retroativo (itens ingeridos antes deste item)
+
+Um item ingerido ANTES deste item existir não tem `plat:cadeia`/`plat:manifesto_sha256`. Dois caminhos,
+o mesmo mecanismo por trás dos dois:
+
+- **Sem reconversão** (rápido, só metadado): `POST /api/imagens/proveniencia/preencher-pendentes`
+  (`{"limite": N}`, perfil editor+) varre até N itens do inquilino que ainda não têm `plat:cadeia_origem`
+  (consulta direta no jsonb do pgstac — nunca itera item já preenchido) e grava `processing:software` a
+  partir do `plat:versoes` que a ingestão original JÁ media, `processing:lineage` retroativo e o
+  manifesto. `plat:cadeia` fica AUSENTE de propósito: o comando exato da ingestão original não foi
+  capturado, e os percentis 2-98 que parametrizam o perfil visual não sobreviveram em nenhum campo do
+  item antigo — inventar um argv plausível seria medição fabricada. O mesmo item a item pela fila:
+  job `imagens.preencher_proveniencia` (`{"item_id": "..."}`).
+- **Com reconversão** (job `imagens.reexecutar`, fila, pesado): baixa o BRUTO já armazenado, reconverte
+  os dois perfis com o `cog.py` ATUAL e compara o sha256 obtido com o registrado — é a prova de
+  determinismo. Bate → `plat:cadeia` fica com o comando MEDIDO de verdade (`cadeia_origem=
+  reexecucao_retroativa`). Não bate → o item registra `plat:reexecucao` com os dois sha256 lado a lado e,
+  quando aplicável, a comparação de estatísticas (min/max/mean/std) entre a reconversão e o que já estava
+  registrado — nunca sobrescreve os assets/checksums originais. `processing:software` continua sendo a
+  versão medida NA INGESTÃO original (o que realmente produziu os bytes hoje armazenados), mesmo que a
+  reexecução tenha rodado com outro GDAL/rio-cogeo — achado do adversário independente (10/09): sem um
+  sinal explícito, os dois blocos podiam divergir em silêncio. `plat:reexecucao.
+  versoes_mudaram_desde_a_ingestao` (booleano) torna essa divergência visível sempre que existir.
+
+### 26.4 O que ainda não faz
+
+- `plat raster reexecutar <item>`/`verificar <item>` como comando de linha só (hoje: job de fila +
+  rota HTTP — cobre o mesmo caso de uso, forma diferente);
+- reexecução em lote (hoje: um item por chamada do job `imagens.reexecutar`; a varredura de metadado SEM
+  reconversão é que é em lote);
+- reconstrução de `plat:cadeia` real para item retroativo SEM rodar `imagens.reexecutar` — não existe
+  atalho, e não deveria existir (ver 26.3).
+
+## 27. Comparar: cortina, lado a lado, lupa e tempo (`/sig`, painel "Comparar", item L2-01-j-comparacao-cortina-tempo)
+
+Quarta ferramenta da barra de instrumento (ícone entre "Impressão" e "Composições", atalho de teclado
+`C`): comparação visual entre CONJUNTOS de camadas escolhidos na lista, mais um controle de tempo para
+camada vetorial com campo de data. É o que um parceiro que avalia o produto ao lado do concorrente vê em
+dez segundos — não existia antes deste item.
+
+### 27.1 Cortina, lado a lado e lupa
+
+No painel "Comparar", a seção "Cortina, lado a lado, lupa" tem cinco modos (rádio) e duas listas de
+camadas — **conjunto A** (esquerda/mapa 1) e **conjunto B** (direita/mapa 2/lupa) — com as mesmas
+camadas do catálogo principal, marcadas por caixa de seleção. Escolher o modo já aplica (o botão
+"aplicar" existe para reaplicar sem trocar de modo, por exemplo depois de mudar os conjuntos):
+
+- **cortina vertical / cortina horizontal**: dois mapas independentes, sobrepostos na MESMA área, com o
+  mapa B recortado por uma linha que se arrasta (a alça laranja) — arrastar move a linha; o recorte é
+  puro CSS (`clip-path`) sobre um mapa que já está desenhado por baixo, não um "antes/depois" trocado no
+  clique.
+- **lado a lado**: os dois mapas em metades reais da tela (50/50), cada um com seu conjunto de camadas.
+- **lupa**: o mapa PRINCIPAL continua a tela normal (com o que estiver ligado no painel "Camadas"); um
+  círculo de 260 px que segue o cursor mostra por cima, na posição do mouse, o conjunto B.
+
+Em todos os quatro, os dois mapas (ou o mapa principal e o círculo da lupa, no caso da lupa) têm
+**centro, zoom e rotação sincronizados por evento**: mover um dos dois move o outro imediatamente
+(`jumpTo`, sem animação, para não perder passo), com uma trava contra o laço de retroalimentação (mapa A
+move → sincroniza B → B dispara seu próprio evento de movimento → a trava impede sincronizar A de volta).
+Medido na instância viva (`scripts/comparar_demo_tempo.py` + captura Playwright, 20 movimentos aleatórios
+de centro/zoom/rotação só no mapa A): **diferença de centro entre os dois mapas = 0,0 grau em todos os 20
+passos** (a barra "sincronismo" no painel mostra a contagem e a diferença máxima medida em tempo real).
+
+O estado do modo e dos dois conjuntos fica na URL (`?cmp=cortina-v&cmpa=<ids>&cmpb=<ids>`) — recarregar a
+página ou mandar o link para outra pessoa reabre a mesma comparação.
+
+⚠️ Achado do e2e (10/09): o círculo da lupa fica preso no canto até o carregamento do mapa B terminar
+(catálogo de camadas + tiles) — a barra some do lugar assim que o cursor volta a se mover depois disso;
+não há indicador de carregamento dedicado ainda.
+
+### 27.2 Controle de tempo
+
+Seção "Tempo" do mesmo painel: uma camada vetorial com campo de data/hora tipado (detectado pelo tipo do
+campo — `timestamp with time zone`, `timestamp`, `date` — não por convenção de nome), janela
+**instantânea** (só o intervalo do passo atual) ou **acumulativa** (desde o início da faixa até o fim do
+passo atual), um controle deslizante de passo, "reproduzir" a 2 passos por segundo, e a contagem de
+feições do passo atual.
+
+**A filtragem é feita no servidor, não escondida no cliente**: o painel usa a MESMA operação `query` do
+FeatureServer compatível Esri que qualquer cliente (Pro, um script) já usa contra a plataforma
+(`GET /rest/services/<item>/FeatureServer/0/query`, `app/consulta/motor.py`/`where_ast.py`, item
+L2-04-c) — nenhuma rota nova, nenhum parâmetro de tile novo no Martin. O passo monta um `where` no
+dialeto Esri (`<campo> >= TIMESTAMP '2022-03-01 00:00:00' AND <campo> < TIMESTAMP '2022-04-01
+00:00:00'`, sempre em UTC — a sessão do Postgres desta instância é `Etc/UTC`, `SHOW TIME ZONE` conferido)
+e faz DUAS chamadas: `returnCountOnly=true` para a contagem mostrada, `f=geojson&returnGeometry=true`
+para o que aparece no mapa (GeoJSON, camada `circle`). Como as duas passam pelo mesmo `where`
+server-side, um campo nulo nunca aparece em nenhuma janela (comparação com `NULL` é sempre falsa no SQL)
+e o fuso de origem do dado não importa — o que decide é o instante armazenado (`timestamptz`), nunca o
+texto.
+
+Medido na instância viva contra `COUNT(*)` direto no banco (não contra a mesma rota que a tela usa — se o
+motor de contagem da tela estivesse errado, comparar com ele mesmo não provaria nada): **5 passos da
+janela instantânea + 3 da acumulativa, os 8 batendo exatamente** com uma consulta SQL independente
+(`scratchpad/prova_final.py`, capturas `comparar_tempo_instantanea.png`/`comparar_tempo_acumulativa.png`
+em `tests/e2e/capturas/`). "Reproduzir" espera cada passo terminar (contagem + geometria já chegaram)
+antes de agendar o próximo — nunca dois pedidos pendentes ao mesmo tempo — medido: último passo em 104 ms,
+bem abaixo do intervalo de 500 ms (2 passos/s) usado como cadência.
+
+**Nenhuma das três camadas reais do inquilino demo** (Municípios de SP, Linhas de transmissão SP,
+Subestações SP) tem campo de data tipado — "Subestações SP" tem `dt_entrada`, mas como `text`. A prova
+acima rodou sobre uma camada de TESTE semeada só para isto (`scripts/comparar_demo_tempo.py criar`:
+100.000 pontos, `data_evento timestamptz`, ~3% NULL de propósito, 1/4 das linhas gravadas com fuso
+diferente de UTC via `AT TIME ZONE` para provar que a normalização de fuso não muda o resultado) —
+**apagada ao final deste item** (`scripts/comparar_demo_tempo.py apagar`, regra do item: nada de dado de
+teste esquecido no inquilino demo). Sem essa camada (ou outra com campo de data tipado), a seção "Tempo"
+mostra "nenhuma camada com campo de data disponível" e o resto do painel funciona normalmente.
+
+### 27.3 O que ficou de fora
+
+- Controle de tempo para a série RASTER (STAC) — é o item irmão L1-04-serie-temporal, ainda `pendente`;
+  a hipótese original deste item já prevê que os dois usem o MESMO controle de tela quando o L1-04
+  existir, mas o controle hoje só liga em camada vetorial;
+- a hipótese original também citava filtrar por parâmetro na função de tile do Martin; descartado a
+  favor do canal de consulta (27.2) — o motor Esri-compatível já dá filtragem no servidor + contagem
+  exata pela mesma chamada, com menos código novo e paridade Esri de graça (`docs/PARIDADE.md`);
+- indicador de carregamento na lupa enquanto o mapa B monta (27.1);
+- alça arrastável na divisão do "lado a lado" (hoje fixa em 50/50; só cortina tem alça).
+
+## 28. OGC API — Tiles e OGC API — Maps por token (item L1-02-i-ogc-api-tiles-e-maps)
+
+A família moderna que fecha o conjunto de padrões OGC do raster: a plataforma já falava WMTS, WMS,
+XYZ, TileJSON e STAC (seções 22, 24 e 25); faltava a que um catálogo/cliente novo (ArcGIS Pro,
+QGIS >= 3.34) procura primeiro — REST puro, sem KVP nem XML. Mesmo token, mesmo item, mesmo motor de
+pixel das outras seções: esta família só é outra FACHADA sobre o que já existe.
+
+### 28.1 As URLs
+
+Com `<tok>` = o token e `<item>` = o identificador da imagem OU de um mosaico (ad-hoc por nome de
+coleção, ou registrado — seção 24) no catálogo:
+
+| para quê | endereço |
+|---|---|
+| landing | `https://<dominio>/svc/<tok>/ogc/tiles` |
+| classes de conformidade cumpridas | `https://<dominio>/svc/<tok>/ogc/tiles/conformance` |
+| grades de ladrilho servidas | `https://<dominio>/svc/<tok>/ogc/tiles/tileMatrixSets` |
+| definição da grade (a REAL, não um resumo) | `https://<dominio>/svc/<tok>/ogc/tiles/tileMatrixSets/WebMercatorQuad` |
+| coleções (itens raster) visíveis a este token | `https://<dominio>/svc/<tok>/ogc/tiles/collections` |
+| metadados da coleção (item ou mosaico registrado) | `https://<dominio>/svc/<tok>/ogc/tiles/collections/<item>` |
+| metadados do tileset (extensão, limites por zoom) | `https://<dominio>/svc/<tok>/ogc/tiles/collections/<item>/map/tiles/WebMercatorQuad` |
+| ladrilho (map tile) | `https://<dominio>/svc/<tok>/ogc/tiles/collections/<item>/map/tiles/WebMercatorQuad/{z}/{y}/{x}.png` |
+| recorte por bbox/crs/tamanho (OGC API Maps — a irmã do `GetMap` do WMS) | `https://<dominio>/svc/<tok>/ogc/tiles/collections/<item>/map?bbox=<minx,miny,maxx,maxy>&crs=EPSG:3857&width=800&height=600` |
+
+Atenção à ORDEM do caminho do ladrilho: aqui é `{z}/{y}/{x}` (tileMatrix/tileRow/tileCol, do jeito
+que a spec 20-057 define) — no XYZ da seção 22 é `{z}/{x}/{y}`. O conteúdo do ladrilho é
+BYTE-A-BYTE igual nos dois endereços; só a ordem do caminho muda.
+
+### 28.2 O que funciona para item e o que funciona para mosaico
+
+- **ladrilho**: item raster, mosaico REGISTRADO (uuid) e mosaico AD-HOC (nome de coleção completo,
+  sem registro) — as três formas de `<item>` que a seção 22 já aceita;
+- **metadados do tileset**: item e mosaico registrado. Mosaico ad-hoc devolve `422 sem_metadados` com
+  a instrução de registrar a busca (`POST /svc/<tok>/stac/mosaicos`, seção 24) — o ladrilho continua
+  funcionando sem isso, só faltam os limites calculados;
+- **`/map` (OGC API Maps)**: só item raster nesta passagem. Um mosaico devolve `422
+  mapa_nao_suportado` — compor um retângulo arbitrário de várias cenas exige um motor que ainda não
+  existe (o que existe compõe por CÉLULA da grade, não por bbox livre).
+
+### 28.3 Conformidade declarada
+
+`ogcapi-common-1/core`, `ogcapi-common-2/collections`, `ogcapi-tiles-1/core`, `ogcapi-tiles-1/tileset`,
+`ogcapi-tiles-1/geodata-tilesets`, `ogcapi-tiles-1/png`, `ogcapi-tiles-1/jpeg`. Nada além disso: sem
+combinação de várias coleções num tile só, sem formato vetorial/cobertura crua, sem documento OpenAPI
+próprio desta família, sem HTML, sem dimensão de tempo por coleção — ver `docs/PARIDADE.md`.
+
+### 28.4 O que ainda não faz
+
+- OGC API Maps sobre mosaico (28.2);
+- tileset metadata do mosaico ad-hoc sem registro prévio (28.2);
+- HTML/`/api` (OpenAPI próprio) desta família, formatos vetorial/cobertura, `datetime` por coleção,
+  `collections-selection` (tile combinando várias coleções);
+- teste com ArcGIS Pro/QGIS reais: PENDENTE (decisão D20) — o que existe hoje prova a FORMA do
+  protocolo e a identidade byte-a-byte com o XYZ/WMS já em produção, não a compatibilidade final com o
+  cliente real;
+- um pedido de `/map` no TAMANHO MÁXIMO permitido (4096×4096) é lento (~27 s nesta bancada) — o mesmo
+  custo que o `GetMap` do WMS já tem no mesmo tamanho (motor de leitura compartilhado, seção 22); pedir
+  um recorte menor é sempre rápido. Zoom muito abaixo da resolução nativa do item também é lento, nos
+  dois protocolos (XYZ e OGC) igualmente.
+
+Ver `docs/PARIDADE.md`, seção do item, para a tabela cláusula a cláusula e o ADR
+`docs/adr/20260910T2056-ogc-api-tiles-e-maps.md` para as decisões de escopo.
+
+## 29. Telemetria da rede de utilidades — ficha do ativo (item L4-13-integracao-telemetria)
+
+Medição ligada a um ATIVO (o `id` de uma feição — trafo, poste, qualquer coisa; a leitura não exige
+que a feição continue existindo na camada), com corrente, tensão e temperatura publicadas por
+sensor/conector e um alarme declarado de carregamento.
+
+### 29.1 Publicar leitura
+
+`POST /api/rede/medicao/leituras` — lote (até 2.000):
+
+```json
+{"leituras": [
+  {"ativo": "<uuid>", "cod_id": "TR-0001", "ts": "2026-09-10T21:18:50Z", "fonte": "sonda",
+   "grandeza": "corrente_a", "valor": 23.3, "unidade": "A", "bruta": {}}
+]}
+```
+
+Grandezas aceitas (`GET /api/rede/medicao/grandezas`): `corrente_a/b/c` (A, a cada 5 min),
+`tensao_a/b/c` (V, agregada a cada 10 min — PRODIST Módulo 8), `temperatura` (C). `carregamento_pct`
+(%) é DERIVADA: só o motor de alarme escreve; publicar de fora é recusado como `grandeza_desconhecida`.
+Reenviar o mesmo `(ativo, grandeza, ts)` não duplica — a resposta traz `aceitas`/`duplicadas`. `ts` no
+futuro (além de 120 s de tolerância de relógio) e `unidade` que não bate com a da grandeza são
+recusados item a item, com mensagem, sem derrubar o resto do lote.
+
+### 29.2 Placa do ativo (nameplate)
+
+`PUT /api/rede/medicao/ativos/{ativo}` com `kva_nominal` e `tensao_nominal_v` — sem isso o motor de
+alarme não tem contra o que comparar a corrente e não calcula carregamento. `GET` do mesmo caminho lê
+de volta (`placa_cadastrada: false` quando ainda não há placa).
+
+### 29.3 Ficha do ativo (`/rede/medicao/ficha?ativo=<uuid>&rede_id=<uuid opcional>`)
+
+Última leitura de cada grandeza (`GET .../ativos/{ativo}/ultimas`) e gráfico de 7 dias
+(`GET .../ativos/{ativo}/serie?grandeza=&dias=`, padrão 7) — a tela atualiza sozinha a cada 5 s.
+Quando `rede_id` é passado, um mapa (MapLibre, estilo vazio — só o marcador, sem tile de fundo) mostra
+o ponto do ativo na posição real, colorido: vermelho = alarme de carregamento ativo, verde = normal,
+cinza = sem placa cadastrada (sem carregamento para colorir).
+
+### 29.4 Alarme declarado: carregamento > 100% por 30 min
+
+Roda dentro da própria chamada de publicação (não depende de job periódico): calcula
+`carregamento_pct` = √3 × tensão nominal × corrente média ÷ 1.000 ÷ kVA nominal × 100 para todo
+instante de corrente dentro da janela de retrospecto (90 min) que ainda não tem o derivado — não só o
+mais recente, porque um lote com histórico (sensor que ficou offline e manda o atraso todo) precisa da
+série completa para o surto contínuo existir. Acha o início do trecho contínuo acima de 100%; se já
+tem 30 min e o ponto mais recente continua acima, o alarme está ativo. Dispara `rede_medicao/
+alarme_disparado` só na TRANSIÇÃO (reavaliar com o alarme já ativo não gera um segundo evento);
+`rede_medicao/alarme_resolvido` quando volta a ≤ 100%. Os dois aparecem em `GET /api/eventos?
+tipo=rede_medicao/alarme_disparado` (privilégio `org.log_ver`, admin).
+
+### 29.5 Agregação a jusante
+
+`GET /api/rede/medicao/jusante?rede_id=&ativo=&grandeza=&janela_min=&terminal=` soma a leitura mais
+recente (dentro de `janela_min`, padrão 15) de `grandeza` entre os transformadores de distribuição
+alcançados a JUSANTE de `ativo` pela topologia derivada (item L4-01-b — a rede precisa ter passado por
+`POST /api/rede/{id}/topologia/habilitar`). Reusa `app.rede_utilidades.fluxo.tracar_fluxo` sem
+modificação. `terminal` desambigua um dispositivo com mais de um terminal na mesma coordenada (ex.:
+trafo com alta=1/baixa=2 — a topologia liga o trecho ao terminal que "ganhou" o nó compartilhado, nem
+sempre o de baixa; a rota devolve `422 terminal_ambiguo` com a instrução quando não informado e há
+mais de um).
+
+### 29.6 Simulador de prova
+
+`venv/bin/python scripts/rede_medicao_simulador.py --provar` — 20 sensores de trafo reais da rede de
+demonstração, backfill de corrente/temperatura/tensão comprimido no tempo (o `ts` de cada leitura é o
+do sensor, não o de quem publica), mede publicar→ficha e mostra o alarme disparando. `--limpar` apaga
+leitura/placa/estado de alarme dos ativos que tocou (nunca a rede em si).
+
+Ver `docs/PARIDADE.md`, seção do item, e `docs/adr/` para as decisões de escopo (grandeza fechada em
+catálogo, `ativo` sem FK, alarme síncrono em vez de job periódico).
+
+## 30. Construtor de formulário de atributos, arrasta-e-solta (item L5-03-form-builder)
+
+### 30.1 O que existe
+
+Uma camada tem no máximo um formulário (`plat.formulario`), com N versões (`plat.formulario_versao`,
+desenho em jsonb). Só a versão PUBLICADA vale: até publicar, a edição web e o PWA de campo continuam
+mostrando o campo-a-campo genérico de sempre (obrigatório/domínio de `dados.regras_campo`, sem grupo,
+condicional ou cálculo). O desenho é grupo → campo; cada campo liga a um atributo real da camada
+(validado contra `dados.campos`) e pode ter: rótulo, widget (texto, área de texto, número, inteiro,
+booleano, data, seleção), obrigatório (fixo ou condicional — `obrigatorio_se`), visível condicional
+(`visivel_se`), domínio (lista fixa, faixa min/max, ou "vindo da camada" — resolvido como uma FOTO da
+lista de valores distintos no momento de publicar) e cálculo (`calculo`, expressão sobre `$outro_campo`
+que o servidor recomputa sempre — o cliente nunca decide o valor de um campo calculado). Condicional e
+cálculo são expressões da linguagem do item L2-10-c (`$campo`, `==`, `&&`, `Se(...)` etc.,
+`docs/EXPRESSAO.md`), avaliadas IGUAL no navegador (`web/js/expressao/avaliador.js`) e no servidor
+(`app/expressao/avaliador_py.py`).
+
+### 30.2 Construir (`/camadas/{id}/formulario`)
+
+Paleta à esquerda (atributos reais da camada, `GET /api/camadas/{id}/campos`); tela à direita (grupos,
+"+ grupo" cria um novo). Arrasto HTML5 nativo (`page.drag_and_drop` no e2e; mouse/touch no navegador de
+verdade) da paleta para dentro de um grupo cria o campo; arrastar um campo já colocado move-o para
+outro grupo. Cada campo tem um painel curto embutido no próprio cartão (rótulo, widget, obrigatório,
+domínio, visível quando, obrigatório quando, cálculo). "Salvar rascunho" grava uma versão nova
+(`POST /api/camadas/{id}/formulario/versoes`); "Publicar" compila a versão escolhida em
+`plat.item.dados` da camada (`app/formulario/servico.py::versao_publicar`) e a partir daí vale nas duas
+telas de preenchimento — sem outro passo manual.
+
+### 30.3 Preencher (edição web e PWA de campo)
+
+Um só módulo de renderização, `web/js/formulario/motor.js`, importado por `web/js/mapa/edicao.js`
+(painel Edição do `/mapa`, ao criar/editar feição) e por `web/js/campo/roteiro.js` (formulário de
+visita do PWA de campo): grupo vira `<fieldset>`, condicional some/mostra o campo e liga/desliga o
+`*` de obrigatório, cálculo desabilita o campo e mostra o valor recém-recomputado a cada mudança de
+outro campo. `validarLocal` faz a mesma checagem no navegador só para UX — o navegador NUNCA é a trava
+(cláusula 4 do portão): o servidor valida de novo em toda escrita.
+
+### 30.4 Validação no servidor
+
+`app/edicao/servico.py::validar_atributos` (item L2-03-a) já validava obrigatório/domínio de
+`dados.regras_campo`; este item acrescenta duas chaves lidas pela MESMA função sem mudar sua
+assinatura — `form_condicionais` (obrigatório condicional) e `form_calculados` (recomputa e sobrescreve
+o valor do cliente), escritas por `versao_publicar`. Isso só roda em `adicionar` (feição nova — o
+contexto está completo; numa atualização parcial não há garantia de que o corpo trouxe os campos que a
+expressão referencia, documentado como fora de escopo, não escondido). `app/campo/servico.py`
+(`POST /api/campo/visitas`) não validava `dados` nenhuma antes deste item; agora, com formulário
+publicado, `app/formulario/motor.py::validar_dados_livre` roda a mesma obrigatório/domínio/condicional/
+cálculo direto sobre o desenho (a visita grava `dados` jsonb livre, não colunas de tabela).
+
+Medido: 13 casos de API (obrigatório incondicional e condicional, domínio, cálculo ignorando o valor do
+cliente nos DOIS caminhos de escrita, RLS cruzada 404, desenho inválido recusado —
+`tests/api/test_formulario.py`) + 1 e2e no navegador contra a instância viva (arrasto real, publicar,
+depois a MESMA sessão provando a refutação do item pela API de campo —
+`tests/e2e/test_formulario_construtor.py`, medida em `tests/medidas/L5-03-form-builder.json`).
+
+Fora do escopo: cálculo/condicional em `atualizar` parcial; domínio "vindo da camada" é uma foto, não
+uma consulta ao vivo; o construtor não tem editor visual de condição (é a expressão em texto).

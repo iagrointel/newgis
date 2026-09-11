@@ -437,6 +437,18 @@ chown -R www-data:www-data /var/cache/nginx/plat_tiles_vetor /var/cache/nginx/pl
   printf 'limit_req_zone $binary_remote_addr zone=plat_login:10m rate=10r/m;\n'
   printf 'proxy_cache_path /var/cache/nginx/plat_tiles_vetor levels=1:2 keys_zone=plat_tiles_vetor:32m max_size=10g inactive=7d use_temp_path=off;\n'
   printf 'proxy_cache_path /var/cache/nginx/plat_tiles_vetor_auth levels=1:2 keys_zone=plat_tiles_vetor_auth:8m max_size=64m inactive=1m use_temp_path=off;\n'
+  printf '# plat: cache das fatias de 1 MiB do COG por inquilino (item L1-01-d; ADR 20260908T1255). keys_zone pequena\n'
+  printf '# (a chave e curta), max_size 2g: o disco desta maquina e apertado e o objeto vive no Garage, nao aqui.\n'
+  printf 'proxy_cache_path /var/cache/nginx/plat_cog levels=1:2 keys_zone=plat_cog:16m max_size=2g inactive=7d use_temp_path=off;\n'
+  # cache de ladrilho raster (item L1-02): NVMe, 20 GB, 14 dias sem uso; a zona de autorizacao e pequena
+  # e vive 2 s (ver o bloco /svc/.../raster/ em deploy/nginx.conf)
+  # ⚠ a zona de CACHE não pode chamar-se `plat_tiles`. Nesta máquina o `conf.d/plat_limites.conf` já
+  # tem um `limit_req_zone ... zone=plat_tiles:10m rate=600r/m` (posto à mão, fora deste script), e o
+  # nginx recusa o mesmo nome de zona para dois usos: `the shared memory zone "plat_tiles" is already
+  # declared for a different use`. Com o nome repetido o nginx NÃO SOBE. MEDIDO em 10/09/2026 ao montar
+  # o cache de demo.iagrointel.com.
+  printf 'proxy_cache_path /var/cache/nginx/plat_tiles levels=1:2 keys_zone=plat_cache_tiles:64m max_size=20g inactive=14d use_temp_path=off;\n'
+  printf 'proxy_cache_path /var/cache/nginx/plat_tiles_auth levels=1:2 keys_zone=plat_tiles_auth:8m max_size=64m inactive=1m use_temp_path=off;\n'
 } > "$LIMITES.novo"
 if [ -f "$LIMITES" ] && cmp -s "$LIMITES" "$LIMITES.novo"; then rm -f "$LIMITES.novo"; echo "$LIMITES já existe (igual)"; else mv "$LIMITES.novo" "$LIMITES"; echo "$LIMITES escrito"; fi
 escrever_nginx() {

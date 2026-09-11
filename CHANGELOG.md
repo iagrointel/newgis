@@ -3,6 +3,352 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L4-05-d-epanet-inp: arquivo EPANET .inp entra e sai da rede de água)
+
+Porta de entrada e de saída do formato que o setor de água usa: o `.inp` do EPANET. `ler_inp`/`escrever_inp`
+(`app/rede_utilidades/epanet_inp.py`) cobrem JUNCTIONS, RESERVOIRS, TANKS, PIPES, PUMPS, VALVES, COORDINATES,
+VERTICES, PATTERNS, CURVES e OPTIONS; seção fora do escopo vira aviso, nunca erro. `POST /api/rede/{id}/epanet`
+enfileira o job `rede.epanet_importar`, que grava feições sobre o pacote de ativos `agua-epanet`;
+`GET /api/rede/{id}/epanet` reconstrói o arquivo das tabelas, nunca devolve o que entrou. Migração
+`20260910T2353_rede_epanet_importacao.sql`: fila da importação, `plat.rede_epanet_curva`/`rede_epanet_padrao`
+(as curvas e os padrões que um ativo referencia por ID, e sem as quais o arquivo exportado é recusado pelo
+WNTR) e a queda do `NOT NULL` das duas colunas `geom` da rede.
+
+Medido sobre a rede de água real desta casa (`tests/medidas/L4-05-d-epanet-inp.json`): 11.119 junções,
+7 reservatórios e 14.756 trechos lidos do arquivo, 11.126 feições de ponto e 14.756 de linha gravadas,
+941.294,02 m de comprimento declarado, importação em 2,0 s. Topologia habilitada: 11.126 nós e 14.756 arestas.
+Traçado conectado a partir de um reservatório alcança 11.126 nós, exatamente o tamanho da componente conexa que
+o `networkx` calcula no próprio `.inp`. Exportar e reimportar numa rede nova dá o mesmo grafo, e o
+`wntr.sim.EpanetSimulator` 1.5.0 roda o arquivo exportado sem erro.
+
+Nó sem linha em `[COORDINATES]` entra sem geometria e com aviso, jamais como ponto em (0,0) — a refutação
+exigida pelo item é teste (`test_adversario_remove_uma_coordenada`), e a soma de comprimento dos trechos não
+muda quando a coordenada some, porque ela vem do campo Length e não da geometria. Fica declarado como parcial:
+bomba e válvula são LINK no EPANET e ganham aqui o ponto médio dos dois nós (aproximação, não medição), e a
+paridade com o "water utility network foundation" da Esri não foi medida — o modelo é fechado e licenciado.
+ADR `docs/adr/20260907T1629-epanet-inp.md`. Mesclado no ramo de lançamento em 10/09 (trabalho de turno 4,
+resgatado do ramo `wt/il405depane`).
+
+## turno 4, setembro de 2026 (item L4-01-h-alinhamento-inspire-gnm: alinhamento ao INSPIRE Generic Network Model — PARCIAL, elétrica e água)
+
+Mapeamento campo a campo do pacote de ativos (`L4-01-a`) para o Generic Network Model do INSPIRE
+(`net`/`us-net-common`/`us-net-el`), documentado em `docs/INSPIRE_GNM.md` (fonte única: `MAPEAMENTO_GNM`
+em `app/rede_utilidades/inspire_gnm.py`). Exportador `exportar_gml()` gera GML de uma rede de teste
+(elétrica: 3 nós/2 elos com códigos reais de `eletrica-br.json`; água: 2 nós/1 elo) como
+`base:SpatialDataSet` com membros `us-net-common:Appurtenance` (nós) e `us-net-common:UtilityLink`
+(elos, decisão registrada no documento: `Cable`/`Pipe`/`ElectricityCable` são `UtilityLinkSet`, não
+`Link`, e exigiriam uma segunda feature por elo). Validado contra o XSD OFICIAL do INSPIRE (cópia
+vendorizada em `app/rede_utilidades/gnm_xsd/`, resolução 100% offline via `gnm_xsd/catalogo.xml`, sem
+rede em CI): `xmllint --schema` contra `ElectricityNetwork.xsd` e `UtilityNetworksCommon.xsd`, ambos
+`validates` (`tests/unit/test_inspire_gnm.py`, 6 testes verdes). PARCIAL porque o portão pede elétrica,
+água e gás: gás fica de fora por não existir pacote-fonte (`L4-01-a` só publicou elétrica e água) — não
+é lacuna do mapeamento GNM. Também fora: atributos operacionais (tensão, diâmetro, potência) não têm
+correspondência no GNM (ele modela topologia e status, não o dado operacional do ativo) e o teamengine
+oficial do INSPIRE não foi rodado (sem instância local nem rede autorizada; a prova usada é `xmllint`
+contra o mesmo XSD que o teamengine consome na checagem estrutural). Mesclado no ramo de lançamento em
+10/09 (trabalho de turno 4, resgatado do ramo `wt/il401halinh`).
+
+### Commits
+
+| sha | mensagem |
+|---|---|
+| 3c38aa4 | Alinhamento INSPIRE GNM (item L4-01-h): mapeamento, exportador GML e validação contra o XSD oficial |
+
+## turno 9, setembro de 2026 (item L7-03-d-injecao-consulta: 180 payloads de injeção contra o FeatureServer/OGC, 0 execução, 2 defeitos de 500 corrigidos)
+
+`tests/seguranca/test_injecao.py`: 180 payloads (where/outFields/orderBy/groupBy/outStatistics/having/objectIds/
+OGC) contra camada importada de verdade — 0 respostas 5xx, 8 ms de latência máxima, tabela-canário e contagem
+intactas; teste estático por AST (nenhum `.execute` em `app/` interpola nome de entrada do usuário) + `bandit
+B608` em `app/consulta` fixado em 6 f-strings de lista branca. Corrigidos em `app/consulta/motor.py`: `LIKE` em
+coluna numérica e `statisticParameters.value` não numérico devolviam 500 com traceback; agora 400 nomeado
+(`_executar`, rede de segurança para erro de tipo do banco). `docs/SEGURANCA.md` §10. ZAP baseline não rodou
+(sem imagem, disco 94 %, D21). (Colhido de `wt/cx5l703d`, integrado ao `wt/lancamento` no lote L7 #1; motor.py
+aplicado por patch direto, não cherry-pick, porque a árvore de origem está 373 commits atrás.)
+
+## turno 9, setembro de 2026 (item HARD-01-varredura-de-seguranca-continua: varredura de segurança no portão)
+
+- HARD-01-varredura-de-seguranca-continua: `make seguranca` em `make check` (bandit + pip-audit + npm audit + gitleaks no histórico + trivy; ZAP baseline em `make seguranca-zap` contra instância própria), exceções com prazo em `docs/excecoes_seguranca.json`, binárias fixadas por sha256 (`deploy/ferramentas_binarias.txt`), seção 9 de docs/SEGURANCA.md gerada; consertos: defusedxml no Garage, `server_tokens off`, X-Frame-Options e Content-Security-Policy no nginx. (Colhido de `wt/cx4h01`, turno 7/8 daquela trilha, integrado ao `wt/lancamento` no lote L7 #1.)
+
+## turno 9, setembro de 2026 (item L7-29-roteiro-demonstracao: roteiro de 30 minutos com e2e medido, fronteira gerada do painel e revisor separado)
+
+`docs/DEMO.md` percorre o que o produto faz hoje em 9 passos (fundação L0 e mapa L2), cada um com
+duração, "o que dizer", "não prometer" e o e2e que anda o mesmo caminho; seção "Passos que o roteiro
+não percorre" responde os pedidos frequentes (dado de demonstração, imagens, edição, motor, traçado,
+acervo, medição). A lista "o que a demonstração não faz ainda" NÃO é escrita à mão: é a seção
+Fronteira de `laco/PAINEL.md` reproduzida entre marcadores, e `docs/gerar_demo.py --validar` reprova
+o documento quando o bloco commitado diverge da regeneração (unitários cobrem estrutura, versão de 10
+minutos como subconjunto na ordem e a regra de escrita de 03/09 com lista fechada de termos). O texto
+foi revisado por agente separado sem o contexto do autor (33 pontos aplicados, nenhum fato mudado) e
+o validador passou por cima do texto revisado. `tests/e2e/test_demo.py` percorre os 9 passos na
+ordem contra a instalação real com captura por passo (`L7-29-roteiro-demonstracao_pNN_*.png`) e
+reprova acima de 30 min: rodada final 71,2 s, 9 passos, 15 capturas, carga 1 min 5,08, RAM livre
+7,4 GB (`tests/medidas/L7-29-roteiro-demonstracao.json`; passo mais lento: tarefas, 60,8 s — job de
+prova de 45 s + espera de fila vazia + cancelamento pela tela). O e2e documentou o refresco da lista
+de tarefas (relê só quando o contador de ativos muda entre tiques de 10 s; a regra está no ADR
+`20260908T2030-roteiro-de-demonstracao-medido.md`) e a bancada de trilha passou a aceitar o
+certificado autoassinado no contexto do navegador (`tests/e2e/conftest.py`, sem efeito com
+certificado de verdade). As dependências do item seguem abertas (L7-01-c refutado, L3-01/L4-02/
+L5-01/L6-01 pendentes) e o texto DIZ isso em vez de fingir. A lista "não faz ainda" foi regerada
+contra o `PAINEL.md` atual do turno 9 antes de integrar. (Colhido de `wt/il729roteir`, turno 8
+daquela trilha, integrado ao `wt/lancamento` no lote L7 #1.)
+
+## turno 9, setembro de 2026 (item L5-03-form-builder: construtor de formulário de atributos, arrasta-e-solta)
+
+Formulário de atributos por camada, versionado e publicável, desenhado arrastando (grupo, campo
+obrigatório, domínio, condicional, cálculo) — o "L2-10 formulário" que faltava para a edição web e o
+PWA de campo pararem de mostrar um campo-a-campo genérico. Novo `plat.formulario`/`formulario_versao`
+(migração `20260910T2350_formulario.sql`), módulo `app/formulario/` (`motor.py` compila o desenho em
+duas chaves novas de `plat.item.dados` — `form_condicionais`/`form_calculados` — lidas por
+`app/edicao/servico.py::validar_atributos` sem mudar sua assinatura, e valida o mesmo desenho ao vivo
+para `app/campo/servico.py`/`visita_criar`, que antes deste item não validava `dados` nenhuma).
+Condicional e cálculo usam a linguagem de expressão do item L2-10-c-linguagem-expressao
+(`app/expressao/avaliador_py.py`), a MESMA que o navegador usa (`web/js/expressao/avaliador.js`) —
+byte a byte, sem duas implementações. Um só motor de RENDERIZAÇÃO no navegador,
+`web/js/formulario/motor.js`, importado por `web/js/mapa/edicao.js` (edição web) e
+`web/js/campo/roteiro.js` (PWA de campo); construtor arrasta-e-solta em `/camadas/{id}/formulario`
+(`web/js/formulario/construtor.js`, sobre as primitivas de `web/js/editor/arrasto.js` do item
+L5-08-editor-arrasto, reaproveitadas sem cópia).
+
+Medido: 13 casos de API (`tests/api/test_formulario.py` — obrigatório incondicional e condicional,
+domínio, cálculo ignorando o valor do cliente, RLS cruzada 404, desenho inválido recusado) + 1 e2e no
+navegador contra a instância viva (`tests/e2e/test_formulario_construtor.py`, `venv/bin/pytest
+tests/e2e/test_formulario_construtor.py -m lento --base-url https://demo.iagrointel.com`; medida em
+`tests/medidas/L5-03-form-builder.json`): 5 campos em 2 grupos montados por `page.drag_and_drop`
+nativo, publicados, e a MESMA sessão de navegador provando a refutação do item ("adversário define
+campo obrigatório e submete sem ele pela API") em `POST /api/campo/visitas` — sem "nome" → 422
+`campo_obrigatorio`; `categoria=A` sem "ativo" (condicional) → 422; `categoria=B`/`area=5`/
+`total=999` enviado pelo cliente → servidor recomputa `total=10` (`area*2`), ignora o valor mandado.
+
+Fora do escopo deste turno: cálculo/condicional na ATUALIZAÇÃO parcial de feição (só cobertos em
+`adicionar`, contexto completo garantido; documentado em `app/edicao/servico.py`); domínio "vindo da
+camada" é resolvido como um SNAPSHOT na hora de publicar, não uma consulta ao vivo a cada edição;
+arrasto de propriedade avançada (visível/obrigatório/cálculo) é campo de texto com a expressão, não um
+construtor de condição visual — decisão de escopo, não lacuna escondida.
+
+## turno 9, setembro de 2026 (item L1-02-i-ogc-api-tiles-e-maps: OGC API — Tiles e OGC API — Maps por token)
+
+Fecha a família de padrões OGC da imagem: a casa já falava WMTS, WMS 1.3.0, XYZ, TileJSON, STAC e um
+ImageServer compatível Esri (L1-02 e L1-25); faltava OGC API — Tiles (OGC 20-057, classe "GeoData
+TileSets") e OGC API — Maps, que é a porta que ArcGIS Pro/QGIS >= 3.34 procuram primeiro. Nova dupla de
+módulos `app/imagens/ogc_tiles.py` (JSON puro: landing, conformance, `tileMatrixSets`, coleção, tileset)
+e `app/imagens/rotas_ogc_tiles.py` (rotas, mesma porta de entrada `_autorizar` do resto do L1-02) —
+nenhuma leitura de pixel própria: ladrilho de item chama `rotas_tiles._servir`, ladrilho de mosaico
+chama `rotas_tiles._tile_mosaico_impl`, `/map` chama `tiles.recorte()` — as MESMAS funções que já
+atendem XYZ, mosaico ad-hoc/registrado e o `GetMap` do WMS, respectivamente. `docs/adr/20260910T2056-
+ogc-api-tiles-e-maps.md` registra as decisões de escopo (`{item}` no caminho vale para item raster OU
+mosaico; `/map` só item raster nesta passagem; conformance honesto — 7 classes declaradas, todas
+cumpridas, nada a mais).
+
+Medido (`tests/medidas/L1-02-i-ogc-api-tiles-e-maps.json`; suíte própria `tests/api/imagens/
+test_ogc_tiles.py`, 22 casos, todos verdes; rodada junto com `test_tiles_token.py` e `test_mosaico.py`
+sem regressão — `test_wms.py` tem 2 falhas PRÉ-EXISTENTES, reproduzidas isoladamente ANTES de qualquer
+mudança deste item, não relacionadas):
+
+- **ladrilho byte-a-byte igual ao XYZ**, medido na instância viva (`demo.iagrointel.com`) sobre o item
+  REAL Sentinel-2B 23KLQ — Guarulhos: `sha256` idêntico (`1cb61eb0…`, 165.711 bytes) entre
+  `/svc/<tok>/raster/<item>/10/379/579.png` e `/svc/<tok>/ogc/tiles/collections/<item>/map/tiles/
+  WebMercatorQuad/10/579/379.png` (mesma z/x/y, ordem de caminho trocada — `z/y/x` na família nova,
+  `z/x/y` no XYZ, conforme a Tabela 4 da 20-057);
+- **`/map` byte-a-byte igual ao `GetMap` do WMS**, mesmo item, bbox = extensão inteira reprojetada para
+  EPSG:3857, 500×500: `cmp` sem diferença, 729.604 bytes idênticos nos dois lados, `Content-Crs:
+  <http://www.opengis.net/def/crs/EPSG/0/3857>` no cabeçalho;
+- **`/tileMatrixSets/WebMercatorQuad`** devolve os 25 níveis de zoom do PRÓPRIO `TMS.model_dump()` do
+  morecantile (não um resumo escrito à mão) — conferido igual, campo a campo, no teste;
+- **tileset metadata do segundo item real** (Ortofoto Mogi das Cruzes 2016): `dataType: "map"`, 7
+  entradas de `tileMatrixSetLimits` calculadas em O(1) por zoom (dois cantos do bbox via `TMS.tile()`,
+  não enumeração de ladrilhos — evita milhões de tiles num item de poucos graus em zoom alto);
+- **grade inválida e token inválido**: `404 tileMatrixSet_invalido` / `403`, nunca 500 nem 200 fingido
+  (medido ao vivo também).
+
+Achados corrigidos no próprio turno (autoral, antes do adversário externo — ver §refutação abaixo):
+(1) `width`/`height` do `/map` tinham `le=WMS_LARGURA_MAX`/`le=WMS_ALTURA_MAX` no `Query` — como
+4096×4096 é EXATAMENTE o teto (`WMS_PIXELS_MAX`), a checagem `width*height > WMS_PIXELS_MAX` nunca
+disparava (código morto) e um pedido no canto do teto caía direto no render: medido em **142 s** numa
+única chamada de teste antes do conserto. Corrigido para três condições OR'd (mesma forma de
+`rotas_wms._get_map`), sem `le=` no Query — o teto em si continua permitido, só o que passa dele é
+recusado, e a recusa agora acontece ANTES do render; (2) `/map` de item de OUTRO inquilino devolvia
+`422 mapa_nao_suportado` (assumia "não é raster, deve ser mosaico") em vez de `403` — corrigido para
+chamar `_resolver_colecao` primeiro (que já dá o 403 honesto de "não existe para este token") e só
+recusar por tipo depois de confirmar que o item PERTENCE ao inquilino.
+
+Fora deste turno, nomeado em `docs/PARIDADE.md`: OGC API Maps sobre mosaico (motor de composição por
+bbox livre não existe — o que existe compõe por célula da grade); tileset metadata do mosaico AD-HOC
+sem registro prévio (mesma lacuna que `mosaico_tilejson`/`mosaico_wmts_rest` já tinham, por
+consistência); `collections-selection`, `dataset-tilesets`, formatos vetorial/cobertura/netCDF, `/api`
+(OpenAPI próprio desta família), HTML, dimensão `datetime` por coleção; teste com ArcGIS Pro/QGIS reais
+(decisão D20 do dono).
+
+**Rodada do adversário independente (mesmo turno, contexto próprio — nunca viu o código nem o
+raciocínio acima): veredito PARCIAL.** Confirmou, sem confiar no autor: byte-a-byte idêntico em 10
+combinações adicionais de zoom (não só as do autor), isolamento entre inquilinos em toda a superfície
+(collections/tileset/tile/map), grade inválida sempre 404 limpo, SSRF/injeção/traversal sempre
+recusados, 22 testes próprios verdes. Achou DOIS bugs reais, os dois CORRIGIDOS nesta mesma passagem
+com teste de regressão: (1) `bbox=nan,nan,nan,nan`/`-inf,-inf,inf,inf` não levantam `ValueError` em
+`float()` — escapavam da checagem de "invertido" e só quebravam dentro de `tiles.recorte`, saindo como
+502 `leitura_falhou` (categoria errada); corrigido com `math.isfinite` explícito, 400 `bbox_invalido`.
+(2) `crs=EPSG:4326; DROP TABLE x` passava o `startswith("EPSG:")` inteiro (com o texto depois do
+número) e só quebrava dentro de `CRS.from_user_input`, ecoando a exceção crua no corpo do 502;
+corrigido — o texto após `EPSG:` tem de ser só dígitos, senão 400 `crs_invalido` antes de qualquer
+parser. Também mediu, sem corrigir (fora do escopo de uma fachada sobre motor de pixel compartilhado,
+registrado em `docs/PARIDADE.md`): `/map` no TETO PERMITIDO (4096×4096) renderiza em ~27 s nesta
+bancada — idêntico ao `GetMap` do WMS no mesmo tamanho (~34 s), o mesmo `tiles.recorte` por baixo dos
+dois; e zoom abaixo do `minzoom` nativo do item é lento (até 18 s) tanto no XYZ quanto no OGC —
+pré-existente no motor `tiles.ladrilho` do item L1-02 base, reproduzido idêntico nos dois caminhos.
+
+Fechando a lacuna que o próprio portão previa e a suíte original ainda não cobria ("…ou em teste
+próprio contra o JSON Schema da spec"): nova suíte `tests/api/imagens/test_ogc_tiles_schema.py` (5
+casos) valida landing, conformance, `tileMatrixSets` (lista), `tileMatrixSet` (definição) e tileset
+metadata contra o documento OpenAPI **bundled** oficial de OGC API — Tiles Part 1
+(`tests/dados/ogc_schemas/ogcapi-tiles-1.bundled.json`, baixado 10/09/2026 de
+`schemas.opengis.net`, sem depender de rede em execução) — validação de esquema de verdade, não
+asserção de campo escrita à mão. Suíte final: **29 + 5 = 34 casos**, todos verdes.
+
+## turno 9, setembro de 2026 (item L2-01-j-comparacao-cortina-tempo: comparação — cortina, lado a lado, lupa e tempo)
+
+Quarta ferramenta do painel "Comparar" do SIG novo (`/sig`, ícone atalho `C`): cortina (swipe) vertical e
+horizontal entre dois conjuntos de camadas, lado a lado sincronizado, lupa, e controle de tempo para
+camada vetorial com campo de data — o que um parceiro compara com o concorrente em dez segundos. As
+quatro ferramentas reaproveitam `Catalogo` (mapa/catalogo.js) em duas instâncias sincronizadas por
+evento (`jumpTo` + trava contra retroalimentação) em vez de reescrever fonte/tile/ordem de camada; o
+controle de tempo não abriu rota nova nenhuma — usa a MESMA operação `query` do FeatureServer
+Esri-compatível que já existia (item L2-04-c), com filtragem 100% no servidor.
+
+Medido na instância viva (`https://demo.iagrointel.com/sig`, captura em `tests/e2e/capturas/`,
+`scratchpad/prova_final.py` reproduz a mesma sequência sem depender do `.pytest.lock`, disputado nesta
+trilha por outro item rodando em paralelo):
+
+- **sincronismo do lado a lado**: 20 movimentos aleatórios de centro/zoom/rotação só no mapa A —
+  diferença de centro entre os dois mapas = **0,0 grau em todos os 20** (`diferencaMaximaCentro` e
+  `diferencaCentroFinalLng/Lat` no resultado; zoom e rotação idênticos bit a bit);
+- **controle de tempo**: 5 passos da janela instantânea + 3 da acumulativa, os **8 batendo exatamente**
+  com `COUNT(*)` direto no banco (consulta SQL independente, não a mesma rota que a tela usa) — camada de
+  TESTE de 100.000 pontos com `data_evento timestamptz`, ~3% NULL, 1/4 gravado com fuso diferente de UTC
+  (`AT TIME ZONE`), porque nenhuma das 3 camadas reais do inquilino demo tem campo de data tipado
+  (`scripts/comparar_demo_tempo.py criar/apagar` — apagada ao final deste item);
+- **reprodução a 2 passos/s**: laço que espera cada passo terminar antes do próximo (nunca dois pedidos
+  pendentes) — último passo medido em 104-322 ms, sempre abaixo do intervalo de 500 ms;
+- **lupa**: achado e corrigido no próprio turno — `_aplicarVisual()` (que liga `pointer-events:none` no
+  container em modo lupa, condição para o cursor alcançar o mapa principal por baixo) só rodava no ramo
+  cortina/lado-a-lado; sem ela a lupa ficava presa no canto (0,0) do container. Corrigido, medido depois:
+  diferença entre o alvo do cursor e o centro do círculo = **0,01 px** (achado pelo e2e, não pelo
+  adversário — a suíte ainda não tinha rodado quando o código foi escrito pela primeira vez);
+- **0 erros de console** em toda a sequência (cortina × 2 orientações, lado a lado, lupa, tempo × 2
+  janelas, reprodução) — os 502 vistos numa rodada anterior eram `/api/imagens/.../tiles/...` de OUTRA
+  trilha (item L1-01-j) rodando no mesmo inquilino demo compartilhado sob pressão de RAM da máquina, não
+  deste item; o e2e documenta a tolerância e por quê (`tests/e2e/test_comparar.py`).
+
+Fora deste turno, nomeado: controle de tempo para série raster/STAC (item irmão L1-04-serie-temporal,
+ainda `pendente`); alça arrastável no divisor do "lado a lado" (hoje fixo 50/50); indicador de
+carregamento na lupa enquanto o mapa B monta.
+
+## turno 9, setembro de 2026 (item L1-01-j-proveniencia-da-imagem-lastro: proveniência verificável da imagem)
+
+O "Lastro" da casa aplicado à imagem: o item raster passa a carregar, além do `file:checksum` que já
+existia, a extensão `processing` (`processing:software` — versões de GDAL/rio-cogeo/rasterio/`plat`
+MEDIDAS na hora da conversão, não uma constante — e `processing:lineage`, texto em português), um bloco
+`plat:cadeia` (um passo por perfil convertido, o argv EXATO de cada `gdal_translate`, sha256 de entrada e
+de saída) e `plat:manifesto_sha256` (sha256 do item STAC inteiro MENOS essa própria chave — canonicalização
+fixa em `app/imagens/proveniencia.py`: `json.dumps(sort_keys=True, separators=(",",":"),
+ensure_ascii=False)`). `app/imagens/cog.py` ganhou `ProdutoCOG.comando` (o argv que cada conversão rodou);
+`app/imagens/ingestao.py` monta a cadeia e sela o manifesto no MESMO job que já converte, sem round-trip
+extra.
+
+Conferência: `POST /api/imagens/<item>/conferir` (`app/imagens/proveniencia.conferir_item`) baixa CADA
+asset com checksum de volta do balde em stream (`objetos.sha256_remoto`, nunca o objeto inteiro em RAM),
+recalcula o sha256 e compara — divergência POR ATIVO, nunca um veredito único para o item inteiro; um byte
+trocado num ativo não esconde nem contamina o veredito dos outros. Preenchimento retroativo dos itens
+ingeridos antes deste item, dois caminhos: `POST /api/imagens/proveniencia/preencher-pendentes` (rota de
+administração, só metadado — `processing:software` do `plat:versoes` que a ingestão original JÁ media,
+`plat:cadeia` fica AUSENTE de propósito, nunca fabricado) e o job de fila `imagens.reexecutar` (pesado:
+baixa o bruto, reconverte com o `cog.py` ATUAL e compara o sha256 obtido com o registrado — a prova de
+determinismo do portão).
+
+Achado de build que quase quebrou o próprio manifesto: `pgstac.create_item`/`update_item` DESCARTA
+qualquer chave de `properties` com valor `null` na gravação — uma ficha selada com `"plat:cadeia": null`
+tinha o hash calculado sobre um dict que o banco nunca devolve de volta igual, e `conferir_item` acusava
+divergência de manifesto em TODO item sem cadeia, sempre, sem nenhum byte alterado. Corrigido: `cadeia=None`
+OMITE a chave em vez de gravar `null` (`preencher_propriedades_proveniencia`); achado pelo próprio teste
+de integração deste item (não pelo adversário — não houve rodada de adversário separada neste turno).
+Segundo achado, de performance: a 1ª varredura de `preencher-pendentes` sem filtro levou 165 s escaneando
+217 itens em 236 coleções (`pgstac.items` é particionado POR coleção, e esta trilha compartilhada acumulou
+centenas de coleções efêmeras de outras suítes de teste — 16.713 itens pendentes fora do escopo real);
+escopado para só a coleção `<tenant_id>-imagens` (`prov.itens_pendentes`), a mesma varredura caiu para
+2,8 s.
+
+Prova na instância viva (127.0.0.1:8184, restart de API e worker): os 2 itens raster reais do demo
+(Sentinel-2B Guarulhos, Ortofoto Mogi das Cruzes — o 3º item listado antes era um duplicado já apagado)
+preenchidos e conferidos, **0 divergências em 2 itens / 8 ativos** (a demo não tem 10 itens raster reais;
+número relatado é o real, não inventado). `imagens.reexecutar` rodado de verdade sobre a Ortofoto Mogi
+pela fila (job `0ba788c2…`, 10,5 s): **determinismo PROVADO** — sha256 do COG científico e do visual
+reconvertidos bateram exatamente com os já registrados, mesmo argv (`NUM_THREADS=ALL_CPUS` incluído).
+8 itens de teste (fixtures deste turno, sem dado real) apagados da coleção `1-imagens` ao final.
+
+`tests/api/imagens/test_proveniencia.py` (20 casos, sem depender de GDAL/upload real — a montagem do
+item passa pela MESMA `ingestao._item_stac` que `imagens.ingestar` chama, com objetos reais no balde):
+unidades de canonicalização/manifesto/cadeia; item novo nasce com os campos; conferência acusa divergência
+quando o adversário edita 1 byte do objeto (refutação literal do item) e os OUTROS ativos continuam `ok`;
+item de outro inquilino invisível (404) no painel e na conferência; preenchimento leve idempotente; rota
+de administração preenche item retroativo e a conferência bate depois. `venv/bin/ruff check app` limpo
+nos arquivos deste item (7 erros pré-existentes em `app/jobs/tipos_prova.py`, não tocado, não são deste
+turno).
+
+**Adversário independente rodou ao fim do turno (P8) — dois achados, um confirmando, um corrigido.**
+Refutação prescrita pelo item (editar 1 byte do objeto no balde com a chave RW e rodar a conferência):
+TENTOU, FALHOU — `/conferir` acusou corretamente só o ativo alterado, os outros 3 continuaram `ok`,
+`manifesto_ok` continuou `true` (o manifesto certifica os METADADOS do item, não o conteúdo do balde —
+separação deliberada, confirmada); byte restaurado, demo devolvido limpo. Achado NOVO, fora da
+refutação prescrita: `processing:software`, num item reexecutado (`cadeia_origem=
+reexecucao_retroativa`), continuava sendo o `plat:versoes` da ingestão ORIGINAL mesmo quando o GDAL/
+rio-cogeo da reexecução era outro — nada cruzava os dois blocos, e o manifesto sela essa combinação sem
+reclamar (ele prova integridade PÓS-selagem, nunca veracidade do conteúdo selado). Não é um buraco
+alcançável por um cliente da API (a função que grava `processing:software` nunca recebe versão de fora,
+só o `plat:versoes` já medido), mas era invisível quando o GDAL do host muda entre a ingestão e uma
+reexecução posterior. Corrigido: `plat:reexecucao.versoes_mudaram_desde_a_ingestao` (booleano, comparando
+`plat:versoes` × `cog.versoes_software()` medido na hora) — a divergência agora é um campo, não algo que
+só se percebe comparando dois blocos manualmente; `LINEAGE_RETROATIVA` cita o campo explicitamente. Sem
+teste automatizado novo para este campo (só verificado na instância viva, rodando `imagens.reexecutar`
+de novo sobre a Ortofoto Mogi e conferindo `versoes_mudaram_desde_a_ingestao: false`, coerente — o GDAL
+não mudou entre as duas rodadas); ver "fora deste turno" abaixo.
+
+Fora deste turno, nomeado: `plat raster reexecutar/verificar <item>` como comando de linha só (hoje: job
+de fila + rota HTTP, mesmo caso de uso); reexecução em lote (hoje: um item por chamada de
+`imagens.reexecutar`; só a varredura SEM reconversão é em lote); teste automatizado de
+`versoes_mudaram_desde_a_ingestao` (hoje só verificado na instância viva — precisa de um jeito de
+simular GDAL "trocado" sem depender da máquina ter duas versões instaladas).
+
+## turno 8, setembro de 2026 (item L1-07-mosaico-por-colecao-e-pegadas: mosaico por busca registrada e pegadas)
+
+Um mosaico virou uma busca STAC registrada, não mais um recorte ad-hoc: `POST /svc/<tok>/stac/mosaicos`
+grava coleções, período, filtro CQL2 e ordenação, e devolve um id ESTÁVEL — registrar a mesma busca de
+novo devolve o mesmo id, o que é o que permite colar o endereço do mosaico num mapa salvo e ele continuar
+funcionando quando cenas novas entrarem na coleção. O registro delega ao próprio pgstac
+(`pgstac.search_query()`, a mesma função que o `POST /searches/register` do titiler-pgstac chama por
+baixo); a composição do ladrilho roda em casa, com `rio_tiler.mosaic.mosaic_reader` (`FirstMethod`) —
+pixel a pixel, não cena a cena, o que corrige o mosaico ad-hoc anterior (que escolhia uma cena inteira e
+deixava o resto do ladrilho em branco quando a junta caía dentro dele).
+
+Escopo de token agora vale também por mosaico: `tiles:ler:<uuid-do-mosaico>` serve os ladrilhos, o
+TileJSON, o WMTS e as pegadas do mosaico sem nunca abrir acesso às cenas avulsas que o compõem — medido
+na instância viva (403 no item avulso com o token do mosaico). Pegadas (`GET .../mosaico/<uuid>/pegadas`)
+devolvem GeoJSON com `id`/`datetime`/`eo:cloud_cover` por cena, contagem exata contra o que compõe a
+busca.
+
+Medido em `tests/medidas/L1-07-mosaico-por-colecao-e-pegadas.json` (`scratchpad/medir_l107.py`, grade
+sintética de 6 quadrantes adjacentes, 4 km cada, 20 m/px): ladrilho do mosaico de z8 a z14 fica entre
+**64 e 106 ms de Server-Timing** (mediana de 20 pedidos quentes: 89-127 ms; frio de processo em z8:
+13,9 s, dominado por abrir a 1ª conexão ao Garage/COG, não por escolher entre cenas). Prova pela
+instância real (`scratchpad/prova_l107_mosaico.py`, 127.0.0.1:8184): ladrilho na JUNTA entre dois
+quadrantes com `X-Plat-Cenas-Candidatas: 6` e pixel médio 0,0 de um lado × 138,5 de outro (diferença
+138,5/255) — os dois lados vieram de cenas DIFERENTES, não uma cena com o resto vazio; pegadas com 6
+feições (contagem exata); registro duas vezes com o mesmo critério devolveu o mesmo id nas duas vezes.
+
+Fora deste turno, nomeado: regras de seleção de pixel além de "primeira com dado" — mediana, média,
+travar cena, "mais recente sem nuvem" (item irmão L1-08); pegadas como camada vetorial por Martin (só
+GeoJSON pela API); tela "Coleção → Mosaico" no construtor de mapa (L2); `mosaicRule` do ImageServer
+compatível Esri (L1-25) continua recusando — o item que faltava agora existe, mas ninguém ligou o
+parâmetro Esri ao mosaico novo (`app/imagens/rotas_imageserver.py` estava sendo tocado por outra trilha
+no mesmo turno; ligar as duas juntas ficou para um próximo turno, ver `docs/PARIDADE.md`).
+
 ## turno 7, setembro de 2026 (item L4-04-d-diagrama-esquematico: diagrama de rede, regras e layouts)
 ## turno 4, setembro de 2026 (item L2-05-e-raster-basico: treze ferramentas raster sobre COG)
 ## turno 3, setembro de 2026 (item L2-14-a-ingestao-de-fluxos: entrada de eventos em tempo real)
@@ -8230,3 +8576,115 @@ feição, com o lado que mudou marcado por classe e não só por cor) e a decis�
 
 Limite declarado: 50 ramos abertos por camada (`VERSOES_POR_CAMADA_MAX`), e a camada pode declarar um
 teto menor em `dados.versionamento.ramos_max`.
+
+## L1-02-g-wms-1-3-0-raster (10/09/2026)
+- WMS 1.3.0 por token (`GET /svc/<token>/wms`, `app/imagens/rotas_wms.py` + `app/imagens/wms.py`): `GetCapabilities` (uma `<Layer>` por item raster que o token alcança, `EX_GeographicBoundingBox`, `BoundingBox` em EPSG:4326 e EPSG:3857) e `GetMap` (LAYERS/CRS/BBOX/WIDTH/HEIGHT/FORMAT/TRANSPARENT), reusando a mesma porta de entrada do WMTS (`_autorizar`, token no caminho, cache de 5 s).
+- `tiles.recorte()` em `app/imagens/tiles.py`, ao lado de `ladrilho()`: leitura de um bbox arbitrário (não uma célula de grade) via `rio_tiler.io.Reader.part`, para o CRS/tamanho que o cliente pedir no GetMap.
+- Eixo invertido do WMS 1.3.0 em EPSG:4326 (BBOX = lat,lon nesse CRS, x,y normal em EPSG:3857) tratado em `wms.py::bbox_do_parametro`/`bbox_para_atributo` e testado nos dois CRS.
+- Isolamento entre inquilinos: a lista de camadas visíveis é calculada uma vez por token (tenant_id + escopo) e usada tanto no GetCapabilities quanto na validação do GetMap — camada fora dela vira `LayerNotDefined`, a mesma mensagem para "não existe" e "não é sua".
+- Erro de domínio (CRS inexistente, tamanho acima do teto, BBOX degenerado, STYLES desconhecido, operação não suportada) sempre em `ServiceExceptionReport` (XML da spec), nunca 500 mudo; `SLD`/`SLD_BODY` só é consultado como string, nunca entra num parser de XML (defesa estrutural contra XXE).
+- `app/limites.py`: seção WMS (`WMS_LARGURA_MAX`/`WMS_ALTURA_MAX`/`WMS_PIXELS_MAX` = 4096×4096, `WMS_CAMADAS_MAX` = 500).
+- XSD oficial do WMS 1.3.0 (`capabilities_1_3_0.xsd`, `exceptions_1_3_0.xsd`) trazido para `tests/dados/ogc_xsd/wms/1.3.0/` a partir do commit `b0b52199f` (já no object store do repositório, cache de XSD do item L2-04-i) — sem depender de rede para validar.
+- `tests/api/imagens/test_wms.py` (21 casos): GetCapabilities válido no XSD oficial, GetMap com tamanho exato, JPEG sem transparência, fora-da-cobertura em branco, eixo invertido 4326×3857, isolamento entre inquilinos, token sem escopo/inválido, e os abusos do adversário (WIDTH gigante, BBOX invertido de verdade, CRS inexistente, STYLES arbitrário, SLD_BODY com XXE).
+- Fora desta passagem (ver `docs/PARIDADE.md`): `GetFeatureInfo`, `TIME`/dimensão, `GetLegendGraphic` (depende de L1-02-f, ainda pendente).
+
+## L1-02-f-predefinicoes-de-renderizacao-e-legenda (10/09/2026)
+- `app/imagens/predefinicoes.py`: 6 predefinições de FÁBRICA (RGB natural, falsa-cor NIR, NDVI, NDWI,
+  NBR aproximado — PARCIAL, sem banda SWIR real nesta instalação —, relevo sombreado com hillshade
+  analítico calculado dentro do próprio ladrilho/recorte) + predefinições CUSTOM por item, guardadas em
+  `plat.render_predefinicao` (migração `20260910T1620`, RLS, JSON Schema
+  `docs/esquemas/renderizacao-v1.json`: bandas, esticamento min/max·desvio-padrão·percentil (aproximado
+  por `statistics.NormalDist`, sem recalcular pixel)·explícito, colormap nomeado do rio-tiler, nodata
+  transparente, opacidade, reamostro.
+- Aplicado nos TRÊS caminhos sem mudar o comportamento padrão de quem não passa nada: `predef=` no
+  XYZ/WMTS/TileJSON (`rotas_tiles.py`), `STYLES=` no WMS `GetMap` + `GetLegendGraphic` novo
+  (`rotas_wms.py`/`wms.py`, `<Style>`/`<LegendURL>` no `GetCapabilities`) e `renderingRule` no
+  ImageServer (`rotas_imageserver.py`) — só a forma mínima `{"rasterFunction":"<nome>"}`, forma
+  encadeada/`rasterFunctionArguments` continua recusada com erro Esri; `allowRasterFunction` agora é
+  `true` quando o item tem banda suficiente para ao menos 1 predefinição de fábrica.
+- `tiles.ladrilho()`/`tiles.recorte()` ganharam `resampling`/`nodata_transparente` (default idêntico ao
+  de antes); `predefinicoes.renderizar_hillshade` lê 1 banda e calcula sombreamento fora do pipeline de
+  `rio_tiler.render` (formula padrão azimute 315°/altitude 45°, `np.gradient`); `aplicar_opacidade` faz
+  pós-processamento de alfa por PIL só quando `opacidade<1`.
+- Legenda: `legenda_json`/`legenda_png` (mesma fonte para as duas — nunca dessincronizadas), servidas
+  por `/svc/<token>/raster/<item>/legenda.json|png` e pelo `GetLegendGraphic` do WMS.
+- CRUD de sessão em `app/imagens/rotas_predefinicoes.py` (`/api/imagens/<item>/predefinicoes`,
+  `POST .../tornar-padrao`): nome de fábrica é reservado, banda fora do item é 422
+  `predefinicao_incompativel` na hora de salvar (não só no uso).
+- `plat.item` ganhou `UNIQUE (tenant_id, id)` (faltava, item L1-02-f precisava de FK composta por
+  inquilino, regra de `tests/api/test_fk_composta_por_inquilino.py`).
+- `tests/api/imagens/test_predefinicoes.py` (22 casos): esquema/banda/colormap inválidos nunca viram
+  500, determinismo da query string, NDVI abre + legenda bate com os cortes, falsa-cor muda o pixel de
+  forma previsível (>50% dos pixels diferem), trocar a predefinição padrão muda a URL publicada sem
+  quebrar a anterior (nome explícito continua servindo), isolamento entre inquilinos, WMS `STYLES=`/
+  `GetLegendGraphic`, ImageServer `renderingRule` (forma mínima aceita, forma encadeada e nome
+  inexistente recusados sem 500). `test_imageserver_token.py` atualizado: o teste antigo que esperava
+  `renderingRule` SEMPRE recusado (400) virou dois testes (mosaicRule continua fora; renderingRule com
+  nome desconhecido é 422/400, nunca 500 — a FORMA passou a ser aceita, o CONTEÚDO ainda é validado).
+- Prova pela instância viva (127.0.0.1:8184, item Sentinel-2 real de 3 bandas): cor verdadeira × falsa
+  cor (recomposição 3-1-2, predefinição custom) — 99,46% dos 65.536 pixels do mesmo ladrilho diferem
+  (diferença média 12,7/8,9/7,1 por canal RGB); ver relatório do turno para os dois PNG e os comandos.
+- Fora deste turno: linguagem de expressão livre por predefinição do usuário (item L1-12, ainda
+  pendente — as 3 predefinições de índice usam expressão FIXA, escolhida em código, sobre a gramática
+  já existente de `tiles.py`); tabela de cor CUSTOM por intervalo (só rampa nomeada, como o portão
+  pede); histórico de versão de uma predefinição editada (edita substitui o corpo, `versao` sobe, mas
+  não guarda a versão anterior — só a troca de PADRÃO entre predefinições distintas preserva a URL
+  antiga, não a edição de uma já publicada).
+
+## L4-13-integracao-telemetria (10/09/2026)
+- `plat.rede_medicao` particionada por mês (`PARTITION BY RANGE (ts)`, mesmo padrão de `plat.evento`:
+  função `rede_medicao_particao_garantir` SECURITY DEFINER com `pg_advisory_xact_lock`, RLS própria em
+  cada partição, REVOKE ALL de acesso direto à partição — SEM TimescaleDB, proibido para dado de
+  cliente nesta casa). `ativo` é só o `id` (uuid) de uma feição, sem FK: a mesma decisão de desenho do
+  módulo campo, uma leitura de algo que saiu da camada continua sendo um fato.
+- Catálogo fechado `plat.rede_medicao_grandeza` (8 grandezas: corrente/tensão por fase, temperatura —
+  `tipo='bruto'` — e `carregamento_pct` — `tipo='derivado'`, só o motor de alarme escreve). Placa do
+  ativo (kVA/tensão nominal) em `plat.rede_medicao_ativo`, sem depender de nenhuma tabela de feição.
+- `POST /api/rede/medicao/leituras`: lote (até 2.000), idempotente por `(tenant, ativo, grandeza, ts)`
+  — `ON CONFLICT DO NOTHING`, reenviar não duplica —, recusa item a item (nunca o lote inteiro) por
+  `ts_futuro` (tolerância de 120 s de relógio do sensor), `grandeza_desconhecida` e
+  `unidade_incompativel`, sempre com mensagem. `PUT/GET /api/rede/medicao/ativos/{ativo}` (placa),
+  `.../ultimas` (última leitura por grandeza) e `.../serie` (série por período, padrão 7 dias) — a
+  ficha do ativo. `GET /api/rede/medicao/jusante` soma a leitura mais recente de uma grandeza entre os
+  transformadores alcançados a jusante de um ponto pela topologia derivada (reusa
+  `app.rede_utilidades.fluxo.tracar_fluxo`, sem mudar nada nele).
+- Motor de alarme "carregamento > 100% por 30 min" (`servico.py::avaliar_alarme_carregamento`) roda
+  DENTRO da própria chamada de publicação, para cada ativo tocado que já tem placa cadastrada — sem
+  depender de job periódico. Calcula `carregamento_pct` (S(kVA) ≈ √3×V×I_média ÷ 1000, sobre kVA
+  nominal) para cada `ts` de corrente na janela de retrospecto que ainda não tem o derivado (não só o
+  mais recente — um lote com histórico, como o do simulador desta prova ou um sensor que ficou
+  offline, precisa da série completa para o "surto contínuo de 30 min" existir). `plat.
+  rede_medicao_alarme_estado` guarda só o ESTADO atual (evita reabrir o mesmo alarme a cada leitura);
+  dispara `rede_medicao/alarme_disparado` na transição, `rede_medicao/alarme_resolvido` quando volta a
+  ≤ 100%.
+- Privilégio novo `rede.medir` (perfis campo/editor/admin — migração e espelho em
+  `app/auth/privilegios.py`, vocabulário 47→48). Tarefa periódica `rede_medicao.particoes_criar`
+  registrada PAUSADA (`ativa=false`; o mês corrente e o seguinte já existem desde a migração).
+- Tela `/rede/medicao/ficha?ativo=<uuid>&rede_id=<uuid opcional>` (`web/rede_medicao_ficha.html` +
+  `web/js/rede/medicao_ficha.js`): última leitura de cada grandeza, gráfico de 7 dias (SVG inline, sem
+  biblioteca) e — quando `rede_id` é passado — um mapa MapLibre (estilo vazio, só o marcador) com o
+  ponto do ativo colorido (vermelho = alarme ativo, verde = normal, cinza = sem placa); atualiza
+  sozinha a cada 5 s.
+- Simulador `scripts/rede_medicao_simulador.py`: 20 sensores de trafo reais da rede
+  `lancamento-demo-utilidades` (35 trafos disponíveis), corrente por fase a cada 5 min, temperatura a
+  cada 5 min, tensão a cada 10 min; `--provar` mede publicar→ficha e mostra o alarme disparando com
+  histórico simulado; `--limpar` apaga leitura/placa/estado de alarme dos ativos que tocou (nunca a
+  rede em si).
+- Medido na instância viva (127.0.0.1:8184, tenant `demo`, 10/09/2026): 1.540 leituras (65 min de
+  histórico × 20 trafos) publicadas em 0,7 s; publicar → aparecer na ficha do ativo = **0,089 s**
+  (portão pede ≤ 5 s); alarme disparou em 8 dos 20 trafos simulados com carregamento acima de 100%
+  (ex.: 151,5%, desde 30 min antes do fim do backfill); gráfico de 7 dias com 15 pontos.
+- 11 testes novos em `tests/api/test_rede_medicao.py`: idempotência (mesmo lote 2×, mesmo trio dentro
+  do mesmo lote), recusa com mensagem (ts futuro, grandeza desconhecida, unidade incompatível,
+  `carregamento_pct` publicada de fora), isolamento entre inquilinos usando o MESMO `ativo` uuid nos
+  dois lados (leitura, série e placa — cláusula inegociável), ficha do ativo (última leitura por
+  grandeza, série filtra por janela), alarme dispara/resolve/NÃO dispara antes de 30 min contínuos,
+  agregação a jusante com uma rede mínima real (2 trafos, 2 trechos).
+- Paridade Esri (`docs/PARIDADE.md`): GeoEvent Server e ArcGIS Velocity fazem streaming/regra sobre
+  telemetria, mas não têm uma tabela de medição por ativo nativa dentro do Utility Network — registrado
+  como ALÉM da capacidade Esri equivalente, não paridade.
+- Fora deste turno: MQTT/ingestão por fluxo (a rota é HTTP; L2-14-tempo-real é quem cobre ingestão de
+  fluxo em geral); agregação a jusante por ALIMENTADOR/subrede nomeada (a agregação existe e está
+  testada, mas parte de um `ativo` ponto de partida — subrede/controlador automático depende de
+  L4-04-a/b, não construído para a rede de demonstração desta trilha); retenção/expurgo de partição
+  antiga (a de `plat.evento` existe como molde, não copiada aqui por não ser exigida pelo portão).

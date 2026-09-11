@@ -40,6 +40,9 @@ class ProdutoCOG:
     sha256: str
     compressao: str          # 'JPEG' | 'WEBP' | 'ZSTD'
     bandas_usadas: list[int]  # 1-based, como no GDAL
+    comando: list[list[str]]  # item L1-01-j: argv EXATO de cada chamada gdal_translate, na ordem em que rodou
+                              # (lista de argv, não string montada — sem ambiguidade de aspas/espaço; a cadeia
+                              # de proveniência (`plat:cadeia`) é isto mais o sha256 de entrada/saída)
 
 
 def _sha256(caminho: Path) -> str:
@@ -119,7 +122,7 @@ def converter_cientifico(ctx, bruto: Path, rel: RelatorioValidacao, saida: Path)
     _rodar(ctx, argv, "cientifico")
     _validar_cog(saida, "cientifico")
     return ProdutoCOG("cientifico", saida, saida.stat().st_size, _sha256(saida), "ZSTD",
-                      list(range(1, rel.bandas + 1)))
+                      list(range(1, rel.bandas + 1)), [list(argv)])
 
 
 def _bandas_visual(rel: RelatorioValidacao) -> list[int]:
@@ -160,7 +163,8 @@ def converter_visual(ctx, bruto: Path, rel: RelatorioValidacao, stats: list[dict
     _rodar(ctx, argv, "visual")
     vrt.unlink(missing_ok=True)
     _validar_cog(saida, "visual")
-    return ProdutoCOG("visual", saida, saida.stat().st_size, _sha256(saida), compressao, bandas)
+    return ProdutoCOG("visual", saida, saida.stat().st_size, _sha256(saida), compressao, bandas,
+                      [list(argv_vrt), list(argv)])
 
 
 def miniatura_png(ctx, visual: ProdutoCOG, saida: Path) -> dict:

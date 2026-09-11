@@ -66,11 +66,7 @@ EXTENSOES = {
     "application/vnd.pmtiles": "pmtiles",
     "application/octet-stream": "bin",
     # formatos de exportação de camada (item L0-04-h-exportar; app/exportacao/formatos.py)
-    "application/geopackage+sqlite3": "gpkg",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
-    "application/vnd.google-earth.kml+xml": "kml",
     "application/gml+xml": "gml",
-    "image/vnd.dxf": "dxf",
     "application/vnd.apache.parquet": "parquet",
 }
 _SLUG = r"[a-z0-9][a-z0-9-]{1,38}"
@@ -367,6 +363,67 @@ def ler_intervalo(chave: str, inicio: int, fim: int) -> bytes:
     """Bytes [inicio, fim] inclusive (contrato ADR 0005: cabeçalho central de zip sem baixar o arquivo inteiro)."""
     bucket, obj_key = _chave_e_objeto(chave)
     return _cliente(bucket).get_intervalo(bucket["bucket_alias"], obj_key, inicio, fim)
+
+
+def tamanho(chave: str) -> int:
+    """Tamanho do objeto em bytes (HEAD no Garage); FileNotFoundError se não existe (item L1-01: o handler de
+    tiles e a entrega por Range precisam do tamanho sem baixar nada)."""
+    bucket, obj_key = _chave_e_objeto(chave)
+    info = _cliente(bucket).head(bucket["bucket_alias"], obj_key)
+    if info is None:
+        raise FileNotFoundError(chave)
+    return int(info.tamanho)
+
+
+def fonte_gdal(chave: str) -> tuple[str, dict]:
+    """(caminho `/vsis3/...`, opções de ambiente GDAL) para LER o objeto por faixa de bytes, sem baixar
+    (item L1-02: o motor de ladrilho abre o COG direto no Garage). Usa SEMPRE a chave só-leitura do balde
+    do inquilino — a chave RW nunca chega perto do caminho de leitura de tile.
+
+    Não devolve URL assinada nem credencial ao cliente: o segredo fica no processo, no `rasterio.Env` que
+    envolve a leitura. Quem chama nunca recebe endereço que o navegador possa repetir."""
+    bucket, obj_key = _chave_e_objeto(chave)
+    if not settings.PLAT_GARAGE_URL:
+        raise ConfiguracaoAusente("PLAT_GARAGE_URL é obrigatório para ler COG por /vsis3")
+    endpoint = settings.PLAT_GARAGE_URL
+    sem_esquema = endpoint.split("://", 1)[-1]
+    opcoes = {
+        "AWS_ACCESS_KEY_ID": bucket["chave_ro_id"],
+        "AWS_SECRET_ACCESS_KEY": bucket["chave_ro_segredo"],
+        "AWS_S3_ENDPOINT": sem_esquema,
+        "AWS_HTTPS": "YES" if endpoint.startswith("https://") else "NO",
+        "AWS_VIRTUAL_HOSTING": "FALSE",
+        "AWS_DEFAULT_REGION": settings.PLAT_GARAGE_REGIAO,
+        "AWS_REGION": settings.PLAT_GARAGE_REGIAO,
+    }
+    return f"/vsis3/{bucket['bucket_alias']}/{obj_key}", opcoes
+
+
+def baixar(chave: str, destino) -> int:
+    """Grava o objeto em `destino` (caminho local) EM STREAM, sem materializar em RAM (item L1-01: o bruto de
+    até RASTER_BYTES_MAX desce para o diretório de trabalho do job). Devolve os bytes escritos."""
+    bucket, obj_key = _chave_e_objeto(chave)
+    cli = _cliente(bucket)
+    escrito = 0
+    with open(destino, "wb") as f:
+        for pedaco in cli.get_stream(bucket["bucket_alias"], obj_key):
+            f.write(pedaco)
+            escrito += len(pedaco)
+    return escrito
+
+
+def sha256_remoto(chave: str) -> str:
+    """Sha256 do objeto RELIDO do balde em stream, nunca inteiro em RAM (item L1-01-j: o COG científico de
+    uma cena chega a centenas de MB) — é o mecanismo de CONFERÊNCIA que torna a proveniência do Lastro
+    VERIFICÁVEL (baixa de novo, recalcula, compara), não prometida. Usa a chave só-leitura (mesma regra de
+    `fonte_gdal`: conferir nunca precisa de RW). `FileNotFoundError`/`ChaveInvalida`/`ErroGarage` sobem ao
+    chamador sem tratamento — "não consegui conferir" é diferente de "conferi e diverge"."""
+    bucket, obj_key = _chave_e_objeto(chave)
+    cli = _cliente(bucket, ro=True)
+    h = hashlib.sha256()
+    for pedaco in cli.get_stream(bucket["bucket_alias"], obj_key):
+        h.update(pedaco)
+    return h.hexdigest()
 
 
 def apagar(chave: str) -> bool:

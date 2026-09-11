@@ -19,7 +19,8 @@ from app import telemetria as rotas_telemetria
 from app.acervo import publicacao as rotas_acervo_publicacao
 from app.acervo import rotas as rotas_acervo
 from app.acervo import rotas_frescor as rotas_acervo_frescor
-from app.amc.rotas import router as rotas_amc
+from app.agol import rotas as rotas_agol
+from app.amc import rotas as rotas_amc
 from app.amc.rotas import router as rotas_amc_presets
 from app.amc.rotas_criterios_feicao import router as rotas_criterios_feicao
 from app.amc.rotas_pareto import router as rotas_amc_pareto
@@ -44,7 +45,8 @@ from app.auth import (
 )
 from app.auth import saml as rotas_saml
 from app.auth import sso as rotas_sso
-from app.campo.rotas import router as rotas_campo
+from app.backup import rotas as rotas_backup
+from app.campo import rotas as rotas_campo
 from app.catalogo import (
     camada_esquema,
     rotas_categorias,
@@ -65,6 +67,7 @@ from app.catalogo import (
 from app.cena.rotas import router as rotas_cena
 from app.chamados import rotas as rotas_chamados
 from app.coleta.rotas import router as rotas_coleta
+from app.conexao import proxy as rotas_conexao_proxy
 from app.conexao import rotas as rotas_conexao
 from app.conexao import rotas_csw, rotas_endpoints, rotas_esri_rest, rotas_wms_wmts
 from app.consulta import cors_servicos
@@ -91,14 +94,20 @@ from app.ferramentas import rotas as rotas_ferramentas
 from app.ferramentas import rotas_gp as rotas_ferramentas_gp
 from app.ferramentas.rotas_script import router as rotas_ferramentas_script
 from app.fluxo.rotas import router as rotas_fluxos
+from app.formulario.rotas import router as rotas_formulario
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.geocodificador.rotas_lote import router as rotas_geocodificacao_lote
 from app.geocodificador.rotas_lote import router as rotas_geocodificador_lote
 from app.geoparquet.rotas import router as rotas_geoparquet
+from app.imagens.rotas_cog import router as rotas_cog
 from app.imagens.rotas_imagens import router as rotas_imagens
+from app.imagens.rotas_imageserver import router as rotas_imageserver
+from app.imagens.rotas_ogc_tiles import router as rotas_ogc_tiles
+from app.imagens.rotas_predefinicoes import router as rotas_predefinicoes
 from app.imagens.rotas_stac import router as rotas_stac
 from app.imagens.rotas_tiles import router as rotas_tiles
+from app.imagens.rotas_wms import router as rotas_wms_raster
 from app.ingestao.rotas import router as rotas_ingestao
 from app.ingestao.rotas_exportar import router as rotas_ingestao_exportar
 from app.intercambio.lote_importar import router as rotas_intercambio_lote_importar
@@ -115,6 +124,7 @@ from app.mapa.selecao import router as rotas_selecao
 from app.mapas.rotas import router as rotas_mapas
 from app.mapas_base.rotas import router as rotas_mapas_base
 from app.migracao.rotas import router as rotas_migracao
+from app.modelo3d.rotas import router as rotas_modelo3d
 from app.modelos3d.rotas import router as rotas_modelos3d
 from app.multiescala import backtest_rotas as rotas_backtest  # L3-09: backtest contra decisão real
 from app.multiescala import regioes_rotas as rotas_regioes  # L3-05: localizar regiões
@@ -122,7 +132,7 @@ from app.multiescala.corredor_rotas import router as rotas_corredor
 from app.multiescala.rotas import router as rotas_multiescala
 from app.notebooks.rotas import router as rotas_notebooks
 from app.odk import rotas as rotas_odk
-from app.ogc_mapas.rotas_wms import router as rotas_wms
+from app.ogc_mapas.rotas_wms import router as rotas_wms_vetor
 from app.ogc_mapas.rotas_wmts import router as rotas_wmts
 from app.paineis.rotas import router as rotas_paineis
 from app.parcelas.rotas import router as rotas_parcelas
@@ -131,6 +141,7 @@ from app.portal import openapi as portal_openapi
 from app.portal.rotas import router as rotas_portal
 from app.rede.consumidores_rotas import router as rotas_rede_consumidores
 from app.rede.rotas import router as rotas_rede
+from app.rede_medicao.rotas import router as rotas_rede_medicao
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rede_utilidades.rotas_areas_sujas import router as rotas_rede_areas_sujas
 from app.rede_utilidades.rotas_atributos import router as rotas_rede_atributos
@@ -315,6 +326,11 @@ ROUTERS = [
     rotas_csw.router,
     # --- telemetria opcional do appliance (L7-11-c): /api/telemetria (superadmin), /api/telemetria/receber (casa)
     rotas_telemetria.router,
+    # --- conectores vivos (L6-02-conectores-vivos): /api/conexoes/{id}/descobrir, /camadas — descoberta de
+    # camada (nome/título/CRS/extensão) a partir de uma plat.conexao já cadastrada
+    # --- proxy de tile/imagem por conexão cadastrada (mesmo item): GET /api/conexoes/{id}/tile — generaliza
+    # `rotas_mapa_wms_publico` (allowlist fixa) para "as fontes que o inquilino cadastrou"
+    rotas_conexao_proxy.router,
     # --- arquivos/objetos (L0-11): /api/arquivos genérico por inquilino; /api/objetos/{chave} já vem do catálogo
     # (rotas_compartilhamento, entrega por URL assinada)
     rotas_arquivos,
@@ -396,6 +412,11 @@ ROUTERS = [
     # --- topologia derivada da rede de utilidades (L4-01-b): /api/rede/{rede_id}/feicoes/{pontos,linhas}
     # (as camadas de rede, editáveis) e /api/rede/{rede_id}/topologia/{habilitar,nos,arestas} (o índice derivado)
     rotas_rede_topologia,
+    # --- atributos de rede (L4-01-d): /api/rede/{rede_id}/atributos/{sincronizar,propagar-fase,
+    # conectividade,substituicoes,discrepancias} — fase/tensão/capacidade/is_connected/subrede
+    rotas_rede_atributos,
+    # --- EPANET .inp (L4-05-d): /api/rede/{rede_id}/epanet/{importar,importacoes,exportar}
+    rotas_rede_epanet,
     # --- configuração de traçado (L4-02-e): /api/rede/{rede_id}/config_tracado (CRUD) e o campo `config_id`
     # do POST /api/rede/{rede_id}/tracar, que faz o traçado ler o pedido salvo em vez do corpo
     rotas_rede_config_tracado,
@@ -430,9 +451,6 @@ ROUTERS = [
     # (as camadas de rede, editáveis) e /api/rede/{rede_id}/topologia/{habilitar,nos,arestas} (o índice derivado)
     # --- topologia derivada da rede de utilidades (L4-01-b): /api/rede/{rede_id}/feicoes/{pontos,linhas}
     # (as camadas de rede, editáveis) e /api/rede/{rede_id}/topologia/{habilitar,nos,arestas} (o índice derivado)
-    # --- atributos de rede (L4-01-d): /api/rede/{rede_id}/atributos/{sincronizar,propagar-fase,
-    # conectividade,substituicoes,discrepancias} — fase/tensão/capacidade/is_connected/subrede
-    rotas_rede_atributos,
     # --- topologia derivada da rede de utilidades (L4-01-b): /api/rede/{rede_id}/feicoes/{pontos,linhas}
     # (as camadas de rede, editáveis) e /api/rede/{rede_id}/topologia/{habilitar,nos,arestas} (o índice derivado)
     # --- regras de conectividade (L4-03-a): applyEdits com avaliação "sem regra = proibido", validação em
@@ -452,12 +470,13 @@ ROUTERS = [
     # e a fachada Esri /rest/services/{nome}/UtilityNetworkServer/unitIdentifiers (query, reserve)
     rotas_rede_identificadores,
     rotas_rede_un_esri,
-    # --- EPANET .inp da rede de água (L4-05-d): POST/GET /api/rede/{rede_id}/epanet (importa por job, exporta
-    # reconstruído das feições) e GET .../epanet/{importacao_id} (status do job)
-    rotas_rede_epanet,
     # --- gás e esgoto (L4-05-e): GET /api/rede/{rede_id}/esgoto/escoamento e .../gas/pressao (conferências
     # que só leem) e POST .../teksi (GeoPackage no esquema TEKSI vira feição no vocabulário do pacote)
     rotas_rede_gas_esgoto,
+    # --- telemetria da rede de utilidades (L4-13-integracao-telemetria): /api/rede/medicao/leituras (publicar
+    # lote), /api/rede/medicao/ativos/{ativo} (placa), .../ultimas e .../serie (ficha do ativo), .../jusante
+    # (agregação pela topologia derivada, acima)
+    rotas_rede_medicao,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,
@@ -469,9 +488,26 @@ ROUTERS = [
     # --- ladrilho raster por token no caminho (L1-02): /svc/<token>/raster/<item>/{z}/{x}/{y}, WMTS,
     # TileJSON e mosaico por coleção; motor rio-tiler lendo COG no Garage por /vsis3
     rotas_tiles,
+    rotas_cog,
+    # --- ImageServer compatível Esri por token (L1-25): /svc/<token>/rest/services/<item>/ImageServer,
+    # exportImage, identify e tile/<z>/<y>/<x> — reusa a autorização e o motor do L1-02, acima
+    rotas_imageserver,
+    # --- WMS 1.3.0 por token (L1-02-g-wms-1-3-0-raster): /svc/<token>/wms (GetCapabilities/GetMap),
+    # mesma porta de entrada do WMTS, leitura de pixel por `tiles.recorte` (bbox arbitrário, não tile)
+    rotas_wms_raster,
+    # --- OGC API Tiles (20-057) e OGC API Maps por token (L1-02-i): /svc/<token>/ogc/tiles/*, landing+
+    # conformance+tileMatrixSets+collections+tileset+ladrilho (item e mosaico) e /map (item, bbox livre)
+    rotas_ogc_tiles,
+    # --- predefinições de renderização e legenda (L1-02-f): CRUD de sessão em
+    # /api/imagens/<item>/predefinicoes; consumidas por token em /svc/.../predef=, STYLES= (WMS/WMTS) e
+    # renderingRule (ImageServer) — ver app/imagens/predefinicoes.py
+    rotas_predefinicoes,
     # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,
     # /fatores/{id}/amostras, /conjuntos/{id}/macro, /execucoes/{id}/micro, /execucoes
     rotas_multiescala,
+    # --- modelo 3D / foto 360 (L1-03-modelo3d): /api/modelo3d/ingestoes (job IFC->xkt), /api/modelo3d/{item},
+    # /api/foto360 (síncrono, sem conversão)
+    rotas_modelo3d,
     # --- servidor de tiles vetoriais em 3 contratos (L2-04-e): TileJSON+XYZ, VectorTileServer Esri
     # (descritor, estilo, sprites/fontes, tile z/y/x) e exportação por URL (geojson/kml/csv/fgb/gpkg).
     # ORDEM IMPORTA: tem de vir ANTES de `rotas_mapa`. As duas famílias moram em /tiles/, e o repasse
@@ -507,7 +543,7 @@ ROUTERS = [
     # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,
     # /fatores/{id}/amostras, /conjuntos/{id}/macro, /execucoes/{id}/micro, /execucoes
     # --- motor multicritério (L3-01-a/b): /api/amc/modelos, /api/amc/conjuntos, /api/amc/execucoes
-    rotas_amc,
+    rotas_amc.router,
     # --- motor multicritério (AMC), localização semelhante (L3-17-similaridade): /api/amc/similaridade e
     # /api/amc/similaridade/exportar; sem tabela própria, mesmo padrão sem-estado de rotas_rede acima
     rotas_similaridade,
@@ -533,7 +569,7 @@ ROUTERS = [
     rotas_ogc_features,
     rotas_wfs,
     # --- WMS 1.3.0 e WMTS 1.0.0 por token (L2-04-i): imagem da mesma camada, o que QGIS/Pro/AGOL leem
-    rotas_wms,
+    rotas_wms_vetor,
     rotas_wmts,
     # --- escrita compatível Esri (L2-04-d): applyEdits/addFeatures/updateFeatures/deleteFeatures, calculate,
     # anexos e uploads sobre a MESMA porta de escrita do L2-03-a
@@ -596,7 +632,7 @@ ROUTERS = [
     # --- PWA de campo (L2-07-a): /api/campo/sessao (token de 30 dias, escopo campo:usar), /api/campo/mapas,
     # e o shell/manifest/service worker em /campo/* (servidos aqui, não em /static/: a trilha de teste roda
     # só uvicorn sem nginx na frente)
-    rotas_campo,
+    rotas_campo.router_pwa,
     rotas_backtest.router,
     # --- traçado de custo mínimo sobre a grade do multicritério (L3-10): /api/multiescala/execucoes/{id}/corredor
     rotas_corredor,
@@ -654,6 +690,20 @@ ROUTERS = [
     # divide, merge, clip, createSeeds, reconstructFromSeeds, assignFeaturesToRecord}
     rotas_parcelas,
     rotas_parcelas_qualidade,
+    # --- integração ArcGIS Online do cliente (L2-08-migracao-agol): /api/agol/credencial, /api/agol/testar,
+    # /api/agol/publicacoes (job agol.publicar -> hosted feature layer na conta AGOL do inquilino)
+    rotas_agol.router,
+    # --- campo (L2-07-campo): fila de trabalho, roteiro do dia e visita com foto — /api/campo/filas,
+    # /api/campo/roteiros, /api/campo/visitas, portado de rs-coop/certaja/sig
+    rotas_campo.router,
+    # --- construtor de formulário de atributos, arrasta-e-solta (L5-03-form-builder):
+    # /api/camadas/{id}/campos, /formulario, /formulario/versoes* — usado pelo construtor, pela
+    # edição web (L2-03) e pelo PWA de campo (acima) através do mesmo motor (app/formulario/motor.py)
+    rotas_formulario,
+    # --- backup lógico por inquilino e ensaio de restauração (L0-06-backup-status): GET /api/backup/backups,
+    # GET /api/backup/ensaios (disparar usa a fila genérica: POST /api/jobs {tipo: backup.executar|
+    # backup.ensaio_restauracao})
+    rotas_backup.router,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

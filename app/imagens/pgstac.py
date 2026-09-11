@@ -115,6 +115,25 @@ def item_criar(cur, tenant_id: int, colecao_id: str, corpo: dict[str, Any]) -> d
     return conteudo
 
 
+def item_atualizar(cur, tenant_id: int, colecao_id: str, item_id: str, corpo: dict[str, Any]) -> dict:
+    """Atualiza um item STAC que já existe (item L1-01-j: preencher/recalcular a proveniência sem recriar o
+    item nem tocar nos assets). `pgstac.update_item` substitui o conteúdo inteiro — nunca cria; por isso o
+    item alvo tem de existir E ser do inquilino antes de chamar (mesmas duas checagens de `item_criar`, na
+    mesma ordem: 404 para os dois casos indistinguíveis de propósito — coleção alheia e item inexistente)."""
+    if colecao_obter(cur, tenant_id, colecao_id) is None:
+        raise ErroAPI(404, "colecao_inexistente", "coleção inexistente")
+    if item_obter(cur, tenant_id, colecao_id, item_id) is None:
+        raise ErroAPI(404, "item_inexistente", "item inexistente")
+    if str(corpo.get("id")) != str(item_id):
+        raise ErroAPI(422, "item_id_divergente", "id do corpo diverge do item alvo")
+    if corpo.get("collection") not in (None, colecao_id):
+        raise ErroAPI(422, "colecao_divergente", "properties.collection do corpo diverge da coleção")
+    conteudo = {**corpo, "type": "Feature", "stac_version": corpo.get("stac_version", "1.0.0"),
+               "collection": colecao_id}
+    cur.execute("SELECT pgstac.update_item(%s::jsonb)", (jsonb(conteudo),))
+    return conteudo
+
+
 def itens_criar_lote(cur, colecao_id: str, itens: list[dict]) -> int:
     """Ingestão em massa direto no `items_staging` do pgstac (usada pela semeadura sintética de teste,
     tests/api/imagens/test_medida_10000.py) — o CALLER já garantiu que `colecao_id` é do inquilino e que
@@ -194,6 +213,14 @@ def parametros_busca(
         if limit < 1:
             raise ErroAPI(422, "limit_invalido", "limit precisa ser >= 1", {"recebido": limit})
         limit = min(limit, limites.STAC_PAGINA_MAX)  # acima do teto: a spec manda usar o teto, não recusar
+
+    if collections is not None:
+        if not isinstance(collections, list) or not all(isinstance(c, str) for c in collections):
+            # achado do adversário do item L1-07 (10/09): `[c for c in collections if c in permitidas]`
+            # com um dict/list dentro de `collections` levantava `TypeError: unhashable type` cru (500) —
+            # entrada do cliente nunca pode alcançar essa comparação sem ser texto primeiro.
+            raise ErroAPI(422, "collections_invalido", "collections precisa ser uma lista de nomes (texto)",
+                          {"recebido": collections})
 
     permitidas = set(colecoes_do_tenant(cur, tenant_id))
     if collections:

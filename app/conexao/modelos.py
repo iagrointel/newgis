@@ -126,3 +126,26 @@ class ArquivoUrlEstado(Saida):
     ultimo_detalhe: str | None = None
     sincronizacoes: int
     recargas: int
+
+
+# --- item L6-02-conectores-vivos: descoberta de camada (`app/conexao/descoberta.py`) e proxy de tile/imagem
+
+class CamadaExterna(Saida):
+    nome: str
+    titulo: str | None = None
+    crs: list[str] = Field(default_factory=list)
+    extensao: dict[str, Any] | None = None
+    descoberta_em: str
+
+
+class CamadasPagina(Saida):
+    total: int
+    itens: list[CamadaExterna]
+
+
+class DescobrirResultado(Saida):
+    ok: bool
+    mensagem: str
+    url_sondada: str | None = None
+    total: int
+    itens: list[CamadaExterna]

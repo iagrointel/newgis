@@ -28,3 +28,16 @@ three-0.185.1/three.core.min.js  0.185.1  05b2609338c76cd65daf74f3ac515bc9a5045e
 three-0.185.1/LICENSE  0.185.1  8b378ebe60e2fe500158cb0ac71cb5e8b7d92953c2abcc63a0eb90499653b5bc  MIT  https://registry.npmjs.org/three/-/three-0.185.1.tgz (npm pack three@0.185.1, 08/09/2026; arquivo package/LICENSE)
 deck.gl-9.4.0.min.js  9.4.0  2eb6a1ae0d58604b1378682cd1136f8793478ba801e43dae48b3807e48758a6b  MIT  https://registry.npmjs.org/deck.gl/-/deck.gl-9.4.0.tgz (npm pack deck.gl@9.4.0, 08/09/2026; arquivo package/dist.min.js, empacotamento UMD com o global `deck`; traz Tile3DLayer e MapboxOverlay, que é o que põe 3D Tiles sobre o MapLibre)
 deck.gl-9.4.0.LICENSE  9.4.0  e499a2c2ba3b9faabe91fdfddf43e329439263264b7148e5548d0ec605cce9f2  MIT  https://registry.npmjs.org/deck.gl/-/deck.gl-9.4.0.tgz (npm pack deck.gl@9.4.0, 08/09/2026; arquivo package/LICENSE)
+# item L1-03-modelo3d (10/09/2026): visualizador de modelo 3D e foto 360, portado do SIG de teste interno
+# (cópia dos mesmos dois arquivos que já rodam lá). pannellum é MIT, dentro da lista admitida. xeokit-sdk NÃO
+# é: é AGPL-3.0-only (com licença comercial alternativa da criadora, creoox/xeokit — LICENSE do pacote
+# @xeokit/xeokit-convert, conferida 10/09/2026, é a mesma família do xeokit-sdk). ⛔⛔ FORA da lista admitida
+# pelo ADR 0001 §11.2 regra 3 (BSD-3/MIT/Apache-2.0/ISC/OFL-1.1) — `tests/unit/test_vendor.py` REPROVA esta
+# linha de propósito, como gate: não editar a lista de licenças admitidas nem o teste para calar o aviso.
+# Ficou visível (não removida) para o dono decidir com o módulo inteiro na mesa: (a) licença comercial
+# xeokit, (b) trocar por visualizador BSD/MIT (Babylon.js + parser IFC próprio), ou (c) aceitar AGPL só
+# enquanto o módulo for interno/análise-beta-privado (nunca redistribuído fora da casa). Ver relatório da
+# sessão que portou o módulo.
+xeokit-sdk-2.6.113.js  2.6.113  89d380a867d82f96d2ee1e0a589bbb3820c4d2d67ffed5caeed641e34c3eaf42  AGPL-3.0-only  https://github.com/xeokit/xeokit-sdk (cópia do arquivo em uso em SIG de teste interno, build 2026-08-20; NÃO está na lista de licenças admitidas — ver nota acima)
+pannellum-2.5.7.js  2.5.7  51b8df674333612adbd807b6f47940d4d7aa07317d949d3f1314f84de965fc3c  MIT  https://github.com/mpetroff/pannellum/releases/tag/2.5.7 (cópia do arquivo em uso em SIG de teste interno)
+pannellum-2.5.7.css  2.5.7  da0906e704524cca414ce6160c7be218048dcdd0c13fafa84184f6ea0b084785  MIT  https://github.com/mpetroff/pannellum/releases/tag/2.5.7 (cópia do arquivo em uso em SIG de teste interno)

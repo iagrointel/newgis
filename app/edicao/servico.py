@@ -6,7 +6,12 @@ servidor, "só as próprias feições" e evento por lote. Roda contra a tabela `
 Domínio de atributo (portão cláusula 3): `dados.regras_campo` é o mecanismo PRÓPRIO deste item, escopado à
 camada (migração 20260906T1859). O item L2-10-a-dominios-subtipos (entregue noutra trilha, ainda não integrada
 a esta árvore) traz um domínio COMPARTILHADO entre camadas com subtipo — quando integrado, vira uma segunda
-fonte de regra além de `regras_campo`, não substitui esta."""
+fonte de regra além de `regras_campo`, não substitui esta.
+
+`form_condicionais`/`form_calculados` (item L5-03-form-builder, `app/formulario/motor.py`): o construtor
+arrasta-e-solta compila condicional (obrigatório conforme outro campo) e cálculo (expressão sobre outros
+campos) para essas duas chaves em `dados` na hora de PUBLICAR um formulário — `validar_atributos` lê as duas
+sem mudar de assinatura; nenhuma camada sem formulário publicado é afetada."""
 
 from __future__ import annotations
 
@@ -163,7 +168,33 @@ def validar_atributos(atributos: dict | None, dados: dict, operacao: str) -> tup
         valor = _validar_tipo_e_tamanho(campo, valor, campos_validos[campo]["tipo"])
         _validar_dominio(campo, valor, regra)
         limpos[campo] = valor
+    # item L5-03-form-builder: `form_calculados`/`form_condicionais` só existem depois que ALGUÉM publica
+    # um formulário para esta camada (app/formulario/servico.py::versao_publicar compila o desenho para
+    # cá) — sem publicação, `dados.get(...)` devolve vazio e este bloco não roda (compatível com toda
+    # camada de antes deste item). Escopo "adicionar" só: numa feição NOVA o contexto está completo (todo
+    # atributo do desenho passou pelo loop acima); numa atualização PARCIAL não há garantia de que os
+    # campos referenciados por uma expressão vieram no corpo, então cálculo/condicional de `atualizar`
+    # fica para um item futuro (documentado no MANUAL, não escondido).
     if operacao == "adicionar":
+        calculados = dados.get("form_calculados") or {}
+        condicionais = dados.get("form_condicionais") or []
+        if calculados or condicionais:
+            from app.formulario.motor import avaliar_condicionais, calcular_campos  # import tardio: evita ciclo
+
+            contexto = {nome: limpos.get(nome) for nome in campos_validos}
+            if calculados:
+                for campo, valor in calcular_campos(contexto, calculados, onde="camada").items():
+                    if campo in campos_validos:
+                        valor = _validar_tipo_e_tamanho(campo, valor, campos_validos[campo]["tipo"])
+                        limpos[campo] = valor
+                        contexto[campo] = valor
+            if condicionais:
+                for campo, estado in avaliar_condicionais(contexto, condicionais, onde="camada").items():
+                    if estado.get("obrigatorio") and campo in campos_validos:
+                        if campo not in limpos or limpos[campo] is None:
+                            raise ErroAPI(
+                                422, "campo_obrigatorio", f"campo obrigatório ausente: {campo}", {"campo": campo}
+                            )
         for campo, regra in regras.items():
             if regra.get("obrigatorio") and not regra.get("somente_leitura") and campo in campos_validos:
                 if campo not in limpos or limpos[campo] is None:

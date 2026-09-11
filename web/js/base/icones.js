@@ -33,6 +33,8 @@ export const ICONES = {
   grade: [['rect', { x: 3, y: 3, width: 7, height: 7 }], ['rect', { x: 14, y: 3, width: 7, height: 7 }], ['rect', { x: 3, y: 14, width: 7, height: 7 }], ['rect', { x: 14, y: 14, width: 7, height: 7 }]],
   lista: [['line', { x1: 4, y1: 6, x2: 20, y2: 6 }], ['line', { x1: 4, y1: 12, x2: 20, y2: 12 }], ['line', { x1: 4, y1: 18, x2: 20, y2: 18 }]],
   tabela: [['rect', { x: 3, y: 4, width: 18, height: 16 }], ['line', { x1: 3, y1: 10, x2: 21, y2: 10 }], ['line', { x1: 3, y1: 15, x2: 21, y2: 15 }], ['line', { x1: 10, y1: 4, x2: 10, y2: 20 }]],
+  modelo3d: [['polygon', { points: '12 3 20 7.5 20 16.5 12 21 4 16.5 4 7.5' }], ['line', { x1: 12, y1: 3, x2: 12, y2: 12 }], ['line', { x1: 12, y1: 12, x2: 20, y2: 7.5 }], ['line', { x1: 12, y1: 12, x2: 4, y2: 7.5 }], ['line', { x1: 12, y1: 12, x2: 12, y2: 21 }]],
+  foto360: [['circle', { cx: 12, cy: 12, r: 9 }], ['ellipse', { cx: 12, cy: 12, rx: 9, ry: 3.5 }], ['line', { x1: 3, y1: 12, x2: 21, y2: 12 }]],
   generico: [['rect', { x: 4, y: 4, width: 16, height: 16, rx: 3 }]],
 
   /* --- interface: navegação e ação --- */

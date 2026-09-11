@@ -49,6 +49,8 @@ body:not(.com-lateral) .lateral { display: none; }
 .lateral nav a { display: block; padding: var(--e2) var(--e4); color: var(--texto); text-decoration: none; border-left: var(--borda-destaque) solid transparent; }
 .lateral nav a:hover { background: var(--painel); color: var(--texto); }
 .lateral nav a[aria-current="page"] { border-left-color: var(--acento); background: var(--painel); font-weight: 600; }
+.lateral nav .grupo-rotulo { padding: var(--e3) var(--e4) var(--e1); margin-top: var(--e1); color: var(--fraco); font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; }
+.lateral nav ul li.grupo-rotulo:first-child { margin-top: 0; }
 .lateral .pessoa { padding: var(--e4); border-top: var(--borda-largura) solid var(--borda); display: grid; gap: var(--e2); }
 .lateral .pessoa-topo { display: flex; align-items: center; gap: var(--e2); min-width: 0; }
 .lateral .pessoa a { color: var(--texto); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
@@ -290,6 +292,10 @@ plat-idioma select.controle { width: auto; padding: var(--e1) var(--e2); font-si
 }
 .upload-dropzone:hover, .upload-dropzone:focus-visible, .soltar-area:hover, .soltar-area:focus-visible { border-color: var(--acento); color: var(--texto); }
 .upload-dropzone.sobre, .soltar-area.sobre { border-color: var(--acento); background: var(--painel-2); color: var(--texto); }
+/* --- rede simples (item L4-18-rede-simples-trace-network): estado vazio honesto quando não há nenhuma
+   camada publicada da geometria certa para o papel (linha/ponto) — nunca uma caixa muda sem explicação. */
+.redes-simples .vazio { color: var(--fraco); padding: var(--e3) var(--e4); margin: var(--e2) 0 var(--e4); border: 1px dashed var(--borda); border-radius: var(--raio); }
+.redes-simples .vazio a { color: inherit; text-decoration: underline; }
 #upload-nome { font-family: var(--mono); color: var(--texto); margin-top: var(--e2); }
 #upload-progresso, progress.barra { width: 100%; height: var(--e3); accent-color: var(--acento); border: none; border-radius: var(--raio-pilula); }
 #upload-progresso::-webkit-progress-bar, progress.barra::-webkit-progress-bar { background: var(--painel-2); border-radius: var(--raio-pilula); }
@@ -332,3 +338,51 @@ plat-idioma select.controle { width: auto; padding: var(--e1) var(--e2); font-si
 .servico-externo { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); font-size: var(--t-1); }
 .servico-externo .servico-nome { min-width: 12rem; color: var(--fraco); }
 .servico-externo code { font-size: var(--t-2); word-break: break-all; }
+/* --- tela inicial (item de porta única: enviar → organizar → compartilhar) */
+.passos-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--e3); margin-bottom: var(--e4); }
+.passos-3 .passo { background: var(--painel); border: 1px solid var(--borda); border-radius: var(--raio); padding: var(--e4); }
+.passos-3 .passo .n { display: inline-block; width: 1.75rem; height: 1.75rem; line-height: 1.75rem; text-align: center; border-radius: 50%; background: var(--painel-2); border: 1px solid var(--borda-forte); color: var(--acento); font-weight: 600; margin-bottom: var(--e2); }
+.passos-3 .passo h3 { margin: 0 0 var(--e1); font-size: 1rem; }
+.passos-3 .passo p { margin: 0; color: var(--fraco); font-size: .9rem; }
+.linha-atalhos { display: flex; flex-wrap: wrap; gap: var(--e3); margin-top: var(--e2); }
+.linha-atalhos a { color: var(--fraco); text-decoration: none; font-size: .85rem; padding: var(--e1) 0; }
+.linha-atalhos a:hover { color: var(--texto); text-decoration: underline; }
+.lista-recentes { display: grid; gap: 0; }
+.lista-recentes a { display: flex; justify-content: space-between; gap: var(--e3); padding: var(--e2) 0; border-bottom: 1px solid var(--borda); color: var(--texto); text-decoration: none; }
+.lista-recentes a:hover { color: var(--acento); }
+.lista-recentes .tipo { color: var(--fraco); font-size: .8rem; white-space: nowrap; }
+
+/* --- campo (item L2-07-campo): fila de trabalho, roteiro do dia e visita com foto */
+.campo-filas .ajuda, .campo-fila .ajuda, .campo-roteiro .ajuda { color: var(--fraco); font-size: .85rem; margin: 0 0 var(--e2); }
+.campo-filas .vazio, .campo-fila .vazio { color: var(--fraco); padding: var(--e3) var(--e4); margin: var(--e2) 0; border: 1px dashed var(--borda); border-radius: var(--raio); }
+.linha-botoes { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); margin: var(--e2) 0; }
+.lista-selecao { max-height: 260px; overflow-y: auto; border: 1px solid var(--borda); border-radius: var(--raio); padding: var(--e2) var(--e3); margin: var(--e2) 0; background: var(--painel); }
+.linha-selecao { display: block; padding: var(--e1) 0; font-size: .9rem; }
+.linha-selecao input { margin-right: var(--e2); accent-color: var(--acento); }
+.badge { display: inline-block; padding: 2px var(--e2); border-radius: 999px; font-size: .78rem; font-weight: 600;
+  background: var(--painel-2); border: 1px solid var(--borda-forte); color: var(--fraco); }
+.badge-visitado, .badge-confirmado { color: var(--ok); border-color: var(--ok); }
+.badge-pulado, .badge-nao_confirmado { color: var(--erro, #c0392b); border-color: var(--erro, #c0392b); }
+.badge-inconclusivo { color: var(--aviso, #b8860b); border-color: var(--aviso, #b8860b); }
+.badge-pendente { color: var(--fraco); }
+.resumo-roteiro { display: grid; grid-template-columns: max-content 1fr; gap: var(--e1) var(--e3); margin: var(--e2) 0 var(--e4); }
+.resumo-roteiro dt { color: var(--fraco); }
+.parada-roteiro { display: flex; align-items: center; gap: var(--e3); padding: var(--e2) 0; border-bottom: 1px solid var(--borda); }
+.parada-roteiro .num { display: inline-flex; align-items: center; justify-content: center; width: 1.6rem; height: 1.6rem;
+  border-radius: 50%; background: var(--painel-2); border: 1px solid var(--borda-forte); font-size: .8rem; font-weight: 600; }
+.parada-roteiro .ja-visitado { margin-left: auto; color: var(--fraco); font-size: .85rem; }
+.parada-roteiro button { margin-left: auto; }
+.formulario-visita { margin: var(--e2) 0 var(--e3); display: grid; gap: var(--e2); }
+.formulario-visita label { display: grid; gap: 4px; font-size: .85rem; color: var(--fraco); }
+.aviso-fila-local { background: var(--painel-2); border: 1px solid var(--borda-forte); border-radius: var(--raio);
+  padding: var(--e2) var(--e3); margin: var(--e2) 0; font-size: .9rem; }
+
+/* --- telemetria da rede de utilidades (item L4-13-integracao-telemetria): ficha do ativo */
+.ficha-secao { margin: 0 0 var(--e4); }
+.ficha-secao h2 { font-size: 1rem; margin: 0 0 var(--e2); }
+.rede-medicao-ficha .lista-definicao { display: grid; grid-template-columns: max-content 1fr; gap: var(--e1) var(--e3); margin: 0; }
+.rede-medicao-ficha .lista-definicao dt { color: var(--fraco); }
+.rede-medicao-ficha tr.alarme td { color: var(--erro, #c0392b); font-weight: 600; }
+.rede-medicao-ficha .alarme-texto { color: var(--erro, #c0392b); font-weight: 600; }
+.grafico-linha { stroke: var(--acento); stroke-width: 2; }
+.grafico-eixo { stroke: var(--borda-forte); stroke-width: 1; }

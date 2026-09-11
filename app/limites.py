@@ -301,6 +301,22 @@ CONEXAO_ARQUIVO_LOTE_PERIODICO = 20            # conexões sincronizadas por exe
 # longitude trocadas — ver `app/conexao/arquivo_url.py::conferir_faixa_coordenada`.
 CONEXAO_ARQUIVO_LAT_MAX = 90.0
 CONEXAO_ARQUIVO_LON_MAX = 180.0
+# --- descoberta de camada (item L6-02-conectores-vivos; app/conexao/descoberta.py): GetCapabilities de um
+# GeoServer nacional pode ser grande de verdade (o do IBGE mede 11.602.903 bytes, achado do T3) — teto maior
+# e timeout mais folgado que o teste de saúde, mas ainda finito (nunca "baixa até acabar").
+CONEXAO_DESCOBERTA_MAX_BYTES = 24 * 1024 * 1024   # 24 MiB
+CONEXAO_DESCOBERTA_TIMEOUT_S = 15.0
+CONEXAO_DESCOBERTA_CAMADAS_MAX = 2000              # teto de linhas gravadas por descoberta (corta, não trava)
+
+# --- proxy de tile/imagem por conexão cadastrada (mesmo item): generaliza `app/mapa/proxy_wms.py` (allowlist
+# fixa de 3 fontes públicas) para "as fontes que o inquilino cadastrou" em `plat.conexao`. Só wms/wmts/esri_rest
+# têm operação de tile/imagem (wfs/ogc_api são API de feição, não de raster — L6-02-c, fora deste proxy).
+CONEXAO_PROXY_TIPOS = ("wms", "wmts", "esri_rest")
+CONEXAO_PROXY_CONECTAR_TIMEOUT_S = 3.0
+CONEXAO_PROXY_LER_TIMEOUT_S = 20.0                 # uma base pública lenta não pode travar o mapa de quem espera
+CONEXAO_PROXY_MAX_BYTES = 12 * 1024 * 1024         # 12 MiB: teto de 1 tile/imagem (ortofoto 10-20 cm inclusa)
+CONEXAO_PROXY_CACHE_TTL_S = 600                    # mesmos 10 min do proxy público de hoje
+CONEXAO_PROXY_CACHE_MAX_ITENS = 500                # cache em processo; LRU simples por ordem de inserção
 
 # --- ingestão vetorial (L0-04; ADR 0005, reduzido a 4 formatos: shapefile.zip, gpkg, geojson, csv)
 INGESTAO_AMOSTRA_VALIDADE = 1000          # feições lidas na amostra de ST_IsValid (ogr2ogr -limit, MEDIDO no ADR)
@@ -500,6 +516,39 @@ FERRAMENTA_SINCRONO_CUSTO_MAX = 5000       # custo = feições × complexidade d
 FERRAMENTA_JOB_MEMORIA_MB = 1024            # RLIMIT_DATA do filho que roda uma ferramenta
 FERRAMENTA_JOB_TIMEOUT_S = 1800             # 30 min por execução; ferramenta mais longa é outro tipo de job
 BUFFER_DISTANCIA_M_MAX = 100_000            # 100 km: acima disso o buffer geodésico deixa de fazer sentido em camada
+
+# --- COG direto por HTTPS (L1-02-e): uma requisição Range é mantida pequena para que clientes analíticos
+# não transformem a API em download monolítico; a resposta sem Range continua permitida, mas sai em streaming.
+COG_FAIXA_MAX_BYTES = 16 * 1024 * 1024  # 16 MiB por Range; GDAL/QGIS normalmente pede blocos muito menores
+
+# --- WMS 1.3.0 (L1-02-g-wms-1-3-0-raster; app/imagens/wms.py, rotas_wms.py): camada fina sobre o mesmo
+# leitor de pixel do ladrilho (`recorte()` em tiles.py, irmã de `ladrilho()`) — GetMap é um recorte
+# arbitrário (bbox+CRS+tamanho do cliente), não uma célula da grade WebMercator. WMS_PIXELS_MAX é o
+# teto que protege RAM/CPU do processo (um GetMap grande demais lê e reprojeta o COG inteiro na hora);
+# 4096×4096 cobre a maior tela física comum (4K) com folga e ainda cabe em RAM sem swap nesta máquina
+# apertada. WMS_CAMADAS_MAX limita quantos `<Layer>` o GetCapabilities enumera por token: cada camada
+# custa uma leitura do STAC (bbox), então sem teto um token com muitos itens deixaria o documento lento
+# e enorme — 500 é acima de qualquer inquilino de demonstração hoje, revisar quando houver caso real.
+WMS_LARGURA_MAX = 4096                  # WIDTH máximo aceito no GetMap — acima: ServiceExceptionReport
+WMS_ALTURA_MAX = 4096                   # HEIGHT máximo aceito no GetMap — acima: ServiceExceptionReport
+WMS_PIXELS_MAX = 4096 * 4096            # teto de WIDTH×HEIGHT (é o que de fato protege a memória)
+WMS_CAMADAS_MAX = 500                   # <Layer> por GetCapabilities (itens além disso não aparecem)
+WMS_TIMEOUT_S = 30                      # teto de renderização de um GetMap (mesma ordem do tile)
+
+# --- ImageServer compatível Esri (L1-25-servico-de-imagem-esri-compativel; app/imagens/rotas_imageserver.py):
+# `exportImage` é o mesmo tipo de recorte arbitrário que o GetMap do WMS (`Reader.part`, não uma célula da
+# grade) — mesma defesa, mesmo teto: a refutação do item manda pedir 20.000×20.000 e recusar sem travar.
+IMAGESERVER_EXPORT_LADO_MAX = 4096      # largura/altura máximas aceitas no exportImage, em pixels
+IMAGESERVER_EXPORT_LADO_PADRAO = 400    # tamanho quando `size` não vem — mesmo default do ArcGIS Server
+
+# --- ingestão de modelo 3D (L1-03-modelo3d, 10/09/2026): IFC bruto enviado pelo usuário antes da conversão
+# (que roda num conversor externo — GPU box por ssh nesta instalação — por isso o teto é bem menor que o do
+# raster: o arquivo inteiro viaja por scp duas vezes, ida e volta, dentro do timeout do job).
+MODELO3D_IFC_BYTES_MAX = 512 * 1024 * 1024
+MODELO3D_XKT_BYTES_MAX = 512 * 1024 * 1024
+MODELO3D_CONVERSAO_TIMEOUT_S = 1500     # teto do ssh+scp+convert2xkt no conversor remoto (job todo tem mais margem)
+FOTO360_BYTES_MAX = 64 * 1024 * 1024
+MODELO3D_URL_VALIDADE_S = 3600          # validade da URL assinada do .xkt/.jpg entregue ao visualizador
 # --- grades aninhadas do motor multicritério (L3-19-multiescala; migração 20260906T1640_multiescala.sql):
 # macro (grosseira, ex. 1 km) triando regiões e micro (fina, ex. 100 m) gerada SÓ dentro das aprovadas.
 # ESCALA_CELULAS_MAX vale tanto para a grade macro inteira quanto para o refino micro (aprovadas × k²) — é o
@@ -1154,3 +1203,61 @@ EDICAO_TEXTO_MAX = 65_536                 # 64 KiB por valor de campo texto (mes
 EDICAO_REGRA_CAMPO_MAX = 500              # entradas em dados.regras_campo (mesmo teto de campos da camada)
 EDICAO_DOMINIO_VALORES_MAX = 1_000        # valores aceitos por regra de domínio codificado
 EDICAO_SRID_MAX = 999_999                 # mesmo teto do esquema de camada_vetorial (029_ingestao_vetor.sql)
+
+# --- integração ArcGIS Online do cliente (item L2-08-migracao-agol): credencial por inquilino em
+# `tenant.config.agol` (mesmo padrão de SMTP_* acima) e o job `agol.publicar` (app/agol/tarefas.py), portado
+# de `/home/dev/fgr/sig/pipeline/20_agol_publish.py`.
+AGOL_PORTAL_MAX = 300
+AGOL_USUARIO_MAX = 128
+AGOL_CREDENCIAL_MAX = 1024                # senha ou token, antes de cifrar
+AGOL_ROTULO_MAX = 100
+AGOL_TITULO_MAX = 250
+AGOL_CONECTAR_TIMEOUT_S = 6.0
+AGOL_LER_TIMEOUT_S = 20.0                 # teste de credencial: curto de propósito (rota síncrona)
+AGOL_PUBLICAR_TIMEOUT_S = 300.0           # addItem/publish dentro do job: upload pode ser grande
+AGOL_POLL_INTERVALO_S = 4.0               # espera do job assíncrono de publish (mesmo valor do script original)
+AGOL_POLL_TENTATIVAS_MAX = 90             # 90 x 4 s = 6 min (mesmo teto do script original: `for _ in range(90)`)
+AGOL_FEICOES_MAX = 200_000                # teto de segurança do export GeoJSON (fetchall bounded; camada maior
+# que isso é recusada com uma mensagem clara em vez de estourar a memória do worker — item novo desta portagem,
+# o script original (`20_agol_publish.py`) não tinha teto nenhum porque rodava numa única fazenda/inquilino)
+
+# --- campo: fila de trabalho, roteiro e visita com foto (item L2-07-campo), portado de rs-coop/certaja/sig
+CAMPO_FILA_ALVOS_MAX = 5_000               # feições por fila (mesma ordem de grandeza de EDICAO_LOTE_MAX x2)
+CAMPO_ROTEIRO_PARADAS_MAX = 60             # mesmo teto do sistema de origem ("no máximo 60 paradas por rota")
+CAMPO_FOTO_BYTES_MAX = 10 * 1024 * 1024    # mesmo teto de MINIATURA_BYTES_MAX; a foto é reamostrada abaixo disso
+CAMPO_FOTO_PIXELS_MAX = 40_000_000         # contra bomba de descompressão (mesma técnica de MINIATURA_PIXELS_MAX)
+CAMPO_FOTO_LADO_MAX = 2400                 # px do maior lado após redimensionar (mesmo valor do sistema de origem)
+CAMPO_ROTA_VELOCIDADE_KMH = 35             # estimativa de fallback (linha reta) quando não há motor de rota real;
+# DECLARADA, nunca medida — o sistema de origem já rotula isso como estimativa no aviso devolvido
+
+# --- backup lógico por inquilino e ensaio de restauração (item L0-06-backup-status; app/backup/), portado de
+# `/home/dev/fgr/sig/pipeline/backup.sh`/`restore_test.sh`. Disco a 99% nesta máquina (CLAUDE.md) — o código
+# NUNCA pode presumir que o schema do inquilino continua pequeno como o de demonstração: o dump é recusado
+# (FalhaDefinitiva, arquivo apagado) acima deste teto, ANTES do upload. Mesma ordem de grandeza de
+# RASTER_BYTES_MAX/UPLOAD_BYTES_MAX (2 GiB) — não há hoje um schema de inquilino perto disso, mas o teto tem
+# de existir mesmo assim (é o que o item pede: "o código não pode presumir").
+BACKUP_DUMP_BYTES_MAX = 2 * 1024 * 1024 * 1024   # 2 GiB
+BACKUP_DUMP_TIMEOUT_S = 3600                     # pg_dump -Fc do schema do inquilino
+BACKUP_DRILL_TIMEOUT_S = 3600                    # download + pg_restore em schema temporário + COUNT(*)
+BACKUP_LISTA_MAX = 200                           # linhas por página em GET /api/backup/backups e /ensaios
+
+# --- construtor de formulário de atributos, arrasta-e-solta (item L5-03-form-builder): uma camada tem no
+# máximo um plat.formulario, N versões; o desenho é grupo->campo com condicional/cálculo em expressão
+# (item L2-10-c-linguagem-expressao). Tetos de negação-de-serviço do próprio desenho (a expressão em si já
+# tem os seus, em app/expressao/avaliador_py.py: MAX_TEXTO/MAX_TOKENS/MAX_PROFUNDIDADE).
+FORMULARIO_GRUPOS_MAX = 40
+FORMULARIO_CAMPOS_POR_GRUPO_MAX = 60
+FORMULARIO_DESENHO_BYTES_MAX = 512 * 1024   # jsonb bruto (nome+rótulo+expressões de até 60x40 campos cabe longe disso)
+FORMULARIO_VERSOES_MAX = 200                # rascunhos guardados por formulário (histórico do construtor)
+
+# --- telemetria da rede de utilidades (item L4-13-integracao-telemetria): leitura ligada ao ativo,
+# particionada por mês (plat.rede_medicao). Lote pequeno de propósito — é publicação de sensor (20 sensores
+# x poucas grandezas por tick), não upload em massa; o mesmo teto do item de campo (CAMPO_FILA_ALVOS_MAX) é
+# ordem de grandeza maior do que qualquer simulador/gateway real manda de uma vez.
+REDE_MEDICAO_LOTE_MAX = 2_000                 # leituras por POST /api/rede/medicao/leituras
+REDE_MEDICAO_JANELA_FUTURO_S = 120            # tolerância de relógio do sensor (refutação "timestamp futuro")
+REDE_MEDICAO_SERIE_DIAS_PADRAO = 7            # janela padrão do gráfico da ficha do ativo
+REDE_MEDICAO_SERIE_DIAS_MAX = 92              # mesmo teto de LOG_JANELA_DIAS
+REDE_MEDICAO_SERIE_PONTOS_MAX = 20_000        # linhas devolvidas por série (amostragem simples acima disso)
+REDE_MEDICAO_ALARME_JANELA_MIN = 30           # "carregamento > 100% por 30 min" (portão do item)
+REDE_MEDICAO_ALARME_LOOKBACK_MIN = 90         # quanto de histórico o motor olha para achar o início do surto

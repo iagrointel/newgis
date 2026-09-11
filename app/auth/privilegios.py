@@ -63,6 +63,8 @@ PRIVILEGIOS: tuple[tuple[str, str, str, bool, tuple[str, ...]], ...] = (
     # regras por CSV ficam FORA do editar do dia a dia — quem edita feição não abre a comporta
     ("rede.administrar", "rede",
      "ligar/desligar a avaliação de regras da rede e substituir o conjunto de regras por CSV", True, (A,)),
+    ("rede.medir", "rede", "publicar leitura de telemetria e cadastrar a placa (kVA/tensão nominal) de um "
+     "ativo", False, (C, E, A)),  # item L4-13-integracao-telemetria (migração 20260910T2351)
     ("jobs.ver", "jobs", "ver a lista, o detalhe, o log e os tipos de job do inquilino (leitura)", False,
      QUATRO_PERFIS),  # acrescentado em T2 (migração 015): sem ele o visualizador tomava 403 na tela Tarefas
     ("jobs.executar", "jobs", "criar, cancelar e repetir os próprios jobs, e gerir agendas", False,

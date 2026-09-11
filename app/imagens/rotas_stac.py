@@ -12,13 +12,15 @@ from typing import Any
 
 import psycopg2
 from fastapi import APIRouter, Body, Query, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 from app import db, limites
 from app.auth import escopos as esc
 from app.auth.comum import erro_do_banco
 from app.auth.sessao import _auth_de_token  # reaproveita o MESMO caminho de auth de token do /api (ADR 0002 §8)
+from app.catalogo.comum import registrar_evento
 from app.erros import ErroAPI
+from app.imagens import mosaico as mo
 from app.imagens import pgstac as ps
 from app.imagens import raster_item as ri
 from app.settings import settings
@@ -383,3 +385,78 @@ def busca_post(token: str, request: Request, corpo: dict = Body(default={})):
         resultado = ps.buscar(cur, payload)
     base = _base(token)
     return _resposta_busca(resultado, base, f"{base}/search")
+
+
+# ---------------------------------------------------------------- mosaico (item L1-07; ADR 20260910T2330)
+def _mosaico_json(base: str, linha: dict) -> dict:
+    mid = str(linha["id"])
+    base_mosaico = f"{settings.PLAT_URL_PUBLICA.rstrip('/')}/svc/<token>/mosaico/{mid}"
+    return {
+        "id": mid,
+        "nome": linha["nome"],
+        "colecoes": linha["colecoes"],
+        "criterios": linha["criterios"],
+        "estado": linha["estado"],
+        "criado_em": (linha["criado_em"].isoformat() if hasattr(linha["criado_em"], "isoformat")
+                     else linha["criado_em"]),
+        "atualizado_em": (linha["atualizado_em"].isoformat() if hasattr(linha["atualizado_em"], "isoformat")
+                          else linha["atualizado_em"]),
+        "links": {
+            "tiles": base_mosaico + "/{z}/{x}/{y}",
+            "tilejson": base_mosaico + "/tilejson.json",
+            "wmts": base_mosaico + "/wmts",
+            "pegadas": base_mosaico + "/pegadas",
+        },
+    }
+
+
+@router.post("/svc/{token}/stac/mosaicos", status_code=201, openapi_extra=X,
+             summary="registra um mosaico (busca STAC nomeada; item L1-07)")
+def mosaico_registrar(token: str, request: Request, corpo: dict = Body(...)):
+    auth = _auth(request, token)
+    _exigir_escrita(auth)
+    try:
+        with db.db(auth.contexto()) as cur:
+            linha = mo.registrar(cur, auth.tenant_id, auth.usuario_id, corpo)
+            registrar_evento(cur, request, "imagens/mosaico_registrar", "mosaico", linha["id"],
+                             {"nome": linha["nome"], "colecoes": linha["colecoes"]})
+    except psycopg2.Error as e:
+        raise erro_do_banco(e) from e
+    base = _base(token)
+    return JSONResponse(_mosaico_json(base, linha), status_code=201, headers=SEM_CACHE)
+
+
+@router.get("/svc/{token}/stac/mosaicos", openapi_extra=X, summary="lista os mosaicos do inquilino")
+def mosaicos_listar(token: str, request: Request):
+    auth = _auth(request, token)
+    _exigir_leitura(auth)
+    base = _base(token)
+    with db.db(auth.contexto()) as cur:
+        linhas = mo.listar(cur, auth.tenant_id)
+    return JSONResponse({"mosaicos": [_mosaico_json(base, li) for li in linhas]}, headers=SEM_CACHE)
+
+
+@router.get("/svc/{token}/stac/mosaicos/{mosaico_id}", openapi_extra=X, summary="detalhe de um mosaico")
+def mosaico_ver(token: str, mosaico_id: str, request: Request):
+    auth = _auth(request, token)
+    _exigir_leitura(auth)
+    with db.db(auth.contexto()) as cur:
+        linha = mo.obter(cur, auth.tenant_id, mosaico_id)
+    if linha is None:
+        raise ErroAPI(404, "mosaico_inexistente", "mosaico inexistente")
+    base = _base(token)
+    return JSONResponse(_mosaico_json(base, linha), headers=SEM_CACHE)
+
+
+@router.delete("/svc/{token}/stac/mosaicos/{mosaico_id}", status_code=204, openapi_extra=X,
+               summary="remove o registro de um mosaico")
+def mosaico_remover(token: str, mosaico_id: str, request: Request):
+    auth = _auth(request, token)
+    _exigir_escrita(auth)
+    with db.db(auth.contexto()) as cur:
+        achou = mo.remover(cur, auth.tenant_id, mosaico_id)
+        if achou:
+            registrar_evento(cur, request, "imagens/mosaico_remover", "mosaico", mosaico_id, {})
+    if not achou:
+        raise ErroAPI(404, "mosaico_inexistente", "mosaico inexistente")
+    return Response(status_code=204, headers=SEM_CACHE)

@@ -8,6 +8,13 @@
 - `GET /api/imagens/{item_id}/tiles/{z}/{x}/{y}.png` — tile PNG 256 px WebMercator renderizado do COG
   visual, lido do Garage por Range através de um objeto arquivo-like (`ObjetoRemoto`) — nunca baixa o COG
   inteiro. Mínimo honesto até o TiTiler do L1-02 (mesma URL, implementação trocada).
+- `POST /api/imagens/{item_id}/conferir` (item L1-01-j) — CONFERE a proveniência: rebaixa cada asset do
+  balde em stream, recalcula o sha256 e compara com o registrado; a versão pesada (reconverte de verdade)
+  é o job `imagens.reexecutar` (app/imagens/reexecucao.py), não uma rota — GDAL nunca roda dentro de uma
+  requisição HTTP nesta casa.
+- `POST /api/imagens/proveniencia/preencher-pendentes` (item L1-01-j) — preenchimento retroativo SEM
+  reconversão para itens ingeridos antes deste item (rota de administração; o job `imagens.
+  preencher_proveniencia` faz o mesmo item a item pela fila).
 
 Isolamento: toda leitura passa por `db.db(auth.contexto())` (RLS de `plat.item`/`plat.raster_item`) e a
 chave do COG vem do item STAC do PRÓPRIO inquilino — nunca de parâmetro de caminho livre.
@@ -38,6 +45,7 @@ from app.catalogo.comum import registrar_evento, uuid_ok
 from app.catalogo.modelos import Modelo
 from app.erros import ErroAPI
 from app.imagens import pgstac as ps
+from app.imagens import proveniencia as prov
 from app.jobs import servico
 from app.jobs.contexto import sessao_de
 
@@ -249,6 +257,16 @@ def imagem_ver(item_id: str, auth: Auth = autenticado(escopo_token="imagens:ler"
         corpo["assets"] = {nome: {"type": a.get("type"), "file:size": a.get("file:size"),
                                   "file:checksum": a.get("file:checksum")}
                            for nome, a in (stac.get("assets") or {}).items()}
+        # item L1-01-j: proveniência verificável — a "ficha" do item mostra a cadeia em texto simples
+        # (comando + sha256 de entrada/saída de cada passo), nunca só uma promessa em prosa.
+        corpo["proveniencia"] = {
+            "processing_software": props.get("processing:software"),
+            "processing_lineage": props.get("processing:lineage"),
+            "cadeia": props.get("plat:cadeia"),
+            "cadeia_origem": props.get("plat:cadeia_origem"),
+            "manifesto_sha256": props.get("plat:manifesto_sha256"),
+            "reexecucao": props.get("plat:reexecucao"),
+        }
     return JSONResponse(corpo, headers=SEM_CACHE)
 
 
@@ -273,3 +291,65 @@ def tile(item_id: str, z: int, x: int, y: int, auth: Auth = autenticado(escopo_t
     except (rasterio.errors.RasterioError, FileNotFoundError, objetos.ChaveInvalida) as e:
         raise ErroAPI(502, "tile_falhou", f"não foi possível ler o COG do item: {str(e)[:200]}") from e
     return Response(_png_de(arr), media_type="image/png", headers=TILE_CACHE)
+
+
+# ---------------------------------------------------------------- proveniência (item L1-01-j)
+class PreencherPendentesEntrada(Modelo):
+    limite: int = Field(default=200, ge=1, le=2000)
+
+
+@router.post("/api/imagens/{item_id}/conferir", openapi_extra=LER)
+def imagem_conferir(item_id: str, request: Request, auth: Auth = autenticado(escopo_token="imagens:ler")):
+    """Confere a proveniência do item: rebaixa cada asset com `file:checksum` do balde EM STREAM (nunca o
+    objeto inteiro em RAM — o COG científico de uma cena chega a centenas de MB), recalcula o sha256 e
+    compara com o registrado; recalcula também `plat:manifesto_sha256`. Devolve divergência por ativo — é o
+    mecanismo que torna a proveniência do Lastro CONFERÍVEL, não prometida (a mesma ideia por trás de
+    `imagens.reexecutar`, que além de conferir também reconverte)."""
+    with db.db(auth.contexto()) as cur:
+        item = _item_raster(cur, item_id)
+        dados = item["dados"] or {}
+        colecao = dados.get("colecao") or ""
+        stac_id = dados.get("stac_id") or item_id
+        if not ps.colecao_pertence(colecao, auth.tenant_id):
+            raise ErroAPI(404, "item_inexistente", "item inexistente")
+        resultado = prov.conferir_item(cur, auth.tenant_id, colecao, stac_id)
+        registrar_evento(cur, request, "imagens/conferir", "item", item_id,
+                         {"ok": resultado["ok"], "n_ativos": len(resultado["ativos"])})
+    return JSONResponse(resultado, headers=SEM_CACHE)
+
+
+@router.post("/api/imagens/proveniencia/preencher-pendentes", openapi_extra=PUBLICAR)
+def proveniencia_preencher_pendentes(
+    corpo: PreencherPendentesEntrada, request: Request,
+    auth: Auth = autenticado("conteudo.publicar_camada"),
+):
+    """Rota de administração do preenchimento retroativo (item L1-01-j, cláusula 3): busca até `limite`
+    itens do inquilino cujo `plat:cadeia_origem` ainda NÃO existe (`prov.itens_pendentes`, filtro no jsonb
+    do pgstac — nunca itera item já preenchido) e preenche, SEM reconverter — mesma lógica de
+    `imagens.preencher_proveniencia`, mas inline (é leitura+escrita de metadado, nunca GDAL, então cabe
+    numa requisição só). Item que precisa da cadeia MEDIDA de verdade (não reconstruída) segue precisando
+    de `imagens.reexecutar` (fila, pesado). MEDIDO (10/09): sem o filtro de pendência, uma varredura
+    repetida numa base com muito item já preenchido custava 165 s para ~217 itens só para descartar todos;
+    com o filtro, uma base já preenchida volta em milissegundos com 0 pendente."""
+    with db.db(auth.contexto()) as cur:
+        pendentes = prov.itens_pendentes(cur, auth.tenant_id, corpo.limite)
+        preenchidos, ja_tinha, falhas = 0, 0, []
+        for colecao, item_id in pendentes:
+            try:
+                stac = ps.item_obter(cur, auth.tenant_id, colecao, item_id)
+                if stac is None:
+                    falhas.append({"item_id": item_id, "erro": "item STAC inexistente"})
+                    continue
+                novo = prov.preencher_leve(cur, auth.tenant_id, colecao, item_id, stac)
+                if novo is None:
+                    ja_tinha += 1
+                else:
+                    preenchidos += 1
+            except Exception as e:  # noqa: BLE001 — 1 item ruim não pode derrubar a varredura dos outros
+                falhas.append({"item_id": item_id, "erro": str(e)[:300]})
+        registrar_evento(cur, request, "imagens/preencher_proveniencia_lote", "colecao", None,
+                         {"preenchidos": preenchidos, "ja_tinha": ja_tinha, "falhas": len(falhas)})
+    return JSONResponse(
+        {"varridos": len(pendentes), "preenchidos": preenchidos, "ja_tinha": ja_tinha, "falhas": falhas},
+        headers=SEM_CACHE,
+    )
