@@ -12,16 +12,27 @@
 -- Vale para instalação nova e para a que já existe. É idempotente: rodar de novo não acha nada.
 -- ⚠ `camada_schema_prefixo` fica de fora de propósito: é ela que define o prefixo.
 DO $$
-DECLARE r record; def text; novo text; n int := 0; esquema text := current_schema();
+-- ⚠ NÃO usar current_schema(): o aplicador roda com search_path largo e o laço acabava varrendo
+-- funções de fora (erro real: "avg is an aggregate function"). O literal `plat` abaixo é
+-- reescrito pelo tradutor da trilha para o schema da instalação, que é o padrão da casa.
+DECLARE r record; def text; novo text; n int := 0; esquema text := 'plat';
 BEGIN
   FOR r IN
     SELECT p.oid, p.proname
     FROM pg_proc p JOIN pg_namespace ns ON ns.oid = p.pronamespace
     WHERE ns.nspname = esquema
+      -- `prokind='f'`: só função comum. `pg_get_functiondef` LEVANTA ERRO em agregação
+      -- ("avg is an aggregate function") e em função de janela, e derruba a migração inteira.
+      AND p.prokind = 'f'
       AND p.proname <> 'camada_schema_prefixo'
-      AND pg_get_functiondef(p.oid) ~ '''d_''\s*\|\|'
   LOOP
+    -- ⚠ `pg_get_functiondef` fica AQUI, nunca no WHERE: no WHERE o planejador pode avaliá-la antes do
+    -- filtro `prokind`, e ela LEVANTA ERRO em agregação ("avg is an aggregate function"), derrubando a
+    -- migração inteira. Não há ordem de avaliação garantida em SQL. Medido em 11/09/2026.
     def := pg_get_functiondef(r.oid);
+    IF def !~ '''d_''\s*\|\|' THEN
+      CONTINUE;
+    END IF;
     novo := regexp_replace(def, '''d_''(\s*\|\|)', esquema || '.camada_schema_prefixo()\1', 'g');
     IF novo <> def THEN
       EXECUTE novo;
