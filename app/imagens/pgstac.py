@@ -81,7 +81,25 @@ def colecao_criar(cur, tenant_id: int, slug: str, corpo: dict[str, Any]) -> dict
     )
     conteudo.setdefault("links", [])
     cur.execute("SELECT pgstac.create_collection(%s::jsonb)", (jsonb(conteudo),))
+    colecao_espelhar(cur, tenant_id, slug, colecao_id, conteudo.get("title"))
     return conteudo
+
+
+def colecao_espelhar(cur, tenant_id: int, slug: str, colecao_id: str, titulo: str | None = None) -> None:
+    """Garante a linha de `plat.raster_colecao` que espelha a coleção do pgstac.
+
+    O pgstac e essa tabela são duas guardas para a mesma coisa, herança de dois ramos, e
+    `plat.raster_item.colecao` tem chave estrangeira para a SEGUNDA. Enquanto as duas existirem, quem
+    cria ou usa uma tem de garantir a outra — e garantir SEMPRE, não só na criação: uma coleção feita
+    numa tentativa anterior deixava o pgstac em dia e o espelho vazio, e a ingestão seguinte convertia
+    os dois COGs, gerava a miniatura, chegava a 88 % e morria em `raster_item_colecao_fkey`.
+    Medido em 11/09/2026 com a cena de 829 MB.
+    """
+    cur.execute(
+        "INSERT INTO plat.raster_colecao (colecao, tenant_id, slug, titulo) VALUES (%s, %s, %s, %s) "
+        "ON CONFLICT (colecao) DO UPDATE SET titulo = coalesce(EXCLUDED.titulo, plat.raster_colecao.titulo)",
+        (colecao_id, tenant_id, slug, titulo),
+    )
 
 
 def item_obter(cur, tenant_id: int, colecao_id: str, item_id: str) -> dict | None:

@@ -53,6 +53,12 @@ class IngestarParametros(BaseModel):
 
 def _colecao_garantir(cur, tenant_id: int) -> str:
     colecao_id = ps.nome_colecao(tenant_id, SLUG_COLECAO)
+    # O espelho `plat.raster_colecao` é garantido SEMPRE, não só quando a coleção nasce: o pgstac e o
+    # espelho são duas tabelas para a mesma coisa (herança de dois ramos), e uma coleção criada numa
+    # tentativa anterior deixava o pgstac em dia e o espelho vazio — a ingestão seguinte convertia os
+    # dois COGs, gerava a miniatura, chegava a 88 % e morria no `raster_item_colecao_fkey`.
+    # Medido em 11/09/2026 com a cena de 829 MB.
+    ps.colecao_espelhar(cur, tenant_id, SLUG_COLECAO, colecao_id)
     if ps.colecao_obter(cur, tenant_id, colecao_id) is None:
         ps.colecao_criar(cur, tenant_id, SLUG_COLECAO, {
             "title": "Imagens do inquilino",
@@ -275,9 +281,19 @@ def imagens_ingestar(ctx, arquivo_id: uuid.UUID, titulo: str | None = None,
              o_cient["bytes"] + o_vis["bytes"], ctx.usuario_id, ctx.usuario_id),
         )
         miniatura_catalogo.guardar(cur, item_id, png600)
+        # ⚠ SAVEPOINT obrigatório: no psycopg2, UM statement que falha aborta a transação INTEIRA, e o
+        # `except` seguinte não salva nada — tudo o que veio antes (item STAC, espelho, linha do
+        # catálogo, miniatura) é desfeito no commit. O job ainda assim reportava "concluído", porque o
+        # erro foi engolido. Medido duas vezes: em 10/09 no ramo da demonstração e de novo em 11/09
+        # aqui, com a cena de 829 MB — 32 s de conversão jogados fora e nenhum item no catálogo.
+        # `update_collection_extents` é do pgstac e depende do search_path; o ajuste vale só na chamada.
+        cur.execute("SAVEPOINT extents")
         try:
+            cur.execute("SELECT set_config('search_path', 'pgstac,' || current_setting('search_path'), true)")
             cur.execute("SELECT pgstac.update_collection_extents()")
+            cur.execute("RELEASE SAVEPOINT extents")
         except Exception as e:  # extents são derivados; nunca derrubam a ingestão
+            cur.execute("ROLLBACK TO SAVEPOINT extents")
             ctx.log("AVISO", f"update_collection_extents falhou (extent da coleção ficou mundial): {e}")
     ctx.entrada(item_id, o_cient["sha256"], "COG científico no catálogo")
 
