@@ -53,6 +53,39 @@ def _tile_matrix_set(zoom_min: int, zoom_max: int) -> list[str]:
     return linhas
 
 
+def _limites(bounds: list[float], zoom_min: int, zoom_max: int) -> list[str]:
+    """`TileMatrixSetLimits`: por nível, a faixa de linha/coluna que a imagem realmente cobre.
+
+    Sem isto o documento diz apenas "grade WebMercatorQuad", e um cliente que confia na grade inteira
+    pede ladrilho em qualquer canto do mundo. O ArcGIS Pro é um deles: ao criar a camada ele desenha
+    a extensão que o documento declara, e cada pedido fora da imagem custa uma leitura inútil do COG.
+    A ordem dos filhos é a do XSD (`TileMatrix`, `MinTileRow`, `MaxTileRow`, `MinTileCol`, `MaxTileCol`)
+    — invertê-la reprova na validação do esquema."""
+    oeste, sul, leste, norte = bounds
+    linhas = ["        <TileMatrixSetLimits>"]
+    for z in range(zoom_min, zoom_max + 1):
+        m = TMS.matrix(z)
+        noroeste = TMS.tile(oeste, norte, z)
+        sudeste = TMS.tile(leste, sul, z)
+        col_min, col_max = sorted((noroeste.x, sudeste.x))
+        lin_min, lin_max = sorted((noroeste.y, sudeste.y))
+        col_min = max(0, min(col_min, m.matrixWidth - 1))
+        col_max = max(0, min(col_max, m.matrixWidth - 1))
+        lin_min = max(0, min(lin_min, m.matrixHeight - 1))
+        lin_max = max(0, min(lin_max, m.matrixHeight - 1))
+        linhas += [
+            "          <TileMatrixLimits>",
+            f"            <TileMatrix>{m.id}</TileMatrix>",
+            f"            <MinTileRow>{lin_min}</MinTileRow>",
+            f"            <MaxTileRow>{lin_max}</MaxTileRow>",
+            f"            <MinTileCol>{col_min}</MinTileCol>",
+            f"            <MaxTileCol>{col_max}</MaxTileCol>",
+            "          </TileMatrixLimits>",
+        ]
+    linhas.append("        </TileMatrixSetLimits>")
+    return linhas
+
+
 def capabilities(
     *,
     base: str,
@@ -124,8 +157,9 @@ def capabilities(
     linhas += [
         "      <TileMatrixSetLink>",
         f"        <TileMatrixSet>{TMS_ID}</TileMatrixSet>",
-        "      </TileMatrixSetLink>",
     ]
+    linhas += _limites(bounds, zoom_min, zoom_max)
+    linhas += ["      </TileMatrixSetLink>"]
     for f in formatos:
         ext = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp"}[f]
         gabarito = f"{base}/{{TileMatrix}}/{{TileCol}}/{{TileRow}}.{ext}{extra}"

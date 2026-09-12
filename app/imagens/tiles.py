@@ -26,6 +26,8 @@ from rio_tiler.colormap import cmap as colormaps
 from rio_tiler.errors import EmptyMosaicError, TileOutsideBounds
 from rio_tiler.io import Reader
 
+from app import limites
+
 TMS = tms_registry.get("WebMercatorQuad")
 TAMANHO = 256
 FORMATOS = {
@@ -171,6 +173,19 @@ def ladrilho(
     indices = bandas if (bandas and not expressao) else None
     with rasterio.Env(session=fonte.sessao, **fonte.env):
         with Reader(fonte.caminho, tms=TMS) as src:
+            piso = src.minzoom - limites.RASTER_TILE_NIVEIS_ABAIXO_DO_MINIMO
+            if z < piso:
+                # Longe abaixo do zoom mínimo a imagem não enche um ladrilho e o custo DOBRA por nível
+                # (a medição está em limites.RASTER_TILE_NIVEIS_ABAIXO_DO_MINIMO): o pedido passava do
+                # teto de 60 s do nginx, que devolvia 504, e o ArcGIS Pro traduzia isso para
+                # "Invalid Path" e recusava a camada inteira. Quem pede tão longe recebe o mesmo
+                # ladrilho vazio de quem pede fora da caixa, em milissegundos. O GetCapabilities e o
+                # TileJSON anunciam o mínimo real e o `TileMatrixSetLimits` diz por nível onde a imagem
+                # está: um cliente que lê o documento nunca chega aqui.
+                raise ForaDaCobertura(
+                    f"zoom {z} está {piso - z} nível(is) além do que a imagem suporta "
+                    f"abaixo do mínimo ({src.minzoom})"
+                )
             try:
                 if indices is None and not expressao and src.dataset.count > 3:
                     # PNG/JPEG/WEBP não carregam mais de 3 bandas + máscara: sem escolha do cliente,

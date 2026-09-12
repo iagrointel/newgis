@@ -400,7 +400,11 @@ def _capabilities(token: str, item: str, auth, expressao, bandas, faixa, colorma
         identificador=item,
         titulo=titulo,
         bounds=info["bounds"],
-        zoom_min=0,
+        # o zoom mínimo é o da IMAGEM, não zero: declarar 0 faz o cliente pedir o ladrilho do mundo
+        # inteiro ao criar a camada, e ler o COG para um ladrilho em que a imagem não chega a um pixel
+        # custou 93 s MEDIDOS nesta máquina — acima do teto de 60 s do nginx, que devolve 504 e faz o
+        # ArcGIS Pro recusar a camada com "Invalid Path". O TileJSON já anunciava o mínimo certo.
+        zoom_min=info["minzoom"],
         zoom_max=max(info["maxzoom"], 18),
         formatos=["image/png", "image/jpeg", "image/webp"],
         consulta=_consulta_render(expressao, bandas, faixa, colormap, asset, predef_pub),

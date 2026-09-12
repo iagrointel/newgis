@@ -316,7 +316,11 @@ def test_registro_conta_ladrilhos_por_token(sessao_a, raster_demo):
         meu = [li for li in linhas if li["token_id"] == tid]
         assert meu and meu[0]["ladrilhos"] >= 1, linhas
         assert meu[0]["bytes"] > 0 and meu[0]["itens"] == 1
-        assert meu[0]["prefixo"] == tok[:12]
+        from app import limites  # como todo import de app neste arquivo: dentro da função
+
+        # o prefixo foi encurtado de 12 para 8 pelo achado G1-d1 do adversário (entropia
+        # guardada em claro é entropia dada de graça); o teste lia o número velho
+        assert meu[0]["prefixo"] == tok[:limites.TOKEN_PREFIXO_TAMANHO]
     finally:
         sessao_a.delete(f"/api/tokens/{tid}")
 

@@ -465,6 +465,13 @@ RASTER_VISUAL_MAX_LADO = 1024           # miniatura PNG (lado maior)
 RASTER_ESTATISTICA_AMOSTRA = 100_000    # pixels amostrados por banda para percentis do perfil visual
 RASTER_TILE_CACHE_DATASET_MAX = 8       # datasets abertos por processo no handler de tiles (LRU)
 RASTER_TILE_TIMEOUT_S = 30              # teto de renderização de um tile (mata a requisição, não o worker)
+# Quantos níveis ABAIXO do zoom mínimo da imagem um ladrilho ainda é servido. Abaixo do mínimo a imagem
+# não enche um ladrilho e o custo DOBRA por nível — MEDIDO nesta máquina numa cena de 869 MB com mínimo 8:
+# z=8 0,05 s · z=7 2,2 s · z=6 2,0 s · z=5 3,3 s · z=4 5,9 s · z=3 12 s · z=2 23 s · z=1 46 s · z=0 94 s.
+# O teto do nginx é 60 s: de z=1 para baixo o cliente recebia 504, e o ArcGIS Pro traduz isso para
+# "Invalid Path" e recusa a camada inteira. Três níveis param em 3,3 s e ainda cobrem o raster pequeno,
+# que tem mínimo alto por ser pequeno (o de teste tem mínimo 14 e é pedido em z=12).
+RASTER_TILE_NIVEIS_ABAIXO_DO_MINIMO = 3
 # --- exportação de camada (L0-04-h-exportar; ADR 0018). Os tempos e tetos abaixo saem de MEDIÇÃO nesta
 # --- geocodificação de tabela enviada pelo usuário (L2-11-a-geocodificacao-csv). O teto de tamanho é medido
 # em BYTES REAIS do objeto (não no que o navegador declara) e em LINHAS: os dois existem porque um arquivo
@@ -733,6 +740,13 @@ RASTER_VISUAL_MAX_LADO = 1024           # miniatura PNG (lado maior)
 RASTER_ESTATISTICA_AMOSTRA = 100_000    # pixels amostrados por banda para percentis do perfil visual
 RASTER_TILE_CACHE_DATASET_MAX = 8       # datasets abertos por processo no handler de tiles (LRU)
 RASTER_TILE_TIMEOUT_S = 30              # teto de renderização de um tile (mata a requisição, não o worker)
+# Quantos níveis ABAIXO do zoom mínimo da imagem um ladrilho ainda é servido. Abaixo do mínimo a imagem
+# não enche um ladrilho e o custo DOBRA por nível — MEDIDO nesta máquina numa cena de 869 MB com mínimo 8:
+# z=8 0,05 s · z=7 2,2 s · z=6 2,0 s · z=5 3,3 s · z=4 5,9 s · z=3 12 s · z=2 23 s · z=1 46 s · z=0 94 s.
+# O teto do nginx é 60 s: de z=1 para baixo o cliente recebia 504, e o ArcGIS Pro traduz isso para
+# "Invalid Path" e recusa a camada inteira. Três níveis param em 3,3 s e ainda cobrem o raster pequeno,
+# que tem mínimo alto por ser pequeno (o de teste tem mínimo 14 e é pedido em z=12).
+RASTER_TILE_NIVEIS_ABAIXO_DO_MINIMO = 3
 # --- classes de relacionamento entre camadas (L2-10-b-relacionamentos; plat.relacionamento/_junc,
 # /api/relacionamentos e /api/camadas/{id}/relacionados/{rel}). Nomes seguem o mesmo teto de campo do
 # L2-10-a (CAMPO_PADRAO); NOME_MAX é o mesmo teto do nome_direto/nome_inverso do banco.
