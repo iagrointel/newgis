@@ -385,7 +385,11 @@ def informacao(fonte: Fonte) -> dict:
                 "maxzoom": src.maxzoom,
                 "bandas": len(info.band_descriptions),
                 "dtype": info.dtype,
-                "nodata": info.nodata_value,
+                # `nodata_value` é campo EXTRA do Info do rio-tiler: só existe quando o arquivo
+                # declara nodata. Ler direto levantava AttributeError e o TileJSON devolvia 500 em
+                # toda imagem sem nodata — ortofoto com banda alfa é exatamente esse caso, e o
+                # defeito não aparecia na imagem de demonstração, que tem nodata declarado.
+                "nodata": getattr(info, "nodata_value", None),
             }
 
 

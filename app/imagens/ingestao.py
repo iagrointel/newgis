@@ -303,7 +303,14 @@ def imagens_ingestar(ctx, arquivo_id: uuid.UUID, titulo: str | None = None,
 
     duracao = time.monotonic() - inicio
     bytes_cogs = o_cient["bytes"] + o_vis["bytes"]
+    # `taxa_compressao` é a FRAÇÃO que os dois COG juntos ocupam do original — 0,9091 quer dizer
+    # "os dois somados pesam 91 % do que entrou", e não "91 % de compressão". O nome engana e o
+    # número já foi lido ao contrário: quem serve imagem quer a razão do VISUAL sozinho, que é o
+    # arquivo que responde ladrilho. As duas razões vão explícitas ao lado, com nome que não deixa
+    # dúvida, e a antiga fica para não quebrar quem já a lê.
     taxa = round(bytes_cogs / bytes_baixados, 4) if bytes_baixados else None
+    razao_visual = round(bytes_baixados / o_vis["bytes"], 2) if o_vis["bytes"] else None
+    razao_cientifico = round(bytes_baixados / o_cient["bytes"], 2) if o_cient["bytes"] else None
     ctx.progresso(100, "concluído")
     return {
         "item_id": item_id,
@@ -315,6 +322,8 @@ def imagens_ingestar(ctx, arquivo_id: uuid.UUID, titulo: str | None = None,
         "bytes_visual": o_vis["bytes"],
         "bytes_cientifico": o_cient["bytes"],
         "taxa_compressao": taxa,
+        "visual_vezes_menor_que_o_bruto": razao_visual,
+        "cientifico_vezes_menor_que_o_bruto": razao_cientifico,
         "compressao_visual": visual.compressao,
         "sha256_cientifico": o_cient["sha256"],
         "sha256_visual": o_vis["sha256"],
