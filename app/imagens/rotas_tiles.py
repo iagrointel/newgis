@@ -39,6 +39,7 @@ from typing import Any
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse, Response
 
+from app import limites
 from app import db, objetos
 from app.acervo import arquivos as arquivos_acervo
 from app.auth import escopos as esc
@@ -400,11 +401,20 @@ def _capabilities(token: str, item: str, auth, expressao, bandas, faixa, colorma
         identificador=item,
         titulo=titulo,
         bounds=info["bounds"],
-        # o zoom mínimo é o da IMAGEM, não zero: declarar 0 faz o cliente pedir o ladrilho do mundo
-        # inteiro ao criar a camada, e ler o COG para um ladrilho em que a imagem não chega a um pixel
-        # custou 93 s MEDIDOS nesta máquina — acima do teto de 60 s do nginx, que devolve 504 e faz o
-        # ArcGIS Pro recusar a camada com "Invalid Path". O TileJSON já anunciava o mínimo certo.
-        zoom_min=info["minzoom"],
+        # O documento tem de anunciar EXATAMENTE a faixa que o serviço entrega, nem mais nem menos.
+        #
+        # Nem mais: declarar zoom 0 fazia o cliente pedir o ladrilho do mundo inteiro ao criar a
+        # camada, e ler o COG para um ladrilho onde a imagem não chega a um pixel custou 93 s MEDIDOS
+        # — acima do teto de 60 s do nginx, que devolvia 504, e o ArcGIS Pro traduz 504 para
+        # "Invalid Path" e recusa a camada.
+        #
+        # Nem menos: o `minzoom` que o rio-tiler calcula sai da pirâmide interna do COG e é
+        # CONSERVADOR. Numa ortofoto de 12 km² ele deu 14, mas os níveis 11, 12 e 13 respondem em
+        # menos de 0,1 s (MEDIDO 12/09/2026), porque a visão geral mais grossa já os cobre. Anunciar
+        # 14 fazia a camada DESAPARECER no ArcGIS ao afastar o mapa, o que parece defeito do serviço.
+        # A faixa honesta é a mesma que `tiles.ladrilho` aceita: até
+        # `limites.RASTER_TILE_NIVEIS_ABAIXO_DO_MINIMO` níveis abaixo do mínimo do COG.
+        zoom_min=max(0, info["minzoom"] - limites.RASTER_TILE_NIVEIS_ABAIXO_DO_MINIMO),
         zoom_max=max(info["maxzoom"], 18),
         formatos=["image/png", "image/jpeg", "image/webp"],
         consulta=_consulta_render(expressao, bandas, faixa, colormap, asset, predef_pub),
