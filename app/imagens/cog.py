@@ -71,8 +71,21 @@ def _validar_cog(caminho: Path, perfil: str) -> None:
 
 def estatisticas_bruto(caminho: Path, rel: RelatorioValidacao) -> list[dict]:
     """Estatísticas por banda lidas do BRUTO (rasterio, amostra limitada): min/max/mean/std e os
-    percentis 2-98 que escalam o perfil visual. A amostra é por diezimação determinística — nunca
-    lê mais que ~RASTER_ESTATISTICA_AMOSTRA pixels por banda."""
+    percentis 2-98 que escalam o perfil visual. A amostra é por dizimação determinística — nunca
+    lê mais que ~RASTER_ESTATISTICA_AMOSTRA pixels por banda.
+
+    A dizimação acontece NA LEITURA, por `out_shape`, e não depois. A versão anterior fazia
+    `ds.read(i)[::passo, ::passo]`, que materializa a banda INTEIRA antes de jogar 99 % fora: a
+    garantia do parágrafo acima estava escrita mas não implementada. Numa ortofoto de
+    12.000 x 100.000 uint8 isso é 1,2 GB por banda, e o job morria com "memória excedida
+    (limite 1024 MB)" logo depois de validar — MEDIDO em 12/09/2026. Na cena Sentinel da
+    demonstração a banda cabia em 241 MB, e foi por isso que o defeito nunca apareceu.
+
+    Com `out_shape` o GDAL faz leitura reduzida (e usa visão geral quando existe), então o pico é o
+    tamanho da AMOSTRA. A diferença de comportamento é real e vale registrar: a amostra passa a ser
+    reamostrada por vizinho mais próximo em vez de recortada exatamente de passo em passo. Para
+    mínimo, máximo, média, desvio e percentil 2-98 as duas são equivalentes; o que muda é que já
+    não se paga a banda toda em RAM para obter a amostra."""
     import numpy as np
 
     nodata_final = rel.nodata_final()
@@ -80,7 +93,9 @@ def estatisticas_bruto(caminho: Path, rel: RelatorioValidacao) -> list[dict]:
     with rasterio.open(caminho) as ds:
         for i in range(1, ds.count + 1):
             passo = max(1, int(((ds.width * ds.height) / limites.RASTER_ESTATISTICA_AMOSTRA) ** 0.5))
-            arr = ds.read(i)[::passo, ::passo]
+            alt = max(1, ds.height // passo)
+            larg = max(1, ds.width // passo)
+            arr = ds.read(i, out_shape=(alt, larg))
             nd = nodata_final[i - 1] if i - 1 < len(nodata_final) else None
             if nd is not None:
                 arr = arr[arr != nd]
