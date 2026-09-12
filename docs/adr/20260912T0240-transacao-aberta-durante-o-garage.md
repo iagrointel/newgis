@@ -83,3 +83,20 @@ mecanismo — mas isso é decisão de produto, não ajuste de desempenho.
     # um raster cujos COG somem mais de ~1,5 GB
     python3 /mnt/pgdata/plat-orto/enviar_e_ingerir.py <arquivo.tif> "<titulo>" medida.json
     # sem o remendo: falha em "gerando a miniatura" com SSL connection has been closed
+
+## Achado de lado: job que falha não limpa o disco de trabalho
+
+MEDIDO na mesma sessão. O job que termina em `concluido` apaga o próprio diretório em
+`PLAT_JOBS_DIR`; o que termina em `falhou`, não. Duas falhas desta ingestão deixaram **5,4 GB cada
+uma** paradas (o bruto rebaixado mais os dois COG já convertidos), 10,8 GB no total, e o disco não
+voltaria sozinho.
+
+Com uma ortofoto de cidade inteira — 469 GB de bruto pela conta do DOCUMENTO.md — duas falhas
+enchem o volume e derrubam o Postgres da máquina, que nesta instalação é compartilhado com bancos de
+cliente.
+
+Guardar o trabalho de um job que falhou tem valor real: foi exatamente por os COG estarem no
+diretório que se mediu a razão de compressão sem esperar o conserto. Então a resposta não é apagar
+na hora, é ter prazo e teto: expurgo por idade (o periódico de limpeza já existe para o upload) e um
+teto de bytes retidos por inquilino, com o que passar do teto sendo apagado do mais antigo para o
+mais novo. Enquanto isso não existir, quem depurar ingestão grande precisa apagar à mão.
