@@ -1,0 +1,11 @@
+{
+  "arquivo": "/mnt/pgdata/plat-orto/orto_faixa_cru.tif",
+  "bytes": 3699433104,
+  "largura": 12000,
+  "altura": 100000,
+  "gigapixels": 1.2,
+  "bandas": 3,
+  "gsd_m": 0.1,
+  "epsg": 31983,
+  "km2": 12.000000000000002
+}

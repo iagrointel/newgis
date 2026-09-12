@@ -1,0 +1,53 @@
+{
+  "arquivo": "orto_faixa_cru.tif",
+  "titulo": "Ortofoto 10 cm de São Paulo — faixa de 12 km² (Butantã/Pinheiros), Prefeitura de SP, CC0",
+  "cru_bytes": 3699433104,
+  "cru_sha256": "e889f3933555c601263f31080cf3353b66f5e47fea41b127da9c48a971ceb9aa",
+  "sha_s": 117.38,
+  "partes": 221,
+  "envio_s": 100.76,
+  "envio_mb_s": 36.7,
+  "concluir_s": 9.65,
+  "arquivo_id": "b282a9a1-2ac5-4723-bc3e-877c462abaeb",
+  "job_id": "b3999be4-5531-4a06-a113-d8476d53fb30",
+  "conversao_s": 2640.76,
+  "estado_final": "concluido",
+  "item_id": "75747924-c15e-4968-a076-4c5a27196520",
+  "bytes_bruto": 3699433104,
+  "bytes_visual": 433221417,
+  "bytes_cientifico": 1564705982,
+  "visual_vezes_menor_que_o_bruto": 8.54,
+  "cientifico_vezes_menor_que_o_bruto": 2.36,
+  "taxa_compressao": 0.5401,
+  "compressao_visual": "JPEG",
+  "dimensoes": [
+    12000,
+    100000
+  ],
+  "epsg": 31983,
+  "dtype": "Byte",
+  "bandas": 3,
+  "duracao_s": 2628.83,
+  "versoes": {
+    "gdal": "3.8.4",
+    "plat": "0.1.0",
+    "rasterio": "1.5.0",
+    "rio-cogeo": "7.0.2"
+  },
+  "avisos_validacao": [
+    "NoData não declarado no arquivo: informe o valor que marca 'sem dado' (ou 'nenhum' para não marcar); sem isso as bordas ficam pretas",
+    "data de aquisição ausente nos metadados: informe a data da imagem (AAAA-MM-DD)"
+  ],
+  "visual_bytes": 433221417,
+  "cientifico_bytes": 1564705982,
+  "token_leitura_id": 125,
+  "ladrilhos_piramide": 15234,
+  "minzoom": 14,
+  "maxzoom": 20,
+  "bounds": [
+    -46.7152431,
+    -23.6092398,
+    -46.7023214,
+    -23.518823
+  ]
+}

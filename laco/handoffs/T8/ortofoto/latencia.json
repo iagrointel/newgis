@@ -1,0 +1,91 @@
+{
+  "base": "https://sistema.iagrointel.com/svc/<TOKEN>/raster/75747924-c15e-4968-a076-4c5a27196520",
+  "minzoom": 14,
+  "maxzoom": 20,
+  "medidas": [
+    {
+      "zoom": 14,
+      "x": 6066,
+      "y": 9296,
+      "http": "200",
+      "frio_ms": 543.3,
+      "quente_ms": 23.8,
+      "bytes": 101360,
+      "cache": "HIT"
+    },
+    {
+      "zoom": 15,
+      "x": 12132,
+      "y": 18592,
+      "http": "200",
+      "frio_ms": 97.1,
+      "quente_ms": 23.9,
+      "bytes": 201819,
+      "cache": "HIT"
+    },
+    {
+      "zoom": 16,
+      "x": 24264,
+      "y": 37184,
+      "http": "200",
+      "frio_ms": 180.3,
+      "quente_ms": 24.1,
+      "bytes": 197015,
+      "cache": "HIT"
+    },
+    {
+      "zoom": 17,
+      "x": 48529,
+      "y": 74368,
+      "http": "200",
+      "frio_ms": 118.2,
+      "quente_ms": 23.6,
+      "bytes": 196202,
+      "cache": "HIT"
+    },
+    {
+      "zoom": 18,
+      "x": 97059,
+      "y": 148736,
+      "http": "200",
+      "frio_ms": 580.1,
+      "quente_ms": 24.3,
+      "bytes": 186436,
+      "cache": "HIT"
+    },
+    {
+      "zoom": 19,
+      "x": 194119,
+      "y": 297472,
+      "http": "200",
+      "frio_ms": 197.3,
+      "quente_ms": 23.7,
+      "bytes": 168821,
+      "cache": "HIT"
+    },
+    {
+      "zoom": 20,
+      "x": 388238,
+      "y": 594944,
+      "http": "200",
+      "frio_ms": 357.6,
+      "quente_ms": 24.3,
+      "bytes": 153236,
+      "cache": "HIT"
+    }
+  ],
+  "resumo": {
+    "frio_mediana_ms": 197.3,
+    "quente_mediana_ms": 23.9,
+    "bytes_mediana": 186436,
+    "zooms_medidos": [
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20
+    ]
+  }
+}

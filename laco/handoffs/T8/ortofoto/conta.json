@@ -1,0 +1,48 @@
+{
+  "imagem": {
+    "km2": 12.000000000000002,
+    "gsd_cm": 10.0,
+    "gigapixels": 1.2,
+    "cru_gb": 3.699433104,
+    "visual_gb": 0.433221417,
+    "cientifico_gb": 1.564705982,
+    "razao": 8.539358763973574
+  },
+  "esri_por_ano": {
+    "guardar só o COG como camada de ladrilho": {
+      "creditos": 6.2383884048,
+      "reais": 11.2790062358784
+    },
+    "guardar a imagem crua em tiles": {
+      "creditos": 53.271836697599994,
+      "reais": 96.31548074926079
+    },
+    "a crua como imagem DINÂMICA (1-10 imagens)": {
+      "creditos": 3703.2718366976,
+      "reais": 6695.515480749261
+    },
+    "gerar a pirâmide (15,234 ladrilhos, uma vez)": {
+      "creditos": 1.5234,
+      "reais": 2.7543072000000004
+    },
+    "*se* fosse feição editável do mesmo tamanho do COG": {
+      "creditos": 1247.6776809599999,
+      "reais": 2255.8012471756797
+    }
+  },
+  "aqui_por_ano": {
+    "eur": 0.2325558968951818,
+    "reais": 1.3740565168051817
+  },
+  "fontes": {
+    "tarifa_esri": "doc.arcgis.com/en/arcgis-online/administer/credits.htm, 12/09/2026",
+    "preco_credito": "Catálogo SGD/MGI v2.0: R$ 1.808 por 1.000 créditos",
+    "cambio": {
+      "fonte": "PTAX/Banco Central do Brasil",
+      "data": "2026-09-11",
+      "boletim": "Fechamento",
+      "eur_brl_venda": 5.9085
+    },
+    "imagem": "Ortofoto do Mapa Digital da Cidade de São Paulo, licença CC0"
+  }
+}
