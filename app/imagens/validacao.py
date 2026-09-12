@@ -94,6 +94,12 @@ def ambiente_isolado() -> dict:
     `app.raster.validacao`."""
     env = {k: v for k, v in os.environ.items() if not k.startswith(_BLOQUEADAS)}
     env["GDAL_DISABLE_READDIR_ON_OPEN"] = "EMPTY_DIR"
+    # O cache de bloco do GDAL vale 5 % da RAM FÍSICA quando não é declarado — 1,2 GB numa máquina de
+    # 24 GB. O `memoria_mb` do job vira RLIMIT_DATA do neto, e com 1024 MB declarados o gdal_translate
+    # estouraria o limite sozinho, antes de ler pixel, num arquivo grande. Declarar o cache tira a
+    # decisão da RAM da máquina e a põe no orçamento do job: o COG é escrito em blocos de 512, então o
+    # cache não precisa ser grande — precisa ser PREVISÍVEL.
+    env.setdefault("GDAL_CACHEMAX", str(limites.RASTER_GDAL_CACHE_MB))
     return env
 
 

@@ -170,8 +170,12 @@ def _item_stac(
     "sobe ao Garage, cria o item STAC no pgstac e o item raster no catálogo, com miniatura e estatísticas",
     parametros=IngestarParametros,
     pesado=True,
-    memoria_mb=1024,
-    timeout_s=3600,
+    # Uma ortofoto é o caso grande deste job: 100 km² a 10 cm são 10 gigapixels e 30 GB sem
+    # compressão, e o COG é escrito em blocos de 512 com visões gerais, então o pico de memória
+    # é o bloco e não a imagem — o que cresce com o tamanho é o TEMPO. Com 1 h de teto o job
+    # morria no meio e deixava o catálogo vazio (a conversão de 869 MB já levava 64 s).
+    memoria_mb=1024,   # teto do registro é PLAT_WORKER_MEMORIA_MB (1024); o COG é escrito em blocos
+    timeout_s=6 * 3600,
     tentativas=1,
     perfil_minimo="editor",
     ferramentas=("gdalinfo", "gdal_translate"),

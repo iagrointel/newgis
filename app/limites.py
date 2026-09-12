@@ -126,7 +126,11 @@ ARQUIVO_BUFFER_UNICO_BYTES = ARQUIVO_PARTE_BYTES  # até aqui: 1 PUT só, sem ab
 # arquivo — cada PUT bufferiza no máximo isto de RAM); teto de 2 GiB por arquivo nesta fase (hipótese do item;
 # a Esri aceita 500 GB — ampliar é mudar UPLOAD_BYTES_MAX e reindexar; 24 h é o prazo do periódico de expurgo,
 # reaproveitando o padrão de `jobs.expurgo`/`jobs.sessoes_expurgar` do L0-05).
-UPLOAD_BYTES_MAX = 2 * 1024 * 1024 * 1024   # 2 GiB
+UPLOAD_BYTES_MAX = 64 * 1024 * 1024 * 1024  # 64 GiB. Eram 2 GiB, e 2 GiB não cabe uma ortofoto: 100 km² a
+                                            # 10 cm são 10 gigapixels = 30 GB sem compressão, que é o que uma
+                                            # empresa de aerolevantamento entrega. O envio é por partes de
+                                            # UPLOAD_PARTE_BYTES e nunca bufferiza mais que isso, então o teto
+                                            # é política de cota, não de memória. A Esri aceita 500 GB.
 UPLOAD_PARTE_BYTES = 16 * 1024 * 1024       # 16 MiB (ADR 0005 seção 3.1; distinto de ARQUIVO_PARTE_BYTES acima,
                                              # que é do caminho de streaming server-driven do L0-11)
 UPLOAD_EXPIRA_HORAS = 24
@@ -460,10 +464,15 @@ STAC_LOTE_ITENS_MAX = 10_000  # POST .../items:lote (semeadura de teste/ingestã
 # no handler de tiles (mínimo honesto até o TiTiler do L1-02).
 RASTER_DIMENSAO_MAX = 200_000           # pixels por eixo (linhas ou colunas) — acima: recusa na validação
 RASTER_BANDAS_MAX = 64                  # bandas por raster — acima: recusa na validação
-RASTER_BYTES_MAX = 2 * 1024 * 1024 * 1024  # bruto aceito para ingestão (igual a UPLOAD_BYTES_MAX)
+RASTER_BYTES_MAX = UPLOAD_BYTES_MAX        # bruto aceito para ingestão: amarrado ao teto de envio, para os
+                                           # dois não divergirem quando um for mexido (aconteceu: eram dois 2 GiB)
 RASTER_VISUAL_MAX_LADO = 1024           # miniatura PNG (lado maior)
 RASTER_ESTATISTICA_AMOSTRA = 100_000    # pixels amostrados por banda para percentis do perfil visual
 RASTER_TILE_CACHE_DATASET_MAX = 8       # datasets abertos por processo no handler de tiles (LRU)
+# Cache de bloco do gdal_translate da conversão, em MB. Sem declaração o GDAL usa 5 % da RAM física
+# (1,2 GB numa máquina de 24 GB), que estoura sozinho o RLIMIT_DATA de um job de 1024 MB. 256 MB é
+# folgado para blocos de 512 px e deixa o resto do orçamento para o próprio gdal_translate.
+RASTER_GDAL_CACHE_MB = 256
 RASTER_TILE_TIMEOUT_S = 30              # teto de renderização de um tile (mata a requisição, não o worker)
 # Quantos níveis ABAIXO do zoom mínimo da imagem um ladrilho ainda é servido. Abaixo do mínimo a imagem
 # não enche um ladrilho e o custo DOBRA por nível — MEDIDO nesta máquina numa cena de 869 MB com mínimo 8:
@@ -735,10 +744,15 @@ STAC_LOTE_ITENS_MAX = 10_000  # POST .../items:lote (semeadura de teste/ingestã
 # no handler de tiles (mínimo honesto até o TiTiler do L1-02).
 RASTER_DIMENSAO_MAX = 200_000           # pixels por eixo (linhas ou colunas) — acima: recusa na validação
 RASTER_BANDAS_MAX = 64                  # bandas por raster — acima: recusa na validação
-RASTER_BYTES_MAX = 2 * 1024 * 1024 * 1024  # bruto aceito para ingestão (igual a UPLOAD_BYTES_MAX)
+RASTER_BYTES_MAX = UPLOAD_BYTES_MAX        # bruto aceito para ingestão: amarrado ao teto de envio, para os
+                                           # dois não divergirem quando um for mexido (aconteceu: eram dois 2 GiB)
 RASTER_VISUAL_MAX_LADO = 1024           # miniatura PNG (lado maior)
 RASTER_ESTATISTICA_AMOSTRA = 100_000    # pixels amostrados por banda para percentis do perfil visual
 RASTER_TILE_CACHE_DATASET_MAX = 8       # datasets abertos por processo no handler de tiles (LRU)
+# Cache de bloco do gdal_translate da conversão, em MB. Sem declaração o GDAL usa 5 % da RAM física
+# (1,2 GB numa máquina de 24 GB), que estoura sozinho o RLIMIT_DATA de um job de 1024 MB. 256 MB é
+# folgado para blocos de 512 px e deixa o resto do orçamento para o próprio gdal_translate.
+RASTER_GDAL_CACHE_MB = 256
 RASTER_TILE_TIMEOUT_S = 30              # teto de renderização de um tile (mata a requisição, não o worker)
 # Quantos níveis ABAIXO do zoom mínimo da imagem um ladrilho ainda é servido. Abaixo do mínimo a imagem
 # não enche um ladrilho e o custo DOBRA por nível — MEDIDO nesta máquina numa cena de 869 MB com mínimo 8:
