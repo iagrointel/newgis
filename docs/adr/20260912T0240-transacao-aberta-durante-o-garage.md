@@ -1,6 +1,6 @@
 # Transação aberta enquanto o objeto sobe ao Garage
 
-Data: 12/09/2026 · Estado: **remendo aplicado, conserto de verdade em aberto**
+Data: 12/09/2026 · Estado: **contornado no ponto certo; conserto estrutural em aberto**
 
 ## O que aconteceu
 
@@ -34,17 +34,29 @@ tarefa: trabalho longo FORA do bloco `with ctx.db()`"*. O autor da ingestão ten
 comentário em `app/imagens/ingestao.py` diz "objetos sobem um por transação curta" — mas 1,5 GB não
 é curto.
 
-## O remendo que está no ar
+## O que está no ar
 
-    ALTER ROLE plat_tuniao_worker SET idle_in_transaction_session_timeout = '5min';
+`app/imagens/ingestao.py` afrouxa o teto **só dentro das transações que sobem COG**, com `SET LOCAL`:
 
-Só o papel do trabalhador. O global segue em 60 segundos para todos os outros papéis. Uma linha,
-reversível com `RESET`.
+    cur.execute("SET LOCAL idle_in_transaction_session_timeout = %s",
+                (limites.RASTER_UPLOAD_TRANSACAO_PARADA,))   # 10min
 
-⛔ **Isto NÃO é o conserto, e tem preço.** Transação aberta por minutos segura o horizonte de limpeza
-do Postgres, e o horizonte é do SERVIDOR: afeta o `VACUUM` de todos os bancos, inclusive os de
-cliente que dividem esta máquina. Cinco minutos é curto, mas não é de graça. Nunca ampliar isto sem
-medir o efeito no `VACUUM`, e nunca aplicar ao papel da aplicação.
+`SET LOCAL` reverte no commit, então a folga não escapa daquelas duas transações: nenhuma rota da API
+herda permissão de segurar transação por minutos.
+
+### A primeira tentativa de conserto estava errada, e por quê
+
+Primeiro foi `ALTER ROLE plat_tuniao_worker SET idle_in_transaction_session_timeout = '5min'`. Não
+surtiu efeito nenhum e o job falhou de novo no mesmo ponto, aos 45 minutos. Motivo, escrito no
+cabeçalho de `app/jobs/worker.py`: a role `plat_worker` serve **só para mudar estado de job** ("nunca
+o pool de `app.db`"). A TAREFA abre transação pelo pool de `app.db`, ou seja, pela role da
+**aplicação**, que seguia com os 60 s globais. O `ALTER ROLE` foi desfeito com `RESET`.
+
+⛔ Não trocar o `SET LOCAL` por `ALTER ROLE`, nem na role da aplicação nem na do trabalhador.
+Transação parada por minutos segura o horizonte de limpeza do Postgres, e o horizonte é do
+**SERVIDOR**: atrasa o `VACUUM` de todos os bancos, inclusive os de cliente que dividem esta
+máquina. Com `SET LOCAL` o custo existe só enquanto um COG sobe; com `ALTER ROLE` passa a existir em
+qualquer transação daquele papel, inclusive numa rota web com defeito.
 
 ## O conserto de verdade
 

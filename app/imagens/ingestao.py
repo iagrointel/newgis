@@ -234,13 +234,29 @@ def imagens_ingestar(ctx, arquivo_id: uuid.UUID, titulo: str | None = None,
     versoes = cog.versoes_software()
 
     item_id = str(uuid.uuid4())
-    # objetos sobem um por transação curta (endereçados por conteúdo: retentativa não duplica)
+
+    def _folga_para_o_garage(cur) -> None:
+        """Afrouxa o teto de transação PARADA só nesta transação (ADR 20260912T0240).
+
+        `objetos.parte_concluir` fica minutos sem tocar no banco: relê o objeto inteiro do Garage
+        para conferir o sha256 e o copia para a chave por conteúdo. Com o teto de 60 s do servidor a
+        sessão morria com "SSL connection has been closed unexpectedly", DEPOIS de a conversão toda
+        ter dado certo — o catálogo ficava vazio e 45 minutos de trabalho iam embora.
+        `SET LOCAL` volta ao padrão no commit, então a folga não escapa desta transação."""
+        cur.execute("SET LOCAL idle_in_transaction_session_timeout = %s",
+                    (limites.RASTER_UPLOAD_TRANSACAO_PARADA,))
+
+    # objetos sobem um por transação curta (endereçados por conteúdo: retentativa não duplica).
+    # "curta" é o número de CONSULTAS, não o tempo: um COG de 1,5 GB leva minutos entre a primeira e
+    # a última, e é por isso que a folga acima existe.
     ctx.progresso(82, "subindo o COG científico")
     with ctx.db() as cur:
+        _folga_para_o_garage(cur)
         o_cient = objetos.guardar_arquivo(cur, "raster", cientifico.caminho, "image/tiff", item_id=item_id,
                                           usuario_id=ctx.usuario_id)
     ctx.progresso(88, "subindo o COG visual")
     with ctx.db() as cur:
+        _folga_para_o_garage(cur)
         o_vis = objetos.guardar_arquivo(cur, "raster", visual.caminho, "image/tiff", item_id=item_id,
                                         usuario_id=ctx.usuario_id)
     ctx.progresso(92, "subindo a miniatura")

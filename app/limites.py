@@ -473,6 +473,17 @@ RASTER_TILE_CACHE_DATASET_MAX = 8       # datasets abertos por processo no handl
 # (1,2 GB numa máquina de 24 GB), que estoura sozinho o RLIMIT_DATA de um job de 1024 MB. 256 MB é
 # folgado para blocos de 512 px e deixa o resto do orçamento para o próprio gdal_translate.
 RASTER_GDAL_CACHE_MB = 256
+
+# Teto de transação PARADA durante a subida de um objeto grande ao Garage, aplicado por `SET LOCAL`
+# e só nas transações que sobem COG (ADR 20260912T0240). O servidor tem
+# `idle_in_transaction_session_timeout = 60s`, e `objetos.parte_concluir` fica mais que isso sem
+# tocar no banco: ela relê o objeto inteiro para conferir o sha256 e o copia para a chave por
+# conteúdo. Com 1,5 GB num disco de 25 MB/s a sessão era derrubada e NENHUM raster cujos COG
+# passassem de ~1,5 GB conseguia ser catalogado (MEDIDO 12/09/2026, duas vezes).
+# ⛔ `SET LOCAL` é deliberado: vale só para aquela transação e volta ao padrão no commit. Não trocar
+# por ALTER ROLE — o horizonte de limpeza é do SERVIDOR, e afrouxar o papel inteiro atrasa o VACUUM
+# de todos os bancos da máquina, inclusive os de cliente.
+RASTER_UPLOAD_TRANSACAO_PARADA = "10min"
 RASTER_TILE_TIMEOUT_S = 30              # teto de renderização de um tile (mata a requisição, não o worker)
 # Quantos níveis ABAIXO do zoom mínimo da imagem um ladrilho ainda é servido. Abaixo do mínimo a imagem
 # não enche um ladrilho e o custo DOBRA por nível — MEDIDO nesta máquina numa cena de 869 MB com mínimo 8:
@@ -753,6 +764,17 @@ RASTER_TILE_CACHE_DATASET_MAX = 8       # datasets abertos por processo no handl
 # (1,2 GB numa máquina de 24 GB), que estoura sozinho o RLIMIT_DATA de um job de 1024 MB. 256 MB é
 # folgado para blocos de 512 px e deixa o resto do orçamento para o próprio gdal_translate.
 RASTER_GDAL_CACHE_MB = 256
+
+# Teto de transação PARADA durante a subida de um objeto grande ao Garage, aplicado por `SET LOCAL`
+# e só nas transações que sobem COG (ADR 20260912T0240). O servidor tem
+# `idle_in_transaction_session_timeout = 60s`, e `objetos.parte_concluir` fica mais que isso sem
+# tocar no banco: ela relê o objeto inteiro para conferir o sha256 e o copia para a chave por
+# conteúdo. Com 1,5 GB num disco de 25 MB/s a sessão era derrubada e NENHUM raster cujos COG
+# passassem de ~1,5 GB conseguia ser catalogado (MEDIDO 12/09/2026, duas vezes).
+# ⛔ `SET LOCAL` é deliberado: vale só para aquela transação e volta ao padrão no commit. Não trocar
+# por ALTER ROLE — o horizonte de limpeza é do SERVIDOR, e afrouxar o papel inteiro atrasa o VACUUM
+# de todos os bancos da máquina, inclusive os de cliente.
+RASTER_UPLOAD_TRANSACAO_PARADA = "10min"
 RASTER_TILE_TIMEOUT_S = 30              # teto de renderização de um tile (mata a requisição, não o worker)
 # Quantos níveis ABAIXO do zoom mínimo da imagem um ladrilho ainda é servido. Abaixo do mínimo a imagem
 # não enche um ladrilho e o custo DOBRA por nível — MEDIDO nesta máquina numa cena de 869 MB com mínimo 8:
