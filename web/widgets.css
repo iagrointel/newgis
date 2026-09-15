@@ -42,3 +42,43 @@ plat-grafico .barra text { font-size: 10px; fill: var(--cor-texto, #222); }
 .plat-widgets .widget-acoes button { margin: var(--e1) var(--e1) 0 0; }
 .plat-widgets .widget-acoes-saida { margin: var(--e1) 0 0; color: var(--fraco); }
 .plat-widgets .widget-acoes-saida[data-tipo="erro"] { color: var(--falha); }
+
+/* item L5-01-d: widgets de página (texto, imagem, botão, cartão, incorporar, divisor, menu, controlador,
+   compartilhar, login, idioma, tema) — cores só por token (`make tokens`), sem valor de reserva hex. */
+plat-w-texto-rico :first-child { margin-top: 0; }
+plat-w-texto-rico :last-child { margin-bottom: 0; }
+plat-w-imagem figure { margin: 0; }
+plat-w-imagem figcaption { font-size: var(--i-t0); color: var(--fraco); margin-top: var(--e1); }
+plat-w-botao .botao, plat-w-botao button {
+  display: inline-block; padding: var(--e2) var(--e3); border-radius: var(--raio); border: 1px solid var(--acento);
+  background: var(--acento); color: var(--acento-texto); font: inherit; cursor: pointer; text-decoration: none;
+}
+plat-w-botao button:disabled, plat-w-botao a[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+plat-w-cartao .plat-w-cartao {
+  display: block; border: 1px solid var(--borda); border-radius: var(--raio); padding: var(--e3);
+  background: var(--painel);
+}
+plat-w-cartao .plat-w-cartao img { display: block; max-width: 100%; border-radius: var(--raio); margin-bottom: var(--e2); }
+plat-w-cartao .plat-w-cartao h3 { margin: 0 0 var(--e1); }
+plat-w-incorporar iframe { display: block; width: 100%; border: 1px solid var(--borda); border-radius: var(--raio); }
+plat-w-divisor { display: block; }
+plat-w-divisor hr { border: 0; border-top: 1px solid var(--borda); margin: var(--e2) 0; }
+plat-w-divisor hr.plat-divisor-tracejado { border-top-style: dashed; }
+plat-w-divisor hr.plat-divisor-pontilhado { border-top-style: dotted; }
+plat-w-divisor[data-vertical="1"] { display: inline-block; height: 100%; }
+plat-w-divisor[data-vertical="1"] hr { border-top: 0; border-left: 1px solid var(--borda); height: 100%; margin: 0 var(--e2); }
+plat-w-menu .plat-w-menu ul { list-style: none; display: flex; gap: var(--e3); margin: 0; padding: 0; }
+plat-w-menu .plat-menu-vertical ul { flex-direction: column; }
+plat-w-menu .plat-w-menu a[aria-disabled="true"] { color: var(--fraco); pointer-events: none; }
+plat-w-menu .plat-w-menu a[aria-current="page"] { color: var(--acento); font-weight: 600; }
+plat-w-controlador .plat-w-controlador { display: flex; flex-wrap: wrap; gap: var(--e2); }
+plat-w-controlador button[aria-expanded="true"] { border-color: var(--acento); color: var(--acento); }
+plat-w-compartilhar .plat-w-compartilhar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); }
+plat-w-compartilhar input { flex: 1 1 12rem; border: 1px solid var(--borda); border-radius: var(--raio); padding: var(--e1) var(--e2); }
+plat-w-compartilhar textarea { flex: 1 1 100%; border: 1px solid var(--borda); border-radius: var(--raio); padding: var(--e1) var(--e2); font-family: var(--mono); }
+plat-w-compartilhar .plat-w-qr { width: 6rem; height: 6rem; background: var(--i-qr-fundo); border-radius: var(--raio); }
+plat-w-login .plat-w-login { display: flex; align-items: center; gap: var(--e2); }
+plat-w-login .plat-login-nome { color: var(--fraco); }
+plat-w-idioma label { display: inline-flex; align-items: center; gap: var(--e1); }
+plat-w-tema [role="group"] { display: inline-flex; gap: var(--e1); }
+plat-w-tema button[aria-pressed="true"] { border-color: var(--acento); color: var(--acento); font-weight: 600; }

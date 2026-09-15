@@ -31,17 +31,22 @@ import { BarramentoWidgets, montarWidgets } from '../widgets/motor.js';
    sintético só com os tipos candidatos, montado num elemento nunca preso ao DOM (nunca fica visível nem
    dispara efeito nenhum — só devolve `falhas`, o mapa tipo→mensagem que a chamadora usa).
 
-   ⚠ Conferido em 15/09/2026: nenhum tipo de PALETA_PAGINAS bate com um nome do REGISTRO por engenharia — o
-   resto do lote L5-01-d (os tipos `botão, cartão, incorporar, divisor, menu de widget, controlador,
-   compartilhar, login, idioma, tema` tanto na paleta de páginas quanto no registro de widgets) não sobrevive
-   no ramo atual (conferido em `editor/paleta_paginas.js` e `widgets/registro.js`) e restaurá-lo é FORA do
-   escopo desta reconciliação (nenhum símbolo novo criado nesses dois arquivos). `TIPOS_WIDGET_PAGINA` fica
-   vazio até esses tipos voltarem — quando voltarem, listar o nome aqui é a única mudança necessária. Os
-   nomes que hoje colidem por acaso (`texto`, `mapa`, `tabela`) são esquemas DIFERENTES do executor
-   (desenhados por `desenharNo`, nunca pelo motor) e por isso NÃO entram na lista: casar por nome seria falso
-   positivo — carregaria `widgets/mapa.js` (que puxa o MapLibre) toda vez que a página tivesse uma caixa de
-   mapa que nem usa o motor. */
-const TIPOS_WIDGET_PAGINA = new Set();
+   ⚡ Restaurado em 15/09/2026: o lote L5-01-d (`botão, cartão, incorporar, divisor, menu de widget,
+   controlador, compartilhar, login, idioma, tema`) voltou a `editor/paleta_paginas.js` e a
+   `widgets/registro.js` — nove tipos batem por NOME entre os dois catálogos e entram abaixo. Os que colidem
+   por acaso (`texto`, `imagem`, `mapa`, `tabela`) continuam DE FORA de propósito: são esquemas DIFERENTES do
+   executor (desenhados por `desenharNo`, nunca pelo motor) — casar por nome seria falso positivo, carregaria
+   `widgets/mapa.js` (que puxa o MapLibre) toda vez que a página tivesse uma caixa de mapa que nem usa o
+   motor. O menu de widget é o mesmo caso por um motivo a mais: o tipo de PÁGINA se chama `menu_widget` na
+   paleta (para não pisar no `menu` de navegação entre páginas, que já existe e é um esquema à parte — ver
+   `desenharMenu` abaixo), enquanto o manifesto do motor continua se chamando `menu` (nome do módulo/i18n,
+   `widgets/registro.js`); os dois nomes não batem de propósito, então `menu_widget` também fica fora desta
+   lista. ⛔ Isto só resolve a DETECÇÃO DE FALHA de carregamento no preload (`prepararWidgets`, usado por
+   `executar_tela.js`); `desenharNo` ainda não MONTA nenhum destes nove pelo motor de verdade (ainda caem no
+   `default` → caixa `exec-desconhecido`) — isso é trabalho à parte, não coberto por esta reconciliação. */
+const TIPOS_WIDGET_PAGINA = new Set([
+  'botao', 'cartao', 'incorporar', 'divisor', 'controlador', 'compartilhar', 'login', 'idioma', 'tema',
+]);
 
 export function tiposDeWidget(documento) {
   return [...new Set(doc.nos(documento).map((n) => n.tipo))].filter((t) => TIPOS_WIDGET_PAGINA.has(t) && REGISTRO.has(t));

@@ -25,6 +25,7 @@ export const PALETA_PAGINAS = {
     'linha', 'coluna', 'grade', 'acordeao', 'painel_fixo', 'painel_lateral', 'janela',
     'secao_vistas', 'vista',
     'grupo', 'texto', 'imagem', 'mapa', 'tabela',
+    'botao', 'cartao', 'incorporar', 'divisor', 'menu_widget', 'controlador', 'compartilhar', 'login', 'idioma', 'tema',
   ],
   tipos: {
     // ---------------------------------------------------------------- página (raiz do documento)
@@ -238,6 +239,158 @@ export const PALETA_PAGINAS = {
       esquema: {
         type: 'object', additionalProperties: false, required: ['linhas_por_pagina'],
         properties: { linhas_por_pagina: { type: 'integer', title: 'Linhas por página', minimum: 1, maximum: 500 } },
+      },
+    },
+
+    // ---------------------------------------------------------------- widgets de página (item
+    // L5-01-d-widgets-pagina-menu): as propriedades usam o MESMO vocabulário do `esquema_config` do manifesto
+    // em `widgets/registro.js` (mesmos nomes de campo), para o dia em que o executor montar estes tipos pelo
+    // motor (`widgets/motor.js`) sem tradução nenhuma — hoje o executor ainda desenha estes nós pela caixa
+    // genérica `exec-desconhecido` (ver `TIPOS_WIDGET_PAGINA` em `executor/executor.js`); só o CONSTRUTOR
+    // (arrasto + edição de propriedades) está completo para eles nesta entrega.
+    botao: {
+      rotulo: 'Botão', aceita_filhos: false, largura_padrao: 3,
+      propriedades_padrao: { rotulo: 'Botão', habilitado: true, acao: { tipo: 'evento' } },
+      esquema: {
+        type: 'object', additionalProperties: false, required: ['rotulo'],
+        properties: {
+          rotulo: { type: 'string', title: 'Rótulo', minLength: 1, maxLength: 200 },
+          habilitado: { type: 'boolean', title: 'Habilitado', default: true },
+          valor: {},
+          acao: {
+            type: 'object', additionalProperties: false, required: ['tipo'],
+            properties: {
+              tipo: { type: 'string', title: 'Tipo de ação', enum: ['evento', 'link', 'pagina'], default: 'evento' },
+              url: { type: 'string', title: 'Endereço do link', maxLength: 2000 },
+              nova_aba: { type: 'boolean', title: 'Abrir em nova aba', default: false },
+              pagina: { type: 'string', title: 'Caminho da página', maxLength: 80 },
+            },
+          },
+        },
+      },
+    },
+    cartao: {
+      rotulo: 'Cartão', aceita_filhos: false, largura_padrao: 4,
+      propriedades_padrao: { titulo: 'Novo cartão', texto: '' },
+      esquema: {
+        type: 'object', additionalProperties: false, required: ['titulo'],
+        properties: {
+          titulo: { type: 'string', title: 'Título', minLength: 1, maxLength: 200 },
+          texto: { type: 'string', title: 'Texto (Markdown)', maxLength: 5000, default: '' },
+          imagem: { type: 'string', title: 'Endereço da imagem', maxLength: 2000 },
+          imagem_alternativo: { type: 'string', title: 'Texto alternativo da imagem', maxLength: 200 },
+          link: { type: 'string', title: 'Endereço do link', maxLength: 2000 },
+          link_rotulo: { type: 'string', title: 'Rótulo do link/botão', maxLength: 200 },
+          pagina: { type: 'string', title: 'Caminho da página', maxLength: 80 },
+        },
+      },
+    },
+    incorporar: {
+      rotulo: 'Incorporar', aceita_filhos: false, largura_padrao: 6,
+      propriedades_padrao: { titulo: 'Conteúdo incorporado', altura: 320, dominios_permitidos: [], sandbox: ['allow-scripts'] },
+      esquema: {
+        type: 'object', additionalProperties: false, required: [],
+        properties: {
+          titulo: { type: 'string', title: 'Título', maxLength: 200 },
+          url: { type: 'string', title: 'Endereço (https, só domínio permitido)', maxLength: 2000 },
+          html: { type: 'string', title: 'HTML (sanitizado)', maxLength: 20000 },
+          altura: { type: 'integer', title: 'Altura (px)', minimum: 60, maximum: 2000, default: 320 },
+          dominios_permitidos: { type: 'array', title: 'Domínios permitidos', maxItems: 20, items: { type: 'string', maxLength: 200 } },
+          // enum estrito de propósito (diferente do esquema_config do motor, mais permissivo): aqui é um
+          // SELETOR na tela de propriedades, então `allow-same-origin` nem aparece como opção; lá é a
+          // validação de um documento já gravado, que não pode travar por um token velho/desconhecido —
+          // quem filtra de verdade na hora de montar é `seguro.js::sandboxDe`.
+          sandbox: {
+            type: 'array', title: 'Sandbox', maxItems: 4,
+            items: { type: 'string', enum: ['allow-scripts', 'allow-forms', 'allow-popups', 'allow-presentation'] },
+          },
+        },
+      },
+    },
+    divisor: {
+      rotulo: 'Divisor', aceita_filhos: false, largura_padrao: 12,
+      propriedades_padrao: { estilo: 'linha', vertical: false },
+      esquema: {
+        type: 'object', additionalProperties: false, required: ['estilo'],
+        properties: {
+          estilo: { type: 'string', title: 'Estilo', enum: ['linha', 'tracejado', 'pontilhado'], default: 'linha' },
+          vertical: { type: 'boolean', title: 'Vertical', default: false },
+        },
+      },
+    },
+    // chave `menu_widget` (não `menu`): o tipo `menu` já existe acima como NAVEGAÇÃO ENTRE PÁGINAS do
+    // documento inteiro (gerado da lista de páginas, sem `itens` configurável); este é o widget genérico de
+    // menu do motor (`widgets/menu.js`, manifesto `menu` em `widgets/registro.js`), com itens escolhidos à
+    // mão (página OU link) — mesma raiz que colidiu para `texto`/`imagem`/`mapa`/`tabela` acima, resolvida
+    // aqui com um nome de tipo diferente em vez de reescrever a navegação existente.
+    menu_widget: {
+      rotulo: 'Menu (widget)', aceita_filhos: false, largura_padrao: 12,
+      propriedades_padrao: { orientacao: 'horizontal', itens: [] },
+      esquema: {
+        type: 'object', additionalProperties: false, required: ['orientacao'],
+        properties: {
+          orientacao: { type: 'string', title: 'Orientação', enum: ['horizontal', 'vertical'], default: 'horizontal' },
+          rotulo: { type: 'string', title: 'Rótulo (acessibilidade)', maxLength: 200 },
+          itens: {
+            type: 'array', title: 'Itens', maxItems: 30,
+            items: {
+              type: 'object', additionalProperties: false,
+              properties: {
+                rotulo: { type: 'string', maxLength: 200 }, pagina: { type: 'string', maxLength: 80 },
+                url: { type: 'string', maxLength: 2000 }, valor: {},
+              },
+            },
+          },
+        },
+      },
+    },
+    controlador: {
+      rotulo: 'Controlador', aceita_filhos: false, largura_padrao: 6,
+      propriedades_padrao: { alvos: [] },
+      esquema: {
+        type: 'object', additionalProperties: false, required: [],
+        properties: {
+          alvos: {
+            type: 'array', title: 'Alvos (id do nó na mesma página)', maxItems: 50,
+            items: { type: 'object', additionalProperties: false, required: ['id'], properties: { id: { type: 'string', maxLength: 26 }, rotulo: { type: 'string', maxLength: 200 } } },
+          },
+        },
+      },
+    },
+    compartilhar: {
+      rotulo: 'Compartilhar', aceita_filhos: false, largura_padrao: 6,
+      propriedades_padrao: { qr: true, incorporar: true },
+      esquema: {
+        type: 'object', additionalProperties: false, required: [],
+        properties: {
+          url: { type: 'string', title: 'Endereço (padrão: a própria página)', maxLength: 2000 },
+          qr: { type: 'boolean', title: 'Mostrar QR', default: true },
+          incorporar: { type: 'boolean', title: 'Mostrar trecho de incorporação', default: true },
+        },
+      },
+    },
+    login: {
+      rotulo: 'Login', aceita_filhos: false, largura_padrao: 3,
+      propriedades_padrao: {},
+      esquema: { type: 'object', additionalProperties: false, required: [], properties: {} },
+    },
+    idioma: {
+      rotulo: 'Idioma', aceita_filhos: false, largura_padrao: 3,
+      propriedades_padrao: { idiomas: ['pt-BR'] },
+      esquema: {
+        type: 'object', additionalProperties: false, required: [],
+        properties: {
+          idiomas: { type: 'array', title: 'Idiomas oferecidos', maxItems: 5, items: { type: 'string', enum: ['pt-BR', 'en', 'es'] } },
+          rotulo: { type: 'string', title: 'Rótulo', maxLength: 200 },
+        },
+      },
+    },
+    tema: {
+      rotulo: 'Tema', aceita_filhos: false, largura_padrao: 3,
+      propriedades_padrao: {},
+      esquema: {
+        type: 'object', additionalProperties: false, required: [],
+        properties: { rotulo: { type: 'string', title: 'Rótulo', maxLength: 200 } },
       },
     },
   },

@@ -1,10 +1,19 @@
-/* plat — registro de widgets (item L5-06-motor-widgets; ampliado pelo L5-07-fontes-vistas-mensagens e pelo
-   L5-01-c-widgets-dado: tabela 2, gráfico 2, filtro 2, lista, consulta, seleção, info-feicao, adicionar-dado).
+/* plat — registro de widgets (item L5-06-motor-widgets; ampliado pelo L5-07-fontes-vistas-mensagens, pelo
+   L5-01-c-widgets-dado: tabela 2, gráfico 2, filtro 2, lista, consulta, seleção, info-feicao, adicionar-dado;
+   e pelo L5-01-d-widgets-pagina-menu: imagem, cartão, incorporar, divisor, menu (widget), controlador,
+   compartilhar, login, idioma, tema — mais texto/botão, que já existiam aqui e ganharam os campos que
+   faltavam (`formato`/`acao`) e o elemento correto (`plat-w-<nome>`, o que `web/js/widgets/base.js::definir`
+   registra de verdade; ver PARIDADE.md).
    Cada manifesto declara os EVENTOS que emite e as AÇÕES que aceita no vocabulário do barramento
    (L5_CONCEITO D5): eventos clique | dado_adicionado | filtro_mudou | extensao_mudou | localizacao |
    registros_carregados | selecao_mudou | vista_mudou; ações de dado filtrar | selecionar | limpar_filtro |
    limpar_selecao (resolvidas na VISTA do widget) e de widget zoom | pan | piscar | popup | abrir | fechar |
-   definir_parametro (chamadas no elemento). `configuracao.vista` liga o widget a uma vista do documento. */
+   definir_parametro (chamadas no elemento). `configuracao.vista` liga o widget a uma vista do documento.
+   ⚠ os widgets de página (`texto`/`imagem`/`botão`/`cartão`/... de `../widgets/*.js`, base `PlatWidget` de
+   `base.js`) são catálogo independente dos tipos HOMÔNIMOS de `editor/paleta_paginas.js` (que o EXECUTOR
+   desenha direto, sem passar pelo motor — ver o comentário de `TIPOS_WIDGET_PAGINA` em
+   `executor/executor.js`): `texto`/`imagem` ficam aqui por completude do registro (outros construtores os
+   usam), mas a paleta de páginas continua com o esquema PRÓPRIO dela para esses dois nomes. */
 const textoCurto = { type: 'string', maxLength: 200 };
 const ulid = { type: 'string', maxLength: 26 };
 const objetoFechado = (properties = {}, required = []) => ({ type: 'object', additionalProperties: false, properties, required });
@@ -87,14 +96,124 @@ const manifestos = [
     fontes: { min: 1, max: 1, tipos: ['camada', 'tabela'] }, i18n: 'widget.adicionar-dado',
   },
   {
-    nome: 'texto', versao: '1.0.0', api_widget: 1, modulo: './texto.js', elemento: 'plat-texto',
-    esquema_config: objetoFechado({ texto: { type: 'string', maxLength: 10000 }, nivel: { type: 'integer', minimum: 1, maximum: 6 } }, ['texto']),
-    eventos: [], acoes: ['texto.definir', 'definir_parametro'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.texto',
+    // item L5-01-d: `formato: 'markdown'` (Markdown mínimo + DOMPurify, seguro.js/base.js::fragmentoSeguro) e
+    // `texto.feicao` (liga a {campo} da feição selecionada) faltavam aqui; elemento real é `plat-w-texto`.
+    nome: 'texto', versao: '1.1.0', api_widget: 1, modulo: './texto.js', elemento: 'plat-w-texto',
+    esquema_config: objetoFechado({
+      texto: { type: 'string', maxLength: 10000 }, nivel: { type: 'integer', minimum: 1, maximum: 6 },
+      formato: { type: 'string', enum: ['markdown'] },
+    }, ['texto']),
+    eventos: [], acoes: ['texto.definir', 'texto.feicao', 'definir_parametro'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.texto',
   },
   {
-    nome: 'botao', versao: '1.0.0', api_widget: 1, modulo: './botao.js', elemento: 'plat-botao',
-    esquema_config: objetoFechado({ rotulo: textoCurto, valor: {}, habilitado: { type: 'boolean' } }, ['rotulo']),
-    eventos: ['clique', 'botao.acionado'], acoes: ['botao.habilitar', 'abrir', 'fechar'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.botao',
+    // item L5-01-d: imagem por endereço ou por {campo} da feição selecionada (imagem.js); elemento `plat-w-imagem`.
+    nome: 'imagem', versao: '1.0.0', api_widget: 1, modulo: './imagem.js', elemento: 'plat-w-imagem',
+    esquema_config: objetoFechado({
+      url: { type: 'string', maxLength: 2000 }, campo: textoCurto, alternativo: textoCurto,
+      legenda: { type: 'string', maxLength: 200 },
+      ajuste: { type: 'string', enum: ['cobrir', 'conter', 'preencher', 'nenhum'] },
+      altura: { type: 'integer', minimum: 20, maximum: 4000 },
+    }),
+    eventos: ['imagem.acionada'], acoes: ['imagem.definir', 'imagem.feicao', 'definir_parametro'],
+    fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.imagem',
+  },
+  {
+    // item L5-01-d: `acao` faltava aqui (botao.js lê `c.acao.tipo` evento|link|pagina) — sem isto todo botão de
+    // link/página do documento era recusado por "campo desconhecido"; elemento real é `plat-w-botao`.
+    nome: 'botao', versao: '1.1.0', api_widget: 1, modulo: './botao.js', elemento: 'plat-w-botao',
+    esquema_config: objetoFechado({
+      rotulo: textoCurto, valor: {}, habilitado: { type: 'boolean' },
+      acao: objetoFechado({
+        tipo: { type: 'string', enum: ['evento', 'link', 'pagina'] },
+        url: { type: 'string', maxLength: 2000 }, nova_aba: { type: 'boolean' }, pagina: textoCurto,
+      }),
+    }, ['rotulo']),
+    eventos: ['clique', 'botao.acionado', 'botao.pagina'], acoes: ['botao.habilitar', 'abrir', 'fechar', 'definir_parametro'],
+    fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.botao',
+  },
+  {
+    // item L5-01-d: cartão com imagem, título, corpo em Markdown ({campo} da feição) e link ou troca de página.
+    nome: 'cartao', versao: '1.0.0', api_widget: 1, modulo: './cartao.js', elemento: 'plat-w-cartao',
+    esquema_config: objetoFechado({
+      titulo: { type: 'string', maxLength: 200 }, texto: { type: 'string', maxLength: 5000 },
+      imagem: { type: 'string', maxLength: 2000 }, imagem_alternativo: textoCurto,
+      link: { type: 'string', maxLength: 2000 }, link_rotulo: textoCurto, pagina: textoCurto,
+    }),
+    eventos: ['cartao.acionado', 'cartao.pagina'], acoes: ['cartao.feicao', 'definir_parametro'],
+    fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.cartao',
+  },
+  {
+    // item L5-01-d: incorporar por URL (só domínio da lista, sandbox nunca com allow-same-origin) ou HTML
+    // sanitizado em `srcdoc` (sandbox vazio) — ver seguro.js::hostPermitido/sandboxDe.
+    nome: 'incorporar', versao: '1.0.0', api_widget: 1, modulo: './incorporar.js', elemento: 'plat-w-incorporar',
+    esquema_config: objetoFechado({
+      titulo: textoCurto, altura: { type: 'integer', minimum: 60, maximum: 2000 },
+      html: { type: 'string', maxLength: 20000 }, url: { type: 'string', maxLength: 2000 },
+      dominios_permitidos: { type: 'array', maxItems: 20, items: textoCurto },
+      // sem enum de propósito: `seguro.js::sandboxDe` já filtra para a lista permitida (nunca `allow-same-
+      // origin`) na hora de montar o iframe — o esquema só barra estrutura errada, não repete a filtragem
+      // de segurança, que é do widget (documento antigo com token descontinuado continua carregando).
+      sandbox: { type: 'array', maxItems: 6, items: { type: 'string', maxLength: 40 } },
+    }),
+    eventos: [], acoes: ['incorporar.definir', 'definir_parametro'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.incorporar',
+  },
+  {
+    // item L5-01-d: divisor (`<hr>`) — sem dado, sem ação além das genéricas do widget.
+    nome: 'divisor', versao: '1.0.0', api_widget: 1, modulo: './divisor.js', elemento: 'plat-w-divisor',
+    esquema_config: objetoFechado({
+      estilo: { type: 'string', enum: ['linha', 'tracejado', 'pontilhado'] }, vertical: { type: 'boolean' },
+    }),
+    eventos: [], acoes: ['definir_parametro'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.divisor',
+  },
+  {
+    // item L5-01-d: menu de widget (itens com página OU link) — nome próprio no registro (`menu`) por já ser
+    // o do módulo/i18n; a paleta de páginas usa a chave `menu_widget` para nunca colidir com o tipo `menu` de
+    // navegação entre páginas (root, esquema diferente, desenhado por `executor.js::desenharMenu`).
+    nome: 'menu', versao: '1.0.0', api_widget: 1, modulo: './menu.js', elemento: 'plat-w-menu',
+    esquema_config: objetoFechado({
+      orientacao: { type: 'string', enum: ['horizontal', 'vertical'] }, rotulo: textoCurto,
+      itens: {
+        type: 'array', maxItems: 30,
+        items: objetoFechado({ rotulo: textoCurto, pagina: textoCurto, url: { type: 'string', maxLength: 2000 }, valor: {} }),
+      },
+    }),
+    eventos: ['menu.pagina', 'menu.acionado'], acoes: ['menu.definir', 'definir_parametro'],
+    fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.menu',
+  },
+  {
+    // item L5-01-d: controlador — um botão por nó-alvo da própria página (abre/fecha por `data-no-id`).
+    nome: 'controlador', versao: '1.0.0', api_widget: 1, modulo: './controlador.js', elemento: 'plat-w-controlador',
+    esquema_config: objetoFechado({
+      alvos: { type: 'array', maxItems: 50, items: objetoFechado({ id: ulid, rotulo: textoCurto }, ['id']) },
+    }),
+    eventos: ['controlador.alternado'], acoes: ['controlador.abrir', 'controlador.fechar', 'definir_parametro'],
+    fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.controlador',
+  },
+  {
+    // item L5-01-d: compartilhar — link da página, QR (`GET /api/qr.svg`, sem serviço externo) e trecho de embed.
+    nome: 'compartilhar', versao: '1.0.0', api_widget: 1, modulo: './compartilhar.js', elemento: 'plat-w-compartilhar',
+    esquema_config: objetoFechado({ url: { type: 'string', maxLength: 2000 }, qr: { type: 'boolean' }, incorporar: { type: 'boolean' } }),
+    eventos: [], acoes: ['definir_parametro'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.compartilhar',
+  },
+  {
+    // item L5-01-d: login — quem está autenticado (`GET /api/eu`) com botão sair, ou link para `/entrar`.
+    nome: 'login', versao: '1.0.0', api_widget: 1, modulo: './login.js', elemento: 'plat-w-login',
+    esquema_config: objetoFechado({}),
+    eventos: ['login.mudou'], acoes: ['login.atualizar', 'definir_parametro'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.login',
+  },
+  {
+    // item L5-01-d: idioma — seletor entre os idiomas que o documento lista (web/js/i18n/*.json).
+    nome: 'idioma', versao: '1.0.0', api_widget: 1, modulo: './idioma.js', elemento: 'plat-w-idioma',
+    esquema_config: objetoFechado({
+      idiomas: { type: 'array', maxItems: 5, items: { type: 'string', enum: ['pt-BR', 'en', 'es'] } }, rotulo: textoCurto,
+    }),
+    eventos: ['idioma.mudou'], acoes: ['idioma.definir', 'definir_parametro'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.idioma',
+  },
+  {
+    // item L5-01-d: tema — sistema/claro/escuro, `data-theme` no `<html>` (tokens.css); lembra em localStorage.
+    nome: 'tema', versao: '1.0.0', api_widget: 1, modulo: './tema.js', elemento: 'plat-w-tema',
+    esquema_config: objetoFechado({ rotulo: textoCurto }),
+    eventos: ['tema.mudou'], acoes: ['tema.definir', 'definir_parametro'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.tema',
   },
   {
     nome: 'filtro', versao: '2.0.0', api_widget: 1, modulo: './filtro.js', elemento: 'plat-filtro',
