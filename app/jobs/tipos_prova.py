@@ -2,7 +2,8 @@
 plataforma: N passos com progresso, log e efeito parcial em plat_trabalho.passos (apagado na limpeza, inclusive em
 Cancelado; uma tabela por job custaria 0,5-1 s de DDL neste servidor), marcador gravado só no último passo
 (prova "nunca concluído sem execução inteira"). Os demais exercitam cada caminho de morte da seção 6: memória,
-falha comum/definitiva, tarefa que ignora o cancelamento, job pesado, tempo esgotado. Todos com perfil_minimo=admin: são diagnósticos do operador, não aparecem para editor/visualizador (achado do QA de 10/09)."""
+falha comum/definitiva, tarefa que ignora o cancelamento, job pesado, tempo esgotado. Todos com
+perfil_minimo=admin: são diagnósticos do operador, não aparecem para editor/visualizador (achado do QA de 10/09)."""
 
 import uuid
 
@@ -17,15 +18,26 @@ class ProgressoParametros(BaseModel):
     chave: str | None = Field(None, max_length=200, description="lock lógico: mesma chave nunca roda em paralelo")
 
 
-@tarefa(nome="prova.progresso", perfil_minimo="admin", descricao="Diagnóstico: N passos com progresso, log e marcador de fim",
-        parametros=ProgressoParametros, pesado=False, memoria_mb=256, timeout_s=7200, tentativas=3,
-        chave=lambda p: p.get("chave"), versao=1)
+@tarefa(
+    nome="prova.progresso",
+    perfil_minimo="admin",
+    descricao="Diagnóstico: N passos com progresso, log e marcador de fim",
+    parametros=ProgressoParametros,
+    pesado=False,
+    memoria_mb=256,
+    timeout_s=7200,
+    tentativas=3,
+    chave=lambda p: p.get("chave"),
+    versao=1,
+)
 def prova_progresso(ctx, duracao_s: int = 300, passos: int = 60, chave: str | None = None) -> dict:
     jid = str(ctx.job_id)
     with ctx.db() as cur:  # recomeço do zero: nada de execução anterior sobra (reinício = reexecução)
         cur.execute("DELETE FROM plat_trabalho.passos WHERE job_id = %s", (jid,))
-    ctx.log("INFO", f"início: {passos} passos em {duracao_s} s; efeito parcial em plat_trabalho.passos; "
-                    f"tentativa {ctx.tentativa}")
+    ctx.log(
+        "INFO",
+        f"início: {passos} passos em {duracao_s} s; efeito parcial em plat_trabalho.passos; tentativa {ctx.tentativa}",
+    )
     intervalo = duracao_s / passos
     cada = max(1, passos // 10)
     try:
@@ -38,8 +50,10 @@ def prova_progresso(ctx, duracao_s: int = 300, passos: int = 60, chave: str | No
                 ctx.log("INFO", f"passo {i} de {passos}")
         marcador = uuid.uuid4()
         with ctx.db() as cur:
-            cur.execute("INSERT INTO plat_trabalho.marcadores(job_id, marcador) VALUES (%s, %s)",
-                        (str(ctx.job_id), str(marcador)))
+            cur.execute(
+                "INSERT INTO plat_trabalho.marcadores(job_id, marcador) VALUES (%s, %s)",
+                (str(ctx.job_id), str(marcador)),
+            )
         return {"passos": passos, "duracao_s": duracao_s, "marcador": str(marcador)}
     finally:
         with ctx.db() as cur:
@@ -50,8 +64,16 @@ class MemoriaParametros(BaseModel):
     mb: int = Field(600, ge=1, le=8192)
 
 
-@tarefa(nome="prova.memoria", perfil_minimo="admin", descricao="Diagnóstico: aloca N MB para provar o limite de memória do filho",
-        parametros=MemoriaParametros, pesado=False, memoria_mb=256, timeout_s=120, tentativas=1)
+@tarefa(
+    nome="prova.memoria",
+    perfil_minimo="admin",
+    descricao="Diagnóstico: aloca N MB para provar o limite de memória do filho",
+    parametros=MemoriaParametros,
+    pesado=False,
+    memoria_mb=256,
+    timeout_s=120,
+    tentativas=1,
+)
 def prova_memoria(ctx, mb: int = 600) -> dict:
     ctx.log("INFO", f"alocando {mb} MB sob RLIMIT_DATA")
     bloco = bytearray(mb * 1024 * 1024)
@@ -63,8 +85,16 @@ class FalhaParametros(BaseModel):
     definitiva: bool = False
 
 
-@tarefa(nome="prova.falha", perfil_minimo="admin", descricao="Diagnóstico: levanta exceção comum (retenta 2/4/8 s) ou FalhaDefinitiva",
-        parametros=FalhaParametros, pesado=False, memoria_mb=256, timeout_s=60, tentativas=3)
+@tarefa(
+    nome="prova.falha",
+    perfil_minimo="admin",
+    descricao="Diagnóstico: levanta exceção comum (retenta 2/4/8 s) ou FalhaDefinitiva",
+    parametros=FalhaParametros,
+    pesado=False,
+    memoria_mb=256,
+    timeout_s=60,
+    tentativas=3,
+)
 def prova_falha(ctx, definitiva: bool = False) -> dict:
     ctx.log("INFO", f"tentativa {ctx.tentativa}: vai falhar ({'definitiva' if definitiva else 'comum'})")
     if definitiva:
@@ -76,8 +106,16 @@ class DuracaoParametros(BaseModel):
     duracao_s: int = Field(120, ge=1, le=3600)
 
 
-@tarefa(nome="prova.ignora_cancelamento", perfil_minimo="admin", descricao="Diagnóstico: laço que nunca lê a flag de cancelamento",
-        parametros=DuracaoParametros, pesado=False, memoria_mb=256, timeout_s=600, tentativas=1)
+@tarefa(
+    nome="prova.ignora_cancelamento",
+    perfil_minimo="admin",
+    descricao="Diagnóstico: laço que nunca lê a flag de cancelamento",
+    parametros=DuracaoParametros,
+    pesado=False,
+    memoria_mb=256,
+    timeout_s=600,
+    tentativas=1,
+)
 def prova_ignora_cancelamento(ctx, duracao_s: int = 120) -> dict:
     import time
 
@@ -92,8 +130,16 @@ class PesadoParametros(BaseModel):
     duracao_s: int = Field(20, ge=1, le=3600)
 
 
-@tarefa(nome="prova.pesado", perfil_minimo="admin", descricao="Diagnóstico: job pesado (só 1 por vez na máquina)",
-        parametros=PesadoParametros, pesado=True, memoria_mb=512, timeout_s=3600, tentativas=1)
+@tarefa(
+    nome="prova.pesado",
+    perfil_minimo="admin",
+    descricao="Diagnóstico: job pesado (só 1 por vez na máquina)",
+    parametros=PesadoParametros,
+    pesado=True,
+    memoria_mb=512,
+    timeout_s=3600,
+    tentativas=1,
+)
 def prova_pesado(ctx, duracao_s: int = 20) -> dict:
     passos = max(1, duracao_s)
     for i in range(1, passos + 1):
@@ -102,8 +148,16 @@ def prova_pesado(ctx, duracao_s: int = 20) -> dict:
     return {"duracao_s": duracao_s}
 
 
-@tarefa(nome="prova.tempo_esgotado", perfil_minimo="admin", descricao="Diagnóstico: timeout_s=5 com tarefa mais longa (tempo esgotado)",
-        parametros=DuracaoParametros, pesado=False, memoria_mb=256, timeout_s=5, tentativas=1)
+@tarefa(
+    nome="prova.tempo_esgotado",
+    perfil_minimo="admin",
+    descricao="Diagnóstico: timeout_s=5 com tarefa mais longa (tempo esgotado)",
+    parametros=DuracaoParametros,
+    pesado=False,
+    memoria_mb=256,
+    timeout_s=5,
+    tentativas=1,
+)
 def prova_tempo_esgotado(ctx, duracao_s: int = 120) -> dict:
     passos = max(1, duracao_s)
     for i in range(1, passos + 1):

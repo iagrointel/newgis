@@ -22,9 +22,8 @@ import time
 import zipfile
 from pathlib import Path
 
-from shapely.geometry import shape as shapely_shape
-
 import pytest
+from shapely.geometry import shape as shapely_shape
 
 from app import objetos as objetos_mod
 from tests.api.ingestao.conftest import GERADOS, esperar_job
@@ -74,7 +73,6 @@ def _reimportar(ing, dados: bytes, nome: str, formato: str, content_type="applic
     """Sobe `dados` como um novo arquivo e reimporta pelo pipeline normal (mesma confirmação automática do
     `Ingestor`). Devolve a importação final."""
     obj = None
-    import tempfile
 
     with tempfile.TemporaryDirectory() as tmp:
         caminho = Path(tmp) / nome
@@ -222,7 +220,6 @@ def test_ida_e_volta_dxf_so_geometria_por_ferramenta(ingestor_a, conexao_plat_ap
                         capture_output=True, text=True)
     assert r2.returncode == 0, r2.stderr
     volta = json.loads((tmp_path / "volta.geojson").read_text())["features"]
-    from shapely.geometry import shape as shapely_shape
     areas_volta = sorted(shapely_shape(f["geometry"]).area for f in volta if f.get("geometry"))
     assert len(areas_volta) == 80
     for a1, a2 in zip(sorted(areas_origem), areas_volta, strict=True):
@@ -265,7 +262,6 @@ def test_ida_e_volta_tiles_com_quantizacao_documentada(ingestor_a, conexao_plat_
     assert r.returncode == 0, r.stderr
     volta = json.loads((tmp_path / "volta.geojson").read_text())["features"]
     assert len(volta) == 80, f"{formato}: {len(volta)} feições no zoom 6 (esperava as 80 inteiras, sem fragmento)"
-    from shapely.geometry import shape as shapely_shape
     desvios = []
     for o, v in zip(origem, volta, strict=True):
         cv = shapely_shape(v["geometry"]).centroid
@@ -338,7 +334,7 @@ def test_exportar_inquilino_isolamento_e_tempo(ingestor_a, ingestor_b, conexao_p
     """Cláusula INEGOCIÁVEL: exportação do inquilino A nunca inclui camada de B. Mesmo teste mede o tempo com
     ~20 camadas (a mesma bancada demo já carrega algumas camadas de outros testes; garante o PISO de 20 só
     para A, sem se importar com o que mais existir)."""
-    ids = ids_por_slug(conexao_plat_app)
+    ids_por_slug(conexao_plat_app)  # confere que os admins de demo/demo2 estão semeados
 
     item_b = _importar_gpkg(ingestor_b, "lugares_pv.csv" if False else "cobertura.gpkg")
 

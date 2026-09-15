@@ -28,7 +28,7 @@ def _contexto(browser, base_url, env):
 
 
 def test_selecao_em_massa_move_50_para_pasta(
-    browser, base_url, credenciais_demo, admin_api, api_catalogo, env, medida
+    browser, base_url, credenciais_demo, admin_api, api_catalogo, env, medida  # noqa: F811
 ):
     """cláusula do portão: 'seleção em massa de 50 itens move para pasta'."""
     slug, admin_login, senha_admin = credenciais_demo
@@ -87,7 +87,7 @@ def test_selecao_em_massa_move_50_para_pasta(
 
 
 def test_filtros_combinam_tipo_tag_data_igual_a_api(
-    browser, base_url, credenciais_demo, admin_api, api_catalogo, env, medida
+    browser, base_url, credenciais_demo, admin_api, api_catalogo, env, medida  # noqa: F811
 ):
     """cláusula do portão: 'filtros combinam (tipo+tag+data) com resultado igual ao da API'."""
     slug, admin_login, senha_admin = credenciais_demo
@@ -165,7 +165,7 @@ def test_filtros_combinam_tipo_tag_data_igual_a_api(
 
 
 def test_pagina_conteudo_com_10_mil_itens(
-    browser, base_url, credenciais_demo, admin_api, api_catalogo, env, conexao_plat_app, medida
+    browser, base_url, credenciais_demo, admin_api, api_catalogo, env, conexao_plat_app, medida  # noqa: F811
 ):
     """cláusula do portão: 'lista de 10 mil itens pagina em ≤ 1,5 s de primeira pintura medida (pagina_conteudo_ms)'.
     Insere 10.000 itens direto no banco (rápido; a API faz 1 INSERT por chamada e levaria minutos) no MESMO

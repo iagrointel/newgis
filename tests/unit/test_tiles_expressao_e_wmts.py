@@ -77,7 +77,7 @@ def test_limites_por_nivel_cercam_a_imagem_e_nao_a_grade():
         assert f"<{etiqueta}>" in bloco
     # e nenhum limite pode passar da largura da grade naquele nível (2^z)
     import re as _re
-    for nivel, corpo in zip((8, 9, 10), xml.split("<TileMatrixLimits>")[1:]):
+    for nivel, corpo in zip((8, 9, 10), xml.split("<TileMatrixLimits>")[1:], strict=True):
         for etiqueta in ("MaxTileRow", "MaxTileCol"):
             valor = int(_re.search(rf"<{etiqueta}>(\d+)</{etiqueta}>", corpo).group(1))
             assert valor < 2 ** nivel, (nivel, etiqueta, valor)

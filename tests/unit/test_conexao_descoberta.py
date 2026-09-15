@@ -64,7 +64,11 @@ def test_wms_1_3_0_lista_camadas_com_crs_e_extensao(buscar_dublado):
     # CRS herdado do Layer pai (EPSG:4326) + o declarado na própria camada (EPSG:3857) — as duas contam
     assert set(ortofoto.crs) == {"EPSG:4326", "EPSG:3857"}
     assert ortofoto.extensao == {
-        "minx": -46.83, "miny": -24.02, "maxx": -46.36, "maxy": -23.35, "crs": "EPSG:4326",
+        "minx": -46.83,
+        "miny": -24.02,
+        "maxx": -46.36,
+        "maxy": -23.35,
+        "crs": "EPSG:4326",
     }
 
 
@@ -83,9 +87,12 @@ def test_wms_1_1_1_eixo_sem_namespace(buscar_dublado):
 
 def test_wms_url_de_capacidades_ja_com_getcapabilities_nao_duplica(buscar_dublado):
     buscar_dublado(_ler("wms_1_3_0.xml"), "text/xml")
-    descoberta.descobrir_camadas({
-        "tipo": "wms", "url": "https://x.example/wms?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.3.0",
-    })
+    descoberta.descobrir_camadas(
+        {
+            "tipo": "wms",
+            "url": "https://x.example/wms?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.3.0",
+        }
+    )
     assert buscar_dublado.url_chamada() == "https://x.example/wms?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.3.0"
 
 
@@ -123,7 +130,8 @@ def test_ogc_api_features_colecoes(buscar_dublado):
     doc = {
         "collections": [
             {
-                "id": "poco_outorga", "title": "Poços de outorga",
+                "id": "poco_outorga",
+                "title": "Poços de outorga",
                 "crs": ["http://www.opengis.net/def/crs/OGC/1.3/CRS84", "http://www.opengis.net/def/crs/EPSG/0/4674"],
                 "extent": {"spatial": {"bbox": [[-73.99, -33.75, -28.84, 5.27]], "crs": "CRS84"}},
             },
@@ -153,11 +161,19 @@ def test_esri_rest_layers_do_servico(buscar_dublado):
     doc = {
         "name": "Cadastro",
         "spatialReference": {"wkid": 4674, "latestWkid": 4674},
-        "fullExtent": {"xmin": -73.99, "ymin": -33.75, "xmax": -28.84, "ymax": 5.27, "spatialReference": {"wkid": 4674}},
+        "fullExtent": {
+            "xmin": -73.99,
+            "ymin": -33.75,
+            "xmax": -28.84,
+            "ymax": 5.27,
+            "spatialReference": {"wkid": 4674},
+        },
         "layers": [{"id": 0, "name": "imoveis"}, {"id": 1, "name": "sedes"}],
     }
     buscar_dublado(__import__("json").dumps(doc).encode("utf-8"), "application/json")
-    r = descoberta.descobrir_camadas({"tipo": "esri_rest", "url": "https://mapas.example/arcgis/rest/services/Cadastro/MapServer"})
+    r = descoberta.descobrir_camadas(
+        {"tipo": "esri_rest", "url": "https://mapas.example/arcgis/rest/services/Cadastro/MapServer"}
+    )
     assert r.ok, r.mensagem
     assert {c.nome for c in r.camadas} == {"0", "1"}
     imoveis = next(c for c in r.camadas if c.nome == "0")
@@ -170,7 +186,9 @@ def test_esri_rest_sem_layers_vira_1_camada_do_servico(buscar_dublado):
     """ImageServer não tem `layers`: o serviço inteiro é a única camada descobrível."""
     doc = {"name": "Ortofoto", "description": "Mosaico anual", "spatialReference": {"wkid": 3857}}
     buscar_dublado(__import__("json").dumps(doc).encode("utf-8"), "application/json")
-    r = descoberta.descobrir_camadas({"tipo": "esri_rest", "url": "https://mapas.example/arcgis/rest/services/Orto/ImageServer"})
+    r = descoberta.descobrir_camadas(
+        {"tipo": "esri_rest", "url": "https://mapas.example/arcgis/rest/services/Orto/ImageServer"}
+    )
     assert r.ok, r.mensagem
     assert len(r.camadas) == 1
     assert r.camadas[0].nome == "Ortofoto"
@@ -201,7 +219,7 @@ def test_documento_ilegivel_nao_levanta(buscar_dublado):
     assert r.mensagem.startswith("erro_ao_interpretar:")
 
 
-# ---------------------------------------------------------------------------- SSRF (sem dublê: rede real bloqueada na validação)
+# --------------------------------------------------------------- SSRF (sem dublê: rede real bloqueada na validação)
 def test_url_insegura_recusada_antes_de_qualquer_rede():
     """`descobrir_camadas` nunca contorna `app.conexao.seguranca.validar_url`: uma URL que resolve para
     loopback é recusada por `buscar_seguro` DENTRO da própria função de segurança, sem que este módulo

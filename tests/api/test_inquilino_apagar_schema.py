@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import secrets
 
-from tests.api.conftest import PREFIXO_TESTE, entrar, novo_cliente
+from tests.api.conftest import PREFIXO_TESTE
 
 
 def _existe_schema(conexao_plat_app, nome: str) -> bool:

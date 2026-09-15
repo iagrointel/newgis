@@ -72,7 +72,8 @@ def test_l6_02_c_credencial_vaza_para_host_externo_via_rel_next():
                          srid_entregue=4326, extent_4326=None)
         list(ve.Paginador(conector, col, tam_pagina=1, limite=10).paginas_json())
     finally:
-        sa.shutdown(); sb.shutdown()
+        sa.shutdown()
+        sb.shutdown()
         os.environ.pop("PLAT_TESTE_CONEXAO_ALVOS", None)
 
     vazou = "Bearer CREDENCIAL-DA-CASA" in (recebido.get("B") or [])

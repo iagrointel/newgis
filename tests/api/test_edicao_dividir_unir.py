@@ -16,7 +16,7 @@ def _linha(coords):
 
 
 @pytest.fixture
-def camada_linha(fabrica, conexao_plat_app):
+def camada_linha(fabrica, conexao_plat_app):  # noqa: F811
     ids = ids_por_slug(conexao_plat_app)
     admin_id = _admin_usuario_id(conexao_plat_app, "demo")
     item_id, dados = fabrica.criar(
@@ -26,7 +26,7 @@ def camada_linha(fabrica, conexao_plat_app):
 
 
 @pytest.fixture
-def camada_poligono(fabrica, conexao_plat_app):
+def camada_poligono(fabrica, conexao_plat_app):  # noqa: F811
     ids = ids_por_slug(conexao_plat_app)
     admin_id = _admin_usuario_id(conexao_plat_app, "demo")
     item_id, dados = fabrica.criar(
@@ -132,7 +132,7 @@ def test_unir_feicao_inexistente_e_404(sessao_a, camada_linha):
     assert r.status_code == 404
 
 
-def test_unir_de_outro_inquilino_e_404(sessao_a, sessao_b, camada_linha, camada_b):
+def test_unir_de_outro_inquilino_e_404(sessao_a, sessao_b, camada_linha, camada_b):  # noqa: F811
     a = _adicionar(sessao_a, camada_linha["id"], _linha([[-46.6, -23.5], [-46.5, -23.5]]))
     b = _adicionar(sessao_b, camada_b["id"], {"type": "Point", "coordinates": [-46.5, -23.5]})
     r = sessao_b.post(

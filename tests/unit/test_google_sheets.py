@@ -12,6 +12,7 @@ import json
 import time
 
 import pytest
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
@@ -119,7 +120,10 @@ def test_credencial_que_nao_e_json():
 # --------------------------------------------------------------------- JWT RS256
 def _desmontar(jwt: str) -> tuple[dict, dict, bytes, bytes]:
     cab, pay, ass = jwt.split(".")
-    dec = lambda s: json.loads(base64.urlsafe_b64decode(s + "=" * (-len(s) % 4)))
+
+    def dec(s: str) -> dict:
+        return json.loads(base64.urlsafe_b64decode(s + "=" * (-len(s) % 4)))
+
     return dec(cab), dec(pay), base64.urlsafe_b64decode(ass + "=" * (-len(ass) % 4)), f"{cab}.{pay}".encode()
 
 
@@ -145,7 +149,7 @@ def test_jwt_adulterado_nao_confere():
     pay_adulterado = base64.urlsafe_b64encode(
         json.dumps(corpo, separators=(",", ":")).encode()).rstrip(b"=").decode()
     assinatura = base64.urlsafe_b64decode(ass + "=" * (-len(ass) % 4))
-    with pytest.raises(Exception):  # InvalidSignature da cryptography
+    with pytest.raises(InvalidSignature):
         conta["_chave_rsa"].public_key().verify(
             assinatura, f"{cab}.{pay_adulterado}".encode(), padding.PKCS1v15(), hashes.SHA256())
 

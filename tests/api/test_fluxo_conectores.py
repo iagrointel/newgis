@@ -93,7 +93,7 @@ def test_mqtt_simulador_de_cem_veiculos_a_um_evento_por_segundo(sessao_a, ambien
                             {"ts": agora, "placa": f"AAA{veiculo:04d}", "lon": -46.6, "lat": -23.5,
                              "velocidade": 50}).encode())
                     alvo = 100 * (segundo + 1)
-                    assert _esperar(lambda: fila.conta(fonte["id"]).instantaneo()["aceitos"] >= alvo), (
+                    assert _esperar(lambda alvo=alvo: fila.conta(fonte["id"]).instantaneo()["aceitos"] >= alvo), (
                         f"só {fila.conta(fonte['id']).instantaneo()['aceitos']} de {alvo} eventos chegaram")
                     while fila.escrever_uma_vez(registro.contexto_do_inquilino):
                         pass

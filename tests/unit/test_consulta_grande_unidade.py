@@ -15,9 +15,9 @@ from pathlib import Path
 import pytest
 
 from app import limites
+from app.consulta_grande import consulta_livre as _consulta_livre  # noqa: F401 — registra consulta_sql
 from app.consulta_grande import dialeto as dial
 from app.consulta_grande import duckdb_cli, execucao, seguranca
-from app.consulta_grande import consulta_livre as _consulta_livre  # noqa: F401 — registra consulta_sql
 from app.consulta_grande import ferramentas_grandes as fg
 from app.ferramentas import registro
 

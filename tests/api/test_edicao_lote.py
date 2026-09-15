@@ -49,7 +49,7 @@ def _quadrados(con, camada: dict, n: int, lado_graus: float = 0.001) -> None:
     con.commit()
 
 
-def _linhas(fabrica, camada, colunas="*"):
+def _linhas(fabrica, camada, colunas="*"):  # noqa: F811
     d = camada["dados"]
     contexto(fabrica.con, camada["tenant_id"], usuario_id=camada["admin_id"], login="admin")
     with fabrica.con.cursor() as cur:
@@ -57,7 +57,7 @@ def _linhas(fabrica, camada, colunas="*"):
         return cur.fetchall()
 
 
-def _historico_n(fabrica, camada) -> int:
+def _historico_n(fabrica, camada) -> int:  # noqa: F811
     d = camada["dados"]
     contexto(fabrica.con, camada["tenant_id"], usuario_id=camada["admin_id"], login="admin")
     with fabrica.con.cursor() as cur:
@@ -67,7 +67,7 @@ def _historico_n(fabrica, camada) -> int:
 
 
 @pytest.fixture
-def camada_poli(fabrica, conexao_plat_app):
+def camada_poli(fabrica, conexao_plat_app):  # noqa: F811
     """MultiPolygon em demo com campos numéricos/texto e domínio em `classe` (A/B/C) e `n` (0-1000000)."""
     ids = ids_por_slug(conexao_plat_app)
     admin_id = _admin_usuario_id(conexao_plat_app, "demo")
@@ -80,7 +80,7 @@ def camada_poli(fabrica, conexao_plat_app):
 
 
 # ---------------------------------------------------------------- portão 1: 100 mil feições, area_ha como job ≤ 30 s
-def test_calcular_area_ha_em_100_mil_feicoes_como_job(sessao_a, camada_poli, fabrica, worker_vivo, medida):
+def test_calcular_area_ha_em_100_mil_feicoes_como_job(sessao_a, camada_poli, fabrica, worker_vivo, medida):  # noqa: F811
     _quadrados(fabrica.con, camada_poli, 100_000)
     hist_antes = _historico_n(fabrica, camada_poli)
     t0 = time.monotonic()
@@ -117,7 +117,7 @@ def test_calcular_area_ha_em_100_mil_feicoes_como_job(sessao_a, camada_poli, fab
 
 
 # ---------------------------------------------------------------- portão 2: linha a linha == sql
-def test_linha_a_linha_da_o_mesmo_resultado_da_traducao_sql(sessao_a, camada_poli, fabrica):
+def test_linha_a_linha_da_o_mesmo_resultado_da_traducao_sql(sessao_a, camada_poli, fabrica):  # noqa: F811
     _quadrados(fabrica.con, camada_poli, 2_000)
     expressao = "Arredondar($area_m2 / 10000, 4) + Se($n % 2 == 0, 0.5, 0) - Minimo(Absoluto($n - 3), 1)"
     r1 = _lote(sessao_a, camada_poli["id"], operacao="calcular", campo="area_ha_sql", expressao=expressao,
@@ -142,7 +142,7 @@ def test_linha_a_linha_da_o_mesmo_resultado_da_traducao_sql(sessao_a, camada_pol
 
 
 # ---------------------------------------------------------------- portão 3: 1 fora do domínio = nada muda
-def test_uma_feicao_fora_do_dominio_nao_altera_nenhuma(sessao_a, camada_poli, fabrica):
+def test_uma_feicao_fora_do_dominio_nao_altera_nenhuma(sessao_a, camada_poli, fabrica):  # noqa: F811
     _quadrados(fabrica.con, camada_poli, 50)
     hist = _historico_n(fabrica, camada_poli)
     for avaliacao in ("sql", "linha_a_linha"):
@@ -169,7 +169,7 @@ def test_uma_feicao_fora_do_dominio_nao_altera_nenhuma(sessao_a, camada_poli, fa
 
 
 # ---------------------------------------------------------------- portão 4: pré-visualização correta, nada gravado
-def test_previa_mostra_antes_e_depois_sem_gravar(sessao_a, camada_poli, fabrica):
+def test_previa_mostra_antes_e_depois_sem_gravar(sessao_a, camada_poli, fabrica):  # noqa: F811
     _quadrados(fabrica.con, camada_poli, 30)
     r = _lote(sessao_a, camada_poli["id"], operacao="calcular", campo="area_ha", expressao="$area_m2 / 10000",
               selecao={"todas": True}, previa=True)
@@ -197,7 +197,7 @@ def test_previa_mostra_antes_e_depois_sem_gravar(sessao_a, camada_poli, fabrica)
 
 
 # ---------------------------------------------------------------- portão 5: cancelar no meio = estado anterior
-def test_cancelamento_no_meio_deixa_a_camada_no_estado_anterior(sessao_a, camada_poli, fabrica, worker_vivo):
+def test_cancelamento_no_meio_deixa_a_camada_no_estado_anterior(sessao_a, camada_poli, fabrica, worker_vivo):  # noqa: F811
     _quadrados(fabrica.con, camada_poli, 40_000)
     hist = _historico_n(fabrica, camada_poli)
     # linha a linha de propósito (mais lento: dá tempo de cancelar entre sub-lotes de 1.000)
@@ -217,7 +217,7 @@ def test_cancelamento_no_meio_deixa_a_camada_no_estado_anterior(sessao_a, camada
 
 
 # ---------------------------------------------------------------- limiar síncrono/job, apagar, copiar/mover, corrigir
-def test_ate_5000_e_sincrono_acima_vira_job(sessao_a, camada_poli, fabrica, worker_vivo):
+def test_ate_5000_e_sincrono_acima_vira_job(sessao_a, camada_poli, fabrica, worker_vivo):  # noqa: F811
     _quadrados(fabrica.con, camada_poli, 5_001)
     r = _lote(sessao_a, camada_poli["id"], operacao="atribuir", campo="classe", valor="C",
               selecao={"onde": "$n <= 5000"})
@@ -232,7 +232,7 @@ def test_ate_5000_e_sincrono_acima_vira_job(sessao_a, camada_poli, fabrica, work
     assert len(meus) >= 3 and {e["propriedades"]["execucao"] for e in meus} >= {"sincrono", "job"}, meus[:3]
 
 
-def test_apagar_copiar_mover_e_corrigir_geometria(sessao_a, camada_poli, camada_a, fabrica, conexao_plat_app):
+def test_apagar_copiar_mover_e_corrigir_geometria(sessao_a, camada_poli, camada_a, fabrica, conexao_plat_app):  # noqa: F811
     _quadrados(fabrica.con, camada_poli, 20)
     ids = ids_por_slug(conexao_plat_app)
     admin_id = _admin_usuario_id(conexao_plat_app, "demo")
@@ -292,8 +292,8 @@ def test_apagar_copiar_mover_e_corrigir_geometria(sessao_a, camada_poli, camada_
 
 
 # ---------------------------------------------------------------- refutação do adversário
-def test_refutacao_outra_camada_laco_divisao_por_zero_e_isolamento(sessao_a, sessao_b, camada_poli, camada_b,
-                                                                   fabrica):
+def test_refutacao_outra_camada_laco_divisao_por_zero_e_isolamento(sessao_a, sessao_b, camada_poli, camada_b,  # noqa: F811
+                                                                   fabrica):  # noqa: F811
     _quadrados(fabrica.con, camada_poli, 20)
     hist = _historico_n(fabrica, camada_poli)
     # expressão que tenta ler outra camada/inquilino: a linguagem não tem acesso a nada fora da lista branca
@@ -339,7 +339,7 @@ def test_refutacao_outra_camada_laco_divisao_por_zero_e_isolamento(sessao_a, ses
         assert r.status_code == 422 and r.json()["erro"] == "tipo_invalido", (avaliacao, r.text[:300])
 
 
-def test_somente_proprias_restringe_a_selecao(sessao_a, camada_a_somente_proprias, fabrica, usuarios_a):
+def test_somente_proprias_restringe_a_selecao(sessao_a, camada_a_somente_proprias, fabrica, usuarios_a):  # noqa: F811
     """Camada com `somente_proprias`: um editor sem `feicoes.editar_total` só toca as feições que criou; as outras
     ficam fora do lote com aviso (mesma regra do L2-03-a, por seleção em vez de por feição)."""
     cam = camada_a_somente_proprias

@@ -325,7 +325,6 @@ def test_atualizacao_agendada_em_15_minutos(fonte, servidor, cliente_demo, clien
     item_primeiro = est1["item_id"]
 
     # o próximo disparo ficou marcado para exatamente 15 minutos depois desta passagem
-    fmt = "%Y-%m-%dT%H:%M:%S"
     ultimo = datetime.datetime.fromisoformat(est1["ultimo_em"])
     proximo = datetime.datetime.fromisoformat(est1["proximo_em"])
     delta = (proximo - ultimo).total_seconds()

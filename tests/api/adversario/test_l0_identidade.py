@@ -54,7 +54,7 @@ def test_l0_02a_cookie_reusado_apos_logout_e_401(cred):
 def test_l0_02a_cookie_com_um_caractere_trocado_e_401(sessao_a):
     valor = _cookie(sessao_a)
     meio = len(valor) // 2
-    trocado = valor[:meio] + ("0" if valor[meio] != "0" else "1") + valor[meio + 1:]
+    trocado = valor[:meio] + ("0" if valor[meio] != "0" else "1") + valor[meio + 1 :]
     assert trocado != valor
     r = _cliente_com_cookie(trocado).get("/api/eu")
     assert r.status_code == 401, (r.status_code, r.text[:200])
@@ -65,7 +65,9 @@ def test_l0_02a_cookie_com_um_caractere_trocado_e_401(sessao_a):
 def test_l0_02a_cookie_de_demo_nao_abre_nada_de_demo2(sessao_a, sessao_b, ids):
     """Não há inquilino na URL nas rotas atuais (o inquilino vem da sessão); o cruzamento possível é por id de
     objeto: item, usuário e grupo de demo2 pedidos pela sessão de demo têm de sumir (404/403), nunca 200."""
-    r = sessao_b.post("/api/itens", json={"tipo": "mapa", "titulo": f"{PREFIXO_TESTE} adv b", "dados": DADOS_POR_TIPO["mapa"]})
+    r = sessao_b.post(
+        "/api/itens", json={"tipo": "mapa", "titulo": f"{PREFIXO_TESTE} adv b", "dados": DADOS_POR_TIPO["mapa"]}
+    )
     assert r.status_code == 201, r.text
     item_b = r.json()["id"]
     try:
@@ -88,15 +90,18 @@ def test_l0_02a_200_logins_em_60s_nao_vazam_hash_nem_senha_no_log(cred, caplog, 
     t0 = time.time()
     c = novo_cliente()
     for i in range(200):
-        r = c.post("/api/login", json={"inquilino": "demo", "login": login, "senha": senha if i % 2 else "errada-" + senha})
+        r = c.post(
+            "/api/login", json={"inquilino": "demo", "login": login, "senha": senha if i % 2 else "errada-" + senha}
+        )
         assert r.status_code in (200, 401, 423, 429), r.text[:200]
     assert time.time() - t0 < 60, "200 logins levaram mais de 60 s (não é o que a refutação mede)"
     texto = "\n".join(rec.getMessage() for rec in caplog.records)
     assert senha not in texto
     assert "pbkdf2_sha256$" not in texto
     with _como_inquilino(conexao_plat_app, "demo") as cur:
-        cur.execute("SELECT count(*) AS n FROM plat.log_acesso WHERE rota LIKE %s OR rota LIKE %s",
-                    (f"%{senha}%", "%pbkdf2%"))
+        cur.execute(
+            "SELECT count(*) AS n FROM plat.log_acesso WHERE rota LIKE %s OR rota LIKE %s", (f"%{senha}%", "%pbkdf2%")
+        )
         assert cur.fetchone()["n"] == 0
 
 
@@ -107,7 +112,11 @@ def test_l0_02b_bloqueio_por_usuario_nao_derruba_o_admin(usuarios_a, cred):
     alvo = novo_cliente()
     codigos = []
     for _ in range(6):
-        codigos.append(alvo.post("/api/login", json={"inquilino": slug, "login": u["login"], "senha": "errada-" + senha}).status_code)
+        codigos.append(
+            alvo.post(
+                "/api/login", json={"inquilino": slug, "login": u["login"], "senha": "errada-" + senha}
+            ).status_code
+        )
     assert 423 in codigos, codigos
     r = alvo.post("/api/login", json={"inquilino": slug, "login": u["login"], "senha": senha})
     assert r.status_code == 423, (r.status_code, r.text[:200])
@@ -229,7 +238,9 @@ def _token(sessao, **kw) -> dict:
 
 def test_l0_02d_token_de_demo_nao_le_item_de_demo2(sessao_a, sessao_b, cliente):
     tok = _token(sessao_a)
-    r = sessao_b.post("/api/itens", json={"tipo": "mapa", "titulo": f"{PREFIXO_TESTE} adv tok b", "dados": DADOS_POR_TIPO["mapa"]})
+    r = sessao_b.post(
+        "/api/itens", json={"tipo": "mapa", "titulo": f"{PREFIXO_TESTE} adv tok b", "dados": DADOS_POR_TIPO["mapa"]}
+    )
     item_b = r.json()["id"]
     try:
         r = com_token(cliente, tok["token"], "GET", f"/api/itens/{item_b}")
@@ -274,8 +285,12 @@ def test_l0_02d_token_expirado_e_revogado_sao_401(sessao_a, cliente):
 def test_l0_02d_referer_alterado_e_recusado(sessao_a, cliente):
     tok = _token(sessao_a, restricao={"referer": ["https://*.exemplo.gov.br"]})
     try:
-        for ref in ("https://exemplo.gov.br.atacante.com/", "https://atacante.com/https://sig.exemplo.gov.br",
-                    "https://sig.exemplo.gov.br.evil/", "http://sig.exemplo.gov.br/"):
+        for ref in (
+            "https://exemplo.gov.br.atacante.com/",
+            "https://atacante.com/https://sig.exemplo.gov.br",
+            "https://sig.exemplo.gov.br.evil/",
+            "http://sig.exemplo.gov.br/",
+        ):
             r = com_token(cliente, tok["token"], "GET", "/api/eu", headers={"Referer": ref})
             assert r.status_code == 401, (ref, r.status_code, r.text[:120])
         r = com_token(cliente, tok["token"], "GET", "/api/eu", headers={"Referer": "https://sig.exemplo.gov.br/mapa"})
@@ -296,19 +311,33 @@ def test_l0_02g_ator_nao_atribui_papel_com_um_privilegio_a_mais_que_o_seu(sessao
     gerir membros é administrativo (docs/PRIVILEGIOS.md), o ator é um admin de perfil com o papel R1 (subconjunto
     do teto admin) — R2 acrescenta papeis.gerir. O ator tenta dar R2 a outro usuário, a um usuário novo, em
     lote e a si mesmo; qualquer 2xx = refutado."""
-    r1 = sessao_a.post("/api/papeis", json={"nome": f"{PREFIXO_TESTE}-r1",
-                                             "privilegios": ["membros.gerir", "membros.papel", "conteudo.criar"]})
+    r1 = sessao_a.post(
+        "/api/papeis",
+        json={"nome": f"{PREFIXO_TESTE}-r1", "privilegios": ["membros.gerir", "membros.papel", "conteudo.criar"]},
+    )
     assert r1.status_code == 201, r1.text
-    r2 = sessao_a.post("/api/papeis", json={"nome": f"{PREFIXO_TESTE}-r2", "privilegios": [
-        "membros.gerir", "membros.papel", "conteudo.criar", "papeis.gerir"]})
+    r2 = sessao_a.post(
+        "/api/papeis",
+        json={
+            "nome": f"{PREFIXO_TESTE}-r2",
+            "privilegios": ["membros.gerir", "membros.papel", "conteudo.criar", "papeis.gerir"],
+        },
+    )
     assert r2.status_code == 201, r2.text
     try:
         c1, u1, _s1 = usuarios_a.sessao("admin", papel_id=r1.json()["id"])
         u2, _ = usuarios_a.criar("admin", papel_id=r1.json()["id"])
         r = c1.put(f"/api/usuarios/{u2['id']}", json={"papel_id": r2.json()["id"]})
         assert r.status_code == 403, (r.status_code, r.text[:200])
-        r = c1.post("/api/usuarios", json={"login": f"{PREFIXO_TESTE}x{secrets.token_hex(3)}", "nome": "x",
-                                         "perfil": "admin", "papel_id": r2.json()["id"]})
+        r = c1.post(
+            "/api/usuarios",
+            json={
+                "login": f"{PREFIXO_TESTE}x{secrets.token_hex(3)}",
+                "nome": "x",
+                "perfil": "admin",
+                "papel_id": r2.json()["id"],
+            },
+        )
         assert r.status_code == 403, (r.status_code, r.text[:200])
         r = c1.post("/api/usuarios/lote", json={"ids": [u2["id"]], "acao": "papel", "papel_id": r2.json()["id"]})
         assert r.status_code in (403, 422), (r.status_code, r.text[:200])
@@ -324,8 +353,9 @@ def test_l0_02g_ator_nao_atribui_papel_com_um_privilegio_a_mais_que_o_seu(sessao
 
 def test_l0_02g_visualizador_nao_cria_usuario_nem_papel(usuarios_a):
     c, _u, _s = usuarios_a.sessao("visualizador")
-    r = c.post("/api/usuarios", json={"login": f"{PREFIXO_TESTE}v{secrets.token_hex(3)}", "nome": "x",
-                                     "perfil": "admin"})
+    r = c.post(
+        "/api/usuarios", json={"login": f"{PREFIXO_TESTE}v{secrets.token_hex(3)}", "nome": "x", "perfil": "admin"}
+    )
     assert r.status_code == 403, (r.status_code, r.text[:200])
     r = c.post("/api/papeis", json={"nome": f"{PREFIXO_TESTE}-v", "privilegios": ["conteudo.criar"]})
     assert r.status_code == 403, (r.status_code, r.text[:200])

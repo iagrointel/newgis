@@ -12,6 +12,7 @@ import psycopg2
 import pytest
 from psycopg2 import sql
 
+
 def escapou(exc: BaseException) -> bool:
     """A consulta foi parar no `plat` de producao (a role da trilha nao tem privilegio la)."""
     return "schema plat" in str(exc) or "plat.tenant" in str(exc)

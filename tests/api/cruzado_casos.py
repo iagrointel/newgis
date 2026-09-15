@@ -1203,9 +1203,6 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: f"/api/rede/{p.rede_b['id']}/subrede/zt-inexistente/fluxo"),
     ("GET", "/api/rede/{rede_id}/subrede/{nome}/fluxo/camada"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/subrede/zt-inexistente/fluxo/camada"),
-    ("POST", "/api/rede/{rede_id}/pacote"): Caso(
-        lambda p: f"/api/rede/{p.rede_b['id']}/pacote", lambda p: {"esquema": "plat.rede.pacote"},
-    ),
     ("GET", "/api/org"): Caso(lambda p: "/api/org", proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
     ("PUT", "/api/org"): Caso(
         lambda p: "/api/org", _corpo_org_atual, proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
@@ -1388,10 +1385,6 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("GET", "/api/qr.svg"): Caso(lambda p: "/api/qr.svg?texto=https://exemplo.invalido/x", proprio=True,
                                  aceita=frozenset({200}), verificar=_sem_marca),
     # ---- L2-01-mapa-web: leituras de lista agem só no chamador (RLS); camada de B como alvo = 404 em toda perna.
-    ("GET", "/api/mapa/camadas"): Caso(lambda p: "/api/mapa/camadas", proprio=True, aceita=frozenset({200}),
-                                       verificar=_sem_marca),
-    ("GET", "/api/mapa/camadas/{id}"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}"),
-    ("GET", "/api/mapa/camadas/{id}/tilejson"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}/tilejson"),
     # ---- L2-06-e / L2-01-i: agregação e gráfico sobre a camada de B — o item de B (mapa) não é camada
     # vetorial, e RLS esconde o item: 404 em toda perna, nunca uma linha agregada.
     ("POST", "/api/camadas/{item_id}/estatisticas"): Caso(
@@ -1401,19 +1394,11 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", "/api/camadas/{item_id}/grafico"): Caso(
         lambda p: f"/api/camadas/{p.item_b['id']}/grafico", lambda p: {"tipo": "contagem"},
     ),
-    ("GET", "/api/geocodificar"): Caso(
-        lambda p: "/api/geocodificar?endereco=Avenida+Paulista,+Sao+Paulo+-+SP", proprio=True,
-        aceita=frozenset({200, 422}), verificar=_sem_marca,
-    ),
     # ---- L2-11-b geocodificador próprio (dado aberto CNEFE/IBGE, sem tabela de inquilino, mesmo padrão de
     # /api/rota-/api/matriz-/api/isocrona acima): 422 é resposta de NEGÓCIO (UF/logradouro não instalado
     # nesta trilha), não vazamento — aceito ao lado de 200.
     ("POST", "/api/geocodificar"): Caso(
         lambda p: "/api/geocodificar", lambda p: {"endereco": "Avenida Paulista, São Paulo - SP"},
-        proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca,
-    ),
-    ("GET", "/api/geocodificar"): Caso(
-        lambda p: "/api/geocodificar?endereco=Avenida+Paulista%2C+S%C3%A3o+Paulo+-+SP",
         proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca,
     ),
     ("POST", "/api/reverso"): Caso(
@@ -1471,9 +1456,6 @@ CASOS: dict[tuple[str, str], Caso] = {
     # UUID que não é de A nem de B, então a RLS de `plat.item` responde 404 antes de qualquer escrita. As
     # rotas de anexo em multipart leem o corpo só DEPOIS de a camada existir, para que o pedido cruzado morra
     # no 404 sem consumir formulário.
-    ("POST", "/api/camadas/{id}/edicoes"): Caso(
-        lambda p: f"/api/camadas/{UUID_NULO}/edicoes", lambda p: {"adicionar": []}
-    ),
     # ---- construtor de formulário de atributos, arrasta-e-solta (L5-03-form-builder): mesmo padrão acima —
     # UUID que não é de A nem de B, RLS de `plat.item` (via `comum.item_ou_404`/`comum.exigir_edicao`) responde
     # 404 antes de tocar `plat.formulario`/`formulario_versao`, sem precisar de um formulário real de B.
@@ -1491,36 +1473,6 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     ("POST", "/api/camadas/{id}/formulario/versoes/{versao}/publicar"): Caso(
         lambda p: f"/api/camadas/{UUID_NULO}/formulario/versoes/1/publicar", lambda p: {}
-    ),
-    ("POST", "/api/camadas/{id}/feicoes/unir"): Caso(
-        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/unir",
-        lambda p: {"ids": [UUID_NULO, UUID_NULO], "versoes": {UUID_NULO: 1}},
-    ),
-    ("POST", "/api/camadas/{id}/feicoes/dividir"): Caso(
-        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/dividir",
-        lambda p: {"id": UUID_NULO, "versao": 1, "ponto": [0.0, 0.0]},
-    ),
-    ("GET", "/api/camadas/{id}/feicoes/{globalid}"): Caso(
-        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}"
-    ),
-    ("GET", "/api/camadas/{id}/feicoes/{globalid}/historico"): Caso(
-        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}/historico"
-    ),
-    ("POST", "/api/camadas/{id}/feicoes/{globalid}/historico/{historico_id}/restaurar"): Caso(
-        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}/historico/1/restaurar"
-    ),
-    ("GET", "/api/camadas/{id}/feicoes/{globalid}/anexos"): Caso(
-        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}/anexos"
-    ),
-    ("POST", "/api/camadas/{id}/feicoes/{globalid}/anexos"): Caso(
-        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}/anexos",
-        lambda p: {"nome": "zt.png", "content_type": "image/png", "conteudo": "aGk="},
-    ),
-    ("GET", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): Caso(
-        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}/anexos/{UUID_NULO}"
-    ),
-    ("DELETE", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): Caso(
-        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}/anexos/{UUID_NULO}"
     ),
     # ---- réplicas de trabalho desconectado (L2-13-b): a lista é do próprio chamador (só as réplicas do
     # dono, ou de todo o inquilino com conteudo.ver_tudo — nunca de outro inquilino, a RLS de plat.replica
@@ -1541,11 +1493,6 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"idempotencia": "zt-cruzado-replica", "camadas": []},
     ),
     # ---- visualizador de mapa (L2-01-mapa-web): a lista é do próprio chamador; o resto é por id
-    ("GET", "/api/mapa/camadas"): Caso(
-        lambda p: "/api/mapa/camadas", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
-    ),
-    ("GET", "/api/mapa/camadas/{id}"): Caso(lambda p: f"/api/mapa/camadas/{UUID_NULO}"),
-    ("GET", "/api/mapa/camadas/{id}/tilejson"): Caso(lambda p: f"/api/mapa/camadas/{UUID_NULO}/tilejson"),
     # ---- construtor de camada por esquema (L5-31) e vista de camada (L5-32): tudo age no inquilino do
     # chamador; a camada-mãe apontada pelo caminho nunca é de B (UUID_NULO = de ninguém)
     # Corpo recusado na fronteira (geometria fora da lista), igual para as quatro chamadas — daí o
@@ -1702,40 +1649,6 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: "/api/amc/modelos/validar", lambda p: {"definicao": AMC_DEF_MINIMA},
         proprio=True, aceita=frozenset({200}),
     ),
-    ("POST", "/api/amc/modelos"): Caso(
-        lambda p: "/api/amc/modelos",
-        lambda p: {"nome": f"{PREFIXO}amc-modelo-a", "definicao": AMC_DEF_MINIMA},
-        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
-        limpar=_apagar_criado(("DELETE", "/api/amc/modelos/{id}")),
-    ),
-    ("GET", "/api/amc/modelos"): Caso(lambda p: "/api/amc/modelos", proprio=True, aceita=frozenset({200}),
-                                      verificar=_sem_marca),
-    ("GET", "/api/amc/modelos/{id}"): Caso(lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}"),
-    ("PUT", "/api/amc/modelos/{id}"): Caso(
-        lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}", lambda p: {"nome": f"{PREFIXO}amc-invadido"},
-    ),
-    ("DELETE", "/api/amc/modelos/{id}"): Caso(lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}"),
-    ("POST", "/api/amc/conjuntos"): Caso(
-        lambda p: "/api/amc/conjuntos",
-        lambda p: {"nome": f"{PREFIXO}amc-conjunto-a", "tipo": "hexagonal", "lado_m": 250},
-        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
-        limpar=_apagar_criado(("DELETE", "/api/amc/conjuntos/{id}")),
-    ),
-    ("GET", "/api/amc/conjuntos"): Caso(lambda p: "/api/amc/conjuntos", proprio=True, aceita=frozenset({200}),
-                                        verificar=_sem_marca),
-    ("GET", "/api/amc/conjuntos/{id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}"),
-    ("DELETE", "/api/amc/conjuntos/{id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}"),
-    ("POST", "/api/amc/execucoes"): Caso(
-        lambda p: "/api/amc/execucoes",
-        lambda p: {"modelo_id": p.modelo_amc_b["id"], "conjunto_id": p.conjunto_amc_b["id"], "semente": 1},
-    ),
-    ("GET", "/api/amc/execucoes"): Caso(lambda p: "/api/amc/execucoes", proprio=True, aceita=frozenset({200}),
-                                        verificar=_sem_marca),
-    ("GET", "/api/amc/execucoes/{id}"): Caso(lambda p: f"/api/amc/execucoes/{p.execucao_amc_b['id']}"),
-    ("DELETE", "/api/amc/execucoes/{id}"): Caso(lambda p: f"/api/amc/execucoes/{p.execucao_amc_b['id']}"),
-    ("GET", "/api/amc/execucoes/{id}/resultados"): Caso(
-        lambda p: f"/api/amc/execucoes/{p.execucao_amc_b['id']}/resultados",
-    ),
     # --- clonagem de camadas hospedadas (L2-08-b): registro por inquilino; conexão de B nunca serve A
     ("GET", "/api/migracao/clones"): Caso(lambda p: "/api/migracao/clones", proprio=True, aceita=frozenset({200})),
     ("GET", "/api/migracao/clones/{id}"): Caso(lambda p: f"/api/migracao/clones/{UUID_NULO}"),
@@ -1745,13 +1658,6 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     ("DELETE", "/api/migracao/clones/{id}"): Caso(lambda p: f"/api/migracao/clones/{UUID_NULO}"),
     # ---- L4-18-rede-simples: rede simples de B = 404; criar rede simples com camada de B = 404/422
-    ("GET", "/api/rede/{rede_id}/simples"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/simples"),
-    ("POST", "/api/rede/simples"): Caso(
-        lambda p: "/api/rede/simples",
-        lambda p: {"nome": "zt rede simples cruzada", "disciplina": "agua", "camada_linha_id": p.rede_b["id"]},
-        aceita=frozenset({422}),
-    ),
-    ("POST", "/api/rede/{rede_id}/promover"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/promover", lambda p: {}),
     # ---- L2-09-d-analise-3d: análise é stateless SEM salvar_item (o corpo não pede item) — nada é criado
     # nem em A nem em B; a verificação é a resposta não carregar marca de B
     ("POST", "/api/analise3d/visada"): Caso(

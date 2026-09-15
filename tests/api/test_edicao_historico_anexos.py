@@ -35,7 +35,7 @@ def _criar_ponto(sessao, camada_id, nome="um", categoria="A", lon=-46.1):
 
 
 # ---------------------------------------------------------------- histórico: quem, quando, o quê
-def test_historico_registra_inserir_atualizar_apagar_em_ordem(sessao_a, camada_a):
+def test_historico_registra_inserir_atualizar_apagar_em_ordem(sessao_a, camada_a):  # noqa: F811
     f = _criar_ponto(sessao_a, camada_a["id"])
     gid = f["id"]
     r = sessao_a.post(
@@ -66,20 +66,20 @@ def test_historico_registra_inserir_atualizar_apagar_em_ordem(sessao_a, camada_a
         assert h["momento"] is not None
 
 
-def test_historico_de_feicao_de_outro_inquilino_nunca_aparece(sessao_a, sessao_b, camada_a, camada_b):
+def test_historico_de_feicao_de_outro_inquilino_nunca_aparece(sessao_a, sessao_b, camada_a, camada_b):  # noqa: F811
     f = _criar_ponto(sessao_a, camada_a["id"])
     r = sessao_b.get(f"/api/camadas/{camada_b['id']}/feicoes/{f['id']}/historico")
     assert r.status_code == 200
     assert r.json() == []  # a mesma tabela d_demo2 nunca contém globalid nascido em d_demo
 
 
-def test_historico_de_camada_de_outro_inquilino_e_404(sessao_b, camada_a):
+def test_historico_de_camada_de_outro_inquilino_e_404(sessao_b, camada_a):  # noqa: F811
     r = sessao_b.get(f"/api/camadas/{camada_a['id']}/feicoes/00000000-0000-0000-0000-000000000000/historico")
     assert r.status_code == 404
 
 
 # ---------------------------------------------------------------- restauração
-def test_restaurar_atributo_apos_atualizacao(sessao_a, camada_a):
+def test_restaurar_atributo_apos_atualizacao(sessao_a, camada_a):  # noqa: F811
     f = _criar_ponto(sessao_a, camada_a["id"], nome="original")
     gid = f["id"]
     r = sessao_a.post(
@@ -111,7 +111,7 @@ def test_restaurar_atributo_apos_atualizacao(sessao_a, camada_a):
     assert hist2[1]["atributos_depois"]["nome"] == "original"
 
 
-def test_restaurar_recria_feicao_apagada_com_o_mesmo_globalid(sessao_a, camada_a):
+def test_restaurar_recria_feicao_apagada_com_o_mesmo_globalid(sessao_a, camada_a):  # noqa: F811
     f = _criar_ponto(sessao_a, camada_a["id"], nome="fenix")
     gid = f["id"]
     r = sessao_a.post(
@@ -140,7 +140,7 @@ def test_restaurar_recria_feicao_apagada_com_o_mesmo_globalid(sessao_a, camada_a
     assert r2.status_code == 200, r2.text
 
 
-def test_restaurar_entrada_de_exclusao_e_recusado(sessao_a, camada_a):
+def test_restaurar_entrada_de_exclusao_e_recusado(sessao_a, camada_a):  # noqa: F811
     f = _criar_ponto(sessao_a, camada_a["id"])
     gid = f["id"]
     sessao_a.post(
@@ -154,7 +154,7 @@ def test_restaurar_entrada_de_exclusao_e_recusado(sessao_a, camada_a):
     assert r.json()["erro"] == "nada_a_restaurar"
 
 
-def test_restaurar_domino_atual_ainda_e_aplicado(sessao_a, camada_a):
+def test_restaurar_domino_atual_ainda_e_aplicado(sessao_a, camada_a):  # noqa: F811
     """Uma regra pode ter mudado desde que o histórico foi gravado: restaurar não pula a validação atual."""
     f = _criar_ponto(sessao_a, camada_a["id"], categoria="A")
     gid, versao = f["id"], f["versao"]
@@ -171,7 +171,7 @@ def test_restaurar_domino_atual_ainda_e_aplicado(sessao_a, camada_a):
     assert r2.status_code == 200, r2.text
 
 
-def test_restaurar_feicao_de_outro_inquilino_e_404(sessao_a, sessao_b, camada_a, camada_b):
+def test_restaurar_feicao_de_outro_inquilino_e_404(sessao_a, sessao_b, camada_a, camada_b):  # noqa: F811
     f = _criar_ponto(sessao_a, camada_a["id"])
     gid = f["id"]
     hist = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()
@@ -183,7 +183,7 @@ def test_restaurar_feicao_de_outro_inquilino_e_404(sessao_a, sessao_b, camada_a,
 # ---------------------------------------------------------------- domínio/obrigatório aplicado no SERVIDOR
 # (refutação do item-pai L2-03-a, reconferida aqui pelo caminho de restauração e pela API direta, "sem passar
 # pela tela")
-def test_atributo_fora_do_dominio_direto_na_api_sem_navegador(sessao_a, camada_a):
+def test_atributo_fora_do_dominio_direto_na_api_sem_navegador(sessao_a, camada_a):  # noqa: F811
     # modo padrão é "transacao": o erro de domínio propaga como 422 da própria chamada HTTP — não é preciso
     # passar pelo navegador para provar que o servidor recusa (refutação do item: "sem passar pela tela")
     r = sessao_a.post(
@@ -195,7 +195,7 @@ def test_atributo_fora_do_dominio_direto_na_api_sem_navegador(sessao_a, camada_a
     assert r.json()["erro"] == "fora_do_dominio"
 
 
-def test_campo_obrigatorio_ausente_direto_na_api_e_recusado(sessao_a, camada_a):
+def test_campo_obrigatorio_ausente_direto_na_api_e_recusado(sessao_a, camada_a):  # noqa: F811
     r = sessao_a.post(
         f"/api/camadas/{camada_a['id']}/edicoes",
         json={"adicionar": [{"atributos": {"categoria": "A"}, "geometria": _ponto()}], "atualizar": [], "apagar": []},
@@ -205,7 +205,7 @@ def test_campo_obrigatorio_ausente_direto_na_api_e_recusado(sessao_a, camada_a):
 
 
 # ---------------------------------------------------------------- anexos: limite de tamanho e de tipo
-def test_anexo_enviado_e_listado(sessao_a, camada_a):
+def test_anexo_enviado_e_listado(sessao_a, camada_a):  # noqa: F811
     f = _criar_ponto(sessao_a, camada_a["id"])
     gid = f["id"]
     r = sessao_a.post(
@@ -229,7 +229,7 @@ def test_anexo_enviado_e_listado(sessao_a, camada_a):
     assert r3.headers["content-type"].startswith("image/png")
 
 
-def test_anexo_tipo_nao_permitido_e_recusado(sessao_a, camada_a):
+def test_anexo_tipo_nao_permitido_e_recusado(sessao_a, camada_a):  # noqa: F811
     f = _criar_ponto(sessao_a, camada_a["id"])
     r = sessao_a.post(
         f"/api/camadas/{camada_a['id']}/feicoes/{f['id']}/anexos",
@@ -239,7 +239,7 @@ def test_anexo_tipo_nao_permitido_e_recusado(sessao_a, camada_a):
     assert r.json()["erro"] == "tipo_nao_permitido"
 
 
-def test_anexo_acima_do_limite_de_tamanho_e_recusado(sessao_a, camada_a, monkeypatch):
+def test_anexo_acima_do_limite_de_tamanho_e_recusado(sessao_a, camada_a, monkeypatch):  # noqa: F811
     from app import limites
     monkeypatch.setattr(limites, "ANEXO_TAMANHO_MAX", 100)
     f = _criar_ponto(sessao_a, camada_a["id"])
@@ -252,7 +252,7 @@ def test_anexo_acima_do_limite_de_tamanho_e_recusado(sessao_a, camada_a, monkeyp
     assert r.json()["erro"] == "anexo_grande"
 
 
-def test_anexo_no_teto_real_ainda_da_anexo_grande_nao_corpo_grande(sessao_a, camada_a):
+def test_anexo_no_teto_real_ainda_da_anexo_grande_nao_corpo_grande(sessao_a, camada_a):  # noqa: F811
     """Achado do adversário (07/09): o envio é JSON com o conteúdo em base64, que incha o arquivo em ~4/3.
     Com `ANEXO_TAMANHO_MAX` (não substituído por monkeypatch aqui, ao contrário do teste acima) igual ao
     teto de corpo do middleware (item L0-12), o 413 genérico disparava ANTES desta checagem rodar, e o
@@ -274,7 +274,7 @@ def test_anexo_no_teto_real_ainda_da_anexo_grande_nao_corpo_grande(sessao_a, cam
     assert r.json()["erro"] == "anexo_grande"
 
 
-def test_anexo_conteudo_nao_bate_com_content_type_declarado_e_recusado(sessao_a, camada_a):
+def test_anexo_conteudo_nao_bate_com_content_type_declarado_e_recusado(sessao_a, camada_a):  # noqa: F811
     """item L7-03-b (varredura de conteúdo): PDF de verdade declarado como PNG."""
     f = _criar_ponto(sessao_a, camada_a["id"])
     pdf_de_verdade = b"%PDF-1.4\n%..." + b"\x00" * 32
@@ -286,7 +286,7 @@ def test_anexo_conteudo_nao_bate_com_content_type_declarado_e_recusado(sessao_a,
     assert r.json()["erro"] == "conteudo_recusado"
 
 
-def test_anexo_apagado_some_da_listagem(sessao_a, camada_a):
+def test_anexo_apagado_some_da_listagem(sessao_a, camada_a):  # noqa: F811
     f = _criar_ponto(sessao_a, camada_a["id"])
     envio = sessao_a.post(
         f"/api/camadas/{camada_a['id']}/feicoes/{f['id']}/anexos",
@@ -298,13 +298,13 @@ def test_anexo_apagado_some_da_listagem(sessao_a, camada_a):
     assert lista == []
 
 
-def test_anexo_de_feicao_de_outro_inquilino_e_404(sessao_a, sessao_b, camada_a, camada_b):
+def test_anexo_de_feicao_de_outro_inquilino_e_404(sessao_a, sessao_b, camada_a, camada_b):  # noqa: F811
     f = _criar_ponto(sessao_a, camada_a["id"])
     r = sessao_b.get(f"/api/camadas/{camada_b['id']}/feicoes/{f['id']}/anexos/00000000-0000-0000-0000-000000000000")
     assert r.status_code == 404
 
 
-def test_anexo_exige_feicao_existente(sessao_a, camada_a):
+def test_anexo_exige_feicao_existente(sessao_a, camada_a):  # noqa: F811
     r = sessao_a.post(
         f"/api/camadas/{camada_a['id']}/feicoes/00000000-0000-0000-0000-000000000000/anexos",
         json={"nome": "foto.png", "content_type": "image/png", "conteudo": _b64(PNG_1X1)},
@@ -315,7 +315,7 @@ def test_anexo_exige_feicao_existente(sessao_a, camada_a):
 
 # ---------------------------------------------------------------- edição concorrente (revalidação da cláusula
 # do item-pai, mas exercitada a partir de uma feição que também tem histórico gravado)
-def test_conflito_de_versao_nao_apaga_a_trilha_de_historico(sessao_a, sessao_b, camada_a):
+def test_conflito_de_versao_nao_apaga_a_trilha_de_historico(sessao_a, sessao_b, camada_a):  # noqa: F811
     f = _criar_ponto(sessao_a, camada_a["id"], nome="base")
     gid, versao = f["id"], f["versao"]
     r1 = sessao_a.post(
@@ -336,7 +336,7 @@ def test_conflito_de_versao_nao_apaga_a_trilha_de_historico(sessao_a, sessao_b, 
 
 
 # ---------------------------------------------------------------- obter feição exata (não recortada por tile)
-def test_obter_feicao_devolve_geometria_e_atributos_exatos(sessao_a, camada_a):
+def test_obter_feicao_devolve_geometria_e_atributos_exatos(sessao_a, camada_a):  # noqa: F811
     f = _criar_ponto(sessao_a, camada_a["id"], nome="exata", lon=-46.123456)
     r = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{f['id']}")
     assert r.status_code == 200, r.text
@@ -347,12 +347,12 @@ def test_obter_feicao_devolve_geometria_e_atributos_exatos(sessao_a, camada_a):
     assert corpo["geometria"]["coordinates"][0] == pytest.approx(-46.123456)
 
 
-def test_obter_feicao_inexistente_e_404(sessao_a, camada_a):
+def test_obter_feicao_inexistente_e_404(sessao_a, camada_a):  # noqa: F811
     r = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/00000000-0000-0000-0000-000000000000")
     assert r.status_code == 404
 
 
-def test_obter_feicao_de_outro_inquilino_e_404(sessao_a, sessao_b, camada_a, camada_b):
+def test_obter_feicao_de_outro_inquilino_e_404(sessao_a, sessao_b, camada_a, camada_b):  # noqa: F811
     f = _criar_ponto(sessao_a, camada_a["id"])
     r = sessao_b.get(f"/api/camadas/{camada_b['id']}/feicoes/{f['id']}")
     assert r.status_code == 404
