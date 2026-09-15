@@ -621,6 +621,32 @@ seção 5.8 e o ADR.
   ladrilho (`L1-02-tiles-token`) ainda não está mesclada nesta base — a zona de borda já protege `/tiles/` e o
   mecanismo já suporta o escopo, falta só a fiação quando aquele ramo entrar.
 
+### 12.1 Configuração — motor de render, SSE e processos da API
+
+Nove chaves do `.env` (`app/settings.py::Settings`) que entraram no dataclass pela união de 10/09
+(motor de render — ADR 0023 —, atualização viva de camada por SSE e o teto de recurso partilhado por
+processo) mas que `carregar()` só passou a ler de `valores` no conserto de 15/09 (a mesma classe de
+achado dos 16 campos string do item L7-31/L7-19: campo no dataclass, nunca lido do `.env`). Nenhuma
+delas tinha padrão/mínimo documentado em `docs/LIMITES.md`, `app/limites.py` ou aqui — o padrão abaixo é
+exatamente o valor que o dataclass já assumia (nenhuma instalação muda de comportamento por causa deste
+conserto); o mínimo é a regra geral de são para a instalação (inteiro >= 1; booleano pelo mesmo texto que
+`PLAT_SMTP_TLS` já aceita: `1/true/verdadeiro/sim` e `0/false/falso/nao/não`).
+
+| chave | padrão | mínimo | usada por |
+|---|---|---|---|
+| `PLAT_RENDER_POOL_TAMANHO` | `0` | `1` | `app/render/motor.py::Motor` — nº de páginas do chromium mantidas quentes (ADR 0023: medido com 2 em produção, `deploy/plat-render.service`) |
+| `PLAT_RENDER_FILA_MAX` | `0` | `1` | idem — acima disso, `429 fila_cheia` (ADR 0023 item 1) |
+| `PLAT_RENDER_TIMEOUT_S` | `0` | `1` | idem — teto de tempo único cobrindo fila + execução (ADR 0023 item 2) |
+| `PLAT_RENDER_TOKEN_TTL_S` | `0` | `1` | `app/render/token.py` — prazo do token interno do render, sempre cortado a 60 s mesmo se pedirem mais |
+| `PLAT_RENDER_MAX_PX` | `0` | `1` | `app/render/rotas.py`, `app/ogc_mapas/pool.py` — teto de largura/altura de imagem pedida |
+| `PLAT_RENDER_MEMORIA_MB` | `0` | `1` | valor nominal do pool de render (`deploy/plat-render.service`); a unidade systemd corta o `MemoryMax` um pouco acima |
+| `PLAT_RENDER_IGNORAR_HTTPS` | `false` | — | `docs/adr/20260908T1230-layout-de-impressao.md` — aceita certificado autoassinado da trilha ao render buscar a própria página |
+| `PLAT_SSE_LIGADO` | `false` | — | `app/vivo/rotas.py` — interruptor de operação; desligado, a rota de atualização viva por SSE responde 503 na hora |
+| `PLAT_API_PROCESSOS` | `0` | `1` | `app/jobs/eventos.py` — divide os tetos de recurso partilhado (SSE por inquilino/instalação) pelo nº de processos `uvicorn --workers N`; o consumidor já protege contra zero com `max(1, ...)` |
+
+Nenhuma delas tem máximo declarado (o helper `_inteiro` de `app/settings.py` não impõe teto, só piso);
+fica para quando o item correspondente (render em produção, SSE em produção) tiver portão próprio.
+
 
 ---
 

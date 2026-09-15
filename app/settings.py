@@ -312,6 +312,23 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_GARAGE_CHAVE_ID=_opcional(valores, "PLAT_GARAGE_CHAVE_ID"),
         PLAT_GARAGE_CHAVE_SEGREDO=_opcional(valores, "PLAT_GARAGE_CHAVE_SEGREDO"),
         PLAT_SEGURANCA_CONTATO=_opcional(valores, "PLAT_SEGURANCA_CONTATO") or "",
+        # (conserto 15/09, item de wt/segur) os 9 campos abaixo são a segunda metade do mesmo achado dos
+        # 16 campos string acima: numéricos/booleanos, ficaram para depois por não ter padrão/mínimo
+        # documentado em docs/LIMITES.md, app/limites.py ou MANUAL.md. Nenhum dos dois é: o padrão
+        # registrado aqui é exatamente o default que o dataclass já tinha (o valor que o código assume
+        # hoje, com `carregar()` nunca lendo a chave — nenhuma instalação muda de comportamento com este
+        # conserto), e o mínimo é a regra geral de são (inteiro >= 1; booleano pelas mesmas palavras que
+        # `PLAT_SMTP_TLS` já aceita). Documentado em MANUAL.md, seção "Configuração — motor de render, SSE
+        # e processos da API".
+        PLAT_RENDER_POOL_TAMANHO=_inteiro(valores, "PLAT_RENDER_POOL_TAMANHO", 0, 1),
+        PLAT_RENDER_FILA_MAX=_inteiro(valores, "PLAT_RENDER_FILA_MAX", 0, 1),
+        PLAT_RENDER_TIMEOUT_S=_inteiro(valores, "PLAT_RENDER_TIMEOUT_S", 0, 1),
+        PLAT_RENDER_TOKEN_TTL_S=_inteiro(valores, "PLAT_RENDER_TOKEN_TTL_S", 0, 1),
+        PLAT_RENDER_MAX_PX=_inteiro(valores, "PLAT_RENDER_MAX_PX", 0, 1),
+        PLAT_RENDER_MEMORIA_MB=_inteiro(valores, "PLAT_RENDER_MEMORIA_MB", 0, 1),
+        PLAT_RENDER_IGNORAR_HTTPS=_booleano(valores, "PLAT_RENDER_IGNORAR_HTTPS", False),
+        PLAT_SSE_LIGADO=_booleano(valores, "PLAT_SSE_LIGADO", False),
+        PLAT_API_PROCESSOS=_inteiro(valores, "PLAT_API_PROCESSOS", 0, 1),
     )
 
 

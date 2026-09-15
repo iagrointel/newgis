@@ -22,13 +22,21 @@ Dois grupos ficam de fora do valor genérico "x":
   é um valor inválido para eles (não começa com postgresql://, não é hex64, não é ambiente conhecido,
   não começa com https://, não é nível de log, não tem o prefixo do papel do worker); usá-lo aqui daria
   falso-negativo, não cobertura real. Já têm teste dedicado em test_settings.py.
+
+Conserto 15/09 (item de wt/segur): dos campos de NAO_STRING, os 9 abaixo — `PLAT_RENDER_POOL_TAMANHO`,
+`PLAT_RENDER_FILA_MAX`, `PLAT_RENDER_TIMEOUT_S`, `PLAT_RENDER_TOKEN_TTL_S`, `PLAT_RENDER_MAX_PX`,
+`PLAT_RENDER_MEMORIA_MB`, `PLAT_RENDER_IGNORAR_HTTPS`, `PLAT_SSE_LIGADO`, `PLAT_API_PROCESSOS` — eram o
+resto do mesmo esquecimento (`carregar()` nunca os lia de `valores`, sempre o default do dataclass) e
+ganharam padrão/mínimo em MANUAL.md §12.1. `INTEIROS_NOVOS`/`BOOLEANOS_NOVOS` abaixo testam, para cada um
+deles: texto válido chega convertido (não como string) e texto inválido levanta `ErroConfiguracao`
+nomeando a variável — a mesma cobertura que `test_settings.py` já dá aos formatados.
 """
 
 import dataclasses
 
 import pytest
 
-from app.settings import Settings, carregar
+from app.settings import ErroConfiguracao, Settings, carregar
 
 BASE = {
     "PLAT_DSN": "postgresql://plat_app:x@127.0.0.1:5432/iagro_sat",
@@ -98,3 +106,89 @@ def test_campo_string_chega_a_settings_efetiva(campo):
         f"{campo} não chegou à Settings efetiva sem alteração — carregar() provavelmente não lê este "
         f"campo de `valores` (o mesmo esquecimento do achado PLAT_GARAGE_CHAVE_ID/PLAT_GARAGE_CHAVE_SEGREDO)"
     )
+
+
+# --- conserto 15/09: os 9 campos int/bool que ficaram de fora do primeiro conserto (docstring do módulo).
+# Ambos os conjuntos usam a MESMA função de conversão que o resto do módulo já usa (_inteiro/_booleano) —
+# este teste não sabe disso, só observa o comportamento pela API pública `carregar()`.
+
+INTEIROS_NOVOS = sorted(
+    {
+        "PLAT_RENDER_POOL_TAMANHO",
+        "PLAT_RENDER_FILA_MAX",
+        "PLAT_RENDER_TIMEOUT_S",
+        "PLAT_RENDER_TOKEN_TTL_S",
+        "PLAT_RENDER_MAX_PX",
+        "PLAT_RENDER_MEMORIA_MB",
+        "PLAT_API_PROCESSOS",
+    }
+)
+
+BOOLEANOS_NOVOS = sorted({"PLAT_RENDER_IGNORAR_HTTPS", "PLAT_SSE_LIGADO"})
+
+
+def test_inteiros_e_booleanos_novos_batem_com_nao_string():
+    """Trava de digitação: os dois conjuntos acima têm de ser exatamente os 9 campos que a docstring do
+    módulo promete testar — nem a mais (campo que não existe mais), nem a menos (campo esquecido de novo)."""
+    assert set(INTEIROS_NOVOS) | set(BOOLEANOS_NOVOS) == {
+        "PLAT_RENDER_POOL_TAMANHO",
+        "PLAT_RENDER_FILA_MAX",
+        "PLAT_RENDER_TIMEOUT_S",
+        "PLAT_RENDER_TOKEN_TTL_S",
+        "PLAT_RENDER_MAX_PX",
+        "PLAT_RENDER_MEMORIA_MB",
+        "PLAT_RENDER_IGNORAR_HTTPS",
+        "PLAT_SSE_LIGADO",
+        "PLAT_API_PROCESSOS",
+    }
+
+
+@pytest.mark.parametrize("campo", INTEIROS_NOVOS)
+def test_campo_inteiro_texto_valido_converte(campo):
+    efetiva = carregar({**BASE, campo: "7"})
+    valor = getattr(efetiva, campo)
+    assert valor == 7 and isinstance(valor, int), f"{campo} não converteu '7' para o inteiro 7"
+
+
+@pytest.mark.parametrize("campo", INTEIROS_NOVOS)
+def test_campo_inteiro_texto_invalido_da_erro_com_o_nome_da_variavel(campo):
+    with pytest.raises(ErroConfiguracao, match=campo):
+        carregar({**BASE, campo: "abacate"})
+
+
+@pytest.mark.parametrize("campo", INTEIROS_NOVOS)
+def test_campo_inteiro_abaixo_do_minimo_da_erro_com_o_nome_da_variavel(campo):
+    """Mínimo registrado em MANUAL.md §12.1: inteiro >= 1 (regra geral de são; nenhum dos 9 tinha mínimo
+    documentado antes deste conserto)."""
+    with pytest.raises(ErroConfiguracao, match=campo):
+        carregar({**BASE, campo: "0"})
+
+
+@pytest.mark.parametrize(
+    "campo,texto,esperado",
+    [
+        (campo, texto, esperado)
+        for campo in BOOLEANOS_NOVOS
+        for texto, esperado in [
+            ("1", True),
+            ("true", True),
+            ("verdadeiro", True),
+            ("sim", True),
+            ("0", False),
+            ("false", False),
+            ("falso", False),
+            ("nao", False),
+            ("não", False),
+        ]
+    ],
+)
+def test_campo_booleano_texto_valido_converte(campo, texto, esperado):
+    efetiva = carregar({**BASE, campo: texto})
+    valor = getattr(efetiva, campo)
+    assert valor is esperado, f"{campo}={texto!r} deveria converter para {esperado}, veio {valor!r}"
+
+
+@pytest.mark.parametrize("campo", BOOLEANOS_NOVOS)
+def test_campo_booleano_texto_invalido_da_erro_com_o_nome_da_variavel(campo):
+    with pytest.raises(ErroConfiguracao, match=campo):
+        carregar({**BASE, campo: "talvez"})
