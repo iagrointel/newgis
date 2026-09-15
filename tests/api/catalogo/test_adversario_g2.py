@@ -155,7 +155,7 @@ def test_g2_5_evento_de_transferencia_so_do_que_mudou(sessao_a, itens_a, editor_
     plano = dono_c.post(
         "/api/itens/transferir", json={"ids": [camada["id"]], "novo_dono_id": admin_id, "simular": True}
     ).json()
-    codigos = [f["codigo"] for l in plano["plano"] for f in l["falhas"]]
+    codigos = [f["codigo"] for linha_ in plano["plano"] for f in linha_["falhas"]]
     assert "arrasto_sem_edicao" in codigos, plano
     assert plano["com_falha"] == 1, plano
 

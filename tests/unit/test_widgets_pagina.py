@@ -12,37 +12,55 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def executar_js(codigo: str):
-    processo = subprocess.run(["node", "--input-type=module", "-e", codigo], cwd=ROOT, text=True,
-                              capture_output=True, check=True)
+    processo = subprocess.run(
+        ["node", "--input-type=module", "-e", codigo], cwd=ROOT, text=True, capture_output=True, check=True
+    )
     return json.loads(processo.stdout)
 
 
 CABECALHO = "const s = await import('./web/js/widgets/seguro.js');\n"
 
 VETORES_URL_RECUSADOS = [
-    "javascript:alert(1)", "JaVaScRiPt:alert(1)", " javascript:alert(1)", "java\\tscript:alert(1)",
-    "data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==", "vbscript:msgbox(1)", "//evil.invalido/x",
-    "file:///etc/passwd", "\\\\evil.invalido\\x", "sem-esquema/relativo",
+    "javascript:alert(1)",
+    "JaVaScRiPt:alert(1)",
+    " javascript:alert(1)",
+    "java\\tscript:alert(1)",
+    "data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==",
+    "vbscript:msgbox(1)",
+    "//evil.invalido/x",
+    "file:///etc/passwd",
+    "\\\\evil.invalido\\x",
+    "sem-esquema/relativo",
 ]
 
 
 def test_url_segura_recusa_os_vetores_e_aceita_o_normal():
-    r = executar_js(CABECALHO + f"""
+    r = executar_js(
+        CABECALHO
+        + f"""
       const recusados = {json.dumps(VETORES_URL_RECUSADOS)}.map((u) => s.urlSegura(u));
       const aceitos = ['https://exemplo.invalido/a?b=1', 'http://exemplo.invalido', '/conteudo/x', 'mailto:a@b.c',
                        'tel:+5511'].map((u) => s.urlSegura(u));
       const imagem = [s.urlSegura('data:image/png;base64,iVBORw0KGgo=', {{imagem: true}}),
                       s.urlSegura('data:image/png;base64,iVBORw0KGgo='), s.urlSegura('mailto:a@b.c', {{imagem: true}})];
       console.log(JSON.stringify({{recusados, aceitos, imagem}}));
-    """)
+    """
+    )
     assert r["recusados"] == [None] * len(VETORES_URL_RECUSADOS), r["recusados"]
-    assert r["aceitos"] == ["https://exemplo.invalido/a?b=1", "http://exemplo.invalido/", "/conteudo/x", "mailto:a@b.c",
-                            "tel:+5511"]
+    assert r["aceitos"] == [
+        "https://exemplo.invalido/a?b=1",
+        "http://exemplo.invalido/",
+        "/conteudo/x",
+        "mailto:a@b.c",
+        "tel:+5511",
+    ]
     assert r["imagem"][0].startswith("data:image/png") and r["imagem"][1] is None and r["imagem"][2] is None
 
 
 def test_dominio_do_embed_e_sandbox():
-    r = executar_js(CABECALHO + """
+    r = executar_js(
+        CABECALHO
+        + """
       console.log(JSON.stringify({
         sub: s.hostPermitido('https://mapas.exemplo.invalido/x', ['exemplo.invalido']),
         exato: s.hostPermitido('https://exemplo.invalido/', ['*.exemplo.invalido']),
@@ -51,20 +69,30 @@ def test_dominio_do_embed_e_sandbox():
         vazio: s.hostPermitido('https://exemplo.invalido/', []),
         sandbox: s.sandboxDe(['allow-scripts', 'allow-same-origin', 'allow-top-navigation', 'allow-forms']),
       }));
-    """)
-    assert r == {"sub": True, "exato": True, "http": False, "sufixo_falso": False, "vazio": False,
-                 "sandbox": "allow-scripts allow-forms"}
+    """
+    )
+    assert r == {
+        "sub": True,
+        "exato": True,
+        "http": False,
+        "sufixo_falso": False,
+        "vazio": False,
+        "sandbox": "allow-scripts allow-forms",
+    }
 
 
 def test_markdown_minimo_e_campos_da_feicao():
-    r = executar_js(CABECALHO + """
+    r = executar_js(
+        CABECALHO
+        + """
       const md = ['# Título', '', 'Olá **{nome}** *it* `c` [site](https://x.invalido) [mal](javascript:alert(1))', '',
                   '- a', '- b', '', '1. um', '', '---',
                   '![alt](https://x.invalido/i.png) ![m](javascript:1)'].join('\\n');
       const feicao = {properties: {nome: '<img src=x onerror=alert(1)>'}};
       const html = s.markdownParaHtml(s.substituirCampos(md, feicao));
       console.log(JSON.stringify({html, campos: s.substituirCampos('{a} {b} {c}', {a: 1, b: '<x>'})}));
-    """)
+    """
+    )
     html = r["html"]
     assert html.startswith("<h1>Título</h1>")
     assert "<strong>&lt;img src=x onerror=alert(1)&gt;</strong>" in html  # o valor da feição chega escapado
@@ -84,8 +112,20 @@ def test_registro_tem_os_doze_widgets_do_item_com_manifesto_valido():
       const nomes = [...REGISTRO.values()].map((m) => { validarManifesto(m); return m.nome; });
       console.log(JSON.stringify(nomes));
     """)
-    esperados = {"texto", "imagem", "botao", "cartao", "incorporar", "divisor", "menu", "controlador", "compartilhar",
-                 "login", "idioma", "tema"}
+    esperados = {
+        "texto",
+        "imagem",
+        "botao",
+        "cartao",
+        "incorporar",
+        "divisor",
+        "menu",
+        "controlador",
+        "compartilhar",
+        "login",
+        "idioma",
+        "tema",
+    }
     assert esperados <= set(r), esperados - set(r)
     # os 12 do item + os 10 que já existiam antes dele (L5-06/L5-07/L5-01-c: mapa, legenda, tabela, grafico,
     # lista, consulta, selecao, info-feicao, adicionar-dado, filtro) — sem duplicata nenhuma no registro.
@@ -109,8 +149,19 @@ def test_widgets_do_item_usam_o_elemento_que_o_modulo_registra_de_verdade():
 
 
 def test_modulos_dos_widgets_novos_ficam_abaixo_de_60_kb():
-    for nome in ("imagem", "cartao", "incorporar", "divisor", "menu", "controlador", "compartilhar", "login", "idioma",
-                 "tema", "seguro"):
+    for nome in (
+        "imagem",
+        "cartao",
+        "incorporar",
+        "divisor",
+        "menu",
+        "controlador",
+        "compartilhar",
+        "login",
+        "idioma",
+        "tema",
+        "seguro",
+    ):
         assert (ROOT / "web/js/widgets" / f"{nome}.js").stat().st_size <= 60 * 1024, nome
 
 
@@ -141,13 +192,16 @@ def test_paleta_de_paginas_tem_os_nove_tipos_sem_colidir_com_menu_texto_imagem()
 def test_executor_lista_so_os_nove_sem_colisao_em_tipos_de_widget_pagina():
     r = executar_js("""
       const { tiposDeWidget } = await import('./web/js/executor/executor.js');
-      const nove = ["botao", "cartao", "incorporar", "divisor", "controlador", "compartilhar", "login", "idioma", "tema"];
+      const nove = ["botao", "cartao", "incorporar", "divisor", "controlador",
+                    "compartilhar", "login", "idioma", "tema"];
       const colisao = ["texto", "imagem", "mapa", "tabela", "menu", "menu_widget"];
       const nos = [...nove, ...colisao].map((tipo, i) => ({id: `n${i}`, tipo, pai: null, propriedades: {}}));
       const doc = {corpo: {nos}};
       console.log(JSON.stringify(tiposDeWidget(doc).sort()));
     """)
-    assert r == sorted(["botao", "cartao", "incorporar", "divisor", "controlador", "compartilhar", "login", "idioma", "tema"])
+    assert r == sorted(
+        ["botao", "cartao", "incorporar", "divisor", "controlador", "compartilhar", "login", "idioma", "tema"]
+    )
 
 
 def test_botao_com_acao_de_link_e_de_pagina_valida_no_esquema():
