@@ -234,13 +234,17 @@ def log_do_job(request: Request, job_id: uuid.UUID, apos: int = Query(0, ge=0), 
 
 @router.get("/api/jobs/{job_id}/eventos", responses={**ERROS, 200: {"content": {"text/event-stream": {}}}},
             openapi_extra=XV, tags=["jobs"])
-async def eventos_do_job(request: Request, job_id: uuid.UUID, auth: Auth = AUTH_VER):
-    """SSE: primeiro evento `estado`, depois `log`/`estado`, `fim` no estado final; Last-Event-ID reenvia o log."""
+async def eventos_do_job(request: Request, job_id: uuid.UUID, desde: int | None = Query(None, ge=0),
+                          auth: Auth = AUTH_VER):
+    """SSE: primeiro evento `estado`, depois `log`/`estado`, `fim` no estado final; Last-Event-ID reenvia o log.
+    `desde` é o mesmo valor por query (fallback do `Last-Event-ID`, que o EventSource nativo do navegador não
+    consegue mandar numa reconexão aberta à mão pelo cliente — só no retry automático do próprio navegador,
+    que o front não usa depois do `fim` de conexão forçado aos 30 min; ver web/js/jobs/eventos.js)."""
     s = sessao_de(auth)
     job = await run_in_threadpool(servico.obter, s, job_id)
     eventos.reservar(s)
     ultimo = request.headers.get("Last-Event-ID")
-    ultimo_id = int(ultimo) if ultimo and ultimo.isdigit() else None
+    ultimo_id = int(ultimo) if ultimo and ultimo.isdigit() else desde
     return StreamingResponse(
         eventos.gerar(s, job, ultimo_id), media_type="text/event-stream",
         headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no", "Connection": "keep-alive"},

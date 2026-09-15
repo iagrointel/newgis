@@ -3,12 +3,21 @@
    Depois de 2 erros seguidos do EventSource (ou conexão recusada de vez: 404/429) cai para polling de 3 s em
    obter(id) + log(id, apos); a próxima abertura tenta o SSE de novo. Limite de 10 assinaturas por página:
    acima disso assinar() devolve false e a lista faz polling da própria lista.
-   Eventos entregues ao ouvinte: {tipo: 'estado'|'log'|'fim'|'modo'|'erro', id, dados}. */
+   Eventos entregues ao ouvinte: {tipo: 'estado'|'log'|'fim'|'modo'|'erro', id, dados}.
+   Reconexão (achado do adversário G3, item L0-05-c): o servidor força o fim de QUALQUER conexão aos 30 min
+   (app/jobs/eventos.py DURACAO_MAX_S) mandando `event: fim` com o estado REAL do job (não-final) e um motivo
+   de "reconecte". Isso é diferente de um `fim` de verdade (job concluído/falhou/cancelado): só o segundo
+   desfaz a assinatura. O primeiro reabre o EventSource com recuo exponencial (500 ms a 30 s, resetado no
+   próximo `open`) mandando `Last-Event-ID` (cabeçalho, quando o construtor aceita; `?desde=` sempre, para o
+   EventSource nativo do navegador, que não permite cabeçalho custom numa conexão aberta à mão) para retomar o
+   log de onde parou — sem isso a tela de detalhe silenciava depois de 30 min com o job ainda rodando. */
 import { log as lerLog, obter } from './api.js';
 import { FINAIS } from './formato.js';
 
 export const LIMITE = 10;
 export const INTERVALO_POLLING_MS = 3000;
+const RECONEXAO_BASE_MS = 500;
+const RECONEXAO_MAX_MS = 30000;
 const assinaturas = new Map();
 
 function json(texto) {
@@ -32,16 +41,43 @@ function emitir(a, evento) {
 function tratar(a, tipo, dados) {
   if (!assinaturas.has(a.id)) return;
   if (tipo === 'log' && dados && dados.id != null) a.apos = Math.max(a.apos, Number(dados.id) || 0);
+  if (tipo === 'fim' && dados && !FINAIS.has(dados.estado)) {
+    // fim de CONEXÃO forçado pelo servidor, job continua rodando: reconecta em silêncio, nunca avisa o
+    // ouvinte (lista/detalhe) — não é o fim do job, é só o fim de uma conexão de 30 min.
+    reconectar(a);
+    return;
+  }
   emitir(a, { tipo, id: a.id, dados });
   if (tipo === 'fim') encerrar(a);
 }
 
+function reconectar(a) {
+  if (a.es) {
+    try { a.es.close(); } catch { /* já pode estar fechando sozinho */ }
+    a.es = null;
+  }
+  if (a.timerReconexao) clearTimeout(a.timerReconexao);
+  a.tentativasReconexao = (a.tentativasReconexao || 0) + 1;
+  const espera = Math.min(RECONEXAO_MAX_MS, RECONEXAO_BASE_MS * 2 ** (a.tentativasReconexao - 1));
+  a.timerReconexao = setTimeout(() => {
+    a.timerReconexao = null;
+    if (assinaturas.has(a.id)) abrirSse(a);
+  }, espera);
+}
+
 function abrirSse(a) {
   a.modo = 'sse';
-  const es = new EventSource(`/api/jobs/${encodeURIComponent(a.id)}/eventos`);
+  const desde = a.apos > 0 ? `?desde=${encodeURIComponent(a.apos)}` : '';
+  // o segundo argumento é ignorado pelo EventSource nativo do navegador (não há como mandar cabeçalho numa
+  // conexão aberta à mão); serve para o EventSource de teste/Node que aceita { headers } e para deixar o
+  // Last-Event-ID explícito também por esse caminho, não só pela query.
+  const es = a.apos > 0
+    ? new EventSource(`/api/jobs/${encodeURIComponent(a.id)}/eventos${desde}`, { headers: { 'Last-Event-ID': String(a.apos) } })
+    : new EventSource(`/api/jobs/${encodeURIComponent(a.id)}/eventos`);
   a.es = es;
   es.addEventListener('open', () => {
     a.erros = 0;
+    a.tentativasReconexao = 0;
     emitir(a, { tipo: 'modo', id: a.id, dados: { modo: 'sse' } });
   });
   es.addEventListener('estado', (e) => tratar(a, 'estado', json(e.data)));
@@ -89,8 +125,10 @@ function abrirPolling(a) {
 function encerrar(a) {
   if (a.es) a.es.close();
   if (a.timer) clearInterval(a.timer);
+  if (a.timerReconexao) clearTimeout(a.timerReconexao);
   a.es = null;
   a.timer = null;
+  a.timerReconexao = null;
   assinaturas.delete(a.id);
 }
 
@@ -102,7 +140,10 @@ export function assinar(id, ouvinte) {
     return true;
   }
   if (assinaturas.size >= LIMITE) return false;
-  a = { id, ouvintes: new Set([ouvinte]), es: null, timer: null, erros: 0, apos: 0, modo: 'sse', consultando: false };
+  a = {
+    id, ouvintes: new Set([ouvinte]), es: null, timer: null, erros: 0, apos: 0, modo: 'sse', consultando: false,
+    timerReconexao: null, tentativasReconexao: 0,
+  };
   assinaturas.set(id, a);
   abrirSse(a);
   return true;
