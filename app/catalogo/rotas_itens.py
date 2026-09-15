@@ -1,7 +1,10 @@
 """Rotas /api/itens (ADR 0004 seção 13): lista com busca, filtros laterais, facetas, tags, cursor; CRUD com JSON
 Schema por tipo; lote; mover; versões (imutáveis, restaurar, publicar); relações (usado-por, criado-a-partir-de,
 ordem de exclusão, PUT relacoes); lixeira lógica por DELETE. Toda rota declara x-auth/x-privilegio. Leituras aceitam
-token catalogo:ler; escritas por token exigem admin:inquilino.
+token catalogo:ler; criar (POST) exige token conteudo:criar (mesmo privilégio conteudo.criar da sessão); as demais
+escritas (editar/apagar/lote/mover/versão/relações) exigem token catalogo:escrever — RLS `pode_editar` decide por
+baixo, igual à sessão (item de seguimento de L0-04-a/L0-11: antes caíam no padrão admin:inquilino de
+`autenticado()` e só perfil admin conseguia emitir o token, embora a operação seja "editar o próprio item").
 
 Documento de construtor (item L5-05-documento-versoes): `validar_grafo` roda logo depois de `tipos.validar` nas
 duas rotas que gravam `dados` (id de nó ULID, sem duplicata, sem ligação pendente); `ver` migra o documento na
@@ -554,7 +557,7 @@ def _publicar_tipo(auth: Auth, tipo: str) -> None:
     status_code=201,
     openapi_extra={"x-auth": "S/T", "x-privilegio": "conteudo.criar"},
 )
-def criar(corpo: ItemEntrada, request: Request, auth: Auth = autenticado("conteudo.criar")):
+def criar(corpo: ItemEntrada, request: Request, auth: Auth = autenticado("conteudo.criar", escopo_token="conteudo:criar")):
     tipos.obter(corpo.tipo)
     _publicar_tipo(auth, corpo.tipo)
     tipos.validar(corpo.tipo, corpo.dados)
@@ -886,12 +889,12 @@ def _editar(id: str, corpo, request: Request, auth: Auth) -> dict:
 
 
 @router.put("/api/itens/{id}", response_model=Item, openapi_extra=EDITAR)
-def editar(id: str, request: Request, corpo: dict = Body(...), auth: Auth = autenticado()):  # noqa: B008
+def editar(id: str, request: Request, corpo: dict = Body(...), auth: Auth = autenticado(escopo_token="catalogo:escrever")):  # noqa: B008
     return _editar(id, corpo, request, auth)
 
 
 @router.patch("/api/itens/{id}", response_model=Item, openapi_extra=EDITAR)
-def editar_parcial(id: str, request: Request, corpo: dict = Body(...), auth: Auth = autenticado()):  # noqa: B008
+def editar_parcial(id: str, request: Request, corpo: dict = Body(...), auth: Auth = autenticado(escopo_token="catalogo:escrever")):  # noqa: B008
     return _editar(id, corpo, request, auth)
 
 
@@ -935,7 +938,8 @@ def apagar_item(cur, request: Request, auth: Auth, iid: str, cascata: bool, forc
     response_class=Response,
     openapi_extra={"x-auth": "S/T", "x-privilegio": "rls:visibilidade|conteudo.apagar_tudo"},
 )
-def apagar(id: str, request: Request, cascata: bool = False, auth: Auth = autenticado(superadmin_pode_ler=True)):
+def apagar(id: str, request: Request, cascata: bool = False,
+           auth: Auth = autenticado(escopo_token="catalogo:escrever", superadmin_pode_ler=True)):
     iid = uuid_ok(id)
     forcado = bool(auth.superadmin and auth.modo == "sessao" and auth.leitura_inquilino is not None)
     ctx = auth.contexto_leitura() if forcado else auth.contexto()
@@ -950,7 +954,7 @@ def apagar(id: str, request: Request, cascata: bool = False, auth: Auth = autent
 
 
 @router.post("/api/itens/lote", response_model=LoteSaida, openapi_extra=EDITAR)
-def lote(corpo: LoteEntrada, request: Request, auth: Auth = autenticado()):
+def lote(corpo: LoteEntrada, request: Request, auth: Auth = autenticado(escopo_token="catalogo:escrever")):
     feitos, recusados = 0, []
     ids = [uuid_ok(i) for i in dict.fromkeys(corpo.ids)]
     for iid in ids:
@@ -1010,7 +1014,7 @@ def mover_item(cur, request: Request, auth: Auth, iid: str, pasta_id: str | None
 
 
 @router.post("/api/itens/{id}/mover", response_model=Item, openapi_extra=EDITAR)
-def mover(id: str, corpo: MoverEntrada, request: Request, auth: Auth = autenticado()):
+def mover(id: str, corpo: MoverEntrada, request: Request, auth: Auth = autenticado(escopo_token="catalogo:escrever")):
     iid = uuid_ok(id)
     try:
         with db.db(auth.contexto()) as cur:
@@ -1091,7 +1095,8 @@ def versao(id: str, n: int, diff_de: int | None = None, auth: Auth = autenticado
 
 @router.post("/api/itens/{id}/versoes/{n}/restaurar", response_model=Item, openapi_extra=EDITAR)
 def restaurar_versao(
-    id: str, n: int, request: Request, corpo: RestaurarVersaoEntrada | None = None, auth: Auth = autenticado()
+    id: str, n: int, request: Request, corpo: RestaurarVersaoEntrada | None = None,
+    auth: Auth = autenticado(escopo_token="catalogo:escrever"),
 ):
     iid = uuid_ok(id)
     try:
@@ -1113,7 +1118,7 @@ def restaurar_versao(
 
 
 @router.post("/api/itens/{id}/versoes/{n}/publicar", response_model=Item, openapi_extra=EDITAR)
-def publicar_versao(id: str, n: int, request: Request, auth: Auth = autenticado()):
+def publicar_versao(id: str, n: int, request: Request, auth: Auth = autenticado(escopo_token="catalogo:escrever")):
     iid = uuid_ok(id)
     with db.db(auth.contexto()) as cur:
         exigir_edicao(cur, iid)
@@ -1172,7 +1177,7 @@ def ordem_de_exclusao(id: str, auth: Auth = autenticado(escopo_token="catalogo:l
 
 
 @router.put("/api/itens/{id}/relacoes", response_model=list[UsadoPor], openapi_extra=EDITAR)
-def relacoes_definir(id: str, corpo: RelacoesEntrada, request: Request, auth: Auth = autenticado()):
+def relacoes_definir(id: str, corpo: RelacoesEntrada, request: Request, auth: Auth = autenticado(escopo_token="catalogo:escrever")):
     iid = uuid_ok(id)
     try:
         with db.db(auth.contexto()) as cur:
