@@ -4,6 +4,8 @@
    simples) E no barramento de mensagens do L5-07 (`barramentoApp.disparar`), quando houver. As ações de dado
    (filtrar/selecionar/limpar_*) chegam ao widget já resolvidas na vista pelo barramento; aqui ficam as ações de
    widget (piscar, abrir, fechar, definir_parametro) com comportamento padrão. */
+import { htmlSeguro } from '../base/dom.js';
+
 export class PlatWidget extends HTMLElement {
   #configuracao = {};
   #vista = null;
@@ -11,6 +13,7 @@ export class PlatWidget extends HTMLElement {
   barramento = null;
   barramentoApp = null;
   noId = '';
+  feicao = null; // feição selecionada (mapa/tabela) que os widgets de página leem por {campo} (item L5-01-d)
 
   set configuracao(valor) {
     this.#configuracao = Object.freeze({ ...(valor || {}) });
@@ -59,6 +62,27 @@ export class PlatWidget extends HTMLElement {
     if (!detalhe || typeof detalhe.nome !== 'string') return;
     this.dataset[`parametro${detalhe.nome.replace(/[^a-z0-9]/gi, '')}`] = String(detalhe.valor ?? '');
     this.configuracao = { ...this.configuracao, [detalhe.nome]: detalhe.valor };
+  }
+
+  /* ação comum `<widget>.feicao`: guarda a feição selecionada e redesenha (texto, imagem, cartão a usam;
+     item L5-01-d, restaurado de ce38d2084 após a fusão ter descartado este trecho de base.js) */
+  definirFeicao(detalhe) {
+    this.feicao = (detalhe && (detalhe.feicao || detalhe.linha || detalhe)) || null;
+    if (this.isConnected) this.renderizar();
+  }
+
+  /* HTML vindo do documento entra só pelo DOMPurify (D23); sem DOMPurify na página, cai para texto puro */
+  fragmentoSeguro(html) {
+    try { return htmlSeguro(html, { proibir: ['style', 'form', 'input', 'button'] }); }
+    catch { return document.createTextNode(String(html)); }
+  }
+
+  /* caixa de erro nomeada dentro do próprio widget (config inválida em tempo de execução) */
+  erro(mensagem) {
+    const e = document.createElement('section');
+    e.className = 'plat-widget-erro'; e.setAttribute('role', 'alert');
+    e.textContent = `Widget “${this.dataset.tipo || this.localName}”: ${mensagem}`;
+    this.replaceChildren(e);
   }
 
   /* item L5-01-e: botão "Ações" do usuário nos widgets de dado (o "Actions" do EXB): exportar as feições FILTRADAS
