@@ -106,12 +106,24 @@ class ExpurgoParametros(BaseModel):
 def catalogo_lixeira_expurgar(
     ctx, dias: int = 30, ids: list[uuid.UUID] | None = None, agora: datetime.datetime | None = None
 ) -> dict:
+    # `ids` ausente (None) = varredura por idade, que é o periódico; `ids` presente e VAZIO = pedido que não
+    # resolveu nenhum item, e nunca "expurgar tudo" (achado G2-4, laco/handoffs/T3/ataque-g2-ADVERSARIO.md:
+    # `[str(x) for x in ids] if ids else None` transformava [] em NULL e plat.lixeira_expurgar(0, now(), NULL)
+    # devolvia a lixeira INTEIRA do inquilino — expurgo físico, sem volta. Isto era a metade "tarefa" do
+    # conserto de d0e5f08df; a rota (app/catalogo/rotas_lixeira.py::esvaziar) já recusa antes de chegar aqui,
+    # mas um job criado por outro caminho — POST /api/jobs direto, sem passar pela rota — ainda cai nesta
+    # função, e ela tem de ser segura por si, não só a rota.
+    if ids is not None and len(ids) == 0:
+        raise FalhaDefinitiva("lista de itens vazia: o expurgo por lista nunca significa 'toda a lixeira'")
+    alvo = None if ids is None else [str(x) for x in ids]
     with ctx.db() as cur:
         cur.execute(
             "SELECT * FROM plat.lixeira_expurgar(%s, %s, %s::uuid[])",
-            (dias, agora or datetime.datetime.now(datetime.UTC), [str(x) for x in ids] if ids else None),
+            (dias, agora or datetime.datetime.now(datetime.UTC), alvo),
         )
         candidatos = cur.fetchall()
+    if alvo is not None and len(candidatos) > len(alvo):
+        raise FalhaDefinitiva(f"{len(candidatos)} candidatos para uma lista de {len(alvo)} itens: pedido recusado")
     ctx.log("INFO", f"{len(candidatos)} itens a expurgar (dias={dias}, agora={agora or 'now'})")
     expurgados, recusados, bytes_total = 0, [], 0
     for n, c in enumerate(candidatos, 1):
