@@ -51,14 +51,10 @@ def _arvore_sintetica(tmp_path: Path) -> Path:
     return raiz
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L7-15 (refutação literal): PLAT_RELEASE_CHECK_CMD/PLAT_RELEASE_HOMOLOG_CMD substituem `make check` "
-    "e `make homolog` por qualquer comando. O RELEASE_MANIFEST.json é escrito com make_check/make_homolog = "
-    "'passou' como texto fixo, sem olhar nada, e publicar_release.sh aprova. O manifesto não prova nada: "
-    "prova só que o próprio script o escreveu.",
-)
 def test_release_sem_check_e_sem_homolog_precisa_ser_recusada(tmp_path):
+    """CONSERTADO em 06/09/2026 (docs/RELEASE.md): o manifesto grava comando/código de saída/testes
+    contados/sha do log; publicar_release.sh recusa pacote cujo comando não seja o canônico. Este teste
+    era xfail(strict) até 15/09/2026 — a mesma técnica que ele denunciava (afirmar 'passou' sem checar)."""
     raiz = _arvore_sintetica(tmp_path)
     cod, saida, erro = rodar(
         ["bash", "scripts/preparar_release.sh", "9.9.9"],
@@ -81,12 +77,9 @@ def test_release_sem_check_e_sem_homolog_precisa_ser_recusada(tmp_path):
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L7-15: PLAT_VERIFICAR_SCRIPT troca o verificador de assinatura por qualquer executável. "
-    "`PLAT_VERIFICAR_SCRIPT=/bin/true` faz publicar_release.sh aprovar um pacote sem assinatura nenhuma.",
-)
 def test_verificador_de_assinatura_nao_pode_ser_trocado_por_variavel(tmp_path):
+    """CONSERTADO em 06/09/2026: PLAT_VERIFICAR_SCRIPT não existe mais; publicar_release.sh sempre chama
+    scripts/verificar_pacote.sh ao lado dele, então setar a variável não troca mais nada."""
     raiz = _arvore_sintetica(tmp_path)
     rodar(
         ["bash", "scripts/preparar_release.sh", "0.2.0"],
@@ -124,12 +117,9 @@ def test_publicar_precisa_recusar_regressao_de_versao(tmp_path):
     assert cod_antigo != 0, f"pacote ANTIGO aprovado depois do novo (regressão de versão): {saida}"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L7-15 (hipótese do item): 'etiqueta git vX.Y.Z assinada'. preparar_release.sh roda `git tag -a` "
-    "(anotada, NÃO assinada); `git tag -v` responde 'no signature found'.",
-)
 def test_etiqueta_de_release_precisa_ser_assinada(tmp_path):
+    """CONSERTADO em 06/09/2026: preparar_release.sh roda `git tag -s` com assinatura SSH derivada da
+    chave Ed25519 do release; `git tag -v` confere contra var/releases/allowed_signers."""
     raiz = _arvore_sintetica(tmp_path)
     rodar(
         ["bash", "scripts/preparar_release.sh", "0.1.1"],
