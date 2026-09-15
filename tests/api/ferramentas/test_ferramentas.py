@@ -7,9 +7,11 @@ import time
 
 import pytest
 
-from app import limites
+from app import esquema_dado, limites
 from app.ferramentas import executor, registro
 from app.jobs.registro import Cancelado
+from app.schema_ambiente import SCHEMA_PADRAO
+from app.settings import settings
 from tests.api.ferramentas import apoio
 from tests.api.jobs.conftest import esperar
 
@@ -32,6 +34,21 @@ def test_catalogo_lista_buffer_com_esquema_e_gpserver(sessao_a):
     assert f["esquema"]["required"] == ["camada"]
     assert f["gpserver"] == GP
     assert sessao_a.get("/api/ferramentas/nao_existe").status_code == 404
+
+
+def test_camada_de_apoio_nasce_no_schema_prefixado_da_instalacao_nunca_em_producao(camada_a, conexao_plat_app):
+    """Regressão do achado 11-15/09/2026: `tests/api/ferramentas/apoio.py::criar_camada` montava
+    `schema = f"d_{slug}"` à mão — em produção coincide com o prefixado, mas numa trilha isolada
+    (`PLAT_SCHEMA != SCHEMA_PADRAO`) aponta para o `d_<slug>` de OUTRA instalação, sem privilégio
+    (`permission denied for schema d_demo`). A tabela de `camada_a` tem de nascer em
+    `app.esquema_dado.esquema(slug)` — nunca em `"d_" + slug` puro quando a instalação não é produção."""
+    with conexao_plat_app.cursor() as cur:
+        esperado = esquema_dado.esquema(cur, "demo")
+    assert camada_a["schema"] == esperado
+    if settings.PLAT_SCHEMA != SCHEMA_PADRAO:
+        assert camada_a["schema"] != "d_demo", (
+            f"camada da trilha {settings.PLAT_SCHEMA!r} nasceu em d_demo (schema de dado de produção)"
+        )
 
 
 def test_parametro_fora_do_tipo_e_422_nomeando_o_campo(sessao_a, camada_a):

@@ -4,6 +4,7 @@ de catálogo correspondente pela API, e a limpeza pelo destruidor do tipo (mesmo
 
 import uuid
 
+from app import esquema_dado
 from app.catalogo import destruidores
 from tests import jobs_sessao
 from tests.api.conftest import PREFIXO_TESTE
@@ -14,7 +15,9 @@ PONTOS = [("A", 1, -46.50, -23.40), ("B", 2, -46.51, -23.41), ("C", 3, -46.52, -
 
 
 def criar_camada(env, sessao, slug: str = "demo", pontos=PONTOS) -> dict:
-    """Cria tabela d_<slug>.c_<16 hex> com campos nome/valor e geom Point 4326, e o item camada_vetorial."""
+    """Cria tabela <prefixo>d_<slug>.c_<16 hex> (prefixo de instalação de `plat.camada_schema_prefixo()`; `d_`
+    em produção, `d_plat_t<trilha>_` numa trilha — ver app/esquema_dado.py) com campos nome/valor e geom Point
+    4326, e o item camada_vetorial."""
     con = jobs_sessao.conectar(env["PLAT_DSN"])
     try:
         ids = ids_por_slug(con)
@@ -24,8 +27,8 @@ def criar_camada(env, sessao, slug: str = "demo", pontos=PONTOS) -> dict:
         contexto(con, ids[slug], usuario_id=adm, login="admin")
         item_id = str(uuid.uuid4())
         tabela = "c_" + uuid.UUID(item_id).hex[:16]
-        schema = f"d_{slug}"
         with con.cursor() as cur:
+            schema = esquema_dado.esquema(cur, slug)
             cur.execute("SELECT to_regnamespace(%s) IS NULL AS falta", (schema,))
             if cur.fetchone()["falta"]:
                 cur.execute("SELECT plat.camada_schema_garantir(%s)", (slug,))
