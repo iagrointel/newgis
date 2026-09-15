@@ -294,8 +294,13 @@ def baixar(exportacao_id: str, request: Request, auth: Auth = autenticado(escopo
 
 
 @router.delete("/api/exportacoes/{exportacao_id}", status_code=204, response_class=Response, openapi_extra=LER)
-def apagar(exportacao_id: str, auth: Auth = autenticado(escopo_token="admin:inquilino")):
-    """Cancela a que ainda roda (o job é cancelado junto) ou apaga o arquivo da que já está pronta."""
+def apagar(exportacao_id: str, auth: Auth = autenticado(escopo_token="conteudo:exportar")):
+    """Cancela a que ainda roda (o job é cancelado junto) ou apaga o arquivo da que já está pronta.
+
+    Item de seguimento de L0-04-a/L0-11: exigia token `admin:inquilino` para cancelar/apagar a PRÓPRIA
+    exportação — só perfil admin conseguia emitir esse escopo (`app/auth/rotas_tokens.py`), embora
+    `conteudo.exportar` (o privilégio que já cobre `POST /api/exportacoes`, teto editor/admin) baste, e
+    `_carregar` acima já recusa com 404 quem não é dono (nem tem `jobs.gerir_todos`)."""
     with db.db(auth.contexto()) as cur:
         r = _carregar(cur, auth, exportacao_id)
     if r["estado"] in ESTADOS_APAGAVEIS:
