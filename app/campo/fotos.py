@@ -2,7 +2,7 @@
 JPEG limpo — MESMA técnica de app/catalogo/miniatura.py::normalizar (o reencode por Pillow É a fronteira de
 segurança de conteúdo: um arquivo que não é imagem de verdade nunca sobrevive ao Image.open+save; nenhum
 metadado do aparelho — EXIF, GPS embutido no arquivo — sobrevive ao reencode, mesma prática do sistema de
-origem `rs-coop/certaja/sig::_foto_guardar`)."""
+origem do SIG anterior)."""
 
 from __future__ import annotations
 

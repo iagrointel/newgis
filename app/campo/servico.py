@@ -1,5 +1,5 @@
 """Núcleo do módulo campo (item L2-07-campo): fila de trabalho, roteiro do dia (ordem de visita + trajeto) e
-visita com foto — portado de rs-coop/certaja/sig (`app/main.py` seções `filas`/`rotas`/`visitas`).
+visita com foto — portado do SIG anterior (`app/main.py` seções `filas`/`rotas`/`visitas`).
 
 Mudança de desenho pela casa (multi-inquilino, ver cabeçalho da migração 20260910T2245_campo.sql): o ALVO não
 é mais uma tabela própria com atributos do domínio elétrico — é a referência (camada_id, globalid) para uma

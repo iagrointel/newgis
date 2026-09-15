@@ -29,7 +29,7 @@ from tests.api.test_rls import contexto, ids_por_slug
 
 RAIZ = Path(__file__).resolve().parents[2]
 EXTRATO = str(RAIZ / "tests" / "dados" / "taquari_power.osm")
-MUNICIPIO = json.loads((RAIZ / "tests" / "dados" / "taquari_limite.geojson").read_text())
+MUNICIPIO = json.loads((RAIZ / "tests" / "dados" / "municipio_limite.geojson").read_text())
 
 
 @pytest.fixture
@@ -52,7 +52,7 @@ def _rede_com_eletrica(sessao, limpar, sufixo):
 
 
 def _importar(sessao, rid):
-    corpo = {"caminho": EXTRATO, "municipio": MUNICIPIO, "nome_municipio": "Taquari"}
+    corpo = {"caminho": EXTRATO, "municipio": MUNICIPIO, "nome_municipio": "Município de teste"}
     return sessao.post(f"/api/rede/{rid}/importar-osm", json=corpo)
 
 
@@ -127,7 +127,7 @@ def test_ficha_mostra_licenca_e_aviso(sessao_a, limpar_redes):
     item = itens[0]
     assert item["fonte"] == "osm"
     assert item["estado"] == "concluida"
-    assert item["municipio"] == "Taquari"
+    assert item["municipio"] == "Município de teste"
     assert "ODbL" in item["licenca"]
     assert item["aviso"] == "cadastro comunitário, não oficial"
     assert len(item["sha256"]) == 64
@@ -145,7 +145,8 @@ def test_sem_pacote_recusa_com_a_lista_dos_tipos_que_faltam(sessao_a, limpar_red
 
 def test_extrato_inexistente_e_erro_explicado_nao_excecao_crua(sessao_a, limpar_redes):
     rid = _rede_com_eletrica(sessao_a, limpar_redes, "sem-arquivo")
-    corpo = {"caminho": "/nao/existe/em/lugar/nenhum.osm", "municipio": MUNICIPIO, "nome_municipio": "Taquari"}
+    corpo = {"caminho": "/nao/existe/em/lugar/nenhum.osm", "municipio": MUNICIPIO,
+             "nome_municipio": "Município de teste"}
     r = sessao_a.post(f"/api/rede/{rid}/importar-osm", json=corpo)
     assert r.status_code == 422, r.text
     assert "não encontrado" in r.json()["mensagem"]

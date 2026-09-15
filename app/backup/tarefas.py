@@ -31,7 +31,7 @@ Os dois tipos recusam rodar fora do inquilino técnico (a função SQL `backup_c
 ## L0-06-backup-status (por inquilino)
 
 Tipos de job do backup lógico por inquilino (item L0-06-backup-status; porta
-`/home/dev/fgr/sig/pipeline/backup.sh`/`restore_test.sh` para o multi-inquilino do PLAT — ver o desenho
+o pipeline de backup/ensaio de restauração do SIG anterior para o multi-inquilino do PLAT — ver o desenho
 completo em `app/backup/__init__.py`).
 
 `backup.executar` — pg_dump -Fc (comprimido) do schema `d_<slug>` do PRÓPRIO inquilino do job, sha256,

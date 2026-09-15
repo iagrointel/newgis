@@ -1269,7 +1269,7 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `AGOL_POLL_TENTATIVAS_MAX` | `90` | 90 x 4 s = 6 min (mesmo teto do script original: `for _ in range(90)`) |
 | `AGOL_FEICOES_MAX` | `200000` | teto de segurança do export GeoJSON (fetchall bounded; camada maior |
 
-## campo: fila de trabalho, roteiro e visita com foto (item L2-07-campo), portado de rs-coop/certaja/sig
+## campo: fila de trabalho, roteiro e visita com foto (item L2-07-campo), portado do SIG anterior
 
 | nome | valor | explicação |
 |---|---|---|

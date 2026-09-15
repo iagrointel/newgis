@@ -35,30 +35,16 @@ LICENCAS = RAIZ / "dados" / "demo" / "LICENCAS.md"
 
 TETO_PACOTE_BYTES = 300 * 1024 * 1024
 
-NOMES_PROIBIDOS = [
-    "cbre",
-    "novaterra",
-    "certaja",
-    "certel",
-    "fgr",
-    "sicredi",
-    "daiichi",
-    "arayara",
-    "ineep",
-    "neoenergia",
-    "petrobras",
-    "state grid",
-    "robson",
-    "corporate gestao",
-    "inovacoop",
-    "coprel",
-    "cooperaliança",
-    "light rj",
-    "edp es",
-    "iagrosat ltda",
-    "queiroz",
-    "finotti",
-]
+def _nomes_proibidos() -> list[str]:
+    """Nomes que nunca podem aparecer em arquivo de demonstração (cláusula 3). Lido de
+    `tests/nomes_proibidos.regex` — a MESMA lista que a fila de junção usa para reprovar nome de
+    cliente em arquivo do produto — nunca listado aqui, para não virar ele mesmo uma ocorrência do
+    que proíbe."""
+    padrao = (RAIZ / "tests" / "nomes_proibidos.regex").read_text(encoding="utf-8").strip()
+    return re.search(r"\(([^)]*)\)", padrao).group(1).split("|")
+
+
+NOMES_PROIBIDOS = _nomes_proibidos()
 
 sys.path.insert(0, str(RAIZ))
 from dados.demo import semear as demo_semear  # noqa: E402

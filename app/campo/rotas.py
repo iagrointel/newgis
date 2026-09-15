@@ -14,7 +14,7 @@ arquivo a cada resposta, então o teste de invalidação de cache troca o conte�
 servidor).
 
 Fila de trabalho, roteiro do dia e visita com foto (item L2-07-campo): `router`, prefixo `/api/campo`, portado
-de rs-coop/certaja/sig (`app/main.py`, rotas `/api/filas*`, `/api/rotas*`, `/api/visitas*`, `/api/fotos/{nome}`).
+do SIG anterior (`app/main.py`, rotas `/api/filas*`, `/api/rotas*`, `/api/visitas*`, `/api/fotos/{nome}`).
 Privilégio único `campo.coletar` (já existe na casa desde a migração 003 — perfil `campo` inteiro foi
 desenhado para isto) para toda escrita; leitura é `rls:visibilidade` (qualquer sessão válida do inquilino, a
 RLS de cada tabela `plat.campo_*` já isola por `tenant_id`). Sem escopo de token dedicado ainda (nenhum

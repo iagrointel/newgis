@@ -1,6 +1,6 @@
 /* plat · modelo3d — bootstrap da tela /modelo/{id} (item L1-03-modelo3d). Dois visualizadores na mesma
    página, escolhidos por `?tipo=` (modelo3d, padrão | foto360): xeokit (módulo ES, carregado sob demanda —
-   o mesmo jeito que fgr/sig/web/js/pages.js::viewer3d faz) para .xkt, pannellum (script clássico, já
+   o mesmo jeito que o visualizador 3D do SIG anterior faz) para .xkt, pannellum (script clássico, já
    carregado por modelo.html) para a foto equirretangular. `body[data-pronto="1"]` só depois do primeiro
    modelo carregado — o e2e/Playwright espera por isso. */
 import '../base/componentes.js';

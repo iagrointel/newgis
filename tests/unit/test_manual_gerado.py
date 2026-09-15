@@ -32,10 +32,17 @@ def _png_1x1() -> bytes:
 
 PNG_1X1 = _png_1x1()
 
-NOMES_DE_CLIENTE = [
-    "CBRE", "Novaterra", "novaterrageo", "iAgroSat", "iAgroIntel", "CENTELHA",
-    "Novaterra Geoprocessamento", "Corp360", "Corporate Gestao",
-]
+def _nomes_de_cliente() -> list[str]:
+    """Nomes que o manual gerado (branco, item L7-04-a) nunca pode citar: os nomes de cliente/parceiro
+    lidos de `tests/nomes_proibidos.regex` — a MESMA lista da fila de junção, nunca copiada aqui como
+    texto — combinados com a própria marca operadora (nem cliente nem casa aparece num manual white-label)."""
+    padrao = (RAIZ / "tests" / "nomes_proibidos.regex").read_text(encoding="utf-8").strip()
+    clientes = re.search(r"\(([^)]*)\)", padrao).group(1).split("|")
+    marca_da_casa = ["iAgroSat", "iAgroIntel", "CENTELHA", "novaterrageo", "Corp360", "Corporate Gestao"]
+    return clientes + marca_da_casa
+
+
+NOMES_DE_CLIENTE = _nomes_de_cliente()
 
 
 def gerador():

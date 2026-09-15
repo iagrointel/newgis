@@ -15,12 +15,17 @@ Cada cláusula do portão vira um teste aqui:
      atribuição e obrigações; ODbL leva atribuição E share-alike. É a refutação do item, feita aqui mesmo:
      exportar a camada ODbL e procurar o aviso de atribuição no pacote.
 
-Camada de teste: `cbre.osm_aeroway` (1.523 feições reais do OpenStreetMap nesta base, medido 06/09/2026),
-fonte `openstreetmap` — a fonte ODbL canônica da curadoria do item L6-01-g. A licença NÃO é semeada de
-cabeça: a fixture faz o GET de verdade em https://www.openstreetmap.org/copyright, exige HTTP 200 e os
-termos esperados, e grava o recorte literal como evidência — o mesmo critério do script de curadoria, na
-hora do teste. Uma segunda camada (`cbre.osm_rail`, fonte `dnit-osm-rodovias`, SEM licença curada) prova a
-recusa D17.
+Camada de teste: uma tabela real do OpenStreetMap com feições de aeroway (fonte `openstreetmap` — a fonte
+ODbL canônica da curadoria do item L6-01-g). A licença NÃO é semeada de cabeça: a fixture faz o GET de
+verdade em https://www.openstreetmap.org/copyright, exige HTTP 200 e os termos esperados, e grava o
+recorte literal como evidência — o mesmo critério do script de curadoria, na hora do teste. Uma segunda
+camada (feições de ferrovia, fonte `dnit-osm-rodovias`, SEM licença curada) prova a recusa D17.
+
+⛔ PENDÊNCIA (item T9): a curadoria original usava duas tabelas de OSM de um schema de cliente do
+acervo compartilhado, e este repositório é público — nome de cliente não pode aparecer em arquivo do
+produto. Não há, hoje, tabela equivalente (feições reais de OSM com geometria) fora de um schema de
+cliente nesta base; os nomes abaixo são placeholders que NÃO existem, e o módulo fica marcado
+`skip` até que o item T9 traga a mesma curadoria sobre um schema de dado aberto.
 """
 
 import hashlib
@@ -36,6 +41,8 @@ from pathlib import Path
 import httpx
 import pytest
 
+pytestmark = pytest.mark.skip(reason="depende de schema de cliente; substituir por dado aberto — T9")
+
 ROOT = Path(__file__).resolve().parents[2]
 PUBLICAR = ROOT / "scripts" / "acervo_publicar.py"
 ITEM = "L6-01-e-assinatura-e-uso"
@@ -43,11 +50,11 @@ ITEM = "L6-01-e-assinatura-e-uso"
 FONTE_ODBL = "openstreetmap"
 URL_LICENCA_OSM = "https://www.openstreetmap.org/copyright"
 TERMOS_OSM = ["Open Data Commons Open Database License", "ODbL"]
-CAMADA_ODBL_ID = "openstreetmap/cbre.osm_aeroway"
-VIEW_ODBL = "cbre_osm_aeroway"
+CAMADA_ODBL_ID = "openstreetmap/acervo_teste.osm_aeroway_aberto"
+VIEW_ODBL = "acervo_teste_osm_aeroway_aberto"
 
-CAMADA_SEM_LICENCA_ID = "dnit-osm-rodovias/cbre.osm_rail"
-VIEW_SEM_LICENCA = "cbre_osm_rail"
+CAMADA_SEM_LICENCA_ID = "dnit-osm-rodovias/acervo_teste.osm_rail_aberto"
+VIEW_SEM_LICENCA = "acervo_teste_osm_rail_aberto"
 
 
 def _schema() -> str:
@@ -149,12 +156,12 @@ def _limpar_estado() -> None:
 @pytest.fixture(scope="module")
 def camadas_prontas():
     """Camada ODbL publicada COM licença verificada por HTTP na hora + camada SEM licença para a recusa."""
-    if not (_tabela_existe("cbre.osm_aeroway") and _tabela_existe("cbre.osm_rail")):
-        pytest.skip("tabelas cbre.osm_aeroway/cbre.osm_rail não existem nesta base")
+    if not (_tabela_existe("acervo_teste.osm_aeroway_aberto") and _tabela_existe("acervo_teste.osm_rail_aberto")):
+        pytest.skip("tabelas acervo_teste.osm_aeroway_aberto/acervo_teste.osm_rail_aberto não existem nesta base")
     status, evidencia = _verificar_licenca_osm_agora()
     _semeia_licenca(status, evidencia)
-    _registrar_camada(CAMADA_ODBL_ID, FONTE_ODBL, "cbre.osm_aeroway", "GEOMETRY")
-    _registrar_camada(CAMADA_SEM_LICENCA_ID, "dnit-osm-rodovias", "cbre.osm_rail", "LINESTRING")
+    _registrar_camada(CAMADA_ODBL_ID, FONTE_ODBL, "acervo_teste.osm_aeroway_aberto", "GEOMETRY")
+    _registrar_camada(CAMADA_SEM_LICENCA_ID, "dnit-osm-rodovias", "acervo_teste.osm_rail_aberto", "LINESTRING")
     _publicar()
     _limpar_estado()
     return {"odbl": VIEW_ODBL, "sem_licenca": VIEW_SEM_LICENCA}
@@ -285,7 +292,7 @@ def test_dez_consultas_aparecem_como_dez_no_registro_do_dia(camadas_prontas, ass
     assert depois["camada"]["feicoes"] - antes["camada"]["feicoes"] == feicoes_servidas
     medida(ITEM)("dez_consultas_registradas_no_dia",
                  depois["camada"]["consultas"] - antes["camada"]["consultas"], "consultas",
-                 "10 x GET /api/acervo/camadas/cbre_osm_aeroway/feicoes; delta de GET /api/acervo/uso")
+                 "10 x GET /api/acervo/camadas/acervo_teste_osm_aeroway_aberto/feicoes; delta de GET /api/acervo/uso")
 
 
 def test_relatorio_mensal_agrega_o_uso_da_camada(camadas_prontas, assinatura_odbl, sessao_a):
@@ -382,10 +389,10 @@ def test_export_leva_licenca_txt_com_atribuicao_odbl(camadas_prontas, assinatura
     assert "sha256 do texto aceito" in texto
     assert dados["type"] == "FeatureCollection" and dados["total"] >= 1
     medida(ITEM)("export_pacote_leva_licenca_txt_e_atribuicao", 1, "booleano",
-                 "GET /api/acervo/camadas/cbre_osm_aeroway/exportar; LICENCA.txt com 'Licença: ODbL', "
+                 "GET /api/acervo/camadas/acervo_teste_osm_aeroway_aberto/exportar; LICENCA.txt com 'Licença: ODbL', "
                  "'Atribuição exigida: Dados de OpenStreetMap' e share-alike")
     medida(ITEM)("export_pacote_bytes", len(r.content), "bytes",
-                 "tamanho do .zip de 50 feições de cbre.osm_aeroway com LICENCA.txt")
+                 "tamanho do .zip de 50 feições de acervo_teste.osm_aeroway_aberto com LICENCA.txt")
 
 
 def test_export_sem_assinatura_e_403(camadas_prontas, sessao_b):

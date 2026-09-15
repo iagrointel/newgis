@@ -1,6 +1,6 @@
 """Job `agol.publicar` (item L2-08-migracao-agol; ADR 0003): publica uma `camada_vetorial` hospedada do
 inquilino como hosted feature layer na conta ArcGIS Online do CLIENTE (`app/agol/cliente.py`, portado de
-`/home/dev/fgr/sig/pipeline/20_agol_publish.py`). Ordem pensada para cancelamento/retentativa, mesma regra de
+o script de publicação AGOL do SIG anterior). Ordem pensada para cancelamento/retentativa, mesma regra de
 `app/imagens/ingestao.py`: o trabalho caro (export do GeoJSON, upload, publish) acontece fora de qualquer
 `with ctx.db()` que precise ficar aberto por muito tempo; o estado em `plat.agol_publicacao` é gravado antes
 (estado='publicando') e depois (estado='publicado'|'erro') em transações curtas."""

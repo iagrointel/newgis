@@ -1,7 +1,7 @@
 -- 20260910T2210_backup_restore_drill: item L0-06-backup-status — ensaio de restauração. Restaura o último
 -- dump do inquilino num schema TEMPORÁRIO da MESMA base (`plat_ensaio_<hex>`; o Postgres é compartilhado
 -- com sistemas de cliente — sem banco novo, sem reinício), confere COUNT(*) de cada tabela contra a
--- produção e sempre derruba o schema temporário. Porta /home/dev/fgr/sig/pipeline/restore_test.sh (que usa
+-- produção e sempre derruba o schema temporário. Porta o script de ensaio de restauração do SIG anterior (que usa
 -- um BANCO separado, opção fechada aqui — ver app/backup/__init__.py). `app/backup/tarefas.py::
 -- backup_ensaio_restauracao` é quem grava. Idempotente. Sem BEGIN/COMMIT. Aplicada como postgres.
 

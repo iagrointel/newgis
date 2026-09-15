@@ -64,7 +64,7 @@ from psycopg2.extras import Json, execute_values
 LOTE = 5000
 EXEMPLOS_MAX = 5
 # teto declarado da leitura em memória (nós+vias power=* do recorte já filtrado por osmium):
-# município real medido (Taquari-RS, fixture do item) fica na casa das centenas; 300 mil
+# município real medido (fixture do item) fica na casa das centenas; 300 mil
 # elementos cobre uma capital inteira com folga e ainda impede o extrato errado (ex.: o Brasil
 # inteiro por engano) de estourar a RAM da máquina (regra dura: nunca ler .pbf sem teto).
 MAX_ELEMENTOS = 300_000

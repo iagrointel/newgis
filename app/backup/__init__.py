@@ -23,7 +23,7 @@ com mensagem, e a falha segue o caminho de notificação.
 ## L0-06-backup-status — backup POR INQUILINO e ensaio de restauração
 
 Porta para o PLAT o que já roda em produção no SIG de teste interno da casa
-(`/home/dev/fgr/sig/pipeline/backup.sh` + `restore_test.sh`, rotas `/api/backups` e
+(pipeline de backup/ensaio de restauração do SIG anterior, rotas `/api/backups` e
 `/api/backups/verificar`): pg_dump -Fc do schema, sha256, tabela de registro, e um ensaio que restaura o
 último dump e confere COUNT(*) contra o banco vivo.
 

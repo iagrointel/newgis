@@ -1,6 +1,6 @@
-"""Rotas da integração ArcGIS Online do cliente (item L2-08-migracao-agol; portado de
-`/home/dev/fgr/sig/app/v2.py` — rotas `/api/integracoes/agol` e `/api/integracoes/agol/publicar` — e
-`/home/dev/fgr/sig/pipeline/20_agol_publish.py`). Diferenças do original, por causa do multi-inquilino do
+"""Rotas da integração ArcGIS Online do cliente (item L2-08-migracao-agol; portado das rotas
+`/api/integracoes/agol` e `/api/integracoes/agol/publicar` e do script de publicação AGOL do SIG
+anterior). Diferenças do original, por causa do multi-inquilino do
 PLAT: (1) a credencial fica cifrada em `tenant.config.agol` por INQUILINO (o original usava AGOL_USER/
 AGOL_PASSWORD do `.env` do servidor, uma credencial só, compartilhada por todos os clientes que o processo
 atendia — aqui isso seria um vazamento entre inquilinos); (2) a publicação roda na FILA de jobs (`agol.

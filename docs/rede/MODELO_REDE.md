@@ -53,7 +53,7 @@ primeiras eram as únicas sem esse tratamento, corrigido) entra com contagem 0 d
 
 ## 4. Achado de dado real: RAMLIG não tem segundo ponto de conexão nomeado
 
-Medido contra um extrato real de distribuidora (Vale do Taquari/RS, `tests/dados/bdgd_extrato_etb23.gdb`,
+Medido contra um extrato real de distribuidora (`tests/dados/bdgd_extrato_etb23.gdb`,
 conferido também na BDGD completa de 2.418.764 linhas de RAMLIG): `PN_CON_2` vem **vazio em 100%** das
 linhas. O manual da ANEEL e o próprio arquivo confirmam por que: o ramal de ligação liga a rede
 (`PN_CON_1`, que casa com o `PN_CON` da unidade consumidora em ~95% dos casos medidos) direto ao

@@ -1,5 +1,5 @@
-"""Cliente ArcGIS REST API (item L2-08-migracao-agol), portado de
-`/home/dev/fgr/sig/pipeline/20_agol_publish.py`: generateToken -> addItem (GeoJSON) -> publish (hosted feature
+"""Cliente ArcGIS REST API (item L2-08-migracao-agol), portado do script de publicação AGOL do SIG
+anterior: generateToken -> addItem (GeoJSON) -> publish (hosted feature
 service); numa rodada seguinte, overwrite do mesmo item. Igual ao original nas chamadas e no formato dos
 parâmetros publicados (targetSR 4326, maxRecordCount 5000, capabilities Query); diferente porque cada
 requisição passa por `app.conexao.seguranca` (validação SSRF + cliente pinado no IP já validado) em vez de

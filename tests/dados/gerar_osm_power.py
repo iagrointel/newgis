@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Gera o extrato OSM sintético `taquari_power.osm` usado pelo teste do conector
 power=* (item L4-05-g-osm-power). Não baixa nada da internet: os nós/vias abaixo foram
-desenhados a mão dentro (e um pouco fora) do polígono de Taquari-RS (`taquari_limite.geojson`,
+desenhados a mão dentro (e um pouco fora) do polígono de um município real (`municipio_limite.geojson`,
 IBGE 2022), cobrindo cada ramo do mapeamento declarado em `app/rede_utilidades/osm_power.py` --
 via power=line/minor_line cortada por nó tipado, torre/poste fixados no trecho (sem cortar),
 ativo avulso sem via, ponto fora do recorte, área de subestação com junção dentro e uma relação

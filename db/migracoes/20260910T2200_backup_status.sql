@@ -1,5 +1,5 @@
 -- 20260910T2200_backup_status: item L0-06-backup-status (linha L0 fundação) — backup lógico POR INQUILINO,
--- portado de /home/dev/fgr/sig/pipeline/backup.sh (pg_dump -Fc do schema + sha256 + tabela de registro).
+-- portado do pipeline de backup do SIG anterior (pg_dump -Fc do schema + sha256 + tabela de registro).
 -- Diferença do original por causa do multi-inquilino do PLAT: aqui não há bucket global 'plat-backup' — o
 -- dump sobe ao bucket do PRÓPRIO inquilino no Garage (app/objetos.py, mesmo caminho que app/imagens usa
 -- para o COG). `app/backup/tarefas.py::backup_executar` é quem grava. Idempotente. Sem BEGIN/COMMIT.

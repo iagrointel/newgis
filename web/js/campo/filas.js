@@ -1,7 +1,7 @@
 /* plat — tela /campo/filas (item L2-07-campo): lista as filas de trabalho do inquilino e cria uma nova a
    partir de uma camada vetorial hospedada do catálogo — o alvo de campo é sempre uma feição de camada do
    catálogo (camada_id + globalid), nunca uma tabela paralela. Porta o conceito de `fila`/`fila_item` do SIG
-   de campo que a casa já opera (rs-coop/certaja/sig, web/js/pages.js::painelFilas). */
+   de campo que a casa já opera (SIG anterior, web/js/pages.js::painelFilas). */
 import { obter, enviar, mensagemDe } from '../base/api.js';
 import { h, limpar } from '../base/dom.js';
 import { carregar, t, formatarData } from '../base/i18n.js';

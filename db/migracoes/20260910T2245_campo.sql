@@ -1,5 +1,5 @@
 -- 20260910T2245_campo (item L2-07-campo, 10/09/2026): módulo de CAMPO — a casa já opera fila de trabalho,
--- roteiro do dia e visita com foto dentro de um SIG de cliente (rs-coop/certaja/sig e o irmão edp_es/sig);
+-- roteiro do dia e visita com foto dentro de um SIG de cliente (o SIG anterior e o irmão de outro cliente);
 -- este é o mesmo módulo portado para a plataforma, com DUAS mudanças de desenho por causa do multi-inquilino:
 --
 --   1. no sistema de origem o ALVO é uma tabela própria (`alvo`, com atributos fixos do domínio elétrico:

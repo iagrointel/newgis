@@ -5,13 +5,13 @@ PONTO é justamente testar contra dado REAL da ANEEL (esquisitices de campo incl
 cláusula "contagem conferida contra o arquivo" pede), não uma malha de ordem de grandeza equivalente.
 
 Fonte: `/home/dev/liga/certaja_2024.gdb.zip` — ativo da casa já documentado como tal pelo item irmão
-`L4-01-c-importador-bdgd` (BDGD 2024-12-31 V11 da cooperativa Certaja Energia, 13,5 MB comprimidos,
+`L4-01-c-importador-bdgd` (BDGD 2024-12-31 V11 de uma cooperativa real, 13,5 MB comprimidos,
 56 MB abertos: 6 SUB, 21 CTMT, 44.268 SSDMT, 5.481 UNTRMT, 29.244 SSDBT, 27.587 UCBT_tab, 26.581
 RAMLIG, 3.064 UNSEMT, 142 UCMT_tab, 60.549 PONNOT — uma distribuidora REAL inteira, não um recorte).
 Se o arquivo não estiver na máquina (ambiente sem os ativos da casa), o chamador deve pular o teste —
 `obter_extrato()` levanta `FileNotFoundError` para isso.
 
-Achado ao medir (06-07/09/2026): importar a Certaja INTEIRA (44.268 SSDMT + 29.244 SSDBT + 27.587
+Achado ao medir (06-07/09/2026): importar a distribuidora INTEIRA (44.268 SSDMT + 29.244 SSDBT + 27.587
 UCBT_tab + 5.481 UNTRMT + 3.064 UNSEMT — a associação de cada dispositivo/consumidor com a junção é
 UMA CONSULTA por linha, não em lote) passou de 13 minutos sem terminar numa trilha sob disputa de
 banco compartilhada — achado registrado em `docs/rede/MODELO_REDE.md` §4 como pendência de
@@ -44,7 +44,7 @@ def obter_extrato() -> str:
         return str(DESTINO)
     if not FONTE.exists():
         raise FileNotFoundError(
-            f"ativo da casa ausente: {FONTE} (BDGD real da Certaja, documentada em L4-01-c; "
+            f"ativo da casa ausente: {FONTE} (BDGD real de uma distribuidora, documentada em L4-01-c; "
             "sem ela, os testes que dependem de distribuidora real pulam)"
         )
     RAIZ_GERADOS.mkdir(parents=True, exist_ok=True)

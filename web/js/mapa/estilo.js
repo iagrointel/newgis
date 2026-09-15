@@ -6,8 +6,8 @@
 
    Medido 10/09 (captura de tela real): `/mapa` abria SEMPRE no recorte vetorial de Guarulhos (19 MB, só o
    canto superior direito da tela em qualquer outro lugar do Brasil) — "isso não é um SIG" (o dono). A base
-   PADRÃO agora é o raster aberto `tile.openstreetmap.org` (mundial, mesma pilha MapLibre-sobre-OSM do SIG da
-   FGR); o recorte vetorial de Guarulhos continua no seletor "camada base" como opção (uso: instrumento local
+   PADRÃO agora é o raster aberto `tile.openstreetmap.org` (mundial, mesma pilha MapLibre-sobre-OSM de um
+   SIG irmão); o recorte vetorial de Guarulhos continua no seletor "camada base" como opção (uso: instrumento local
    de alto detalhe, viário/edificação/lugar vetorizados) — nenhum dos dois é removido.
 
    `construirEstilo(base)` aceita um descritor `{ tipo, url? }`:

@@ -694,7 +694,7 @@ ROUTERS = [
     # /api/agol/publicacoes (job agol.publicar -> hosted feature layer na conta AGOL do inquilino)
     rotas_agol.router,
     # --- campo (L2-07-campo): fila de trabalho, roteiro do dia e visita com foto — /api/campo/filas,
-    # /api/campo/roteiros, /api/campo/visitas, portado de rs-coop/certaja/sig
+    # /api/campo/roteiros, /api/campo/visitas, portado do SIG anterior
     rotas_campo.router,
     # --- construtor de formulário de atributos, arrasta-e-solta (L5-03-form-builder):
     # /api/camadas/{id}/campos, /formulario, /formulario/versoes* — usado pelo construtor, pela

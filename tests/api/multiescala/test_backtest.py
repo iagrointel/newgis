@@ -1,8 +1,8 @@
 """Backtest contra decisão REAL sobre DADO ABERTO (item L3-09-backtest-decisao-real), pela API:
 `POST /api/multiescala/execucoes/{id}/backtest`.
 
-O dado aberto desta casa: `cbre.osm_buildings_ind` (OpenStreetMap, prédios industriais) e `cbre.osm_roads`
-(vias). A plataforma NÃO lê esse schema — o papel do inquilino é isolado dele, e assim tem de ser. Quem lê é a
+O dado aberto desta casa: uma tabela real de OpenStreetMap com prédios industriais e outra com vias.
+A plataforma NÃO lê esse schema — o papel do inquilino é isolado dele, e assim tem de ser. Quem lê é a
 FIXTURE, como a casa leria qualquer dado aberto antes de trazê-lo: os pontos das escolhas e as amostras do
 fator entram na plataforma pela API dela mesma. Sem o dado no banco, a suíte é pulada com a razão.
 
@@ -11,7 +11,13 @@ até a via motorway/trunk/primary mais próxima, uma amostra por célula); grade
 dos galpões OSM com área > 5.000 m² dentro da janela (a mesma regra que o item nomeia).
 Cláusulas provadas aqui: relatório com AUC, percentil mediano, nulo e p-valor sobre o dado aberto; escolhas
 sintéticas do próprio modelo com AUC ≥ 0,95 e aleatórias 0,5 ± 0,05 pela API; camada anacrônica marcada.
-Refutação: escolhas = todas as células (AUC indefinida, com a frase) e escolhas fora da grade (contagem)."""
+Refutação: escolhas = todas as células (AUC indefinida, com a frase) e escolhas fora da grade (contagem).
+
+⛔ PENDÊNCIA (item T9): as duas tabelas de OSM usadas aqui vivem hoje num schema de cliente do acervo
+compartilhado, e este repositório é público — nome de cliente não pode aparecer em arquivo do produto.
+Não há, nesta base, tabela equivalente (feições reais de OSM com geometria) fora de um schema de
+cliente; os nomes abaixo são placeholders que NÃO existem, e o módulo fica marcado `skip` até que o
+item T9 traga o mesmo dado aberto sobre um schema neutro."""
 
 from __future__ import annotations
 
@@ -22,6 +28,8 @@ import subprocess
 import pytest
 
 from tests.api.test_rls import contexto, ids_por_slug
+
+pytestmark = pytest.mark.skip(reason="depende de schema de cliente; substituir por dado aberto — T9")
 
 JANELA = {"lon0": -46.65, "lat0": -23.55, "lon1": -46.35, "lat1": -23.35}
 RESOLUCAO_M = 500.0
@@ -41,19 +49,24 @@ def _psql(sql: str) -> list[list[str]]:
 
 @pytest.fixture(scope="module")
 def dado_aberto():
-    linhas = _psql("SELECT to_regclass('cbre.osm_buildings_ind')::text, to_regclass('cbre.osm_roads')::text")
+    linhas = _psql(
+        "SELECT to_regclass('acervo_teste.osm_buildings_ind_aberto')::text, "
+        "to_regclass('acervo_teste.osm_roads_aberto')::text"
+    )
     if not linhas or linhas[0][0] in ("", None) or linhas[0][1] in ("", None):
-        pytest.skip("cbre.osm_buildings_ind / cbre.osm_roads ausentes nesta instalação")
+        pytest.skip(
+            "acervo_teste.osm_buildings_ind_aberto / acervo_teste.osm_roads_aberto ausentes nesta instalação"
+        )
     galpoes = _psql(
         "SELECT round(ST_X(ST_PointOnSurface(geom))::numeric,6), round(ST_Y(ST_PointOnSurface(geom))::numeric,6) "
-        f"FROM cbre.osm_buildings_ind WHERE area_m2 > 5000 AND ST_Intersects(geom, ST_MakeEnvelope("
+        f"FROM acervo_teste.osm_buildings_ind_aberto WHERE area_m2 > 5000 AND ST_Intersects(geom, ST_MakeEnvelope("
         f"{JANELA['lon0']}, {JANELA['lat0']}, {JANELA['lon1']}, {JANELA['lat1']}, 4326))"
     )
     amostras = _psql(
         "WITH p AS (SELECT %s + %s*i AS lon, %s + %s*j AS lat FROM generate_series(0,60) i, "
         "generate_series(0,44) j) "
         "SELECT round(lon::numeric,6), round(lat::numeric,6), round((100*exp(-d/2000.0))::numeric,3) FROM ("
-        "  SELECT lon, lat, (SELECT ST_Distance(g::geography, r.geom::geography) FROM cbre.osm_roads r "
+        "  SELECT lon, lat, (SELECT ST_Distance(g::geography, r.geom::geography) FROM acervo_teste.osm_roads_aberto r "
         "          WHERE r.highway IN ('motorway','trunk','primary') ORDER BY r.geom <-> g LIMIT 1) AS d "
         "  FROM (SELECT lon, lat, ST_SetSRID(ST_MakePoint(lon,lat),4326) AS g FROM p) q) w WHERE d IS NOT NULL"
         % (JANELA["lon0"], PASSO_LON, JANELA["lat0"], PASSO_LAT)

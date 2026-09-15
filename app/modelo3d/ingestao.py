@@ -33,7 +33,7 @@ from app.catalogo import tipos as tipos_item
 from app.catalogo.comum import jsonb
 from app.jobs.registro import FalhaDefinitiva, tarefa
 
-# alias do ~/.ssh/config desta máquina (mesmo destino que fgr/sig/app/ingest.py::ifc_para_xkt usa); pode ser
+# alias do ~/.ssh/config desta máquina (mesmo destino que o ingestor de IFC do SIG anterior usa); pode ser
 # trocado por variável de ambiente sem editar código, se o destino um dia mudar de nome
 GPU_HOST = os.environ.get("PLAT_MODELO3D_SSH_HOST", "gpu")
 XKT_CONVERTER_REMOTO = (
@@ -41,7 +41,7 @@ XKT_CONVERTER_REMOTO = (
 )
 SSH_OPCOES = ("-o", "BatchMode=yes", "-o", "ConnectTimeout=8", "-o", "StrictHostKeyChecking=accept-new")
 
-# tipos IFC cuja contagem soma "n_elementos" no resumo (mesmo vocabulário medido em fgr/sig/app/ingest.py,
+# tipos IFC cuja contagem soma "n_elementos" no resumo (mesmo vocabulário medido no ingestor de IFC do
 # lido antes de escrever esta função — não importado, reimplementado aqui: são ~20 palavras do padrão IFC4,
 # não código operacional de um sistema de cliente)
 _TIPOS_ELEMENTO = frozenset((
@@ -92,7 +92,7 @@ def _resumo_ifc(caminho: Path) -> dict:
 
 def _ifc_para_xkt(ctx, ifc_local: Path, xkt_local: Path) -> dict:
     """Converte por ssh numa máquina com GPU que já tem @xeokit/xeokit-convert instalado (mesma técnica lida
-    em fgr/sig/app/ingest.py::ifc_para_xkt antes de escrever esta função — reimplementada aqui com
+    no ingestor de IFC do SIG anterior antes de escrever esta função — reimplementada aqui com
     `ctx.subprocesso`, não importada: são sistemas separados). `FalhaDefinitiva` com mensagem honesta em
     qualquer um dos três jeitos de falhar (ssh, envio, conversão) — nunca um `.xkt` fingido."""
     t0 = time.monotonic()

@@ -5,8 +5,8 @@
             "type": "Feature",
             "properties": {
                 "cd_mun": "4321303",
-                "nome": "Taquari",
-                "fonte": "IBGE malha municipal 2022 (via certaja.limite_mun)"
+                "nome": "Município de teste",
+                "fonte": "IBGE malha municipal 2022 (recorte de teste)"
             },
             "geometry": {
                 "type": "Polygon",

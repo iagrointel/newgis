@@ -39,8 +39,7 @@ from typing import Any
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse, Response
 
-from app import limites
-from app import db, objetos
+from app import db, limites, objetos
 from app.acervo import arquivos as arquivos_acervo
 from app.auth import escopos as esc
 from app.auth import sessao as sessao_auth

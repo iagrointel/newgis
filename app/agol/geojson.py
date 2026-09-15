@@ -1,5 +1,5 @@
 """GeoJSON de uma camada hospedada para o AGOL (item L2-08-migracao-agol): mesma consulta do
-`geojson_da_camada` de `/home/dev/fgr/sig/pipeline/20_agol_publish.py` (todas as colunas exceto `geom`/
+`geojson_da_camada` do script de publicação AGOL do SIG anterior (todas as colunas exceto `geom`/
 `tenant_id`, `ST_AsGeoJSON(ST_Transform(geom,4326),7)`), adaptada a `app.consulta.campos.campos_da_camada`
 (a mesma lista branca que o FeatureServer usa, item L2-04-c — nunca "todas as colunas da tabela" às cegas) e
 com um teto de feições (`limites.AGOL_FEICOES_MAX`): o script original fazia `cur.fetchall()` sem limite

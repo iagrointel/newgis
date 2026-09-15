@@ -1256,7 +1256,7 @@ EDICAO_SRID_MAX = 999_999                 # mesmo teto do esquema de camada_veto
 
 # --- integração ArcGIS Online do cliente (item L2-08-migracao-agol): credencial por inquilino em
 # `tenant.config.agol` (mesmo padrão de SMTP_* acima) e o job `agol.publicar` (app/agol/tarefas.py), portado
-# de `/home/dev/fgr/sig/pipeline/20_agol_publish.py`.
+# do script de publicação AGOL do SIG anterior.
 AGOL_PORTAL_MAX = 300
 AGOL_USUARIO_MAX = 128
 AGOL_CREDENCIAL_MAX = 1024                # senha ou token, antes de cifrar
@@ -1271,7 +1271,7 @@ AGOL_FEICOES_MAX = 200_000                # teto de segurança do export GeoJSON
 # que isso é recusada com uma mensagem clara em vez de estourar a memória do worker — item novo desta portagem,
 # o script original (`20_agol_publish.py`) não tinha teto nenhum porque rodava numa única fazenda/inquilino)
 
-# --- campo: fila de trabalho, roteiro e visita com foto (item L2-07-campo), portado de rs-coop/certaja/sig
+# --- campo: fila de trabalho, roteiro e visita com foto (item L2-07-campo), portado do SIG anterior
 CAMPO_FILA_ALVOS_MAX = 5_000               # feições por fila (mesma ordem de grandeza de EDICAO_LOTE_MAX x2)
 CAMPO_ROTEIRO_PARADAS_MAX = 60             # mesmo teto do sistema de origem ("no máximo 60 paradas por rota")
 CAMPO_FOTO_BYTES_MAX = 10 * 1024 * 1024    # mesmo teto de MINIATURA_BYTES_MAX; a foto é reamostrada abaixo disso
@@ -1281,7 +1281,7 @@ CAMPO_ROTA_VELOCIDADE_KMH = 35             # estimativa de fallback (linha reta)
 # DECLARADA, nunca medida — o sistema de origem já rotula isso como estimativa no aviso devolvido
 
 # --- backup lógico por inquilino e ensaio de restauração (item L0-06-backup-status; app/backup/), portado de
-# `/home/dev/fgr/sig/pipeline/backup.sh`/`restore_test.sh`. Disco a 99% nesta máquina (CLAUDE.md) — o código
+# o pipeline de backup/ensaio de restauração do SIG anterior. Disco a 99% nesta máquina (CLAUDE.md) — o código
 # NUNCA pode presumir que o schema do inquilino continua pequeno como o de demonstração: o dump é recusado
 # (FalhaDefinitiva, arquivo apagado) acima deste teto, ANTES do upload. Mesma ordem de grandeza de
 # RASTER_BYTES_MAX/UPLOAD_BYTES_MAX (2 GiB) — não há hoje um schema de inquilino perto disso, mas o teto tem
