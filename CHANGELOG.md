@@ -8747,3 +8747,7 @@ teto menor em `dados.versionamento.ramos_max`.
   testada, mas parte de um `ativo` ponto de partida — subrede/controlador automático depende de
   L4-04-a/b, não construído para a rede de demonstração desta trilha); retenção/expurgo de partição
   antiga (a de `plat.evento` existe como molde, não copiada aqui por não ser exigida pelo portão).
+
+## auditoria-apagar-inquilino (15/09/2026)
+
+- `plat.tenant_apagar_interno` apagava `plat.auditoria` pelo loop genérico de tenant_id e o gatilho `plat.tg_auditoria_imutavel()` recusava com 409 `auditoria_imutavel` (10 arquivos de teste erravam no teardown da fixture `inquilino_temporario`); corrigido em `db/migracoes/20260915T1500_auditoria_apagar_inquilino.sql` (marca `plat.apagando_inquilino` local à transação, só DELETE, só dentro da função; auditoria do inquilino apagada de forma explícita) — prova: `roda_teste.sh tests/api/test_usuarios_papel_escalada.py` 8 passed sem erro de teardown (antes: 8 passed + 1 error) e `tests/api/test_auditoria_imutavel_apagar_inquilino.py` 3 passed.
