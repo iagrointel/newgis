@@ -24,7 +24,7 @@ PACOTES_DE_COMANDO = {
     "certbot": "certbot",
     "openssl": "openssl",
     "curl": "curl",
-    "psql": "postgresql-client",
+    "psql": "postgresql-client-16",  # nome concreto do pgdg nesta máquina; "postgresql-client" é virtual
 }
 
 
@@ -33,13 +33,9 @@ def _lista_apt() -> list[str]:
     return [linha.split()[0] for linha in linhas if linha.strip() and not linha.strip().startswith("#")]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L7-14: deploy/pacotes_apt.txt se apresenta como 'lista fechada de pacotes apt que o plat já "
-    "exige', mas install.sh chama nginx, certbot, openssl, curl e psql — nenhum na lista. Numa máquina "
-    "limpa o instalador quebra no passo do nginx/certbot depois de já ter criado role, segredo e venv.",
-)
 def test_lista_apt_cobre_o_que_install_sh_exige():
+    """CONSERTADO em 15/09/2026: deploy/pacotes_apt.txt ganhou nginx, certbot, python3-certbot-nginx,
+    openssl, curl e postgresql-client-16 (ver comentário no próprio arquivo). Era xfail(strict=True)."""
     texto = (RAIZ / "install.sh").read_text(encoding="utf-8")
     lista = _lista_apt()
     faltando = sorted(

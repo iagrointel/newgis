@@ -32,6 +32,20 @@ python3-magic          # 2:0.4.27-3
 python3-pil            # 10.2.0-1ubuntu1.3
 libcairo2              # 1.18.0-3build1
 #
+# Servidor web, certificado e cliente de banco que o proprio install.sh chama DIRETO como comando externo
+# (nginx -t / systemctl reload nginx, certbot --nginx, openssl rand, curl no healthcheck do /saude, psql
+# via `sudo -u postgres psql`) mas que a lista fechada nao cobria ate 15/09/2026 (achado do adversario G6,
+# tests/adversario_raiz/test_g6_apt_e_cve.py::test_lista_apt_cobre_o_que_install_sh_exige — numa maquina
+# limpa o instalador quebrava no passo do nginx/certbot depois de ja ter criado role, segredo e venv).
+nginx                   # 1.24.0-2ubuntu7.18
+certbot                 # 2.9.0-1
+python3-certbot-nginx   # 2.9.0-1 (plugin --nginx que install.sh usa; certbot sozinho nao emite certificado)
+openssl                 # 3.0.13-0ubuntu3.15
+curl                    # 8.5.0-2ubuntu10.13
+postgresql-client-16    # 16.13-1.pgdg24.04+1 (fornece o binario `psql`; nome concreto do pgdg nesta
+                        # maquina, nao o meta-pacote generico "postgresql-client", que nem instalado fica
+                        # e dpkg -s nao confirma por ser virtual)
+#
 # Fora desta lista de proposito (nao e escopo deste item, colisao evitada com o item que ja e dono):
 # - pgRouting, pgstac, pg_partman, tds_fdw/oracle_fdw -> item L7-14-extensoes-fdw (extensoes de banco
 #   com portao e adversario proprios, dependente de L7-01-a-compose-perfis).
@@ -42,3 +56,11 @@ libcairo2              # 1.18.0-3build1
 # - gitleaks/pip-audit/osv-scanner/trivy -> item de varredura de vulnerabilidade (L7 seguranca, ainda
 #   pendente na fila); gitleaks tambem nao tem pacote apt nesta distribuicao (binario Go de release do
 #   GitHub), por isso o item L7-16 usa uma varredura propria do historico do git (ver ADR 0007 secao 3).
+# - docker -> install.sh CHAMA docker (--worker-container/--imagem-notebook, linhas com `command -v docker`)
+#   mas nunca instala sozinho: "decisao do dono" escrita no proprio install.sh. Nao e lacuna, e escolha
+#   registrada; quem usa essas flags precisa ter Docker (+ plugin `docker compose` v2) por outro caminho.
+# - node/npm -> install.sh falha cedo com mensagem propria ("node ausente (apt install nodejs)") em vez de
+#   instalar sozinho: o pacote `nodejs` do apt do Ubuntu e uma versao antiga p/ o validador da Style Spec
+#   (ferramentas/estilo/), a fonte real seria o repositorio NodeSource, e ainda nao ha decisao de qual
+#   repositorio usar. Ausencia de decisao nao vira pacote na lista (mesma regra do LibreDWG acima) — quando
+#   decidir, o pacote/repositorio entra aqui com o commit da decisao.

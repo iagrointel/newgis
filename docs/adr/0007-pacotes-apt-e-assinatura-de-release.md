@@ -37,6 +37,21 @@ esperados) e que cada um está de fato instalado nesta máquina.
   `gitleaks` em particular também não tem pacote apt nesta distribuição (é um binário Go distribuído só
   como release do GitHub); por isso o item L7-16 (seção 3 abaixo) não depende dele.
 
+### 1.1 Emenda 15/09/2026 — a lista não cobria o que `install.sh` chama como comando
+
+O adversário (`tests/adversario_raiz/test_g6_apt_e_cve.py::test_lista_apt_cobre_o_que_install_sh_exige`)
+mediu que `install.sh` chama `nginx` (`nginx -t`, `systemctl reload nginx`), `certbot --nginx`, `openssl
+rand`, `curl` (healthcheck de `/saude`) e `psql` (via `sudo -u postgres psql`) — nenhum dos cinco estava
+na lista "fechada". Numa máquina limpa (nenhuma delas roda hoje, todas já têm os sete pacotes originais)
+o instalador quebraria no passo do nginx/certbot **depois** de já ter criado role, segredo e venv.
+Adicionados: `nginx`, `certbot`, `python3-certbot-nginx` (plugin que o `--nginx` do certbot exige),
+`openssl`, `curl`, `postgresql-client-16` (nome concreto do pgdg nesta máquina — `postgresql-client`
+genérico é pacote virtual, `dpkg -s` não confirma instalação por esse nome). `docker`/`node`/`npm`
+continuam FORA de propósito (decisão já registrada no próprio `install.sh`/no comentário do arquivo, não
+lacuna). `tests/unit/test_pacotes_apt.py` ganhou um teste que confere, por regex simples de palavra
+inteira (não um parser de shell — um parser completo com aspas/heredoc foi tentado e travou por
+backtracking), que todo comando dessa lista curta continua com o pacote correspondente na lista fechada.
+
 ## 2. Assinatura de pacote de atualização (L7-16) — desenho
 
 Ed25519 via `cryptography` (pacote dpkg `python3-cryptography`, já na lista da seção 1; a mesma
