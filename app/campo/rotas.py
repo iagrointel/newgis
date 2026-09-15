@@ -17,9 +17,11 @@ Fila de trabalho, roteiro do dia e visita com foto (item L2-07-campo): `router`,
 do SIG anterior (`app/main.py`, rotas `/api/filas*`, `/api/rotas*`, `/api/visitas*`, `/api/fotos/{nome}`).
 Privilégio único `campo.coletar` (já existe na casa desde a migração 003 — perfil `campo` inteiro foi
 desenhado para isto) para toda escrita; leitura é `rls:visibilidade` (qualquer sessão válida do inquilino, a
-RLS de cada tabela `plat.campo_*` já isola por `tenant_id`). Sem escopo de token dedicado ainda (nenhum
-`campo:*` no vocabulário fechado de `app/auth/escopos.py`): token de serviço precisa de `admin:inquilino`
-(o padrão de `autenticado()` quando `escopo_token` não é passado).
+RLS de cada tabela `plat.campo_*` já isola por `tenant_id`). Todas as rotas (leitura e escrita) exigem token
+com o escopo `campo:usar` (item de seguimento de L0-04-a/L0-11: o vocabulário já tem `campo:usar` — usado por
+`router_pwa` desde a origem —, mas este `router` continuava no padrão `admin:inquilino` de `autenticado()`
+quando `escopo_token` não é passado, e o perfil `campo` nunca é admin do inquilino: o próprio operador de
+campo não conseguia emitir um token para o próprio trabalho).
 
 Dois `APIRouter` porque os dois nasceram em ramos diferentes com desenhos incompatíveis (um sem prefixo e
 paths totalmente qualificados, o outro com `prefix="/api/campo"`); `app/main.py` inclui os dois
@@ -338,7 +340,7 @@ def _visita_json(v: dict) -> dict:
 
 # ---------------------------------------------------------------------- camada de origem (apoio da tela de criação)
 @router.get("/camadas/{camada_id}/globalids", openapi_extra=LER)
-def camada_globalids(camada_id: str, limite: int = 200, auth: Auth = autenticado()) -> dict:
+def camada_globalids(camada_id: str, limite: int = 200, auth: Auth = autenticado(escopo_token="campo:usar")) -> dict:
     """Lista curta de feições da camada (globalid + rótulo) para a tela de criação de fila escolher os
     alvos sem precisar de um visualizador de mapa completo."""
     cid = uuid_ok(camada_id, "item_inexistente", "item de camada inexistente")
@@ -350,7 +352,7 @@ def camada_globalids(camada_id: str, limite: int = 200, auth: Auth = autenticado
 
 # ---------------------------------------------------------------------- fila
 @router.post("/filas", status_code=201, openapi_extra=ESCREVER)
-def criar_fila(corpo: FilaCriar, request: Request, auth: Auth = autenticado("campo.coletar")):
+def criar_fila(corpo: FilaCriar, request: Request, auth: Auth = autenticado("campo.coletar", escopo_token="campo:usar")):
     camada_id = uuid_ok(corpo.camada_id, "item_inexistente", "item de camada inexistente")
     with db.db(auth.contexto()) as cur:
         r = servico.fila_criar(cur, auth, corpo.titulo, camada_id, corpo.globalids)
@@ -361,7 +363,7 @@ def criar_fila(corpo: FilaCriar, request: Request, auth: Auth = autenticado("cam
 
 
 @router.get("/filas", openapi_extra=LER)
-def listar_filas(auth: Auth = autenticado()) -> dict:
+def listar_filas(auth: Auth = autenticado(escopo_token="campo:usar")) -> dict:
     with db.db(auth.contexto()) as cur:
         linhas = servico.filas_listar(cur)
     return {"filas": [
@@ -371,7 +373,7 @@ def listar_filas(auth: Auth = autenticado()) -> dict:
 
 
 @router.get("/filas/{fila_id}", openapi_extra=LER)
-def ver_fila(fila_id: str, auth: Auth = autenticado()) -> dict:
+def ver_fila(fila_id: str, auth: Auth = autenticado(escopo_token="campo:usar")) -> dict:
     fid = uuid_ok(fila_id, "fila_inexistente", "fila inexistente")
     with db.db(auth.contexto()) as cur:
         f = servico.fila_ou_404(cur, fid)
@@ -388,7 +390,7 @@ def ver_fila(fila_id: str, auth: Auth = autenticado()) -> dict:
 
 
 @router.get("/filas/{fila_id}/alvos.geojson", openapi_extra=LER)
-def alvos_geojson(fila_id: str, auth: Auth = autenticado()) -> JSONResponse:
+def alvos_geojson(fila_id: str, auth: Auth = autenticado(escopo_token="campo:usar")) -> JSONResponse:
     """Camada de alvos da fila (item 4 do pedido: `GET /api/rede/{id}/feicoes/*.geojson` é o molde já usado
     pela rede de utilidades; aqui a MESMA forma para os alvos de uma fila de campo, com o estado de visita em
     cada feição para colorir no mapa)."""
@@ -408,7 +410,7 @@ def alvos_geojson(fila_id: str, auth: Auth = autenticado()) -> JSONResponse:
 
 @router.post("/filas/{fila_id}/alvos", status_code=201, openapi_extra=ESCREVER)
 def adicionar_alvos(fila_id: str, corpo: FilaAlvosAdicionar, request: Request,
-                    auth: Auth = autenticado("campo.coletar")):
+                    auth: Auth = autenticado("campo.coletar", escopo_token="campo:usar")):
     fid = uuid_ok(fila_id, "fila_inexistente", "fila inexistente")
     with db.db(auth.contexto()) as cur:
         f = servico.fila_ou_404(cur, fid)
@@ -421,7 +423,8 @@ def adicionar_alvos(fila_id: str, corpo: FilaAlvosAdicionar, request: Request,
 
 
 @router.put("/filas/{fila_id}/ordem", openapi_extra=ESCREVER)
-def reordenar_fila(fila_id: str, corpo: FilaOrdem, request: Request, auth: Auth = autenticado("campo.coletar")):
+def reordenar_fila(fila_id: str, corpo: FilaOrdem, request: Request,
+                  auth: Auth = autenticado("campo.coletar", escopo_token="campo:usar")):
     fid = uuid_ok(fila_id, "fila_inexistente", "fila inexistente")
     with db.db(auth.contexto()) as cur:
         servico.fila_ou_404(cur, fid)
@@ -432,7 +435,7 @@ def reordenar_fila(fila_id: str, corpo: FilaOrdem, request: Request, auth: Auth 
 
 # ---------------------------------------------------------------------- roteiro
 @router.post("/roteiros", status_code=201, openapi_extra=ESCREVER)
-def criar_roteiro(corpo: RoteiroCriar, request: Request, auth: Auth = autenticado("campo.coletar")):
+def criar_roteiro(corpo: RoteiroCriar, request: Request, auth: Auth = autenticado("campo.coletar", escopo_token="campo:usar")):
     fid = uuid_ok(corpo.fila_id, "fila_inexistente", "fila inexistente")
     origem = {"lon": corpo.origem.lon, "lat": corpo.origem.lat}
     with db.db(auth.contexto()) as cur:
@@ -445,7 +448,7 @@ def criar_roteiro(corpo: RoteiroCriar, request: Request, auth: Auth = autenticad
 
 
 @router.get("/roteiros", openapi_extra=LER)
-def listar_roteiros(fila_id: str | None = None, auth: Auth = autenticado()) -> dict:
+def listar_roteiros(fila_id: str | None = None, auth: Auth = autenticado(escopo_token="campo:usar")) -> dict:
     fid = uuid_ok(fila_id) if fila_id else None
     with db.db(auth.contexto()) as cur:
         linhas = servico.roteiros_listar(cur, fid)
@@ -458,7 +461,7 @@ def listar_roteiros(fila_id: str | None = None, auth: Auth = autenticado()) -> d
 
 
 @router.get("/roteiros/{roteiro_id}", openapi_extra=LER)
-def ver_roteiro(roteiro_id: str, auth: Auth = autenticado()) -> dict:
+def ver_roteiro(roteiro_id: str, auth: Auth = autenticado(escopo_token="campo:usar")) -> dict:
     rid = uuid_ok(roteiro_id, "roteiro_inexistente", "roteiro inexistente")
     with db.db(auth.contexto()) as cur:
         r = servico.roteiro_ou_404(cur, rid)
@@ -478,7 +481,7 @@ def ver_roteiro(roteiro_id: str, auth: Auth = autenticado()) -> dict:
 
 
 @router.get("/roteiros/{roteiro_id}/trajeto.geojson", openapi_extra=LER)
-def roteiro_trajeto_geojson(roteiro_id: str, auth: Auth = autenticado()) -> JSONResponse:
+def roteiro_trajeto_geojson(roteiro_id: str, auth: Auth = autenticado(escopo_token="campo:usar")) -> JSONResponse:
     rid = uuid_ok(roteiro_id, "roteiro_inexistente", "roteiro inexistente")
     with db.db(auth.contexto()) as cur:
         r = servico.roteiro_ou_404(cur, rid)
@@ -493,7 +496,7 @@ def roteiro_trajeto_geojson(roteiro_id: str, auth: Auth = autenticado()) -> JSON
 
 # ---------------------------------------------------------------------- visita
 @router.post("/visitas", status_code=201, openapi_extra=ESCREVER)
-def criar_visita(corpo: VisitaCriar, request: Request, auth: Auth = autenticado("campo.coletar")):
+def criar_visita(corpo: VisitaCriar, request: Request, auth: Auth = autenticado("campo.coletar", escopo_token="campo:usar")):
     # existência de alvo/fila/roteiro é conferida aqui (404 antes de tocar a tabela de visita); a feição em si
     # NUNCA é exigida existir ainda na camada — visitar algo que já sumiu da camada continua sendo um FATO
     if corpo.fila_id:
@@ -527,7 +530,7 @@ def criar_visita(corpo: VisitaCriar, request: Request, auth: Auth = autenticado(
 
 @router.get("/visitas", openapi_extra=LER)
 def listar_visitas(fila_id: str | None = None, alvo_id: str | None = None, roteiro_id: str | None = None,
-                   limite: int = 500, auth: Auth = autenticado()) -> dict:
+                   limite: int = 500, auth: Auth = autenticado(escopo_token="campo:usar")) -> dict:
     with db.db(auth.contexto()) as cur:
         linhas = servico.visitas_listar(
             cur, fila_id=uuid_ok(fila_id) if fila_id else None, alvo_id=uuid_ok(alvo_id) if alvo_id else None,
@@ -544,7 +547,7 @@ def listar_visitas(fila_id: str | None = None, alvo_id: str | None = None, rotei
 
 
 @router.get("/visitas/{visita_id}", openapi_extra=LER)
-def ver_visita(visita_id: str, auth: Auth = autenticado()) -> dict:
+def ver_visita(visita_id: str, auth: Auth = autenticado(escopo_token="campo:usar")) -> dict:
     vid = uuid_ok(visita_id, "visita_inexistente", "visita inexistente")
     with db.db(auth.contexto()) as cur:
         v = servico.visita_ou_404(cur, vid)
@@ -553,7 +556,7 @@ def ver_visita(visita_id: str, auth: Auth = autenticado()) -> dict:
 
 @router.post("/visitas/{visita_id}/fotos", status_code=201, openapi_extra=ESCREVER)
 def enviar_foto(visita_id: str, corpo: VisitaFotoEntrada, request: Request,
-                auth: Auth = autenticado("campo.coletar")):
+                auth: Auth = autenticado("campo.coletar", escopo_token="campo:usar")):
     vid = uuid_ok(visita_id, "visita_inexistente", "visita inexistente")
     dados = fotos.decodificar_base64(corpo.conteudo)
     with db.db(auth.contexto()) as cur:
