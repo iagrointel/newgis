@@ -16,13 +16,13 @@ UUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 # chaves de DESCRICAO; `tests/unit/test_escopos_vocabulario.py` confere os três contra as rotas.
 ESCOPO = re.compile(
     rf"^(catalogo:(ler|escrever)|camada:(ler|editar)(:{UUID})?|tiles:ler(:{UUID})?|jobs:executar|"
-    rf"rota:usar|geocodificar:usar|multiescala:usar|parcelas:usar|conteudo:criar|"
+    rf"rota:usar|geocodificar:usar|multiescala:usar|parcelas:usar|conteudo:(criar|exportar)|"
     rf"imagens:(ler|escrever)|rede:(ler|editar|validar|analisar)|campo:usar|crs:usar|fluxo:ler|"
     rf"admin:inquilino)$"
 )
 ESCOPOS_SEM_UUID = (
     "catalogo:ler", "catalogo:escrever", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar",
-    "rota:usar", "geocodificar:usar", "multiescala:usar", "parcelas:usar", "conteudo:criar",
+    "rota:usar", "geocodificar:usar", "multiescala:usar", "parcelas:usar", "conteudo:criar", "conteudo:exportar",
     "imagens:ler", "imagens:escrever", "rede:ler", "rede:editar", "rede:validar", "rede:analisar",
     "campo:usar",
     "crs:usar", "fluxo:ler", "admin:inquilino",
@@ -40,9 +40,13 @@ DESCRICAO = {
     "multicritério em grades aninhadas (L3-19-multiescala; dado e execução do próprio inquilino)",
     "parcelas:usar": "rodar os fluxos da malha de parcelas do próprio inquilino na fachada "
     "/api/parcelas/fabrica (L4-parcelas-02: build, divide, merge, clip, seeds, assignFeaturesToRecord)",
-    "catalogo:escrever": "criar e apagar itens do catálogo pela API (hoje: modelo 3D, app/modelos3d)",
-    "conteudo:criar": "enviar arquivo pelo upload retomável (exige conteudo.criar no dono); é o escopo "
-    "que a tela troca pela sessão antes de começar o envio, porque o corpo da parte é byte cru",
+    "catalogo:escrever": "editar, mover, apagar/restaurar, versionar e relacionar item do catálogo do próprio "
+    "inquilino pela API (RLS `plat.pode_editar`, mesma trava de sessão; também cobre modelo 3D, app/modelos3d)",
+    "conteudo:criar": "criar item novo no catálogo (POST /api/itens) e enviar arquivo pelo upload retomável "
+    "(exige conteudo.criar no dono); é o escopo que a tela troca pela sessão antes de começar o envio, "
+    "porque o corpo da parte é byte cru",
+    "conteudo:exportar": "ler o status, baixar e cancelar/apagar a própria exportação de camada (exige "
+    "conteudo.exportar no dono)",
     "imagens:ler": "ler imagem: ficha, ladrilho, COG por HTTPS, predefinição de renderização e STAC",
     "imagens:escrever": "criar e alterar coleção e item STAC do próprio inquilino",
     "rede:ler": "ler rede de utilidades: nós, arestas, subredes, diagrama e sumário",
@@ -124,5 +128,7 @@ PERFIS_DE_CHAVE = {
 }
 
 
-# de wt/upload
-ESCOPO_EXIGE_PRIVILEGIO = {"conteudo:criar": "conteudo.criar"}
+# de wt/upload; `conteudo:exportar` acrescentado no item de seguimento de L0-04-a/L0-11 (mesma causa raiz:
+# app/exportacao/rotas.py::apagar exigia admin:inquilino para cancelar/apagar a PRÓPRIA exportação — só
+# perfil admin conseguia emitir, embora `conteudo.exportar` já seja privilégio de editor/admin, não só admin)
+ESCOPO_EXIGE_PRIVILEGIO = {"conteudo:criar": "conteudo.criar", "conteudo:exportar": "conteudo.exportar"}
