@@ -12,7 +12,7 @@ import psycopg2
 import psycopg2.extras
 import psycopg2.pool
 
-from app.migracoes import chave_migracao
+from app.migracoes import chave_migracao, nome_de_migracao
 from app.migracoes import listar as listar_migracoes
 from app.schema_ambiente import CursorSchemaAmbiente
 from app.settings import settings
@@ -124,10 +124,22 @@ def migracoes_em_disco() -> list[str]:
 
 def migracoes_estado() -> tuple[int, int, str | None]:
     """(aplicadas, pendentes, ultima) comparando o disco com plat.versao_migracao.
-    `ultima` é a de autoria mais recente pela chave_migracao, não a maior string."""
+    `ultima` é a de autoria mais recente pela chave_migracao, não a maior string.
+
+    `plat.versao_migracao` também recebe registros de FORA das duas famílias de nome do ADR 0014
+    (achado L7-03-f, item C): `db/pgstac_instalar.sh` grava `pgstac-migrate-<versão do pypgstac>`
+    (ex.: `pgstac-migrate-0.9.12`) na MESMA tabela, para aparecer no mesmo painel de versão — mas
+    esse nome não é `NNN_slug` nem `YYYYMMDDTHHMM_slug`, e `chave_migracao` classifica qualquer nome
+    fora do legado na família "carimbo" sem validar o formato. Como comparação de string põe letra
+    depois de dígito, "pgstac-migrate-0.9.12" vence a ordenação e virava `ultima` — vazando um número
+    de versão de dependência por `/api/status` e `/saude`, que a cláusula do portão veda numa resposta
+    aberta (nunca dependência nem versão de biblioteca). `ultima` só faz sentido para as migrações QUE
+    O APLICADOR CONTROLA (as duas famílias), então o cálculo abaixo ignora qualquer nome fora delas —
+    sem tirá-lo de `aplicadas`, que continua contando toda linha de fato aplicada no banco."""
     disco = migracoes_em_disco()
     with db() as cur:
         cur.execute("SELECT nome FROM plat.versao_migracao")
         aplicadas = sorted((r["nome"] for r in cur.fetchall()), key=chave_migracao)
     pendentes = [n for n in disco if n not in aplicadas]
-    return len(aplicadas), len(pendentes), (aplicadas[-1] if aplicadas else None)
+    proprias = [n for n in aplicadas if nome_de_migracao(n)]
+    return len(aplicadas), len(pendentes), (proprias[-1] if proprias else None)
