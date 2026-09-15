@@ -51,6 +51,17 @@ Suíte de testes não rodada (`tests/unit/test_front_sintaxe.py` não executado)
 abaixo de 5000 MB nas 10 tentativas de 60 s antes do pytest (medido `free -m`), então a prova ficou só
 em `node`, permitido pela regra da casa.
 
+## lote f1-lote3, setembro de 2026 (item j2: defeito #6 de LANCAMENTO.md:412, raster_item x raster_colecao)
+
+Já estava FECHADO antes deste lote — desde 11/09 14h45, mesmo dia do hand-over (própria seção "A prova
+que o dono pediu" de `laco/handoffs/T8/LANCAMENTO.md`), só a tabela do defeito #6 não tinha sido
+atualizada. `colecao_espelhar` (`app/imagens/pgstac.py`) roda incondicionalmente dentro de
+`_colecao_garantir` (`app/imagens/ingestao.py`), ANTES de checar se a coleção já existe no pgstac —
+não só na criação, como o defeito original descrevia. Conferido de novo neste lote, sem alterar
+código: `plat_tuniao.raster_colecao` tem a linha `1-imagens` (tenant 1) e `plat_tuniao.raster_item`
+referencia essa coleção sem violar `raster_item_colecao_fkey`. Tabela do hand-over atualizada em
+`laco/handoffs/T8/LANCAMENTO.md:412` (fora deste repositório): ABERTO → FECHADO, com a referência.
+
 ## turno 4, setembro de 2026 (item L4-05-d-epanet-inp: arquivo EPANET .inp entra e sai da rede de água)
 
 Porta de entrada e de saída do formato que o setor de água usa: o `.inp` do EPANET. `ler_inp`/`escrever_inp`
