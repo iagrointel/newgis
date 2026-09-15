@@ -3,11 +3,12 @@ import statistics
 import time
 from pathlib import Path
 
+from app import db as dbmod
 from app.db import migracoes_em_disco
 
 ROOT = Path(__file__).resolve().parents[2]
 CAMPOS = {"versao", "git_sha", "ambiente", "banco", "migracoes_aplicadas", "migracoes_pendentes",
-          "ultima_migracao", "servicos", "fila", "tempo_ms", "em"}
+          "ultima_migracao", "servicos", "fila", "manutencao", "tempo_ms", "em"}
 
 
 def test_saude_200_com_json_do_contrato(cliente):
@@ -21,7 +22,13 @@ def test_saude_200_com_json_do_contrato(cliente):
     # tempo `YYYYMMDDTHHMM_slug` de toda migração nova. `migracoes_em_disco` já devolve as duas na
     # ordem de aplicação (legado primeiro, depois carimbo).
     migracoes = migracoes_em_disco()
-    assert j["migracoes_aplicadas"] == len(migracoes)
+    # `aplicadas` conta TODA linha em plat.versao_migracao, inclusive nomes fora das duas famílias do
+    # ADR 0014 (achado L7-03-f, item C): `db/pgstac_instalar.sh` grava `pgstac-migrate-<versão>` na
+    # mesma tabela (ver app/db.py::migracoes_estado e tests/unit/test_migracoes_nome_e_dependencia.py).
+    with dbmod.db() as cur:
+        cur.execute("SELECT count(*) AS n FROM plat.versao_migracao WHERE nome LIKE 'pgstac-migrate-%'")
+        fora_do_padrao = cur.fetchone()["n"]
+    assert j["migracoes_aplicadas"] == len(migracoes) + fora_do_padrao
     # "última" aqui quer dizer A DE AUTORIA MAIS RECENTE (o maior carimbo de tempo; na falta de
     # carimbo, o maior número do legado), não a maior string nem a última que foi aplicada no banco.
     assert j["ultima_migracao"] == migracoes[-1]
