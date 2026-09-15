@@ -21,6 +21,7 @@ from app.imagens import (
 )
 from app.ingestao import tarefas as ingestao_tarefas  # noqa: F401 — L0-04: ingestao.inspecionar/ingestao.carregar
 from app.jobs import periodicos, tipos_prova  # noqa: F401 — importação registra os tipos
+from app.jobs import seguranca as jobs_seguranca  # noqa: F401 — L7-03-f: seguranca.varrer_cve + periódico
 from app.jobs.registro import REGISTRO
 from app.modelo3d import ingestao as modelo3d_ingestao  # noqa: F401 — L1-03: modelo3d.converter (IFC -> xkt)
 from app.rede_medicao import (
