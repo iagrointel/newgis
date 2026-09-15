@@ -90,10 +90,19 @@ def gerar_markdown() -> str:
             valor = getattr(modulo, nome)
             if isinstance(valor, dict):
                 partes.append(f"\n### `{nome}`\n")
-                partes.append("| chave | padrão | mínimo | máximo |")
-                partes.append("|---|---|---|---|")
-                for chave, (padrao, minimo, maximo) in valor.items():
-                    partes.append(f"| `{chave}` | `{padrao!r}` | `{minimo!r}` | `{maximo!r}` |")
+                # dois formatos: dict de (padrão, mínimo, máximo) por chave (ex. AUTH_PADROES) ganha a
+                # subtabela de faixa; qualquer outro dict (ex. CHAMADO_SLA_PRIMEIRA_RESPOSTA_HORAS, valor
+                # escalar por chave) vira uma linha por chave, ordenada — sem exigir o formato de faixa.
+                if valor and all(isinstance(v, (tuple, list)) and len(v) == 3 for v in valor.values()):
+                    partes.append("| chave | padrão | mínimo | máximo |")
+                    partes.append("|---|---|---|---|")
+                    for chave, (padrao, minimo, maximo) in valor.items():
+                        partes.append(f"| `{chave}` | `{padrao!r}` | `{minimo!r}` | `{maximo!r}` |")
+                else:
+                    partes.append("| chave | valor |")
+                    partes.append("|---|---|")
+                    for chave in sorted(valor, key=repr):
+                        partes.append(f"| `{chave}` | `{_repr_deterministico(valor[chave])}` |")
     return "\n".join(partes) + "\n"
 
 
