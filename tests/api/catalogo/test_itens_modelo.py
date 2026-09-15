@@ -178,7 +178,11 @@ def test_visualizador_nao_cria_e_editor_publica_camada_so_com_privilegio(visuali
 
 def test_tipo_item_e_vocabulario_sem_escrita(conexao_plat_app, cliente, sessao_a):
     r = sessao_a.get("/api/tipos-item")
-    assert r.status_code == 200 and len(r.json()) == 15
+    # vocabulário fechado, mas não estático: cada tipo novo abaixo entrou por migração com ADR
+    # próprio entre 06/09 e 10/09/2026 (docs/adr/*), nunca por escrita da API — a garantia que
+    # este teste protege é a ausência de INSERT/UPDATE/DELETE pela role de aplicação, verificada
+    # na segunda metade do teste, não um tamanho fixo do vocabulário.
+    assert r.status_code == 200 and len(r.json()) == 30
     nomes = {t["nome"] for t in r.json()}
     assert {
         "camada_vetorial",
@@ -196,6 +200,22 @@ def test_tipo_item_e_vocabulario_sem_escrita(conexao_plat_app, cliente, sessao_a
         "arquivo",
         "modelo_amc",
         "site",
+        # acrescentados por migração desde 06/09/2026 (cada um com ADR em docs/adr/):
+        "analise_3d",       # 20260908T1703_analise3d.sql
+        "camada_tracado",   # 20260908T0607_rede_tracado_execucao.sql
+        "colecao",          # 20260908T2015_colecao_marca.sql
+        "ferramenta_resultado",  # 20260908T1847_ferramenta_resultado.sql
+        "ferramenta_script",     # 20260909T0049_script_ferramenta.sql
+        "foto360",          # 20260910T2100_modelo3d.sql
+        "layout",           # 20260908T1203_layout.sql
+        "mapa_base",        # 20260907T1649_mapa_base.sql
+        "modelo3d",         # 20260910T2100_modelo3d.sql
+        "mosaico",          # 20260910T2340_mosaico_tipo_item.sql
+        "narrativa",        # 20260908T0300_narrativa_tipo.sql
+        "notebook",         # 20260908T2258_notebook_por_inquilino.sql
+        "notebook_saida",   # 20260908T2258_notebook_por_inquilino.sql
+        "parquet",          # 20260907T1634_geoparquet.sql
+        "selecao",          # 20260907T1242_selecao_filtro.sql
     } == nomes
     assert all(t["esquema"].get("additionalProperties") is False for t in r.json())
     ids = ids_por_slug(conexao_plat_app)
