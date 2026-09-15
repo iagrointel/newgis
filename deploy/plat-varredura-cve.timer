@@ -1,0 +1,10 @@
+[Unit]
+Description=plat — varredura diária de CVE conhecido em dependências (item L7-03-f)
+
+[Timer]
+OnCalendar=*-*-* 05:20:00
+Persistent=true
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target

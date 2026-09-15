@@ -1,0 +1,18 @@
+[Unit]
+Description=plat — pip-audit + npm audit diário, grava plat.varredura_cve/plat.vulnerabilidade (item L7-03-f)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=oneshot
+User=APP_USER
+Group=APP_USER
+WorkingDirectory=APP_DIR
+Environment=PYTHONNOUSERSITE=1
+# mesmo mecanismo do plat-worker (docs/SEGURANCA.md §1): credencial fora do .env, dono root 0600. Só
+# PLAT_DSN — este script nunca muda estado de job nem lê segredo de outro papel.
+LoadCredential=PLAT_DSN:/etc/plat/segredos/PLAT_DSN
+ExecStart=APP_DIR/venv/bin/python APP_DIR/scripts/varredura_cve.py
+# nunca "0 CVE" fingido: rc 2 (fonte não rodou) é um resultado válido do script, não uma falha da unidade —
+# quem lê o estado é plat.varredura_cve/status_vulnerabilidades, não `systemctl status`.
+SuccessExitStatus=0 1 2

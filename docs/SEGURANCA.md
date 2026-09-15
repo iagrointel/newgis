@@ -272,19 +272,65 @@ o que o portão deste item não permite ficar sem revisão.
 ### 7.4 `make seguranca-deps` é opcional hoje, não bloqueia `make check`
 
 Por decisão explícita desta passagem (item pequeno, entrega de hoje): o alvo existe e funciona, mas **não**
-está na cadeia de `check`/`check-rapido` ainda — rodar `make seguranca-deps` é manual (ou de um timer futuro
-diário, ainda não construído nesta passagem). Ligar ao `check` principal é o próximo passo natural do item,
-registrado aqui para não se perder: nesta janela o risco de um `pip-audit` que depende de rede (OSV.dev)
-bloquear o `check` de todo mundo, numa hora ruim de rede, pesou mais que o ganho de rodar em toda passagem.
+está na cadeia de `check`/`check-rapido` ainda — rodar `make seguranca-deps` é manual. Ligar ao `check`
+principal é o próximo passo natural do item, registrado aqui para não se perder: nesta janela o risco de um
+`pip-audit` que depende de rede (OSV.dev) bloquear o `check` de todo mundo, numa hora ruim de rede, pesou
+mais que o ganho de rodar em toda passagem. (`make seguranca`/HARD-01, esse sim dentro de `check`, já roda
+pip-audit como uma das cinco ferramentas — mas com a política de exceção do §9.2, não com o nome
+`seguranca-deps`; ver §7.6 para o que passou a rodar 1×/dia independente do `check`.)
 
-### 7.5 Log de correções
+### 7.5 Log de correções — GERADO, não mais escrito à mão
 
-Tabela viva, preenchida à mão a cada correção de CVE aplicada (formato pronto; começa vazia — nenhuma
-correção foi necessária ainda, o único achado de hoje, §7.2, é média e não crítica/alta):
+Superado pelo §7.6: até esta passagem esta seção era uma tabela em branco preenchida manualmente. Agora é
+`docs/CORRECOES.md` (arquivo próprio, `make correcoes`), lido de `plat.vulnerabilidade` — a versão escrita à
+mão nunca chegou a ganhar uma linha, então nada se perde na troca.
 
-| CVE | pacote | versão corrigida | data | quem aplicou |
-|---|---|---|---|---|
-| _(vazio — primeira correção entra aqui)_ | | | | |
+### 7.6 Banco, job diário, `/status` e `docs/CORRECOES.md` (turno de fechamento do item)
+
+O que faltava — registrado no bloqueio de `laco/estado.json`: "sem plat.vulnerabilidade, sem
+docs/CORRECOES.md, sem timer, sem /status e fora do make check". Fechado nesta passagem, com o que já
+existia (pip-audit do §7.2 acima; `npm audit` do item HARD-01 §9, `scripts/varredura_seguranca.py::rodar_npm`
+— reaproveitado, não duplicado):
+
+- **`plat.vulnerabilidade`** (uma linha por achado; nunca apagada — `resolvida_em` fica `NULL` enquanto
+  aberto e ganha data quando o pacote/CVE some de uma varredura para a próxima) e **`plat.varredura_cve`**
+  (uma linha por execução: quando, rc, duração, resumo) — `db/migracoes/20260915T2252_vulnerabilidade.sql`.
+  Sem `tenant_id` (telemetria da instalação, como `plat.status_amostra`); `plat_app` só lê, a escrita é só
+  pela função SECURITY DEFINER `plat.varredura_cve_registrar()`. Uma fonte que não rodou (sem rede) nunca
+  fecha um achado por ausência — só quem rodou de verdade pode dizer que um CVE sumiu por correção.
+- **`scripts/varredura_cve.py`** — `rodar()` (pip-audit + npm audit, sem tocar banco, testável por dublê) e
+  `main()`/`persistir()` (grava). **`app/jobs/seguranca.py`** — mesma varredura, registrada como tipo de job
+  `seguranca.varrer_cve` e no periódico interno (`app/jobs/periodicos.py`, 05:20 diário, sincronizado no
+  inquilino técnico `plataforma` — ADR 0003 §7). **`deploy/plat-varredura-cve.timer` + `.service`** — mesmo
+  espírito de `deploy/plat-segredo-expira.timer`: caminho independente da fila, para quando o worker está
+  fora do ar (LoadCredential=PLAT_DSN; `SuccessExitStatus=0 1 2` — rc 2 é "uma fonte não rodou", resultado
+  válido do script, não falha da unidade). **Arquivos só; não habilitado por este turno** — para ligar:
+  ```
+  sudo cp deploy/plat-varredura-cve.{timer,service} /etc/systemd/system/
+  sudo sed -i "s|APP_DIR|$(pwd)|; s|APP_USER|$(whoami)|" /etc/systemd/system/plat-varredura-cve.service
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now plat-varredura-cve.timer
+  ```
+- **`/api/status`** ganha o bloco `vulnerabilidades: {abertas, estado, ultima_varredura, fonte}` (função
+  `plat.status_vulnerabilidades()`, agregado — nunca pacote/CVE individual numa rota sem sessão); `estado` é
+  `"nunca_rodou"` / `"ok"` / `"falhou"` (rc da última execução) — é isso que fecha a cláusula "página /status
+  mostra o último ciclo" do portão.
+- **`docs/CORRECOES.md`** (`docs/gerar_correcoes.py`, `make correcoes`) — o log de correções de verdade: uma
+  linha por achado com aviso/pacote/versão/gravidade/detectada/resolvida, gerado do banco (cai para o último
+  instantâneo em `var/seguranca/ultima_varredura_cve.json` quando o banco não responde na hora da geração).
+  **Fora de `check`/`check-rapido`** por decisão explícita (comentário no próprio `Makefile`, mesmo espírito
+  do §7.4): a geração bate no banco vivo a cada chamada, e não há motivo para pagar essa consulta em toda
+  passagem de `check` só para um documento que muda quando uma varredura nova roda, não a cada commit.
+- Testes: `tests/unit/test_varredura_cve.py` (rodar() com pip-audit/npm dublados; ciclo aberto→resolvido e
+  "fonte sem rede não resolve por ausência" contra a trilha corrente; `docs/gerar_correcoes.py` determinístico
+  com dados fixos).
+- **O que fica de fora, nomeado**: `osv-scanner`, `trivy` (CVE de imagem — `trivy config` de má configuração
+  em `deploy/` já roda dentro de `make seguranca`/HARD-01 §9) e `gitleaks` continuam ausentes desta varredura
+  específica — nenhum dos três está instalado nesta máquina (rule do dono: não instalar ferramenta nova sem
+  o dono), e `gitleaks`/`trivy` (imagem) já são cobertos por `make seguranca`/HARD-01 §9, que é quem instala
+  os binários fixados de `deploy/ferramentas_binarias.txt`. `seguranca-deps`/pip-audit isolado (§7.4) continua
+  fora de `check`; o que passou a rodar dentro de `check` é `make seguranca` (HARD-01), que já inclui
+  pip-audit e npm audit desde antes desta passagem.
 
 
 ## 8. Varredura de conteúdo em upload de anexo (item L7-03-b-antivirus-anexos)
