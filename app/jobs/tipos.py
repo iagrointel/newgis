@@ -1,6 +1,7 @@
 """Importa cada módulo de tipos (o registro é preenchido na importação) e expõe REGISTRO. Linhas futuras
 acrescentam aqui a importação do seu módulo de tarefas (ex.: app.ingestao.tarefas no L0-04)."""
 
+from app import status_tarefas  # noqa: F401 — L0-06-e-status: status.amostrar + periódico (achado L7-03-f)
 from app.agol import (
     tarefas as agol_tarefas,  # noqa: F401 — L2-08: agol.publicar (hosted feature layer no AGOL do cliente)
 )

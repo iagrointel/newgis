@@ -106,3 +106,20 @@ def test_tipos_de_prova_estao_registrados(monkeypatch):
             "prova.tempo_esgotado", "jobs.expurgo"} <= set(REGISTRO)
     assert REGISTRO["prova.tempo_esgotado"].timeout_s == 5 and REGISTRO["prova.pesado"].pesado
     assert registro.ordem_perfil("admin") > registro.ordem_perfil("editor") > registro.ordem_perfil("campo")
+
+
+def test_status_amostrar_esta_registrado(monkeypatch):
+    # achado L7-03-f (comentário do commit acb7132f3, item A do achado): `app/status_tarefas.py` declara o
+    # periódico `status.amostrar` mas NINGUÉM importava o módulo em `app/jobs/tipos.py` — o tipo nunca
+    # entrava em REGISTRO e o job periódico (retrato de /status a cada 5 min) ficava órfão, nunca disparava.
+    # Consertado somando `from app import status_tarefas` a `app/jobs/tipos.py` (mesmo padrão de
+    # `app.jobs.seguranca`, registrado no mesmo commit). Prova de que o tipo agora entra em vigor:
+    monkeypatch.setenv("PLAT_WORKER_MEMORIA_MB", "1536")
+    cfg.obter.cache_clear()
+    from app.jobs.tipos import REGISTRO
+
+    assert "status.amostrar" in REGISTRO
+    assert REGISTRO["status.amostrar"].perfil_minimo == "admin"
+    from app.jobs.periodicos import PERIODICOS
+
+    assert ("retrato operacional", "*/5 * * * *", "status.amostrar", {}) in PERIODICOS
