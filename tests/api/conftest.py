@@ -74,13 +74,31 @@ def novo_cliente():
     return TestClient(app, base_url="http://testserver")
 
 
+def _caminho_trinco(nome: str) -> Path:
+    """15/09: o trinco morava sempre em tests/<nome> (por WORKTREE) enquanto o segredo TOTP que ele protege
+    e o desafio 2FA que ele serializa moram no BANCO da trilha e em PLAT_CREDENCIAIS_TOTP_ARQUIVO — os DOIS
+    compartilhados por QUALQUER worktree que rode a MESMA trilha (`uniao`, por exemplo). Dois worktrees
+    diferentes na mesma trilha tinham trincos de arquivo DIFERENTES (cada um só via os processos do seu
+    próprio checkout) e mesmo assim disputavam a MESMA linha `plat.usuario` do superadmin — cada um achava
+    que estava sozinho, e o segundo perdia a corrida do desafio (410 desafio_expirado) ou do passo do TOTP
+    (401 codigo_invalido), medido de verdade em 15/09 rodando -n 2 contra a trilha uniao. Quando
+    PLAT_CREDENCIAIS_TOTP_ARQUIVO aponta para fora do worktree (é o caso de toda trilha, ver
+    laco/trilha_ambiente.sh), o trinco passa a morar no MESMO diretório desse arquivo — logo dois worktrees
+    da mesma trilha usam o MESMO trinco. Sem a variável (suíte local, sem trilha), o trinco continua em
+    tests/, como antes: nenhuma mudança de comportamento para quem não usa trilha."""
+    if os.environ.get("PLAT_CREDENCIAIS_TOTP_ARQUIVO"):
+        return CREDENCIAIS_TOTP.with_name(CREDENCIAIS_TOTP.name + "." + nome)
+    return Path(__file__).resolve().parents[1] / nome
+
+
 @contextlib.contextmanager
 def trinco(nome: str):
-    """Trinco de arquivo entre processos (os workers do pytest-xdist são processos irmãos). Cada `nome` é um
-    arquivo próprio em tests/, logo dois trincos diferentes nunca esperam um pelo outro."""
+    """Trinco de arquivo entre processos (os workers do pytest-xdist são processos irmãos, e — via
+    `_caminho_trinco` — também os processos de OUTROS worktrees que rodem a mesma trilha). Cada `nome` é um
+    arquivo próprio, logo dois trincos diferentes nunca esperam um pelo outro."""
     import fcntl
 
-    with open(Path(__file__).resolve().parents[1] / nome, "w") as arq:
+    with open(_caminho_trinco(nome), "w") as arq:
         fcntl.flock(arq, fcntl.LOCK_EX)
         try:
             yield
@@ -94,7 +112,9 @@ def entrar(cliente, slug: str, login: str, senha: str, segredo_totp: str | None 
     07/09: sob pytest-xdist os workers entram com o MESMO usuário ao mesmo tempo; o banco guarda um
     desafio 2FA por usuário (plat.usuario.desafio_2fa_hash), então o login de um worker apaga o desafio
     do outro (410 desafio_expirado) e os dois disputam o mesmo passo de 30 s do TOTP (anti-replay).
-    Só o trecho login -> 2fa é serializado, por trinco de arquivo; o resto da suíte segue em paralelo.
+    Só o trecho login -> 2fa é serializado, por trinco (`_caminho_trinco`: de arquivo entre os workers de
+    uma rodada e, quando a suíte roda contra uma trilha, entre QUALQUER worktree nela) — o resto da suíte
+    segue em paralelo.
     """
     with trinco(".login.lock"):
         return _entrar(cliente, slug, login, senha, segredo_totp)
@@ -110,10 +130,17 @@ def _entrar(cliente, slug: str, login: str, senha: str, segredo_totp: str | None
         # anti-replay (app/auth/totp.py::verificar): o passo de 30 s já gasto por outro worker (ou por uma rodada
         # anterior) devolve codigo_invalido. Espera o passo seguinte e repete — até 3 vezes, porque com 5 workers
         # entrando ao mesmo tempo dois passos seguidos podem estar gastos.
+        # 15/09: defesa em profundidade — mesmo com `_caminho_trinco` compartilhado entre worktrees, um 410
+        # desafio_expirado (outro processo fora do trinco, ou uma rodada anterior que deixou o desafio velho
+        # no banco) refaz o login (novo desafio) sem esperar o passo do TOTP, já que o código não mudou.
         for _ in range(3):
-            if not (r2.status_code == 401 and r2.json().get("erro") == "codigo_invalido"):
+            expirou = r2.status_code == 410
+            replay = r2.status_code == 401 and r2.json().get("erro") == "codigo_invalido"
+            if not (expirou or replay):
                 break
-            time.sleep(totp.PASSO_S - (time.time() % totp.PASSO_S) + 0.5)
+            print(f"aviso: entrar({slug}/{login}) recebeu {r2.status_code} no 2fa, tentando de novo", flush=True)
+            if replay:
+                time.sleep(totp.PASSO_S - (time.time() % totp.PASSO_S) + 0.5)
             r = cliente.post("/api/login", json={"inquilino": slug, "login": login, "senha": senha})
             corpo = {"desafio": r.json()["desafio"], "codigo": totp.codigo(segredo_totp)}
             r2 = cliente.post("/api/login/2fa", json=corpo)
