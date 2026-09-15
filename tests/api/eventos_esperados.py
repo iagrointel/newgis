@@ -1,6 +1,15 @@
 """Evento(s) de domínio que cada rota de escrita do L0-02 registra (ADR 0002 seção 9.4). Rota de escrita no
-OpenAPI sem entrada aqui = falha em test_eventos.py. Lista vazia = a rota, por decisão, não gera evento
-(login falho comum, logout sem sessão, leituras) e o motivo está ao lado."""
+OpenAPI sem entrada aqui = falha em test_eventos.py.
+
+- `EVENTOS_POR_ROTA`: rota que MUDA estado do inquilino, com a lista dos tipos de evento que narra. Nunca
+  fica vazia aqui (achado G4-03: lista vazia era "sem evento" disfarçado) — quem não gera evento vai para
+  `ROTAS_SEM_EVENTO`.
+- `ROTAS_SEM_EVENTO`: as poucas rotas de verbo de escrita que NÃO alteram estado (cálculo puro, protocolo Esri
+  que usa POST para leitura, parte de um envio que já é narrado pelo início e pela conclusão). Cada entrada
+  carrega o MOTIVO escrito, e `test_eventos.py` reprova motivo curto ou ausente, entrada repetida nas duas
+  listas, e rota que aparece aqui apesar de o seu módulo chamar `registrar_evento`.
+
+Rota de escrita do OpenAPI que não esteja em uma das duas = falha em `test_eventos.py`."""
 
 EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/login"): ["usuarios/entrar", "usuarios/falha_login"],
@@ -10,7 +19,6 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("PUT", "/api/eu/senha"): ["usuarios/trocar_senha"],
     ("DELETE", "/api/eu/sessoes"): ["sessoes/revogar"],
     ("DELETE", "/api/eu/sessoes/{id}"): ["sessoes/revogar"],
-    ("POST", "/api/eu/2fa/iniciar"): [],  # só liga no confirmar; iniciar sem confirmar não muda o estado da conta
     ("POST", "/api/eu/2fa/confirmar"): ["usuarios/2fa_ligar"],
     ("POST", "/api/eu/2fa/desativar"): ["usuarios/2fa_desligar"],
     ("POST", "/api/eu/2fa/codigos"): ["usuarios/2fa_codigos"],
@@ -84,16 +92,6 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("DELETE", "/api/favoritos/{item_id}"): ["favoritos/remover"],
     ("POST", "/api/lixeira/{id}/restaurar"): ["itens/restaurar"],
     ("POST", "/api/lixeira/esvaziar"): ["lixeira/esvaziar"],
-    # ---- arquivos/objetos (L0-11): sem dono humano (usuário/grupo/token) para narrar num evento de domínio; a
-    # auditoria do objeto é a própria linha em plat.arquivo (quem gravou, quando, sha256) + plat.log_acesso da
-    # requisição (rota, ip, bytes, token_id) — o mesmo padrão de decisão já usado acima em /api/eu/2fa/iniciar
-    ("POST", "/api/arquivos"): [],
-    ("DELETE", "/api/arquivos/{sha256}"): [],
-    # ---- rede de rota (L2-11-c): cálculo sobre dado aberto (OSM), sem escrita em `plat.*` e sem dono humano —
-    # não há o que narrar num evento de domínio (mesma decisão de /api/arquivos acima)
-    ("POST", "/api/rota"): [],
-    ("POST", "/api/matriz"): [],
-    ("POST", "/api/isocrona"): [],
     # ---- LDAP/Active Directory (L0-08-d): login registra a MESMA sequência do login local, reaproveitada de
     # _abrir_sessao ("usuarios/entrar"), mais o provisionamento automático (criação ou sincronização do
     # usuário a partir do diretório); administração do provedor tem vocabulário próprio ("org/*")
@@ -108,35 +106,23 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/convites"): ["convites/criar"],
     ("DELETE", "/api/convites/{id}"): ["convites/cancelar"],
     ("POST", "/api/convites/aceitar"): ["usuarios/convite_aceito"],
-    # ---- redefinição de senha por e-mail (L0-07-d-smtp-convites; ADR 0002 seção 6.3): `solicitar` SEMPRE
-    # responde {"ok": true} sem revelar se o e-mail existe e não registra evento nenhum (mesma decisão de
-    # /api/login com credencial errada) — o evento nasce só quando a senha É trocada, em `aplicar`.
-    ("POST", "/api/senha/redefinir/solicitar"): [],
+    # ---- redefinição de senha por e-mail (L0-07-d-smtp-convites; ADR 0002 seção 6.3): o evento nasce só
+    # quando a senha É trocada, em `aplicar` (ver `solicitar` em ROTAS_SEM_EVENTO).
     ("POST", "/api/senha/redefinir/aplicar"): ["usuarios/redefinir_senha_email"],
     # ---- SMTP por inquilino (L0-07-d-smtp-convites; ADR 0013): PUT tanto configura quanto remove o override
     # (host="" apaga), então os dois tipos aparecem juntos.
     ("PUT", "/api/org/smtp"): ["org/smtp_configurar", "org/smtp_remover"],
     ("POST", "/api/org/smtp/testar"): ["org/smtp_testar"],
     # ---- upload retomável (L0-04-a-upload-arquivo; ADR 0005 seção 3): `enviar_parte` não registra evento por
-    # parte (o volume de partes tornaria o log ruidoso sem valor de auditoria; `uploads/iniciar` e
-    # `uploads/concluir`/`uploads/abortar` já narram início e fim do processo).
+    # parte (ver ROTAS_SEM_EVENTO); `uploads/iniciar` e `uploads/concluir`/`uploads/abortar` já narram início e
+    # fim do processo.
     ("POST", "/api/uploads"): ["uploads/iniciar"],
-    ("PUT", "/api/uploads/{id}/partes/{n}"): [],
     ("POST", "/api/uploads/{id}/concluir"): ["uploads/concluir"],
     ("DELETE", "/api/uploads/{id}"): ["uploads/abortar"],
-    # ---- ingestão vetorial (L0-04-b/c/d; ADR 0005 seção 16): `apagar` só remove importações que nunca
-    # chegaram a carregar (proposta/falhou/cancelada/expirada) — sem efeito sobre o catálogo, sem evento.
+    # ---- ingestão vetorial (L0-04-b/c/d; ADR 0005 seção 16): `apagar` de proposta nunca carregada vai para
+    # ROTAS_SEM_EVENTO — sem efeito sobre o catálogo.
     ("POST", "/api/importacoes"): ["importacoes/criar"],
     ("PUT", "/api/importacoes/{id}/confirmar"): ["importacoes/confirmar"],
-    ("DELETE", "/api/importacoes/{id}"): [],
-    # ---- geocodificador (L2-11-a/b): cálculo sobre dado aberto CNEFE/IBGE, sem tabela de inquilino e sem
-    # dono humano para narrar — mesma decisão já usada acima em /api/rota, /api/matriz, /api/isocrona.
-    ("POST", "/api/geocodificar"): [],
-    ("POST", "/api/reverso"): [],
-    ("POST", "/rest/services/Geocodificador/GeocodeServer"): [],
-    ("POST", "/rest/services/Geocodificador/GeocodeServer/findAddressCandidates"): [],
-    ("POST", "/rest/services/Geocodificador/GeocodeServer/reverseGeocode"): [],
-    ("POST", "/rest/services/Geocodificador/GeocodeServer/geocodeAddresses"): [],
     # ---- achado nesta verificação: as duas famílias abaixo já existiam em master sem entrada aqui (não são
     # deste turno) — /api/eu/foto (app/auth/rotas_eu.py) e /api/conexoes (L6-02-a-modelo-conexao-e-seguranca,
     # app/conexao/rotas.py). Sem elas o portão de cobertura nunca passava, mesmo antes das rotas novas.
@@ -174,4 +160,46 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/rede/{rede_id}/tracar"): ["redes/tracar"],
     ("POST", "/api/rede/{rede_id}/epanet"): ["redes/epanet_importar"],
     ("POST", "/api/rede/{rede_id}/teksi"): ["redes/teksi_importar"],
+}
+
+
+ROTAS_SEM_EVENTO: dict[tuple[str, str], str] = {
+    ("POST", "/api/eu/2fa/iniciar"):
+        "só liga no confirmar; iniciar sem confirmar não muda o estado da conta, nada para narrar ainda",
+    ("POST", "/api/arquivos"):
+        "arquivo/objeto (L0-11) sem dono humano para narrar num evento de domínio; a auditoria do objeto é a "
+        "própria linha em plat.arquivo (quem gravou, quando, sha256) + plat.log_acesso da requisição",
+    ("DELETE", "/api/arquivos/{sha256}"):
+        "mesma decisão de POST /api/arquivos: sem dono humano, a auditoria fica em plat.arquivo/log_acesso",
+    ("POST", "/api/rota"):
+        "cálculo de rota sobre dado aberto (OSM) pelo OSRM: nenhuma escrita em plat.*, nenhum objeto criado; "
+        "o uso fica em plat.log_acesso (rota, ip, tempo, token_id)",
+    ("POST", "/api/matriz"):
+        "matriz de distância pelo OSRM: mesmo caso do POST /api/rota, cálculo sem escrita em plat.*",
+    ("POST", "/api/isocrona"):
+        "isócrona pelo OSRM: mesmo caso do POST /api/rota, cálculo sem escrita em plat.*",
+    ("POST", "/api/senha/redefinir/solicitar"):
+        "sempre responde {\"ok\": true} sem revelar se o e-mail existe e não registra evento nenhum (mesma "
+        "decisão de /api/login com credencial errada); o evento nasce só quando a senha É trocada, em aplicar",
+    ("PUT", "/api/uploads/{id}/partes/{n}"):
+        "upload retomável: não registra evento por parte (o volume tornaria o log ruidoso sem valor de "
+        "auditoria); uploads/iniciar e uploads/concluir/abortar já narram início e fim do processo",
+    ("DELETE", "/api/importacoes/{id}"):
+        "só remove importações que nunca chegaram a carregar (proposta/falhou/cancelada/expirada) — sem "
+        "efeito sobre o catálogo, sem evento de domínio",
+    ("POST", "/api/geocodificar"):
+        "consulta ao gazetteer: leitura pura, é POST só porque o pedido é um corpo JSON grande demais para a "
+        "linha de consulta; o uso fica em plat.log_acesso",
+    ("POST", "/api/reverso"):
+        "geocodificação reversa: leitura pura, mesmo caso do POST /api/geocodificar acima",
+    ("POST", "/rest/services/Geocodificador/GeocodeServer"):
+        "descritor do serviço no protocolo Esri: o mesmo documento do GET, que o cliente ArcGIS também pede "
+        "por POST; nenhuma escrita em plat.*",
+    ("POST", "/rest/services/Geocodificador/GeocodeServer/findAddressCandidates"):
+        "busca de endereço no protocolo Esri: leitura pura, o cliente ArcGIS usa GET ou POST conforme o "
+        "tamanho do pedido; mesma decisão de /api/geocodificar",
+    ("POST", "/rest/services/Geocodificador/GeocodeServer/reverseGeocode"):
+        "geocodificação reversa no protocolo Esri: leitura pura, mesmo caso do findAddressCandidates acima",
+    ("POST", "/rest/services/Geocodificador/GeocodeServer/geocodeAddresses"):
+        "geocodificação em lote no protocolo Esri: leitura pura, mesmo caso do findAddressCandidates acima",
 }
