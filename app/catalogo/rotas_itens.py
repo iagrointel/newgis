@@ -21,7 +21,7 @@ from app import db, limites
 from app.auth.comum import campos_json, paginacao
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo import busca as mod_busca
-from app.catalogo import comum, diff, documento, metadado, relacoes, site, texto, tipos
+from app.catalogo import comum, diff, documento, metadado, metadado_mgb, relacoes, site, texto, tipos
 from app.catalogo.comum import (
     carregar,
     exigir_edicao,
@@ -40,6 +40,7 @@ from app.catalogo.modelos import (
     ItemEntrada,
     LoteEntrada,
     LoteSaida,
+    MetadadoEditorEntrada,
     MoverEntrada,
     OrdemExclusao,
     Pagina,
@@ -653,6 +654,105 @@ def metadado_iso(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler"))
         # nunca deveria acontecer para um item bem formado; erro de build do gerador, não do pedido do cliente
         raise ErroAPI(500, "metadado_invalido", "metadado gerado não validou contra o XSD", e.erros) from e
     return Response(content=xml, media_type="application/xml")
+
+
+def _eventos_do_item(cur, item_id: str) -> list[dict]:
+    cur.execute(
+        "SELECT tipo, em, propriedades FROM plat.evento WHERE alvo_tipo = 'item' AND alvo_id = %s ORDER BY em ASC",
+        (str(item_id),),
+    )
+    return cur.fetchall()
+
+
+def _config_do_tenant(cur, auth: Auth) -> dict | None:
+    cur.execute("SELECT config FROM plat.tenant WHERE id = %s", (auth.tenant_id,))
+    r = cur.fetchone()
+    return r["config"] if r else None
+
+
+def _metadado_leitura(r: dict, eventos: list[dict], config: dict | None, estilo: str | None) -> dict:
+    """Leitura completa da aba Metadado (item L0-09-metadado-catalogo, cláusula 3): identificação sincronizada
+    + parte própria (`plat.item.metadado_iso`) + linhagem computada + o que falta do essencial/completo +
+    avisos (extent declarado que diverge do item) — reusa o mesmo núcleo do item irmão L0-09-b, sem duplicar
+    esquema nem cálculo."""
+    stored = r.get("metadado_iso") or {}
+    base_url = settings.PLAT_URL_PUBLICA.rstrip("/")
+    v = metadado_mgb.visao(r, stored, eventos, base_url)
+    estilo_efetivo = estilo if estilo in metadado_mgb.ESTILOS else metadado_mgb.estilo_do_tenant(config)
+    saida = metadado_mgb.formatar_estilo(v, estilo_efetivo)
+    saida["faltantes_essencial"] = metadado_mgb.faltantes(v, "essencial")
+    saida["faltantes_completo"] = metadado_mgb.faltantes(v, "completo")
+    saida["avisos"] = metadado_mgb.avisos_extent(stored, r)
+    return saida
+
+
+@router.get("/api/itens/{id}/metadado", openapi_extra=LER)
+def metadado_obter(id: str, estilo: str | None = None, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """Leitura do editor de metadado na tela (item L0-09-metadado-catalogo, cláusula 3; web/js/catalogo/
+    item_metadado.js). `estilo` só muda rótulo/apresentação (`?estilo=iso19115_3|dublin_core`); o padrão vem de
+    `plat.tenant.config.estilo_metadado` (item L0-09-b). Mesmo isolamento por inquilino de `GET /api/itens/{id}`
+    (RLS de `plat.item`): item de outro inquilino é 404, nunca vaza um campo."""
+    with db.db(auth.contexto()) as cur:
+        r = item_ou_404(cur, id)
+        eventos = _eventos_do_item(cur, r["id"])
+        config = _config_do_tenant(cur, auth)
+        return _metadado_leitura(r, eventos, config, estilo)
+
+
+@router.post("/api/itens/{id}/metadado/validar", openapi_extra=EDITAR)
+def metadado_validar_rota(id: str, corpo: MetadadoEditorEntrada, auth: Auth = autenticado()):
+    """Só a lista do que falta (essencial/completo), sem gravar — o botão "Validar" do editor. `item` é uma
+    prévia local (título/resumo/tags/créditos/termos de uso propostos), nunca escrita no banco aqui."""
+    with db.db(auth.contexto()) as cur:
+        r = item_ou_404(cur, id)
+        if corpo.item:
+            try:
+                previsto = ItemEditar.model_validate(corpo.item).model_dump(exclude_unset=True)
+            except pydantic.ValidationError as exc:
+                detalhe = [
+                    {"campo": ".".join(str(x) for x in d.get("loc", ())), "erro": d.get("msg", "")}
+                    for d in exc.errors()
+                ]
+                raise ErroAPI(422, "validacao", "pedido inválido: campos do item fora do esquema", detalhe) from exc
+            r = {**r, **previsto}
+        eventos = _eventos_do_item(cur, r["id"])
+        v = metadado_mgb.visao(r, corpo.metadado or {}, eventos, settings.PLAT_URL_PUBLICA.rstrip("/"))
+    return {
+        "faltantes_essencial": metadado_mgb.faltantes(v, "essencial"),
+        "faltantes_completo": metadado_mgb.faltantes(v, "completo"),
+    }
+
+
+@router.put("/api/itens/{id}/metadado", openapi_extra=EDITAR)
+def metadado_salvar(id: str, request: Request, corpo: MetadadoEditorEntrada, auth: Auth = autenticado()):
+    """Grava a parte própria do metadado (`plat.item.metadado_iso`) e, se vier `item`, os campos sincronizados
+    pelo MESMO caminho de `PUT/PATCH /api/itens/{id}` (`editar_item`) — nunca um segundo lugar de verdade para
+    título/resumo/tags. Estrutura inválida (esquema, datas fora de ordem, corpo grande) = 422 com o caminho de
+    cada erro; extent declarado que diverge do item real = aviso, nunca bloqueio (refutação do item L0-09-b)."""
+    stored = corpo.metadado or {}
+    if not metadado_mgb.tamanho_ok(stored):
+        raise ErroAPI(
+            422, "metadado_grande", f"metadado acima do teto de {limites.METADADO_ISO_BYTES_MAX} bytes"
+        )
+    try:
+        metadado_mgb.validar_estrutura(stored)
+    except metadado_mgb.ErroMetadadoInvalido as e:
+        raise ErroAPI(422, "metadado_invalido", "metadado inválido", e.erros) from e
+    try:
+        with db.db(auth.contexto()) as cur:
+            exigir_edicao(cur, id)
+            if corpo.item:
+                editar_item(cur, request, auth, id, corpo.item)
+            cur.execute("UPDATE plat.item SET metadado_iso = %s WHERE id = %s::uuid", (jsonb(stored), id))
+            registrar_evento(cur, request, "itens/metadado_iso_atualizar", "item", id, {})
+            r = item_ou_404(cur, id)
+            eventos = _eventos_do_item(cur, r["id"])
+            config = _config_do_tenant(cur, auth)
+            saida = _metadado_leitura(r, eventos, config, None)
+            saida["item"] = item_json(r, auth)
+            return saida
+    except psycopg2.Error as e:
+        raise comum.erro_do_banco(e) from e
 
 
 def editar_item(

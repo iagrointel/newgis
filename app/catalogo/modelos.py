@@ -102,6 +102,18 @@ class MetadadoIsoEntrada(Modelo):
     xml: str = Field(min_length=1, max_length=limites.METADADO_XML_BYTES_MAX)
 
 
+class MetadadoEditorEntrada(Modelo):
+    """Corpo de `POST /api/itens/{id}/metadado/validar` e `PUT /api/itens/{id}/metadado` (item
+    L0-09-metadado-catalogo, cláusula 3): `item` é o subconjunto sincronizado (título/resumo/tags/créditos/
+    termos de uso — mesmo contrato de `ItemEditar`, validado por `editar_item`), `metadado` é a parte própria
+    do Perfil MGB 2.0 (`app/catalogo/metadado_mgb.py`, `ESQUEMA_MGB`). Ambos ficam soltos (`dict`) aqui: quem
+    valida estrutura é `metadado_mgb.validar_estrutura`/`editar_item`, nunca este modelo — repetir o esquema
+    aqui seria um segundo lugar de verdade."""
+
+    item: dict[str, Any] | None = None
+    metadado: dict[str, Any] = Field(default_factory=dict)
+
+
 class MoverEntrada(Modelo):
     pasta_id: str | None = Field(default=None, pattern=UUID_PADRAO)
 
