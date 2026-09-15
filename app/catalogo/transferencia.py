@@ -5,7 +5,7 @@ favoritos, versões, relações, proteção e status; executa com plat.transfere
 
 from fastapi import APIRouter, Request
 
-from app import db
+from app import db, notificacoes
 from app.auth.sessao import Auth, autenticado
 from app.catalogo import comum
 from app.catalogo.comum import item_ou_404, registrar_evento, uuid_ok
@@ -184,6 +184,19 @@ def executar(
                     "arrastado_por": None if iid == p["id"] else p["id"],
                 },
             )
+        # notificação interna do novo dono (L0-03-k, "transferência de dono"): só o item principal do plano,
+        # não um aviso por item arrastado (a vista/estilo some junto, o dono não precisa de N avisos)
+        notificacoes.notificar(
+            cur,
+            auth.tenant_id,
+            novo["id"],
+            "itens/transferido",
+            f'Você recebeu a propriedade de "{p["titulo"]}"',
+            f"itens/transferido:{p['id']}",
+            url=f"/itens/{p['id']}",
+            alvo_tipo="item",
+            alvo_id=p["id"],
+        )
         feitos += 1
     return feitos
 

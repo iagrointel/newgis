@@ -25,6 +25,7 @@ from urllib.parse import urlparse
 import psycopg2
 import psycopg2.extras
 
+from app import limites
 from app import log as plat_log
 from app.jobs import agenda as mod_agenda
 from app.jobs import filho as mod_filho
@@ -393,7 +394,32 @@ class Worker:
         ok = bool(r and r["ok"])
         if not ok:
             log.warning("job_terminar recusado (job já não era deste worker)", extra={"job_id": str(job["id"])})
+        elif estado in ("concluido", "falhou"):
+            self._notificar_dono(job, estado)
         return ok
+
+    def _notificar_dono(self, job: dict, estado: str) -> None:
+        """Notificação interna do dono do job ao terminar (item L0-03-k: a metade de notificação declarava
+        'jobs/concluido'/'jobs/falhou' em app/notificacoes.TIPOS mas nada chamava plat.notificar aqui — o job
+        terminava e ninguém era avisado. `plat_worker` não tem privilégio de tabela (migração 006), só EXECUTE
+        em `plat.notificar` (SECURITY DEFINER, migração 20260906T1607); dedup por job+estado evita duplicata se
+        este método for chamado mais de uma vez para o mesmo job (job_terminar já garante UPDATE único, isto é
+        defesa dobrada). Nunca deixa a notificação derrubar o laço do worker: falhar em notificar não é falhar
+        o job."""
+        usuario_id = job.get("usuario_id")
+        if usuario_id is None:
+            return  # job sem dono (periódico/sistema): ninguém para notificar
+        tipo = "jobs/concluido" if estado == "concluido" else "jobs/falhou"
+        titulo = f'O job "{job["tipo"]}" foi concluído' if estado == "concluido" else f'O job "{job["tipo"]}" falhou'
+        try:
+            self.um(
+                "SELECT plat.notificar(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) AS id",
+                (job["tenant_id"], usuario_id, tipo, titulo, f"{tipo}:{job['id']}", None, "/jobs",
+                 "job", str(job["id"]), limites.NOTIFICACOES_POR_MINUTO),
+            )
+        except Exception:
+            log.exception("notificação de fim de job falhou (o job já terminou; isto não desfaz)",
+                          extra={"job_id": str(job["id"]), "estado": estado})
 
     def _finalizar(self, f: Filho, codigo: int) -> None:
         job = f.job
@@ -436,6 +462,8 @@ class Worker:
             r = self.um("SELECT plat.job_devolver(%s, %s, %s, true, %s, %s, %s) AS estado",
                         (job["id"], self.nome, erro, espera, self.max_reinicios, psycopg2.extras.Json(prov)))
             estado = r["estado"] if r else None
+            if estado == "falhou":  # tentativas esgotadas: job_devolver termina fora de job_terminar
+                self._notificar_dono(job, "falhou")
         if estado in ("concluido", "cancelado", "pendente"):
             mod_filho.apagar_dir(self.dir_jobs, job["id"])
         log.info("job terminou: %s (código %s)", estado, codigo,

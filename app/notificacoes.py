@@ -10,7 +10,15 @@ enfileirada — é assim que 10 mil notificações em 1 minuto viram no máximo 
 
 Ler, marcar como lida e apagar são do próprio usuário: a segurança de linha da tabela usa `usuario_id =
 plat.usuario_atual()`, então notificação de outro usuário não aparece na lista nem é alcançável por id (404).
-"""
+
+Da hipótese original do item (convite de grupo, pedido de entrada, job concluído/falhou, item compartilhado
+comigo, transferência de dono), duas ficaram PARCIAIS na primeira passagem (achado G2-7): `jobs/concluido` e
+`jobs/falhou` estavam nesta lista de TIPOS mas nenhum código chamava `plat.notificar` — o worker terminava o
+job e ninguém era avisado (consertado em app/jobs/worker.py::_notificar_dono); "item compartilhado comigo" e
+"transferência de dono" não emitiam nada. Completado agora: `itens/transferido` (app/catalogo/transferencia.py,
+novo dono) e `itens/compartilhado` (app/catalogo/rotas_compartilhamento.py, membros do grupo recém-adicionado).
+"Prazo de token" continua fora (exigiria uma varredura periódica que não existe ainda; não confundir com o
+item deste turno)."""
 
 import logging
 
@@ -24,6 +32,8 @@ TIPOS = (
     "grupos/pedido",  # alguém pediu entrada no grupo que você gere
     "jobs/concluido",  # seu job terminou
     "jobs/falhou",  # seu job falhou
+    "itens/transferido",  # você recebeu a propriedade de um item
+    "itens/compartilhado",  # um item foi compartilhado com um grupo do qual você é membro
 )
 
 

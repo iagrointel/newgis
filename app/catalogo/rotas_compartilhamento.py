@@ -12,7 +12,7 @@ import psycopg2
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 
-from app import db, limites, objetos
+from app import db, limites, notificacoes, objetos
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo import comum, miniatura, relacoes
 from app.catalogo.comum import (
@@ -140,6 +140,7 @@ def aplicar_compartilhamento(
             if cur.fetchone() is None:
                 raise ErroAPI(404, "grupo_inexistente", "grupo inexistente", {"grupo": g})
         atuais = set(antes["grupos"])
+        novos_grupos = []
         for g in atuais - set(alvo):
             cur.execute("DELETE FROM plat.item_grupo WHERE item_id = %s::uuid AND grupo_id = %s::uuid", (iid, g))
         for g in alvo:
@@ -149,6 +150,9 @@ def aplicar_compartilhamento(
                     "VALUES (%s::uuid, %s::uuid, %s, %s)",
                     (iid, g, auth.tenant_id, auth.usuario_id),
                 )
+                novos_grupos.append(g)
+    else:
+        novos_grupos = []
     if destaques is not None:
         ids = [uuid_ok(g, "grupo_inexistente", "grupo inexistente") for g in destaques]
         cur.execute(
@@ -160,6 +164,28 @@ def aplicar_compartilhamento(
     }
     if antes != depois:
         registrar_evento(cur, request, "compartilhamento/alterar", "item", iid, {"antes": antes, "depois": depois})
+    if novos_grupos:
+        # notificação interna "item compartilhado comigo" (L0-03-k): membro ativo do grupo recém-adicionado,
+        # nunca quem compartilhou; dedup por (item, grupo, membro) — refazer o mesmo compartilhamento não
+        # duplica, adicionar a um grupo diferente ou readicionar depois de remover notifica de novo.
+        cur.execute(
+            "SELECT g.id AS grupo_id, g.nome, gm.usuario_id FROM plat.grupo g JOIN plat.grupo_membro gm "
+            "ON gm.grupo_id = g.id AND gm.estado = 'ativo' AND gm.usuario_id != %s "
+            "WHERE g.id = ANY (%s::uuid[])",
+            (auth.usuario_id, novos_grupos),
+        )
+        for m in cur.fetchall():
+            notificacoes.notificar(
+                cur,
+                auth.tenant_id,
+                m["usuario_id"],
+                "itens/compartilhado",
+                f'"{r["titulo"]}" foi compartilhado com o grupo {m["nome"]}',
+                f"itens/compartilhado:{iid}:{m['grupo_id']}",
+                url=f"/itens/{iid}",
+                alvo_tipo="item",
+                alvo_id=iid,
+            )
     if aplicar_a:
         deps = {d["id"]: d for d in _dependencias(cur, iid) if not d.get("oculto")}
         sem_edicao = [d for d in aplicar_a if d not in deps or not deps[d]["pode_editar"]]

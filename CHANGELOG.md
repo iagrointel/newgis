@@ -8787,3 +8787,27 @@ teto menor em `dados.versionamento.ramos_max`.
 ## auditoria-apagar-inquilino (15/09/2026)
 
 - `plat.tenant_apagar_interno` apagava `plat.auditoria` pelo loop genérico de tenant_id e o gatilho `plat.tg_auditoria_imutavel()` recusava com 409 `auditoria_imutavel` (10 arquivos de teste erravam no teardown da fixture `inquilino_temporario`); corrigido em `db/migracoes/20260915T1500_auditoria_apagar_inquilino.sql` (marca `plat.apagando_inquilino` local à transação, só DELETE, só dentro da função; auditoria do inquilino apagada de forma explícita) — prova: `roda_teste.sh tests/api/test_usuarios_papel_escalada.py` 8 passed sem erro de teardown (antes: 8 passed + 1 error) e `tests/api/test_auditoria_imutavel_apagar_inquilino.py` 3 passed.
+
+## notificacoes-internas-completar (15/09/2026, item L0-03-k-favoritos-notificacoes, metade notificação)
+
+- A tabela/API/sino de `plat.notificacao` já existia (commit `d1334f735`, 07/09), mas três das cinco origens
+  que a hipótese do item pedia nunca chegaram a chamar `plat.notificar`: `jobs/concluido`/`jobs/falhou`
+  estavam na lista `app/notificacoes.TIPOS` desde o começo, mas nenhum código os emitia (o worker terminava
+  o job e ninguém era avisado); "item compartilhado comigo" e "transferência de dono" nunca tinham código
+  nenhum (a passagem anterior declarou as duas fora de escopo).
+- `app/jobs/worker.py::Worker._notificar_dono`, chamado de `_terminar` (concluído, timeout, falha definitiva)
+  e do desvio por `plat.job_devolver` quando as tentativas se esgotam sem passar por `job_terminar`; nunca
+  propaga exceção (notificar é efeito colateral, não pode derrubar o job que acabou de terminar).
+- `app/catalogo/transferencia.py::executar` notifica o NOVO dono (`itens/transferido`), um aviso por item
+  PRINCIPAL do plano — itens arrastados (vista/estilo) não geram aviso extra.
+- `app/catalogo/rotas_compartilhamento.py::aplicar_compartilhamento` notifica os membros ATIVOS de cada
+  grupo NOVO adicionado ao compartilhamento (`itens/compartilhado`), nunca quem compartilhou; o diff
+  antes/depois evita renotificar quando o mesmo grupo já estava lá.
+- Escopo: só a metade de NOTIFICAÇÃO. Favoritos ("estado errado na tela") é o item-irmão L0-03-f, de outro
+  trabalhador (`wt/f2-l0sse`) — não tocado aqui. "Prazo de token" continua fora (exigiria periódico
+  cross-tenant que não existe, mesma lacuna já registrada para o aviso por e-mail).
+- Prova: `bash laco/roda_teste.sh tests/unit/test_jobs_notificar_dono.py` — 8 passed (sem banco; espiona
+  `Worker.um` e confere a SQL emitida por `_notificar_dono`/`_terminar`, já que o daemon `plat-worker` vivo
+  desta trilha não pode ser reiniciado para carregar este código). `bash laco/roda_teste.sh tests/api/
+  catalogo/test_notificacoes.py` — 9 passed (as 7 preexistentes + as 2 novas de compartilhamento/
+  transferência), contra a trilha `uniao` real. `docs/PARIDADE.md`: nova seção "Notificações internas".

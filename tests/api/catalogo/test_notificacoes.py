@@ -9,13 +9,20 @@ não existia). Cobre as cláusulas do portão que são de API:
   - expurgo por idade com relógio simulado;
   - medida: a consulta do sino em ≤ 20 ms.
 
-A notificação de job concluído é escrita pelo worker (app/jobs/worker.py::_notificar_dono) e depende de worker
-vivo; aqui o mesmo caminho é exercido pela função plat.notificar, que é o que o worker chama.
+A notificação de job concluído/falhou é escrita pelo worker (app/jobs/worker.py::Worker._notificar_dono, que
+chama a mesma `plat.notificar`); aqui o caminho é exercido diretamente pela função (o que o worker chama), sem
+depender do daemon `plat-worker` vivo com o código deste turno — o unitário de `_notificar_dono` em si vive em
+tests/unit/test_jobs_notificar_dono.py (sem banco, monkeypatch de `Worker.um`).
+
+Duas emissões que faltavam na primeira passagem (achado G2-7 as declarava "fora do escopo desta passagem")
+ganham teste aqui: transferência de dono de item (`itens/transferido`) e item compartilhado com um grupo do
+qual o usuário é membro (`itens/compartilhado`).
 """
 
 import time
 import uuid
 
+from tests.api.catalogo.conftest import titulo_zt
 from tests.api.test_rls import contexto, ids_por_slug
 
 ITEM = "L0-03-catalogo"
@@ -221,3 +228,56 @@ def test_titulo_no_teto_de_250_e_recusa_acima(sessao_a, itens_a):
     )
     assert r.status_code == 422, r.text
     assert sessao_a.put(f"/api/itens/{it['id']}", json={"titulo": "z" * (teto + 1)}).status_code == 422
+
+
+def test_item_compartilhado_com_grupo_notifica_membro_ativo_mas_nao_quem_compartilhou(sessao_a, itens_a, editor_a):
+    """Emissão que faltava (achado G2-7, "item compartilhado comigo"): compartilhar um item com um grupo
+    notifica os membros ATIVOS desse grupo, nunca quem compartilhou. Repetir o mesmo PUT (mesmo grupo, já
+    membro) não gera segunda notificação — o diff é feito ANTES do dedup por chave, contra `antes`/`depois`
+    de plat.item_grupo (app/catalogo/rotas_compartilhamento.py::aplicar_compartilhamento)."""
+    cliente, usuario = editor_a
+    _limpar(cliente)
+    item = itens_a.criar("mapa", sessao=sessao_a)
+    g = sessao_a.post("/api/grupos", json={"nome": titulo_zt("g-notif-item"), "entrada": "convite"}).json()
+    try:
+        assert sessao_a.post(f"/api/grupos/{g['id']}/membros",
+                              json={"usuario_id": usuario["id"], "papel": "membro"}).status_code == 201
+        assert cliente.post(f"/api/grupos/{g['id']}/aceitar").status_code == 200
+        _limpar(cliente)  # descarta a notificação do convite; este teste é sobre a de compartilhamento
+
+        r = sessao_a.put(f"/api/itens/{item['id']}/compartilhamento", json={"grupos": [g["id"]]})
+        assert r.status_code == 200, r.text
+
+        minhas = [n for n in cliente.get("/api/notificacoes").json()["itens"] if n["alvo_id"] == item["id"]]
+        assert len(minhas) == 1, minhas
+        assert minhas[0]["tipo"] == "itens/compartilhado"
+        assert minhas[0]["lida_em"] is None
+        # quem compartilhou não recebe nada de si mesmo
+        assert not [n for n in sessao_a.get("/api/notificacoes").json()["itens"] if n["alvo_id"] == item["id"]]
+
+        # repetir o mesmo compartilhamento (grupo já presente) não duplica
+        r = sessao_a.put(f"/api/itens/{item['id']}/compartilhamento", json={"grupos": [g["id"]]})
+        assert r.status_code == 200, r.text
+        minhas_depois = [n for n in cliente.get("/api/notificacoes").json()["itens"] if n["alvo_id"] == item["id"]]
+        assert len(minhas_depois) == 1, minhas_depois
+    finally:
+        sessao_a.delete(f"/api/grupos/{g['id']}")
+
+
+def test_transferencia_de_item_notifica_o_novo_dono(sessao_a, itens_a, usuarios_a):
+    """Emissão que faltava (achado G2-7, "transferência de dono"): transferir a propriedade de um item notifica
+    o NOVO dono (app/catalogo/transferencia.py::executar); dedup por (item, novo dono) — a mesma transferência
+    pedida duas vezes não duplica (a segunda nem chega a mudar `dono_id`: `ja_e_o_dono` barra no plano)."""
+    dono_c, dono, _ = usuarios_a.sessao("editor")
+    novo_c, novo, _ = usuarios_a.sessao("editor")
+    item = itens_a.criar("mapa", sessao=dono_c)
+    r = dono_c.post(
+        "/api/itens/transferir", json={"ids": [item["id"]], "novo_dono_id": novo["id"], "simular": False}
+    )
+    assert r.status_code == 200 and r.json()["executado"] is True, r.text
+
+    minhas = [n for n in novo_c.get("/api/notificacoes").json()["itens"] if n["alvo_id"] == item["id"]]
+    assert len(minhas) == 1, minhas
+    assert minhas[0]["tipo"] == "itens/transferido"
+    # o antigo dono não recebe nada por transferir o que era seu
+    assert not [n for n in dono_c.get("/api/notificacoes").json()["itens"] if n["alvo_id"] == item["id"]]
