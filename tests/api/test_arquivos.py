@@ -40,8 +40,8 @@ ADMIN_LEGITIMO = {
 # deste item): commit 6b0108782 em wt/f2-l004a já troca para conteudo:criar, mas esse ramo ainda não foi
 # fundido em wt/uniao (a base deste worktree) — listado aqui como exceção RASTREADA, não como aprovação, para
 # a varredura não silenciar o achado nem duplicar o conserto de outro item/branch neste commit.
-PENDENTE_OUTRO_ITEM = {
-    "js/uploads/nucleo.js": "L0-04-a — corrigido em wt/f2-l004a (commit 6b0108782), a ser fundido em wt/uniao.",
+PENDENTE_OUTRO_ITEM: dict[str, str] = {
+    # js/uploads/nucleo.js saiu daqui em 16/09: L0-04-a (commit 6b0108782) já está em wt/uniao.
 }
 
 
