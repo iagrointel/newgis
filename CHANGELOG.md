@@ -3,6 +3,21 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## setembro de 2026 (item L0-02-g residual: status do `POST /api/usuarios/lote` numa escalada 100% recusada)
+
+`test_l0_02g_ator_nao_atribui_papel_com_um_privilegio_a_mais_que_o_seu` media que a rota já RECUSAVA a
+escalada (`alterados: 0`, alvo em `recusados`), mas devolvia `200` — o adversário exige 403/422 para
+qualquer tentativa de escalada. Conserto em `app/auth/rotas_usuarios.py::lote`: quando `alterados == 0`
+e há `recusados`, a resposta vira `403` com `erro`/`mensagem`/`detalhe` do primeiro recusado (preserva o
+`detalhe` original, por exemplo a lista de privilégios que faltam) e `recusados` continua no corpo, no
+mesmo nível de `erro`. Aplicação parcial (≥1 alterado) continua `200`, sem mudança de contrato.
+
+Prova: `roda_teste.sh tests/api/adversario/test_l0_identidade.py` → 18 passed (os 2 outros nomes que
+falhavam num run anterior — `02b`/`02c` — são contenção do superadmin/2FA compartilhado entre workers
+na mesma máquina, `410 desafio_expirado`; reproduzido e confirmado isolando-os); `roda_teste.sh
+tests/api/test_usuarios_papel_escalada.py` → 8 passed (sem o teardown 409 auditoria_imutavel que o
+laudo citava como de outro item — não apareceu nesta rodada). `MANUAL.md` §4.4 atualizado.
+
 ## lote f1-lote3, setembro de 2026 (item i: reprodutibilidade das 13 funções SQL do prefixo de schema)
 
 Dívida de `laco/handoffs/T8/LANCAMENTO.md:448-450` ("falta escrever a migração equivalente") está PAGA,

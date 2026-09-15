@@ -259,7 +259,10 @@ códigos e as sessões; se o inquilino exige o fator, o usuário entra com a pen
 
 Selecionando até 100 linhas aparecem as ações `Mudar perfil`, `Desabilitar`, `Reabilitar` e papel
 (`POST /api/usuarios/lote`). A resposta diz quantos foram alterados e lista os recusados com o motivo (por exemplo
-o último administrador). Acima de 100: `422 lote_acima_de_100`.
+o último administrador). Acima de 100: `422 lote_acima_de_100`. Se NENHUM item do lote é aplicado (todos
+recusados — por exemplo uma tentativa de escalada de papel, item L0-02-g), a resposta é `403` com `erro`/
+`mensagem`/`detalhe` do primeiro recusado; a lista completa continua em `recusados`, no corpo. Aplicação
+parcial (ao menos um alterado) continua `200`.
 
 Página pronta em 59,4 ms (`pagina_pronta_ms_usuarios`).
 

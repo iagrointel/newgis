@@ -5,6 +5,7 @@ import secrets
 
 import psycopg2
 from fastapi import APIRouter, Request, Response
+from fastapi.responses import JSONResponse
 
 from app import db, limites, senha
 from app.auth import privilegios as priv
@@ -34,7 +35,7 @@ from app.auth.modelos import (
 )
 from app.auth.politica import email_permitido
 from app.auth.sessao import Auth, autenticado, iso
-from app.erros import ErroAPI
+from app.erros import TIPO_PROBLEMA, ErroAPI, corpo_erro
 
 router = APIRouter(prefix="/api", tags=["usuarios"])
 ORDENS = {
@@ -465,6 +466,13 @@ def criar_usuario(corpo: UsuarioCriar, request: Request, auth: Auth = autenticad
     openapi_extra={"x-auth": "S/T", "x-privilegio": "membros.gerir|membros.papel"},
 )
 def lote(corpo: LoteEntrada, request: Request, auth: Auth = autenticado()):
+    """Ação em lote sobre usuários. Quando pelo menos um item é aplicado, a resposta é sempre `200` com
+    `alterados` e a lista de `recusados` (aplicação parcial é sucesso parcial, não erro). Quando NENHUM item
+    é aplicado e há recusados, a resposta vira `403`: `erro`/`mensagem`/`detalhe` são os do primeiro recusado
+    (preserva o `detalhe` original — por exemplo a lista de privilégios que faltam em
+    `privilegio_proprio_insuficiente` — para quem já checava esse formato) e a lista completa continua
+    disponível em `recusados`, no mesmo nível de `erro`/`mensagem` — porque o lote inteiro foi, na prática,
+    uma tentativa negada (item L0-02-g: sem isto o adversário via 200 numa escalada 100% recusada)."""
     if len(corpo.ids) > limites.LOTE_MAX:
         raise ErroAPI(422, "lote_acima_de_100", f"no máximo {limites.LOTE_MAX} usuários por lote")
     if corpo.acao == "perfil" and not corpo.perfil:
@@ -495,12 +503,18 @@ def lote(corpo: LoteEntrada, request: Request, auth: Auth = autenticado()):
                 alterados += 1
             except ErroAPI as e:
                 cur.execute("ROLLBACK TO SAVEPOINT item")
-                recusados.append({"id": uid, "erro": e.erro, "mensagem": e.mensagem})
+                recusados.append({"id": uid, "erro": e.erro, "mensagem": e.mensagem, "_detalhe": e.detalhe})
             except psycopg2.Error as e:
                 cur.execute("ROLLBACK TO SAVEPOINT item")
                 erro = erro_do_banco(e)
-                recusados.append({"id": uid, "erro": erro.erro, "mensagem": erro.mensagem})
-    return {"alterados": alterados, "recusados": recusados}
+                recusados.append({"id": uid, "erro": erro.erro, "mensagem": erro.mensagem, "_detalhe": erro.detalhe})
+    recusados_pub = [{k: v for k, v in r.items() if k != "_detalhe"} for r in recusados]
+    if alterados == 0 and recusados:
+        primeiro = recusados[0]
+        corpo = corpo_erro(request, primeiro["erro"], primeiro["mensagem"], primeiro["_detalhe"], 403)
+        corpo["recusados"] = recusados_pub
+        return JSONResponse(corpo, status_code=403, media_type=TIPO_PROBLEMA)
+    return {"alterados": alterados, "recusados": recusados_pub}
 
 
 @router.get(
