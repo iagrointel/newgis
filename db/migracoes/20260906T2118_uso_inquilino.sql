@@ -14,7 +14,7 @@
 --    medir relações d_<slug> a cada dia em toda tabela de feição é exatamente o custo que a série existe
 --    para evitar na hora da tela.
 --  * A função é SECURITY DEFINER (dono postgres, contorna RLS) porque o periódico roda sob o inquilino
---    técnico `plataforma` e mede TODOS os inquilinos ativos; a leitura da série pela tela NÃO usa a função
+--    técnico `plataforma` e mede todos os inquilinos ativos; a leitura da série pela tela NÃO usa a função
 --    — é SELECT direto na tabela sob RLS (cada inquilino só lê a própria série).
 --  * Sem GRANT para PUBLIC (regra P6): REVOKE explícito + GRANT só a plat_app, mesmo padrão da 048.
 

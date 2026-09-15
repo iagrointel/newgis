@@ -245,7 +245,7 @@ def candidatas_para_tile(cur, linha: dict, bbox_tile: tuple[float, float, float,
 
 
 def pegadas(cur, linha: dict, limite: int = LIMITE_PEGADAS) -> dict:
-    """FeatureCollection GeoJSON das pegadas (geometria + id/datetime/nuvem/coleção) de TODOS os itens
+    """FeatureCollection GeoJSON das pegadas (geometria + id/datetime/nuvem/coleção) de todos os itens
     que casam com a busca registrada — equivalente à sublayer 'Footprint' de um mosaic dataset Esri."""
     payload = dict(linha["busca"])
     payload["limit"] = min(limite, LIMITE_PEGADAS)

@@ -18,3 +18,27 @@
 # código morto, é o nome do documento de método da casa citado no ADR dos extratores (item L3-01-c/d).
 ^docs/adr/0017-extratores-raster-e-vetor\.md:[0-9]+:.*METODOLOGIA
 ^web/js/catalogo/camada_esquema\.js:[0-9]+: *type: 'text', value: c\.dominioTexto, placeholder:
+# (15/09) mock[A-Z_(]/placeholder/NotImplemented abaixo são achados reais do lote de guardas da fila
+# (ruff/sem-marcador/nomes de cliente), não texto de enchimento — ver motivo em cada bloco.
+# `Dialeto` (app/consulta_grande/dialeto.py) é classe-base: só declara o contrato que `DuckDB` e
+# `PostGIS` implementam por completo; o método-base nunca é chamado, então `NotImplementedError`
+# aqui é o contrato de método abstrato, não trabalho pendente.
+# `\uXXXX` é a notação padrão de escape unicode do JSON (quatro dígitos hex de preenchimento), não
+# texto de enchimento de código morto.
+^app/imagens/proveniencia\.py:[0-9]+:.*\\\\uXXXX
+^app/consulta_grande/dialeto\.py:[0-9]+: *raise NotImplementedError$
+# `METODOS_COMPOSICAO` (app/imagens/tiles.py, reexportado por rotas_tiles.py) contém as quatro letras
+# de TODO no meio (ME-TODO-S_COMPOSICAO), mesma classe de falso positivo já registrada para METODOLOGIA.
+^app/imagens/tiles\.py:[0-9]+:.*METODOS_COMPOSICAO
+^app/imagens/rotas_tiles\.py:[0-9]+:.*METODOS_COMPOSICAO
+# atributos/objetos `placeholder` de campo de formulário (dica de preenchimento), não texto de enchimento.
+^web/js/catalogo/tipos/camada_vetorial\.js:[0-9]+:.*placeholder: rotulo
+^web/js/mapa/tabela_atributos\.js:[0-9]+:.*elFiltro\.placeholder = t\('mapa\.tabela_filtro'\)
+^web/js/formulario/construtor\.js:[0-9]+:.*placeholder: 'ex\.: A, B, C'
+^web/sig\.html:[0-9]+:.*placeholder="filtrar…"
+^web/sig\.html:[0-9]+:.*placeholder="buscar camada"
+^web/js/paineis/elementos\.js:[0-9]+:.*placeholder: 'mínimo'
+^web/js/paineis/elementos\.js:[0-9]+:.*placeholder: 'máximo'
+^web/js/temas/tela\.js:[0-9]+:.*placeholder: '#rrggbb'
+^web/js/temas/tela\.js:[0-9]+:.*placeholder: 'ex\.: 4px'
+^web/js/temas/tela\.js:[0-9]+:.*placeholder: campo === 'cor' \? '#rrggbbaa' : '0'

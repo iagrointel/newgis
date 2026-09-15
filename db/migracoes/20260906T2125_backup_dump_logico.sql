@@ -3,7 +3,7 @@
 -- Dump lógico diário (pg_dump -Fc) do schema plat e de cada d_<slug>, um arquivo por inquilino, com sha256,
 -- bytes e tempo registrados aqui, retenção de 14 diários + 8 semanais, cópia para o bucket '<prefixo>backup'
 -- do Garage e para destino externo S3 configurável. As funções são SECURITY DEFINER porque a tarefa roda no
--- inquilino técnico 'plataforma' mas precisa listar TODOS os inquilinos (RLS de plat.tenant só mostra a
+-- inquilino técnico 'plataforma' mas precisa listar todos os inquilinos (RLS de plat.tenant só mostra a
 -- própria linha) e gravar nestas tabelas em nome da plataforma. Toda função confere que o chamador está no
 -- inquilino técnico 'plataforma' (mesmo padrão da recusa de jobs.expurgo, migração 006) — um admin de outro
 -- inquilino não semeia linhas falsas de backup nem lê o destino (a chave do Garage fica aqui). Idempotente.

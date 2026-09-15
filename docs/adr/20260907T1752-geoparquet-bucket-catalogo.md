@@ -55,7 +55,7 @@ Durante o teste deste item, um job `pesado` ficou **pendente por > 7 minutos** p
 `pesado_ok` só é recalculada quando `self.lock_pesado` ainda é `False`; num tick em que o worker JÁ possui o
 lock (`self.lock_pesado = True` de um tick anterior) e não há job pesado pendente para ele, `pesado_ok` fica
 `False` por inicialização e a linha `if pesado_ok: self._soltar_pesado()` nunca dispara — o lock fica preso
-até o processo do worker morrer. Isso trava TODO job pesado da frota (exportação, ingestão, geoparquet) atrás
+até o processo do worker morrer. Isso trava todo job pesado da frota (exportação, ingestão, geoparquet) atrás
 de um único worker ocioso. Não foi corrigido aqui (`app/jobs/worker.py` é arquivo que a árvore principal
 também mexe, fora do escopo deste item) — reportado no handoff para o gerente decidir quem conserta.
 

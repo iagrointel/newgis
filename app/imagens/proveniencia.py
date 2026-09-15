@@ -11,7 +11,7 @@ promessa. Três peças:
    (`objetos.sha256_remoto`) e compara com `file:checksum`; recalcula também `plat:manifesto_sha256`.
 3. Canonicalização do manifesto — regra FIXA, documentada aqui porque o hash só é reproduzível se todo
    mundo que o calcula usar a MESMA serialização: `json.dumps(obj, sort_keys=True, separators=(",", ":"),
-   ensure_ascii=False)`, codificado UTF-8. `sort_keys=True` ordena as chaves em TODO nível do dicionário
+   ensure_ascii=False)`, codificado UTF-8. `sort_keys=True` ordena as chaves em todo nível do dicionário
    (o `json` da stdlib ordena recursivamente, não só o topo); `separators` compactos tiram o espaço que o
    padrão do Python insere depois de `:` e de `,`; `ensure_ascii=False` mantém acento como está em vez de
    escapar para `\\uXXXX` (a mesma escolha de `app.catalogo.comum.jsonb`) — qualquer uma das três escolhas
@@ -133,7 +133,7 @@ def preencher_propriedades_proveniencia(
     fabricado) OMITE a chave `plat:cadeia` em vez de gravar `null`: MEDIDO (10/09) que o
     `pgstac.create_item`/`update_item` DESCARTA chave de `properties` com valor `null` na gravação — uma
     ficha selada com `"plat:cadeia": null` teria `plat:manifesto_sha256` calculado sobre um dict que o
-    banco nunca devolve de volta, e `conferir_item` acusaria divergência de manifesto em TODO item sem
+    banco nunca devolve de volta, e `conferir_item` acusaria divergência de manifesto em todo item sem
     cadeia, sempre, mesmo sem qualquer byte alterado (achado do próprio teste de integração deste item,
     não do adversário). `properties.get('plat:cadeia')` no lado de leitura continua devolvendo `None` do
     mesmo jeito — a ausência da chave e um valor `null` são indistinguíveis para quem só LÊ."""
@@ -162,7 +162,7 @@ _ERROS_LEITURA = (FileNotFoundError, ChaveInvalida, ErroGarage)
 
 
 def conferir_item(cur, tenant_id: int, colecao_id: str, item_id: str) -> dict:
-    """Confere TODO asset com `file:checksum` do item: baixa em stream do balde (`objetos.sha256_remoto`,
+    """Confere todo asset com `file:checksum` do item: baixa em stream do balde (`objetos.sha256_remoto`,
     nunca o objeto inteiro em RAM), recalcula o sha256 e compara com o multihash registrado; recalcula
     também `plat:manifesto_sha256` quando o item já tem um. NUNCA lança por divergência (achado, não erro
     de execução) — "não consegui baixar o objeto" e "baixei e o sha256 diverge" são entradas DIFERENTES no

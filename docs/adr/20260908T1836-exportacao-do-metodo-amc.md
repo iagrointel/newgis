@@ -1,10 +1,10 @@
 # ADR 20260908T1836 — exportação do método do motor AMC (item L3-01-i-exportacao-metodo)
 
-Contexto: o motor AMC já combina fatores (`app/amc/combinacao.py`, ADR 20260907T1013), mas o MÉTODO —
+Contexto: o motor AMC já combina fatores (`app/amc/combinacao.py`, ADR 20260907T1013), mas o método —
 o que foi decidido, sobre que dado, com que pesos — vive só no estado da aplicação. O item pede a
 exportação dele em duas peças amarradas: um JSON canônico e um PDF gerado por script no desenho da
 casa (molde Suitability Modeler: resumo, diagrama do fluxo, uma página por fator, pesos, resultado,
-ressalvas). O portão fixa a regra de verdade: páginas = seções; TODO número extraído do PDF tem de
+ressalvas). O portão fixa a regra de verdade: páginas = seções; todo número extraído do PDF tem de
 existir no JSON; o JSON reimportado recria o modelo com o MESMO hash; e o adversário que alterar um
 peso no JSON exportado muda o hash e não pode reapresentar o PDF antigo como do modelo novo.
 

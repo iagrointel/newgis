@@ -220,7 +220,7 @@ body.sig .app, body.sig .lateral { display: none; } /* a casca do SIG não usa a
 /* lupa: mapa B vira um círculo pequeno que segue o cursor sobre o mapa PRINCIPAL (não o mapa A).
    `pointer-events: none` no CONTAINER inteiro (não só no círculo) é o que faz o cursor chegar ao mapa
    principal por baixo — sem isto o #comparar-area (cheio, z-index 5, só com o mapa A escondido) intercepta
-   TODO pointermove da área do mapa antes de ele alcançar #mapa, e a lupa nunca sai do canto (achado do
+   todo pointermove da área do mapa antes de ele alcançar #mapa, e a lupa nunca sai do canto (achado do
    e2e: centro ficava sempre no default left:0/top:0, 237 px do cursor real). */
 .comparar-area.modo-lupa { pointer-events: none; }
 .comparar-mapa.comparar-lupa {

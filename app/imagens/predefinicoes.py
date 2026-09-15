@@ -256,7 +256,7 @@ def _e_uuid(valor: str) -> bool:
     """`plat.render_predefinicao.item_id` é uuid (o item do CATÁLOGO). Um `plat.raster_item` de fixture
     de teste antiga pode ter `item_id` texto livre (`item-espelho-1`, fora do catálogo) — nunca tem
     predefinição custom, e um `item_id::uuid` cego nesse caso quebra com 500 (achado ligando este item
-    ao WMS/TileJSON da demo: `GetCapabilities` varre TODO item ativo do inquilino, catálogo ou não)."""
+    ao WMS/TileJSON da demo: `GetCapabilities` varre todo item ativo do inquilino, catálogo ou não)."""
     import uuid as _uuid_mod
 
     try:

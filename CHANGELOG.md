@@ -325,7 +325,7 @@ determinismo do portão).
 Achado de build que quase quebrou o próprio manifesto: `pgstac.create_item`/`update_item` DESCARTA
 qualquer chave de `properties` com valor `null` na gravação — uma ficha selada com `"plat:cadeia": null`
 tinha o hash calculado sobre um dict que o banco nunca devolve de volta igual, e `conferir_item` acusava
-divergência de manifesto em TODO item sem cadeia, sempre, sem nenhum byte alterado. Corrigido: `cadeia=None`
+divergência de manifesto em todo item sem cadeia, sempre, sem nenhum byte alterado. Corrigido: `cadeia=None`
 OMITE a chave em vez de gravar `null` (`preencher_propriedades_proveniencia`); achado pelo próprio teste
 de integração deste item (não pelo adversário — não houve rodada de adversário separada neste turno).
 Segundo achado, de performance: a 1ª varredura de `preencher-pendentes` sem filtro levou 165 s escaneando

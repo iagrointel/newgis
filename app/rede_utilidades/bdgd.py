@@ -20,7 +20,7 @@ Contagem conferida contra o arquivo: para cada camada, o feature count lido do G
 quantidade, explicação e exemplos — nunca engolido em silêncio. O resultado é gravado em
 `plat.rede_importacao` (auditoria) e devolvido como dict.
 
-Sem placeholder: nenhum caminho é fixo no código; o GDB de entrada é sempre parâmetro.
+Nenhum caminho fixo no código: o GDB de entrada é sempre parâmetro.
 """
 
 from __future__ import annotations

@@ -95,7 +95,7 @@ END $$;
 DO $$
 DECLARE papel text := plat.papel_leitor(); r record; existe_func boolean; n int := 0;
 BEGIN
-  -- (10/09/2026) O laço original varria TODO schema `d_*` do banco. Numa instalação só isso é o mesmo
+  -- (10/09/2026) O laço original varria todo schema `d_*` do banco. Numa instalação só isso é o mesmo
   -- conjunto; num banco compartilhado por várias instalações (o caso desta máquina: 461 schemas de trilha e
   -- 4.047 schemas de dado) ele tenta criar política em tabela de OUTRA instalação, com esquema de versão
   -- diferente, e a migração morre em `column "tenant_id" does not exist`. O filtro abaixo é a MESMA regra

@@ -1098,7 +1098,7 @@ Mudança no L0-05 exigida por este item: o advisory lock de "1 pesado por vez" (
 `LOCK_PESADO`) passou a carregar o nome do schema. Ele é um lock do BANCO, e o banco é um só para produção,
 homologação e as bases por trilha — com o nome fixo, um job pesado de um ambiente segurava o único lugar de
 todos os outros ambientes (medido em 06/09). Em produção, onde só existe o schema `plat`, o comportamento não muda.
-TODOS os outros (medido em 06/09). Em produção, onde só existe o schema `plat`, o comportamento não muda.
+Todos os outros (medido em 06/09). Em produção, onde só existe o schema `plat`, o comportamento não muda.
 todos os outros (medido em 06/09). Em produção, onde só existe o schema `plat`, o comportamento não muda.
 
 Válvula de teste: `PLAT_TESTE_CONEXAO_ALVOS` (`app/conexao/seguranca.py::alvos_de_teste`), lista de pares

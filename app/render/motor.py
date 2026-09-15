@@ -5,7 +5,7 @@ teto de tempo por pedido (`PLAT_RENDER_TIMEOUT_S`). google-chrome do sistema NUN
 nesta máquina) — só o chromium instalado pelo playwright (`playwright install chromium`).
 
 Isolamento de rede (cláusula "página headless sem acesso à rede externa"): o chromium nasce com
-`--host-resolver-rules` que responde `~NOTFOUND` para TODO host, exceto os de `HOSTS_PERMITIDOS`
+`--host-resolver-rules` que responde `~NOTFOUND` para todo host, exceto os de `HOSTS_PERMITIDOS`
 (127.0.0.1/::1/localhost e o host de `PLAT_URL_PUBLICA` em produção). Um `fetch` para um domínio de fora
 rejeita na hora, dentro do próprio navegador, sem sair da máquina e sem depender de firewall.
 
