@@ -122,6 +122,25 @@ def formatos(auth: Auth = autenticado(escopo_token="catalogo:ler")):
             "em_curso_max": limites.EXPORTACAO_POR_USUARIO_EM_CURSO}
 
 
+def _perdas_declaradas(formato, campos: list[str]) -> list[str]:
+    """O que este formato NÃO leva, dito antes de gerar (refutação do item: "DXF com atributos —
+    perda declarada"). Não impede a exportação: informa."""
+    perdas = []
+    if campos and not formato.guarda_atributos:
+        perdas.append(f"{formato.rotulo} não guarda atributo: os {len(campos)} campos escolhidos "
+                      f"({', '.join(campos[:6])}{'…' if len(campos) > 6 else ''}) ficam de fora; sai só a geometria")
+    if not formato.guarda_geometria:
+        perdas.append(f"{formato.rotulo} não guarda geometria")
+    if formato.crs_saida in ("4326", "3857"):
+        perdas.append(f"{formato.rotulo} grava sempre em EPSG:{formato.crs_saida}")
+    if formato.tilado:
+        perdas.append(f"{formato.rotulo} recorta e generaliza a geometria por tile: a contagem de feições "
+                      "do arquivo não é a do banco")
+    if formato.nome == "shapefile":
+        perdas.append("o shapefile trunca nome de campo em 10 caracteres")
+    return perdas
+
+
 @router.post("/api/exportacoes", status_code=202, openapi_extra=EXPORTAR)
 def criar(corpo: ExportacaoEntrada, request: Request, auth: Auth = autenticado("conteudo.exportar")):
     formato = formato_de(corpo.formato)

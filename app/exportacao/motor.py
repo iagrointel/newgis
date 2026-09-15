@@ -130,8 +130,9 @@ def argumentos_ogr2ogr(
     codificacao: str,
 ) -> list[str]:
     argv = ["ogr2ogr", "-f", formato.driver, str(destino), conninfo, "-sql", sql, "-nln", nome_camada]
-    if srid_saida:
-        argv += ["-t_srs", f"EPSG:{int(srid_saida)}"]
+    alvo_crs = crs_de_saida(formato, srid_saida)
+    if alvo_crs:
+        argv += ["-t_srs", f"EPSG:{int(alvo_crs)}"]
     for opcao in formato.lco:
         argv += ["-lco", opcao]
     for opcao in formato.dsco:
@@ -141,6 +142,21 @@ def argumentos_ogr2ogr(
     if formato.nome == "csv":
         argv += ["-lco", "GEOMETRY=AS_XY", "-lco", "STRING_QUOTING=IF_AMBIGUOUS"]
     return argv
+
+
+def crs_de_saida(formato: Formato, srid_pedido: int | None) -> int | None:
+    """EPSG que o ogr2ogr vai receber, já obedecendo a política do formato (bloco CRS de `formatos.py`).
+
+    Formato de CRS preso devolve o CRS preso mesmo quando ninguém pediu nada: sem isso, uma camada em
+    SIRGAS 2000 / UTM sairia com coordenada projetada dentro de um GeoJSON que se declara WGS 84. Quem
+    pede um CRS INCOMPATÍVEL com o formato é recusado na entrada da rota (422), não aqui."""
+    if formato.crs_saida == "4326":
+        return 4326
+    if formato.crs_saida == "3857":
+        return 3857
+    if formato.crs_saida == "nenhum":
+        return int(srid_pedido) if srid_pedido else None
+    return int(srid_pedido) if srid_pedido else None
 
 
 def zipar_diretorio(origem: Path, destino_zip: Path) -> None:
