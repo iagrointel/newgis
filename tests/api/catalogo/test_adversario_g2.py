@@ -43,12 +43,11 @@ def test_g2_1_compactar_versoes_nao_deve_cruzar_inquilino(sessao_b, itens_b, con
     assert removidas == 0, f"o inquilino A apagou {removidas} versões de um item do inquilino B"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G2-2: POST /api/jobs aceita (201) o tipo catalogo.versoes_compactar com item_id de "
-    "OUTRO inquilino; somado ao G2-1, um admin de qualquer inquilino apaga o histórico de versões "
-    "de item alheio pela fila.",
-)
+# ACHADO G2-2 CORRIGIDO (conferido em 15/09/2026): app/jobs/registro.py ganhou o hook `verificar` (chamado por
+# app/jobs/servico.py::criar logo após validar os parâmetros do tipo), e app/catalogo/tarefas.py registra
+# `_verificar_item_do_inquilino` para catalogo.versoes_compactar — consulta plat.item sob a RLS da sessão de quem
+# pede o job; item de outro inquilino (ou inexistente) não resolve e a rota devolve 404 antes de entrar na fila,
+# em vez de 201. A marca xfail estrita saiu; o teste fica como regressão.
 def test_g2_2_job_de_compactacao_nao_deve_aceitar_item_de_outro_inquilino(sessao_a, sessao_b, itens_b):
     it_b = itens_b.criar("mapa")
     r = sessao_a.post(

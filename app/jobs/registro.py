@@ -48,6 +48,7 @@ class Tarefa:
     ferramentas: tuple[str, ...]
     somente_sistema: bool
     somente_leitura: bool
+    verificar: Callable[[object, dict], None] | None
 
 
 REGISTRO: dict[str, Tarefa] = {}
@@ -72,7 +73,8 @@ def ordem_perfil(perfil: str) -> int:
 def tarefa(*, nome: str, descricao: str, parametros: type[BaseModel], pesado: bool = False, memoria_mb: int = 256,
            timeout_s: int = 3600, tentativas: int = 3, chave: Callable[[dict], str | None] | None = None,
            executor: str = "local", versao: int = 1, threads_blas: int = 1, perfil_minimo: str = "editor",
-           ferramentas: tuple[str, ...] = (), somente_sistema: bool = False, somente_leitura: bool = False):
+           ferramentas: tuple[str, ...] = (), somente_sistema: bool = False, somente_leitura: bool = False,
+           verificar: Callable[[object, dict], None] | None = None):
     """Decorador de registro. Recusa na importação (ErroRegistro) tudo o que a seção 3.1 do ADR 0003 proíbe.
 
     `somente_sistema=True` (item L0-07-d-smtp-convites) marca um tipo que só o PRÓPRIO backend enfileira
@@ -87,7 +89,15 @@ def tarefa(*, nome: str, descricao: str, parametros: type[BaseModel], pesado: bo
     com esse tipo passa pelo middleware de app/modo.py e o job sai da fila mesmo com o inquilino pausado
     (cláusula de `plat.job_pegar`, migração 20260906T2109). Marcar um tipo que escreve em tabela do
     inquilino quebra o contrato do modo — a marca é recusada em `somente_sistema` (tipo interno nem
-    passa pela rota, a isenção não lhe diz respeito)."""
+    passa pela rota, a isenção não lhe diz respeito).
+
+    `verificar` (achado G2-2, laco/handoffs/T3/ataque-g2-ADVERSARIO.md): hook opcional f(sessao, parametros)
+    chamado por app/jobs/servico.py::criar logo depois da validação pydantic dos parâmetros, antes da cota.
+    É o lugar para recusar (levantando ErroServico) um parâmetro que aponta um objeto de OUTRO inquilino —
+    POST /api/jobs é genérico e não sabe o que item_id/grupo_id/etc. significam para cada tipo; sem o hook,
+    um tipo que aceita o id de um objeto alheio só falha (ou pior, roda sem checar) dentro do worker, depois
+    de já estar na fila com HTTP 201. catalogo.versoes_compactar é o primeiro a usar.
+    """
     if somente_leitura and somente_sistema:
         raise ErroRegistro(f"{nome}: somente_leitura não combina com somente_sistema "
                            "(tipo interno não passa pela rota, a isenção do modo não lhe diz respeito)")
@@ -124,7 +134,7 @@ def tarefa(*, nome: str, descricao: str, parametros: type[BaseModel], pesado: bo
             nome=nome, descricao=descricao, parametros=parametros, funcao=funcao, pesado=pesado,
             memoria_mb=memoria_mb, timeout_s=timeout_s, tentativas=tentativas, chave=chave, executor=executor,
             versao=versao, threads_blas=threads_blas, perfil_minimo=perfil_minimo, ferramentas=tuple(ferramentas),
-            somente_sistema=somente_sistema, somente_leitura=somente_leitura,
+            somente_sistema=somente_sistema, somente_leitura=somente_leitura, verificar=verificar,
         )
         return funcao
 

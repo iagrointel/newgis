@@ -12,8 +12,10 @@ import uuid
 
 from pydantic import BaseModel, Field, field_validator
 
+from app import db as banco
 from app import objetos
 from app.catalogo import destruidores, miniatura, tipos
+from app.jobs.contexto import ErroServico
 from app.jobs.registro import FalhaDefinitiva, tarefa
 
 
@@ -160,6 +162,23 @@ class CompactarParametros(BaseModel):
     item_id: uuid.UUID | None = None
 
 
+def _verificar_item_do_inquilino(sessao, parametros: dict) -> None:
+    """Achado G2-2 (laco/handoffs/T3/ataque-g2-ADVERSARIO.md): POST /api/jobs aceitava (201) item_id de
+    OUTRO inquilino para catalogo.versoes_compactar — a rota genérica da fila não sabe o que item_id
+    significa, então quem devia recusar é o próprio tipo. `plat.item` tem RLS por tenant (p_item_ler), então
+    a mesma consulta que qualquer rota do catálogo já usa (comum.item_ou_404) devolve vazio para item de
+    outro inquilino ou inexistente; aqui vira 404 ANTES do job entrar na fila, em vez de aceitar e deixar
+    o defeito para o worker (que hoje já é seguro por si — a função SQL compara tenant_atual(), achado
+    G2-1 — mas silenciosamente, sem avisar quem pediu)."""
+    item_id = parametros.get("item_id")
+    if not item_id:
+        return
+    with banco.db(sessao.ctx) as cur:
+        cur.execute("SELECT 1 FROM plat.item WHERE id = %s::uuid", (str(item_id),))
+        if cur.fetchone() is None:
+            raise ErroServico(404, "item_inexistente", "item inexistente ou de outro inquilino")
+
+
 @tarefa(
     nome="catalogo.versoes_compactar",
     descricao="Compacta versões antigas de item (mantém as 50 mais recentes; blocos de 10 viram uma)",
@@ -170,6 +189,7 @@ class CompactarParametros(BaseModel):
     tentativas=1,
     chave=lambda p: "versoes_compactar",
     perfil_minimo="admin",
+    verificar=_verificar_item_do_inquilino,
 )
 def catalogo_versoes_compactar(ctx, manter: int = 50, item_id: uuid.UUID | None = None) -> dict:
     with ctx.db() as cur:

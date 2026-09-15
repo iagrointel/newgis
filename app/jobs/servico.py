@@ -114,6 +114,8 @@ def criar(sessao: Sessao, tipo: str, parametros, prioridade: int = 5, agendado_p
         raise ErroServico(403, "tipo_somente_sistema", f"{t.nome} só é criado internamente, nunca por esta rota")
     _exigir_perfil(sessao, t.perfil_minimo, f"criar job {t.nome}")
     params = _parametros(t, parametros)
+    if t.verificar:
+        t.verificar(sessao, params)
     if not isinstance(prioridade, int) or not 1 <= prioridade <= 9:
         raise ErroServico(422, "prioridade_invalida", "prioridade deve ser inteiro de 1 (primeiro) a 9")
     quando = _data(agendado_para, "agendado_para")
@@ -320,6 +322,8 @@ def _validar_agenda(sessao: Sessao, dados: dict, parcial: dict | None = None) ->
     t = tipo_registrado(str(base.get("tipo") or ""))
     _exigir_perfil(sessao, t.perfil_minimo, f"agendar {t.nome}")
     params = _parametros(t, base.get("parametros"))
+    if t.verificar:
+        t.verificar(sessao, params)
     cron = str(base.get("cron") or "").strip()
     fuso = str(base.get("fuso") or "America/Sao_Paulo").strip()
     try:
