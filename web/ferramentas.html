@@ -42,6 +42,16 @@
         <p id="ferramenta-custo" class="ajuda"></p>
         <plat-estado id="ferramenta-estado" hidden></plat-estado>
         <plat-formulario id="ferramenta-form"></plat-formulario>
+        <details class="cartao-interno" id="gpserver">
+          <summary data-i18n="ferramentas.gpserver_titulo">ArcGIS (GPServer)</summary>
+          <p class="ajuda" data-i18n="ferramentas.gpserver_ajuda">URL compatível com ArcGIS Pro/AGOL para esta ferramenta; o token é seu, não compartilhe.</p>
+          <div id="gpserver-urls" class="gpserver-urls"></div>
+          <plat-estado id="gpserver-estado" hidden></plat-estado>
+          <div class="botoes">
+            <button type="button" id="gpserver-execute" class="pequeno" data-i18n="ferramentas.gpserver_execute">execute (síncrono)</button>
+            <button type="button" id="gpserver-executar" class="pequeno primario" data-i18n="ferramentas.gpserver_executar">executar como no ArcGIS (submitJob)</button>
+          </div>
+        </details>
         <section id="execucao" class="cartao-interno" hidden aria-live="polite">
           <h3><span data-i18n="ferramentas.execucao">execução</span> <span id="execucao-estado" class="estado-job"></span></h3>
           <div class="progresso" id="execucao-progresso" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-i18n-aria="ferramentas.progresso" aria-label="progresso da execução">

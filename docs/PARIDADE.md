@@ -361,6 +361,18 @@ demo = Roraima (260.515 pontos, 15 municípios; escolhida por ser o MENOR arquiv
 | `outSR`, `searchExtent`, boost por `location=`, `category`, `langCode`, paginação `search/start/num` | parâmetros documentados do `findAddressCandidates` | fora desta versão (saída sempre 4326; sem filtro geográfico nem boost de proximidade) | fora | — | 2026-09-06 | pendente (D20) |
 | geocodificação em lote de planilha/CSV do usuário (upload → coluna de endereço → resultado) | não é o `GeocodeServer`; é uma ferramenta de geoprocessamento separada (`Geocode Addresses` do Pro/ArcMap) | item-irmão `L2-11-a-geocodificacao-csv`, ainda não construído (reusa `motor.buscar()`) | fora (item separado) | — | 2026-09-06 | pendente (D20) |
 
+## Ferramentas de análise — GPServer por ferramenta (item L2-05-a-catalogo-ferramentas-gpserver; UX-22)
+
+A referência Esri é o serviço de geoprocessamento por ferramenta (`developers.arcgis.com/rest/services-reference/
+enterprise/gp-service`, `gp-task`, `execute-gp-task`, `submit-gp-job`, `gp-job`, `gp-result`, `cancel-gp-job`).
+Cada ferramenta do registro (`app.ferramentas.registro`, ex. `buffer`) publica sua própria instância em
+`/rest/services/<ferramenta>/GPServer/<ferramenta>`. Item auditado nesta sessão como worker isolado (sem
+adversário separado do turno) — a linha fica `parcial` até o testador/adversário do laço confirmarem.
+
+| capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |
+|---|---|---|---|---|---|---|
+| descritor do serviço/tarefa, execute síncrono, submitJob/jobs/results/cancel assíncronos, com controle real numa tela (não só documentado) | `GPServer`/`GPServer/{tarefa}` (`?f=json`), `execute`, `submitJob`, `jobs/{id}`, `jobs/{id}/results/{param}`, `jobs/{id}/cancel` | backend já existia (`app/ferramentas/rotas_gp.py`, mesmo commit do L2-05-a) com suíte própria (`tests/api/ferramentas/test_ferramentas.py`); a lacuna era só de tela (item UX-22) — `/ferramentas` (UX-09) só listava o registro de jobs administrativos (`GET /api/jobs/tipos`), nunca o registro GP; agora o catálogo junta os dois (`tp._origem`), o painel de cada ferramenta GP ganhou a aba "ArcGIS (GPServer)" (URL copiável dos 4 descritores/rotas) e dois botões reais — "execute" e "executar como no ArcGIS (submitJob)" — que chamam a rota Esri de verdade pelo `fetch` da tela (não a API própria); o botão cancelar da execução também passa a chamar o `cancel` do GPServer quando o job veio de uma ferramenta GP | parcial (`execute`/`submitJob`/`cancel` com controle real e cobertos pelo mapa de cobertura da interface, `docs/gerar_cobertura_ui.py`; Pro/AGOL real e revisão do testador/adversário do laço pendentes) | worker desta sessão (`docs/gerar_cobertura_ui.py` confere as 3 rotas de escrita como `coberto`; `node --check` na tela) | 2026-09-15 | pendente (D20) |
+
 ## SMTP, convite de membro e redefinição de senha (item L0-07-d-smtp-convites, turno 3; ADR 0017)
 
 | capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |

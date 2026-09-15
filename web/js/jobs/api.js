@@ -45,6 +45,13 @@ export const log = (jobId, apos = 0, limite = 500, nivel) =>
 export const resumo = () => chamar('GET', '/api/jobs/resumo');
 export const tipos = () => chamar('GET', '/api/jobs/tipos');
 
+/* ferramentas de análise no vocabulário GP da Esri (item L2-05-a): catálogo separado do de `tipos()` acima —
+   cada ferramenta é `app.ferramentas.registro.REGISTRO`, exposta também como GPServer em web/js/jobs/ferramentas.js
+   (aba "ArcGIS (GPServer)", item UX-22). Execução própria (síncrona ou por job, conforme o custo estimado);
+   o GPServer (execute/submitJob) é chamado direto por URL, não por aqui. */
+export const ferramentas = () => chamar('GET', '/api/ferramentas');
+export const ferramentaExecutar = (nome, corpo) => chamar('POST', `/api/ferramentas/${id(nome)}/executar`, corpo);
+
 /* agendas */
 export const agendas = {
   listar: (filtros = {}) => chamar('GET', `/api/agendas${consulta(filtros)}`),
