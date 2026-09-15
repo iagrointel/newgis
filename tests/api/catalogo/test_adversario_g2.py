@@ -56,12 +56,12 @@ def test_g2_2_job_de_compactacao_nao_deve_aceitar_item_de_outro_inquilino(sessao
     assert r.status_code >= 400, f"job aceito com item de outro inquilino: {r.status_code} {r.text[:200]}"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G2-3: a compactação não cumpre o teto declarado na refutação do item ('manter <= 50 "
-    "linhas'): depois de 200 PUTs uma passada deixa 66 linhas (com 1.000 PUTs deixa 146), e o "
-    "periódico roda uma passada por dia.",
-)
+# ACHADO G2-3 CORRIGIDO (conferido em 15/09/2026, migração db/migracoes/20260915T2320_versoes_compactar_converge.sql):
+# plat.item_versoes_compactar fazia UMA passada em blocos de 10 e devolvia manter + ceil((N-manter)/10) linhas (66
+# com 200 PUTs). A função agora corta em OFFSET (p_manter - 1) — a linha-resumo final ocupa uma das `manter` vagas
+# — e repete a passada de compactação num LOOP interno até estabilizar, então uma ÚNICA chamada já converge ao
+# teto (49 recentes + 1 linha `compactada`), sem depender de quantas vezes o periódico rodar. A marca xfail
+# estrita saiu; o teste fica como regressão.
 def test_g2_3_compactacao_mantem_no_maximo_50_linhas(sessao_a, itens_a, conexao_plat_app):
     it = itens_a.criar("mapa")
     iid = it["id"]
