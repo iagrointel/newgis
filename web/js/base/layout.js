@@ -5,6 +5,7 @@ import { h, limpar } from './dom.js';
 import { t } from './i18n.js';
 import { tem } from './estado.js';
 import { sair } from '../auth/sessao.js';
+import { icone } from './icones.js';
 
 /* rótulo de grupo (caixa alta, --fraco) mostrado ANTES do primeiro item de cada `grupo` — só aparece quando o
    grupo muda em relação ao item anterior (telasVisiveis filtra por privilégio antes, então o rótulo nunca some
@@ -46,6 +47,23 @@ export const TELAS = [
 
 export function telasVisiveis(usuario) {
   return TELAS.filter((tela) => !tela.privilegio || tem(tela.privilegio, usuario));
+}
+
+/* seletor de tema (sistema · claro · escuro) — botões reais, gravam em localStorage via window.platTema
+   (web/js/base/tema.js, script clássico carregado no <head>). Sem o script (tela sem tema.js) não monta. */
+export function seletorTema() {
+  const pt = window.platTema;
+  if (!pt) return null;
+  const grupo = h('div', { class: 'seletor-tema', role: 'group', 'aria-label': t('tema.rotulo') });
+  const opcoes = [['sistema', 'sistema', 'tema.sistema'], ['claro', 'sol', 'tema.claro'], ['escuro', 'lua', 'tema.escuro']];
+  const atualizar = () => { for (const b of grupo.children) b.setAttribute('aria-pressed', String(b.dataset.tema === pt.temaAtual())); };
+  for (const [tema, ic, chave] of opcoes) {
+    const b = h('button', { type: 'button', dataset: { tema }, 'aria-label': t(chave), title: t(chave), 'aria-pressed': 'false' }, icone(ic, { tamanho: 14 }));
+    b.addEventListener('click', () => { pt.definirTema(tema); atualizar(); });
+    grupo.append(b);
+  }
+  atualizar();
+  return grupo;
 }
 
 export function montarLayout({ usuario, ativo = location.pathname }) {

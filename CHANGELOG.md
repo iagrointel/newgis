@@ -17,6 +17,40 @@ Conferido no banco da trilha `plat_tuniao`: `plat_tuniao.versao_migracao` tem a 
 acha nenhuma função com o literal fora de `camada_schema_prefixo()` (excluída de propósito); catorze
 funções usam `camada_schema_prefixo()` hoje, cobrindo as treze do hand-over. Nada para escrever.
 
+## lote f1-lote3, setembro de 2026 (item j1: 7 módulos com importação quebrada, LANCAMENTO.md:439-444)
+
+A varredura original do hand-over tinha um falso positivo: `coleta/tela.js` importa `folhas` de
+`coleta/motor.js`, que já exporta (`export function* folhas`) — o regex do scanner antigo não
+reconhecia `function*`, só `function`. Corrigido isso, sobram 6 pares realmente quebrados (7 símbolos,
+`amc/motor_pagina.js` importa dois de `combinacao.js`).
+
+Consertados por união manual: buscada a implementação perdida na própria história do repositório
+(commit ancestral do HEAD atual cujo hunk a fusão descartou) em vez de escrever comportamento novo —
+`web/js/base/i18n.js::acrescentar` (mescla i18n de widget externo em tempo de execução), `web/js/base/
+api.js::remendar` (PATCH genérico, mesmo padrão de `obter`/`enviar`/`alterar`/`apagar`) e
+`::reqIdsRecentes` (anel das últimas 20 requisições por X-Req-Id, consumido por
+`web/js/chamados/reportar.js`), `web/js/amc/combinacao.js::MAPA_COMBINADOR`/`::MAPA_POLITICA`
+(tradução do vocabulário do modelo, gêmea de `app/amc/explicacao.py`, que já tem os dois dicionários)
+e `web/js/base/layout.js::seletorTema` (botões de tema sobre `window.platTema`, script clássico que
+já existe e já é usado pela própria `web/js/estilo/estilo.js`).
+
+Fica ABERTO `web/js/executor/executar_tela.js::prepararWidgets`: a implementação histórica dependia de
+`REGISTRO`/`carregarModulos`/`criarWidget` de `web/js/widgets/motor.js`, API que não existe mais no
+motor atual (hoje só `BarramentoWidgets`/`montarWidgets` — o desenho mudou depois). Reintroduzir a
+função exigiria reconciliar dois desenhos de motor de widget divergentes (o executor não tem hoje
+nenhum caso para botão/cartão/embed/menu-widget/controlador/compartilhar/idioma/tema — caem todos no
+`exec-desconhecido` genérico), decisão de arquitetura fora do escopo de uma união mecânica de
+importação. Não inventado.
+
+Prova: `node --check` nos 4 arquivos tocados e nos 6 módulos que os importam (`web/js/widgets/
+externos.js`, `web/js/mapa/anotacoes.js`, `web/js/chamados/reportar.js`, `web/js/amc/motor_pagina.js`,
+`web/js/estilo/estilo.js`, mais `web/js/coleta/tela.js` sem alteração) — todos OK; e resolução em
+tempo de execução (`node -e "import('./x.js').then(m => console.log(typeof m.simbolo))"`) para cada
+símbolo: todos `function`/`object`, nenhum mais `undefined`, exceto `prepararWidgets` (deixado aberto).
+Suíte de testes não rodada (`tests/unit/test_front_sintaxe.py` não executado): memória livre ficou
+abaixo de 5000 MB nas 10 tentativas de 60 s antes do pytest (medido `free -m`), então a prova ficou só
+em `node`, permitido pela regra da casa.
+
 ## turno 4, setembro de 2026 (item L4-05-d-epanet-inp: arquivo EPANET .inp entra e sai da rede de água)
 
 Porta de entrada e de saída do formato que o setor de água usa: o `.inp` do EPANET. `ler_inp`/`escrever_inp`

@@ -87,6 +87,15 @@ export function t(chave, params = {}) {
   return s.replace(/\{(\w+)\}/g, (_, k) => (params[k] === undefined ? `{${k}}` : String(params[k])));
 }
 
+/* L5-36: chaves de widget externo instalado entram no dicionário em tempo de execução (o pacote do widget
+   traz o seu i18n.json; quem chama já validou o prefixo `widget.<nome>.` — pacote nenhum sobrescreve chave
+   da casa). Quem já traduziu antes é avisado pelo mesmo evento da carga. */
+export function acrescentar(pares) {
+  if (!pares || typeof pares !== 'object') return;
+  Object.assign(dicionario, pares);
+  document.dispatchEvent(new CustomEvent(EVENTO, { detail: { idioma } }));
+}
+
 export function aplicar(raiz) {
   raiz.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
   raiz.querySelectorAll('[data-i18n-aria]').forEach((el) => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
