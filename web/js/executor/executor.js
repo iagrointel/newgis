@@ -14,6 +14,46 @@
 import { h, limpar } from '../base/dom.js';
 import * as doc from '../editor/documento.js';
 import { paginas, paginasNoMenu, paginaPorCaminho, paginaInicial } from './paginas.js';
+import { REGISTRO } from '../widgets/registro.js';
+import { BarramentoWidgets, montarWidgets } from '../widgets/motor.js';
+
+/* --- widgets da tela (item L5-01-d-widgets-pagina-menu) --------------------------------------------------
+   Um nó da paleta de páginas PODE ser também um widget do motor (REGISTRO, `../widgets/registro.js`): o
+   executor carregaria o módulo dele aqui, antes do primeiro desenho, para que um módulo que falhe vire uma
+   caixa de erro nomeada — não uma tela morta (mesmo raciocínio do carregador interno de `widgets/motor.js`).
+   A API antiga que esta função usava (REGISTRO/carregarModulos/criarWidget importados de `widgets/motor.js`)
+   não existe mais: `git log -S prepararWidgets --all -- web/js/executor/executar_tela.js web/js/widgets/motor.js
+   web/js/executor/executor.js` só acha os commits f3a286696/b6f9e3f69 (07/09), e a fusão que uniu os ramos
+   depois disso descartou as mudanças de f3a286696 neste arquivo (nenhum commit de `executor.js` na história
+   do ramo atual além da criação, item L5-01-a) enquanto manteve o import quebrado que b6f9e3f69 introduziu em
+   `executar_tela.js`. Hoje o motor expõe `BarramentoWidgets`/`montarWidgets` (web/js/widgets/motor.js), e é
+   sobre eles que esta versão está escrita: reusa o PRÓPRIO carregador de `montarWidgets` contra um documento
+   sintético só com os tipos candidatos, montado num elemento nunca preso ao DOM (nunca fica visível nem
+   dispara efeito nenhum — só devolve `falhas`, o mapa tipo→mensagem que a chamadora usa).
+
+   ⚠ Conferido em 15/09/2026: nenhum tipo de PALETA_PAGINAS bate com um nome do REGISTRO por engenharia — o
+   resto do lote L5-01-d (os tipos `botão, cartão, incorporar, divisor, menu de widget, controlador,
+   compartilhar, login, idioma, tema` tanto na paleta de páginas quanto no registro de widgets) não sobrevive
+   no ramo atual (conferido em `editor/paleta_paginas.js` e `widgets/registro.js`) e restaurá-lo é FORA do
+   escopo desta reconciliação (nenhum símbolo novo criado nesses dois arquivos). `TIPOS_WIDGET_PAGINA` fica
+   vazio até esses tipos voltarem — quando voltarem, listar o nome aqui é a única mudança necessária. Os
+   nomes que hoje colidem por acaso (`texto`, `mapa`, `tabela`) são esquemas DIFERENTES do executor
+   (desenhados por `desenharNo`, nunca pelo motor) e por isso NÃO entram na lista: casar por nome seria falso
+   positivo — carregaria `widgets/mapa.js` (que puxa o MapLibre) toda vez que a página tivesse uma caixa de
+   mapa que nem usa o motor. */
+const TIPOS_WIDGET_PAGINA = new Set();
+
+export function tiposDeWidget(documento) {
+  return [...new Set(doc.nos(documento).map((n) => n.tipo))].filter((t) => TIPOS_WIDGET_PAGINA.has(t) && REGISTRO.has(t));
+}
+
+export async function prepararWidgets(documento) {
+  const tipos = tiposDeWidget(documento);
+  if (!tipos.length) return new Map();
+  const docSintetico = { corpo: { nos: tipos.map((tipo) => ({ id: tipo, tipo, configuracao: {} })), fontes: [], vistas: [], ligacoes: [] } };
+  const { falhas } = await montarWidgets(document.createElement('div'), docSintetico, { barramento: new BarramentoWidgets(), carregarFontes: false });
+  return falhas;
+}
 
 const PARAM_PAGINA = 'pagina';
 
