@@ -42,6 +42,30 @@ def _impressao(valor: str) -> str:
     return hashlib.sha256(valor.encode()).hexdigest()[:16]
 
 
+def _nomes_de_segredo() -> set[str]:
+    """Nomes de credencial que o produto declara como segredo, hoje.
+
+    Substitui `app.settings.SEGREDOS` (tupla fixa de 5 nomes que o item L7-19 introduziu em f46fd46fe):
+    ela não existe mais em `app/settings.py` — `git log -S SEGREDOS --all -- app/settings.py` só acha
+    aquele commit, e o mecanismo mudou de lá para cá. Hoje `_credenciais_systemd()` (app/settings.py) não
+    consulta lista nenhuma: aceita QUALQUER campo de `Settings` que tenha um arquivo homônimo em
+    `$CREDENTIALS_DIRECTORY`, entregue pelo `LoadCredential=` de cada unidade systemd. A lista central
+    virou as próprias unidades versionadas em `deploy/*.service` — é essa a fonte de verdade objetiva que
+    fica aqui, sem inventar constante nova em `app/settings.py` (que não pede uma) nem enfraquecer a
+    checagem: o resultado (conferido em 15/09) é {PLAT_DSN, PLAT_DSN_LEITOR, PLAT_DSN_WORKER,
+    PLAT_GARAGE_ADMIN_TOKEN, PLAT_SECRET, PLAT_SECRET_ANTERIOR} — 4 dos 5 nomes antigos (só
+    PLAT_GARAGE_CHAVE_SEGREDO fica de fora: é a credencial NOVA de homologação, do lado de cá do
+    isolamento, e nunca existiu em produção — a comparação por VALOR logo acima já cobre qualquer
+    coincidência) mais PLAT_SECRET_ANTERIOR e PLAT_DSN_LEITOR, que a tupla antiga não cobria."""
+    nomes = set()
+    for unidade in (RAIZ / "deploy").glob("*.service"):
+        for linha in unidade.read_text(encoding="utf-8").splitlines():
+            linha = linha.strip()
+            if linha.startswith("LoadCredential="):
+                nomes.add(linha.removeprefix("LoadCredential=").split(":", 1)[0])
+    return nomes
+
+
 @pytest.fixture(scope="module")
 def ambientes():
     if not ENV_PRODUCAO.is_file():
@@ -97,8 +121,6 @@ def test_nenhum_segredo_de_producao_aparece_no_ambiente_de_homologacao(ambientes
     caracteres, abaixo disso nada aqui é credencial. Endereço de serviço em http(s) também não é segredo e
     é compartilhado de propósito (o daemon do Garage é um só nesta máquina), então sai da comparação; o DSN
     do Postgres, que começa com `postgresql://` e carrega a senha da role, continua dentro."""
-    from app.settings import SEGREDOS
-
     producao, homolog = ambientes
 
     def credencial(valor: str) -> bool:
@@ -112,7 +134,7 @@ def test_nenhum_segredo_de_producao_aparece_no_ambiente_de_homologacao(ambientes
     )
     assert repetidos == [], f"valor de produção repetido em homologação: {repetidos}"
     # e, explicitamente, nenhum dos segredos nomeados do produto
-    for nome in SEGREDOS:
+    for nome in _nomes_de_segredo():
         valor = (producao.get(nome) or "").strip()
         if valor:
             assert valor not in valores_homolog, f"{nome} é o MESMO nos dois ambientes (sha256 {_impressao(valor)})"
