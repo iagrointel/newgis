@@ -47,13 +47,6 @@ def pagina_adv2(browser, base_url):
     ctx.close()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G2-9: na tela Conteúdo, depois de aplicar e limpar um filtro, o clique na estrela grava "
-    "o favorito no servidor (PUT 204) mas a linha continua com aria-pressed=false porque o GET "
-    "/api/itens em voo recarrega a lista com o estado anterior; a tela mostra o contrário do que o "
-    "servidor guardou e o clique seguinte repete o PUT em vez de desfavoritar.",
-)
 def test_g2_9_favorito_na_lista_apos_ciclo_de_filtro(pagina_adv2, base_url, credenciais_demo_adv2):
     pagina, (login, senha) = pagina_adv2, credenciais_demo_adv2
     pagina.goto(f"{base_url}/entrar?inquilino=demo&proximo=/conteudo", wait_until="domcontentloaded")
