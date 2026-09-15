@@ -3,6 +3,20 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## lote f1-lote3, setembro de 2026 (item i: reprodutibilidade das 13 funções SQL do prefixo de schema)
+
+Dívida de `laco/handoffs/T8/LANCAMENTO.md:448-450` ("falta escrever a migração equivalente") está PAGA,
+não em aberto: a migração `db/migracoes/20260911T1440_prefixo_schema_de_dado_nas_funcoes.sql` (commit
+`0278b96c`) já É essa migração. Ela não lista as treze funções — varre `pg_proc` do schema em aplicação
+em tempo de execução e reescreve todo corpo de função com o literal `'d_' ||` para
+`camada_schema_prefixo() ||`, exceto a própria função que define o prefixo — por isso vale tanto para
+uma instalação nova quanto para a que já existia, e é idempotente.
+
+Conferido no banco da trilha `plat_tuniao`: `plat_tuniao.versao_migracao` tem a migração aplicada
+(11/09 14:19); a varredura do próprio hand-over (`pg_get_functiondef(p.oid) LIKE '%''d_'' ||%'`) não
+acha nenhuma função com o literal fora de `camada_schema_prefixo()` (excluída de propósito); catorze
+funções usam `camada_schema_prefixo()` hoje, cobrindo as treze do hand-over. Nada para escrever.
+
 ## turno 4, setembro de 2026 (item L4-05-d-epanet-inp: arquivo EPANET .inp entra e sai da rede de água)
 
 Porta de entrada e de saída do formato que o setor de água usa: o `.inp` do EPANET. `ler_inp`/`escrever_inp`
