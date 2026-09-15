@@ -36,18 +36,22 @@ from pathlib import Path
 _ARQUIVO_FONTE_PADRAO = Path("/home/dev/plataforma/laco/var/bdgd_fonte.txt")
 
 
-def _fonte_bdgd() -> Path:
-    """Caminho do FileGDB real: `PLAT_BDGD_FONTE` (env) ou, na falta dela, o conteúdo de
-    `_ARQUIVO_FONTE_PADRAO` (fora do git, texto puro com o caminho, uma linha). Sem os dois, devolve
-    um caminho que nunca existe — `obter_extrato()` levanta `FileNotFoundError` do mesmo jeito que já
-    levanta hoje quando o ativo da casa não está na máquina."""
-    caminho = os.environ.get("PLAT_BDGD_FONTE")
+def fonte() -> Path:
+    """Caminho do FileGDB real, na ordem: `PLAT_REDE_REFERENCIA_GDB` (env, nome usado pelo teste da
+    cláusula 1 em escala) · `PLAT_BDGD_FONTE` (env, nome usado pelo restante deste módulo) · o conteúdo de
+    `_ARQUIVO_FONTE_PADRAO` (fora do git, texto puro com o caminho, uma linha). Sem os três, devolve um
+    caminho que nunca existe — `obter_extrato()` levanta `FileNotFoundError` do mesmo jeito que já levanta
+    hoje quando o ativo da casa não está na máquina; nenhum literal do caminho real entra no repositório."""
+    caminho = os.environ.get("PLAT_REDE_REFERENCIA_GDB") or os.environ.get("PLAT_BDGD_FONTE")
     if not caminho and _ARQUIVO_FONTE_PADRAO.exists():
         caminho = _ARQUIVO_FONTE_PADRAO.read_text(encoding="utf-8").strip()
     return Path(caminho) if caminho else Path("/nao/configurado/PLAT_BDGD_FONTE.gdb.zip")
 
 
-FONTE = _fonte_bdgd()
+# mantido por compatibilidade com quem já importava o nome antigo (mesma função, novo nome público)
+_fonte_bdgd = fonte
+
+FONTE = fonte()
 RAIZ_GERADOS = Path(__file__).resolve().parent / "gerados"
 DESTINO = RAIZ_GERADOS / "bdgd_distribuidora.gdb"
 DESTINO_PEQUENO = RAIZ_GERADOS / "bdgd_distribuidora_ctj3_1.gdb"
