@@ -16,7 +16,7 @@ def executar_js(codigo: str):
     return json.loads(processo.stdout)
 
 
-def test_registro_declara_seis_widgets_com_contrato_valido():
+def test_registro_declara_pelo_menos_os_sete_widgets_originais_com_contrato_valido():
     resultado = executar_js("""
       import { REGISTRO, validarManifesto } from './web/js/widgets/registro.js';
       const nomes = [...REGISTRO.values()].map((m) => {
@@ -25,9 +25,19 @@ def test_registro_declara_seis_widgets_com_contrato_valido():
       });
       console.log(JSON.stringify(nomes));
     """)
-    # sete desde o L5-07 (gráfico); o nome do teste segue o do portão do L5-06 (">= 6 widgets")
-    assert {item["nome"] for item in resultado} == {"mapa", "legenda", "tabela", "texto", "botao", "filtro", "grafico"}
-    assert all(item["elemento"] == f"plat-{item['nome']}" for item in resultado)
+    # baseline atualizada 15/09 (item F2-widgets-3): o registro cresceu de 7 (L5-06/L5-07) para 22
+    # (L5-01-c + L5-01-d somaram tabela/gráfico v2, lista, consulta, seleção, info-feição,
+    # adicionar-dado, texto/botão + os 9 widgets de página) — a igualdade de conjunto virou
+    # subconjunto, e a contagem exata mora aqui.
+    originais = {"mapa", "legenda", "tabela", "texto", "botao", "filtro", "grafico"}
+    assert originais <= {item["nome"] for item in resultado}
+    assert len(resultado) == 22
+    # `elemento == f"plat-{nome}"` não vale mais para TODOS: a varredura de 15/09 corrigiu
+    # mapa/legenda/filtro de `plat-<nome>` (elemento nunca definido, achado igual ao de texto/botão)
+    # para `plat-w-<nome>`, que é o que os módulos realmente registram — mesmo padrão dos widgets de
+    # página. A checagem elemento×`definir()` real, widget por widget, é o teste dedicado em
+    # test_widgets_registro_elementos.py; aqui só garantimos a forma (prefixo `plat-`).
+    assert all(item["elemento"].startswith("plat-") for item in resultado)
     assert all(isinstance(item["eventos"], list) and isinstance(item["acoes"], list) for item in resultado)
 
 
@@ -86,10 +96,13 @@ def test_manifesto_invalido_e_recusado_com_o_campo_nomeado():
       }
       console.log(JSON.stringify(saida));
     """)
+    # "modulo_absoluto" atualizado 15/09: baseline datava de antes do L5-36 (commit 690bbe225), que
+    # passou a aceitar caminho same-origin absoluto (`/api/widgets/externos/<nome>/modulo.js`) para
+    # widget EXTERNO — só a URL de outra origem continua recusada — e trocou a mensagem de erro.
     assert resultado == {
         "sem_esquema": "manifesto.esquema_config: campo obrigatório",
         "elemento_sem_prefixo": "manifesto.elemento: Custom Element inválido",
         "api_incompativel": "manifesto.api_widget: versão de API incompatível",
         "fontes_invertidas": "manifesto.fontes: limites inválidos",
-        "modulo_absoluto": "manifesto.modulo: módulo relativo inválido",
+        "modulo_absoluto": "manifesto.modulo: módulo inválido (relativo ./algo.js ou caminho same-origin /algo.js)",
     }
