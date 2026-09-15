@@ -66,10 +66,10 @@ def _conectar(env, tenant_id, usuario_id):
 
 
 @pytest.mark.lento
-@pytest.mark.skipif(not carga_bdgd.esquema(),
-                    reason="sem PLAT_REDE_REFERENCIA_ESQUEMA: a medida exige a BDGD real da cooperativa "
-                           "de teste carregada num schema do iagro_sat (ativo da casa, só leitura)")
 def test_medida_reconciliacao_na_cooperativa(cred, env):
+    if not carga_bdgd.esquema():
+        pytest.skip("sem PLAT_REDE_REFERENCIA_ESQUEMA: a medida exige a BDGD real da cooperativa de "
+                    "teste carregada num schema do iagro_sat (ativo da casa, só leitura)")
     cliente = novo_cliente()
     login, senha = cred["demo"]
     r = entrar(cliente, "demo", login, senha)
