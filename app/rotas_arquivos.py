@@ -12,7 +12,16 @@ de conteúdo (`app/varredura_conteudo.py`) antes de tocar o Garage — na 1ª pa
 executável, com emenda entre blocos), então carga colada depois do cabeçalho não escapa.
 `GET /api/arquivos/{sha256}` devolve o conteúdo como ANEXO (`Content-Disposition: attachment`,
 `X-Content-Type-Options: nosniff`) e com tipo de mídia da lista fechada da instalação: byte enviado por
-cliente nunca volta como `text/html`, `image/svg+xml` ou JavaScript (`app/entrega_conteudo.py`)."""
+cliente nunca volta como `text/html`, `image/svg+xml` ou JavaScript (`app/entrega_conteudo.py`).
+
+Achado do adversário (mesma causa raiz de L0-04-a, handoffs/T4/ADVERSARIO-L0.md): o escopo de token exigido
+aqui NÃO é `admin:inquilino` — enviar/baixar/apagar o PRÓPRIO arquivo e ver a própria cota são operações de
+conteúdo comuns, cobertas pelo escopo `conteudo:criar` (teto por PRIVILÉGIO `conteudo.criar`, vocabulário em
+`app/auth/escopos.py`), não por perfil. `admin:inquilino` só perfil admin consegue emitir
+(`app/auth/rotas_tokens.py`), o que deixava upload/download/apagar por token inacessíveis a um editor comum.
+`POST /api/arquivos` também cobra `conteudo.criar` na dependência (é criação); `GET /api/arquivos/{sha256}`,
+`DELETE /api/arquivos/{sha256}` e `GET /api/arquivos` (uso × cota) não cobram privilégio de sessão — o teto ali
+é o mesmo de sempre (RLS por inquilino, `X = {"x-privilegio": "proprio"}`), só o escopo de TOKEN mudou."""
 
 import re
 
@@ -58,15 +67,18 @@ def varredura(auth: Auth = autenticado(so_sessao=True)):
 
 
 @router.get("/api/arquivos", openapi_extra=X)
-def uso(auth: Auth = autenticado()):
+def uso(auth: Auth = autenticado(escopo_token="conteudo:criar")):
     with db.db(auth.contexto()) as cur:
         cur.execute("SELECT cota_bytes FROM plat.tenant WHERE id = %s", (auth.tenant_id,))
         cota = cur.fetchone()["cota_bytes"]
     return {"bytes_usados": objetos.uso(auth.tenant_slug), "cota_bytes": cota}
 
 
-@router.post("/api/arquivos", status_code=201, openapi_extra={"x-auth": "T", "x-privilegio": "proprio"})
-async def enviar(request: Request, classe: str = "objeto", auth: Auth = autenticado(escopo_token="admin:inquilino")):
+@router.post("/api/arquivos", status_code=201, openapi_extra={"x-auth": "T", "x-privilegio": "conteudo.criar"})
+async def enviar(
+    request: Request, classe: str = "objeto",
+    auth: Auth = autenticado("conteudo.criar", escopo_token="conteudo:criar"),
+):
     """Corpo cru (não multipart/form-data: o corpo INTEIRO é o arquivo). Streaming com teto de tamanho; acima de
     `limites.ARQUIVO_BUFFER_UNICO_BYTES` abre multipart real no Garage (contrato `objetos.parte_*`, ADR 0005).
     Só token de serviço (`Authorization: Bearer`), nunca cookie de sessão: o CSRF sob cookie (ADR 0002 seção 5.3)
@@ -169,7 +181,7 @@ async def enviar(request: Request, classe: str = "objeto", auth: Auth = autentic
 @router.get(
     "/api/arquivos/{sha256}", openapi_extra=X, responses={200: {"content": {"application/octet-stream": {}}}}
 )
-def ler(sha256: str, classe: str = "objeto", auth: Auth = autenticado()):
+def ler(sha256: str, classe: str = "objeto", auth: Auth = autenticado(escopo_token="conteudo:criar")):
     classe, sha256 = _classe_ok(classe), _sha256_ok(sha256)
     with db.db(auth.contexto()) as cur:
         r = _linha(cur, auth.tenant_id, classe, sha256)
@@ -195,7 +207,7 @@ def ler(sha256: str, classe: str = "objeto", auth: Auth = autenticado()):
 
 
 @router.delete("/api/arquivos/{sha256}", status_code=204, response_class=Response, openapi_extra=X)
-def apagar(sha256: str, classe: str = "objeto", auth: Auth = autenticado()):
+def apagar(sha256: str, classe: str = "objeto", auth: Auth = autenticado(escopo_token="conteudo:criar")):
     classe, sha256 = _classe_ok(classe), _sha256_ok(sha256)
     with db.db(auth.contexto()) as cur:
         r = _linha(cur, auth.tenant_id, classe, sha256)

@@ -16,7 +16,8 @@ URL para adulterar, e mesmo que houvesse, o `WHERE` da política ignoraria).
 `org_logo`, sem `item_id`: um objeto por inquilino, deduplicado por sha256) e o MESMO truque de base64 sob
 JSON que a miniatura de item já usa (`app/catalogo/rotas_miniatura.py`): o CSRF sob cookie de sessão exige
 `application/json` em todo verbo de escrita (ADR 0002 seção 5.3), então o envio de bytes crus fica reservado
-à rota de token de serviço (`POST /api/arquivos`, escopo `admin:inquilino`). A imagem é revalidada e
+à rota de token de serviço (`POST /api/arquivos`, escopo `conteudo:criar` — achado do adversário L0-11,
+ver `app/rotas_arquivos.py`). A imagem é revalidada e
 REDESENHADA pelo Pillow (contain 300×300, fundo transparente, sem EXIF/ICC) antes de gravar — mesma razão do
 L7-03-b (a saída é sempre um PNG novo, nunca os bytes originais do cliente), por isso não chama
 `escanear_cabecalho()` de novo (o padrão já isento é o mesmo da miniatura: ver o docstring de

@@ -5,13 +5,44 @@ listar bucket de outro inquilino, chave de objeto com '../', sobrescrever objeto
 
 import hashlib
 import os
+import re
 import time
+from pathlib import Path
 
 import pytest
 
 from tests.api.test_rls import contexto, ids_por_slug
 
 ITEM = "L0-11-arquivos-objetos"
+
+# ---------------------------------------------------------------- varredura de front-end (mesmo padrão de
+# tests/api/uploads/test_uploads.py::test_front_uploads_nunca_pede_token_admin_inquilino, item L0-04-a):
+# nenhum módulo JS deve pedir/assumir o escopo `admin:inquilino` para uma operação que um usuário comum com
+# `conteudo.criar` deveria conseguir fazer sozinho — só perfil admin consegue emitir esse escopo
+# (app/auth/rotas_tokens.py), e um requisito assim deixa a funcionalidade inteira inacessível a quem não é
+# admin do inquilino. `[:=]` cobre tanto `escopos: [...]` (objeto literal) quanto `escopos = [...]`
+# (parâmetro default), as duas formas vistas no repositório.
+WEB_RAIZ = Path(__file__).resolve().parents[2] / "web"
+_PEDE_ADMIN_INQUILINO = re.compile(r"escopos\s*[:=]\s*\[\s*['\"]admin:inquilino['\"]\s*\]")
+# (a) operação de administração de verdade: lista de escopos disponíveis na TELA de gestão de tokens,
+# filtrada para só aparecer a quem já é admin (`ESCOPOS.filter((e) => e !== 'admin:inquilino' || admin)`,
+# achado que NÃO reproduz aqui porque o padrão acima não casa com um array de vários itens — listado só por
+# completude do relatório da varredura, sem precisar de exceção).
+ADMIN_LEGITIMO = {
+    "sdk/plat.js": (
+        "Plataforma.entrar() é um ponto de entrada GENÉRICO do SDK (login de integrador/script, não uma tela "
+        "amarrada a uma rota específica): o default mais amplo é intencional, e quem chama pode passar "
+        "escopos=[...] menor. Minerar admin:inquilino aqui só funciona para quem já é admin (a checagem de "
+        "app/auth/rotas_tokens.py vale igual); não é o mesmo bug de rota fixa com teto baixo."
+    ),
+}
+# (b) mesma causa raiz de L0-04-a/L0-11, mas de OUTRO item (upload retomável /api/uploads, não /api/arquivos
+# deste item): commit 6b0108782 em wt/f2-l004a já troca para conteudo:criar, mas esse ramo ainda não foi
+# fundido em wt/uniao (a base deste worktree) — listado aqui como exceção RASTREADA, não como aprovação, para
+# a varredura não silenciar o achado nem duplicar o conserto de outro item/branch neste commit.
+PENDENTE_OUTRO_ITEM = {
+    "js/uploads/nucleo.js": "L0-04-a — corrigido em wt/f2-l004a (commit 6b0108782), a ser fundido em wt/uniao.",
+}
 
 
 def test_bucket_por_inquilino_isolado_e_instalacao_idempotente(conexao_plat_app):
@@ -333,6 +364,125 @@ def test_api_uso_e_cota(sessao_a):
     assert r.status_code == 200
     corpo = r.json()
     assert "bytes_usados" in corpo and "cota_bytes" in corpo and corpo["bytes_usados"] >= 0
+
+
+# ---------------------------------------------------------------- achado do adversário (mesma causa raiz de
+# L0-04-a, handoffs/T4/ADVERSARIO-L0.md): POST/GET/DELETE /api/arquivos exigiam token com escopo
+# `admin:inquilino` (só perfil admin consegue emitir, app/auth/rotas_tokens.py) para enviar/baixar/apagar o
+# PRÓPRIO arquivo — um editor comum (privilégio `conteudo.criar`, perfil `editor`) nunca conseguia. O escopo
+# certo é `conteudo:criar` (teto por PRIVILÉGIO, vocabulário em app/auth/escopos.py), o mesmo que
+# app/uploads/rotas.py já usa para o upload retomável.
+def test_editor_comum_envia_baixa_e_apaga_pelo_proprio_token(cliente, usuarios_a):
+    """Reprodução ANTES → depois do achado: um editor comum (1) consegue emitir token com escopo
+    `conteudo:criar`; (2) envia, baixa (sha256 igual) e apaga o PRÓPRIO arquivo com ele; (3) continua sem
+    conseguir `admin:inquilino` (o teto por perfil daquele escopo não foi enfraquecido). As chamadas de
+    arquivo usam `cliente` (sem cookie) — cookie de sessão + `Authorization: Bearer` juntos são
+    `autenticacao_ambigua` (400), então o token tem de andar sozinho, como o navegador faz de verdade."""
+    c_ed, _, _ = usuarios_a.sessao("editor")
+    r_tok = c_ed.post("/api/tokens", json={"nome": "zt-arquivos-editor", "escopos": ["conteudo:criar"]})
+    assert r_tok.status_code == 201, r_tok.text
+    tok = r_tok.json()
+    try:
+        h = {"Authorization": f"Bearer {tok['token']}", "content-type": "application/octet-stream"}
+        conteudo = os.urandom(1024)
+        r = cliente.post("/api/arquivos?classe=zt_editor", content=conteudo, headers=h)
+        assert r.status_code == 201, r.text
+        sha = r.json()["sha256"]
+        assert sha == hashlib.sha256(conteudo).hexdigest()
+
+        r = cliente.get(f"/api/arquivos/{sha}?classe=zt_editor", headers={"Authorization": h["Authorization"]})
+        assert r.status_code == 200 and r.content == conteudo
+
+        r = cliente.delete(f"/api/arquivos/{sha}?classe=zt_editor", headers={"Authorization": h["Authorization"]})
+        assert r.status_code == 204, r.text
+
+        # o teto de ADMIN continua de pé: editor não vira admin de token por tabela
+        r_neg = c_ed.post("/api/tokens", json={"nome": "zt-arquivos-editor-nega", "escopos": ["admin:inquilino"]})
+        assert r_neg.status_code == 422 and r_neg.json()["erro"] == "escopo_fora_do_teto"
+    finally:
+        c_ed.delete(f"/api/tokens/{tok['id']}")
+
+
+def test_visualizador_sem_conteudo_criar_nao_ganha_token_de_arquivo(usuarios_a):
+    """Simetria: quem NÃO tem `conteudo.criar` (perfil `visualizador`) continua sem conseguir se emitir um
+    token com o escopo `conteudo:criar` — o teto virou "por privilégio", não "sem teto"."""
+    c_vis, _, _ = usuarios_a.sessao("visualizador")
+    r = c_vis.post("/api/tokens", json={"nome": "zt-arquivos-vis", "escopos": ["conteudo:criar"]})
+    assert r.status_code == 422 and r.json()["erro"] == "escopo_fora_do_teto"
+
+
+def test_visualizador_sem_conteudo_criar_recebe_403_ao_enviar_por_sessao(usuarios_a):
+    """`POST /api/arquivos` agora cobra o privilégio `conteudo.criar` na própria dependência (é criação),
+    não só o escopo do token: um visualizador (sem o privilégio) recebe 403 sem_privilegio mesmo por sessão,
+    antes de a rota sequer checar `auth.modo == token`."""
+    c_vis, _, _ = usuarios_a.sessao("visualizador")
+    r = c_vis.post("/api/arquivos?classe=zt_sem_priv", json={})
+    assert r.status_code == 403, r.text
+    corpo = r.json()
+    assert corpo["erro"] == "sem_privilegio" and corpo["detalhe"]["exigido"] == "conteudo.criar"
+
+
+def test_editor_com_token_conteudo_criar_nao_alcanca_arquivo_de_outro_inquilino(cliente, usuarios_a, usuarios_b):
+    """RLS por inquilino continua de pé com o escopo novo: o objeto genérico (`referencia IS NULL`) é isolado
+    por `tenant_id` (não por `usuario_id` — dois editores do MESMO inquilino compartilham a mesma classe de
+    objeto por desenho, isso não muda aqui); um editor de OUTRO inquilino com token `conteudo:criar` próprio
+    nunca vê nem apaga o arquivo do primeiro. As chamadas usam `cliente` (sem cookie próprio) para o
+    `Authorization: Bearer` de cada token ser a ÚNICA credencial em jogo — nunca a sessão de `usuarios_a`."""
+    c_a, _, _ = usuarios_a.sessao("editor")
+    c_b, _, _ = usuarios_b.sessao("editor")
+    tok_a = c_a.post("/api/tokens", json={"nome": "zt-arquivos-cruz-a", "escopos": ["conteudo:criar"]}).json()
+    tok_b = c_b.post("/api/tokens", json={"nome": "zt-arquivos-cruz-b", "escopos": ["conteudo:criar"]}).json()
+    try:
+        h_a = {"Authorization": f"Bearer {tok_a['token']}", "content-type": "text/plain"}
+        h_b = {"Authorization": f"Bearer {tok_b['token']}"}
+        conteudo = os.urandom(256)
+        r = cliente.post("/api/arquivos?classe=zt_cruz", content=conteudo, headers=h_a)
+        assert r.status_code == 201, r.text
+        sha = r.json()["sha256"]
+
+        r = cliente.get(f"/api/arquivos/{sha}?classe=zt_cruz", headers=h_b)
+        assert r.status_code == 404, r.text
+        r = cliente.delete(f"/api/arquivos/{sha}?classe=zt_cruz", headers=h_b)
+        assert r.status_code == 404, r.text
+
+        r = cliente.delete(f"/api/arquivos/{sha}?classe=zt_cruz", headers=h_a)
+        assert r.status_code == 204, r.text
+    finally:
+        c_a.delete(f"/api/tokens/{tok_a['id']}")
+        c_b.delete(f"/api/tokens/{tok_b['id']}")
+
+
+def test_front_web_so_pede_admin_inquilino_nos_casos_documentados():
+    """Varredura de `web/**/*.js` inteiro (não só `web/js/uploads/`, que é o alcance de L0-04-a): nenhum módulo
+    novo pode passar a pedir/assumir o escopo `admin:inquilino` para uma rota de conteúdo comum sem que
+    alguém escreva aqui por quê — regressão nova reprova; os dois casos de hoje estão documentados acima."""
+    achados = {}
+    for caminho in sorted(WEB_RAIZ.rglob("*.js")):
+        texto = caminho.read_text(encoding="utf-8")
+        if _PEDE_ADMIN_INQUILINO.search(texto):
+            achados[str(caminho.relative_to(WEB_RAIZ))] = caminho
+
+    esperado = set(ADMIN_LEGITIMO) | set(PENDENTE_OUTRO_ITEM)
+    assert set(achados) == esperado, (
+        f"achados não documentados: {set(achados) - esperado}; documentados mas não achados: "
+        f"{esperado - set(achados)} — atualize ADMIN_LEGITIMO/PENDENTE_OUTRO_ITEM (ou o conserto) junto com "
+        "o código, nunca separado"
+    )
+
+
+def test_arquivos_js_consumidores_nunca_pedem_token_admin_inquilino():
+    """Os três módulos que hoje CONSOMEM `/api/arquivos` pela tela (fontes.js, organizacao.js,
+    adicionar_dado.js) só fazem GET por sessão — nenhum deles emite token, então nenhum pode carregar o
+    escopo velho de volta se um dia passarem a emitir um."""
+    consumidores = (
+        WEB_RAIZ / "js" / "app" / "fontes.js",
+        WEB_RAIZ / "js" / "auth" / "organizacao.js",
+        WEB_RAIZ / "js" / "widgets" / "adicionar_dado.js",
+    )
+    for caminho in consumidores:
+        assert caminho.is_file(), caminho
+        texto = caminho.read_text(encoding="utf-8")
+        assert not _PEDE_ADMIN_INQUILINO.search(texto), f"{caminho.name} passou a pedir admin:inquilino"
 
 
 def test_taxa_de_transferencia_local(conexao_plat_app, medida):

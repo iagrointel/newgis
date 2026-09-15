@@ -9441,7 +9441,7 @@
      }
     },
     "x-auth": "T",
-    "x-privilegio": "proprio"
+    "x-privilegio": "conteudo.criar"
    }
   },
   "/api/arquivos/_chave-leitura": {
