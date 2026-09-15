@@ -64,6 +64,7 @@ from app.catalogo import (
     transferencia,
     vista_camada,
 )
+from app.catalogo import rotas_csw as rotas_csw_catalogo
 from app.cena.rotas import router as rotas_cena
 from app.chamados import rotas as rotas_chamados
 from app.coleta.rotas import router as rotas_coleta
@@ -300,6 +301,8 @@ ROUTERS = [
     rotas_pacote.router,
     # --- catálogo externo OGC API Records (L0-09-metadado-catalogo): /ogc/records; token catalogo:ler, nunca aberto
     rotas_ogc.router,
+    # --- catálogo externo CSW 2.0.2 (L0-09-metadado-catalogo, cláusula 1): /csw; mesma autenticação de /ogc/records
+    rotas_csw_catalogo.router,
     # --- layout de impressão (L2-12-b): /api/layouts, página headless do quadro e Export Web Map Task (Esri)
     rotas_layout.router,
     rotas_presenca.router,
