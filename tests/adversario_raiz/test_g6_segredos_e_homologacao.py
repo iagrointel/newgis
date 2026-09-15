@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.adversario.apoio_g6 import RAIZ, ler_env
+from tests.adversario_raiz.apoio_g6 import RAIZ, ler_env
 
 ITEM_SEGREDOS = "L7-19-segredos-e-certificados"
 ITEM_HOMOLOG = "L7-31-ambiente-homologacao"

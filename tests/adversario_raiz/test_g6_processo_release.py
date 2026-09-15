@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.adversario.apoio_g6 import RAIZ, rodar
+from tests.adversario_raiz.apoio_g6 import RAIZ, rodar
 
 ITEM = "L7-15-processo-release"
 

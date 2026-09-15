@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.adversario.apoio_g6 import RAIZ
+from tests.adversario_raiz.apoio_g6 import RAIZ
 
 ITEM_APT = "L7-14-instalacoes-apt-desta-linha"
 ITEM_CVE = "L7-03-f-dependencias-cve-log-correcoes"

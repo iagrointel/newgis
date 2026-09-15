@@ -12,8 +12,10 @@ import pytest
 
 from tests.e2e.apoio import sufixo
 from tests.e2e.apoio_catalogo import TelaCatalogo
+from tests.e2e.conftest import (
+    api_catalogo,  # noqa: F401 (fixture reaproveitada; vive no conftest, não em test_conteudo)
+)
 from tests.e2e.frente_trilha import FrenteTrilha
-from tests.e2e.test_conteudo import api_catalogo  # noqa: F401 (fixture reaproveitada)
 
 pytestmark = [pytest.mark.lento, pytest.mark.e2e]
 

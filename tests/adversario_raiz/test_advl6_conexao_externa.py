@@ -4,7 +4,7 @@ offline (servidor de prova no loopback, liberado pela válvula `PLAT_TESTE_CONEX
 
 Rodar (na trilha do adversário, base própria `plat_tadvl6`):
     set -a; source /home/dev/plataforma/laco/var/trilha/advl6.env; set +a
-    venv/bin/pytest tests/adversario/test_advl6_conexao_externa.py -q -p no:randomly
+    venv/bin/pytest tests/adversario_raiz/test_advl6_conexao_externa.py -q -p no:randomly
 """
 
 from __future__ import annotations

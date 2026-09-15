@@ -15,7 +15,7 @@ open-redirect nele) que responda 302 para fora exfiltra o Bearer da casa.
 Reproduzir (não precisa de rede nem de banco — só do import do módulo):
   cd /home/dev/plataforma/wt/cred
   export PLAT_SECRET=$(python3 -c "import secrets;print(secrets.token_hex(32))")
-  venv/bin/pytest tests/adversario/test_g5_adversario.py -q -o addopts=""
+  venv/bin/pytest tests/adversario_raiz/test_g5_adversario.py -q -o addopts=""
 """
 import socket
 
