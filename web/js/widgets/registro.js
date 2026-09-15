@@ -3,7 +3,12 @@
    e pelo L5-01-d-widgets-pagina-menu: imagem, cartão, incorporar, divisor, menu (widget), controlador,
    compartilhar, login, idioma, tema — mais texto/botão, que já existiam aqui e ganharam os campos que
    faltavam (`formato`/`acao`) e o elemento correto (`plat-w-<nome>`, o que `web/js/widgets/base.js::definir`
-   registra de verdade; ver PARIDADE.md).
+   registra de verdade; ver PARIDADE.md). Varredura de 15/09 (item F2-widgets-3): o mesmo bug do `texto`/
+   `botao` (elemento inventado, nunca definido) estava em MAIS TRÊS manifestos mais antigos —
+   `mapa` ('plat-mapa'), `legenda` ('plat-legenda') e `filtro` ('plat-filtro') — todos com módulo próprio
+   que na verdade registra `plat-w-<nome>`; corrigidos aqui e cobertos por
+   `test_widgets_registro_elementos.py`, que reprova QUALQUER divergência futura entre `elemento` e o
+   `definir(...)` real do módulo, não só os nomes de um item específico.
    Cada manifesto declara os EVENTOS que emite e as AÇÕES que aceita no vocabulário do barramento
    (L5_CONCEITO D5): eventos clique | dado_adicionado | filtro_mudou | extensao_mudou | localizacao |
    registros_carregados | selecao_mudou | vista_mudou; ações de dado filtrar | selecionar | limpar_filtro |
@@ -24,14 +29,14 @@ export const ACOES_WIDGET = Object.freeze(['zoom', 'pan', 'piscar', 'popup', 'ab
 
 const manifestos = [
   {
-    nome: 'mapa', versao: '1.1.0', api_widget: 1, modulo: './mapa.js', elemento: 'plat-mapa',
+    nome: 'mapa', versao: '1.1.0', api_widget: 1, modulo: './mapa.js', elemento: 'plat-w-mapa',
     esquema_config: objetoFechado({ rotulo: textoCurto, vista: ulid, campo_rotulo: textoCurto, altura: { type: 'integer', minimum: 120, maximum: 2000 } }),
     eventos: ['clique', 'selecao_mudou', 'extensao_mudou', 'registros_carregados', 'mapa.selecao', 'mapa.extensao_alterada'],
     acoes: [...ACOES_DADO, 'zoom', 'pan', 'piscar', 'popup', 'mapa.enquadrar', 'mapa.destacar'],
     fontes: { min: 0, max: 100, tipos: ['mapa', 'camada'] }, i18n: 'widget.mapa',
   },
   {
-    nome: 'legenda', versao: '1.0.0', api_widget: 1, modulo: './legenda.js', elemento: 'plat-legenda',
+    nome: 'legenda', versao: '1.0.0', api_widget: 1, modulo: './legenda.js', elemento: 'plat-w-legenda',
     esquema_config: objetoFechado({
       titulo: textoCurto,
       itens: { type: 'array', maxItems: 500, items: objetoFechado({ rotulo: textoCurto, cor: textoCurto, valor: {} }, ['rotulo']) },
@@ -216,7 +221,7 @@ const manifestos = [
     eventos: ['tema.mudou'], acoes: ['tema.definir', 'definir_parametro'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.tema',
   },
   {
-    nome: 'filtro', versao: '2.0.0', api_widget: 1, modulo: './filtro.js', elemento: 'plat-filtro',
+    nome: 'filtro', versao: '2.0.0', api_widget: 1, modulo: './filtro.js', elemento: 'plat-w-filtro',
     esquema_config: objetoFechado({
       rotulo: textoCurto, valor: textoCurto, vista: ulid, campo: textoCurto,
       modo: { type: 'string', enum: ['texto', 'valores', 'intervalo', 'data'] }, multiplo: { type: 'boolean' },
