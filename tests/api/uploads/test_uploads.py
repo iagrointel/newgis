@@ -6,9 +6,11 @@ montar o token de serviço (mesma regra de `app.rotas_arquivos`); o envio em si 
 from __future__ import annotations
 
 import hashlib
+import re
 import time
 import zipfile
 from io import BytesIO
+from pathlib import Path
 
 import psycopg2
 import psycopg2.extras
@@ -547,3 +549,41 @@ def test_tipos_aceitos_lista_publica(up_a):
     nomes = {t["tipo"] for t in r.json()}
     assert {"shapefile.zip", "gpkg", "geojson", "csv", "kml", "kmz", "gpx", "xlsx", "dxf", "dwg", "gdb.zip",
             "parquet", "fgb", "gml", "zip"} <= nomes
+
+
+# ---------------- achado do adversário independente T3, parte front-end (mesmo handoff, mesma causa raiz)
+# A fusão de 10/09 (wt/upload) trocou o escopo do token em web/js/uploads/enviar.js (tela /uploads) de
+# `admin:inquilino` para `conteudo:criar`, mas web/js/uploads/nucleo.js — o módulo que a zona de
+# arrastar-e-soltar do mapa (web/js/sig/sig.js::instalarArrastarPublicar) importa e reusa "pelo MESMO
+# protocolo... nenhuma reimplementação de parte/token/confirmação" — ficou para trás com o escopo velho.
+# Reproduzido ao vivo (POST /api/tokens com escopos=['admin:inquilino'] por um editor comum): 422
+# escopo_fora_do_teto, exatamente o que um editor recebia ao arrastar um arquivo sobre o mapa.
+WEB_JS_UPLOADS = Path(__file__).resolve().parents[3] / "web" / "js" / "uploads"
+_PEDE_ADMIN_INQUILINO = re.compile(r"escopos\s*:\s*\[\s*['\"]admin:inquilino['\"]\s*\]")
+_PEDE_CONTEUDO_CRIAR = re.compile(r"escopos\s*:\s*\[\s*['\"]conteudo:criar['\"]\s*\]")
+
+
+def test_editor_comum_nao_consegue_admin_inquilino_reproducao_do_achado_js(usuarios_a):
+    """Reproduz o que web/js/uploads/nucleo.js pedia (achado do adversário): o próprio token que a tela de
+    upload/arrastar-e-soltar tentava obter -- 422, não 201 -- para um editor comum."""
+    c_ed, _, _ = usuarios_a.sessao("editor")
+    r = c_ed.post("/api/tokens", json={"nome": f"{PREFIXO_TESTE}-editor-nucleo-velho", "escopos": ["admin:inquilino"]})
+    assert r.status_code == 422 and r.json()["erro"] == "escopo_fora_do_teto", r.text
+
+
+@pytest.mark.parametrize("caminho", sorted(WEB_JS_UPLOADS.glob("*.js")), ids=lambda p: p.name)
+def test_front_uploads_nunca_pede_token_admin_inquilino(caminho):
+    """Nenhum módulo de web/js/uploads/ pode pedir um token com escopo `admin:inquilino` para o envio --
+    só perfil admin consegue emitir esse escopo (app/auth/rotas_tokens.py), o que deixaria a
+    funcionalidade inteira inacessível para um editor comum. O escopo certo é `conteudo:criar` (teto por
+    privilégio `conteudo.criar`, não por perfil) -- é o que web/js/uploads/enviar.js já usa; este teste
+    garante que web/js/uploads/nucleo.js (reusado por web/js/sig/sig.js na publicação por arrastar-e-soltar)
+    não regride para o escopo velho de novo."""
+    texto = caminho.read_text(encoding="utf-8")
+    assert not _PEDE_ADMIN_INQUILINO.search(texto), (
+        f"{caminho.name} pede token com escopo admin:inquilino -- editor comum fica sem conseguir enviar arquivo"
+    )
+    if "/api/tokens" in texto:
+        assert _PEDE_CONTEUDO_CRIAR.search(texto), (
+            f"{caminho.name} chama POST /api/tokens para o upload mas não pede o escopo conteudo:criar"
+        )

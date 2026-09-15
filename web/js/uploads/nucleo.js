@@ -2,7 +2,12 @@
    tela /uploads (enviar.js) e pela zona de arrasto da tela inicial (app.js): mesmo upload em partes, mesma
    troca sessão→token, mesma decisão de publicar como raster (geotiff/jp2, `POST /api/imagens/ingestoes`) ou
    como camada vetorial (shapefile.zip/gpkg/geojson/csv, `POST /api/importacoes` → confirmar → carregar) ou,
-   para os formatos que a ingestão ainda não lê, deixar como item 'arquivo' mesmo — nunca uma promessa sem data. */
+   para os formatos que a ingestão ainda não lê, deixar como item 'arquivo' mesmo — nunca uma promessa sem data.
+
+   Achado do adversário T3 (handoffs/T3/L0-04-a-ADVERSARIO.md), a mesma correção de enviar.js: o token tem
+   de pedir o escopo `conteudo:criar` (teto por privilégio `conteudo.criar`), NUNCA `admin:inquilino` — esse
+   só perfil admin consegue emitir (app/auth/rotas_tokens.py), o que deixaria a publicação por arrastar-e-
+   soltar (web/js/sig/sig.js::instalarArrastarPublicar, que importa este módulo) inacessível a um editor comum. */
 import { obter, enviar, alterar } from '../base/api.js';
 import { h } from '../base/dom.js';
 import { t } from '../base/i18n.js';
@@ -24,7 +29,7 @@ let tokenServico = null;
 
 async function token() {
   if (tokenServico) return tokenServico;
-  const r = await enviar('/api/tokens', { nome: NOME_TOKEN, escopos: ['admin:inquilino'], validade_dias: 1 });
+  const r = await enviar('/api/tokens', { nome: NOME_TOKEN, escopos: ['conteudo:criar'], validade_dias: 1 });
   if (r.status !== 201) throw new Error(r.json.mensagem || 'não foi possível preparar o envio');
   tokenServico = r.json.token;
   return tokenServico;
