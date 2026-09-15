@@ -154,6 +154,14 @@ class Coletor:
 
     # --- conexões (15 s, UMA conexão mantida aberta)
     def _dsn(self):
+        # 06/09: os segredos saíram do .env para /etc/plat/segredos (conserto G6); cofre primeiro
+        try:
+            import subprocess
+            v = subprocess.run(["sudo", "cat", "/etc/plat/segredos/PLAT_DSN"], capture_output=True, text=True, timeout=5).stdout.strip()
+            if v:
+                return v
+        except Exception:
+            pass
         try:
             for l in open(f"{REPO}/.env", encoding="utf-8"):
                 if l.startswith("PLAT_DSN="):
