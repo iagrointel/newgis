@@ -13,7 +13,6 @@ Reproduzir:
 """
 
 
-import pytest
 
 from tests.api.catalogo.conftest import titulo_zt
 from tests.api.conftest import novo_cliente

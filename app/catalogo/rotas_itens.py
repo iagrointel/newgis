@@ -466,9 +466,7 @@ def facetas(request: Request, auth: Auth = autenticado(escopo_token="catalogo:le
             "GROUP BY 1, 2, 3 ORDER BY n DESC, 2 LIMIT 100",
             params,
         )
-        saida["dono"] = [
-            {"valor": r["login"], "id": r["id"], "rotulo": r["nome"], "n": r["n"]} for r in cur.fetchall()
-        ]
+        saida["dono"] = [{"valor": r["login"], "id": r["id"], "rotulo": r["nome"], "n": r["n"]} for r in cur.fetchall()]
         cur.execute(
             f"SELECT tag AS valor, count(*) AS n FROM (SELECT unnest(i.tags) AS tag {FROM_LISTA}{onde}) x "
             "GROUP BY 1 ORDER BY n DESC, 1 LIMIT 30",
@@ -557,7 +555,9 @@ def _publicar_tipo(auth: Auth, tipo: str) -> None:
     status_code=201,
     openapi_extra={"x-auth": "S/T", "x-privilegio": "conteudo.criar"},
 )
-def criar(corpo: ItemEntrada, request: Request, auth: Auth = autenticado("conteudo.criar", escopo_token="conteudo:criar")):
+def criar(
+    corpo: ItemEntrada, request: Request, auth: Auth = autenticado("conteudo.criar", escopo_token="conteudo:criar")
+):
     tipos.obter(corpo.tipo)
     _publicar_tipo(auth, corpo.tipo)
     tipos.validar(corpo.tipo, corpo.dados)
@@ -734,9 +734,7 @@ def metadado_salvar(id: str, request: Request, corpo: MetadadoEditorEntrada, aut
     cada erro; extent declarado que diverge do item real = aviso, nunca bloqueio (refutação do item L0-09-b)."""
     stored = corpo.metadado or {}
     if not metadado_mgb.tamanho_ok(stored):
-        raise ErroAPI(
-            422, "metadado_grande", f"metadado acima do teto de {limites.METADADO_ISO_BYTES_MAX} bytes"
-        )
+        raise ErroAPI(422, "metadado_grande", f"metadado acima do teto de {limites.METADADO_ISO_BYTES_MAX} bytes")
     try:
         metadado_mgb.validar_estrutura(stored)
     except metadado_mgb.ErroMetadadoInvalido as e:
@@ -889,12 +887,16 @@ def _editar(id: str, corpo, request: Request, auth: Auth) -> dict:
 
 
 @router.put("/api/itens/{id}", response_model=Item, openapi_extra=EDITAR)
-def editar(id: str, request: Request, corpo: dict = Body(...), auth: Auth = autenticado(escopo_token="catalogo:escrever")):  # noqa: B008
+def editar(
+    id: str, request: Request, corpo: dict = Body(...), auth: Auth = autenticado(escopo_token="catalogo:escrever")
+):  # noqa: B008
     return _editar(id, corpo, request, auth)
 
 
 @router.patch("/api/itens/{id}", response_model=Item, openapi_extra=EDITAR)
-def editar_parcial(id: str, request: Request, corpo: dict = Body(...), auth: Auth = autenticado(escopo_token="catalogo:escrever")):  # noqa: B008
+def editar_parcial(
+    id: str, request: Request, corpo: dict = Body(...), auth: Auth = autenticado(escopo_token="catalogo:escrever")
+):  # noqa: B008
     return _editar(id, corpo, request, auth)
 
 
@@ -938,8 +940,12 @@ def apagar_item(cur, request: Request, auth: Auth, iid: str, cascata: bool, forc
     response_class=Response,
     openapi_extra={"x-auth": "S/T", "x-privilegio": "rls:visibilidade|conteudo.apagar_tudo"},
 )
-def apagar(id: str, request: Request, cascata: bool = False,
-           auth: Auth = autenticado(escopo_token="catalogo:escrever", superadmin_pode_ler=True)):
+def apagar(
+    id: str,
+    request: Request,
+    cascata: bool = False,
+    auth: Auth = autenticado(escopo_token="catalogo:escrever", superadmin_pode_ler=True),
+):
     iid = uuid_ok(id)
     forcado = bool(auth.superadmin and auth.modo == "sessao" and auth.leitura_inquilino is not None)
     ctx = auth.contexto_leitura() if forcado else auth.contexto()
@@ -1095,7 +1101,10 @@ def versao(id: str, n: int, diff_de: int | None = None, auth: Auth = autenticado
 
 @router.post("/api/itens/{id}/versoes/{n}/restaurar", response_model=Item, openapi_extra=EDITAR)
 def restaurar_versao(
-    id: str, n: int, request: Request, corpo: RestaurarVersaoEntrada | None = None,
+    id: str,
+    n: int,
+    request: Request,
+    corpo: RestaurarVersaoEntrada | None = None,
     auth: Auth = autenticado(escopo_token="catalogo:escrever"),
 ):
     iid = uuid_ok(id)
@@ -1177,7 +1186,9 @@ def ordem_de_exclusao(id: str, auth: Auth = autenticado(escopo_token="catalogo:l
 
 
 @router.put("/api/itens/{id}/relacoes", response_model=list[UsadoPor], openapi_extra=EDITAR)
-def relacoes_definir(id: str, corpo: RelacoesEntrada, request: Request, auth: Auth = autenticado(escopo_token="catalogo:escrever")):
+def relacoes_definir(
+    id: str, corpo: RelacoesEntrada, request: Request, auth: Auth = autenticado(escopo_token="catalogo:escrever")
+):
     iid = uuid_ok(id)
     try:
         with db.db(auth.contexto()) as cur:

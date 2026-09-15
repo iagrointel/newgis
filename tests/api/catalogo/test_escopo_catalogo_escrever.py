@@ -6,8 +6,8 @@ nenhum token para essas rotas. Prova: `POST /api/itens` exige token `conteudo:cr
 (PUT/PATCH/DELETE/lote/mover/versão/relações) exigem `catalogo:escrever`; visualizador sem `conteudo.criar`
 continua sem conseguir criar; RLS entre inquilinos continua recusando."""
 
-from tests.api.conftest import com_token, novo_cliente
 from tests.api.catalogo.conftest import titulo_zt
+from tests.api.conftest import com_token, novo_cliente
 
 
 def test_editor_comum_cria_por_token_conteudo_criar(usuarios_a):
