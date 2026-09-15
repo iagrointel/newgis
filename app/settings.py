@@ -286,6 +286,32 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_SMTP_ROTULO=_opcional(valores, "PLAT_SMTP_ROTULO"),
         PLAT_POOL_MIN=pool_min,
         PLAT_POOL_MAX=pool_max,
+        # (conserto 15/09, item de wt/segur) os 16 campos abaixo entraram no dataclass pela união do
+        # 10/09 (linhas ~127-151) mas ficaram órfãos aqui: `carregar()` nunca os lia de `valores`, então a
+        # configuração EFETIVA nunca tinha o que o .env/systemd declarava para eles (achado do adversário
+        # T3: PLAT_GARAGE_CHAVE_ID/SEGREDO nunca chegavam à Settings, e homologação continuava dependendo
+        # do token de administração). String opcional segue o mesmo caminho de todo campo Optional[str]
+        # (_opcional); os três com padrão "" seguem o mesmo caminho com fallback textual, sem regra de
+        # identificador (não são nome de schema/canal Postgres).
+        PLAT_RENDER_BASE_URL=_opcional(valores, "PLAT_RENDER_BASE_URL"),
+        PLAT_MARTIN_SIMBOLOS_URL=_opcional(valores, "PLAT_MARTIN_SIMBOLOS_URL"),
+        PLAT_CANAL_CAMADA=_opcional(valores, "PLAT_CANAL_CAMADA") or "",
+        PLAT_BACKUP_DIR=_opcional(valores, "PLAT_BACKUP_DIR"),
+        PLAT_BACKUP_EXTERNO_URL=_opcional(valores, "PLAT_BACKUP_EXTERNO_URL"),
+        PLAT_BACKUP_EXTERNO_BUCKET=_opcional(valores, "PLAT_BACKUP_EXTERNO_BUCKET"),
+        PLAT_BACKUP_EXTERNO_CHAVE=_opcional(valores, "PLAT_BACKUP_EXTERNO_CHAVE"),
+        PLAT_BACKUP_EXTERNO_SEGREDO=_opcional(valores, "PLAT_BACKUP_EXTERNO_SEGREDO"),
+        PLAT_BACKUP_EXTERNO_REGIAO=_opcional(valores, "PLAT_BACKUP_EXTERNO_REGIAO"),
+        PLAT_TELEMETRIA_URL=_opcional(valores, "PLAT_TELEMETRIA_URL"),
+        PLAT_CLAMD=_opcional(valores, "PLAT_CLAMD"),
+        PLAT_ACERVO_ARQUIVOS_RAIZ=_opcional(valores, "PLAT_ACERVO_ARQUIVOS_RAIZ"),
+        PLAT_SHEETS_EXPORTACAO_PREFIXO=_opcional(valores, "PLAT_SHEETS_EXPORTACAO_PREFIXO") or "",
+        # PLAT_GARAGE_CHAVE_ID/SEGREDO: chave S3 própria da homologação (item L7-31); mesmo caminho do
+        # PLAT_GARAGE_ADMIN_TOKEN acima — quem prioriza o LoadCredential= do systemd é
+        # `_credenciais_systemd()` dentro de `valores_do_ambiente()`, antes de `valores` chegar aqui.
+        PLAT_GARAGE_CHAVE_ID=_opcional(valores, "PLAT_GARAGE_CHAVE_ID"),
+        PLAT_GARAGE_CHAVE_SEGREDO=_opcional(valores, "PLAT_GARAGE_CHAVE_SEGREDO"),
+        PLAT_SEGURANCA_CONTATO=_opcional(valores, "PLAT_SEGURANCA_CONTATO") or "",
     )
 
 
