@@ -1,9 +1,10 @@
 """Laudo executável do adversário do grupo G2 (catálogo de conteúdo, itens L0-03-a..l).
 
 Cada teste aqui é um achado MEDIDO em 06/09/2026 numa base isolada (schema plat_tadv2, criado por
-`laco/trilha_ambiente.sh adv2`). Todos estão marcados `xfail(strict=True)`: enquanto o defeito existir
+`laco/trilha_ambiente.sh adv2`). Cada achado nasceu marcado `xfail(strict=True)`: enquanto o defeito existir
 o teste é xfail; quando alguém consertar, ele vira XPASS e a suíte reprova — é assim que o achado vira
-prova. O adversário NÃO conserta nada.
+prova, e a marca sai (G2-1, G2-6, G2-7 e G2-8 já perderam a marca; ver o comentário de cada um para a
+correção e a data). O adversário NÃO conserta nada.
 
 Reproduzir:
   bash /home/dev/plataforma/laco/trilha_ambiente.sh adv2
@@ -22,12 +23,11 @@ ITEM = "L0-03-catalogo"
 
 
 # ---------------------------------------------------------------- L0-03-l (e isolamento por inquilino)
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G2-1: plat.item_versoes_compactar(uuid,int) é SECURITY DEFINER e NÃO compara "
-    "tenant_atual() com o inquilino do item: no contexto do inquilino A ela apaga linhas de "
-    "plat.item_versao de item do inquilino B (medido: 2 linhas removidas).",
-)
+# ACHADO G2-1 CORRIGIDO (conferido em 15/09/2026): a migração 20260906T1601_funcoes_privilegiadas_isolamento.sql
+# (varredura das 102 funções SECURITY DEFINER, laco/handoffs/T3/VARREDURA-funcoes-privilegiadas.md) reescreveu
+# plat.item_versoes_compactar para comparar tenant_atual() com o inquilino do item (mesmo padrão de
+# plat.item_expurgar/lixeira_expurgar desde a 011): item de outro inquilino devolve 0 sem apagar nada. A marca
+# xfail estrita saiu; o teste fica como regressão.
 def test_g2_1_compactar_versoes_nao_deve_cruzar_inquilino(sessao_b, itens_b, conexao_plat_app):
     it_b = itens_b.criar("mapa")
     for i in range(3):
@@ -143,13 +143,10 @@ def test_g2_5_evento_de_transferencia_so_do_que_mudou(sessao_a, itens_a, editor_
 
 
 # ---------------------------------------------------------------- L0-03-e
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G2-6: a miniatura entregue pelo link compartilhável sai com "
-    "'Cache-Control: private, max-age=300' (miniatura.entregar), enquanto todas as outras rotas do "
-    "link são no-store; depois de revogar, o cliente que já a baixou continua servindo do cache por "
-    "até 5 minutos — a refutação do item diz que o cache não pode servir.",
-)
+# ACHADO G2-6 CORRIGIDO (conferido em 15/09/2026, ADR docs/adr/20260906T1623-consertos-do-ataque-g2.md): as
+# rotas anônimas de app/catalogo/rotas_compartilhamento.py (link por token e pública) passam
+# cache=SEM_CACHE["Cache-Control"] para miniatura.entregar, em vez do CACHE_SESSAO padrão. A marca xfail
+# estrita saiu; o teste fica como regressão.
 def test_g2_6_miniatura_por_link_sem_cache(sessao_a, itens_a):
     it = itens_a.criar("mapa")
     png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
@@ -162,12 +159,11 @@ def test_g2_6_miniatura_por_link_sem_cache(sessao_a, itens_a):
 
 
 # ---------------------------------------------------------------- L0-03-k
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G2-7: metade do item não existe. Não há rota, tabela, migração nem código de "
-    "notificação interna (grep por 'notific' em app/, db/ e web/ = 0); o item declara sino na barra, "
-    "lida/não lida, dedup por chave, expurgo em 90 dias e medida 'sino consulta <= 20 ms'.",
-)
+# ACHADO G2-7 CORRIGIDO (conferido em 15/09/2026, ADR docs/adr/20260906T1623-consertos-do-ataque-g2.md §3): a
+# migração 20260906T1607_notificacao_interna.sql criou plat.notificacao (dedup por chave, sino, expurgo de 90
+# dias) e app/rotas_notificacoes.py expõe GET /api/notificacoes. O item L0-03-k segue PARCIAL ("item
+# compartilhado comigo" e "prazo de token" não emitem notificação ainda), mas a rota existe. A marca xfail
+# estrita saiu; o teste fica como regressão.
 def test_g2_7_notificacoes_internas_existem(sessao_a):
     codigos = {rota: sessao_a.get(rota).status_code for rota in ("/api/notificacoes", "/api/eu/notificacoes")}
     assert any(c != 404 for c in codigos.values()), codigos
