@@ -48,11 +48,24 @@ ESPERA_PARADA_S = 20
 # todas as bases por trilha (laco/trilha_ambiente.sh). Com o nome fixo "plat.job.pesado" o semáforo passava a
 # valer entre AMBIENTES: um job pesado da homologação (ou de uma trilha) segurava o único lugar e o job pesado
 # de produção ficava pendente sem nada rodando nele — medido em 06/09, com o worker de uma trilha segurando o
-# lock e o de outra rodando só job leve. O nome carrega o schema, então o semáforo volta a ser o que sempre se
-# quis dizer: um pesado por vez DENTRO de um ambiente. Em produção, onde só existe o schema `plat`, o valor é
-# o mesmo de antes e o comportamento não muda.
-LOCK_PESADO = f"plat.job.pesado:{settings.PLAT_SCHEMA or 'plat'}"
+# lock e o de outra rodando só job leve. `chave_lock_pesado()` (item F5) prefixa pelo schema do ambiente, então
+# o semáforo volta a ser o que sempre se quis dizer: um pesado por vez DENTRO de um ambiente. Em produção, onde
+# só existe o schema `plat`, o valor é o mesmo de antes e o comportamento não muda.
+LOCK_PESADO = "plat.job.pesado"  # nome-base; a chave real leva o schema (ver chave_lock_pesado)
 UTC = datetime.UTC
+
+
+def chave_lock_pesado(schema: str | None = None) -> str:
+    """Chave da trava de aconselhamento do job pesado, amarrada ao AMBIENTE (item F5; laudo do
+    adversário do reescritor de schema, laco/handoffs/T4/ADVERSARIO-reescritor-schema.md).
+    hashtext(LOCK_PESADO) sozinho dava a MESMA trava em produção, homologação e em qualquer
+    trilha: pg_try_advisory_lock é do CLUSTER Postgres inteiro, nunca do schema, e o nome
+    viaja como PARÂMETRO da consulta (nunca como texto SQL) — CursorSchemaAmbiente reescreve
+    só o texto, então não havia o que reescrever. Prefixar pelo schema do ambiente
+    (settings.PLAT_SCHEMA, já usado por PLAT_DSN_WORKER/PLAT_CANAL_JOB para a mesma separação)
+    resolve: a chave fica estável dentro de um processo (o schema não muda durante a vida do
+    worker) e diferente entre ambientes, porque cada ambiente usa um schema diferente."""
+    return f"{schema or settings.PLAT_SCHEMA}:{LOCK_PESADO}"
 
 
 def _iso(dt) -> str | None:
@@ -314,7 +327,7 @@ class Worker:
         while len(self.filhos) < self.processos and not self.parando:
             pesado_ok = False
             if not self.lock_pesado:
-                r = self.um("SELECT pg_try_advisory_lock(hashtext(%s)) AS ok", (LOCK_PESADO,))
+                r = self.um("SELECT pg_try_advisory_lock(hashtext(%s)) AS ok", (chave_lock_pesado(),))
                 pesado_ok = bool(r and r["ok"])
                 self.lock_pesado = pesado_ok
             job = self.um("SELECT * FROM plat.job_pegar(%s, %s)", (self.nome, pesado_ok))
@@ -328,7 +341,7 @@ class Worker:
 
     def _soltar_pesado(self) -> None:
         if self.lock_pesado:
-            self.sql("SELECT pg_advisory_unlock(hashtext(%s))", (LOCK_PESADO,))
+            self.sql("SELECT pg_advisory_unlock(hashtext(%s))", (chave_lock_pesado(),))
             self.lock_pesado = False
 
     def _lancar(self, job: dict) -> None:
