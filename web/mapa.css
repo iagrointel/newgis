@@ -14,10 +14,10 @@
    `web/js/mapa/estilo.js` (`COR`), nunca as var(--texto) etc. da folha principal. */
 body.mapa {
   overflow: hidden;
-  --mapa-painel: rgba(18, 24, 26, .88);
-  --mapa-borda: #3a4550;
-  --mapa-texto: #e7ece9;
-  --mapa-texto-fraco: #9aa8ae;
+  --mapa-painel: var(--i-carta-painel);
+  --mapa-borda: var(--i-carta-painel-borda);
+  --mapa-texto: var(--i-carta-texto);
+  --mapa-texto-fraco: var(--i-carta-texto-fraco);
 }
 body.mapa .principal.mapa-tela {
   padding: 0;
@@ -59,7 +59,7 @@ body.mapa .mapa-painel {
 }
 body.mapa .mapa-painel-base { top: var(--e4); display: flex; align-items: center; gap: var(--e2); font-family: var(--sans); }
 body.mapa .mapa-painel-base label { color: var(--mapa-texto-fraco); text-transform: lowercase; }
-body.mapa .mapa-painel-base select { background: #1a2224; color: var(--mapa-texto); border: 1px solid var(--mapa-borda); border-radius: var(--raio); padding: .2rem .4rem; }
+body.mapa .mapa-painel-base select { background: var(--i-carta-edificacao); color: var(--mapa-texto); border: 1px solid var(--mapa-borda); border-radius: var(--raio); padding: .2rem .4rem; }
 body.mapa .mapa-coordenadas { top: calc(var(--e4) + 2.4rem); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 
 /* item L6-01-h-frescor-verificacao: painel das camadas do acervo, canto inferior esquerdo acima da escala.
@@ -79,5 +79,5 @@ body.mapa .mapa-painel-acervo ul { list-style: none; margin: 0; padding: 0; disp
 body.mapa .mapa-painel-acervo li { display: flex; align-items: baseline; gap: var(--e2); justify-content: space-between; }
 body.mapa .mapa-painel-acervo code { font-family: var(--mono); font-size: .72rem; color: var(--mapa-texto); }
 body.mapa .mapa-painel-acervo .marcador { font-size: .68rem; white-space: nowrap; }
-body.mapa .mapa-painel-acervo .marcador.falha { background: #5a1f22; color: #ffd9d9; border-color: #8d3338; }
-body.mapa .mapa-painel-acervo .marcador.ok { background: #1d3a2a; color: #cdebd8; border-color: #2f6a48; }
+body.mapa .mapa-painel-acervo .marcador.falha { background: var(--i-carta-falha-fundo); color: var(--i-carta-falha-texto); border-color: var(--i-carta-falha-borda); }
+body.mapa .mapa-painel-acervo .marcador.ok { background: var(--i-carta-ok-fundo); color: var(--i-carta-ok-texto); border-color: var(--i-carta-ok-borda); }

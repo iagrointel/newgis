@@ -1,0 +1,82 @@
+# Exceções de tests/unit/test_tokens_cor.py (item L0-14-identidade-visual, conserto sobre a refutação do
+# adversário G4). Formato: `caminho/relativo` (exceção do arquivo inteiro) ou `caminho/relativo:linha`
+# (só aquela linha), sempre seguido de `  # motivo` — nenhuma linha entra aqui sem explicação escrita.
+#
+# G4 mediu 56 literais em cinco lugares nomeados (style.css 21, mapa.css 9, tarefas.css 9, conteudo.css 4,
+# js 13). Os quatro CSS foram migrados para tokens neste conserto (style.css e mapa.css tinham literal
+# de verdade; tarefas.css e conteudo.css já estavam limpos quando este turno começou — outro trabalho já
+# tinha corrigido). A varredura desta suíte é ampla de propósito (web/**/*.css e web/js/**/*.js inteiros,
+# não só os quatro nomes) porque é o que o portão pede; ela expõe MUITO mais do que os 56 originais — 297
+# ocorrências em 51 arquivos que não estavam no raio da refutação G4, resultado de outra frente de trabalho
+# (infra de web/estilo/*.css, telas novas) que entrou na árvore depois da refutação. Migrar tudo isso é
+# redesenho fora do mandato deste conserto ("só o que a refutação nomeia; não redesenhe nada") — cada
+# arquivo abaixo fica como exceção, categorizada, para o gerente decidir um item novo. Nenhuma delas
+# esconde os quatro nomes de G4: eles estão em 0, provados por este mesmo teste.
+
+# --- categoria 1: CSS fora do nome de G4, entrado depois pela frente de trabalho de web/estilo/* e telas novas ---
+web/estilo/temas.css        # fora do escopo de G4 (só citou style/mapa/tarefas/conteudo.css); infra de tema entrada depois — item novo
+web/campo/campo.css         # fora do escopo de G4; tela de campo entrada depois — item novo
+web/widgets.css             # fora do escopo de G4; folha de widgets entrada depois — item novo
+web/estilo/site.css         # fora do escopo de G4; infra de web/estilo/ entrada depois — item novo
+web/estilo/editor.css       # fora do escopo de G4; infra de web/estilo/ entrada depois — item novo
+web/painel.css              # fora do escopo de G4; folha de painel entrada depois — item novo
+web/sdk/exemplos/exemplos.css  # fora do escopo de G4; exemplos de SDK, não cromo do produto — item novo
+web/redes_diagrama.css      # fora do escopo de G4; diagrama de rede entrado depois — item novo
+web/amc_pareto.css          # fora do escopo de G4; tela de Pareto entrada depois — item novo
+web/coleta.css              # fora do escopo de G4; tela de coleta entrada depois — item novo
+web/modelo.css              # fora do escopo de G4; tela de modelo entrada depois — item novo
+web/estilo/narrativa.css    # fora do escopo de G4; infra de web/estilo/ entrada depois — item novo
+web/estilo/executor.css     # fora do escopo de G4; infra de web/estilo/ entrada depois — item novo
+web/migracao.css            # fora do escopo de G4; tela de migração entrada depois — item novo
+web/versoes.css             # fora do escopo de G4; tela de versões entrada depois — item novo
+web/cena.css                # fora do escopo de G4; tela 3D entrada depois — item novo
+web/sig.css                 # fora do escopo de G4; tela de SIG entrada depois — item novo
+web/simbolos.css            # fora do escopo de G4; galeria de símbolos entrada depois — item novo
+
+# --- categoria 2: cor de dado/cartografia — MapLibre e a cena 3D leem JSON puro, não var() de CSS; o
+# próprio código documenta a cópia à mão dos tokens escuros (ex.: cabeçalho de web/js/mapa/estilo.js e de
+# web/js/amc/pareto.js) ou roda puro em Node sem DOM/CSSOM (tests/unit/test_amc_pareto_escova.py). Fora do
+# escopo nomeado por G4 ("js").
+web/js/mapa/estilo.js            # paint MapLibre; JSON puro, sem var() — cópia documentada dos tokens escuros
+web/js/mapa/impressao.js         # paint MapLibre para exportação/impressão do mapa
+web/js/mapa/estilo_editor.js     # editor de estilo de CAMADA (cor é dado do usuário, não cromo)
+web/js/mapa/grafico_svg.js       # gráfico SVG sobreposto ao mapa, cor de série de dado
+web/js/mapa/tabela.js            # tabela de atributos com cor de célula por valor
+web/js/mapa/desenho.js           # ferramenta de desenho sobre o mapa, cor da geometria
+web/js/mapa/graficos.js          # gráfico de série temporal sobre o mapa
+web/js/mapa/edicao.js            # edição de geometria sobre o mapa
+web/js/mapa/medicao.js           # régua/medição sobre o mapa
+web/js/mapa/motor.js             # motor AMC sobre o mapa; já usa cor(nome, reserva) — reserva é literal de propósito
+web/js/mapa/rotas.js             # traçado de rota sobre o mapa; já usa cor(nome, reserva) — reserva é literal de propósito
+web/js/mapa/tabela_atributos.js  # tabela de atributos flutuante do mapa
+web/js/mapa/estilo_sugestao.js   # sugestão de estilo de camada (cor é dado)
+web/js/mapa/render_layout_entrada.js  # miniatura de layout sem base, MapLibre puro
+web/js/rede/fluxo.js             # diagrama de fluxo da rede de utilidades
+web/js/rede/isolamento.js        # diagrama de isolamento da rede
+web/js/rede/diagrama.js          # diagrama unifilar da rede
+web/js/rede/medicao_ficha.js     # ficha de medição da rede
+web/js/cena/cena.js              # cena 3D (iluminação/céu/névoa), config de renderização, não cromo
+web/js/cena/documento.js         # documento/config da cena 3D
+web/js/cena/camadas3d.js         # camada 3D, cor de material padrão
+web/js/analise3d/painel.js       # painel de análise 3D
+web/js/sig/sig.js                # mapa MapLibre do SIG clonado
+web/js/sig/comparar.js           # comparação de camadas do SIG, paint MapLibre
+web/js/catalogo/tipos/camada_vetorial.js  # miniatura MapLibre do tipo de camada vetorial
+web/js/catalogo/tipos/raster.js  # miniatura MapLibre do tipo de camada raster
+web/js/simbolos/galeria.js       # miniatura MapLibre da galeria de símbolos
+web/js/amc/rampa.js              # rampa de cor da classificação AMC (dado, não cromo)
+web/js/amc/pareto.js             # parte PURA (roda em Node, sem DOM/CSSOM — comentário do próprio arquivo)
+web/js/amc/pareto_tela.js        # tela de Pareto sobre o mapa, paint MapLibre
+web/js/amc/motor_pagina.js       # contorno de célula do motor AMC sobre o mapa
+
+# --- categoria 3: paleta fixa de gráfico/legenda — cor para distinguir categoria, não cor de marca ---
+web/js/legenda.js           # legenda do mapa; contorno fixo de swatch, mesma família da categoria 2
+web/js/widgets/grafico.js   # paleta categórica do widget de gráfico genérico
+
+# --- categoria 4: valor padrão/inicial de DADO do usuário (tema do inquilino), não cromo do produto ---
+web/js/temas/tela.js        # editor do tema do INQUILINO (item L5-10): swatch/sombra padrão de um tema que o usuário ainda não definiu
+
+# --- categoria 5: SDK/exemplo para desenvolvedor externo — valor de demonstração, não cromo do produto ---
+web/sdk/plat.js                       # exemplo de config do SDK (cor/fundo de demonstração)
+web/sdk/exemplos/10_catalogo_no_mapa.js  # exemplo de uso do SDK
+web/ext/exemplo/semaforo/semaforo.js  # widget de exemplo (extensão de demonstração)

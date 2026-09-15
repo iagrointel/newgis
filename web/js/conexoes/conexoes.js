@@ -342,7 +342,7 @@ function preverCamada(conexao, camada) {
   const src = `/api/conexoes/${encodeURIComponent(conexao.id)}/tile?${params.toString()}`;
   const corpo = h('div', {},
     h('p', {}, `${camada.titulo || camada.nome} — GetMap real pelo proxy da conexão (não uma amostra salva)`),
-    h('img', { src, alt: camada.nome, style: 'max-width: 100%; border: 1px solid var(--borda, #ccc);' }));
+    h('img', { src, alt: camada.nome, style: 'max-width: 100%; border: 1px solid var(--borda);' }));
   porId('dialogo').abrir({ titulo: 'pré-visualização da camada', corpo, botoes: [{ id: 'fechar', rotulo: 'fechar' }] });
 }
 

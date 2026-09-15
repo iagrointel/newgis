@@ -166,6 +166,16 @@
   --i-carta-painel-borda: #3a4550;
   --i-carta-texto: #e7ece9;
   --i-carta-texto-fraco: #9aa8ae;
+
+  /* selo de estado sobre o painel do mapa (item L6-01-h): mesma lógica do --i-carta-* acima — cor FIXA,
+     nunca var(--i-erro)/var(--i-sucesso) do tema, porque o painel em cima do canvas não reflui de paleta
+     com o sistema operacional. */
+  --i-carta-falha-fundo: #5a1f22;
+  --i-carta-falha-texto: #ffd9d9;
+  --i-carta-falha-borda: #8d3338;
+  --i-carta-ok-fundo: #1d3a2a;
+  --i-carta-ok-texto: #cdebd8;
+  --i-carta-ok-borda: #2f6a48;
 }
 
 /* =====================================================================================================

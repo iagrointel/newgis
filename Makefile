@@ -21,14 +21,17 @@ SEGREDOS=PLAT_SECRET=$$(sudo cat /etc/plat/segredos/PLAT_SECRET 2>/dev/null); \
 	[ -n "$$PLAT_DSN" ] && export PLAT_DSN; \
 	[ -n "$$PLAT_GARAGE_ADMIN_TOKEN" ] && export PLAT_GARAGE_ADMIN_TOKEN;
 
-.PHONY: check check-rapido lint sem-marcador teste e2e medidas migrar openapi vendor limites seguranca-deps seguranca seguranca-gravar seguranca-zap ferramentas homolog pacote-rede conformidade conformidade-conferir
+.PHONY: check check-rapido lint tokens sem-marcador teste e2e medidas migrar openapi vendor limites seguranca-deps seguranca seguranca-gravar seguranca-zap ferramentas homolog pacote-rede conformidade conformidade-conferir
 
-check: lint sem-marcador limites seguranca teste e2e  ## suíte inteira (portão P3); seguranca = item HARD-01
+check: lint tokens sem-marcador limites seguranca teste e2e  ## suíte inteira (portão P3); seguranca = item HARD-01
 
-check-rapido: lint sem-marcador limites teste  ## o que o driver roda
+check-rapido: lint tokens sem-marcador limites teste  ## o que o driver roda
 
 lint:
 	$(VENV)/ruff check app tests docs/gerar_limites.py docs/gerar_pacote_rede.py
+
+tokens:                                     ## item L0-14: nenhum literal de cor fora de web/estilo/tokens.css e toda tela carrega tokens.css 1º; -p no:base_url tira a dependência de PLAT_DSN (só lê arquivo, não bate no banco)
+	$(VENV)/pytest tests/unit/test_tokens_cor.py tests/unit/test_telas_carregam_tokens.py -p no:base_url
 
 limites:                                    ## docs/LIMITES.md == app/limites.py (item L0-12); falha se divergir
 	$(VENV)/python docs/gerar_limites.py --check

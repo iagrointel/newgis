@@ -362,8 +362,8 @@ plat-idioma select.controle { width: auto; padding: var(--e1) var(--e2); font-si
 .badge { display: inline-block; padding: 2px var(--e2); border-radius: 999px; font-size: .78rem; font-weight: 600;
   background: var(--painel-2); border: 1px solid var(--borda-forte); color: var(--fraco); }
 .badge-visitado, .badge-confirmado { color: var(--ok); border-color: var(--ok); }
-.badge-pulado, .badge-nao_confirmado { color: var(--erro, #c0392b); border-color: var(--erro, #c0392b); }
-.badge-inconclusivo { color: var(--aviso, #b8860b); border-color: var(--aviso, #b8860b); }
+.badge-pulado, .badge-nao_confirmado { color: var(--falha); border-color: var(--falha); }
+.badge-inconclusivo { color: var(--atencao); border-color: var(--atencao); }
 .badge-pendente { color: var(--fraco); }
 .resumo-roteiro { display: grid; grid-template-columns: max-content 1fr; gap: var(--e1) var(--e3); margin: var(--e2) 0 var(--e4); }
 .resumo-roteiro dt { color: var(--fraco); }
@@ -382,7 +382,7 @@ plat-idioma select.controle { width: auto; padding: var(--e1) var(--e2); font-si
 .ficha-secao h2 { font-size: 1rem; margin: 0 0 var(--e2); }
 .rede-medicao-ficha .lista-definicao { display: grid; grid-template-columns: max-content 1fr; gap: var(--e1) var(--e3); margin: 0; }
 .rede-medicao-ficha .lista-definicao dt { color: var(--fraco); }
-.rede-medicao-ficha tr.alarme td { color: var(--erro, #c0392b); font-weight: 600; }
-.rede-medicao-ficha .alarme-texto { color: var(--erro, #c0392b); font-weight: 600; }
+.rede-medicao-ficha tr.alarme td { color: var(--falha); font-weight: 600; }
+.rede-medicao-ficha .alarme-texto { color: var(--falha); font-weight: 600; }
 .grafico-linha { stroke: var(--acento); stroke-width: 2; }
 .grafico-eixo { stroke: var(--borda-forte); stroke-width: 1; }
