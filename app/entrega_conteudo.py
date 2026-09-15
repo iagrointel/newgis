@@ -29,17 +29,30 @@ import re
 from urllib.parse import quote
 
 from app.objetos import EXTENSOES
+from app.varredura_conteudo import TIPOS_REAIS_DE_SCRIPT
 
 TIPO_GENERICO = "application/octet-stream"
 NOME_MAX = 80  # nome de arquivo sugerido; o conteúdo real nunca depende dele
 _INSEGURO = re.compile(r'[\x00-\x1f\x7f"\\/:*?<>|]')
 
+# `EXTENSOES` (app/objetos.py) é o vocabulário de ARMAZENAMENTO da instalação, não de entrega: ele inclui
+# `text/html` para um uso interno legítimo (L2-16-b, saída de notebook agendado, nunca byte de cliente). Servir
+# de volta um upload de cliente com esse mesmo `Content-Type` é exatamente o achado 23 (handoff T3): o remetente
+# escolhe o tipo, e `text/html`/`image/svg+xml`/JavaScript renderizam na origem da aplicação. Por isso a entrega
+# nunca reusa `EXTENSOES` sozinho — soma o mesmo bloqueio de `TIPOS_REAIS_DE_SCRIPT` que a varredura já usa para
+# recusar conteúdo executável em navegador: se um tipo novo entrar ali por ser perigoso para varrer, ele também
+# sai daqui automaticamente, sem precisar lembrar de mexer nos dois lugares.
+_PERIGOSOS_PARA_ENTREGA = TIPOS_REAIS_DE_SCRIPT
+
 
 def tipo_de_entrega(content_type: str | None) -> str:
-    """Tipo de mídia com que o conteúdo do cliente pode voltar: só o vocabulário fechado da instalação; o
-    resto vira `application/octet-stream` (nunca `text/html`, `application/xhtml+xml`, `image/svg+xml` ou
-    JavaScript a partir de byte enviado por alguém)."""
+    """Tipo de mídia com que o conteúdo do cliente pode voltar: só o vocabulário fechado da instalação, MENOS
+    os tipos que o navegador executa (`TIPOS_REAIS_DE_SCRIPT`); o resto vira `application/octet-stream` (nunca
+    `text/html`, `application/xhtml+xml`, `image/svg+xml` ou JavaScript a partir de byte enviado por alguém,
+    mesmo que `text/html` esteja no vocabulário de armazenamento por outro motivo interno)."""
     tipo = (content_type or "").split(";")[0].strip().lower()
+    if tipo in _PERIGOSOS_PARA_ENTREGA:
+        return TIPO_GENERICO
     return tipo if tipo in EXTENSOES else TIPO_GENERICO
 
 
