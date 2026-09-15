@@ -1,7 +1,7 @@
 """Tipos de job do catálogo (ADR 0004 seção 11.4), registrados pelo decorador @tarefa do L0-05 e importados em
 app/jobs/tipos.py: catalogo.miniatura, catalogo.lixeira_expurgar (pesado), catalogo.versoes_compactar,
-catalogo.tags_renomear, catalogo.migrar_dados, catalogo.exportar_lista. Importar este módulo também soma os
-periódicos do catálogo à lista do worker (app/catalogo/periodicos.py)."""
+catalogo.notificacoes_expurgar, catalogo.tags_renomear, catalogo.migrar_dados, catalogo.exportar_lista. Importar
+este módulo também soma os periódicos do catálogo à lista do worker (app/catalogo/periodicos.py)."""
 
 import csv
 import datetime
@@ -166,6 +166,33 @@ def catalogo_lixeira_expurgar(
             ctx.log("AVISO", f"{iid} ({c['tipo']}) não expurgado: {e}")
         ctx.progresso(int(n * 100 / max(1, len(candidatos))), f"{n} de {len(candidatos)}")
     return {"expurgados": expurgados, "recusados": recusados, "bytes_liberados": bytes_total}
+
+
+# ---------------------------------------------------------------- catalogo.notificacoes_expurgar
+class NotificacoesExpurgoParametros(BaseModel):
+    dias: int = Field(90, ge=1, le=3650)
+
+
+@tarefa(
+    nome="catalogo.notificacoes_expurgar",
+    descricao="Expurgo de notificações internas com mais de N dias (plat.notificacoes_expurgar)",
+    parametros=NotificacoesExpurgoParametros,
+    pesado=False,
+    memoria_mb=256,
+    timeout_s=600,
+    tentativas=1,
+    chave=lambda p: "notificacoes_expurgar",
+    perfil_minimo="admin",
+)
+def catalogo_notificacoes_expurgar(ctx, dias: int = 90) -> dict:
+    # achado L7-03-f (item A/acréscimo): a entrada em app/catalogo/periodicos.py existia desde a notificação
+    # interna (20260906T1607_notificacao_interna.sql, que já cria plat.notificacoes_expurgar) mas ESTE tipo
+    # nunca tinha sido escrito — órfão igual ao status.amostrar, só que a função SQL sempre existiu sozinha.
+    with ctx.db() as cur:
+        cur.execute("SELECT plat.notificacoes_expurgar(%s) AS n", (dias,))
+        n = cur.fetchone()["n"]
+    ctx.progresso(100, f"{n} notificações expurgadas (dias={dias})")
+    return {"expurgadas": n}
 
 
 # ---------------------------------------------------------------- catalogo.versoes_compactar

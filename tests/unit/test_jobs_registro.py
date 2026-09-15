@@ -123,3 +123,31 @@ def test_status_amostrar_esta_registrado(monkeypatch):
     from app.jobs.periodicos import PERIODICOS
 
     assert ("retrato operacional", "*/5 * * * *", "status.amostrar", {}) in PERIODICOS
+
+
+def _periodicos_reais(monkeypatch) -> list[tuple[str, str, str, dict]]:
+    """Importa app.jobs.tipos (soma REGISTRO e PERIODICOS de todo módulo da casa) sob o teto real de
+    memória — mesma disciplina de test_tipos_de_prova_estao_registrados: sem isto, tipos reais como
+    exportacao.gerar (até 1024 MB) esbarram no teto artificial de 512 MB do fixture `ambiente`."""
+    monkeypatch.setenv("PLAT_WORKER_MEMORIA_MB", "1536")
+    cfg.obter.cache_clear()
+    from app.jobs.periodicos import PERIODICOS
+
+    return list(PERIODICOS)
+
+
+@pytest.mark.parametrize("indice", range(30))  # teto folgado: cresce sozinho conforme PERIODICOS cresce
+def test_todo_periodico_tem_tipo_registrado(indice, monkeypatch):
+    """Acréscimo ao achado L7-03-f (item A): dois órfãos já apareceram (status.amostrar,
+    catalogo.notificacoes_expurgar) — um tipo em PERIODICOS cujo módulo nunca foi importado em
+    app/jobs/tipos.py, ou cuja função nunca foi escrita, nunca dispara. Parametrizado sobre TODOS os
+    períodicos hoje registrados (não uma lista fixa) para pegar o PRÓXIMO órfão sozinho, sem precisar
+    editar este teste de novo."""
+    periodicos = _periodicos_reais(monkeypatch)
+    if indice >= len(periodicos):
+        pytest.skip(f"só há {len(periodicos)} periódicos hoje")
+    nome_p, cron, tipo, _parametros = periodicos[indice]
+    from app.jobs.tipos import REGISTRO
+
+    assert tipo in REGISTRO, f"periódico {nome_p!r} ({tipo}) sem tipo registrado em app.jobs.tipos"
+    assert len(cron.split()) == 5, f"periódico {nome_p!r}: cron {cron!r} sem 5 campos"

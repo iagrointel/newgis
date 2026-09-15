@@ -9,7 +9,7 @@ from app.backup import (
     tarefas as backup_tarefas,  # noqa: F401 — L0-06: backup.executar/backup.ensaio_restauracao + periódicos
 )
 from app.catalogo import (
-    tarefas as catalogo_tarefas,  # noqa: F401 — L0-03: 6 tipos catalogo.* e os periódicos do catálogo
+    tarefas as catalogo_tarefas,  # noqa: F401 — L0-03: 7 tipos catalogo.* e os periódicos do catálogo
 )
 from app.conexao import tarefas as conexao_tarefas  # noqa: F401 — L6-02-l: conexoes.saude_verificar + periódico
 from app.conexao import (
