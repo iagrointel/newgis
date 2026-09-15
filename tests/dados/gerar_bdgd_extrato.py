@@ -4,8 +4,10 @@
 PONTO é justamente testar contra dado REAL da ANEEL (esquisitices de campo incluídas — é o que a
 cláusula "contagem conferida contra o arquivo" pede), não uma malha de ordem de grandeza equivalente.
 
-Fonte: `/home/dev/liga/certaja_2024.gdb.zip` — ativo da casa já documentado como tal pelo item irmão
-`L4-01-c-importador-bdgd` (BDGD 2024-12-31 V11 de uma cooperativa real, 13,5 MB comprimidos,
+Fonte: caminho lido de `PLAT_BDGD_FONTE` (variável de ambiente) ou, na falta dela, do arquivo
+`/home/dev/plataforma/laco/var/bdgd_fonte.txt` (fora do git — nunca o nome do ativo real no
+repositório) — ativo da casa já documentado como tal pelo item irmão `L4-01-c-importador-bdgd`
+(BDGD 2024-12-31 V11 de uma cooperativa real, 13,5 MB comprimidos,
 56 MB abertos: 6 SUB, 21 CTMT, 44.268 SSDMT, 5.481 UNTRMT, 29.244 SSDBT, 27.587 UCBT_tab, 26.581
 RAMLIG, 3.064 UNSEMT, 142 UCMT_tab, 60.549 PONNOT — uma distribuidora REAL inteira, não um recorte).
 Se o arquivo não estiver na máquina (ambiente sem os ativos da casa), o chamador deve pular o teste —
@@ -26,14 +28,29 @@ Uso:  venv/bin/python tests/dados/gerar_bdgd_extrato.py   (imprime os dois camin
 
 from __future__ import annotations
 
+import os
 import shutil
 import zipfile
 from pathlib import Path
 
-FONTE = Path("/home/dev/liga/certaja_2024.gdb.zip")
+_ARQUIVO_FONTE_PADRAO = Path("/home/dev/plataforma/laco/var/bdgd_fonte.txt")
+
+
+def _fonte_bdgd() -> Path:
+    """Caminho do FileGDB real: `PLAT_BDGD_FONTE` (env) ou, na falta dela, o conteúdo de
+    `_ARQUIVO_FONTE_PADRAO` (fora do git, texto puro com o caminho, uma linha). Sem os dois, devolve
+    um caminho que nunca existe — `obter_extrato()` levanta `FileNotFoundError` do mesmo jeito que já
+    levanta hoje quando o ativo da casa não está na máquina."""
+    caminho = os.environ.get("PLAT_BDGD_FONTE")
+    if not caminho and _ARQUIVO_FONTE_PADRAO.exists():
+        caminho = _ARQUIVO_FONTE_PADRAO.read_text(encoding="utf-8").strip()
+    return Path(caminho) if caminho else Path("/nao/configurado/PLAT_BDGD_FONTE.gdb.zip")
+
+
+FONTE = _fonte_bdgd()
 RAIZ_GERADOS = Path(__file__).resolve().parent / "gerados"
-DESTINO = RAIZ_GERADOS / "bdgd_certaja.gdb"
-DESTINO_PEQUENO = RAIZ_GERADOS / "bdgd_certaja_ctj3_1.gdb"
+DESTINO = RAIZ_GERADOS / "bdgd_distribuidora.gdb"
+DESTINO_PEQUENO = RAIZ_GERADOS / "bdgd_distribuidora_ctj3_1.gdb"
 CTMT_PEQUENO = "3_CTJ3_1"  # medido: o menor CTMT com as 5 camadas de aresta/nó todas presentes
 
 
