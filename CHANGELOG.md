@@ -18,6 +18,27 @@ na mesma máquina, `410 desafio_expirado`; reproduzido e confirmado isolando-os)
 tests/api/test_usuarios_papel_escalada.py` → 8 passed (sem o teardown 409 auditoria_imutavel que o
 laudo citava como de outro item — não apareceu nesta rodada). `MANUAL.md` §4.4 atualizado.
 
+## setembro de 2026 (item L3-01-a-modelo-dado: refutação "execute_values manda bytes e fura a reescrita de schema")
+
+Já estava CONSERTADO antes deste turno (achado 1 do laudo, 06/09/2026), em dois níveis: `gravar_feicoes`
+(`app/amc/unidades.py`) não usa mais `psycopg2.extras.execute_values` — grava em `cur.execute` de TEXTO
+com `jsonb_to_recordset`, que passa pela reescrita como qualquer consulta — e `MixinReescritaSchema`
+(`app/schema_ambiente.py`, não tocado por regra da casa) já decodifica/reescreve/recodifica `bytes` em
+`execute`/`executemany`/`callproc`/`mogrify`/`copy_expert`. O item `L3-01-a-modelo-dado` no
+`laco/estado.json` ainda carrega o `bloqueio` antigo (pré-conserto) — registro desatualizado, não um
+defeito vivo.
+
+Reproduzido ao vivo com `psycopg2.extras.execute_values` de verdade contra um cursor-espião
+(`CursorEspiao` de `tests/unit/test_schema_ambiente.py`) fora do schema padrão: `INSERT INTO plat.x(a,b)
+VALUES %s` chega a `cur.execute` como `b'INSERT INTO plat_tteste.x(a,b) VALUES (%s,%s),(%s,%s)'` — o
+schema de trilha, não `plat` de produção.
+
+Prova: `roda_teste.sh tests/unit/test_schema_ambiente.py` → 22 passed (sem mudança; já cobria bytes em
+todos os pontos de entrada); `roda_teste.sh tests/api/amc/test_amc_adversario_api.py -k
+"test_adv_conjunto_de_feicoes_funciona_em_qualquer_schema or
+test_adv_execute_values_e_o_unico_desvio_da_reescrita_de_schema"` → 2 passed. Nenhum código alterado
+neste item; só a verificação acima e esta nota.
+
 ## lote f1-lote3, setembro de 2026 (item i: reprodutibilidade das 13 funções SQL do prefixo de schema)
 
 Dívida de `laco/handoffs/T8/LANCAMENTO.md:448-450` ("falta escrever a migração equivalente") está PAGA,
