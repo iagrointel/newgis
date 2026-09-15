@@ -80,6 +80,9 @@ def _do_banco() -> dict:
                 {"dia": r["dia"].isoformat(), "amostras": r["amostras"], "ok": r["ok"], "ausentes": r["ausentes"]}
             )
 
+        cur.execute("SELECT * FROM plat.status_vulnerabilidades()")
+        vuln = cur.fetchone()
+
         cur.execute("SELECT * FROM plat.status_disponibilidade(%s)", (primeiro_do_mes,))
         disponibilidade = {
             r["servico"]: {
@@ -101,6 +104,12 @@ def _do_banco() -> dict:
             "idade_h": _idade_h(b["ultimo_em"], inicio),
         },
         "ensaio_restauracao": drill,
+        "vulnerabilidades": {
+            "abertas": vuln["abertas"],
+            "estado": "nunca_rodou" if vuln["ultima_em"] is None else ("ok" if not vuln["ultimo_rc"] else "falhou"),
+            "ultima_varredura": _iso(vuln["ultima_em"]),
+            "fonte": vuln["fonte"],
+        },
         "historico": {"dias": DIAS_HISTORICO, "servicos": historico},
         "disponibilidade_mes": {"desde": _iso(primeiro_do_mes), "servicos": disponibilidade},
     }
@@ -319,6 +328,7 @@ def retrato() -> dict:
         "fila": corpo.get("fila", {"erro": True}),
         "backup": corpo.get("backup", {"erro": True}),
         "ensaio_restauracao": corpo.get("ensaio_restauracao", {"erro": True}),
+        "vulnerabilidades": corpo.get("vulnerabilidades", {"erro": True}),
         "disco": _disco_agregado(disco),
         "bucket": _bucket(),
         "certificado": {"estado": certificado["estado"], "dias_restantes": certificado.get("dias_restantes")},
