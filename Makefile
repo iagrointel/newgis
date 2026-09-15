@@ -21,7 +21,7 @@ SEGREDOS=PLAT_SECRET=$$(sudo cat /etc/plat/segredos/PLAT_SECRET 2>/dev/null); \
 	[ -n "$$PLAT_DSN" ] && export PLAT_DSN; \
 	[ -n "$$PLAT_GARAGE_ADMIN_TOKEN" ] && export PLAT_GARAGE_ADMIN_TOKEN;
 
-.PHONY: check check-rapido lint tokens sem-marcador teste e2e medidas migrar openapi vendor limites seguranca-deps seguranca seguranca-gravar seguranca-zap ferramentas homolog pacote-rede conformidade conformidade-conferir
+.PHONY: check check-rapido lint tokens sem-marcador teste e2e medidas migrar openapi vendor limites seguranca-deps varredura-cve correcoes seguranca seguranca-gravar seguranca-zap ferramentas homolog pacote-rede conformidade conformidade-conferir
 
 check: lint tokens sem-marcador limites seguranca teste e2e  ## suíte inteira (portão P3); seguranca = item HARD-01
 
@@ -74,6 +74,19 @@ vendor:                                     ## confere sha256 de web/vendor cont
 
 seguranca-deps:                             ## item L7-03-f: só o pip-audit (docs/SEGURANCA.md seção 7); `seguranca` abaixo já o inclui
 	$(VENV)/python scripts/varredura_dependencias.py --json var/seguranca/pip_audit.json
+
+varredura-cve:                              ## item L7-03-f (seção 7.6): pip-audit + npm audit, grava plat.varredura_cve/plat.vulnerabilidade; roda a mesma varredura do timer diário deploy/plat-varredura-cve.*
+	$(SEGREDOS) $(VENV)/python scripts/varredura_cve.py
+
+correcoes:                                  ## item L7-03-f: gera docs/CORRECOES.md a partir de plat.vulnerabilidade (`--check` confere sem escrever)
+# FORA de `check`/`check-rapido` por decisão explícita (mesmo espírito da nota em `seguranca-deps` acima):
+# a geração bate no banco vivo (plat.vulnerabilidade) para ficar com o estado mais recente das CVE abertas —
+# no `check`, que roda em série com o resto da suíte numa máquina com Postgres compartilhado por cliente
+# pagante, isso é uma consulta extra em toda passagem só para um documento que muda quando uma varredura
+# nova roda, não a cada commit. `tests/unit/test_varredura_cve.py` já cobre a renderização (determinística,
+# com dados fixos, sem tocar banco); rodar `make correcoes` continua sendo manual, ou de
+# deploy/plat-varredura-cve.timer no dia em que grava uma varredura nova.
+	$(SEGREDOS) $(VENV)/python docs/gerar_correcoes.py
 
 # item HARD-01 (docs/SEGURANCA.md seção 9): bandit + pip-audit + npm audit + gitleaks (histórico) + trivy, política de
 # bloqueio e exceções com prazo em docs/excecoes_seguranca.json; depois confere que a seção gerada do doc bate com a
