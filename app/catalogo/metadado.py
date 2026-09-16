@@ -289,6 +289,299 @@ def validar(xml_bytes: bytes) -> None:
         raise ErroMetadadoInvalido(schema.error_log)
 
 
+# ------------------------------------------------------------------ exportação ISO 19115-3 (mdb:MD_Metadata) —
+# item L0-09-metadado-catalogo, cláusula 2 (D42). Ao lado do gerador ISO 19139/GMD acima, nunca no lugar dele
+# (D17: o Perfil MGB/INDE continua no formato legado por padrão; `?formato=19115-3` pede o novo). MESMO núcleo
+# de campos (identificação, resumo, palavras-chave, contato, extensão geográfica, sistema de referência,
+# licença/restrições, linhagem, data) traduzido para onde cada coisa mora no modelo novo:
+# - contato deixou de ser `CI_ResponsibleParty` (nome/organização soltos + role) e virou `CI_Responsibility`
+#   com uma lista de `party` (CI_Organisation ou CI_Individual, cada um com `name`);
+# - `hierarchyLevel` virou `mdb:metadataScope/mdb:MD_MetadataScope/mdb:resourceScope`;
+# - a linhagem SAIU de dentro de `dataQualityInfo/DQ_DataQuality` — em 19115-3 essa classe passou a exigir
+#   pelo menos um `report` (mdq:AbstractDQ_Element, uma medida de qualidade concreta que este item não tem) —
+#   e virou uma propriedade própria do nível raiz, `mdb:resourceLineage/mrl:LI_Lineage`; por isso este gerador
+#   NUNCA emite `dataQualityInfo` (D17: sem medida de qualidade real, sem elemento inventado só para encaixar).
+#
+# Validado contra `docs/xsd/cache/standards.iso.org/iso/19115/-3/mdb/2.0/mdb.xsd`, baixado por
+# `docs/xsd/baixar_iso19139.py --perfil iso19115-3` (mesmo cache offline do 19139 acima; ver o script para o
+# redirecionamento do import de GML que o espelho oficial do ISO nunca publicou).
+MDB = "http://standards.iso.org/iso/19115/-3/mdb/2.0"
+CIT = "http://standards.iso.org/iso/19115/-3/cit/2.0"
+GCO3 = "http://standards.iso.org/iso/19115/-3/gco/1.0"
+GEX = "http://standards.iso.org/iso/19115/-3/gex/1.0"
+LAN = "http://standards.iso.org/iso/19115/-3/lan/1.0"
+MCC = "http://standards.iso.org/iso/19115/-3/mcc/1.0"
+MRI = "http://standards.iso.org/iso/19115/-3/mri/1.0"
+MRS = "http://standards.iso.org/iso/19115/-3/mrs/1.0"
+MMI = "http://standards.iso.org/iso/19115/-3/mmi/1.0"
+MCO = "http://standards.iso.org/iso/19115/-3/mco/1.0"
+MRD = "http://standards.iso.org/iso/19115/-3/mrd/1.0"
+MRL = "http://standards.iso.org/iso/19115/-3/mrl/2.0"
+NSMAP_19115_3 = {
+    "mdb": MDB, "mcc": MCC, "cit": CIT, "gco": GCO3, "gex": GEX, "mri": MRI,
+    "mrs": MRS, "mmi": MMI, "mco": MCO, "mrd": MRD, "mrl": MRL, "lan": LAN, "xsi": XSI,
+}
+# convenção usada por catálogos ISO 19115-3 reais (INSPIRE/geocatálogos francófonos) para o atributo
+# `codeList`; `codeListValue`/`codeList` são `xs:anyURI` no gco 1.0 (não mais token solto como no 19139), mas
+# um validador real aceita referência relativa — o valor em si nunca é resolvido pela validação.
+CODELIST_BASE_3 = "https://standards.iso.org/iso/19115/resources/Codelist/cat/codelists.xml"
+XSD_ENTRADA_19115_3 = (
+    Path(__file__).resolve().parents[2]
+    / "docs"
+    / "xsd"
+    / "cache"
+    / "standards.iso.org"
+    / "iso"
+    / "19115"
+    / "-3"
+    / "mdb"
+    / "2.0"
+    / "mdb.xsd"
+)
+
+
+def _e3(pai, tag: str, ns: str):
+    return etree.SubElement(pai, f"{{{ns}}}{tag}")
+
+
+def _texto3(pai, tag: str, valor: str, ns: str):
+    """<ns:tag><gco:CharacterString>valor</gco:CharacterString></ns:tag>"""
+    el = _e3(pai, tag, ns)
+    cs = _e3(el, "CharacterString", GCO3)
+    cs.text = valor
+    return el
+
+
+def _codigo3(pai, tag: str, ns: str, elemento: str, elemento_ns: str, valor: str, rotulo: str | None = None):
+    """<ns:tag><elemento_ns:elemento codeList="..." codeListValue="valor">rotulo</elemento_ns:elemento></ns:tag>"""
+    el = _e3(pai, tag, ns)
+    c = _e3(el, elemento, elemento_ns)
+    c.set("codeList", f"{CODELIST_BASE_3}#{elemento}")
+    c.set("codeListValue", valor)
+    c.text = rotulo or valor
+    return el
+
+
+def _data_simples3(pai, tag: str, ns: str, data: datetime.date):
+    el = _e3(pai, tag, ns)
+    d = _e3(el, "Date", GCO3)
+    d.text = data.isoformat()
+    return el
+
+
+def _ci_date3(pai, tag: str, ns: str, data: datetime.date, tipo: str):
+    """<ns:tag><cit:CI_Date><cit:date>.../cit:date><cit:dateType>.../cit:dateType></cit:CI_Date></ns:tag>"""
+    wrapper = _e3(pai, tag, ns)
+    ci_date = _e3(wrapper, "CI_Date", CIT)
+    _data_simples3(ci_date, "date", CIT, data)
+    _codigo3(ci_date, "dateType", CIT, "CI_DateTypeCode", CIT, tipo)
+    return wrapper
+
+
+def _ci_citation3(
+    pai, tag: str, ns: str, titulo: str, datas: list[tuple[datetime.date, str]], identificador: str | None = None
+):
+    wrapper = _e3(pai, tag, ns)
+    cit_el = _e3(wrapper, "CI_Citation", CIT)
+    _texto3(cit_el, "title", titulo, CIT)
+    for data, tipo in datas:
+        _ci_date3(cit_el, "date", CIT, data, tipo)
+    if identificador:
+        ident_wrap = _e3(cit_el, "identifier", CIT)
+        md_id = _e3(ident_wrap, "MD_Identifier", MCC)
+        _texto3(md_id, "code", identificador, MCC)
+    return wrapper
+
+
+def _ci_responsibility3(
+    pai, tag: str, ns: str, papel: str, nome_individual: str | None = None, organizacao: str | None = None
+):
+    """<ns:tag><cit:CI_Responsibility><cit:role .../><cit:party><cit:CI_Organisation|CI_Individual><cit:name>
+    .../cit:name></.../></cit:party></cit:CI_Responsibility></ns:tag> — `party` é obrigatório (>=1) em
+    CI_Responsibility_Type; sempre emitimos exatamente um."""
+    wrapper = _e3(pai, tag, ns)
+    resp = _e3(wrapper, "CI_Responsibility", CIT)
+    _codigo3(resp, "role", CIT, "CI_RoleCode", CIT, papel)
+    party_wrap = _e3(resp, "party", CIT)
+    party_tag = "CI_Organisation" if organizacao else "CI_Individual"
+    party = _e3(party_wrap, party_tag, CIT)
+    nome = organizacao or nome_individual
+    if nome:
+        _texto3(party, "name", nome, CIT)
+    return wrapper
+
+
+def _online_resource3(pai, tag: str, ns: str, url: str, nome: str, descricao: str | None = None):
+    wrapper = _e3(pai, tag, ns)
+    onl = _e3(wrapper, "CI_OnlineResource", CIT)
+    _texto3(onl, "linkage", url, CIT)
+    _texto3(onl, "name", nome, CIT)
+    if descricao:
+        _texto3(onl, "description", descricao, CIT)
+    return wrapper
+
+
+def montar_md_metadata_19115_3(row: dict, tenant_nome: str, base_url: str) -> etree._Element:
+    """`row` é a mesma linha crua de `comum.carregar()`/`comum.SQL_ITEM` que `montar_md_metadata` usa —
+    um só lugar de verdade para o que entra no metadado, dois geradores para os dois formatos de saída."""
+    item_id = str(row["id"])
+    md = etree.Element(f"{{{MDB}}}MD_Metadata", nsmap=NSMAP_19115_3)
+    md.set(
+        f"{{{XSI}}}schemaLocation",
+        f"{MDB} https://standards.iso.org/iso/19115/-3/mdb/2.0/mdb.xsd",
+    )
+
+    ident_id_wrap = _e3(md, "metadataIdentifier", MDB)
+    md_id = _e3(ident_id_wrap, "MD_Identifier", MCC)
+    _texto3(md_id, "code", item_id, MCC)
+
+    scope_wrap = _e3(md, "metadataScope", MDB)
+    scope = _e3(scope_wrap, "MD_MetadataScope", MDB)
+    _codigo3(scope, "resourceScope", MDB, "MD_ScopeCode", MCC, "dataset")
+
+    _ci_responsibility3(md, "contact", MDB, "pointOfContact", organizacao=tenant_nome)
+
+    modificado = row["modificado_em"]
+    criado = row["criado_em"]
+    modificado_data = modificado.date() if hasattr(modificado, "date") else modificado
+    criado_data = criado.date() if hasattr(criado, "date") else criado
+    _ci_date3(md, "dateInfo", MDB, modificado_data, "revision")
+
+    padrao_wrap = _e3(md, "metadataStandard", MDB)
+    padrao_cit = _e3(padrao_wrap, "CI_Citation", CIT)
+    _texto3(padrao_cit, "title", "ISO 19115-1:2014/19115-3:2016", CIT)
+
+    ref_wrap = _e3(md, "referenceSystemInfo", MDB)
+    md_rs = _e3(ref_wrap, "MD_ReferenceSystem", MRS)
+    rs_id_wrap = _e3(md_rs, "referenceSystemIdentifier", MRS)
+    rs_id = _e3(rs_id_wrap, "MD_Identifier", MCC)
+    _texto3(rs_id, "code", "4326", MCC)
+    _texto3(rs_id, "codeSpace", "EPSG", MCC)
+
+    ident_info_wrap = _e3(md, "identificationInfo", MDB)
+    ident = _e3(ident_info_wrap, "MD_DataIdentification", MRI)
+    titulo = row["titulo"]
+    _ci_citation3(ident, "citation", MRI, titulo, [(criado_data, "creation"), (modificado_data, "revision")], item_id)
+    resumo = row.get("resumo") or row.get("descricao") or titulo
+    _texto3(ident, "abstract", resumo, MRI)
+    if row.get("creditos"):
+        _texto3(ident, "credit", row["creditos"], MRI)
+    progresso = MD_PROGRESSO.get(row.get("status"))
+    if progresso:
+        _codigo3(ident, "status", MRI, "MD_ProgressCode", MCC, progresso)
+    dono_nome = row.get("dono_nome")
+    if dono_nome:
+        _ci_responsibility3(ident, "pointOfContact", MRI, "owner", nome_individual=dono_nome)
+    # ordem do XSD (AbstractMD_Identification_Type): extent vem ANTES de graphicOverview, que vem ANTES de
+    # descriptiveKeywords/resourceConstraints — inverter quebra a validação (sequence, não bag de campos).
+    xmin, ymin, xmax, ymax = row.get("xmin"), row.get("ymin"), row.get("xmax"), row.get("ymax")
+    if xmin is not None:
+        ext_wrap = _e3(ident, "extent", MRI)
+        ext = _e3(ext_wrap, "EX_Extent", GEX)
+        geo_wrap = _e3(ext, "geographicElement", GEX)
+        bbox = _e3(geo_wrap, "EX_GeographicBoundingBox", GEX)
+        for tag, valor in (
+            ("westBoundLongitude", xmin),
+            ("eastBoundLongitude", xmax),
+            ("southBoundLatitude", ymin),
+            ("northBoundLatitude", ymax),
+        ):
+            el = _e3(bbox, tag, GEX)
+            dec = _e3(el, "Decimal", GCO3)
+            dec.text = repr(float(valor))
+    if row.get("miniatura_chave"):
+        graf_wrap = _e3(ident, "graphicOverview", MRI)
+        browse = _e3(graf_wrap, "MD_BrowseGraphic", MCC)
+        _texto3(browse, "fileName", f"{base_url}/api/itens/{item_id}/miniatura", MCC)
+    tags = row.get("tags") or []
+    if tags:
+        kw_wrap = _e3(ident, "descriptiveKeywords", MRI)
+        kw = _e3(kw_wrap, "MD_Keywords", MRI)
+        for t in tags:
+            _texto3(kw, "keyword", t, MRI)
+        _codigo3(kw, "type", MRI, "MD_KeywordTypeCode", MRI, "theme")
+    if row.get("termos_de_uso"):
+        rc_wrap = _e3(ident, "resourceConstraints", MRI)
+        legal = _e3(rc_wrap, "MD_LegalConstraints", MCO)
+        _texto3(legal, "useLimitation", row["termos_de_uso"], MCO)
+
+    dist_wrap = _e3(md, "distributionInfo", MDB)
+    dist = _e3(dist_wrap, "MD_Distribution", MRD)
+    transfer_wrap = _e3(dist, "transferOptions", MRD)
+    transfer = _e3(transfer_wrap, "MD_DigitalTransferOptions", MRD)
+    _online_resource3(transfer, "onLine", MRD, f"{base_url}/api/itens/{item_id}", titulo, "item na plataforma (JSON)")
+    _online_resource3(
+        transfer,
+        "onLine",
+        MRD,
+        f"{base_url}/api/itens/{item_id}/metadado.xml?formato=19115-3",
+        f"{titulo} (metadado ISO 19115-3)",
+    )
+
+    # resourceLineage (mdb, nível raiz) — nunca dataQualityInfo/DQ_DataQuality, ver nota no topo da seção
+    dados = row.get("dados") or {}
+    procedencia = dados.get("procedencia") if isinstance(dados, dict) else None
+    if procedencia:
+        partes = []
+        for chave, rotulo in PROCEDENCIA_ROTULOS:
+            v = procedencia.get(chave)
+            if v:
+                partes.append(f"{rotulo}: {v}")
+        if partes:
+            lineage_wrap = _e3(md, "resourceLineage", MDB)
+            lineage = _e3(lineage_wrap, "LI_Lineage", MRL)
+            _texto3(lineage, "statement", "; ".join(partes), MRL)
+
+    return md
+
+
+def gerar_xml_19115_3(row: dict, tenant_nome: str, base_url: str) -> bytes:
+    md = montar_md_metadata_19115_3(row, tenant_nome, base_url)
+    return etree.tostring(md, xml_declaration=True, encoding="UTF-8", pretty_print=True)
+
+
+# `mdb.xsd` sozinho só importa cit/dqc/lan/mcc/mri/gex — não importa mrs/mco/mrd/mrl, mesmo os campos de
+# MD_Metadata que eles preenchem sendo abstratos (Abstract_ReferenceSystem, Abstract_Constraints,
+# Abstract_Distribution, Abstract_LineageInformation): é assim que o ISO publicou o pacote base. libxml2 só
+# reconhece que `mrs:MD_ReferenceSystem` (por exemplo) substitui `Abstract_ReferenceSystem` se o schema de mrs
+# também estiver no MESMO documento de schema compilado — por isso a validação de um `montar_md_metadata_19115_3`
+# completo contra `mdb.xsd` puro rejeitava MD_ReferenceSystem/MD_LegalConstraints/MD_Distribution/LI_Lineage
+# como "elemento não esperado" (medido 16/09/2026). A correção não inventa schema novo: é um XSD-agregador
+# (técnica padrão, o mesmo problema que plugins ISO 19115-3 de GeoNetwork/pycsw resolvem do mesmo jeito) que só
+# importa os pacotes oficiais já cacheados — nenhum tipo/elemento novo é declarado aqui.
+_PERFIL_19115_3_IMPORTS = (
+    (MDB, "mdb/2.0/mdb.xsd"),
+    (MRS, "mrs/1.0/mrs.xsd"),
+    (MCO, "mco/1.0/mco.xsd"),
+    (MRD, "mrd/1.0/mrd.xsd"),
+    (MRL, "mrl/2.0/mrl.xsd"),
+)
+
+
+@functools.lru_cache(maxsize=1)
+def _schema_19115_3() -> etree.XMLSchema:
+    if not XSD_ENTRADA_19115_3.exists():
+        raise ErroXSDAusente(
+            f"{XSD_ENTRADA_19115_3} ausente; rode: venv/bin/python docs/xsd/baixar_iso19139.py --perfil iso19115-3"
+        )
+    raiz_19115_3 = XSD_ENTRADA_19115_3.parents[2]  # .../cache/standards.iso.org/iso/19115/-3/
+    importas = "".join(
+        f'<xs:import namespace="{ns}" schemaLocation="{caminho}"/>' for ns, caminho in _PERFIL_19115_3_IMPORTS
+    )
+    perfil = f'<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">{importas}</xs:schema>'.encode("utf-8")
+    # base_url ancora os schemaLocation relativos em raiz_19115_3 sem escrever nenhum arquivo no cache
+    doc = etree.XML(perfil, base_url=str(raiz_19115_3 / "_perfil_agregador.xsd"))
+    return etree.XMLSchema(doc)
+
+
+def validar_19115_3(xml_bytes: bytes) -> None:
+    """Levanta ErroMetadadoInvalido se o XML não validar contra o XSD ISO 19115-3 (mdb) cacheado."""
+    doc = etree.fromstring(xml_bytes)
+    schema = _schema_19115_3()
+    if not schema.validate(doc):
+        raise ErroMetadadoInvalido(schema.error_log)
+
+
 # ------------------------------------------------------------------ importação (item L0-09-c-xml-iso-validacao)
 # O analisador é o MESMO módulo da exportação de propósito: a tabela de rótulos de procedência, o mapa de
 # `MD_ProgressCode` e o XSD em cache são únicos, e é isso que faz a ida e volta (exportar → importar) fechar sem

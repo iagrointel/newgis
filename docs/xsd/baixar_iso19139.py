@@ -11,11 +11,13 @@ de gravar — depois de rodado este script, `app/catalogo/metadado.py` nunca mai
 Idempotente: pula arquivo já presente no cache, a menos que --forcar. Cada execução (mesmo sem baixar nada
 novo) reescreve `MANIFESTO.json` com sha256 e data de acesso do que está no disco.
 
-Uso: venv/bin/python docs/xsd/baixar_iso19139.py [--perfil iso19139|wfs20] [--forcar]
+Uso: venv/bin/python docs/xsd/baixar_iso19139.py [--perfil iso19139|wfs20|iso19115-3] [--forcar]
 
 Perfis (mesma mecânica, sementes diferentes; o manifesto acumula todos): `iso19139` (metadado do
 catálogo, L0-09) e `wfs20` (WFS 2.0/1.1 + FES 2.0 + OWS + GML, para validar a saída XML do
-item L2-04-h sem tocar a rede em teste).
+item L2-04-h sem tocar a rede em teste) e `iso19115-3` (mdb:MD_Metadata, L0-09 cláusula 2/D42;
+reaproveita a árvore GML 3.2 do `wfs20` porque o import de GML do pacote `gmw` do 19115-3 aponta
+para uma URL do ISO que nunca respondeu — ver REDIRECIONAMENTOS abaixo).
 """
 
 import argparse
@@ -48,10 +50,57 @@ PERFIS = {
         "(FES 2.0, OWS 1.1/1.0, GML 3.2.1 e 3.1.1) — validação do GetCapabilities/GetFeature do "
         "item L2-04-h, sempre offline",
     },
+    "iso19115-3": {
+        "sementes": (
+            "https://standards.iso.org/iso/19115/-3/mdb/2.0/mdb.xsd",
+            "https://standards.iso.org/iso/19115/-3/cit/2.0/cit.xsd",
+            "https://standards.iso.org/iso/19115/-3/gco/1.0/gco.xsd",
+            "https://standards.iso.org/iso/19115/-3/gex/1.0/gex.xsd",
+            "https://standards.iso.org/iso/19115/-3/lan/1.0/lan.xsd",
+            "https://standards.iso.org/iso/19115/-3/mcc/1.0/mcc.xsd",
+            "https://standards.iso.org/iso/19115/-3/mri/1.0/mri.xsd",
+            "https://standards.iso.org/iso/19115/-3/mrs/1.0/mrs.xsd",
+            "https://standards.iso.org/iso/19115/-3/msr/1.0/msr.xsd",
+            "https://standards.iso.org/iso/19115/-3/mmi/1.0/mmi.xsd",
+            "https://standards.iso.org/iso/19115/-3/mco/1.0/mco.xsd",
+            "https://standards.iso.org/iso/19115/-3/mrd/1.0/mrd.xsd",
+            "https://standards.iso.org/iso/19157/-2/mdq/1.0/mdq.xsd",
+            "https://standards.iso.org/iso/19115/-3/mrl/2.0/mrl.xsd",
+        ),
+        "descricao": "ISO 19115-3 (mdb:MD_Metadata, XML Schema Implementation, standards.iso.org) — L0-09 "
+        "cláusula 2 (D42); sementes = mdb (base) + cit/gco/gex/lan/mcc (comuns) + mri (identificação) + "
+        "mrs (sistema de referência) + msr (representação espacial) + mmi (manutenção) + mco (restrições/"
+        "licença) + mrd (distribuição) + 19157-2/mdq (qualidade) + mrl (linhagem); dqc (19157-2), gcx e a "
+        "árvore GML 3.2 (gmw:*) entram por import transitivo. Ver REDIRECIONAMENTOS: o espelho oficial do "
+        "GML citado por gmw (standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19136_Schemas/gml.xsd) "
+        "responde 404 (medido 16/09/2026) — reaproveita a árvore GML 3.2.1 já cacheada pelo perfil wfs20 "
+        "em vez de inventar conteúdo (é o mesmo schema, hospedado pelo OGC).",
+    },
 }
 SEMENTES = PERFIS["iso19139"]["sementes"]
 SCHEMA_LOCATION = re.compile(r'schemaLocation\s*=\s*"([^"]+)"')
+COMENTARIO_XML = re.compile(r"<!--.*?-->", re.S)
+# `extent.xsd` (gex 1.0) traz um <import> de `19111/rce/1.0/rce.xsd` DENTRO de um comentário XML (nunca usado
+# por nenhum tipo do arquivo — conferido: nenhuma referência "rce:" fora do comentário) e essa URL nunca foi
+# publicada pelo ISO (404 medido nos 6 caminhos plausíveis em 16/09/2026). Sem tirar comentário antes de
+# procurar schemaLocation, o rastreador tentava baixar um import morto que nem o validador real (libxml2)
+# precisa resolver. Ler o texto sem comentário SÓ decide o que entra na fila; o arquivo gravado no cache
+# continua sendo o texto oficial completo, comentário incluído.
+REDIRECIONAMENTOS = {
+    # standards.iso.org/ittf/.../ISO_19136_Schemas/gml.xsd: import ATIVO (não comentado) em gmw.xsd
+    # (19115-3), usado por gex/mri/msr/mdq — e nunca respondeu (404 medido nos dois esquemas em 16/09/2026).
+    # GML 3.2 é o MESMO schema (OGC 07-036) que o perfil wfs20 já baixa de schemas.opengis.net; redirecionar
+    # para lá evita rede extra e evita inventar conteúdo para uma URL que o ISO nunca publicou.
+    "http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19136_Schemas/gml.xsd":
+        "https://schemas.opengis.net/gml/3.2.1/gml.xsd",
+    "https://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19136_Schemas/gml.xsd":
+        "https://schemas.opengis.net/gml/3.2.1/gml.xsd",
+}
 TIMEOUT_S = 20
+
+
+def redirecionar(url: str) -> str:
+    return REDIRECIONAMENTOS.get(url, url)
 
 
 def chave(url: str) -> str:
@@ -102,10 +151,11 @@ def baixar(forcar: bool, sementes: tuple[str, ...] = SEMENTES) -> dict:
                 raise
             print(f"baixado: {url} ({len(dados)} bytes)")
         conteudo[k] = dados
-        for m in SCHEMA_LOCATION.finditer(dados.decode("utf-8", "replace")):
+        texto_sem_comentario = COMENTARIO_XML.sub("", dados.decode("utf-8", "replace"))
+        for m in SCHEMA_LOCATION.finditer(texto_sem_comentario):
             loc = m.group(1)
             if loc.startswith("http://") or loc.startswith("https://"):
-                alvo_url = loc
+                alvo_url = redirecionar(loc)
             elif loc.startswith("../") or "/" in loc or loc.endswith(".xsd"):
                 # cache JÁ reescrito (2ª execução em diante): a referência relativa aponta para outro
                 # arquivo do PRÓPRIO cache — resolver urljoin contra a URL de origem compõe um endereço
@@ -128,7 +178,7 @@ def baixar(forcar: bool, sementes: tuple[str, ...] = SEMENTES) -> dict:
         def _troca(m, url=url):
             loc = m.group(1)
             if loc.startswith("http://") or loc.startswith("https://"):
-                novo = relativo(url, loc)
+                novo = relativo(url, redirecionar(loc))
                 return f'schemaLocation="{novo}"'
             return m.group(0)
 

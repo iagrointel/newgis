@@ -642,17 +642,27 @@ def ver(id: str, request: Request, auth: Auth = autenticado(escopo_token="catalo
 
 
 @router.get("/api/itens/{id}/metadado.xml", openapi_extra=LER)
-def metadado_iso(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
-    """Metadado ISO 19139/GMD do item (item L0-09-metadado-catalogo; ADR 0004 D17). Validado contra o XSD
-    oficial ANTES de sair (docs/xsd/cache/, baixado por docs/xsd/baixar_iso19139.py); `item_ou_404` + RLS de
-    `plat.item` garantem que o token/sessão de um inquilino nunca gera o XML de item de outro."""
+def metadado_iso(
+    id: str,
+    formato: str | None = Query(None, pattern=r"^19115-3$"),
+    auth: Auth = autenticado(escopo_token="catalogo:ler"),
+):
+    """Metadado ISO do item (item L0-09-metadado-catalogo; ADR 0004 D17). Padrão = ISO 19139/GMD (o que o
+    Perfil MGB/INDE consome); `?formato=19115-3` pede `mdb:MD_Metadata` (ISO 19115-1/19115-3, L0-09 cláusula
+    2/D42) — os dois validados contra o XSD oficial ANTES de sair (docs/xsd/cache/, baixado por
+    docs/xsd/baixar_iso19139.py --perfil iso19139|iso19115-3); `item_ou_404` + RLS de `plat.item` garantem que
+    o token/sessão de um inquilino nunca gera o XML de item de outro."""
     with db.db(auth.contexto()) as cur:
         r = item_ou_404(cur, id)
     try:
-        xml = metadado.gerar_xml(r, auth.tenant_nome, settings.PLAT_URL_PUBLICA.rstrip("/"))
-        metadado.validar(xml)
+        if formato == "19115-3":
+            xml = metadado.gerar_xml_19115_3(r, auth.tenant_nome, settings.PLAT_URL_PUBLICA.rstrip("/"))
+            metadado.validar_19115_3(xml)
+        else:
+            xml = metadado.gerar_xml(r, auth.tenant_nome, settings.PLAT_URL_PUBLICA.rstrip("/"))
+            metadado.validar(xml)
     except metadado.ErroXSDAusente as e:
-        raise ErroAPI(503, "indisponivel", "cache do XSD ISO 19139 ausente nesta máquina") from e
+        raise ErroAPI(503, "indisponivel", "cache do XSD ISO ausente nesta máquina") from e
     except metadado.ErroMetadadoInvalido as e:
         # nunca deveria acontecer para um item bem formado; erro de build do gerador, não do pedido do cliente
         raise ErroAPI(500, "metadado_invalido", "metadado gerado não validou contra o XSD", e.erros) from e

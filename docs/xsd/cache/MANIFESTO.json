@@ -1,5 +1,5 @@
 {
- "gerado_em": "2026-09-07T23:06:47Z",
+ "gerado_em": "2026-09-16T00:45:48Z",
  "perfis": {
   "wfs20": {
    "entradas": [
@@ -7,6 +7,25 @@
     "schemas.opengis.net/wfs/1.1.0/wfs.xsd"
    ],
    "descricao": "WFS 2.0.0 (OGC 09-025r2) e WFS 1.1.0, com as árvores que eles importam (FES 2.0, OWS 1.1/1.0, GML 3.2.1 e 3.1.1) — validação do GetCapabilities/GetFeature do item L2-04-h, sempre offline"
+  },
+  "iso19115-3": {
+   "entradas": [
+    "standards.iso.org/iso/19115/-3/mdb/2.0/mdb.xsd",
+    "standards.iso.org/iso/19115/-3/cit/2.0/cit.xsd",
+    "standards.iso.org/iso/19115/-3/gco/1.0/gco.xsd",
+    "standards.iso.org/iso/19115/-3/gex/1.0/gex.xsd",
+    "standards.iso.org/iso/19115/-3/lan/1.0/lan.xsd",
+    "standards.iso.org/iso/19115/-3/mcc/1.0/mcc.xsd",
+    "standards.iso.org/iso/19115/-3/mri/1.0/mri.xsd",
+    "standards.iso.org/iso/19115/-3/mrs/1.0/mrs.xsd",
+    "standards.iso.org/iso/19115/-3/msr/1.0/msr.xsd",
+    "standards.iso.org/iso/19115/-3/mmi/1.0/mmi.xsd",
+    "standards.iso.org/iso/19115/-3/mco/1.0/mco.xsd",
+    "standards.iso.org/iso/19115/-3/mrd/1.0/mrd.xsd",
+    "standards.iso.org/iso/19157/-2/mdq/1.0/mdq.xsd",
+    "standards.iso.org/iso/19115/-3/mrl/2.0/mrl.xsd"
+   ],
+   "descricao": "ISO 19115-3 (mdb:MD_Metadata, XML Schema Implementation, standards.iso.org) — L0-09 cláusula 2 (D42); sementes = mdb (base) + cit/gco/gex/lan/mcc (comuns) + mri (identificação) + mrs (sistema de referência) + msr (representação espacial) + mmi (manutenção) + mco (restrições/licença) + mrd (distribuição) + 19157-2/mdq (qualidade) + mrl (linhagem); dqc (19157-2), gcx e a árvore GML 3.2 (gmw:*) entram por import transitivo. Ver REDIRECIONAMENTOS: o espelho oficial do GML citado por gmw (standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19136_Schemas/gml.xsd) responde 404 (medido 16/09/2026) — reaproveita a árvore GML 3.2.1 já cacheada pelo perfil wfs20 em vez de inventar conteúdo (é o mesmo schema, hospedado pelo OGC)."
   }
  },
  "arquivos": [
@@ -360,7 +379,7 @@
   },
   {
    "arquivo": "schemas.opengis.net/gml/3.2.1/gml.xsd",
-   "url_origem": "http://schemas.opengis.net/gml/3.2.1/gml.xsd",
+   "url_origem": "https://schemas.opengis.net/gml/3.2.1/gml.xsd",
    "sha256": "eb1e652fdc10fa70352c3fc554cd3bfacc5a863e964a4e64c76f25c762b80a3f",
    "bytes": 1076
   },
@@ -735,6 +754,276 @@
    "url_origem": "https://schemas.opengis.net/wfs/2.0/wfs.xsd",
    "sha256": "e157396fc348c8a6f7dc61756d24ae3e17e54dec8c947ae9ca44825f70c44203",
    "bytes": 35817
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/cit/1.0/cit.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/cit/1.0/cit.xsd",
+   "sha256": "5877b10c90fbeaaccd2a528e34cdeb17117e81a7b3f32768883c9d0de5338dd2",
+   "bytes": 568
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/cit/1.0/citation.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/cit/1.0/citation.xsd",
+   "sha256": "f58c269e88b83c93ab596ccd35e8281e52025767b7558891b67631f9f7ec0e16",
+   "bytes": 24147
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/cit/2.0/cit.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/cit/2.0/cit.xsd",
+   "sha256": "6526fce5835aabc02d37d81a19b8330f1329c2c6bbd7fdac7ba583f4a4d4f84a",
+   "bytes": 536
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/cit/2.0/citation.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/cit/2.0/citation.xsd",
+   "sha256": "942569516eaf3ff807840768bdf366a0b46a32fbc3da5b7a1f6b38049fd3d31f",
+   "bytes": 24458
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/gco/1.0/baseTypes2014.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/gco/1.0/baseTypes2014.xsd",
+   "sha256": "cea31f2de7eeddd1a0de30a5b44f1904b7c1bd84cab747c09169fec97a2d77d5",
+   "bytes": 28581
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/gco/1.0/gco.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/gco/1.0/gco.xsd",
+   "sha256": "3f48af9a408de9feebe66fb355d2d654bea7c8499f5c34be744e2deff01843cd",
+   "bytes": 1488
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/gcx/1.0/extendedTypes.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/gcx/1.0/extendedTypes.xsd",
+   "sha256": "93ebd852f05bc64e83e62f037dcf04d840ee67506a0666949c9b1810e0a83adc",
+   "bytes": 5303
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/gcx/1.0/gcx.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/gcx/1.0/gcx.xsd",
+   "sha256": "373813665212f7a827fe4ee0b4ffd9658d1e7b19f2bb820311a209c1717058f0",
+   "bytes": 665
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/gex/1.0/extent.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/gex/1.0/extent.xsd",
+   "sha256": "a966606865fa2fbc0e43dbd4b0d1a2c5f67a86f0b05db2bcf03e165397414fec",
+   "bytes": 11689
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/gex/1.0/gex.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/gex/1.0/gex.xsd",
+   "sha256": "8ca4058286f73cb0d0bba39fc6dcedaf5e7dff56345688d9a1a3b29e8c0c0bd1",
+   "bytes": 770
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/gmw/1.0/gmlWrapperTypes2014.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/gmw/1.0/gmlWrapperTypes2014.xsd",
+   "sha256": "2a36ed98893bae4b75fbd8600d2dac7b353e3a5896bbd9b07eb278aedfa54bd7",
+   "bytes": 7661
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/gmw/1.0/gmw.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/gmw/1.0/gmw.xsd",
+   "sha256": "596c9866d39dbebd84aaec7e9e0c2b2ebf0295cac0010106fd787a38fe50fca5",
+   "bytes": 1647
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/lan/1.0/lan.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/lan/1.0/lan.xsd",
+   "sha256": "f5d6e27b5347ae73e4625be3b4bc8e504ded5afd942599a4e849eaa9a917bd9b",
+   "bytes": 830
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/lan/1.0/language.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/lan/1.0/language.xsd",
+   "sha256": "52d1138801fc4f1d1752f5843e84d461eef96de0b89321d3d34cdfd8ab24b4f2",
+   "bytes": 6397
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/mcc/1.0/AbstractCommonClasses.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/mcc/1.0/AbstractCommonClasses.xsd",
+   "sha256": "b0e6f03e328d1fd0d582d9eafa7253f9164227440c40f26c91fbac6ffc4753ca",
+   "bytes": 15388
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/mcc/1.0/commonClasses.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/mcc/1.0/commonClasses.xsd",
+   "sha256": "905ef5fc7fd06936b1ab0928635ded4fb7c53b2ef834b9c401910060a28eab6c",
+   "bytes": 10279
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/mcc/1.0/mcc.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/mcc/1.0/mcc.xsd",
+   "sha256": "bbba7effc02c331bca11baaa740a39333132b3752ff8dc7ae094c918589e9871",
+   "bytes": 773
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/mco/1.0/constraints.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/mco/1.0/constraints.xsd",
+   "sha256": "6752ca2eab63611bcce76c58272bcbb2cfe645da46ca7abf374850ce38e4916b",
+   "bytes": 9857
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/mco/1.0/mco.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/mco/1.0/mco.xsd",
+   "sha256": "97e6e9eda9973bf6660b466a1fd32a47972306abfe428be117871abc7cd736ad",
+   "bytes": 772
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/mdb/2.0/mdb.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/mdb/2.0/mdb.xsd",
+   "sha256": "f7caf275b18f85c2d1c2823f371ad327d8be6d8ab25e81c746d9da8dfba17315",
+   "bytes": 1678
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/mdb/2.0/metadataBase.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/mdb/2.0/metadataBase.xsd",
+   "sha256": "0c4f5e677ecaa055270ffcef1b2c44a711e7be7c3b92642f27e8aecd04cb88f3",
+   "bytes": 6854
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/mmi/1.0/maintenance.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/mmi/1.0/maintenance.xsd",
+   "sha256": "c9d4203297e3c0048e0d33f47a2c2b263f63699f9fd8f1c385ca0ad42aff048d",
+   "bytes": 4323
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/mmi/1.0/mmi.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/mmi/1.0/mmi.xsd",
+   "sha256": "5cde2e7f62b691d6e572d1e28e7ef0ebef597c72d987ea1a5274f4cbf08564e8",
+   "bytes": 785
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/mrd/1.0/distribution.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/mrd/1.0/distribution.xsd",
+   "sha256": "5552db7e9bebc354c17fa10331c8b9a3535fe8c4713281a8cb01b952d4958255",
+   "bytes": 13524
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/mrd/1.0/mrd.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/mrd/1.0/mrd.xsd",
+   "sha256": "49fbbf3e0af89d2abc139020e01d622ec3898ebc32b095d67f117f7d8ff9139b",
+   "bytes": 804
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/mri/1.0/identification.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/mri/1.0/identification.xsd",
+   "sha256": "5ef081eba3bb94712668f9efcc2b105a1ff961f223618f167efa0900b9cfd6d9",
+   "bytes": 28519
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/mri/1.0/mri.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/mri/1.0/mri.xsd",
+   "sha256": "150055a1740bc9334c5c6fb4569556dd3bddf82c965177081d96b9c6c33a9844",
+   "bytes": 966
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/mrl/2.0/lineage.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/mrl/2.0/lineage.xsd",
+   "sha256": "c34256efa50a207b40ab87817cf7b83aff55477b79961fa428b8cc8e1bf3adcb",
+   "bytes": 7751
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/mrl/2.0/lineageImagery.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/mrl/2.0/lineageImagery.xsd",
+   "sha256": "396e4d7aa6802a74f86201a96844469b0dc013cfe8ea85623a1d1b2091032995",
+   "bytes": 15790
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/mrl/2.0/mrl.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/mrl/2.0/mrl.xsd",
+   "sha256": "77c3ddff7c5a7bd31bfb56b8a22ff7b29e1e4f4b5230104e8b0fb15829e5a9b5",
+   "bytes": 822
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/mrs/1.0/mrs.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/mrs/1.0/mrs.xsd",
+   "sha256": "a2e9f9669bc417523126f53488133d45960f79c14068d9917a2dcdb2ab1718b5",
+   "bytes": 815
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/mrs/1.0/referenceSystem.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/mrs/1.0/referenceSystem.xsd",
+   "sha256": "f034710e7c69953470e4520c24281ab27227709ae667d202b7a5d4f56cc08a30",
+   "bytes": 2530
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/msr/1.0/msr.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/msr/1.0/msr.xsd",
+   "sha256": "51bdb4ea48ef3f2701d9d2a9ed5809eb84fd2a2fcc5f56e6df530b63c1913dd7",
+   "bytes": 1067
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/msr/1.0/spatialRepresentation.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/msr/1.0/spatialRepresentation.xsd",
+   "sha256": "e700465b1bc230a62e61fc72b706ba800f356ed5c795e3fb895d6082cfc81868",
+   "bytes": 18947
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/msr/1.0/spatialRepresentationImagery.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/msr/1.0/spatialRepresentationImagery.xsd",
+   "sha256": "ce2740bf03819305431421001149b12985c9b722c64882b2546e7777d4f5f7f3",
+   "bytes": 5793
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/srv/2.0/serviceInformation.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/srv/2.0/serviceInformation.xsd",
+   "sha256": "85fa8ea3c0cc0f6bd3033c53e9ac0158fd05934852721346e19191972c0d9da6",
+   "bytes": 14304
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19115/-3/srv/2.0/srv.xsd",
+   "url_origem": "https://standards.iso.org/iso/19115/-3/srv/2.0/srv.xsd",
+   "sha256": "3cc64f661ec34d48d747da09cbcca4ba615fc153474216c948f9a01c94bf178c",
+   "bytes": 766
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19157/-2/dqc/1.0/abstract.xsd",
+   "url_origem": "https://standards.iso.org/iso/19157/-2/dqc/1.0/abstract.xsd",
+   "sha256": "ca9a26457af0b5c783290ac51a15565853fd1f4f1031eab63f2a9ef3cba6b4f8",
+   "bytes": 1947
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19157/-2/dqc/1.0/dqc.xsd",
+   "url_origem": "https://standards.iso.org/iso/19157/-2/dqc/1.0/dqc.xsd",
+   "sha256": "24df630a7b78b2f195cba7f024a6c921e8dbd8f08c3da4188d1388e0afd847db",
+   "bytes": 963
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19157/-2/mdq/1.0/dataQualityElement.xsd",
+   "url_origem": "https://standards.iso.org/iso/19157/-2/mdq/1.0/dataQualityElement.xsd",
+   "sha256": "d4befc037c863a827b4c49f2e36a54116b559a9277759e19171b90ce57fab22f",
+   "bytes": 24482
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19157/-2/mdq/1.0/dataQualityEvaluation.xsd",
+   "url_origem": "https://standards.iso.org/iso/19157/-2/mdq/1.0/dataQualityEvaluation.xsd",
+   "sha256": "2cd5a31ebe103a09805ae7df0e2e7be5c5b1b4e6a90ecba0e9982132f14ed137",
+   "bytes": 8411
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19157/-2/mdq/1.0/dataQualityImagery.xsd",
+   "url_origem": "https://standards.iso.org/iso/19157/-2/mdq/1.0/dataQualityImagery.xsd",
+   "sha256": "ae72bafae67044712b48fe315bf6c3ed929ac56676a9ed3f6dc0addd050e8472",
+   "bytes": 3723
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19157/-2/mdq/1.0/dataQualityResult.xsd",
+   "url_origem": "https://standards.iso.org/iso/19157/-2/mdq/1.0/dataQualityResult.xsd",
+   "sha256": "6a092aebd95589ba40bfbec22d1ed335cbc05d4904c02ea3760e3cc3ebfe52b5",
+   "bytes": 6522
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19157/-2/mdq/1.0/mdq.xsd",
+   "url_origem": "https://standards.iso.org/iso/19157/-2/mdq/1.0/mdq.xsd",
+   "sha256": "dcb7ee552f63ce90ec1f5375b98b22877f6d30bf187bef15c5ae7b0d5a462171",
+   "bytes": 1218
+  },
+  {
+   "arquivo": "standards.iso.org/iso/19157/-2/mdq/1.0/metaquality.xsd",
+   "url_origem": "https://standards.iso.org/iso/19157/-2/mdq/1.0/metaquality.xsd",
+   "sha256": "1be4aae94b698a0c7f0553d0d0dec1b5fb0d4a580c92a4001e5f22f7622fbe1d",
+   "bytes": 3718
   },
   {
    "arquivo": "www.w3.org/1999/xlink.xsd",
