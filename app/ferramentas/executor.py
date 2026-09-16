@@ -222,14 +222,23 @@ def _extent_de(geojson: str | None) -> list | None:
     xs, ys = numeros[0::2], numeros[1::2]
     if not xs or not ys:
         return None
-    # Retângulo de lado zero (camada de uma feição só = POINT, feições colineares = LINESTRING)
-    # NÃO é recusado pelo tipo: `ST_MakeEnvelope` com xmin==xmax e/ou ymin==ymax ainda casta para
-    # `geometry(Polygon, 4326)` (conferido direto no Postgres — o typmod só cobra estrutura de anel
-    # fechado com 4+ posições, nunca área); guardar esse caso como None aqui derrubava exatamente os
-    # dois casos que este achatamento existe para aguentar.
-    if -180 <= min(xs) and max(xs) <= 180 and -90 <= min(ys) and max(ys) <= 90:
-        return [min(xs), min(ys), max(xs), max(ys)]
-    return None
+    xmin, ymin, xmax, ymax = min(xs), min(ys), max(xs), max(ys)
+    if not (-180 <= xmin and xmax <= 180 and -90 <= ymin and ymax <= 90):
+        return None
+    # Retângulo de lado zero (camada de uma feição só = POINT, feições colineares = LINESTRING): achado
+    # 16/09 em tests/api/ferramentas/test_rede_ferramentas.py — a suposição anterior aqui era de que
+    # `ST_MakeEnvelope` com xmin==xmax e/ou ymin==ymax ainda validava porque "o typmod só cobra estrutura
+    # de anel fechado, nunca área"; MEDIDO direto no Postgres desta instalação: `ST_IsValid` REPROVA os
+    # dois casos (xmin==xmax OU ymin==ymax), e é `ST_IsValid` — não o typmod — que o CHECK
+    # `item_extent_check` chama. O typmod aceita a estrutura; o CHECK não aceita a geometria inválida.
+    # Mesmo conserto de `app/ingestao/carregar.py::_envoltoria_nao_degenerada` (item L6-02-h): afasta o
+    # lado nulo por um épsilon em graus, nos dois sentidos, sem sair de -180..180/-90..90.
+    e = limites.INGESTAO_EPSILON_ENVOLTORIA
+    if xmax - xmin < e:
+        xmin, xmax = max(-180.0, xmin - e), min(180.0, xmax + e)
+    if ymax - ymin < e:
+        ymin, ymax = max(-90.0, ymin - e), min(90.0, ymax + e)
+    return [xmin, ymin, xmax, ymax]
 
 
 def executar(ctx, f: registro.Ferramenta, parametros: dict, titulo: str | None = None, autor: dict | None = None,
