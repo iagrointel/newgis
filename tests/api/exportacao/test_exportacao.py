@@ -83,16 +83,27 @@ def contar_no_arquivo(caminho: Path, formato: str) -> int:
 
 
 # ---------------------------------------------------------------- 1, 6: formatos e tempo por formato
+# achado 16/09: o item L2-01-l acrescentou 5 formatos a FORMATOS depois desta cláusula escrita (GeoJSON
+# Sequence, File Geodatabase, MVT, PMTiles e o `pacote` de mapa) — iterar `FORMATOS` inteiro faz este
+# loop tentar `pacote` (que exige item_id de MAPA, não de camada — outro contrato) e os tilados MVT/
+# PMTiles (que por definição NÃO preservam a contagem de feições 1:1, `formato.tilado`,
+# `_perdas_declaradas`: "a contagem de feições do arquivo não é a do banco"). Os formatos que cabem
+# nesta cláusula (mesma camada, mesma contagem reaberta) são todos os outros — tilado e pacote fora.
+FORMATOS_DA_CLAUSULA_1 = [n for n, f in FORMATOS.items() if not f.tilado and n != "pacote"]
+
+
 def test_onze_formatos_da_camada_de_100_mil_feicoes_reabertos_com_a_mesma_contagem(
     inquilino_a, camada_a, worker_exportacao, medida, tmp_path
 ):
     """Cláusula 1 do portão ("10 formatos ... cada um reaberto por ogrinfo com a mesma contagem") e cláusula 6
-    ("medida tempo por formato"). São 11 formatos: os 10 que o `ogrinfo` desta máquina reabre mais o
-    GeoParquet, reaberto pelo DuckDB — a razão está em `app/exportacao/formatos.py`."""
+    ("medida tempo por formato"). Eram 11 quando escrita (os 10 que o `ogrinfo` desta máquina reabre mais o
+    GeoParquet, reaberto pelo DuckDB); o item L2-01-l acrescentou GeoJSON Sequence e File Geodatabase depois
+    (mesma classe: ogrinfo reabre, mesma contagem) — hoje são FORMATOS_DA_CLAUSULA_1 (tilado e pacote têm
+    cláusula própria, não esta). A razão de cada formato está em `app/exportacao/formatos.py`."""
     cliente = inquilino_a.admin
     tempos = {}
     reabertos = {}
-    for nome in FORMATOS:
+    for nome in FORMATOS_DA_CLAUSULA_1:
         inicio = time.monotonic()
         final = exportar(cliente, {"item_id": camada_a["item_id"], "formato": nome,
                                    "nome": f"zt-{nome}"}, timeout=600)
@@ -103,7 +114,7 @@ def test_onze_formatos_da_camada_de_100_mil_feicoes_reabertos_com_a_mesma_contag
         assert caminho.stat().st_size == final["bytes"] > 0, nome
         reabertos[nome] = contar_no_arquivo(caminho, nome)
 
-    assert reabertos == dict.fromkeys(FORMATOS, FEICOES), reabertos
+    assert reabertos == dict.fromkeys(FORMATOS_DA_CLAUSULA_1, FEICOES), reabertos
     abertos_por_ogrinfo = [n for n, f in FORMATOS.items() if f.reabre_com_ogrinfo]
     assert len(abertos_por_ogrinfo) >= 10, abertos_por_ogrinfo
     medida("L0-04-h-exportar")(
