@@ -13,6 +13,7 @@ from __future__ import annotations
 import subprocess
 import tempfile
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 
 LARGURA = 1024
@@ -77,7 +78,15 @@ def semear_raster(tenant_id: int, slug: str) -> dict:
             [CANTO_LON, CANTO_LAT], [CANTO_LON + 0.19, CANTO_LAT], [CANTO_LON + 0.19, CANTO_LAT - 0.19],
             [CANTO_LON, CANTO_LAT - 0.19], [CANTO_LON, CANTO_LAT]]]},
         "bbox": [CANTO_LON, CANTO_LAT - 0.19, CANTO_LON + 0.19, CANTO_LAT],
-        "properties": {"datetime": "2026-01-01T00:00:00Z", "title": "COG sintético de teste (4 bandas)"},
+        # datetime da SEMEADURA (não uma data fixa no passado): a coleção "1-imagens" é compartilhada por
+        # ~10 arquivos de teste que chamam semear_raster(tenant_id_a, "demo") e nunca apagam o item depois
+        # (deliberado — dedup por conteúdo, id novo por chamada). Com uma data fixa, centenas de itens
+        # acumulados ao longo de execuções da suíte empatam em "datetime desc" e o desempate por "id desc"
+        # vira sorteio: a busca ad-hoc por coleção do mosaico (`_tile_mosaico_impl`) pode não trazer o
+        # item desta chamada dentro do `limit` e devolver 204 (achado medido 16/09: 219 itens co-localizados,
+        # todos datados 2026-01-01, e o item da chamada corrente fora dos 6 primeiros por ordem de uuid).
+        "properties": {"datetime": datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
+                       "title": "COG sintético de teste (4 bandas)"},
         "assets": {"cientifico": {**asset, "roles": ["data"]}, "visual": {**asset, "roles": ["visual"]}},
         "links": [],
     }
