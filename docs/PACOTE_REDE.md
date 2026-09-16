@@ -23,8 +23,8 @@ Pacote de ativos da rede de água de abastecimento no vocabulário do EPANET 2.2
 | versão do esquema | 1 |
 | disciplina | agua |
 | fonte | https://www.epa.gov/water-research/epanet |
-| tamanho | 27765 bytes |
-| sha256 | `1a6bbe11731451a38f58df1e0ba264c3b2959666fd5a8ea8eb340937c5a26789` |
+| tamanho | 27605 bytes |
+| sha256 | `ab4b02b0b54a1a6d6e8f84cdce45b650305c5118b2647f7c06657258bb6d7757` |
 
 ### Redes de domínio e tiers
 
@@ -125,35 +125,35 @@ Total: 41 atributos, 0 com origem conferida em extração real e 41 declarados d
 
 | tipo de regra | de | para | o que diz |
 |---|---|---|---|
-| conectividade_no_trecho | `tubulacao/1` | `bomba/1` | bomba em série na tubulação |
-| conectividade_no_trecho | `tubulacao/1` | `bomba/2` | bomba em série na tubulação |
-| conectividade_no_trecho | `tubulacao/1` | `no/1` | tubulação ligada ao nó |
-| conectividade_no_trecho | `tubulacao/1` | `no/2` | tubulação ligada ao nó |
-| conectividade_no_trecho | `tubulacao/1` | `reservatorio_de_nivel_fixo/1` | tubulação ligada ao nó |
-| conectividade_no_trecho | `tubulacao/1` | `reservatorio_de_nivel_variavel/1` | tubulação ligada ao nó |
-| conectividade_no_trecho | `tubulacao/1` | `valvula/1` | válvula em série na tubulação |
-| conectividade_no_trecho | `tubulacao/1` | `valvula/2` | válvula em série na tubulação |
-| conectividade_no_trecho | `tubulacao/1` | `valvula/3` | válvula em série na tubulação |
-| conectividade_no_trecho | `tubulacao/1` | `valvula/4` | válvula em série na tubulação |
-| conectividade_no_trecho | `tubulacao/1` | `valvula/5` | válvula em série na tubulação |
-| conectividade_no_trecho | `tubulacao/1` | `valvula/6` | válvula em série na tubulação |
-| conectividade_no_trecho | `tubulacao/2` | `no/1` | tubulação com válvula de retenção ligada ao nó |
-| conectividade_no_trecho | `tubulacao/2` | `no/2` | tubulação com válvula de retenção ligada ao nó |
-| conectividade_no_trecho | `tubulacao/2` | `reservatorio_de_nivel_fixo/1` | tubulação com válvula de retenção ligada ao nó |
-| conectividade_no_trecho | `tubulacao/2` | `reservatorio_de_nivel_variavel/1` | tubulação com válvula de retenção ligada ao nó |
+| juncao_aresta | `tubulacao/1` | `bomba/1` | bomba em série na tubulação |
+| juncao_aresta | `tubulacao/1` | `bomba/2` | bomba em série na tubulação |
+| juncao_aresta | `tubulacao/1` | `no/1` | tubulação ligada ao nó |
+| juncao_aresta | `tubulacao/1` | `no/2` | tubulação ligada ao nó |
+| juncao_aresta | `tubulacao/1` | `reservatorio_de_nivel_fixo/1` | tubulação ligada ao nó |
+| juncao_aresta | `tubulacao/1` | `reservatorio_de_nivel_variavel/1` | tubulação ligada ao nó |
+| juncao_aresta | `tubulacao/1` | `valvula/1` | válvula em série na tubulação |
+| juncao_aresta | `tubulacao/1` | `valvula/2` | válvula em série na tubulação |
+| juncao_aresta | `tubulacao/1` | `valvula/3` | válvula em série na tubulação |
+| juncao_aresta | `tubulacao/1` | `valvula/4` | válvula em série na tubulação |
+| juncao_aresta | `tubulacao/1` | `valvula/5` | válvula em série na tubulação |
+| juncao_aresta | `tubulacao/1` | `valvula/6` | válvula em série na tubulação |
+| juncao_aresta | `tubulacao/2` | `no/1` | tubulação com válvula de retenção ligada ao nó |
+| juncao_aresta | `tubulacao/2` | `no/2` | tubulação com válvula de retenção ligada ao nó |
+| juncao_aresta | `tubulacao/2` | `reservatorio_de_nivel_fixo/1` | tubulação com válvula de retenção ligada ao nó |
+| juncao_aresta | `tubulacao/2` | `reservatorio_de_nivel_variavel/1` | tubulação com válvula de retenção ligada ao nó |
 
 ## `eletrica-br` — Elétrica de distribuição (Brasil, BDGD Módulo 10)
 
-Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 13 camadas de rede da BDGD (Módulo 10 do PRODIST). Dez camadas têm mapeamento coluna a coluna conferido contra uma extração real de distribuidora; cinco camadas (SUB, UNSEMT, UNCRMT, UNREMT, UGMT_tab) trazem colunas declaradas do Módulo 10, ainda não conferidas — cada atributo diz qual é o seu caso em origem.conferida.
+Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 13 camadas de rede da BDGD (Módulo 10 do PRODIST). Dez camadas têm mapeamento coluna a coluna conferido contra uma extração real de distribuidora; cinco camadas (SUB, UNSEMT, UNCRMT, UNREMT, UGMT_tab) trazem colunas declaradas do Módulo 10, ainda não conferidas — cada atributo diz qual é o seu caso em origem.conferida. Desde a versão 1.1.0, subestação, disjuntor de saída e transformador de distribuição também carregam a categoria controlador (ADR 20260907T2031-controlador-de-subrede-e-tiers), porque são os ativos que de fato ancoram o controlador de uma subrede na distribuição.
 
 | campo | valor |
 |---|---|
-| versão do pacote | 1.0.0 |
+| versão do pacote | 1.1.0 |
 | versão do esquema | 1 |
 | disciplina | eletrica |
 | fonte | https://dadosabertos.aneel.gov.br/dataset/base-de-dados-geografica-da-distribuidora-bdgd |
-| tamanho | 96042 bytes |
-| sha256 | `8bc3786c221e3ed5f0a40a85401301c266b15495c7444d5e64fa738f4d612663` |
+| tamanho | 96258 bytes |
+| sha256 | `b4b6a04edaad239db0ade6e5abaad5be64447cd7958ee2f50a553828fa077218` |
 
 ### Redes de domínio e tiers
 
@@ -170,7 +170,7 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 |---|---|---|
 | `conducao` | Condução | Conduz sem transformar nem interromper. |
 | `consumo` | Consumo | Ponto final que retira energia da rede. |
-| `controlador` | Controlador | Ajusta grandeza elétrica (tensão, reativo) sem interromper o circuito. |
+| `controlador` | Controlador | Ajusta grandeza elétrica (tensão, reativo) sem interromper o circuito, ou ancora o controlador de uma subrede (só um tipo com esta categoria pode controlar uma subrede). |
 | `dispositivo_de_protecao` | Dispositivo de proteção | Interrompe sozinho diante de defeito. |
 | `estrutura_de_suporte` | Estrutura de suporte | Sustenta o condutor e o equipamento; não conduz. |
 | `fonte` | Fonte | Onde a energia entra na rede; o traçado a montante termina aqui. |
@@ -198,7 +198,7 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | `chave_de_media_tensao` | ponto | UNSEMT | 1 | `chave_faca` | Chave faca | media_tensao | seccionamento | — |
 | `chave_de_media_tensao` | ponto | UNSEMT | 2 | `chave_fusivel` | Chave fusível | media_tensao | dispositivo_de_protecao, seccionamento | — |
 | `chave_de_media_tensao` | ponto | UNSEMT | 3 | `religador` | Religador | media_tensao | controlador, dispositivo_de_protecao | — |
-| `chave_de_media_tensao` | ponto | UNSEMT | 4 | `disjuntor` | Disjuntor | media_tensao | dispositivo_de_protecao | — |
+| `chave_de_media_tensao` | ponto | UNSEMT | 4 | `disjuntor` | Disjuntor | media_tensao | controlador, dispositivo_de_protecao | — |
 | `chave_de_media_tensao` | ponto | UNSEMT | 5 | `seccionalizador` | Seccionalizador | media_tensao | dispositivo_de_protecao, seccionamento | — |
 | `equipamento_do_transformador` | sem_geometria | EQTRMT | 1 | `equipamento_do_transformador` | Equipamento do transformador | media_tensao | transformacao | — |
 | `geracao_distribuida` | ponto | UGBT_tab, UGMT_tab | 1 | `geracao_em_baixa_tensao` | Geração em baixa tensão | baixa_tensao | geracao, medicao | — |
@@ -209,8 +209,8 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | `ponto_notavel` | ponto | PONNOT | 3 | `ponto_notavel_nao_classificado` | Ponto notável ainda não classificado | estrutura | estrutura_de_suporte | — |
 | `ramal_de_ligacao` | linha | RAMLIG | 1 | `ramal_de_ligacao` | Ramal de ligação | baixa_tensao | conducao | — |
 | `regulador_de_tensao` | ponto | UNREMT | 1 | `regulador_de_tensao` | Regulador de tensão | media_tensao | controlador | — |
-| `subestacao` | ponto | SUB | 1 | `subestacao_de_distribuicao` | Subestação de distribuição | subtransmissao | fonte | — |
-| `transformador_de_distribuicao` | ponto | UNTRMT | 1 | `transformador_de_distribuicao` | Transformador de distribuição | media_tensao | transformacao | T |
+| `subestacao` | ponto | SUB | 1 | `subestacao_de_distribuicao` | Subestação de distribuição | subtransmissao | controlador, fonte | — |
+| `transformador_de_distribuicao` | ponto | UNTRMT | 1 | `transformador_de_distribuicao` | Transformador de distribuição | media_tensao | controlador, transformacao | T |
 | `transformador_de_distribuicao` | ponto | UNTRMT | 2 | `banco_de_transformadores` | Banco de transformadores | media_tensao | transformacao | B |
 | `transformador_de_distribuicao` | ponto | UNTRMT | 3 | `transformador_nao_classificado` | Transformador ainda não classificado | media_tensao | transformacao | — |
 | `trecho_de_baixa_tensao` | linha | SSDBT | 1 | `trecho_de_baixa_tensao` | Trecho de baixa tensão | baixa_tensao | conducao | — |
@@ -444,30 +444,30 @@ Total: 214 atributos, 154 com origem conferida em extração real e 60 declarado
 
 | tipo de regra | de | para | o que diz |
 |---|---|---|---|
-| conectividade_no_trecho | `ramal_de_ligacao/1` | `trecho_de_baixa_tensao/1` | ramal derivado do trecho de baixa tensão |
-| conectividade_no_trecho | `ramal_de_ligacao/1` | `unidade_consumidora/1` | consumidor de baixa tensão ligado pelo ramal |
-| conectividade_no_trecho | `trecho_de_baixa_tensao/1` | `geracao_distribuida/1` | geração em baixa tensão ligada ao trecho de baixa tensão |
-| conectividade_no_trecho | `trecho_de_baixa_tensao/1` | `ponto_de_iluminacao_publica/1` | luminária ligada ao trecho de baixa tensão |
-| conectividade_no_trecho | `trecho_de_baixa_tensao/1` | `transformador_de_distribuicao/1` | secundário do transformador no trecho de baixa tensão |
-| conectividade_no_trecho | `trecho_de_baixa_tensao/1` | `transformador_de_distribuicao/2` | secundário do banco no trecho de baixa tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `banco_de_capacitores/1` | banco de capacitores derivado do trecho de média tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `chave_de_media_tensao/1` | chave em série no trecho de média tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `chave_de_media_tensao/2` | chave fusível em série no trecho de média tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `chave_de_media_tensao/3` | religador em série no trecho de média tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `chave_de_media_tensao/4` | disjuntor em série no trecho de média tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `chave_de_media_tensao/5` | seccionalizador em série no trecho de média tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `regulador_de_tensao/1` | regulador em série no trecho de média tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `subestacao/1` | saída da subestação alimenta o trecho de média tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `transformador_de_distribuicao/1` | primário do transformador no trecho de média tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `transformador_de_distribuicao/2` | primário do banco no trecho de média tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `unidade_consumidora/2` | consumidor de média tensão ligado ao trecho de média tensão |
 | contencao | `subestacao/1` | `chave_de_media_tensao/4` | disjuntor contido na subestação |
 | contencao | `subestacao/1` | `regulador_de_tensao/1` | regulador contido na subestação |
-| fixacao_estrutural | `ponto_notavel/1` | `ponto_de_iluminacao_publica/1` | luminária fixada no poste |
-| fixacao_estrutural | `ponto_notavel/1` | `transformador_de_distribuicao/1` | transformador fixado no poste |
-| fixacao_estrutural | `ponto_notavel/1` | `trecho_de_baixa_tensao/1` | trecho de baixa tensão fixado no poste |
-| fixacao_estrutural | `ponto_notavel/1` | `trecho_de_media_tensao/1` | trecho de média tensão fixado no poste |
-| fixacao_estrutural | `ponto_notavel/2` | `trecho_de_media_tensao/1` | trecho de média tensão fixado na torre |
+| estrutura | `ponto_notavel/1` | `ponto_de_iluminacao_publica/1` | luminária fixada no poste |
+| estrutura | `ponto_notavel/1` | `transformador_de_distribuicao/1` | transformador fixado no poste |
+| estrutura | `ponto_notavel/1` | `trecho_de_baixa_tensao/1` | trecho de baixa tensão fixado no poste |
+| estrutura | `ponto_notavel/1` | `trecho_de_media_tensao/1` | trecho de média tensão fixado no poste |
+| estrutura | `ponto_notavel/2` | `trecho_de_media_tensao/1` | trecho de média tensão fixado na torre |
+| juncao_aresta | `ramal_de_ligacao/1` | `trecho_de_baixa_tensao/1` | ramal derivado do trecho de baixa tensão |
+| juncao_aresta | `ramal_de_ligacao/1` | `unidade_consumidora/1` | consumidor de baixa tensão ligado pelo ramal |
+| juncao_aresta | `trecho_de_baixa_tensao/1` | `geracao_distribuida/1` | geração em baixa tensão ligada ao trecho de baixa tensão |
+| juncao_aresta | `trecho_de_baixa_tensao/1` | `ponto_de_iluminacao_publica/1` | luminária ligada ao trecho de baixa tensão |
+| juncao_aresta | `trecho_de_baixa_tensao/1` | `transformador_de_distribuicao/1` | secundário do transformador no trecho de baixa tensão |
+| juncao_aresta | `trecho_de_baixa_tensao/1` | `transformador_de_distribuicao/2` | secundário do banco no trecho de baixa tensão |
+| juncao_aresta | `trecho_de_media_tensao/1` | `banco_de_capacitores/1` | banco de capacitores derivado do trecho de média tensão |
+| juncao_aresta | `trecho_de_media_tensao/1` | `chave_de_media_tensao/1` | chave em série no trecho de média tensão |
+| juncao_aresta | `trecho_de_media_tensao/1` | `chave_de_media_tensao/2` | chave fusível em série no trecho de média tensão |
+| juncao_aresta | `trecho_de_media_tensao/1` | `chave_de_media_tensao/3` | religador em série no trecho de média tensão |
+| juncao_aresta | `trecho_de_media_tensao/1` | `chave_de_media_tensao/4` | disjuntor em série no trecho de média tensão |
+| juncao_aresta | `trecho_de_media_tensao/1` | `chave_de_media_tensao/5` | seccionalizador em série no trecho de média tensão |
+| juncao_aresta | `trecho_de_media_tensao/1` | `regulador_de_tensao/1` | regulador em série no trecho de média tensão |
+| juncao_aresta | `trecho_de_media_tensao/1` | `subestacao/1` | saída da subestação alimenta o trecho de média tensão |
+| juncao_aresta | `trecho_de_media_tensao/1` | `transformador_de_distribuicao/1` | primário do transformador no trecho de média tensão |
+| juncao_aresta | `trecho_de_media_tensao/1` | `transformador_de_distribuicao/2` | primário do banco no trecho de média tensão |
+| juncao_aresta | `trecho_de_media_tensao/1` | `unidade_consumidora/2` | consumidor de média tensão ligado ao trecho de média tensão |
 
 ## `esgoto-teksi` — Esgoto sanitário e drenagem (esquema TEKSI)
 
@@ -479,8 +479,8 @@ Pacote de ativos de esgoto sanitário e drenagem pluvial, com o tier na BACIA (p
 | versão do esquema | 1 |
 | disciplina | esgoto |
 | fonte | https://teksi.github.io/wastewater/ |
-| tamanho | 72442 bytes |
-| sha256 | `308c5f038ad87f285804b1ce5a07f2b6b3bb9b2075c7c9399aeb0bd9bbd77e8b` |
+| tamanho | 72163 bytes |
+| sha256 | `224dc7e819cd81573d8343b124a478448e99c82d549cb8ada4014fcd10e867c0` |
 
 ### Redes de domínio e tiers
 
@@ -656,35 +656,35 @@ Total: 104 atributos, 0 com origem conferida em extração real e 104 declarados
 
 | tipo de regra | de | para | o que diz |
 |---|---|---|---|
-| conectividade_entre_nos | `elevatoria/1` | `elevatoria/2` | conjunto motobomba faz parte da elevatória |
-| conectividade_no_trecho | `boca_de_lobo/1` | `galeria_pluvial/1` | boca de lobo entrega na galeria pluvial |
-| conectividade_no_trecho | `boca_de_lobo/2` | `galeria_pluvial/1` | poço de visita pluvial recebe e entrega galeria pluvial |
-| conectividade_no_trecho | `boca_de_lobo/2` | `galeria_pluvial/2` | poço de visita pluvial entrega no canal de drenagem |
-| conectividade_no_trecho | `elevatoria/1` | `coletor/2` | elevatória recebe coletor tronco por gravidade |
-| conectividade_no_trecho | `elevatoria/1` | `coletor/3` | elevatória recebe o interceptor por gravidade |
-| conectividade_no_trecho | `elevatoria/1` | `coletor/5` | elevatória entrega na linha de recalque, e daí em diante a cota não decide o sentido |
-| conectividade_no_trecho | `estacao_de_tratamento/1` | `coletor/3` | interceptor termina na estação de tratamento |
-| conectividade_no_trecho | `estacao_de_tratamento/1` | `coletor/4` | emissário termina na estação de tratamento |
-| conectividade_no_trecho | `estrutura_especial/1` | `coletor/3` | extravasor instalado no interceptor |
-| conectividade_no_trecho | `estrutura_especial/1` | `coletor/4` | extravasor desvia o excedente para o emissário |
-| conectividade_no_trecho | `estrutura_especial/2` | `coletor/1` | câmara de transição entre dois coletores de rede |
-| conectividade_no_trecho | `estrutura_especial/3` | `coletor/2` | caixa de passagem no coletor tronco |
-| conectividade_no_trecho | `poco_de_visita/1` | `coletor/1` | poço de visita recebe e entrega coletor de rede |
-| conectividade_no_trecho | `poco_de_visita/1` | `coletor/2` | poço de visita recebe e entrega coletor tronco |
-| conectividade_no_trecho | `poco_de_visita/1` | `coletor/3` | poço de visita recebe e entrega interceptor |
-| conectividade_no_trecho | `poco_de_visita/1` | `coletor/4` | poço de visita recebe e entrega emissário |
-| conectividade_no_trecho | `poco_de_visita/1` | `coletor/5` | a linha de recalque termina num poço de visita, onde volta a escoar por gravidade |
-| conectividade_no_trecho | `poco_de_visita/1` | `coletor/6` | sifão invertido começa e termina em poço de visita |
-| conectividade_no_trecho | `poco_de_visita/1` | `ligacao_predial/1` | ligação predial pode chegar direto no poço de visita |
-| conectividade_no_trecho | `poco_de_visita/2` | `coletor/1` | poço de queda recebe coletor de rede com desnível |
-| conectividade_no_trecho | `poco_de_visita/2` | `coletor/2` | poço de queda recebe coletor tronco com desnível |
-| conectividade_no_trecho | `poco_de_visita/3` | `coletor/1` | caixa de inspeção entrega no coletor de rede |
-| conectividade_no_trecho | `poco_de_visita/3` | `ligacao_predial/1` | caixa de inspeção recebe a ligação predial |
-| conectividade_no_trecho | `ponto_de_lancamento/1` | `coletor/4` | emissário termina no ponto de lançamento |
-| conectividade_no_trecho | `ponto_de_lancamento/1` | `galeria_pluvial/1` | galeria pluvial termina no ponto de lançamento |
-| conectividade_no_trecho | `ponto_de_lancamento/1` | `galeria_pluvial/2` | canal de drenagem termina no ponto de lançamento |
 | contencao | `poco_de_visita/1` | `poco_de_visita/3` | caixa de inspeção pode estar contida no mesmo conjunto do poço de visita |
-| fixacao_estrutural | `elevatoria/1` | `estrutura_especial/3` | caixa de passagem apoiada na estrutura da elevatória |
+| estrutura | `elevatoria/1` | `estrutura_especial/3` | caixa de passagem apoiada na estrutura da elevatória |
+| juncao_aresta | `boca_de_lobo/1` | `galeria_pluvial/1` | boca de lobo entrega na galeria pluvial |
+| juncao_aresta | `boca_de_lobo/2` | `galeria_pluvial/1` | poço de visita pluvial recebe e entrega galeria pluvial |
+| juncao_aresta | `boca_de_lobo/2` | `galeria_pluvial/2` | poço de visita pluvial entrega no canal de drenagem |
+| juncao_aresta | `elevatoria/1` | `coletor/2` | elevatória recebe coletor tronco por gravidade |
+| juncao_aresta | `elevatoria/1` | `coletor/3` | elevatória recebe o interceptor por gravidade |
+| juncao_aresta | `elevatoria/1` | `coletor/5` | elevatória entrega na linha de recalque, e daí em diante a cota não decide o sentido |
+| juncao_aresta | `estacao_de_tratamento/1` | `coletor/3` | interceptor termina na estação de tratamento |
+| juncao_aresta | `estacao_de_tratamento/1` | `coletor/4` | emissário termina na estação de tratamento |
+| juncao_aresta | `estrutura_especial/1` | `coletor/3` | extravasor instalado no interceptor |
+| juncao_aresta | `estrutura_especial/1` | `coletor/4` | extravasor desvia o excedente para o emissário |
+| juncao_aresta | `estrutura_especial/2` | `coletor/1` | câmara de transição entre dois coletores de rede |
+| juncao_aresta | `estrutura_especial/3` | `coletor/2` | caixa de passagem no coletor tronco |
+| juncao_aresta | `poco_de_visita/1` | `coletor/1` | poço de visita recebe e entrega coletor de rede |
+| juncao_aresta | `poco_de_visita/1` | `coletor/2` | poço de visita recebe e entrega coletor tronco |
+| juncao_aresta | `poco_de_visita/1` | `coletor/3` | poço de visita recebe e entrega interceptor |
+| juncao_aresta | `poco_de_visita/1` | `coletor/4` | poço de visita recebe e entrega emissário |
+| juncao_aresta | `poco_de_visita/1` | `coletor/5` | a linha de recalque termina num poço de visita, onde volta a escoar por gravidade |
+| juncao_aresta | `poco_de_visita/1` | `coletor/6` | sifão invertido começa e termina em poço de visita |
+| juncao_aresta | `poco_de_visita/1` | `ligacao_predial/1` | ligação predial pode chegar direto no poço de visita |
+| juncao_aresta | `poco_de_visita/2` | `coletor/1` | poço de queda recebe coletor de rede com desnível |
+| juncao_aresta | `poco_de_visita/2` | `coletor/2` | poço de queda recebe coletor tronco com desnível |
+| juncao_aresta | `poco_de_visita/3` | `coletor/1` | caixa de inspeção entrega no coletor de rede |
+| juncao_aresta | `poco_de_visita/3` | `ligacao_predial/1` | caixa de inspeção recebe a ligação predial |
+| juncao_aresta | `ponto_de_lancamento/1` | `coletor/4` | emissário termina no ponto de lançamento |
+| juncao_aresta | `ponto_de_lancamento/1` | `galeria_pluvial/1` | galeria pluvial termina no ponto de lançamento |
+| juncao_aresta | `ponto_de_lancamento/1` | `galeria_pluvial/2` | canal de drenagem termina no ponto de lançamento |
+| juncao_juncao | `elevatoria/1` | `elevatoria/2` | conjunto motobomba faz parte da elevatória |
 
 ## `gas-br` — Gás canalizado (tiers por pressão)
 
@@ -696,8 +696,8 @@ Pacote de ativos da rede de gás canalizado. O tier é o degrau de pressão (tra
 | versão do esquema | 1 |
 | disciplina | gas |
 | fonte | https://solutions.arcgis.com/utilities/gas/help/gas-utility-network-foundation/ |
-| tamanho | 28749 bytes |
-| sha256 | `d7d3ccac26d832ded8e423b068b2bc54865770b2f3b98f051b67b0df5e725843` |
+| tamanho | 28459 bytes |
+| sha256 | `019505eb8af4bda56c94c23cbe507d8013b9fadb4e2699fe4f0bc89ad19f59ba` |
 
 ### Redes de domínio e tiers
 
@@ -823,32 +823,122 @@ Total: 51 atributos, 0 com origem conferida em extração real e 51 declarados d
 
 | tipo de regra | de | para | o que diz |
 |---|---|---|---|
-| conectividade_entre_nos | `city_gate/1` | `estacao_de_medicao/1` | o medidor de transferência faz parte do conjunto do city gate |
-| conectividade_entre_nos | `city_gate/1` | `regulador/1` | o regulador de city gate faz parte do conjunto do city gate |
-| conectividade_entre_nos | `regulador/3` | `estacao_de_medicao/2` | regulador de ramal e medidor de faturamento no mesmo abrigo |
-| conectividade_entre_nos | `regulador/4` | `regulador/1` | regulador monitor em série com o regulador de city gate |
-| conectividade_no_trecho | `city_gate/1` | `tubulacao_de_gas/1` | city gate recebe da rede de transporte |
-| conectividade_no_trecho | `city_gate/1` | `tubulacao_de_gas/2` | city gate entrega na rede de alta pressão |
-| conectividade_no_trecho | `estacao_de_medicao/1` | `tubulacao_de_gas/2` | medidor de transferência instalado na rede de alta pressão |
-| conectividade_no_trecho | `estacao_de_medicao/2` | `tubulacao_de_gas/5` | medidor de faturamento instalado no ramal de serviço |
-| conectividade_no_trecho | `juncao_de_gas/1` | `tubulacao_de_gas/1` | junção conecta tubulações no tier de transporte |
-| conectividade_no_trecho | `juncao_de_gas/2` | `tubulacao_de_gas/2` | junção conecta tubulações no tier de alta pressão |
-| conectividade_no_trecho | `juncao_de_gas/3` | `tubulacao_de_gas/3` | junção conecta tubulações no tier de média pressão |
-| conectividade_no_trecho | `juncao_de_gas/4` | `tubulacao_de_gas/4` | junção conecta tubulações no tier de baixa pressão |
-| conectividade_no_trecho | `juncao_de_gas/4` | `tubulacao_de_gas/5` | ramal de serviço derivado por junção na baixa pressão |
-| conectividade_no_trecho | `juncao_de_gas/4` | `tubulacao_de_gas/6` | tubulação desativada permanece ligada à junção que a derivava |
-| conectividade_no_trecho | `ponto_de_entrega/1` | `tubulacao_de_gas/5` | entrega residencial no fim do ramal de serviço |
-| conectividade_no_trecho | `ponto_de_entrega/2` | `tubulacao_de_gas/5` | entrega comercial no fim do ramal de serviço |
-| conectividade_no_trecho | `ponto_de_entrega/3` | `tubulacao_de_gas/3` | entrega industrial direto da rede de média pressão |
-| conectividade_no_trecho | `regulador/1` | `tubulacao_de_gas/1` | regulador de city gate recebe da rede de transporte |
-| conectividade_no_trecho | `regulador/1` | `tubulacao_de_gas/2` | regulador de city gate entrega na rede de alta pressão |
-| conectividade_no_trecho | `regulador/2` | `tubulacao_de_gas/2` | regulador de rede recebe da rede de alta pressão |
-| conectividade_no_trecho | `regulador/2` | `tubulacao_de_gas/3` | regulador de rede entrega na rede de média pressão |
-| conectividade_no_trecho | `regulador/3` | `tubulacao_de_gas/3` | regulador de ramal recebe da rede de média pressão |
-| conectividade_no_trecho | `regulador/3` | `tubulacao_de_gas/4` | regulador de ramal entrega na rede de baixa pressão |
-| conectividade_no_trecho | `regulador/4` | `tubulacao_de_gas/2` | regulador monitor fica em série na rede de alta pressão |
-| conectividade_no_trecho | `valvula_de_gas/1` | `tubulacao_de_gas/3` | válvula de bloqueio instalada na rede de média pressão |
-| conectividade_no_trecho | `valvula_de_gas/1` | `tubulacao_de_gas/4` | válvula de bloqueio instalada na rede de baixa pressão |
-| conectividade_no_trecho | `valvula_de_gas/2` | `tubulacao_de_gas/2` | válvula de alívio derivada da rede de alta pressão |
-| conectividade_no_trecho | `valvula_de_gas/3` | `tubulacao_de_gas/3` | válvula de purga derivada da rede de média pressão |
-| conectividade_no_trecho | `valvula_de_gas/4` | `tubulacao_de_gas/2` | válvula de retenção instalada na rede de alta pressão |
+| juncao_aresta | `city_gate/1` | `tubulacao_de_gas/1` | city gate recebe da rede de transporte |
+| juncao_aresta | `city_gate/1` | `tubulacao_de_gas/2` | city gate entrega na rede de alta pressão |
+| juncao_aresta | `estacao_de_medicao/1` | `tubulacao_de_gas/2` | medidor de transferência instalado na rede de alta pressão |
+| juncao_aresta | `estacao_de_medicao/2` | `tubulacao_de_gas/5` | medidor de faturamento instalado no ramal de serviço |
+| juncao_aresta | `juncao_de_gas/1` | `tubulacao_de_gas/1` | junção conecta tubulações no tier de transporte |
+| juncao_aresta | `juncao_de_gas/2` | `tubulacao_de_gas/2` | junção conecta tubulações no tier de alta pressão |
+| juncao_aresta | `juncao_de_gas/3` | `tubulacao_de_gas/3` | junção conecta tubulações no tier de média pressão |
+| juncao_aresta | `juncao_de_gas/4` | `tubulacao_de_gas/4` | junção conecta tubulações no tier de baixa pressão |
+| juncao_aresta | `juncao_de_gas/4` | `tubulacao_de_gas/5` | ramal de serviço derivado por junção na baixa pressão |
+| juncao_aresta | `juncao_de_gas/4` | `tubulacao_de_gas/6` | tubulação desativada permanece ligada à junção que a derivava |
+| juncao_aresta | `ponto_de_entrega/1` | `tubulacao_de_gas/5` | entrega residencial no fim do ramal de serviço |
+| juncao_aresta | `ponto_de_entrega/2` | `tubulacao_de_gas/5` | entrega comercial no fim do ramal de serviço |
+| juncao_aresta | `ponto_de_entrega/3` | `tubulacao_de_gas/3` | entrega industrial direto da rede de média pressão |
+| juncao_aresta | `regulador/1` | `tubulacao_de_gas/1` | regulador de city gate recebe da rede de transporte |
+| juncao_aresta | `regulador/1` | `tubulacao_de_gas/2` | regulador de city gate entrega na rede de alta pressão |
+| juncao_aresta | `regulador/2` | `tubulacao_de_gas/2` | regulador de rede recebe da rede de alta pressão |
+| juncao_aresta | `regulador/2` | `tubulacao_de_gas/3` | regulador de rede entrega na rede de média pressão |
+| juncao_aresta | `regulador/3` | `tubulacao_de_gas/3` | regulador de ramal recebe da rede de média pressão |
+| juncao_aresta | `regulador/3` | `tubulacao_de_gas/4` | regulador de ramal entrega na rede de baixa pressão |
+| juncao_aresta | `regulador/4` | `tubulacao_de_gas/2` | regulador monitor fica em série na rede de alta pressão |
+| juncao_aresta | `valvula_de_gas/1` | `tubulacao_de_gas/3` | válvula de bloqueio instalada na rede de média pressão |
+| juncao_aresta | `valvula_de_gas/1` | `tubulacao_de_gas/4` | válvula de bloqueio instalada na rede de baixa pressão |
+| juncao_aresta | `valvula_de_gas/2` | `tubulacao_de_gas/2` | válvula de alívio derivada da rede de alta pressão |
+| juncao_aresta | `valvula_de_gas/3` | `tubulacao_de_gas/3` | válvula de purga derivada da rede de média pressão |
+| juncao_aresta | `valvula_de_gas/4` | `tubulacao_de_gas/2` | válvula de retenção instalada na rede de alta pressão |
+| juncao_juncao | `city_gate/1` | `estacao_de_medicao/1` | o medidor de transferência faz parte do conjunto do city gate |
+| juncao_juncao | `city_gate/1` | `regulador/1` | o regulador de city gate faz parte do conjunto do city gate |
+| juncao_juncao | `regulador/3` | `estacao_de_medicao/2` | regulador de ramal e medidor de faturamento no mesmo abrigo |
+| juncao_juncao | `regulador/4` | `regulador/1` | regulador monitor em série com o regulador de city gate |
+
+## `transmissao-matpower` — Transmissão no vocabulário do MATPOWER
+
+Pacote de ativos de rede de transmissão/subtransmissão no vocabulário do caseformat versão 2 do MATPOWER: barra e ramo (linha e transformador de potência); o que a matriz gen declara entra como atributo da barra. Existe porque o caso do MATPOWER descreve uma rede ELÉTRICA SEM GEOMETRIA — as matrizes bus/branch/gen não têm coordenada nenhuma. Por isso todo grupo deste pacote tem geometria 'sem_geometria': a barra importada vira objeto não espacial, e nunca um ponto na coordenada (0, 0). O vocabulário de distribuição (pacote eletrica-br, da BDGD) não serve aqui: lá o objeto é o trecho de média tensão com traçado medido em campo.
+
+| campo | valor |
+|---|---|
+| versão do pacote | 1.0.0 |
+| versão do esquema | 1 |
+| disciplina | eletrica |
+| fonte | https://github.com/MATPOWER/matpower |
+| tamanho | 16658 bytes |
+| sha256 | `84432d8372ac7fe468922194a13ca6ee515407393d2e92425e32686c4a622e8c` |
+
+### Redes de domínio e tiers
+
+| domínio | tipo do domínio | tier | ordem | tipo do tier | o que é |
+|---|---|---|---|---|---|
+| `transmissao` | dominio | `sistema` | 1 | hierarquico | O caso inteiro. O caseformat do MATPOWER não declara hierarquia de subrede; a área (coluna area da matriz bus) é partição, não hierarquia. |
+| `transmissao` | dominio | `area` | 2 | particionado | Partição declarada na coluna area da matriz bus. |
+
+### Categorias de rede
+
+| categoria | nome | o que significa no traçado |
+|---|---|---|
+| `barramento` | Barramento | Ponto do sistema onde a tensão é a mesma para todos os ramos que ali chegam. |
+| `consumo` | Consumo | Potência ativa e reativa retirada do sistema numa barra. |
+| `injecao` | Injeção | Elemento que injeta potência ativa no sistema. |
+| `interligacao` | Interligação | Elemento que liga duas barras e carrega potência entre elas. |
+| `transformacao` | Transformação | Elemento que liga dois níveis de tensão. |
+
+### Configurações de terminal
+
+| configuração | nome | terminais | caminhos válidos |
+|---|---|---|---|
+| `dois_terminais` | Dois terminais | 1=de, 2=para | 1→2 (fechado) |
+| `sem_terminal` | Sem terminal | — | — |
+
+### Grupos e tipos de ativo
+
+| grupo | geometria | camada de origem | código do tipo | chave | nome | tier | categorias | códigos na fonte |
+|---|---|---|---|---|---|---|---|---|
+| `barra` | sem_geometria | mpc.bus | 1 | `barra_de_carga` | Barra de carga (PQ) | sistema | barramento, consumo | 1 |
+| `barra` | sem_geometria | mpc.bus | 2 | `barra_de_geracao` | Barra de geração (PV) | sistema | barramento, injecao | 2 |
+| `barra` | sem_geometria | mpc.bus | 3 | `barra_de_referencia` | Barra de referência (slack) | sistema | barramento, injecao | 3 |
+| `barra` | sem_geometria | mpc.bus | 4 | `barra_isolada` | Barra isolada | sistema | barramento | 4 |
+| `ramo` | sem_geometria | mpc.branch | 1 | `linha_de_transmissao` | Linha de transmissão | sistema | interligacao | ratio=0 |
+| `ramo` | sem_geometria | mpc.branch | 2 | `transformador_de_potencia` | Transformador de potência | sistema | interligacao, transformacao | ratio<>0 |
+
+### Atributos: mapeamento coluna a coluna
+
+| camada de origem | coluna | grupo | atributo | nome | tipo | unidade | obrigatório | conferida | observação |
+|---|---|---|---|---|---|---|---|---|---|
+| mpc.bus | `area` | `barra` | `area` | área do sistema | inteiro | — | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.bus | `baseKV` | `barra` | `base_kv` | tensão de base da barra | real | kV | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.bus | `bus_i` | `barra` | `bus_i` | número da barra no caso | inteiro | — | sim | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.bus | `type` | `barra` | `bus_type` | tipo da barra | inteiro | — | sim | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.gen | `bus` | `barra` | `gen_n` | quantidade de geradores ligados à barra | inteiro | — | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte Somado por barra: o caseformat permite mais de uma linha da matriz gen na mesma barra. |
+| mpc.gen | `Pg` | `barra` | `gen_pg` | potência ativa gerada na barra | real | MW | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte Soma das linhas da matriz gen desta barra. |
+| mpc.gen | `Qg` | `barra` | `gen_qg` | potência reativa gerada na barra | real | Mvar | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte Soma das linhas da matriz gen desta barra. |
+| mpc.gen | `Vg` | `barra` | `gen_vg` | tensão de referência do gerador | real | pu | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte Da primeira linha da matriz gen desta barra. |
+| mpc.bus | `Pd` | `barra` | `pd` | potência ativa demandada | real | MW | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.bus | `Qd` | `barra` | `qd` | potência reativa demandada | real | Mvar | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.bus | `Va` | `barra` | `va` | ângulo da tensão | real | grau | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.bus | `Vm` | `barra` | `vm` | módulo da tensão | real | pu | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.branch | `angle` | `ramo` | `angle` | defasagem angular | real | grau | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.branch | `b` | `ramo` | `b` | susceptância total de carregamento | real | pu | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.branch | `fbus` | `ramo` | `f_bus` | barra de origem | inteiro | — | sim | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.branch | `r` | `ramo` | `r` | resistência | real | pu | sim | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.branch | `rateA` | `ramo` | `rate_a` | capacidade de longa duração | real | MVA | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.branch | `ratio` | `ramo` | `ratio` | relação de transformação | real | — | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.branch | `status` | `ramo` | `status` | em serviço | inteiro | — | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.branch | `tbus` | `ramo` | `t_bus` | barra de destino | inteiro | — | sim | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.branch | `x` | `ramo` | `x` | reatância | real | pu | sim | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+
+Total: 21 atributos, 21 com origem conferida em extração real e 0 declarados da fonte sem conferência.
+
+
+### Regras de conexão
+
+| tipo de regra | de | para | o que diz |
+|---|---|---|---|
+| juncao_aresta | `ramo/1` | `barra/1` | ramo ligado à barra |
+| juncao_aresta | `ramo/1` | `barra/2` | ramo ligado à barra |
+| juncao_aresta | `ramo/1` | `barra/3` | ramo ligado à barra |
+| juncao_aresta | `ramo/1` | `barra/4` | ramo ligado à barra |
+| juncao_aresta | `ramo/2` | `barra/1` | ramo ligado à barra |
+| juncao_aresta | `ramo/2` | `barra/2` | ramo ligado à barra |
+| juncao_aresta | `ramo/2` | `barra/3` | ramo ligado à barra |
+| juncao_aresta | `ramo/2` | `barra/4` | ramo ligado à barra |

@@ -3298,7 +3298,7 @@
   },
   {
    "codigo": "controlador",
-   "descricao": "Ajusta grandeza elétrica (tensão, reativo) sem interromper o circuito.",
+   "descricao": "Ajusta grandeza elétrica (tensão, reativo) sem interromper o circuito, ou ancora o controlador de uma subrede (só um tipo com esta categoria pode controlar uma subrede).",
    "nome": "Controlador"
   },
   {
@@ -3508,11 +3508,11 @@
  ],
  "pacote": {
   "codigo": "eletrica-br",
-  "descricao": "Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 13 camadas de rede da BDGD (Módulo 10 do PRODIST). Dez camadas têm mapeamento coluna a coluna conferido contra uma extração real de distribuidora; cinco camadas (SUB, UNSEMT, UNCRMT, UNREMT, UGMT_tab) trazem colunas declaradas do Módulo 10, ainda não conferidas — cada atributo diz qual é o seu caso em origem.conferida.",
+  "descricao": "Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 13 camadas de rede da BDGD (Módulo 10 do PRODIST). Dez camadas têm mapeamento coluna a coluna conferido contra uma extração real de distribuidora; cinco camadas (SUB, UNSEMT, UNCRMT, UNREMT, UGMT_tab) trazem colunas declaradas do Módulo 10, ainda não conferidas — cada atributo diz qual é o seu caso em origem.conferida. Desde a versão 1.1.0, subestação, disjuntor de saída e transformador de distribuição também carregam a categoria controlador (ADR 20260907T2031-controlador-de-subrede-e-tiers), porque são os ativos que de fato ancoram o controlador de uma subrede na distribuição.",
   "disciplina": "eletrica",
   "fonte": "https://dadosabertos.aneel.gov.br/dataset/base-de-dados-geografica-da-distribuidora-bdgd",
   "nome": "Elétrica de distribuição (Brasil, BDGD Módulo 10)",
-  "versao": "1.0.0"
+  "versao": "1.1.0"
  },
  "regras": [
   {
@@ -3830,6 +3830,7 @@
   },
   {
    "categorias": [
+    "controlador",
     "dispositivo_de_protecao"
    ],
    "chave": "disjuntor",
@@ -3981,6 +3982,7 @@
   },
   {
    "categorias": [
+    "controlador",
     "fonte"
    ],
    "chave": "subestacao_de_distribuicao",
@@ -3994,6 +3996,7 @@
   },
   {
    "categorias": [
+    "controlador",
     "transformacao"
    ],
    "chave": "transformador_de_distribuicao",
