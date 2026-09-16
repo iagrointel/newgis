@@ -24,19 +24,24 @@ from app.catalogo import tipos as catalogo_tipos
 from app.catalogo.comum import registrar_evento, uuid_ok
 from app.catalogo.modelos import Item as ItemSaida
 from app.catalogo.modelos import JobCriado
+from app.conexao import cache as cache_conexao
+from app.conexao import copia as copia_mod
 from app.conexao import credencial as credencial_mod
 from app.conexao import descoberta as descoberta_mod  # `publicar_camada` já usa a variável local `descoberta`
-from app.conexao import proveniencia, seguranca
+from app.conexao import google_sheets, ladrilhos, proveniencia, seguranca, vetor_externo
 from app.conexao.modelos import (
     ArquivoUrlEntrada,
     ArquivoUrlEstado,
     CamadasPagina,
+    CamposSaida,
+    ColecoesPagina,
     Conexao,
     ConexaoEditar,
     ConexaoEntrada,
     ConexaoPagina,
     ConexaoTeste,
     DescobrirResultado,
+    FeicoesSaida,
     PublicarCamadaEntrada,
     SaudeHistoricoPagina,
 )
@@ -121,6 +126,84 @@ def _url_ok(url: str) -> None:
         raise ErroAPI(422, "url_insegura", f"URL recusada: {e.motivo}", {"motivo": e.motivo}) from e
 
 
+def _config_tiles_ok(tipo: str, url: str, config: dict) -> dict:
+    """PMTiles/XYZ (item L6-02-g-pmtiles-xyz-tilejson): `config.atribuicao`/`zoom_min`/`zoom_max` obrigatórios
+    (e `formato`/marcadores `{z}{x}{y}` para xyz) — ver `app.conexao.ladrilhos.validar_config`. Devolve o
+    `config` já normalizado; para qualquer outro tipo devolve o `config` recebido, sem tocar."""
+    try:
+        return ladrilhos.validar_config(tipo, url, config)
+    except ladrilhos.ErroConfigTiles as e:
+        raise ErroAPI(422, e.codigo, str(e), {"campo": e.campo}) from e
+
+
+def _range_pmtiles_ok(url: str) -> None:
+    """PMTiles (item L6-02-g-pmtiles-xyz-tilejson): recusa a conexão ANTES de gravar se o servidor não honrar
+    `Range`/206 — ver `app.conexao.ladrilhos.verificar_range_pmtiles` (a refutação do item: adversário que
+    devolve 200 ignorando o Range)."""
+    resultado = ladrilhos.verificar_range_pmtiles(url)
+    if not resultado.ok:
+        raise ErroAPI(
+            422, "pmtiles_sem_range",
+            f"o servidor não confirmou suporte a Range/206 para PMTiles: {resultado.motivo}",
+            {"motivo": resultado.motivo, "status": resultado.status},
+        )
+
+
+def _url_de_planilha(tipo: str, url: str) -> str:
+    """Item L6-02-i: conexão `google_sheets` só registra URL de planilha do Google, e já na forma CANÔNICA de
+    exportação CSV (`/export?format=csv`), com o gid da aba preservado — o que fica gravado é o endereço que
+    a sincronização vai baixar, não a página de edição que o usuário colou. Qualquer outra URL vira 422."""
+    if tipo != "google_sheets":
+        return url
+    try:
+        return google_sheets.url_exportacao_csv(url)
+    except google_sheets.ErroGoogleSheets as e:
+        raise ErroAPI(422, e.motivo, e.detalhe, {"motivo": e.motivo}) from e
+
+
+def _credencial_de_planilha_ok(tipo: str, credencial: str | None) -> None:
+    """A credencial de `google_sheets` é o JSON da conta de serviço: confere na ENTRADA (422 se inválido),
+    sem nunca ecoar o conteúdo na resposta — a exceção carrega só o nome do campo problemático."""
+    if tipo != "google_sheets" or credencial is None:
+        return
+    try:
+        google_sheets.validar_conta_servico(credencial)
+    except google_sheets.ErroGoogleSheets as e:
+        raise ErroAPI(422, e.motivo, e.detalhe, {"motivo": e.motivo}) from e
+
+
+def _conector(cur, cid: str, auth: Auth) -> tuple[vetor_externo.Conector, dict]:
+    """Monta o conector a partir da linha (RLS já aplicada por `_carregar`), decifrando a credencial só aqui."""
+    r = _carregar(cur, cid)
+    if r["tipo"] not in vetor_externo.TIPOS_SUPORTADOS:
+        raise ErroAPI(
+            422, "tipo_sem_conector",
+            f"conexão do tipo {r['tipo']!r}; este conector atende {vetor_externo.TIPOS_SUPORTADOS}",
+            {"tipo": r["tipo"], "suportados": list(vetor_externo.TIPOS_SUPORTADOS)},
+        )
+    cabecalhos = None
+    if r["tem_credencial"]:
+        cur.execute("SELECT credencial_cifrada FROM plat.conexao WHERE id = %s::uuid", (cid,))
+        bruta = cur.fetchone()["credencial_cifrada"]
+        try:
+            token = decifrar_com_rotacao(
+                credencial_mod.decifrar, bruta, settings.PLAT_SECRET, settings.PLAT_SECRET_ANTERIOR
+            )
+            cabecalhos = {"Authorization": f"Bearer {token}"}
+        except Exception:  # noqa: BLE001 — mesma decisão do teste de saúde: nunca quebra a rota
+            cabecalhos = None
+    return vetor_externo.Conector(tipo=r["tipo"], url=r["url"], cabecalhos=cabecalhos), r
+
+
+def _erro_do_conector(e: vetor_externo.ErroConector) -> ErroAPI:
+    """Falha do serviço de terceiro NUNCA vira 500 nosso: vira 502 com o motivo nomeado (o usuário precisa
+    distinguir "o serviço deles está fora" de "a plataforma quebrou")."""
+    if e.motivo == "colecao_inexistente":
+        return ErroAPI(404, "colecao_inexistente", f"a conexão não publica a coleção {e.detalhe!r}")
+    return ErroAPI(502, "servico_externo", f"o serviço externo não atendeu: {e.motivo}",
+                   {"motivo": e.motivo, "detalhe": e.detalhe[:400]})
+
+
 @router.get("", response_model=ConexaoPagina, openapi_extra=LER)
 def listar(tipo: str | None = None, auth: Auth = autenticado(escopo_token="catalogo:ler")):
     onde, params = ["true"], []
@@ -143,6 +226,123 @@ def ver(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
         return _json(_carregar(cur, cid))
 
 
+@router.get("/{id}/tilejson", openapi_extra=LER)
+def tilejson(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """TileJSON 3.0.0 de uma conexão `xyz` (item L6-02-g-pmtiles-xyz-tilejson) — só monta o que a conexão já
+    guarda (`app.conexao.ladrilhos.tilejson`), nunca sonda o serviço de novo."""
+    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
+    with db.db(auth.contexto()) as cur:
+        r = _json(_carregar(cur, cid))
+    if r["tipo"] != "xyz":
+        raise ErroAPI(
+            422, "tipo_sem_tilejson", "TileJSON só existe para conexões do tipo xyz", {"tipo": r["tipo"]}
+        )
+    return ladrilhos.tilejson(r)
+
+
+@router.get("/{id}/colecoes", response_model=ColecoesPagina, openapi_extra=LER)
+def listar_colecoes(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """Coleções que o serviço publica: `wfs:FeatureTypeList` do GetCapabilities (WFS 2.0) ou `GET /collections`
+    (OGC API - Features). Resposta em cache curto por (inquilino, conexão)."""
+    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
+    chave = (auth.tenant_id, cid, "colecoes")
+    guardado = cache_conexao.obter(chave)
+    if guardado is not None:
+        return {**guardado, "do_cache": True}
+    with db.db(auth.contexto()) as cur:
+        conector, _ = _conector(cur, cid, auth)
+    try:
+        cols = vetor_externo.listar_colecoes(conector)
+    except vetor_externo.ErroConector as e:
+        raise _erro_do_conector(e) from e
+    corpo = {"total": len(cols), "itens": [
+        {"nome": c.nome, "titulo": c.titulo, "crs_nativo": c.crs_nativo, "srid_nativo": c.srid_nativo,
+         "srid_entregue": c.srid_entregue, "extent_4326": c.extent_4326, "formatos": list(c.formatos)}
+        for c in cols
+    ]}
+    cache_conexao.guardar(chave, corpo)
+    return {**corpo, "do_cache": False}
+
+
+@router.get("/{id}/colecoes/{colecao}/campos", response_model=CamposSaida, openapi_extra=LER)
+def campos_da_colecao(id: str, colecao: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """Atributos e o tipo que o SERVIÇO declara (`DescribeFeatureType` no WFS, `/queryables` no OGC API). Quando
+    o serviço não declara nada, os tipos vêm de uma amostra de uma feição e `origem_do_tipo` diz `amostra` —
+    inferido nunca é apresentado como declarado."""
+    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
+    chave = (auth.tenant_id, cid, "campos", colecao)
+    guardado = cache_conexao.obter(chave)
+    if guardado is not None:
+        return {**guardado, "do_cache": True}
+    with db.db(auth.contexto()) as cur:
+        conector, _ = _conector(cur, cid, auth)
+    try:
+        col = vetor_externo.colecao_ou_erro(conector, colecao)
+        campos, _ = vetor_externo.descrever_campos(conector, col)
+    except vetor_externo.ErroConector as e:
+        raise _erro_do_conector(e) from e
+    normalizados = copia_mod._normalizar_campos(campos)
+    corpo = {"colecao": col.nome, "itens": [
+        {"nome": c["nome"], "origem": c["origem"], "tipo": c["tipo"], "tipo_declarado": c["tipo_declarado"],
+         "origem_do_tipo": c["origem_do_tipo"]}
+        for c in normalizados
+    ]}
+    cache_conexao.guardar(chave, corpo)
+    return {**corpo, "do_cache": False}
+
+
+@router.get("/{id}/colecoes/{colecao}/feicoes", response_model=FeicoesSaida, openapi_extra=LER)
+def feicoes_da_colecao(
+    id: str, colecao: str, bbox: str | None = None, datahora: str | None = None,
+    limite: int = limites.CONEXAO_VETOR_PREVIA_MAX,
+    auth: Auth = autenticado(escopo_token="catalogo:ler"),
+):
+    """Feições ao vivo (modo referenciado), no máximo `CONEXAO_VETOR_PREVIA_MAX` por chamada. `bbox` é
+    `minx,miny,maxx,maxy` em graus (CRS84) e `datahora` é o `datetime` do OGC API (instante ou intervalo).
+    A resposta traz `numberMatched` (o total que o serviço declara) ao lado de `numberReturned` — sem os dois
+    não dá para saber se a página é a coleção inteira."""
+    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
+    limite = max(1, min(limite, limites.CONEXAO_VETOR_PREVIA_MAX))
+    caixa = None
+    if bbox:
+        try:
+            caixa = [float(v) for v in bbox.split(",")]
+        except ValueError as e:
+            raise ErroAPI(422, "bbox_invalido", "bbox deve ser minx,miny,maxx,maxy em graus") from e
+        if len(caixa) != 4:
+            raise ErroAPI(422, "bbox_invalido", "bbox deve ter exatamente 4 números")
+    chave = (auth.tenant_id, cid, "feicoes", colecao, bbox, datahora, limite)
+    guardado = cache_conexao.obter(chave)
+    if guardado is not None:
+        return {**guardado, "do_cache": True}
+    with db.db(auth.contexto()) as cur:
+        conector, _ = _conector(cur, cid, auth)
+    try:
+        col = vetor_externo.colecao_ou_erro(conector, colecao)
+        formato = vetor_externo._formato_json_wfs(col) if conector.tipo == "wfs" else "application/geo+json"
+        if conector.tipo == "wfs" and not formato:
+            raise ErroAPI(
+                422, "formato_json_indisponivel",
+                "este WFS não anuncia nenhum outputFormat JSON; use o modo copiado (job conexao.copiar_vetor), "
+                "que converte o GML localmente",
+                {"formatos": list(col.formatos)},
+            )
+        pag = vetor_externo.Paginador(conector, col, bbox=caixa, datahora=datahora,
+                                      tam_pagina=limite, limite=limite, formato_json=formato)
+        feicoes: list[dict] = []
+        for lote in pag.paginas_json():
+            feicoes.extend(lote)
+    except vetor_externo.ErroConector as e:
+        raise _erro_do_conector(e) from e
+    corpo = {
+        "type": "FeatureCollection", "features": feicoes, "numberReturned": len(feicoes),
+        "numberMatched": pag.relatorio.numero_matched, "colecao": col.nome,
+        "srid_entregue": col.srid_entregue, "avisos": pag.relatorio.avisos,
+    }
+    cache_conexao.guardar(chave, corpo)
+    return {**corpo, "do_cache": False}
+
+
 @router.post("", response_model=Conexao, status_code=201, openapi_extra=CRIAR)
 def criar(corpo: ConexaoEntrada, request: Request, auth: Auth = autenticado("conteudo.criar")):
     if not auth.tem("conteudo.registrar_fonte"):
@@ -150,8 +350,13 @@ def criar(corpo: ConexaoEntrada, request: Request, auth: Auth = autenticado("con
             403, "sem_privilegio", "a operação exige o privilégio conteudo.registrar_fonte",
             {"exigido": "conteudo.registrar_fonte"},
         )
+    corpo.url = _url_de_planilha(corpo.tipo, corpo.url)
     _url_ok(corpo.url)
+    _credencial_de_planilha_ok(corpo.tipo, corpo.credencial)
     _config_ok(corpo.config)
+    corpo.config = _config_tiles_ok(corpo.tipo, corpo.url, corpo.config)
+    if corpo.tipo == "pmtiles":
+        _range_pmtiles_ok(corpo.url)
     credencial_cifrada = credencial_mod.cifrar(corpo.credencial, settings.PLAT_SECRET) if corpo.credencial else None
     with db.db(auth.contexto()) as cur:
         try:
@@ -184,7 +389,10 @@ def editar(id: str, corpo: ConexaoEditar, request: Request, auth: Auth = autenti
         if corpo.nome is not None:
             campos.append("nome = %s")
             params.append(" ".join(corpo.nome.split()))
+        url_nova = corpo.url if corpo.url is not None else r["url"]
         if corpo.url is not None:
+            corpo.url = _url_de_planilha(r["tipo"], corpo.url)
+            url_nova = corpo.url
             _url_ok(corpo.url)
             campos.append("url = %s")
             params.append(corpo.url)
@@ -194,11 +402,19 @@ def editar(id: str, corpo: ConexaoEditar, request: Request, auth: Auth = autenti
             params.append(corpo.modo)
         if corpo.config is not None:
             _config_ok(corpo.config)
+            config_nova = _config_tiles_ok(r["tipo"], url_nova, corpo.config)
             campos.append("config = %s::jsonb")
-            params.append(json.dumps(corpo.config, ensure_ascii=False))
+            params.append(json.dumps(config_nova, ensure_ascii=False))
+        elif corpo.url is not None and r["tipo"] in ("pmtiles", "xyz"):
+            # a URL mudou mas o config não veio nesta edição: revalida contra o config já gravado (o
+            # `atribuicao`/zoom continuam obrigatórios, e xyz precisa dos marcadores {z}{x}{y} na URL NOVA)
+            _config_tiles_ok(r["tipo"], url_nova, r["config"] or {})
+        if corpo.url is not None and r["tipo"] == "pmtiles":
+            _range_pmtiles_ok(corpo.url)
         if corpo.remover_credencial:
             campos.append("credencial_cifrada = NULL")
         elif corpo.credencial is not None:
+            _credencial_de_planilha_ok(r["tipo"], corpo.credencial)
             campos.append("credencial_cifrada = %s")
             params.append(credencial_mod.cifrar(corpo.credencial, settings.PLAT_SECRET))
         if campos:
@@ -209,6 +425,8 @@ def editar(id: str, corpo: ConexaoEditar, request: Request, auth: Auth = autenti
             except psycopg2.Error as e:
                 raise auth_comum.erro_do_banco(e) from e
             campos_alterados = [c.split(" =")[0] for c in campos]
+            # servir a resposta da URL/coleção antiga depois da edição seria mentira, não cache (item L6-02-c)
+            cache_conexao.esquecer((auth.tenant_id, cid))
             registrar_evento(cur, request, "conexoes/editar", "conexao", cid, {"campos": campos_alterados})
         return _json(_carregar(cur, cid))
 
@@ -220,6 +438,7 @@ def apagar(id: str, request: Request, auth: Auth = autenticado()):
         r = _carregar(cur, cid)
         _pode_editar(r, auth)
         cur.execute("DELETE FROM plat.conexao WHERE id = %s::uuid", (cid,))
+        cache_conexao.esquecer((auth.tenant_id, cid))
         registrar_evento(cur, request, "conexoes/apagar", "conexao", cid, {"nome": r["nome"]})
 
 
@@ -231,25 +450,37 @@ def testar(id: str, request: Request, auth: Auth = autenticado()):
         _pode_editar(r, auth)
         url = r["url"]
 
-    # decifra a credencial só em memória, só aqui, e só para autenticar o teste — nunca volta na resposta
+    # decifra a credencial só em memória, só aqui, e só para autenticar o teste — nunca volta na resposta.
+    # google_sheets: a credencial é o JSON da conta de serviço e a autenticação é a troca por access token
+    # (item L6-02-i); conta recusada pelo Google vira teste com erro e mensagem em português, nunca exceção.
     cabecalhos = None
+    falha_credencial: str | None = None
     if r["tem_credencial"]:
         with db.db(auth.contexto()) as cur:
             cur.execute("SELECT credencial_cifrada FROM plat.conexao WHERE id = %s::uuid", (cid,))
             bruta = cur.fetchone()["credencial_cifrada"]
         try:
-            token = decifrar_com_rotacao(
+            em_claro = decifrar_com_rotacao(
                 credencial_mod.decifrar, bruta, settings.PLAT_SECRET, settings.PLAT_SECRET_ANTERIOR
             )
-            cabecalhos = {"Authorization": f"Bearer {token}"}
         except Exception:  # noqa: BLE001 — PLAT_SECRET (e ANTERIOR) trocados ou dado corrompido: testa sem
             # credencial, nunca quebra a rota (InvalidTag do AEAD não é ValueError — abrangido de propósito)
-            cabecalhos = None
+            em_claro = None
+        try:
+            cabecalhos = google_sheets.cabecalhos_auth(r["tipo"], em_claro)
+        except google_sheets.ErroGoogleSheets as e:
+            falha_credencial = e.detalhe
 
-    resultado = seguranca.buscar_seguro(
-        url, metodo="GET", timeout_conectar=limites.CONEXAO_CONECTAR_TIMEOUT_S,
-        timeout_ler=limites.CONEXAO_LER_TIMEOUT_S, cabecalhos=cabecalhos,
-    )
+    if falha_credencial is not None:
+        resultado = seguranca.ResultadoBusca(
+            ok=False, status=None, mensagem=falha_credencial, url_final=url,
+            latencia_ms=0, saltos=0,
+        )
+    else:
+        resultado = seguranca.buscar_seguro(
+            url, metodo="GET", timeout_conectar=limites.CONEXAO_CONECTAR_TIMEOUT_S,
+            timeout_ler=limites.CONEXAO_LER_TIMEOUT_S, cabecalhos=cabecalhos,
+        )
     saude = "ok" if resultado.ok else "erro"
     with db.db(auth.contexto()) as cur:
         # plat.conexao_saude_registrar (036) grava saude/saude_mensagem/... E o histórico (item L6-02-l-saude)
@@ -381,15 +612,17 @@ def _arquivo_estado(cur, cid: str) -> dict:
 def arquivo_configurar(id: str, corpo: ArquivoUrlEntrada, request: Request,
                        auth: Auth = autenticado("conteudo.publicar_camada")):
     """Marca a conexão como fonte de arquivo por URL e define o intervalo da atualização agendada (item
-    L6-02-h). Só faz sentido em conexão `http` no modo `copiada`: `referenciada` significa que o dado FICA no
-    serviço de origem, e este item copia o arquivo para dentro da plataforma."""
+    L6-02-h; `google_sheets` entra pelo item L6-02-i — a planilha vira o MESMO CSV por URL). Só faz sentido
+    em conexão no modo `copiada`: `referenciada` significa que o dado FICA no serviço de origem, e este
+    item copia o arquivo para dentro da plataforma."""
     cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
     with db.db(auth.contexto()) as cur:
         r = _carregar(cur, cid)
-        if r["tipo"] != "http" or r["modo"] != "copiada":
+        if r["tipo"] not in ("http", "google_sheets") or r["modo"] != "copiada":
             raise ErroAPI(
                 422, "conexao_incompativel",
-                f"arquivo por URL exige conexão de tipo 'http' no modo 'copiada'; esta é {r['tipo']!r}/{r['modo']!r}",
+                f"arquivo por URL exige conexão 'http' ou 'google_sheets' no modo 'copiada'; "
+                f"esta é {r['tipo']!r}/{r['modo']!r}",
                 {"tipo": r["tipo"], "modo": r["modo"]},
             )
         cur.execute("SELECT plat.conexao_arquivo_configurar(%s::uuid, %s, %s)",

@@ -1,14 +1,16 @@
 """Item L6-02-g-pmtiles-xyz-tilejson: as rotas de `plat.conexao` recusam pmtiles/xyz sem
 `config.atribuicao`/`zoom_min`/`zoom_max` (e xyz sem `formato`/marcadores `{z}{x}{y}` na URL), recusam pmtiles
 cujo servidor não confirma `Range`/206, e `GET /api/conexoes/{id}/tilejson` monta o TileJSON de uma conexão
-xyz. A checagem de Range é feita contra um PMTiles público real (Tigris/protomaps, `accept-ranges: bytes`
-conferido por HTTP em 07/09/2026) — marcado `lento` (rede real), como o resto do módulo."""
+xyz. A checagem de Range é feita contra um PMTiles público real (R2/protomaps, `accept-ranges: bytes`
+conferido por HTTP em 16/09/2026 — o `demo-bucket.protomaps.com/v4.pmtiles` de 07/09/2026 saiu do ar, 404;
+trocado pelo dataset de amostra oficial da Protomaps, mesmo bucket público `r2-public.protomaps.com`) —
+marcado `lento` (rede real), como o resto do módulo."""
 
 import pytest
 
 from tests.api.conftest import PREFIXO_TESTE
 
-URL_PMTILES_PUBLICA = "https://demo-bucket.protomaps.com/v4.pmtiles"
+URL_PMTILES_PUBLICA = "https://r2-public.protomaps.com/protomaps-sample-datasets/cb_2018_us_zcta510_500k.pmtiles"
 
 
 @pytest.fixture

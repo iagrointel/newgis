@@ -203,7 +203,7 @@ def trocar_por_token(conta: dict) -> str:
         f"grant_type={GRANT_JWT_BEARER}&assertion={assertion}"
     ).encode("ascii")
     r = seguranca.buscar_seguro(
-        conta["token_uri"], metodo="POST", conteudo=corpo,
+        conta["token_uri"], metodo="POST", corpo_envio=corpo,
         cabecalhos={"Content-Type": "application/x-www-form-urlencoded"},
         guardar_corpo=True, max_bytes=TOKEN_RESPOSTA_MAX_BYTES, max_redirects=0,
         timeout_ler=20.0,

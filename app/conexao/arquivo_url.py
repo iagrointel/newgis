@@ -85,17 +85,22 @@ def condicionais(etag: str | None, last_modified: str | None) -> dict[str, str]:
 
 
 def baixar(url: str, *, etag: str | None = None, last_modified: str | None = None,
-           credencial: str | None = None, max_bytes: int = limites.CONEXAO_ARQUIVO_MAX_BYTES) -> Baixado:
+           credencial: str | None = None, cabecalhos: dict[str, str] | None = None,
+           max_bytes: int = limites.CONEXAO_ARQUIVO_MAX_BYTES) -> Baixado:
     """Um GET condicional por `buscar_seguro`. Nunca levanta: recusa de segurança vira `ok=False` com o motivo
-    em `mensagem` (`url_insegura:...`), do mesmo jeito que o teste de saúde do L6-02-a."""
+    em `mensagem` (`url_insegura:...`), do mesmo jeito que o teste de saúde do L6-02-a. `cabecalhos` (item
+    L6-02-i: Bearer do access token do Google, que NÃO é a credencial gravada — essa é o JSON da conta de
+    serviço) tem precedência sobre `credencial`."""
     import hashlib
 
-    cabecalhos = condicionais(etag, last_modified)
+    montados = condicionais(etag, last_modified)
     if credencial:
-        cabecalhos["Authorization"] = f"Bearer {credencial}"
+        montados["Authorization"] = f"Bearer {credencial}"
+    if cabecalhos:
+        montados.update(cabecalhos)
     r = seguranca.buscar_seguro(
         url, metodo="GET", timeout_ler=limites.CONEXAO_ARQUIVO_LER_TIMEOUT_S, max_bytes=max_bytes,
-        cabecalhos=cabecalhos, guardar_corpo=True,
+        cabecalhos=montados, guardar_corpo=True,
     )
     if r.status == 304:
         return Baixado(ok=True, nao_modificado=True, status=304, mensagem="nao_modificado",
