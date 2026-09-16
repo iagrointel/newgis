@@ -18,6 +18,7 @@ import time
 import psycopg2
 import pytest
 
+from app import esquema_dado
 from app.schema_ambiente import CursorSchemaAmbiente
 from tests.api.conftest import entrar, novo_cliente
 from tests.api.test_rls import contexto
@@ -64,11 +65,11 @@ class Camada:
         self.inq = inq
         self.sessao = inq.admin
         self.tabela = "c_" + secrets.token_hex(8)
-        self.esquema = "d_" + inq.slug
         self.campos = campos
         contexto(con, inq.id, usuario_id=inq.admin_id, login="admin")
         colunas = ", ".join(f'{c["nome"]} {c["tipo"]}' for c in campos)
         with con.cursor() as cur:
+            self.esquema = esquema_dado.esquema(cur, inq.slug)
             cur.execute("SELECT plat.camada_schema_garantir(%s)", (inq.slug,))
             cur.execute(
                 f"CREATE TABLE {self.esquema}.{self.tabela} "

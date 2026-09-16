@@ -18,6 +18,7 @@ import uuid
 
 import pytest
 
+from app import esquema_dado
 from tests.api.exportacao.conftest import InquilinoDeExportacao, WorkerDeTeste, _contexto, conexao
 from tests.api.geoparquet.conftest import gerar
 
@@ -93,12 +94,12 @@ def _semear(env, inq, titulo: str, geometria: str, colunas: str, insercao: str, 
             campos: list, feicoes: int) -> dict:
     tabela = "c_" + uuid.uuid4().hex[:16]
     item_id = str(uuid.uuid4())
-    schema = f"d_{inq.slug}"
-    alvo = f'"{schema}"."{tabela}"'
     con = conexao(env)
     try:
         _contexto(con, inq.id, inq.admin_id)
         with con.cursor() as cur:
+            schema = esquema_dado.esquema(cur, inq.slug)
+            alvo = f'"{schema}"."{tabela}"'
             cur.execute("SELECT plat.camada_schema_garantir(%s)", (inq.slug,))
             cur.execute(f"CREATE TABLE {alvo} (fid bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, {colunas})")
             cur.execute(insercao.format(alvo=alvo), parametros)

@@ -145,6 +145,7 @@ def criar_camada_poligonos(env, sessao, slug: str, poligonos: list[tuple[str, li
     em coordenadas do `srid`."""
     import json
 
+    from app import esquema_dado
     from tests import jobs_sessao
     from tests.api.conftest import PREFIXO_TESTE
     from tests.api.test_rls import contexto, ids_por_slug
@@ -158,8 +159,8 @@ def criar_camada_poligonos(env, sessao, slug: str, poligonos: list[tuple[str, li
         contexto(con, ids[slug], usuario_id=adm, login="admin")
         item_id = str(uuid.uuid4())
         tabela = "c_" + uuid.UUID(item_id).hex[:16]
-        schema = f"d_{slug}"
         with con.cursor() as cur:
+            schema = esquema_dado.esquema(cur, slug)
             cur.execute("SELECT to_regnamespace(%s) IS NULL AS falta", (schema,))
             if cur.fetchone()["falta"]:
                 cur.execute("SELECT plat.camada_schema_garantir(%s)", (slug,))

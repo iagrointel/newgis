@@ -14,6 +14,7 @@ import uuid
 
 import pytest
 
+from app import esquema_dado
 from tests.api.exportacao.conftest import (
     FEICOES,  # noqa: F401 — reexportado por conveniência de quem só quer o número
     InquilinoDeExportacao,
@@ -47,11 +48,11 @@ def semear_camada_particionavel(env, inq, feicoes: int, titulo: str, ufs=None) -
     ufs = ufs or UFS
     tabela = "c_" + uuid.uuid4().hex[:16]
     item_id = str(uuid.uuid4())
-    schema = f"d_{inq.slug}"
     con = conexao(env)
     try:
         _contexto(con, inq.id, inq.admin_id)
         with con.cursor() as cur:
+            schema = esquema_dado.esquema(cur, inq.slug)
             cur.execute("SELECT plat.camada_schema_garantir(%s)", (inq.slug,))
             cur.execute(
                 f'CREATE TABLE "{schema}"."{tabela}" ('

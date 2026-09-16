@@ -31,7 +31,7 @@ import uuid
 
 import pytest
 
-from app import objetos
+from app import esquema_dado, objetos
 from app.settings import settings
 from tests.api.exportacao.conftest import _contexto, conexao
 from tests.api.geoparquet.conftest import (
@@ -47,11 +47,11 @@ def _semear_poligonos(env, inq, feicoes: int, titulo: str) -> dict:
     """Polígonos (não pontos): ST_Area só é uma prova de verdade sobre um polígono — em ponto é sempre 0."""
     tabela = "c_" + uuid.uuid4().hex[:16]
     item_id = str(uuid.uuid4())
-    schema = f"d_{inq.slug}"
     con = conexao(env)
     try:
         _contexto(con, inq.id, inq.admin_id)
         with con.cursor() as cur:
+            schema = esquema_dado.esquema(cur, inq.slug)
             cur.execute("SELECT plat.camada_schema_garantir(%s)", (inq.slug,))
             cur.execute(
                 f'CREATE TABLE "{schema}"."{tabela}" ('
@@ -298,11 +298,11 @@ def test_coluna_nao_declarada_no_item_nunca_aparece_no_arquivo(inquilino_gp, wor
     Parquet gerado não pode trazer essa coluna."""
     tabela = "c_" + uuid.uuid4().hex[:16]
     item_id = str(uuid.uuid4())
-    schema = f"d_{inquilino_gp.slug}"
     con = conexao(env)
     try:
         _contexto(con, inquilino_gp.id, inquilino_gp.admin_id)
         with con.cursor() as cur:
+            schema = esquema_dado.esquema(cur, inquilino_gp.slug)
             cur.execute("SELECT plat.camada_schema_garantir(%s)", (inquilino_gp.slug,))
             cur.execute(
                 f'CREATE TABLE "{schema}"."{tabela}" (fid bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, '

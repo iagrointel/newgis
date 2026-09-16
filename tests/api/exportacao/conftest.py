@@ -30,6 +30,7 @@ from pathlib import Path
 import psycopg2
 import pytest
 
+from app import esquema_dado
 from app.schema_ambiente import CursorSchemaAmbiente
 from tests.api.conftest import InquilinoTemporario, Usuarios
 
@@ -178,14 +179,16 @@ def _contexto(con, tenant_id: int, usuario_id: int) -> None:
 
 
 def semear_camada(env, inq, feicoes: int, titulo: str, prefixo: str = "ponto") -> dict:
-    """Cria `d_<slug>.c_<16 hex>` com `feicoes` pontos e publica o item `camada_vetorial`. Devolve o item."""
+    """Cria `<prefixo>d_<slug>.c_<16 hex>` (prefixo de instalação de `plat.camada_schema_prefixo()`; `d_` em
+    produção, `d_plat_t<trilha>_` numa trilha — ver app/esquema_dado.py) com `feicoes` pontos e publica o item
+    `camada_vetorial`. Devolve o item."""
     tabela = "c_" + uuid.uuid4().hex[:16]
     item_id = str(uuid.uuid4())
-    schema = f"d_{inq.slug}"
     con = conexao(env)
     try:
         _contexto(con, inq.id, inq.admin_id)
         with con.cursor() as cur:
+            schema = esquema_dado.esquema(cur, inq.slug)
             cur.execute("SELECT plat.camada_schema_garantir(%s)", (inq.slug,))
             cur.execute(
                 f'CREATE TABLE "{schema}"."{tabela}" ('

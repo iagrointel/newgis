@@ -15,6 +15,7 @@ import uuid
 import psycopg2.extras
 import pytest
 
+from app import esquema_dado
 from tests.api.conftest import PREFIXO_TESTE
 from tests.api.test_rls import contexto, ids_por_slug
 
@@ -38,10 +39,10 @@ class FabricaCamada:
     def criar(
         self, slug, tenant_id, usuario_id, campos, geometria="Point", regras_campo=None, edicao=None
     ) -> tuple[str, dict]:
-        schema = f"d_{slug}"
         tabela = "c_" + uuid.uuid4().hex[:16]
         contexto(self.con, tenant_id, usuario_id=usuario_id, login="admin")
         with self.con.cursor() as cur:
+            schema = esquema_dado.esquema(cur, slug)
             cur.execute("SELECT plat.camada_schema_garantir(%s)", (slug,))
             cols_sql = "".join(f', "{c["nome"]}" {c["tipo"]}' for c in campos)
             cur.execute(f'CREATE TABLE "{schema}"."{tabela}" (fid serial primary key, '

@@ -5,10 +5,12 @@ inquilino tem de nascer de `app.esquema_dado.esquema()` (Python) ou de `plat.cam
 isolada aponta para o `d_<slug>` de PRODUÇÃO (`permission denied for schema d_demo`, medido 11-15/09/2026 em
 `tests/api/ferramentas/apoio.py::criar_camada`).
 
-Este teste varre o CÓDIGO (estático, sem banco): app/**/*.py inteiro e as migrações SQL de carimbo
-POSTERIORES a `20260911T1440` (a que já fez a varredura e o conserto genérico; migração anterior a ela,
-inclusive as que definem `camada_schema_prefixo()`, são histórico e ficam de fora — não é para reescrever
-o passado, é para não deixar voltar)."""
+Este teste varre o CÓDIGO (estático, sem banco): app/**/*.py E tests/**/*.py inteiros, e as migrações SQL
+de carimbo POSTERIORES a `20260911T1440` (a que já fez a varredura e o conserto genérico; migração anterior
+a ela, inclusive as que definem `camada_schema_prefixo()`, são histórico e ficam de fora — não é para
+reescrever o passado, é para não deixar voltar). `tests/` entrou em 16/09/2026 depois de achar o MESMO
+defeito, de novo, em `tests/api/exportacao/conftest.py::semear_camada` (`InvalidSchemaName` na trilha —
+18 erros em `tests/api/exportacao/test_exportacao.py`) e em outros oito arquivos de apoio de teste."""
 
 import re
 from pathlib import Path
@@ -17,6 +19,7 @@ from app.migracoes import chave_migracao, listar
 
 RAIZ = Path(__file__).resolve().parents[2]
 DIR_APP = RAIZ / "app"
+DIR_TESTS = RAIZ / "tests"
 DIR_MIGRACOES = RAIZ / "db" / "migracoes"
 
 # app/esquema_dado.py é a própria função central: o docstring dela CITA o literal proibido (entre crases,
@@ -30,21 +33,56 @@ RE_PY = re.compile(r'''f"d_\{|f'd_\{|"d_"\s*\+|'d_'\s*\+''')
 # `'d_' ||` em SQL: a mesma montagem à mão, do lado do banco (é o padrão que 20260911T1440 varreu e reescreveu).
 RE_SQL = re.compile(r"'d_'\s*\|\|")
 
+# Ocorrências conferidas uma a uma (16/09/2026) que NÃO são o defeito: prosa em docstring/comentário citando
+# o literal proibido como exemplo, teste adversário que INSPECIONA o texto-fonte/corpo de função em busca do
+# literal (o achado É o teste, não um schema sendo montado), ou comparação deliberada contra o nome de
+# produção (`PRODUCAO`/`f"d_{settings.PLAT_SCHEMA}_"`, que usa o schema do AMBIENTE, não o slug de um
+# inquilino). Cada linha aqui tem de continuar existindo verbatim no arquivo — se o texto mudar, a exceção
+# para de bater e a linha nova volta a ser varrida.
+EXCECOES: dict[str, set[str]] = {
+    "tests/api/adversario_g3/test_g3_ingestao.py": {
+        "(plat.camada_schema_garantir: 'd_' || p_slug), sem prefixo de instalação — duas instalações no mesmo",
+        """assert esquema == "plat" or f"d_{esquema}" in corpo or f"'{esquema}_d_'" in corpo, (""",
+    },
+    "tests/api/adversario_schema/test_schema_de_dado.py": {
+        "@pytest.mark.xfail(strict=True, reason=\"FURO F8: app/ingestao/carregar.py:102 monta `schema = "
+        "f'd_{slug}'` \"",
+        '":172 e :190 criam `\'d_\' || p_slug` do mesmo jeito. O job de carga "',
+        "assert 'f\"d_{slug}\"' not in fonte, (",
+    },
+    "tests/api/ferramentas/test_ferramentas.py": {
+        '`schema = f"d_{slug}"` à mão — em produção coincide com o prefixado, mas numa trilha isolada',
+        '`app.esquema_dado.esquema(slug)` — nunca em `"d_" + slug` puro quando a instalação não é produção."""',
+    },
+    "tests/api/ingestao/test_isolamento_schema_dado.py": {
+        'assert prefixo == f"d_{settings.PLAT_SCHEMA}_", prefixo',
+        'assert "d_" + "demo" == PRODUCAO',
+    },
+    "tests/unit/test_recurso_partilhado_por_inquilino.py": {
+        'return False, "plat.camada_schema_garantir ainda monta o schema como \'d_\' || slug"',
+    },
+}
 
-def _arquivos_py():
-    for p in sorted(DIR_APP.rglob("*.py")):
-        if p == ARQUIVO_CENTRAL_PY:
+
+def _arquivos_py(base: Path, excluir: set[Path] = frozenset()):
+    for p in sorted(base.rglob("*.py")):
+        if p in excluir:
             continue
         yield p
 
 
 def test_nenhum_arquivo_python_monta_d_menos_slug_a_mao():
     achados = []
-    for p in _arquivos_py():
-        texto = p.read_text(encoding="utf-8")
-        for i, linha in enumerate(texto.splitlines(), start=1):
-            if RE_PY.search(linha):
-                achados.append(f"{p.relative_to(RAIZ)}:{i}: {linha.strip()}")
+    for base in (DIR_APP, DIR_TESTS):
+        for p in _arquivos_py(base, {ARQUIVO_CENTRAL_PY}):
+            rel = str(p.relative_to(RAIZ))
+            if rel == "tests/unit/test_schema_de_dado_prefixo.py":
+                continue  # este arquivo: as próprias EXCECOES/regex citam o literal em string/comentário
+            permitidas = EXCECOES.get(rel, frozenset())
+            texto = p.read_text(encoding="utf-8")
+            for i, linha in enumerate(texto.splitlines(), start=1):
+                if RE_PY.search(linha) and linha.strip() not in permitidas:
+                    achados.append(f"{rel}:{i}: {linha.strip()}")
     assert not achados, (
         "schema de dado montado sem app.esquema_dado.esquema() (só \"d_\" + slug, sem o prefixo de "
         "instalação) em:\n" + "\n".join(achados)

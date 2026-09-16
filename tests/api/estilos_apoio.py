@@ -11,6 +11,7 @@ Dado sintético e declarado (nunca nome de cliente). Região: Guarulhos e entorn
 import random
 import uuid
 
+from app import esquema_dado
 from app.catalogo import destruidores
 from tests import jobs_sessao
 from tests.api.test_rls import contexto, ids_por_slug
@@ -74,8 +75,8 @@ def criar(env, slug: str = "demo") -> dict:
     try:
         tid, adm = _admin(con, slug)
         contexto(con, tid, usuario_id=adm, login="admin")
-        schema = f"d_{slug}"
         with con.cursor() as cur:
+            schema = esquema_dado.esquema(cur, slug)
             cur.execute("SELECT to_regnamespace(%s) IS NULL AS falta", (schema,))
             if cur.fetchone()["falta"]:
                 cur.execute("SELECT plat.camada_schema_garantir(%s)", (slug,))

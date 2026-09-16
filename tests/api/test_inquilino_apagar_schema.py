@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import secrets
 
+from app import esquema_dado
 from tests.api.conftest import PREFIXO_TESTE
 
 
@@ -21,13 +22,13 @@ def _garantir_schema_do_inquilino(conexao_plat_app, tenant_id: int, slug: str) -
     """Chama a função de produção plat.camada_schema_garantir (mesmo caminho que a ingestão real usa
     para nascer d_<slug>, migração 20260907T0240) no contexto GUC do próprio inquilino — não dá para
     fazer CREATE SCHEMA direto como plat_app (sem privilégio; só a função SECURITY DEFINER tem)."""
-    nome_schema = f"d_{slug}"
     with conexao_plat_app.cursor() as cur:
         cur.execute(
             "SELECT set_config('plat.tenant_id', %s, false), set_config('plat.usuario_id', '0', false), "
             "set_config('plat.login', 'teste-apagar-schema', false)",
             (str(tenant_id),),
         )
+        nome_schema = esquema_dado.esquema(cur, slug)
         cur.execute("SELECT plat.camada_schema_garantir(%s)", (slug,))
         cur.execute(f'CREATE TABLE "{nome_schema}".teste_apagar(id int)')
     conexao_plat_app.commit()
@@ -85,7 +86,8 @@ def test_inquilino_temporario_usado_duas_vezes_nao_deixa_schema_extra(sessao_pla
 
     def _schemas_zt() -> set[str]:
         with conexao_plat_app.cursor() as cur:
-            cur.execute("SELECT nspname FROM pg_namespace WHERE nspname LIKE %s", (f"d_{PREFIXO_TESTE}-inq-%",))
+            padrao = esquema_dado.prefixo(cur) + f"{PREFIXO_TESTE}-inq-%"
+            cur.execute("SELECT nspname FROM pg_namespace WHERE nspname LIKE %s", (padrao,))
             return {row["nspname"] for row in cur.fetchall()}
 
     conexao_plat_app.rollback()

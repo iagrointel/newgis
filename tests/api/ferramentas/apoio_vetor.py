@@ -5,6 +5,7 @@ o que muda é que aqui a geometria vem escrita no teste, para o mesmo dado poder
 
 import uuid
 
+from app import esquema_dado
 from tests import jobs_sessao
 from tests.api.conftest import PREFIXO_TESTE
 from tests.api.test_rls import contexto, ids_por_slug
@@ -29,9 +30,9 @@ def criar_camada_wkt(env, sessao, feicoes: list[dict], tipo: str = "Polygon", sl
     con, adm = _conectar(env, slug)
     item_id = str(uuid.uuid4())
     tabela = "c_" + uuid.UUID(item_id).hex[:16]
-    schema = f"d_{slug}"
     try:
         with con.cursor() as cur:
+            schema = esquema_dado.esquema(cur, slug)
             cur.execute("SELECT to_regnamespace(%s) IS NULL AS falta", (schema,))
             if cur.fetchone()["falta"]:
                 cur.execute("SELECT plat.camada_schema_garantir(%s)", (slug,))
@@ -88,9 +89,9 @@ def criar_camada_grade(env, sessao, n_col: int, n_lin: int, passo: float, desloc
     con, adm = _conectar(env, slug)
     item_id = str(uuid.uuid4())
     tabela = "c_" + uuid.UUID(item_id).hex[:16]
-    schema = f"d_{slug}"
     try:
         with con.cursor() as cur:
+            schema = esquema_dado.esquema(cur, slug)
             cur.execute("SELECT to_regnamespace(%s) IS NULL AS falta", (schema,))
             if cur.fetchone()["falta"]:
                 cur.execute("SELECT plat.camada_schema_garantir(%s)", (slug,))

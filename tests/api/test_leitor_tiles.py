@@ -20,6 +20,7 @@ import time
 import psycopg2
 import pytest
 
+from app import esquema_dado
 from tests.api.test_rls import contexto
 
 SLUGS = ("demo", "demo2")
@@ -103,10 +104,11 @@ def camadas(env):
     try:
         for slug in SLUGS:
             adm = _admin(con, slug)
-            esquema, tabela = f"d_{slug}", "c_" + _hex16()
+            tabela = "c_" + _hex16()
             valor, hash_ = token_novo()
             with con.cursor() as cur:
                 contexto(con, adm["tenant_id"], adm["usuario_id"], "admin")
+                esquema = esquema_dado.esquema(cur, slug)
                 cur.execute(f'CREATE TABLE "{esquema}"."{tabela}" '
                             f'(fid bigserial PRIMARY KEY, nome text, geom geometry(Point, 4326))')
                 cur.execute(f'INSERT INTO "{esquema}"."{tabela}" (nome, geom) '

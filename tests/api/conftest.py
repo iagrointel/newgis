@@ -366,21 +366,29 @@ def _conexao_plat_app():
 
 
 def schema_de_dado_existe(slug: str) -> bool:
+    from app import esquema_dado
+
     con = _conexao_plat_app()
     try:
         with con.cursor() as cur:
-            cur.execute("SELECT to_regnamespace(%s) IS NOT NULL AS existe", (f"d_{slug}",))
+            esquema = esquema_dado.esquema(cur, slug)
+            cur.execute("SELECT to_regnamespace(%s) IS NOT NULL AS existe", (esquema,))
             return bool(cur.fetchone()["existe"])
     finally:
         con.close()
 
 
 def apagar_schema_de_dado(slug: str) -> None:
-    """DROP SCHEMA d_<slug> CASCADE como plat_app (dono do schema); só para o resto de uma base sem a migração."""
+    """DROP SCHEMA <prefixo>d_<slug> CASCADE como plat_app (dono do schema; prefixo de
+    plat.camada_schema_prefixo() — `d_` em produção, `d_plat_t<trilha>_` numa trilha); só para o resto de uma
+    base sem a migração."""
+    from app import esquema_dado
+
     con = _conexao_plat_app()
     try:
         with con.cursor() as cur:
-            cur.execute(f'DROP SCHEMA IF EXISTS "d_{slug}" CASCADE')
+            esquema = esquema_dado.esquema(cur, slug)
+            cur.execute(f'DROP SCHEMA IF EXISTS "{esquema}" CASCADE')
     finally:
         con.close()
 
