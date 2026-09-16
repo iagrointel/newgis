@@ -1,15 +1,18 @@
-"""Formatos aceitos (ADR 0005 seção 3.3 e 10.1; item L6-02-o-importacao-exportacao-formatos): os 4 da fundação
-(shapefile zipado, GeoPackage, GeoJSON, CSV/TXT lat/lon) mais os que o `L6-02-o` acrescentou depois de MEDIR os
-drivers reais do GDAL desta máquina (`ogr --formats`, 05/09 e reconferido nesta passagem: todos presentes e com
-DCAP_CREATE=YES) — GeoJSONSeq (NDJSON), KML/LIBKML, DXF (CAD), XLSX (tabular, sem geometria nativa: ver
-`app/ingestao/xlsx_geom.py`) e FileGDB zipada (driver OpenFileGDB, mesmo truque `/vsizip` do shapefile.zip),
-mais DWG (item L0-04-e, ADR 0020-leitura-de-cad-dxf-e-dwg): convertido para DXF antes de ler pelo `dwg2dxf`
-do GNU LibreDWG (GPL-3, processo separado, nunca ligado à aplicação), não pelo ODA File Converter (avaliado e
-descartado no mesmo ADR). MVT, PMTiles e MSSQLSpatial são só destino de EXPORTAÇÃO (`app/ingestao/exportar.py`)
-— não entram aqui porque não são fonte de importação de camada nesta plataforma (mosaico de tiles e banco
-externo, não arquivo de origem). GPX, DXF/DWG binário fora do texto ASCII, GML, MapInfo, FlatGeobuf e
-GeoParquet continuam fora (não medidos/decisão de escopo); Apache Parquet/GeoParquet e Oracle Spatial (OCI)
-NÃO existem no GDAL desta instalação — nunca prometer os dois.
+"""Formatos aceitos (ADR 0005 seção 3.3 e 10.1; item L6-02-o-importacao-exportacao-formatos, item L0-04-d do
+portão de ingestão). Restaurado 16/09 (achado da re-triagem pós-fusão: `app/ingestao/formatos.py` só trazia os
+4 da fundação + os 5 do L6-02-o — os 4 formatos que o portão do L0-04-b pede a mais (GML, FlatGeobuf, GDB, e o
+próprio DXF já presente) e 3 do L0-04-d (KMZ, GPX) nunca sobreviveram à fusão dos 198 ramos, embora o commit
+que os mediu (`wt/g3fix`, "Ingestão vetorial: 13 formatos...") exista na árvore). Os 9 do portão do L0-04-d
+(shapefile zipado, GeoPackage, GeoJSON, GeoJSONSeq, KML, KMZ, CSV/TXT, GPX, XLSX) e os 4 que o L0-04-b pede a
+mais (GML, FlatGeobuf, DXF, File Geodatabase zipada) — o GDAL desta instalação tem driver para todos
+(`ogrinfo --formats`). DWG (item L0-04-e, ADR 0020-leitura-de-cad-dxf-e-dwg) também entra: convertido para DXF
+antes de ler pelo `dwg2dxf` do GNU LibreDWG (GPL-3, processo separado, nunca ligado à aplicação).
+
+"gdb" é um ALIAS de "filegdb.zip" (mesmo conteúdo, mesma verificação, dois nomes em uso por duas gerações de
+teste do mesmo item — nenhuma delas errada, então as duas ficam). MVT, PMTiles e MSSQLSpatial são só destino de
+EXPORTAÇÃO (`app/ingestao/exportar.py`) — não entram aqui porque não são fonte de importação de camada nesta
+plataforma (mosaico de tiles e banco externo, não arquivo de origem). Apache Parquet/GeoParquet e Oracle
+Spatial (OCI) NÃO existem no GDAL desta instalação — declarados em FORMATOS_FORA_DE_ESCOPO, nunca prometidos.
 Cada formato tem: extensões aceitas, prova pelo CONTEÚDO (nunca só a extensão — a mesma regra do L0-11/L7-03-b,
 aqui aplicada ao tipo declarado no upload), e o driver GDAL usado na inspeção/carga."""
 
@@ -41,10 +44,27 @@ FORMATOS: dict[str, Formato] = {
     "geojsonseq": Formato("geojsonseq", (".geojsonl", ".geojsons", ".ndjson"), "GeoJSON sequencial (NDJSON)",
                           "GeoJSONSeq"),
     "kml": Formato("kml", (".kml",), "KML", "LIBKML"),
+    "kmz": Formato("kmz", (".kmz",), "KMZ (KML zipado)", "LIBKML"),
+    "gpx": Formato("gpx", (".gpx",), "GPX (trilhas, rotas, pontos)", "GPX"),
     "dxf": Formato("dxf", (".dxf",), "DXF (CAD)", "DXF"),
     "dwg": Formato("dwg", (".dwg",), "DWG (CAD, convertido para DXF antes de ler)", "DXF"),
     "xlsx": Formato("xlsx", (".xlsx",), "Excel (XLSX)", "XLSX"),
     "filegdb.zip": Formato("filegdb.zip", (".zip",), "File Geodatabase (zip)", "OpenFileGDB"),
+    # "gdb" é o MESMO formato de "filegdb.zip" com outro nome de item (portão do L0-04-b): duas gerações de
+    # teste do mesmo item usam identificadores diferentes para o mesmo zip de File Geodatabase — em vez de
+    # forçar uma a mudar (regra da casa: nunca afrouxar teste, e os dois estão certos), os dois convivem.
+    "gdb": Formato("gdb", (".zip",), "File Geodatabase (zip)", "OpenFileGDB"),
+    "gml": Formato("gml", (".gml", ".xml"), "GML", "GML"),
+    "flatgeobuf": Formato("flatgeobuf", (".fgb",), "FlatGeobuf", "FlatGeobuf"),
+}
+
+# Formatos que o portão pede para DECLARAR como fora de escopo (nunca prometer, nunca esconder): a rota
+# GET /api/importacoes/formatos os lista com aceito=False e o motivo, em vez de omiti-los como se não
+# existissem. GeoParquet/Parquet e MapInfo TAB não têm driver nesta instalação do GDAL (medido, `ogrinfo
+# --formats`); a lista é fechada por decisão de escopo do item L0-04-b, não por falta de medição.
+FORMATOS_FORA_DE_ESCOPO: dict[str, str] = {
+    "geoparquet": "o GDAL desta instalação não tem os drivers Parquet/GeoParquet (Apache Arrow) compilados",
+    "mapinfo": "o driver MapInfo TAB não está nesta instalação; fora do escopo do item L0-04-b",
 }
 
 # formatos que só existem como DESTINO de exportação (app/ingestao/exportar.py); nunca aparecem em FORMATOS de
@@ -136,12 +156,37 @@ def verificar_conteudo(tipo_declarado: str, dados: bytes) -> None:
             raise ConteudoNaoCorresponde(
                 "conteúdo não corresponde ao tipo shapefile.zip: nenhum trio .shp/.shx/.dbf encontrado no zip"
             )
-    elif tipo_declarado == "filegdb.zip":
+    elif tipo_declarado in ("filegdb.zip", "gdb"):
         zf = conferir_zip(dados)
         if _gdb_no_zip(zf) is None:
             raise ConteudoNaoCorresponde(
-                "conteúdo não corresponde ao tipo filegdb.zip: nenhuma pasta <nome>.gdb com catálogo "
+                f"conteúdo não corresponde ao tipo {tipo_declarado}: nenhuma pasta <nome>.gdb com catálogo "
                 "(a*.gdbtable) encontrada no zip"
+            )
+    elif tipo_declarado == "kmz":
+        zf = conferir_zip(dados)
+        if not any(i.filename.lower().endswith(".kml") for i in zf.infolist()):
+            raise ConteudoNaoCorresponde(
+                "conteúdo não corresponde ao tipo kmz: nenhum arquivo .kml dentro do zip"
+            )
+    elif tipo_declarado == "gpx":
+        inicio = dados[:4096]
+        minusculo = inicio.lower()
+        if b"<gpx" not in minusculo or b"topografix.com/gpx" not in dados[:65536].lower():
+            raise ConteudoNaoCorresponde(
+                "conteúdo não corresponde ao tipo gpx: falta a tag <gpx> do schema topografix no início do "
+                "arquivo"
+            )
+    elif tipo_declarado == "gml":
+        minusculo = dados[:65536].lstrip(b"\xef\xbb\xbf \r\n\t").lower()
+        if not minusculo.startswith(b"<") or (b"gml" not in minusculo and b"opengis.net" not in minusculo):
+            raise ConteudoNaoCorresponde(
+                "conteúdo não corresponde ao tipo gml: o arquivo é " + _o_que_e(dados)
+            )
+    elif tipo_declarado == "flatgeobuf":
+        if dados[:3] != b"fgb" or dados[3:4] != bytes([3]):  # magic "fgb" + versão 3 do FlatGeobuf
+            raise ConteudoNaoCorresponde(
+                "conteúdo não corresponde ao tipo flatgeobuf: faltam os 4 bytes mágicos 'fgb'+versão 3"
             )
     elif tipo_declarado == "gpkg":
         if dados[:16] != b"SQLite format 3\x00":

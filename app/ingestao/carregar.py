@@ -175,8 +175,17 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
         encoding_confirmada = ((confirmacao.get("codificacao") or {}).get("valor")
                                or proposta.get("codificacao", {}).get("valor"))
         respostas_cad = {k: v for k, v in (confirmacao.get("cad") or {}).items() if v is not None}
+        # arquivo com N camadas (item L0-04-b/d): a confirmação pode ter trocado a escolhida (`camada.
+        # escolhida`); sem isso, cai no padrão que a inspeção gravou (`proposta["camada_escolhida"]`,
+        # `camada_origem` por compatibilidade com propostas antigas de 1 camada só).
+        camada_escolhida_nome = ((confirmacao.get("camada") or {}).get("escolhida")
+                                 or proposta.get("camada_escolhida") or proposta.get("camada_origem"))
         if formato in ("dxf", "dwg"):
             prep = PREPARADORES[formato](ctx, dados, encoding_confirmada, respostas_cad)
+        elif formato == "xlsx":
+            # XLSX (item L0-04-b, "2 planilhas"): cada aba pede sua PRÓPRIA conversão para CSV — só a
+            # escolhida paga esse custo aqui, nunca as outras.
+            prep = PREPARADORES[formato](ctx, dados, encoding_confirmada, {"aba": camada_escolhida_nome})
         else:
             prep = PREPARADORES[formato](ctx, dados, encoding_confirmada)
 
@@ -188,7 +197,11 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
         select_sql, campos_usados = _select_campos(prep, campos)
         geom = confirmacao.get("geometria") or proposta.get("geometria") or {}
         tipo_escolhido_raw = geom.get("escolhida") or "Geometry"  # o que a inspeção/usuário resolveu
-        camada_origem = proposta.get("camada_origem") or prep.get("layer")
+        # XLSX: o nome de EXIBIÇÃO da camada é a aba ("planilha_um"), mas o `ogr2ogr` lê pelo nome INTERNO
+        # que o driver CSV dá ao arquivo convertido (`prep["layer"]`, ver `_preparar_xlsx`) — os dois só
+        # coincidem por acidente quando há 1 aba só. Para todo outro formato o nome de exibição JÁ É o nome
+        # OGR real dentro do container (camada do GPKG, pasta do KMZ, layer fixo do GPX).
+        camada_origem = prep.get("layer") if formato == "xlsx" else (camada_escolhida_nome or prep.get("layer"))
         sql_origem = f'SELECT {select_sql} FROM "{camada_origem}"'
         # DXF/DWG: o usuário escolhe QUAIS camadas do desenho entram (a lista veio na proposta). Sem escolha,
         # entram todas — nunca um recorte silencioso.

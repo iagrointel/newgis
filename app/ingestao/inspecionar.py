@@ -1,12 +1,14 @@
-"""Job `ingestao.inspecionar` (ADR 0005 seção 4, L0-04-b; formatos ampliados pelo L6-02-o-importacao-exportacao-
-formatos): baixa o objeto, roda `ogrinfo -ro -json -so`, resolve geometria/CRS/codificação/campos, amostra a
-validade (shapely, sem depender de dialeto SQLite do GDAL) e grava a PROPOSTA editável em
-`plat.importacao.proposta` (estado `proposta`). Nunca cria tabela: só a confirmação do usuário dispara a carga.
-9 formatos de importação hoje: shapefile.zip, gpkg, geojson, csv (fundação) + geojsonseq, kml, dxf/dwg,
-filegdb.zip, xlsx (L6-02-o) — ver `app/ingestao/formatos.py` para o que cada um prova por conteúdo e o driver
-GDAL usado. Achado 16/09 (wt/f2fixapi2): a fusão dos 198 ramos (31a35ae57) trouxe o `inspecionar.py` do lado que
-tinha DXF/DWG isolados via `app/ingestao/cad.py` mas descartou geojsonseq/kml/filegdb.zip/xlsx do outro lado —
-os 4 preparadores voltaram aqui, com a assinatura atual de `_ogrinfo_json`/`_cfg`."""
+"""Job `ingestao.inspecionar` (ADR 0005 seção 4, L0-04-b/d; formatos ampliados pelo L6-02-o-importacao-
+exportacao-formatos): baixa o objeto, roda `ogrinfo -ro -json -so`, resolve geometria/CRS/codificação/campos por
+CAMADA (nunca só a primeira — item L0-04-b "GPKG com 3 camadas"/"KMZ com 3 pastas"), amostra a validade
+(shapely, sem depender de dialeto SQLite do GDAL) e grava a PROPOSTA editável em `plat.importacao.proposta`
+(estado `proposta`). Nunca cria tabela: só a confirmação do usuário dispara a carga.
+14 formatos de importação hoje: shapefile.zip, gpkg, geojson, csv (fundação) + geojsonseq, kml, kmz, gpx, dxf,
+dwg, filegdb.zip/gdb, xlsx, gml, flatgeobuf — ver `app/ingestao/formatos.py` para o que cada um prova por
+conteúdo e o driver GDAL usado. Achados da re-triagem de 16/09: (a) wt/f2fixapi2 já tinha restaurado
+geojsonseq/kml/filegdb.zip/xlsx perdidos na fusão dos 198 ramos (31a35ae57); (b) esta passagem restaurou os
+que faltavam do portão do L0-04-d/L0-04-b (kmz/gpx/gml/flatgeobuf) e a listagem de TODAS as camadas do arquivo
+(`proposta["camadas"]`, `_analisar_camada()`), que a fusão nunca trouxe de `wt/g3fix`."""
 
 from __future__ import annotations
 
@@ -230,7 +232,54 @@ def _preparar_kml(ctx, dados: bytes) -> dict:
     crs = {"origem": "kml", "srid": 4326, "perguntar": False, "wkt": None, "sugestao": None}
     codificacao = {"origem": "formato", "valor": "UTF-8", "perguntar": False, "sugestao": None}
     return {"caminho": str(caminho), "layer": None, "oo": [], "crs": crs, "codificacao": codificacao, "csv": None,
-            "titulo_origem": None, "driver": "LIBKML", "origem_e_normalizada": False}
+            "titulo_origem": None, "driver": "LIBKML", "origem_e_normalizada": False,
+            "avisos": ["estilos do KML (ícones, cores, rótulos) não são importados; só geometria e atributos"]}
+
+
+def _preparar_kmz(ctx, dados: bytes) -> dict:
+    """KMZ (item L0-04-d, portão literal 'KMZ com 3 pastas gera 3 camadas'): o mesmo driver LIBKML lê o .kmz
+    zipado direto, sem descompactar à mão — cada `<Folder>` do `doc.kml` interno vira uma camada OGR própria.
+    Mesma observação de CRS do KML (WGS84 fixo, OGC KML 22.1 §5.3)."""
+    caminho = ctx.dir_trabalho / "original.kmz"
+    caminho.write_bytes(dados)
+    crs = {"origem": "kml", "srid": 4326, "perguntar": False, "wkt": None, "sugestao": None}
+    codificacao = {"origem": "formato", "valor": "UTF-8", "perguntar": False, "sugestao": None}
+    return {"caminho": str(caminho), "layer": None, "oo": [], "crs": crs, "codificacao": codificacao, "csv": None,
+            "titulo_origem": None, "driver": "LIBKML", "origem_e_normalizada": False,
+            "avisos": ["estilos do KML (ícones, cores, rótulos) não são importados; só geometria e atributos"]}
+
+
+def _preparar_gpx(ctx, dados: bytes) -> dict:
+    """GPX (item L0-04-d): o driver GPX do GDAL sempre declara as MESMAS 5 camadas fixas (waypoints, routes,
+    tracks, route_points, track_points), estejam elas vazias ou não — a inspeção lista as 5 e escolhe a única
+    com dado (ou pergunta, se mais de uma tiver). Formato é sempre WGS84 (RFC de facto do GPX)."""
+    caminho = ctx.dir_trabalho / "original.gpx"
+    caminho.write_bytes(dados)
+    crs = {"origem": "gpx", "srid": 4326, "perguntar": False, "wkt": None, "sugestao": None}
+    codificacao = {"origem": "formato", "valor": "UTF-8", "perguntar": False, "sugestao": None}
+    return {"caminho": str(caminho), "layer": None, "oo": [], "crs": crs, "codificacao": codificacao, "csv": None,
+            "titulo_origem": None, "driver": "GPX", "origem_e_normalizada": False}
+
+
+def _preparar_gml(ctx, dados: bytes) -> dict:
+    """GML (item L0-04-b, 4 formatos a mais do portão): o driver GML do GDAL lê o `.gml`; sem CRS fixo (o
+    arquivo pode trazer `srsName` ou nada), então `crs=None` deixa o passo de CRS do `ingestao_inspecionar` ler
+    o `projjson`/perguntar como faz para o GPKG."""
+    caminho = ctx.dir_trabalho / "original.gml"
+    caminho.write_bytes(dados)
+    codificacao = {"origem": "formato", "valor": "UTF-8", "perguntar": False, "sugestao": None}
+    return {"caminho": str(caminho), "layer": None, "oo": [], "crs": None, "codificacao": codificacao, "csv": None,
+            "titulo_origem": None, "driver": "GML", "origem_e_normalizada": False}
+
+
+def _preparar_flatgeobuf(ctx, dados: bytes) -> dict:
+    """FlatGeobuf (item L0-04-b): formato binário com CRS embutido no cabeçalho (WKT); `crs=None` deixa o
+    `ingestao_inspecionar` ler do `projjson` do `ogrinfo -json`, igual ao GPKG."""
+    caminho = ctx.dir_trabalho / "original.fgb"
+    caminho.write_bytes(dados)
+    codificacao = {"origem": "formato", "valor": "UTF-8", "perguntar": False, "sugestao": None}
+    return {"caminho": str(caminho), "layer": None, "oo": [], "crs": None, "codificacao": codificacao, "csv": None,
+            "titulo_origem": None, "driver": "FlatGeobuf", "origem_e_normalizada": False}
 
 
 def _preparar_csv(ctx, dados: bytes) -> dict:
@@ -299,21 +348,36 @@ def _preparar_filegdb(ctx, dados: bytes) -> dict:
             "origem_e_normalizada": False}
 
 
-def _preparar_xlsx(ctx, dados: bytes, encoding_confirmada: str | None) -> dict:
-    """Excel/XLSX (item L6-02-o): o driver XLSX do GDAL NÃO tem geometria (`ogrinfo --format XLSX`: "No support
-    for geometries" — MEDIDO nesta passagem, não é bug nosso) — é só tabela. Em vez de reinventar a detecção de
-    coluna lon/lat que o CSV já tem testada, converte a 1ª aba para CSV com `ogr2ogr` e entrega para
-    `_preparar_csv`: mesmo caminho, mesmas regras de X/Y (`app/ingestao/csv_normalizar.py`), mesma proposta. Uma
-    camada de polígono/linha em XLSX chega SEM geometria automática (Excel não tem onde guardar um polígono) —
-    fica registrada como aviso; o par lon/lat continua funcionando para pontos, provado no teste de ida e volta."""
+def _slug_aba(nome: str) -> str:
+    """Nome de arquivo seguro para uma aba do XLSX (`planilha_um` -> `planilha_um`; qualquer coisa fora
+    [a-z0-9_-] vira `_`, sempre em minúsculo, nunca vazio)."""
+    import re
+
+    limpo = re.sub(r"[^a-z0-9_-]+", "_", nome.lower()).strip("_")
+    return limpo or "aba"
+
+
+def _preparar_xlsx(ctx, dados: bytes, encoding_confirmada: str | None, aba_escolhida: str | None = None) -> dict:
+    """Excel/XLSX (item L6-02-o + L0-04-b 'XLSX com 2 planilhas'): o driver XLSX do GDAL NÃO tem geometria
+    (`ogrinfo --format XLSX`: "No support for geometries" — MEDIDO, não é bug nosso) — é só tabela. Lista TODAS
+    as abas primeiro (achado do adversário do turno 3: `abas[0]` escolhia sempre a primeira e as demais
+    desapareciam sem aviso — mesma classe do bug de `camadas[0]` no resto do módulo); converte a aba ESCOLHIDA
+    (`aba_escolhida`, ou a primeira por padrão) para CSV com `ogr2ogr` e entrega para `_preparar_csv`: mesmo
+    caminho, mesmas regras de X/Y (`app/ingestao/csv_normalizar.py`), mesma proposta. Uma camada de
+    polígono/linha ou uma aba sem coluna de coordenada chega SEM geometria automática (Excel não tem onde
+    guardar um polígono) — fica registrada como aviso; o par lon/lat continua funcionando para pontos, provado
+    no teste de ida e volta. `camadas_disponiveis` carrega nome+contagem de TODAS as abas (barato: uma só
+    chamada de `ogrinfo` no arquivo cru, sem conversão) para `ingestao_inspecionar` montar `proposta["camadas"]`
+    sem custo de converter as abas que não forem escolhidas."""
     caminho_xlsx = ctx.dir_trabalho / "original.xlsx"
     caminho_xlsx.write_bytes(dados)
     info = _ogrinfo_json(ctx, str(caminho_xlsx), None, [])
     abas = info.get("layers") or []
     if not abas:
         raise FalhaDefinitiva("o arquivo XLSX não tem nenhuma aba")
-    aba = abas[0]["name"]
-    caminho_csv = ctx.dir_trabalho / "original_xlsx.csv"
+    nomes_abas = [a.get("name") for a in abas]
+    aba = aba_escolhida if aba_escolhida in nomes_abas else nomes_abas[0]
+    caminho_csv = ctx.dir_trabalho / f"aba_{_slug_aba(aba)}.csv"
     r = ctx.subprocesso(["ogr2ogr", "-f", "CSV", str(caminho_csv), str(caminho_xlsx), aba])
     if r.returncode != 0:
         linhas = [ln for ln in (r.stderr or "").splitlines() if ln.strip()]
@@ -322,6 +386,14 @@ def _preparar_xlsx(ctx, dados: bytes, encoding_confirmada: str | None) -> dict:
     prep = _preparar_csv(ctx, caminho_csv.read_bytes())
     prep["titulo_origem"] = aba
     prep["driver"] = "XLSX (aba convertida para CSV)"
+    # `_preparar_csv` devolve `layer: None` (o CSV comum não precisa de nome — o driver assume o único que
+    # existe); aqui o nome IMPORTA porque `camada_origem` (nome de EXIBIÇÃO, a aba) e o layer OGR real do CSV
+    # gerado ("aba_planilha_um") são coisas diferentes, e `carregar.py` precisa do segundo para o `ogr2ogr`.
+    prep["layer"] = caminho_csv.stem
+    prep["camadas_disponiveis"] = [{"camada_origem": n, "feicoes": int(a.get("featureCount") or 0),
+                                    "tem_geometria_declarada": bool(a.get("geometryFields"))}
+                                   for n, a in zip(nomes_abas, abas, strict=True)]
+    prep["camada_ativa"] = aba
     if not (prep.get("csv") or {}).get("coordenadas"):
         prep.setdefault("avisos", []).append(
             "a aba não tinha colunas de latitude/longitude reconhecidas; a camada será importada sem geometria "
@@ -336,11 +408,17 @@ PREPARADORES = {
     "geojson": lambda ctx, dados, enc: _preparar_geojson(ctx, dados),
     "geojsonseq": lambda ctx, dados, enc: _preparar_geojsonseq(ctx, dados),
     "kml": lambda ctx, dados, enc: _preparar_kml(ctx, dados),
+    "kmz": lambda ctx, dados, enc: _preparar_kmz(ctx, dados),
+    "gpx": lambda ctx, dados, enc: _preparar_gpx(ctx, dados),
+    "gml": lambda ctx, dados, enc: _preparar_gml(ctx, dados),
+    "flatgeobuf": lambda ctx, dados, enc: _preparar_flatgeobuf(ctx, dados),
     "csv": lambda ctx, dados, enc: _preparar_csv(ctx, dados),
     "dxf": lambda ctx, dados, enc, respostas=None: _preparar_cad(ctx, dados, "dxf", respostas),
     "dwg": lambda ctx, dados, enc, respostas=None: _preparar_cad(ctx, dados, "dwg", respostas),
     "filegdb.zip": lambda ctx, dados, enc: _preparar_filegdb(ctx, dados),
-    "xlsx": lambda ctx, dados, enc: _preparar_xlsx(ctx, dados, enc),
+    "gdb": lambda ctx, dados, enc: _preparar_filegdb(ctx, dados),
+    "xlsx": lambda ctx, dados, enc, respostas=None: _preparar_xlsx(ctx, dados, enc,
+                                                                   (respostas or {}).get("aba")),
 }
 
 
@@ -351,6 +429,114 @@ def _marcar_falha(ctx, importacao_id: str, erro: str) -> None:
             "WHERE id = %s::uuid AND estado NOT IN ('concluida','falhou','cancelada','expirada')",
             (erro[:2000], importacao_id),
         )
+
+
+def _analisar_camada(ctx, prep: dict, camada: dict) -> dict:
+    """Os cinco pedaços que a proposta grava por camada (campos, geometria, CRS, validade, avisos), extraídos
+    do resumo de UMA camada que `ogrinfo -json` devolve. Isolado do laço principal (achado do adversário do
+    turno 3, item L0-04-b 'GPKG com 3 camadas'/'KMZ com 3 pastas': o código antigo só chamava isto para
+    `camadas[0]` e as demais desapareciam da proposta em silêncio) para rodar uma vez por camada do arquivo,
+    não só na primeira — `ingestao_inspecionar` decide QUAL vira a escolhida; esta função não decide nada."""
+    nome_camada_origem = camada.get("name") or prep.get("titulo_origem") or "camada"
+    feicoes = int(camada.get("featureCount") or 0)
+
+    campos_origem = camada.get("fields") or []
+    if len(campos_origem) > CAMPOS_MAX:
+        raise FalhaDefinitiva(f"a camada tem {len(campos_origem)} campos; o máximo é {CAMPOS_MAX}")
+    if not campos_origem and not camada.get("geometryFields"):
+        raise FalhaDefinitiva(f"a camada {nome_camada_origem} não tem campos nem geometria")
+
+    # ------------------------------------------------------------ geometria
+    geom_fields = camada.get("geometryFields") or []
+    tipo_bruto = geom_fields[0].get("type") if geom_fields else None
+    base_tipo, _ = geometria.normalizar_tipo_ogr(tipo_bruto or "")
+    if base_tipo in geometria.TIPOS_CONCRETOS:
+        resolvido = {"tipos": {tipo_bruto: feicoes}, "escolhida": base_tipo, "perguntar": False,
+                     "opcoes": [base_tipo], "z": "Z" in (tipo_bruto or "") or "25D" in (tipo_bruto or ""),
+                     "sem_geometria": 0}
+    elif prep.get("tipos_geometria"):
+        # DXF/DWG: os tipos já vieram contados pelo leitor de CAD, com o dialeto SQLITE (o OGR SQL não tem
+        # GROUP BY e a varredura genérica devolveria vazio em silêncio). DXF/DWG têm sempre UMA camada só
+        # ("entities"), então não há ambiguidade de qual resumo esta contagem descreve.
+        resolvido = geometria.resolver(dict(prep["tipos_geometria"]))
+    elif geom_fields and feicoes:
+        ctx.progresso(45, "varrendo o tipo real de geometria")
+        tipos_contagem = _tipos_por_varredura(ctx, prep["caminho"], nome_camada_origem, prep["oo"],
+                                              prep.get("config"))
+        resolvido = geometria.resolver(tipos_contagem or {"NULL": feicoes})
+    elif geom_fields:
+        resolvido = {"tipos": {}, "escolhida": None, "perguntar": False, "opcoes": [], "z": False,
+                     "sem_geometria": 0}
+    else:
+        resolvido = {"tipos": {}, "escolhida": None, "perguntar": False, "opcoes": [], "z": False,
+                     "sem_geometria": feicoes}
+
+    # ------------------------------------------------------------ CRS
+    crs = dict(prep["crs"]) if prep["crs"] is not None else None
+    extent = None
+    if geom_fields and geom_fields[0].get("extent"):
+        extent = [float(v) for v in geom_fields[0]["extent"]]
+    if crs is None:
+        projjson = (geom_fields[0].get("coordinateSystem") or {}).get("projjson") if geom_fields else None
+        epsg = None
+        if projjson:
+            ident = (projjson.get("id") or {})
+            if str(ident.get("authority", "")).upper() == "EPSG":
+                epsg = int(ident["code"])
+        if epsg:
+            crs = {"origem": "gpkg", "srid": epsg, "perguntar": False, "wkt": None, "sugestao": None}
+        else:
+            crs = {"origem": "nenhum", "srid": None, "perguntar": True, "wkt": None,
+                   "sugestao": _extent_sugere_srid(extent)}
+    elif crs.get("srid") is None and crs.get("sugestao") is None:
+        crs["sugestao"] = _extent_sugere_srid(extent)
+    crs["extent_origem"] = extent
+
+    # ------------------------------------------------------------ campos
+    # CSV/TXT: o ogrinfo já leu o arquivo NORMALIZADO (csv_normalizar.py normaliza o cabeçalho antes do
+    # GDAL) — "origem" mostra o cabeçalho VERDADEIRO do arquivo enviado, não o nome já limpo, casado por
+    # posição com `prep["csv_colunas"]` (mesma ordem: csv_normalizar preserva a ordem das colunas).
+    csv_colunas_origem = {c.nome: c.origem for c in prep.get("csv_colunas", [])} if prep.get("csv_colunas") else {}
+    usados: set[str] = set()
+    campos = []
+    for i, f in enumerate(campos_origem):
+        tipo_pg = tipos_campo.pg_de(f.get("type", "String"), f.get("subType"))
+        nome_origem_bruto = f.get("name", "")
+        nome, motivo = nomes.normalizar(nome_origem_bruto, usados, posicao=i)
+        avisos_campo = [motivo] if motivo else []
+        campos.append({
+            "origem": csv_colunas_origem.get(nome_origem_bruto, nome_origem_bruto), "nome": nome,
+            "tipo_origem": f.get("type", "String"), "tipo": tipo_pg, "opcoes_tipo": tipos_campo.opcoes_de(tipo_pg),
+            "largura": f.get("width"), "avisos": avisos_campo,
+        })
+
+    # ------------------------------------------------------------ validade (amostra)
+    amostra, invalidas, exemplo = (0, 0, None)
+    if resolvido.get("escolhida"):
+        ctx.progresso(70, "amostrando validade")
+        amostra, invalidas, exemplo = _amostra_validade(ctx, prep["caminho"], nome_camada_origem,
+                                                        prep["oo"], prep.get("config"))
+
+    # ------------------------------------------------------------ avisos desta camada
+    avisos_camada = []
+    if crs.get("aviso"):
+        avisos_camada.append(crs.pop("aviso"))
+    if feicoes == 0:
+        # refutação literal do L0-04-b ("CSV com 300 colunas e 0 linhas ... silêncio ou 500 = refutado"):
+        # nunca terminar sem dizer que a camada não trouxe NENHUMA linha, mesmo tendo campos de sobra.
+        avisos_camada.append(
+            f"a camada {nome_camada_origem!r} tem {len(campos_origem)} campos e NENHUMA linha de dado"
+        )
+    elif resolvido.get("sem_geometria"):
+        avisos_camada.append(f"{resolvido['sem_geometria']} feições sem geometria")
+
+    return {
+        "camada_origem": nome_camada_origem, "feicoes": feicoes, "feicoes_exatas": feicoes >= 0,
+        "geometria": resolvido, "crs": crs, "campos": campos,
+        "validade": {"amostra": amostra, "invalidas": invalidas, "exemplo": exemplo,
+                     "acao": "corrigir" if invalidas else None},
+        "avisos": avisos_camada, "tem_geometria": bool(resolvido.get("escolhida")),
+    }
 
 
 @tarefa(
@@ -397,89 +583,62 @@ def ingestao_inspecionar(ctx, importacao_id: uuid.UUID) -> dict:
         ctx.progresso(20, "preparando a fonte")
         prep = preparador(ctx, dados, None)
 
-        ctx.progresso(35, "ogrinfo")
-        info = _ogrinfo_json(ctx, prep["caminho"], prep["layer"], prep["oo"], prep.get("config"))
-        camadas = info.get("layers") or []
-        if not camadas:
-            raise FalhaDefinitiva("o arquivo não contém camada vetorial")
-        camada = camadas[0]
-        nome_camada_origem = camada.get("name") or prep["titulo_origem"] or "camada"
-        feicoes = int(camada.get("featureCount") or 0)
-
-        campos_origem = camada.get("fields") or []
-        if len(campos_origem) > CAMPOS_MAX:
-            raise FalhaDefinitiva(f"a camada tem {len(campos_origem)} campos; o máximo é {CAMPOS_MAX}")
-        if not campos_origem and not camada.get("geometryFields"):
-            raise FalhaDefinitiva(f"a camada {nome_camada_origem} não tem campos nem geometria")
-
-        # ------------------------------------------------------------ geometria
-        geom_fields = camada.get("geometryFields") or []
-        tipo_bruto = geom_fields[0].get("type") if geom_fields else None
-        base_tipo, _ = geometria.normalizar_tipo_ogr(tipo_bruto or "")
-        if base_tipo in geometria.TIPOS_CONCRETOS:
-            resolvido = {"tipos": {tipo_bruto: feicoes}, "escolhida": base_tipo, "perguntar": False,
-                         "opcoes": [base_tipo], "z": "Z" in (tipo_bruto or "") or "25D" in (tipo_bruto or ""),
-                         "sem_geometria": 0}
-        elif prep.get("tipos_geometria"):
-            # DXF/DWG: os tipos já vieram contados pelo leitor de CAD, com o dialeto SQLITE (o OGR SQL não tem
-            # GROUP BY e a varredura genérica devolveria vazio em silêncio)
-            resolvido = geometria.resolver(dict(prep["tipos_geometria"]))
-        elif geom_fields:
-            ctx.progresso(45, "varrendo o tipo real de geometria")
-            tipos_contagem = _tipos_por_varredura(ctx, prep["caminho"], nome_camada_origem, prep["oo"],
-                                                  prep.get("config"))
-            resolvido = geometria.resolver(tipos_contagem or {"NULL": feicoes})
+        # ------------------------------------------------------------ listagem de TODAS as camadas
+        # Achado do adversário do turno 3 (item L0-04-b: "GPKG com 3 camadas", "KMZ com 3 pastas"):
+        # `camadas[0]` descartava as demais em silêncio. XLSX é o único formato cuja listagem leve
+        # (`camadas_disponiveis`) já veio pronta do preparador sem custo de converter cada aba; para todos
+        # os outros o MESMO `ogrinfo -json` sem `layer` específico (já feito hoje) devolve TODAS as camadas
+        # do arquivo de uma vez, com campos e geometria completos — só faltava não jogar fora as demais.
+        if prep.get("camadas_disponiveis") is not None:
+            resumo = prep["camadas_disponiveis"]
+            camadas_ogr = None
         else:
-            resolvido = {"tipos": {}, "escolhida": None, "perguntar": False, "opcoes": [], "z": False,
-                         "sem_geometria": feicoes}
+            ctx.progresso(35, "ogrinfo")
+            info_container = _ogrinfo_json(ctx, prep["caminho"], prep["layer"], prep["oo"], prep.get("config"))
+            camadas_ogr = info_container.get("layers") or []
+            if not camadas_ogr:
+                raise FalhaDefinitiva("o arquivo não contém camada vetorial")
+            resumo = [{"camada_origem": c.get("name") or prep.get("titulo_origem") or "camada",
+                      "feicoes": int(c.get("featureCount") or 0),
+                      "tem_geometria_declarada": bool(c.get("geometryFields"))} for c in camadas_ogr]
 
-        # ------------------------------------------------------------ CRS
-        crs = prep["crs"]
-        extent = None
-        if geom_fields and geom_fields[0].get("extent"):
-            extent = [float(v) for v in geom_fields[0]["extent"]]
-        if crs is None:
-            projjson = (geom_fields[0].get("coordinateSystem") or {}).get("projjson") if geom_fields else None
-            epsg = None
-            if projjson:
-                ident = (projjson.get("id") or {})
-                if str(ident.get("authority", "")).upper() == "EPSG":
-                    epsg = int(ident["code"])
-            if epsg:
-                crs = {"origem": "gpkg", "srid": epsg, "perguntar": False, "wkt": None, "sugestao": None}
-            else:
-                crs = {"origem": "nenhum", "srid": None, "perguntar": True, "wkt": None,
-                       "sugestao": _extent_sugere_srid(extent)}
-        elif crs.get("srid") is None and crs.get("sugestao") is None:
-            crs["sugestao"] = _extent_sugere_srid(extent)
-        crs["extent_origem"] = extent
+        # ------------------------------------------------------------ escolha da camada
+        # Regra (item L0-04-d/L0-04-b): 1 camada só -> ela mesma, sem pergunta. Mais de uma e SÓ uma tem
+        # dado -> essa entra por padrão, as vazias só avisam (cláusula do GPX: "abre na única com dado").
+        # Mais de uma com dado (ou nenhuma) -> ambíguo, pergunta "camada", padrão é a 1ª (o usuário troca na
+        # confirmação com `camada.escolhida`).
+        nao_vazias = [i for i, c in enumerate(resumo) if c["feicoes"] > 0]
+        if len(resumo) == 1:
+            indice_escolhido, camada_ambigua = 0, False
+        elif len(nao_vazias) == 1:
+            indice_escolhido, camada_ambigua = nao_vazias[0], False
+        else:
+            indice_escolhido, camada_ambigua = 0, True
+        camada_escolhida_nome = resumo[indice_escolhido]["camada_origem"]
 
-        # ------------------------------------------------------------ campos
-        # CSV/TXT: o ogrinfo já leu o arquivo NORMALIZADO (csv_normalizar.py normaliza o cabeçalho antes do
-        # GDAL) — "origem" mostra o cabeçalho VERDADEIRO do arquivo enviado, não o nome já limpo, casado por
-        # posição com `prep["csv_colunas"]` (mesma ordem: csv_normalizar preserva a ordem das colunas).
-        csv_colunas_origem = {c.nome: c.origem for c in prep.get("csv_colunas", [])} if prep.get("csv_colunas") else {}
-        usados: set[str] = set()
-        campos = []
-        for i, f in enumerate(campos_origem):
-            tipo_pg = tipos_campo.pg_de(f.get("type", "String"), f.get("subType"))
-            nome_origem_bruto = f.get("name", "")
-            nome, motivo = nomes.normalizar(nome_origem_bruto, usados, posicao=i)
-            avisos = [motivo] if motivo else []
-            campos.append({
-                "origem": csv_colunas_origem.get(nome_origem_bruto, nome_origem_bruto), "nome": nome,
-                "tipo_origem": f.get("type", "String"), "tipo": tipo_pg, "opcoes_tipo": tipos_campo.opcoes_de(tipo_pg),
-                "largura": f.get("width"), "avisos": avisos,
-            })
+        if camadas_ogr is not None:
+            camada_ogr_escolhida = camadas_ogr[indice_escolhido]
+        else:
+            # XLSX: a aba escolhida por padrão pode não ser a 1ª (só a preparada até aqui) — reconverte só
+            # ela, e SÓ ela: as abas vazias/ignoradas nunca pagam o custo de virar CSV.
+            if camada_escolhida_nome != prep.get("camada_ativa"):
+                prep = preparador(ctx, dados, None, {"aba": camada_escolhida_nome})
+            info_aba = _ogrinfo_json(ctx, prep["caminho"], prep["layer"], prep["oo"], prep.get("config"))
+            camadas_aba = info_aba.get("layers") or []
+            if not camadas_aba:
+                raise FalhaDefinitiva(f"a aba {camada_escolhida_nome!r} não gerou nenhuma camada")
+            camada_ogr_escolhida = camadas_aba[0]
 
-        # ------------------------------------------------------------ validade (amostra)
-        ctx.progresso(70, "amostrando validade")
-        amostra, invalidas, exemplo = (0, 0, None)
-        if resolvido.get("escolhida"):
-            amostra, invalidas, exemplo = _amostra_validade(ctx, prep["caminho"], nome_camada_origem,
-                                                            prep["oo"], prep.get("config"))
+        analise = _analisar_camada(ctx, prep, camada_ogr_escolhida)
+        analise["camada_origem"] = camada_escolhida_nome  # nome de EXIBIÇÃO (aba do xlsx, pasta do kmz, ...)
+        feicoes = analise["feicoes"]
+        resolvido = analise["geometria"]
+        crs = analise["crs"]
+        campos = analise["campos"]
 
         perguntas = []
+        if camada_ambigua:
+            perguntas.append("camada")
         if crs.get("perguntar"):
             perguntas.append("crs")
         if prep["codificacao"].get("perguntar"):
@@ -492,26 +651,46 @@ def ingestao_inspecionar(ctx, importacao_id: uuid.UUID) -> dict:
                 perguntas.append("unidade")
             perguntas.append("georreferencia")   # o desenho não traz projeção: EPSG ou pontos de controle
 
-        avisos_gerais = []
-        if crs.get("aviso"):
-            avisos_gerais.append(crs.pop("aviso"))
-        if resolvido.get("sem_geometria"):
-            avisos_gerais.append(f"{resolvido['sem_geometria']} feições sem geometria")
+        avisos_gerais = list(prep.get("avisos") or [])
+        avisos_gerais.extend(analise["avisos"])
         if cad_info:
             avisos_gerais.extend(cad_info.get("avisos") or [])
             avisos_gerais.extend(cad_info.get("pendencias") or [])
+        # avisos sobre as OUTRAS camadas: nunca uma camada some do arquivo sem que a proposta diga o nome dela
+        if len(resumo) > 1:
+            outras = [c for i, c in enumerate(resumo) if i != indice_escolhido]
+            if camada_ambigua:
+                nomes_outras = ", ".join(repr(c["camada_origem"]) for c in outras)
+                avisos_gerais.append(
+                    f"o arquivo tem {len(resumo)} camadas; além de {camada_escolhida_nome!r} (escolhida por "
+                    f"padrão) também existem {nomes_outras}, que não entram nesta importação sem escolher "
+                    f"'camada' na confirmação"
+                )
+            else:
+                for c in outras:
+                    if c["feicoes"] == 0:
+                        avisos_gerais.append(f"a camada {c['camada_origem']!r} está vazia")
+                    else:
+                        avisos_gerais.append(
+                            f"a camada {c['camada_origem']!r} também tem dado e não entra nesta importação"
+                        )
 
         item_id = imp["item_id"]
+        camadas_proposta = [
+            {"camada_origem": c["camada_origem"], "feicoes": c["feicoes"],
+            "tem_geometria": (analise["tem_geometria"] if i == indice_escolhido
+                              else bool(c.get("tem_geometria_declarada", True)))}
+            for i, c in enumerate(resumo)
+        ]
         proposta = {
             "importacao_id": iid, "arquivo_id": imp["arquivo_id"], "formato": formato, "driver": prep["driver"],
-            "camada_origem": nome_camada_origem,
-            "titulo": nomes.normalizar_titulo(prep["titulo_origem"] or nome_camada_origem),
+            "camada_origem": camada_escolhida_nome, "camada_escolhida": camada_escolhida_nome,
+            "camadas": camadas_proposta,
+            "titulo": nomes.normalizar_titulo(prep.get("titulo_origem") or camada_escolhida_nome),
             "nome_tabela": tabela_de(item_id),
-            "feicoes": feicoes, "feicoes_exatas": feicoes >= 0,
+            "feicoes": feicoes, "feicoes_exatas": analise["feicoes_exatas"],
             "geometria": resolvido, "crs": crs, "codificacao": prep["codificacao"], "csv": prep["csv"],
-            "campos": campos,
-            "validade": {"amostra": amostra, "invalidas": invalidas, "exemplo": exemplo,
-                         "acao": "corrigir" if invalidas else None},
+            "campos": campos, "validade": analise["validade"],
             "avisos": avisos_gerais, "perguntas": perguntas,
         }
         if prep.get("cad"):

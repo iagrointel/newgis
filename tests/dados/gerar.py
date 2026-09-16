@@ -198,6 +198,99 @@ def gerar_filegdb(cobertura_nomeada: Path) -> None:
     shutil.rmtree(dir_tmp)
 
 
+def gerar_gml(cobertura_nomeada: Path) -> None:
+    """GML (item L0-04-b, "4 formatos a mais" do portão): mesmo recorte nomeado do KML/DXF/GeoJSONSeq."""
+    destino = SAIDA / "cobertura.gml"
+    for sufixo in (".gml", ".xsd"):
+        (SAIDA / f"cobertura{sufixo}").unlink(missing_ok=True)
+    _ogr2ogr("-f", "GML", str(destino), str(cobertura_nomeada), "-nln", "cobertura")
+
+
+def gerar_flatgeobuf(cobertura_nomeada: Path) -> None:
+    """FlatGeobuf (item L0-04-b): mesmo recorte nomeado."""
+    destino = SAIDA / "cobertura.fgb"
+    destino.unlink(missing_ok=True)
+    _ogr2ogr("-f", "FlatGeobuf", str(destino), str(cobertura_nomeada), "-nln", "cobertura")
+
+
+def gerar_gpkg_tres_camadas(cobertura_geojson: Path) -> None:
+    """GeoPackage com 3 camadas (cláusula literal do portão do L0-04-b: 'GPKG com 3 camadas'). Achado do
+    adversário do turno 3: a inspeção tomava `camadas[0]` e as outras duas sumiam sem aviso. As 3 camadas usam
+    o recorte de 80 feições (não o nomeado de 10) porque `test_as_tres_camadas_do_gpkg_importam_uma_a_uma`
+    confere `feicoes_carregadas == 80` em CADA uma delas."""
+    caminho = SAIDA / "tres_camadas.gpkg"
+    caminho.unlink(missing_ok=True)
+    _ogr2ogr("-f", "GPKG", str(caminho), str(cobertura_geojson), "-nln", "camada_um")
+    for nome in ("camada_dois", "camada_tres"):
+        _ogr2ogr("-f", "GPKG", "-update", "-append", str(caminho), str(cobertura_geojson), "-nln", nome)
+
+
+def gerar_kmz_tres_pastas(lugares_subset_geojson: Path) -> None:
+    """KMZ com TRÊS pastas (cláusula literal do portão do L0-04-d: 'KMZ com 3 pastas gera 3 camadas'). O driver
+    LIBKML lê cada `<Folder>` do `doc.kml` interno como uma camada OGR própria; escrito à mão porque
+    `-update -append` do LIBKML sobre `.kmz` SUBSTITUI o documento em vez de acrescentar (medido: sai 1 camada,
+    a última). Coordenadas reais de lugares de Guarulhos (OSM), não inventadas."""
+    dados = json.loads(lugares_subset_geojson.read_text(encoding="utf-8"))
+    pontos = []
+    for f in dados["features"]:
+        geom = f.get("geometry") or {}
+        if geom.get("type") == "Point":
+            pontos.append((f["properties"].get("name") or "sem nome", geom["coordinates"]))
+        elif geom.get("type") == "MultiPoint" and geom.get("coordinates"):
+            pontos.append((f["properties"].get("name") or "sem nome", geom["coordinates"][0]))
+    if len(pontos) < 3:
+        raise RuntimeError("o subconjunto de lugares não tem pontos suficientes para as 3 pastas do KMZ")
+    partes = ['<?xml version="1.0" encoding="UTF-8"?>',
+             '<kml xmlns="http://www.opengis.net/kml/2.2"><Document>']
+    for i, nome_pasta in enumerate(("pasta_um", "pasta_dois", "pasta_tres")):
+        partes.append(f"<Folder><name>{nome_pasta}</name>")
+        for nome, (lon, lat) in pontos[i::3]:
+            seguro = str(nome).replace("&", "e").replace("<", "(").replace(">", ")")
+            partes.append(f"<Placemark><name>{seguro}</name>"
+                          f"<Point><coordinates>{lon},{lat},0</coordinates></Point></Placemark>")
+        partes.append("</Folder>")
+    partes.append("</Document></kml>")
+    kmz = SAIDA / "tres_pastas.kmz"
+    kmz.unlink(missing_ok=True)
+    with zipfile.ZipFile(kmz, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("doc.kml", "\n".join(partes))
+
+
+def gerar_gpx(lugares_geojson: Path) -> None:
+    """GPX (item L0-04-d): o driver GPX do GDAL grava waypoints; `-explodecollections` porque o recorte de
+    lugares do OSM vem como MultiPoint e o driver GPX só aceita Point/LineString."""
+    destino = SAIDA / "lugares.gpx"
+    destino.unlink(missing_ok=True)
+    _ogr2ogr("-f", "GPX", str(destino), str(lugares_geojson), "-t_srs", "EPSG:4326", "-nln", "waypoints",
+             "-nlt", "POINT", "-explodecollections")
+
+
+def gerar_duas_planilhas(lugares_geojson: Path) -> None:
+    """XLSX com DUAS planilhas (cláusula literal do portão do L0-04-b: 'XLSX com 2 planilhas'). Cada planilha é
+    tabela (nome/place, sem lat/lon) — serve para provar que a recusa da carga por falta de geometria é
+    explícita, não silenciosa (`test_planilha_sem_geometria_e_recusada_na_confirmacao_com_motivo`)."""
+    destino = SAIDA / "duas_planilhas.xlsx"
+    destino.unlink(missing_ok=True)
+    _ogr2ogr("-f", "XLSX", str(destino), str(lugares_geojson), "-nln", "planilha_um",
+             "-select", "name,place")
+    _ogr2ogr("-f", "XLSX", "-update", "-append", str(destino), str(lugares_geojson), "-nln", "planilha_dois")
+
+
+def gerar_csv_300_colunas_0_linhas() -> None:
+    """Refutação literal do L0-04-b: 'CSV com 300 colunas e 0 linhas'. A inspeção tem de DIZER o que
+    aconteceu (a camada sairia vazia), nunca terminar em silêncio."""
+    (SAIDA / "largo_300_colunas.csv").write_text(
+        ",".join(f"col_{i}" for i in range(300)) + "\n", encoding="utf-8")
+
+
+def gerar_zips_malformados() -> None:
+    """Entrada malformada tem de virar 422 com mensagem, nunca 500 com rastro (refutação do item pai)."""
+    bons = (SAIDA / "cobertura_shp.zip").read_bytes()
+    (SAIDA / "zip_corrompido.zip").write_bytes(bons[: len(bons) // 2])  # diretório central destruído
+    with zipfile.ZipFile(SAIDA / "zip_aninhado.zip", "w") as z:
+        z.writestr("dentro.zip", bons)
+
+
 def main() -> None:
     if not PMTILES.exists():
         raise SystemExit(f"ausente: {PMTILES} (dado da casa, não deveria faltar)")
@@ -216,6 +309,14 @@ def main() -> None:
     gerar_dxf(cobertura_nomeada)
     gerar_xlsx(lugares)
     gerar_filegdb(cobertura_nomeada)
+    gerar_gml(cobertura_nomeada)
+    gerar_flatgeobuf(cobertura_nomeada)
+    gerar_gpkg_tres_camadas(cobertura)
+    gerar_kmz_tres_pastas(lugares)
+    gerar_gpx(lugares)
+    gerar_duas_planilhas(lugares)
+    gerar_csv_300_colunas_0_linhas()
+    gerar_zips_malformados()
     cobertura_nomeada.unlink()
     cobertura.unlink()
     lugares.unlink()

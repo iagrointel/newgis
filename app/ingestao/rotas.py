@@ -19,7 +19,7 @@ from app.auth.sessao import Auth, autenticado
 from app.catalogo.comum import jsonb, registrar_evento, uuid_ok
 from app.catalogo.modelos import UUID_PADRAO, JobCriado, Modelo
 from app.erros import ErroAPI
-from app.ingestao.formatos import FORMATOS, ConteudoNaoCorresponde
+from app.ingestao.formatos import FORMATOS, ConteudoNaoCorresponde, ZipSuspeito
 from app.ingestao.formatos import verificar_conteudo as _verificar_conteudo
 from app.jobs import servico
 from app.jobs.contexto import sessao_de
@@ -47,6 +47,9 @@ class ConfirmarEntrada(Modelo):
     campos: list[dict] | None = None
     validade: dict | None = None
     cad: dict | None = None   # DXF/DWG: unidade, camadas do desenho, blocos e pontos de controle (ADR 0020)
+    # arquivo com N camadas (item L0-04-b/d): {"escolhida": "<camada_origem>"} — qual das `proposta["camadas"]`
+    # entra nesta importação. Restaurado 16/09 (achado da re-triagem: `camadas[0]` descartava as demais).
+    camada: dict | None = None
 
 
 def _confirmar_cad(pedido: dict, proposta: dict, perguntas_pendentes: list) -> dict:
@@ -159,6 +162,11 @@ def preparar_importacao(cur, request: Request, auth: Auth, arquivo_id: str, form
         raise ErroAPI(404, "objeto_inexistente", "o objeto do arquivo não existe mais no armazenamento") from e
     try:
         _verificar_conteudo(formato, dados)
+    except ZipSuspeito as e:
+        # achado do adversário do turno 3 (item L0-04-d, refutação "zip malformado"): ZipSuspeito e
+        # ConteudoNaoCorresponde eram classes irmãs sem base comum e só a segunda era capturada aqui — um zip
+        # corrompido ou aninhado subia até o handler genérico e saía 500 com rastro, nunca 422.
+        raise ErroAPI(422, "zip_suspeito", str(e)) from e
     except ConteudoNaoCorresponde as e:
         raise ErroAPI(422, "conteudo_nao_corresponde", str(e)) from e
 
@@ -212,7 +220,15 @@ def listar(limite: int = 50, deslocamento: int = 0, lote_id: str | None = None,
 
 @router.get("/api/importacoes/formatos", openapi_extra=LER)
 def formatos_aceitos(auth: Auth = autenticado(escopo_token="catalogo:ler")):
-    return [{"tipo": f.nome, "extensoes": list(f.extensoes), "rotulo": f.rotulo} for f in FORMATOS.values()]
+    """Item L0-04-d: a instalação declara TODOS os formatos que conhece, aceitos ou não, com o motivo de cada
+    recusa — nunca omite um formato como se ele não existisse (achado do adversário do turno 3)."""
+    from app.ingestao.formatos import FORMATOS_FORA_DE_ESCOPO
+
+    aceitos = [{"tipo": f.nome, "extensoes": list(f.extensoes), "rotulo": f.rotulo, "aceito": True, "motivo": None}
+              for f in FORMATOS.values()]
+    recusados = [{"tipo": tipo, "extensoes": [], "rotulo": tipo, "aceito": False, "motivo": motivo}
+                for tipo, motivo in FORMATOS_FORA_DE_ESCOPO.items()]
+    return aceitos + recusados
 
 
 @router.get("/api/importacoes/{id}", openapi_extra=LER)
@@ -232,6 +248,22 @@ def preparar_confirmacao(cur, request: Request, r: dict, corpo: ConfirmarEntrada
 
     confirmacao: dict = {}
     perguntas_pendentes = list(proposta.get("perguntas") or [])
+
+    if corpo.camada is not None and corpo.camada.get("escolhida"):
+        camadas_disponiveis = {c["camada_origem"]: c for c in (proposta.get("camadas") or [])}
+        escolhida = corpo.camada["escolhida"]
+        if camadas_disponiveis and escolhida not in camadas_disponiveis:
+            raise ErroAPI(422, "camada_invalida", f"camada {escolhida!r} não existe nesta importação",
+                          {"opcoes": sorted(camadas_disponiveis)})
+        entrada = camadas_disponiveis.get(escolhida)
+        # a camada sem geometria recusa AQUI, na confirmação — nunca no meio da carga assíncrona (item
+        # L0-04-b, refutação "planilha sem geometria"): o pedido nunca chega a virar job.
+        if entrada is not None and not entrada.get("tem_geometria", True):
+            raise ErroAPI(422, "camada_sem_geometria",
+                          f"a camada {escolhida!r} não tem geometria; não é carregada nesta passagem")
+        confirmacao["camada"] = {"escolhida": escolhida}
+        if "camada" in perguntas_pendentes:
+            perguntas_pendentes.remove("camada")
 
     if corpo.crs is not None:
         srid = corpo.crs.get("srid")
