@@ -96,7 +96,7 @@ async function carregarCamadas() {
   aviso('camadas-aviso', '');
   const filtro = porId('filtro-vencida').value;
   const busca = filtro === '' ? '' : `?vencida=${filtro}`;
-  const r = await api.obter(`/api/acervo/camadas${busca}`);
+  const r = await api.obter(`/api/acervo/frescor/camadas${busca}`);
   if (r.status !== 200) {
     if (r.status === 401) return;
     aviso('camadas-aviso', `não foi possível carregar as camadas do acervo (${api.mensagemDe(r)})`);

@@ -3,14 +3,18 @@
 Três leituras, todas sobre views da plataforma — `acervo.*` continua só leitura e nenhuma destas rotas escreve
 em lugar nenhum:
 
-  `GET /api/acervo/camadas`            camadas do registro com o estado de verificação; `vencida=true` filtra as
+  `GET /api/acervo/frescor/camadas`    camadas do registro com o estado de verificação; `vencida=true` filtra as
                                         que precisam do aviso. É o que a ficha e o mapa consomem.
+                                        (item L6-01-h-frescor-verificacao — item L6-01-e-publicacao já é dono de
+                                        `GET /api/acervo/camadas`, a listagem da galeria de camadas publicadas;
+                                        as duas nasceram com o mesmo caminho em ramos diferentes e ficaram
+                                        sombreadas uma na outra até esta rota mudar de endereço, 16/09)
   `GET /api/acervo/camadas/{id}/verificacoes`  o histórico da camada (as 12 mais recentes que o job mantém).
   `GET /api/acervo/frescor/mudancas`   as contagens que variaram mais de 5 % contra a verificação anterior.
   `GET /api/acervo/frescor/execucoes`  as rodadas do periódico (quando rodou, quanto durou, o que cobriu).
 
-Este router é incluído ANTES de `app/acervo/rotas.py` em `app/main.py`: `/api/acervo/camadas` e
-`/api/acervo/frescor/*` casariam com `/api/acervo/{fonte_id}` se a ordem fosse a inversa, e o FastAPI resolve
+Este router é incluído ANTES de `app/acervo/rotas.py` em `app/main.py`: `/api/acervo/camadas/{id}/verificacoes`
+e `/api/acervo/frescor/*` casariam com `/api/acervo/{fonte_id}` se a ordem fosse a inversa, e o FastAPI resolve
 pela ordem de inclusão.
 
 Regra D17 herdada sem exceção: `plat.v_acervo_camada_frescor` junta `plat.acervo_ficha`, que já filtra fonte sem
@@ -52,7 +56,7 @@ def _iso(r: dict) -> dict:
     return j
 
 
-@router.get("/api/acervo/camadas", response_model=AcervoCamadaFrescorPagina, openapi_extra=LER)
+@router.get("/api/acervo/frescor/camadas", response_model=AcervoCamadaFrescorPagina, openapi_extra=LER)
 def listar_camadas(
     fonte_id: str | None = Query(default=None, max_length=200),
     vencida: bool | None = None,

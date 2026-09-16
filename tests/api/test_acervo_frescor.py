@@ -186,7 +186,7 @@ def test_endpoint_derrubado_acende_o_aviso(env, registro_populado, sessao_a):
     camada_id, fonte_id, url = alvo
     _registrar_endpoint(fonte_id, url, respondeu=False)
 
-    r = sessao_a.get(f"/api/acervo/camadas?fonte_id={fonte_id}")
+    r = sessao_a.get(f"/api/acervo/frescor/camadas?fonte_id={fonte_id}")
     assert r.status_code == 200, r.text
     linha = next(i for i in r.json()["itens"] if i["acervo_camada_id"] == camada_id)
     assert linha["verificacao_vencida"] is True, linha
@@ -201,13 +201,13 @@ def test_endpoint_derrubado_acende_o_aviso(env, registro_populado, sessao_a):
     assert f.json()["camadas_vencidas"] >= 1
 
     # o filtro que a tela usa ("só as com verificação vencida") traz a camada
-    v = sessao_a.get("/api/acervo/camadas?vencida=true&limite=200")
+    v = sessao_a.get("/api/acervo/frescor/camadas?vencida=true&limite=200")
     assert v.status_code == 200
     assert any(i["acervo_camada_id"] == camada_id for i in v.json()["itens"])
 
     # o endereço volta a responder: o aviso por endpoint morto tem de apagar
     _registrar_endpoint(fonte_id, url, respondeu=True)
-    r2 = sessao_a.get(f"/api/acervo/camadas?fonte_id={fonte_id}")
+    r2 = sessao_a.get(f"/api/acervo/frescor/camadas?fonte_id={fonte_id}")
     linha2 = next(i for i in r2.json()["itens"] if i["acervo_camada_id"] == camada_id)
     assert linha2["endpoints_mortos"] == 0, linha2
     assert linha2["motivo_vencida"] != "endpoint_morto", linha2
@@ -219,7 +219,7 @@ def test_camada_nunca_verificada_ja_nasce_com_aviso(env, registro_populado, sess
     camada_id, fonte_id = _camada_exposta()
     _psql(f"DELETE FROM plat.acervo_camada_verificacao WHERE acervo_camada_id = $q${camada_id}$q$; "
           f"DELETE FROM plat.acervo_endpoint_verificacao WHERE fonte_id = $q${fonte_id}$q$")
-    r = sessao_a.get(f"/api/acervo/camadas?fonte_id={fonte_id}")
+    r = sessao_a.get(f"/api/acervo/frescor/camadas?fonte_id={fonte_id}")
     linha = next(i for i in r.json()["itens"] if i["acervo_camada_id"] == camada_id)
     assert linha["verificacao_vencida"] is True
     assert linha["motivo_vencida"] == "nunca_verificada", linha

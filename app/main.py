@@ -308,8 +308,10 @@ ROUTERS = [
     # --- acervo da casa (L6-01-a): /api/acervo, /api/acervo/{fonte_id}, /api/acervo/{fonte_id}/adicionar
     # publicacao ANTES de rotas_acervo: /api/acervo/camadas casaria com /api/acervo/{fonte_id} se viesse depois
     rotas_acervo_publicacao.router,
-    # --- frescor do acervo (L6-01-h): /api/acervo/camadas e /api/acervo/frescor/*; ANTES de rotas_acervo,
-    # senão /api/acervo/{fonte_id} engoliria os dois caminhos (o FastAPI resolve pela ordem de inclusão)
+    # --- frescor do acervo (L6-01-h): /api/acervo/camadas/{id}/verificacoes e /api/acervo/frescor/*
+    # (a listagem em si é /api/acervo/frescor/camadas — /api/acervo/camadas sozinho é do L6-01-e acima,
+    # publicacao.listar_camadas; os dois nasceram no mesmo caminho em ramos diferentes, 16/09); ANTES de
+    # rotas_acervo, senão /api/acervo/{fonte_id} engoliria os caminhos (o FastAPI resolve pela ordem de inclusão)
     rotas_acervo_frescor.router,
     rotas_acervo.router,
     # --- conexão externa (L6-02-a): /api/conexoes, /api/conexoes/{id}, /api/conexoes/{id}/testar
@@ -341,8 +343,18 @@ ROUTERS = [
     rotas_uploads,
     # --- ingestão vetorial (L0-04): /api/importacoes (upload -> inspeção -> confirmação -> carga -> camada)
     rotas_ingestao,
+    # --- construtor de formulário de atributos, arrasta-e-solta (L5-03-form-builder):
+    # GET /api/camadas/{id}/campos (paleta: nome/tipo/alias reais da camada, {campos:[...]}), /formulario,
+    # /formulario/versoes* — usado pelo construtor, pela edição web (L2-03) e pelo PWA de campo através do
+    # mesmo motor (app/formulario/motor.py). Achado 16/09: este módulo e camada_esquema.py registraram o
+    # MESMO caminho GET /api/camadas/{id}/campos, cada um com um nome de parâmetro diferente ({id} aqui,
+    # {item_id} lá) — mesma forma para o Starlette, uma sombreava a outra sempre. camada_esquema.campos
+    # mudou de endereço (agora /esquema/campos, ver comentário dela); este fica com o caminho curto porque
+    # tem mais chamadas (edição web, PWA de campo, item L5-03).
+    rotas_formulario,
     # --- construtor de camada por esquema (L5-31): /api/camadas/esquema, /api/camadas/{id}/esquema[/plano],
-    # /api/camadas/{id}/campos (fields no formato FeatureServer)
+    # /api/camadas/{id}/esquema/campos (fields no formato FeatureServer — GET .../campos sem o prefixo
+    # "esquema" é do form-builder acima, não deste módulo)
     camada_esquema.router,
     # --- vista de camada (L5-32): POST /api/camadas/{id}/vistas, GET/PUT /api/vistas/{id} (view PostgreSQL
     # com filtro congelado e campos ocultos; servida pelo mesmo FeatureServer/OGC da camada-mãe)
@@ -407,6 +419,14 @@ ROUTERS = [
     # --- mapa (L2-01-a-documento-mapa): /api/mapas (lista, criar, ler, editar) e /api/mapas/{id}/completo
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
+    # --- telemetria da rede de utilidades (L4-13-integracao-telemetria): /api/rede/medicao/leituras (publicar
+    # lote), /api/rede/medicao/ativos/{ativo} (placa), .../ultimas e .../serie (ficha do ativo), .../jusante
+    # (agregação pela topologia derivada, abaixo). ANTES de qualquer router "/api/rede/{rede_id}/..." da
+    # família (rotas_rede_identificadores em especial: /{rede_id}/ativos/{global_id}) — "medicao" É um valor
+    # de string válido para {rede_id}, então um router genérico registrado antes engoliria toda rota
+    # medicao/ativos/{ativo} tratando "medicao" como se fosse um rede_id (achado 16/09, mesma família do
+    # /api/importacoes/formatos citado no topo de tests/unit/test_rotas_sombreadas.py)
+    rotas_rede_medicao,
     # --- rede de utilidades (L4-01-a): /api/rede (redes do inquilino), /api/rede/{rede_id}/pacote (importa e
     # exporta o pacote de ativos) e /api/rede/pacotes (os pacotes entregues com a instalação)
     rotas_rede_utilidades,
@@ -475,10 +495,6 @@ ROUTERS = [
     # --- gás e esgoto (L4-05-e): GET /api/rede/{rede_id}/esgoto/escoamento e .../gas/pressao (conferências
     # que só leem) e POST .../teksi (GeoPackage no esquema TEKSI vira feição no vocabulário do pacote)
     rotas_rede_gas_esgoto,
-    # --- telemetria da rede de utilidades (L4-13-integracao-telemetria): /api/rede/medicao/leituras (publicar
-    # lote), /api/rede/medicao/ativos/{ativo} (placa), .../ultimas e .../serie (ficha do ativo), .../jusante
-    # (agregação pela topologia derivada, acima)
-    rotas_rede_medicao,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,
@@ -697,10 +713,6 @@ ROUTERS = [
     # --- campo (L2-07-campo): fila de trabalho, roteiro do dia e visita com foto — /api/campo/filas,
     # /api/campo/roteiros, /api/campo/visitas, portado do SIG anterior
     rotas_campo.router,
-    # --- construtor de formulário de atributos, arrasta-e-solta (L5-03-form-builder):
-    # /api/camadas/{id}/campos, /formulario, /formulario/versoes* — usado pelo construtor, pela
-    # edição web (L2-03) e pelo PWA de campo (acima) através do mesmo motor (app/formulario/motor.py)
-    rotas_formulario,
     # --- backup lógico por inquilino e ensaio de restauração (L0-06-backup-status): GET /api/backup/backups,
     # GET /api/backup/ensaios (disparar usa a fila genérica: POST /api/jobs {tipo: backup.executar|
     # backup.ensaio_restauracao})
