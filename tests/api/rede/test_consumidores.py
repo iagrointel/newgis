@@ -87,7 +87,11 @@ def test_tempo_de_geracao_anotado(gerado, medida):
     assert gerado["segundos"] < 300  # camada inteira em minutos, não em horas
 
 
-def test_lista_sem_campo_identificavel(sessao_a):
+def test_lista_sem_campo_identificavel(gerado, sessao_a):
+    """`gerado` (não usado diretamente) força a geração da camada e o skip do módulo quando não há
+    schema real da cooperativa (PLAT_REDE_ESQUEMA_COOP) — sem essa dependência, este teste era o
+    único do arquivo que não pedia `gerado`/`rede_carregada` e rodava sozinho contra um inquilino
+    sem nenhuma camada gerada (0 itens em vez dos 25 esperados), em vez de pular como os demais."""
     r = sessao_a.get("/api/rede/consumidores/enderecos-sem-rede?limite=25")
     assert r.status_code == 200, r.text
     corpo = r.json()
