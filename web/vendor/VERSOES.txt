@@ -22,6 +22,12 @@ big-shoulders-display-2.002.woff2  2.002  698f9960927e7b5a0c38e5bf388cd0a6e42d85
 ibm-plex-sans-3.201.woff2  3.201  e2291e842cf5af167122a22881a740c7f2dda7716f1e8cd76680264f4a859470  OFL-1.1  https://raw.githubusercontent.com/google/fonts/main/ofl/ibmplexsans/OFL.txt (baixado de fonts.gstatic.com via CSS2 API, 06/09/2026; fonte variável, pesos 400/500/600 usados)
 ibm-plex-mono-regular-2.3.woff2  2.3  08949f728dc52d528e69b1667d15c89a5686a4ee9a296ff90983985f99c380f7  OFL-1.1  https://raw.githubusercontent.com/google/fonts/main/ofl/ibmplexmono/OFL.txt (baixado de fonts.gstatic.com via CSS2 API, 06/09/2026; peso 400)
 ibm-plex-mono-medium-2.3.woff2  2.3  01d285447409c8a588692162439a038b8cbd7871309ee20267b0d2d91c6e8e22  OFL-1.1  https://raw.githubusercontent.com/google/fonts/main/ofl/ibmplexmono/OFL.txt (baixado de fonts.gstatic.com via CSS2 API, 06/09/2026; peso 500)
+# item L2-02-e-simbolos-sprites-glifos (07/09/2026): as duas fontes embutidas que o Martin serve como glifo
+# PBF para o estilo MapLibre (app/simbolos/fontes.py) — .ttf, não .woff2, porque é o Martin (não o navegador)
+# quem lê o arquivo. Vieram do pacote apt do Ubuntu 24.04 noble, não do CSS2 API do Google Fonts como as
+# fontes de UI acima; mesma origem e licença já registradas em docs/LICENCAS_SIMBOLOS.md.
+noto-sans-regular-2.004.ttf  2.004  89c3c497f618fdaa0b2d1e98fef93582f28c71debd2c4a8cdf41f190ced2909d  OFL-1.1  https://raw.githubusercontent.com/google/fonts/main/ofl/notosans/OFL.txt (apt fonts-noto-core 20201225-2, Ubuntu 24.04 noble; upstream https://github.com/googlei18n/noto-fonts)
+open-sans-regular-1.10.ttf  1.10  e64e508b2aa2880f907e470c4550980ec4c0694d103a43f36150ac3f93189bee  Apache-2.0  https://raw.githubusercontent.com/google/fonts/main/apache/opensans/LICENSE.txt (apt fonts-open-sans 1.11-2, Ubuntu 24.04 noble; upstream https://www.opensans.com/)
 pmtiles-4.5.0.js  4.5.0  caf981bc46f6327ee7e65d5dc964d89d38a69f60edca2bd4c5c890c21b554c6c  BSD-3-Clause  https://registry.npmjs.org/pmtiles/-/pmtiles-4.5.0.tgz (npm pack pmtiles@4.5.0, 06/09/2026; arquivo package/dist/pmtiles.js, build UMD global `pmtiles`; item L2-01-a-basemap-local-pmtiles — protocolo `pmtiles://` que o MapLibre usa para ler o PMTiles local por Range HTTP, sem servidor de tiles dinâmico)
 # Item L2-09-c-modelos-gltf-ifc-3dtiles (08/09/2026). Duas bibliotecas novas, as duas MIT, as duas com a
 # licença copiada ao lado do arquivo (three-0.185.1/LICENSE e deck.gl-9.4.0.LICENSE) — a spec veta AGPL e
