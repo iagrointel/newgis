@@ -284,7 +284,8 @@ def executar(ctx, f: registro.Ferramenta, parametros: dict, titulo: str | None =
                     "INSERT INTO plat.item_relacao(origem, destino, tipo, tenant_id) VALUES (%s::uuid, %s::uuid, "
                     "'derivado_de', %s) ON CONFLICT DO NOTHING", (item_id, e["item_id"], ctx.tenant_id),
                 )
-            cur.execute("UPDATE plat.tenant SET uso_bytes = uso_bytes + %s WHERE id = %s", (tamanho, ctx.tenant_id))
+            # uso_bytes NÃO é somado aqui: o INSERT em plat.item acima (camada_vetorial, tamanho_bytes já
+            # preenchido) já disparou o gatilho simétrico plat.item_uso_bytes — somar de novo dobraria a conta.
             props = {"ferramenta": f.nome, "versao": f.versao, "job_id": proveniencia["job_id"],
                      "entradas": [e["item_id"] for e in entradas.values()], "feicoes": int(est["feicoes"])}
             if request is not None:

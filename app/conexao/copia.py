@@ -311,9 +311,11 @@ def conexao_copiar_vetor(ctx, conexao_id: uuid.UUID, colecao: str, titulo: str |
                 + (["dado"] if extent else [None])
                 + [linha["url"], ctx.usuario_id, ctx.usuario_id],
             )
+            # uso_bytes NÃO é somado aqui: o INSERT em plat.item acima (tamanho_bytes já preenchido) já
+            # disparou o gatilho simétrico plat.item_uso_bytes — somar de novo dobraria a conta a cada cópia.
             cur.execute(
-                "UPDATE plat.tenant SET uso_reservado_bytes = greatest(0, uso_reservado_bytes - %s), "
-                "uso_bytes = uso_bytes + %s WHERE id = %s", (reservado, tamanho_bytes, ctx.tenant_id),
+                "UPDATE plat.tenant SET uso_reservado_bytes = greatest(0, uso_reservado_bytes - %s) WHERE id = %s",
+                (reservado, ctx.tenant_id),
             )
             reservado = 0
         ctx.progresso(100, f"{escritas} feições copiadas")

@@ -183,8 +183,9 @@ def publicar(ctx, f, saida: dict, destino: dict, entradas: dict, prov: dict, tit
             cur.execute("INSERT INTO plat.item_relacao(origem, destino, tipo, tenant_id) VALUES (%s::uuid, "
                         "%s::uuid, 'derivado_de', %s) ON CONFLICT DO NOTHING",
                         (item_id, e["item_id"], ctx.tenant_id))
-        cur.execute("UPDATE plat.tenant SET uso_bytes = uso_bytes + %s WHERE id = %s",
-                    (bytes_totais, ctx.tenant_id))
+        # tenant.uso_bytes NÃO conta raster (item L0-07-c-cotas-uso, ver comentário em
+        # app/catalogo/tarefas.py): só camada_vetorial mexe nesse contador (cota de TABELA); somar aqui
+        # inflava a mesma conta que o gate de ingestão vetorial usa, sem devolução simétrica no expurgo.
         props = {"ferramenta": f.nome, "versao": f.versao, "job_id": prov["job_id"],
                  "entradas": [e["item_id"] for e in entradas.values()], "familia": "raster"}
         if request is not None:

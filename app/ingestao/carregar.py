@@ -421,10 +421,13 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
                 "'arquivo_de_camada', %s) ON CONFLICT DO NOTHING",
                 (imp["arquivo_id"], item_id, ctx.tenant_id),
             )
+            # uso_bytes NÃO é somado aqui: o INSERT em plat.item acima (tipo camada_vetorial, tamanho_bytes já
+            # preenchido) já disparou o gatilho simétrico plat.item_uso_bytes (item recurso-partilhado-por-
+            # inquilino) — somar de novo aqui dobraria a conta a cada carga, e a devolução do gatilho na
+            # exclusão nunca alcançaria a soma manual feita aqui.
             cur.execute(
-                "UPDATE plat.tenant SET uso_reservado_bytes = greatest(0, uso_reservado_bytes - %s), "
-                "uso_bytes = uso_bytes + %s WHERE id = %s",
-                (reservado, tamanho_bytes, ctx.tenant_id),
+                "UPDATE plat.tenant SET uso_reservado_bytes = greatest(0, uso_reservado_bytes - %s) WHERE id = %s",
+                (reservado, ctx.tenant_id),
             )
             cur.execute(
                 "UPDATE plat.importacao SET estado = 'concluida', relatorio = %s, item_id = %s::uuid, "
