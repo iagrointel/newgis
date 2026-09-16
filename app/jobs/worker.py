@@ -326,11 +326,18 @@ class Worker:
 
     def _pegar(self) -> None:
         while len(self.filhos) < self.processos and not self.parando:
-            pesado_ok = False
             if not self.lock_pesado:
                 r = self.um("SELECT pg_try_advisory_lock(hashtext(%s)) AS ok", (chave_lock_pesado(),))
-                pesado_ok = bool(r and r["ok"])
-                self.lock_pesado = pesado_ok
+                self.lock_pesado = bool(r and r["ok"])
+            # recalculado a cada volta a partir do estado REAL do lock: se `pesado_ok` ficasse preso ao
+            # valor da tentativa de aquisição (só roda quando `not self.lock_pesado`), um worker que já
+            # segurava o lock de uma volta anterior passaria pesado_ok=False para job_pegar e nunca mais
+            # pegaria trabalho pesado, mesmo com o advisory lock preso — o lock "vazava" sem uso. E exige
+            # também NENHUM pesado nosso já em curso: pg_try_advisory_lock é REENTRANTE na mesma sessão, e
+            # sem esta segunda condição um worker com PLAT_WORKER_PROCESSOS > 1 que já tinha um pesado em
+            # `self.filhos` pediria (e receberia) um SEGUNDO pesado para si mesmo — dois pesados em
+            # paralelo dentro do MESMO worker (tests/unit/test_worker_lock_pesado.py, "metade 3").
+            pesado_ok = self.lock_pesado and not any(f.pesado for f in self.filhos.values())
             job = self.um("SELECT * FROM plat.job_pegar(%s, %s)", (self.nome, pesado_ok))
             if job is None or job.get("id") is None:
                 if pesado_ok:
