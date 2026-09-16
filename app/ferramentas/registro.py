@@ -97,8 +97,12 @@ def _validar_parametro(nome_ferramenta: str, p: Parametro) -> None:
         raise ErroRegistro(f"{onde}: direcao deve ser entrada ou saida")
     if not p.rotulo:
         raise ErroRegistro(f"{onde}: rótulo obrigatório")
-    if p.opcoes and p.tipo != "GPString":
-        raise ErroRegistro(f"{onde}: opcoes só vale para GPString")
+    # achado 16/09: uma lista de escolha fechada (GPMultiValue de GPString, ex. "quais estatísticas")
+    # é tão válida quanto um GPString único com opções — a validação em tempo de EXECUÇÃO (mais abaixo,
+    # onde GPMultiValue vira uma lista de sub-Parametro com o MESMO opcoes) já espera essa combinação.
+    tipo_efetivo_opcoes = p.subtipo if p.tipo == "GPMultiValue" else p.tipo
+    if p.opcoes and tipo_efetivo_opcoes != "GPString":
+        raise ErroRegistro(f"{onde}: opcoes só vale para GPString (ou GPMultiValue de GPString)")
     numerico = p.subtipo if p.tipo == "GPMultiValue" else p.tipo
     if (p.minimo is not None or p.maximo is not None) and numerico not in ("GPDouble", "GPLong", "GPLinearUnit"):
         # faixa vale também na lista (GPMultiValue de número): é aplicada a cada valor por _normalizar
