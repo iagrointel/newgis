@@ -153,7 +153,7 @@ def listar(limite: int = 50, deslocamento: int = 0, lote_id: str | None = None,
 
 
 @router.get("/api/importacoes/formatos", openapi_extra=LER)
-def formatos_aceitos():
+def formatos_aceitos(auth: Auth = autenticado(escopo_token="catalogo:ler")):
     return [{"tipo": f.nome, "extensoes": list(f.extensoes), "rotulo": f.rotulo} for f in FORMATOS.values()]
 
 
