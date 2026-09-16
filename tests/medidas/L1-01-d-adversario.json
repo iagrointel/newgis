@@ -91,26 +91,26 @@
       "web_ativo_no_balde": false
     },
     "3_multipart_acima_da_cota": {
-      "cota_bytes": 254235704,
-      "usado_antes": 248991800,
+      "cota_bytes": 254830718,
+      "usado_antes": 249586814,
       "partes": 2,
       "bytes_enviados": 10485760,
       "parte_1": "aceita",
       "parte_2": "aceita",
       "concluir": "AccessDenied",
-      "bytes_no_garage_depois": 248991800,
+      "bytes_no_garage_depois": 249586814,
       "ultrapassou_a_cota": false
     },
     "3b_cota_de_objetos": {
-      "objetos_antes": 211,
-      "cota_objetos": 214,
+      "objetos_antes": 212,
+      "cota_objetos": 215,
       "tentativas": 6,
       "aceitos": 3,
       "recusados": 3,
       "codigos": [
         "AccessDenied"
       ],
-      "objetos_no_garage_depois": 214
+      "objetos_no_garage_depois": 215
     },
     "3c_concorrencia": {
       "rodadas": [
@@ -118,12 +118,12 @@
           "gravacoes_simultaneas": 32,
           "tamanho_cada": 16384,
           "cabem_pela_cota": 1,
-          "cota_bytes": 249009208,
+          "cota_bytes": 249604222,
           "aceitos": 2,
           "codigos_de_recusa": [
             "AccessDenied"
           ],
-          "bytes_no_garage_depois": 249024568,
+          "bytes_no_garage_depois": 249619582,
           "sobra_sobre_a_cota": 15360,
           "razao": 1.0
         },
@@ -131,12 +131,12 @@
           "gravacoes_simultaneas": 32,
           "tamanho_cada": 16384,
           "cabem_pela_cota": 1,
-          "cota_bytes": 249009208,
+          "cota_bytes": 249604222,
           "aceitos": 1,
           "codigos_de_recusa": [
             "AccessDenied"
           ],
-          "bytes_no_garage_depois": 249008184,
+          "bytes_no_garage_depois": 249603198,
           "sobra_sobre_a_cota": -1024,
           "razao": 1.0
         },
@@ -144,12 +144,12 @@
           "gravacoes_simultaneas": 32,
           "tamanho_cada": 16384,
           "cabem_pela_cota": 1,
-          "cota_bytes": 249009208,
+          "cota_bytes": 249604222,
           "aceitos": 1,
           "codigos_de_recusa": [
             "AccessDenied"
           ],
-          "bytes_no_garage_depois": 249008184,
+          "bytes_no_garage_depois": 249603198,
           "sobra_sobre_a_cota": -1024,
           "razao": 1.0
         }
@@ -158,12 +158,12 @@
         "gravacoes_simultaneas": 32,
         "tamanho_cada": 16384,
         "cabem_pela_cota": 1,
-        "cota_bytes": 249009208,
+        "cota_bytes": 249604222,
         "aceitos": 2,
         "codigos_de_recusa": [
           "AccessDenied"
         ],
-        "bytes_no_garage_depois": 249024568,
+        "bytes_no_garage_depois": 249619582,
         "sobra_sobre_a_cota": 15360,
         "razao": 1.0
       }
@@ -211,16 +211,16 @@
     },
     "9_apagar_devolve_contadores": {
       "antes": {
-        "objetos": 211,
-        "bytes": 248991800
+        "objetos": 212,
+        "bytes": 249586814
       },
       "com_os_tres": {
-        "objetos": 214,
-        "bytes": 248997944
+        "objetos": 215,
+        "bytes": 249592958
       },
       "depois": {
-        "objetos": 211,
-        "bytes": 248991800
+        "objetos": 212,
+        "bytes": 249586814
       },
       "liberado": {
         "objetos": 3,
