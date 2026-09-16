@@ -36,10 +36,13 @@ _CONTENT_TYPE = {
 }
 
 
-def _autenticar(request: Request, item_id: str):
+def _autenticar(request: Request, item_id: str, escopo: str = ESCOPO):
     """Sessão normal OU token — igual ao GeocodeServer (`app/geocodificador/rotas_esri.py`):
     protocolo Esri manda o token na URL, então `?token=`/form `token=` também é aceito além do
-    cabeçalho `Authorization`."""
+    cabeçalho `Authorization`. `escopo` é o escopo exigido (padrão `camada:ler`, a leitura deste
+    módulo); `rotas_edicao_esri.py`, `rotas_sync_esri.py` e `versionamento/rotas_esri.py` reusam
+    esta função passando `camada:editar` nas operações de escrita — nunca remover a conferência
+    de escopo aqui, é ela que impede um token só-leitura de editar/sincronizar/versionar."""
     try:
         auth = auth_sessao.resolver(request)
     except ErroAPI:
@@ -50,7 +53,7 @@ def _autenticar(request: Request, item_id: str):
             raise ErroAPI(401, "token_requerido", "informe token=<token de serviço> ou Authorization: Bearer")
         auth = auth_sessao._auth_de_token(request, tok)  # noqa: SLF001 — mesmo reuso do GeocodeServer
         request.state.auth = auth
-    esc.exigir_escopo(auth, ESCOPO, item_id)
+    esc.exigir_escopo(auth, escopo, item_id)
     return auth
 
 
