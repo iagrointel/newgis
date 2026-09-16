@@ -80,7 +80,9 @@ def test_tilejson_aponta_para_a_propria_url_com_token(token_tiles, raster_demo):
     assert r.status_code == 200, r.text
     corpo = r.json()
     assert corpo["tilejson"] == "3.0.0" and len(corpo["tiles"]) == 1
-    assert f"/svc/{tok}/raster/{item}/" in corpo["tiles"][0]
+    # desde o item L7-26-cdn-tiles o TileJSON aponta para o endereço VERSIONADO ("item@sha256"), que é
+    # o que deixa a CDN guardar o ladrilho para sempre (ver test_cdn_tiles.py para a cláusula do cache).
+    assert f"/svc/{tok}/raster/{item}@" in corpo["tiles"][0]
     assert corpo["tiles"][0].endswith("{z}/{x}/{y}.png")
     assert corpo["minzoom"] <= corpo["maxzoom"] and len(corpo["bounds"]) == 4
 
