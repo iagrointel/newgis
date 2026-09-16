@@ -201,6 +201,10 @@ def listar(sessao: Sessao, estado=None, tipo=None, usuario_id=None, de=None, ate
     deslocamento = max(0, int(deslocamento))
     onde = (" WHERE " + " AND ".join(cond)) if cond else ""
     with banco.db(sessao.ctx) as cur:
+        # sem executor vivo ninguém ceifa (plat.job_ceifar só rodava de dentro do laço do worker,
+        # item recurso-partilhado-por-inquilino): a leitura da fila pela API é o outro lugar por onde
+        # todo cliente passa, então ceifa aqui também — escopada ao inquilino do contexto, piso de 60 s.
+        cur.execute("SELECT plat.job_ceifar_vencidos()")
         cur.execute(f"SELECT count(*) AS n FROM plat.job j{onde}", params)
         total = cur.fetchone()["n"]
         cur.execute(f"{SQL_JOB}{onde} ORDER BY j.{campo} {sentido} NULLS LAST, j.criado_em DESC LIMIT %s OFFSET %s",
