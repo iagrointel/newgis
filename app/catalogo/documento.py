@@ -36,6 +36,7 @@ import os
 import re
 import time
 
+from app import temas
 from app.catalogo import tipos
 from app.cena import documento as cena_documento
 from app.erros import ErroAPI
@@ -88,7 +89,8 @@ def validar_grafo(tipo: str, dados) -> None:
     ligação (`origem`/`alvo`) apontando para um id que não está em `corpo.nos`. O formato de cada campo (tipo do
     nó, tipos de `corpo`/`nos`/`ligacoes`) já é responsabilidade do JSON Schema do tipo (`tipos.validar`,
     chamado ANTES desta função nas duas rotas que escrevem `dados`); aqui só entra o que precisa da lista
-    inteira para ser conferido."""
+    inteira para ser conferido. Item L5-10-temas-marca: `corpo.tema` presente passa pela MESMA checagem —
+    referência ({"id"}) ou definição ({"definicao"}) com tokens validados por formato em app/temas.py."""
     # o tipo `cena` (L2-09-b) tem a mesma natureza — regras que precisam do documento inteiro e que o
     # JSON Schema não expressa — e entra pela MESMA porta, para não haver dois lugares onde um item é
     # conferido antes de gravar. Para qualquer outro tipo a chamada não faz nada.
@@ -96,6 +98,8 @@ def validar_grafo(tipo: str, dados) -> None:
     corpo = _corpo_do_documento(tipo, dados)
     if corpo is None:
         return
+    if corpo.get("tema") is not None:
+        temas.validar_referencia_de_documento(corpo["tema"])
     nos = corpo.get("nos", [])
     if not isinstance(nos, list):
         return
@@ -129,8 +133,42 @@ def validar_grafo(tipo: str, dados) -> None:
                             "regra": "referencia_pendente",
                         }
                     )
+    # vista móvel (item L5-15-vista-movel-responsivo): cada chave de vista_movel.nos é o id de um nó de RAIZ
+    # (D1 do item: só a raiz tem override manual, um contêiner aninhado herda o reflow do pai) que precisa
+    # existir e não ter `pai`. JSON Schema não expressa "é filho da raiz", por isso entra aqui, junto da
+    # mesma checagem de referência pendente que `ligacoes` já faz.
+    vista_movel = corpo.get("vista_movel")
+    if isinstance(vista_movel, dict):
+        raizes = {n.get("id") for n in nos if isinstance(n, dict) and n.get("pai") is None and n.get("id") in validos}
+        nos_movel = vista_movel.get("nos")
+        if isinstance(nos_movel, dict):
+            for nid in nos_movel:
+                if nid not in validos:
+                    erros.append(
+                        {
+                            "campo": f"corpo.vista_movel.nos.{nid}",
+                            "erro": f"vista móvel aponta para nó inexistente: {nid}",
+                            "regra": "referencia_pendente",
+                        }
+                    )
+                elif nid not in raizes:
+                    erros.append(
+                        {
+                            "campo": f"corpo.vista_movel.nos.{nid}",
+                            "erro": "vista móvel só configura nó de raiz (contêiner aninhado herda o reflow)",
+                            "regra": "vista_movel_fora_da_raiz",
+                        }
+                    )
     if erros:
         raise ErroAPI(422, "grafo_invalido", f"grafo do documento ({tipo}) inválido", erros)
+    if tipo == "app":
+        # item L5-07: fontes, vistas e mensagens — a API recusa o que o construtor recusaria (relação entre
+        # fontes diferentes ausente ou com tipos que não casam, referências pendentes, CQL2 malformado)
+        from app.app_modelo.validar import validar_modelo
+
+        erros_modelo, _avisos = validar_modelo(corpo)
+        if erros_modelo:
+            raise ErroAPI(422, "modelo_invalido", "fontes, vistas ou mensagens do aplicativo inválidas", erros_modelo)
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -156,10 +194,34 @@ def _migrar_app_v1_v2(dados: dict) -> dict:
     return {**dados, "corpo": corpo, "esquema_versao": 2}
 
 
+def _migrar_painel_v2_v3(dados: dict) -> dict:
+    """v2->v3 (item L5-15-vista-movel-responsivo, `docs/esquemas/painel-v3.json`): documento sem vista móvel
+    configurada ganha o padrão explícito 'reflow puro' (`manual: false`) na LEITURA — o visualizador (item
+    L5-15) já trata a ausência da chave do mesmo jeito, mas gravar o padrão aqui deixa o documento
+    autoexplicativo depois da primeira leitura, igual ao que a 028 já fazia para `nos`/`ligacoes`. `corpo.tema`
+    (item L5-10-temas-marca) é chave OPCIONAL: nada a migrar no dado, só sobe o número."""
+    corpo = dict(dados.get("corpo") or {})
+    corpo.setdefault("vista_movel", {"manual": False, "nos": {}})
+    return {**dados, "corpo": corpo, "esquema_versao": 3}
+
+
+def _migrar_app_v2_v3(dados: dict) -> dict:
+    """Mesma migração de `_migrar_painel_v2_v3`, mais `fontes`/`vistas`/`mensagens` vazias (item L5-07,
+    exclusivas de `app`)."""
+    corpo = dict(dados.get("corpo") or {})
+    corpo.setdefault("vista_movel", {"manual": False, "nos": {}})
+    corpo.setdefault("fontes", [])
+    corpo.setdefault("vistas", [])
+    corpo.setdefault("mensagens", [])
+    return {**dados, "corpo": corpo, "esquema_versao": 3}
+
+
 # registro fechado: (tipo, versão de origem) -> função que devolve o documento na versão seguinte
 _MIGRACOES = {
     ("painel", 1): _migrar_painel_v1_v2,
     ("app", 1): _migrar_app_v1_v2,
+    ("painel", 2): _migrar_painel_v2_v3,
+    ("app", 2): _migrar_app_v2_v3,
 }
 
 _TETO_PASSOS = 50  # mesma ordem de grandeza de outras cadeias da casa; documento real nunca chega perto disso
