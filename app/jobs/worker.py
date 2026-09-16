@@ -111,6 +111,10 @@ class Worker:
         self.nome_base = settings.PLAT_WORKER_NOME or socket.gethostname()
         self.nome = f"{self.nome_base}:{os.getpid()}"
         self.processos = settings.PLAT_WORKER_PROCESSOS
+        # afinidade de executor (G7, migração 20260916T1600): identidade que ESTE worker anuncia ao
+        # pedir job em plat.job_pegar; 'padrao' (o comum) continua elegível a todo job local/gpu, só um
+        # worker privado de teste ("teste:<pid>") declara algo diferente para disputar SÓ o seu job
+        self.executor = settings.PLAT_WORKER_EXECUTOR
         self.dir_jobs = Path(settings.PLAT_JOBS_DIR) if settings.PLAT_JOBS_DIR else ROOT / "var" / "jobs"
         self.max_reinicios = settings.PLAT_JOB_MAX_REINICIOS
         self.porta = urlparse(settings.PLAT_WORKER_URL or "http://127.0.0.1:8153").port or 8153
@@ -338,7 +342,7 @@ class Worker:
             # `self.filhos` pediria (e receberia) um SEGUNDO pesado para si mesmo — dois pesados em
             # paralelo dentro do MESMO worker (tests/unit/test_worker_lock_pesado.py, "metade 3").
             pesado_ok = self.lock_pesado and not any(f.pesado for f in self.filhos.values())
-            job = self.um("SELECT * FROM plat.job_pegar(%s, %s)", (self.nome, pesado_ok))
+            job = self.um("SELECT * FROM plat.job_pegar(%s, %s, %s)", (self.nome, pesado_ok, self.executor))
             if job is None or job.get("id") is None:
                 if pesado_ok:
                     self._soltar_pesado()

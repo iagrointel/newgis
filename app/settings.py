@@ -65,6 +65,11 @@ class Settings:
     PLAT_WORKER_NOME: str | None
     PLAT_WORKER_PROCESSOS: int
     PLAT_WORKER_MEMORIA_MB: int
+    # afinidade de executor (decisão G7): identidade que este worker anuncia ao pedir job em
+    # `plat.job_pegar(worker, pesado_ok, executor)` (migração 20260916T1600). 'padrao' é o worker comum
+    # (systemd/produção) — ele nunca precisa declarar a chave para continuar pegando job 'local'/'gpu',
+    # só um worker privado de teste (identidade 'teste:<pid>') declara algo diferente.
+    PLAT_WORKER_EXECUTOR: str
     PLAT_JOBS_DIR: str | None
     PLAT_JOB_MAX_REINICIOS: int
     PLAT_GPU_SSH: str | None
@@ -266,6 +271,7 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_WORKER_NOME=_opcional(valores, "PLAT_WORKER_NOME"),
         PLAT_WORKER_PROCESSOS=_inteiro(valores, "PLAT_WORKER_PROCESSOS", 1, 1),
         PLAT_WORKER_MEMORIA_MB=_inteiro(valores, "PLAT_WORKER_MEMORIA_MB", 1536, 128),
+        PLAT_WORKER_EXECUTOR=_opcional(valores, "PLAT_WORKER_EXECUTOR") or "padrao",
         PLAT_JOBS_DIR=_opcional(valores, "PLAT_JOBS_DIR"),
         PLAT_JOB_MAX_REINICIOS=_inteiro(valores, "PLAT_JOB_MAX_REINICIOS", 5, 1),
         PLAT_GPU_SSH=_opcional(valores, "PLAT_GPU_SSH"),
