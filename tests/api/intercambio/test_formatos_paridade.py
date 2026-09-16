@@ -12,6 +12,7 @@ from __future__ import annotations
 import re
 import subprocess
 
+from app.ingestao.formatos import FORMATOS as FORMATOS_ENTRADA
 from app.intercambio.formatos_saida import DRIVERS_ESPERADOS, FORMATOS_SAIDA, NAO_TEMOS
 
 
@@ -48,7 +49,11 @@ def test_rota_responde_temos_e_nao_temos_sem_total_de_formatos(sessao_a):
     assert not any(isinstance(v, int) for v in corpo.values())
     saida = {f["tipo"] for f in corpo["exportacao"]}
     assert saida == set(FORMATOS_SAIDA), saida
-    assert {f["tipo"] for f in corpo["importacao"]} == {"shapefile.zip", "gpkg", "geojson", "csv"}
+    # ATUALIZADO 16/09: a lista de entrada era hardcoded nos 4 da fundação (shapefile.zip/gpkg/geojson/csv) de
+    # quando `app/ingestao/formatos.py` tinha só esses 4 — a re-triagem restaurou os 9 do portão L0-04-d + os 4
+    # do L0-04-b (ver tests/api/ingestao/test_formatos_base.py), então a lista viva é o que decide, nunca um
+    # número congelado no teste (mesmo princípio do "não temos" desta rota).
+    assert {f["tipo"] for f in corpo["importacao"]} == set(FORMATOS_ENTRADA)
     for f in corpo["exportacao"]:
         if f["tipo"] in ("mbtiles", "pmtiles"):
             assert any("quantizada" in a for a in f["avisos_inerentes"]), f

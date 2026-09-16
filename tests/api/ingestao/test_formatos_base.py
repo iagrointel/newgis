@@ -59,18 +59,21 @@ def test_a_rota_de_formatos_responde_e_cobre_os_nove_do_portao(sessao_a):
     assert {f for f, _, _ in FORMATOS_A_MAIS_DO_L0_04_B} <= tipos, sorted(tipos)
 
 
-def test_o_que_depende_de_licenca_de_terceiro_e_declarado_e_nao_escondido(sessao_a, ingestor_a):
-    """DWG é o ÚNICO formato dos portões que esta instalação não traz, e não por falta de driver: depende do
-    ODA File Converter (licença própria) ou do LibreDWG (GPL-3) — decisão do dono, item L0-04-e. A recusa diz
-    isso, em vez de fingir que o tipo não existe."""
+def test_o_que_nao_existe_no_gdal_e_declarado_e_nao_escondido(sessao_a, ingestor_a):
+    """ATUALIZADO 16/09 (ADR 0020-leitura-de-cad-dxf-e-dwg, estado 'aceito'): DWG deixou de ser o formato
+    bloqueado por licença de terceiro — entra pelo LibreDWG (GPL-3, `dwg2dxf` em processo isolado,
+    `fix(ingestao): restaura o tipo dwg`, 16/09) e é aceito como qualquer outro do portão. O que continua
+    genuinamente fora desta instalação é o que o GDAL não tem compilado (GeoParquet/Parquet, MapInfo TAB) —
+    a rota declara isso com o motivo, nunca fingindo que o tipo não existe."""
     corpo = sessao_a.get("/api/importacoes/formatos").json()
+    aceitos = {f["tipo"] for f in corpo if f["aceito"]}
+    assert "dwg" in aceitos, aceitos
     nao_aceitos = {f["tipo"]: f["motivo"] for f in corpo if not f["aceito"]}
-    assert "dwg" in nao_aceitos and "licença" in nao_aceitos["dwg"], nao_aceitos
+    assert "geoparquet" in nao_aceitos and nao_aceitos["geoparquet"], nao_aceitos
 
-    r = _importar_bruto(ingestor_a, "cobertura.dxf", "dwg")
+    r = _importar_bruto(ingestor_a, "cobertura.dxf", "geoparquet")
     assert r.status_code == 422, r.text
     assert r.json()["erro"] == "formato_nao_suportado"
-    assert "ODA" in r.json()["mensagem"] or "LibreDWG" in r.json()["mensagem"], r.json()["mensagem"]
 
 
 # ------------------------------------------------------------------ um arquivo aberto por formato

@@ -150,12 +150,16 @@ def test_geojson_poligono_autointersectado_e_corrigido_com_relatorio(ingestor_a)
 
 
 def test_formato_nao_suportado_recusa_antes_de_qualquer_job(ingestor_a):
-    # "gml" nunca entrou em `FORMATOS` (item L6-02-o ampliou para geojsonseq/kml/dxf/filegdb.zip/xlsx, mas GML
-    # continua fora — decisão de escopo, não medição pendente); "kml" NÃO serve mais de exemplo aqui desde que
-    # o L6-02-o o suportou de verdade.
+    # ATUALIZADO 16/09: "gml" ERA usado aqui como exemplo de formato fora de `FORMATOS`, mas o portão do
+    # L0-04-b sempre pediu gml entre os "4 formatos a mais" (ver laco/estado.json item L0-04-d-formatos-base,
+    # medido 10/09) — a suposição de que ele "nunca entrou, decisão de escopo" estava errada, não o código; o
+    # conserto da re-triagem de 16/09 trouxe gml (e kmz/gpx/flatgeobuf/gdb) de volta a `FORMATOS`
+    # (tests/api/ingestao/test_formatos_base.py exige isso). "geoparquet" é o exemplo que continua
+    # genuinamente fora (o GDAL desta instalação não tem os drivers Parquet compilados,
+    # `app/ingestao/formatos.py::FORMATOS_FORA_DE_ESCOPO`).
     obj = ingestor_a.enviar_arquivo(GERADOS / "cobertura.gpkg")
     item_id = ingestor_a.item_arquivo(obj, "cobertura.gpkg")
-    r = ingestor_a.sessao.post("/api/importacoes", json={"arquivo_id": item_id, "formato": "gml"})
+    r = ingestor_a.sessao.post("/api/importacoes", json={"arquivo_id": item_id, "formato": "geoparquet"})
     assert r.status_code == 422 and r.json()["erro"] == "formato_nao_suportado"
 
 
