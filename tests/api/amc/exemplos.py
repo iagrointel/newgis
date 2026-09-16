@@ -69,6 +69,70 @@ def modelo_valido() -> dict:
     })
 
 
+def modelo_cinco_fatores() -> dict:
+    """5 fatores (2 raster, 2 polígono, 1 ponto), para tests/api/amc/test_matriz_api.py — a rota da matriz
+    (L3-01-g) precisa de fatores suficientes para provar que ela recombina com pesos novos e concorda com a
+    rota de explicação. Os valores BRUTOS e as FAVORABILIDADES esperadas (batidas à mão contra cada
+    transformação) estão em BRUTOS/FAVORABILIDADES do próprio arquivo de teste; aqui só a FORMA do modelo —
+    o teste grava os brutos direto em plat.amc_fator_bruto, nunca por extração de camada real."""
+    return copy.deepcopy({
+        "esquema": "amc_modelo.v1",
+        "nome": "modelo de cinco fatores (teste da matriz)",
+        "descricao": "dois fatores raster, dois de polígono e um de ponto; brutos gravados à mão no teste",
+        "combinador": {"tipo": "soma_ponderada_normalizada"},
+        "dado_ausente": "excluir_fator",
+        "fatores": [
+            {
+                "id": "declividade", "nome": "declividade média", "criterio": "terreno mais plano é melhor",
+                "fonte": "modelo digital de elevação de teste", "unidade": "%", "direcao": "menor_melhor",
+                "base": "engenharia",
+                "camada": {"tipo": "item", "id": "00000000-0000-0000-0000-000000000011", "banda": 1},
+                "extrator": {"tipo": "raster_media"},
+                "transformacao": {"tipo": "linear", "minimo": 0, "maximo": 30, "direcao": "decrescente"},
+                "peso": 1.0,
+            },
+            {
+                "id": "altitude", "nome": "altitude", "criterio": "mais alto drena melhor",
+                "fonte": "modelo digital de elevação de teste", "unidade": "m", "direcao": "maior_melhor",
+                "base": "engenharia",
+                "camada": {"tipo": "item", "id": "00000000-0000-0000-0000-000000000012", "banda": 1},
+                "extrator": {"tipo": "raster_media"},
+                "transformacao": {"tipo": "linear", "minimo": 500, "maximo": 900, "direcao": "crescente"},
+                "peso": 1.0,
+            },
+            {
+                "id": "uso_urbano", "nome": "fração de uso urbano", "criterio": "mais urbano tem infra pronta",
+                "fonte": "uso e cobertura de teste", "unidade": "fração", "direcao": "maior_melhor",
+                "base": "engenharia",
+                "camada": {"tipo": "item", "id": "00000000-0000-0000-0000-000000000013"},
+                "extrator": {"tipo": "poligono_fracao_area"},
+                "transformacao": {"tipo": "linear", "minimo": 0, "maximo": 1, "direcao": "crescente"},
+                "peso": 1.0,
+            },
+            {
+                "id": "restricao_amb", "nome": "fração de restrição ambiental",
+                "criterio": "menos restrição é melhor", "fonte": "restrição ambiental de teste",
+                "unidade": "fração", "direcao": "menor_melhor", "base": "engenharia",
+                "camada": {"tipo": "item", "id": "00000000-0000-0000-0000-000000000014"},
+                "extrator": {"tipo": "poligono_fracao_area"},
+                "transformacao": {"tipo": "linear", "minimo": 0, "maximo": 1, "direcao": "decrescente"},
+                "peso": 1.0,
+            },
+            {
+                "id": "dist_acesso", "nome": "distância ao acesso", "criterio": "quanto mais perto, melhor",
+                "fonte": "malha viária de teste", "unidade": "m", "direcao": "menor_melhor",
+                "base": "engenharia",
+                "camada": {"tipo": "item", "id": "00000000-0000-0000-0000-000000000015"},
+                "extrator": {"tipo": "ponto_distancia_mais_proximo"},
+                "transformacao": {"tipo": "degraus",
+                                  "bandas": [{"ate": 500, "nota": 100}, {"ate": 2000, "nota": 60},
+                                             {"ate": 10000, "nota": 20}], "acima": 0},
+                "peso": 1.0,
+            },
+        ],
+    })
+
+
 def modelo_sem_camada_externa() -> dict:
     """O mesmo modelo sem NENHUMA camada: serve para provar a forma do documento sem depender do catálogo."""
     m = modelo_valido()
