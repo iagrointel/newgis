@@ -66,7 +66,7 @@
       "chave_rw_segredo": 403
     },
     "2_controle_positivo": {
-      "balde": "tgadv-plat-demo2",
+      "balde": "tuniao-plat-demo2",
       "bytes": 2176,
       "sha_bate": true
     },
@@ -78,39 +78,39 @@
       "GetBucketLocation_de_B": "AccessDenied",
       "GetObject_virtualhost_de_B": "AccessDenied",
       "GetObject_prefixo_do_alias_de_A": "NoSuchKey",
-      "travessia_ponto_ponto": "GET tgadv-plat-demo/../tgadv-plat-demo2/zadv/alvo_90185099.bin: 403 <?xml versio",
-      "travessia_codificada": "GET tgadv-plat-demo/..%2Ftgadv-plat-demo2%2Fzadv/alvo_90185099.bin: 403 <?xml ve",
-      "travessia_codificada_dupla": "GET tgadv-plat-demo/..%252Ftgadv-plat-demo2%252Fzadv/alvo_90185099.bin: 403 <?xm",
+      "travessia_ponto_ponto": "GET tuniao-plat-demo/../tuniao-plat-demo2/zadv/alvo_90185099.bin: 403 <?xml vers",
+      "travessia_codificada": "GET tuniao-plat-demo/..%2Ftuniao-plat-demo2%2Fzadv/alvo_90185099.bin: 403 <?xml ",
+      "travessia_codificada_dupla": "GET tuniao-plat-demo/..%252Ftuniao-plat-demo2%252Fzadv/alvo_90185099.bin: 403 <?",
       "sufixo_no_nome_do_balde": "404",
       "caminho_cru_sem_assinatura": "403"
     },
     "2c_web_anonimo": {
-      "status": 200,
-      "leu_o_conteudo": true,
+      "status": 404,
+      "leu_o_conteudo": false,
       "porta_3902_so_em_127_0_0_1": true,
-      "web_ativo_no_balde": true
+      "web_ativo_no_balde": false
     },
     "3_multipart_acima_da_cota": {
-      "cota_bytes": 5246016,
-      "usado_antes": 2112,
+      "cota_bytes": 254235704,
+      "usado_antes": 248991800,
       "partes": 2,
       "bytes_enviados": 10485760,
       "parte_1": "aceita",
       "parte_2": "aceita",
       "concluir": "AccessDenied",
-      "bytes_no_garage_depois": 2112,
+      "bytes_no_garage_depois": 248991800,
       "ultrapassou_a_cota": false
     },
     "3b_cota_de_objetos": {
-      "objetos_antes": 1,
-      "cota_objetos": 4,
+      "objetos_antes": 211,
+      "cota_objetos": 214,
       "tentativas": 6,
       "aceitos": 3,
       "recusados": 3,
       "codigos": [
         "AccessDenied"
       ],
-      "objetos_no_garage_depois": 4
+      "objetos_no_garage_depois": 214
     },
     "3c_concorrencia": {
       "rodadas": [
@@ -118,54 +118,54 @@
           "gravacoes_simultaneas": 32,
           "tamanho_cada": 16384,
           "cabem_pela_cota": 1,
-          "cota_bytes": 19520,
-          "aceitos": 1,
+          "cota_bytes": 249009208,
+          "aceitos": 2,
           "codigos_de_recusa": [
             "AccessDenied"
           ],
-          "bytes_no_garage_depois": 18496,
-          "sobra_sobre_a_cota": -1024,
-          "razao": 0.95
+          "bytes_no_garage_depois": 249024568,
+          "sobra_sobre_a_cota": 15360,
+          "razao": 1.0
         },
         {
           "gravacoes_simultaneas": 32,
           "tamanho_cada": 16384,
           "cabem_pela_cota": 1,
-          "cota_bytes": 19520,
-          "aceitos": 4,
+          "cota_bytes": 249009208,
+          "aceitos": 1,
           "codigos_de_recusa": [
             "AccessDenied"
           ],
-          "bytes_no_garage_depois": 67648,
-          "sobra_sobre_a_cota": 48128,
-          "razao": 3.47
+          "bytes_no_garage_depois": 249008184,
+          "sobra_sobre_a_cota": -1024,
+          "razao": 1.0
         },
         {
           "gravacoes_simultaneas": 32,
           "tamanho_cada": 16384,
           "cabem_pela_cota": 1,
-          "cota_bytes": 19520,
+          "cota_bytes": 249009208,
           "aceitos": 1,
           "codigos_de_recusa": [
             "AccessDenied"
           ],
-          "bytes_no_garage_depois": 18496,
+          "bytes_no_garage_depois": 249008184,
           "sobra_sobre_a_cota": -1024,
-          "razao": 0.95
+          "razao": 1.0
         }
       ],
       "pior": {
         "gravacoes_simultaneas": 32,
         "tamanho_cada": 16384,
         "cabem_pela_cota": 1,
-        "cota_bytes": 19520,
-        "aceitos": 4,
+        "cota_bytes": 249009208,
+        "aceitos": 2,
         "codigos_de_recusa": [
           "AccessDenied"
         ],
-        "bytes_no_garage_depois": 67648,
-        "sobra_sobre_a_cota": 48128,
-        "razao": 3.47
+        "bytes_no_garage_depois": 249024568,
+        "sobra_sobre_a_cota": 15360,
+        "razao": 1.0
       }
     },
     "4_sobrescrita_no_garage": {
@@ -181,74 +181,10 @@
       "chaves_diferentes": true,
       "v1_intacta_byte_a_byte": true
     },
-    "5_faixas": {
-      "faixa_normal": {
-        "status": 206,
-        "content_range": "bytes 1048576-1048591/3146505",
-        "bytes": 16
-      },
-      "faixa_aberta": {
-        "status": 206,
-        "content_range": "bytes 100-3146504/3146505",
-        "bytes": 3146405
-      },
-      "faixa_alem_do_fim": {
-        "status": 416,
-        "content_range": "bytes */3146505"
-      },
-      "faixa_invalida": {
-        "status": 416,
-        "bytes": 206
-      },
-      "multiplas_faixas": {
-        "status": 200,
-        "content_range": null,
-        "content_type": "image/tiff",
-        "bytes": 3146505
-      },
-      "sem_faixa": {
-        "status": 200,
-        "bytes": 3146505,
-        "accept_ranges": "bytes"
-      }
-    },
-    "5b_token": {
-      "token_inventado": {
-        "status": 403,
-        "abriu": false
-      },
-      "token_truncado": {
-        "status": 403,
-        "abriu": false
-      },
-      "token_com_um_char_trocado": {
-        "status": 403,
-        "abriu": false
-      },
-      "token_de_outro_inquilino": {
-        "status": 403,
-        "abriu": false
-      },
-      "sem_token": {
-        "status": 404,
-        "abriu": false
-      },
-      "caminho_do_balde_direto": {
-        "status": 404,
-        "abriu": false
-      }
-    },
-    "5d_multiplas_faixas": {
-      "status": 200,
-      "content_type": "image/tiff",
-      "bytes_pedidos": 32,
-      "bytes_recebidos": 3146505,
-      "objeto_inteiro": true
-    },
     "6_listbuckets": {
       "status": 200,
       "baldes_listados": [
-        "tgadv-plat-demo"
+        "tuniao-plat-demo"
       ],
       "traz_o_proprio": true,
       "traz_o_do_vizinho": false,
@@ -275,16 +211,16 @@
     },
     "9_apagar_devolve_contadores": {
       "antes": {
-        "objetos": 2,
-        "bytes": 3148617
+        "objetos": 211,
+        "bytes": 248991800
       },
       "com_os_tres": {
-        "objetos": 5,
-        "bytes": 3154761
+        "objetos": 214,
+        "bytes": 248997944
       },
       "depois": {
-        "objetos": 2,
-        "bytes": 3148617
+        "objetos": 211,
+        "bytes": 248991800
       },
       "liberado": {
         "objetos": 3,
@@ -295,5 +231,8 @@
         "bytes": 0
       }
     }
+  },
+  "ambiente": {
+    "web_garage_disponivel": false
   }
 }
