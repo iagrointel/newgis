@@ -21,7 +21,8 @@ Dois achados independentes, ambos determinísticos (não dependem do estado da t
    só documenta a galeria de mapas base (OSM/Sentinel) — zero menção a qualquer um dos arquivos reais do
    conjunto de demonstração (`municipios_ac.zip`, `rodovias_federais_ac.geojson`,
    `estacoes_inmet_norte.csv`, `demonstracao_3_camadas.gpkg`, `planta_exemplo.dxf`, etc., 11 arquivos em
-   `dados_demo/catalogo.json`). `tests/api/test_dado_demo.py::test_cada_arquivo_tem_fonte_endereco_licenca_e_data_de_acesso_no_documento`
+   `dados_demo/catalogo.json`).
+   `tests/api/test_dado_demo.py::test_cada_arquivo_tem_fonte_endereco_licenca_e_data_de_acesso_no_documento`
    já falha hoje com a lista completa dos 11 arquivos "sem bloco no documento"."""
 
 from __future__ import annotations
