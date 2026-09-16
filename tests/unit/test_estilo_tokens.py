@@ -37,7 +37,7 @@ MEDIDAS_ADMITIDAS = {"0", "1", "100%", "auto", "inherit", "normal", "none", "ini
 
 # carácter fora do bloco tipográfico admitido = glifo/emoji fora da família de ícones
 GLIFOS_ADMITIDOS = set("–—…·×“”‘’«»°º²³ªµ→←↔≤≥≈−")
-NOME_ICONE = re.compile(r"icone\(\s*'([a-z_]+)'")
+NOME_ICONE = re.compile(r"(?<![\w.])icone\(\s*'([a-z_]+)'")
 NOME_ICONE_EM_DADO = re.compile(r"icone:\s*'([a-z_]+)'")
 
 
