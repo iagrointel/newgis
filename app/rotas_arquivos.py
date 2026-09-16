@@ -163,6 +163,17 @@ def cog_autorizar(request: Request):
         or r["tenant_slug"] != m.group("slug")
     ):
         raise ErroAPI(403, "cog_negado", "caminho de COG não autorizado")
+    # Item de imagem EXCLUÍDO (L1-01-i): nega mesmo quando o nginx já tem a fatia em cache. A auth_request
+    # roda a cada pedido (cache ou não), então o 403 aqui barra a fatia sem precisar de PURGE; quando o item
+    # volta pela restauração (estado 'ativo' ou linha que não existe mais), o acesso volta do mesmo jeito.
+    with db.db() as cur:
+        cur.execute(
+            "SELECT plat.raster_item_estado_por_item(%s, %s) AS estado",
+            (m.group("slug"), m.group("objeto").split("/")[0]),  # objeto = <item_id>/<asset>_<sha8>.<ext>
+        )
+        estado = cur.fetchone()["estado"]
+    if estado == "excluido":
+        raise ErroAPI(403, "cog_negado", "caminho de COG não autorizado")
     return Response(status_code=204)
 
 
