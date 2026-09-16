@@ -25,9 +25,8 @@ import psycopg2.extras
 from pydantic import BaseModel, Field
 
 from app import limites, objetos
-from app.conexao import arquivo_url
+from app.conexao import arquivo_url, google_sheets
 from app.conexao import credencial as credencial_mod
-from app.conexao import google_sheets
 from app.ingestao.carregar import ingestao_carregar
 from app.ingestao.inspecionar import ingestao_inspecionar
 from app.jobs.registro import FalhaDefinitiva, tarefa
