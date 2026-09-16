@@ -132,12 +132,12 @@
           "tamanho_cada": 16384,
           "cabem_pela_cota": 1,
           "cota_bytes": 249604222,
-          "aceitos": 1,
+          "aceitos": 8,
           "codigos_de_recusa": [
             "AccessDenied"
           ],
-          "bytes_no_garage_depois": 249603198,
-          "sobra_sobre_a_cota": -1024,
+          "bytes_no_garage_depois": 249717886,
+          "sobra_sobre_a_cota": 113664,
           "razao": 1.0
         },
         {
