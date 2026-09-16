@@ -345,7 +345,19 @@ def test_bandit_b608_em_app_consulta_e_registrado(medida):
       "venv/bin/bandit -q -f json -t B608 -r app/consulta (cada um conferido: interpola só lista branca)")
     linhas = sorted(f"{a['filename'].split('/app/')[-1]}:{a['line_number']}" for a in achados)
     m("bandit_b608_linhas", linhas, "linhas", "onde o bandit vê SQL montado por string em app/consulta")
-    # o que o bandit acha tem de ser o que já conhecemos (motor.py); qualquer linha nova é revisão obrigatória
-    # rotas_servico: extent com schema/tabela vindos do catálogo
-    conhecidos = ("consulta/motor.py", "consulta/where_ast.py", "consulta/rotas_servico.py")
+    # o que o bandit acha tem de ser o que já conhecemos; qualquer linha nova é revisão obrigatória.
+    # rotas_servico: extent com schema/tabela vindos do catálogo. Revisados em 16/09 (item L7-03-d) os
+    # 5 arquivos abaixo, todos criados DEPOIS deste teste (07-08/09) sem nunca voltar aqui para registro:
+    # mapserver/rotas_mapserver (desenho/identify/find/generateKml): schema/tabela do catálogo, nomes de
+    # coluna de information_schema (`campos_da_camada`/lista branca), todo valor buscado por `%s`;
+    # rotas_edicao_esri (query/calcExpression/deleteFeatures/anexo): `where`/`onde` sempre compilados por
+    # `where_ast.compilar_where` (mesma lista branca de `motor.py`), fid/globalid por `%s`;
+    # rotas_ogc_features: fid validado (`isdigit`) e passado por `%s`, schema/tabela do catálogo;
+    # rotas_sync_esri: `dono` é um dos DOIS literais fixos (com/sem cláusula), nunca texto do chamador —
+    # o valor (`item_id`/`usuario_id`) vai por `%s`, mesmo padrão de `app/campo/servico.py::roteiros_listar`.
+    conhecidos = (
+        "consulta/motor.py", "consulta/where_ast.py", "consulta/rotas_servico.py",
+        "consulta/mapserver.py", "consulta/rotas_mapserver.py", "consulta/rotas_edicao_esri.py",
+        "consulta/rotas_ogc_features.py", "consulta/rotas_sync_esri.py",
+    )
     assert all(li.startswith(conhecidos) for li in linhas), linhas

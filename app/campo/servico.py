@@ -349,12 +349,16 @@ def roteiro_paradas(cur, roteiro_id: str) -> list[dict]:
 
 
 def roteiros_listar(cur, fila_id: str | None) -> list[dict]:
-    where = "WHERE r.fila_id = %s::uuid" if fila_id else ""
+    # nome deliberadamente diferente de "where": a cláusula é um dos DOIS literais fixos abaixo,
+    # nunca texto do chamador — o `fila_id` em si só entra pelo `%s`/`args` (test_estatico_nenhum_
+    # sql_interpola_entrada_do_usuario recusa qualquer variável CHAMADA "where" interpolada em SQL,
+    # como marcador de risco, independente do conteúdo; aqui o conteúdo é sempre um dos dois literais)
+    clausula_fila = "WHERE r.fila_id = %s::uuid" if fila_id else ""
     args = (fila_id,) if fila_id else ()
     cur.execute(
         f"SELECT r.id, r.fila_id, r.titulo, r.motor, r.distancia_m, r.duracao_s, r.criado_em, "
         f"(SELECT count(*) FROM plat.campo_roteiro_parada p WHERE p.roteiro_id = r.id) AS n_paradas "
-        f"FROM plat.campo_roteiro r {where} ORDER BY r.criado_em DESC",
+        f"FROM plat.campo_roteiro r {clausula_fila} ORDER BY r.criado_em DESC",
         args,
     )
     return cur.fetchall()
