@@ -121,9 +121,29 @@ def _bbox3857(c, tok, item) -> str:
     return f"{minx},{miny},{maxx},{maxy}"
 
 
+def _bbox3857_padrao() -> str:
+    """BBOX padrão de `_getmap`, calculada uma vez das constantes de `apoio_raster.py` (nunca por HTTP):
+    achado desta bancada — o valor DEFAULT do dicionário era `_bbox3857(c, tok, item)`, uma chamada
+    HTTP que roda mesmo quando quem chama vai SOBRESCREVER "BBOX" logo em seguida (Python avalia o
+    dict literal inteiro antes do `p.update(extra)`). Num teste negativo — token de outro inquilino
+    ou sem escopo, item de outro inquilino — essa chamada pede `.../info.json` com a MESMA combinação
+    (tok, item) que o teste está provando que deve ser recusada, e falha (403) antes mesmo do GetMap
+    ser exercido — o ajudante quebra em vez de o comportamento sob teste. Como todo raster de
+    `apoio_raster.semear_raster` nasce com a MESMA geometria (constantes de módulo, não medida em
+    runtime), o valor aqui bate exatamente com o que `_bbox3857(c, tok, item)` devolveria para
+    qualquer item legítimo — não é uma aproximação, é a mesma conta feita sem depender da rede."""
+    from rasterio.warp import transform_bounds
+
+    from tests.api.imagens.apoio_raster import CANTO_LAT, CANTO_LON
+
+    oeste, sul, leste, norte = CANTO_LON, CANTO_LAT - 0.19, CANTO_LON + 0.19, CANTO_LAT
+    minx, miny, maxx, maxy = transform_bounds("EPSG:4326", "EPSG:3857", oeste, sul, leste, norte)
+    return f"{minx},{miny},{maxx},{maxy}"
+
+
 def _getmap(c, tok, item, **extra):
     p = {"SERVICE": "WMS", "REQUEST": "GetMap", "VERSION": "1.3.0", "LAYERS": item, "STYLES": "",
-         "CRS": "EPSG:3857", "BBOX": _bbox3857(c, tok, item),
+         "CRS": "EPSG:3857", "BBOX": _bbox3857_padrao(),
          "WIDTH": "256", "HEIGHT": "256", "FORMAT": "image/png", "TRANSPARENT": "TRUE"}
     p.update(extra)
     return c.get(f"/svc/{tok}/wms", params=p)
