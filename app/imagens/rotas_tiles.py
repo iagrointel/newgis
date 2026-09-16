@@ -174,7 +174,13 @@ def _fonte_do_item(auth, item: str, asset: str) -> tuple[tiles.Fonte, dict]:
         fonte = tiles.Fonte(str(alvo), tiles.env_gdal(), None)
     else:
         chave = href[len("/api/objetos/"):]
-        caminho, opcoes = objetos.fonte_gdal(chave)
+        try:
+            caminho, opcoes = objetos.fonte_gdal(chave, tenant_slug_esperado=auth.tenant_slug)
+        except objetos.ChaveDeOutroInquilino as exc:
+            # defesa em profundidade (achado ADVL1): href do item aponta para o balde de OUTRO
+            # inquilino — 403, nunca 404 (não confirma nem nega existência alheia).
+            raise ErroAPI(403, "item_indisponivel",
+                          "item de imagem inexistente, excluído ou de outro inquilino", {"item": item}) from exc
         tiles.preparar_ambiente_s3(settings.PLAT_GARAGE_URL or "")
         fonte = tiles.Fonte(caminho, tiles.env_gdal(), tiles.sessao_s3(opcoes))
     _guardar(_FONTES, chave_cache, (fonte, stac))

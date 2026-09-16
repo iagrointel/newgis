@@ -88,6 +88,17 @@ class ChaveInvalida(ValueError):
     """Chave fora do padrão <slug>/<classe>/[<referencia>/]<sha256>.<ext>: nunca chega ao Garage."""
 
 
+class ChaveDeOutroInquilino(PermissionError):
+    """Achado ADVL1 (T9, 16/09/2026; defesa em profundidade): a chave aponta para o balde de um inquilino
+    diferente do que o CHAMADOR já sabia que deveria ser (`tenant_slug_esperado`) — nunca confiar no
+    `<slug>` embutido na própria chave quando quem pede já tem seu próprio inquilino em mãos. Só as
+    funções de leitura que recebem `tenant_slug_esperado` explicitamente levantam isto; chamado sem esse
+    argumento (o resto do adaptador, chave sempre vinda de coluna com RLS) o comportamento não muda em
+    nada. Ver `app/imagens/rotas_cog.py`, `app/imagens/rotas_tiles.py` e `app/imagens/proveniencia.py`,
+    que resolvem a chave a partir do `href` de um asset STAC — dado que o inquilino do TOKEN escreveu,
+    não necessariamente o dono do objeto."""
+
+
 class ConfiguracaoAusente(RuntimeError):
     """PLAT_GARAGE_ADMIN_URL/PLAT_GARAGE_ADMIN_TOKEN ausentes: sem eles não se cria bucket novo."""
 
@@ -253,10 +264,15 @@ def _resolver_bucket_por_slug(tenant_slug: str) -> dict | None:
         return cur.fetchone()
 
 
-def _chave_e_objeto(chave: str) -> tuple[dict, str]:
-    """(linha do bucket, caminho do objeto DENTRO do bucket) a partir da chave completa; ChaveInvalida se malformada
-    ou FileNotFoundError se o inquilino da chave não tem bucket (nunca existiu ou foi apagado)."""
+def _chave_e_objeto(chave: str, tenant_slug_esperado: str | None = None) -> tuple[dict, str]:
+    """(linha do bucket, caminho do objeto DENTRO do bucket) a partir da chave completa; ChaveInvalida se
+    malformada, FileNotFoundError se o inquilino da chave não tem bucket (nunca existiu ou foi apagado), e
+    `ChaveDeOutroInquilino` se `tenant_slug_esperado` foi passado e não bate com o `<slug>` embutido na
+    própria chave (defesa em profundidade do achado ADVL1: quem já sabe de que inquilino a chave deveria
+    ser nunca resolve o bucket de outro só porque o slug de dentro da chave diz isso)."""
     p = _partes(chave)
+    if tenant_slug_esperado is not None and p["slug"] != tenant_slug_esperado:
+        raise ChaveDeOutroInquilino(chave)
     bucket = _resolver_bucket_por_slug(p["slug"])
     if bucket is None:
         raise FileNotFoundError(chave)
@@ -426,30 +442,36 @@ def ler(chave: str) -> bytes:
     return _cliente(bucket).get(bucket["bucket_alias"], obj_key)
 
 
-def ler_intervalo(chave: str, inicio: int, fim: int) -> bytes:
-    """Bytes [inicio, fim] inclusive (contrato ADR 0005: cabeçalho central de zip sem baixar o arquivo inteiro)."""
-    bucket, obj_key = _chave_e_objeto(chave)
+def ler_intervalo(chave: str, inicio: int, fim: int, tenant_slug_esperado: str | None = None) -> bytes:
+    """Bytes [inicio, fim] inclusive (contrato ADR 0005: cabeçalho central de zip sem baixar o arquivo inteiro).
+
+    `tenant_slug_esperado` (achado ADVL1): quem já sabe de que inquilino a chave deveria ser (ex.: veio de
+    um `href` de asset STAC, não de uma URL assinada) passa o próprio slug aqui — `ChaveDeOutroInquilino`
+    se não bater, em vez de servir bytes de outro balde."""
+    bucket, obj_key = _chave_e_objeto(chave, tenant_slug_esperado)
     return _cliente(bucket).get_intervalo(bucket["bucket_alias"], obj_key, inicio, fim)
 
 
-def tamanho(chave: str) -> int:
+def tamanho(chave: str, tenant_slug_esperado: str | None = None) -> int:
     """Tamanho do objeto em bytes (HEAD no Garage); FileNotFoundError se não existe (item L1-01: o handler de
-    tiles e a entrega por Range precisam do tamanho sem baixar nada)."""
-    bucket, obj_key = _chave_e_objeto(chave)
+    tiles e a entrega por Range precisam do tamanho sem baixar nada). `tenant_slug_esperado`: ver
+    `ler_intervalo`."""
+    bucket, obj_key = _chave_e_objeto(chave, tenant_slug_esperado)
     info = _cliente(bucket).head(bucket["bucket_alias"], obj_key)
     if info is None:
         raise FileNotFoundError(chave)
     return int(info.tamanho)
 
 
-def fonte_gdal(chave: str) -> tuple[str, dict]:
+def fonte_gdal(chave: str, tenant_slug_esperado: str | None = None) -> tuple[str, dict]:
     """(caminho `/vsis3/...`, opções de ambiente GDAL) para LER o objeto por faixa de bytes, sem baixar
     (item L1-02: o motor de ladrilho abre o COG direto no Garage). Usa SEMPRE a chave só-leitura do balde
     do inquilino — a chave RW nunca chega perto do caminho de leitura de tile.
 
     Não devolve URL assinada nem credencial ao cliente: o segredo fica no processo, no `rasterio.Env` que
-    envolve a leitura. Quem chama nunca recebe endereço que o navegador possa repetir."""
-    bucket, obj_key = _chave_e_objeto(chave)
+    envolve a leitura. Quem chama nunca recebe endereço que o navegador possa repetir. `tenant_slug_esperado`:
+    ver `ler_intervalo`."""
+    bucket, obj_key = _chave_e_objeto(chave, tenant_slug_esperado)
     if not settings.PLAT_GARAGE_URL:
         raise ConfiguracaoAusente("PLAT_GARAGE_URL é obrigatório para ler COG por /vsis3")
     endpoint = settings.PLAT_GARAGE_URL
@@ -479,13 +501,15 @@ def baixar(chave: str, destino) -> int:
     return escrito
 
 
-def sha256_remoto(chave: str) -> str:
+def sha256_remoto(chave: str, tenant_slug_esperado: str | None = None) -> str:
     """Sha256 do objeto RELIDO do balde em stream, nunca inteiro em RAM (item L1-01-j: o COG científico de
     uma cena chega a centenas de MB) — é o mecanismo de CONFERÊNCIA que torna a proveniência do Lastro
     VERIFICÁVEL (baixa de novo, recalcula, compara), não prometida. Usa a chave só-leitura (mesma regra de
     `fonte_gdal`: conferir nunca precisa de RW). `FileNotFoundError`/`ChaveInvalida`/`ErroGarage` sobem ao
-    chamador sem tratamento — "não consegui conferir" é diferente de "conferi e diverge"."""
-    bucket, obj_key = _chave_e_objeto(chave)
+    chamador sem tratamento — "não consegui conferir" é diferente de "conferi e diverge". `tenant_slug_esperado`
+    (achado ADVL1): ver `ler_intervalo` — conferir nunca relê objeto de outro inquilino por trás de um
+    `href` fabricado."""
+    bucket, obj_key = _chave_e_objeto(chave, tenant_slug_esperado)
     cli = _cliente(bucket, ro=True)
     h = hashlib.sha256()
     for pedaco in cli.get_stream(bucket["bucket_alias"], obj_key):

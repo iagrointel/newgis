@@ -29,7 +29,7 @@ from typing import Any
 from app.erros import ErroAPI
 from app.garage import ErroGarage
 from app.imagens import pgstac as ps
-from app.objetos import ChaveInvalida
+from app.objetos import ChaveDeOutroInquilino, ChaveInvalida
 
 EXTENSAO_PROCESSING = "https://stac-extensions.github.io/processing/v1.2.0/schema.json"
 MULTIHASH_SHA256_PREFIXO = "1220"  # 0x12 sha2-256, 0x20 = 32 bytes (prefixo já usado em ingestao._asset_objeto)
@@ -158,7 +158,7 @@ def preencher_propriedades_proveniencia(
 
 
 # ---------------------------------------------------------------- conferência
-_ERROS_LEITURA = (FileNotFoundError, ChaveInvalida, ErroGarage)
+_ERROS_LEITURA = (FileNotFoundError, ChaveInvalida, ChaveDeOutroInquilino, ErroGarage)
 
 
 def conferir_item(cur, tenant_id: int, colecao_id: str, item_id: str) -> dict:
@@ -166,12 +166,18 @@ def conferir_item(cur, tenant_id: int, colecao_id: str, item_id: str) -> dict:
     nunca o objeto inteiro em RAM), recalcula o sha256 e compara com o multihash registrado; recalcula
     também `plat:manifesto_sha256` quando o item já tem um. NUNCA lança por divergência (achado, não erro
     de execução) — "não consegui baixar o objeto" e "baixei e o sha256 diverge" são entradas DIFERENTES no
-    resultado, porque confundir as duas seria mentir sobre o que foi conferido."""
+    resultado, porque confundir as duas seria mentir sobre o que foi conferido.
+
+    Achado ADVL1 (T9, 16/09/2026): `sha256_remoto` recebe `tenant_slug_esperado` (o PRÓPRIO inquilino,
+    nunca o slug embutido no `href`) — defesa em profundidade, porque esta rota é justamente a que vira
+    oráculo de existência/hash de objeto alheio se confiar cegamente no `href` do item."""
     from app import objetos  # import tardio: objetos.py não depende de imagens; evita ciclo de import no boot
 
     stac = ps.item_obter(cur, tenant_id, colecao_id, item_id)
     if stac is None:
         raise ErroAPI(404, "item_inexistente", "item STAC inexistente")
+
+    tenant_slug = ps.slug_do_tenant(cur, tenant_id)
 
     ativos: list[dict] = []
     tudo_ok = True
@@ -184,6 +190,13 @@ def conferir_item(cur, tenant_id: int, colecao_id: str, item_id: str) -> dict:
             ativos.append({"asset": nome, "ok": False, "erro": f"href não endereçável: {href!r}"})
             tudo_ok = False
             continue
+        if tenant_slug is None:
+            # não deveria acontecer (ver docstring de `slug_do_tenant`) — tratado como "não consigo
+            # confirmar de quem é o objeto", NUNCA como "então relê sem checar" (isso reabriria o ADVL1).
+            ativos.append({"asset": nome, "ok": False,
+                           "erro": "não foi possível confirmar o inquilino do contexto para conferir"})
+            tudo_ok = False
+            continue
         chave = href[len("/api/objetos/"):]
         try:
             esperado = sha256_de_multihash(checksum)
@@ -192,7 +205,7 @@ def conferir_item(cur, tenant_id: int, colecao_id: str, item_id: str) -> dict:
             tudo_ok = False
             continue
         try:
-            obtido = objetos.sha256_remoto(chave)
+            obtido = objetos.sha256_remoto(chave, tenant_slug_esperado=tenant_slug)
         except _ERROS_LEITURA as e:
             ativos.append({"asset": nome, "ok": False, "erro": f"não foi possível reler o objeto: {e}"})
             tudo_ok = False

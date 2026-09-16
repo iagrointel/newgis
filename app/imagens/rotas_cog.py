@@ -59,11 +59,11 @@ def _interpretar_faixa(cabecalho: str, tamanho: int) -> tuple[int, int]:
     return inicio, fim
 
 
-def _blocos(chave: str, inicio: int, fim: int) -> Iterator[bytes]:
+def _blocos(chave: str, inicio: int, fim: int, tenant_slug: str) -> Iterator[bytes]:
     posicao = inicio
     while posicao <= fim:
         ultimo = min(fim, posicao + _BLOCO_STREAM_BYTES - 1)
-        dados = objetos.ler_intervalo(chave, posicao, ultimo)
+        dados = objetos.ler_intervalo(chave, posicao, ultimo, tenant_slug_esperado=tenant_slug)
         if not dados:
             raise RuntimeError("o armazenamento encerrou o objeto antes do tamanho informado")
         yield dados
@@ -109,9 +109,14 @@ def servir_cog(request: Request, token: str, item: str, asset: str):
         )
     chave = _resolver_asset(auth, item, asset)
     try:
-        tamanho = objetos.tamanho(chave)
+        tamanho = objetos.tamanho(chave, tenant_slug_esperado=auth.tenant_slug)
     except FileNotFoundError as exc:
         raise ErroAPI(404, "asset_inexistente", "o objeto do asset não existe no armazenamento") from exc
+    except objetos.ChaveDeOutroInquilino as exc:
+        # defesa em profundidade (achado ADVL1): o href do item aponta para o balde de OUTRO inquilino —
+        # nunca 404 (confirmaria que o objeto existe em algum lugar), sempre 403, igual a `item_indisponivel`.
+        raise ErroAPI(403, "item_indisponivel", "item de imagem inexistente, excluído ou de outro inquilino",
+                      {"item": item}) from exc
 
     inicio, fim, status = 0, tamanho - 1, 200
     range_pedido = request.headers.get("range")
@@ -130,5 +135,5 @@ def servir_cog(request: Request, token: str, item: str, asset: str):
     if status == 206:
         headers["Content-Range"] = f"bytes {inicio}-{fim}/{tamanho}"
     return StreamingResponse(
-        _blocos(chave, inicio, fim), status_code=status, media_type=_TIPO_COG, headers=headers
+        _blocos(chave, inicio, fim, auth.tenant_slug), status_code=status, media_type=_TIPO_COG, headers=headers
     )

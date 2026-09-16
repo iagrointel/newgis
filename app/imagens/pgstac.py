@@ -111,6 +111,53 @@ def item_obter(cur, tenant_id: int, colecao_id: str, item_id: str) -> dict | Non
     return conteudo  # get_item devolve null (não erro) quando não existe
 
 
+def slug_do_tenant(cur, tenant_id: int) -> str | None:
+    """Slug do PRÓPRIO inquilino, lido de `plat.tenant` sob RLS (`p_tenant` em 002_identidade.sql: `USING
+    (id = plat.tenant_atual())` — só a própria linha é visível a `plat_app`). Nunca resolve o slug de um
+    `tenant_id` que não seja o do contexto de `cur`: devolve `None` nesse caso, e quem chama trata isso
+    como 'não consigo confirmar de quem é', nunca como 'então deixa passar' (todo chamador de hoje abre
+    `cur` já no contexto do MESMO `tenant_id` que passa adiante, então isto só falha se algo estiver
+    genuinamente errado no contexto da conexão)."""
+    cur.execute("SELECT slug FROM plat.tenant WHERE id = %s", (tenant_id,))
+    r = cur.fetchone()
+    return r["slug"] if r else None
+
+
+def _validar_assets_href(cur, tenant_id: int, assets: Any) -> None:
+    """Achado ADVL1 (adversário de linha L1, T9 16/09/2026): `POST .../items` gravava `assets.*.href` do
+    corpo do cliente sem checar que aponta para um objeto do PRÓPRIO inquilino — `rotas_cog.py`,
+    `rotas_tiles.py` e `proveniencia.py` extraem a chave direto desse `href` e resolvem o balde pelo
+    `<slug>` DENTRO dela, então um `href` fabricado para a chave real de outro inquilino fazia essas
+    rotas servir bytes/sha256 de lá. Ponto único de escrita: nenhum item cujo asset aponte para o balde
+    de outro inquilino chega a existir no catálogo. Confere só o PREFIXO `<slug>/` do que vem depois de
+    `/api/objetos/` — de propósito NÃO reexige o formato exato de chave de nenhum adaptador específico
+    (`app.objetos` e `app.objetos_raster` usam convenções de chave diferentes uma da outra; os dois
+    começam com `<slug>/`, e é só isso que importa aqui). `app.objetos` ainda confere de novo na leitura
+    (defesa em profundidade, ADVL1 parte b) — esta função nunca é a única linha de defesa.
+
+    Outro esquema de `href` (`acervo://…`, URL externa) não é objeto do balde do inquilino e não é
+    assunto desta checagem — cada um desses tem seu próprio guardrail em outro lugar."""
+    if not isinstance(assets, dict):
+        return
+    slug_proprio: str | None = None
+    for nome, asset in assets.items():
+        if not isinstance(asset, dict):
+            continue
+        href = asset.get("href")
+        if not isinstance(href, str) or not href.startswith("/api/objetos/"):
+            continue
+        chave = href[len("/api/objetos/"):]
+        slug_do_href = chave.split("/", 1)[0] if chave else ""
+        if slug_proprio is None:
+            slug_proprio = slug_do_tenant(cur, tenant_id)
+        if not slug_do_href or not slug_proprio or slug_do_href != slug_proprio:
+            raise ErroAPI(
+                422, "asset_de_outro_inquilino",
+                f"asset '{nome}': href não aponta para um objeto do próprio inquilino",
+                {"asset": nome},
+            )
+
+
 def item_criar(cur, tenant_id: int, colecao_id: str, corpo: dict[str, Any]) -> dict:
     if colecao_obter(cur, tenant_id, colecao_id) is None:
         raise ErroAPI(404, "colecao_inexistente", "coleção inexistente")
@@ -119,6 +166,7 @@ def item_criar(cur, tenant_id: int, colecao_id: str, corpo: dict[str, Any]) -> d
         raise ErroAPI(422, "item_id_invalido", "id do item é obrigatório (1-256 caracteres)")
     if corpo.get("collection") not in (None, colecao_id):
         raise ErroAPI(422, "colecao_divergente", "properties.collection do corpo diverge da URL")
+    _validar_assets_href(cur, tenant_id, corpo.get("assets"))
     conteudo = {
         **corpo,
         "type": "Feature",
@@ -146,6 +194,7 @@ def item_atualizar(cur, tenant_id: int, colecao_id: str, item_id: str, corpo: di
         raise ErroAPI(422, "item_id_divergente", "id do corpo diverge do item alvo")
     if corpo.get("collection") not in (None, colecao_id):
         raise ErroAPI(422, "colecao_divergente", "properties.collection do corpo diverge da coleção")
+    _validar_assets_href(cur, tenant_id, corpo.get("assets"))
     conteudo = {**corpo, "type": "Feature", "stac_version": corpo.get("stac_version", "1.0.0"),
                "collection": colecao_id}
     cur.execute("SELECT pgstac.update_item(%s::jsonb)", (jsonb(conteudo),))
