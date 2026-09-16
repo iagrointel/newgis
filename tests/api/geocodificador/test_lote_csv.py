@@ -90,9 +90,17 @@ def _csv_ruidoso(amostra) -> str:
 
 class WorkerTemporario:
     """Sobe `python -m app.jobs.worker` em subprocesso com o ambiente da trilha, espera /saude e mata pelo PID
-    no fim — nunca `systemctl`/`pkill` (regra do brief comum)."""
+    no fim — nunca `systemctl`/`pkill` (regra do brief comum).
 
-    def __init__(self, env: dict[str, str], porta: int = PORTA_WORKER):
+    Achado 16/09 (mesma classe de `tests/api/conexao/test_google_sheets.py`, decisão G7): a unidade
+    `plat-<trilha>-worker` do systemd tem `WorkingDirectory` fixo em OUTRO worktree — sem afinidade de
+    executor, ela podia vencer a corrida pelo job `geocodificador.lote_csv` desta suíte e rodar com o CÓDIGO
+    DE LÁ. `executor`, quando passado, faz este worker anunciar essa identidade (`PLAT_WORKER_EXECUTOR`);
+    quem chama também marca `PLAT_TESTE_JOB_EXECUTOR` no processo do pytest ANTES de enfileirar, e
+    `plat.job_pegar` (migração `20260916T1600_afinidade_executor_job_pegar.sql`) só deixa o worker com o
+    MESMO executor pegar um job `teste:<pid>`."""
+
+    def __init__(self, env: dict[str, str], porta: int = PORTA_WORKER, executor: str | None = None):
         ambiente = dict(os.environ)
         ambiente.update({k: v for k, v in env.items() if v is not None})
         ambiente.update({
@@ -101,6 +109,8 @@ class WorkerTemporario:
             "PLAT_WORKER_PROCESSOS": "1",
             "PLAT_WORKER_URL": f"http://127.0.0.1:{porta}",
         })
+        if executor is not None:
+            ambiente["PLAT_WORKER_EXECUTOR"] = executor
         # em worktree o `.git` é um arquivo-ponteiro (`gitdir: ...`), não um diretório: `app.versao._sha_do_git`
         # (ADR 0001 seção 7, lê sem subprocesso) não resolve esse caso e o worker recusa subir sem sha — achado
         # deste item, não corrigido aqui (arquivo compartilhado com a árvore principal); contorno local só do
@@ -144,9 +154,16 @@ class WorkerTemporario:
 
 @pytest.fixture(scope="module")
 def worker_temporario(env):
-    w = WorkerTemporario(env)
+    identidade = f"teste:{os.getpid()}"
+    anterior = os.environ.get("PLAT_TESTE_JOB_EXECUTOR")
+    os.environ["PLAT_TESTE_JOB_EXECUTOR"] = identidade
+    w = WorkerTemporario(env, executor=identidade)
     yield w
     w.parar()
+    if anterior is None:
+        os.environ.pop("PLAT_TESTE_JOB_EXECUTOR", None)
+    else:
+        os.environ["PLAT_TESTE_JOB_EXECUTOR"] = anterior
 
 
 def _criar_job(sessao, csv_texto: str, mapeamento: dict, titulo: str, limiar_pendente: float = 50.0) -> dict:

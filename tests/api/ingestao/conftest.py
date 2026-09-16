@@ -5,6 +5,7 @@ camadas criadas são apagadas no fim (lixeira + expurgo físico apaga a tabela v
 
 from __future__ import annotations
 
+import os
 import time
 from pathlib import Path
 
@@ -15,9 +16,32 @@ import pytest
 from app.catalogo import destruidores
 from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 from tests.api.conftest import PREFIXO_TESTE, novo_cliente
+from tests.api.jobs.conftest import WorkerExtra
 from tests.api.test_rls import contexto, ids_por_slug
 
 GERADOS = Path(__file__).resolve().parents[2] / "dados" / "gerados"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _worker_privado_ingestao(env):
+    """Achado 16/09 (wt/f2fixapi2): a unidade `plat-<trilha>-worker` do systemd tem `WorkingDirectory` fixo
+    em OUTRO worktree (`wt/ux11merge`) — todo job real de ingestão (`ingestao.inspecionar`/`carregar`/
+    `exportar_*`) enfileirado por um teste desta suíte corria o risco de ser executado com o CÓDIGO DE LÁ, não
+    com o desta pasta. Mesma classe do achado que motivou a afinidade de executor G7
+    (`tests/api/conexao/test_google_sheets.py`): sobe um worker PRÓPRIO em subprocesso, com `cwd` NESTE
+    worktree (`WorkerExtra` usa `ROOT` de `tests/api/jobs/conftest.py`, que é a raiz de onde o pytest roda), e
+    marca `PLAT_TESTE_JOB_EXECUTOR` para que só ELE (nunca o worker do systemd) pegue os jobs desta sessão de
+    teste — migração `20260916T1600_afinidade_executor_job_pegar.sql` já aplicada na trilha `uniao`."""
+    identidade = f"teste:{os.getpid()}"
+    anterior = os.environ.get("PLAT_TESTE_JOB_EXECUTOR")
+    os.environ["PLAT_TESTE_JOB_EXECUTOR"] = identidade
+    w = WorkerExtra(dict(env), f"teste-ingestao-{os.getpid()}", processos=2, executor=identidade)
+    yield w
+    w.parar()
+    if anterior is None:
+        os.environ.pop("PLAT_TESTE_JOB_EXECUTOR", None)
+    else:
+        os.environ["PLAT_TESTE_JOB_EXECUTOR"] = anterior
 
 
 @pytest.fixture(scope="session", autouse=True)
