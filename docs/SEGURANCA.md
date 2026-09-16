@@ -715,23 +715,38 @@ QUALQUER classe: a política aqui só estreita quais tipos cada classe aceita.
 | classe | `Content-Type` aceitos | teto |
 |---|---|---|
 | `objeto` | sem lista por rota: qualquer `Content-Type` passa para a assinatura básica do §8 decidir sozinha — inclusive `application/octet-stream`, `text/plain` ou qualquer tipo sem família fixa em `TIPOS_PERMITIDOS` (`image/png`, `image/jpeg`, `image/gif`, `image/tiff`, `image/webp`, `application/json`, `application/geo+json`, `text/csv`, `application/pdf`, `application/zip`, `application/vnd.google-earth.kmz`); é a classe "arquivo bruto" (padrão de `POST /api/arquivos`) | `limites.ARQUIVO_BYTES_MAX` |
-| `anexo` | `image/png`, `image/jpeg`, `image/gif`, `image/webp`, `image/svg+xml`, `application/pdf`, `text/csv`, `text/plain`, `application/json`, `application/geo+json`, `application/zip`, `application/vnd.google-earth.kmz`, `application/vnd.google-earth.kml+xml`, `text/html` | `limites.ANEXO_BYTES_MAX` |
+| `anexo` | `image/png`, `image/jpeg`, `image/gif`, `image/webp`, `image/svg+xml`†, `application/pdf`, `text/csv`, `text/plain`, `application/json`, `application/geo+json`, `application/zip`, `application/vnd.google-earth.kmz`, `application/vnd.google-earth.kml+xml`, `text/html`† | `limites.ANEXO_BYTES_MAX` |
 | `foto_campo` | `image/jpeg`, `image/png`, `image/webp` | `limites.ANEXO_BYTES_MAX` |
-| `imagem` | `image/png`, `image/jpeg`, `image/gif`, `image/webp`, `image/svg+xml` | `limites.IMAGEM_UPLOAD_BYTES_MAX` |
+| `imagem` | `image/png`, `image/jpeg`, `image/gif`, `image/webp`, `image/svg+xml`† | `limites.IMAGEM_UPLOAD_BYTES_MAX` |
 | `csv` | `text/csv`, `text/plain` | `limites.ANEXO_BYTES_MAX` |
 
 Classe fora desta tabela cai em `objeto` (`varredura_conteudo.politica()`).
 
+† **`image/svg+xml` e `text/html` estão na lista de `Content-Type` DECLARADO que a rota aceita (esta camada,
+§12), mas nunca sobrevivem à assinatura básica do §8**: decisão G2 do gerente (laco/handoffs/T9/FASE1.md) —
+`varredura_conteudo.TIPOS_REAIS_DE_SCRIPT` recusa incondicionalmente o tipo REAL `text/html`,
+`application/xhtml+xml` e `image/svg+xml` (quando o conteúdo é texto de verdade, `_e_texto`), então um SVG ou
+HTML de verdade declarado numa destas classes sempre volta `415 conteudo_recusado` (motor `assinatura_basica`)
+ANTES de chegar em `pos_processar()` — ver 12.1. A entrada continua na tabela porque a política desta camada é
+só sobre o `Content-Type` do CABEÇALHO (item L7-03-a); quem decide pelos BYTES é sempre o §8 (item L7-03-b), e
+"declarado, mas sempre recusado pela camada de baixo" é diferente de "não aceito por esta rota" — ver
+tests/seguranca/test_upload.py.
+
 ### 12.1 Pós-processamento sobre o arquivo inteiro
 
 Só corre quando o arquivo coube no buffer único (`limites.ARQUIVO_BUFFER_UNICO_BYTES`, o que já vale para a
-maioria dos anexos/imagens desta tabela) — `varredura_conteudo.pos_processar()`:
+maioria dos anexos/imagens desta tabela) e só chega lá o que sobreviveu ao §8 — `varredura_conteudo.pos_processar()`:
 
-- **SVG** (`image/svg+xml`): sai sanitizado por `app/svg_seguro.py` (lista BRANCA de elemento/atributo,
-  parse por `defusedxml` — nunca resolve entidade externa nem expande bomba de entidades). `<script>`,
-  manipuladores `on*`, `<foreignObject>`, `href`/`xlink:href` para fora do arquivo e `url()` em `style` somem;
-  o desenho (path/circle/rect/...) fica. SVG que não sobrevive ao parse (XML inválido, entidade externa) é
-  recusado com `415`, motor `svg_seguro`.
+- **SVG** (`image/svg+xml`): ⛔ **NÃO sanitiza mais** (decisão G2 do gerente, laco/handoffs/T9/FASE1.md,
+  16/09/2026): a denylist do §8 (`TIPOS_REAIS_DE_SCRIPT`) já recusa qualquer SVG que seja texto de verdade —
+  o caso comum — antes deste passo rodar, então `app/svg_seguro.py::sanitizar()` só é alcançado por um SVG
+  cujo tipo REAL o `libmagic` não classificou como `image/svg+xml` (ex.: um `<!DOCTYPE ...>` antes da tag
+  `<svg>` que faz o `libmagic` devolver `text/plain`) — nesses casos residuais o parse por `defusedxml`
+  (nunca resolve entidade externa nem expande bomba de entidades) ainda recusa com `415`, motor
+  `svg_seguro`, quem não sobrevive ao parse (XML inválido, entidade externa). Vence a denylist porque
+  segurança > conveniência: um sanitizador é, ele mesmo, superfície de ataque (mais código a auditar do que
+  uma recusa). `sanitizar()`/`tem_script()` continuam existindo e testados (`tests/seguranca/test_upload.py
+  ::test_svg_com_script_sai_sem_o_script`) como função pura, só não são mais o caminho normal do upload.
 - **zip/kmz** (`application/zip`, `application/vnd.google-earth.kmz`): passa pelas regras de zip-bomba de
   `app/ingestao/formatos.py::conferir_zip` (nº de entradas, tamanho descomprimido, razão de compressão,
   caminho de entrada) ANTES de gravar — nunca extrai para decidir. Acima do buffer único (multipart), a

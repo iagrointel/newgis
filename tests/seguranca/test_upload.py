@@ -1,9 +1,21 @@
 """Pipeline único de upload (item L7-03-a-antivirus-upload; docs/SEGURANCA.md §9). Portão, cláusula a cláusula:
 EICAR recusado quando clamd está ligado e o evento aparece na trilha (aqui um `clamd` de teste que fala o protocolo
-INSTREAM por socket unix — o daemon real não cabe na RAM desta máquina, D21); SVG com `<script>` sai sem o
-script; zip com 1 GB de zeros é recusado; `.exe` renomeado para `.tif` é recusado pelos bytes; 1 byte acima do
-plano = 413 antes de ler o corpo inteiro (medido pelo número de mensagens ASGI consumidas). Refutação: polyglot
-GIF+HTML, SVG com `xlink:href` javascript, `.dbf` malformado, KMZ com 10 mil entradas, anexo `.html` inline."""
+INSTREAM por socket unix — o daemon real não cabe na RAM desta máquina, D21); zip com 1 GB de zeros é recusado;
+`.exe` renomeado para `.tif` é recusado pelos bytes; 1 byte acima do plano = 413 antes de ler o corpo inteiro
+(medido pelo número de mensagens ASGI consumidas). Refutação: polyglot GIF+HTML, `.dbf` malformado, KMZ com
+10 mil entradas.
+
+Decisão G2 do gerente (laco/handoffs/T9/FASE1.md, "Decisões do gerente"): entre sanitizar HTML/SVG na entrada
+(L7-03-a, o que este arquivo testava até 16/09/2026) e recusar os dois pelo tipo real (a denylist determinística
+de L7-03-b, achado do adversário G6, commit a07f6ca17 "Varredura de anexo: polyglot recusado, tipo desconhecido
+nunca desliga o exame, entrega como anexo") — vence a denylist: segurança > conveniência, sanitizar HTML/SVG é
+superfície de ataque (um sanitizador é, ele mesmo, mais código para o adversário atacar; recusar é uma
+verificação, não uma transformação). `app/varredura_conteudo.TIPOS_REAIS_DE_SCRIPT` já recusa incondicionalmente
+`text/html`/`application/xhtml+xml`/`image/svg+xml` (tipo REAL, `_e_texto`) desde aquele commit — os testes de
+SVG/HTML/GIF-polyglot abaixo passaram a exigir a RECUSA nomeada (`415 conteudo_recusado`, `detalhe.motor` e
+`detalhe.tipo_detectado`), nunca mais sanitização ou entrega com sandbox. Ver docs/SEGURANCA.md §8/§9 e
+tests/adversario_raiz/test_g6_varredura_anexos.py + tests/unit/test_varredura_conteudo_polyglot.py (a MESMA
+denylist, testada sem HTTP)."""
 
 from __future__ import annotations
 
@@ -166,20 +178,33 @@ def test_svg_com_script_sai_sem_o_script():
     assert b"onload" not in limpo and b"onclick" not in limpo
 
 
-def test_svg_por_upload_e_gravado_sanitizado_e_servido_com_sandbox(cliente, sessao_a):
+def test_svg_por_upload_e_recusado_pela_denylist(cliente, sessao_a, env):
+    """G2: SVG nunca é aceito, sanitizado ou não — `image/svg+xml` REAL (`_e_texto`) está em
+    `TIPOS_REAIS_DE_SCRIPT` e recusa antes de `pos_processar()`/`svg_seguro.sanitizar()` sequer rodar
+    (motor `assinatura_basica`, o mesmo que recusa HTML/executável abaixo — a mesma porta, não uma paralela)."""
     tok = _token(sessao_a, "zt-l703a-svg")
     try:
         h = {"Authorization": f"Bearer {tok['token']}", "content-type": "image/svg+xml"}
         r = cliente.post("/api/arquivos?classe=anexo", content=SVG_SCRIPT, headers=h)
-        assert r.status_code == 201, r.text
-        sha = r.json()["sha256"]
-        assert sha != hashlib.sha256(SVG_SCRIPT).hexdigest()  # o que foi gravado NÃO é o que chegou
-        r2 = cliente.get(f"/api/arquivos/{sha}?classe=anexo", headers=h)
-        assert r2.status_code == 200 and not tem_script(r2.content)
-        assert r2.headers["content-security-policy"].startswith("sandbox")
-        assert r2.headers["x-content-type-options"] == "nosniff"
-        cliente.delete(f"/api/arquivos/{sha}?classe=anexo", headers=h)
-        # entidade externa / bomba de entidades: recusa
+        assert r.status_code == 415, r.text
+        corpo = r.json()
+        assert corpo["erro"] == "conteudo_recusado"
+        assert corpo["detalhe"]["motor"] == "assinatura_basica"
+        assert corpo["detalhe"]["tipo_detectado"] == "image/svg+xml"
+        sha = hashlib.sha256(SVG_SCRIPT).hexdigest()
+        con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
+        ids = ids_por_slug(con)
+        con.close()
+        ev = _eventos(env, ids["demo"], "arquivos/conteudo_recusado", sha)
+        assert ev is not None, "recusa sem registro na trilha"
+        assert ev["propriedades"]["tipo_detectado"] == "image/svg+xml"
+        # nunca foi gravado, sanitizado ou não
+        assert cliente.get(f"/api/arquivos/{sha}?classe=anexo", headers=h).status_code == 404
+        # entidade externa / bomba de entidades: continua recusada, mas por OUTRA cláusula — o `<!DOCTYPE s`
+        # (sem "html" depois) não é o `text/html`/`image/svg+xml` REAL da denylist (libmagic devolve
+        # `text/plain` para este payload específico), então quem recusa aqui ainda é `svg_seguro.sanitizar()`
+        # dentro de `pos_processar()`; a denylist acima não precisa cobrir todo caso de SVG malformado, só o
+        # caso comum (SVG bem formado) que ela intercepta ANTES de chegar lá
         xxe = b'<!DOCTYPE s [<!ENTITY e SYSTEM "file:///etc/passwd">]><svg xmlns="http://www.w3.org/2000/svg">&e;</svg>'
         r3 = cliente.post("/api/arquivos?classe=anexo", content=xxe, headers=h)
         assert r3.status_code == 415 and r3.json()["detalhe"]["motor"] == "svg_seguro", r3.text
@@ -243,19 +268,26 @@ def test_exe_renomeado_para_tif_e_recusado_pelos_bytes(cliente, sessao_a, env):
         con.close()
         ev = _eventos(env, ids["demo"], "arquivos/conteudo_recusado", sha)
         assert ev is not None and ev["propriedades"]["content_type"] == "image/tiff"
-        # polyglot GIF+HTML (refutação): a assinatura é GIF, mas a classe anexo não serve inline o que não é
-        # imagem e a imagem vai com sandbox; um "GIF" que é HTML por dentro é recusado quando declarado html
+        # polyglot GIF+HTML (refutação): a assinatura é GIF, mas quem declara html é recusado pela denylist
+        # de tipo real (`text/html` está em TIPOS_REAIS_DE_SCRIPT)
         h_html = {**h, "content-type": "text/html"}
         r2 = cliente.post("/api/arquivos?classe=anexo", content=GIF_HTML_POLYGLOT, headers=h_html)
         assert r2.status_code == 415, r2.text
-        # e declarado como GIF entra, mas nunca sai executável: nosniff + sandbox + tipo fixo image/gif
+        # G2: e declarado como GIF TAMBÉM é recusado — não pela denylist de tipo real (libmagic ainda
+        # detecta `image/gif` pela assinatura no início), e sim pela checagem 3 de app/varredura_conteudo.py
+        # (carga executável em QUALQUER PONTO do corpo: o `<script` colado depois do cabeçalho GIF é achado
+        # no corpo inteiro, não só no cabeçalho) — nunca mais "entra e sai sem sandbox", a classe anexo não
+        # grava o polyglot de jeito nenhum, sob nenhum Content-Type declarado
         h_gif = {**h, "content-type": "image/gif"}
         r3 = cliente.post("/api/arquivos?classe=anexo", content=GIF_HTML_POLYGLOT, headers=h_gif)
-        assert r3.status_code == 201, r3.text
-        r4 = cliente.get(f"/api/arquivos/{r3.json()['sha256']}?classe=anexo", headers=h)
-        assert r4.headers["content-type"].startswith("image/gif") and r4.headers["x-content-type-options"] == "nosniff"
-        assert r4.headers["content-security-policy"].startswith("sandbox")
-        cliente.delete(f"/api/arquivos/{r3.json()['sha256']}?classe=anexo", headers=h)
+        assert r3.status_code == 415, r3.text
+        corpo3 = r3.json()
+        assert corpo3["erro"] == "conteudo_recusado"
+        assert corpo3["detalhe"]["motor"] == "assinatura_basica"
+        assert corpo3["detalhe"]["tipo_detectado"] == "image/gif"
+        assert cliente.get(
+            f"/api/arquivos/{hashlib.sha256(GIF_HTML_POLYGLOT).hexdigest()}?classe=anexo", headers=h
+        ).status_code == 404
     finally:
         sessao_a.delete(f"/api/tokens/{tok['id']}")
 
@@ -334,21 +366,27 @@ def test_1_byte_acima_do_plano_da_413_antes_de_ler_o_corpo(sessao_a, env, medida
 # --------------------------------------------------------------------------- 6. anexo .html nunca inline
 
 
-def test_anexo_html_e_servido_como_attachment_com_sandbox(cliente, sessao_a):
+def test_anexo_html_e_recusado_pela_denylist(cliente, sessao_a, env):
+    """G2: `text/html` REAL nunca é aceito como anexo (sandbox/attachment morreram com a sanitização — a
+    denylist recusa antes de gravar, então não há o que servir depois)."""
     tok = _token(sessao_a, "zt-l703a-html")
     try:
         h = {"Authorization": f"Bearer {tok['token']}", "content-type": "text/html"}
         html = b"<!DOCTYPE html><html><body><script>document.cookie</script>oi</body></html>"
         r = cliente.post("/api/arquivos?classe=anexo", content=html, headers=h)
-        assert r.status_code == 201, r.text
-        sha = r.json()["sha256"]
-        r2 = cliente.get(f"/api/arquivos/{sha}?classe=anexo", headers=h)
-        assert r2.status_code == 200
-        disposicao = r2.headers["content-disposition"]
-        assert disposicao.startswith("attachment;") and ".html" in disposicao
-        assert r2.headers["content-security-policy"].startswith("sandbox")
-        assert r2.headers["x-content-type-options"] == "nosniff"
-        cliente.delete(f"/api/arquivos/{sha}?classe=anexo", headers=h)
+        assert r.status_code == 415, r.text
+        corpo = r.json()
+        assert corpo["erro"] == "conteudo_recusado"
+        assert corpo["detalhe"]["motor"] == "assinatura_basica"
+        assert corpo["detalhe"]["tipo_detectado"] == "text/html"
+        sha = hashlib.sha256(html).hexdigest()
+        con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
+        ids = ids_por_slug(con)
+        con.close()
+        ev = _eventos(env, ids["demo"], "arquivos/conteudo_recusado", sha)
+        assert ev is not None, "recusa sem registro na trilha"
+        assert ev["propriedades"]["tipo_detectado"] == "text/html"
+        assert cliente.get(f"/api/arquivos/{sha}?classe=anexo", headers=h).status_code == 404
     finally:
         sessao_a.delete(f"/api/tokens/{tok['id']}")
 
