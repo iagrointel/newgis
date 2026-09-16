@@ -299,6 +299,16 @@ def resolver(request: Request) -> Auth | None:
             r = cur.fetchone()
         if r is None:
             raise ErroAPI(401, "sessao_expirada", "sessão inexistente ou expirada; entre de novo")
+        if not r["tenant_ativo"]:
+            # 16/09: inquilino suspenso NÃO apaga a sessão (plat.auth_sessao devolve a linha, só sinaliza
+            # tenant_ativo=false) — mesma mensagem do operador que /api/login já dá para credenciais novas
+            # (item L0-07-f); reativar o inquilino volta a autenticar com o MESMO cookie. tenant_id/usuario_id
+            # no request.state ANTES do raise, como rotas_login.py já faz para o 503 do /api/login: sem isso
+            # o log_acesso deste 503 ficava sem tenant_id/usuario_id, igual a um 401 de credencial inexistente.
+            request.state.tenant_id = r["tenant_id"]
+            request.state.usuario_id = r["usuario_id"]
+            request.state.resultado = "suspenso"
+            raise ErroAPI(503, "inquilino_suspenso", "inquilino suspenso; fale com o operador da plataforma")
         auth = _auth_de_sessao(r, h)
     else:
         return None

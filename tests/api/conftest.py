@@ -5,6 +5,7 @@ o arquivo), usuários temporários com limpeza. A suíte roda com PLAT_AMBIENTE=
 seção 16.4): validade_dias=0 e PLAT_TESTE_* só valem em dev."""
 
 import contextlib
+import datetime
 import os
 import secrets
 import time
@@ -28,6 +29,28 @@ CREDENCIAIS = Path(os.environ.get("PLAT_CREDENCIAIS_ARQUIVO") or (ROOT / "tests"
 # seu próprio arquivo.
 CREDENCIAIS_TOTP = Path(os.environ.get("PLAT_CREDENCIAIS_TOTP_ARQUIVO") or (ROOT / "tests" / "credenciais_totp.txt"))
 PREFIXO_TESTE = "zt"  # logins/nomes criados pela suíte começam assim (limpeza por prefixo)
+# 16/09: LACUNA MEDIDA (test_login.py::test_usuario_desabilitado_e_inquilino_suspenso e
+# test_bloqueio_expira_com_o_tempo falhando com "credenciais_invalidas" pra usuário recém-criado, sem
+# tenant_id/usuario_id no log_acesso = auth_login não achou a linha). varrer_residuos por PREFIXO já avisava
+# que apaga "o que outro worker do pytest-xdist ainda esteja usando" — mas a trilha (uniao) roda VÁRIOS
+# worktrees como processos totalmente separados ao mesmo tempo (não só workers xdist da MESMA invocação);
+# `sob_xdist()`/`pytest_sessionfinish` só serializam contra os workers da própria invocação. Quando outro
+# worktree termina a própria suíte e sua fixture `limpeza_de_residuos` varre zt-* no meio da janela em que
+# ESTE processo ainda está usando um usuário zt-* recém-criado (visto: usuário apagado entre a criação e o
+# 1º login, e de novo depois de um sleep de 61 s), o `auth_login` não acha mais a linha e devolve 401 —
+# comportamento correto do app para o estado real do banco naquele instante, não um bug de produto. Guarda de
+# idade: só varre o que tem `criado_em` mais velho que isto, então o resíduo de OUTRO worktree em uso agora
+# nunca é tocado (uma rodada de arquivo único no roda_teste.sh nunca passa de RELOGIO=600s).
+_LIMPEZA_IDADE_MIN = 20
+
+
+def _residuo_maduro(criado_em: str | None, minutos: int = _LIMPEZA_IDADE_MIN) -> bool:
+    """True só se `criado_em` (formato de app.auth.sessao.iso) for mais velho que `minutos` — ou desconhecido
+    (sem campo, mais seguro tratar como maduro do que nunca varrer)."""
+    if not criado_em:
+        return True
+    limite = datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=minutos)
+    return criado_em < limite.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def arquivo_openapi() -> dict:
@@ -105,6 +128,23 @@ def trinco(nome: str):
             yield
         finally:
             fcntl.flock(arq, fcntl.LOCK_UN)
+
+
+@pytest.fixture(autouse=True)
+def _trinco_serial(request):
+    """16/09: LACUNA MEDIDA — o marcador `serial` (pyproject.toml) só promete não correr "ao lado de outro
+    worker do pytest-xdist"; quem garante isso hoje é só `sob_xdist()`/`pytest_sessionfinish`, que enxergam
+    apenas os workers da MESMA invocação. A trilha (uniao) roda vários worktrees como processos totalmente
+    separados contra o MESMO inquilino demo2 — visto de verdade: test_usuario_desabilitado_e_inquilino_suspenso
+    (que suspende/reativa demo2 inteiro) falhando com 401 no lugar do 503 esperado, sinal de outro processo
+    mexendo no mesmo inquilino no meio do teste. Mesmo padrão do `.login.lock`/`.2fa_plataforma.lock` acima:
+    um trinco de arquivo cross-worktree (via `_caminho_trinco`) ao redor da duração inteira de qualquer teste
+    `serial`, para qualquer worktree da trilha."""
+    if request.node.get_closest_marker("serial") is None:
+        yield
+        return
+    with trinco(".serial.lock"):
+        yield
 
 
 def entrar(cliente, slug: str, login: str, senha: str, segredo_totp: str | None = None):
@@ -412,22 +452,27 @@ def varrer_residuos(sessao_a, sessao_b, sessao_plat) -> None:
     a rodada nunca chegasse a rodá-lo (sessão abortada). Filtro agora é o mesmo prefixo "zt" usado para
     usuário/token/grupo/papel acima — "plataforma"/"demo"/"demo2" nunca começam por "zt", sem risco de
     colisão. Além do prefixo, tenta de novo qualquer id que um apagar() resiliente tenha registrado como não
-    confirmado (_INQUILINOS_NAO_APAGADOS, ver InquilinoTemporario.apagar)."""
+    confirmado (_INQUILINOS_NAO_APAGADOS, ver InquilinoTemporario.apagar).
+
+    16/09: cada item também passa por `_residuo_maduro` (criado_em mais velho que _LIMPEZA_IDADE_MIN) antes de
+    apagar — sem isso, esta varredura por prefixo apaga zt-* que OUTRO worktree da mesma trilha criou há
+    segundos e ainda está usando (ver comentário de _LIMPEZA_IDADE_MIN)."""
     for s in (sessao_a, sessao_b):
         for t in s.get("/api/tokens?todos=1").json():
-            if t["nome"].startswith(PREFIXO_TESTE) and t["revogado_em"] is None:
+            if t["nome"].startswith(PREFIXO_TESTE) and t["revogado_em"] is None and _residuo_maduro(t.get("criado_em")):
                 s.delete(f"/api/tokens/{t['id']}")
         for g in s.get(f"/api/grupos?q={PREFIXO_TESTE}&limite=200").json()["itens"]:
-            s.delete(f"/api/grupos/{g['id']}")
+            if _residuo_maduro(g.get("criado_em")):
+                s.delete(f"/api/grupos/{g['id']}")
         for u in s.get(f"/api/usuarios?q={PREFIXO_TESTE}&limite=200").json()["itens"]:
-            if u["login"].startswith(PREFIXO_TESTE):
+            if u["login"].startswith(PREFIXO_TESTE) and _residuo_maduro(u.get("criado_em")):
                 s.delete(f"/api/usuarios/{u['id']}")
         for p in s.get("/api/papeis").json()["personalizados"]:
-            if p["nome"].startswith(PREFIXO_TESTE):
+            if p["nome"].startswith(PREFIXO_TESTE) and _residuo_maduro(p.get("criado_em")):
                 s.delete(f"/api/papeis/{p['id']}")
     vistos = set()
     for t in sessao_plat.get("/api/plataforma/inquilinos").json():
-        if t["slug"].startswith(PREFIXO_TESTE):
+        if t["slug"].startswith(PREFIXO_TESTE) and _residuo_maduro(t.get("criado_em")):
             sessao_plat.delete(f"/api/plataforma/inquilinos/{t['id']}")
             vistos.add(t["id"])
     for id_ in list(_INQUILINOS_NAO_APAGADOS):
