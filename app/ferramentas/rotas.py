@@ -18,6 +18,8 @@ from app.consulta_grande import ferramentas_grandes as _grandes  # noqa: F401 �
 from app.erros import ErroAPI
 from app.ferramentas import buffer as _buffer  # noqa: F401 — a importação registra a ferramenta de exemplo
 from app.ferramentas import executor, registro
+from app.ferramentas import grade as _grade  # noqa: F401 — registra tesselação/densidade/ESDA (L2-05-d)
+from app.ferramentas import raster as _raster  # noqa: F401 — registra as 13 ferramentas raster (L2-05-e)
 from app.ferramentas import rede as _rede  # noqa: F401 — registra as ferramentas de rede (L2-05-f)
 from app.jobs import servico
 from app.jobs.contexto import ErroServico, sessao_de
