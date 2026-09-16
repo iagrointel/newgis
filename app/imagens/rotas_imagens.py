@@ -208,7 +208,7 @@ class IngestaoEntrada(Modelo):
 
 # ---------------------------------------------------------------- tabela de formatos (a MESMA do código)
 @router.get("/api/imagens/formatos", openapi_extra=LER)
-def formatos_de_entrada():
+def formatos_de_entrada(auth: Auth = autenticado(escopo_token="imagens:ler")):
     """A tabela canônica de formatos de entrada raster (`app.imagens.formatos.lista()`): aceitos com a
     georreferência de cada um e recusados com a mensagem exata (ECW/MrSID sem SDK no GDAL desta
     instalação; GeoPDF e HDF5 com razão medida). A tela de upload lê ESTA rota — nunca mantém lista à
