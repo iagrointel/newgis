@@ -12,9 +12,11 @@ no nível de `buscar_seguro`; não montei o cenário fim a fim". Este arquivo fe
 Tudo offline e determinístico: `socket.getaddrinfo` e `cliente_pinado` trocados por `monkeypatch`, contexto de
 job de mentira, nenhum socket e nenhum banco.
 
-As guardas de regressão do fim do arquivo são `xfail(strict=True)` DE PROPÓSITO: elas afirmam o comportamento
-VULNERÁVEL. Enquanto o conserto estiver de pé elas falham (xfail = esperado); se alguém desfizer o conserto
-elas passam (XPASS) e a suíte fica vermelha.
+As guardas de regressão de `socket`/`cliente_pinado` do fim do arquivo são `xfail(strict=True)` DE PROPÓSITO:
+elas afirmam o comportamento VULNERÁVEL. Enquanto o conserto estiver de pé elas falham (xfail = esperado); se
+alguém desfizer o conserto elas passam (XPASS) e a suíte fica vermelha. A guarda de `app/garage.py` NÃO segue
+esse padrão (achado 16/09: a asserção estava invertida e o xfail escondia que a proteção tinha sumido da
+fusão wt/uniao) — agora é uma asserção comum, que exige a proteção presente, mais um teste comportamental.
 """
 
 import contextlib
@@ -115,7 +117,12 @@ def rodar_saude(monkeypatch):
         monkeypatch.setattr(socket, "getaddrinfo", _gai)
         monkeypatch.setattr(s, "cliente_pinado", lambda validada, **_: _Cliente(rotas, registro))
         cifrada = credencial_mod.cifrar(SEGREDO, settings.PLAT_SECRET)
-        ctx = _Ctx([{"id": "00000000-0000-0000-0000-000000000001", "url": url, "credencial_cifrada": cifrada}])
+        # achado à parte de A/B: `tipo` é exigido por google_sheets.cabecalhos_auth (item L6-02-i) desde que
+        # entrou em app/conexao/tarefas.py; esta fixture não foi atualizada (mesma família de bug do item B —
+        # fixture presa a uma assinatura/contrato anterior). "http" cai no ramo "Bearer direto" pré-existente.
+        ctx = _Ctx([{
+            "id": "00000000-0000-0000-0000-000000000001", "url": url, "tipo": "http", "credencial_cifrada": cifrada,
+        }])
         retorno = tarefas.conexoes_saude_verificar(ctx, limite=10)
         return retorno, registro, ctx
 
@@ -212,12 +219,51 @@ def test_regressao_job_saude_leva_a_credencial_para_outro_host(rodar_saude):
     assert registro[1][1].get("Authorization") == f"Bearer {SEGREDO}"
 
 
-@pytest.mark.xfail(strict=True, reason="furo fechado: app/garage.py nao segue Location com Authorization")
-def test_regressao_garage_segue_redirecionamento_com_authorization():
-    """O outro caminho da casa que monta `Authorization` e usava `requests` com redirecionamento automático."""
+def test_garage_declara_allow_redirects_false_nos_dois_chamadores():
+    """O outro caminho da casa que monta `Authorization` (`app/garage.py`, fora do `buscar_seguro`/`cliente_pinado`
+    testado acima) usa `requests` puro. Sem `allow_redirects=False` nas duas chamadas (`ClienteS3._requisicao` e
+    `ClienteAdmin._chamar`) o `requests` seguiria um `Location` de 3xx sozinho e reenviaria a assinatura SigV4 /
+    o Bearer de admin para o host que o servidor escolher. Não é xfail: a proteção TEM de estar no código; ver o
+    teste comportamental abaixo para a prova de que ela realmente barra o salto."""
     import inspect
 
     from app import garage
 
-    fonte = inspect.getsource(garage)
-    assert "allow_redirects=False" not in fonte
+    for alvo in (garage.ClienteS3._requisicao, garage.ClienteAdmin._chamar):
+        fonte = inspect.getsource(alvo)
+        assert "allow_redirects=False" in fonte, (
+            f"{alvo.__qualname__} deve chamar requests.request(..., allow_redirects=False) — achado "
+            "G5-1/L6-02-a reaberto pela fusão wt/uniao"
+        )
+
+
+def test_garage_cliente_s3_nao_segue_redirecionamento_nem_reenvia_authorization(monkeypatch):
+    """Comportamental (não só grep de fonte): uma sessão falsa devolve 302 com `Location` para OUTRO host.
+    O cliente não pode seguir — nem reenviar o `Authorization` assinado — e tem de estourar como erro."""
+    from app import garage
+
+    chamadas: list[tuple[tuple, dict]] = []
+
+    class _RespostaFalsa:
+        status_code = 302
+        text = "redirecionando"
+        headers = {"Location": "http://host-atacante.teste/outro-balde/outra-chave"}
+
+    def _request_falso(*args, **kwargs):
+        chamadas.append((args, kwargs))
+        return _RespostaFalsa()
+
+    monkeypatch.setattr(garage.requests, "request", _request_falso)
+
+    cliente = garage.ClienteS3("http://garage.teste:3900", "AKIA_TESTE", "segredo-teste", "garage")
+    with pytest.raises(garage.ErroGarage):
+        cliente.get("balde-a", "chave-a")
+
+    assert len(chamadas) == 1, "o cliente seguiu o redirecionamento e fez uma segunda requisição"
+    args, kwargs = chamadas[0]
+    assert kwargs.get("allow_redirects") is False, "a chamada não pediu allow_redirects=False"
+    # `requests.request(metodo, url, ...)` é chamado posicional em app/garage.py — a URL é o 2º argumento.
+    url_chamada = kwargs.get("url") or (args[1] if len(args) > 1 else "")
+    assert "host-atacante.teste" not in url_chamada, (
+        "a URL chamada já aponta para o host atacante — o Authorization teria ido junto"
+    )
