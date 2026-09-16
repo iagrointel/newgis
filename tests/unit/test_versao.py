@@ -62,7 +62,7 @@ def test_sem_git_e_sem_plat_git_sha_falha_nomeando(monkeypatch, tmp_path):
 
 def test_git_de_worktree_arquivo_apontador_e_lido(monkeypatch, tmp_path):
     """Em worktree, .git é um ARQUIVO ('gitdir: …') e não um diretório; o HEAD vem do gitdir do
-    worktree, mas a ref do ramo vive no diretório comum, indicado pelo arquivo 'commidir'."""
+    worktree, mas a ref do ramo vive no diretório comum, indicado pelo arquivo 'commondir'."""
     import app.versao as v
 
     gitdir = tmp_path / "repo" / ".git" / "worktrees" / "wt"
@@ -70,7 +70,7 @@ def test_git_de_worktree_arquivo_apontador_e_lido(monkeypatch, tmp_path):
     (comum / "refs" / "heads" / "wt").mkdir(parents=True)
     (gitdir / "refs" / "heads").mkdir(parents=True)
     (gitdir / "HEAD").write_text("ref: refs/heads/wt/ramo\n", encoding="ascii")
-    (gitdir / "commidir").write_text("../..\n", encoding="ascii")
+    (gitdir / "commondir").write_text("../..\n", encoding="ascii")
     (comum / "refs" / "heads" / "wt" / "ramo").write_text(
         "fedcba9876543210fedcba9876543210fedcba98\n", encoding="ascii")
     (tmp_path / ".git").write_text(f"gitdir: {gitdir}\n", encoding="ascii")
