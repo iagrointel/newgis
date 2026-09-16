@@ -715,10 +715,11 @@ def test_ataque_6_o_mesmo_nome_do_arcade_nao_carrega_estados_contraditorios():
 
 
 def test_ataque_7_contagem_independente_de_funcoes_e_vetores():
-    """Contado dos arquivos, não do handoff: 49 funções na tabela do Python, as MESMAS 49 no
-    JavaScript (lidas pelo `--nomes-funcoes` do executor) e 309 vetores. (43 viraram 49 no item
-    L4-29: as seis funções de rede entraram nos DOIS avaliadores e no documento; o invariante
-    testado continua o mesmo — mesmos nomes dos dois lados e o documento contando igual.)"""
+    """Contado dos arquivos, não do handoff: 55 funções na tabela do Python, as MESMAS 55 no
+    JavaScript (lidas pelo `--nomes-funcoes` do executor) e 339 vetores. (43 viraram 49 no item
+    L4-29 com as seis funções de rede, e 49 viraram 55 no item L5-11 com as seis de feição e
+    geometria — os dois entraram nos DOIS avaliadores e no documento; o invariante testado
+    continua o mesmo — mesmos nomes dos dois lados e o documento contando igual.)"""
     from app.expressao.avaliador_py import TABELA_FUNCOES
 
     vetores = json.loads((RAIZ / "tests" / "expressoes" / "vetores.json").read_text(encoding="utf-8"))
@@ -731,9 +732,9 @@ def test_ataque_7_contagem_independente_de_funcoes_e_vetores():
         check=True,
     )
     nomes_js = set(json.loads(r.stdout))
-    assert len(TABELA_FUNCOES) == 49
+    assert len(TABELA_FUNCOES) == 55
     assert nomes_js == set(TABELA_FUNCOES)
-    assert len(vetores) == 309
+    assert len(vetores) == 339
     assert MAX_PASSOS_PADRAO == 100_000
 
 

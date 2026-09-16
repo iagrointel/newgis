@@ -1576,7 +1576,7 @@ servidor e o navegador devolverem exatamente o mesmo número.
 | `indicador_painel` | numero · nulo | 500 ms | número exibido num indicador de painel |
 | `titulo_dinamico` | texto · numero · nulo | 50 ms | título de janela, aba ou painel montado a partir da feição |
 
-### Catálogo de funções (49), uma linha e um exemplo por função
+### Catálogo de funções (55), uma linha e um exemplo por função
 
 | função | argumentos | o que faz | exemplo |
 |---|---|---|---|
@@ -1629,6 +1629,12 @@ servidor e o navegador devolverem exatamente o mesmo número.
 | `Comprimento` | 1 | comprimento da linha em metros | `Comprimento($linha) → 111195.080234` |
 | `Distancia` | 2 | distância entre dois pontos em metros | `Distancia($a, $b) → 111195.080234` |
 | `Dentro` | 2 | verdadeiro se o ponto está dentro do polígono | `Dentro($p, $area) → verdadeiro` |
+| `Subrede` | 0 | nome da subrede do objeto | `Subrede() → 'SR-CENTRO'` |
+| `Alimentador` | 0 | código do alimentador (circuito) do objeto | `Alimentador() → 'AL-1042'` |
+| `TensaoAlimentador` | 0 | tensão nominal do alimentador em kV, herdada em um salto | `TensaoAlimentador() → 13.8` |
+| `ContarJusante` | 0 | clientes a jusante já calculados pelo motor (nulo se não calculado) | `ContarJusante() → 42` |
+| `NivelRede` | 0 | nível de tensão do objeto ('mt' ou 'bt') | `NivelRede() → 'mt'` |
+| `AtributoRede` | 1 | atributo de rede pelo nome (nulo se ausente) | `AtributoRede('tensao_kv') → 13.8` |
 <!-- fim: catalogo de expressao gerado por docs/gerar_manual_expressao.py -->
 
 ---

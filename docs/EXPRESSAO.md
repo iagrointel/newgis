@@ -75,8 +75,9 @@ introduz literais `[]`/`{}`. As coleções aceitam aninhamento dentro dos limite
 A igualdade nas funções `Contem`, `Unicos` e `Decode` é estrutural: ordem de lista importa,
 ordem de chaves de dicionário não, e booleano é diferente de número.
 
-Geometria, domínio, relações entre camadas e funções com expressão por elemento (`Filter`/`Map`)
-continuam fora do núcleo. O contexto só deve conter dados já autorizados pelo chamador.
+Ponto, linha e polígono simples entraram no núcleo pelo item L5-11 (seção 5, "Feição e
+geometria"); domínio, relações entre camadas e funções com expressão por elemento (`Filter`/`Map`)
+continuam fora. O contexto só deve conter dados já autorizados pelo chamador.
 
 Por que "data" não é um tipo dedicado: os dois avaliadores têm de concordar byte a byte, e a forma
 mais barata de garantir isso é não depender de biblioteca de fuso horário nenhuma das duas línguas
@@ -139,7 +140,7 @@ lados e têm vetor de teste em `tests/expressoes/vetores_convergencia.json`.
   devolve `valor` sem nunca avaliar `alternativa`.
 - **`&&`/`||`**: como descrito acima — o lado que decide sozinho evita avaliar o outro.
 
-## 5. Catálogo de funções (49)
+## 5. Catálogo de funções (55)
 
 Uma linha por função, com 1 exemplo. `TABELA_FUNCOES` em `avaliador_py.py` e `TABELA_FUNCOES` em
 `avaliador.js` são a fonte única — `tests/unit/test_expressao_doc_sincronizada.py` confere que
@@ -246,6 +247,46 @@ posteriores à primeira correspondência. Não modifica o contexto. As chaves `_
 `prototype` e `constructor` são recusadas por `Obter`; getters e propriedades herdadas não
 são caminhos de acesso a dados.
 
+### Feição e geometria (item L5-11)
+
+A feição é o dicionário `{"atributos": {...}, "geometria": ...}` e chega às expressões como
+`$feicao`; `$geometria` é a geometria dela e cada atributo cujo nome é um identificador válido
+chega como `$nome` (quem monta isso é `app/expressao/perfis.py` / `web/js/expressao/perfis.js`).
+Geometria é GeoJSON (RFC 7946) com as chaves do próprio padrão — `{"type": "Point" |
+"LineString" | "Polygon", "coordinates": ...}` —, grau decimal em WGS-84 e longitude ANTES da
+latitude. Coordenada fora de −180..180 / −90..90, anel de polígono que não fecha, anel com menos
+de quatro posições, tipo de geometria diferente do que a função pede e dicionário que não é
+geometria dão `geometria_invalida`.
+
+| função | aridade | descrição | exemplo |
+|---|---|---|---|
+| `Atributo(feicao, nome, padrao)` | 2-3 | atributo por nome; ausente devolve o padrão (ou nulo); presente com valor nulo permanece nulo; `__proto__`/`prototype`/`constructor` são `campo_nao_permitido` | `Atributo($feicao, 'nome do lote')` → `'L-7'` |
+| `Geometria(feicao)` | 1 | geometria da feição, ou nulo se ela não tiver | `EhNulo(Geometria($feicao))` → `falso` |
+| `Area(poligono)` | 1 | área do polígono em metros quadrados, descontando os anéis internos | `Area($geometria)` → `12363718145.180046` |
+| `Comprimento(linha)` | 1 | comprimento da linha em metros (soma dos segmentos) | `Comprimento($geometria)` → `111195.080234` |
+| `Distancia(ponto, ponto)` | 2 | distância entre dois pontos em metros | `Distancia($a, $b)` → `111195.080234` |
+| `Dentro(ponto, poligono)` | 2 | verdadeiro se o ponto está dentro do polígono | `Dentro($p, $geometria)` → `verdadeiro` |
+
+**Modelo da Terra, e o que ele NÃO é.** Esfera de raio autálico 6.371.008,8 m (IUGG), sem
+elipsoide, sem projeção e sem PostGIS: área pela fórmula de Chamberlain & Duquette
+(`A = R²/2 · Σ (λ₂−λ₁)(sin φ₁ + sin φ₂)`, o sinal do anel dá a orientação e o resultado é o módulo
+do anel externo menos o módulo de cada anel interno), comprimento e distância por haversine,
+`Dentro` por cruzamento de raio par-ímpar no plano de graus. O erro do modelo esférico chega a
+0,5 % contra o elipsoide — serve para ordem de grandeza e comparação, nunca para medição legal de
+área. Todo resultado métrico é arredondado a 6 casas decimais (1 micrômetro quando a unidade é
+metro) porque `sin`/`cos`/`asin` da biblioteca matemática do Python e do V8 podem divergir no
+último bit e o portão exige o MESMO número nos dois lados.
+
+**Bordas, e a assimetria que existe de propósito.** Ponto sobre a aresta ou sobre um vértice do
+anel EXTERNO conta como dentro; ponto sobre a borda de um anel interno (buraco) conta como fora.
+Não há tolerância: a comparação é exata em ponto flutuante. `Dentro` não cruza o antimeridiano nem
+trata polígono que contém um polo — polígono assim tem de ser partido antes.
+
+**Fora desta passagem** (nomeado, não escondido): `MultiPoint`/`MultiLineString`/`MultiPolygon`/
+`GeometryCollection`, `Buffer`, `Centroide`, `Interseta`, `Toca`, distância de ponto a linha ou a
+polígono, área de linha, comprimento de polígono (perímetro) e qualquer sistema de coordenadas que
+não seja grau decimal WGS-84.
+
 ### Rede (item L4-29-regras-de-atributo-de-rede)
 
 Funções que leem a chave reservada `rede` do contexto, montada POR OBJETO pelo motor de regras de
@@ -351,6 +392,10 @@ dentro de um nó de AST é recusado** (`no_desconhecido`), não ignorado: a form
 | `limite_passos` | avaliação acima do orçamento de passos |
 | `tempo_excedido` | avaliação acima do orçamento de tempo |
 | `no_desconhecido` | AST em JSON malformada ou com tipo de nó fora do vocabulário |
+| `geometria_invalida` | geometria fora do contrato GeoJSON aceito: tipo errado para a função, coordenada fora da faixa ou não numérica, anel que não fecha, anel com menos de quatro posições, `coordinates` ausente |
+| `feicao_invalida` | feição que não é dicionário, `atributos` que não é dicionário de nomes ou `geometria` que não é dicionário (montagem do contexto por `app/expressao/perfis.py`) |
+| `perfil_desconhecido` | nome de perfil fora de `PERFIS` (`app/expressao/perfis.py`) |
+| `tipo_de_retorno_invalido` | a expressão avaliou, mas devolveu um tipo que o perfil não aceita |
 | `operador_desconhecido` | defesa interna (`# pragma: no cover`): nunca alcançável a partir da gramática publicada — todo operador que o parser aceita tem tratamento no avaliador |
 
 Todo erro de sintaxe (`sintaxe_invalida`, `caractere_invalido`, `profundidade_excedida` quando
@@ -568,8 +613,11 @@ Lista de nomes lida das páginas oficiais (`developers.arcgis.com/arcade/functio
 
 ## 11. O que fica FORA desta passagem (pendências nomeadas)
 
-- Geometria; funções com expressão por elemento (`Filter`/`Map`),
-  domínio (`DomainName`/`DomainCode`/`Subtypes`) e `FeatureSetByRelationship`.
+- Funções com expressão por elemento (`Filter`/`Map`), domínio (`DomainName`/`DomainCode`/
+  `Subtypes`) e `FeatureSetByRelationship`. **Geometria deixou de estar aqui no item L5-11**: ponto,
+  linha e polígono simples com `Area`/`Comprimento`/`Distancia`/`Dentro` existem (seção 5); o que
+  continua fora está nomeado no fim daquela subseção (multi-geometria, `Buffer`, `Centroide`,
+  `Interseta`, ponto a linha, projeção).
 - Integração com popup, rótulo (MapLibre), regra de formulário e indicador — itens futuros do
   L2-10/L5 (o "ativo da casa" `L5-11` do item). A parte de regra de atributo saiu do papel no
   item L4-29: as seis funções de rede da seção 5 mais o motor `app/rede/regras.py` (perfis
