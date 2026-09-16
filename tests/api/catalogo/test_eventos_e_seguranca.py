@@ -73,9 +73,11 @@ def test_vocabulario_no_banco_e_rotas_declaradas(conexao_plat_app):
 def test_sequencia_real_e_propriedades_sem_segredo(sessao_a, itens_a):
     it = itens_a.criar("mapa", descricao="descrição longa que nunca vai para o evento " * 3)
     iid = it["id"]
-    sessao_a.put(
-        f"/api/itens/{iid}", json={"titulo": it["titulo"] + " x", "dados": {"esquema_versao": 1, "corpo": {"a": 1}}}
+    r_put = sessao_a.put(
+        f"/api/itens/{iid}",
+        json={"titulo": it["titulo"] + " x", "dados": {"esquema_versao": 1, "corpo": {"rotacao": 1}}},
     )
+    assert r_put.status_code == 200, r_put.text
     r = sessao_a.post(f"/api/itens/{iid}/links", json={})
     tok, lid = r.json()["token"], r.json()["id"]
     sessao_a.delete(f"/api/itens/{iid}/links/{lid}")
