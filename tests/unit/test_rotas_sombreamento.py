@@ -14,6 +14,16 @@ import re
 from app.main import app
 
 PARAMETRO = re.compile(r"^\{[^}]+\}$")
+_CONVERSOR = re.compile(r"^\{[^:}]+:([a-z]+)\}$")
+# quando o molde declara um conversor do Starlette, o segmento parametrizado só cobre um literal que o
+# conversor aceitaria de verdade — sem isto, `{camada:int}` "cobria" `/replicas` (não é dígito nenhum) e a
+# varredura acusava um sombreamento que o PRÓPRIO conversor já impede na aplicação viva (é exatamente o
+# porquê do `:int` ali: ver o docstring de app/dominios/rotas_featureserver.py::camada_de_feicao)
+_ACEITA_POR_CONVERSOR = {
+    "int": re.compile(r"^-?\d+$"),
+    "float": re.compile(r"^-?\d+(\.\d+)?$"),
+    "uuid": re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"),
+}
 
 
 def achatar_rotas(rotas):
@@ -49,6 +59,10 @@ def _cobre(parametrizada: str, fixa: str) -> bool:
         if seg_a == seg_b:
             continue
         if PARAMETRO.match(seg_a) and not PARAMETRO.match(seg_b):
+            m = _CONVERSOR.match(seg_a)
+            aceita = _ACEITA_POR_CONVERSOR.get(m.group(1)) if m else None
+            if aceita is not None and not aceita.match(seg_b):
+                return False  # o conversor recusaria este literal; o Starlette segue para a próxima rota
             tem_parametro_no_lugar_de_literal = True
             continue
         return False
