@@ -314,6 +314,13 @@ def habilitar(cur, tenant_id: int, rede_id: str, usuario_id: int | None) -> dict
     cur.execute("DELETE FROM plat.rede_topo_no WHERE rede_id = %s::uuid", (rede_id,))
     # a reconstrução total resolve TODA área suja pendente da rede — por isso elas morrem aqui, junto do
     # índice velho (a manutenção incremental, reconstruir só a área, é fronteira honesta desta passagem).
+    # Antes de apagar, persiste a marcação nas subredes que a área tocava (item L4-04-b, portão: "só as 2
+    # subredes afetadas ficam suja"): sem isto, uma edição que precisa de topologia nova (feição sem nó
+    # ainda) perderia o sinal de incremento no instante em que `habilitar()` roda, porque quem sobrevive à
+    # reconstrução é o estado GRAVADO da subrede (`rede_subrede.estado`), não a área suja em si.
+    from app.rede_utilidades import subredes as subredes_mod
+
+    subredes_mod.marcar_sujas(cur, rede_id)
     cur.execute("DELETE FROM plat.rede_topo_area_suja WHERE rede_id = %s::uuid", (rede_id,))
 
     _inserir_lote(
