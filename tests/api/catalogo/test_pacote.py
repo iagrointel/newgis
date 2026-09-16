@@ -50,7 +50,10 @@ def _montar_origem(itens, sessao):
     mapa = itens.criar(
         "mapa",
         sessao=sessao,
-        dados={"esquema_versao": 1, "corpo": {"camadas": [c["id"] for c in camadas.values()]}},
+        dados={
+            "esquema_versao": 1,
+            "corpo": {"camadas": [{"id": gerar_ulid(), "ref": c["id"]} for c in camadas.values()]},
+        },
     )
     no_visor, no_legenda = gerar_ulid(), gerar_ulid()
     app = itens.criar(
