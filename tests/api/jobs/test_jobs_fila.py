@@ -15,7 +15,9 @@ def test_tipos_listam_o_registro(cliente_demo):
     nomes = {t["nome"] for t in r.json()}
     assert {"prova.progresso", "prova.memoria", "prova.falha", "prova.pesado", "jobs.expurgo"} <= nomes
     prova = next(t for t in r.json() if t["nome"] == "prova.progresso")
-    assert prova["memoria_mb"] == 256 and prova["executor"] == "local" and prova["perfil_minimo"] == "editor"
+    # perfil_minimo="admin" desde 10/09 (98009206c, achado do QA: prova.* é diagnóstico do operador, não
+    # deve aparecer executável para editor/visualizador) — supersede o "editor" anterior a essa decisão.
+    assert prova["memoria_mb"] == 256 and prova["executor"] == "local" and prova["perfil_minimo"] == "admin"
     assert "duracao_s" in prova["parametros_schema"]["properties"]
 
 

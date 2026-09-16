@@ -77,7 +77,10 @@ def test_usuario_nao_admin_so_ve_os_proprios_jobs(env, cliente_demo, sessao_demo
         token, _, _ = jobs_sessao.criar_sessao(con, "demo", login)
         with _cliente_com_cookie(token) as editor:
             assert editor.get(f"/api/jobs/{job_de_demo['id']}").status_code == 404
-            meu = criar_job(editor, "prova.progresso", {"duracao_s": 0, "passos": 1})
+            # prova.* virou admin-only em 10/09 (achado do QA, 98009206c) — editor precisa de um tipo que
+            # continue em perfil_minimo="editor" para provar RLS de fila (não é sobre prova.*).
+            meu = criar_job(editor, "ferramentas.buffer",
+                            {"geometria": {"type": "Point", "coordinates": [0, 0]}, "distancia_m": 10})
             assert meu["usuario_id"] == uid and meu["usuario_login"] == login
             ids = {j["id"] for j in editor.get("/api/jobs", params={"limite": 200}).json()["itens"]}
             assert meu["id"] in ids and job_de_demo["id"] not in ids

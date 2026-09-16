@@ -59,12 +59,16 @@ def test_visualizador_nao_ve_nem_cancela_job_de_outro(visualizador, cliente_demo
 
 
 def test_editor_continua_lendo_e_executando(usuarios_a):
+    """`prova.*` virou admin-only em 10/09 (achado do QA: são diagnósticos do operador, não deviam aparecer
+    para editor/visualizador — 98009206c) — o job de prova para "editor executa" tem de ser um que
+    continue em perfil_minimo="editor" (ferramentas.buffer, sem upload, ADR próprio)."""
     c, _, _ = usuarios_a.sessao("editor")
     privilegios = c.get("/api/eu").json()["privilegios"]
     assert {"jobs.ver", "jobs.executar"} <= set(privilegios)
     for rota in LEITURA:
         assert c.get(rota).status_code == 200, rota
-    job = criar_job(c, "prova.progresso", {"duracao_s": 0, "passos": 1})
+    job = criar_job(c, "ferramentas.buffer",
+                    {"geometria": {"type": "Point", "coordinates": [0, 0]}, "distancia_m": 10})
     assert c.get(f"/api/jobs/{job['id']}").status_code == 200
     assert c.post(f"/api/jobs/{job['id']}/cancelar").status_code == 202
 
