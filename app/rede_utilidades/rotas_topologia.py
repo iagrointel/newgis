@@ -11,6 +11,7 @@ construção pesada vai para o threadpool (lição do achado A4 do item L4-01-a)
 import json
 import uuid as uuid_mod
 
+import psycopg2
 from fastapi import APIRouter, Request
 from starlette.concurrency import run_in_threadpool
 
@@ -19,12 +20,13 @@ from app.auth import comum as auth_comum
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo.comum import registrar_evento
 from app.erros import ErroAPI
-from app.rede_utilidades import feicoes, topologia
+from app.rede_utilidades import config_tracado, direcao, feicoes, fluxo, lacos, topologia, tracado
 from app.rede_utilidades.modelos import (
     Feicao,
     FeicaoLinhaEntrada,
     FeicaoPontoEntrada,
     TopologiaResumo,
+    TracadoEntrada,
 )
 
 router = APIRouter(prefix="/api/rede", tags=["rede de utilidades — topologia"])
@@ -311,3 +313,91 @@ def _uuid_ok_no(valor: str) -> str:
         return str(uuid_mod.UUID(valor))
     except (ValueError, AttributeError, TypeError) as e:
         raise ErroAPI(404, "no_inexistente", "nó inexistente") from e
+
+
+# --- traçado: conectado, subrede (L4-02-a), laços, caminho_curto, isolados (L4-02-d) --------------------
+
+def _tracar_sincrono(rid: str, corpo: TracadoEntrada, auth: Auth, request: Request) -> dict:
+    with db.db(auth.contexto()) as cur:
+        _rede_existe(cur, rid)
+        barreiras = [b.model_dump() for b in corpo.barreiras]
+        try:
+            if corpo.config_id is not None:
+                # item L4-02-e: o pedido inteiro (tipo, barreiras de condição e de filtro, filtro de saída,
+                # funções e tipo de resultado) vem da configuração salva; do corpo só valem os pontos de
+                # partida e as barreiras pontuais deste traçado.
+                ficha = config_tracado.obter(cur, rid, corpo.config_id, auth.usuario_id)
+                resultado = config_tracado.executar(
+                    cur, auth.tenant_id, rid, ficha,
+                    [p.model_dump() for p in corpo.pontos_partida], barreiras)
+            elif corpo.tipo is None:
+                raise ErroAPI(422, "tipo_obrigatorio",
+                              "informe 'tipo' ou 'config_id' (a configuração salva traz o tipo)")
+            elif corpo.tipo in tracado.TIPOS_TRACADO:
+                resultado = tracado.tracar(
+                    cur, auth.tenant_id, rid, corpo.tipo,
+                    [p.model_dump() for p in corpo.pontos_partida], barreiras,
+                )
+            elif corpo.tipo in fluxo.TIPOS_FLUXO:
+                # o sentido vem do controlador de subrede (L4-02-b) ou do atributo de fluxo (L4-18); quem
+                # escolhe é `direcao.tracar_direcao`, e a resposta sempre diz qual foi em `origem_direcao`.
+                resultado = direcao.tracar_direcao(
+                    cur, auth.tenant_id, rid, corpo.tipo,
+                    [p.model_dump() for p in corpo.pontos_partida], barreiras, corpo.origem_direcao,
+                )
+            elif corpo.tipo == "lacos":
+                resultado = lacos.detectar_lacos(cur, auth.tenant_id, rid, barreiras)
+            elif corpo.tipo == "isolados":
+                resultado = lacos.isolados(cur, auth.tenant_id, rid, corpo.categoria_controlador, barreiras)
+            elif corpo.tipo == "caminho_curto":
+                if len(corpo.pontos_partida) != 1:
+                    raise ErroAPI(422, "origem_invalida",
+                                  "caminho_curto exige exatamente um ponto em pontos_partida (a origem)")
+                if corpo.destino is None:
+                    raise ErroAPI(422, "destino_obrigatorio", "caminho_curto exige o campo 'destino'")
+                resultado = lacos.caminho_curto(
+                    cur, auth.tenant_id, rid, corpo.pontos_partida[0].model_dump(),
+                    corpo.destino.model_dump(), corpo.atributo_custo, corpo.k, barreiras,
+                )
+            else:  # nunca alcançado — o pattern do pydantic já barrou; guarda por clareza
+                raise ErroAPI(422, "tipo_invalido", f"tipo desconhecido: {corpo.tipo}")
+        except psycopg2.Error as e:  # noqa: BLE001 — erro do banco vira mensagem legível, nunca 500 cru
+            raise auth_comum.erro_do_banco(e) from e
+        registrar_evento(cur, request, "redes/tracar", "rede", rid,
+                         {"tipo": resultado.get("tipo") or corpo.tipo,
+                          "config_id": corpo.config_id,
+                          "contagem": resultado.get("contagem"),
+                          "duracao_ms": resultado.get("duracao_ms")})
+    return resultado
+
+
+@router.post("/{rede_id}/tracar", status_code=200, openapi_extra=LER)
+async def tracar_rede(rede_id: str, corpo: TracadoEntrada, request: Request,
+                      auth: Auth = autenticado(escopo_token="rede:analisar")):
+    """Traça `tipo=conectado` (tudo que se alcança do(s) ponto(s) de partida, respeitando a traversabilidade
+    de cada dispositivo e as barreiras) ou `tipo=subrede` (o mesmo, mas parando em qualquer controlador de
+    outra subrede — hoje, categoria `transformacao` do pacote); ou, item L4-02-d-lacos-e-caminho-curto:
+    `tipo=lacos` (ciclos por componente biconexo, `pgr_biconnectedComponents`), `tipo=isolados` (elementos sem
+    caminho a nenhuma feição da categoria `categoria_controlador`, padrão `fonte`, `pgr_connectedComponents`)
+    ou `tipo=caminho_curto` (origem em `pontos_partida[0]`, `destino`, custo = `atributo_custo` ou o
+    comprimento geodésico por padrão; `k` alternativas por `pgr_ksp` quando `k>1`); ou, item
+    itens L4-18-rede-simples-trace-network e L4-02-b-montante-jusante, `tipo=montante`/`tipo=jusante`: numa
+    rede com controlador de subrede em tier hierárquico o sentido vem da DISTÂNCIA AO CONTROLADOR (jusante de
+    um ponto = o que só chega ao controlador passando por ele); sem controlador, vem da DIREÇÃO DE FLUXO
+    declarada no atributo `direcao_fluxo` de cada trecho (digitalizada/contra/indeterminada), que para, com
+    aviso por trecho, em toda aresta indeterminada. `origem_direcao` no pedido impõe um dos dois, e a
+    resposta sempre diz qual valeu; em malha (tier particionado) sem atributo, e em laço, a resposta é
+    `direcao='indeterminado'` com o motivo e os nós do laço, nunca um sentido arbitrado. Ponto de partida, destino
+    e barreira são a mesma forma: feição+terminal ou coordenada com tolerância. Não exige `rede.editar`: é
+    leitura sobre o índice já construído (mesmo privilégio de `topologia/alcance`), nunca grava nada na rede.
+    Sem `response_model` fixo porque cada `tipo` devolve um formato diferente (ver `docs/openapi.json` para o
+    formato de cada um, e os testes de cada item para exemplo)."""
+    rid = _uuid_ok(rede_id)
+    if corpo.config_id is not None:
+        try:
+            corpo.config_id = str(uuid_mod.UUID(corpo.config_id))
+        except (ValueError, AttributeError, TypeError) as e:
+            raise ErroAPI(404, "config_inexistente",
+                          "configuração de traçado inexistente nesta rede") from e
+    resultado = await run_in_threadpool(_tracar_sincrono, rid, corpo, auth, request)
+    return resultado
