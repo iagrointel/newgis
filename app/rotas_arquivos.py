@@ -134,7 +134,11 @@ def chave_leitura(auth: Auth = autenticado("org.integracoes", so_sessao=True)):
     "/api/arquivos/_cog/autorizar",
     status_code=204,
     response_class=Response,
-    openapi_extra={"x-auth": "publico", "x-privilegio": "publico"},
+    # x-auth "-" é o valor do vocabulário para rota sem credencial nenhuma (app/portal/openapi.py); estava
+    # escrito "publico" por engano (confundindo com o valor de x-plat-escopo) e isso fazia
+    # tests/unit/test_contrato_guarda.py achar que a rota exigia credencial sem ter Depends(autenticado(...))
+    # — ela é pública DE PROPÓSITO (ver docstring abaixo), a autenticação real é o token no X-Original-URI.
+    openapi_extra={"x-auth": "-", "x-privilegio": "publico"},
 )
 def cog_autorizar(request: Request):
     """Subrequisição `auth_request` do bloco `/svc/<token>/cog/<slug>/...` do nginx (deploy/nginx.conf). Recebe o
