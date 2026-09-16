@@ -22,10 +22,16 @@ Mecanismo (os 8 casos do adversário do item, na ordem do portão):
   8. DNS que muda entre a validação e a conexão (rebinding)               → `cliente_pinado` conecta ao(s) IP(s)
      já validados, nunca resolve de novo no momento da conexão (o backend customizado do httpcore não chama
      `getaddrinfo` outra vez para este host)
-  9. credencial reenviada a outro host num redirecionamento               → `_sem_credencial_em_outro_host`
-     (acrescentado no item L6-02-h): `Authorization`/`Cookie`/`Proxy-Authorization`/`X-Api-Key` só seguem
-     quando o `Location` aponta para o MESMO host, mesma porta e sem cair de https para http. Este era o
-     achado do adversário do L6-02-a que deixou aquele item marcado REFUTADO
+  9. redirecionamento que troca de ORIGEM levando a credencial junto      → `buscar_seguro` RETIRA todo cabeçalho
+     de credencial (`Authorization`, `Cookie`, `Proxy-Authorization` e os nomes passados em
+     `cabecalhos_secretos`) no primeiro salto em que esquema, host ou porta deixam de ser os da URL original,
+     e NÃO devolve a credencial se a cadeia voltar à origem inicial (retirada é definitiva — ver ADR 0012,
+     "Decisão: credencial nunca atravessa mudança de origem"; achado do adversário G5). `ResultadoBusca.
+     credencial_retirada` diz ao chamador que um `http_401` depois do redirecionamento é esperado, não senha
+     errada. Achado irmão, resolvido por uma função à parte porque tem outro chamador (`_mesma_origem_de_
+     confianca`/`_sem_credencial_em_outro_host`, usadas por `app/migracao/portal.py`, item L2-08-a): ali a
+     comparação é hop-a-hop e não definitiva — serve para o token do Portal/AGOL, que não decifra segredo do
+     inquilino da mesma forma
 """
 
 from __future__ import annotations
@@ -53,6 +59,11 @@ _ESQUEMAS_PERMITIDOS = {"http", "https"}
 _REDES_EXTRAS_BLOQUEADAS = (ipaddress.ip_network("100.64.0.0/10"),)
 log = logging.getLogger("plat.conexao")
 _RESOLVEDOR = ThreadPoolExecutor(max_workers=8, thread_name_prefix="plat-conexao-dns")
+# cabeçalhos que carregam segredo e NUNCA podem atravessar uma mudança de origem num redirecionamento dentro
+# de `buscar_seguro` (comparação sempre em minúsculas: nome de cabeçalho HTTP não diferencia maiúscula de
+# minúscula). Não confundir com `CABECALHOS_DE_CREDENCIAL` abaixo, que é a lista (mais ampla, com X-Api-Key)
+# usada por `_sem_credencial_em_outro_host` — outro mecanismo, outro chamador (`app/migracao/portal.py`).
+_CABECALHOS_CREDENCIAL = frozenset({"authorization", "cookie", "proxy-authorization"})
 
 
 class ErroURLInsegura(ValueError):
@@ -216,6 +227,18 @@ def cliente_pinado(validada: URLValidada, *, timeout_conectar: float, timeout_le
     return httpx.Client(transport=transporte, timeout=timeout, follow_redirects=False, trust_env=False)
 
 
+def _origem(validada: URLValidada) -> tuple[str, str, int]:
+    """Origem no sentido do RFC 6454: esquema + host + porta (porta já normalizada pelo `validar_url`, que
+    preenche 80/443 quando a URL não a declara — assim `https://h/` e `https://h:443/` são a MESMA origem, e
+    `https://h/` e `http://h/` não são). Usada só pelo laço de redirecionamento de `buscar_seguro`."""
+    return (validada.esquema, validada.host.lower(), validada.porta)
+
+
+def _sem_credenciais(cabecalhos: dict[str, str], secretos: frozenset[str]) -> dict[str, str]:
+    """Cópia dos cabeçalhos sem nenhum que carregue segredo. Não altera o dicionário do chamador."""
+    return {k: v for k, v in cabecalhos.items() if k.lower() not in secretos}
+
+
 @dataclass(frozen=True)
 class ResultadoBusca:
     ok: bool
@@ -231,6 +254,9 @@ class ResultadoBusca:
     content_type: str | None = None  # cabeçalho `content-type` da resposta final (item L6-02-conectores-vivos:
     # o proxy de tile precisa repassar o tipo real — image/png, image/jpeg, application/vnd.ogc.se_xml de erro
     # do WMS — sem inventar um padrão); `None` quando a busca nem chegou a ter resposta (URL insegura/timeout)
+    # True quando algum salto de redirecionamento trocou de origem e a credencial foi retirada (achado G5):
+    # serve para o chamador saber que um `http_401` depois de redirecionamento é esperado, não senha errada
+    credencial_retirada: bool = False
 
 
 # Cabeçalhos que provam quem é o cliente: seguem para o host que o USUÁRIO escolheu, nunca para um terceiro
@@ -267,6 +293,7 @@ def buscar_seguro(
     max_redirects: int = limites.CONEXAO_REDIRECT_MAX,
     max_bytes: int = limites.CONEXAO_RESPOSTA_MAX_BYTES,
     cabecalhos: dict[str, str] | None = None,
+    cabecalhos_secretos: typing.Iterable[str] | None = None,
     guardar_corpo: bool = False,
     corpo_envio: bytes | None = None,
 ) -> ResultadoBusca:
@@ -275,22 +302,29 @@ def buscar_seguro(
     status=None, ...)` com o motivo em `mensagem` — quem chama (rota de teste de saúde) nunca precisa
     distinguir os dois.
 
-    `guardar_corpo=True` (item L6-05-proveniencia-camada-externa: ler o que o serviço declara — GetCapabilities,
-    `f=json`, catálogo STAC) acumula os bytes lidos (até `max_bytes`, o mesmo teto do teste de saúde) em
-    `ResultadoBusca.corpo`; por padrão fica `b""` (o teste de saúde de L6-02-a nunca precisou do corpo, só do
-    status).
+    `cabecalhos` são enviados no salto 0 e mantidos enquanto a origem (esquema+host+porta) não mudar; ao
+    mudar, todo cabeçalho de credencial sai e não volta mais (caso 9 da docstring do módulo).
+    `cabecalhos_secretos` acrescenta nomes próprios do conector à lista que é retirada (ex.: `X-Api-Key`,
+    `api-key`) — `Authorization`, `Cookie` e `Proxy-Authorization` já entram sempre.
 
     `corpo_envio` (item L2-07-e-odk-central-ponte: publicar o XLSForm no ODK Central) manda um corpo no
     método declarado (POST). O corpo é REENVIADO tal e qual em cada salto de redirecionamento, como manda o
     307/308 — e o 301/302/303 de um POST, que um navegador transformaria em GET, aqui NÃO é seguido: vira
     `redirecionamento_muda_metodo`, porque mudar o método por conta própria é decisão que o chamador tem de
-    tomar (e é exatamente o formato do achado G5 de credencial em redirecionamento, agora sobre um corpo
-    autenticado em vez de um cabeçalho)."""
+    tomar (e porque um destino que faz isso com uma escrita autenticada é exatamente o caso do achado G5).
+
+    `guardar_corpo=True` (item L6-05-proveniencia-camada-externa: ler o que o serviço declara — GetCapabilities,
+    `f=json`, catálogo STAC) acumula os bytes lidos (até `max_bytes`, o mesmo teto do teste de saúde) em
+    `ResultadoBusca.corpo`; por padrão fica `b""` (o teste de saúde de L6-02-a nunca precisou do corpo, só do
+    status)."""
     import time
 
     inicio = time.monotonic()
     alvo = url
-    cabecalhos_do_salto = dict(cabecalhos or {})
+    secretos = _CABECALHOS_CREDENCIAL | frozenset(n.lower() for n in (cabecalhos_secretos or ()))
+    enviar = dict(cabecalhos or {})
+    origem_inicial: tuple[str, str, int] | None = None
+    retirada = False
     for salto in range(max_redirects + 1):
         try:
             validada = validar_url(alvo)
@@ -298,13 +332,25 @@ def buscar_seguro(
             return ResultadoBusca(
                 ok=False, status=None, mensagem=f"url_insegura:{e.motivo}", url_final=alvo,
                 latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto,
+                credencial_retirada=retirada,
             )
+        # Caso 9 do modelo (achado G5): a credencial só vale para a origem que o inquilino cadastrou. Se o
+        # destino redireciona para outro esquema/host/porta, os cabeçalhos de segredo saem AQUI, antes de
+        # abrir a conexão. A retirada é definitiva: se a cadeia voltar à origem inicial, a credencial NÃO
+        # volta junto (quem escolheu o desvio foi o servidor de destino, não o inquilino).
+        origem = _origem(validada)
+        if origem_inicial is None:
+            origem_inicial = origem
+        elif origem != origem_inicial and not retirada:
+            if any(k.lower() in secretos for k in enviar):
+                retirada = True
+            enviar = _sem_credenciais(enviar, secretos)
         with cliente_pinado(validada, timeout_conectar=timeout_conectar, timeout_ler=timeout_ler) as cliente:
             try:
                 # `content=` só entra quando há corpo: os dublês de cliente dos testes de redirecionamento
                 # (L6-02-a) implementam `stream(metodo, url, headers=...)` e nada mais.
-                extra_envio = {"content": corpo_envio} if corpo_envio is not None else {}
-                with cliente.stream(metodo, alvo, headers=cabecalhos_do_salto, **extra_envio) as r:
+                extra = {"content": corpo_envio} if corpo_envio is not None else {}
+                with cliente.stream(metodo, alvo, headers=enviar, **extra) as r:
                     lido = 0
                     pedacos: list[bytes] = []
                     for pedaco in r.iter_bytes():
@@ -313,6 +359,7 @@ def buscar_seguro(
                             return ResultadoBusca(
                                 ok=False, status=r.status_code, mensagem="resposta_excede_limite_de_bytes",
                                 url_final=alvo, latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto,
+                                credencial_retirada=retirada,
                             )
                         if guardar_corpo:
                             pedacos.append(pedaco)
@@ -323,38 +370,41 @@ def buscar_seguro(
                 return ResultadoBusca(
                     ok=False, status=None, mensagem="tempo_esgotado", url_final=alvo,
                     latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto,
+                    credencial_retirada=retirada,
                 )
             except httpx.HTTPError as e:
                 return ResultadoBusca(
                     ok=False, status=None, mensagem=f"erro_de_conexao:{type(e).__name__}", url_final=alvo,
                     latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto,
+                    credencial_retirada=retirada,
                 )
         if status in (301, 302, 303, 307, 308):
             if corpo_envio is not None and status in (301, 302, 303):
                 return ResultadoBusca(
                     ok=False, status=status, mensagem="redirecionamento_muda_metodo", url_final=alvo,
                     latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto,
+                    credencial_retirada=retirada,
                 )
             local = r.headers.get("location")
             if not local:
                 return ResultadoBusca(
                     ok=False, status=status, mensagem="redirecionamento_sem_location", url_final=alvo,
                     latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto,
+                    credencial_retirada=retirada,
                 )
             # Location relativo vira absoluto contra a URL atual, do mesmo jeito que um navegador faria
-            anterior = alvo
             alvo = httpx.URL(alvo).join(local).__str__()
-            cabecalhos_do_salto = _sem_credencial_em_outro_host(cabecalhos_do_salto, anterior, alvo)
             continue
         return ResultadoBusca(
             ok=200 <= status < 400, status=status, mensagem=f"http_{status}", url_final=alvo,
             latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto, corpo=corpo,
             cabecalhos={k.lower(): v for k, v in r.headers.items()},
-            content_type=content_type,
+            content_type=content_type, credencial_retirada=retirada,
         )
     return ResultadoBusca(
         ok=False, status=None, mensagem="redirecionamentos_demais", url_final=alvo,
         latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=max_redirects,
+        credencial_retirada=retirada,
     )
 
 
