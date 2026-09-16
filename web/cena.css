@@ -2,25 +2,25 @@
    a área da cena e a tira de slides. Todo o resto (barra, blocos, botões) vem de mapa.css/style.css. */
 #cena { position: absolute; inset: 0; }
 
-.camada-cena { display: flex; align-items: center; gap: .5rem; padding: .15rem 0; }
+.camada-cena { display: flex; align-items: center; gap: var(--i-e2); padding: var(--i-e0) 0; }
 
-.lista-slides { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; gap: .4rem; }
-.lista-slides > li { display: flex; align-items: center; gap: .4rem; }
+.lista-slides { list-style: none; margin: var(--i-e2) 0 0; padding: 0; display: grid; gap: var(--i-e2); }
+.lista-slides > li { display: flex; align-items: center; gap: var(--i-e2); }
 .slide {
-  display: flex; align-items: center; gap: .5rem; flex: 1;
-  background: none; border: 1px solid var(--borda, #2a3237); border-radius: 4px;
-  color: inherit; cursor: pointer; padding: .25rem; text-align: left;
+  display: flex; align-items: center; gap: var(--i-e2); flex: 1;
+  background: none; border: 1px solid var(--borda, #2a3237); border-radius: var(--i-raio);
+  color: inherit; cursor: pointer; padding: var(--i-e1); text-align: left;
 }
 .slide:hover, .slide:focus-visible { border-color: var(--realce, #d98a2b); }
-.slide-miniatura { width: 72px; height: auto; display: block; border-radius: 2px; }
+.slide-miniatura { width: 72px; height: auto; display: block; border-radius: var(--i-raio); }
 .slide-sem-miniatura { width: 72px; text-align: center; opacity: .6; }
-.slide-nome { font-size: .85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slide-nome { font-size: var(--i-t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* item L2-09-c: painel do elemento clicado no modelo 3D */
 .elemento-propriedades { max-height: 22rem; overflow: auto; }
-.elemento-propriedades h3 { margin: 0 0 .25rem; font-size: .95rem; }
-.elemento-propriedades h4 { margin: .6rem 0 .15rem; font-size: .8rem; opacity: .8; }
-.elemento-cabecalho, .elemento-conjunto { display: grid; grid-template-columns: auto 1fr; gap: .1rem .6rem; margin: 0; }
+.elemento-propriedades h3 { margin: 0 0 var(--i-e1); font-size: var(--i-t2); }
+.elemento-propriedades h4 { margin: var(--i-e2) 0 var(--i-e0); font-size: var(--i-t0); opacity: .8; }
+.elemento-cabecalho, .elemento-conjunto { display: grid; grid-template-columns: auto 1fr; gap: var(--i-e0) var(--i-e2); margin: 0; }
 .elemento-cabecalho dt, .elemento-conjunto dt { opacity: .7; }
 .elemento-cabecalho dd, .elemento-conjunto dd { margin: 0; word-break: break-word; }
-.modelo-cena { display: flex; align-items: center; gap: .4rem; }
+.modelo-cena { display: flex; align-items: center; gap: var(--i-e2); }

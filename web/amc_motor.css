@@ -29,12 +29,12 @@ body.motor .motor-painel {
 body.motor .motor-painel, body.motor .mapa-area { min-width: 0; }
 body.motor .motor-painel .cartao { margin: 0; min-width: 0; }
 body.motor .motor-painel plat-tabela, body.motor .motor-painel .tabela-rolagem { max-width: 100%; }
-body.motor .motor-bloco h2 { margin: 0 0 var(--e3); font-size: .95rem; }
+body.motor .motor-bloco h2 { margin: 0 0 var(--e3); font-size: var(--i-t2); }
 body.motor .motor-ressalva { margin: 0; }
 body.motor .motor-dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--e1) var(--e4); margin: 0 0 var(--e3); }
 body.motor .motor-dl dt { color: var(--fraco); }
 body.motor .motor-dl dd { margin: 0; overflow-wrap: anywhere; }
-body.motor .motor-id { font-family: var(--mono); font-size: .72rem; word-break: break-all; }
+body.motor .motor-id { font-family: var(--mono); font-size: var(--i-t-1); word-break: break-all; }
 body.motor #bloco-recusas h2 { color: var(--falha); }
 body.motor .motor-modo { display: flex; align-items: center; gap: var(--e2); flex-wrap: wrap; margin-bottom: var(--e3); }
 body.motor .motor-modo input[type="number"] { width: 5rem; }
@@ -42,8 +42,8 @@ body.motor .motor-modo input[type="number"] { width: 5rem; }
 body.motor .motor-fatores, body.motor .motor-vetos, body.motor .motor-legenda { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e3); }
 body.motor .motor-fator { border: 1px solid var(--borda); border-radius: var(--raio); padding: var(--e3); display: grid; gap: var(--e2); }
 body.motor .motor-fator-topo { display: flex; align-items: baseline; gap: var(--e2); justify-content: space-between; }
-body.motor .motor-fator-topo strong { font-size: .95rem; }
-body.motor .motor-fator .fraco { font-size: .8rem; }
+body.motor .motor-fator-topo strong { font-size: var(--i-t2); }
+body.motor .motor-fator .fraco { font-size: var(--i-t0); }
 body.motor .motor-peso { display: flex; align-items: center; gap: var(--e2); }
 body.motor .motor-peso input[type="range"] { flex: 1; min-width: 6rem; }
 body.motor .motor-peso input[type="number"] { width: 5rem; font-family: var(--mono); }
@@ -52,7 +52,7 @@ body.motor .motor-fator-acoes { display: flex; gap: var(--e2); flex-wrap: wrap; 
 
 body.motor .motor-veto { border: 1px solid var(--borda); border-left: 3px solid var(--aviso); border-radius: var(--raio); padding: var(--e3); display: grid; gap: var(--e1); }
 
-body.motor .motor-legenda li { display: flex; align-items: center; gap: var(--e2); font-family: var(--mono); font-size: .8rem; }
+body.motor .motor-legenda li { display: flex; align-items: center; gap: var(--e2); font-family: var(--mono); font-size: var(--i-t0); }
 body.motor .motor-amostra { width: 1.6rem; height: .8rem; border: 1px solid var(--borda-forte); display: inline-block; }
 
 body.motor #bloco-recusas { border-color: var(--erro); }

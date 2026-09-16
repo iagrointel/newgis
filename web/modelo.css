@@ -26,10 +26,10 @@ body.modelo3d .modelo3d-barra {
   border-bottom: 1px solid var(--borda);
   background: var(--painel);
 }
-body.modelo3d .modelo3d-barra h1 { margin: 0; font-size: 1.1rem; }
-body.modelo3d .modelo3d-barra .voltar { color: var(--fraco); text-decoration: none; font-size: .85rem; }
+body.modelo3d .modelo3d-barra h1 { margin: 0; font-size: var(--i-t3); }
+body.modelo3d .modelo3d-barra .voltar { color: var(--fraco); text-decoration: none; font-size: var(--i-t1); }
 body.modelo3d .modelo3d-barra .voltar:hover { text-decoration: underline; }
-body.modelo3d .modelo3d-origem { font-size: .75rem; color: var(--fraco); }
+body.modelo3d .modelo3d-origem { font-size: var(--i-t-1); color: var(--fraco); }
 body.modelo3d .modelo3d-barra plat-aviso { flex: 1; }
 
 body.modelo3d .modelo3d-corpo { display: flex; flex: 1; min-height: 0; }
@@ -46,15 +46,15 @@ body.modelo3d .modelo3d-painel {
 }
 body.modelo3d .modelo3d-painel h2 {
   margin: 0 0 var(--e2);
-  font-size: .78rem;
+  font-size: var(--i-t0);
   text-transform: uppercase;
-  letter-spacing: .08em;
+  letter-spacing: var(--i-espaco-letra-ampla);
   color: var(--fraco);
 }
-body.modelo3d .campo-linha { display: flex; justify-content: space-between; gap: var(--e2); padding: .2rem 0; font-size: .85rem; border-bottom: 1px dashed var(--borda); }
+body.modelo3d .campo-linha { display: flex; justify-content: space-between; gap: var(--e2); padding: var(--i-e1) 0; font-size: var(--i-t1); border-bottom: 1px dashed var(--borda); }
 body.modelo3d .campo-linha .rotulo { color: var(--fraco); }
-body.modelo3d .lista-simples { margin: 0; padding-left: 1.1rem; font-size: .85rem; }
-body.modelo3d .lista-simples li { margin: .15rem 0; }
+body.modelo3d .lista-simples { margin: 0; padding-left: var(--i-e4); font-size: var(--i-t1); }
+body.modelo3d .lista-simples li { margin: var(--i-e0) 0; }
 
 body.modelo3d .modelo3d-area { position: relative; flex: 1; min-height: 0; background: var(--modelo-fundo); }
 body.modelo3d #xcanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
@@ -62,12 +62,12 @@ body.modelo3d #pano { position: absolute; inset: 0; }
 body.modelo3d .modelo3d-carregando {
   position: absolute; left: var(--e4); top: var(--e4); z-index: 5;
   background: var(--modelo-painel); border: 1px solid var(--modelo-borda); border-radius: var(--raio);
-  padding: var(--e2) var(--e3); color: var(--modelo-texto); font-size: .85rem;
+  padding: var(--e2) var(--e3); color: var(--modelo-texto); font-size: var(--i-t1);
 }
 body.modelo3d .modelo3d-erro {
   position: absolute; left: var(--e4); top: var(--e4); z-index: 5; max-width: 28rem;
   background: var(--modelo-painel); border: 1px solid #a24444; border-radius: var(--raio);
-  padding: var(--e2) var(--e3); color: #ffb4b4; font-size: .85rem;
+  padding: var(--e2) var(--e3); color: #ffb4b4; font-size: var(--i-t1);
 }
 
 /* foto 360 (pannellum) reaproveita a mesma área de tela cheia */

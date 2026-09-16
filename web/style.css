@@ -15,10 +15,10 @@ body {
 a { color: var(--acento); }
 a:hover { color: var(--texto); }
 :focus-visible { outline: var(--foco-largura) solid var(--foco); outline-offset: var(--foco-recuo); }
-.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: calc(var(--i-e0) * -1); overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .pular { position: absolute; left: -999px; top: var(--e2); z-index: 100; background: var(--acento); color: var(--acento-texto); padding: var(--e2) var(--e4); border-radius: var(--raio); }
 .pular:focus { left: var(--e2); }
-h1, h2, h3, .marca strong { font-family: var(--titulo); font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+h1, h2, h3, .marca strong { font-family: var(--titulo); font-weight: 800; text-transform: uppercase; letter-spacing: var(--i-espaco-letra-titulo); }
 h3 { font-size: var(--t0); }
 dd, .mono, .codigo, code, pre, time, .num { font-family: var(--mono); }
 
@@ -49,7 +49,7 @@ body:not(.com-lateral) .lateral { display: none; }
 .lateral nav a { display: block; padding: var(--e2) var(--e4); color: var(--texto); text-decoration: none; border-left: var(--borda-destaque) solid transparent; }
 .lateral nav a:hover { background: var(--painel); color: var(--texto); }
 .lateral nav a[aria-current="page"] { border-left-color: var(--acento); background: var(--painel); font-weight: 600; }
-.lateral nav .grupo-rotulo { padding: var(--e3) var(--e4) var(--e1); margin-top: var(--e1); color: var(--fraco); font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; }
+.lateral nav .grupo-rotulo { padding: var(--e3) var(--e4) var(--e1); margin-top: var(--e1); color: var(--fraco); font-size: var(--i-t-1); text-transform: uppercase; letter-spacing: var(--i-espaco-letra-media); }
 .lateral nav ul li.grupo-rotulo:first-child { margin-top: 0; }
 .lateral .pessoa { padding: var(--e4); border-top: var(--borda-largura) solid var(--borda); display: grid; gap: var(--e2); }
 .lateral .pessoa-topo { display: flex; align-items: center; gap: var(--e2); min-width: 0; }
@@ -119,7 +119,7 @@ button[aria-pressed="true"]:not(.texto) { background: var(--acento); color: var(
 .form .caixa, .caixa { display: flex; align-items: center; gap: var(--e2); }
 .form .caixa input, .caixa input { width: 1rem; height: 1rem; accent-color: var(--acento); }
 .form .caixas { display: grid; gap: var(--e1); border: 0; padding: 0; margin: 0; }
-.form .caixas .grupo-caixas { color: var(--fraco); font-size: var(--t-2); margin-top: var(--e2); text-transform: uppercase; letter-spacing: .04em; }
+.form .caixas .grupo-caixas { color: var(--fraco); font-size: var(--t-2); margin-top: var(--e2); text-transform: uppercase; letter-spacing: var(--i-espaco-letra-titulo); }
 .form .info { color: var(--texto); }
 .form .botoes { margin-top: var(--e2); }
 .form .linha-senha { display: flex; gap: var(--e2); }
@@ -231,7 +231,7 @@ dialog.dialogo:not([open]) { display: none; }
 
 /* ---------- código, segredo, QR ---------- */
 .codigo { font-family: var(--mono); background: var(--fundo); border: var(--borda-largura) solid var(--borda-forte); border-radius: var(--raio); padding: var(--e2) var(--e3); word-break: break-all; display: block; user-select: all; }
-.codigo.grande { font-size: var(--t1); letter-spacing: .04em; }
+.codigo.grande { font-size: var(--t1); letter-spacing: var(--i-espaco-letra-titulo); }
 .lista-codigos { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--e2); list-style: none; padding: 0; margin: var(--e3) 0; }
 .lista-codigos li { font-family: var(--mono); background: var(--fundo); border: var(--borda-largura) solid var(--borda-forte); border-radius: var(--raio); padding: var(--e2); text-align: center; }
 .svg-qr { background: var(--branco); padding: var(--e3); border-radius: var(--raio); width: 220px; height: 220px; display: inline-block; }
@@ -341,25 +341,25 @@ plat-idioma select.controle { width: auto; padding: var(--e1) var(--e2); font-si
 /* --- tela inicial (item de porta única: enviar → organizar → compartilhar) */
 .passos-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--e3); margin-bottom: var(--e4); }
 .passos-3 .passo { background: var(--painel); border: 1px solid var(--borda); border-radius: var(--raio); padding: var(--e4); }
-.passos-3 .passo .n { display: inline-block; width: 1.75rem; height: 1.75rem; line-height: 1.75rem; text-align: center; border-radius: 50%; background: var(--painel-2); border: 1px solid var(--borda-forte); color: var(--acento); font-weight: 600; margin-bottom: var(--e2); }
-.passos-3 .passo h3 { margin: 0 0 var(--e1); font-size: 1rem; }
-.passos-3 .passo p { margin: 0; color: var(--fraco); font-size: .9rem; }
+.passos-3 .passo .n { display: inline-block; width: var(--i-emblema-diametro); height: var(--i-emblema-diametro); line-height: var(--i-emblema-diametro); text-align: center; border-radius: 50%; background: var(--painel-2); border: 1px solid var(--borda-forte); color: var(--acento); font-weight: 600; margin-bottom: var(--e2); }
+.passos-3 .passo h3 { margin: 0 0 var(--e1); font-size: var(--i-t2); }
+.passos-3 .passo p { margin: 0; color: var(--fraco); font-size: var(--i-t1); }
 .linha-atalhos { display: flex; flex-wrap: wrap; gap: var(--e3); margin-top: var(--e2); }
-.linha-atalhos a { color: var(--fraco); text-decoration: none; font-size: .85rem; padding: var(--e1) 0; }
+.linha-atalhos a { color: var(--fraco); text-decoration: none; font-size: var(--i-t1); padding: var(--e1) 0; }
 .linha-atalhos a:hover { color: var(--texto); text-decoration: underline; }
 .lista-recentes { display: grid; gap: 0; }
 .lista-recentes a { display: flex; justify-content: space-between; gap: var(--e3); padding: var(--e2) 0; border-bottom: 1px solid var(--borda); color: var(--texto); text-decoration: none; }
 .lista-recentes a:hover { color: var(--acento); }
-.lista-recentes .tipo { color: var(--fraco); font-size: .8rem; white-space: nowrap; }
+.lista-recentes .tipo { color: var(--fraco); font-size: var(--i-t0); white-space: nowrap; }
 
 /* --- campo (item L2-07-campo): fila de trabalho, roteiro do dia e visita com foto */
-.campo-filas .ajuda, .campo-fila .ajuda, .campo-roteiro .ajuda { color: var(--fraco); font-size: .85rem; margin: 0 0 var(--e2); }
+.campo-filas .ajuda, .campo-fila .ajuda, .campo-roteiro .ajuda { color: var(--fraco); font-size: var(--i-t1); margin: 0 0 var(--e2); }
 .campo-filas .vazio, .campo-fila .vazio { color: var(--fraco); padding: var(--e3) var(--e4); margin: var(--e2) 0; border: 1px dashed var(--borda); border-radius: var(--raio); }
 .linha-botoes { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); margin: var(--e2) 0; }
 .lista-selecao { max-height: 260px; overflow-y: auto; border: 1px solid var(--borda); border-radius: var(--raio); padding: var(--e2) var(--e3); margin: var(--e2) 0; background: var(--painel); }
-.linha-selecao { display: block; padding: var(--e1) 0; font-size: .9rem; }
+.linha-selecao { display: block; padding: var(--e1) 0; font-size: var(--i-t1); }
 .linha-selecao input { margin-right: var(--e2); accent-color: var(--acento); }
-.badge { display: inline-block; padding: 2px var(--e2); border-radius: 999px; font-size: .78rem; font-weight: 600;
+.badge { display: inline-block; padding: var(--i-e0) var(--e2); border-radius: var(--i-raio-pilula); font-size: var(--i-t0); font-weight: 600;
   background: var(--painel-2); border: 1px solid var(--borda-forte); color: var(--fraco); }
 .badge-visitado, .badge-confirmado { color: var(--ok); border-color: var(--ok); }
 .badge-pulado, .badge-nao_confirmado { color: var(--falha); border-color: var(--falha); }
@@ -369,17 +369,17 @@ plat-idioma select.controle { width: auto; padding: var(--e1) var(--e2); font-si
 .resumo-roteiro dt { color: var(--fraco); }
 .parada-roteiro { display: flex; align-items: center; gap: var(--e3); padding: var(--e2) 0; border-bottom: 1px solid var(--borda); }
 .parada-roteiro .num { display: inline-flex; align-items: center; justify-content: center; width: 1.6rem; height: 1.6rem;
-  border-radius: 50%; background: var(--painel-2); border: 1px solid var(--borda-forte); font-size: .8rem; font-weight: 600; }
-.parada-roteiro .ja-visitado { margin-left: auto; color: var(--fraco); font-size: .85rem; }
+  border-radius: 50%; background: var(--painel-2); border: 1px solid var(--borda-forte); font-size: var(--i-t0); font-weight: 600; }
+.parada-roteiro .ja-visitado { margin-left: auto; color: var(--fraco); font-size: var(--i-t1); }
 .parada-roteiro button { margin-left: auto; }
 .formulario-visita { margin: var(--e2) 0 var(--e3); display: grid; gap: var(--e2); }
-.formulario-visita label { display: grid; gap: 4px; font-size: .85rem; color: var(--fraco); }
+.formulario-visita label { display: grid; gap: var(--i-e1); font-size: var(--i-t1); color: var(--fraco); }
 .aviso-fila-local { background: var(--painel-2); border: 1px solid var(--borda-forte); border-radius: var(--raio);
-  padding: var(--e2) var(--e3); margin: var(--e2) 0; font-size: .9rem; }
+  padding: var(--e2) var(--e3); margin: var(--e2) 0; font-size: var(--i-t1); }
 
 /* --- telemetria da rede de utilidades (item L4-13-integracao-telemetria): ficha do ativo */
 .ficha-secao { margin: 0 0 var(--e4); }
-.ficha-secao h2 { font-size: 1rem; margin: 0 0 var(--e2); }
+.ficha-secao h2 { font-size: var(--i-t2); margin: 0 0 var(--e2); }
 .rede-medicao-ficha .lista-definicao { display: grid; grid-template-columns: max-content 1fr; gap: var(--e1) var(--e3); margin: 0; }
 .rede-medicao-ficha .lista-definicao dt { color: var(--fraco); }
 .rede-medicao-ficha tr.alarme td { color: var(--falha); font-weight: 600; }

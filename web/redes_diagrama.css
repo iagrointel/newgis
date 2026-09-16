@@ -25,7 +25,7 @@ body.redes-diagrama .quadros-diagrama {
   margin-top: var(--e3);
 }
 
-body.redes-diagrama .quadro h2 { font-size: 1rem; margin: 0 0 var(--e1); }
+body.redes-diagrama .quadro h2 { font-size: var(--i-t2); margin: 0 0 var(--e1); }
 
 body.redes-diagrama .tela-mapa {
   height: 62vh;
@@ -54,7 +54,7 @@ body.redes-diagrama .marcador-no[data-papel="conexao"] { width: 9px; height: 9px
    além da cor, o nó selecionado ganha um anel e cresce. */
 body.redes-diagrama .marcador-no.selecionado {
   background: var(--no-selecionado);
-  box-shadow: 0 0 0 4px rgba(180, 52, 31, .35);
+  box-shadow: 0 0 0 var(--i-e1) color-mix(in srgb, var(--no-selecionado) 35%, transparent);
   transform: scale(1.35);
 }
 
@@ -65,7 +65,7 @@ body.redes-diagrama .marcador-no:focus-visible {
 
 body.redes-diagrama .etiqueta {
   display: inline-block;
-  padding: 2px var(--e1);
+  padding: var(--i-e0) var(--e1);
   border-radius: var(--raio);
   border: 1px solid var(--borda);
 }

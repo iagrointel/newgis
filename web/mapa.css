@@ -34,7 +34,7 @@ body.mapa .mapa-barra {
   border-bottom: 1px solid var(--borda);
   background: var(--painel);
 }
-body.mapa .mapa-barra h1 { margin: 0; font-size: 1.1rem; }
+body.mapa .mapa-barra h1 { margin: 0; font-size: var(--i-t3); }
 body.mapa .mapa-barra plat-aviso { flex: 1; }
 body.mapa .mapa-area { position: relative; flex: 1; min-height: 0; }
 body.mapa #mapa { position: absolute; inset: 0; }
@@ -53,14 +53,14 @@ body.mapa .mapa-painel {
   border-radius: var(--raio);
   padding: var(--e2) var(--e3);
   font-family: var(--mono);
-  font-size: .8rem;
+  font-size: var(--i-t0);
   color: var(--mapa-texto);
   backdrop-filter: blur(2px);
 }
 body.mapa .mapa-painel-base { top: var(--e4); display: flex; align-items: center; gap: var(--e2); font-family: var(--sans); }
 body.mapa .mapa-painel-base label { color: var(--mapa-texto-fraco); text-transform: lowercase; }
-body.mapa .mapa-painel-base select { background: var(--i-carta-edificacao); color: var(--mapa-texto); border: 1px solid var(--mapa-borda); border-radius: var(--raio); padding: .2rem .4rem; }
-body.mapa .mapa-coordenadas { top: calc(var(--e4) + 2.4rem); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+body.mapa .mapa-painel-base select { background: var(--i-carta-edificacao); color: var(--mapa-texto); border: 1px solid var(--mapa-borda); border-radius: var(--raio); padding: var(--i-e1) var(--i-e2); }
+body.mapa .mapa-coordenadas { top: calc(var(--e4) + 2.4rem); font-variant-numeric: tabular-nums; letter-spacing: var(--i-espaco-letra-fina); }
 
 /* item L6-01-h-frescor-verificacao: painel das camadas do acervo, canto inferior esquerdo acima da escala.
    Mesmas variáveis --mapa-* do resto do painel (cor FIXA sobre o canvas, nunca var(--texto) do tema: é o
@@ -73,11 +73,11 @@ body.mapa .mapa-painel-acervo {
   overflow: auto;
   font-family: var(--sans);
 }
-body.mapa .mapa-painel-acervo h2 { margin: 0 0 var(--e1); font-size: .85rem; color: var(--mapa-texto); }
-body.mapa .mapa-painel-acervo .acervo-resumo { margin: 0 0 var(--e2); color: var(--mapa-texto-fraco); font-size: .75rem; }
+body.mapa .mapa-painel-acervo h2 { margin: 0 0 var(--e1); font-size: var(--i-t1); color: var(--mapa-texto); }
+body.mapa .mapa-painel-acervo .acervo-resumo { margin: 0 0 var(--e2); color: var(--mapa-texto-fraco); font-size: var(--i-t-1); }
 body.mapa .mapa-painel-acervo ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e1); }
 body.mapa .mapa-painel-acervo li { display: flex; align-items: baseline; gap: var(--e2); justify-content: space-between; }
-body.mapa .mapa-painel-acervo code { font-family: var(--mono); font-size: .72rem; color: var(--mapa-texto); }
-body.mapa .mapa-painel-acervo .marcador { font-size: .68rem; white-space: nowrap; }
+body.mapa .mapa-painel-acervo code { font-family: var(--mono); font-size: var(--i-t-1); color: var(--mapa-texto); }
+body.mapa .mapa-painel-acervo .marcador { font-size: var(--i-t-1); white-space: nowrap; }
 body.mapa .mapa-painel-acervo .marcador.falha { background: var(--i-carta-falha-fundo); color: var(--i-carta-falha-texto); border-color: var(--i-carta-falha-borda); }
 body.mapa .mapa-painel-acervo .marcador.ok { background: var(--i-carta-ok-fundo); color: var(--i-carta-ok-texto); border-color: var(--i-carta-ok-borda); }

@@ -205,6 +205,14 @@
   --i-entrelinha-justa: 1.25;
   --i-entrelinha-titulo: 1.05;
   --i-espaco-letra-titulo: .04em;
+  /* achados na varredura de fusão (item L0-14, conserto wt/f2fixestilos): telas que chegaram depois do
+     turno 4 escreveram tracking à mão fora do único valor que existia — em vez de inventar um valor por
+     tela, os únicos quatro adicionais vistos no produto viram token, mesma disciplina do resto do grupo. */
+  --i-espaco-letra-fina: .02em;
+  --i-espaco-letra-media: .06em;
+  --i-espaco-letra-ampla: .08em;
+  --i-espaco-letra-larga: .1em;
+  --i-espaco-letra-extra: .6em;
 }
 
 /* =====================================================================================================
@@ -222,6 +230,9 @@
   --i-e6: calc(var(--i-passo) * 8);    /* 32 px */
   --i-e7: calc(var(--i-passo) * 12);   /* 48 px */
   --i-e8: calc(var(--i-passo) * 16);   /* 64 px */
+  /* fora da grade de 4 px de propósito: recuo full-bleed em vw achado em telas que chegaram depois do
+     turno 4 (item L0-14, conserto wt/f2fixestilos) — não é passo de densidade, é fração da viewport. */
+  --i-espaco-vw: 5vw;
 }
 :root[data-densidade="compacta"] { --i-densidade: .75; }
 :root[data-densidade="confortavel"] { --i-densidade: 1.25; }
@@ -241,6 +252,7 @@
   --i-tique: 10px;               /* comprimento do traço em L nos cantos da moldura */
   --i-regua-passo: 4px;          /* distância entre os traços da régua sob um número */
   --i-regua-altura: 4px;
+  --i-emblema-diametro: 1.75rem;  /* medalhão numerado de passo-a-passo (largura=altura=entrelinha) */
   --i-tempo: .15s;
   --i-tempo-lento: .3s;
 

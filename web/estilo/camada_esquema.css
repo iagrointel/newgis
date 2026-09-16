@@ -12,7 +12,7 @@
 
 .chip-tipo {
   font-family: var(--i-fonte-dado);
-  font-size: .85rem;
+  font-size: var(--i-t1);
   padding: var(--i-e2) var(--i-e3);
   border: 1px solid var(--i-linha);
   border-radius: var(--i-raio);
@@ -56,8 +56,8 @@
 .campo-linha label {
   display: flex;
   flex-direction: column;
-  gap: .15rem;
-  font-size: .75rem;
+  gap: var(--i-e0);
+  font-size: var(--i-t-1);
   color: var(--i-texto-fraco);
 }
 

@@ -2,14 +2,14 @@
    Três colunas de largura igual (base, ramo, padrão) para que a comparação seja por POSIÇÃO e não por
    leitura de rótulo; o lado que mudou recebe contorno, nunca só cor (contraste não pode ser o único
    canal de informação). */
-.versoes .barra { display: flex; gap: .75rem; align-items: end; flex-wrap: wrap; margin-bottom: 1rem; }
-.versoes .conflito { border: 1px solid var(--borda, #d0d0d0); border-radius: .5rem; padding: 1rem; margin-bottom: 1rem; }
-.versoes .conflito > h2 { font-size: 1rem; margin: 0 0 .5rem; }
+.versoes .barra { display: flex; gap: var(--i-e3); align-items: end; flex-wrap: wrap; margin-bottom: var(--i-e4); }
+.versoes .conflito { border: 1px solid var(--borda, #d0d0d0); border-radius: var(--i-raio); padding: var(--i-e4); margin-bottom: var(--i-e4); }
+.versoes .conflito > h2 { font-size: var(--i-t2); margin: 0 0 var(--i-e2); }
 .versoes .diff { width: 100%; border-collapse: collapse; }
-.versoes .diff th, .versoes .diff td { text-align: left; padding: .35rem .5rem; vertical-align: top; width: 25%; }
+.versoes .diff th, .versoes .diff td { text-align: left; padding: var(--i-e1) var(--i-e2); vertical-align: top; width: 25%; }
 .versoes .diff tbody tr + tr { border-top: 1px solid var(--borda, #e6e6e6); }
 .versoes .mudou { outline: 2px solid var(--acento, #2d6cdf); outline-offset: -2px; font-weight: 600; }
-.versoes .decisao { display: flex; gap: 1rem; align-items: center; margin-top: .75rem; flex-wrap: wrap; }
-.versoes .manual { display: grid; gap: .5rem; margin-top: .5rem; }
+.versoes .decisao { display: flex; gap: var(--i-e4); align-items: center; margin-top: var(--i-e3); flex-wrap: wrap; }
+.versoes .manual { display: grid; gap: var(--i-e2); margin-top: var(--i-e2); }
 .versoes .manual[hidden] { display: none; }
-.versoes .resumo { margin: .5rem 0 1rem; }
+.versoes .resumo { margin: var(--i-e2) 0 var(--i-e4); }

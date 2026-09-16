@@ -7,7 +7,7 @@
 .valor-token { font-family: var(--mono); font-size: var(--t-2); }
 .sonda { position: absolute; left: -9999px; }
 .escala-tipo .exemplo-tipo { margin: var(--e1) 0; }
-.titulo-exemplo { font-family: var(--titulo); font-weight: 800; text-transform: uppercase; letter-spacing: .04em; font-size: var(--t3); }
+.titulo-exemplo { font-family: var(--titulo); font-weight: 800; text-transform: uppercase; letter-spacing: var(--i-espaco-letra-titulo); font-size: var(--t3); }
 .escala-espaco { display: grid; gap: var(--e1); }
 .linha-espaco { display: grid; grid-template-columns: 5rem 8rem 1fr; align-items: center; gap: var(--e2); }
 .barra-espaco { display: block; height: var(--e2); background: var(--acento); }

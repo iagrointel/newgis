@@ -11,16 +11,16 @@
 .status-estado-degradado { color: var(--atencao); }
 .status-estado-erro { color: var(--falha); }
 .status-estado-ausente { color: var(--fraco); }
-.status .faixa { display: flex; gap: 1px; align-items: flex-end; height: 2.25rem; margin: var(--e1) 0 var(--e4); }
+.status .faixa { display: flex; gap: var(--i-e0); align-items: flex-end; height: 2.25rem; margin: var(--e1) 0 var(--e4); }
 .status .faixa .dia { flex: 1 1 auto; min-width: 2px; background: var(--borda); height: 100%; position: relative; }
 .status .faixa .dia > span { display: block; width: 100%; background: var(--ok); position: absolute; bottom: 0; }
 .status .faixa .dia.parcial > span { background: var(--atencao); }
 .status .faixa .dia.caiu > span { background: var(--falha); }
-.status .faixa + h3, .status h3 { margin: 0 0 var(--e1); font-size: .9rem; color: var(--fraco); }
+.status .faixa + h3, .status h3 { margin: 0 0 var(--e1); font-size: var(--i-t1); color: var(--fraco); }
 .status .numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: var(--e2) var(--e4); }
 .status .numeros .numero { display: block; }
-.status .numeros dt { color: var(--fraco); font-size: .85rem; }
+.status .numeros dt { color: var(--fraco); font-size: var(--i-t1); }
 .status .numeros dd { margin: 0 0 var(--e2); }
-.status .correcoes { margin: 0; padding-left: 1.1rem; }
+.status .correcoes { margin: 0; padding-left: var(--i-e4); }
 .status .correcoes li { margin-bottom: var(--e1); }
-.status .nota { color: var(--fraco); font-size: .85rem; }
+.status .nota { color: var(--fraco); font-size: var(--i-t1); }
