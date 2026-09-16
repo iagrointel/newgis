@@ -1,11 +1,18 @@
 """Registro de tipos (ADR 0003 seção 3.1): nome repetido, nome fora do padrão, memoria_mb acima do teto, executor
 'gpu' sem PLAT_GPU_SSH, gpu sem pesado, JSON Schema gerado, descrição para /api/jobs/tipos. Sem banco."""
 
+import ast
+import re
+from pathlib import Path
+
 import pytest
 from pydantic import BaseModel
 
 from app import settings as cfg
 from app.jobs import registro
+
+APP_ROOT = Path(__file__).resolve().parents[2] / "app"
+NOME_TIPO_RE = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")
 
 AMBIENTE = {
     "PLAT_DSN": "postgresql://plat_app:x@127.0.0.1:5432/iagro_sat", "PLAT_SECRET": "ab" * 32, "PLAT_AMBIENTE": "dev",
@@ -151,3 +158,80 @@ def test_todo_periodico_tem_tipo_registrado(indice, monkeypatch):
 
     assert tipo in REGISTRO, f"periódico {nome_p!r} ({tipo}) sem tipo registrado em app.jobs.tipos"
     assert len(cron.split()) == 5, f"periódico {nome_p!r}: cron {cron!r} sem 5 campos"
+
+
+def _tipos_enfileirados_no_codigo() -> list[tuple[str, str]]:
+    """Varre TODO `app/**/*.py` por chamada `algo.criar(sessao_ou_cur, tipo, ...)` /
+    `algo.enfileirar(tenant_id, tipo, ...)` (posicional ou por `tipo=`) cujo 2º argumento é uma string
+    literal com cara de tipo de job (`area.verbo`) ou um `Name` resolvido para uma constante atribuída no
+    mesmo arquivo — cobre tanto `TIPO_JOB = "..."` (app/relatorios/rotas.py) quanto
+    `tipo_job = "a" if cond else "b"` (app/intercambio/rotas.py). Não é lista fixa: pega o PRÓXIMO tipo
+    órfão sozinho, sem editar este arquivo de novo. Devolve um exemplo de local por tipo único."""
+    achados: dict[str, str] = {}
+    for caminho in sorted(APP_ROOT.rglob("*.py")):
+        try:
+            arvore = ast.parse(caminho.read_text(encoding="utf-8"), filename=str(caminho))
+        except SyntaxError:
+            continue
+        constantes: dict[str, set[str]] = {}
+        for no in ast.walk(arvore):
+            if not isinstance(no, ast.Assign):
+                continue
+            valores: list[str] = []
+            if isinstance(no.value, ast.Constant) and isinstance(no.value.value, str):
+                valores = [no.value.value]
+            elif isinstance(no.value, ast.IfExp):
+                for ramo in (no.value.body, no.value.orelse):
+                    if isinstance(ramo, ast.Constant) and isinstance(ramo.value, str):
+                        valores.append(ramo.value)
+            if not valores:
+                continue
+            for alvo in no.targets:
+                if isinstance(alvo, ast.Name):
+                    constantes.setdefault(alvo.id, set()).update(valores)
+        for no in ast.walk(arvore):
+            if not isinstance(no, ast.Call):
+                continue
+            if isinstance(no.func, ast.Attribute):
+                nome_chamada = no.func.attr
+            elif isinstance(no.func, ast.Name):
+                nome_chamada = no.func.id
+            else:
+                continue
+            if nome_chamada not in ("criar", "enfileirar"):
+                continue
+            por_nome = {kw.arg: kw.value for kw in no.keywords if kw.arg}
+            alvos = []
+            if "tipo" in por_nome:
+                alvos.append(por_nome["tipo"])
+            if len(no.args) >= 2:
+                alvos.append(no.args[1])
+            candidatos: list[str] = []
+            for alvo in alvos:
+                if isinstance(alvo, ast.Constant) and isinstance(alvo.value, str):
+                    candidatos.append(alvo.value)
+                elif isinstance(alvo, ast.Name):
+                    candidatos.extend(constantes.get(alvo.id, ()))
+            for tipo in candidatos:
+                if NOME_TIPO_RE.match(tipo) and tipo not in achados:
+                    achados[tipo] = f"{caminho.relative_to(APP_ROOT.parent)}:{no.lineno}"
+    return sorted(achados.items())
+
+
+_TIPOS_NO_CODIGO = _tipos_enfileirados_no_codigo()
+
+
+@pytest.mark.parametrize("tipo, local", _TIPOS_NO_CODIGO, ids=[t for t, _ in _TIPOS_NO_CODIGO])
+def test_todo_tipo_enfileirado_esta_registrado(tipo, local, monkeypatch):
+    """Acréscimo à família 'tipo de job órfão' (status.amostrar, catalogo.notificacoes_expurgar — achado
+    L7-03-f — e agora exportacao.gerar): o teste de periódico acima só cobre PERIODICOS; uma rota que
+    enfileira um tipo sob demanda (POST) ficava de fora e só quebrava (422 tipo_desconhecido) quando um
+    usuário de verdade clicava. Achado 15/09 (wt/f2-tiposjob): a varredura achou 27 módulos com `@tarefa`
+    nunca importados em app/jobs/tipos.py, com rota que os enfileira — consertados no mesmo commit que
+    este teste (um 28º, app.edicao.tarefas/camadas.lote, ficou de fora: bug alheio pré-existente em
+    app/edicao/modelos.py, já presente em wt/uniao — ver comentário em app/jobs/tipos.py)."""
+    monkeypatch.setenv("PLAT_WORKER_MEMORIA_MB", "1536")
+    cfg.obter.cache_clear()
+    from app.jobs.tipos import REGISTRO
+
+    assert tipo in REGISTRO, f"{local} enfileira {tipo!r} mas o tipo não está registrado em app.jobs.tipos"
