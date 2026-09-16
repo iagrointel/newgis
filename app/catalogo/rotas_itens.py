@@ -25,6 +25,7 @@ from app.auth.comum import campos_json, paginacao
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo import busca as mod_busca
 from app.catalogo import comum, diff, documento, metadado, metadado_mgb, relacoes, site, texto, tipos
+from app.catalogo import procedencia as mod_procedencia
 from app.catalogo.comum import (
     carregar,
     exigir_edicao,
@@ -173,6 +174,30 @@ def filtros_da_query(auth: Auth, p: dict, lixeira: bool = False) -> tuple[list[s
         cond.append("i.origem = %s")
         params.append(p["origem"])
         chave["origem"] = p["origem"]
+    # item L0-09-a: filtros laterais de procedência, ao lado de `licenca:`/`procedencia:[a TO b]` da gramática
+    # de `q` (app/catalogo/busca.py) — mesmo par que tipo/status/acesso já têm (q= e filtro lateral).
+    if p.get("licenca"):
+        if str(p["licenca"]).lower() in ("nenhuma", "ausente"):
+            cond.append("plat.procedencia_licenca(i.dados) IS NULL")
+        else:
+            cond.append("plat.procedencia_licenca(i.dados) ILIKE '%%' || %s || '%%'")
+            params.append(p["licenca"])
+        chave["licenca"] = p["licenca"]
+    if p.get("procedencia_min") not in (None, ""):
+        try:
+            minimo = float(str(p["procedencia_min"]).replace(",", "."))
+        except ValueError as e:
+            raise ErroAPI(
+                422, "campo_invalido", "procedencia_min exige número", {"campo": "procedencia_min"}
+            ) from e
+        if not 0 <= minimo <= 10:
+            raise ErroAPI(
+                422, "campo_invalido", "procedencia_min vai de 0 a 10",
+                {"campo": "procedencia_min", "valor": p["procedencia_min"]},
+            )
+        cond.append("plat.procedencia_pontuacao(i.dados) >= %s")
+        params.append(minimo)
+        chave["procedencia_min"] = minimo
     for nome, coluna in (("criado", "i.criado_em"), ("modificado", "i.modificado_em"), ("apagado", "i.apagado_em")):
         de, ate = _data(p.get(f"{nome}_de"), nome, False), _data(p.get(f"{nome}_ate"), nome, True)
         if de:
@@ -455,6 +480,9 @@ def facetas(request: Request, auth: Auth = autenticado(escopo_token="catalogo:le
             ("familia", "t.familia"),
             ("status", "coalesce(i.status, 'nenhum')"),
             ("acesso", "i.acesso"),
+            # item L0-09-a: licença registrada no bloco de procedência; sem licença conta como 'nenhuma'
+            # (mesmo texto que o filtro lateral ?licenca=nenhuma aceita em app/catalogo/busca.py)
+            ("licenca", "coalesce(plat.procedencia_licenca(i.dados), 'nenhuma')"),
         ):
             cur.execute(
                 f"SELECT {expr} AS valor, count(*) AS n {FROM_LISTA}{onde} GROUP BY 1 ORDER BY n DESC, 1 LIMIT 100",
@@ -562,6 +590,9 @@ def criar(
 ):
     tipos.obter(corpo.tipo)
     _publicar_tipo(auth, corpo.tipo)
+    # item L0-09-a: vazio vira NULL e origem declarado|medido é validada ANTES do JSON Schema (que só confere
+    # a forma; a regra de conteúdo do bloco mora em app/catalogo/procedencia.py, e nunca era chamada na escrita).
+    corpo.dados = mod_procedencia.normalizar_em_dados(corpo.dados)
     tipos.validar(corpo.tipo, corpo.dados)
     documento.validar_grafo(corpo.tipo, corpo.dados)
     site.validar_documento(corpo.tipo, corpo.dados)
@@ -811,6 +842,9 @@ def editar_item(
         raise ErroAPI(422, "validacao", "nada a alterar")
     dados = campos.get("dados", r["dados"])
     if "dados" in campos:
+        # item L0-09-a: mesma normalização/validação da criação (vazio -> NULL, origem declarado|medido)
+        dados = mod_procedencia.normalizar_em_dados(dados)
+        campos["dados"] = dados
         tipos.validar(r["tipo"], dados)
         documento.validar_grafo(r["tipo"], dados)
         site.validar_documento(r["tipo"], dados)
