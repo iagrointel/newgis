@@ -2,7 +2,7 @@
    camada vazia por arrasto (paleta de tipos -> lista) ou por clique (mesma paleta, alternativa de teclado —
    as duas produzem exatamente o mesmo objeto de campo, sem biblioteca de drag-and-drop: só Drag and Drop API
    nativa do HTML5, o mesmo princípio de "0 byte" do editor de arrasto do L5-08). Ao criar, mostra os campos
-   de volta no formato `fields` que a API devolve (GET /api/camadas/{id}/campos) — é a prova visual de que
+   de volta no formato `fields` que a API devolve (GET /api/camadas/{id}/esquema/campos) — é a prova visual de que
    alias e domínio já estão lá, sem reconfigurar nada. */
 import { enviar, mensagemDe, obter } from '../base/api.js';
 import { h, limpar } from '../base/dom.js';
@@ -183,7 +183,7 @@ async function criar() {
 }
 
 async function mostrarResultado(itemId) {
-  const r = await obter(`/api/camadas/${itemId}/campos`);
+  const r = await obter(`/api/camadas/${itemId}/esquema/campos`);
   if (r.status !== 200) return;
   const cartao = document.getElementById('resultado-cartao');
   const corpo = document.getElementById('resultado-corpo');

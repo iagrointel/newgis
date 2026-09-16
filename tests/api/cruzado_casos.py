@@ -1507,7 +1507,7 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"titulo": f"{PREFIXO}camada", "geometria": "Hipercubo", "srid": 4674, "campos": []},
         publico=True, aceita=frozenset({422}),
     ),
-    ("GET", "/api/camadas/{item_id}/campos"): Caso(lambda p: f"/api/camadas/{UUID_NULO}/campos"),
+    ("GET", "/api/camadas/{item_id}/esquema/campos"): Caso(lambda p: f"/api/camadas/{UUID_NULO}/esquema/campos"),
     ("POST", "/api/camadas/{item_id}/esquema/plano"): Caso(
         lambda p: f"/api/camadas/{UUID_NULO}/esquema/plano", lambda p: {"mudancas": []}
     ),

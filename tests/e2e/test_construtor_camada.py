@@ -26,7 +26,7 @@ def _capturar(page, nome: str) -> None:
 
 @pytest.fixture(scope="session")
 def api_camada_esquema(api_auth):
-    faltam = [r for r in ("/api/camadas/esquema", "/api/camadas/{item_id}/campos") if r not in api_auth]
+    faltam = [r for r in ("/api/camadas/esquema", "/api/camadas/{item_id}/esquema/campos") if r not in api_auth]
     if faltam:
         pytest.skip(f"backend ainda sem {faltam} no OpenAPI (item {ITEM})")
     return api_auth

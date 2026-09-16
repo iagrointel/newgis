@@ -2,7 +2,7 @@
 - camada criada por arrasto de campos aparece no PostgreSQL com os tipos certos (compara information_schema)
   e no formato `fields` de FeatureServer;
 - migração destrutiva (texto→inteiro com dado) é recusada com mensagem;
-- alias e domínio refletem no formulário (GET /campos) sem reconfigurar a camada.
+- alias e domínio refletem no formulário (GET /esquema/campos) sem reconfigurar a camada.
 Refutação: 300 campos, um deles nome reservado do PostgreSQL e outro com acento/símbolo — tem de normalizar
 sem quebrar nada, nunca 500."""
 
@@ -146,7 +146,7 @@ def test_camada_criada_por_esquema_aparece_no_postgres_com_tipos_certos(camada_a
         assert obrigatoria in colunas
     assert rls["relrowsecurity"] and rls["relforcerowsecurity"], "FORCE ROW LEVEL SECURITY ausente"
 
-    r2 = camada_a.sessao.get(f"/api/camadas/{item_id}/campos")
+    r2 = camada_a.sessao.get(f"/api/camadas/{item_id}/esquema/campos")
     assert r2.status_code == 200, r2.text
     fields = {f["name"]: f for f in r2.json()["fields"]}
     assert fields["nome_do_talhao"]["alias"] == "Nome do talhão"
@@ -159,7 +159,7 @@ def test_camada_criada_por_esquema_aparece_no_postgres_com_tipos_certos(camada_a
     # colunas de sistema nunca aparecem no fields (é o que a tela do formulário usa)
     assert "tenant_id" not in fields and "geom" not in fields and "fid" not in fields
     medida("L5-31-construtor-de-camada-esquema")("campos_criados_e_lidos", len(fields), "campos",
-                                                  "GET /api/camadas/{id}/campos")
+                                                  "GET /api/camadas/{id}/esquema/campos")
 
 
 def test_migracao_destrutiva_texto_para_inteiro_com_dado_e_recusada(camada_a, env):
@@ -214,12 +214,12 @@ def test_alargar_tamanho_de_texto_aplica_sem_ressalva(camada_a):
 
 
 def test_alias_e_dominio_refletem_no_formulario_sem_reconfigurar(camada_a):
-    """Renomear o alias (metadado puro, plat.camada_campo_meta) aparece no GET /campos na hora, sem recriar
+    """Renomear o alias (metadado puro, plat.camada_campo_meta) aparece no GET /esquema/campos na hora, sem recriar
     a camada nem reenviar o esquema inteiro — é a cláusula 'sem reconfigurar' do portão."""
     r = camada_a.criar(campos=[{"nome": "responsavel", "tipo": "text", "alias": "Responsável"}])
     item_id = r.json()["item_id"]
 
-    antes = camada_a.sessao.get(f"/api/camadas/{item_id}/campos").json()["fields"]
+    antes = camada_a.sessao.get(f"/api/camadas/{item_id}/esquema/campos").json()["fields"]
     assert {f["name"]: f["alias"] for f in antes}["responsavel"] == "Responsável"
 
     corpo = {"mudancas": [{"tipo": "renomear_alias", "campo": "responsavel", "novo_alias": "Técnico responsável"}]}
@@ -227,7 +227,7 @@ def test_alias_e_dominio_refletem_no_formulario_sem_reconfigurar(camada_a):
     assert ra.status_code == 200, ra.text
     assert len(ra.json()["aplicadas"]) == 1
 
-    depois = camada_a.sessao.get(f"/api/camadas/{item_id}/campos").json()["fields"]
+    depois = camada_a.sessao.get(f"/api/camadas/{item_id}/esquema/campos").json()["fields"]
     assert {f["name"]: f["alias"] for f in depois}["responsavel"] == "Técnico responsável"
 
 
@@ -245,7 +245,7 @@ def test_adicionar_campo_com_dominio_por_plano_de_migracao(camada_a):
     ra = camada_a.sessao.put(f"/api/camadas/{item_id}/esquema", json=corpo)
     assert ra.status_code == 200 and len(ra.json()["aplicadas"]) == 1, ra.text
 
-    fields = {f["name"]: f for f in camada_a.sessao.get(f"/api/camadas/{item_id}/campos").json()["fields"]}
+    fields = {f["name"]: f for f in camada_a.sessao.get(f"/api/camadas/{item_id}/esquema/campos").json()["fields"]}
     assert "status" in fields
     assert fields["status"]["domain"]["codedValues"][0]["codigo"] == "ok"
 
@@ -253,7 +253,7 @@ def test_adicionar_campo_com_dominio_por_plano_de_migracao(camada_a):
 def test_adversario_300_campos_com_reservada_e_acento_normaliza_sem_quebrar(camada_a, medida):
     """Refutação do item: 300 campos, um com nome de palavra reservada do PostgreSQL ('select'), outro com
     acento inicial/símbolo e maiúsculas ('Área (m²) - Útil'), e duplicatas propositais ('Campo' repetido 5x).
-    Tem de normalizar tudo (nunca 500) e o FeatureServer (`GET /campos`) tem de continuar respondendo certo
+    Tem de normalizar tudo (nunca 500) e o FeatureServer (`GET /esquema/campos`) tem de continuar respondendo certo
     para as 300 colunas."""
     campos = [{"nome": "select", "tipo": "text"}, {"nome": "Área (m²) - Útil", "tipo": "double precision"}]
     campos += [{"nome": "Campo", "tipo": "text"} for _ in range(5)]  # dedup: campo, campo_2 .. campo_5, e a
@@ -269,7 +269,7 @@ def test_adversario_300_campos_com_reservada_e_acento_normaliza_sem_quebrar(cama
     assert avisos.get("select_") == "reservado"
     assert avisos.get("campo_2") == "duplicado" and avisos.get("campo_5") == "duplicado"
 
-    fields = camada_a.sessao.get(f"/api/camadas/{corpo['item_id']}/campos")
+    fields = camada_a.sessao.get(f"/api/camadas/{corpo['item_id']}/esquema/campos")
     assert fields.status_code == 200, fields.text
     nomes = [f["name"] for f in fields.json()["fields"]]
     assert len(nomes) == 300
@@ -295,7 +295,7 @@ def test_item_de_outro_tipo_nao_serve_campos(sessao_a):
     assert r.status_code == 201, r.text
     item_id = r.json()["id"]
     try:
-        rc = sessao_a.get(f"/api/camadas/{item_id}/campos")
+        rc = sessao_a.get(f"/api/camadas/{item_id}/esquema/campos")
         assert rc.status_code == 422 and rc.json()["erro"] == "tipo_incompativel"
     finally:
         sessao_a.delete(f"/api/itens/{item_id}")

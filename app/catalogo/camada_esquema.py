@@ -303,8 +303,13 @@ def criar(corpo: CamadaEsquemaEntrada, request: Request, auth: Auth = autenticad
             "campos": len(r["campos"]), "avisos": r["avisos"]}
 
 
-@router.get("/api/camadas/{item_id}/campos", openapi_extra=LER)
+@router.get("/api/camadas/{item_id}/esquema/campos", openapi_extra=LER)
 def campos(item_id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """Fields no formato FeatureServer. Mora sob `/esquema/` desde 16/09: `GET /api/camadas/{id}/campos`
+    (sem prefixo) é do form-builder (`app/formulario/rotas.py`, item L5-03) — mesmo caminho, {id}/{item_id}
+    só de nome, então sombreava um ao outro; a paleta do construtor de formulário é a que fica no nome
+    curto porque tem mais chamadas (edição web, PWA de campo, item L5-03) do que este endpoint (usado só
+    pela tela /construtor-camada, item L5-31)."""
     with db.db(auth.contexto()) as cur:
         item = item_ou_404(cur, item_id)
         if item["tipo"] != "camada_vetorial":
