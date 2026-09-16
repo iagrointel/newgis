@@ -1,7 +1,12 @@
-"""Job `ingestao.inspecionar` (ADR 0005 seção 4, L0-04-b), reduzido aos 4 formatos desta passagem (shapefile.zip,
-gpkg, geojson, csv): baixa o objeto, roda `ogrinfo -ro -json -so`, resolve geometria/CRS/codificação/campos,
-amostra a validade (shapely, sem depender de dialeto SQLite do GDAL) e grava a PROPOSTA editável em
-`plat.importacao.proposta` (estado `proposta`). Nunca cria tabela: só a confirmação do usuário dispara a carga."""
+"""Job `ingestao.inspecionar` (ADR 0005 seção 4, L0-04-b; formatos ampliados pelo L6-02-o-importacao-exportacao-
+formatos): baixa o objeto, roda `ogrinfo -ro -json -so`, resolve geometria/CRS/codificação/campos, amostra a
+validade (shapely, sem depender de dialeto SQLite do GDAL) e grava a PROPOSTA editável em
+`plat.importacao.proposta` (estado `proposta`). Nunca cria tabela: só a confirmação do usuário dispara a carga.
+9 formatos de importação hoje: shapefile.zip, gpkg, geojson, csv (fundação) + geojsonseq, kml, dxf/dwg,
+filegdb.zip, xlsx (L6-02-o) — ver `app/ingestao/formatos.py` para o que cada um prova por conteúdo e o driver
+GDAL usado. Achado 16/09 (wt/f2fixapi2): a fusão dos 198 ramos (31a35ae57) trouxe o `inspecionar.py` do lado que
+tinha DXF/DWG isolados via `app/ingestao/cad.py` mas descartou geojsonseq/kml/filegdb.zip/xlsx do outro lado —
+os 4 preparadores voltaram aqui, com a assinatura atual de `_ogrinfo_json`/`_cfg`."""
 
 from __future__ import annotations
 
@@ -205,6 +210,29 @@ def _preparar_geojson(ctx, dados: bytes) -> dict:
             "titulo_origem": None, "driver": "GeoJSON", "origem_e_normalizada": False}
 
 
+def _preparar_geojsonseq(ctx, dados: bytes) -> dict:
+    """GeoJSONSeq/NDJSON (item L6-02-o): mesma regra de CRS do GeoJSON comum (RFC 7946, sempre WGS84 — o formato
+    não tem seção `crs` por feição nem por arquivo, então não há "crs legado" a respeitar aqui)."""
+    caminho = ctx.dir_trabalho / "original.geojsonl"
+    caminho.write_bytes(dados)
+    crs = {"origem": "rfc7946", "srid": 4326, "perguntar": False, "wkt": None, "sugestao": None}
+    codificacao = {"origem": "formato", "valor": "UTF-8", "perguntar": False, "sugestao": None}
+    return {"caminho": str(caminho), "layer": None, "oo": [], "crs": crs, "codificacao": codificacao, "csv": None,
+            "titulo_origem": None, "driver": "GeoJSONSeq", "origem_e_normalizada": False}
+
+
+def _preparar_kml(ctx, dados: bytes) -> dict:
+    """KML (item L6-02-o, driver LIBKML): o formato é sempre lon/lat WGS84 (OGC KML 22.1 §5.3), então o CRS nunca
+    é perguntado — igual ao GeoJSON. Atributos chegam como campos genéricos do LIBKML (Name/description são os
+    dois primeiros; os `<ExtendedData>`/`<SimpleData>` do arquivo viram os campos de verdade)."""
+    caminho = ctx.dir_trabalho / "original.kml"
+    caminho.write_bytes(dados)
+    crs = {"origem": "kml", "srid": 4326, "perguntar": False, "wkt": None, "sugestao": None}
+    codificacao = {"origem": "formato", "valor": "UTF-8", "perguntar": False, "sugestao": None}
+    return {"caminho": str(caminho), "layer": None, "oo": [], "crs": crs, "codificacao": codificacao, "csv": None,
+            "titulo_origem": None, "driver": "LIBKML", "origem_e_normalizada": False}
+
+
 def _preparar_csv(ctx, dados: bytes) -> dict:
     resultado = csv_normalizar.normalizar_bytes(dados)
     if resultado.aspas_desbalanceadas_linha is not None:
@@ -253,13 +281,66 @@ def _preparar_cad(ctx, dados: bytes, formato: str, respostas: dict | None = None
             "origem_e_normalizada": False, "cad": rel.json(), "tipos_geometria": dict(rel.tipos_geometria)}
 
 
+def _preparar_filegdb(ctx, dados: bytes) -> dict:
+    """File Geodatabase zipada (item L6-02-o, driver OpenFileGDB): mesmo truque do shapefile.zip — abre a pasta
+    `<nome>.gdb` de dentro do zip via `/vsizip`, sem descompactar em disco (37 GB livres, ver regra dura da
+    bancada). CRS vem do próprio catálogo da FileGDB (como no GPKG): `crs=None` deixa o passo de CRS do
+    `ingestao_inspecionar` ler o `projjson` do `ogrinfo -json`."""
+    caminho_zip = ctx.dir_trabalho / "original_gdb.zip"
+    caminho_zip.write_bytes(dados)
+    zf = formatos.conferir_zip(dados)
+    base = formatos._gdb_no_zip(zf)
+    if not base:
+        raise FalhaDefinitiva("o zip não tem uma pasta <nome>.gdb com catálogo (a*.gdbtable)")
+    caminho = f"/vsizip/{caminho_zip}/{base.rstrip('/')}"
+    codificacao = {"origem": "formato", "valor": "UTF-8", "perguntar": False, "sugestao": None}
+    return {"caminho": caminho, "layer": None, "oo": [], "crs": None, "codificacao": codificacao, "csv": None,
+            "titulo_origem": base.rstrip("/").rsplit("/", 1)[-1].removesuffix(".gdb"), "driver": "OpenFileGDB",
+            "origem_e_normalizada": False}
+
+
+def _preparar_xlsx(ctx, dados: bytes, encoding_confirmada: str | None) -> dict:
+    """Excel/XLSX (item L6-02-o): o driver XLSX do GDAL NÃO tem geometria (`ogrinfo --format XLSX`: "No support
+    for geometries" — MEDIDO nesta passagem, não é bug nosso) — é só tabela. Em vez de reinventar a detecção de
+    coluna lon/lat que o CSV já tem testada, converte a 1ª aba para CSV com `ogr2ogr` e entrega para
+    `_preparar_csv`: mesmo caminho, mesmas regras de X/Y (`app/ingestao/csv_normalizar.py`), mesma proposta. Uma
+    camada de polígono/linha em XLSX chega SEM geometria automática (Excel não tem onde guardar um polígono) —
+    fica registrada como aviso; o par lon/lat continua funcionando para pontos, provado no teste de ida e volta."""
+    caminho_xlsx = ctx.dir_trabalho / "original.xlsx"
+    caminho_xlsx.write_bytes(dados)
+    info = _ogrinfo_json(ctx, str(caminho_xlsx), None, [])
+    abas = info.get("layers") or []
+    if not abas:
+        raise FalhaDefinitiva("o arquivo XLSX não tem nenhuma aba")
+    aba = abas[0]["name"]
+    caminho_csv = ctx.dir_trabalho / "original_xlsx.csv"
+    r = ctx.subprocesso(["ogr2ogr", "-f", "CSV", str(caminho_csv), str(caminho_xlsx), aba])
+    if r.returncode != 0:
+        linhas = [ln for ln in (r.stderr or "").splitlines() if ln.strip()]
+        raise FalhaDefinitiva(f"não converteu a aba {aba!r} do XLSX para tabela: "
+                              f"{(linhas[-1] if linhas else 'sem detalhe')[:200]}")
+    prep = _preparar_csv(ctx, caminho_csv.read_bytes())
+    prep["titulo_origem"] = aba
+    prep["driver"] = "XLSX (aba convertida para CSV)"
+    if not (prep.get("csv") or {}).get("coordenadas"):
+        prep.setdefault("avisos", []).append(
+            "a aba não tinha colunas de latitude/longitude reconhecidas; a camada será importada sem geometria "
+            "automática (Excel não guarda polígono/linha nativamente)"
+        )
+    return prep
+
+
 PREPARADORES = {
     "shapefile.zip": lambda ctx, dados, enc: _preparar_shapefile(ctx, dados, enc),
     "gpkg": lambda ctx, dados, enc: _preparar_gpkg(ctx, dados),
     "geojson": lambda ctx, dados, enc: _preparar_geojson(ctx, dados),
+    "geojsonseq": lambda ctx, dados, enc: _preparar_geojsonseq(ctx, dados),
+    "kml": lambda ctx, dados, enc: _preparar_kml(ctx, dados),
     "csv": lambda ctx, dados, enc: _preparar_csv(ctx, dados),
     "dxf": lambda ctx, dados, enc, respostas=None: _preparar_cad(ctx, dados, "dxf", respostas),
     "dwg": lambda ctx, dados, enc, respostas=None: _preparar_cad(ctx, dados, "dwg", respostas),
+    "filegdb.zip": lambda ctx, dados, enc: _preparar_filegdb(ctx, dados),
+    "xlsx": lambda ctx, dados, enc: _preparar_xlsx(ctx, dados, enc),
 }
 
 
