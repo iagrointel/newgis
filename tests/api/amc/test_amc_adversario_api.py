@@ -97,16 +97,46 @@ def modelo_com_itens(sessao) -> dict:
 
 
 def conjunto_pronto(sessao, con, marca: str) -> dict:
-    """Conjunto de grade pequeno, já gerado (o worker não conhece o tipo de job antes do merge, então a função do
-    job é chamada direto — mesma escolha do construtor). Grade, e não feições, porque o caminho de feições está
-    quebrado fora do schema `plat` (ver test_adv_conjunto_de_feicoes_funciona_em_qualquer_schema)."""
+    """Conjunto de grade pequeno, já gerado: chama a função do job direto em vez de esperar um worker de
+    verdade processar a fila.
+
+    Achado 16/09: o comentário original dizia que "o worker não conhece o tipo de job antes do merge" e por
+    isso a chamada direta seria segura — hoje, pós-fusão, o worker CONHECE `amc.gerar_unidades`, e um worker
+    de verdade da trilha compartilhada compete pelo MESMO job que esta função chama direto. `gerar_grade` faz
+    DELETE + regenera; as duas execuções concorrentes (a nossa e a do worker) intercalam DELETEs e INSERTs, e
+    qualquer leitura de amc_unidade depois disso pode pegar o intervalo em que a tabela está zerada — mesmo
+    bem depois desta função retornar, se o worker demorou a pegar o job. O conserto de verdade não é tentar
+    vencer a corrida (cancelar chega tarde demais: a função inteira roda em ~17 ms, mais rápido que o
+    round-trip HTTP do cancelamento) — é ESPERAR o job morrer (cancelado ou concluído; qualquer um dos dois
+    fecha a janela, porque job não é reprocessado) antes de gerar nós mesmos, a última palavra garantida.
+
+    O caminho de feições (síncrono, sem job, sem worker algum) FECHARIA a corrida de vez, mas o autor
+    original mediu que ele quebrava fora do schema `plat` — test_adv_conjunto_de_feicoes_funciona_em_
+    qualquer_schema e test_adv_execute_values_e_o_unico_desvio_da_reescrita_de_schema medem hoje que esse
+    achado FOI consertado, só ninguém trocou este helper (fora do escopo desta rodada: mexer na geometria
+    dos testes que dependem de valor exato por unidade de uma grade 'quadrada' específica)."""
     r = sessao.post("/api/amc/conjuntos", json={"nome": f"{PREFIXO} conjunto {marca}", "tipo": "quadrada",
                                                 "lado_m": 500.0,
                                                 "area_estudo": exemplos.area_retangulo(-49.30, -16.70, 0.01, 0.01)})
     assert r.status_code == 201, r.text
     conjunto = r.json()
-    mod_unidades.gerar_grade(ContextoDeTeste(ids_por_slug(con)["demo" if marca == "a" else "demo2"]),
-                             conjunto["id"])
+    job_id = conjunto.get("job_id")
+    if job_id:
+        sessao.post(f"/api/jobs/{job_id}/cancelar")
+        fim = time.monotonic() + 5
+        while time.monotonic() < fim:
+            estado = sessao.get(f"/api/jobs/{job_id}").json().get("estado")
+            if estado in ("concluido", "cancelado", "falhou"):
+                break
+            time.sleep(0.05)
+    tenant_id = ids_por_slug(con)["demo" if marca == "a" else "demo2"]
+    contexto(con, tenant_id)
+    mod_unidades.gerar_grade(ContextoDeTeste(tenant_id), conjunto["id"])
+    with con.cursor() as cur:
+        cur.execute(f"SELECT count(*) AS n FROM {ESQ}.amc_unidade WHERE conjunto_id = %s", (conjunto["id"],))
+        n = cur.fetchone()["n"]
+    con.commit()
+    assert n > 0, f"gerar_grade não produziu unidade nenhuma para {conjunto['id']} (job {job_id} preso?)"
     return sessao.get(f"/api/amc/conjuntos/{conjunto['id']}").json()
 
 
