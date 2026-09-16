@@ -204,11 +204,11 @@ def _extent_de(geojson: str | None) -> list | None:
     xs, ys = numeros[0::2], numeros[1::2]
     if not xs or not ys:
         return None
-    if min(xs) == max(xs) or min(ys) == max(ys):
-        # a coluna `plat.item.extent` é `geometry(Polygon, 4326)`: um retângulo de lado zero (camada de uma
-        # feição só, ou feições colineares) não é polígono e a inserção seria recusada pelo tipo. Fica sem
-        # extent — melhor do que alargar a caixa por conta própria e gravar um retângulo que ninguém mediu.
-        return None
+    # Retângulo de lado zero (camada de uma feição só = POINT, feições colineares = LINESTRING)
+    # NÃO é recusado pelo tipo: `ST_MakeEnvelope` com xmin==xmax e/ou ymin==ymax ainda casta para
+    # `geometry(Polygon, 4326)` (conferido direto no Postgres — o typmod só cobra estrutura de anel
+    # fechado com 4+ posições, nunca área); guardar esse caso como None aqui derrubava exatamente os
+    # dois casos que este achatamento existe para aguentar.
     if -180 <= min(xs) and max(xs) <= 180 and -90 <= min(ys) and max(ys) <= 90:
         return [min(xs), min(ys), max(xs), max(ys)]
     return None
