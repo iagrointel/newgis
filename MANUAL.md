@@ -642,7 +642,7 @@ conserto); o mínimo é a regra geral de são para a instalação (inteiro >= 1;
 | `PLAT_RENDER_MEMORIA_MB` | `0` | `1` | valor nominal do pool de render (`deploy/plat-render.service`); a unidade systemd corta o `MemoryMax` um pouco acima |
 | `PLAT_RENDER_IGNORAR_HTTPS` | `false` | — | `docs/adr/20260908T1230-layout-de-impressao.md` — aceita certificado autoassinado da trilha ao render buscar a própria página |
 | `PLAT_SSE_LIGADO` | `false` | — | `app/vivo/rotas.py` — interruptor de operação; desligado, a rota de atualização viva por SSE responde 503 na hora |
-| `PLAT_API_PROCESSOS` | `0` | `1` | `app/jobs/eventos.py` — divide os tetos de recurso partilhado (SSE por inquilino/instalação) pelo nº de processos `uvicorn --workers N`; o consumidor já protege contra zero com `max(1, ...)` |
+| `PLAT_API_PROCESSOS` | `2` | `1` | `app/jobs/eventos.py` — divide os tetos de recurso partilhado (SSE por inquilino/instalação) pelo nº de processos `uvicorn --workers N`; default 2 porque `deploy/plat-api.service` roda `--workers 2` desde a fundação do repositório (conserto 16/09: um default 0 mascarado por `max(1, ...)` fazia cada processo achar que era o único e dobrar a cota publicada) |
 
 Nenhuma delas tem máximo declarado (o helper `_inteiro` de `app/settings.py` não impõe teto, só piso);
 fica para quando o item correspondente (render em produção, SSE em produção) tiver portão próprio.

@@ -142,7 +142,13 @@ class Settings:
     PLAT_BACKUP_EXTERNO_SEGREDO: str | None = None  # (entrega 10/09) de wt/il006estatu
     PLAT_BACKUP_EXTERNO_REGIAO: str | None = None  # (entrega 10/09) de wt/il006estatu
     PLAT_TELEMETRIA_URL: str | None = None  # (entrega 10/09) de wt/cx5l711c
-    PLAT_API_PROCESSOS: int = 0  # (entrega 10/09) de wt/il004hexpor
+    # default 2, não 0: deploy/plat-api.service roda `uvicorn --workers 2` desde a fundação do repositório
+    # (904a849d8) e nunca mudou — um default de 0, mascarado por `max(1, ...)` em
+    # app/jobs/eventos.py::cota_por_processo, faz CADA um dos 2 processos achar que é o único e aplicar o
+    # teto da instalação inteiro, dobrando a cota publicada (achado de
+    # tests/unit/test_recurso_partilhado_por_inquilino.py::orcamento_de_conexoes). Continua substituível
+    # por PLAT_API_PROCESSOS na instalação, se um dia o número de workers mudar.
+    PLAT_API_PROCESSOS: int = 2  # (entrega 10/09) de wt/il004hexpor; default corrigido 16/09
     PLAT_CLAMD: str | None = None  # (entrega 10/09) de wt/cx5l703a
     PLAT_ACERVO_ARQUIVOS_RAIZ: str | None = None  # (entrega 10/09) de wt/cx5l601i
     PLAT_SHEETS_EXPORTACAO_PREFIXO: str = ""  # (entrega 10/09) de wt/il602igoogl
@@ -328,7 +334,7 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_RENDER_MEMORIA_MB=_inteiro(valores, "PLAT_RENDER_MEMORIA_MB", 0, 1),
         PLAT_RENDER_IGNORAR_HTTPS=_booleano(valores, "PLAT_RENDER_IGNORAR_HTTPS", False),
         PLAT_SSE_LIGADO=_booleano(valores, "PLAT_SSE_LIGADO", False),
-        PLAT_API_PROCESSOS=_inteiro(valores, "PLAT_API_PROCESSOS", 0, 1),
+        PLAT_API_PROCESSOS=_inteiro(valores, "PLAT_API_PROCESSOS", 2, 1),
     )
 
 
