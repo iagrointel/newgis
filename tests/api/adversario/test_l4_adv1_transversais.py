@@ -51,26 +51,15 @@ from __future__ import annotations
 
 import uuid
 
-import pytest
-
 from app.rede_utilidades import instalados
 from app.rede_utilidades import pacote as pacote_mod
 from tests.api.test_rls import contexto, ids_por_slug
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "ACHADO 1 (adversário L4, turno 9): POST /api/rede quebra a resposta com "
-        "ResponseValidationError porque app/rede_utilidades/rotas.py (SQL_BASE, _json, criar) nunca "
-        "leu/escreveu/devolveu tolerancia_m, enquanto app/rede_utilidades/modelos.py:Rede exige o "
-        "campo sem default desde 07-10/09. A rede É criada (o INSERT roda e comita antes da "
-        "serialização falhar) mas o chamador nunca recebe o id nem status 201 — reproduzido com "
-        "TestClient real contra o app vivo da trilha uniao, sem depender de nenhum arquivo oficial do "
-        "item. Derruba a cláusula 'criar 1 rede' de todo item de L4 que cria rede pela API padrão."
-    ),
-)
 def test_l4_adv1_criar_rede_via_api_falta_tolerancia_m(sessao_a):
+    """ACHADO 1 CONSERTADO (turno f2fixrede): `app/rede_utilidades/rotas.py` volta a ler/escrever/
+    devolver `tolerancia_m` (SQL_BASE, _json, criar) — `git log -p -S tolerancia_m` mostrava a versão
+    certa, restaurada. Deixa de ser xfail e vira teste normal da cláusula."""
     nome = f"zt-adv-l4-transversal-{uuid.uuid4().hex[:10]}"
     r = sessao_a.post("/api/rede", json={"nome": nome, "disciplina": "eletrica"})
     assert r.status_code == 201, r.text
@@ -79,21 +68,15 @@ def test_l4_adv1_criar_rede_via_api_falta_tolerancia_m(sessao_a):
     sessao_a.delete(f"/api/rede/{corpo['id']}")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "ACHADO 2 (adversário L4, turno 9): POST /api/rede/{id}/pacote falha com 422 "
-        "(restricao=rede_regra_tipo_check) na PRIMEIRA importação de QUALQUER pacote de ativos "
-        "(eletrica-br testado aqui; os outros 4 pacotes usam o mesmo vocabulário antigo e caem "
-        "igual), porque a migração 20260906T2058_rede_regras_conectividade.sql trocou a CHECK "
-        "CONSTRAINT do banco para o vocabulário novo (juncao_juncao/juncao_aresta/...) sem que os "
-        "arquivos de pacote nem app/rede_utilidades/deposito.py fossem atualizados — deposito.py grava "
-        "r['tipo'] do JSON verbatim, sem tradução. A rede é criada por SQL direto (contorna o Achado "
-        "1 de propósito, para isolar este achado) e o pacote é importado pela MESMA rota HTTP que os "
-        "14 itens irmãos usam. Derruba a cláusula 'instalar o pacote' de toda a linha."
-    ),
-)
 def test_l4_adv1_instalar_pacote_vocabulario_regra_divergente(sessao_a, conexao_plat_app):
+    """ACHADO 2 CONSERTADO (turno f2fixrede): os 5 arquivos `app/rede_utilidades/pacotes/*.json`
+    foram convertidos para o vocabulário NOVO de `plat.rede_regra.tipo` (o da migração
+    20260906T2058_rede_regras_conectividade.sql), reordenados para a forma canônica
+    (`pacote.canonizar`, cuja ordem de `regras` depende do `tipo`), e o código que ainda citava o
+    vocabulário antigo (`esquema.py:TIPOS_REGRA`, `topologia.py:TIPOS_REGRA_CONECTIVIDADE`,
+    `diagnostico.py`, `bdgd.py`, `osm_power.py`) foi atualizado. Deixa de ser xfail e vira teste
+    normal da cláusula (a asserção de pré-condição abaixo já não vale — o pacote está no vocabulário
+    novo — e é substituída pela verificação direta do vocabulário novo)."""
     con = conexao_plat_app
     ids = ids_por_slug(con)
     tenant_id = ids["demo"]
@@ -114,10 +97,10 @@ def test_l4_adv1_instalar_pacote_vocabulario_regra_divergente(sessao_a, conexao_
     con.commit()
 
     bruto = instalados.bruto("eletrica-br")
-    doc = pacote_mod.ler(bruto)  # confere que o pacote em si é válido — o problema é só o vocabulário
-    assert any(r["tipo"] == "conectividade_no_trecho" for r in doc["regras"]), (
-        "pré-condição do achado: o pacote eletrica-br declara o vocabulário antigo; se isto falhar, "
-        "o pacote já foi corrigido e este xfail deixou de fazer sentido"
+    doc = pacote_mod.ler(bruto)  # confere que o pacote em si é válido, já no vocabulário novo
+    assert any(r["tipo"] == "juncao_aresta" for r in doc["regras"]), (
+        "o pacote eletrica-br deveria estar no vocabulário novo (juncao_aresta/juncao_juncao/"
+        "aresta_juncao_aresta/contencao/estrutura) depois do conserto"
     )
 
     r = sessao_a.post(f"/api/rede/{rede_id}/pacote", content=bruto, headers={"Content-Type": "application/json"})

@@ -44,12 +44,6 @@ VOCABULARIO_ANTIGO = {"conectividade_no_trecho", "conectividade_entre_nos", "fix
 
 # ---------------------------------------------------------------------- checagem estática (sem banco,
 # sem trilha — sempre reproduzível mesmo com a base sob disputa de outros agentes)
-@pytest.mark.xfail(strict=True, reason=(
-    "achado adversário L4 rodada 2 (transversal): os 5 arquivos de app/rede_utilidades/pacotes/*.json "
-    "ainda declaram o vocabulário de conectividade anterior à migração 20260906T2058 (item "
-    "L4-03-a-regras-de-conectividade), que já traduziu as linhas gravadas no banco mas não a fonte dos "
-    "pacotes"
-))
 def test_pacotes_de_ativos_ja_usam_o_vocabulario_novo_de_conectividade():
     """Estático: os 5 arquivos de pacote deveriam ter sido migrados junto com
     `20260906T2058_rede_regras_conectividade.sql` (que traduziu as linhas já gravadas no banco com um
@@ -92,12 +86,8 @@ def _instalar_e_descartar(con, codigo_pacote: str, sufixo: str) -> None:
 
 
 @pytest.mark.parametrize("codigo_pacote", DOMINIOS)
-@pytest.mark.xfail(strict=True, reason=(
-    "achado adversário L4 rodada 2 (transversal): a migração 20260906T2058 (item "
-    "L4-03-a-regras-de-conectividade) trocou o vocabulário de plat.rede_regra.tipo e traduziu as linhas "
-    "já gravadas, mas os 5 arquivos de app/rede_utilidades/pacotes/*.json continuam com o vocabulário "
-    "antigo e app/rede_utilidades/deposito.py::importar grava r['tipo'] sem traduzir -> qualquer rede "
-    "NOVA que instale qualquer pacote falha com psycopg2.errors.CheckViolation em rede_regra_tipo_check"
-))
 def test_instalar_pacote_em_rede_nova_nao_viola_check_de_conectividade(conexao_plat_app, codigo_pacote):
+    """CONSERTADO (turno f2fixrede): os 5 pacotes foram convertidos para o vocabulário novo de
+    `plat.rede_regra.tipo` (o da migração 20260906T2058) e reescritos na forma canônica; deixa de
+    ser xfail e vira teste normal da cláusula."""
     _instalar_e_descartar(conexao_plat_app, codigo_pacote, codigo_pacote.replace("-", "_"))
