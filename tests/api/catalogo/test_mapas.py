@@ -12,6 +12,7 @@ import time
 import pytest
 
 from app.catalogo.documento import gerar_ulid
+from app.estilos import compilador
 from tests.api.test_rls import contexto, ids_por_slug
 
 ITEM = "L2-01-a"
@@ -173,7 +174,13 @@ def test_apagar_estilo_usado_por_mapa_da_409(sessao_a, itens_a, camadas_a):
 
 # ---------------------------------------------------------------- /completo
 def test_completo_resolve_camadas_estilo_e_campos(sessao_a, itens_a, camadas_a, conexao_plat_app):
-    estilo = itens_a.criar("estilo", dados={"esquema_versao": 1, "corpo": {"version": 8, "layers": []}})
+    # item L2-02-a: 'estilo' exige corpo.{maplibre,plat_construtor} (additionalProperties:false) desde que o
+    # editor de estilo passou a validar/recompilar na gravação — o {"version":8,"layers":[]} solto de antes
+    # já não valida.
+    pc = {"tipo": "unico", "geometria": "poligono", "versao": 1, "simbolo": {"cor": "#4e79a7"}}
+    estilo = itens_a.criar(
+        "estilo", dados={"esquema_versao": 1, "corpo": {"plat_construtor": pc, "maplibre": compilador.compilar(pc)}}
+    )
     c = camada(camadas_a[0], estilo={"ref": estilo["id"]}, opacidade=0.5, visivel=False)
     mid = criar_mapa(sessao_a, itens_a, camadas=[c], mapa_base={"id": "osm-guarulhos"}).json()["id"]
 
@@ -184,7 +191,9 @@ def test_completo_resolve_camadas_estilo_e_campos(sessao_a, itens_a, camadas_a, 
     (saida,) = j["camadas"]
     assert saida["ref"] == camadas_a[0] and saida["tipo"] == "camada_vetorial"
     assert saida["opacidade"] == 0.5 and saida["visivel"] is False
-    assert saida["estilo"]["origem"] == "item" and saida["estilo"]["corpo"] == {"version": 8, "layers": []}
+    assert saida["estilo"]["origem"] == "item"
+    assert saida["estilo"]["corpo"]["plat_construtor"] == pc
+    assert saida["estilo"]["corpo"]["maplibre"] == compilador.compilar(pc)
     assert saida["tiles"]["pronto"] is False  # nenhum servidor de tiles instalado nesta máquina
     assert saida["dominios"] == {}
 

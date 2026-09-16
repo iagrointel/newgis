@@ -164,6 +164,65 @@
           "const": 3857,
           "description": "CRS de exibição fixo (C12 do L2_CONCEITO); o CRS do dado é livre"
         },
+        "desenho": {
+          "additionalProperties": false,
+          "properties": {
+            "features": {
+              "items": {
+                "properties": {
+                  "geometry": {
+                    "properties": {
+                      "coordinates": {},
+                      "type": {
+                        "enum": [
+                          "Point",
+                          "LineString",
+                          "Polygon"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "coordinates"
+                    ],
+                    "type": "object"
+                  },
+                  "id": {
+                    "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+                    "type": "string"
+                  },
+                  "properties": {
+                    "additionalProperties": true,
+                    "properties": {
+                      "tipo_desenho": {
+                        "maxLength": 20,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "tipo_desenho"
+                    ],
+                    "type": "object"
+                  },
+                  "type": {
+                    "const": "Feature"
+                  }
+                },
+                "required": [
+                  "type",
+                  "id",
+                  "geometry",
+                  "properties"
+                ],
+                "type": "object"
+              },
+              "maxItems": 5000,
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
         "extensao_inicial": {
           "description": "[oeste, sul, leste, norte] em graus (EPSG:4326)",
           "items": false,
@@ -327,6 +386,6 @@
     "esquema_versao",
     "corpo"
   ],
-  "title": "documento de mapa do plat_tstac (mapa-v1)",
+  "title": "documento de mapa do plat_tuniao (mapa-v1)",
   "type": "object"
 }
