@@ -53,8 +53,13 @@ def _sha256(caminho: Path) -> str:
     return h.hexdigest()
 
 
-def _rodar(ctx, argv: list[str], perfil: str) -> None:
-    r = ctx.subprocesso(argv, env=ambiente_isolado())
+def _rodar(ctx, argv: list[str], perfil: str, *fontes_extra: Path) -> None:
+    # passa o argv inteiro (não só a fonte): `ambiente_isolado` só reage a quem termina em .dat/.bin (o
+    # par ENVI), o resto (flags, destino) não casa e não muda nada — mas sem isto o READDIR fica sempre
+    # fechado e o gdal_translate não acha o .hdr irmão do .dat extraído (mesmo achado da validação).
+    # `fontes_extra` cobre o caso em que o argv não CITA o .dat (um VRT que o REFERENCIA por dentro,
+    # reaberto na 2ª etapa da conversão visual) — sem isto o driver ENVI acha "not recognized" de novo.
+    r = ctx.subprocesso(argv, env=ambiente_isolado(*argv, *fontes_extra))
     if r.returncode != 0:
         linhas = [ln for ln in (r.stderr or "").splitlines() if ln.strip()]
         raise ErroConversao(
@@ -175,7 +180,7 @@ def converter_visual(ctx, bruto: Path, rel: RelatorioValidacao, stats: list[dict
     opcao_nivel = ["-co", f"WEBP_LEVEL={QUALIDADE_WEBP}"] if webp else ["-co", f"QUALITY={QUALIDADE_JPEG}"]
     argv = ["gdal_translate", *_argv_base_cog("visual"), "-co", f"COMPRESS={compressao}",
             *opcao_nivel, "-mo", "PLAT_PERFIL=visual", str(vrt), str(saida)]
-    _rodar(ctx, argv, "visual")
+    _rodar(ctx, argv, "visual", bruto)  # o VRT referencia `bruto` por dentro (SourceFilename)
     vrt.unlink(missing_ok=True)
     _validar_cog(saida, "visual")
     return ProdutoCOG("visual", saida, saida.stat().st_size, _sha256(saida), compressao, bandas,

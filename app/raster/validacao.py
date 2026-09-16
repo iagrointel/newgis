@@ -65,6 +65,7 @@ GDAL_CACHEMAX_MB = 64
 # --- limites do conteúdo
 COTA_DESCOMPACTADO_PADRAO = 4 * 1024 * 1024 * 1024   # 4 GiB quando o chamador não passa a cota do inquilino
 BANDAS_MAX = 512
+FAMILIA_MULTIDIMENSIONAL = ("netCDF", "GRIB")   # 1 variável × 1 tempo = 1 raster; o resto é o item L1-19
 LADO_MAX = 200_000                                    # pixels por lado (500 GB em uint8 para além disso)
 ZIP_ENTRADAS_MAX = 1000
 ZIP_RAZAO_MAX = 50                                    # a cláusula do portão: 50× declarado = recusa (>=)
@@ -91,6 +92,8 @@ for _f in _formatos.FORMATOS.values():
     for _ext in _f.extensoes:
         ASSINATURAS[_ext] = (_f.rotulo, _f.assinaturas)
 EXTENSOES_RASTER_EM_ZIP = _formatos.EXTENSOES_RASTER_EM_ZIP
+SIDECARES_EM_ZIP = _formatos.SIDECARES_EM_ZIP
+_RE_VIRGULA_DECIMAL = re.compile(rb"\d,\d")
 _NOMES_MAGICOS = {b"\x89PNG": "PNG", b"\xff\xd8\xff": "JPEG", b"GIF8": "GIF", b"%PDF": "PDF", b"<?xm": "XML",
                   b"PK\x03\x04": "zip", b"\x00\x00\x00\x0c": "JPEG 2000", b"II*\x00": "TIFF", b"MM\x00*": "TIFF"}
 
@@ -464,6 +467,18 @@ def _filho(argumentos: dict) -> dict:
         fontes = _abrir_zip(caminho, cota, dir_trabalho, saida)
         if saida["problemas"]:
             return saida
+    elif ext == ".kmz":
+        fontes = _abrir_kmz(caminho, cota, dir_trabalho, saida)
+        if saida["problemas"]:
+            return saida
+        # a georreferência veio do doc.kml da casa: KML é WGS84 POR ESPECIFICAÇÃO — o CRS 4326 é
+        # declarado aqui (origem 'informado', com o aviso no relatório), nunca assumido em silêncio
+        respostas.setdefault("crs", "EPSG:4326")
+        saida["avisos"].append("CRS EPSG:4326 declarado pela plataforma: KML é WGS84 por especificação")
+    elif ext == ".zarr":
+        fontes = _abrir_zarr(caminho, cota, dir_trabalho, saida)
+        if saida["problemas"]:
+            return saida
     elif ext == ".vrt":
         _conferir_vrt(caminho, saida)
         if saida["problemas"]:
@@ -471,6 +486,20 @@ def _filho(argumentos: dict) -> dict:
         fontes = [caminho]
     else:
         fontes = [caminho]
+        if ext == ".asc":
+            # ASCII Grid com vírgula decimal (padrão de exportação de alguns países): recusa dirigida — o
+            # GDAL leria os números truncados na vírgula sem avisar
+            if _RE_VIRGULA_DECIMAL.search(caminho.read_bytes()[:4096]):
+                saida["problemas"].append(
+                    "ASCII Grid com vírgula decimal (ex.: '1,5'): o formato espera ponto decimal e separador "
+                    "de coluna por espaço; reexporte o arquivo com ponto decimal e envie de novo")
+                return saida
+    # o ENVI descobre o .hdr irmão pelo READDIR do diretório (medido: com
+    # GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR o driver não encontra o cabeçalho e devolve "not recognized").
+    # Para essa entrada só, o endurecimento cede — o diretório do trabalho contém só o que o envio trouxe,
+    # e o .hdr já foi conferido irmão-de-mesmo-nome (solto) ou extraído junto (zip).
+    if any(f.suffix.lower() in (".dat", ".bin") for f in fontes):
+        os.environ.pop("GDAL_DISABLE_READDIR_ON_OPEN", None)
     _inspecionar(fontes, cota, perfil, respostas, saida)
     return saida
 
@@ -482,28 +511,31 @@ def _recusa_generica(saida: dict, erro: BaseException) -> dict:
     return saida
 
 
-def _abrir_zip(caminho: Path, cota: int, dir_trabalho: Path, saida: dict) -> list[Path]:
-    """Só o diretório central é lido antes de decidir; extrai APENAS os rasters, depois de aprovado."""
+def _zip_seguro(caminho: Path, cota: int, saida: dict):
+    """Abre um contêiner zip (o .zip de rasters, o .kmz, o .zarr zipado), confere o diretório central e os
+    tetos ANTES de extrair qualquer byte: nº de entradas, cota declarada, razão de compressão (zip-bomba) e
+    teto de volume escrito ligado ao tamanho do ENVIO (achado 7). Devolve (zf, infos) ou (None, None) com o
+    problema já registrado."""
     try:
         zf = zipfile.ZipFile(caminho)
         infos = zf.infolist()
     except (zipfile.BadZipFile, OSError) as e:
         saida["problemas"].append(f"zip inválido: {e}")
-        return []
+        return None, None
     if len(infos) > ZIP_ENTRADAS_MAX:
         saida["problemas"].append(f"zip com {len(infos)} entradas; o máximo é {ZIP_ENTRADAS_MAX}")
-        return []
+        return None, None
     total_decl = sum(i.file_size for i in infos)
     total_comp = max(1, sum(i.compress_size for i in infos))
     razao = total_decl / total_comp
     if total_decl > cota:
         saida["problemas"].append(f"zip declara {_gb(total_decl)} descompactados, acima da cota de {_gb(cota)}; "
                                   "nada foi descompactado")
-        return []
+        return None, None
     if razao >= ZIP_RAZAO_MAX:
         saida["problemas"].append(f"zip declara razão de compressão de {razao:.0f}× (limite {ZIP_RAZAO_MAX}×): "
                                   "suspeita de zip-bomba; nada foi descompactado")
-        return []
+        return None, None
     # teto de VOLUME escrito, ligado ao tamanho do ENVIO (achado 7): a razão de 50× e a cota do inquilino
     # deixavam um envio de 1,4 MB escrever 60 MB no diretório de trabalho do worker.
     enviado = caminho.stat().st_size
@@ -513,8 +545,18 @@ def _abrir_zip(caminho: Path, cota: int, dir_trabalho: Path, saida: dict) -> lis
             f"zip de {_gb(enviado)} declara {_gb(total_decl)} descompactados, acima do teto de {_gb(teto)} para "
             f"um envio desse tamanho ({ZIP_VOLUME_FATOR}× o enviado mais {_gb(ZIP_VOLUME_PISO)}); nada foi "
             "descompactado")
+        return None, None
+    return zf, infos
+
+
+def _abrir_zip(caminho: Path, cota: int, dir_trabalho: Path, saida: dict) -> list[Path]:
+    """Só o diretório central é lido antes de decidir; extrai os rasters E os sidecars que os acompanham
+    (.hdr do ENVI, world file, pirâmides .rrd/.aux), depois de aprovado."""
+    zf, infos = _zip_seguro(caminho, cota, saida)
+    if zf is None:
         return []
     rasters = []
+    sidecars = []
     for i in infos:
         nome = i.filename
         if (len(nome.encode("utf-8", "replace")) > ZIP_NOME_MAX or nome.startswith("/") or ".." in nome.split("/")
@@ -529,12 +571,15 @@ def _abrir_zip(caminho: Path, cota: int, dir_trabalho: Path, saida: dict) -> lis
             return []
         if nome.lower().endswith(EXTENSOES_RASTER_EM_ZIP) and not i.is_dir():
             rasters.append(i)
+        elif nome.lower().endswith(SIDECARES_EM_ZIP) and not i.is_dir():
+            sidecars.append(i)
     if not rasters:
         saida["problemas"].append("o zip não contém nenhum GeoTIFF (.tif/.tiff) nem JPEG 2000 (.jp2)")
         return []
     destino = dir_trabalho / "zip_extraido"
     destino.mkdir(parents=True, exist_ok=True)
     caminhos = []
+    formato_interno = ""
     for i in rasters:
         alvo = destino / Path(i.filename).name
         with zf.open(i) as origem, alvo.open("wb") as f:
@@ -553,8 +598,191 @@ def _abrir_zip(caminho: Path, cota: int, dir_trabalho: Path, saida: dict) -> lis
             saida["problemas"].append(f"dentro do zip, {i.filename!r}: {problema}")
             return []
         caminhos.append(alvo)
+        formato_interno = formato or formato_interno
+    # sidecars (.hdr do ENVI, world file, pirâmides .rrd/.aux) viajam para o MESMO diretório achatado,
+    # de mesmo nome-base do raster que acompanham — sem eles o GDAL abre o raster sem georreferência
+    # (world file) ou nem acha o cabeçalho (ENVI); NUNCA entram em `caminhos`/`rasters`: são auxiliares
+    # do raster irmão, não uma "cena" própria (senão um .img+.rrd viraria "mosaico de 2 cenas").
+    for i in sidecars:
+        alvo = destino / Path(i.filename).name
+        if alvo.exists():  # nome duplicado (zip malformado): o raster já escreveu; não sobrescreve
+            continue
+        # sidecar já está sob o teto de VOLUME do zip inteiro (total_decl/cota, checado acima para
+        # TODAS as entradas, sidecar incluído); leitura de uma vez só (arquivo pequeno por natureza).
+        alvo.write_bytes(zf.read(i))
     saida["info"]["zip_entradas"] = [i.filename for i in rasters]
+    saida["info"]["extraido_em"] = destino.name
+    if len(rasters) == 1 and formato_interno:
+        # par de UM raster (ENVI dat+hdr, PNG/JPEG+world file, Erdas img+rrd): o formato de entrada é o
+        # de DENTRO — a tabela tem de dizer Erdas/PNG/JPEG, não "zip de rasters (mosaico)"; o mosaico de
+        # verdade (vários rasters) mantém o rótulo do contêiner (já em info["formato"] pelo pai).
+        saida["info"]["formato"] = formato_interno
     return caminhos
+
+
+def _copiar_entrada(zf, i, alvo: Path) -> bool:
+    """Copia UMA entrada do zip para `alvo`, provando o tamanho declarado a cada bloco (o cabeçalho que
+    mente para menos interrompe a cópia). Falso = problema registrado; a chamada interrompe e volta."""
+    alvo.parent.mkdir(parents=True, exist_ok=True)
+    with zf.open(i) as origem, alvo.open("wb") as f:
+        restante = i.file_size
+        while True:
+            bloco = origem.read(min(1 << 20, max(1, restante)))
+            if not bloco:
+                break
+            f.write(bloco)
+            restante -= len(bloco)
+            if restante < 0:  # o cabeçalho mentiu para menos: para antes de encher o disco
+                return False
+    return True
+
+
+def _extrair_flat(zf, entradas: list, destino: Path, saida: dict) -> dict[str, Path]:
+    """Extrai as entradas ACHATADAS em `destino` (nome de base — os sidecars irmãos continuam irmãos).
+    Devolve {nome de base: caminho}; dois arquivos de mesmo nome de base são recusa (sobrescrita silenciosa
+    jamais). Para no meio se o cabeçalho mentir sobre o tamanho."""
+    destino.mkdir(parents=True, exist_ok=True)
+    extraidos: dict[str, Path] = {}
+    for i in entradas:
+        nome_base = Path(i.filename).name
+        if nome_base.lower() in extraidos:
+            saida["problemas"].append(f"zip com dois arquivos de mesmo nome {nome_base!r}; nada foi extraído")
+            return {}
+        alvo = destino / nome_base
+        if not _copiar_entrada(zf, i, alvo):
+            saida["problemas"].append(f"a entrada {i.filename!r} do zip é maior do que o declarado")
+            return {}
+        extraidos[nome_base.lower()] = alvo
+    return extraidos
+
+
+def _abrir_kmz(caminho: Path, cota: int, dir_trabalho: Path, saida: dict) -> list[Path]:
+    """KMZ superoverlay: o GroundOverlay do doc.kml vira raster solto — a imagem é extraída e o world file
+    + .prj (KML é sempre WGS84, EPSG:4326) são ESCRITOS pela casa ao lado dela. Rotação diferente de zero
+    é recusa (a georreferência da caixa não descreve pixels girados)."""
+    import xml.etree.ElementTree as ET
+
+    import rasterio
+
+    zf, infos = _zip_seguro(caminho, cota, saida)
+    if zf is None:
+        return []
+    por_nome = {i.filename.lower(): i for i in infos if not i.is_dir()}
+    kml_info = por_nome.get("doc.kml")
+    if kml_info is None:
+        saida["problemas"].append("KMZ sem doc.kml: não é um superoverlay legível")
+        return []
+    try:
+        raiz = ET.fromstring(zf.read(kml_info))
+    except ET.ParseError as e:
+        saida["problemas"].append(f"doc.kml com XML inválido: {e}")
+        return []
+
+    def _texto(no, caminho: str) -> str | None:
+        achado = no.find(caminho)
+        return achado.text.strip() if achado is not None and achado.text else None
+
+    overlays = raiz.iter("{http://www.opengis.net/kml/2.2}GroundOverlay")
+    overlay = next(overlays, None)
+    if overlay is None:  # sem namespace ou sem overlay
+        overlay = next((el for el in raiz.iter() if el.tag.rsplit("}", 1)[-1] == "GroundOverlay"), None)
+    if overlay is None:
+        saida["problemas"].append("KMZ sem GroundOverlay: parece KML vetorial — importe como camada "
+                                  "vetorial (o caminho raster espera superoverlay de imagem)")
+        return []
+    href = _texto(overlay, ".//{*}Icon/{*}href") or _texto(overlay, ".//{*}href")
+    if not href:
+        saida["problemas"].append("GroundOverlay sem Icon/href: nenhuma imagem referenciada")
+        return []
+    if href.startswith(("http://", "https://", "/vsi")) or ".." in href.split("/"):
+        saida["problemas"].append(f"GroundOverlay aponta para imagem fora do KMZ: {href[:120]!r}")
+        return []
+    rotacao = _texto(overlay, ".//{*}LatLonBox/{*}rotation") or "0"
+    try:
+        if abs(float(rotacao)) > 1e-9:
+            saida["problemas"].append(f"KMZ com rotação de {rotacao} graus no LatLonBox: a georreferência da "
+                                      "caixa não descreve pixels girados; desrotacione no software de origem")
+            return []
+    except ValueError:
+        saida["problemas"].append(f"rotação do LatLonBox não é um número: {rotacao!r}")
+        return []
+    caixa = {t: _texto(overlay, f".//{{*}}LatLonBox/{{*}}{t}")
+             for t in ("north", "south", "east", "west")}
+    if any(v is None for v in caixa.values()):
+        saida["problemas"].append("GroundOverlay sem LatLonBox completo (north/south/east/west)")
+        return []
+    imagem_info = por_nome.get(href.lower().lstrip("./"))
+    if imagem_info is None:
+        saida["problemas"].append(f"a imagem {href!r} referenciada pelo doc.kml não está dentro do KMZ")
+        return []
+    destino = dir_trabalho / "kmz_extraido"
+    extraidos = _extrair_flat(zf, [imagem_info], destino, saida)
+    if not extraidos:
+        return []
+    imagem = next(iter(extraidos.values()))
+    formato, problema = conferir_assinatura(imagem)
+    if problema:
+        saida["problemas"].append(f"dentro do KMZ, {imagem_info.filename!r}: {problema}")
+        return []
+    # world file + .prj escritos pela casa (o par vem do LatLonBox, não do arquivo do cliente)
+    try:
+        with rasterio.open(str(imagem)) as d:  # só cabeçalho: dimensões para o tamanho do pixel
+            largura, altura = d.width, d.height
+            sufixos = (".pgw", ".wld") if d.driver == "PNG" else (".jgw", ".wld")
+    except Exception as e:  # noqa: BLE001 — defeito da imagem vira recusa em português
+        saida["problemas"].append(f"o GDAL não abriu a imagem do KMZ ({imagem.name}): {_detalhe(e)}")
+        return []
+    norte, sul, leste, oeste = (float(caixa[t]) for t in ("north", "south", "east", "west"))
+    px, py = (leste - oeste) / largura, (norte - sul) / altura
+    wld = (f"{px!r}\n0\n0\n{-py!r}\n{oeste + px / 2!r}\n{norte - py / 2!r}\n")
+    from rasterio.crs import CRS as _CRS
+    for s in sufixos:
+        (imagem.parent / (imagem.stem + s)).write_text(wld, encoding="ascii")
+    (imagem.parent / (imagem.name + ".prj")).write_text(_CRS.from_epsg(4326).to_wkt(), encoding="utf-8")
+    saida["info"]["zip_entradas"] = [imagem_info.filename]
+    saida["info"]["extraido_em"] = destino.name
+    saida["info"]["extraidos"] = sorted(p.name for p in extraidos.values()) + \
+        [imagem.stem + s for s in sufixos] + [imagem.name + ".prj"]
+    saida["info"]["georref_kmz"] = "doc.kml LatLonBox (EPSG:4326)"
+    return [imagem]
+
+
+_MARCADORES_ZARR = (".zgroup", ".zarray", "zarr.json", ".zmetadata")
+
+
+def _abrir_zarr(caminho: Path, cota: int, dir_trabalho: Path, saida: dict) -> list[Path]:
+    """Zarr zipado: o .zarr do cliente é um zip do armazém (marcadores .zgroup/.zarray do Zarr v2 ou
+    zarr.json do v3). Extrai TUDO preservando a estrutura interna (chunks e metadados vivem em subpastas —
+    achataria destruiria o armazém) e devolve o diretório-raiz do armazém — o driver Zarr do GDAL abre
+    diretório. Leitura só; escrita de Zarr não existe nesta instalação."""
+    zf, infos = _zip_seguro(caminho, cota, saida)
+    if zf is None:
+        return []
+    entradas = [i for i in infos if not i.is_dir()]
+    destino = dir_trabalho / "zarr_extraido"
+    destino.mkdir(parents=True, exist_ok=True)
+    for i in entradas:
+        if not _copiar_entrada(zf, i, destino / i.filename):
+            saida["problemas"].append(f"a entrada {i.filename!r} do zip é maior do que o declarado")
+            return []
+    raiz = None
+    for marcador in _MARCADORES_ZARR:
+        if (destino / marcador).exists():
+            raiz = destino
+            break
+        primeiro = next(destino.rglob(marcador), None)
+        if primeiro is not None:
+            raiz = primeiro.parent
+            break
+    if raiz is None:
+        saida["problemas"].append("o arquivo .zarr não contém um armazém Zarr (nenhum marcador .zgroup, "
+                                  ".zarray ou zarr.json dentro do zip)")
+        return []
+    saida["info"]["zip_entradas"] = [i.filename for i in entradas]
+    saida["info"]["extraido_em"] = destino.name
+    saida["info"]["extraidos"] = [i.filename for i in entradas]
+    saida["info"]["zarr_raiz"] = raiz.name
+    return [raiz]
 
 
 # Elementos do modelo VRT que SEMPRE referenciam dado, seja qual for a subclasse do dataset. `SourceDataset` é
@@ -695,13 +923,20 @@ def _inspecionar(fontes: list[Path], cota: int, perfil: str, respostas: dict, sa
                 c = _Cabecalho()
                 c.width, c.height, c.count, c.dtypes = d.width, d.height, d.count, list(d.dtypes)
                 c.colorinterp = [ci.name for ci in d.colorinterp]
+                # epsg/res/bounds de CADA arquivo (não só do primeiro): item L1-01-f cláusula 4 — o
+                # mosaico (zip com vários rasters) precisa comparar CRS/resolução/sobreposição cena a
+                # cena, não só do primeiro contra as demais dimensões.
+                c.epsg = d.crs.to_epsg() if d.crs else None
+                c.res = tuple(d.res)
+                c.bounds = tuple(d.bounds)
                 cabecalhos.append(c)
                 if primeiro is None:
                     primeiro = c
                     c.driver, c.nodata, c.crs = d.driver, d.nodata, d.crs
-                    c.res, c.bounds, c.tags = tuple(d.res), tuple(d.bounds), dict(d.tags())
+                    c.tags = dict(d.tags())
                     c.transform = d.transform
                     c.alpha = MaskFlags.alpha in d.mask_flag_enums[0]
+                    c.subdatasets = list(d.subdatasets)
         except Exception as e:  # noqa: BLE001 — qualquer defeito do ARQUIVO vira recusa em português
             problemas.append(f"o GDAL não abriu {f.name}: {_detalhe(e)}")
             return
@@ -715,18 +950,68 @@ def _inspecionar(fontes: list[Path], cota: int, perfil: str, respostas: dict, sa
             bandas += d.count
         info.update({"driver": ds.driver, "largura": ds.width, "altura": ds.height, "bandas": bandas,
                      "tipos": sorted(set(tipos)), "tipo": tipos[0] if tipos else None,
-                     "arquivos": [f.name for f in fontes]})
+                     "arquivos": [f.name for f in fontes], "mosaico": len(cabecalhos) > 1})
         if bandas < 1:
             problemas.append("o arquivo não tem nenhuma banda")
             return
         if bandas > BANDAS_MAX:
             problemas.append(f"{bandas} bandas; o máximo aceito é {BANDAS_MAX}")
             return
-        for d in cabecalhos[1:]:
-            if (d.width, d.height) != (ds.width, ds.height):
-                problemas.append(f"arquivos do zip com dimensões diferentes: {ds.width}×{ds.height} e "
-                                 f"{d.width}×{d.height}")
+        # --- família multidimensional (netCDF/GRIB): 1 variável × 1 tempo = 1 raster; o resto é o L1-19
+        if ds.driver in FAMILIA_MULTIDIMENSIONAL:
+            if len(primeiro.subdatasets) > 1:
+                problemas.append(
+                    "o arquivo tem " + str(len(primeiro.subdatasets)) + " variáveis (subdatasets): " +
+                    "; ".join(s.rsplit(":", 1)[-1] for s in primeiro.subdatasets[:5]) +
+                    ("…" if len(primeiro.subdatasets) > 5 else "") +
+                    ". A leitura de dados multidimensionais (variáveis múltiplas, eixo de tempo/profundidade) "
+                    "é o item L1-19, não a entrada raster")
                 return
+            if bandas > 1:
+                problemas.append(
+                    f"o arquivo tem {bandas} fatias (eixo de tempo/profundidade ou variáveis múltiplas): "
+                    "nesta instalação cada entrada raster é 1 variável de 1 tempo só; a leitura de séries "
+                    "temporais é o item L1-19 (dados multidimensionais)")
+                return
+        # --- mosaico (zip com vários rasters): só vira mosaico se os pedaços são comparáveis (item
+        # L1-01-f cláusula 4). A plataforma não reprojeta na importação — cenas em CRS diferentes
+        # recusam DIZENDO quais (arquivo + EPSG de cada uma), nunca uma escolha silenciosa de lado.
+        if len(cabecalhos) > 1:
+            sem_crs = [f.name for c, f in zip(cabecalhos, fontes, strict=True) if c.epsg is None]
+            if sem_crs:
+                problemas.append("cenas do zip sem CRS: " + ", ".join(sem_crs) +
+                                 "; mosaico exige CRS em todas as cenas (informe o EPSG no envio)")
+                return
+            epsgs = {c.epsg for c in cabecalhos}
+            if len(epsgs) > 1:
+                problemas.append(
+                    "cenas do zip em CRS diferentes: " +
+                    ", ".join(f"{f.name} (EPSG:{c.epsg})" for c, f in zip(cabecalhos, fontes, strict=True)) +
+                    "; a plataforma não reprojeta na importação — reprojeite as cenas para o mesmo CRS no "
+                    "software de origem e envie de novo")
+                return
+            for c in cabecalhos[1:]:
+                if (c.width, c.height) != (ds.width, ds.height):
+                    problemas.append(f"cenas do zip com dimensões diferentes: {ds.width}×{ds.height} e "
+                                     f"{c.width}×{c.height}")
+                    return
+                if c.res != ds.res:
+                    problemas.append(f"cenas do zip com resoluções diferentes: {ds.res[0]:g}/{ds.res[1]:g} e "
+                                     f"{c.res[0]:g}/{c.res[1]:g} (metros por pixel)")
+                    return
+            for a in range(len(cabecalhos)):
+                for b in range(a + 1, len(cabecalhos)):
+                    ba, bb = cabecalhos[a].bounds, cabecalhos[b].bounds
+                    dx = min(ba[2], bb[2]) - max(ba[0], bb[0])   # interseção em X (colunas)
+                    dy = min(ba[3], bb[3]) - max(ba[1], bb[1])   # interseção em Y (linhas)
+                    if dx > ds.res[0] / 2 and dy > abs(ds.res[1]) / 2:
+                        problemas.append(f"cenas sobrepostas no zip: {fontes[a].name} e {fontes[b].name} "
+                                         "cobrem o mesmo chão; o mosaico não duplica dado — envie cenas "
+                                         "adjacentes, sem recorte comum")
+                        return
+                    if max(-dx, -dy) > 2 * max(abs(ds.res[0]), abs(ds.res[1])):
+                        avisos.append("o mosaico tem lacunas: há cenas vizinhas que não se tocam "
+                                      "(bordas sem cobertura)")
         if len(set(tipos)) > 1:
             problemas.append(f"bandas com tipos de dado diferentes: {', '.join(sorted(set(tipos)))}; "
                              "todas as bandas têm de ter o mesmo tipo")
