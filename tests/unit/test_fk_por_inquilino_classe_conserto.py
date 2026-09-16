@@ -125,8 +125,10 @@ def _token(cur, tenant_id):
     usuario = _admin(cur, tenant_id)
     nome = _z("token")
     cur.execute(
-        "INSERT INTO plat.token_servico(tenant_id, usuario_id, nome, token_hash, prefixo) "
-        "VALUES (%s, %s, %s, %s, 'zfk') RETURNING id",
+        # expira_em é NOT NULL desde o item L7-08-d (migração 20260906T1617_chaves_api.sql), com teto de
+        # 366 dias sobre criado_em (ck_token_prazo_teto) — 90 dias é o mesmo prazo do backfill da migração.
+        "INSERT INTO plat.token_servico(tenant_id, usuario_id, nome, token_hash, prefixo, expira_em) "
+        "VALUES (%s, %s, %s, %s, 'zfk', now() + interval '90 days') RETURNING id",
         (tenant_id, usuario, nome, f"hash-{nome}"),
     )
     return cur.fetchone()["id"]
@@ -178,8 +180,10 @@ def _inserir_link_item_id(cur, b, valor):
 def _inserir_token_renovado_por(cur, b, valor):
     nome = _z("token-b")
     cur.execute(
-        "INSERT INTO plat.token_servico(tenant_id, usuario_id, nome, token_hash, prefixo, renovado_por) "
-        "VALUES (%s, %s, %s, %s, 'zfk', %s)",
+        # expira_em NOT NULL desde o L7-08-d (ver _token acima) — sem ela o INSERT falha antes de chegar
+        # na FK de renovado_por que este caso quer exercitar.
+        "INSERT INTO plat.token_servico(tenant_id, usuario_id, nome, token_hash, prefixo, expira_em, "
+        "renovado_por) VALUES (%s, %s, %s, %s, 'zfk', now() + interval '90 days', %s)",
         (b, _admin(cur, b), nome, f"hash-{nome}", valor),
     )
 
