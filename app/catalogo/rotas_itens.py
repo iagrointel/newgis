@@ -275,6 +275,10 @@ def listar_ids(cur, auth: Auth, p: dict, lixeira: bool = False) -> tuple[int, li
     chaves, direcao, nome_ord = _ordenacao(consulta, p.get("ordenar"), p.get("direcao"))
     chave["ordenar"], chave["direcao"] = nome_ord, direcao
     assinatura = mod_busca.assinatura(chave)
+    # cursor de outra consulta/ordenação tem de cair AQUI, antes de qualquer caminho de saída antecipada
+    # (achado: a reserva por trigram abaixo devolvia 200 ignorando um cursor cruzado, porque a validação só
+    # rodava depois, no caminho normal — nunca alcançada quando o total==0 tomava o atalho da reserva).
+    cursor_decodificado = mod_busca.cursor_decodificar(p["cursor"], assinatura) if p.get("cursor") else None
     onde = " WHERE " + " AND ".join(cond)
     cur.execute(f"SELECT count(*) AS n {FROM_LISTA}{onde}", params)
     total = cur.fetchone()["n"]
@@ -321,9 +325,8 @@ def listar_ids(cur, auth: Auth, p: dict, lixeira: bool = False) -> tuple[int, li
         cur.execute(f"SELECT count(*) AS n {FROM_LISTA}{onde}", params)
         total = cur.fetchone()["n"]
     cursor_params: list = []
-    if p.get("cursor"):
-        c = mod_busca.cursor_decodificar(p["cursor"], assinatura)
-        valores = list(c["v"]) + [c["id"]]
+    if cursor_decodificado is not None:
+        valores = list(cursor_decodificado["v"]) + [cursor_decodificado["id"]]
         if len(valores) != len(exprs):
             raise ErroAPI(400, "cursor_invalido", "cursor de outra ordenação")
         op = "<" if direcao == "desc" else ">"
