@@ -34,9 +34,15 @@ def test_criacao_valida_tipo_parametros_e_corpo(cliente_demo):
 
 
 def test_sem_cookie_401_no_formato_d18(cliente):
+    """D18 (`app/erros.py`) continua valendo — `erro`/`mensagem`/`req_id` sempre presentes — mas o ADR 0018
+    (L7-08-d) acrescentou os membros RFC 9457 (`type`/`title`/`status`/`detail`/`instance`) por CIMA, nunca
+    em troca; o corpo não é mais só os três campos originais."""
     r = cliente.get("/api/jobs")
     assert r.status_code == 401
-    assert set(r.json()) == {"erro", "mensagem", "req_id"} and r.json()["erro"] == "nao_autenticado"
+    corpo = r.json()
+    for campo in ("erro", "mensagem", "req_id"):
+        assert campo in corpo, (campo, sorted(corpo))
+    assert corpo["erro"] == "nao_autenticado"
 
 
 def test_100_jobs_executados_exatamente_uma_vez(cliente_demo, worker_vivo, worker_extra, conexao_plat_app, medida):
