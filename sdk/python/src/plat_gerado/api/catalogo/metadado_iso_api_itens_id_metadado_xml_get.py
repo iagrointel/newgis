@@ -7,18 +7,32 @@ import httpx
 from ... import errors
 from ...client import AuthenticatedClient, Client
 from ...models.http_validation_error import HTTPValidationError
-from ...types import Response
+from ...types import UNSET, Response, Unset
 
 
 def _get_kwargs(
     id: str,
+    *,
+    formato: None | str | Unset = UNSET,
 ) -> dict[str, Any]:
+
+    params: dict[str, Any] = {}
+
+    json_formato: None | str | Unset
+    if isinstance(formato, Unset):
+        json_formato = UNSET
+    else:
+        json_formato = formato
+    params["formato"] = json_formato
+
+    params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
 
     _kwargs: dict[str, Any] = {
         "method": "get",
         "url": "/api/itens/{id}/metadado.xml".format(
             id=quote(str(id), safe=""),
         ),
+        "params": params,
     }
 
     return _kwargs
@@ -57,16 +71,21 @@ def sync_detailed(
     id: str,
     *,
     client: AuthenticatedClient | Client,
+    formato: None | str | Unset = UNSET,
 ) -> Response[Any | HTTPValidationError]:
     """Metadado Iso
 
-     Metadado ISO 19139/GMD do item (item L0-09-metadado-catalogo; ADR 0004 D17). Validado contra o XSD
-    oficial ANTES de sair (docs/xsd/cache/, baixado por docs/xsd/baixar_iso19139.py); `item_ou_404` +
-    RLS de
-    `plat.item` garantem que o token/sessão de um inquilino nunca gera o XML de item de outro.
+     Metadado ISO do item (item L0-09-metadado-catalogo; ADR 0004 D17). Padrão = ISO 19139/GMD (o que o
+    Perfil MGB/INDE consome); `?formato=19115-3` pede `mdb:MD_Metadata` (ISO 19115-1/19115-3, L0-09
+    cláusula
+    2/D42) — os dois validados contra o XSD oficial ANTES de sair (docs/xsd/cache/, baixado por
+    docs/xsd/baixar_iso19139.py --perfil iso19139|iso19115-3); `item_ou_404` + RLS de `plat.item`
+    garantem que
+    o token/sessão de um inquilino nunca gera o XML de item de outro.
 
     Args:
         id (str):
+        formato (None | str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -78,6 +97,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         id=id,
+        formato=formato,
     )
 
     response = client.get_httpx_client().request(
@@ -91,16 +111,21 @@ def sync(
     id: str,
     *,
     client: AuthenticatedClient | Client,
+    formato: None | str | Unset = UNSET,
 ) -> Any | HTTPValidationError | None:
     """Metadado Iso
 
-     Metadado ISO 19139/GMD do item (item L0-09-metadado-catalogo; ADR 0004 D17). Validado contra o XSD
-    oficial ANTES de sair (docs/xsd/cache/, baixado por docs/xsd/baixar_iso19139.py); `item_ou_404` +
-    RLS de
-    `plat.item` garantem que o token/sessão de um inquilino nunca gera o XML de item de outro.
+     Metadado ISO do item (item L0-09-metadado-catalogo; ADR 0004 D17). Padrão = ISO 19139/GMD (o que o
+    Perfil MGB/INDE consome); `?formato=19115-3` pede `mdb:MD_Metadata` (ISO 19115-1/19115-3, L0-09
+    cláusula
+    2/D42) — os dois validados contra o XSD oficial ANTES de sair (docs/xsd/cache/, baixado por
+    docs/xsd/baixar_iso19139.py --perfil iso19139|iso19115-3); `item_ou_404` + RLS de `plat.item`
+    garantem que
+    o token/sessão de um inquilino nunca gera o XML de item de outro.
 
     Args:
         id (str):
+        formato (None | str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -113,6 +138,7 @@ def sync(
     return sync_detailed(
         id=id,
         client=client,
+        formato=formato,
     ).parsed
 
 
@@ -120,16 +146,21 @@ async def asyncio_detailed(
     id: str,
     *,
     client: AuthenticatedClient | Client,
+    formato: None | str | Unset = UNSET,
 ) -> Response[Any | HTTPValidationError]:
     """Metadado Iso
 
-     Metadado ISO 19139/GMD do item (item L0-09-metadado-catalogo; ADR 0004 D17). Validado contra o XSD
-    oficial ANTES de sair (docs/xsd/cache/, baixado por docs/xsd/baixar_iso19139.py); `item_ou_404` +
-    RLS de
-    `plat.item` garantem que o token/sessão de um inquilino nunca gera o XML de item de outro.
+     Metadado ISO do item (item L0-09-metadado-catalogo; ADR 0004 D17). Padrão = ISO 19139/GMD (o que o
+    Perfil MGB/INDE consome); `?formato=19115-3` pede `mdb:MD_Metadata` (ISO 19115-1/19115-3, L0-09
+    cláusula
+    2/D42) — os dois validados contra o XSD oficial ANTES de sair (docs/xsd/cache/, baixado por
+    docs/xsd/baixar_iso19139.py --perfil iso19139|iso19115-3); `item_ou_404` + RLS de `plat.item`
+    garantem que
+    o token/sessão de um inquilino nunca gera o XML de item de outro.
 
     Args:
         id (str):
+        formato (None | str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -141,6 +172,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         id=id,
+        formato=formato,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -152,16 +184,21 @@ async def asyncio(
     id: str,
     *,
     client: AuthenticatedClient | Client,
+    formato: None | str | Unset = UNSET,
 ) -> Any | HTTPValidationError | None:
     """Metadado Iso
 
-     Metadado ISO 19139/GMD do item (item L0-09-metadado-catalogo; ADR 0004 D17). Validado contra o XSD
-    oficial ANTES de sair (docs/xsd/cache/, baixado por docs/xsd/baixar_iso19139.py); `item_ou_404` +
-    RLS de
-    `plat.item` garantem que o token/sessão de um inquilino nunca gera o XML de item de outro.
+     Metadado ISO do item (item L0-09-metadado-catalogo; ADR 0004 D17). Padrão = ISO 19139/GMD (o que o
+    Perfil MGB/INDE consome); `?formato=19115-3` pede `mdb:MD_Metadata` (ISO 19115-1/19115-3, L0-09
+    cláusula
+    2/D42) — os dois validados contra o XSD oficial ANTES de sair (docs/xsd/cache/, baixado por
+    docs/xsd/baixar_iso19139.py --perfil iso19139|iso19115-3); `item_ou_404` + RLS de `plat.item`
+    garantem que
+    o token/sessão de um inquilino nunca gera o XML de item de outro.
 
     Args:
         id (str):
+        formato (None | str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -175,5 +212,6 @@ async def asyncio(
         await asyncio_detailed(
             id=id,
             client=client,
+            formato=formato,
         )
     ).parsed

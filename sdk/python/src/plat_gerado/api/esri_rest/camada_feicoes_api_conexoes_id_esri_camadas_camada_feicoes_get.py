@@ -1,0 +1,224 @@
+from http import HTTPStatus
+from typing import Any
+from urllib.parse import quote
+
+import httpx
+
+from ... import errors
+from ...client import AuthenticatedClient, Client
+from ...models.http_validation_error import HTTPValidationError
+from ...types import UNSET, Response, Unset
+
+
+def _get_kwargs(
+    id: str,
+    camada: str,
+    *,
+    where: str | Unset = "1=1",
+    campos: str | Unset = "*",
+    out_sr: int | Unset = 4326,
+) -> dict[str, Any]:
+
+    params: dict[str, Any] = {}
+
+    params["where"] = where
+
+    params["campos"] = campos
+
+    params["outSR"] = out_sr
+
+    params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
+
+    _kwargs: dict[str, Any] = {
+        "method": "get",
+        "url": "/api/conexoes/{id}/esri/camadas/{camada}/feicoes".format(
+            id=quote(str(id), safe=""),
+            camada=quote(str(camada), safe=""),
+        ),
+        "params": params,
+    }
+
+    return _kwargs
+
+
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Any | HTTPValidationError | None:
+    if response.status_code == 200:
+        response_200 = response.json()
+        return response_200
+
+    if response.status_code == 422:
+        response_422 = HTTPValidationError.from_dict(response.json())
+
+        return response_422
+
+    if client.raise_on_unexpected_status:
+        raise errors.UnexpectedStatus(response.status_code, response.content)
+    else:
+        return None
+
+
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[Any | HTTPValidationError]:
+    return Response(
+        status_code=HTTPStatus(response.status_code),
+        content=response.content,
+        headers=response.headers,
+        parsed=_parse_response(client=client, response=response),
+    )
+
+
+def sync_detailed(
+    id: str,
+    camada: str,
+    *,
+    client: AuthenticatedClient | Client,
+    where: str | Unset = "1=1",
+    campos: str | Unset = "*",
+    out_sr: int | Unset = 4326,
+) -> Response[Any | HTTPValidationError]:
+    """Camada Feicoes
+
+    Args:
+        id (str):
+        camada (str):
+        where (str | Unset):  Default: '1=1'.
+        campos (str | Unset):  Default: '*'.
+        out_sr (int | Unset):  Default: 4326.
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Response[Any | HTTPValidationError]
+    """
+
+    kwargs = _get_kwargs(
+        id=id,
+        camada=camada,
+        where=where,
+        campos=campos,
+        out_sr=out_sr,
+    )
+
+    response = client.get_httpx_client().request(
+        **kwargs,
+    )
+
+    return _build_response(client=client, response=response)
+
+
+def sync(
+    id: str,
+    camada: str,
+    *,
+    client: AuthenticatedClient | Client,
+    where: str | Unset = "1=1",
+    campos: str | Unset = "*",
+    out_sr: int | Unset = 4326,
+) -> Any | HTTPValidationError | None:
+    """Camada Feicoes
+
+    Args:
+        id (str):
+        camada (str):
+        where (str | Unset):  Default: '1=1'.
+        campos (str | Unset):  Default: '*'.
+        out_sr (int | Unset):  Default: 4326.
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Any | HTTPValidationError
+    """
+
+    return sync_detailed(
+        id=id,
+        camada=camada,
+        client=client,
+        where=where,
+        campos=campos,
+        out_sr=out_sr,
+    ).parsed
+
+
+async def asyncio_detailed(
+    id: str,
+    camada: str,
+    *,
+    client: AuthenticatedClient | Client,
+    where: str | Unset = "1=1",
+    campos: str | Unset = "*",
+    out_sr: int | Unset = 4326,
+) -> Response[Any | HTTPValidationError]:
+    """Camada Feicoes
+
+    Args:
+        id (str):
+        camada (str):
+        where (str | Unset):  Default: '1=1'.
+        campos (str | Unset):  Default: '*'.
+        out_sr (int | Unset):  Default: 4326.
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Response[Any | HTTPValidationError]
+    """
+
+    kwargs = _get_kwargs(
+        id=id,
+        camada=camada,
+        where=where,
+        campos=campos,
+        out_sr=out_sr,
+    )
+
+    response = await client.get_async_httpx_client().request(**kwargs)
+
+    return _build_response(client=client, response=response)
+
+
+async def asyncio(
+    id: str,
+    camada: str,
+    *,
+    client: AuthenticatedClient | Client,
+    where: str | Unset = "1=1",
+    campos: str | Unset = "*",
+    out_sr: int | Unset = 4326,
+) -> Any | HTTPValidationError | None:
+    """Camada Feicoes
+
+    Args:
+        id (str):
+        camada (str):
+        where (str | Unset):  Default: '1=1'.
+        campos (str | Unset):  Default: '*'.
+        out_sr (int | Unset):  Default: 4326.
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Any | HTTPValidationError
+    """
+
+    return (
+        await asyncio_detailed(
+            id=id,
+            camada=camada,
+            client=client,
+            where=where,
+            campos=campos,
+            out_sr=out_sr,
+        )
+    ).parsed

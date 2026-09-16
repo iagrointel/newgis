@@ -9,21 +9,34 @@ from ...client import AuthenticatedClient, Client
 from ...models.editar_parcial_api_itens_id_patch_corpo import EditarParcialApiItensIdPatchCorpo
 from ...models.http_validation_error import HTTPValidationError
 from ...models.item import Item
-from ...types import Response
+from ...types import UNSET, Response, Unset
 
 
 def _get_kwargs(
     id: str,
     *,
     body: EditarParcialApiItensIdPatchCorpo,
+    rotulo: None | str | Unset = UNSET,
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+
+    params: dict[str, Any] = {}
+
+    json_rotulo: None | str | Unset
+    if isinstance(rotulo, Unset):
+        json_rotulo = UNSET
+    else:
+        json_rotulo = rotulo
+    params["rotulo"] = json_rotulo
+
+    params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
 
     _kwargs: dict[str, Any] = {
         "method": "patch",
         "url": "/api/itens/{id}".format(
             id=quote(str(id), safe=""),
         ),
+        "params": params,
     }
 
     _kwargs["json"] = body.to_dict()
@@ -69,11 +82,19 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: EditarParcialApiItensIdPatchCorpo,
+    rotulo: None | str | Unset = UNSET,
 ) -> Response[HTTPValidationError | Item]:
     """Editar Parcial
 
+     `?rotulo=rascunho` é o autosave do editor (ADR 20260907T1522, item L5-09): grava a versão rotulada
+    'rascunho' em vez de 'edicao'. Nenhum outro valor é aceito por fora (regex trava em `rascunho`); os
+    demais rótulos do enum só o servidor escreve sozinho
+    (edicao/restauracao/publicacao/compactada/migracao).
+    Nunca toca `versao_publicada` — só `.../versoes/{n}/publicar` muda isso.
+
     Args:
         id (str):
+        rotulo (None | str | Unset):
         body (EditarParcialApiItensIdPatchCorpo):
 
     Raises:
@@ -87,6 +108,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         id=id,
         body=body,
+        rotulo=rotulo,
     )
 
     response = client.get_httpx_client().request(
@@ -101,11 +123,19 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: EditarParcialApiItensIdPatchCorpo,
+    rotulo: None | str | Unset = UNSET,
 ) -> HTTPValidationError | Item | None:
     """Editar Parcial
 
+     `?rotulo=rascunho` é o autosave do editor (ADR 20260907T1522, item L5-09): grava a versão rotulada
+    'rascunho' em vez de 'edicao'. Nenhum outro valor é aceito por fora (regex trava em `rascunho`); os
+    demais rótulos do enum só o servidor escreve sozinho
+    (edicao/restauracao/publicacao/compactada/migracao).
+    Nunca toca `versao_publicada` — só `.../versoes/{n}/publicar` muda isso.
+
     Args:
         id (str):
+        rotulo (None | str | Unset):
         body (EditarParcialApiItensIdPatchCorpo):
 
     Raises:
@@ -120,6 +150,7 @@ def sync(
         id=id,
         client=client,
         body=body,
+        rotulo=rotulo,
     ).parsed
 
 
@@ -128,11 +159,19 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: EditarParcialApiItensIdPatchCorpo,
+    rotulo: None | str | Unset = UNSET,
 ) -> Response[HTTPValidationError | Item]:
     """Editar Parcial
 
+     `?rotulo=rascunho` é o autosave do editor (ADR 20260907T1522, item L5-09): grava a versão rotulada
+    'rascunho' em vez de 'edicao'. Nenhum outro valor é aceito por fora (regex trava em `rascunho`); os
+    demais rótulos do enum só o servidor escreve sozinho
+    (edicao/restauracao/publicacao/compactada/migracao).
+    Nunca toca `versao_publicada` — só `.../versoes/{n}/publicar` muda isso.
+
     Args:
         id (str):
+        rotulo (None | str | Unset):
         body (EditarParcialApiItensIdPatchCorpo):
 
     Raises:
@@ -146,6 +185,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         id=id,
         body=body,
+        rotulo=rotulo,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -158,11 +198,19 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: EditarParcialApiItensIdPatchCorpo,
+    rotulo: None | str | Unset = UNSET,
 ) -> HTTPValidationError | Item | None:
     """Editar Parcial
 
+     `?rotulo=rascunho` é o autosave do editor (ADR 20260907T1522, item L5-09): grava a versão rotulada
+    'rascunho' em vez de 'edicao'. Nenhum outro valor é aceito por fora (regex trava em `rascunho`); os
+    demais rótulos do enum só o servidor escreve sozinho
+    (edicao/restauracao/publicacao/compactada/migracao).
+    Nunca toca `versao_publicada` — só `.../versoes/{n}/publicar` muda isso.
+
     Args:
         id (str):
+        rotulo (None | str | Unset):
         body (EditarParcialApiItensIdPatchCorpo):
 
     Raises:
@@ -178,5 +226,6 @@ async def asyncio(
             id=id,
             client=client,
             body=body,
+            rotulo=rotulo,
         )
     ).parsed

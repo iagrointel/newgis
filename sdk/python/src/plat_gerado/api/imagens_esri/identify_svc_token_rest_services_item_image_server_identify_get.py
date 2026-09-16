@@ -1,0 +1,289 @@
+from http import HTTPStatus
+from typing import Any
+from urllib.parse import quote
+
+import httpx
+
+from ... import errors
+from ...client import AuthenticatedClient, Client
+from ...models.http_validation_error import HTTPValidationError
+from ...types import UNSET, Response, Unset
+
+
+def _get_kwargs(
+    token: str,
+    item: str,
+    *,
+    geometry: str,
+    geometry_type: str | Unset = "esriGeometryPoint",
+    sr: None | str | Unset = UNSET,
+    f: None | str | Unset = UNSET,
+    callback: None | str | Unset = UNSET,
+    asset: None | str | Unset = UNSET,
+) -> dict[str, Any]:
+
+    params: dict[str, Any] = {}
+
+    params["geometry"] = geometry
+
+    params["geometryType"] = geometry_type
+
+    json_sr: None | str | Unset
+    if isinstance(sr, Unset):
+        json_sr = UNSET
+    else:
+        json_sr = sr
+    params["sr"] = json_sr
+
+    json_f: None | str | Unset
+    if isinstance(f, Unset):
+        json_f = UNSET
+    else:
+        json_f = f
+    params["f"] = json_f
+
+    json_callback: None | str | Unset
+    if isinstance(callback, Unset):
+        json_callback = UNSET
+    else:
+        json_callback = callback
+    params["callback"] = json_callback
+
+    json_asset: None | str | Unset
+    if isinstance(asset, Unset):
+        json_asset = UNSET
+    else:
+        json_asset = asset
+    params["asset"] = json_asset
+
+    params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
+
+    _kwargs: dict[str, Any] = {
+        "method": "get",
+        "url": "/svc/{token}/rest/services/{item}/ImageServer/identify".format(
+            token=quote(str(token), safe=""),
+            item=quote(str(item), safe=""),
+        ),
+        "params": params,
+    }
+
+    return _kwargs
+
+
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Any | HTTPValidationError | None:
+    if response.status_code == 200:
+        response_200 = response.json()
+        return response_200
+
+    if response.status_code == 422:
+        response_422 = HTTPValidationError.from_dict(response.json())
+
+        return response_422
+
+    if client.raise_on_unexpected_status:
+        raise errors.UnexpectedStatus(response.status_code, response.content)
+    else:
+        return None
+
+
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[Any | HTTPValidationError]:
+    return Response(
+        status_code=HTTPStatus(response.status_code),
+        content=response.content,
+        headers=response.headers,
+        parsed=_parse_response(client=client, response=response),
+    )
+
+
+def sync_detailed(
+    token: str,
+    item: str,
+    *,
+    client: AuthenticatedClient | Client,
+    geometry: str,
+    geometry_type: str | Unset = "esriGeometryPoint",
+    sr: None | str | Unset = UNSET,
+    f: None | str | Unset = UNSET,
+    callback: None | str | Unset = UNSET,
+    asset: None | str | Unset = UNSET,
+) -> Response[Any | HTTPValidationError]:
+    """valor de pixel num ponto
+
+    Args:
+        token (str):
+        item (str):
+        geometry (str): "x,y" ou {"x":..,"y":..,"spatialReference":{"wkid":..}}
+        geometry_type (str | Unset):  Default: 'esriGeometryPoint'.
+        sr (None | str | Unset):
+        f (None | str | Unset):
+        callback (None | str | Unset):
+        asset (None | str | Unset):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Response[Any | HTTPValidationError]
+    """
+
+    kwargs = _get_kwargs(
+        token=token,
+        item=item,
+        geometry=geometry,
+        geometry_type=geometry_type,
+        sr=sr,
+        f=f,
+        callback=callback,
+        asset=asset,
+    )
+
+    response = client.get_httpx_client().request(
+        **kwargs,
+    )
+
+    return _build_response(client=client, response=response)
+
+
+def sync(
+    token: str,
+    item: str,
+    *,
+    client: AuthenticatedClient | Client,
+    geometry: str,
+    geometry_type: str | Unset = "esriGeometryPoint",
+    sr: None | str | Unset = UNSET,
+    f: None | str | Unset = UNSET,
+    callback: None | str | Unset = UNSET,
+    asset: None | str | Unset = UNSET,
+) -> Any | HTTPValidationError | None:
+    """valor de pixel num ponto
+
+    Args:
+        token (str):
+        item (str):
+        geometry (str): "x,y" ou {"x":..,"y":..,"spatialReference":{"wkid":..}}
+        geometry_type (str | Unset):  Default: 'esriGeometryPoint'.
+        sr (None | str | Unset):
+        f (None | str | Unset):
+        callback (None | str | Unset):
+        asset (None | str | Unset):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Any | HTTPValidationError
+    """
+
+    return sync_detailed(
+        token=token,
+        item=item,
+        client=client,
+        geometry=geometry,
+        geometry_type=geometry_type,
+        sr=sr,
+        f=f,
+        callback=callback,
+        asset=asset,
+    ).parsed
+
+
+async def asyncio_detailed(
+    token: str,
+    item: str,
+    *,
+    client: AuthenticatedClient | Client,
+    geometry: str,
+    geometry_type: str | Unset = "esriGeometryPoint",
+    sr: None | str | Unset = UNSET,
+    f: None | str | Unset = UNSET,
+    callback: None | str | Unset = UNSET,
+    asset: None | str | Unset = UNSET,
+) -> Response[Any | HTTPValidationError]:
+    """valor de pixel num ponto
+
+    Args:
+        token (str):
+        item (str):
+        geometry (str): "x,y" ou {"x":..,"y":..,"spatialReference":{"wkid":..}}
+        geometry_type (str | Unset):  Default: 'esriGeometryPoint'.
+        sr (None | str | Unset):
+        f (None | str | Unset):
+        callback (None | str | Unset):
+        asset (None | str | Unset):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Response[Any | HTTPValidationError]
+    """
+
+    kwargs = _get_kwargs(
+        token=token,
+        item=item,
+        geometry=geometry,
+        geometry_type=geometry_type,
+        sr=sr,
+        f=f,
+        callback=callback,
+        asset=asset,
+    )
+
+    response = await client.get_async_httpx_client().request(**kwargs)
+
+    return _build_response(client=client, response=response)
+
+
+async def asyncio(
+    token: str,
+    item: str,
+    *,
+    client: AuthenticatedClient | Client,
+    geometry: str,
+    geometry_type: str | Unset = "esriGeometryPoint",
+    sr: None | str | Unset = UNSET,
+    f: None | str | Unset = UNSET,
+    callback: None | str | Unset = UNSET,
+    asset: None | str | Unset = UNSET,
+) -> Any | HTTPValidationError | None:
+    """valor de pixel num ponto
+
+    Args:
+        token (str):
+        item (str):
+        geometry (str): "x,y" ou {"x":..,"y":..,"spatialReference":{"wkid":..}}
+        geometry_type (str | Unset):  Default: 'esriGeometryPoint'.
+        sr (None | str | Unset):
+        f (None | str | Unset):
+        callback (None | str | Unset):
+        asset (None | str | Unset):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Any | HTTPValidationError
+    """
+
+    return (
+        await asyncio_detailed(
+            token=token,
+            item=item,
+            client=client,
+            geometry=geometry,
+            geometry_type=geometry_type,
+            sr=sr,
+            f=f,
+            callback=callback,
+            asset=asset,
+        )
+    ).parsed

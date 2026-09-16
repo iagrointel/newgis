@@ -1,10 +1,16 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
+
+from ..types import UNSET, Unset
+
+if TYPE_CHECKING:
+    from ..models.link_criado_avisos_item import LinkCriadoAvisosItem
+
 
 T = TypeVar("T", bound="LinkCriado")
 
@@ -23,6 +29,7 @@ class LinkCriado:
         itens_incluidos (list[str]):
         token (str):
         url (str):
+        avisos (list[LinkCriadoAvisosItem] | Unset):
     """
 
     id: str
@@ -35,6 +42,7 @@ class LinkCriado:
     itens_incluidos: list[str]
     token: str
     url: str
+    avisos: list[LinkCriadoAvisosItem] | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -62,6 +70,13 @@ class LinkCriado:
 
         url = self.url
 
+        avisos: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.avisos, Unset):
+            avisos = []
+            for avisos_item_data in self.avisos:
+                avisos_item = avisos_item_data.to_dict()
+                avisos.append(avisos_item)
+
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
@@ -78,11 +93,15 @@ class LinkCriado:
                 "url": url,
             }
         )
+        if avisos is not UNSET:
+            field_dict["avisos"] = avisos
 
         return field_dict
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.link_criado_avisos_item import LinkCriadoAvisosItem  # noqa: PLC0415
+
         d = dict(src_dict)
         id = d.pop("id")
 
@@ -124,6 +143,15 @@ class LinkCriado:
 
         url = d.pop("url")
 
+        _avisos = d.pop("avisos", UNSET)
+        avisos: list[LinkCriadoAvisosItem] | Unset = UNSET
+        if _avisos is not UNSET:
+            avisos = []
+            for avisos_item_data in _avisos:
+                avisos_item = LinkCriadoAvisosItem.from_dict(avisos_item_data)
+
+                avisos.append(avisos_item)
+
         link_criado = cls(
             id=id,
             prefixo=prefixo,
@@ -135,6 +163,7 @@ class LinkCriado:
             itens_incluidos=itens_incluidos,
             token=token,
             url=url,
+            avisos=avisos,
         )
 
         link_criado.additional_properties = d

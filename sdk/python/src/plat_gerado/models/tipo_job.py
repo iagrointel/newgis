@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Any, TypeVar
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
+from ..types import UNSET, Unset
+
 if TYPE_CHECKING:
     from ..models.tipo_job_parametros_schema import TipoJobParametrosSchema
 
@@ -27,6 +29,7 @@ class TipoJob:
         versao (int):
         perfil_minimo (str):
         parametros_schema (TipoJobParametrosSchema):
+        somente_leitura (bool | Unset):  Default: False.
     """
 
     nome: str
@@ -39,6 +42,7 @@ class TipoJob:
     versao: int
     perfil_minimo: str
     parametros_schema: TipoJobParametrosSchema
+    somente_leitura: bool | Unset = False
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -62,6 +66,8 @@ class TipoJob:
 
         parametros_schema = self.parametros_schema.to_dict()
 
+        somente_leitura = self.somente_leitura
+
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
@@ -78,6 +84,8 @@ class TipoJob:
                 "parametros_schema": parametros_schema,
             }
         )
+        if somente_leitura is not UNSET:
+            field_dict["somente_leitura"] = somente_leitura
 
         return field_dict
 
@@ -106,6 +114,8 @@ class TipoJob:
 
         parametros_schema = TipoJobParametrosSchema.from_dict(d.pop("parametros_schema"))
 
+        somente_leitura = d.pop("somente_leitura", UNSET)
+
         tipo_job = cls(
             nome=nome,
             descricao=descricao,
@@ -117,6 +127,7 @@ class TipoJob:
             versao=versao,
             perfil_minimo=perfil_minimo,
             parametros_schema=parametros_schema,
+            somente_leitura=somente_leitura,
         )
 
         tipo_job.additional_properties = d

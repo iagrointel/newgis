@@ -53,6 +53,7 @@ class Job:
         resultado (Any | None | Unset):
         erro (None | str | Unset):
         proveniencia (Any | None | Unset):
+        somente_leitura (bool | Unset):  Default: False.
     """
 
     id: UUID
@@ -88,6 +89,7 @@ class Job:
     resultado: Any | None | Unset = UNSET
     erro: None | str | Unset = UNSET
     proveniencia: Any | None | Unset = UNSET
+    somente_leitura: bool | Unset = False
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -227,6 +229,8 @@ class Job:
         else:
             proveniencia = self.proveniencia
 
+        somente_leitura = self.somente_leitura
+
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
@@ -283,6 +287,8 @@ class Job:
             field_dict["erro"] = erro
         if proveniencia is not UNSET:
             field_dict["proveniencia"] = proveniencia
+        if somente_leitura is not UNSET:
+            field_dict["somente_leitura"] = somente_leitura
 
         return field_dict
 
@@ -484,6 +490,8 @@ class Job:
 
         proveniencia = _parse_proveniencia(d.pop("proveniencia", UNSET))
 
+        somente_leitura = d.pop("somente_leitura", UNSET)
+
         job = cls(
             id=id,
             tipo=tipo,
@@ -518,6 +526,7 @@ class Job:
             resultado=resultado,
             erro=erro,
             proveniencia=proveniencia,
+            somente_leitura=somente_leitura,
         )
 
         job.additional_properties = d

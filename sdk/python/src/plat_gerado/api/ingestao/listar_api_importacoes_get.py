@@ -13,6 +13,7 @@ def _get_kwargs(
     *,
     limite: int | Unset = 50,
     deslocamento: int | Unset = 0,
+    lote_id: None | str | Unset = UNSET,
 ) -> dict[str, Any]:
 
     params: dict[str, Any] = {}
@@ -20,6 +21,13 @@ def _get_kwargs(
     params["limite"] = limite
 
     params["deslocamento"] = deslocamento
+
+    json_lote_id: None | str | Unset
+    if isinstance(lote_id, Unset):
+        json_lote_id = UNSET
+    else:
+        json_lote_id = lote_id
+    params["lote_id"] = json_lote_id
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
 
@@ -66,12 +74,14 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
     limite: int | Unset = 50,
     deslocamento: int | Unset = 0,
+    lote_id: None | str | Unset = UNSET,
 ) -> Response[Any | HTTPValidationError]:
     """Listar
 
     Args:
         limite (int | Unset):  Default: 50.
         deslocamento (int | Unset):  Default: 0.
+        lote_id (None | str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -84,6 +94,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         limite=limite,
         deslocamento=deslocamento,
+        lote_id=lote_id,
     )
 
     response = client.get_httpx_client().request(
@@ -98,12 +109,14 @@ def sync(
     client: AuthenticatedClient | Client,
     limite: int | Unset = 50,
     deslocamento: int | Unset = 0,
+    lote_id: None | str | Unset = UNSET,
 ) -> Any | HTTPValidationError | None:
     """Listar
 
     Args:
         limite (int | Unset):  Default: 50.
         deslocamento (int | Unset):  Default: 0.
+        lote_id (None | str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -117,6 +130,7 @@ def sync(
         client=client,
         limite=limite,
         deslocamento=deslocamento,
+        lote_id=lote_id,
     ).parsed
 
 
@@ -125,12 +139,14 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
     limite: int | Unset = 50,
     deslocamento: int | Unset = 0,
+    lote_id: None | str | Unset = UNSET,
 ) -> Response[Any | HTTPValidationError]:
     """Listar
 
     Args:
         limite (int | Unset):  Default: 50.
         deslocamento (int | Unset):  Default: 0.
+        lote_id (None | str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -143,6 +159,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         limite=limite,
         deslocamento=deslocamento,
+        lote_id=lote_id,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -155,12 +172,14 @@ async def asyncio(
     client: AuthenticatedClient | Client,
     limite: int | Unset = 50,
     deslocamento: int | Unset = 0,
+    lote_id: None | str | Unset = UNSET,
 ) -> Any | HTTPValidationError | None:
     """Listar
 
     Args:
         limite (int | Unset):  Default: 50.
         deslocamento (int | Unset):  Default: 0.
+        lote_id (None | str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -175,5 +194,6 @@ async def asyncio(
             client=client,
             limite=limite,
             deslocamento=deslocamento,
+            lote_id=lote_id,
         )
     ).parsed

@@ -8,18 +8,32 @@ import httpx
 from ... import errors
 from ...client import AuthenticatedClient, Client
 from ...models.erro import Erro
-from ...types import Response
+from ...types import UNSET, Response, Unset
 
 
 def _get_kwargs(
     job_id: UUID,
+    *,
+    desde: int | None | Unset = UNSET,
 ) -> dict[str, Any]:
+
+    params: dict[str, Any] = {}
+
+    json_desde: int | None | Unset
+    if isinstance(desde, Unset):
+        json_desde = UNSET
+    else:
+        json_desde = desde
+    params["desde"] = json_desde
+
+    params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
 
     _kwargs: dict[str, Any] = {
         "method": "get",
         "url": "/api/jobs/{job_id}/eventos".format(
             job_id=quote(str(job_id), safe=""),
         ),
+        "params": params,
     }
 
     return _kwargs
@@ -84,14 +98,21 @@ def sync_detailed(
     job_id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    desde: int | None | Unset = UNSET,
 ) -> Response[Any | Erro]:
     """Eventos Do Job
 
      SSE: primeiro evento `estado`, depois `log`/`estado`, `fim` no estado final; Last-Event-ID reenvia o
     log.
+    `desde` é o mesmo valor por query (fallback do `Last-Event-ID`, que o EventSource nativo do
+    navegador não
+    consegue mandar numa reconexão aberta à mão pelo cliente — só no retry automático do próprio
+    navegador,
+    que o front não usa depois do `fim` de conexão forçado aos 30 min; ver web/js/jobs/eventos.js).
 
     Args:
         job_id (UUID):
+        desde (int | None | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -103,6 +124,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         job_id=job_id,
+        desde=desde,
     )
 
     response = client.get_httpx_client().request(
@@ -116,14 +138,21 @@ def sync(
     job_id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    desde: int | None | Unset = UNSET,
 ) -> Any | Erro | None:
     """Eventos Do Job
 
      SSE: primeiro evento `estado`, depois `log`/`estado`, `fim` no estado final; Last-Event-ID reenvia o
     log.
+    `desde` é o mesmo valor por query (fallback do `Last-Event-ID`, que o EventSource nativo do
+    navegador não
+    consegue mandar numa reconexão aberta à mão pelo cliente — só no retry automático do próprio
+    navegador,
+    que o front não usa depois do `fim` de conexão forçado aos 30 min; ver web/js/jobs/eventos.js).
 
     Args:
         job_id (UUID):
+        desde (int | None | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -136,6 +165,7 @@ def sync(
     return sync_detailed(
         job_id=job_id,
         client=client,
+        desde=desde,
     ).parsed
 
 
@@ -143,14 +173,21 @@ async def asyncio_detailed(
     job_id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    desde: int | None | Unset = UNSET,
 ) -> Response[Any | Erro]:
     """Eventos Do Job
 
      SSE: primeiro evento `estado`, depois `log`/`estado`, `fim` no estado final; Last-Event-ID reenvia o
     log.
+    `desde` é o mesmo valor por query (fallback do `Last-Event-ID`, que o EventSource nativo do
+    navegador não
+    consegue mandar numa reconexão aberta à mão pelo cliente — só no retry automático do próprio
+    navegador,
+    que o front não usa depois do `fim` de conexão forçado aos 30 min; ver web/js/jobs/eventos.js).
 
     Args:
         job_id (UUID):
+        desde (int | None | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -162,6 +199,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         job_id=job_id,
+        desde=desde,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -173,14 +211,21 @@ async def asyncio(
     job_id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    desde: int | None | Unset = UNSET,
 ) -> Any | Erro | None:
     """Eventos Do Job
 
      SSE: primeiro evento `estado`, depois `log`/`estado`, `fim` no estado final; Last-Event-ID reenvia o
     log.
+    `desde` é o mesmo valor por query (fallback do `Last-Event-ID`, que o EventSource nativo do
+    navegador não
+    consegue mandar numa reconexão aberta à mão pelo cliente — só no retry automático do próprio
+    navegador,
+    que o front não usa depois do `fim` de conexão forçado aos 30 min; ver web/js/jobs/eventos.js).
 
     Args:
         job_id (UUID):
+        desde (int | None | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -194,5 +239,6 @@ async def asyncio(
         await asyncio_detailed(
             job_id=job_id,
             client=client,
+            desde=desde,
         )
     ).parsed

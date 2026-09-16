@@ -67,6 +67,17 @@ def sync_detailed(
 ) -> Response[HTTPValidationError | LoteSaidaAuth]:
     """Lote
 
+     Ação em lote sobre usuários. Quando pelo menos um item é aplicado, a resposta é sempre `200` com
+    `alterados` e a lista de `recusados` (aplicação parcial é sucesso parcial, não erro). Quando NENHUM
+    item
+    é aplicado e há recusados, a resposta vira `403`: `erro`/`mensagem`/`detalhe` são os do primeiro
+    recusado
+    (preserva o `detalhe` original — por exemplo a lista de privilégios que faltam em
+    `privilegio_proprio_insuficiente` — para quem já checava esse formato) e a lista completa continua
+    disponível em `recusados`, no mesmo nível de `erro`/`mensagem` — porque o lote inteiro foi, na
+    prática,
+    uma tentativa negada (item L0-02-g: sem isto o adversário via 200 numa escalada 100% recusada).
+
     Args:
         body (LoteEntradaAuth):
 
@@ -96,6 +107,17 @@ def sync(
 ) -> HTTPValidationError | LoteSaidaAuth | None:
     """Lote
 
+     Ação em lote sobre usuários. Quando pelo menos um item é aplicado, a resposta é sempre `200` com
+    `alterados` e a lista de `recusados` (aplicação parcial é sucesso parcial, não erro). Quando NENHUM
+    item
+    é aplicado e há recusados, a resposta vira `403`: `erro`/`mensagem`/`detalhe` são os do primeiro
+    recusado
+    (preserva o `detalhe` original — por exemplo a lista de privilégios que faltam em
+    `privilegio_proprio_insuficiente` — para quem já checava esse formato) e a lista completa continua
+    disponível em `recusados`, no mesmo nível de `erro`/`mensagem` — porque o lote inteiro foi, na
+    prática,
+    uma tentativa negada (item L0-02-g: sem isto o adversário via 200 numa escalada 100% recusada).
+
     Args:
         body (LoteEntradaAuth):
 
@@ -119,6 +141,17 @@ async def asyncio_detailed(
     body: LoteEntradaAuth,
 ) -> Response[HTTPValidationError | LoteSaidaAuth]:
     """Lote
+
+     Ação em lote sobre usuários. Quando pelo menos um item é aplicado, a resposta é sempre `200` com
+    `alterados` e a lista de `recusados` (aplicação parcial é sucesso parcial, não erro). Quando NENHUM
+    item
+    é aplicado e há recusados, a resposta vira `403`: `erro`/`mensagem`/`detalhe` são os do primeiro
+    recusado
+    (preserva o `detalhe` original — por exemplo a lista de privilégios que faltam em
+    `privilegio_proprio_insuficiente` — para quem já checava esse formato) e a lista completa continua
+    disponível em `recusados`, no mesmo nível de `erro`/`mensagem` — porque o lote inteiro foi, na
+    prática,
+    uma tentativa negada (item L0-02-g: sem isto o adversário via 200 numa escalada 100% recusada).
 
     Args:
         body (LoteEntradaAuth):
@@ -146,6 +179,17 @@ async def asyncio(
     body: LoteEntradaAuth,
 ) -> HTTPValidationError | LoteSaidaAuth | None:
     """Lote
+
+     Ação em lote sobre usuários. Quando pelo menos um item é aplicado, a resposta é sempre `200` com
+    `alterados` e a lista de `recusados` (aplicação parcial é sucesso parcial, não erro). Quando NENHUM
+    item
+    é aplicado e há recusados, a resposta vira `403`: `erro`/`mensagem`/`detalhe` são os do primeiro
+    recusado
+    (preserva o `detalhe` original — por exemplo a lista de privilégios que faltam em
+    `privilegio_proprio_insuficiente` — para quem já checava esse formato) e a lista completa continua
+    disponível em `recusados`, no mesmo nível de `erro`/`mensagem` — porque o lote inteiro foi, na
+    prática,
+    uma tentativa negada (item L0-02-g: sem isto o adversário via 200 numa escalada 100% recusada).
 
     Args:
         body (LoteEntradaAuth):

@@ -5,15 +5,15 @@ import httpx
 
 from ... import errors
 from ...client import AuthenticatedClient, Client
-from ...models.convite_membro import ConviteMembro
-from ...models.convite_membro_entrada import ConviteMembroEntrada
+from ...models.convite import Convite
+from ...models.convite_entrada import ConviteEntrada
 from ...models.http_validation_error import HTTPValidationError
 from ...types import Response
 
 
 def _get_kwargs(
     *,
-    body: ConviteMembroEntrada,
+    body: ConviteEntrada,
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
 
@@ -32,9 +32,9 @@ def _get_kwargs(
 
 def _parse_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> ConviteMembro | HTTPValidationError | None:
+) -> Convite | HTTPValidationError | None:
     if response.status_code == 201:
-        response_201 = ConviteMembro.from_dict(response.json())
+        response_201 = Convite.from_dict(response.json())
 
         return response_201
 
@@ -51,7 +51,7 @@ def _parse_response(
 
 def _build_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> Response[ConviteMembro | HTTPValidationError]:
+) -> Response[Convite | HTTPValidationError]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -63,19 +63,19 @@ def _build_response(
 def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
-    body: ConviteMembroEntrada,
-) -> Response[ConviteMembro | HTTPValidationError]:
+    body: ConviteEntrada,
+) -> Response[Convite | HTTPValidationError]:
     """Convidar
 
     Args:
-        body (ConviteMembroEntrada):
+        body (ConviteEntrada):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[ConviteMembro | HTTPValidationError]
+        Response[Convite | HTTPValidationError]
     """
 
     kwargs = _get_kwargs(
@@ -92,19 +92,19 @@ def sync_detailed(
 def sync(
     *,
     client: AuthenticatedClient | Client,
-    body: ConviteMembroEntrada,
-) -> ConviteMembro | HTTPValidationError | None:
+    body: ConviteEntrada,
+) -> Convite | HTTPValidationError | None:
     """Convidar
 
     Args:
-        body (ConviteMembroEntrada):
+        body (ConviteEntrada):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        ConviteMembro | HTTPValidationError
+        Convite | HTTPValidationError
     """
 
     return sync_detailed(
@@ -116,19 +116,19 @@ def sync(
 async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
-    body: ConviteMembroEntrada,
-) -> Response[ConviteMembro | HTTPValidationError]:
+    body: ConviteEntrada,
+) -> Response[Convite | HTTPValidationError]:
     """Convidar
 
     Args:
-        body (ConviteMembroEntrada):
+        body (ConviteEntrada):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[ConviteMembro | HTTPValidationError]
+        Response[Convite | HTTPValidationError]
     """
 
     kwargs = _get_kwargs(
@@ -143,19 +143,19 @@ async def asyncio_detailed(
 async def asyncio(
     *,
     client: AuthenticatedClient | Client,
-    body: ConviteMembroEntrada,
-) -> ConviteMembro | HTTPValidationError | None:
+    body: ConviteEntrada,
+) -> Convite | HTTPValidationError | None:
     """Convidar
 
     Args:
-        body (ConviteMembroEntrada):
+        body (ConviteEntrada):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        ConviteMembro | HTTPValidationError
+        Convite | HTTPValidationError
     """
 
     return (

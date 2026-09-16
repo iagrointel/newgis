@@ -5,7 +5,7 @@ import httpx
 
 from ... import errors
 from ...client import AuthenticatedClient, Client
-from ...models.convite import Convite
+from ...models.convite_grupo import ConviteGrupo
 from ...types import Response
 
 
@@ -19,12 +19,12 @@ def _get_kwargs() -> dict[str, Any]:
     return _kwargs
 
 
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> list[Convite] | None:
+def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> list[ConviteGrupo] | None:
     if response.status_code == 200:
         response_200 = []
         _response_200 = response.json()
         for response_200_item_data in _response_200:
-            response_200_item = Convite.from_dict(response_200_item_data)
+            response_200_item = ConviteGrupo.from_dict(response_200_item_data)
 
             response_200.append(response_200_item)
 
@@ -36,7 +36,7 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[list[Convite]]:
+def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[list[ConviteGrupo]]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -48,7 +48,7 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
-) -> Response[list[Convite]]:
+) -> Response[list[ConviteGrupo]]:
     """Convites
 
     Raises:
@@ -56,7 +56,7 @@ def sync_detailed(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[list[Convite]]
+        Response[list[ConviteGrupo]]
     """
 
     kwargs = _get_kwargs()
@@ -71,7 +71,7 @@ def sync_detailed(
 def sync(
     *,
     client: AuthenticatedClient | Client,
-) -> list[Convite] | None:
+) -> list[ConviteGrupo] | None:
     """Convites
 
     Raises:
@@ -79,7 +79,7 @@ def sync(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        list[Convite]
+        list[ConviteGrupo]
     """
 
     return sync_detailed(
@@ -90,7 +90,7 @@ def sync(
 async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
-) -> Response[list[Convite]]:
+) -> Response[list[ConviteGrupo]]:
     """Convites
 
     Raises:
@@ -98,7 +98,7 @@ async def asyncio_detailed(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[list[Convite]]
+        Response[list[ConviteGrupo]]
     """
 
     kwargs = _get_kwargs()
@@ -111,7 +111,7 @@ async def asyncio_detailed(
 async def asyncio(
     *,
     client: AuthenticatedClient | Client,
-) -> list[Convite] | None:
+) -> list[ConviteGrupo] | None:
     """Convites
 
     Raises:
@@ -119,7 +119,7 @@ async def asyncio(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        list[Convite]
+        list[ConviteGrupo]
     """
 
     return (

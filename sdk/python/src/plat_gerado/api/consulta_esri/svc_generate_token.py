@@ -1,0 +1,191 @@
+from http import HTTPStatus
+from typing import Any
+from urllib.parse import quote
+
+import httpx
+
+from ... import errors
+from ...client import AuthenticatedClient, Client
+from ...models.http_validation_error import HTTPValidationError
+from ...types import Response
+
+
+def _get_kwargs(
+    token: str,
+) -> dict[str, Any]:
+
+    _kwargs: dict[str, Any] = {
+        "method": "post",
+        "url": "/svc/{token}/rest/generateToken".format(
+            token=quote(str(token), safe=""),
+        ),
+    }
+
+    return _kwargs
+
+
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Any | HTTPValidationError | None:
+    if response.status_code == 200:
+        response_200 = response.json()
+        return response_200
+
+    if response.status_code == 422:
+        response_422 = HTTPValidationError.from_dict(response.json())
+
+        return response_422
+
+    if client.raise_on_unexpected_status:
+        raise errors.UnexpectedStatus(response.status_code, response.content)
+    else:
+        return None
+
+
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[Any | HTTPValidationError]:
+    return Response(
+        status_code=HTTPStatus(response.status_code),
+        content=response.content,
+        headers=response.headers,
+        parsed=_parse_response(client=client, response=response),
+    )
+
+
+def sync_detailed(
+    token: str,
+    *,
+    client: AuthenticatedClient | Client,
+) -> Response[Any | HTTPValidationError]:
+    """Generate Token
+
+     Troca usuário/senha do inquilino por um token de SERVIÇO de leitura, com validade de no
+    máximo 24 h (`expiration` em minutos, teto aplicado sem reclamar, como faz o ArcGIS Server).
+
+    O inquilino é o do token que está no caminho — não se pede o slug de novo, e um usuário de outro
+    inquilino não autentica aqui nem por acaso. Conta com 2FA ligado é recusada com o código 400 do
+    protocolo: `generateToken` não tem onde pedir o segundo fator, e aceitar só a senha rebaixaria a
+    política do inquilino.
+
+    Args:
+        token (str):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Response[Any | HTTPValidationError]
+    """
+
+    kwargs = _get_kwargs(
+        token=token,
+    )
+
+    response = client.get_httpx_client().request(
+        **kwargs,
+    )
+
+    return _build_response(client=client, response=response)
+
+
+def sync(
+    token: str,
+    *,
+    client: AuthenticatedClient | Client,
+) -> Any | HTTPValidationError | None:
+    """Generate Token
+
+     Troca usuário/senha do inquilino por um token de SERVIÇO de leitura, com validade de no
+    máximo 24 h (`expiration` em minutos, teto aplicado sem reclamar, como faz o ArcGIS Server).
+
+    O inquilino é o do token que está no caminho — não se pede o slug de novo, e um usuário de outro
+    inquilino não autentica aqui nem por acaso. Conta com 2FA ligado é recusada com o código 400 do
+    protocolo: `generateToken` não tem onde pedir o segundo fator, e aceitar só a senha rebaixaria a
+    política do inquilino.
+
+    Args:
+        token (str):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Any | HTTPValidationError
+    """
+
+    return sync_detailed(
+        token=token,
+        client=client,
+    ).parsed
+
+
+async def asyncio_detailed(
+    token: str,
+    *,
+    client: AuthenticatedClient | Client,
+) -> Response[Any | HTTPValidationError]:
+    """Generate Token
+
+     Troca usuário/senha do inquilino por um token de SERVIÇO de leitura, com validade de no
+    máximo 24 h (`expiration` em minutos, teto aplicado sem reclamar, como faz o ArcGIS Server).
+
+    O inquilino é o do token que está no caminho — não se pede o slug de novo, e um usuário de outro
+    inquilino não autentica aqui nem por acaso. Conta com 2FA ligado é recusada com o código 400 do
+    protocolo: `generateToken` não tem onde pedir o segundo fator, e aceitar só a senha rebaixaria a
+    política do inquilino.
+
+    Args:
+        token (str):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Response[Any | HTTPValidationError]
+    """
+
+    kwargs = _get_kwargs(
+        token=token,
+    )
+
+    response = await client.get_async_httpx_client().request(**kwargs)
+
+    return _build_response(client=client, response=response)
+
+
+async def asyncio(
+    token: str,
+    *,
+    client: AuthenticatedClient | Client,
+) -> Any | HTTPValidationError | None:
+    """Generate Token
+
+     Troca usuário/senha do inquilino por um token de SERVIÇO de leitura, com validade de no
+    máximo 24 h (`expiration` em minutos, teto aplicado sem reclamar, como faz o ArcGIS Server).
+
+    O inquilino é o do token que está no caminho — não se pede o slug de novo, e um usuário de outro
+    inquilino não autentica aqui nem por acaso. Conta com 2FA ligado é recusada com o código 400 do
+    protocolo: `generateToken` não tem onde pedir o segundo fator, e aceitar só a senha rebaixaria a
+    política do inquilino.
+
+    Args:
+        token (str):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Any | HTTPValidationError
+    """
+
+    return (
+        await asyncio_detailed(
+            token=token,
+            client=client,
+        )
+    ).parsed

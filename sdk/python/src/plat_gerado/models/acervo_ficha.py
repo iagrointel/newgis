@@ -31,6 +31,12 @@ class AcervoFicha:
         proxima_verificacao (None | str | Unset):
         risco_pii (bool | Unset):  Default: False.
         risco_pii_motivo (None | str | Unset):
+        verificacao_vencida (bool | Unset):  Default: False.
+        motivo_vencida (None | str | Unset):
+        camadas_expostas (int | Unset):  Default: 0.
+        camadas_vencidas (int | Unset):  Default: 0.
+        verificada_em (None | str | Unset):
+        endpoints_mortos (int | Unset):  Default: 0.
         url (None | str | Unset):
         url_http (None | str | Unset):
         url_conferida_em (None | str | Unset):
@@ -64,6 +70,12 @@ class AcervoFicha:
     proxima_verificacao: None | str | Unset = UNSET
     risco_pii: bool | Unset = False
     risco_pii_motivo: None | str | Unset = UNSET
+    verificacao_vencida: bool | Unset = False
+    motivo_vencida: None | str | Unset = UNSET
+    camadas_expostas: int | Unset = 0
+    camadas_vencidas: int | Unset = 0
+    verificada_em: None | str | Unset = UNSET
+    endpoints_mortos: int | Unset = 0
     url: None | str | Unset = UNSET
     url_http: None | str | Unset = UNSET
     url_conferida_em: None | str | Unset = UNSET
@@ -129,6 +141,26 @@ class AcervoFicha:
             risco_pii_motivo = UNSET
         else:
             risco_pii_motivo = self.risco_pii_motivo
+
+        verificacao_vencida = self.verificacao_vencida
+
+        motivo_vencida: None | str | Unset
+        if isinstance(self.motivo_vencida, Unset):
+            motivo_vencida = UNSET
+        else:
+            motivo_vencida = self.motivo_vencida
+
+        camadas_expostas = self.camadas_expostas
+
+        camadas_vencidas = self.camadas_vencidas
+
+        verificada_em: None | str | Unset
+        if isinstance(self.verificada_em, Unset):
+            verificada_em = UNSET
+        else:
+            verificada_em = self.verificada_em
+
+        endpoints_mortos = self.endpoints_mortos
 
         url: None | str | Unset
         if isinstance(self.url, Unset):
@@ -261,6 +293,18 @@ class AcervoFicha:
             field_dict["risco_pii"] = risco_pii
         if risco_pii_motivo is not UNSET:
             field_dict["risco_pii_motivo"] = risco_pii_motivo
+        if verificacao_vencida is not UNSET:
+            field_dict["verificacao_vencida"] = verificacao_vencida
+        if motivo_vencida is not UNSET:
+            field_dict["motivo_vencida"] = motivo_vencida
+        if camadas_expostas is not UNSET:
+            field_dict["camadas_expostas"] = camadas_expostas
+        if camadas_vencidas is not UNSET:
+            field_dict["camadas_vencidas"] = camadas_vencidas
+        if verificada_em is not UNSET:
+            field_dict["verificada_em"] = verificada_em
+        if endpoints_mortos is not UNSET:
+            field_dict["endpoints_mortos"] = endpoints_mortos
         if url is not UNSET:
             field_dict["url"] = url
         if url_http is not UNSET:
@@ -365,6 +409,32 @@ class AcervoFicha:
             return cast(None | str | Unset, data)
 
         risco_pii_motivo = _parse_risco_pii_motivo(d.pop("risco_pii_motivo", UNSET))
+
+        verificacao_vencida = d.pop("verificacao_vencida", UNSET)
+
+        def _parse_motivo_vencida(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        motivo_vencida = _parse_motivo_vencida(d.pop("motivo_vencida", UNSET))
+
+        camadas_expostas = d.pop("camadas_expostas", UNSET)
+
+        camadas_vencidas = d.pop("camadas_vencidas", UNSET)
+
+        def _parse_verificada_em(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        verificada_em = _parse_verificada_em(d.pop("verificada_em", UNSET))
+
+        endpoints_mortos = d.pop("endpoints_mortos", UNSET)
 
         def _parse_url(data: object) -> None | str | Unset:
             if data is None:
@@ -536,6 +606,12 @@ class AcervoFicha:
             proxima_verificacao=proxima_verificacao,
             risco_pii=risco_pii,
             risco_pii_motivo=risco_pii_motivo,
+            verificacao_vencida=verificacao_vencida,
+            motivo_vencida=motivo_vencida,
+            camadas_expostas=camadas_expostas,
+            camadas_vencidas=camadas_vencidas,
+            verificada_em=verificada_em,
+            endpoints_mortos=endpoints_mortos,
             url=url,
             url_http=url_http,
             url_conferida_em=url_conferida_em,

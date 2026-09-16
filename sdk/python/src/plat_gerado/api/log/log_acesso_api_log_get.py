@@ -21,6 +21,7 @@ def _get_kwargs(
     limite: int | None | Unset = UNSET,
     deslocamento: int | None | Unset = UNSET,
     formato: str | Unset = "json",
+    req_id: None | str | Unset = UNSET,
 ) -> dict[str, Any]:
 
     params: dict[str, Any] = {}
@@ -83,6 +84,13 @@ def _get_kwargs(
 
     params["formato"] = formato
 
+    json_req_id: None | str | Unset
+    if isinstance(req_id, Unset):
+        json_req_id = UNSET
+    else:
+        json_req_id = req_id
+    params["req_id"] = json_req_id
+
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
 
     _kwargs: dict[str, Any] = {
@@ -136,6 +144,7 @@ def sync_detailed(
     limite: int | None | Unset = UNSET,
     deslocamento: int | None | Unset = UNSET,
     formato: str | Unset = "json",
+    req_id: None | str | Unset = UNSET,
 ) -> Response[HTTPValidationError | PaginaAuth]:
     """Log Acesso
 
@@ -149,6 +158,7 @@ def sync_detailed(
         limite (int | None | Unset):
         deslocamento (int | None | Unset):
         formato (str | Unset):  Default: 'json'.
+        req_id (None | str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -168,6 +178,7 @@ def sync_detailed(
         limite=limite,
         deslocamento=deslocamento,
         formato=formato,
+        req_id=req_id,
     )
 
     response = client.get_httpx_client().request(
@@ -189,6 +200,7 @@ def sync(
     limite: int | None | Unset = UNSET,
     deslocamento: int | None | Unset = UNSET,
     formato: str | Unset = "json",
+    req_id: None | str | Unset = UNSET,
 ) -> HTTPValidationError | PaginaAuth | None:
     """Log Acesso
 
@@ -202,6 +214,7 @@ def sync(
         limite (int | None | Unset):
         deslocamento (int | None | Unset):
         formato (str | Unset):  Default: 'json'.
+        req_id (None | str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -222,6 +235,7 @@ def sync(
         limite=limite,
         deslocamento=deslocamento,
         formato=formato,
+        req_id=req_id,
     ).parsed
 
 
@@ -237,6 +251,7 @@ async def asyncio_detailed(
     limite: int | None | Unset = UNSET,
     deslocamento: int | None | Unset = UNSET,
     formato: str | Unset = "json",
+    req_id: None | str | Unset = UNSET,
 ) -> Response[HTTPValidationError | PaginaAuth]:
     """Log Acesso
 
@@ -250,6 +265,7 @@ async def asyncio_detailed(
         limite (int | None | Unset):
         deslocamento (int | None | Unset):
         formato (str | Unset):  Default: 'json'.
+        req_id (None | str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -269,6 +285,7 @@ async def asyncio_detailed(
         limite=limite,
         deslocamento=deslocamento,
         formato=formato,
+        req_id=req_id,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -288,6 +305,7 @@ async def asyncio(
     limite: int | None | Unset = UNSET,
     deslocamento: int | None | Unset = UNSET,
     formato: str | Unset = "json",
+    req_id: None | str | Unset = UNSET,
 ) -> HTTPValidationError | PaginaAuth | None:
     """Log Acesso
 
@@ -301,6 +319,7 @@ async def asyncio(
         limite (int | None | Unset):
         deslocamento (int | None | Unset):
         formato (str | Unset):  Default: 'json'.
+        req_id (None | str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -322,5 +341,6 @@ async def asyncio(
             limite=limite,
             deslocamento=deslocamento,
             formato=formato,
+            req_id=req_id,
         )
     ).parsed

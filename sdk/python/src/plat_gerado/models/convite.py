@@ -6,9 +6,11 @@ from typing import TYPE_CHECKING, Any, TypeVar, cast
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
+from ..types import UNSET, Unset
+
 if TYPE_CHECKING:
-    from ..models.convite_convidado_por_type_0 import ConviteConvidadoPorType0
-    from ..models.convite_grupo import ConviteGrupo
+    from ..models.convite_criado_por_type_0 import ConviteCriadoPorType0
+    from ..models.convite_papel_type_0 import ConvitePapelType0
 
 
 T = TypeVar("T", bound="Convite")
@@ -18,84 +20,190 @@ T = TypeVar("T", bound="Convite")
 class Convite:
     """
     Attributes:
-        grupo (ConviteGrupo):
-        papel (str):
-        convidado_por (ConviteConvidadoPorType0 | None):
-        criado_em (None | str):
+        id (str):
+        email (str):
+        perfil (str):
+        criado_em (str):
+        expira_em (str):
+        nome_sugerido (None | str | Unset):
+        papel (ConvitePapelType0 | None | Unset):
+        criado_por (ConviteCriadoPorType0 | None | Unset):
+        usado_em (None | str | Unset):
+        cancelado_em (None | str | Unset):
     """
 
-    grupo: ConviteGrupo
-    papel: str
-    convidado_por: ConviteConvidadoPorType0 | None
-    criado_em: None | str
+    id: str
+    email: str
+    perfil: str
+    criado_em: str
+    expira_em: str
+    nome_sugerido: None | str | Unset = UNSET
+    papel: ConvitePapelType0 | None | Unset = UNSET
+    criado_por: ConviteCriadoPorType0 | None | Unset = UNSET
+    usado_em: None | str | Unset = UNSET
+    cancelado_em: None | str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.convite_convidado_por_type_0 import ConviteConvidadoPorType0  # noqa: PLC0415
+        from ..models.convite_criado_por_type_0 import ConviteCriadoPorType0  # noqa: PLC0415
+        from ..models.convite_papel_type_0 import ConvitePapelType0  # noqa: PLC0415
 
-        grupo = self.grupo.to_dict()
+        id = self.id
 
-        papel = self.papel
+        email = self.email
 
-        convidado_por: dict[str, Any] | None
-        if isinstance(self.convidado_por, ConviteConvidadoPorType0):
-            convidado_por = self.convidado_por.to_dict()
-        else:
-            convidado_por = self.convidado_por
+        perfil = self.perfil
 
-        criado_em: None | str
         criado_em = self.criado_em
+
+        expira_em = self.expira_em
+
+        nome_sugerido: None | str | Unset
+        if isinstance(self.nome_sugerido, Unset):
+            nome_sugerido = UNSET
+        else:
+            nome_sugerido = self.nome_sugerido
+
+        papel: dict[str, Any] | None | Unset
+        if isinstance(self.papel, Unset):
+            papel = UNSET
+        elif isinstance(self.papel, ConvitePapelType0):
+            papel = self.papel.to_dict()
+        else:
+            papel = self.papel
+
+        criado_por: dict[str, Any] | None | Unset
+        if isinstance(self.criado_por, Unset):
+            criado_por = UNSET
+        elif isinstance(self.criado_por, ConviteCriadoPorType0):
+            criado_por = self.criado_por.to_dict()
+        else:
+            criado_por = self.criado_por
+
+        usado_em: None | str | Unset
+        if isinstance(self.usado_em, Unset):
+            usado_em = UNSET
+        else:
+            usado_em = self.usado_em
+
+        cancelado_em: None | str | Unset
+        if isinstance(self.cancelado_em, Unset):
+            cancelado_em = UNSET
+        else:
+            cancelado_em = self.cancelado_em
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
             {
-                "grupo": grupo,
-                "papel": papel,
-                "convidado_por": convidado_por,
+                "id": id,
+                "email": email,
+                "perfil": perfil,
                 "criado_em": criado_em,
+                "expira_em": expira_em,
             }
         )
+        if nome_sugerido is not UNSET:
+            field_dict["nome_sugerido"] = nome_sugerido
+        if papel is not UNSET:
+            field_dict["papel"] = papel
+        if criado_por is not UNSET:
+            field_dict["criado_por"] = criado_por
+        if usado_em is not UNSET:
+            field_dict["usado_em"] = usado_em
+        if cancelado_em is not UNSET:
+            field_dict["cancelado_em"] = cancelado_em
 
         return field_dict
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.convite_convidado_por_type_0 import ConviteConvidadoPorType0  # noqa: PLC0415
-        from ..models.convite_grupo import ConviteGrupo  # noqa: PLC0415
+        from ..models.convite_criado_por_type_0 import ConviteCriadoPorType0  # noqa: PLC0415
+        from ..models.convite_papel_type_0 import ConvitePapelType0  # noqa: PLC0415
 
         d = dict(src_dict)
-        grupo = ConviteGrupo.from_dict(d.pop("grupo"))
+        id = d.pop("id")
 
-        papel = d.pop("papel")
+        email = d.pop("email")
 
-        def _parse_convidado_por(data: object) -> ConviteConvidadoPorType0 | None:
+        perfil = d.pop("perfil")
+
+        criado_em = d.pop("criado_em")
+
+        expira_em = d.pop("expira_em")
+
+        def _parse_nome_sugerido(data: object) -> None | str | Unset:
             if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        nome_sugerido = _parse_nome_sugerido(d.pop("nome_sugerido", UNSET))
+
+        def _parse_papel(data: object) -> ConvitePapelType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
                 return data
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                convidado_por_type_0 = ConviteConvidadoPorType0.from_dict(data)
+                papel_type_0 = ConvitePapelType0.from_dict(data)
 
-                return convidado_por_type_0
+                return papel_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            return cast(ConviteConvidadoPorType0 | None, data)
+            return cast(ConvitePapelType0 | None | Unset, data)
 
-        convidado_por = _parse_convidado_por(d.pop("convidado_por"))
+        papel = _parse_papel(d.pop("papel", UNSET))
 
-        def _parse_criado_em(data: object) -> None | str:
+        def _parse_criado_por(data: object) -> ConviteCriadoPorType0 | None | Unset:
             if data is None:
                 return data
-            return cast(None | str, data)
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                criado_por_type_0 = ConviteCriadoPorType0.from_dict(data)
 
-        criado_em = _parse_criado_em(d.pop("criado_em"))
+                return criado_por_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(ConviteCriadoPorType0 | None | Unset, data)
+
+        criado_por = _parse_criado_por(d.pop("criado_por", UNSET))
+
+        def _parse_usado_em(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        usado_em = _parse_usado_em(d.pop("usado_em", UNSET))
+
+        def _parse_cancelado_em(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        cancelado_em = _parse_cancelado_em(d.pop("cancelado_em", UNSET))
 
         convite = cls(
-            grupo=grupo,
-            papel=papel,
-            convidado_por=convidado_por,
+            id=id,
+            email=email,
+            perfil=perfil,
             criado_em=criado_em,
+            expira_em=expira_em,
+            nome_sugerido=nome_sugerido,
+            papel=papel,
+            criado_por=criado_por,
+            usado_em=usado_em,
+            cancelado_em=cancelado_em,
         )
 
         convite.additional_properties = d

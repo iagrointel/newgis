@@ -32,6 +32,7 @@ class Token:
         ultimo_ip (None | str):
         dono (TokenDono):
         renovado_por (int | None):
+        usos (int | Unset):  Default: 0.
         acessos_30d (int | None | Unset):
         ultimo_status (int | None | Unset):
     """
@@ -48,6 +49,7 @@ class Token:
     ultimo_ip: None | str
     dono: TokenDono
     renovado_por: int | None
+    usos: int | Unset = 0
     acessos_30d: int | None | Unset = UNSET
     ultimo_status: int | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -83,6 +85,8 @@ class Token:
         renovado_por: int | None
         renovado_por = self.renovado_por
 
+        usos = self.usos
+
         acessos_30d: int | None | Unset
         if isinstance(self.acessos_30d, Unset):
             acessos_30d = UNSET
@@ -113,6 +117,8 @@ class Token:
                 "renovado_por": renovado_por,
             }
         )
+        if usos is not UNSET:
+            field_dict["usos"] = usos
         if acessos_30d is not UNSET:
             field_dict["acessos_30d"] = acessos_30d
         if ultimo_status is not UNSET:
@@ -180,6 +186,8 @@ class Token:
 
         renovado_por = _parse_renovado_por(d.pop("renovado_por"))
 
+        usos = d.pop("usos", UNSET)
+
         def _parse_acessos_30d(data: object) -> int | None | Unset:
             if data is None:
                 return data
@@ -211,6 +219,7 @@ class Token:
             ultimo_ip=ultimo_ip,
             dono=dono,
             renovado_por=renovado_por,
+            usos=usos,
             acessos_30d=acessos_30d,
             ultimo_status=ultimo_status,
         )

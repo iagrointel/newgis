@@ -1,0 +1,197 @@
+from http import HTTPStatus
+from typing import Any
+from urllib.parse import quote
+
+import httpx
+
+from ... import errors
+from ...client import AuthenticatedClient, Client
+from ...models.http_validation_error import HTTPValidationError
+from ...types import Response
+
+
+def _get_kwargs(
+    item_id: str,
+    nome: str,
+) -> dict[str, Any]:
+
+    _kwargs: dict[str, Any] = {
+        "method": "post",
+        "url": "/api/imagens/{item_id}/predefinicoes/{nome}/tornar-padrao".format(
+            item_id=quote(str(item_id), safe=""),
+            nome=quote(str(nome), safe=""),
+        ),
+    }
+
+    return _kwargs
+
+
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Any | HTTPValidationError | None:
+    if response.status_code == 200:
+        response_200 = response.json()
+        return response_200
+
+    if response.status_code == 422:
+        response_422 = HTTPValidationError.from_dict(response.json())
+
+        return response_422
+
+    if client.raise_on_unexpected_status:
+        raise errors.UnexpectedStatus(response.status_code, response.content)
+    else:
+        return None
+
+
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[Any | HTTPValidationError]:
+    return Response(
+        status_code=HTTPStatus(response.status_code),
+        content=response.content,
+        headers=response.headers,
+        parsed=_parse_response(client=client, response=response),
+    )
+
+
+def sync_detailed(
+    item_id: str,
+    nome: str,
+    *,
+    client: AuthenticatedClient | Client,
+) -> Response[Any | HTTPValidationError]:
+    """Tornar Padrao
+
+     Marca `nome` como a predefinição padrão do item — a que resolve quando ninguém passa `predef=`/
+    `STYLES=`/`renderingRule` nenhum. Fábrica pode virar padrão (não precisa existir na tabela: só grava
+    o nome quando é CUSTOM; um padrão de fábrica é lido direto de `pred.FABRICA`, sem linha — ver
+    `padrao_do_item`/`_predef_publicada` em rotas_tiles.py). Trocar o padrão NÃO apaga a predefinição
+    anterior nem quebra uma URL que já a nomeia explicitamente (portão do item).
+
+    Args:
+        item_id (str):
+        nome (str):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Response[Any | HTTPValidationError]
+    """
+
+    kwargs = _get_kwargs(
+        item_id=item_id,
+        nome=nome,
+    )
+
+    response = client.get_httpx_client().request(
+        **kwargs,
+    )
+
+    return _build_response(client=client, response=response)
+
+
+def sync(
+    item_id: str,
+    nome: str,
+    *,
+    client: AuthenticatedClient | Client,
+) -> Any | HTTPValidationError | None:
+    """Tornar Padrao
+
+     Marca `nome` como a predefinição padrão do item — a que resolve quando ninguém passa `predef=`/
+    `STYLES=`/`renderingRule` nenhum. Fábrica pode virar padrão (não precisa existir na tabela: só grava
+    o nome quando é CUSTOM; um padrão de fábrica é lido direto de `pred.FABRICA`, sem linha — ver
+    `padrao_do_item`/`_predef_publicada` em rotas_tiles.py). Trocar o padrão NÃO apaga a predefinição
+    anterior nem quebra uma URL que já a nomeia explicitamente (portão do item).
+
+    Args:
+        item_id (str):
+        nome (str):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Any | HTTPValidationError
+    """
+
+    return sync_detailed(
+        item_id=item_id,
+        nome=nome,
+        client=client,
+    ).parsed
+
+
+async def asyncio_detailed(
+    item_id: str,
+    nome: str,
+    *,
+    client: AuthenticatedClient | Client,
+) -> Response[Any | HTTPValidationError]:
+    """Tornar Padrao
+
+     Marca `nome` como a predefinição padrão do item — a que resolve quando ninguém passa `predef=`/
+    `STYLES=`/`renderingRule` nenhum. Fábrica pode virar padrão (não precisa existir na tabela: só grava
+    o nome quando é CUSTOM; um padrão de fábrica é lido direto de `pred.FABRICA`, sem linha — ver
+    `padrao_do_item`/`_predef_publicada` em rotas_tiles.py). Trocar o padrão NÃO apaga a predefinição
+    anterior nem quebra uma URL que já a nomeia explicitamente (portão do item).
+
+    Args:
+        item_id (str):
+        nome (str):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Response[Any | HTTPValidationError]
+    """
+
+    kwargs = _get_kwargs(
+        item_id=item_id,
+        nome=nome,
+    )
+
+    response = await client.get_async_httpx_client().request(**kwargs)
+
+    return _build_response(client=client, response=response)
+
+
+async def asyncio(
+    item_id: str,
+    nome: str,
+    *,
+    client: AuthenticatedClient | Client,
+) -> Any | HTTPValidationError | None:
+    """Tornar Padrao
+
+     Marca `nome` como a predefinição padrão do item — a que resolve quando ninguém passa `predef=`/
+    `STYLES=`/`renderingRule` nenhum. Fábrica pode virar padrão (não precisa existir na tabela: só grava
+    o nome quando é CUSTOM; um padrão de fábrica é lido direto de `pred.FABRICA`, sem linha — ver
+    `padrao_do_item`/`_predef_publicada` em rotas_tiles.py). Trocar o padrão NÃO apaga a predefinição
+    anterior nem quebra uma URL que já a nomeia explicitamente (portão do item).
+
+    Args:
+        item_id (str):
+        nome (str):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Any | HTTPValidationError
+    """
+
+    return (
+        await asyncio_detailed(
+            item_id=item_id,
+            nome=nome,
+            client=client,
+        )
+    ).parsed

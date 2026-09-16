@@ -6,7 +6,7 @@ import httpx
 
 from ... import errors
 from ...client import AuthenticatedClient, Client
-from ...models.convite_entrada import ConviteEntrada
+from ...models.convite_grupo_entrada import ConviteGrupoEntrada
 from ...models.estado import Estado
 from ...models.http_validation_error import HTTPValidationError
 from ...types import Response
@@ -15,7 +15,7 @@ from ...types import Response
 def _get_kwargs(
     id: str,
     *,
-    body: ConviteEntrada,
+    body: ConviteGrupoEntrada,
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
 
@@ -68,13 +68,13 @@ def sync_detailed(
     id: str,
     *,
     client: AuthenticatedClient | Client,
-    body: ConviteEntrada,
+    body: ConviteGrupoEntrada,
 ) -> Response[Estado | HTTPValidationError]:
     """Convidar
 
     Args:
         id (str):
-        body (ConviteEntrada):
+        body (ConviteGrupoEntrada):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -100,13 +100,13 @@ def sync(
     id: str,
     *,
     client: AuthenticatedClient | Client,
-    body: ConviteEntrada,
+    body: ConviteGrupoEntrada,
 ) -> Estado | HTTPValidationError | None:
     """Convidar
 
     Args:
         id (str):
-        body (ConviteEntrada):
+        body (ConviteGrupoEntrada):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -127,13 +127,13 @@ async def asyncio_detailed(
     id: str,
     *,
     client: AuthenticatedClient | Client,
-    body: ConviteEntrada,
+    body: ConviteGrupoEntrada,
 ) -> Response[Estado | HTTPValidationError]:
     """Convidar
 
     Args:
         id (str):
-        body (ConviteEntrada):
+        body (ConviteGrupoEntrada):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -157,13 +157,13 @@ async def asyncio(
     id: str,
     *,
     client: AuthenticatedClient | Client,
-    body: ConviteEntrada,
+    body: ConviteGrupoEntrada,
 ) -> Estado | HTTPValidationError | None:
     """Convidar
 
     Args:
         id (str):
-        body (ConviteEntrada):
+        body (ConviteGrupoEntrada):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
