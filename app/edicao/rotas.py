@@ -12,9 +12,18 @@ from app import db, limites
 from app.auth import escopos as esc
 from app.auth.sessao import Auth, autenticado
 from app.catalogo import comum
-from app.edicao import lote
-from app.edicao.modelos import EdicoesEntrada, EdicoesSaida, LoteEntrada, LoteSaida
-from app.edicao.servico import aplicar_edicoes
+from app.edicao import anexos, combinar, historico, lote
+from app.edicao.modelos import (
+    AnexoEntrada,
+    DivisaoEntrada,
+    EdicoesEntrada,
+    EdicoesSaida,
+    LoteEntrada,
+    LoteSaida,
+    RestaurarSaida,
+    UniaoEntrada,
+)
+from app.edicao.servico import aplicar_edicoes, obter_feicao
 from app.erros import ErroAPI
 
 router = APIRouter(tags=["edicao"])
@@ -75,5 +84,132 @@ def editar_em_lote(
             lote.registrar_efeitos(cur, plano, saida, iid,
                                     lambda tipo, props: comum.registrar_evento(cur, request, tipo, "item", iid, props))
             return saida
+    except psycopg2.Error as e:
+        raise comum.erro_do_banco(e) from e
+
+
+# ---------------------------------------------------------------- as 8 rotas abaixo nasceram no commit
+# 9b347a2c8 (07/09, item L2-03-edicao: histórico/restauração, anexos, dividir/unir) e foram perdidas numa
+# fusão posterior — só `/lote` (acima) tinha sido restaurada, em 087ab16f0 (16/09). Lógica idêntica ao
+# commit original; `_auth_editor`/`autenticado()`/os escopos `camada:ler`/`camada:editar` não mudaram desde
+# então (conferido contra o sha 9b347a2c8), então a restauração é a mesma dependência já em uso acima.
+
+
+@router.get(
+    "/api/camadas/{id}/feicoes/{globalid}",
+    openapi_extra={"x-auth": "S/T", "x-privilegio": "rls:visibilidade"},
+)
+def obter_feicao_rota(id: str, globalid: str, auth: Auth = autenticado(escopo_token="camada:ler")) -> dict:
+    iid = comum.uuid_ok(id)
+    globalid = comum.uuid_ok(globalid, "feicao_inexistente", "feição inexistente nesta camada")
+    esc.exigir_escopo(auth, "camada:ler", iid)
+    with db.db(auth.contexto()) as cur:
+        return obter_feicao(cur, iid, globalid)
+
+
+LER_HISTORICO = {"x-auth": "S/T", "x-privilegio": "rls:visibilidade"}
+
+
+@router.get("/api/camadas/{id}/feicoes/{globalid}/historico", openapi_extra=LER_HISTORICO)
+def listar_historico(id: str, globalid: str, auth: Auth = autenticado(escopo_token="camada:ler")) -> list[dict]:
+    iid = comum.uuid_ok(id)
+    globalid = comum.uuid_ok(globalid, "feicao_inexistente", "feição inexistente nesta camada")
+    esc.exigir_escopo(auth, "camada:ler", iid)
+    with db.db(auth.contexto()) as cur:
+        return historico.listar(cur, iid, globalid)
+
+
+@router.post(
+    "/api/camadas/{id}/feicoes/{globalid}/historico/{historico_id}/restaurar",
+    response_model=RestaurarSaida,
+    openapi_extra=EDITAR,
+)
+def restaurar_feicao(
+    id: str, globalid: str, historico_id: int, request: Request, auth: Auth = Depends(_auth_editor)
+) -> RestaurarSaida:
+    iid = comum.uuid_ok(id)
+    globalid = comum.uuid_ok(globalid, "feicao_inexistente", "feição inexistente nesta camada")
+    esc.exigir_escopo(auth, "camada:editar", iid)
+    try:
+        with db.db(auth.contexto()) as cur:
+            return historico.restaurar(cur, auth, request, iid, globalid, historico_id)
+    except psycopg2.Error as e:
+        raise comum.erro_do_banco(e) from e
+
+
+@router.get("/api/camadas/{id}/feicoes/{globalid}/anexos", openapi_extra=LER_HISTORICO)
+def listar_anexos(id: str, globalid: str, auth: Auth = autenticado(escopo_token="camada:ler")) -> list[dict]:
+    iid = comum.uuid_ok(id)
+    globalid = comum.uuid_ok(globalid, "feicao_inexistente", "feição inexistente nesta camada")
+    esc.exigir_escopo(auth, "camada:ler", iid)
+    with db.db(auth.contexto()) as cur:
+        return anexos.listar(cur, iid, globalid)
+
+
+@router.post("/api/camadas/{id}/feicoes/{globalid}/anexos", status_code=201, openapi_extra=EDITAR)
+def enviar_anexo(
+    id: str, globalid: str, corpo: AnexoEntrada, request: Request, auth: Auth = Depends(_auth_editor)
+) -> dict:
+    iid = comum.uuid_ok(id)
+    globalid = comum.uuid_ok(globalid, "feicao_inexistente", "feição inexistente nesta camada")
+    esc.exigir_escopo(auth, "camada:editar", iid)
+    try:
+        with db.db(auth.contexto()) as cur:
+            return anexos.enviar(cur, auth, request, iid, globalid, corpo.nome, corpo.content_type, corpo.conteudo)
+    except psycopg2.Error as e:
+        raise comum.erro_do_banco(e) from e
+
+
+@router.get("/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}", openapi_extra=LER_HISTORICO)
+def baixar_anexo(id: str, globalid: str, anexo_id: str, auth: Auth = autenticado(escopo_token="camada:ler")):
+    iid = comum.uuid_ok(id)
+    globalid = comum.uuid_ok(globalid, "feicao_inexistente", "feição inexistente nesta camada")
+    anexo_id = comum.uuid_ok(anexo_id, "anexo_inexistente", "anexo inexistente")
+    esc.exigir_escopo(auth, "camada:ler", iid)
+    with db.db(auth.contexto()) as cur:
+        dados, content_type, nome = anexos.baixar(cur, iid, globalid, anexo_id)
+    return Response(
+        content=dados, media_type=content_type,
+        headers={"Content-Disposition": f'inline; filename="{nome}"'},
+    )
+
+
+@router.delete(
+    "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}",
+    status_code=204, response_class=Response, openapi_extra=EDITAR,
+)
+def apagar_anexo(
+    id: str, globalid: str, anexo_id: str, request: Request, auth: Auth = Depends(_auth_editor)
+) -> Response:
+    iid = comum.uuid_ok(id)
+    globalid = comum.uuid_ok(globalid, "feicao_inexistente", "feição inexistente nesta camada")
+    anexo_id = comum.uuid_ok(anexo_id, "anexo_inexistente", "anexo inexistente")
+    esc.exigir_escopo(auth, "camada:editar", iid)
+    try:
+        with db.db(auth.contexto()) as cur:
+            anexos.apagar(cur, auth, request, iid, globalid, anexo_id)
+    except psycopg2.Error as e:
+        raise comum.erro_do_banco(e) from e
+    return Response(status_code=204)
+
+
+@router.post("/api/camadas/{id}/feicoes/unir", openapi_extra=EDITAR)
+def unir_feicoes(id: str, corpo: UniaoEntrada, request: Request, auth: Auth = Depends(_auth_editor)) -> dict:
+    iid = comum.uuid_ok(id)
+    esc.exigir_escopo(auth, "camada:editar", iid)
+    try:
+        with db.db(auth.contexto()) as cur:
+            return combinar.unir(cur, auth, request, iid, corpo.ids, corpo.versoes, corpo.atributos)
+    except psycopg2.Error as e:
+        raise comum.erro_do_banco(e) from e
+
+
+@router.post("/api/camadas/{id}/feicoes/dividir", openapi_extra=EDITAR)
+def dividir_feicao(id: str, corpo: DivisaoEntrada, request: Request, auth: Auth = Depends(_auth_editor)) -> dict:
+    iid = comum.uuid_ok(id)
+    esc.exigir_escopo(auth, "camada:editar", iid)
+    try:
+        with db.db(auth.contexto()) as cur:
+            return combinar.dividir(cur, auth, request, iid, corpo.id, corpo.versao, corpo.ponto)
     except psycopg2.Error as e:
         raise comum.erro_do_banco(e) from e
