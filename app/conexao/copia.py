@@ -156,8 +156,12 @@ def conexao_copiar_vetor(ctx, conexao_id: uuid.UUID, colecao: str, titulo: str |
         conector, linha = _conector_de(cur, cid)
         cur.execute("SELECT slug FROM plat.tenant WHERE id = %s", (ctx.tenant_id,))
         slug = cur.fetchone()["slug"]
-
-    schema = esquema_dado.esquema(cur, slug)
+        # achado 16/09 (tests/api/conexao/test_wfs_ogcapi.py): `esquema_dado.esquema` PRECISA rodar com o
+        # cursor ainda dentro do `with` — fora dele a conexão já voltou ao pool (commit + putconn em
+        # app.db.db()), e a consulta seguinte reabre uma transação numa conexão que outro checkout já achava
+        # limpa; o próximo `_preparar` (con.autocommit = False) explode com "ProgrammingError: set_session
+        # cannot be used inside a transaction" — determinístico, não flutuação de carga.
+        schema = esquema_dado.esquema(cur, slug)
     item_id = str(uuid.uuid4())
     tabela = f"c_{item_id.replace('-', '')[:16]}"
     tabela_criada = False
