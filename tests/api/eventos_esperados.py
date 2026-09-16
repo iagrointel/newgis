@@ -160,15 +160,16 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/rede/{rede_id}/tracar"): ["redes/tracar"],
     ("POST", "/api/rede/{rede_id}/epanet"): ["redes/epanet_importar"],
     ("POST", "/api/rede/{rede_id}/teksi"): ["redes/teksi_importar"],
+    # L7-03-a: o envio bem-sucedido continua sem evento (sem dono humano — a auditoria é plat.arquivo +
+    # plat.log_acesso); a RECUSA pelo pipeline único (tipo fora da rota, bytes, zip-bomba, SVG, antivírus) é
+    # o que vai para a trilha.
+    ("POST", "/api/arquivos"): ["arquivos/conteudo_recusado", "arquivos/quarentena"],
 }
 
 
 ROTAS_SEM_EVENTO: dict[tuple[str, str], str] = {
     ("POST", "/api/eu/2fa/iniciar"):
         "só liga no confirmar; iniciar sem confirmar não muda o estado da conta, nada para narrar ainda",
-    ("POST", "/api/arquivos"):
-        "arquivo/objeto (L0-11) sem dono humano para narrar num evento de domínio; a auditoria do objeto é a "
-        "própria linha em plat.arquivo (quem gravou, quando, sha256) + plat.log_acesso da requisição",
     ("DELETE", "/api/arquivos/{sha256}"):
         "mesma decisão de POST /api/arquivos: sem dono humano, a auditoria fica em plat.arquivo/log_acesso",
     ("POST", "/api/rota"):

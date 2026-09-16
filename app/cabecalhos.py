@@ -16,6 +16,7 @@ LISTA de origens — que é o caso de uso (embutir o mapa no sítio do cliente).
 """
 
 import json
+import re
 import secrets
 import time
 
@@ -64,6 +65,13 @@ CSP_DOCUMENTO = (
 )
 # Tudo que não é documento (JSON, GeoJSON, imagem, tile, arquivo): nada pode ser carregado a partir dele.
 CSP_DADO = ("default-src 'none'", "base-uri 'none'", "form-action 'none'", "frame-ancestors 'none'")
+# Download de byte de cliente (item L7-03-a-antivirus-upload; docs/SEGURANCA.md §9): `GET /api/arquivos/{sha256}`
+# já entrega com tipo rebaixado e `Content-Disposition: attachment` (app/entrega_conteudo.py), mas um SVG/HTML/GIF
+# aberto DIRETO na aba (o usuário ignora o download e abre a URL) ainda é HTML/SVG válido para o navegador — CSP
+# `sandbox` fecha o que o próprio arquivo tentaria fazer se rodasse (iframe, formulário, plugin, navegação
+# top-level, popup), por cima do que `CSP_DADO` já fecha (carregar recurso A PARTIR dele). Só esta rota: as
+# outras (JSON, tile, GeoJSON) não têm por que herdar uma restrição pensada para conteúdo de cliente.
+_ROTA_ARQUIVO_BAIXAR = re.compile(r"^/api/arquivos/[0-9a-f]{64}$")
 CORS_VERBOS = "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS"
 CORS_CABECALHOS = "authorization, content-type, x-requested-with"
 CORS_EXPOSTOS = "x-req-id"
@@ -118,6 +126,8 @@ def esquecer_origens() -> None:
 def politica(request: Request, resposta: Response, nonce: str) -> str:
     tipo = (resposta.headers.get("content-type") or "").split(";")[0].strip().lower()
     if tipo not in ("text/html", "application/xhtml+xml"):
+        if request.method == "GET" and _ROTA_ARQUIVO_BAIXAR.match(request.url.path):
+            return "sandbox; " + "; ".join(CSP_DADO)
         return "; ".join(CSP_DADO)
     origens = origens_embutidas(request)
     ancestrais = "frame-ancestors " + (" ".join(("'self'", *origens)) if origens else "'none'")

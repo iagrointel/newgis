@@ -701,3 +701,65 @@ local.
 - **`fail2ban` com IP real de produção no teste**: por segurança operacional desta máquina
   compartilhada (ver 9.2) — em produção o `banaction` é o real (`nftables`, herdado), sem dry-run;
   só o TESTE evita usar um IP de verdade.
+
+
+## 12. Pipeline único de upload por classe (item L7-03-a-antivirus-upload)
+
+Camada de CIMA da varredura de conteúdo do §8: a `classe` do upload (`POST /api/arquivos?classe=`) decide,
+ANTES de ler um byte do corpo, quais `Content-Type` são aceitos e o teto de tamanho da classe
+(`app/varredura_conteudo.POLITICAS`). `Content-Type` fora da lista da classe recusa com `415
+politica_de_rota` sem gastar leitura de corpo nem chamada ao Garage — o mesmo espírito de "recusar cedo" da
+checagem de `Content-Length` (§8.4). A checagem "bytes provam o tipo" do §8 continua valendo sempre, para
+QUALQUER classe: a política aqui só estreita quais tipos cada classe aceita.
+
+| classe | `Content-Type` aceitos | teto |
+|---|---|---|
+| `objeto` | sem lista por rota: qualquer `Content-Type` passa para a assinatura básica do §8 decidir sozinha — inclusive `application/octet-stream`, `text/plain` ou qualquer tipo sem família fixa em `TIPOS_PERMITIDOS` (`image/png`, `image/jpeg`, `image/gif`, `image/tiff`, `image/webp`, `application/json`, `application/geo+json`, `text/csv`, `application/pdf`, `application/zip`, `application/vnd.google-earth.kmz`); é a classe "arquivo bruto" (padrão de `POST /api/arquivos`) | `limites.ARQUIVO_BYTES_MAX` |
+| `anexo` | `image/png`, `image/jpeg`, `image/gif`, `image/webp`, `image/svg+xml`, `application/pdf`, `text/csv`, `text/plain`, `application/json`, `application/geo+json`, `application/zip`, `application/vnd.google-earth.kmz`, `application/vnd.google-earth.kml+xml`, `text/html` | `limites.ANEXO_BYTES_MAX` |
+| `foto_campo` | `image/jpeg`, `image/png`, `image/webp` | `limites.ANEXO_BYTES_MAX` |
+| `imagem` | `image/png`, `image/jpeg`, `image/gif`, `image/webp`, `image/svg+xml` | `limites.IMAGEM_UPLOAD_BYTES_MAX` |
+| `csv` | `text/csv`, `text/plain` | `limites.ANEXO_BYTES_MAX` |
+
+Classe fora desta tabela cai em `objeto` (`varredura_conteudo.politica()`).
+
+### 12.1 Pós-processamento sobre o arquivo inteiro
+
+Só corre quando o arquivo coube no buffer único (`limites.ARQUIVO_BUFFER_UNICO_BYTES`, o que já vale para a
+maioria dos anexos/imagens desta tabela) — `varredura_conteudo.pos_processar()`:
+
+- **SVG** (`image/svg+xml`): sai sanitizado por `app/svg_seguro.py` (lista BRANCA de elemento/atributo,
+  parse por `defusedxml` — nunca resolve entidade externa nem expande bomba de entidades). `<script>`,
+  manipuladores `on*`, `<foreignObject>`, `href`/`xlink:href` para fora do arquivo e `url()` em `style` somem;
+  o desenho (path/circle/rect/...) fica. SVG que não sobrevive ao parse (XML inválido, entidade externa) é
+  recusado com `415`, motor `svg_seguro`.
+- **zip/kmz** (`application/zip`, `application/vnd.google-earth.kmz`): passa pelas regras de zip-bomba de
+  `app/ingestao/formatos.py::conferir_zip` (nº de entradas, tamanho descomprimido, razão de compressão,
+  caminho de entrada) ANTES de gravar — nunca extrai para decidir. Acima do buffer único (multipart), a
+  MESMA regra roda depois de gravado, lendo só o diretório central por intervalo
+  (`app/uploads/zip_remoto.py::inspecionar_zip_remoto`); zip suspeito é apagado do Garage e recusado. Motor
+  `zip_bomba` nos dois casminhos.
+
+### 12.2 Antivírus opcional (`clamd`, D21)
+
+`app/varredura_conteudo.py::MotorClamd` fala o protocolo `INSTREAM` do `clamd` por socket unix ou TCP
+(biblioteca padrão só). Só entra na cadeia quando `PLAT_CLAMD` está definido nas configurações (endereço do
+`clamd`) — sem isso, só a assinatura básica do §8 roda, exatamente como D21 decidiu (§8.1: a base de
+assinaturas do `clamd` residente em RAM não cabe nesta máquina hoje). Com `PLAT_CLAMD` definido, `clamd` fora
+do ar RECUSA o upload (`ClamdIndisponivel`) — nunca "passa sem varrer" só porque o antivírus caiu.
+
+### 12.3 Evento na trilha
+
+Recusa por qualquer motor deste pipeline (`politica_de_rota`, assinatura básica do §8, `svg_seguro`,
+`zip_bomba`, `clamd`) grava um evento (`plat.evento`, tipo vocabulário `db/migracoes/
+20260907T2225_upload_recusa_evento.sql`): `arquivos/quarentena` quando é o antivírus (guarda sha256 +
+assinatura), `arquivos/conteudo_recusado` nos demais (guarda sha256 quando há dados, classe, `Content-Type`
+declarado, tipo detectado, motivo) — nunca o conteúdo. A quarentena É o registro: o objeto recusado nunca é
+gravado no Garage.
+
+### 12.4 Entrega: nunca ativo, mesmo aberto direto na aba
+
+`GET /api/arquivos/{sha256}` sempre entrega com `Content-Disposition: attachment` e tipo de mídia rebaixado
+pela lista fechada do §8.6/`app/entrega_conteudo.py` (byte de cliente nunca volta como `text/html`,
+`image/svg+xml` ou JavaScript). Por cima disso, `app/cabecalhos.py` acrescenta `Content-Security-Policy:
+sandbox` só nesta rota (o resto da API usa a política de dado comum, §1-11): se o usuário ignora o download e
+abre a URL direto na aba, o conteúdo não pode navegar a página, abrir formulário, popup ou plugin.

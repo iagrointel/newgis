@@ -41,7 +41,11 @@ from typing import Any
 from app import db
 from app.garage import ClienteAdmin, ClienteS3, ErroGarage
 from app.settings import settings
-from app.varredura_conteudo import ConteudoRecusado, escanear_cabecalho  # noqa: F401 — reexportado (item L7-03-b)
+from app.varredura_conteudo import (  # noqa: F401 — reexportados (itens L7-03-a/b)
+    ConteudoRecusado,
+    escanear_cabecalho,
+    escanear_continuacao,
+)
 
 log = logging.getLogger("plat.objetos")
 
@@ -55,6 +59,8 @@ EXTENSOES = {
     "application/geo+json": "geojson",
     "text/csv": "csv",
     "text/html": "html",  # L2-16-b: saída HTML do notebook agendado (notebooks.executar)
+    "text/plain": "txt",  # L7-03-a: tipos que o pipeline único de upload aceita em anexo (attachment sempre)
+    "image/svg+xml": "svg",  # L7-03-a: gravado sanitizado (app/svg_seguro.py), entregue com CSP sandbox
     "application/pdf": "pdf",
     "application/zip": "zip",
     "application/vnd.google-earth.kmz": "kmz",

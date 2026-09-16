@@ -5,14 +5,24 @@ em `plat.arquivo` (RLS: o inquilino da sessão nunca vê o sha256 de outro) e en
 Garage; `GET /api/arquivos` devolve uso × cota; `GET /api/arquivos/_varredura` roda a varredura de órfãos do
 próprio inquilino (não confundir com a varredura de CONTEÚDO abaixo). Isento do limite de corpo padrão
 (`app/limite_corpo.py`): a rota aplica o próprio teto em streaming, nunca bufferizando mais que uma parte
-(`limites.ARQUIVO_PARTE_BYTES`) de RAM por vez. Item L7-03-b-antivirus-anexos: todo envio passa pela varredura
-de conteúdo (`app/varredura_conteudo.py`) antes de tocar o Garage — na 1ª parte (multipart) ou dentro de
-`objetos.guardar` (arquivo pequeno, 1 PUT só); 415 `conteudo_recusado` quando os bytes não batem com o
-`Content-Type` declarado; no caminho multipart cada parte SEGUINTE também é varrida (busca de carga
-executável, com emenda entre blocos), então carga colada depois do cabeçalho não escapa.
-`GET /api/arquivos/{sha256}` devolve o conteúdo como ANEXO (`Content-Disposition: attachment`,
-`X-Content-Type-Options: nosniff`) e com tipo de mídia da lista fechada da instalação: byte enviado por
-cliente nunca volta como `text/html`, `image/svg+xml` ou JavaScript (`app/entrega_conteudo.py`).
+(`limites.ARQUIVO_PARTE_BYTES`) de RAM por vez.
+
+Item L7-03-b-antivirus-anexos: todo envio passa pela varredura de conteúdo (`app/varredura_conteudo.py`) antes
+de tocar o Garage — na 1ª parte (multipart) ou dentro do buffer único (arquivo pequeno, 1 PUT só); 415
+`conteudo_recusado` quando os bytes não batem com o `Content-Type` declarado; no caminho multipart cada parte
+SEGUINTE também é varrida (busca de carga executável, com emenda entre blocos), então carga colada depois do
+cabeçalho não escapa. `GET /api/arquivos/{sha256}` devolve o conteúdo como ANEXO (`Content-Disposition:
+attachment`, `X-Content-Type-Options: nosniff`) e com tipo de mídia da lista fechada da instalação: byte
+enviado por cliente nunca volta como `text/html`, `image/svg+xml` ou JavaScript (`app/entrega_conteudo.py`).
+
+Item L7-03-a-antivirus-upload (pipeline único; docs/SEGURANCA.md §9): a `classe` do upload decide, ANTES de ler
+um byte do corpo, quais `Content-Type` são aceitos e o teto de tamanho (`app/varredura_conteudo.POLITICAS`) — um
+`Content-Type` fora da lista da classe recusa com 415 `politica_de_rota` sem gastar leitura de corpo. Com o
+arquivo inteiro em mãos (buffer único), SVG sai sanitizado e zip/kmz passam pela regra de zip-bomba
+(`varredura_conteudo.pos_processar`); acima do buffer único, a mesma regra de zip-bomba roda no que já foi
+gravado, por intervalo (`app/uploads/zip_remoto.py`), e zip suspeito é apagado do Garage. Recusa por este
+pipeline vira evento na trilha (`arquivos/conteudo_recusado`, ou `arquivos/quarentena` quando é o antivírus
+`clamd` — nunca o conteúdo, só sha256/assinatura/motivo).
 
 Achado do adversário (mesma causa raiz de L0-04-a, handoffs/T4/ADVERSARIO-L0.md): o escopo de token exigido
 aqui NÃO é `admin:inquilino` — enviar/baixar/apagar o PRÓPRIO arquivo e ver a própria cota são operações de
@@ -28,9 +38,12 @@ import re
 
 from fastapi import APIRouter, Request, Response
 
-from app import db, entrega_conteudo, limites, objetos, objetos_raster
+from app import db, entrega_conteudo, limites, objetos, objetos_raster, varredura_conteudo
+from app.auth.comum import registrar_evento
 from app.auth.sessao import Auth, autenticado, ip_de, sha256_hex
 from app.erros import ErroAPI
+from app.ingestao.formatos import ZipSuspeito
+from app.uploads import zip_remoto
 
 router = APIRouter(tags=["arquivos"])
 X = {"x-auth": "S/T", "x-privilegio": "proprio"}
@@ -54,6 +67,22 @@ def _sha256_ok(sha256: str) -> str:
     if not SHA256.match(sha256):
         raise ErroAPI(422, "validacao", "sha256 fora do padrão (64 hex)", {"campo": "sha256"})
     return sha256
+
+
+def _recusar(
+    request: Request, ctx, e: objetos.ConteudoRecusado, classe: str, content_type: str, dados: bytes | None
+) -> ErroAPI:
+    """Registra a recusa na trilha (`arquivos/conteudo_recusado`, ou `arquivos/quarentena` quando é o
+    antivírus) em transação PRÓPRIA — levantar dentro do `with` do envio faria rollback do evento — e devolve
+    o 415 para o chamador levantar. Nunca grava o conteúdo: a quarentena É o registro (sha256 + assinatura +
+    quem/quando/de onde, nunca os bytes)."""
+    props = varredura_conteudo.propriedades_da_recusa(e, classe, content_type, dados)
+    with db.db(ctx) as cur:
+        registrar_evento(cur, request, varredura_conteudo.tipo_do_evento(e), "arquivo", props.get("sha256"), props)
+    detalhe = {"tipo_detectado": e.resultado.tipo_detectado, "motor": e.resultado.motor}
+    if e.resultado.virus:
+        detalhe["assinatura"] = e.resultado.virus
+    return ErroAPI(415, "conteudo_recusado", str(e), detalhe)
 
 
 def _linha(cur, tenant_id: int, classe: str, sha256: str) -> dict | None:
@@ -154,8 +183,22 @@ async def enviar(
     classe = _classe_ok(classe)
     content_type = (request.headers.get("content-type") or "application/octet-stream").split(";")[0].strip()
     ctx = auth.contexto()
+    # pipeline único (item L7-03-a): lista de tipos e teto por CLASSE, decididos ANTES de ler um byte do corpo
+    try:
+        pol = varredura_conteudo.conferir_tipo_na_rota(classe, content_type)
+    except objetos.ConteudoRecusado as e:
+        raise _recusar(request, ctx, e, classe, content_type, None) from None
     tamanho_parte = limites.ARQUIVO_PARTE_BYTES
-    limite = limites.ARQUIVO_BYTES_MAX
+    limite = pol.max_bytes
+    declarado = request.headers.get("content-length")
+    if declarado and declarado.isdigit() and int(declarado) > limite:
+        # 1 byte acima do plano = 413 SEM ler o corpo (o cliente que mente no Content-Length cai no contador
+        # abaixo, que para de ler assim que passa do teto — nunca o corpo inteiro)
+        raise ErroAPI(
+            413, "arquivo_grande",
+            f"Content-Length {declarado} acima do limite de {limite} bytes da classe {pol.nome}",
+            {"maximo_bytes": limite, "classe": pol.nome},
+        )
     buffer = bytearray()
     total = 0
     cauda = b""  # emenda entre partes: um padrão de carga partido na costura entre blocos não escapa
@@ -174,7 +217,10 @@ async def enviar(
         total += len(pedaco)
         if total > limite:
             abortar_se_aberto()
-            raise ErroAPI(413, "arquivo_grande", f"corpo acima do limite de {limite} bytes")
+            raise ErroAPI(
+                413, "arquivo_grande", f"corpo acima do limite de {limite} bytes da classe {pol.nome}",
+                {"maximo_bytes": limite, "classe": pol.nome},
+            )
         buffer += pedaco
         if len(buffer) >= tamanho_parte:
             try:
@@ -182,14 +228,13 @@ async def enviar(
                     # 1ª parte antes de abrir o multipart: varredura de conteúdo (item L7-03-b) aqui, nunca
                     # depois — um arquivo grande recusado não chega a gastar upload multipart no Garage
                     objetos.escanear_cabecalho(bytes(buffer), content_type)
-                    cauda = objetos.cauda_varredura(bytes(buffer))
+                    cauda = varredura_conteudo.cauda(bytes(buffer))
                 else:
                     # partes SEGUINTES: carga executável colada depois do cabeçalho também recusa o envio
                     cauda = objetos.escanear_continuacao(bytes(buffer), cauda)
             except objetos.ConteudoRecusado as e:
                 abortar_se_aberto()
-                detalhe = {"tipo_detectado": e.resultado.tipo_detectado}
-                raise ErroAPI(415, "conteudo_recusado", str(e), detalhe) from e
+                raise _recusar(request, ctx, e, classe, content_type, bytes(buffer)) from None
             try:
                 with db.db(ctx) as cur:
                     if upload_id is None:
@@ -212,8 +257,10 @@ async def enviar(
             # varredura de conteúdo (item L7-03-b) roda AQUI, na borda onde o byte cru do cliente entra —
             # objetos.guardar() não varre (é adaptador de armazenamento genérico, ver seu próprio docstring)
             objetos.escanear_cabecalho(bytes(buffer), content_type)
+            # arquivo inteiro em mãos: SVG sai sanitizado, zip/kmz passam pela regra de zip-bomba (L7-03-a)
+            dados = varredura_conteudo.pos_processar(bytes(buffer), content_type)
             with db.db(ctx) as cur:
-                resultado = objetos.guardar(cur, classe, bytes(buffer), content_type, usuario_id=auth.usuario_id)
+                resultado = objetos.guardar(cur, classe, dados, content_type, usuario_id=auth.usuario_id)
         else:
             if buffer:
                 objetos.escanear_continuacao(bytes(buffer), cauda)
@@ -222,15 +269,28 @@ async def enviar(
                 partes.append((numero, etag))
             with db.db(ctx) as cur:
                 resultado = objetos.parte_concluir(cur, upload_id, partes)
+            if content_type in ("application/zip", "application/vnd.google-earth.kmz"):
+                # zip acima do buffer único: as MESMAS regras de zip-bomba, lendo só o diretório central por
+                # intervalo (app/uploads/zip_remoto.py); zip suspeito é apagado do Garage e recusado
+                try:
+                    zip_remoto.inspecionar_zip_remoto(
+                        lambda a, b: objetos.ler_intervalo(resultado["chave"], a, b), int(resultado["bytes"])
+                    )
+                except ZipSuspeito as e:
+                    objetos.apagar(resultado["chave"])
+                    rec = objetos.ConteudoRecusado(
+                        varredura_conteudo.Resultado(False, f"zip suspeito: {e}", "application/zip", "zip_bomba")
+                    )
+                    raise _recusar(request, ctx, rec, classe, content_type, None) from None
     except objetos.CotaExcedida as e:
         abortar_se_aberto()
         raise ErroAPI(413, "cota_excedida", str(e)) from e
     except objetos.ConteudoRecusado as e:
-        # dois caminhos chegam aqui: o de 1 PUT (upload_id is None, varredura do corpo inteiro) e o resto
-        # final do multipart (busca de carga executável no último bloco, emendado com a cauda do anterior)
+        # dois caminhos chegam aqui: o de 1 PUT (upload_id is None, varredura do corpo inteiro/pós-processo) e
+        # o resto final do multipart (busca de carga executável no último bloco, emendado com a cauda anterior)
         abortar_se_aberto()
-        detalhe = {"tipo_detectado": e.resultado.tipo_detectado}
-        raise ErroAPI(415, "conteudo_recusado", str(e), detalhe) from e
+        detalhe_dados = bytes(buffer) if upload_id is None else None
+        raise _recusar(request, ctx, e, classe, content_type, detalhe_dados) from None
     except Exception:
         abortar_se_aberto()
         raise
