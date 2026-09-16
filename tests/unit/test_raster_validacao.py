@@ -237,7 +237,7 @@ def test_tif_que_e_png_renomeado(tmp_path):
     rel = validar("png_renomeado_tif", p)
     assert rel["estado"] == "recusado"
     assert rel["problemas"] == ["o conteúdo não corresponde à extensão .tif: os primeiros bytes são de PNG, "
-                                "não de GeoTIFF"]
+                                "não de GeoTIFF / BigTIFF"]
     assert rel["subprocesso"] is None  # recusado no pai, sem abrir subprocesso
 
 

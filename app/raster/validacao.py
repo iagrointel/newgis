@@ -51,6 +51,8 @@ import zipfile
 from datetime import date, datetime
 from pathlib import Path
 
+from app.imagens import formatos as _formatos
+
 VERSAO = 1
 
 # --- limites do subprocesso (ADR 0015 seção 2; refletidos em tests/medidas/L1-01-b.json)
@@ -77,15 +79,18 @@ TIPOS_SEM_CONVERSAO = ("complex64", "complex128", "complex_int16", "int64", "uin
 PERFIS = ("dados", "visual")
 CAMPOS_RESPOSTA = ("crs", "nodata", "data_aquisicao", "escala")
 
-# --- formatos: extensão → (nome, assinaturas admitidas nos primeiros bytes)
-ASSINATURAS: dict[str, tuple[str, tuple[bytes, ...]]] = {
-    ".tif": ("GeoTIFF", (b"II*\x00", b"MM\x00*", b"II+\x00", b"MM\x00+")),
-    ".tiff": ("GeoTIFF", (b"II*\x00", b"MM\x00*", b"II+\x00", b"MM\x00+")),
-    ".jp2": ("JPEG 2000", (b"\x00\x00\x00\x0cjP  \r\n\x87\n", b"\xff\x4f\xff\x51")),
+# --- formatos: a tabela canônica vive em app.imagens.formatos (item L1-01-f) e é importada — extensão →
+# (rótulo, assinaturas admitidas nos primeiros bytes). Extensões de RECUSADOS têm mensagem própria e
+# dirigida (ECW/MrSID sem SDK no GDAL desta instalação; GeoPDF/HDF5 com razão medida), devolvida ANTES da
+# recusa genérica de extensão desconhecida. O VRT (formato interno do mosaico, não entrada de usuário)
+# continua listado aqui, fora da tabela de usuário.
+ASSINATURAS: dict[str, tuple[str, tuple[bytes, ...] | None]] = {
     ".vrt": ("VRT (GDAL)", (b"<VRTDataset",)),
-    ".zip": ("zip com GeoTIFF/JPEG 2000", (b"PK\x03\x04",)),
 }
-EXTENSOES_RASTER_EM_ZIP = (".tif", ".tiff", ".jp2")
+for _f in _formatos.FORMATOS.values():
+    for _ext in _f.extensoes:
+        ASSINATURAS[_ext] = (_f.rotulo, _f.assinaturas)
+EXTENSOES_RASTER_EM_ZIP = _formatos.EXTENSOES_RASTER_EM_ZIP
 _NOMES_MAGICOS = {b"\x89PNG": "PNG", b"\xff\xd8\xff": "JPEG", b"GIF8": "GIF", b"%PDF": "PDF", b"<?xm": "XML",
                   b"PK\x03\x04": "zip", b"\x00\x00\x00\x0c": "JPEG 2000", b"II*\x00": "TIFF", b"MM\x00*": "TIFF"}
 
@@ -128,14 +133,23 @@ def nome_pelo_conteudo(cabecalho: bytes) -> str:
 
 
 def conferir_assinatura(caminho: Path) -> tuple[str, str | None]:
-    """(formato, problema). A extensão diz o que o cliente DECLAROU; os bytes dizem o que o arquivo É."""
+    """(formato, problema). A extensão diz o que o cliente DECLAROU; os bytes dizem o que o arquivo É.
+    Recusados nomeados (ECW/MrSID/GeoPDF/HDF5, tabela `app.imagens.formatos.RECUSADOS`) têm a mensagem
+    dirigida devolvida ANTES da recusa genérica de extensão — o usuário merece o porquê, não a lista."""
     ext = caminho.suffix.lower()
+    recusado = _formatos.recusado_por_extensao(ext)
+    if recusado is not None:
+        return "", recusado.mensagem
     if ext not in ASSINATURAS:
         return "", (f"extensão {ext or '(sem extensão)'} não é um formato raster aceito; aceitos: "
                     + ", ".join(sorted(ASSINATURAS)))
     nome, assinaturas = ASSINATURAS[ext]
     with caminho.open("rb") as f:
         cabecalho = f.read(64)
+    if assinaturas is None:
+        # formato sem assinatura própria (.dat/.bin do ENVI, .asc texto): a prova de que É aquele formato
+        # vem da abertura pelo GDAL no filho (e, para o ENVI, do .hdr irmão) — aqui só a extensão declara
+        return nome, None
     if ext == ".vrt":
         ok = cabecalho.lstrip().startswith(b"<VRTDataset") or (
             cabecalho.lstrip().startswith(b"<?xml") and b"VRTDataset" in caminho.read_bytes()[:4096])

@@ -442,7 +442,7 @@ def test_tif_que_e_png_nao_abre_subprocesso(tmp_path: Path) -> None:
     assert relatorio["estado"] == "recusado"
     assert relatorio["subprocesso"] is None, "abriu subprocesso para um arquivo que o pai já sabia recusar"
     assert relatorio["problemas"][0] == ("o conteúdo não corresponde à extensão .tif: os primeiros bytes são de "
-                                         "PNG, não de GeoTIFF")
+                                         "PNG, não de GeoTIFF / BigTIFF")
 
 
 # =========================================================== ATAQUE 4 — mensagem
