@@ -64,6 +64,28 @@ def tabela_de(d: dict) -> str:
     return f'{ident(d["schema"])}.{ident(d["tabela"])}'
 
 
+def utm_da_camada(ctx, e: dict) -> int:
+    """SRID UTM WGS 84 do centro da camada (32600+fuso ao norte, 32700+fuso ao sul). Usado para gerar grade
+    métrica de verdade: quadrado e hexágono desenhados em grau ficam achatados conforme a latitude.
+
+    Mora aqui (não em app/ferramentas/relacao.py, que também a definia) para que app/ferramentas/grade.py
+    (item L2-05-d) não precise importar relacao.py (item L2-05-c) só por esta função — relacao.py registra
+    a ferramenta `juncao_espacial`, nome que app/consulta_grande/ferramentas_grandes.py (item L2-15-b) já
+    usa para a variante de dado grande; importar as duas no mesmo processo derruba o catálogo inteiro com
+    `ErroRegistro: ferramenta repetida` (achado 16/09). Decidir se as duas devem convergir num só registro
+    é decisão de portão de outro item; aqui só se evita o crash do processo inteiro."""
+    with ctx.db() as cur:
+        cur.execute(f"SELECT ST_X(c) AS x, ST_Y(c) AS y FROM (SELECT ST_Centroid(ST_Transform("
+                    f"ST_SetSRID(ST_Extent(geom)::geometry, {int(e['srid'])}), 4326)) AS c "
+                    f"FROM {tabela_de(e)}) t")
+        r = cur.fetchone()
+    if r is None or r["x"] is None:
+        raise ErroFerramenta("camada_vazia", f"camada {e['titulo']!r} sem feições para definir a grade")
+    fuso = int((float(r["x"]) + 180.0) // 6.0) + 1
+    fuso = min(60, max(1, fuso))
+    return (32600 if float(r["y"]) >= 0 else 32700) + fuso
+
+
 def familia(entrada: dict) -> tuple[str, str, int]:
     f = FAMILIAS.get(str(entrada.get("geometria", "")).upper())
     if f is None:

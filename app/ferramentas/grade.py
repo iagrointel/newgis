@@ -6,7 +6,7 @@ próximo médio, I de Moran global, interpolação por inverso da distância (ID
 Divisão de trabalho, para não haver duas implementações da mesma conta:
 
 * o que é DESENHO de grade regular é PostGIS (`ST_SquareGrid`/`ST_HexagonGrid`), o mesmo caminho que
-  `agregar_pontos` do L2-05-c já usa, sempre em UTM local (`relacao.utm_da_camada`);
+  `agregar_pontos` do L2-05-c já usa, sempre em UTM local (`vetor.utm_da_camada`);
 * o que é ESTATÍSTICA é `app/ferramentas/estatistica_espacial.py` (numpy/scipy, sem banco), conferido no teste
   do item contra `esda`/`libpysal` e contra fórmula fechada;
 * o que é ISOLINHA é GDAL (`gdal.ContourGenerateEx`), sobre a superfície interpolada em memória.
@@ -34,8 +34,10 @@ from shapely.geometry import LineString, MultiLineString, Point, Polygon
 from app import limites
 from app.ferramentas import estatistica_espacial as ee
 from app.ferramentas.registro import Parametro, ferramenta
-from app.ferramentas.relacao import (
+from app.ferramentas.vetor import (
+    NUMERICAS,
     ErroFerramenta,
+    escrever,
     familia,
     ident,
     tabela_de,
@@ -43,7 +45,6 @@ from app.ferramentas.relacao import (
     utm_da_camada,
     verificar_tamanho,
 )
-from app.ferramentas.vetor import NUMERICAS, escrever
 
 TIPOS_GRADE = ("quadrada", "hexagonal", "h3")
 FORMAS_CENTRO = ("centro", "circulo_distancia_padrao", "elipse")
