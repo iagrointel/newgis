@@ -192,9 +192,11 @@ def _recriar(request: Request, auth: Auth, manifesto: dict, gpkg: Path) -> dict:
                           "id_no_pacote": camada["id_no_pacote"], "tabela": tabela})
     de_para = {c["id_no_pacote"]: c["id"] for c in novas}
     corpo = json.loads(json.dumps(manifesto["mapa"].get("corpo") or {}))
+    # achado 16/09: o campo do documento é `ref` (docs/esquemas/mapa-v1.json), não `camada_id` — nome
+    # antigo, de antes da renomeação feita por outro item (mesma causa de app/mapa/pacote.py).
     for c in corpo.get("camadas") or []:
-        if c.get("camada_id") in de_para:
-            c["camada_id"] = de_para[c["camada_id"]]
+        if c.get("ref") in de_para:
+            c["ref"] = de_para[c["ref"]]
     with db.db(auth.contexto()) as cur:
         cur.execute(
             "INSERT INTO plat.item(tenant_id, tipo, titulo, dono_id, descricao, dados, criado_por, "

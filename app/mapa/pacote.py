@@ -40,10 +40,15 @@ class ErroPacote(Exception):
 
 
 def camadas_citadas(corpo: dict) -> list[str]:
-    """Os uuid de camada que o documento de mapa cita, na ordem em que aparecem, sem repetição."""
+    """Os uuid de camada que o documento de mapa cita, na ordem em que aparecem, sem repetição.
+
+    Achado 16/09: o campo do documento (`docs/esquemas/mapa-v1.json`, `corpo.camadas[].ref`) foi
+    renomeado de `camada_id` para `ref` por outro item, depois deste módulo ter sido escrito contra o
+    nome antigo — sem o conserto, NENHUM mapa real (pós-renomeação) tem camada citada encontrada, e todo
+    pacote sai `mapa_sem_camadas`."""
     vistos: list[str] = []
     for c in (corpo or {}).get("camadas") or []:
-        cid = c.get("camada_id") if isinstance(c, dict) else None
+        cid = c.get("ref") if isinstance(c, dict) else None
         if isinstance(cid, str) and cid not in vistos:
             vistos.append(cid)
     return vistos
