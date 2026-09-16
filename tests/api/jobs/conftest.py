@@ -124,12 +124,19 @@ class WorkerExtra:
     """Worker em subprocesso (só para teste; sempre encerrado no fim). `nome` é a identidade `<base>:<pid>` que o
     processo registra; `saude()` lê o /saude dele."""
 
-    def __init__(self, env: dict, nome_base: str, processos: int = 1, porta: int | None = None):
+    def __init__(self, env: dict, nome_base: str, processos: int = 1, porta: int | None = None,
+                 executor: str | None = None):
         porta = porta or porta_livre()
         ambiente = {k: v for k, v in os.environ.items()}
         ambiente.update({k: v for k, v in env.items() if v is not None})
         ambiente.update({"PYTHONNOUSERSITE": "1", "PLAT_WORKER_NOME": nome_base,
                          "PLAT_WORKER_PROCESSOS": str(processos), "PLAT_WORKER_URL": f"http://127.0.0.1:{porta}"})
+        # afinidade de executor (G7): OPCIONAL — só quando o chamador passa `executor` explicitamente é
+        # que este worker extra anuncia algo diferente de 'padrao' (settings.PLAT_WORKER_EXECUTOR); os
+        # outros usos de WorkerExtra/iniciar_worker/worker_extra continuam sem passar nada aqui e o
+        # comportamento deles não muda.
+        if executor is not None:
+            ambiente["PLAT_WORKER_EXECUTOR"] = executor
         self.nome_base = nome_base
         self.porta = porta
         self.proc = subprocess.Popen([sys.executable, "-m", "app.jobs.worker"], cwd=ROOT, env=ambiente,
