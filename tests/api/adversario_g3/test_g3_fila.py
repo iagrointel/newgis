@@ -122,10 +122,10 @@ def test_periodico_da_plataforma_nao_e_travado_por_chave_escolhida_por_inquilino
 
 
 # ---------------------------------------------------------------- L0-05-a: traceback saneado
-@pytest.mark.xfail(
-    strict=True,
-    reason="L0-05-a: filho.py grava traceback.format_exception() cru em plat.job_log; nao ha saneamento",
-)
+# CORRIGIDO (16/09/2026, commit ddf06a0ff, app/jobs/sanear.py): filho.py passou a chamar sanear() antes
+# de gravar traceback.format_exception() em plat.job_log — troca caminho absoluto do servidor por
+# <app>/<lib>/<venv>/<python> e credencial de URL por <credencial>. Achado original: o traceback ia cru
+# para o log, expondo /home/dev/plataforma/... a quem tem o privilégio jobs.ver.
 def test_traceback_do_job_que_falhou_e_saneado(cliente, sessao_a):
     """Portão literal do L0-05-a: 'job com exceção é retentado 3 vezes ... e termina falhou com o traceback
     SANEADO'. app/jobs/filho.py grava traceback.format_exception() inteiro em plat.job_log."""

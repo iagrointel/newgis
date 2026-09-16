@@ -43,12 +43,11 @@ def _recusa(dados: bytes, content_type: str) -> bool:
         return True
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L7-03-b (refutação literal 'polyglot imagem+script'): arquivo que COMEÇA com GIF/JPEG/PNG "
-    "válido e carrega script/PHP logo depois é aceito — libmagic devolve a família declarada. A afirmação "
-    "do docstring de app/varredura_conteudo.py ('já cobre o polyglot óbvio do portão') é falsa, medida.",
-)
+# CORRIGIDO (16/09/2026, commit a07f6ca17 "Varredura de anexo: polyglot recusado, tipo desconhecido
+# nunca desliga o exame, entrega como anexo (L7-03-b)"): a busca de carga executável passou a
+# percorrer o corpo inteiro (não só o cabeçalho), então imagem válida + script colado depois é
+# recusada. Achado original: arquivo que COMEÇA com GIF/JPEG/PNG válido e carrega script/PHP logo
+# depois era aceito porque libmagic devolvia a família declarada.
 @pytest.mark.parametrize(
     "nome,dados,content_type",
     [
@@ -61,13 +60,11 @@ def test_polyglot_imagem_mais_script_precisa_ser_recusado(nome, dados, content_t
     assert _recusa(dados, content_type), f"polyglot {nome} aceito sob {content_type}"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L7-03-b: TIPOS_PERMITIDOS.get(declarado, None) devolve None (= não examinar) para QUALQUER "
-    "Content-Type fora da tabela, não só para application/octet-stream. Declarar 'text/html' — ou qualquer "
-    "coisa inventada — desliga a varredura inteira, e a rota GET /api/arquivos devolve o conteúdo com esse "
-    "mesmo Content-Type, sem Content-Disposition: attachment.",
-)
+# CORRIGIDO (16/09/2026, commit a07f6ca17 "Varredura de anexo: polyglot recusado, tipo desconhecido
+# nunca desliga o exame, entrega como anexo (L7-03-b)"): Content-Type fora da tabela deixou de
+# significar "não examinar" e passou a receber rigor máximo. Achado original:
+# TIPOS_PERMITIDOS.get(declarado, None) devolvia None para qualquer tipo fora da tabela, e isso
+# desligava a varredura inteira — quem escolhia se ela rodava era o remetente.
 @pytest.mark.parametrize("content_type", ["text/html", "application/x-inventado", "", "text/plain"])
 def test_content_type_fora_da_tabela_nao_pode_desligar_a_varredura(content_type):
     assert _recusa(b"#!/bin/sh\nrm -rf /\n", content_type), (
@@ -75,22 +72,20 @@ def test_content_type_fora_da_tabela_nao_pode_desligar_a_varredura(content_type)
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L7-03-b: a varredura olha só os primeiros 8 KiB (CABECALHO_BYTES). Um CSV válido de 9 KiB com "
-    "carga depois do limite passa sem exame do que importa.",
-)
+# CORRIGIDO (16/09/2026, commit a07f6ca17 "Varredura de anexo: polyglot recusado, tipo desconhecido
+# nunca desliga o exame, entrega como anexo (L7-03-b)"): a busca de carga passou a percorrer o
+# corpo inteiro, não só os primeiros 8 KiB (CABECALHO_BYTES). Achado original: um CSV válido de
+# 9 KiB com carga depois do limite passava sem exame do que importava.
 def test_carga_depois_de_8_kib_precisa_ser_examinada():
     dados = b"a,b\n" + b"1,2\n" * 2200 + b"#!/bin/sh\nrm -rf /\n"
     assert len(dados) > 8192
     assert _recusa(dados, "text/csv"), "carga além de 8 KiB nunca é olhada"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L7-03-b: contêiner composto (kmz/zip) não é aberto entrada por entrada — um zip com script "
-    "dentro passa como 'application/zip', que é a família declarada.",
-)
+# CORRIGIDO (16/09/2026, commit a07f6ca17 "Varredura de anexo: polyglot recusado, tipo desconhecido
+# nunca desliga o exame, entrega como anexo (L7-03-b)"): contêiner composto (kmz/zip) passou a ser
+# aberto entrada por entrada; entrada com extensão executável ou shebang recusa o pacote inteiro.
+# Achado original: um zip com script dentro passava como 'application/zip', a família declarada.
 def test_zip_com_script_dentro_precisa_ser_recusado():
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:

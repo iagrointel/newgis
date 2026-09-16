@@ -53,13 +53,13 @@ def test_garage_toml_nao_pode_ter_token_em_claro():
     assert achados == [], f"segredo em claro em {GARAGE_TOML}: {achados}"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L7-19 (portão: 'plat segredo rotacionar <nome> para cada um dos 5 segredos'). Existe "
-    "scripts/rotacionar_segredo.sh com 2 nomes admitidos (PLAT_SECRET, PLAT_DSN_WORKER); não existe comando "
-    "`plat segredo rotacionar`, não há PLAT_SECRET_ANTERIOR (dupla chave), não há rotação de chave S3 nem "
-    "do token admin do Garage, e não há medida de 0 erro 5xx durante a rotação (nenhum k6 no repositório).",
-)
+# CORRIGIDO (16/09/2026, commit 6b1c2e4ed "Homologacao com credencial propria de armazenamento e
+# segredos fora do .env (L7-31, L7-19)"): scripts/rotacionar_segredo.sh passou a cobrir os cinco
+# segredos do portão (PLAT_SECRET, PLAT_DSN_WORKER, PLAT_DSN, PLAT_GARAGE_ADMIN_TOKEN,
+# PLAT_GARAGE_S3 <slug>). Achado original: só 2 nomes eram admitidos (PLAT_SECRET, PLAT_DSN_WORKER).
+# ⚠ este teste cobre só essa cláusula estreita (os 5 nomes no script); as outras cláusulas do achado
+# original (comando `plat segredo rotacionar`, PLAT_SECRET_ANTERIOR/dupla chave, medida de 0 erro 5xx
+# via k6) NÃO são exercitadas aqui e seguem sem teste — ver MEMORY "L7-19 segredos PARCIAL".
 def test_rotacao_cobre_os_cinco_segredos_do_portao():
     script = (RAIZ / "scripts" / "rotacionar_segredo.sh").read_text(encoding="utf-8")
     esperados = ["PLAT_SECRET", "PLAT_DSN_WORKER", "PLAT_DSN", "PLAT_GARAGE_ADMIN_TOKEN", "PLAT_GARAGE_S3"]

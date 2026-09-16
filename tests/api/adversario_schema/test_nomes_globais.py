@@ -27,13 +27,13 @@ def test_chave_do_advisory_lock_depende_do_ambiente(schema):
     )
 
 
-@pytest.mark.xfail(strict=True, reason="FURO F6: a regex e `\\bplat\\b`; `_` e caractere de palavra, entao "
-                                       "qualquer NOVO objeto global chamado plat_<algo> passa intacto. Ja "
-                                       "aconteceu: o schema `plat_acervo` e o papel `plat_acervo_publicador` "
-                                       "do L6-01-b exigiram 4 linhas novas a mao em app/schema_ambiente.py "
-                                       "(laco/handoffs/T3/L6-01-b-view-so-leitura.md:18) e outra regra em "
-                                       "laco/trilha_reescrever.py. O padrao e lista-branca: o que ninguem "
-                                       "lembrou de acrescentar vaza para producao em silencio")
+# CORRIGIDO (16/09/2026, commit 2507be9ea "Publicacao sem copia do acervo: view so-leitura com
+# porteiro de assinatura (item L6-01-b-view-so-leitura)"): app/schema_ambiente.py ganhou o regex
+# `_ACERVO` que reescreve `plat_acervo`/`plat_acervo_publicador` explicitamente. Achado original: a
+# regex `\bplat\b` não casa `_` (caractere de palavra), logo qualquer objeto global `plat_<algo>`
+# passava intacto. ⚠ o conserto é lista-branca por nome (só plat_acervo/plat_acervo_publicador): a
+# causa raiz do achado F6 — "o que ninguém lembrou de acrescentar vaza para produção em silêncio" —
+# segue valendo para qualquer FUTURO `plat_<algo>` que não entre nessa lista.
 def test_schema_irmao_plat_algo_e_reescrito():
     sql = "SELECT 1 FROM plat_acervo.assinatura"
     assert reescrever_schema(sql, TRILHA) != sql, "plat_acervo ficou apontando para o objeto global"

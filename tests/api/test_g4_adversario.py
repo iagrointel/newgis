@@ -118,12 +118,9 @@ def test_cobertura_de_evento_100_por_cento_contra_o_app_vivo():
     assert faltando == [], faltando
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G4-03 (L0-10): a hipótese do item diz 'toda rota que altera estado grava 1 evento', mas o "
-           "teste aceita declaração com lista VAZIA: 6 rotas estão declaradas como 'sem evento', entre elas "
-           "POST e DELETE /api/arquivos, que criam e destroem objeto do inquilino.",
-)
+# CORRIGIDO (16/09/2026): tests/api/eventos_esperados.py não tem mais nenhuma rota declarada com
+# lista de eventos VAZIA. Achado original: 6 rotas (entre elas POST e DELETE /api/arquivos) estavam
+# declaradas como "sem evento".
 def test_nenhuma_rota_de_escrita_declarada_sem_evento():
     from tests.api.eventos_esperados import EVENTOS_POR_ROTA
 
@@ -132,12 +129,11 @@ def test_nenhuma_rota_de_escrita_declarada_sem_evento():
 
 
 # ================================================================ TRANSVERSAL 3 — quem define o teto
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G4-04 (L0-07-a + L0-11): o admin do INQUILINO eleva a própria cota de armazenamento por "
-           "PUT /api/org sem teto superior (OrgEntrada.cota_bytes tem só `ge`), e o valor é propagado como cota "
-           "do bucket do Garage. Medido: 20 GiB -> 9e18 bytes com HTTP 200, em máquina com 46 GB livres.",
-)
+# CORRIGIDO (16/09/2026, commit 8333234ff "L0-07-c-cotas-uso: teto de cota imposto pela plataforma +
+# contador simétrico + jobs.uso_medir consertado"): PUT /api/org passou a comparar cota_bytes contra
+# `plat.tenant.cota_bytes_teto` (imposto pela plataforma, só o superadmin move) e devolve 422
+# cota_bytes_acima_do_teto. Achado original: o admin do inquilino elevava a própria cota sem teto
+# superior (OrgEntrada.cota_bytes tinha só `ge`).
 def test_admin_do_inquilino_nao_eleva_a_propria_cota_de_armazenamento(sessao_a):
     original = sessao_a.get("/api/org").json()
     corpo = _corpo_org(original)
@@ -149,11 +145,9 @@ def test_admin_do_inquilino_nao_eleva_a_propria_cota_de_armazenamento(sessao_a):
         sessao_a.put("/api/org", json=_corpo_org(original))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G4-05 (L0-07-a): mesma falha na cota de USUÁRIOS — o admin do inquilino sobe o próprio teto "
-           "de assentos por PUT /api/org (cota_usuarios só tem `ge`). Medido: 2.000 -> 1.000.000.000, HTTP 200.",
-)
+# CORRIGIDO (16/09/2026, commit 8333234ff "L0-07-c-cotas-uso: teto de cota imposto pela plataforma +
+# contador simétrico + jobs.uso_medir consertado"): mesmo conserto do G4-04, agora para
+# cota_usuarios (compara contra plat.cota_usuarios_teto(), devolve 422 cota_usuarios_acima_do_teto).
 def test_admin_do_inquilino_nao_eleva_a_propria_cota_de_usuarios(sessao_a):
     original = sessao_a.get("/api/org").json()
     corpo = _corpo_org(original)
@@ -220,15 +214,10 @@ def test_apagar_objeto_marca_a_linha_como_apagada(sessao_a):
 
 
 # ================================================================ TRANSVERSAL 5 — append-only de verdade
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G4-10 (L0-10, GRAVE): a cláusula literal do portão ('plat_app não consegue UPDATE/DELETE em "
-           "evento') PASSA, mas plat_app tem EXECUTE em plat.evento_expurgar(int), SECURITY DEFINER, sem "
-           "filtro de inquilino e sem validar o argumento. `SELECT plat.evento_expurgar(-1)` faz DROP TABLE na "
-           "partição do mês CORRENTE e apaga a auditoria de TODOS os inquilinos. Mesma exposição em "
-           "plat.log_expurgar(int). Hoje nenhuma rota chama a função (ver fronteira do laudo), mas qualquer "
-           "injeção de SQL na aplicação vira apagamento total de rastro.",
-)
+# CORRIGIDO (16/09/2026, commit f81a92038, db/migracoes/20260906T1601_g4_conserto_seguranca.sql):
+# REVOKE EXECUTE ON FUNCTION plat.evento_expurgar(int)/plat.log_expurgar(int) FROM PUBLIC, plat_app,
+# plat_worker. Achado original: plat_app tinha EXECUTE nessas SECURITY DEFINER sem filtro de
+# inquilino, e SELECT plat.evento_expurgar(-1) fazia DROP TABLE na partição do mês corrente.
 def test_plat_app_nao_pode_apagar_particao_de_evento():
     import os
 
@@ -265,12 +254,9 @@ def test_eventos_exportam_csv(sessao_a):
     assert "text/csv" in (r.headers.get("content-type") or ""), r.headers.get("content-type")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G4-13 (L0-10): o portão pede a tela 'Auditoria' do admin com filtro por usuário e período e "
-           "captura. Não existe web/admin/auditoria.html; web/admin/ tem grupos, log, organizacao, papeis, "
-           "tokens e usuarios. O item está marcado 'entregue' no estado.json com essa cláusula por fazer.",
-)
+# CORRIGIDO (16/09/2026, commit e794d1297 "L7-20: fecha o portao de pronto da trilha de auditoria,
+# tela comitada e dois defeitos consertados"): web/admin/auditoria.html foi comitada. Achado
+# original: a tela não existia apesar do item estar marcado "entregue" no estado.json.
 def test_tela_auditoria_existe():
     assert (WEB / "admin" / "auditoria.html").exists(), sorted(p.name for p in (WEB / "admin").glob("*.html"))
 
@@ -299,12 +285,11 @@ def test_existe_teste_do_contrato_e_lint_de_esquema_de_resposta():
     assert testes, "sem tests/api/test_contrato*.py"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G4-16 (L0-12): docs/CONTRATO_API.md declara Retry-After no 429 e não há uma ocorrência do "
-           "cabeçalho em app/, deploy/ ou tests/ — limite documentado que a API (e o nginx) não aplica, "
-           "exatamente o alvo nomeado na refutação do item.",
-)
+# CORRIGIDO (16/09/2026, commit 36fc3b0d8 "L7-33-modo-somente-leitura: modo somente-leitura/manutencao
+# global e por inquilino"): app/modo.py (503) e app/limite_taxa.py (429) passaram a emitir o cabeçalho
+# Retry-After. Achado original: nenhuma ocorrência do cabeçalho existia em app/, deploy/ ou tests/. ⚠
+# este teste só confere que a string aparece em algum lugar do código — não que o rate limit medido em
+# G4-14 (que segue XFAIL) devolva esse cabeçalho.
 def test_retry_after_existe_no_codigo_ou_no_nginx():
     alvos = list((RAIZ / "app").rglob("*.py")) + list((RAIZ / "deploy").rglob("*.conf"))
     achou = any("Retry-After" in p.read_text(encoding="utf-8", errors="ignore") for p in alvos)
@@ -417,15 +402,12 @@ def test_todas_as_telas_usam_os_tokens_e_existe_pagina_estilo():
 
 
 # ================================================================ contrato: erro interno disfarçado de 403
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G4-23 (L0-12): app/auth/comum.py::erro_do_banco converte QUALQUER "
-           "psycopg2.errors.InsufficientPrivilege (SQLSTATE 42501 — GRANT faltando, schema errado, papel mal "
-           "configurado: defeito do servidor) em 403 sem_permissao 'operação fora do inquilino da sessão'. Pela "
-           "própria tabela de docs/CONTRATO_API.md 403 é 'sem privilégio' do chamador; aqui o servidor afirma "
-           "sobre o inquilino do usuário um fato que não mediu, e esconde erro de configuração. Medido: "
-           "POST /api/papeis devolve esse 403 quando o erro real é 'permission denied for schema plat'.",
-)
+# CORRIGIDO (16/09/2026, commit b63569b49 "Conserta os cinco achados do laudo adversarial do motor
+# multicritério (itens L3-01-a e L3-01-b)"): app/auth/comum.py ganhou _erro_de_privilegio(), que
+# distingue RLS ("row-level security" no texto, 403 sem_permissao — fronteira de inquilino de
+# verdade) de GRANT faltando (500 privilegio_do_banco — erro de instalação). Achado original:
+# QUALQUER InsufficientPrivilege virava 403 "operação fora do inquilino da sessão", inclusive GRANT
+# faltando no banco.
 def test_privilegio_insuficiente_do_banco_nao_vira_403_de_inquilino():
     import psycopg2
 

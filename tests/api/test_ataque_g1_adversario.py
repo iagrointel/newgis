@@ -61,13 +61,11 @@ def test_t1_openapi_do_arquivo_reflete_o_app_vivo():
     assert sorted(arquivo - vivas) == [], "rotas em docs/openapi.json que já não existem"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G1-T2: as migrações 046/047 dão GRANT EXECUTE ao plat_app sem o REVOKE ... FROM PUBLIC que "
-    "as migrações 003/006/024 usam; 6 funções SECURITY DEFINER do schema plat ficaram executáveis por PUBLIC "
-    "(convite_aceitar, convite_resolver, redefinicao_solicitar, redefinicao_resolver, redefinicao_contexto, "
-    "uploads_expirar_candidatos). Cláusula literal do portão do L0-02-e.",
-)
+# CORRIGIDO (16/09/2026, commit 4c4730d69 "Fecha EXECUTE para PUBLIC em plat e mede a carga de 100
+# mil feicoes (L0-02, L0-04-c)"): migrações passaram a fazer REVOKE ... FROM PUBLIC nas 6 funções
+# SECURITY DEFINER do schema plat (convite_aceitar, convite_resolver, redefinicao_solicitar,
+# redefinicao_resolver, redefinicao_contexto, uploads_expirar_candidatos). Achado original: as
+# migrações 046/047 davam GRANT EXECUTE ao plat_app sem o REVOKE que 003/006/024 usam.
 def test_t2_nenhuma_security_definer_executavel_por_public(conexao_plat_app):
     with conexao_plat_app.cursor() as cur:
         cur.execute(
@@ -79,13 +77,11 @@ def test_t2_nenhuma_security_definer_executavel_por_public(conexao_plat_app):
         assert [r["proname"] for r in cur.fetchall()] == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G1-T3: o commit master 90ab545 não importa. app/main.py referencia app/auth/rotas_convites.py, "
-    "rotas_redefinicao.py, modelos_convite.py, modelos_redefinicao.py, app/correio/, app/uploads/ e "
-    "app/migracoes.py, que nunca foram comitados. Um checkout limpo do repositório não sobe a API, logo nenhum "
-    "portão deste grupo é reproduzível a partir do repositório.",
-)
+# CORRIGIDO (16/09/2026): todos os módulos referenciados por app/main.py (app/auth/rotas_convites.py,
+# rotas_redefinicao.py, modelos_convite.py, modelos_redefinicao.py, app/correio/, app/uploads/,
+# app/migracoes.py) estão versionados (commits 2132603d2, e407d1a4f, 13b419fb7, entre outros).
+# Achado original: um checkout limpo do repositório não subia a API porque esses arquivos nunca
+# tinham sido comitados.
 def test_t3_todo_modulo_importado_esta_versionado():
     versionados = set(
         subprocess.run(
@@ -176,12 +172,9 @@ def test_a1_sessao_ociosa_alem_da_politica_some_no_periodico(usuarios_a, conexao
 
 # ====================================================================== L0-02-b política de senha e bloqueio
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G1-b1: a hipótese do item diz 'mínimo 10 caracteres com pelo menos uma letra e um número' "
-    "(regra herdada do SIG de teste interno). O produto entrega mínimo 8: limites.AUTH_PADROES['senha_min'] = "
-    "(8, 8, 64) e Politica.senha_min = 8. Medido: PUT /api/eu/senha com 'Abcdefg1' (8 caracteres) devolve 204.",
-)
+# CORRIGIDO (16/09/2026, commit d2adfb20e "Fecha as tres divergencias entre o portao e o codigo
+# (G1-a1, G1-b1, G1-d1)"): limites.AUTH_PADROES["senha_min"] e Politica.senha_min passaram a exigir
+# 10 caracteres. Achado original: a hipótese do item pedia mínimo 10 e o produto entregava 8.
 def test_b1_senha_de_oito_caracteres_e_recusada(usuarios_a):
     c, _u, senha = usuarios_a.sessao()
     r = c.put("/api/eu/senha", json={"atual": senha, "nova": "Abcdefg1"})
@@ -301,11 +294,10 @@ def test_c_forca_bruta_replay_e_relogio(usuarios_a, sessao_a):
 
 # ====================================================================== L0-02-d token de serviço
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G1-d1: o portão pede 'prefixo de 8 caracteres na lista'; app/auth/rotas_tokens.py::_inserir "
-    "grava prefixo = valor[:12], ou seja 'plat_' + 7 caracteres do próprio segredo. Medido: len(prefixo) = 12.",
-)
+# CORRIGIDO (16/09/2026, commit d2adfb20e "Fecha as tres divergencias entre o portao e o codigo
+# (G1-a1, G1-b1, G1-d1)"): app/auth/rotas_tokens.py::_inserir passou a gravar
+# valor[:limites.TOKEN_PREFIXO_TAMANHO] (8 caracteres). Achado original: prefixo = valor[:12] (12
+# caracteres, "plat_" + 7 do próprio segredo).
 def test_d1_prefixo_do_token_tem_oito_caracteres(sessao_a):
     r = sessao_a.post("/api/tokens", json={"nome": f"{PREFIXO_TESTE}-adv-prefixo", "escopos": ["catalogo:ler"]})
     assert r.status_code == 201, r.text
@@ -377,12 +369,10 @@ def test_d_leitura_por_token_aparece_no_log_com_token_id(sessao_a):
 
 # ====================================================================== L0-02-e varredura cruzada
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G1-e1: GET /api/uploads/tipos declara x-auth 'S/T' no OpenAPI e responde 200 SEM credencial "
-    "nenhuma. Rota nova, fora de docs/openapi.json, logo fora da varredura cruzada e fora do teste de "
-    "privilégio declarado.",
-)
+# CORRIGIDO (16/09/2026, commit b080a2f80 "Uma porta so para toda rota autenticada, e o teste que
+# varre o contrato (G1-c1, G1-e1, G1-e2)"): GET /api/uploads/tipos passou a exigir credencial via
+# autenticado(). Achado original: a rota declarava x-auth 'S/T' no OpenAPI e respondia 200 sem
+# credencial nenhuma.
 def test_e1_rota_declarada_com_auth_exige_credencial():
     assert novo_cliente().get("/api/uploads/tipos").status_code == 401
 

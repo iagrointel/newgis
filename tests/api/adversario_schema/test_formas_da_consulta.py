@@ -21,9 +21,10 @@ def escapou(exc: BaseException) -> bool:
 SELECT = "SELECT id FROM plat.tenant WHERE id = %s"
 
 
-@pytest.mark.xfail(strict=True, reason="FURO F1: cursor.executemany e do C do psycopg2 e nao chama o "
-                                       "execute() do CursorSchemaAmbiente (app/schema_ambiente.py:44); "
-                                       "usado em app/auth/rotas_usuarios.py:242 e :285")
+# CORRIGIDO (16/09/2026, commit ceeb7ccc6 "fix(schema_ambiente): restaura MixinReescritaSchema —
+# executemany/mogrify/copy_expert/callproc reescrevem plat.→plat_t<trilha>."): CursorSchemaAmbiente
+# passou a sobrescrever executemany() chamando _reescrever() antes de super().executemany(). Achado
+# original: cursor.executemany é do C do psycopg2 e não chamava o execute() da subclasse.
 def test_executemany_passa_pelo_reescritor(con):
     with con.cursor() as cur:
         try:
@@ -33,9 +34,10 @@ def test_executemany_passa_pelo_reescritor(con):
             raise
 
 
-@pytest.mark.xfail(strict=True, reason="FURO F2: COPY nao passa por execute(); CursorSchemaAmbiente nao "
-                                       "sobrescreve copy_expert/copy_from/copy_to. Uso real com `plat.` "
-                                       "fixo: scripts/geocodificador_instalar_uf.py:278")
+# CORRIGIDO (16/09/2026, commit ceeb7ccc6 "fix(schema_ambiente): restaura MixinReescritaSchema —
+# executemany/mogrify/copy_expert/callproc reescrevem plat.→plat_t<trilha>."): CursorSchemaAmbiente
+# passou a sobrescrever copy_expert() chamando _reescrever() antes de super().copy_expert(). Achado
+# original: COPY não passava por execute() e escapava com `plat.` fixo.
 def test_copy_expert_passa_pelo_reescritor(con):
     buf = io.StringIO()
     with con.cursor() as cur:

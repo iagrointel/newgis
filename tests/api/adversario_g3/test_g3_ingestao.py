@@ -12,7 +12,23 @@ import pytest
 
 from tests.api.ingestao.conftest import esperar_job
 
-FORMATOS_DO_PORTAO = ["kml", "kmz", "gpx", "xlsx", "gml", "flatgeobuf", "dxf", "gdb"]
+# kml, xlsx e dxf saíram da lista de xfail em 16/09/2026 (commit 0d75d4b66 acrescentou os três a
+# app/ingestao/formatos.py FORMATOS); kmz, gpx, gml, flatgeobuf e gdb seguem sem suporte (o "gdb" do
+# portão é literal, e o formato existente chama-se "filegdb.zip" — nome diferente, continua recusado).
+_XFAIL_FORMATO = pytest.mark.xfail(
+    strict=True,
+    reason="L0-04-b/L0-04-d: KMZ/GPX/GML/FlatGeobuf/GDB nao existem na instalacao (formato_nao_suportado)",
+)
+FORMATOS_DO_PORTAO = [
+    "kml",
+    pytest.param("kmz", marks=_XFAIL_FORMATO),
+    pytest.param("gpx", marks=_XFAIL_FORMATO),
+    "xlsx",
+    pytest.param("gml", marks=_XFAIL_FORMATO),
+    pytest.param("flatgeobuf", marks=_XFAIL_FORMATO),
+    "dxf",
+    pytest.param("gdb", marks=_XFAIL_FORMATO),
+]
 
 
 def _importar_bruto(ing, caminho: Path, formato: str):
@@ -23,10 +39,9 @@ def _importar_bruto(ing, caminho: Path, formato: str):
 
 
 # --------------------------------------------------------------- L0-04-d: formatos do portão
-@pytest.mark.xfail(
-    strict=True,
-    reason="L0-04-d: a instalacao anuncia 4 formatos (csv, geojson, gpkg, shapefile.zip); o portao exige 9",
-)
+# CORRIGIDO (16/09/2026, commit 0d75d4b66, app/ingestao/formatos.py): a instalação passou a anunciar
+# 9 formatos (shapefile.zip, gpkg, geojson, csv, geojsonseq, kml, dxf, xlsx, filegdb.zip). Achado
+# original: só 4 existiam (csv, geojson, gpkg, shapefile.zip).
 def test_formatos_anunciados_cobrem_os_9_do_portao(sessao_a):
     """Portão do L0-04-d: 'teste automatizado com 1 arquivo aberto por formato (9 arquivos)'.
     Formatos exigidos: shapefile zip, GeoPackage, GeoJSON/GeoJSONSeq, KML/KMZ, CSV/TXT, GPX, XLSX/XLS."""
@@ -37,13 +52,9 @@ def test_formatos_anunciados_cobrem_os_9_do_portao(sessao_a):
 
 
 @pytest.mark.parametrize("formato", FORMATOS_DO_PORTAO)
-@pytest.mark.xfail(
-    strict=True,
-    reason="L0-04-b/L0-04-d: KML/KMZ/GPX/XLSX/GML/FlatGeobuf/DXF/GDB nao existem na instalacao (formato_nao_suportado)",
-)
 def test_formato_do_portao_e_aceito(ingestor_a, arquivos_de_ataque, formato):
     """Cada formato que o portão do item pai lista tem de ser ACEITO (importar ou perguntar), nunca recusado
-    como inexistente. Hoje só existem 4 formatos (app/ingestao/formatos.py FORMATOS)."""
+    como inexistente."""
     r = _importar_bruto(ingestor_a, arquivos_de_ataque / "tres_camadas.gpkg", formato)
     assert r.status_code != 422 or r.json().get("erro") != "formato_nao_suportado", \
         f"formato {formato} não existe nesta instalação: {r.text[:200]}"
@@ -144,24 +155,23 @@ def test_geojson_de_uma_feicao_com_um_milhao_de_vertices(ingestor_a, geojson_mui
 
 
 # --------------------------------------------------------------- rota de descoberta de formatos
-@pytest.mark.xfail(
-    strict=True,
-    reason="L0-04-d: GET /api/importacoes/formatos declarada depois de /api/importacoes/{id} -> 404 "
-           "importacao_inexistente",
-)
+# CORRIGIDO (16/09/2026, commit 8eb678dfd "L0-02-z e L0-04-k: ... conserta rota /formatos encoberta"):
+# GET /api/importacoes/formatos passou a ser declarada ANTES de GET /api/importacoes/{id} em
+# app/ingestao/rotas.py. Achado original: a rota de descoberta era encoberta pelo parâmetro de
+# caminho livre e nunca era alcançada (404 importacao_inexistente).
 def test_rota_de_formatos_de_importacao_e_alcancavel(sessao_a):
-    """`GET /api/importacoes/formatos` é declarada DEPOIS de `GET /api/importacoes/{id}` em
-    app/ingestao/rotas.py, e o parâmetro de caminho é livre: a rota de descoberta nunca é alcançada."""
+    """`GET /api/importacoes/formatos` tem de ser alcançável, e não encoberta por
+    `GET /api/importacoes/{id}` (parâmetro de caminho livre) em app/ingestao/rotas.py."""
     r = sessao_a.get("/api/importacoes/formatos")
     assert r.status_code == 200, (f"a rota que anuncia os formatos responde {r.status_code} "
                                   f"(engolida por /api/importacoes/{{id}}): {r.text[:200]}")
 
 
 # --------------------------------------------------------------- medidas exigidas pelos portões
-@pytest.mark.xfail(
-    strict=True,
-    reason="L0-04-b/c: nenhuma medida tempo_inspecao_s nem tempo_import_100k_s existe em tests/medidas",
-)
+# CORRIGIDO (16/09/2026, commit efa906115 "Fecha o conserto funcional do G3: medidas de 100 mil
+# feições gravadas..."): tests/medidas/L0-04-b-inspecao.json (tempo_inspecao_s=1.31s) e
+# tests/medidas/L0-04-c-tabela-camada.json (tempo_import_100k_s=8.61s) foram gravados, gerado_em
+# 2026-09-06. Achado original: nenhum dos dois arquivos existia.
 def test_medidas_de_desempenho_da_ingestao_estao_gravadas():
     """Portão do L0-04-b: 'medida tempo_inspecao_s por arquivo (100 mil feições ≤ 5 s)'. Portão do L0-04-c:
     'shapefile de 100 mil feições ... em ≤ 60 s medido (medida tempo_import_100k_s)'. O BRIEF do laço manda
