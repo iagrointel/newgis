@@ -30,8 +30,17 @@ from plat_geo import erros
 from plat_geo.acervo import Acervo
 from plat_geo.catalogo import Catalogo, Pagina
 from plat_geo.cliente import Plataforma
-from plat_geo.erros import (Conflito, ErroAutenticacao, ErroLimite, ErroPermissao, ErroPlataforma,
-                        ErroServidor, ErroValidacao, FalhaJob, NaoEncontrado)
+from plat_geo.erros import (
+    Conflito,
+    ErroAutenticacao,
+    ErroLimite,
+    ErroPermissao,
+    ErroPlataforma,
+    ErroServidor,
+    ErroValidacao,
+    FalhaJob,
+    NaoEncontrado,
+)
 from plat_geo.ferramentas import Ferramentas
 from plat_geo.jobs import Jobs
 
@@ -41,6 +50,7 @@ except importlib.metadata.PackageNotFoundError:
     __versao__ = os.environ.get("PLAT_VERSAO") or "0.0.0.dev0"
 
 __all__ = [
+    "FalhaJob",
     "Acervo",
     "Catalogo",
     "Conflito",
