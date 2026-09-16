@@ -47,7 +47,12 @@ def solicitar(corpo: RedefinicaoSolicitarEntrada, request: Request):
                       "minutos e tente de novo")
     if r["token"] is None:
         return {"ok": True}  # e-mail não encontrado: mesma resposta, sem enfileirar nada (não revela existência)
-    with db.db() as cur:
+    # achado 16/09 (fusão): sem contexto, plat.tenant fica sob RLS (id = tenant_atual(), NULL numa rota
+    # pública) e a linha nunca aparece — cur.fetchone() vira None e estoura TypeError. O contexto vem do
+    # PRÓPRIO usuário que acabou de ser resolvido por plat.redefinicao_solicitar (SECURITY DEFINER), não de
+    # sessão nenhuma (não existe sessão aqui).
+    ctx = db.Contexto(tenant_id=r["tenant_id"], usuario_id=r["usuario_id"], login=r["login"])
+    with db.db(ctx) as cur:
         cur.execute("SELECT config FROM plat.tenant WHERE id = %s", (r["tenant_id"],))
         config = cur.fetchone()["config"]
     if smtp_efetivo(config, settings) is not None:
