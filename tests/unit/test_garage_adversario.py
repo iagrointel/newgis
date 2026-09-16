@@ -499,7 +499,8 @@ def test_3b_cota_de_objetos_para_de_um_em_um(ambiente):
 
 
 @pytest.mark.xfail(
-    strict=True,
+    strict=False,  # 16/09: corrida NÃO determinística — passou 1 de 3 com --runxfail na trilha uniao; strict=True
+    # virava alarme aleatório. O defeito continua aberto (L1-01-d/objetos: enforcement sequencial da cota).
     reason="MEDIDO pelo adversário: a cota de bytes do Garage é conferida contra um contador que só converge "
            "DEPOIS da gravação. Trinta e duas gravações disparadas no mesmo instante num balde com folga para "
            "UMA entram quase todas e o balde termina muitas vezes acima do limite. O enforcement é sequencial, "
