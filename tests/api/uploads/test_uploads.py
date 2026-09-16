@@ -17,7 +17,7 @@ import psycopg2.extras
 import pytest
 
 from app import db as banco
-from app import objetos
+from app import limites, objetos
 from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 from tests.api.conftest import PREFIXO_TESTE, novo_cliente
 from tests.api.test_rls import contexto as _rls_contexto
@@ -193,26 +193,36 @@ def test_partes_fora_de_ordem_tambem_fecham(up_a):
 
 
 def test_gpkg_com_conteudo_zip_recusado_mensagem_exata(up_a):
-    """Cláusula literal do portão: '.gpkg com conteúdo zip recusado com "conteúdo não corresponde ao tipo"'."""
+    """Cláusula literal do portão: '.gpkg com conteúdo zip recusado com "conteúdo não corresponde ao tipo"'.
+
+    16/09: desde 20619c060 (08/09, "upload grande: parte gravada em fluxo...") a checagem de tipo roda já na
+    PARTE 1 (`tipos.verificar_inicio`), sem esperar a última parte -- a rejeição chega no PUT da parte, não
+    no POST concluir (o teste ainda esperava o 422 só em concluir e ficou para trás; docs/LIMITES.md ->
+    UPLOAD_CABECALHO_INICIO_BYTES documenta a checagem antecipada)."""
     dados = _zip_com({"nao_e_gpkg.bin": b"qualquer coisa"})
     r = up_a.iniciar(f"{PREFIXO_TESTE}-falso.gpkg", dados, "gpkg")
     upload_id = r.json()["id"]
-    up_a.enviar_partes(upload_id, dados, r.json()["parte_bytes"])
-    resultado = up_a.concluir(upload_id, esperado=422)
-    corpo = resultado.json()
+    respostas = up_a.enviar_partes(upload_id, dados, r.json()["parte_bytes"])
+    assert respostas[0].status_code == 422, respostas[0].text
+    corpo = respostas[0].json()
     assert corpo["erro"] == "conteudo_nao_corresponde"
     assert "conteúdo não corresponde ao tipo" in corpo["mensagem"]
     # o objeto recusado não fica no bucket nem no upload continua "iniciado" (pode-se abortar sem 500)
     c = up_a.cliente()
     r_ver = c.get(f"/api/uploads/{upload_id}", headers=up_a.cabecalho())
     assert r_ver.status_code == 200
-    assert r_ver.json()["estado"] == "iniciado"  # concluir falhou -> upload NÃO fica "concluido"
+    assert r_ver.json()["estado"] == "iniciado"  # rejeição na parte não avança o upload para "concluido"
 
 
 def test_arquivo_acima_do_maximo_413_antes_de_qualquer_byte(up_a):
-    """Refutação do adversário: arquivo de 2,1 GiB (acima do teto desta fase) -> 413, e NENHUM byte é aceito
-    (a checagem é só sobre o tamanho DECLARADO em POST /api/uploads, que não carrega corpo de arquivo)."""
-    tamanho = int(2.1 * 1024 * 1024 * 1024)
+    """Refutação do adversário: arquivo acima do teto desta fase -> 413, e NENHUM byte é aceito (a checagem é
+    só sobre o tamanho DECLARADO em POST /api/uploads, que não carrega corpo de arquivo).
+
+    16/09: o teto era 2 GiB quando este teste nasceu; 895709aac (12/09, "imagens: o caminho de ingestão passa
+    a aguentar ortofoto") subiu `UPLOAD_BYTES_MAX` para 64 GiB de propósito (100 km² a 10 cm não cabiam em
+    2 GiB -- docs/LIMITES.md documenta o valor novo) e o 2,1 GiB fixo aqui ficou ABAIXO do teto atual, então
+    passava a ser aceito (201) em vez de recusado. Usa o teto de verdade + 1 byte, nunca um número fixo."""
+    tamanho = limites.UPLOAD_BYTES_MAX + 1
     c = novo_cliente()
     r = c.post(
         "/api/uploads",
@@ -494,6 +504,14 @@ def test_abortar_libera_a_reserva_de_cota(up_a, env):
 
 # ---------------------------------------------------------------- periódico de expurgo (24 h)
 def test_upload_incompleto_some_em_24h_pelo_periodico(up_a, env):
+    """16/09: `_CtxFalso.db()` chamava `uploads_expirar_candidatos` sob o contexto do PRÓPRIO inquilino do
+    upload esquecido (demo) e passou a bater em `InsufficientPrivilege` -- 20260906T1601_funcoes_privilegiadas_
+    isolamento.sql (achado G2-1/G2-2/G4-10 do adversário) trocou `plat.uploads_expirar_candidatos` para só
+    rodar sem contexto de inquilino ou sob o inquilino técnico `plataforma`, fechando o caminho "admin de um
+    inquilino enfileira o periódico e o expurgo varre todos os inquilinos". O job REAL já roda assim
+    (app/uploads/periodicos.py, docstring do módulo: "o job da fila, que roda sob o inquilino técnico
+    `plataforma`, enxerga uploads esquecidos de QUALQUER inquilino") -- o teste ficou para trás; o double
+    abaixo agora imita o mesmo contexto que o job de verdade usa."""
     from app.uploads.periodicos import uploads_expirar
 
     dados = _csv_de(1024 * 1024)
@@ -504,6 +522,9 @@ def test_upload_incompleto_some_em_24h_pelo_periodico(up_a, env):
     con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
     try:
         tenant_id = ids_por_slug(con)["demo"]
+        with con.cursor() as cur:
+            cur.execute("SELECT tenant_id, usuario_id FROM plat.auth_login('plataforma', 'admin')")
+            plataforma = cur.fetchone()
         _rls_contexto(con, tenant_id)
         with con.cursor() as cur:
             cur.execute(
@@ -520,7 +541,9 @@ def test_upload_incompleto_some_em_24h_pelo_periodico(up_a, env):
 
     class _CtxFalso:
         def db(self):
-            return banco.db(banco.Contexto(linha["tenant_id"], linha["usuario_id"], "teste"))
+            # o inquilino técnico `plataforma`, não `linha["tenant_id"]` (demo): plat.uploads_expirar_candidatos
+            # é SECURITY DEFINER e cruza inquilinos -- só roda sob esse contexto (ou sem nenhum).
+            return banco.db(banco.Contexto(plataforma["tenant_id"], plataforma["usuario_id"], "teste"))
 
         def progresso(self, pct, mensagem=""):
             pass
