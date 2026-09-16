@@ -23,7 +23,10 @@ def _montar_app(itens_a, sessao_a):
     """camada -> mapa (cita a camada) -> app (cita o mapa): a mesma cadeia que
     `app/catalogo/publicacao.py::camadas_citadas` percorre."""
     camada = itens_a.criar("camada_vetorial", sessao=sessao_a)
-    mapa = itens_a.criar("mapa", sessao=sessao_a, dados={"esquema_versao": 1, "corpo": {"camadas": [camada["id"]]}})
+    mapa = itens_a.criar(
+        "mapa", sessao=sessao_a,
+        dados={"esquema_versao": 1, "corpo": {"camadas": [{"id": gerar_ulid(), "ref": camada["id"]}]}},
+    )
     no_id = gerar_ulid()
     corpo_app = {"nos": [{"id": no_id, "tipo": "visor_mapa"}], "mapas": [mapa["id"]]}
     app = itens_a.criar(

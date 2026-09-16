@@ -183,7 +183,11 @@ def instalar(app: FastAPI) -> None:
         nonce = secrets.token_urlsafe(18)
         request.state.csp_nonce = nonce
         resposta = _preflight(request) or await call_next(request)
-        resposta.headers["Content-Security-Policy"] = politica(request, resposta, nonce)
+        # a rota já pode ter posto a sua própria CSP (publicação L5-14/rotas_publicacao.py, site L5-20/
+        # rotas_site.py, portal/rotas.py): a genérica por inquilino (`politica`) não tem como saber o
+        # frame-ancestors/frame-src de UMA publicação específica, então nunca sobrescreve o que a rota já
+        # decidiu — só preenche quando a resposta ainda não trouxe CSP nenhuma.
+        resposta.headers.setdefault("Content-Security-Policy", politica(request, resposta, nonce))
         resposta.headers["Referrer-Policy"] = REFERRER_POLICY
         resposta.headers["X-Content-Type-Options"] = "nosniff"
         resposta.headers["Permissions-Policy"] = PERMISSIONS_POLICY
