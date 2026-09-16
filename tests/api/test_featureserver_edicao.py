@@ -195,7 +195,11 @@ def test_update_attachment_mantem_o_mesmo_identificador(sessao_a, camada):
     r = sessao_a.post(f"{base(camada)}/{oid}/addAttachment",
                       files={"attachment": ("a.png", PNG_1X1, "image/png")})
     numero = r.json()["addAttachmentResult"]["objectId"]
-    outro = PNG_1X1 + b"\x00" * 8  # bytes diferentes, mesmo cabeçalho PNG
+    # mesmo tamanho e cabeçalho PNG, 1 byte do IDAT invertido: conteúdo (sha256) diferente sem
+    # acrescentar bytes depois do IEND — apêndice pós-formato é "arquivo disfarçado" para a varredura
+    # de conteúdo (item L7-03-b, app/varredura_conteudo.py::_sobra_depois_da_imagem) e não pode
+    # aparecer aqui, senão o 415 dela mascara o que este teste prova (mesmo identificador no update)
+    outro = bytes(b ^ 0xFF if i == 45 else b for i, b in enumerate(PNG_1X1))
     r = sessao_a.post(f"{base(camada)}/{oid}/updateAttachment",
                       data={"attachmentId": str(numero)},
                       files={"attachment": ("b.png", outro, "image/png")})
