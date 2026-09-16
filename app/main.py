@@ -99,7 +99,6 @@ from app.formulario.rotas import router as rotas_formulario
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.geocodificador.rotas_lote import router as rotas_geocodificacao_lote
-from app.geocodificador.rotas_lote import router as rotas_geocodificador_lote
 from app.geoparquet.rotas import router as rotas_geoparquet
 from app.imagens.rotas_cog import router as rotas_cog
 from app.imagens.rotas_imagens import router as rotas_imagens
@@ -616,13 +615,11 @@ ROUTERS = [
     # --- ladrilho raster por token no caminho (L1-02): /svc/<token>/raster/<item>/{z}/{x}/{y}, WMTS,
     # TileJSON e mosaico por coleção; motor rio-tiler lendo COG no Garage por /vsis3
     # --- geocodificação de tabela (L2-11-a): /api/geocodificacoes (mapear colunas -> lote ->
-    # camada de pontos com colunas de qualidade -> revisão manual do que ficou pendente)
+    # camada de pontos com colunas de qualidade -> revisão manual do que ficou pendente); MESMO router
+    # de rotas_geocodificador_lote (alias duplicado removido — dobrava toda rota/schema do arquivo)
     rotas_geocodificacao_lote,
     # --- vídeos por tarefa (L7-04-d): /api/videos (manifesto) e /videos/arquivo/{caminho}
     rotas_videos,
-    # --- geocodificação de tabela (L2-11-a): /api/geocodificador/lote/* — a criação em si é POST /api/jobs
-    # (tipo geocodificador.lote_csv); aqui só a tela de revisão (pendentes, arrasto manual, re-geocodificar)
-    rotas_geocodificador_lote,
     # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,
     # /fatores/{id}/amostras, /conjuntos/{id}/macro, /execucoes/{id}/micro, /execucoes
     # --- portal de API (L7-08-d): /portal (página, CSP própria) e /api/portal/exemplos
@@ -682,8 +679,8 @@ ROUTERS = [
     # --- motor multicritério (AMC), localização semelhante (L3-17-similaridade): /api/amc/similaridade e
     # /api/amc/similaridade/exportar; sem tabela própria, mesmo padrão sem-estado de rotas_rede acima
     # --- motor multicritério, presets (L3-01-h-presets): /api/amc/presets (CRUD, aplicar sem job,
-    # exportar, importar)
-    rotas_amc_presets,
+    # exportar, importar) -- MESMO router de rotas_amc.router (item vive em app/amc/rotas.py); incluído
+    # só uma vez (o alias rotas_amc_presets duplicava a inclusão e dobrava toda rota/schema do arquivo)
     # --- motor multicritério (L3-01-a/b): /api/amc/modelos, /api/amc/conjuntos, /api/amc/execucoes
     # --- motor multicritério (AMC), critérios sobre a própria feição (L3-06-criterios-de-feicao):
     # /api/amc/criterios-feicao e /api/amc/criterios-feicao/exportar; sem estado, como rotas_similaridade
