@@ -23,6 +23,9 @@ Environment=PLAT_API_PROCESSOS=2
 # se souber o caminho. Isolamento por-unidade de verdade pediria DynamicUser= (usuário efêmero por
 # serviço); fora de escopo aqui por reescrever a dono de toda a árvore do repositório. Ver docs/SEGURANCA.md §1.
 LoadCredential=PLAT_SECRET:/etc/plat/segredos/PLAT_SECRET
+# PLAT_SECRET_ANTERIOR (dupla-chave de rotação, item L7-19): install.sh (seção d2) garante que o arquivo
+# sempre existe (vazio quando não há rotação em curso) — LoadCredential= não aceita caminho ausente.
+LoadCredential=PLAT_SECRET_ANTERIOR:/etc/plat/segredos/PLAT_SECRET_ANTERIOR
 # item L7-19, achado 17 do adversário no turno 3: PLAT_DSN (senha da role plat_app, credencial de banco de
 # TODA consulta da aplicação) e PLAT_GARAGE_ADMIN_TOKEN (credencial raiz do armazenamento de objetos)
 # estavam em claro no .env. Saem pelo mesmo mecanismo dos dois de cima. Os arquivos são criados/migrados

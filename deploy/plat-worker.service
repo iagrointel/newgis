@@ -15,13 +15,18 @@ Environment=PYTHONNOUSERSITE=1
 # PLAT_DSN_WORKER é a senha da role plat_worker, autoridade total sobre estado de job de todos os
 # inquilinos (achado do adversário no T2, L0-05) — sai do .env, dono root 0600 em /etc/plat/segredos/.
 LoadCredential=PLAT_SECRET:/etc/plat/segredos/PLAT_SECRET
+# PLAT_SECRET_ANTERIOR (dupla-chave de rotação, item L7-19): install.sh (seção d2) garante que o arquivo
+# sempre existe (vazio quando não há rotação em curso) — LoadCredential= não aceita caminho ausente.
+LoadCredential=PLAT_SECRET_ANTERIOR:/etc/plat/segredos/PLAT_SECRET_ANTERIOR
 # item L7-19, achado 17 do adversário no turno 3: PLAT_DSN (senha da role plat_app, credencial de banco de
-# TODA consulta da aplicação) e PLAT_GARAGE_ADMIN_TOKEN (credencial raiz do armazenamento de objetos)
-# estavam em claro no .env. Saem pelo mesmo mecanismo dos dois de cima. Os arquivos são criados/migrados
-# pelo install.sh (seção d2); se algum faltar, o systemd recusa iniciar a unidade — é de propósito, um
-# segredo ausente tem de parar a partida, não virar fallback silencioso para o .env.
+# TODA consulta da aplicação) estava em claro no .env. Sai pelo mesmo mecanismo do de cima. Os arquivos
+# são criados/migrados pelo install.sh (seção d2); se algum faltar, o systemd recusa iniciar a unidade —
+# é de propósito, um segredo ausente tem de parar a partida, não virar fallback silencioso para o .env.
+# a credencial raiz do armazenamento de objetos fica DE FORA desta unidade de propósito: só a API cria
+# bucket/chave por inquilino (app/objetos.py::_admin); o worker nunca fala com a Admin API do Garage, e
+# carregar aqui seria dar a um processo que não precisa a chave mais sensível da instalação (mesmo
+# princípio de PLAT_DSN_WORKER abaixo — achado do adversário T2, L0-05).
 LoadCredential=PLAT_DSN:/etc/plat/segredos/PLAT_DSN
-LoadCredential=PLAT_GARAGE_ADMIN_TOKEN:/etc/plat/segredos/PLAT_GARAGE_ADMIN_TOKEN
 LoadCredential=PLAT_DSN_WORKER:/etc/plat/segredos/PLAT_DSN_WORKER
 ExecStart=APP_DIR/venv/bin/python -m app.jobs.worker
 # sem job o worker só termina por sinal: qualquer saída é anômala (ADR 0003 seção 4.5)
