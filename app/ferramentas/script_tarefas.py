@@ -9,7 +9,7 @@ RETRATO imutável `plat.item_versao` na versão congelada pelo parâmetro do job
 sha256 do texto antes de rodar. Versão nova publicada depois não muda execução passada nenhuma.
 
 Contrato com o script: `entradas.json` ao lado do script traz {"parametros": {...}}; o script
-declara saídas com `plat.saidas.gravar` (SDK copiado junto, na versão deste commit) para
+declara saídas com `plat_geo.saidas.gravar` (SDK copiado junto, na versão deste commit) para
 `saida.json`; o job recusa saída com chave fora do declarado no cabeçalho. Script sem saída
 válida FALHA o job (falha honesta, nunca item vazio).
 """
@@ -94,12 +94,12 @@ def _copiar(nome: str, diretorio: str, caminho_local: str, caminho_remoto: str) 
 def _copiar_sdk(nome: str, diretorio: str) -> None:
     """Copia o pacote do SDK DESTE COMMIT para o contêiner (o interpretador roda com o SDK
     carimbado pela execução, não com o que a imagem instalou quando foi construída). O tar
-    extrai `plat/` DENTRO do diretório do script: sys.path[0] é o diretório do script, então
+    extrai `plat_geo/` DENTRO do diretório do script: sys.path[0] é o diretório do script, então
     a cópia da execução vence o SDK velho do site-packages da imagem."""
     pacote = RAIZ / "pacote"
     buffer = BytesIO()
     with tarfile.open(fileobj=buffer, mode="w") as tar:
-        tar.add(pacote / "plat", arcname="plat")
+        tar.add(pacote / "plat_geo", arcname="plat_geo")
     copiado = subprocess.run(
         ["docker", "exec", "-i", nome, "sh", "-c",
          f"mkdir -p {diretorio} && tar -xf - -C {diretorio}"],
@@ -181,7 +181,7 @@ def ferramentas_executar_script(ctx, ferramenta_id: str, versao: int, sha256: st
                           capture_output=True, timeout=60)
     if lido.returncode != 0:
         raise FalhaDefinitiva("script terminou sem erro mas não declarou saída nenhuma "
-                              "(plat.saidas.gravar nunca foi chamado)")
+                              "(plat_geo.saidas.gravar nunca foi chamado)")
     if len(lido.stdout) > TAM_MAX_SAIDA:
         raise FalhaDefinitiva(f"saída acima do teto de {TAM_MAX_SAIDA} bytes")
     try:

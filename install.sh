@@ -410,7 +410,7 @@ fi
 if [ "$IMAGEM_NOTEBOOK" -eq 1 ]; then
   echo "== h5. imagem do notebook por inquilino (--imagem-notebook, item L2-16-b)"
   command -v docker >/dev/null 2>&1 || { echo "docker não instalado; --imagem-notebook exige Docker (o script nunca instala Docker sozinho, decisão do dono)" >&2; exit 1; }
-  [ -f pacote/pyproject.toml ] || { echo "pacote/ (SDK plat) ausente na raiz; --imagem-notebook precisa dela para levar o SDK ao contêiner" >&2; exit 1; }
+  [ -f pacote/pyproject.toml ] || { echo "pacote/ (SDK plat_geo) ausente na raiz; --imagem-notebook precisa dela para levar o SDK ao contêiner" >&2; exit 1; }
   df -h / | tail -1
   # o .dockerignore da raiz é de negação total (build do worker, L0-05-e) e não se abre; o contexto do
   # build da imagem de notebook é deploy/notebook/contexto e o SDK é copiado para lá ANTES do build

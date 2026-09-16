@@ -7,22 +7,30 @@ L2-03-a`, `Raster.ler(bbox, bandas, resolução) -> array via TiTiler/COG por ST
 exemplos rodando contra a instalação de demo, leitura de raster comparada a rasterio direto e widget
 renderizando em notebook headless.
 
-Achado: existem DOIS pacotes Python diferentes chamados `plat`, versão `0.1.0` os dois:
+Achado (nesta rodada, antes do conserto): existiam DOIS pacotes Python diferentes chamados `plat`,
+versão `0.1.0` os dois:
 
   1. `sdk/python/src/plat` — item L7-08-b-sdk-python (SDK genérico gerado do OpenAPI: `.itens`,
      `.jobs`, `.camadas` como visão de `/api/itens`). É este que está de fato instalado no venv da
      casa (`pip show plat` -> Location .../enterprise/venv/..., conferido nesta rodada).
   2. `pacote/plat` — o pacote que instala.sh (`--imagem-notebook`) copia para dentro da imagem docker
-     do notebook por inquilino (item L2-16-b) e que `pacote/pyproject.toml` declara como
+     do notebook por inquilino (item L2-16-b) e que `pacote/pyproject.toml` declarava como
      `name = "plat"` `version = "0.1.0"` — o mesmo nome e a mesma versão do pacote 1.
 
-`pacote/plat` é o único candidato a "a camada geoespacial" do item L2-16-a. Ele expõe só
+⚡ Decisão do gerente G3 (16/09/2026, `laco/handoffs/T9/FASE1.md`): canônico = `sdk/python` (`plat`);
+o pacote 2 foi renomeado `plat_geo` (`pacote/plat_geo/`, `pacote/pyproject.toml` com
+`name = "plat_geo"`) e passou a viver ao lado do genérico sem colisão de nome — a primeira cláusula
+abaixo (nomes/versões distintos) já não é mais uma refutação, é o estado atual; fica registrada
+como teste de regressão (não mais `xfail`). As cláusulas seguintes (Raster/Camada/Tabela/widget/
+índice) continuam abertas — o rename não implementou nenhuma delas.
+
+`pacote/plat_geo` é o único candidato a "a camada geoespacial" do item L2-16-a. Ele expõe só
 `Plataforma`, `Catalogo` (CRUD genérico de item, sem bbox/GeoDataFrame), `Acervo`, `Jobs` e
 `Ferramentas` (dispara job, inclusive um atalho `.buffer()`) — nenhuma classe `Raster`, `Tabela` ou
 `Mapa`, e nenhum método `ler`/`escrever` que devolva ou aceite um GeoDataFrame. A imagem docker do
 notebook instala geopandas/rasterio/duckdb/shapely (`deploy/notebook/contexto/Dockerfile`), mas o SDK
 que ela também instala não usa nenhuma dessas bibliotecas: 0 ocorrência de `geopandas`/`GeoDataFrame`/
-`rasterio` em todo `pacote/plat/*.py` (conferido nesta rodada com grep). Não existe também nenhum
+`rasterio` em todo `pacote/plat_geo/*.py` (conferido nesta rodada com grep). Não existe também nenhum
 "índice interno de pacotes do repositório" (portão literal): o SDK só vira um tarball copiado para o
 contexto de build da imagem docker (`install.sh` seção h5), nunca é publicado em lugar nenhum que um
 `pip install plat --index-url ...` de fora alcance.
@@ -36,7 +44,6 @@ Reprodução (sem rede, sem banco — só o código-fonte do worktree):
 
 from __future__ import annotations
 
-import importlib.util
 import re
 import sys
 from pathlib import Path
@@ -44,38 +51,29 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
-PACOTE_PLAT = ROOT / "pacote" / "plat"
+PACOTE_PLAT = ROOT / "pacote" / "plat_geo"
 
 
 def _carregar_pacote_plat():
-    """Carrega `pacote/plat` sob um nome de módulo próprio (`plat_geo_pacote`), nunca `plat`, para não
-    colidir com o `plat` de `sdk/python` que já pode estar em `sys.modules` (o pacote realmente
-    instalado no venv desta casa é o de `sdk/python`, não este)."""
-    nome = "plat_geo_pacote_l2_16a"
-    if nome in sys.modules:
-        return sys.modules[nome]
-    spec = importlib.util.spec_from_file_location(
-        nome, PACOTE_PLAT / "__init__.py", submodule_search_locations=[str(PACOTE_PLAT)]
-    )
-    modulo = importlib.util.module_from_spec(spec)
-    sys.modules[nome] = modulo
-    spec.loader.exec_module(modulo)
-    return modulo
+    """Importa `pacote/plat_geo` (pós-G3: nome próprio, não colide mais com o `plat` genérico de
+    `sdk/python` — antes do rename este loader usava um alias manual em `sys.modules` só para
+    evitar a colisão de nome; hoje um `import plat_geo` comum já resolve certo)."""
+    pacote_dir = ROOT / "pacote"
+    if str(pacote_dir) not in sys.path:
+        sys.path.insert(0, str(pacote_dir))
+    if "plat_geo" in sys.modules:
+        return sys.modules["plat_geo"]
+    import plat_geo
+
+    return plat_geo
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "L2-16-a / L7-08-b: sdk/python/pyproject.toml e pacote/pyproject.toml declaram o MESMO "
-        "(nome, versão) = ('plat', '0.1.0') para dois pacotes com API incompatível (httpx+.itens "
-        "contra requests+.catalogo); nada impede a colisão se algum dia forem publicados no mesmo "
-        "índice, como o portão do item promete"
-    ),
-)
-def test_l2_16a_existem_dois_pacotes_plat_0_1_0_com_apis_incompativeis():
-    """Dois `pyproject.toml` diferentes declaram o mesmo par (nome, versão) para APIs incompatíveis:
-    `sdk/python` usa `httpx` + `.itens`/`.camadas`(visão); `pacote/plat` usa `requests` + `.catalogo`.
-    Nada no repositório impede os dois de reivindicar o mesmo nome publicado."""
+def test_l2_16a_pacotes_plat_e_plat_geo_tem_identidade_distinta():
+    """Regressão do G3 (16/09/2026): `sdk/python/pyproject.toml` (`plat`) e `pacote/pyproject.toml`
+    (`plat_geo`) já não declaram o mesmo (nome, versão) — antes deste conserto os dois eram
+    `('plat', '0.1.0')` com APIs incompatíveis (`sdk/python` usa `httpx` + `.itens`/`.camadas`;
+    `pacote/plat_geo` usa `requests` + `.catalogo`) e este teste era `xfail(strict=True)` (a
+    colisão era o achado do adversário). Se algum dia voltar a colidir, este teste falha de novo."""
     sdk_pyproject = (ROOT / "sdk" / "python" / "pyproject.toml").read_text()
     pacote_pyproject = (ROOT / "pacote" / "pyproject.toml").read_text()
 
@@ -96,7 +94,7 @@ def test_l2_16a_existem_dois_pacotes_plat_0_1_0_com_apis_incompativeis():
     strict=True,
     reason=(
         "L2-16-a: o portão promete Camada.ler(filtro,campos,bbox)->GeoDataFrame e "
-        "Camada.escrever(gdf,...); pacote/plat/catalogo.py::Catalogo só tem CRUD genérico de item "
+        "Camada.escrever(gdf,...); pacote/plat_geo/catalogo.py::Catalogo só tem CRUD genérico de item "
         "(listar/iterar/abrir/criar/atualizar/substituir_dados/apagar), sem bbox nem GeoDataFrame"
     ),
 )
@@ -111,19 +109,19 @@ def test_l2_16a_camada_le_e_escreve_geodataframe():
     strict=True,
     reason=(
         "L2-16-a: o portão promete Raster.ler(bbox,bandas,resolução) -> array comparável a rasterio "
-        "direto; não existe nenhuma classe Raster em pacote/plat, nem import de rasterio/numpy"
+        "direto; não existe nenhuma classe Raster em pacote/plat_geo, nem import de rasterio/numpy"
     ),
 )
 def test_l2_16a_classe_raster_existe():
     modulo = _carregar_pacote_plat()
-    assert hasattr(modulo, "Raster"), "classe Raster ausente do SDK geoespacial (pacote/plat)"
+    assert hasattr(modulo, "Raster"), "classe Raster ausente do SDK geoespacial (pacote/plat_geo)"
 
 
 @pytest.mark.xfail(
     strict=True,
     reason=(
         "L2-16-a: o portão promete Tabela e Mapa (documento) como domínios do SDK, ao lado de "
-        "catálogo/acervo/jobs/ferramentas; pacote/plat só tem os quatro últimos"
+        "catálogo/acervo/jobs/ferramentas; pacote/plat_geo só tem os quatro últimos"
     ),
 )
 def test_l2_16a_tabela_e_mapa_documento_existem():
@@ -137,7 +135,7 @@ def test_l2_16a_tabela_e_mapa_documento_existem():
     reason=(
         "L2-16-a: o portão promete 'mapa em notebook (widget leve HTML com MapLibre)' com teste "
         "headless via nbconvert; não existe módulo nem exemplo nenhum do SDK que renderize um widget "
-        "de mapa (0 arquivo em pacote/plat ou sdk/python/exemplos menciona MapLibre/notebook/widget)"
+        "de mapa (0 arquivo em pacote/plat_geo ou sdk/python/exemplos menciona MapLibre/notebook/widget)"
     ),
 )
 def test_l2_16a_widget_de_mapa_em_notebook_existe():
@@ -146,7 +144,7 @@ def test_l2_16a_widget_de_mapa_em_notebook_existe():
         re.search(r"maplibre|ipyleaflet|_repr_html_|display\(", arquivo.read_text(), re.IGNORECASE)
         for arquivo in fontes
     )
-    assert achou, "nenhum arquivo do SDK (pacote/plat ou exemplos) implementa widget de mapa em notebook"
+    assert achou, "nenhum arquivo do SDK (pacote/plat_geo ou exemplos) implementa widget de mapa em notebook"
 
 
 @pytest.mark.xfail(

@@ -4,7 +4,7 @@ descricao: >
   Ferramenta de exemplo (item L2-16-c): lê um item do catálogo cujo dado carrega GeoJSON, desenha
   um buffer em torno de cada feição (cada "campo") e declara as saídas. A leitura do item usa o
   SDK da plataforma (o token do contêiner é de leitura, L2-16-b) e a saída é declarada com
-  plat.saidas, para o job registrar o item com a procedência. O buffer é calculado no SRID
+  plat_geo.saidas, para o job registrar o item com a procedência. O buffer é calculado no SRID
   métrico informado; a entrada e a saída GeoJSON ficam em WGS 84 (EPSG:4326), convenção do
   catálogo.
 parametros:
@@ -36,8 +36,8 @@ import json
 import os
 
 import pyproj
-from plat import saidas
-from plat.cliente import Plataforma
+from plat_geo import saidas
+from plat_geo.cliente import Plataforma
 from shapely.geometry import mapping, shape
 from shapely.ops import transform as transformar_forma
 

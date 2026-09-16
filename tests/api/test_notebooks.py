@@ -377,7 +377,7 @@ def test_kernel_le_camada_pela_api_e_nao_escapa(servidor, demo, contenedor_demo,
     codigo = f"""
 import json, os, socket
 saida = {{}}
-from plat import Plataforma
+from plat_geo import Plataforma
 pla = Plataforma(os.environ["PLAT_URL_API"], os.environ["PLAT_TOKEN"])
 item = pla.catalogo.abrir({camada_demo!r})
 saida["api_item"] = item["titulo"]

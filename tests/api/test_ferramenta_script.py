@@ -183,7 +183,7 @@ def _script_rede() -> str:
         '"""\nnome: prova_rede_fora\ntitulo: Prova de rede\n'
         'parametros:\n  - nome: alvo\n    tipo: texto\n    padrao: "1.1.1.1"\n'
         'saidas:\n  - nome: estado\n    tipo: texto\n"""\n'
-        'import socket\nfrom plat import saidas\n'
+        'import socket\nfrom plat_geo import saidas\n'
         's = socket.create_connection(("1.1.1.1", 443), timeout=4.0)\n'
         's.close()\nsaidas.gravar("estado", "conectou")\n'
     )
@@ -193,7 +193,7 @@ def _script_etc() -> str:
     return (
         '"""\nnome: prova_etc_shadow\ntitulo: Prova de arquivo do sistema\n'
         'parametros: []\nsaidas:\n  - nome: lido\n    tipo: texto\n"""\n'
-        'from plat import saidas\n'
+        'from plat_geo import saidas\n'
         'with open("/etc/shadow", encoding="utf-8") as arq:\n'
         '    conteudo = arq.read()\n'
         'saidas.gravar("lido", f"{len(conteudo)} bytes")\n'
@@ -212,7 +212,7 @@ def _script_escrita() -> str:
     return (
         '"""\nnome: prova_escrita_sem_permissao\ntitulo: Prova de escrita\n'
         'parametros: []\nsaidas:\n  - nome: criado\n    tipo: texto\n"""\n'
-        'from plat import saidas\nfrom plat.cliente import Plataforma\n'
+        'from plat_geo import saidas\nfrom plat_geo.cliente import Plataforma\n'
         'pla = Plataforma.do_ambiente()\n'
         'novo = pla.catalogo.criar(tipo="ferramenta_resultado", titulo="escrito de dentro",\n'
         '                          dados={"ferramenta": "prova", "parametros": {}, "resultado": {}})\n'
