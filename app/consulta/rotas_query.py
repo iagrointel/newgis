@@ -120,7 +120,8 @@ def _item_id_valido(item_id: str) -> None:
 def _camada_do_item(cur, item_id: str) -> dict:
     _item_id_valido(item_id)
     cur.execute(
-        "SELECT dados FROM plat.item WHERE id = %s::uuid AND tipo = 'camada_vetorial'", (item_id,)
+        "SELECT dados FROM plat.item WHERE id = %s::uuid AND tipo IN ('camada_vetorial', 'vista_de_camada')",
+        (item_id,),
     )
     r = cur.fetchone()
     if r is None:
