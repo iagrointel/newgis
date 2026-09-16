@@ -142,6 +142,21 @@ def _importar(cur, auth: Auth, modelo: str) -> tuple[int, int]:
         if r:
             existentes += 1
             return str(r["id"])
+        # nó irmão com o MESMO nome e sem código nenhum (categoria própria criada à mão, antes do modelo
+        # existir): adota em vez de tentar um segundo nó com o mesmo nome, que a restrição de irmãos
+        # (ux_categoria_raiz/ux_categoria_irmas) recusaria — a importação continua idempotente mesmo quando
+        # o inquilino já tinha uma categoria "Transporte"/"Água" antes de importar o vocabulário.
+        cur.execute(
+            "SELECT id FROM plat.categoria WHERE lower(nome) = lower(%s) AND codigo IS NULL "
+            "AND pai_id IS NOT DISTINCT FROM %s::uuid",
+            (nome, pai_id),
+        )
+        r = cur.fetchone()
+        if r:
+            cur.execute("UPDATE plat.categoria SET codigo = %s, origem = %s WHERE id = %s::uuid",
+                       (codigo, origem, r["id"]))
+            existentes += 1
+            return str(r["id"])
         cur.execute(
             "INSERT INTO plat.categoria(tenant_id, pai_id, nome, posicao, origem, codigo) VALUES "
             "(%s, %s::uuid, %s, %s, %s, %s) RETURNING id",

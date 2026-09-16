@@ -95,9 +95,13 @@ def test_categorias_arvore_limites_e_modelos(sessao_a, sessao_b, itens_a):
     assert sessao_a.get(f"/api/itens?categoria={tema['id']}").json()["total"] >= 1  # descendente conta
     r = sessao_a.put(f"/api/itens/{it['id']}", json={"categorias": [str(uuid.uuid4()) for _ in range(21)]})
     assert r.status_code == 422
-    cat_b = sessao_b.put("/api/categorias", json={"arvore": [{"nome": titulo_zt("de B"), "filhas": []}]}).json()[
-        "arvore"
-    ][-1]
+    # aditivo sobre a árvore existente de B (dado de demo semeado tem categoria com item preso — substituir a
+    # árvore inteira, como o resto deste teste faz para A, cairia em 409 categoria_em_uso aqui)
+    base_b = sessao_b.get("/api/categorias").json()["arvore"]
+    cat_b = sessao_b.put(
+        "/api/categorias",
+        json={"arvore": [_sem_extras(n) for n in base_b] + [{"nome": titulo_zt("de B"), "filhas": []}]},
+    ).json()["arvore"][-1]
     r = sessao_a.put(f"/api/itens/{it['id']}", json={"categorias": [cat_b["id"]]})
     assert r.status_code == 404 and r.json()["erro"] == "categoria_inexistente"
     # nó em uso não se remove
