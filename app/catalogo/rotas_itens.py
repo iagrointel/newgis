@@ -56,6 +56,7 @@ from app.catalogo.modelos import (
     VersaoCompleta,
 )
 from app.erros import ErroAPI
+from app.estilos import validador as estilos_validador
 from app.imagens import ciclo_vida  # L1-01-i: item de imagem na lixeira guarda STAC e agenda objetos
 from app.jobs import sistema
 from app.settings import settings
@@ -597,6 +598,7 @@ def criar(
     tipos.validar(corpo.tipo, corpo.dados)
     documento.validar_grafo(corpo.tipo, corpo.dados)
     documento.validar_desenho(corpo.tipo, corpo.dados)
+    estilos_validador.validar_estilo(corpo.tipo, corpo.dados)
     site.validar_documento(corpo.tipo, corpo.dados)
     _classificacao(auth, corpo.classificacao, novo=True)
     iid = str(uuid.UUID(corpo.id)) if corpo.id else str(uuid.uuid4())
@@ -935,6 +937,7 @@ def editar_item(
         tipos.validar(r["tipo"], dados)
         documento.validar_grafo(r["tipo"], dados)
         documento.validar_desenho(r["tipo"], dados)
+        estilos_validador.validar_estilo(r["tipo"], dados)
         site.validar_documento(r["tipo"], dados)
     if "classificacao" in campos:
         _classificacao(auth, campos["classificacao"], novo=False)
