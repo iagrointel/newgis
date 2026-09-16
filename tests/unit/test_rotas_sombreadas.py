@@ -40,9 +40,27 @@ def _casa(rota: APIRoute, caminho: str, metodos: set[str]) -> bool:
     return bool(rota.path_regex.match(caminho)) and bool((rota.methods or set()) & metodos)
 
 
+_VALOR_POR_CONVERSOR = {
+    "int": "9",
+    "float": "9.5",
+    "uuid": "00000000-0000-0000-0000-000000000000",
+    "path": "zzparamzz",
+    "str": "zzparamzz",
+}
+
+
 def _concreto(caminho: str) -> str:
-    """Troca cada `{param}` por um valor sintético que nenhum caminho literal do repositório usa."""
-    return re.sub(r"\{[^}]+\}", "zzparamzz", caminho)
+    """Troca cada `{param}` (ou `{param:conversor}`) por um valor sintético que nenhum caminho literal do
+    repositório usa — mas RESPEITANDO o conversor do Starlette declarado no molde: uma rota
+    `{camada:int}` só combina com dígitos, então sondá-la com uma string genérica faz a própria rota
+    reprovar a própria sonda (falso positivo de sombreamento — achado ao restaurar este arquivo em 16/09,
+    `/rest/services/{item_id}/FeatureServer/{camada:int}` "sombreada" por `.../FeatureServer/{camada_id}`
+    só porque a sonda antiga nunca era um inteiro de verdade)."""
+    def _trocar(m: re.Match) -> str:
+        conversor = m.group(1)
+        return _VALOR_POR_CONVERSOR.get(conversor, "zzparamzz")
+
+    return re.sub(r"\{[^:}]+(?::([a-z]+))?\}", _trocar, caminho)
 
 
 def test_rota_literal_nunca_e_engolida_por_rota_com_parametro():
