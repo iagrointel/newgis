@@ -61,15 +61,6 @@ def _adicionar(sessao, camada_id, geometria, nome="x"):
     return r.json()["adicionar"][0]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "L2-03-b-ferramentas-geometria CAI: POST /api/camadas/{id}/feicoes/unir devolve 404 (rota ausente "
-        "de app/edicao/rotas.py em wt/uniao — perdida numa fusão depois do commit 9b347a2c8; ver docstring "
-        "do módulo e tests/api/test_edicao_dividir_unir.py, que falha inteiro pelo mesmo motivo). O código de "
-        "app/edicao/combinar.py::unir existe e nunca é chamado por nenhum router."
-    ),
-)
 def test_l2_03b_unir_duas_linhas_conectadas(sessao_a, camada_linha_adv):
     a = _adicionar(sessao_a, camada_linha_adv, _linha([[-46.60, -23.50], [-46.55, -23.50]]), nome="trecho-a")
     b = _adicionar(sessao_a, camada_linha_adv, _linha([[-46.55, -23.50], [-46.50, -23.50]]), nome="trecho-b")
@@ -80,15 +71,6 @@ def test_l2_03b_unir_duas_linhas_conectadas(sessao_a, camada_linha_adv):
     assert r.status_code == 200, r.text
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "L2-03-b-ferramentas-geometria CAI: POST /api/camadas/{id}/feicoes/dividir devolve 404 pelo mesmo "
-        "motivo de test_l2_03b_unir_duas_linhas_conectadas (rota perdida de app/edicao/rotas.py). O portão "
-        "exige explicitamente 'dividir linha/polígono ... soma das áreas = área original' e a operação é "
-        "inalcançável por HTTP hoje."
-    ),
-)
 def test_l2_03b_dividir_linha_no_meio(sessao_a, camada_linha_adv):
     a = _adicionar(sessao_a, camada_linha_adv, _linha([[-46.60, -23.50], [-46.50, -23.50]]), nome="inteira")
     r = sessao_a.post(
