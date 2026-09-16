@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 
 import psycopg2
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Request
 from pydantic import Field
 
 from app import db
@@ -82,14 +82,8 @@ def criar_feicao(item_id: str, corpo: FeicaoEntrada, request: Request,
     return {"fid": r["fid"], "globalid": str(r["globalid"])}
 
 
-@router.get("/api/camadas/{item_id}/feicoes", openapi_extra=LER)
-def listar_feicoes(item_id: str, limite: int = Query(default=50, ge=1, le=500),
-                   auth: Auth = autenticado(escopo_token="catalogo:ler")):
-    """Só os atributos declarados e o fid; sem geometria (a leitura de geometria é do serviço de camada)."""
-    with db.db(auth.contexto()) as cur:
-        item = servico.camada_ou_404(cur, item_id)
-        esquema, tabela = _tabela(item)
-        declarados = servico.campos_declarados(item)
-        lista = ", ".join(['fid'] + [f'"{c}"' for c in declarados])
-        cur.execute(f'SELECT {lista} FROM "{esquema}"."{tabela}" ORDER BY fid DESC LIMIT %s', (limite,))
-        return {"itens": [dict(r) for r in cur.fetchall()]}
+# GET /api/camadas/{item_id}/feicoes (leitura) foi removida daqui em 16/09: sombreava (mesmo caminho, mesmo
+# método, `id` só com outro nome de parâmetro) app/regras/rotas.py::feicoes_ler (item L2-10-d), incluído
+# ANTES deste router em app/main.py e por isso já era quem respondia de verdade — esta função nunca rodava.
+# feicoes_ler já é "a leitura da casa" (geometria + campos virtuais); o que fica só aqui é a ESCRITA
+# (POST acima), que é o escopo original do item L2-10-a.
