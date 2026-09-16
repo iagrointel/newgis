@@ -225,7 +225,7 @@ export class Tilesets3D {
 
 export function urlDoModelo(id) {
   return {
-    glb: `/api/modelos/${id}/glb`,
-    tileset: `/api/modelos/${id}/3dtiles/tileset.json`,
+    glb: `/api/modelos3d/${id}/glb`,
+    tileset: `/api/modelos3d/${id}/3dtiles/tileset.json`,
   };
 }

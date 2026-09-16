@@ -1,10 +1,10 @@
 /* plat · cena — o painel dos modelos 3D e a ligação clique → propriedades (item L2-09-c).
 
    Junta as três peças: o que o documento de cena declara (`corpo.modelos`), a camada que desenha
-   (glTF por three.js ou tileset por deck.gl, em `modelos3d.js`) e a API (`/api/modelos/...`).
+   (glTF por three.js ou tileset por deck.gl, em `modelos3d.js`) e a API (`/api/modelos3d/...`).
 
    O clique é a razão de o modelo ter elemento: o nó do glTF carrega `extras.guid`, o painel pede
-   `/api/modelos/{id}/elementos/{guid}` e mostra o tipo, o pavimento e cada conjunto de propriedade que o
+   `/api/modelos3d/{id}/elementos/{guid}` e mostra o tipo, o pavimento e cada conjunto de propriedade que o
    IFC declara. Sem o GUID não haveria o que perguntar — índice de nó muda a cada conversão. */
 import { obter } from '../base/api.js';
 import { h, limpar } from '../base/dom.js';
@@ -26,7 +26,7 @@ export class Modelos3D {
 
   async ficha(modeloId) {
     if (this.fichas.has(modeloId)) return this.fichas.get(modeloId);
-    const r = await obter(`/api/modelos/${modeloId}`);
+    const r = await obter(`/api/modelos3d/${modeloId}`);
     if (r.status !== 200) throw new Error(t('modelos3d.erro_ficha'));
     this.fichas.set(modeloId, r.json);
     return r.json;
@@ -83,7 +83,7 @@ export class Modelos3D {
   async mostrar(modeloId, guid) {
     if (!this.propriedades) return;
     this.selecionado = { modelo_id: modeloId, guid };
-    const r = await obter(`/api/modelos/${modeloId}/elementos/${encodeURIComponent(guid)}`);
+    const r = await obter(`/api/modelos3d/${modeloId}/elementos/${encodeURIComponent(guid)}`);
     limpar(this.propriedades);
     if (r.status !== 200) {
       this.propriedades.append(h('p', { class: 'saida' }, t('modelos3d.elemento_nao_achado')));

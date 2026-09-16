@@ -285,7 +285,7 @@ def test_a_ficha_do_elemento_bate_com_a_api(cena_aberta, bancada):
     _esperar_modelo(page, bancada["casa"]["id"])
     dados = page.evaluate(
         """async (id) => {
-             const r = await fetch(`/api/modelos/${id}/elementos?limite=500`, {credentials: 'same-origin'});
+             const r = await fetch(`/api/modelos3d/${id}/elementos?limite=500`, {credentials: 'same-origin'});
              return r.json();
            }""", bancada["casa"]["id"])
     assert dados["total"] == bancada["casa"]["elementos"]
@@ -304,13 +304,13 @@ def test_o_tileset_carrega_pelo_deck_gl(cena_aberta, bancada, medida):
     assert page.evaluate("() => !!(window.deck && window.deck.Tile3DLayer)"), "deck.gl não carregou"
     carregado = page.evaluate(
         """async (id) => {
-             const r = await fetch(`/api/modelos/${id}/3dtiles/tileset.json`, {credentials: 'same-origin'});
+             const r = await fetch(`/api/modelos3d/${id}/3dtiles/tileset.json`, {credentials: 'same-origin'});
              if (!r.ok) return {erro: r.status};
              const t = await r.json();
              const filhos = t.root.children || [];
              const conteudos = [];
              for (const f of filhos) {
-               const c = await fetch(`/api/modelos/${id}/3dtiles/${f.content.uri}`, {credentials: 'same-origin'});
+               const c = await fetch(`/api/modelos3d/${id}/3dtiles/${f.content.uri}`, {credentials: 'same-origin'});
                conteudos.push({uri: f.content.uri, ok: c.ok, bytes: (await c.arrayBuffer()).byteLength});
              }
              return {versao: t.asset.version, filhos: filhos.length, conteudos};
@@ -319,7 +319,7 @@ def test_o_tileset_carrega_pelo_deck_gl(cena_aberta, bancada, medida):
     assert carregado["filhos"] >= 1
     assert all(c["ok"] and c["bytes"] > 0 for c in carregado["conteudos"]), carregado
     page.evaluate("(id) => window.plat.cena.modelos.tilesets.ativar("
-                  "{id, url_tileset: `/api/modelos/${id}/3dtiles/tileset.json`})", bancada["caixa"]["id"])
+                  "{id, url_tileset: `/api/modelos3d/${id}/3dtiles/tileset.json`})", bancada["caixa"]["id"])
     page.wait_for_timeout(4000)
     montado = page.evaluate("(id) => window.plat.cena.modelos.tilesets.camadas.has(id)",
                             bancada["caixa"]["id"])

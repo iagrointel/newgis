@@ -1063,8 +1063,8 @@ MODELO3D_GLB_BYTES = 300 * 1024 * 1024       # teto do glTF binário PRODUZIDO p
 MODELO3D_MEMORIA_MB = 1024                   # teto do trabalhador (PLAT_WORKER_MEMORIA_MB): o grafo do IFC
 MODELO3D_TIMEOUT_S = 1800
 MODELO3D_NOME_MAX = 200                      # mesmo teto de CHECK(length(nome)<=200) da migração
-MODELO3D_ELEMENTOS_PAGINA_MAX = 500          # elementos por página em GET /api/modelos/{id}/elementos
-MODELO3D_PAGINA_MAX = 200                    # modelos por página em GET /api/modelos
+MODELO3D_ELEMENTOS_PAGINA_MAX = 500          # elementos por página em GET /api/modelos3d/{id}/elementos
+MODELO3D_PAGINA_MAX = 200                    # modelos por página em GET /api/modelos3d
 
 # --- versionamento por ramo (item L2-13-a): teto de ramos ABERTOS por camada. A camada pode declarar o
 # seu próprio teto menor em `dados.versionamento.ramos_max`; este é o máximo que ela pode declarar e o

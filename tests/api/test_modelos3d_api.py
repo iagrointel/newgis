@@ -94,7 +94,7 @@ def criar_modelo(sessao_a):
         sha = _enviar(sessao_a, dados)
         corpo = {"nome": nome, "origem": origem, "arquivo_sha256": sha,
                  "lon": LON, "lat": LAT, "altura_m": ALTURA_M, **extra}
-        r = sessao_a.post("/api/modelos", json=corpo)
+        r = sessao_a.post("/api/modelos3d", json=corpo)
         assert r.status_code == 201, r.text
         modelo = r.json()
         criados.append(modelo["id"])
@@ -103,7 +103,7 @@ def criar_modelo(sessao_a):
 
     yield criar
     for mid in criados:
-        sessao_a.delete(f"/api/modelos/{mid}")
+        sessao_a.delete(f"/api/modelos3d/{mid}")
 
 
 # ------------------------------------------------------------------ criação e ficha
@@ -116,16 +116,16 @@ def test_criar_devolve_ficha_e_enfileira_a_conversao(sessao_a, criar_modelo):
     assert modelo["lon"] == pytest.approx(LON)
     assert modelo["job_id"]
     assert "tileset_arquivos" not in modelo  # chave do armazenamento nunca sai na resposta
-    ficha = sessao_a.get(f"/api/modelos/{modelo['id']}")
+    ficha = sessao_a.get(f"/api/modelos3d/{modelo['id']}")
     assert ficha.status_code == 200
     assert ficha.json()["nome"] == nome
-    lista = sessao_a.get("/api/modelos")
+    lista = sessao_a.get("/api/modelos3d")
     assert lista.status_code == 200
     assert any(m["id"] == modelo["id"] for m in lista.json()["itens"])
 
 
 def test_sha256_que_o_inquilino_nao_tem_e_404(sessao_a):
-    r = sessao_a.post("/api/modelos", json={"nome": f"{PREFIXO}fantasma", "origem": "gltf",
+    r = sessao_a.post("/api/modelos3d", json={"nome": f"{PREFIXO}fantasma", "origem": "gltf",
                                             "arquivo_sha256": "0" * 64, "lon": LON, "lat": LAT})
     assert r.status_code == 404
     assert r.json()["erro"] == "arquivo_nao_encontrado"
@@ -135,7 +135,7 @@ def test_nome_repetido_e_409(sessao_a, criar_modelo):
     nome = f"{PREFIXO}repetido"
     criar_modelo(glb_caixa(), "gltf", nome)
     sha = _enviar(sessao_a, glb_caixa(nome="outro"))
-    r = sessao_a.post("/api/modelos", json={"nome": nome, "origem": "gltf", "arquivo_sha256": sha,
+    r = sessao_a.post("/api/modelos3d", json={"nome": nome, "origem": "gltf", "arquivo_sha256": sha,
                                             "lon": LON, "lat": LAT})
     assert r.status_code == 409
 
@@ -145,13 +145,13 @@ def test_nome_repetido_e_409(sessao_a, criar_modelo):
 def test_corpo_invalido_e_422(sessao_a, campo, valor):
     corpo = {"nome": f"{PREFIXO}invalido", "origem": "gltf", "arquivo_sha256": "a" * 64,
              "lon": LON, "lat": LAT, campo: valor}
-    r = sessao_a.post("/api/modelos", json=corpo)
+    r = sessao_a.post("/api/modelos3d", json=corpo)
     assert r.status_code == 422
     assert any(e["campo"] == campo for e in r.json()["detalhe"])
 
 
 def test_id_que_nao_e_uuid_e_404(sessao_a):
-    assert sessao_a.get("/api/modelos/nao-e-uuid").status_code == 404
+    assert sessao_a.get("/api/modelos3d/nao-e-uuid").status_code == 404
 
 
 # ------------------------------------------------------------------ conversão do IFC
@@ -159,7 +159,7 @@ def test_id_que_nao_e_uuid_e_404(sessao_a):
 def modelo_ifc(sessao_a, criar_modelo, ctx_a):
     modelo = criar_modelo(IFC_ABERTO.read_bytes(), "ifc", f"{PREFIXO}casa-aberta")
     tarefas.modelo3d_converter(ctx_a, modelo["id"], gerar_tileset=False)
-    return sessao_a.get(f"/api/modelos/{modelo['id']}").json()
+    return sessao_a.get(f"/api/modelos3d/{modelo['id']}").json()
 
 
 def test_ifc_convertido_tem_uma_linha_por_elemento(sessao_a, modelo_ifc, medida):
@@ -167,7 +167,7 @@ def test_ifc_convertido_tem_uma_linha_por_elemento(sessao_a, modelo_ifc, medida)
     assert modelo_ifc["estado"] == "pronto"
     assert modelo_ifc["elementos"] == ELEMENTOS_IFC
     assert modelo_ifc["elementos_sem_forma"] == ELEMENTOS_IFC - COM_FORMA_IFC
-    r = sessao_a.get(f"/api/modelos/{modelo_ifc['id']}/elementos?limite=500")
+    r = sessao_a.get(f"/api/modelos3d/{modelo_ifc['id']}/elementos?limite=500")
     assert r.status_code == 200
     assert r.json()["total"] == ELEMENTOS_IFC
     assert len(r.json()["itens"]) == ELEMENTOS_IFC
@@ -181,7 +181,7 @@ def test_ifc_convertido_tem_uma_linha_por_elemento(sessao_a, modelo_ifc, medida)
 
 
 def test_clique_no_elemento_traz_as_propriedades(sessao_a, modelo_ifc):
-    r = sessao_a.get(f"/api/modelos/{modelo_ifc['id']}/elementos/{GUID_LAJE}")
+    r = sessao_a.get(f"/api/modelos3d/{modelo_ifc['id']}/elementos/{GUID_LAJE}")
     assert r.status_code == 200
     e = r.json()
     assert e["tipo"] == "IFCSLAB"
@@ -191,15 +191,15 @@ def test_clique_no_elemento_traz_as_propriedades(sessao_a, modelo_ifc):
 
 
 def test_elementos_filtram_por_tipo_e_pavimento(sessao_a, modelo_ifc):
-    paredes = sessao_a.get(f"/api/modelos/{modelo_ifc['id']}/elementos?tipo=IFCWALL").json()
+    paredes = sessao_a.get(f"/api/modelos3d/{modelo_ifc['id']}/elementos?tipo=IFCWALL").json()
     assert paredes["total"] == 4
     assert {e["tipo"] for e in paredes["itens"]} == {"IFCWALL"}
-    terreo = sessao_a.get(f"/api/modelos/{modelo_ifc['id']}/elementos?pavimento=00 groundfloor").json()
+    terreo = sessao_a.get(f"/api/modelos3d/{modelo_ifc['id']}/elementos?pavimento=00 groundfloor").json()
     assert 0 < terreo["total"] < ELEMENTOS_IFC
 
 
 def test_guid_inexistente_e_404(sessao_a, modelo_ifc):
-    assert sessao_a.get(f"/api/modelos/{modelo_ifc['id']}/elementos/NAOEXISTE").status_code == 404
+    assert sessao_a.get(f"/api/modelos3d/{modelo_ifc['id']}/elementos/NAOEXISTE").status_code == 404
 
 
 def test_a_caixa_gravada_situa_o_modelo_no_ponto_pedido(modelo_ifc):
@@ -214,7 +214,7 @@ def test_a_caixa_gravada_situa_o_modelo_no_ponto_pedido(modelo_ifc):
 
 
 def test_o_glb_convertido_sai_pela_api(sessao_a, modelo_ifc):
-    r = sessao_a.get(f"/api/modelos/{modelo_ifc['id']}/glb")
+    r = sessao_a.get(f"/api/modelos3d/{modelo_ifc['id']}/glb")
     assert r.status_code == 200
     assert r.headers["content-type"].startswith("model/gltf-binary")
     assert r.content[:4] == b"glTF"
@@ -223,7 +223,7 @@ def test_o_glb_convertido_sai_pela_api(sessao_a, modelo_ifc):
 
 def test_glb_antes_da_conversao_e_409(sessao_a, criar_modelo):
     modelo = criar_modelo(glb_caixa(nome="ainda-nao"), "gltf", f"{PREFIXO}sem-glb")
-    r = sessao_a.get(f"/api/modelos/{modelo['id']}/glb")
+    r = sessao_a.get(f"/api/modelos3d/{modelo['id']}/glb")
     assert r.status_code == 409
     assert r.json()["erro"] == "sem_glb"
 
@@ -232,13 +232,13 @@ def test_glb_antes_da_conversao_e_409(sessao_a, criar_modelo):
 @pytest.fixture
 def modelo_com_tileset(sessao_a, modelo_ifc, ctx_a):
     tarefas.modelo3d_tileset(ctx_a, modelo_ifc["id"])
-    return sessao_a.get(f"/api/modelos/{modelo_ifc['id']}").json()
+    return sessao_a.get(f"/api/modelos3d/{modelo_ifc['id']}").json()
 
 
 def test_tileset_sai_pela_api_com_conteudo_relativo(sessao_a, modelo_com_tileset):
     assert modelo_com_tileset["tileset"] is True
     assert modelo_com_tileset["tileset_tiles"] >= 1
-    base = f"/api/modelos/{modelo_com_tileset['id']}/3dtiles"
+    base = f"/api/modelos3d/{modelo_com_tileset['id']}/3dtiles"
     r = sessao_a.get(f"{base}/tileset.json")
     assert r.status_code == 200
     tileset = r.json()
@@ -252,7 +252,7 @@ def test_tileset_sai_pela_api_com_conteudo_relativo(sessao_a, modelo_com_tileset
 
 
 def test_caminho_fora_da_arvore_e_404(sessao_a, modelo_com_tileset):
-    base = f"/api/modelos/{modelo_com_tileset['id']}/3dtiles"
+    base = f"/api/modelos3d/{modelo_com_tileset['id']}/3dtiles"
     for caminho in ("conteudo/../../etc/senha", "outro.json", "conteudo/9999.glb"):
         assert sessao_a.get(f"{base}/{caminho}").status_code == 404
 
@@ -260,7 +260,7 @@ def test_caminho_fora_da_arvore_e_404(sessao_a, modelo_com_tileset):
 def test_tileset_antes_de_gerar_e_409(sessao_a, criar_modelo, ctx_a):
     modelo = criar_modelo(glb_caixa(nome="sem-arvore"), "gltf", f"{PREFIXO}sem-tileset")
     tarefas.modelo3d_converter(ctx_a, modelo["id"], gerar_tileset=False)
-    r = sessao_a.get(f"/api/modelos/{modelo['id']}/3dtiles/tileset.json")
+    r = sessao_a.get(f"/api/modelos3d/{modelo['id']}/3dtiles/tileset.json")
     assert r.status_code == 409
     assert r.json()["erro"] == "sem_tileset"
 
@@ -274,7 +274,7 @@ def test_glb_com_textura_externa_e_recusado_na_conversao(sessao_a, criar_modelo,
     with pytest.raises(FalhaDefinitiva) as e:
         tarefas.modelo3d_converter(ctx_a, modelo["id"], gerar_tileset=False)
     assert "recurso externo" in str(e.value)
-    ficha = sessao_a.get(f"/api/modelos/{modelo['id']}").json()
+    ficha = sessao_a.get(f"/api/modelos3d/{modelo['id']}").json()
     assert ficha["estado"] == "falhou"
     assert "recurso externo" in ficha["erro"]
 
@@ -285,22 +285,22 @@ def test_arquivo_que_nao_e_ifc_falha_com_motivo(sessao_a, criar_modelo, ctx_a):
     modelo = criar_modelo(b"isto nao e um IFC nem um GLB" * 40, "ifc", f"{PREFIXO}lixo")
     with pytest.raises(FalhaDefinitiva):
         tarefas.modelo3d_converter(ctx_a, modelo["id"], gerar_tileset=False)
-    assert sessao_a.get(f"/api/modelos/{modelo['id']}").json()["estado"] == "falhou"
+    assert sessao_a.get(f"/api/modelos3d/{modelo['id']}").json()["estado"] == "falhou"
 
 
 def test_apagar_leva_os_elementos_junto(sessao_a, criar_modelo, ctx_a):
     modelo = criar_modelo(IFC_ABERTO.read_bytes(), "ifc", f"{PREFIXO}apagavel")
     tarefas.modelo3d_converter(ctx_a, modelo["id"], gerar_tileset=False)
-    assert sessao_a.get(f"/api/modelos/{modelo['id']}/elementos").json()["total"] == ELEMENTOS_IFC
-    assert sessao_a.delete(f"/api/modelos/{modelo['id']}").status_code == 200
-    assert sessao_a.get(f"/api/modelos/{modelo['id']}").status_code == 404
-    assert sessao_a.get(f"/api/modelos/{modelo['id']}/elementos").status_code == 404
+    assert sessao_a.get(f"/api/modelos3d/{modelo['id']}/elementos").json()["total"] == ELEMENTOS_IFC
+    assert sessao_a.delete(f"/api/modelos3d/{modelo['id']}").status_code == 200
+    assert sessao_a.get(f"/api/modelos3d/{modelo['id']}").status_code == 404
+    assert sessao_a.get(f"/api/modelos3d/{modelo['id']}/elementos").status_code == 404
 
 
 def test_sem_credencial_nenhuma_rota_responde():
     cliente = novo_cliente()
-    for caminho in ("/api/modelos", "/api/modelos/11111111-2222-3333-4444-555555555555",
-                    "/api/modelos/11111111-2222-3333-4444-555555555555/elementos",
-                    "/api/modelos/11111111-2222-3333-4444-555555555555/glb",
-                    "/api/modelos/11111111-2222-3333-4444-555555555555/3dtiles/tileset.json"):
+    for caminho in ("/api/modelos3d", "/api/modelos3d/11111111-2222-3333-4444-555555555555",
+                    "/api/modelos3d/11111111-2222-3333-4444-555555555555/elementos",
+                    "/api/modelos3d/11111111-2222-3333-4444-555555555555/glb",
+                    "/api/modelos3d/11111111-2222-3333-4444-555555555555/3dtiles/tileset.json"):
         assert cliente.get(caminho).status_code == 401, caminho

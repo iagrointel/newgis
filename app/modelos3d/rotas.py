@@ -2,15 +2,15 @@
 
 Oito rotas, todas sob o inquilino da sessão (RLS em `plat.modelo3d` e `plat.modelo3d_elemento`):
 
-* `POST /api/modelos` cria o modelo a partir de um arquivo JÁ enviado por `POST /api/arquivos` (o item
+* `POST /api/modelos3d` cria o modelo a partir de um arquivo JÁ enviado por `POST /api/arquivos` (o item
   L0-11 é quem sabe receber byte cru, com teto em streaming e varredura de conteúdo — repetir isso aqui
   seria uma segunda porta de entrada de arquivo, com um segundo conjunto de defesas para divergir) e
   enfileira a conversão.
-* `GET /api/modelos`, `GET /api/modelos/{id}`, `DELETE /api/modelos/{id}` — a ficha.
-* `GET /api/modelos/{id}/elementos` e `.../elementos/{guid}` — a tabela de elementos do IFC. É o outro
+* `GET /api/modelos3d`, `GET /api/modelos3d/{id}`, `DELETE /api/modelos3d/{id}` — a ficha.
+* `GET /api/modelos3d/{id}/elementos` e `.../elementos/{guid}` — a tabela de elementos do IFC. É o outro
   lado do clique na tela: o nó do glTF carrega `extras.guid`, o navegador pergunta por aquele GUID.
-* `GET /api/modelos/{id}/glb` — o glTF binário, entregue pela API (nunca uma URL do armazenamento).
-* `GET /api/modelos/{id}/3dtiles/{caminho}` — a árvore OGC 3D Tiles. `tileset.json` e os `conteudo/N.glb`
+* `GET /api/modelos3d/{id}/glb` — o glTF binário, entregue pela API (nunca uma URL do armazenamento).
+* `GET /api/modelos3d/{id}/3dtiles/{caminho}` — a árvore OGC 3D Tiles. `tileset.json` e os `conteudo/N.glb`
   saem pelo MESMO caminho, com os conteúdos citados por URI RELATIVA dentro do tileset: é isso que faz
   um cliente externo (o ArcGIS Pro lê 3D Tiles por URL, DOC.md 22) consumir a árvore inteira a partir de
   um endereço só. A autenticação é a padrão da casa: sessão do navegador, ou `Authorization: Bearer` de
@@ -86,7 +86,7 @@ def _validar(corpo: dict) -> dict:
     return {"nome": nome, "origem": origem, "arquivo_sha256": sha, "arquivo_classe": classe, **valores}
 
 
-@router.get("/api/modelos", openapi_extra=X)
+@router.get("/api/modelos3d", openapi_extra=X)
 def listar(limite: int = Query(50, ge=1, le=limites.MODELO3D_PAGINA_MAX),
            deslocamento: int = Query(0, ge=0),
            auth: Auth = autenticado(escopo_token="catalogo:ler")):
@@ -95,7 +95,7 @@ def listar(limite: int = Query(50, ge=1, le=limites.MODELO3D_PAGINA_MAX),
         return servico.listar(cur, limite, deslocamento)
 
 
-@router.post("/api/modelos", status_code=201, openapi_extra=X)
+@router.post("/api/modelos3d", status_code=201, openapi_extra=X)
 def criar(corpo: dict = Body(...), auth: Auth = autenticado(escopo_token="catalogo:escrever")):
     """Cria o modelo e enfileira a conversão. O arquivo já tem de estar no inquilino (`POST /api/arquivos`)."""
     dados = _validar(corpo)
@@ -119,13 +119,13 @@ def criar(corpo: dict = Body(...), auth: Auth = autenticado(escopo_token="catalo
     return {**modelo, "job_id": str(job["id"])}
 
 
-@router.get("/api/modelos/{id}", openapi_extra=X)
+@router.get("/api/modelos3d/{id}", openapi_extra=X)
 def obter(id: str = Path(...), auth: Auth = autenticado(escopo_token="catalogo:ler")):
     with db.db(auth.contexto()) as cur:
         return servico.obter(cur, _id(id))
 
 
-@router.delete("/api/modelos/{id}", openapi_extra=X)
+@router.delete("/api/modelos3d/{id}", openapi_extra=X)
 def apagar(id: str = Path(...), auth: Auth = autenticado(escopo_token="catalogo:escrever")):
     """Apaga o modelo; os elementos saem em cascata pelo banco. Os objetos gravados (glTF e tileset) ficam
     para a varredura de órfãos do L0-11 — apagar objeto aqui duplicaria aquela responsabilidade."""
@@ -137,7 +137,7 @@ def apagar(id: str = Path(...), auth: Auth = autenticado(escopo_token="catalogo:
     return {"apagado": True, "id": mid}
 
 
-@router.get("/api/modelos/{id}/elementos", openapi_extra=X)
+@router.get("/api/modelos3d/{id}/elementos", openapi_extra=X)
 def elementos(id: str = Path(...), tipo: str | None = Query(None, max_length=80),
               pavimento: str | None = Query(None, max_length=200),
               limite: int = Query(200, ge=1, le=limites.MODELO3D_ELEMENTOS_PAGINA_MAX),
@@ -150,7 +150,7 @@ def elementos(id: str = Path(...), tipo: str | None = Query(None, max_length=80)
         return servico.listar_elementos(cur, mid, tipo, pavimento, limite, deslocamento)
 
 
-@router.get("/api/modelos/{id}/elementos/{guid}", openapi_extra=X)
+@router.get("/api/modelos3d/{id}/elementos/{guid}", openapi_extra=X)
 def elemento(id: str = Path(...), guid: str = Path(..., max_length=64),
              auth: Auth = autenticado(escopo_token="catalogo:ler")):
     """Propriedades de um elemento pelo identificador global que o próprio arquivo IFC carrega."""
@@ -171,7 +171,7 @@ def _entregar(chave: str, tipo: str) -> Response:
                     headers={"Cache-Control": "private, max-age=300", "X-Content-Type-Options": "nosniff"})
 
 
-@router.get("/api/modelos/{id}/glb", openapi_extra=X)
+@router.get("/api/modelos3d/{id}/glb", openapi_extra=X)
 def glb_do_modelo(id: str = Path(...), auth: Auth = autenticado(escopo_token="catalogo:ler")):
     """glTF binário do modelo, entregue pela API (a chave do armazenamento nunca sai para o cliente)."""
     mid = _id(id)
@@ -188,7 +188,7 @@ def glb_do_modelo(id: str = Path(...), auth: Auth = autenticado(escopo_token="ca
     return _entregar(linha["chave"], TIPO_GLB)
 
 
-@router.get("/api/modelos/{id}/3dtiles/{caminho:path}", openapi_extra=X)
+@router.get("/api/modelos3d/{id}/3dtiles/{caminho:path}", openapi_extra=X)
 def tres_d_tiles(id: str = Path(...), caminho: str = Path(..., max_length=64),
                  auth: Auth = autenticado(escopo_token="catalogo:ler")):
     """Árvore OGC 3D Tiles 1.1: `tileset.json` e `conteudo/N.glb`, por URI relativa a partir daqui."""
