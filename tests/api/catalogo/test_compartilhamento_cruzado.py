@@ -17,13 +17,23 @@ import uuid
 
 import pytest
 
+from app.catalogo.documento import gerar_ulid
 from tests.api.catalogo.conftest import titulo_zt
 from tests.api.conftest import InquilinoTemporario, arquivo_openapi, com_token, novo_cliente
 from tests.api.test_rls import contexto, ids_por_slug
 
 ITEM = "L0-03-e"
 PADRAO = {401, 403, 404}
-# TODAS as rotas de compartilhamento do OpenAPI (test_rotas_do_openapi_cobertas reprova se nascer uma fora da lista)
+# TODAS as rotas de compartilhamento do OpenAPI (test_rotas_do_openapi_cobertas reprova se nascer uma fora da
+# lista) — nem toda rota aqui precisa de um `caso` NESTE arquivo: as duas abaixo têm cobertura cruzada própria
+# noutro arquivo, citada ao lado, porque testar aqui duplicaria o setup específico delas.
+#   - POST /api/compartilhado/{token}/paineis/{id}/fontes/{fonte_id}/dados (item L2-06-a): cruzado A/B e
+#     revogação em tests/api/paineis/test_painel_dados.py (test_outro_inquilino_nao_ve_o_painel,
+#     test_link_compartilhado_abre_anonimo_e_nega_apos_revogar) — usa plat.painel_camadas_resolver, não a
+#     lista itens_incluidos do link, e por isso o setup de "mapa/camada" deste arquivo não serve para ela.
+#   - GET /api/publico/wms/{fonte} (item L2-01-a): proxy para allowlist FIXA (geosampa/ibge/inde) em
+#     app/settings.py — não lê item nem inquilino nenhum, não existe "A" nem "B" para cruzar; coberta em
+#     tests/api/test_wms_publico.py (allowlist, REQUEST permitido, repasse de content-type).
 ROTAS = [
     ("GET", "/api/itens/{id}/compartilhamento"),
     ("PUT", "/api/itens/{id}/compartilhamento"),
@@ -33,7 +43,9 @@ ROTAS = [
     ("GET", "/api/compartilhado/{token}"),
     ("GET", "/api/compartilhado/{token}/itens/{id}"),
     ("GET", "/api/compartilhado/{token}/itens/{id}/miniatura"),
+    ("POST", "/api/compartilhado/{token}/paineis/{item_id}/fontes/{fonte_id}/dados"),
     ("GET", "/api/publico/itens/{id}"),
+    ("GET", "/api/publico/wms/{fonte}"),
     ("GET", "/api/publico/itens/{id}/miniatura"),
 ]
 # PNG 1×1 (bytes reais; a miniatura é normalizada para 600×400 no servidor)
@@ -100,7 +112,9 @@ class _EstadoB:
 def cenario(sessao_a, sessao_b, itens_a, itens_b, usuarios_b):
     """B: camada privada + mapa que a usa + grupo + link; A: item, grupo e link próprios."""
     camada_b = itens_b.criar("camada_vetorial")
-    mapa_b = itens_b.criar("mapa", dados={"esquema_versao": 1, "corpo": {"camadas": [camada_b["id"]]}})
+    mapa_b = itens_b.criar(
+        "mapa", dados={"esquema_versao": 1, "corpo": {"camadas": [{"id": gerar_ulid(), "ref": camada_b["id"]}]}},
+    )
     r = sessao_b.post("/api/grupos", json={"nome": titulo_zt("grupo-b"), "visibilidade": "inquilino"})
     assert r.status_code == 201, r.text
     grupo_b = r.json()
@@ -437,7 +451,10 @@ def test_arvore_mostra_nivel_da_dependencia_e_elevar_e_escolha_explicita(sessao_
     editor, _ = editor_a
     vis, _ = visualizador_a
     camada = itens_a.criar("camada_vetorial", sessao=editor)
-    mapa = itens_a.criar("mapa", sessao=editor, dados={"esquema_versao": 1, "corpo": {"camadas": [camada["id"]]}})
+    mapa = itens_a.criar(
+        "mapa", sessao=editor,
+        dados={"esquema_versao": 1, "corpo": {"camadas": [{"id": gerar_ulid(), "ref": camada["id"]}]}},
+    )
     arvore = editor.get(f"/api/itens/{mapa['id']}/compartilhamento").json()["dependencias"]
     assert [(d["id"], d["acesso"], d["pode_editar"]) for d in arvore] == [(camada["id"], "privado", True)]
     # mapa ao inquilino SEM marcar: a camada fica privada (nada muda em silêncio); o visualizador vê só o mapa
@@ -457,7 +474,10 @@ def test_arvore_mostra_nivel_da_dependencia_e_elevar_e_escolha_explicita(sessao_
     # camada do admin (visível ao inquilino) num mapa do editor: aparece na árvore com pode_editar=false; elevar = 403
     do_admin = itens_a.criar("camada_vetorial")
     sessao_a.put(f"/api/itens/{do_admin['id']}/compartilhamento", json={"acesso": "inquilino"})
-    mapa2 = itens_a.criar("mapa", sessao=editor, dados={"esquema_versao": 1, "corpo": {"camadas": [do_admin["id"]]}})
+    mapa2 = itens_a.criar(
+        "mapa", sessao=editor,
+        dados={"esquema_versao": 1, "corpo": {"camadas": [{"id": gerar_ulid(), "ref": do_admin["id"]}]}},
+    )
     arvore = editor.get(f"/api/itens/{mapa2['id']}/compartilhamento").json()["dependencias"]
     assert arvore[0]["pode_editar"] is False and arvore[0]["acesso"] == "inquilino"
     r = editor.put(
