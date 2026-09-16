@@ -20,9 +20,12 @@ from app.exportacao.formatos import FORMATOS, obter
 
 
 # ---------------------------------------------------------------- catálogo de formatos
-def test_onze_formatos_com_extensao_e_tipo_unicos():
-    assert len(FORMATOS) == 11, sorted(FORMATOS)
-    assert sum(1 for f in FORMATOS.values() if f.reabre_com_ogrinfo) == 10
+def test_dezesseis_formatos_com_extensao_e_tipo_unicos():
+    """Eram 11 quando o item L0-04-h-exportar fechou; kmz, mvt, pmtiles, pacote e geoparquet vieram depois
+    (L2-01-l-exportacao-do-mapa e o pacote de mapa) — o número aqui é o portão contra formato duplicado ou
+    perdido, não uma lista fixa: sempre que `FORMATOS` ganhar uma entrada de verdade, bump os dois números."""
+    assert len(FORMATOS) == 16, sorted(FORMATOS)
+    assert sum(1 for f in FORMATOS.values() if f.reabre_com_ogrinfo) == 14
     for nome, f in FORMATOS.items():
         assert f.nome == nome and f.extensao.startswith(".") and f.content_type
         assert "UTF-8" in f.codificacoes
@@ -150,15 +153,25 @@ class ClienteEspiao:
 
 
 class CursorFalso:
-    """Cursor mínimo: as consultas que `guardar_arquivo` faz no caminho de metadado não interessam aqui."""
+    """Cursor mínimo: as consultas que `guardar_arquivo` faz no caminho de metadado não interessam aqui, exceto
+    a checagem de cota (item L0-07-c-cotas-uso): `guardar()` faz um SELECT ... FOR UPDATE da cota do tenant e
+    outro de `plat.arquivo_uso_bytes` antes de gravar — sem responder os dois com algo sensato, todo teste que
+    passa por `guardar()` (o caminho de PUT único; o multipart de `guardar_arquivo` não usa este cursor de
+    verdade, ver `sem_garage`) bate em cota=None. Cota bem acima de qualquer arquivo de teste, uso sempre 0."""
 
     def __init__(self):
         self.comandos: list[str] = []
+        self._ultimo_sql = ""
 
     def execute(self, sql, params=None):
         self.comandos.append(sql)
+        self._ultimo_sql = sql
 
     def fetchone(self):
+        if "cota_bytes FROM plat.tenant" in self._ultimo_sql:
+            return {"cota_bytes": 10 ** 12}
+        if "arquivo_uso_bytes" in self._ultimo_sql:
+            return {"u": 0}
         return None
 
 
