@@ -13,6 +13,15 @@ Achados desta rodada:
     ("STAC/OGC API: license/link rel=license") e que o ramo `ogc_api` do MESMO arquivo já implementa —
     uma coleção STAC que só declara a licença por link (comum quando `license` é `"various"` ou
     `"proprietary"`, ver o próprio spec STAC) fica com `licenca=None`, silenciosamente, sem aviso.
+  - L6-01-a-registro / L6-01-f-lgpd (achado TRANSVERSAL — a mesma suposição furada nos dois): o próprio
+    docstring de `scripts/acervo_sync.py` confessa que a lista negra de coluna é "GROSSA, só pelo NOME" e
+    promete que "a checagem fina por CONTEÚDO (regex de CPF/CNPJ em amostra) é o item L6-01-f". Mas o que
+    L6-01-f entregou foi uma curadoria MANUAL por FONTE inteira (`plat.acervo_lgpd.risco_pii`, 219 tabelas
+    olhadas uma vez em 05-07/09), nunca o scanner automático por CONTEÚDO que o próprio código-fonte do
+    L6-01-a diz que viria depois. E a barreira grossa por NOME já furada é fraca: `_COLUNA_NEGADA` faz
+    correspondência EXATA (`c.lower() in _COLUNA_NEGADA`), então qualquer variação de nome real de
+    cadastro público brasileiro — `cpf_titular`, `nr_cpf`, `proprietario_nome`, `nome_do_proprietario` —
+    passa como coluna EXPOSTA em vez de bloqueada.
 
 Rodar (na trilha do adversário, base própria):
     set -a; source /home/dev/plataforma/laco/var/trilha/uniao.env; set +a
@@ -28,6 +37,7 @@ import pytest
 
 from app.conexao import consulta_sql, seguranca
 from app.conexao import proveniencia as pv
+from scripts import acervo_sync
 
 TABELAS = {"sedes_municipais"}
 
@@ -93,3 +103,37 @@ def test_l6_05_stac_licenca_via_link_nao_e_lida():
         )
     # o teste PASSA (xfail vira xpass=falha) só se a licença do link rel=license for capturada.
     assert achados["licenca"] == "CC-BY-4.0"
+
+
+class _CursorColunasFalso:
+    """Só o que `_colunas_da_tabela` usa: `execute` (ignorado) e `fetchall` devolvendo os nomes de coluna
+    no mesmo formato de `information_schema.columns` via RealDictCursor."""
+
+    def __init__(self, colunas: list[str]):
+        self._colunas = colunas
+
+    def execute(self, *_a, **_kw) -> None:
+        pass
+
+    def fetchall(self):
+        return [{"column_name": c} for c in self._colunas]
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="L6-01-a/L6-01-f: _COLUNA_NEGADA (scripts/acervo_sync.py) é correspondência EXATA por nome, e "
+    "o próprio docstring do script confessa que é 'rede de segurança GROSSA' esperando a checagem fina "
+    "por CONTEÚDO do item L6-01-f — que nunca foi construída como scanner automático (o que existe é "
+    "curadoria manual por FONTE inteira em plat.acervo_lgpd, não por coluna e não repetível em CI). "
+    "Variações reais de nome de cadastro público brasileiro (cpf_titular, nr_cpf, proprietario_nome, "
+    "nome_do_proprietario) não estão no conjunto fixo e saem como EXPOSTAS, não bloqueadas.",
+)
+@pytest.mark.parametrize(
+    "coluna_pii", ["cpf_titular", "nr_cpf", "proprietario_nome", "nome_do_proprietario"]
+)
+def test_l6_01_a_variacao_de_nome_de_coluna_pii_nao_e_bloqueada(coluna_pii):
+    cur = _CursorColunasFalso(["ogc_fid", coluna_pii, "geom"])
+    expostas, bloqueadas = acervo_sync._colunas_da_tabela(cur, "public", "tabela_teste", "geom")
+    # o teste PASSA (xfail vira xpass=falha) só se a variação for bloqueada, não exposta.
+    assert coluna_pii in bloqueadas
+    assert coluna_pii not in expostas
