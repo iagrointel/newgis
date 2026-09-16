@@ -84,6 +84,31 @@ def _corpo_do_documento(tipo: str, dados) -> dict | None:
     return corpo if isinstance(corpo, dict) else None
 
 
+# o que JSON Schema do tipo `colecao` não expressa: `capa.midia` e `metadados.miniatura` viram `src`/`href`
+# na página leitora e nos `og:` da página do link, então só valem caminho da própria instalação ou http(s)
+_MIDIA_RE = re.compile(r"^(https://[^\s]+|/[^\s]*)$")
+
+
+def validar_colecao(corpo: dict) -> None:
+    """422 colecao_invalida quando `capa.midia` ou `metadados.miniatura` fogem do formato permitido
+    (caminho relativo começado por `/` ou URL https). O formato de capa/itens/tema é do JSON Schema do
+    tipo; aqui entra só a regra de segurança que precisa do conteúdo da string."""
+    erros: list[dict] = []
+    for campo in (("capa", "midia"), ("metadados", "miniatura")):
+        secao = corpo.get(campo[0])
+        valor = secao.get(campo[1]) if isinstance(secao, dict) else None
+        if valor is not None and not (isinstance(valor, str) and _MIDIA_RE.match(valor)):
+            erros.append(
+                {
+                    "campo": f"corpo.{campo[0]}.{campo[1]}",
+                    "erro": "caminho precisa começar por / ou ser uma URL https",
+                    "regra": "midia_invalida",
+                }
+            )
+    if erros:
+        raise ErroAPI(422, "colecao_invalida", "corpo da coleção inválido", erros)
+
+
 def validar_grafo(tipo: str, dados) -> None:
     """422 grafo_invalido (mesmo contrato de app/erros.py) quando: nó sem id ULID, dois nós com o mesmo id, ou
     ligação (`origem`/`alvo`) apontando para um id que não está em `corpo.nos`. O formato de cada campo (tipo do
@@ -91,6 +116,13 @@ def validar_grafo(tipo: str, dados) -> None:
     chamado ANTES desta função nas duas rotas que escrevem `dados`); aqui só entra o que precisa da lista
     inteira para ser conferido. Item L5-10-temas-marca: `corpo.tema` presente passa pela MESMA checagem —
     referência ({"id"}) ou definição ({"definicao"}) com tokens validados por formato em app/temas.py."""
+    if tipo == "colecao":
+        # item L5-04-c: `colecao` não é grafo de nós/ligações — só a regra de midia/miniatura entra aqui,
+        # a relação item_de_colecao é sincronizada à parte (app/catalogo/relacoes.py::_colecao).
+        corpo_colecao = dados.get("corpo") if isinstance(dados, dict) else None
+        if isinstance(corpo_colecao, dict):
+            validar_colecao(corpo_colecao)
+        return
     # o tipo `cena` (L2-09-b) tem a mesma natureza — regras que precisam do documento inteiro e que o
     # JSON Schema não expressa — e entra pela MESMA porta, para não haver dois lugares onde um item é
     # conferido antes de gravar. Para qualquer outro tipo a chamada não faz nada.
