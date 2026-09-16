@@ -7,7 +7,8 @@ imitar o esquema que ela mesma entendeu.
 
 O que existe hoje: `tests/dados/gerar_esgoto.py::escrever_geopackage` monta um `.gpkg` SINTÉTICO do
 zero (SQLite + WKB escritos à mão, ver `app/rede_utilidades/teksi.py`), e é esse arquivo sintético —
-nunca um arquivo do projeto TEKSI — que `tests/api/test_rede_gas_esgoto.py::test_importa_geopackage_teksi_com_as_200_feicoes`
+nunca um arquivo do projeto TEKSI — que
+`tests/api/test_rede_gas_esgoto.py::test_importa_geopackage_teksi_com_as_200_feicoes`
 usa. Não há, em lugar nenhum do repositório, um `.gpkg` (nem um link/hash para um) que venha do
 projeto TEKSI de verdade. A própria última nota do ledger do item já admite isso em texto ("TEKSI e
 paridade ficam parciais (colunas lidas do datamodel, nao de dado real)"), mas o item está registrado
