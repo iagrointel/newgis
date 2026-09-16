@@ -17,7 +17,7 @@ import uuid
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
-from pydantic import Field
+from pydantic import ConfigDict, Field
 
 from app import db, limites, objetos
 from app.auth.sessao import Auth, autenticado
@@ -50,6 +50,7 @@ def _url(chave: str | None) -> str | None:
 
 # ---------------------------------------------------------------- modelo 3D (IFC -> xkt, ou xkt direto)
 class IngestaoEntrada(Modelo):
+    model_config = ConfigDict(title="IngestaoEntradaModelo3d")
     arquivo_id: str = Field(pattern=r"^[0-9a-fA-F-]{36}$")
     titulo: str | None = Field(default=None, min_length=1, max_length=250)
 

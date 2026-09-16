@@ -19,7 +19,7 @@ import uuid
 import psycopg2
 import psycopg2.extras
 from fastapi import APIRouter, Depends, Query, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app import db, limites
 from app.amc import MOTOR_VERSAO
@@ -100,6 +100,7 @@ SEM_CHAVE_REPETIDA = Depends(corpo_json_sem_chave_repetida)
 
 
 class ModeloEntrada(BaseModel):
+    model_config = ConfigDict(title="ModeloEntradaAmc")
     nome: str | None = Field(None, max_length=250)
     definicao: dict
 
@@ -287,6 +288,7 @@ def apagar_modelo(modelo_id: str, request: Request, auth: Auth = autenticado("an
 
 # ================================================================ conjuntos de unidades (L3-01-b)
 class ConjuntoEntrada(BaseModel):
+    model_config = ConfigDict(title="ConjuntoEntradaAmc")
     nome: str = Field(..., min_length=1, max_length=250)
     tipo: str = Field(..., description="hexagonal, quadrada ou feicoes")
     lado_m: float | None = None
@@ -448,6 +450,7 @@ def apagar_conjunto(conjunto_id: str, request: Request, auth: Auth = autenticado
 
 # ================================================================ execuções (proveniência congelada)
 class ExecucaoEntrada(BaseModel):
+    model_config = ConfigDict(title="ExecucaoEntradaAmc")
     modelo_id: str
     conjunto_id: str
     pesos: dict | None = Field(None, description="{fator_id: peso}; sem isto, os pesos do modelo")

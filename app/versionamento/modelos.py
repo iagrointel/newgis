@@ -29,4 +29,5 @@ class ResolverEntrada(Modelo):
 
 
 class PublicarEntrada(Modelo):
+    model_config = ConfigDict(title="PublicarEntradaVersionamento")
     modo: str = Field(default="fechar", pattern="^(fechar|rebasear)$")

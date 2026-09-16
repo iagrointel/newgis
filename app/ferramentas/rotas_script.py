@@ -16,7 +16,7 @@ import hashlib
 
 import psycopg2
 from fastapi import APIRouter, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app import db
 from app.auth.sessao import Auth, autenticado
@@ -36,6 +36,7 @@ EXECUTAR = {"x-auth": "S/T", "x-privilegio": "jobs.executar"}
 
 
 class PublicarEntrada(BaseModel):
+    model_config = ConfigDict(title="PublicarEntradaScript")
     codigo: str = Field(min_length=1, max_length=cabecalho.TAM_MAX_CODIGO,
                         description="texto completo do script; a docstring de módulo é o cabeçalho YAML")
     pasta_id: str | None = None
@@ -43,6 +44,7 @@ class PublicarEntrada(BaseModel):
 
 
 class VersaoEntrada(BaseModel):
+    model_config = ConfigDict(title="VersaoEntradaScript")
     codigo: str = Field(min_length=1, max_length=cabecalho.TAM_MAX_CODIGO,
                         description="texto completo da versão nova (o cabeçalho é revalidado)")
     comentario: str | None = Field(default=None, max_length=500)

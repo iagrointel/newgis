@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Body, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app import db, limites
 from app.auth.comum import registrar_evento
@@ -30,6 +30,8 @@ AUTH = autenticado(PRIVILEGIO, escopo_token=ESCOPO)
 
 
 class Execucao(BaseModel):
+    model_config = ConfigDict(title="ExecucaoFerramenta")
+
     parametros: dict = {}
     titulo: str | None = None
     modo: str = "auto"  # auto (síncrono abaixo do custo) | job (sempre fila)

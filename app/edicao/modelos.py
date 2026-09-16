@@ -23,11 +23,13 @@ class Crs(Modelo):
 
 
 class FeicaoAdicionar(Modelo):
+    model_config = ConfigDict(title="FeicaoAdicionarEdicao")
     atributos: dict[str, Any] = Field(default_factory=dict, max_length=limites.EDICAO_ATRIBUTOS_MAX)
     geometria: dict[str, Any] | None = None
 
 
 class FeicaoAtualizar(Modelo):
+    model_config = ConfigDict(title="FeicaoAtualizarEdicao")
     id: str = Field(pattern=UUID_PADRAO)
     versao: int = Field(ge=1)  # concorrência otimista: exigida em toda atualização (hipótese do item)
     atributos: dict[str, Any] | None = Field(default=None, max_length=limites.EDICAO_ATRIBUTOS_MAX)

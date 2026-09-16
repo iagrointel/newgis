@@ -11,7 +11,7 @@ import json
 from typing import Any
 
 from fastapi import APIRouter, Request, Response
-from pydantic import Field
+from pydantic import ConfigDict, Field
 
 from app import db
 from app.auth import govbr, provisionamento
@@ -28,6 +28,7 @@ TABELA = {"ldap": "plat.provedor_ldap", "oidc": "plat.provedor_oidc", "saml": "p
 
 
 class LoginEntrada(Modelo):
+    model_config = ConfigDict(title="LoginProvedorEntrada")
     habilitado: bool | None = None
     rotulo: str | None = Field(default=None, min_length=1, max_length=120)
     ordem: int | None = Field(default=None, ge=0, le=99)

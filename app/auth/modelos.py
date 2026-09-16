@@ -105,6 +105,7 @@ class GrupoEditar(Modelo):
 
 
 class ConviteEntrada(Modelo):
+    model_config = ConfigDict(title="ConviteGrupoEntrada")
     usuario_id: int
     papel: str = Field(default="membro", pattern="^(gerente|membro)$")
 
@@ -213,6 +214,7 @@ class CodigosRecuperacao(Saida):
 
 
 class Convite(Saida):
+    model_config = ConfigDict(title="ConviteGrupo")
     grupo: dict
     papel: str
     convidado_por: dict | None

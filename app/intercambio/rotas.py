@@ -12,7 +12,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Request, Response
-from pydantic import Field
+from pydantic import ConfigDict, Field
 
 from app import db, objetos
 from app.auth.sessao import Auth, autenticado
@@ -32,6 +32,7 @@ TIPOS = ("camada", "inquilino")
 
 
 class ExportacaoEntrada(Modelo):
+    model_config = ConfigDict(title="ExportacaoEntradaIntercambio")
     tipo: str = Field(default="camada")
     item_id: str | None = Field(default=None, pattern=UUID_PADRAO)
     formato: str | None = Field(default=None, min_length=1, max_length=40)

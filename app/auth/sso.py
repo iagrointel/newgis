@@ -61,7 +61,7 @@ from cryptography.hazmat.primitives.hashes import SHA256, SHA384, SHA512
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import RedirectResponse
 from lxml import etree
-from pydantic import Field
+from pydantic import ConfigDict, Field
 
 from app import db, limites
 from app.auth.comum import erro_do_banco, registrar_evento
@@ -747,6 +747,7 @@ async def saml_acs(request: Request):
 # para "SSO, SMTP, webhooks, CORS"). O segredo de cliente OIDC nunca é devolvido (só `tem_segredo`); o PUT o
 # aceita em claro só para cifrar e gravar — omitido, preserva o anterior.
 class ProvedorOidcEntrada(Modelo):
+    model_config = ConfigDict(title="ProvedorOidcEntradaSso")
     habilitado: bool = True
     emissor: str = Field(min_length=8, max_length=250)
     cliente_id: str = Field(min_length=1, max_length=250)
@@ -758,6 +759,7 @@ class ProvedorOidcEntrada(Modelo):
 
 
 class ProvedorSamlEntrada(Modelo):
+    model_config = ConfigDict(title="ProvedorSamlEntradaSso")
     habilitado: bool = True
     idp_entidade: str = Field(min_length=1, max_length=250)
     idp_url_sso: str = Field(min_length=8, max_length=250)
