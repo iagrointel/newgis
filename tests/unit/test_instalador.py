@@ -70,13 +70,16 @@ def test_hsts_em_todo_bloco_de_add_header_do_modelo():
     assert NGINX.count('add_header Strict-Transport-Security "max-age=31536000" always;') == len(blocos) + 1
 
 
-def test_referrer_policy_em_todo_bloco_de_add_header_do_modelo():
-    """Achado do testador do T2: declarado no server{} não chegava às rotas (add_header no bloco cancela o herdado)."""
+def test_referrer_policy_onde_o_nginx_e_a_origem():
+    """T2 achou que, declarado só no server{}, o cabeçalho não chegava às rotas (add_header num bloco cancela o
+    herdado) e a resposta foi repeti-lo em toda location. O item L7-03-e mudou a repartição: nas rotas
+    proxiadas quem declara é a APLICAÇÃO (app/cabecalhos.py) e o nginx não repete — repetir faria sair dois.
+    Sobram o server{} e as duas locations de /static/, onde o nginx é a origem do corpo."""
+    linha = 'add_header Referrer-Policy "strict-origin-when-cross-origin" always;'
     blocos = _blocos_location(NGINX)
-    sem = [b.splitlines()[0].strip() for b in blocos
-           if 'add_header Referrer-Policy "strict-origin-when-cross-origin" always;' not in b]
-    assert sem == [], sem
-    assert NGINX.count('add_header Referrer-Policy "strict-origin-when-cross-origin" always;') == len(blocos) + 1
+    estaticas = sum(1 for b in blocos if "proxy_pass" not in b)
+    assert NGINX.count(linha) == estaticas + 1, (NGINX.count(linha), estaticas)
+    assert "add_header X-Frame-Options" not in NGINX, "quem manda no embutir é frame-ancestors (item L7-03-e)"
 
 
 def test_instalador_limpa_residuos_de_teste_so_em_dev():
