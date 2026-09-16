@@ -147,7 +147,12 @@ def ambiente(env):
                 cur.execute("SELECT cota_bytes, cota_objetos FROM plat.tenant WHERE id = %s", (tid,))
                 c = cur.fetchone()
                 cotas_originais[slug] = (int(c["cota_bytes"]), int(c["cota_objetos"]))
-                baldes[slug] = dict(objetos.garantir_bucket(cur, tid, slug, web=True))
+                # `web=`/`forcar=` sumiram da assinatura atual de garantir_bucket (achado: a fusão wt/uniao
+                # reverteu o L1-01-d — cota dupla e endpoint web — em app/objetos.py; o esquema/migrações e
+                # ClienteAdmin.definir_web/definir_cota(max_objetos=) continuam vivos, só a orquestração caiu).
+                # Sem `web=True` o balde nasce com `web_ativo=false` (default da coluna) — os testes abaixo já
+                # toleram os dois estados.
+                baldes[slug] = dict(objetos.garantir_bucket(cur, tid, slug))
             con.commit()
         alvos = {}
         for slug in ("demo", "demo2"):
@@ -173,7 +178,9 @@ def ambiente(env):
                         "UPDATE plat.tenant SET cota_bytes = %s, cota_objetos = %s WHERE id = %s",
                         (cb, co, tid),
                     )
-                    objetos.garantir_bucket(cur, tid, slug, forcar=True)
+                    # sem `forcar=`: o UPDATE acima já muda `plat.tenant`, então a comparação de
+                    # `garantir_bucket` contra a cota registrada em `arquivo_bucket` já dispara a resincronia
+                    objetos.garantir_bucket(cur, tid, slug)
                 con.commit()
             except Exception as e:
                 print(f"AVISO: cota de {slug} não foi restaurada: {e}")
@@ -396,7 +403,9 @@ def _definir_cota(con, tenant_id: int, slug: str, cota_bytes: int, cota_objetos:
             "UPDATE plat.tenant SET cota_bytes = %s, cota_objetos = %s WHERE id = %s",
             (cota_bytes, cota_objetos, tenant_id),
         )
-        linha = dict(objetos.garantir_bucket(cur, tenant_id, slug, forcar=True))
+        # `forcar=` sumiu (achado registrado na fixture `ambiente`); o UPDATE acima já muda a cota
+        # comparada, então a resincronia dispara do mesmo jeito sem o parâmetro
+        linha = dict(objetos.garantir_bucket(cur, tenant_id, slug))
     con.commit()
     return linha
 
@@ -878,7 +887,8 @@ def test_6_listbuckets_com_chave_ro_responde_200_e_o_que_ele_revela(ambiente):
 def test_7_cota_fica_dessincronizada_quando_o_processo_cai_no_meio(ambiente):
     """Encena a queda: baixa a cota do inquilino e sincroniza, depois devolve a cota no banco SEM sincronizar
     (é o que sobra de um teste interrompido, de um OOM ou de um Ctrl-C entre as duas escritas). Cobra-se que a
-    cota que VALE seja a declarada em `plat.tenant`. Cura no fim com `garantir_bucket(forcar=True)`."""
+    cota que VALE seja a declarada em `plat.tenant`. Cura no fim com `garantir_bucket()` (o `forcar=` que
+    existia aqui sumiu da assinatura atual — achado registrado na fixture `ambiente`)."""
     from app import objetos
 
     con, tid = ambiente["con"], ambiente["ids"]["demo"]
