@@ -80,6 +80,16 @@ PERMITIDAS: dict[tuple[str, str], str] = {
     ("upload", "arquivo_id"): "fora do escopo de L4-01-a",
     ("upload", "usuario_id"): "fora do escopo de L4-01-a",
     ("usuario", "papel_id"): "fora do escopo de L4-01-a",
+    # lote 2 (item F2-FK151, 16/09/2026): varredura de 151 FKs simples fora de plat.rede_*. 150 foram
+    # compostas por script (db/gerar_fk_composta.py; migração db/migracoes/*_fk_composta_por_inquilino_lote2.sql).
+    # Só esta ficou de fora, MESMA razão que reverteu item.criado_por/apagado_por/modificado_por em
+    # 20260915T2349: plat.chamado_operador_responder (db/migracoes/20260908T2230_chamados_suporte.sql,
+    # chamada por app/chamados/rotas.py::operador_responder, rota /api/chamados/operador com
+    # autenticado(superadmin=True, so_sessao=True)) grava chamado_comentario com tenant_id do INQUILINO
+    # DONO DO CHAMADO e autor_id do OPERADOR DA PLATAFORMA — um superadmin que legitimamente mora em
+    # OUTRO inquilino. Uma FK composta (tenant_id, autor_id) recusaria toda resposta de suporte. Ganhou
+    # ON DELETE SET NULL (autor_id), mesmo tratamento do precedente.
+    ("chamado_comentario", "autor_id"): "autoria — ator pode ser superadmin de fora (20260915T2349)",
 }
 
 
