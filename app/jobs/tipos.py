@@ -35,7 +35,9 @@ from app.conexao import (
 from app.conexao import (
     tarefas_endpoints as conexao_tarefas_endpoints,  # noqa: F401 — achado 15/09: endpoints_publicos.retestar
 )
-from app.correio import tarefas as correio_tarefas  # noqa: F401 — L0-07-d: correio.enviar (somente_sistema)
+from app.edicao import (
+    tarefas as edicao_tarefas,  # noqa: F401 — camadas.lote: modelos restaurados em 16/09 (f2ce41ab4)  # noqa: F401 — L0-07-d: correio.enviar (somente_sistema)
+)
 
 # app.edicao.tarefas (camadas.lote) FICA DE FORA de propósito: acionado 15/09, `app/edicao/lote.py` importa
 # LoteEntrada/LoteFalha/LotePrevia/LoteSaida de app/edicao/modelos.py, que não os define (confirmado também
