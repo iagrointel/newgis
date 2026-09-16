@@ -45,6 +45,7 @@ from app.catalogo.modelos import (
     LoteEntrada,
     LoteSaida,
     MetadadoEditorEntrada,
+    MetadadoIsoEntrada,
     MoverEntrada,
     OrdemExclusao,
     Pagina,
@@ -701,6 +702,84 @@ def metadado_iso(
         # nunca deveria acontecer para um item bem formado; erro de build do gerador, não do pedido do cliente
         raise ErroAPI(500, "metadado_invalido", "metadado gerado não validou contra o XSD", e.erros) from e
     return Response(content=xml, media_type="application/xml")
+
+
+def _tipo_aceita_procedencia(tipo: str) -> bool:
+    """`dados.procedencia` (item L0-09-a) só existe nos tipos cujo esquema declara a chave em `properties`
+    (camada_vetorial/raster/vista_de_camada/cena/conexao/arquivo); `mapa`/`painel`/`app` guardam `dados` sob
+    `corpo` com `additionalProperties:false` e não têm a chave — gravar ali seria um armazém improvisado."""
+    esquema = tipos.obter(tipo)["esquema"]
+    return "procedencia" in (esquema.get("properties") or {})
+
+
+@router.post("/api/itens/{id}/metadado.xml", openapi_extra=EDITAR)
+def metadado_iso_importar(
+    id: str,
+    request: Request,
+    corpo: MetadadoIsoEntrada,
+    estrito: bool = False,
+    aplicar: bool = True,
+    auth: Auth = autenticado(escopo_token="catalogo:escrever"),
+):
+    """Importa metadado ISO 19139 no item (item L0-09-c-xml-iso-validacao): o mesmo analisador de
+    `app.catalogo.metadado.analisar` (tests/unit/test_metadado_iso_importacao.py) preenche os campos do
+    perfil (título/resumo/tags/créditos/termos de uso/status/extent), `dados.procedencia` (quando o tipo
+    aceita — `_tipo_aceita_procedencia`) e `metadado_iso`; o que a ISO trouxe e a plataforma não guarda sai em
+    `nao_coube`, com caminho e linha. `estrito=1` transforma o parecer do XSD (avisos) em recusa 422;
+    `aplicar=false` devolve o relatório sem gravar nada. `item_ou_404` + RLS garantem que a leitura/escrita
+    nunca atravessa inquilino."""
+    try:
+        analise = metadado.analisar(corpo.xml.encode("utf-8"))
+    except metadado.ErroXMLIlegivel as e:
+        raise ErroAPI(
+            422, "xml_invalido", str(e), [{"linha": e.linha, "coluna": e.coluna, "erro": e.mensagem}]
+        ) from e
+    if estrito and analise.avisos_xsd:
+        raise ErroAPI(422, "xml_invalido", "documento não passa no XSD oficial (modo estrito)", analise.avisos_xsd)
+    nao_coube = list(analise.nao_coube)
+    procedencia_bloco = dict(analise.procedencia)
+    aplicado = False
+    with db.db(auth.contexto()) as cur:
+        r = item_ou_404(cur, id)
+        identificador_estrangeiro = bool(
+            analise.identificador_arquivo and analise.identificador_arquivo != str(r["id"])
+        )
+        campos_editar = dict(analise.campos)
+        if procedencia_bloco:
+            if _tipo_aceita_procedencia(r["tipo"]):
+                dados_novos = dict(r["dados"] or {})
+                dados_novos["procedencia"] = procedencia_bloco
+                campos_editar["dados"] = dados_novos
+            else:
+                nao_coube = [
+                    *nao_coube,
+                    {
+                        "caminho": "procedencia",
+                        "linha": 0,
+                        "motivo": f"tipo '{r['tipo']}' não aceita dados.procedencia",
+                    },
+                ]
+                procedencia_bloco = {}
+        if aplicar:
+            exigir_edicao(cur, id)
+            if campos_editar:
+                editar_item(cur, request, auth, id, campos_editar)
+            if analise.metadado_iso:
+                cur.execute(
+                    "UPDATE plat.item SET metadado_iso = %s WHERE id = %s::uuid", (jsonb(analise.metadado_iso), id)
+                )
+            if campos_editar or analise.metadado_iso:
+                registrar_evento(cur, request, "itens/metadado_importar", "item", id, {})
+            aplicado = True
+    return {
+        "preenchidos": analise.preenchidos,
+        "aplicado": aplicado,
+        "identificador_estrangeiro": identificador_estrangeiro,
+        "metadado_iso_guardado": analise.metadado_iso,
+        "nao_coube": nao_coube,
+        "avisos_xsd": analise.avisos_xsd,
+        "procedencia": procedencia_bloco,
+    }
 
 
 def _eventos_do_item(cur, item_id: str) -> list[dict]:
