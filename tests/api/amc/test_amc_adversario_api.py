@@ -7,14 +7,16 @@ expõem defeito ficam `xfail(strict=True)` para virarem prova no dia do conserto
 Frentes:
 1. imutabilidade do modelo já executado (rota de atualização, rota parcial, reordenação de chaves, escrita direta
    na tabela com a role da aplicação);
-2. vazamento entre inquilinos nas 18 rotas de /api/amc (todas, não só as de id direto), por id de caminho, por
-   parâmetro de consulta, por corpo e pelo id do conjunto de unidades;
+2. vazamento entre inquilinos nas 21 rotas de /api/amc que existiam quando este ataque foi escrito, mais as 4 que
+   chegaram depois (L3-06-criterios-de-feicao, L3-08-pareto — 25 no total), por id de caminho, por parâmetro de
+   consulta, por corpo e pelo id do conjunto de unidades;
 3. a grade conferida por shapely/pyproj, com buraco, multipolígono, auto-interseção, antimeridiano e área ~0;
 4. a extrapolação declarada: o campo está marcado e a reta se sustenta em dois pontos medidos.
 """
 
 import json
 import math
+import secrets
 import time
 
 import psycopg2
@@ -26,12 +28,36 @@ from shapely.ops import transform
 from app.amc import unidades as mod_unidades
 from app.settings import settings
 from tests.api.amc import exemplos
+from tests.api.amc.test_pareto import _criar_fator, _retangulo
 from tests.api.amc.test_unidades import ContextoDeTeste
 
 ESQ = settings.PLAT_SCHEMA
 PREFIXO = "zt-amcadv"
 MARCA_UNIDADE = "marca-de-B-9f3c1a7e"  # id de unidade improvável de aparecer por acaso num hash
 GEOD = pyproj.Geod(ellps="GRS80")
+
+
+def _execucao_pareto_de(sessao) -> dict:
+    """Execução macro mínima de plat.escala_execucao (item L3-08-pareto), para as sondas de POST /api/amc/pareto
+    e /api/amc/pareto/camada — as duas únicas das 4 rotas novas (achado 16/09) que carregam um identificador
+    de inquilino no CORPO (as duas de criterios-feicao são sem estado, como similaridade). Um fator só (o
+    contrato exige min 1)."""
+    r = sessao.post("/api/multiescala/conjuntos",
+                    json={"nome": f"{PREFIXO}-pareto-{secrets.token_hex(4)}", "area": _retangulo()})
+    assert r.status_code == 201, r.text
+    conjunto = r.json()
+    fator = _criar_fator(sessao, "leste")
+    r = sessao.post(f"/api/multiescala/conjuntos/{conjunto['id']}/macro", json={
+        "resolucao_m": 500.0, "fatores": [{"fator_id": fator["id"], "peso": 1.0}],
+        "aprovacao_tipo": "top_pct", "aprovacao_valor": 50.0,
+    })
+    assert r.status_code == 201, r.text
+    return {"execucao": r.json(), "conjunto": conjunto, "fator": fator}
+
+
+def _limpar_execucao_pareto(sessao, dados: dict) -> None:
+    sessao.delete(f"/api/multiescala/conjuntos/{dados['conjunto']['id']}")
+    sessao.delete(f"/api/multiescala/fatores/{dados['fator']['id']}")
 
 
 def ids_por_slug(con):
@@ -224,7 +250,9 @@ def _rotas_amc() -> list[tuple[str, str]]:
 
 
 def test_adv_as_21_rotas_de_amc_estao_todas_cobertas_por_este_ataque():
-    assert len(_rotas_amc()) == 21, _rotas_amc()
+    # achado 16/09: 25 rotas hoje (chegaram as 4 de L3-06-criterios-de-feicao e L3-08-pareto depois das 21
+    # originais); o nome do teste fica como prova histórica do número que motivou o ataque.
+    assert len(_rotas_amc()) == 25, _rotas_amc()
 
 
 def test_adv_nenhuma_das_21_rotas_entrega_dado_de_outro_inquilino(sessao_a, sessao_b, conexao_plat_app):
@@ -244,10 +272,14 @@ def test_adv_nenhuma_das_21_rotas_entrega_dado_de_outro_inquilino(sessao_a, sess
         cur.execute(f"INSERT INTO {ESQ}.amc_resultado(execucao_id, tenant_id, unidade_id, favorabilidade) "
                     "VALUES (%s::uuid, %s, %s, 88.0)", (execucao_b["id"], ids["demo2"], MARCA_UNIDADE))
     conexao_plat_app.commit()
+    # as 2 rotas de L3-08-pareto (achado 16/09) precisam de um identificador de OUTRO subsistema
+    # (plat.escala_execucao, não plat.amc_execucao): motor de grades multiescala, próprio de B.
+    pareto_b = _execucao_pareto_de(sessao_b)
+    eid_pareto, fid_pareto = pareto_b["execucao"]["id"], pareto_b["fator"]["id"]
 
     mid, cid, eid, vh = modelo_b["id"], conjunto_b["id"], execucao_b["id"], modelo_b["versao_hash"]
     # marcas longas de propósito: "b1" apareceria por acaso dentro de qualquer sha256
-    marcas = {mid, cid, eid, MARCA_UNIDADE}
+    marcas = {mid, cid, eid, MARCA_UNIDADE, eid_pareto, fid_pareto}
     # o hash da versão e o id do item de B são função do DOCUMENTO que A mandou (A escreve o que quiser no
     # próprio modelo), então nas duas rotas que ECOAM o documento eles não são vazamento. O que importaria —
     # A conseguir RESOLVER a camada de B — é conferido logo abaixo com POST /api/amc/execucoes.
@@ -283,8 +315,26 @@ def test_adv_nenhuma_das_21_rotas_entrega_dado_de_outro_inquilino(sessao_a, sess
          {"unidades": {"A": {"chuva": 1200.0}, "B": {"chuva": 800.0}}, "referencias": ["A"]}),
         ("POST", "/api/amc/similaridade/exportar", "/api/amc/similaridade/exportar",
          {"unidades": {"A": {"chuva": 1200.0}, "B": {"chuva": 800.0}}, "referencias": ["A"]}),
+        # L3-06-criterios-de-feicao (achado 16/09): sem estado, como similaridade — o pedido inteiro é a
+        # feição do usuário, nenhum identificador de inquilino entra ou sai.
+        ("POST", "/api/amc/criterios-feicao", "/api/amc/criterios-feicao",
+         {"feicoes": [{"id": "f1", "geometry": {"type": "Point", "coordinates": [-46.5, -23.4]},
+                      "properties": {"a": 1.0}}],
+          "criterios": [{"id": "a", "tipo": "atributo", "campo": "a", "influencia": "positiva"}]}),
+        ("POST", "/api/amc/criterios-feicao/exportar", "/api/amc/criterios-feicao/exportar",
+         {"feicoes": [{"id": "f1", "geometry": {"type": "Point", "coordinates": [-46.5, -23.4]},
+                      "properties": {"a": 1.0}}],
+          "criterios": [{"id": "a", "tipo": "atributo", "campo": "a", "influencia": "positiva"}]}),
+        # L3-08-pareto (achado 16/09): execucao_id/fator_id de B, sob RLS de plat.escala_execucao — de outro
+        # inquilino é 404 (mesma garantia que as rotas de /api/amc/execucoes, outro subsistema).
+        ("POST", "/api/amc/pareto", "/api/amc/pareto",
+         {"execucao_id": eid_pareto,
+          "objetivos": [{"fator_id": fid_pareto, "direcao": "maximizar", "base": "favorabilidade"}]}),
+        ("POST", "/api/amc/pareto/camada", "/api/amc/pareto/camada",
+         {"execucao_id": eid_pareto,
+          "objetivos": [{"fator_id": fid_pareto, "direcao": "maximizar", "base": "favorabilidade"}]}),
     ]
-    assert sorted((m, p) for m, p, _u, _c in sondas) == _rotas_amc(), "sonda não cobre as 21 rotas"
+    assert sorted((m, p) for m, p, _u, _c in sondas) == _rotas_amc(), "sonda não cobre as 25 rotas"
     criados = []
     try:
         for metodo, _padrao, url, corpo in sondas:
@@ -292,6 +342,11 @@ def test_adv_nenhuma_das_21_rotas_entrega_dado_de_outro_inquilino(sessao_a, sess
             texto = resposta.text
             alvos = marcas if (metodo, _padrao) in ecoam else marcas | ecoados
             for marca in alvos:
+                # achado 16/09: o envelope de erro padrão (app/erros.py, RFC 7807) ecoa o CAMINHO do pedido em
+                # "instance" — quando a marca é a própria que A pôs na URL (id no caminho/consulta), o eco não
+                # é vazamento nenhum, é o pedido de volta; o que importaria é uma marca que A NÃO pediu aparecer.
+                if marca in url:
+                    continue
                 assert marca not in texto, (metodo, url, marca, texto[:300])
             if resposta.status_code == 201 and metodo == "POST" and "/modelos" in url:
                 criados.append(("/api/amc/modelos", resposta.json()["id"]))
@@ -324,6 +379,7 @@ def test_adv_nenhuma_das_21_rotas_entrega_dado_de_outro_inquilino(sessao_a, sess
         sessao_b.delete(f"/api/amc/execucoes/{eid}")
         sessao_b.delete(f"/api/amc/conjuntos/{cid}")
         sessao_b.delete(f"/api/amc/modelos/{mid}")
+        _limpar_execucao_pareto(sessao_b, pareto_b)
 
 
 # ================================================================ 3. validação pela API (corpo cru)
