@@ -8,6 +8,7 @@ import contextlib
 import os
 import secrets
 import time
+import warnings
 from pathlib import Path
 
 import pytest
@@ -288,6 +289,13 @@ def token_a(sessao_a):
     sessao_a.delete(f"/api/tokens/{tok['id']}")
 
 
+#: ids de InquilinoTemporario (e subclasses) cujo apagar() esgotou as tentativas sem confirmar a exclusão.
+#: A varredura final de sessão (varrer_residuos) tenta de novo por aqui, além do filtro por prefixo do slug —
+#: achado 17/09: 5 tenants zt-exportacao ficaram para trás porque o apagar() derrubava a fixture ao primeiro
+#: 409 e a varredura só olhava o prefixo "zt-inq-" (ver comentário de varrer_residuos).
+_INQUILINOS_NAO_APAGADOS: list[int] = []
+
+
 class InquilinoTemporario:
     """Inquilino zt-inq-* criado pelo superadmin, com o admin já logado e com senha definitiva; apagado no fim
     (DELETE /api/plataforma/inquilinos/{id}): o teste nunca depende de estado limpo dos inquilinos de demonstração."""
@@ -318,9 +326,27 @@ class InquilinoTemporario:
         """Apaga o inquilino (a função plat.tenant_apagar_interno apaga o schema de dado d_<slug> na mesma transação,
         item L0-02-z) e confere que nada ficou: uma rodada nunca deixa schema d_zt* para trás (incidente
         laco/handoffs/T4/INCIDENTE-schemas-zt.md). Se o schema sobreviver (base antiga, sem a migração), apaga-o
-        aqui mesmo como plat_app, dono do schema."""
-        r = self._plat.delete(f"/api/plataforma/inquilinos/{self.id}")
-        assert r.status_code in (204, 404), r.text
+        aqui mesmo como plat_app, dono do schema.
+
+        Teardown resiliente (17/09): um 409 aqui costuma ser transitório (FK de uma escrita concorrente do
+        próprio teste ainda em voo, ou o trinco do tenant_apagar_interno disputado com outra fixture) — tenta
+        de novo uma vez antes de desistir. Se as duas tentativas falharem, NUNCA derruba o teardown de quem
+        depende desta fixture (isso deixava outros recursos igualmente sem limpar, em cascata): registra o id
+        em _INQUILINOS_NAO_APAGADOS para a varredura de fim de sessão tentar de novo, e avisa em vez de
+        estourar."""
+        for tentativa in (1, 2):
+            r = self._plat.delete(f"/api/plataforma/inquilinos/{self.id}")
+            if r.status_code in (204, 404):
+                break
+            if tentativa == 2:
+                _INQUILINOS_NAO_APAGADOS.append(self.id)
+                warnings.warn(
+                    f"inquilino_temporario: DELETE de {self.slug} (id={self.id}) falhou com {r.status_code} "
+                    f"em 2 tentativas ({r.text}); registrado para a varredura final apagar",
+                    stacklevel=2,
+                )
+                return
+            time.sleep(0.5)
         self.schema_apagado = not schema_de_dado_existe(self.slug)
         if not self.schema_apagado:
             apagar_schema_de_dado(self.slug)
@@ -368,8 +394,17 @@ def inquilino_temporario(sessao_plat):
 
 def varrer_residuos(sessao_a, sessao_b, sessao_plat) -> None:
     """Revoga tokens, apaga grupos, papéis e usuários zt-* dos inquilinos de demonstração e apaga inquilinos
-    zt-inq-*. É uma VARREDURA POR PREFIXO: apaga o resíduo de qualquer rodada, inclusive o que outro worker
-    do pytest-xdist ainda esteja usando — por isso só corre quando não há mais ninguém rodando."""
+    zt-*. É uma VARREDURA POR PREFIXO: apaga o resíduo de qualquer rodada, inclusive o que outro worker
+    do pytest-xdist ainda esteja usando — por isso só corre quando não há mais ninguém rodando.
+
+    17/09: o filtro de inquilino exigia o prefixo "zt-inq-" (só o de InquilinoTemporario puro). Subclasses como
+    InquilinoDeExportacao (tests/api/exportacao/conftest.py, slug "ztexp<hex>" SEM hífen, de propósito — o
+    slug entra em nomes de schema que não aceitam hífen) e _InquilinoVazio (tests/api/exportacao_inquilino/)
+    nunca casavam e ficavam para trás para sempre, mesmo com apagar() bem-sucedido no seu próprio teardown se
+    a rodada nunca chegasse a rodá-lo (sessão abortada). Filtro agora é o mesmo prefixo "zt" usado para
+    usuário/token/grupo/papel acima — "plataforma"/"demo"/"demo2" nunca começam por "zt", sem risco de
+    colisão. Além do prefixo, tenta de novo qualquer id que um apagar() resiliente tenha registrado como não
+    confirmado (_INQUILINOS_NAO_APAGADOS, ver InquilinoTemporario.apagar)."""
     for s in (sessao_a, sessao_b):
         for t in s.get("/api/tokens?todos=1").json():
             if t["nome"].startswith(PREFIXO_TESTE) and t["revogado_em"] is None:
@@ -382,9 +417,15 @@ def varrer_residuos(sessao_a, sessao_b, sessao_plat) -> None:
         for p in s.get("/api/papeis").json()["personalizados"]:
             if p["nome"].startswith(PREFIXO_TESTE):
                 s.delete(f"/api/papeis/{p['id']}")
+    vistos = set()
     for t in sessao_plat.get("/api/plataforma/inquilinos").json():
-        if t["slug"].startswith(f"{PREFIXO_TESTE}-inq-"):
+        if t["slug"].startswith(PREFIXO_TESTE):
             sessao_plat.delete(f"/api/plataforma/inquilinos/{t['id']}")
+            vistos.add(t["id"])
+    for id_ in list(_INQUILINOS_NAO_APAGADOS):
+        if id_ not in vistos:
+            sessao_plat.delete(f"/api/plataforma/inquilinos/{id_}")
+        _INQUILINOS_NAO_APAGADOS.remove(id_)
 
 
 def sob_xdist() -> bool:
