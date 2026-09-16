@@ -679,8 +679,9 @@ ROUTERS = [
     # --- motor multicritério (AMC), localização semelhante (L3-17-similaridade): /api/amc/similaridade e
     # /api/amc/similaridade/exportar; sem tabela própria, mesmo padrão sem-estado de rotas_rede acima
     # --- motor multicritério, presets (L3-01-h-presets): /api/amc/presets (CRUD, aplicar sem job,
-    # exportar, importar) -- MESMO router de rotas_amc.router (item vive em app/amc/rotas.py); incluído
-    # só uma vez (o alias rotas_amc_presets duplicava a inclusão e dobrava toda rota/schema do arquivo)
+    # exportar, importar) -- router PRÓPRIO em app/amc/rotas_presets.py (restaurado em 16/09; antes um apelido
+    # incluía rotas_amc.router duas vezes e dobrava toda rota/schema do arquivo)
+    rotas_amc_presets,
     # --- motor multicritério (L3-01-a/b): /api/amc/modelos, /api/amc/conjuntos, /api/amc/execucoes
     # --- motor multicritério (AMC), critérios sobre a própria feição (L3-06-criterios-de-feicao):
     # /api/amc/criterios-feicao e /api/amc/criterios-feicao/exportar; sem estado, como rotas_similaridade
