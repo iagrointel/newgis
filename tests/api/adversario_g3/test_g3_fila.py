@@ -46,7 +46,9 @@ def _postgres(sql: str) -> str:
 
 
 # ---------------------------------------------------------------- L0-05-a: isolamento entre inquilinos
-@pytest.mark.xfail(strict=True, reason="L0-05-a: a chave do lock e global; um inquilino congela o job de outro")
+# CORRIGIDO (fusão de 16/09/2026, migração 20260916T1100_recurso_partilhado_por_inquilino_regressao.sql):
+# plat.job_pegar volta a travar por (chave, tenant_id) — mesma chave em inquilinos diferentes não se
+# estorva mais. Achado original consertado; prova normal agora.
 def test_lock_por_chave_nao_atravessa_inquilino():
     """Hipótese do L0-05-a: 'lock por chave (mesma camada não importa duas vezes ao mesmo tempo)'. O recurso
     que a chave protege é do INQUILINO; a chave, não. Um inquilino que use a mesma chave de outro congela o
@@ -97,28 +99,46 @@ def test_fila_serve_o_inquilino_que_chegou_primeiro():
                           "20 jobs criados depois, por outro inquilino, com prioridade 1, passaram na frente")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L0-05-d: as chaves dos periodicos sao constantes e qualquer inquilino pode ocupa-las",
-)
+# CORRIGIDO (16/09/2026): a proteção real mudou de forma — não é mais o trinco (chave, tenant_id) de
+# job_pegar quem resolve isto, é o espaço de nome reservado. app/jobs/periodicos.py passou a gravar a
+# chave do periódico como CHAVE_RESERVADA + "sessoes_expurgar" = "sys:sessoes_expurgar" (app/limites.py),
+# e o gatilho plat.job_chave_reservada (migração 20260906T1615a3f) recusa a INSERÇÃO de um job com chave
+# "sys:*" vindo de um inquilino comum sem agenda_id. O teste antigo usava a chave sem o prefixo "sys:" —
+# essa chave já não é a que o periódico usa, então o teste antigo provava uma proteção que não existe
+# mais no caminho real. Reescrito para exercer o mecanismo atual.
 def test_periodico_da_plataforma_nao_e_travado_por_chave_escolhida_por_inquilino():
-    """As chaves dos periódicos são CONSTANTES no código ('sessoes_expurgar', 'manutencao_analyze', …,
-    app/jobs/periodicos.py). Um usuário 'editor' de qualquer inquilino pode enfileirar prova.progresso com
-    essa chave (duracao_s até 3600) e impedir o expurgo de sessões vencidas enquanto o dele roda."""
+    """A chave do periódico agora vive no espaço reservado `sys:` (app/limites.py CHAVE_RESERVADA). Um
+    usuário 'editor' de qualquer inquilino que tente enfileirar prova.progresso com chave='sys:sessoes_
+    expurgar' tem a INSERÇÃO recusada pelo gatilho job_chave_reservada; o inquilino técnico 'plataforma'
+    continua livre para usar essa chave e o periódico roda normalmente."""
+    import subprocess
+    esquema = os.environ.get("PLAT_SCHEMA", "plat")
+    r = subprocess.run(
+        ["sudo", "-u", "postgres", "psql", "-d", os.environ.get("PLAT_DB", "iagro_sat"),
+         "-X", "-A", "-t", "-v", "ON_ERROR_STOP=1", "-c",
+         f"""SET search_path = {esquema}, public;
+             BEGIN;
+             INSERT INTO job(tenant_id, tipo, chave, pesado, memoria_mb, timeout_s)
+               SELECT id, 'prova.progresso', 'sys:sessoes_expurgar', false, 256, 3600
+                 FROM tenant WHERE slug = 'demo';
+             ROLLBACK;"""],
+        capture_output=True, text=True)
+    assert r.returncode != 0, (
+        "um inquilino comum conseguiu inserir job com a chave reservada do periódico (sys:sessoes_expurgar) "
+        f"sem passar por agenda: {r.stdout}")
+    assert "espaço reservado da plataforma" in r.stderr, r.stderr
+
     saida = _postgres("""
       BEGIN;
       UPDATE job SET agendado_para = now() + interval '1 day' WHERE estado = 'pendente';
       INSERT INTO job(tenant_id, tipo, chave, pesado, memoria_mb, timeout_s)
-        SELECT id, 'prova.progresso', 'sessoes_expurgar', false, 256, 7200 FROM tenant WHERE slug = 'demo';
-      INSERT INTO job(tenant_id, tipo, chave, pesado, memoria_mb, timeout_s)
-        SELECT id, 'jobs.sessoes_expurgar', 'sessoes_expurgar', false, 256, 600 FROM tenant WHERE slug = 'plataforma';
+        SELECT id, 'jobs.sessoes_expurgar', 'sys:sessoes_expurgar', false, 256, 600
+          FROM tenant WHERE slug = 'plataforma';
       SELECT (job_pegar('adv3:1', true)).tipo;
-      SELECT coalesce((job_pegar('adv3:2', true)).tipo, 'NENHUM');
       ROLLBACK;""")
     linhas = [ln for ln in saida.splitlines() if ln.strip()]
     assert linhas[-1] == "jobs.sessoes_expurgar", (
-        "o periódico do inquilino técnico ficou impedido pela chave escolhida por um inquilino comum: "
-        f"{linhas}")
+        f"o periódico do inquilino técnico não rodou mesmo sem concorrência de chave: {linhas}")
 
 
 # ---------------------------------------------------------------- L0-05-a: traceback saneado
