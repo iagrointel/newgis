@@ -881,12 +881,12 @@ def editar_item(
     return novo
 
 
-def _editar(id: str, corpo, request: Request, auth: Auth) -> dict:
+def _editar(id: str, corpo, request: Request, auth: Auth, rotulo: str | None = None) -> dict:
     iid = uuid_ok(id)
     campos = campos_json(corpo, set(CAMPOS_EDITAVEIS))
     try:
         with db.db(auth.contexto()) as cur:
-            return item_json(editar_item(cur, request, auth, iid, campos), auth)
+            return item_json(editar_item(cur, request, auth, iid, campos, rotulo=rotulo), auth)
     except psycopg2.Error as e:
         raise comum.erro_do_banco(e) from e
 
@@ -900,9 +900,17 @@ def editar(
 
 @router.patch("/api/itens/{id}", response_model=Item, openapi_extra=EDITAR)
 def editar_parcial(
-    id: str, request: Request, corpo: dict = Body(...), auth: Auth = autenticado(escopo_token="catalogo:escrever")
+    id: str,
+    request: Request,
+    corpo: dict = Body(...),
+    rotulo: str | None = Query(None, pattern=r"^rascunho$"),
+    auth: Auth = autenticado(escopo_token="catalogo:escrever"),
 ):  # noqa: B008
-    return _editar(id, corpo, request, auth)
+    """`?rotulo=rascunho` é o autosave do editor (ADR 20260907T1522, item L5-09): grava a versão rotulada
+    'rascunho' em vez de 'edicao'. Nenhum outro valor é aceito por fora (regex trava em `rascunho`); os
+    demais rótulos do enum só o servidor escreve sozinho (edicao/restauracao/publicacao/compactada/migracao).
+    Nunca toca `versao_publicada` — só `.../versoes/{n}/publicar` muda isso."""
+    return _editar(id, corpo, request, auth, rotulo=rotulo)
 
 
 # ---------------------------------------------------------------- exclusão lógica (lixeira) e lote
