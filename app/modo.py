@@ -184,7 +184,8 @@ def instalar(app: FastAPI) -> None:
     app.add_middleware(ModoMiddleware)
 
 
-@router.get("/api/modo", summary="estado do modo de manutenção (global ou do inquilino da sessão)")
+@router.get("/api/modo", openapi_extra={"x-auth": "-", "x-privilegio": "publico"},
+            summary="estado do modo de manutenção (global ou do inquilino da sessão)")
 def modo_estado(request: Request) -> dict:
     """Público e sempre 200: é o que a faixa do front consulta para mostrar o motivo da manutenção."""
     return estado(_tenant_da_requisicao(request))

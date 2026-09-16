@@ -20,7 +20,7 @@ SEGURA = re.compile(r"^[\w.\-]+$")
 router = APIRouter(tags=["videos"])
 
 
-@router.get("/api/videos")
+@router.get("/api/videos", openapi_extra={"x-auth": "S", "x-privilegio": "proprio"})
 def manifesto(_auth=autenticado(so_sessao=True)):
     caminho = VIDEOS / "manifesto.json"
     if not caminho.is_file():
@@ -30,7 +30,7 @@ def manifesto(_auth=autenticado(so_sessao=True)):
     )
 
 
-@router.get("/videos/arquivo/{caminho}")
+@router.get("/videos/arquivo/{caminho}", openapi_extra={"x-auth": "S", "x-privilegio": "proprio"})
 def arquivo(caminho: str, _auth=autenticado(so_sessao=True)):
     """Entrega um mp4/vtt/manifesto gerado. Nome simples (sem caminho), sufixo conhecido, arquivo real."""
     if not SEGURA.match(caminho) or not caminho.endswith(SUFIXOS_OK):
