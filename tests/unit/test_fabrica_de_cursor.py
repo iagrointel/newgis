@@ -34,6 +34,13 @@ EXCECOES_DECLARADAS: dict[str, str] = {
     "scripts/amc_hash_independente.py:conferir_banco":
         "conferência INDEPENDENTE do hash: usa RealDictCursor de propósito, para não depender do mesmo cursor "
         "que o produto usa, e fixa o schema com SET search_path",
+    # conecta no Postgres EXTERNO do CLIENTE (item L0-04-i-fonte-registrada) — nunca no banco `iagro_sat` nem
+    # no schema `plat`; "plat." só aparece no arquivo em docstring/comentário (`plat.conexao`, `plat.item`),
+    # nunca numa consulta enviada por esta conexão. CursorSchemaAmbiente reescreveria um schema que este
+    # cursor jamais referencia.
+    "app/conexao/pgfdw.py:conectar":
+        "conexão com o Postgres do CLIENTE (banco/host alheios), nunca com o schema plat desta instalação — "
+        "o RealDictCursor aqui não tem nome de objeto `plat.` para reescrever",
 }
 
 

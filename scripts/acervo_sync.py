@@ -39,10 +39,14 @@ import os
 import sys
 import time
 from datetime import UTC, datetime
+from pathlib import Path
 
 import psycopg2
 import psycopg2.errors
 import psycopg2.extras
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # roda fora do venv: acha o pacote app
+from app.schema_ambiente import CursorSchemaAmbiente  # noqa: E402 -- depois do sys.path acima
 
 TIMEOUT_CONTAGEM_MS = 25_000
 PRAZO_TOTAL_S = 270.0  # folga de 30 s sob o portão de 5 min
@@ -136,11 +140,22 @@ def _no_schema(sql: str, schema: str) -> str:
     return sql if schema == "plat" else sql.replace("plat.", f"{schema}.")
 
 
+def _conectar(dsn_kwargs: dict):
+    """psycopg2 sem cursor_factory=CursorSchemaAmbiente escreveria sempre no schema `plat` de PRODUÇÃO, mesmo
+    dentro de uma trilha/homologação (achado F9, tests/unit/test_fabrica_de_cursor.py) — mesmo padrão de
+    `scripts/acervo_licenca_sync.py:_conectar`, o irmão deste script que já tinha o conserto. Convive com
+    `_no_schema()` abaixo sem conflito: quando `schema` (argumento explícito de `sincronizar`) é "plat"
+    (padrão), `_no_schema` não mexe na consulta e é a fábrica quem reescreve pelo PLAT_SCHEMA do ambiente;
+    quando `schema` vem diferente (uso deliberado, fora do ambiente corrente), `_no_schema` já substitui
+    antes de chegar ao cursor e a fábrica não encontra mais `plat.` para trocar."""
+    return psycopg2.connect(cursor_factory=CursorSchemaAmbiente, **dsn_kwargs)
+
+
 def sincronizar(dsn_kwargs: dict, servidor: str, banco: str, limite: int | None = None,
                 schema: str = "plat") -> dict:
     inicio = time.monotonic()
     inicio_iso = datetime.now(UTC)
-    conn = psycopg2.connect(cursor_factory=psycopg2.extras.RealDictCursor, **dsn_kwargs)
+    conn = _conectar(dsn_kwargs)
     conn.autocommit = False
     try:
         with conn.cursor() as cur:
