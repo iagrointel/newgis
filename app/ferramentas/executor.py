@@ -139,14 +139,32 @@ def resolver_fonte(cur, item_id: str, nome_parametro: str, aceita_parquet: bool)
 
 
 def resolver_entradas(cur, f: registro.Ferramenta, parametros: dict) -> dict:
+    """{nome do parâmetro: camada resolvida}. Parâmetro GPMultiValue de camadas (ferramenta `mesclar`) devolve
+    LISTA de camadas resolvidas — `entradas_planas` é quem achata isso para proveniência e derivado_de."""
     entradas = {}
     aceita_parquet = bool(f.limites.get("aceita_parquet"))
     for p in f.entradas:
-        if p.tipo == "GPFeatureRecordSetLayer" and parametros.get(p.nome):
+        if not parametros.get(p.nome):
+            continue
+        if p.tipo == "GPFeatureRecordSetLayer":
             entradas[p.nome] = resolver_fonte(cur, parametros[p.nome], p.nome, aceita_parquet)
-        elif p.tipo == "GPRasterDataLayer" and parametros.get(p.nome):
+        elif p.tipo == "GPMultiValue" and p.subtipo == "GPFeatureRecordSetLayer":
+            entradas[p.nome] = [resolver_fonte(cur, v, f"{p.nome}[{i}]", aceita_parquet)
+                                for i, v in enumerate(parametros[p.nome])]
+        elif p.tipo == "GPRasterDataLayer":
             raise ErroExecucao(422, "raster_nao_suportado", f"{p.nome}: entrada raster depende do item L1-01")
     return entradas
+
+
+def entradas_planas(entradas: dict) -> list[tuple[str, dict]]:
+    """(rótulo, camada) de cada camada de entrada, com o índice no rótulo quando o parâmetro é lista."""
+    planas = []
+    for nome, valor in entradas.items():
+        if isinstance(valor, list):
+            planas.extend((f"{nome}[{i}]", e) for i, e in enumerate(valor))
+        else:
+            planas.append((nome, valor))
+    return planas
 
 
 def custo_estimado(f: registro.Ferramenta, entradas: dict, parametros: dict) -> int:
@@ -225,7 +243,7 @@ def executar(ctx, f: registro.Ferramenta, parametros: dict, titulo: str | None =
         cur.execute("SELECT login FROM plat.usuario WHERE id = %s", (ctx.usuario_id,))
         r = cur.fetchone()
         login = r["login"] if r else None
-    for nome, e in entradas.items():
+    for nome, e in entradas_planas(entradas):
         ctx.entrada(e["item_id"], e["sha256"], f"{nome}: {e['titulo']} (versão {e['versao']})")
     item_id = str(uuid.uuid4())
     tabela = "c_" + uuid.UUID(item_id).hex[:16]
@@ -251,10 +269,11 @@ def executar(ctx, f: registro.Ferramenta, parametros: dict, titulo: str | None =
             tamanho = int(cur.fetchone()["b"])
         ctx.progresso(90, "publicando no catálogo")
         extent = _extent_de(est["extent"])
+        planas = entradas_planas(entradas)
         proveniencia = {
             "ferramenta": f.nome, "versao": f.versao, "parametros": parametros,
             "entradas": [{"parametro": n, "item_id": e["item_id"], "versao": e["versao"], "sha256": e["sha256"]}
-                         for n, e in entradas.items()],
+                         for n, e in planas],
             "executada_em": iniciado_em.isoformat(timespec="seconds"),
             "autor": {"usuario_id": ctx.usuario_id, "login": login},
             "job_id": str(ctx.job_id) if ctx.job_id else None, "custo_estimado": custo,
@@ -270,7 +289,7 @@ def executar(ctx, f: registro.Ferramenta, parametros: dict, titulo: str | None =
             # item L2-15-b: o SQL que rodou e o sha256 de cada arquivo Parquet lido. Sem isto a camada de
             # resultado não é reproduzível, e "proveniência" viraria só o nome da ferramenta.
             dados["procedencia"]["consulta_grande"] = saida["consulta_grande"]
-        titulo_final = (titulo or f"{f.titulo}: " + ", ".join(e["titulo"] for e in entradas.values()))[:250] or f.titulo
+        titulo_final = (titulo or f"{f.titulo}: " + ", ".join(e["titulo"] for _, e in planas))[:250] or f.titulo
         with ctx.db() as cur:
             cur.execute(
                 "INSERT INTO plat.item(id, tenant_id, tipo, titulo, dono_id, dados, tamanho_bytes, extent, "
@@ -279,7 +298,7 @@ def executar(ctx, f: registro.Ferramenta, parametros: dict, titulo: str | None =
                 [item_id, ctx.tenant_id, titulo_final, ctx.usuario_id, _jsonb(dados), tamanho]
                 + (extent or []) + (["dado"] if extent else [None]) + [ctx.usuario_id, ctx.usuario_id],
             )
-            for e in entradas.values():
+            for _, e in planas:
                 cur.execute(
                     "INSERT INTO plat.item_relacao(origem, destino, tipo, tenant_id) VALUES (%s::uuid, %s::uuid, "
                     "'derivado_de', %s) ON CONFLICT DO NOTHING", (item_id, e["item_id"], ctx.tenant_id),
@@ -287,7 +306,7 @@ def executar(ctx, f: registro.Ferramenta, parametros: dict, titulo: str | None =
             # uso_bytes NÃO é somado aqui: o INSERT em plat.item acima (camada_vetorial, tamanho_bytes já
             # preenchido) já disparou o gatilho simétrico plat.item_uso_bytes — somar de novo dobraria a conta.
             props = {"ferramenta": f.nome, "versao": f.versao, "job_id": proveniencia["job_id"],
-                     "entradas": [e["item_id"] for e in entradas.values()], "feicoes": int(est["feicoes"])}
+                     "entradas": [e["item_id"] for _, e in planas], "feicoes": int(est["feicoes"])}
             if request is not None:
                 from app.auth.comum import registrar_evento
 
