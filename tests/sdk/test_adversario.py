@@ -12,6 +12,8 @@ from pathlib import Path
 import pytest
 from plat import ErroPlataforma, Plataforma
 
+from tests.api.conftest import credenciais
+
 RAIZ = Path(__file__).resolve().parents[2]
 DADOS_CAMADA = {
     "schema": "plat_trabalho",
@@ -25,12 +27,13 @@ DADOS_CAMADA = {
 
 @pytest.fixture(scope="module")
 def credenciais_demo2():
-    arq = Path("/home/dev/plataforma/laco/var/trilha/il708bsdkpy.credenciais.txt")
-    for linha in arq.read_text().splitlines():
-        partes = linha.split()
-        if len(partes) >= 3 and partes[0] == "demo2":
-            return "demo2", partes[1], partes[2]
-    pytest.fail(f"credenciais de 'demo2' não encontradas em {arq}")
+    """Mesma fonte de `credenciais_demo` (tests/sdk/conftest.py): PLAT_CREDENCIAIS_ARQUIVO da trilha
+    corrente, não um caminho fixo de outra trilha (o `il708bsdkpy` original já não existe)."""
+    creds = credenciais()
+    if "demo2" not in creds:
+        pytest.fail("credenciais de 'demo2' não encontradas (PLAT_CREDENCIAIS_ARQUIVO)")
+    login, senha = creds["demo2"]
+    return "demo2", login, senha
 
 
 def test_1_token_de_escopo_leitura_nao_escreve(url_api, credenciais_demo):

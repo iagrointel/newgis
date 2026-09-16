@@ -15,12 +15,16 @@ COMITADO = RAIZ / "sdk" / "python" / "src" / "plat_gerado"
 
 
 def _arvore_de_arquivos(base: Path) -> set[str]:
-    # .ruff_cache é o cache do post-hook `ruff format`/`ruff check` do próprio gerador (git-ignorado,
-    # nunca comitado) — não faz parte do SDK gerado, é ruído de ambiente entre uma rodada e outra.
+    # .ruff_cache é o cache do post-hook `ruff format`/`ruff check` do próprio gerador; __pycache__
+    # aparece na árvore comitada assim que QUALQUER teste da suíte importa um módulo gerado (ex.
+    # test_cobertura_openapi.py::test_todo_modulo_gerado_expoe_as_quatro_funcoes_padrao, que roda antes
+    # deste arquivo em ordem alfabética) — os dois são git-ignorados, nunca comitados, e não fazem
+    # parte do SDK gerado: são ruído de ambiente entre uma rodada e outra, não diff do gerador.
+    IGNORAR = {".ruff_cache", "__pycache__"}
     return {
         str(p.relative_to(base))
         for p in base.rglob("*")
-        if p.is_file() and ".ruff_cache" not in p.relative_to(base).parts
+        if p.is_file() and IGNORAR.isdisjoint(p.relative_to(base).parts) and p.suffix != ".pyc"
     }
 
 

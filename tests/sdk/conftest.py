@@ -20,6 +20,15 @@ ROOT = Path(__file__).resolve().parents[2]
 PACOTE = ROOT / "pacote"
 if str(PACOTE) not in sys.path:  # o pacote mora fora de app/: entra no caminho antes do import
     sys.path.insert(0, str(PACOTE))
+# `plat_gerado` (o cliente gerado do OpenAPI) mora em sdk/python/src/, ao lado de um `plat/` antigo
+# que NÃO é o pacote — o `plat` de verdade é o de `pacote/` acima, que já entrou primeiro em sys.path
+# (posição 0) e por isso continua ganhando a resolução de `import plat`. Sem esta entrada,
+# `import plat_gerado` cai na cópia congelada em site-packages (instalada uma vez, de outra trilha/
+# worktree, `pip install ./sdk/python`) em vez da árvore regenerada em disco — é o que fazia
+# test_todo_modulo_gerado_expoe_as_quatro_funcoes_padrao importar um módulo que já não existe mais lá.
+SDK_SRC = ROOT / "sdk" / "python" / "src"
+if str(SDK_SRC) not in sys.path:
+    sys.path.insert(1, str(SDK_SRC))
 
 os.environ.setdefault("PLAT_AMBIENTE", "dev")
 
@@ -196,3 +205,28 @@ def limpar_itens(pla):
 @pytest.fixture(scope="session")
 def versao_sdk():
     return plat.__versao__
+
+
+# --- aliases de compatibilidade (item L7-08-b): test_exemplos.py e test_adversario.py foram escritos
+# contra um conftest.py mais antigo (ad-hoc, porta fixa 8278, credenciais de uma trilha própria
+# il708bsdkpy) que a suíte L2-16-a substituiu por este (servidor/worker de sessão, mesma trilha
+# corrente). Os testes continuam pedindo `url_api`/`worker_da_fila`/`credenciais_demo` pelo nome
+# antigo — em vez de reescrevê-los, os três nomes viram alias direto das fixtures atuais.
+@pytest.fixture(scope="session")
+def url_api(servidor: str) -> str:
+    return servidor
+
+
+@pytest.fixture(scope="session")
+def worker_da_fila(worker):
+    yield
+
+
+@pytest.fixture(scope="session")
+def credenciais_demo() -> tuple[str, str, str]:
+    """(inquilino, login, senha) do admin de `demo` — mesma fonte que `_sessao_admin` já usa
+    (PLAT_CREDENCIAIS_ARQUIVO da trilha corrente, nunca uma senha digitada no código)."""
+    creds = credenciais()
+    assert "demo" in creds, "trilha sem credencial do admin demo (PLAT_CREDENCIAIS_ARQUIVO)"
+    login, senha = creds["demo"]
+    return "demo", login, senha
