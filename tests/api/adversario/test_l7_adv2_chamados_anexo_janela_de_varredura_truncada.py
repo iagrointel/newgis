@@ -63,5 +63,5 @@ def test_anexo_com_carga_apos_65536_bytes_e_recusado():
     dados = png_ate_janela + carga_maliciosa
     assert len(dados) < 8_000_000  # bem abaixo do teto de tamanho do anexo
 
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017 — a rota levanta HTTPException 422 nomeada; o que se afirma é que NÃO passa
         chamados_rotas._verificar_anexo("png", dados)

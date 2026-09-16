@@ -17,13 +17,12 @@ auditoria HARD-03 07/09)."""
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
+
+import pytest
 
 RAIZ = Path(__file__).resolve().parents[3]
 DEMO = RAIZ / "docs" / "DEMO.md"
-
-import pytest
 
 
 def _lista_nao_faz_ainda() -> str:
