@@ -2,11 +2,14 @@
 (shapefile zipado, GeoPackage, GeoJSON, CSV/TXT lat/lon) mais os que o `L6-02-o` acrescentou depois de MEDIR os
 drivers reais do GDAL desta máquina (`ogr --formats`, 05/09 e reconferido nesta passagem: todos presentes e com
 DCAP_CREATE=YES) — GeoJSONSeq (NDJSON), KML/LIBKML, DXF (CAD), XLSX (tabular, sem geometria nativa: ver
-`app/ingestao/xlsx_geom.py`) e FileGDB zipada (driver OpenFileGDB, mesmo truque `/vsizip` do shapefile.zip). MVT,
-PMTiles e MSSQLSpatial são só destino de EXPORTAÇÃO (`app/ingestao/exportar.py`) — não entram aqui porque não são
-fonte de importação de camada nesta plataforma (mosaico de tiles e banco externo, não arquivo de origem). GPX,
-DWG binário, GML, MapInfo, FlatGeobuf e GeoParquet continuam fora (não medidos/decisão de escopo); Apache
-Parquet/GeoParquet e Oracle Spatial (OCI) NÃO existem no GDAL desta instalação — nunca prometer os dois.
+`app/ingestao/xlsx_geom.py`) e FileGDB zipada (driver OpenFileGDB, mesmo truque `/vsizip` do shapefile.zip),
+mais DWG (item L0-04-e, ADR 0020-leitura-de-cad-dxf-e-dwg): convertido para DXF antes de ler pelo `dwg2dxf`
+do GNU LibreDWG (GPL-3, processo separado, nunca ligado à aplicação), não pelo ODA File Converter (avaliado e
+descartado no mesmo ADR). MVT, PMTiles e MSSQLSpatial são só destino de EXPORTAÇÃO (`app/ingestao/exportar.py`)
+— não entram aqui porque não são fonte de importação de camada nesta plataforma (mosaico de tiles e banco
+externo, não arquivo de origem). GPX, DXF/DWG binário fora do texto ASCII, GML, MapInfo, FlatGeobuf e
+GeoParquet continuam fora (não medidos/decisão de escopo); Apache Parquet/GeoParquet e Oracle Spatial (OCI)
+NÃO existem no GDAL desta instalação — nunca prometer os dois.
 Cada formato tem: extensões aceitas, prova pelo CONTEÚDO (nunca só a extensão — a mesma regra do L0-11/L7-03-b,
 aqui aplicada ao tipo declarado no upload), e o driver GDAL usado na inspeção/carga."""
 
@@ -39,6 +42,7 @@ FORMATOS: dict[str, Formato] = {
                           "GeoJSONSeq"),
     "kml": Formato("kml", (".kml",), "KML", "LIBKML"),
     "dxf": Formato("dxf", (".dxf",), "DXF (CAD)", "DXF"),
+    "dwg": Formato("dwg", (".dwg",), "DWG (CAD, convertido para DXF antes de ler)", "DXF"),
     "xlsx": Formato("xlsx", (".xlsx",), "Excel (XLSX)", "XLSX"),
     "filegdb.zip": Formato("filegdb.zip", (".zip",), "File Geodatabase (zip)", "OpenFileGDB"),
 }
@@ -162,16 +166,25 @@ def verificar_conteudo(tipo_declarado: str, dados: bytes) -> None:
             raise ConteudoNaoCorresponde(
                 "conteúdo não corresponde ao tipo kml: falta a tag <kml> no início do arquivo"
             )
-    elif tipo_declarado == "dxf":
-        amostra = dados[:4096]
-        if b"\x00" in amostra:
-            raise ConteudoNaoCorresponde("conteúdo não corresponde ao tipo dxf: o arquivo tem bytes nulos (DXF "
-                                         "binário não é aceito, só o formato texto)")
-        linhas = [ln.strip() for ln in amostra.replace(b"\r\n", b"\n").split(b"\n") if ln.strip()][:4]
-        if not (b"SECTION" in amostra[:2048] and b"0" in linhas):
+    elif tipo_declarado in ("dxf", "dwg"):
+        from app.ingestao import cad
+
+        visto = cad.assinatura(dados[:8192])
+        if tipo_declarado == "dwg":
+            if visto != "dwg":
+                raise ConteudoNaoCorresponde(
+                    "conteúdo não corresponde ao tipo dwg: os bytes iniciais não trazem a marca de versão do "
+                    "DWG (AC10xx)")
+        elif visto == "dxf_binario":
             raise ConteudoNaoCorresponde(
-                "conteúdo não corresponde ao tipo dxf: não achou o par de códigos de grupo '0'/'SECTION' no início"
-            )
+                "conteúdo não corresponde ao tipo dxf: o arquivo é um DXF BINÁRIO, formato que o leitor de DXF "
+                "do GDAL não abre; grave como DXF de texto (ASCII)")
+        elif visto == "dwg":
+            _marca, versao = cad.versao_dwg(dados[:8192])
+            raise ConteudoNaoCorresponde(
+                f"conteúdo não corresponde ao tipo dxf: o arquivo é um DWG na versão {versao}; declare o tipo dwg")
+        elif visto != "dxf":
+            raise ConteudoNaoCorresponde("conteúdo não corresponde ao tipo dxf: o arquivo é " + _o_que_e(dados))
     elif tipo_declarado == "xlsx":
         e_zip = dados[:4] == b"PK\x03\x04"
         tem_indicio_ooxml = b"xl/workbook.xml" in dados[:65536] or b"[Content_Types]" in dados[:2048]
