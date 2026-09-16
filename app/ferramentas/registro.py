@@ -358,3 +358,37 @@ def parametros_de_formulario_gp(f: Ferramenta, crus: dict) -> dict:
                 raise ErroParametro(chave, "JSON inválido") from e
         saida[chave] = valor
     return saida
+
+
+def _carregar_catalogo() -> None:
+    """Achado 16/09 (wt/f2-ferrreg, família 'ferramenta não registrada'): cada módulo de manifesto
+    (buffer, rede, ...) só populava REGISTRO por efeito colateral de importação, e só
+    `app/ferramentas/rotas.py` (montado em `app/main.py`, processo da API) importava esses módulos —
+    o worker (`app/jobs/worker.py` → `app/jobs/tipos.py` → `app/ferramentas/executor.py`) importa só
+    este módulo `registro.py`, nunca os manifestos, então `ferramentas.executar` sempre batia em
+    `ErroRegistro`-like `FalhaDefinitiva('ferramenta não registrada: ...')` fora do processo da API.
+    A raiz: o carregamento do catálogo tem de morar num módulo que os dois processos importam, e é
+    este (`registro.py`, importado tanto por `executor.py` quanto — transitivamente — por `rotas.py`).
+    Importação tardia (dentro da função, chamada só no fim do arquivo, com REGISTRO/Parametro/ferramenta
+    já definidos acima) evita o ciclo: cada manifesto faz `from app.ferramentas.registro import ...` e
+    alguns também importam `app.ferramentas.executor`, que por sua vez faz só `from app.ferramentas
+    import registro` (uso tardio, dentro de função) — nunca lê atributo de `registro` no nível do
+    módulo, então o ciclo fecha sem ImportError mesmo com este módulo ainda em execução.
+    Idempotente: o Python cacheia cada submódulo em `sys.modules` na primeira importação (por
+    processo); chamar de novo — inclusive via um segundo caminho de import — não duplica a ferramenta
+    nem relança `ErroRegistro: ferramenta repetida`.
+
+    Só `buffer`, `vetor` e `rede`: são os três que `app/ferramentas/rotas.py` já importava no processo
+    da API antes deste conserto (produção de verdade). `grade`, `raster`, `relacao` e
+    `estatistica_espacial` NUNCA foram importados por nenhum caminho de produção (achado 16/09,
+    confirmado por grep — só os próprios testes de unidade importam cada um direto) e continuam de
+    fora de propósito: importar `raster` aqui reprova a importação inteira com
+    `ErroRegistro: estatisticas_zonais.estatisticas: opcoes só vale para GPString` — um manifesto
+    quebrado, pré-existente, alheio a este conserto. Colocar os quatro no ar junto agora tornaria
+    a importação de `registro.py` (usada por praticamente tudo) refém de um bug não relacionado.
+    PARAR E RELATAR ao gerente antes de tocar nesses quatro — mesmo padrão do carve-out de
+    `app.edicao.tarefas` em `app/jobs/tipos.py`."""
+    from app.ferramentas import buffer, rede, vetor  # noqa: F401 — a importação é o registro (@ferramenta)
+
+
+_carregar_catalogo()

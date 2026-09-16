@@ -17,7 +17,6 @@ from pydantic import BaseModel, Field
 
 from app import db as banco
 from app import esquema_dado, limites
-from app.ferramentas import registro
 from app.jobs.registro import Cancelado, FalhaDefinitiva, tarefa
 
 UTC = datetime.UTC
@@ -30,6 +29,17 @@ class ErroExecucao(Exception):
     def __init__(self, status: int, codigo: str, mensagem: str, detalhe=None):
         super().__init__(mensagem)
         self.status, self.codigo, self.mensagem, self.detalhe = status, codigo, mensagem, detalhe
+
+
+# Achado 16/09 (wt/f2-ferrreg): importado só AQUI, depois de `ErroExecucao` já existir — não no topo do
+# arquivo. `registro.py` agora carrega o catálogo de manifestos (buffer, vetor, ...) na própria importação
+# (ver `app/ferramentas/registro.py::_carregar_catalogo`), e `vetor.py`/`raster.py`/`rede.py` importam de
+# volta `ErroExecucao` deste módulo — um `from app.ferramentas import registro` no topo do arquivo fechava
+# o ciclo com este módulo ainda incompleto (`ImportError: cannot import name 'ErroExecucao' from partially
+# initialized module`). Com `from __future__ import annotations` as anotações `f: registro.Ferramenta` nas
+# assinaturas abaixo não precisam do nome em tempo de definição — só as chamadas em tempo de execução
+# (`registro.obter`, `registro.PADRAO_NOME`, ...) precisam, e essas rodam bem depois do módulo carregado.
+from app.ferramentas import registro  # noqa: E402
 
 
 class ContextoSincrono:
