@@ -30,49 +30,50 @@ já tem dezenas de linhas `fdw_*` cujo `umuser` é um único papel por trilha (`
 `plat_tcx5l602j_app`) — exatamente o padrão "um papel, muitos inquilinos" que torna o achado explorável de
 verdade, não só teórico.
 
-Não conserta nada aqui (regra da casa); o teste só documenta o achado como xfail(strict=True). O que a
-correção provavelmente exige (fora do escopo deste laudo): nunca guardar a senha do lado do Postgres em
-`pg_user_mapping` acessível ao papel compartilhado — por exemplo REVOKE do papel de aplicação sobre
-`pg_user_mappings` e uma view/função própria que devolva só os metadados não sensíveis, ou um papel de login
-por inquilino (contradiz a decisão 3 do ADR e o desenho RLS/GUC inteiro da casa)."""
+CONSERTADO (turno 9, migração `20260916T0643_fdw_papel_por_inquilino.sql`, worktree f2fixfdwpool): o USER
+MAPPING passa a pertencer a um papel Postgres NOLOGIN por inquilino (`plat_fdw_<slug>`), nunca a
+`session_user` — e a VIEW final deixa de ser `security_invoker` (passa a ter esse papel como dona), mesmo
+padrão já medido e registrado em `20260906T15521aa_acervo_publicacao.sql`. `plat_app`/`plat_t<trilha>_app`
+nunca é membro de `plat_fdw_<slug>`, então `pg_has_role(plat_fdw_<slug>, 'USAGE')` é falso para o papel de
+login compartilhado e `pg_user_mappings.umoptions` volta NULL para qualquer sessão de aplicação. Teste deixou
+de ser xfail.
+
+Achado à parte, consertado na mesma passagem: o `contexto(..., usuario_id=0, ...)` original não batia com o
+`dono_id` gravado no INSERT (`SELECT id FROM plat.usuario ... ORDER BY id LIMIT 1`, um id real, nunca 0) — a
+política `p_conexao_inserir` (`dono_id = plat.usuario_atual()`) sempre recusava a escrita com
+`InsufficientPrivilege` ANTES de o teste chegar perto de `conexao_fdw_publicar`. Com `xfail(strict=True)`
+qualquer exceção conta como "confirmado", então essa recusa (bug do teste, não do produto) mascarava o
+achado real. Agora o teste lê o `dono_id` de verdade primeiro e usa o MESMO id como `usuario_id` do
+contexto, para exercitar o caminho que o achado descreve."""
 
 import uuid
-
-import pytest
 
 from tests.api.test_rls import contexto, ids_por_slug
 
 SENHA_FICTICIA = "adversario-l0-04-i-nao-e-credencial-real-8f2c91a4"  # nunca uma senha real; só prova visibilidade
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO (turno 9, adversário de linha L0, item L0-04-i-fonte-registrada): plat.conexao_fdw_publicar "
-    "grava a senha do Postgres externo com CREATE USER MAPPING FOR session_user, e session_user é o MESMO "
-    "papel de login para TODOS os inquilinos desta instalação (ADR 0001, RLS/GUC). "
-    "pg_user_mappings.umoptions só é ocultado pelo Postgres de quem não é o dono do mapeamento nem "
-    "superusuário -- aqui o dono é sempre esse papel compartilhado, então qualquer sessão autenticada de "
-    "qualquer inquilino lê a senha em claro de qualquer conexão postgres_fdw já publicada por QUALQUER "
-    "outro inquilino, para sempre. docs/adr/20260907T0148 seção 2 avalia isto como risco 'de milissegundos "
-    "da chamada da função' -- CREATE USER MAPPING é DDL persistente, não uma variável de sessão; a avaliação "
-    "de risco do próprio ADR está errada, não só a mitigação.",
-)
 def test_senha_do_fdw_nao_fica_legivel_em_pg_user_mappings_depois_de_publicar(conexao_plat_app):
     ids = ids_por_slug(conexao_plat_app)
+    # contexto só com o tenant (SELECT em plat.usuario não exige usuario_atual() — política p_usuario só olha
+    # tenant_id) para descobrir um dono_id de verdade ANTES do INSERT abaixo, que precisa dos dois batendo.
     contexto(conexao_plat_app, ids["demo"], usuario_id=0, login="teste")
+    with conexao_plat_app.cursor() as cur:
+        cur.execute("SELECT id FROM plat.usuario WHERE tenant_id = %s ORDER BY id LIMIT 1", (ids["demo"],))
+        dono_id = cur.fetchone()["id"]
+    contexto(conexao_plat_app, ids["demo"], usuario_id=dono_id, login="teste")
     conexao_id = str(uuid.uuid4())
     servidor = "fdw_" + conexao_id.replace("-", "")
     with conexao_plat_app.cursor() as cur:
         cur.execute(
             "INSERT INTO plat.conexao(id, tenant_id, tipo, modo, nome, url, credencial_cifrada, dono_id) "
             "VALUES (%s::uuid, %s, 'postgres_fdw', 'referenciada', %s, "
-            "'postgres://192.0.2.1:5432/basedeteste', NULL, "
-            "(SELECT id FROM plat.usuario WHERE tenant_id = %s ORDER BY id LIMIT 1))",
-            (conexao_id, ids["demo"], f"zt adversario fdw leak {conexao_id[:8]}", ids["demo"]),
+            "'postgres://192.0.2.1:5432/basedeteste', NULL, %s)",
+            (conexao_id, ids["demo"], f"zt adversario fdw leak {conexao_id[:8]}", dono_id),
         )
     conexao_plat_app.commit()
     try:
-        contexto(conexao_plat_app, ids["demo"], usuario_id=0, login="teste")
+        contexto(conexao_plat_app, ids["demo"], usuario_id=dono_id, login="teste")
         with conexao_plat_app.cursor() as cur:
             cur.execute(
                 "SELECT * FROM plat.conexao_fdw_publicar(%s::uuid, 'demo', '192.0.2.1', 5432, 'basedeteste', "
@@ -94,7 +95,13 @@ def test_senha_do_fdw_nao_fica_legivel_em_pg_user_mappings_depois_de_publicar(co
             f"a senha do Postgres externo aparece em claro e legível em pg_user_mappings.umoptions: {opcoes!r}"
         )
     finally:
+        # SEM DROP SERVER aqui: o SERVER/USER MAPPING/VIEW são criados pela função SECURITY DEFINER como
+        # `postgres` (dona), e "nenhum teste conecta como postgres" (tests/conftest.py, cabeçalho) — plat_app
+        # nunca teve (nem tem, antes ou depois desta correção) privilégio para DROP SERVER; a mesma pendência
+        # já registrada na ADR ("hoje DELETE /api/conexoes/{id} não limpa objetos FDW"). O teardown limpa só
+        # o que o papel de aplicação PODE limpar: a linha de metadado em plat.conexao (RLS permite DELETE do
+        # dono). O SERVER de teste (nome com uuid aleatório, nunca reaproveitado) fica órfão, do mesmo jeito
+        # que qualquer conexão postgres_fdw apagada pela API hoje.
         with conexao_plat_app.cursor() as cur:
-            cur.execute(f'DROP SERVER IF EXISTS "{servidor}" CASCADE')
             cur.execute("DELETE FROM plat.conexao WHERE id = %s::uuid", (conexao_id,))
         conexao_plat_app.commit()

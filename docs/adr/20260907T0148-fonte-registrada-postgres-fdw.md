@@ -27,23 +27,42 @@ diferentes (nome e IP) de propósito — é exatamente o teste do adversário do
 `CREATE FOREIGN TABLE`/`CREATE VIEW` — e devolve só o nome do schema/view criados. A credencial (senha do
 Postgres do cliente) passa como parâmetro da função SQL, nunca concatenada por Python.
 
-**Risco aceito e documentado**: `CREATE USER MAPPING ... OPTIONS (password %L)` e `ALTER USER MAPPING ...`
-colocam a senha em texto claro DENTRO do `EXECUTE format(...)` que o Postgres roda — se o servidor tiver
-`log_statement` acima de `none`/`ddl` sem redação, ou `pg_stat_statements` com `track_utility` ligado, a
-senha pode aparecer em log/estatística. Esta é uma limitação conhecida e **inerente ao próprio `postgres_fdw`**
-(nenhum wrapper evita isto — nem o Esri Enterprise nem o GeoServer, que guardam a senha do "data store" em
-configuração no servidor, não numa chamada parametrizada). Mitigação real: a credencial cifrada nunca sai do
-banco `plat.conexao.credencial_cifrada` em texto claro (isso o item garante e o teste prova); o texto claro
-existe só durante os milissegundos da chamada da função. Não fechado 100%; registrado aqui em vez de
-prometido como resolvido.
+**Risco aceito e documentado (log/estatística, ainda não fechado)**: `CREATE USER MAPPING ... OPTIONS
+(password %L)` e `ALTER USER MAPPING ...` colocam a senha em texto claro DENTRO do `EXECUTE format(...)` que
+o Postgres roda — se o servidor tiver `log_statement` acima de `none`/`ddl` sem redação, ou
+`pg_stat_statements` com `track_utility` ligado, a senha pode aparecer em log/estatística. Esta é uma
+limitação conhecida e **inerente ao próprio `postgres_fdw`** (nenhum wrapper evita isto — nem o Esri
+Enterprise nem o GeoServer, que guardam a senha do "data store" em configuração no servidor, não numa chamada
+parametrizada). Mitigação real: a credencial cifrada nunca sai do banco `plat.conexao.credencial_cifrada` em
+texto claro (isso o item garante e o teste prova). Não fechado 100%; registrado aqui em vez de prometido
+como resolvido.
+
+**CORRIGIDO (turno 9, adversário de linha L0, migração `20260916T0643_fdw_papel_por_inquilino.sql`) — a
+avaliação de risco abaixo estava ERRADA, não só a mitigação**: esta seção originalmente também tratava a
+persistência da senha em `pg_user_mapping.umoptions` como "risco de milissegundos da chamada da função".
+Isso estava errado — `CREATE USER MAPPING ... OPTIONS (...)` é DDL que grava a opção PERMANENTEMENTE no
+catálogo, não uma variável de sessão, e o dono do mapeamento (decisão 3, abaixo) era sempre `session_user`,
+o MESMO papel de login compartilhado por TODOS os inquilinos (ADR 0001). Qualquer sessão autenticada de
+qualquer inquilino lia a senha de qualquer outra, para sempre, via `SELECT umoptions FROM pg_user_mappings`
+(prova em `tests/api/adversario/test_l0_fonte_registrada_credencial.py`, determinística, sem precisar de
+Postgres externo real). Conserto: o USER MAPPING (e a VIEW final, que deixa de ser `security_invoker`)
+passam a pertencer a um papel Postgres NOLOGIN por INQUILINO (`plat_fdw_<slug>`), nunca concedido a
+`plat_app`/`plat_t<trilha>_app` — o mesmo padrão de "view dona ≠ view consultante" já medido e registrado em
+`20260906T15521aa_acervo_publicacao.sql`. Isto não é isolamento de dado por papel de banco (ADR 0001
+continua valendo para a FILTRAGEM de linha, feita pelo `WHERE plat.tenant_atual() = <tenant_id>` já embutido
+na view) — `plat_fdw_<slug>` é só um contêiner de credencial que nenhuma sessão de aplicação assume.
 
 **3. `session_user`, nunca `plat_app` hardcoded.** A primeira versão da função gravava `CREATE USER MAPPING
 FOR plat_app SERVER ...` — quebrou nas bases de trilha, onde o papel de aplicação chama
 `plat_t<trilha>_app`, não `plat_app` (achado rodando o e2e contra a base da própria trilha: `SECURITY
 DEFINER` troca `current_user` para o DONO da função, mas `session_user` continua sendo quem chamou). Trocado
-para `session_user` em toda parte que precisa do papel que vai USAR a tabela (`CREATE/ALTER USER MAPPING`,
-`GRANT USAGE ON FOREIGN SERVER`, `GRANT SELECT ON VIEW`) — funciona igual em produção (`plat_app`) e em
-qualquer base de trilha, sem precisar saber o nome do papel de antemão.
+para `session_user` em toda parte que precisa do papel que vai USAR a tabela — funciona igual em produção
+(`plat_app`) e em qualquer base de trilha, sem precisar saber o nome do papel de antemão. **Atualizado no
+turno 9** (ver "CORRIGIDO" acima): `session_user` continua sendo quem recebe `GRANT SELECT ON VIEW` (é quem
+de fato consulta), mas `CREATE/ALTER USER MAPPING` e `GRANT USAGE ON FOREIGN SERVER` passaram do papel de
+login compartilhado (`session_user`) para o papel-contêiner por inquilino (`plat_fdw_<slug>`) — o motivo
+original desta decisão (não hardcodar `plat_app`) continua satisfeito, porque `plat_fdw_<slug>` é derivado do
+`slug` do inquilino, nunca do nome do papel de login.
 
 **4. `tenant_id`/RLS "via view", porque uma `FOREIGN TABLE` não aceita política de RLS sobre uma coluna que a
 tabela remota nunca tem.** A `VIEW` que embrulha a `FOREIGN TABLE` injeta `tenant_id` como CONSTANTE (o
