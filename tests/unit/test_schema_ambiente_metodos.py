@@ -13,7 +13,7 @@ sobrescrito na classe. Método novo em uso sem sobrescrita reprova aqui, não em
 import re
 from pathlib import Path
 
-from app.schema_ambiente import CursorSchemaAmbiente, reescrever_schema
+from app.schema_ambiente import CursorSchemaAmbiente, MixinReescritaSchema, reescrever_schema
 
 ROOT = Path(__file__).resolve().parents[2]
 # Métodos do cursor psycopg2 que levam texto de SQL ao servidor.
@@ -31,7 +31,12 @@ def _usados_em_app() -> set[str]:
 
 
 def test_todo_metodo_de_cursor_usado_no_app_reescreve_o_schema():
-    faltando = sorted(m for m in _usados_em_app() if m not in vars(CursorSchemaAmbiente))
+    # `vars(CursorSchemaAmbiente)` sozinho é raso: desde ceeb7ccc6 (restauração de MixinReescritaSchema)
+    # execute/executemany/callproc/mogrify/copy_expert moram no MIXIN, não na classe final — `vars()` não
+    # percorre a MRO e via todos como "não sobrescritos", mesmo funcionando (a classe herda o mixin ANTES
+    # do cursor do psycopg2, `super()` do mixin cai certo). Soma os dois `__dict__` em vez de só um.
+    sobrescritos = set(vars(CursorSchemaAmbiente)) | set(vars(MixinReescritaSchema))
+    faltando = sorted(m for m in _usados_em_app() if m not in sobrescritos)
     assert faltando == [], faltando
 
 
