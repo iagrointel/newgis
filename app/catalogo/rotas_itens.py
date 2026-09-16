@@ -703,7 +703,9 @@ def metadado_obter(id: str, estilo: str | None = None, auth: Auth = autenticado(
 
 
 @router.post("/api/itens/{id}/metadado/validar", openapi_extra=EDITAR)
-def metadado_validar_rota(id: str, corpo: MetadadoEditorEntrada, auth: Auth = autenticado()):
+def metadado_validar_rota(
+    id: str, corpo: MetadadoEditorEntrada, auth: Auth = autenticado(escopo_token="catalogo:escrever")
+):
     """Só a lista do que falta (essencial/completo), sem gravar — o botão "Validar" do editor. `item` é uma
     prévia local (título/resumo/tags/créditos/termos de uso propostos), nunca escrita no banco aqui."""
     with db.db(auth.contexto()) as cur:
@@ -727,7 +729,10 @@ def metadado_validar_rota(id: str, corpo: MetadadoEditorEntrada, auth: Auth = au
 
 
 @router.put("/api/itens/{id}/metadado", openapi_extra=EDITAR)
-def metadado_salvar(id: str, request: Request, corpo: MetadadoEditorEntrada, auth: Auth = autenticado()):
+def metadado_salvar(
+    id: str, request: Request, corpo: MetadadoEditorEntrada,
+    auth: Auth = autenticado(escopo_token="catalogo:escrever"),
+):
     """Grava a parte própria do metadado (`plat.item.metadado_iso`) e, se vier `item`, os campos sincronizados
     pelo MESMO caminho de `PUT/PATCH /api/itens/{id}` (`editar_item`) — nunca um segundo lugar de verdade para
     título/resumo/tags. Estrutura inválida (esquema, datas fora de ordem, corpo grande) = 422 com o caminho de
