@@ -36,12 +36,26 @@ def _jsonb(valor):
     return psycopg2.extras.Json(valor, dumps=lambda v: json.dumps(v, ensure_ascii=False, default=str))
 
 
-def _pg_conninfo() -> str:
+def _pg_conninfo(tenant_id: int | None = None, usuario_id: int | None = None) -> str:
     """`PG:...` para o `ogr2ogr` a partir de PLAT_DSN (o mesmo `plat_app` do pool da API; ADR 0005 seção 6.1:
-    'ogr2ogr conecta como plat_app')."""
+    'ogr2ogr conecta como plat_app'). `tenant_id`/`usuario_id` (item L6-02-o, exportação): a conexão do ogr2ogr
+    é NOVA e SEM as variáveis de sessão que `app.db.db(ctx)` prepara a cada transação — sem elas, `SELECT` numa
+    tabela de camada com `FORCE ROW LEVEL SECURITY` devolve ZERO linhas (medido: `ogr2ogr` "concluiu" a
+    exportação com 0 feições, silenciosamente, antes desta correção). `options='-c plat.tenant_id=... -c
+    plat.usuario_id=...'` no `conninfo` do libpq aplica os mesmos GUCs que `plat.tenant_atual()`/`usuario_atual()`
+    leem, definidos já na abertura da conexão (equivalente ao `SET LOCAL` da API, só que via startup packet).
+    Achado 16/09 (wt/f2fixapi2): a fusão dos ramos tinha revertido esta assinatura para o `_pg_conninfo()` sem
+    parâmetros enquanto `app/ingestao/exportar.py` continuava chamando com os dois argumentos — TypeError em
+    toda exportação (`ingestao.exportar_camada`/`ingestao.exportar_inquilino`), sempre no mesmo passo."""
     partes = psycopg2.extensions.parse_dsn(settings.PLAT_DSN)
     pares = " ".join(f"{k}={v}" for k, v in partes.items() if k in ("dbname", "host", "port", "user", "password"))
-    return f"PG:{pares} application_name=plat-ingestao"
+    sufixo = ""
+    if tenant_id is not None:
+        opcoes = f"-c plat.tenant_id={int(tenant_id)}"
+        if usuario_id is not None:
+            opcoes += f" -c plat.usuario_id={int(usuario_id)}"
+        sufixo = f" options='{opcoes}'"
+    return f"PG:{pares} application_name=plat-ingestao{sufixo}"
 
 
 def _envoltoria_nao_degenerada(xmin: float, ymin: float, xmax: float, ymax: float) -> list[float]:
