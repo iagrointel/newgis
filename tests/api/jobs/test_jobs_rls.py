@@ -79,8 +79,12 @@ def test_usuario_nao_admin_so_ve_os_proprios_jobs(env, cliente_demo, sessao_demo
             assert editor.get(f"/api/jobs/{job_de_demo['id']}").status_code == 404
             # prova.* virou admin-only em 10/09 (achado do QA, 98009206c) — editor precisa de um tipo que
             # continue em perfil_minimo="editor" para provar RLS de fila (não é sobre prova.*).
-            meu = criar_job(editor, "ferramentas.buffer",
-                            {"geometria": {"type": "Point", "coordinates": [0, 0]}, "distancia_m": 10})
+            # catalogo.exportar_lista (não ferramentas.buffer): só grava em plat.arquivo (criado_por ON
+            # DELETE SET NULL) — ferramentas.buffer grava plat.item, cujo dono_id não aceita DELETE
+            # (p_item_apagar USING(false)) nem UPDATE fora do fluxo de transferência de dono
+            # (gatilho tg_item_antes: dono_so_por_transferencia) e travava o apagar_usuario_temporario
+            # do finally abaixo com ForeignKeyViolation.
+            meu = criar_job(editor, "catalogo.exportar_lista", {"formato": "csv"})
             assert meu["usuario_id"] == uid and meu["usuario_login"] == login
             ids = {j["id"] for j in editor.get("/api/jobs", params={"limite": 200}).json()["itens"]}
             assert meu["id"] in ids and job_de_demo["id"] not in ids
