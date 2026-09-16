@@ -134,17 +134,37 @@ def _cota_bytes_tenant(cur, tenant_id: int) -> int:
     return int(r["cota_bytes"]) if r else 21474836480
 
 
+COTA_OBJETOS_PADRAO = 200000  # mesmo DEFAULT de plat.tenant.cota_objetos (migração 20260906T1547/20260908T1255)
+
+
+def _cota_objetos_tenant(cur, tenant_id: int) -> int:
+    cur.execute("SELECT cota_objetos FROM plat.tenant WHERE id = %s", (tenant_id,))
+    r = cur.fetchone()
+    return int(r["cota_objetos"]) if r and r["cota_objetos"] else COTA_OBJETOS_PADRAO
+
+
 def garantir_bucket(cur, tenant_id: int | None = None, tenant_slug: str | None = None) -> dict:
-    """Idempotente: cria bucket + 2 chaves (RW, RO) + cota no Garage na 1ª chamada; nas seguintes só confere e
-    resincroniza a cota se `tenant.cota_bytes` mudou desde a última vez. Devolve a linha de `plat.arquivo_bucket`."""
+    """Idempotente: cria bucket + 2 chaves (RW, RO) + cota (bytes E objetos, item L1-01-d) no Garage na 1ª
+    chamada; nas seguintes só confere e resincroniza se `tenant.cota_bytes`/`cota_objetos` mudaram desde a
+    última vez. Devolve a linha de `plat.arquivo_bucket`.
+
+    ACHADO 16/09 (fusão wt/uniao 31a35ae57 reabriu): esta função tinha ganhado `web`/`forcar` e uma resincronia
+    de `web_ativo` junto (item L1-01-d); a fusão reverteu para a forma anterior a isso. Restaurada aqui só a
+    parte de cota de OBJETOS (o `max_objetos` nunca chegava ao Garage — `test_3b` media que a cota de objetos
+    não era imposta); `web`/`forcar` ficam fora do escopo deste conserto — quem precisa do endpoint web
+    (`semear_bucket`) trata isso por cima, sem mudar a assinatura desta função."""
     if tenant_id is None or tenant_slug is None:
         tenant_id, tenant_slug = _tenant_atual(cur)
     linha = _linha_bucket(cur, tenant_id)
     cota_atual = _cota_bytes_tenant(cur, tenant_id)
+    cota_objetos_atual = _cota_objetos_tenant(cur, tenant_id)
     if linha is not None:
-        if int(linha["cota_bytes"]) != cota_atual:
-            _admin().definir_cota(linha["bucket_id"], cota_atual)
-            cur.execute("SELECT plat.arquivo_bucket_cota_atualizar(%s, %s)", (tenant_id, cota_atual))
+        if int(linha["cota_bytes"]) != cota_atual or int(linha["cota_objetos"]) != cota_objetos_atual:
+            _admin().definir_cota(linha["bucket_id"], cota_atual, cota_objetos_atual)
+            cur.execute(
+                "SELECT plat.arquivo_bucket_cotas_atualizar(%s, %s, %s, %s)",
+                (tenant_id, cota_atual, cota_objetos_atual, bool(linha["web_ativo"])),
+            )
             linha = _linha_bucket(cur, tenant_id)
         return linha
     admin = _admin()
@@ -157,7 +177,7 @@ def garantir_bucket(cur, tenant_id: int | None = None, tenant_slug: str | None =
         admin.permitir(bucket["id"], rw["accessKeyId"], ler=True, escrever=True, dono=True)
     if ro["accessKeyId"] not in ids_permitidos:
         admin.permitir(bucket["id"], ro["accessKeyId"], ler=True, escrever=False, dono=False)
-    admin.definir_cota(bucket["id"], cota_atual)
+    admin.definir_cota(bucket["id"], cota_atual, cota_objetos_atual)
     # criar_chave é idempotente por NOME (ClienteAdmin.criar_chave): se a chave já existia, a resposta não traz
     # `secretAccessKey` de volta (o Garage só devolve o segredo na criação) — nesse caso o segredo já gravado em
     # plat.arquivo_bucket é o único que vale; só entra aqui na 1ª vez que este bucket é criado, então sempre é novo
@@ -174,8 +194,49 @@ def garantir_bucket(cur, tenant_id: int | None = None, tenant_slug: str | None =
             cota_atual,
         ),
     )
+    cur.execute(
+        "SELECT plat.arquivo_bucket_cotas_atualizar(%s, %s, %s, %s)",
+        (tenant_id, cota_atual, cota_objetos_atual, False),
+    )
     log.info("objetos: bucket %s criado para tenant_id=%s", alias, tenant_id)
     return _linha_bucket(cur, tenant_id)
+
+
+def semear_bucket(cur, tenant_id: int, tenant_slug: str, *, web: bool = True) -> tuple[dict, list[str]]:
+    """Passo de instalação (install.sh seção g3, item L1-01-d): garante balde/chaves/cotas do inquilino via
+    `garantir_bucket` (que não mexe em `web_ativo` — ver seu docstring) e, por cima, aplica o estado de `web`
+    pedido (endpoint web do balde, ADR 20260908T1255). Devolve `(linha, mudanças)` — lista vazia na 2ª execução
+    (é o que prova a idempotência, `tests/api/test_garage_inquilino.py`). Depois de sincronizar, LÊ o balde de
+    volta pela Admin API e confere que cotas e web do Garage batem com o banco; divergência é corrigida e
+    registrada em `mudancas`, nunca silenciada."""
+    antes = _linha_bucket(cur, tenant_id)
+    linha = garantir_bucket(cur, tenant_id, tenant_slug)
+    mudancas: list[str] = []
+    if antes is None:
+        mudancas.append("balde, chaves RW/RO e cotas criados")
+    else:
+        for campo in ("cota_bytes", "cota_objetos"):
+            if antes[campo] != linha[campo]:
+                mudancas.append(f"{campo}: {antes[campo]} -> {linha[campo]}")
+    if bool(linha["web_ativo"]) != bool(web):
+        _admin().definir_web(linha["bucket_id"], bool(web))
+        cur.execute(
+            "SELECT plat.arquivo_bucket_cotas_atualizar(%s, %s, %s, %s)",
+            (tenant_id, int(linha["cota_bytes"]), int(linha["cota_objetos"]), bool(web)),
+        )
+        mudancas.append(f"web_ativo: {bool(linha['web_ativo'])} -> {bool(web)}")
+        linha = _linha_bucket(cur, tenant_id)
+    info = _admin().info_bucket(linha["bucket_id"])
+    cotas = info.get("quotas") or {}
+    if int(cotas.get("maxSize") or 0) != int(linha["cota_bytes"]) or int(cotas.get("maxObjects") or 0) != int(
+        linha["cota_objetos"]
+    ):
+        _admin().definir_cota(linha["bucket_id"], int(linha["cota_bytes"]), int(linha["cota_objetos"]))
+        mudancas.append("cota reaplicada no Garage (divergia do banco)")
+    if bool(info.get("websiteAccess")) != bool(linha["web_ativo"]):
+        _admin().definir_web(linha["bucket_id"], bool(linha["web_ativo"]))
+        mudancas.append("web reaplicado no Garage (divergia do banco)")
+    return linha, mudancas
 
 
 def _resolver_bucket_por_slug(tenant_slug: str) -> dict | None:
@@ -444,6 +505,81 @@ def apagar(chave: str) -> bool:
                 (bucket["tenant_id"], chave),
             )
     return existia
+
+
+def _cotas_tenant(cur, tenant_id: int) -> tuple[int, int]:
+    """(cota_bytes, cota_objetos) do inquilino — `plat.tenant` é a autoridade; o balde só espelha."""
+    cur.execute("SELECT cota_bytes, cota_objetos FROM plat.tenant WHERE id = %s", (tenant_id,))
+    r = cur.fetchone()
+    if r is None:
+        return 21474836480, COTA_OBJETOS_PADRAO
+    return int(r["cota_bytes"]), int(r["cota_objetos"] or COTA_OBJETOS_PADRAO)
+
+def uso_detalhado(tenant_slug: str) -> dict:
+    """`{bytes_usados, objetos_usados, cota_bytes, cota_objetos, web_ativo}` lidos do PRÓPRIO Garage
+    (GetBucketInfo: contagem exata dele, não uma soma nossa) e do registro do balde; zeros e `None` quando o
+    inquilino ainda não tem balde."""
+    bucket = _resolver_bucket_por_slug(tenant_slug)
+    if bucket is None:
+        return {"bytes_usados": 0, "objetos_usados": 0, "cota_bytes": None, "cota_objetos": None, "web_ativo": False}
+    info = _admin().info_bucket(bucket["bucket_id"])
+    return {
+        "bytes_usados": int(info.get("bytes", 0)),
+        "objetos_usados": int(info.get("objects", 0)),
+        "cota_bytes": int(bucket["cota_bytes"]),
+        "cota_objetos": int(bucket["cota_objetos"]),
+        "web_ativo": bool(bucket["web_ativo"]),
+    }
+
+def apagar_bucket_do_inquilino(cur, tenant_id: int) -> dict:
+    """Desfaz o que `garantir_bucket` fez: esvazia o balde, apaga as duas chaves de acesso, apaga o balde no
+    Garage e a linha de `plat.arquivo_bucket`. Existe porque apagar o inquilino (`plat.inquilino_apagar`) só
+    limpa o banco — sem isto o balde e as chaves ficariam órfãos no Garage. Idempotente: sem linha, devolve zeros.
+    Devolve `{objetos, bytes}` liberados."""
+    linha = _linha_bucket(cur, tenant_id)
+    if linha is None:
+        return {"objetos": 0, "bytes": 0}
+    admin = _admin()
+    cli = _cliente(linha)
+    alias = linha["bucket_alias"]
+    apagados = 0
+    liberados = 0
+    for o in cli.listar(alias, max_chaves=1000):
+        cli.delete(alias, o["chave"])
+        apagados += 1
+        liberados += int(o["bytes"])
+    for chave_id in (linha["chave_rw_id"], linha["chave_ro_id"]):
+        try:
+            admin.apagar_chave(chave_id)
+        except ErroGarage:
+            log.warning("objetos: chave %s já não existia no Garage", chave_id)
+    try:
+        admin.apagar_bucket(linha["bucket_id"])
+    except ErroGarage:
+        log.warning("objetos: balde %s já não existia no Garage", linha["bucket_id"])
+    cur.execute("DELETE FROM plat.arquivo_bucket WHERE tenant_id = %s", (tenant_id,))
+    cur.execute("UPDATE plat.arquivo SET apagado_em = now() WHERE tenant_id = %s AND apagado_em IS NULL", (tenant_id,))
+    log.info("objetos: balde %s apagado (%s objeto(s), %s bytes)", alias, apagados, liberados)
+    return {"objetos": apagados, "bytes": liberados}
+
+
+def conferir_cotas(bucket: dict, bytes_novos: int, objetos_novos: int = 1) -> dict:
+    """Checagem PRÉVIA (mensagem legível antes de o Garage recusar): uso atual + o que vai entrar contra as duas
+    cotas do balde. Devolve `{bytes, objetos}` usados. O Garage recusa de qualquer forma se esta checagem tiver
+    bug (ADR 0006 seção 2; a recusa dele chega traduzida por `CotaGarage`)."""
+    info = _admin().info_bucket(bucket["bucket_id"])
+    usado = int(info.get("bytes", 0))
+    objetos_atuais = int(info.get("objects", 0))
+    if usado + bytes_novos > int(bucket["cota_bytes"]):
+        raise CotaExcedida(
+            f"cota de {bucket['cota_bytes']} bytes excedida: uso atual {usado}, objeto de {bytes_novos} bytes"
+        )
+    if objetos_atuais + objetos_novos > int(bucket["cota_objetos"]):
+        raise CotaExcedida(
+            f"cota de {bucket['cota_objetos']} objetos excedida: uso atual {objetos_atuais}, "
+            f"mais {objetos_novos} objeto(s)"
+        )
+    return {"bytes": usado, "objetos": objetos_atuais}
 
 
 def uso(tenant_slug: str) -> int:
