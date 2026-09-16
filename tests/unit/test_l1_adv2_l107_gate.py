@@ -23,25 +23,33 @@ ROOT = Path(__file__).resolve().parents[2]
 MEDIDAS = ROOT / "tests" / "medidas"
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "L1-07 CAI: o portao pede o arquivo literal tests/medidas/L1-07.json; o commit de fechamento "
-    "gravou em tests/medidas/L1-07-mosaico-por-colecao-e-pegadas.json (nome diferente do exigido)."
-))
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "L1-07 CAI: o portao pede o arquivo literal tests/medidas/L1-07.json; o commit de fechamento "
+        "gravou em tests/medidas/L1-07-mosaico-por-colecao-e-pegadas.json (nome diferente do exigido)."
+    ),
+)
 def test_arquivo_de_medidas_tem_o_nome_literal_do_portao():
     assert (MEDIDAS / "L1-07.json").exists(), (
         "tests/medidas/L1-07.json (nome literal do portão) não existe; só existe "
-        "tests/medidas/L1-07-mosaico-por-colecao-e-pegadas.json")
+        "tests/medidas/L1-07-mosaico-por-colecao-e-pegadas.json"
+    )
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "L1-07 CAI: a medicao commitada como prova de fechamento usa cenas SINTETICAS ('grade sintetica "
-    "3x2', ver campo 'comando' de cada entrada em tests/medidas/L1-07-mosaico-por-colecao-e-pegadas."
-    "json), nao 'Sentinel-2 abertas' como o portao exige verbatim ('mosaico de >= 6 cenas Sentinel-2 "
-    "abertas')."
-))
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "L1-07 CAI: a medicao commitada como prova de fechamento usa cenas SINTETICAS ('grade sintetica "
+        "3x2', ver campo 'comando' de cada entrada em tests/medidas/L1-07-mosaico-por-colecao-e-pegadas."
+        "json), nao 'Sentinel-2 abertas' como o portao exige verbatim ('mosaico de >= 6 cenas Sentinel-2 "
+        "abertas')."
+    ),
+)
 def test_medida_de_tile_usa_cenas_sentinel2_abertas_de_verdade():
     dados = json.loads((MEDIDAS / "L1-07-mosaico-por-colecao-e-pegadas.json").read_text(encoding="utf-8"))
     comandos = " ".join(v.get("comando", "") for v in dados.get("medidas", {}).values())
     assert "sintética" not in comandos and "sintetica" not in comandos.lower(), (
-        f"a medição usa dado sintético, não Sentinel-2 aberto de verdade: {comandos[:200]}...")
+        f"a medição usa dado sintético, não Sentinel-2 aberto de verdade: {comandos[:200]}..."
+    )
     assert "sentinel" in comandos.lower(), comandos

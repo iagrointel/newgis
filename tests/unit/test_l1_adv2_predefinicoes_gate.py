@@ -26,12 +26,15 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "L1-02-f CAI: docs/esquemas/renderizacao-v1.json so aceita colormap como nome de catalogo "
-    "(string, ate 40 chars); a hipotese do item promete tambem 'colormap explicito por intervalo/"
-    "valor' (um objeto), que nao existe no esquema. Sem isso a refutacao exigida ('colormap de "
-    "70.000 entradas') e impossivel de testar contra a capacidade real."
-))
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "L1-02-f CAI: docs/esquemas/renderizacao-v1.json so aceita colormap como nome de catalogo "
+        "(string, ate 40 chars); a hipotese do item promete tambem 'colormap explicito por intervalo/"
+        "valor' (um objeto), que nao existe no esquema. Sem isso a refutacao exigida ('colormap de "
+        "70.000 entradas') e impossivel de testar contra a capacidade real."
+    ),
+)
 def test_esquema_aceita_colormap_explicito_por_intervalo():
     schema = json.loads((ROOT / "docs" / "esquemas" / "renderizacao-v1.json").read_text(encoding="utf-8"))
     colormap_schema = schema["properties"]["colormap"]
@@ -39,19 +42,25 @@ def test_esquema_aceita_colormap_explicito_por_intervalo():
     if isinstance(tipos_aceitos, str):
         tipos_aceitos = [tipos_aceitos]
     assert "object" in (tipos_aceitos or []) or "anyOf" in colormap_schema or "oneOf" in colormap_schema, (
-        f"colormap so aceita {colormap_schema} — nenhuma forma de objeto/intervalo explicito existe")
+        f"colormap so aceita {colormap_schema} — nenhuma forma de objeto/intervalo explicito existe"
+    )
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "L1-02-f CAI: o proprio docstring de tests/api/imagens/test_predefinicoes.py admite que a prova "
-    "pixel a pixel contra imagem de referencia 'esta no relatorio do turno, nao aqui' — o portao "
-    "exige essa prova como teste de imagem por pixel de referencia, committed e reproduzivel."
-))
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "L1-02-f CAI: o proprio docstring de tests/api/imagens/test_predefinicoes.py admite que a prova "
+        "pixel a pixel contra imagem de referencia 'esta no relatorio do turno, nao aqui' — o portao "
+        "exige essa prova como teste de imagem por pixel de referencia, committed e reproduzivel."
+    ),
+)
 def test_teste_de_pixel_de_referencia_das_6_predefinicoes_esta_commitado():
     texto = (ROOT / "tests" / "api" / "imagens" / "test_predefinicoes.py").read_text(encoding="utf-8")
     assert "está no relatório do turno, não aqui" not in texto, (
         "o próprio arquivo de teste admite que a prova pixel-a-pixel de referência não está "
-        "commitada, só num relatório de turno não reproduzível")
+        "commitada, só num relatório de turno não reproduzível"
+    )
     assert any(nome in texto for nome in ("imagem_de_referencia", "pixel_de_referencia", "referencia.png")), (
         "nenhuma função/asset de imagem de referência (para as 6 predefinições de fábrica) foi "
-        "encontrada no arquivo de teste do item")
+        "encontrada no arquivo de teste do item"
+    )

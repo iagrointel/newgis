@@ -25,22 +25,29 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "L1-02-e CAI: docs/PRO_CONEXAO.md (exigido literalmente pelo portao, 'passo a passo do .acs') "
-    "nao existe no repositorio."
-))
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "L1-02-e CAI: docs/PRO_CONEXAO.md (exigido literalmente pelo portao, 'passo a passo do .acs') "
+        "nao existe no repositorio."
+    ),
+)
 def test_documento_pro_conexao_existe():
     assert (ROOT / "docs" / "PRO_CONEXAO.md").exists(), (
         "docs/PRO_CONEXAO.md não existe — a Porta 2 do item (endpoint S3 para o ArcGIS Pro) não tem "
-        "o documento de passo a passo que o portão exige")
+        "o documento de passo a passo que o portão exige"
+    )
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "L1-02-e CAI: nao existe nenhuma rota que emita uma chave S3 so-leitura por inquilino para uso "
-    "externo (Porta 2 da hipotese do item). app/garage.py tem ClienteAdmin.criar_chave/permitir "
-    "(ler/escrever/dono) mas nenhuma rota de app/imagens ou app/rotas_arquivos chama esse caminho "
-    "para o inquilino final — o Garage so e usado como armazenamento INTERNO da propria aplicacao."
-))
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "L1-02-e CAI: nao existe nenhuma rota que emita uma chave S3 so-leitura por inquilino para uso "
+        "externo (Porta 2 da hipotese do item). app/garage.py tem ClienteAdmin.criar_chave/permitir "
+        "(ler/escrever/dono) mas nenhuma rota de app/imagens ou app/rotas_arquivos chama esse caminho "
+        "para o inquilino final — o Garage so e usado como armazenamento INTERNO da propria aplicacao."
+    ),
+)
 def test_endpoint_s3_por_inquilino_existe():
     alvos = list((ROOT / "app").rglob("rotas_*.py")) + [ROOT / "app" / "rotas_arquivos.py"]
     achados = []
@@ -48,10 +55,14 @@ def test_endpoint_s3_por_inquilino_existe():
         if not caminho.exists():
             continue
         texto = caminho.read_text(encoding="utf-8", errors="ignore")
-        if ("s3" in texto.lower() and
-                ("somente_leitura" in texto.lower() or "so_leitura" in texto.lower()
-                 or "read_only" in texto.lower() or "readonly" in texto.lower())):
+        if "s3" in texto.lower() and (
+            "somente_leitura" in texto.lower()
+            or "so_leitura" in texto.lower()
+            or "read_only" in texto.lower()
+            or "readonly" in texto.lower()
+        ):
             achados.append(str(caminho.relative_to(ROOT)))
     assert achados, (
         "nenhuma rota expõe um endpoint/credencial S3 só-leitura por inquilino para o ArcGIS Pro "
-        "(Create Cloud Storage Connection File) — a Porta 2 do item não existe")
+        "(Create Cloud Storage Connection File) — a Porta 2 do item não existe"
+    )

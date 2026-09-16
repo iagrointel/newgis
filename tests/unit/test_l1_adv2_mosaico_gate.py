@@ -34,17 +34,21 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "L1-08 CAI: app/imagens/mosaico.py::SELECOES_PIXEL nao tem nenhuma regra ciente de nuvem/SCL "
-    "('mais recente sem nuvem' e uma das 5 regras da propria hipotese do item); nenhum teste em "
-    "tests/api/imagens/ menciona SCL."
-))
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "L1-08 CAI: app/imagens/mosaico.py::SELECOES_PIXEL nao tem nenhuma regra ciente de nuvem/SCL "
+        "('mais recente sem nuvem' e uma das 5 regras da propria hipotese do item); nenhum teste em "
+        "tests/api/imagens/ menciona SCL."
+    ),
+)
 def test_regra_mais_recente_sem_nuvem_existe():
     from app.imagens import mosaico
 
     nomes_em_portugues = {"sem_nuvem", "mais_recente_sem_nuvem", "sem_nuvem_scl"}
     assert nomes_em_portugues & set(mosaico.SELECOES_PIXEL), (
-        f"SELECOES_PIXEL = {sorted(mosaico.SELECOES_PIXEL)} nao tem variante ciente de nuvem/SCL")
+        f"SELECOES_PIXEL = {sorted(mosaico.SELECOES_PIXEL)} nao tem variante ciente de nuvem/SCL"
+    )
 
     achados = []
     for caminho in (ROOT / "tests" / "api" / "imagens").glob("*.py"):
@@ -53,12 +57,15 @@ def test_regra_mais_recente_sem_nuvem_existe():
     assert achados, "nenhum teste em tests/api/imagens/ menciona SCL (mascara de nuvem por pixel)"
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "L1-08 CAI: refutacao exigida pelo item (cenas de CRS nativos diferentes, UTM 22S e 23S, num "
-    "MESMO mosaico, alinhamento na costura <= 1px) nao tem teste. O unico arquivo com CRS misto "
-    "(mosaico_crs_diferente.zip) e usado so para provar que a INGESTAO em lote RECUSA CRS misto "
-    "(item L1-01-f), nao para medir alinhamento de mosaico composto."
-))
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "L1-08 CAI: refutacao exigida pelo item (cenas de CRS nativos diferentes, UTM 22S e 23S, num "
+        "MESMO mosaico, alinhamento na costura <= 1px) nao tem teste. O unico arquivo com CRS misto "
+        "(mosaico_crs_diferente.zip) e usado so para provar que a INGESTAO em lote RECUSA CRS misto "
+        "(item L1-01-f), nao para medir alinhamento de mosaico composto."
+    ),
+)
 def test_mosaico_com_crs_nativos_diferentes_tem_teste_de_alinhamento():
     alvo = ROOT / "tests" / "api" / "imagens" / "test_mosaico.py"
     apoio = ROOT / "tests" / "api" / "imagens" / "apoio_mosaico.py"
@@ -66,18 +73,25 @@ def test_mosaico_com_crs_nativos_diferentes_tem_teste_de_alinhamento():
     marcas_utm = ("32722", "32723", "31982", "31983", "22S", "23S")
     assert any(m in texto for m in marcas_utm), (
         "nenhuma referência a duas zonas UTM distintas em test_mosaico.py/apoio_mosaico.py — a "
-        "refutação de CRS misto num mosaico composto nunca foi tentada em código")
+        "refutação de CRS misto num mosaico composto nunca foi tentada em código"
+    )
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "L1-08 CAI (documentacao): docs/PARIDADE.md:688 ainda diz que as regras de mosaicRule (exceto "
-    "'first') sao 'o item irmao L1-08, nao construido' / 'fora (L1-08)', mas o proprio ledger deste "
-    "brief marca L1-08 ENTREGUE (commit 1289cd598) no MESMO dia (2026-09-10) que a data registrada "
-    "nesta linha do documento. O portao pede a tabela com os 7 metodos Esri marcados individualmente."
-))
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "L1-08 CAI (documentacao): docs/PARIDADE.md:688 ainda diz que as regras de mosaicRule (exceto "
+        "'first') sao 'o item irmao L1-08, nao construido' / 'fora (L1-08)', mas o proprio ledger deste "
+        "brief marca L1-08 ENTREGUE (commit 1289cd598) no MESMO dia (2026-09-10) que a data registrada "
+        "nesta linha do documento. O portao pede a tabela com os 7 metodos Esri marcados individualmente."
+    ),
+)
 def test_paridade_md_reflete_l1_08_entregue():
     texto = (ROOT / "docs" / "PARIDADE.md").read_text(encoding="utf-8")
-    linha = next(l for l in texto.splitlines() if "regra de seleção de pixel" in l.lower()
-                 or "regra de selecao de pixel" in l.lower())
+    linha = next(
+        linha
+        for linha in texto.splitlines()
+        if "regra de seleção de pixel" in linha.lower() or "regra de selecao de pixel" in linha.lower()
+    )
     assert "não construído" not in linha and "nao construido" not in linha, linha
     assert "fora (L1-08)" not in linha, linha
