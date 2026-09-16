@@ -58,6 +58,18 @@ def contar_no_arquivo(caminho: Path, formato: str) -> int:
             return int(con.execute("SELECT count(*) FROM read_parquet(?)", [str(caminho)]).fetchone()[0])
         finally:
             con.close()
+    if formato == "filegdb":
+        # o OpenFileGDB não lê pelo /vsizip do GDAL (medido em 16/09: "Read-write random access not
+        # supported for /vsizip") — extrai de verdade antes de reabrir, como quem baixa o zip faria.
+        from app.exportacao.motor import extrair_filegdb
+
+        with extrair_filegdb(caminho, FORMATOS["filegdb"].caminho_interno) as alvo:
+            r = subprocess.run(["ogrinfo", "-so", "-al", alvo], capture_output=True, text=True, timeout=600)
+            assert r.returncode == 0, f"ogrinfo não reabriu {caminho.name}: {r.stderr[:400]}"
+            contagens = [int(li.split(":", 1)[1]) for li in r.stdout.splitlines()
+                         if li.strip().startswith("Feature Count:")]
+        assert contagens, f"ogrinfo não informou Feature Count para {caminho.name}"
+        return sum(contagens)
     alvo = str(caminho)
     if formato == "shapefile":
         alvo = f"/vsizip/{caminho}"

@@ -20,11 +20,13 @@ Três decisões de segurança que este módulo carrega:
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import zipfile
 from pathlib import Path
@@ -128,6 +130,7 @@ def argumentos_ogr2ogr(
     nome_camada: str,
     srid_saida: int | None,
     codificacao: str,
+    tipo_geometria: str | None = None,
 ) -> list[str]:
     argv = ["ogr2ogr", "-f", formato.driver, str(destino), conninfo, "-sql", sql, "-nln", nome_camada]
     alvo_crs = crs_de_saida(formato, srid_saida)
@@ -141,6 +144,12 @@ def argumentos_ogr2ogr(
         argv += ["-lco", f"ENCODING={codificacao}"]
     if formato.nome == "csv":
         argv += ["-lco", "GEOMETRY=AS_XY", "-lco", "STRING_QUOTING=IF_AMBIGUOUS"]
+    if formato.nome == "filegdb" and tipo_geometria:
+        # medido nesta máquina em 16/09: o OpenFileGDB recusa a "Unknown (any)" que o driver PG devolve para
+        # uma camada vinda de `-sql` (nenhum tipo único inferido) — "ERROR 6: Unsupported geometry type" — e
+        # exige o tipo explícito. Os valores de `dados.geometria` (Point, MultiPolygon, ...) já são os nomes
+        # OGC que o `-nlt` do GDAL entende, só maiúsculos.
+        argv += ["-nlt", tipo_geometria.upper()]
     return argv
 
 
@@ -173,6 +182,30 @@ def zipar_arquivo(origem: Path, destino_zip: Path, nome_interno: str) -> None:
         z.write(origem, nome_interno)
 
 
+def zipar_diretorio_aninhado(origem: Path, destino_zip: Path, nome_interno: str) -> None:
+    """Zip recursivo do CONTEÚDO de `origem`, preservado dentro de uma pasta `nome_interno` no zip — diferente
+    de `zipar_diretorio` (shapefile), que solta os arquivos na raiz: a File Geodatabase é uma pasta e o
+    usuário que baixa o zip precisa achar essa pasta ao extrair (não arquivos soltos)."""
+    with zipfile.ZipFile(destino_zip, "w", zipfile.ZIP_DEFLATED) as z:
+        for arquivo in sorted(origem.rglob("*")):
+            if arquivo.is_file():
+                z.write(arquivo, f"{nome_interno}/{arquivo.relative_to(origem)}")
+
+
+@contextlib.contextmanager
+def extrair_filegdb(caminho_zip: Path, nome_interno: str):
+    """Reabertura da File Geodatabase zipada: EXTRAI de verdade para um diretório temporário e devolve o
+    caminho da pasta `.gdb`. Medido nesta máquina em 16/09: ao contrário de shapefile/KML, o OpenFileGDB não
+    lê pelo `/vsizip` do GDAL — `ogrinfo -al /vsizip/<zip>/dados.gdb` falha com "ERROR 1: Read-write random
+    access not supported for /vsizip" (o formato precisa de acesso posicional real, que a camada de zip não
+    dá). Quem baixa o arquivo extrai com o sistema operacional antes de abrir; a conferência do lado de cá
+    faz o mesmo. Diretório temporário sempre apagado ao sair do bloco."""
+    with tempfile.TemporaryDirectory(prefix="plat-filegdb-") as tmp:
+        with zipfile.ZipFile(caminho_zip) as z:
+            z.extractall(tmp)
+        yield str(Path(tmp) / nome_interno)
+
+
 def _argv_parquet(*args: str) -> list[str]:
     return [sys.executable, "-m", "app.exportacao.parquet_cli", *args]
 
@@ -203,16 +236,7 @@ def gpkg_para_geoparquet(origem_gpkg: Path, destino: Path, memoria_mb: int, exec
     )
 
 
-def contar_feicoes(caminho: Path, formato: Formato, executar=None) -> int | None:
-    """Contagem lida do ARQUIVO GERADO (não do banco): é o que prova que o arquivo saiu com o que se pediu.
-    `None` quando a leitura não foi possível — nunca 0 por omissão."""
-    if formato.nome == "geoparquet":
-        return _rodar_parquet(_argv_parquet("contar", str(caminho)), executar)
-    alvo = str(caminho)
-    if formato.nome == "shapefile":
-        alvo = f"/vsizip/{caminho}"
-    elif formato.nome == "kmz":
-        alvo = f"/vsizip/{caminho}/doc.kml"
+def _contar_via_ogrinfo(alvo: str) -> int | None:
     r = subprocess.run(["ogrinfo", "-so", "-al", alvo], capture_output=True, text=True, timeout=300)
     if r.returncode != 0:
         return None
@@ -223,6 +247,22 @@ def contar_feicoes(caminho: Path, formato: Formato, executar=None) -> int | None
             total += int(linha.split(":", 1)[1].strip())
             achou = True
     return total if achou else None
+
+
+def contar_feicoes(caminho: Path, formato: Formato, executar=None) -> int | None:
+    """Contagem lida do ARQUIVO GERADO (não do banco): é o que prova que o arquivo saiu com o que se pediu.
+    `None` quando a leitura não foi possível — nunca 0 por omissão."""
+    if formato.nome == "geoparquet":
+        return _rodar_parquet(_argv_parquet("contar", str(caminho)), executar)
+    if formato.nome == "filegdb":
+        with extrair_filegdb(caminho, formato.caminho_interno) as alvo:
+            return _contar_via_ogrinfo(alvo)
+    alvo = str(caminho)
+    if formato.nome == "shapefile":
+        alvo = f"/vsizip/{caminho}"
+    elif formato.nome == "kmz":
+        alvo = f"/vsizip/{caminho}/doc.kml"
+    return _contar_via_ogrinfo(alvo)
 
 
 def tamanho(caminho: Path) -> int:

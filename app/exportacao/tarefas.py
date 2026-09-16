@@ -126,10 +126,16 @@ def exportacao_gerar(ctx, exportacao_id: uuid.UUID) -> dict:
             alvo = trabalho / "saida.kml"
         elif formato.nome == "geoparquet":
             alvo = trabalho / "saida_intermediaria.gpkg"
+        elif formato.nome == "filegdb":
+            # o driver OpenFileGDB recusa criar o diretório se o nome não terminar em ".gdb" ("Extension of
+            # the directory should be gdb", medido nesta máquina em 16/09) — "saida_dir" sem extensão falha
+            # sempre, driver presente ou não.
+            alvo = trabalho / "saida_dir.gdb"
         gerados.append(alvo)
         argv = motor.argumentos_ogr2ogr(
             formato, destino=alvo, conninfo=motor.conninfo_pg(ctx.tenant_id, ctx.usuario_id), sql=sql,
             nome_camada=Path(nome_arquivo).stem, srid_saida=srid_saida, codificacao=codificacao,
+            tipo_geometria=dados.get("geometria"),
         )
         (resultado, ms_ogr) = motor.cronometrar(ctx.subprocesso, argv)
         avisos = [ln.strip() for ln in (resultado.stderr or "").splitlines() if ln.strip()][:20]
@@ -160,6 +166,11 @@ def exportacao_gerar(ctx, exportacao_id: uuid.UUID) -> dict:
             ctx.progresso(55, "compactando o KMZ")
             final = trabalho / nome_arquivo
             motor.zipar_arquivo(alvo, final, "doc.kml")
+            gerados.append(final)
+        elif formato.nome == "filegdb":
+            ctx.progresso(55, "compactando a File Geodatabase")
+            final = trabalho / nome_arquivo
+            motor.zipar_diretorio_aninhado(alvo, final, formato.caminho_interno)
             gerados.append(final)
         elif formato.nome == "geoparquet":
             ctx.progresso(55, "convertendo para GeoParquet")
