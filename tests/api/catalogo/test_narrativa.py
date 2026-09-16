@@ -83,7 +83,10 @@ def test_imagem_sem_texto_alternativo_bloqueia_a_publicacao_com_mensagem(sessao_
 
 def test_bloco_de_mapa_cita_o_mapa_e_o_token_le_as_camadas_dele(sessao_a, itens_a):
     camada = itens_a.criar("camada_vetorial", sessao=sessao_a)
-    mapa = itens_a.criar("mapa", sessao=sessao_a, dados={"esquema_versao": 1, "corpo": {"camadas": [camada["id"]]}})
+    mapa = itens_a.criar(
+        "mapa", sessao=sessao_a,
+        dados={"esquema_versao": 1, "corpo": {"camadas": [{"id": gerar_ulid(), "ref": camada["id"]}]}},
+    )
     vista = {"bbox": [-46.7, -23.6, -46.5, -23.4], "centro": [-46.6, -23.5], "zoom": 11, "rotacao": 0,
              "proporcao": 0.6, "camadas": [camada["id"]]}
     n = _narrativa(itens_a, _bloco("capa", titulo="T"), _bloco("mapa", mapa_id=mapa["id"], vista=vista, legenda="mapa"))
