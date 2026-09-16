@@ -1,8 +1,15 @@
 /* plat — vistas em memória (item L5-07; D4): uma Vista é fonte + filtro CQL2-JSON + seleção + ordenação + campos.
    `registros()` aplica o filtro sobre as feições carregadas da fonte (todas em memória: o portão mede 10 mil),
    com cache invalidado só quando filtro/dado mudam; seleção é um Set de ids. Cada mudança emite `vista_mudou`,
-   `filtro_mudou` ou `selecao_mudou` no EventTarget da vista — o barramento (barramento.js) reencaminha. */
+   `filtro_mudou` ou `selecao_mudou` no EventTarget da vista — o barramento (barramento.js) reencaminha.
+   Item L5-01-c: a mesma Vista atende os widgets de dado por uma API assíncrona (`pagina()`, `total()`,
+   `agregar()`, `histograma()`, `distintos()`, `exportar()`, `idsDoFiltro()`) — hoje só o caminho em memória
+   (fonte de servidor/FeatureServer fica para quando existir `fonte.servidor`, ver `this.servidor` abaixo);
+   `registros()`/`selecionados()` continuam a valer sobre o filtro simples de sempre (definirFiltro/filtro),
+   NUNCA o modelo "um filtro por origem" — isso é decisão de outro item, não deste conserto. */
 import * as cql2 from './cql2.js';
+import { cql2ParaWhere } from './consulta.js';
+import { agregarEmMemoria, histogramaEmMemoria, paraCsv, paraGeoJson } from './agregacao.js';
 
 export class Vista extends EventTarget {
   constructor(definicao, fonte) {
@@ -92,7 +99,94 @@ export class Vista extends EventTarget {
     return env;
   }
 
+  get servidor() { return this.fonte.modo === 'servidor'; }
+
+  /* filtro efetivo traduzido para o FeatureServer ({where, geometria}); só faz sentido em fonte de servidor */
+  filtroServidor(extra = null) {
+    const f = extra ? (this.filtro ? { op: 'and', args: [this.filtro, extra] } : extra) : this.filtro;
+    return cql2ParaWhere(f, { oid: this.fonte.oid });
+  }
+
+  #ordenar(lista, ordenacao) {
+    if (!ordenacao || !ordenacao.length) return lista;
+    return [...lista].sort((a, b) => {
+      for (const o of ordenacao) {
+        const va = a.propriedades?.[o.campo]; const vb = b.propriedades?.[o.campo];
+        if (va === vb) continue;
+        if (va === null || va === undefined) return 1;
+        if (vb === null || vb === undefined) return -1;
+        const c = va < vb ? -1 : 1;
+        return o.direcao === 'desc' ? -c : c;
+      }
+      return 0;
+    });
+  }
+
+  /* página de registros: {registros, total, deslocamento, limite} */
+  async pagina({ deslocamento = 0, limite = 50, ordenacao = null, campos = null } = {}) {
+    const ord = ordenacao || this.ordenacao;
+    if (!this.servidor) {
+      const todos = this.#ordenar(this.registros(), ordenacao || ord);
+      return { registros: todos.slice(deslocamento, deslocamento + limite), total: todos.length, deslocamento, limite };
+    }
+    const filtro = this.filtroServidor();
+    const [r, total] = await Promise.all([
+      this.fonte.servidor.consultar(filtro, { ordenacao: ord, deslocamento, limite, campos: campos || this.campos, comGeometria: false }),
+      this.total(),
+    ]);
+    this.fonte.lembrar(r.feicoes);
+    return { registros: r.feicoes, total, deslocamento, limite };
+  }
+
+  async total() {
+    if (!this.servidor) return this.registros().length;
+    const chave = JSON.stringify(this.filtroServidor());
+    if (this.#totalCache && this.#totalCache.chave === chave) return this.#totalCache.valor;
+    const valor = await this.fonte.servidor.contar(this.filtroServidor());
+    this.#totalCache = { chave, valor };
+    return valor;
+  }
+
+  async agregar(opcoes) {
+    if (!this.servidor) return agregarEmMemoria(this.registros(), opcoes);
+    return this.fonte.servidor.estatisticas(this.filtroServidor(), opcoes);
+  }
+
+  async histograma(opcoes) {
+    if (!this.servidor) return histogramaEmMemoria(this.registros(), opcoes);
+    return this.fonte.servidor.histograma(this.filtroServidor(), opcoes);
+  }
+
+  /* valores únicos do campo SEM o filtro dinâmico (a lista de um filtro mostra todas as opções da fonte) */
+  async distintos(campo, limite = 200) {
+    if (!this.servidor) {
+      const vistos = new Set();
+      const pred = cql2.predicado(this.#filtroBase);
+      for (const f of this.fonte.feicoes) { if (!pred(f)) continue; const v = f.propriedades?.[campo]; if (v !== null && v !== undefined) vistos.add(v); }
+      return [...vistos].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)).slice(0, limite);
+    }
+    return this.fonte.servidor.distintos(cql2ParaWhere(this.#filtroBase, { oid: this.fonte.oid }), campo, limite);
+  }
+
+  /* ids que casam com um filtro CQL2 (seleção por atributo), respeitando o filtro da vista */
+  async idsDoFiltro(filtro) {
+    if (!this.servidor) { const pred = cql2.predicado(filtro); return this.registros().filter(pred).map((f) => f.id); }
+    return this.fonte.servidor.ids(this.filtroServidor(filtro));
+  }
+
+  /* exportação com o filtro ativo: 'csv' -> texto; 'geojson' -> objeto */
+  async exportar(formato = 'csv', colunas = null, { limite = undefined } = {}) {
+    let feicoes;
+    if (!this.servidor) feicoes = this.#ordenar(this.registros(), this.ordenacao);
+    else feicoes = await this.fonte.servidor.todas(this.filtroServidor(), { ordenacao: this.ordenacao, comGeometria: formato === 'geojson', limite });
+    if (formato === 'geojson') return paraGeoJson(feicoes);
+    return paraCsv(feicoes.map((f) => ({ __id: f.id, ...f.propriedades })), colunas);
+  }
+
+  #totalCache = null;
+
   #emitir(nome, detalhe) {
+    if (nome === 'filtro_mudou' || nome === 'dado_adicionado' || nome === 'registros_carregados') this.#totalCache = null;
     this.dispatchEvent(new CustomEvent(nome, { detail: { origem: this.id, ...detalhe } }));
     this.dispatchEvent(new CustomEvent('vista_mudou', { detail: { origem: this.id, causa: nome } }));
   }
