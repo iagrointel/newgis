@@ -21,9 +21,9 @@ from app.acervo import rotas as rotas_acervo
 from app.acervo import rotas_frescor as rotas_acervo_frescor
 from app.agol import rotas as rotas_agol
 from app.amc import rotas as rotas_amc
-from app.amc.rotas import router as rotas_amc_presets
 from app.amc.rotas_criterios_feicao import router as rotas_criterios_feicao
 from app.amc.rotas_pareto import router as rotas_amc_pareto
+from app.amc.rotas_presets import router as rotas_amc_presets
 from app.amc.rotas_similaridade import router as rotas_similaridade
 from app.analise3d.rotas import router as rotas_analise3d
 from app.auth import ldap as rotas_ldap
