@@ -74,6 +74,9 @@ EXTENSOES = {
     # formatos de exportação de camada (item L0-04-h-exportar; app/exportacao/formatos.py)
     "application/gml+xml": "gml",
     "application/vnd.apache.parquet": "parquet",
+    # acrescentados pelo item L2-01-l (exportação a partir do mapa) — geo+json-seq é o GeoJSON Sequence (RFC
+    # 8142) da EXPORTAÇÃO; não confundir com "application/x-ndjson", content-type diferente do lado da ingestão
+    "application/geo+json-seq": "geojsonl",
 }
 _SLUG = r"[a-z0-9][a-z0-9-]{1,38}"
 _CLASSE = r"[a-z0-9_]{1,40}"
