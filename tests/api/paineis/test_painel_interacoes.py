@@ -65,7 +65,8 @@ def _corpo_base(camada_id: str) -> dict:
     camada = {"ref": camada_id}
     return {
         "grade": {"colunas": 12, "linha_px": 36},
-        "tema": {"modo": "claro"},
+        "tema": {"id": "padrao"},  # esquema de corpo.tema (oneOf id/definicao) é do item L5-10-temas-marca
+                                   # (2130323c8, anterior a este arquivo); {"modo": "claro"} nunca foi válido
         "fontes": [
             {"id": F1, "nome": "ocorrências", "camada": camada, "campos": ["categoria", "valor"], "limite": 50},
             {"id": F2, "nome": "ocorrências de água", "camada": camada,
