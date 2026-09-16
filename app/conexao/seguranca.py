@@ -232,15 +232,24 @@ def buscar_seguro(
     max_bytes: int = limites.CONEXAO_RESPOSTA_MAX_BYTES,
     cabecalhos: dict[str, str] | None = None,
     guardar_corpo: bool = False,
+    corpo_envio: bytes | None = None,
 ) -> ResultadoBusca:
-    """GET/HEAD seguro contra SSRF, com corpo limitado e redirecionamento revalidado hop a hop. Nunca levanta
-    `ErroURLInsegura` para fora: qualquer recusa de validação vira `ResultadoBusca(ok=False, status=None, ...)`
-    com o motivo em `mensagem` — quem chama (rota de teste de saúde) nunca precisa distinguir os dois.
+    """GET/HEAD/POST seguro contra SSRF, com corpo limitado e redirecionamento revalidado hop a hop. Nunca
+    levanta `ErroURLInsegura` para fora: qualquer recusa de validação vira `ResultadoBusca(ok=False,
+    status=None, ...)` com o motivo em `mensagem` — quem chama (rota de teste de saúde) nunca precisa
+    distinguir os dois.
 
     `guardar_corpo=True` (item L6-05-proveniencia-camada-externa: ler o que o serviço declara — GetCapabilities,
     `f=json`, catálogo STAC) acumula os bytes lidos (até `max_bytes`, o mesmo teto do teste de saúde) em
     `ResultadoBusca.corpo`; por padrão fica `b""` (o teste de saúde de L6-02-a nunca precisou do corpo, só do
-    status)."""
+    status).
+
+    `corpo_envio` (item L2-07-e-odk-central-ponte: publicar o XLSForm no ODK Central) manda um corpo no
+    método declarado (POST). O corpo é REENVIADO tal e qual em cada salto de redirecionamento, como manda o
+    307/308 — e o 301/302/303 de um POST, que um navegador transformaria em GET, aqui NÃO é seguido: vira
+    `redirecionamento_muda_metodo`, porque mudar o método por conta própria é decisão que o chamador tem de
+    tomar (e é exatamente o formato do achado G5 de credencial em redirecionamento, agora sobre um corpo
+    autenticado em vez de um cabeçalho)."""
     import time
 
     inicio = time.monotonic()
@@ -256,7 +265,10 @@ def buscar_seguro(
             )
         with cliente_pinado(validada, timeout_conectar=timeout_conectar, timeout_ler=timeout_ler) as cliente:
             try:
-                with cliente.stream(metodo, alvo, headers=cabecalhos_do_salto) as r:
+                # `content=` só entra quando há corpo: os dublês de cliente dos testes de redirecionamento
+                # (L6-02-a) implementam `stream(metodo, url, headers=...)` e nada mais.
+                extra_envio = {"content": corpo_envio} if corpo_envio is not None else {}
+                with cliente.stream(metodo, alvo, headers=cabecalhos_do_salto, **extra_envio) as r:
                     lido = 0
                     pedacos: list[bytes] = []
                     for pedaco in r.iter_bytes():
@@ -282,6 +294,11 @@ def buscar_seguro(
                     latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto,
                 )
         if status in (301, 302, 303, 307, 308):
+            if corpo_envio is not None and status in (301, 302, 303):
+                return ResultadoBusca(
+                    ok=False, status=status, mensagem="redirecionamento_muda_metodo", url_final=alvo,
+                    latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto,
+                )
             local = r.headers.get("location")
             if not local:
                 return ResultadoBusca(
