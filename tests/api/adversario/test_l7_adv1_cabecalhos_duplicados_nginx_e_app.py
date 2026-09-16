@@ -4,12 +4,17 @@
 `app/auth/middleware.py` já documenta a decisão "Cache-Control com UMA origem só: a aplicação. O nginx
 não acrescenta o dele nas rotas proxiadas" — mas essa decisão só foi aplicada ao Cache-Control. Na
 instalação pública (`https://sistema.iagrointel.com`), o nginx TAMBÉM define (via `add_header`)
-`Referrer-Policy`, `Permissions-Policy`, `Strict-Transport-Security`, `X-Content-Type-Options` e
-`X-Frame-Options`, e o `add_header` do nginx ACRESCENTA em vez de substituir o cabeçalho que a aplicação
-já mandou. Resultado medido (executando `tests/api/test_cabecalhos.py`, arquivo oficial do item, contra a
-instalação pública): `Referrer-Policy` chega duplicado com o MESMO valor duas vezes, e `Permissions-Policy`
-chega com dois valores DIFERENTES na mesma resposta (a lista longa da aplicação e uma lista curta do
-nginx) — o oposto de "cabeçalhos completos e testados por rota" com uma fonte de verdade.
+`Referrer-Policy` e `Permissions-Policy`, e o `add_header` do nginx ACRESCENTA em vez de substituir o
+cabeçalho que a aplicação já mandou. Resultado medido (`curl -sD - https://sistema.iagrointel.com/`,
+16/09): `Referrer-Policy` chega duplicado com o MESMO valor duas vezes, e `Permissions-Policy` chega com
+dois valores DIFERENTES na mesma resposta (a lista longa da aplicação e uma lista curta do nginx) — o
+oposto de "cabeçalhos completos e testados por rota" com uma fonte de verdade.
+
+**Conferido e DESCARTADO por evidência**: `Strict-Transport-Security` NÃO duplica — a mesma captura mostra
+uma única linha `Strict-Transport-Security: max-age=31536000; includeSubDomains` (o nginx também define
+HSTS via `add_header`, mas nesta rota a aplicação não manda o dela, então não há acúmulo). Por isso HSTS
+fica fora do parametrize abaixo — incluí-lo antes foi excesso de generalização a partir da lista de
+cabeçalhos que o nginx configura, não da resposta real.
 
 Este teste é mais restrito e não precisa de rede: sobe o app local e confere que, pelo menos do lado da
 aplicação, cada cabeçalho de segurança nomeado no portão aparece EXATAMENTE UMA VEZ (`Message.headers` do
@@ -49,15 +54,16 @@ def http():
         yield c
 
 
-@pytest.mark.parametrize("cabecalho", ["referrer-policy", "permissions-policy", "strict-transport-security"])
+@pytest.mark.parametrize("cabecalho", ["referrer-policy", "permissions-policy"])
 @pytest.mark.xfail(
     strict=True,
     reason=(
-        "o nginx da instalação pública usa add_header para Referrer-Policy/Permissions-Policy/HSTS (entre "
-        "outros), que ACRESCENTA ao cabeçalho que a aplicação já mandou em vez de substituir — a decisão "
-        "'Cache-Control com UMA origem só' (app/auth/middleware.py) só foi aplicada ao Cache-Control. "
-        "Medido: Referrer-Policy chega duplicado com o MESMO valor, Permissions-Policy chega com DOIS "
-        "valores DIFERENTES na mesma resposta. Item L7-03-e-cabecalhos-csp-tls."
+        "o nginx da instalação pública usa add_header para Referrer-Policy/Permissions-Policy, que "
+        "ACRESCENTA ao cabeçalho que a aplicação já mandou em vez de substituir — a decisão 'Cache-Control "
+        "com UMA origem só' (app/auth/middleware.py) só foi aplicada ao Cache-Control. Medido: "
+        "Referrer-Policy chega duplicado com o MESMO valor, Permissions-Policy chega com DOIS valores "
+        "DIFERENTES na mesma resposta. (Strict-Transport-Security, conferido à parte, NÃO duplica — fora "
+        "deste parametrize.) Item L7-03-e-cabecalhos-csp-tls."
     ),
 )
 def test_cabecalho_de_seguranca_aparece_uma_unica_vez(http, cabecalho):
