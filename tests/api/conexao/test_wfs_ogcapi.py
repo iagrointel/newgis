@@ -67,14 +67,30 @@ def portas_ogc():
 def worker_ogc(env, portas_ogc):
     """UM worker para o módulo inteiro, iniciado DEPOIS de `portas_ogc` (a ordem importa: ele herda a válvula
     do ambiente). Dois processos, não um: com um só, o periódico `conexoes.saude_verificar` (item L6-02-l)
-    ocupa o único lugar e o job pesado da cópia espera até o teste estourar o tempo (medido 06/09)."""
+    ocupa o único lugar e o job pesado da cópia espera até o teste estourar o tempo (medido 06/09).
+
+    Decisão G7 (afinidade de executor em `plat.job_pegar`, migração 20260916T1600; mesmo conserto de
+    tests/api/conexao/test_google_sheets.py): este worker é PRIVADO (tem a válvula PLAT_TESTE_CONEXAO_ALVOS
+    liberada para os servidores OGC do loopback), mas disputa a MESMA fila `plat.job` do worker do systemd
+    da trilha — que não tem a válvula e falharia a cópia se vencesse a corrida. A identidade única
+    `teste:<pid deste processo pytest>` é anunciada por ele (via PLAT_WORKER_EXECUTOR) E gravada em todo
+    job que `criar_job()` enfileirar enquanto este worker está de pé (via PLAT_TESTE_JOB_EXECUTOR, lida por
+    `app.jobs.registro.executor_efetivo` nos dois pontos que fazem INSERT em plat.job) — as duas pontas
+    usam o MESMO valor, então só este worker pega esses jobs."""
+    identidade = f"teste:{os.getpid()}"
+    anterior = os.environ.get("PLAT_TESTE_JOB_EXECUTOR")
+    os.environ["PLAT_TESTE_JOB_EXECUTOR"] = identidade
     nome = f"l602c-{os.getpid()}"
-    w = WorkerExtra(env, nome, 2, _porta_livre())
+    w = WorkerExtra(env, nome, 2, _porta_livre(), executor=identidade)
     assert w.saude()["nome_base"] == nome, (
         f"a porta respondeu, mas quem respondeu foi o worker {w.saude()['nome_base']!r} de outra trilha"
     )
     yield w
     w.parar()
+    if anterior is None:
+        os.environ.pop("PLAT_TESTE_JOB_EXECUTOR", None)
+    else:
+        os.environ["PLAT_TESTE_JOB_EXECUTOR"] = anterior
 
 
 @pytest.fixture

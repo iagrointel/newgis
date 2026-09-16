@@ -92,11 +92,26 @@ def prefixo_planilha(servidor):
 
 @pytest.fixture(scope="module")
 def worker(env, servidor):
+    """Decisão G7 (afinidade de executor em `plat.job_pegar`, migração 20260916T1600): o worker extra
+    deste arquivo é PRIVADO (tem a CA de teste e a válvula PLAT_TESTE_CONEXAO_ALVOS liberada), mas
+    disputa a MESMA fila `plat.job` do worker do systemd da trilha — que não tem nem uma coisa nem
+    outra e falhava a sincronização quando vencia a corrida (erro_de_conexao:ConnectError). A
+    identidade única `teste:<pid deste processo pytest>` é anunciada pelo worker extra (3º argumento de
+    `job_pegar`, via PLAT_WORKER_EXECUTOR) E gravada no job que `Fonte.sincronizar()` enfileira (mesmo
+    processo pytest, via PLAT_TESTE_JOB_EXECUTOR lida por `app.jobs.sistema.enfileirar`) — as duas
+    pontas usam o MESMO valor, então só este worker pega este job."""
+    identidade = f"teste:{os.getpid()}"
+    anterior = os.environ.get("PLAT_TESTE_JOB_EXECUTOR")
+    os.environ["PLAT_TESTE_JOB_EXECUTOR"] = identidade
     env2 = dict(env)
     env2["SSL_CERT_FILE"] = str(servidor.bundle)   # o worker em subprocesso verifica a CA de teste
-    w = WorkerExtra(env2, f"teste-l602i-{PORTA_WORKER}", processos=2, porta=PORTA_WORKER)
+    w = WorkerExtra(env2, f"teste-l602i-{PORTA_WORKER}", processos=2, porta=PORTA_WORKER, executor=identidade)
     yield w
     w.parar()
+    if anterior is None:
+        os.environ.pop("PLAT_TESTE_JOB_EXECUTOR", None)
+    else:
+        os.environ["PLAT_TESTE_JOB_EXECUTOR"] = anterior
 
 
 def _cliente(env, slug: str):
