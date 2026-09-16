@@ -147,11 +147,9 @@ def ambiente(env):
                 cur.execute("SELECT cota_bytes, cota_objetos FROM plat.tenant WHERE id = %s", (tid,))
                 c = cur.fetchone()
                 cotas_originais[slug] = (int(c["cota_bytes"]), int(c["cota_objetos"]))
-                # `web=`/`forcar=` sumiram da assinatura atual de garantir_bucket (achado: a fusão wt/uniao
-                # reverteu o L1-01-d — cota dupla e endpoint web — em app/objetos.py; o esquema/migrações e
-                # ClienteAdmin.definir_web/definir_cota(max_objetos=) continuam vivos, só a orquestração caiu).
-                # Sem `web=True` o balde nasce com `web_ativo=false` (default da coluna) — os testes abaixo já
-                # toleram os dois estados.
+                # `garantir_bucket` de propósito NÃO mexe em `web_ativo` (ver seu docstring, achado 16/09,
+                # a0599f86a) — os testes abaixo toleram os dois estados; quem precisa do endpoint web
+                # (ataque 5, `nginx_cog`) liga explicitamente com `semear_bucket(web=True)` só para si.
                 baldes[slug] = dict(objetos.garantir_bucket(cur, tid, slug))
             con.commit()
         alvos = {}
@@ -648,6 +646,29 @@ def test_4b_adaptador_recusa_a_mesma_chave_e_a_versao_1_fica_intacta(ambiente):
     assert medida["chaves_diferentes"] and medida["v1_intacta_byte_a_byte"]
 
 
+def _web_garage_serve_o_objeto(alias: str, caminho: str, esperado: bytes) -> bool:
+    """Confere que o endpoint web do Garage (:3902) REALMENTE serve `caminho` do balde `alias` — não basta a
+    porta estar ouvindo. Achado 16/09: nesta máquina compartilhada, outro processo Garage alheio a esta
+    trilha (workstream de `plataforma/pipeline`, nada a ver com o adversário L1-01-d) também escuta em
+    :3902 e responde 404 genérico para tudo, então `_porta_viva(3902)` sozinha dá falso positivo. Só quando
+    o conteúdo bate byte a byte é que faz sentido montar o nginx e cobrar 206 dele; senão, SKIP com o
+    motivo — a ausência do endpoint web NESTA trilha é lacuna de ambiente (garage-trilhas só expõe S3
+    :3910/admin :3913, ver laco/trilha_ambiente.sh), não defeito do código."""
+    import urllib.error
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(
+            urllib.request.Request(
+                f"http://127.0.0.1:3902/{caminho}", headers={"Host": f"{alias}.web.garage.localhost"}
+            ),
+            timeout=5,
+        ) as r:
+            return r.status == 200 and r.read() == esperado
+    except (urllib.error.URLError, OSError, TimeoutError):
+        return False
+
+
 # ================================================================ ataque 5: faixa de bytes
 @pytest.fixture(scope="module")
 def nginx_cog(ambiente, tmp_path_factory):
@@ -655,10 +676,13 @@ def nginx_cog(ambiente, tmp_path_factory):
     objeto de ~3 MiB no balde de A e um token de serviço de A. Devolve tudo o que o ataque 5 precisa."""
     import ssl
 
-    from app import objetos_raster
+    from app import objetos, objetos_raster
     from app.settings import settings
 
-    porta_api = int(os.environ.get("PLAT_TESTE_API_PORTA", "8171"))
+    # 8171 era a porta da trilha de uso único "gadv" do handoff de 06/09 (laco/handoffs/T3/
+    # L1-01-d-ADVERSARIO.md) — já não existe. A trilha compartilhada de hoje é `uniao`, API em :8192
+    # (laco/var/trilha/uniao.env); PLAT_TESTE_API_PORTA continua podendo apontar para outra.
+    porta_api = int(os.environ.get("PLAT_TESTE_API_PORTA", "8192"))
     if not _porta_viva(porta_api):
         pytest.skip(f"API não está ouvindo em 127.0.0.1:{porta_api}")
     if not _porta_viva(3902):
@@ -668,8 +692,27 @@ def nginx_cog(ambiente, tmp_path_factory):
     dados = os.urandom(3 * 1024 * 1024 + 777)
     _contexto(con, tid)
     with con.cursor() as cur:
+        # liga o endpoint web do balde de A (garantir_bucket, usado em `ambiente`, de propósito não mexe
+        # nisso — ver seu docstring); só este ataque precisa, então liga só para si, não para o módulo todo
+        objetos.semear_bucket(cur, tid, "demo", web=True)
         gravado = objetos_raster.guardar_bytes(cur, f"{PREFIXO}range", "cog", dados)
     con.commit()
+
+    alias = ambiente["baldes"]["demo"]["bucket_alias"]
+    caminho_no_balde = gravado["chave"].split("/", 1)[1]  # sem o slug: é o que o Host header já resolve
+    if not _web_garage_serve_o_objeto(alias, caminho_no_balde, dados):
+        _contexto(con, tid)
+        with con.cursor() as cur:
+            objetos_raster.apagar_item(cur, f"{PREFIXO}range")
+        con.commit()
+        # test_zz_grava_medidas relaxa o piso de 17 para 13 quando isto fica registrado: os 4 ataques
+        # 5/5b/5c/5d dependem deste fixture e não escrevem em MEDIDAS se ele pula.
+        MEDIDAS["ambiente"] = {"web_garage_disponivel": False}
+        pytest.skip(
+            "endpoint web do Garage (:3902) responde, mas não é o desta trilha (garage-trilhas só expõe "
+            "S3 :3910/admin :3913, item D26/garage2 de 16/09): o ataque 5 não tem como exercitar o nginx "
+            "de verdade nesta máquina"
+        )
 
     from tests.api.conftest import credenciais, entrar, novo_cliente
 
@@ -1005,4 +1048,11 @@ def test_zz_grava_medidas():
     destino = RAIZ / "tests" / "medidas" / "L1-01-d-adversario.json"
     destino.parent.mkdir(parents=True, exist_ok=True)
     destino.write_text(json.dumps(MEDIDAS, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    assert len(MEDIDAS["ataques"]) >= 17, MEDIDAS["ataques"].keys()
+    # Piso relaxa de 17 para 13 quando `nginx_cog` registrou que o endpoint web do Garage não é desta
+    # trilha (ver `_web_garage_serve_o_objeto`): os 4 ataques 5/5b/5c/5d dependem dele e não escrevem em
+    # MEDIDAS se ele pula — desde 16/09 (D26/garage2) o `garage-trilhas` compartilhado só expõe S3/admin,
+    # nunca o endpoint web, então essa lacuna é do AMBIENTE, não do código; os outros 13-14 ataques (que
+    # não dependem de nginx) continuam sob o piso cheio.
+    disponivel = MEDIDAS.get("ambiente", {}).get("web_garage_disponivel", True)
+    esperado = 17 if disponivel else 13
+    assert len(MEDIDAS["ataques"]) >= esperado, (disponivel, MEDIDAS["ataques"].keys())
