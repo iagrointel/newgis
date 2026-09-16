@@ -697,7 +697,22 @@ def nginx_cog(ambiente, tmp_path_factory):
         ["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1", "-subj", "/CN=localhost",
          "-keyout", str(prefixo / "k.pem"), "-out", str(prefixo / "c.pem")], check=True, capture_output=True)
     modelo = (RAIZ / "deploy" / "nginx.conf").read_text(encoding="utf-8")
-    bloco = modelo[modelo.index("    # ── COG por inquilino"):modelo.index("    location / {")]
+    # só o bloco `location ~ "^/svc/.../cog/..."` + o `location = /_plat_cog_autorizar` que ele chama por
+    # `auth_request` — não tudo até `location / {`: itens mais novos (L1-02 ladrilho, L2-xx vetor)
+    # inseriram outros `location` COM SEU PRÓPRIO `proxy_cache` entre o bloco do COG e o `location /` —
+    # pegar até lá arrastava zonas de cache (`plat_cache_tiles` etc.) que este nginx sintético, com só a
+    # zona `plat_cog_adv`, não declara, e o `nginx -t` recusava a config inteira. O `_plat_cog_autorizar`
+    # (definido bem depois do COG, ao lado do `_plat_tile_autorizar` de outro item) tem de vir junto: sem
+    # ele o `auth_request` do bloco do COG aponta para uma location inexistente e todo pedido vira 500.
+    def _location(marca: str, a_partir_de: int) -> tuple[str, int]:
+        ini = modelo.index(marca, a_partir_de)
+        fim = modelo.index("\n    }\n", ini) + len("\n    }\n")
+        return modelo[ini:fim], fim
+
+    _inicio_cog = modelo.index("    # ── COG por inquilino")
+    _, _fim_cog = _location('location ~ "^/svc/(?<cog_token>', _inicio_cog)
+    autorizar, _ = _location("    location = /_plat_cog_autorizar", _fim_cog)
+    bloco = modelo[_inicio_cog:_fim_cog] + autorizar
     bloco = bloco.replace("PORTA", str(porta_api)).replace(
         "PREFIXO_BALDE", settings.PLAT_GARAGE_BUCKET_PREFIXO).replace(
         "proxy_cache plat_cog;", "proxy_cache plat_cog_adv;")
