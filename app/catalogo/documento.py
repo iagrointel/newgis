@@ -115,7 +115,10 @@ def validar_grafo(tipo: str, dados) -> None:
     nó, tipos de `corpo`/`nos`/`ligacoes`) já é responsabilidade do JSON Schema do tipo (`tipos.validar`,
     chamado ANTES desta função nas duas rotas que escrevem `dados`); aqui só entra o que precisa da lista
     inteira para ser conferido. Item L5-10-temas-marca: `corpo.tema` presente passa pela MESMA checagem —
-    referência ({"id"}) ou definição ({"definicao"}) com tokens validados por formato em app/temas.py."""
+    referência ({"id"}) ou definição ({"definicao"}) com tokens validados por formato em app/temas.py. No
+    painel, vale também a validação das INTERAÇÕES do L2-06-c (`app.paineis.interacoes`: `corpo.mensagens`
+    e elemento `seletor` — a mensagem específica de cada regra quebrada vai no detalhe do 422, que é o que
+    a tela do editor mostra)."""
     if tipo == "colecao":
         # item L5-04-c: `colecao` não é grafo de nós/ligações — só a regra de midia/miniatura entra aqui,
         # a relação item_de_colecao é sincronizada à parte (app/catalogo/relacoes.py::_colecao).
@@ -132,6 +135,12 @@ def validar_grafo(tipo: str, dados) -> None:
         return
     if corpo.get("tema") is not None:
         temas.validar_referencia_de_documento(corpo["tema"])
+    erros_interacoes: list = []
+    if tipos.familia_de(tipo) == "painel":
+        # import tardio: app.paineis não pode entrar no import de catálogo (ciclo de módulo)
+        from app.paineis.interacoes import validar_interacoes
+
+        erros_interacoes, _avisos = validar_interacoes(corpo)
     nos = corpo.get("nos", [])
     if not isinstance(nos, list):
         return
@@ -191,6 +200,8 @@ def validar_grafo(tipo: str, dados) -> None:
                             "regra": "vista_movel_fora_da_raiz",
                         }
                     )
+    if erros_interacoes:
+        erros.extend(erros_interacoes)
     if erros:
         raise ErroAPI(422, "grafo_invalido", f"grafo do documento ({tipo}) inválido", erros)
     if tipo == "app":
