@@ -182,7 +182,6 @@ SSO_RESPOSTA_MAX = 262144        # teto do corpo SAMLResponse decodificado (256 
 # e o proxy nunca vira um jeito de esgotar a máquina com um serviço lento de propósito (ADR 0012).
 CONEXAO_TIPOS = (
     "wms", "wmts", "wfs", "ogc_api", "esri_rest", "stac", "geoparquet", "pmtiles", "xyz", "postgres_fdw", "s3", "http",
-    "wms", "wmts", "wfs", "ogc_api", "esri_rest", "stac", "geoparquet", "pmtiles", "postgres_fdw", "s3", "http",
     "odk_central",
     # item L6-02-i-google-sheets: planilha do Google como fonte (publicada = exportação CSV sem credencial;
     # privada = JSON de conta de serviço, trocado por access token na leitura — app/conexao/google_sheets.py)
