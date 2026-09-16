@@ -26,11 +26,15 @@ def _camada_vetorial(cur, dados: dict, log) -> int:
     if cur.fetchone()["tem"]:
         cur.execute("SELECT plat.camada_apagar(%s, %s)", (schema, tabela))
         return 0
-    cur.execute(
-        "SELECT pg_total_relation_size(c.oid) AS b FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
-        "WHERE n.nspname = %s AND c.relname = %s",
-        (schema, tabela),
-    )
+    # achado L2-04-a (20260916T1030): `n.nspname = %s` como BIND nunca bate numa trilha — o schema
+    # de trabalho guardado em `dados` é o nome de PRODUÇÃO ('plat_trabalho'), e o rewrite de trilha
+    # (app/schema_ambiente.py) só troca texto de CONSULTA, nunca valor de bind; a consulta achava
+    # sempre "não existe" (r is None) e nunca chegava ao DROP TABLE abaixo — mesmo esse já certo,
+    # porque o `{schema}` dele vai no TEXTO. `to_regclass('"{schema}"."{tabela}"')` embute os dois no
+    # texto também, então o mesmo rewrite que corrige o DROP corrige esta checagem. `schema`/`tabela`
+    # já passaram por NOME (^[a-z][a-z0-9_]{1,62}$) acima — seguro para interpolar como identificador.
+    cur.execute(f"SELECT pg_total_relation_size(to_regclass('\"{schema}\".\"{tabela}\"')) AS b "
+                f"WHERE to_regclass('\"{schema}\".\"{tabela}\"') IS NOT NULL")
     r = cur.fetchone()
     if r is None:
         log("INFO", f"{schema}.{tabela} já não existia")

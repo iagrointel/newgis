@@ -206,6 +206,25 @@ def test_expurgo_com_relogio_simulado_apaga_tabela_fisica(sessao_a, itens_a, con
     itens_a.criados.remove(outro["id"])
 
 
+def test_camada_tile_apagar_recusa_schema_ilegitimo(conexao_plat_app):
+    """plat.camada_tile_apagar (20260916T1030) aceita só dois schemas: o literal de trabalho/cache
+    'plat_trabalho' (que camada_tile_garantir nunca usa para criar função de tile — devolve false sem
+    tocar em nada) e `d_<slug>` de um inquilino DESTA instalação (plat.tenant). Qualquer outra coisa —
+    'plat', 'public', ou um `d_`/schema de trabalho que combine com o padrão mas não pertença a esta
+    instalação — tem de continuar levantando exceção, nunca apagar nada silenciosamente."""
+    with conexao_plat_app.cursor() as cur:
+        for schema in ("plat", "public", "d_naoexiste_" + titulo_zt()[-8:],
+                       "plat_trabalho_" + titulo_zt()[-8:]):
+            with pytest.raises(psycopg2.errors.RaiseException):
+                cur.execute("SELECT plat.camada_tile_apagar(%s, %s)", (schema, "c_0000000000000000"))
+            conexao_plat_app.rollback()
+        # os dois schemas legítimos: devolvem false (nada para apagar), nunca exceção
+        for schema in ("plat_trabalho", os.environ.get("PLAT_SCHEMA_TRABALHO", "plat_trabalho")):
+            cur.execute("SELECT plat.camada_tile_apagar(%s, %s) AS r", (schema, "c_0000000000000000"))
+            assert cur.fetchone()["r"] is False
+        conexao_plat_app.rollback()
+
+
 def test_camada_usada_por_mapa_nao_apaga_sem_cascata(sessao_a, itens_a):
     cam = itens_a.criar("camada_vetorial")
     itens_a.criar("mapa", dados=documento_mapa(cam["id"]))
