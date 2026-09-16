@@ -17,7 +17,7 @@ from app.acervo import tarefas as acervo_tarefas  # noqa: F401 — achado 15/09:
 from app.agol import (
     tarefas as agol_tarefas,  # noqa: F401 — L2-08: agol.publicar (hosted feature layer no AGOL do cliente)
 )
-from app.amc import tarefas as amc_tarefas  # noqa: F401 — achado 15/09: amc.gerar_unidades/amc.robustez_pesos
+from app.amc import tarefas as amc_tarefas  # noqa: F401 — gerar_unidades/robustez_pesos/smaa/recombinar
 from app.backup import (
     tarefas as backup_tarefas,  # noqa: F401 — L0-06: backup.executar/backup.ensaio_restauracao + periódicos
 )
