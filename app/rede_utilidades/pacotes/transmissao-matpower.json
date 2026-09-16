@@ -390,49 +390,49 @@
    "de": "ramo/1",
    "descricao": "ramo ligado à barra",
    "para": "barra/1",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "juncao_aresta"
   },
   {
    "de": "ramo/1",
    "descricao": "ramo ligado à barra",
    "para": "barra/2",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "juncao_aresta"
   },
   {
    "de": "ramo/1",
    "descricao": "ramo ligado à barra",
    "para": "barra/3",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "juncao_aresta"
   },
   {
    "de": "ramo/1",
    "descricao": "ramo ligado à barra",
    "para": "barra/4",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "juncao_aresta"
   },
   {
    "de": "ramo/2",
    "descricao": "ramo ligado à barra",
    "para": "barra/1",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "juncao_aresta"
   },
   {
    "de": "ramo/2",
    "descricao": "ramo ligado à barra",
    "para": "barra/2",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "juncao_aresta"
   },
   {
    "de": "ramo/2",
    "descricao": "ramo ligado à barra",
    "para": "barra/3",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "juncao_aresta"
   },
   {
    "de": "ramo/2",
    "descricao": "ramo ligado à barra",
    "para": "barra/4",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "juncao_aresta"
   }
  ],
  "terminais": [

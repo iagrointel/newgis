@@ -12,7 +12,7 @@ TIPOS_DOMINIO = ("dominio", "estrutura")
 TIPOS_TIER = ("hierarquico", "particionado")
 GEOMETRIAS = ("ponto", "linha", "poligono", "sem_geometria")
 TIPOS_DADO = ("texto", "inteiro", "real", "data", "booleano", "geometria")
-TIPOS_REGRA = ("conectividade_no_trecho", "conectividade_entre_nos", "fixacao_estrutural", "contencao")
+TIPOS_REGRA = ("juncao_juncao", "juncao_aresta", "aresta_juncao_aresta", "contencao", "estrutura")
 
 _CODIGO = {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,62}$"}
 _NOME = {"type": "string", "minLength": 1, "maxLength": 200}

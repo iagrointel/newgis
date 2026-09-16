@@ -1734,168 +1734,6 @@
  },
  "regras": [
   {
-   "de": "elevatoria/1",
-   "descricao": "conjunto motobomba faz parte da elevatória",
-   "para": "elevatoria/2",
-   "tipo": "conectividade_entre_nos"
-  },
-  {
-   "de": "boca_de_lobo/1",
-   "descricao": "boca de lobo entrega na galeria pluvial",
-   "para": "galeria_pluvial/1",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "boca_de_lobo/2",
-   "descricao": "poço de visita pluvial recebe e entrega galeria pluvial",
-   "para": "galeria_pluvial/1",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "boca_de_lobo/2",
-   "descricao": "poço de visita pluvial entrega no canal de drenagem",
-   "para": "galeria_pluvial/2",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "elevatoria/1",
-   "descricao": "elevatória recebe coletor tronco por gravidade",
-   "para": "coletor/2",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "elevatoria/1",
-   "descricao": "elevatória recebe o interceptor por gravidade",
-   "para": "coletor/3",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "elevatoria/1",
-   "descricao": "elevatória entrega na linha de recalque, e daí em diante a cota não decide o sentido",
-   "para": "coletor/5",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "estacao_de_tratamento/1",
-   "descricao": "interceptor termina na estação de tratamento",
-   "para": "coletor/3",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "estacao_de_tratamento/1",
-   "descricao": "emissário termina na estação de tratamento",
-   "para": "coletor/4",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "estrutura_especial/1",
-   "descricao": "extravasor instalado no interceptor",
-   "para": "coletor/3",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "estrutura_especial/1",
-   "descricao": "extravasor desvia o excedente para o emissário",
-   "para": "coletor/4",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "estrutura_especial/2",
-   "descricao": "câmara de transição entre dois coletores de rede",
-   "para": "coletor/1",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "estrutura_especial/3",
-   "descricao": "caixa de passagem no coletor tronco",
-   "para": "coletor/2",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "poco_de_visita/1",
-   "descricao": "poço de visita recebe e entrega coletor de rede",
-   "para": "coletor/1",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "poco_de_visita/1",
-   "descricao": "poço de visita recebe e entrega coletor tronco",
-   "para": "coletor/2",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "poco_de_visita/1",
-   "descricao": "poço de visita recebe e entrega interceptor",
-   "para": "coletor/3",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "poco_de_visita/1",
-   "descricao": "poço de visita recebe e entrega emissário",
-   "para": "coletor/4",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "poco_de_visita/1",
-   "descricao": "a linha de recalque termina num poço de visita, onde volta a escoar por gravidade",
-   "para": "coletor/5",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "poco_de_visita/1",
-   "descricao": "sifão invertido começa e termina em poço de visita",
-   "para": "coletor/6",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "poco_de_visita/1",
-   "descricao": "ligação predial pode chegar direto no poço de visita",
-   "para": "ligacao_predial/1",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "poco_de_visita/2",
-   "descricao": "poço de queda recebe coletor de rede com desnível",
-   "para": "coletor/1",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "poco_de_visita/2",
-   "descricao": "poço de queda recebe coletor tronco com desnível",
-   "para": "coletor/2",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "poco_de_visita/3",
-   "descricao": "caixa de inspeção entrega no coletor de rede",
-   "para": "coletor/1",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "poco_de_visita/3",
-   "descricao": "caixa de inspeção recebe a ligação predial",
-   "para": "ligacao_predial/1",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "ponto_de_lancamento/1",
-   "descricao": "emissário termina no ponto de lançamento",
-   "para": "coletor/4",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "ponto_de_lancamento/1",
-   "descricao": "galeria pluvial termina no ponto de lançamento",
-   "para": "galeria_pluvial/1",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "ponto_de_lancamento/1",
-   "descricao": "canal de drenagem termina no ponto de lançamento",
-   "para": "galeria_pluvial/2",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
    "de": "poco_de_visita/1",
    "descricao": "caixa de inspeção pode estar contida no mesmo conjunto do poço de visita",
    "para": "poco_de_visita/3",
@@ -1905,7 +1743,169 @@
    "de": "elevatoria/1",
    "descricao": "caixa de passagem apoiada na estrutura da elevatória",
    "para": "estrutura_especial/3",
-   "tipo": "fixacao_estrutural"
+   "tipo": "estrutura"
+  },
+  {
+   "de": "boca_de_lobo/1",
+   "descricao": "boca de lobo entrega na galeria pluvial",
+   "para": "galeria_pluvial/1",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "boca_de_lobo/2",
+   "descricao": "poço de visita pluvial recebe e entrega galeria pluvial",
+   "para": "galeria_pluvial/1",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "boca_de_lobo/2",
+   "descricao": "poço de visita pluvial entrega no canal de drenagem",
+   "para": "galeria_pluvial/2",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "elevatoria/1",
+   "descricao": "elevatória recebe coletor tronco por gravidade",
+   "para": "coletor/2",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "elevatoria/1",
+   "descricao": "elevatória recebe o interceptor por gravidade",
+   "para": "coletor/3",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "elevatoria/1",
+   "descricao": "elevatória entrega na linha de recalque, e daí em diante a cota não decide o sentido",
+   "para": "coletor/5",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "estacao_de_tratamento/1",
+   "descricao": "interceptor termina na estação de tratamento",
+   "para": "coletor/3",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "estacao_de_tratamento/1",
+   "descricao": "emissário termina na estação de tratamento",
+   "para": "coletor/4",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "estrutura_especial/1",
+   "descricao": "extravasor instalado no interceptor",
+   "para": "coletor/3",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "estrutura_especial/1",
+   "descricao": "extravasor desvia o excedente para o emissário",
+   "para": "coletor/4",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "estrutura_especial/2",
+   "descricao": "câmara de transição entre dois coletores de rede",
+   "para": "coletor/1",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "estrutura_especial/3",
+   "descricao": "caixa de passagem no coletor tronco",
+   "para": "coletor/2",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "poco_de_visita/1",
+   "descricao": "poço de visita recebe e entrega coletor de rede",
+   "para": "coletor/1",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "poco_de_visita/1",
+   "descricao": "poço de visita recebe e entrega coletor tronco",
+   "para": "coletor/2",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "poco_de_visita/1",
+   "descricao": "poço de visita recebe e entrega interceptor",
+   "para": "coletor/3",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "poco_de_visita/1",
+   "descricao": "poço de visita recebe e entrega emissário",
+   "para": "coletor/4",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "poco_de_visita/1",
+   "descricao": "a linha de recalque termina num poço de visita, onde volta a escoar por gravidade",
+   "para": "coletor/5",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "poco_de_visita/1",
+   "descricao": "sifão invertido começa e termina em poço de visita",
+   "para": "coletor/6",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "poco_de_visita/1",
+   "descricao": "ligação predial pode chegar direto no poço de visita",
+   "para": "ligacao_predial/1",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "poco_de_visita/2",
+   "descricao": "poço de queda recebe coletor de rede com desnível",
+   "para": "coletor/1",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "poco_de_visita/2",
+   "descricao": "poço de queda recebe coletor tronco com desnível",
+   "para": "coletor/2",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "poco_de_visita/3",
+   "descricao": "caixa de inspeção entrega no coletor de rede",
+   "para": "coletor/1",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "poco_de_visita/3",
+   "descricao": "caixa de inspeção recebe a ligação predial",
+   "para": "ligacao_predial/1",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "ponto_de_lancamento/1",
+   "descricao": "emissário termina no ponto de lançamento",
+   "para": "coletor/4",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "ponto_de_lancamento/1",
+   "descricao": "galeria pluvial termina no ponto de lançamento",
+   "para": "galeria_pluvial/1",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "ponto_de_lancamento/1",
+   "descricao": "canal de drenagem termina no ponto de lançamento",
+   "para": "galeria_pluvial/2",
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": "elevatoria/1",
+   "descricao": "conjunto motobomba faz parte da elevatória",
+   "para": "elevatoria/2",
+   "tipo": "juncao_juncao"
   }
  ],
  "terminais": [

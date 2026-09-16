@@ -4,8 +4,8 @@ Hipótese do item: as camadas de rede (`plat.rede_feicao_ponto`/`rede_feicao_lin
 camadas normais e editáveis; `habilitar()` RECONSTRÓI o índice derivado inteiro — nunca lê o índice anterior, só
 apaga e refaz — a partir delas: `plat.rede_topo_no` (um nó por vértice de conexão e por terminal de dispositivo)
 e `plat.rede_topo_aresta` (uma aresta por trecho). Coincidência geométrica com a tolerância DA REDE (`geography`,
-`ST_DWithin`) mais associações explícitas (`plat.rede_regra`, tipos `conectividade_no_trecho`/
-`conectividade_entre_nos`) decidem o que vira o MESMO nó.
+`ST_DWithin`) mais associações explícitas (`plat.rede_regra`, tipos `juncao_aresta`/
+`juncao_juncao`) decidem o que vira o MESMO nó.
 
 Por que "mais associações explícitas" não é enfeite: um dispositivo com 2+ terminais (ex.: transformador,
 `alta`/`baixa`) tem os terminais no MESMO ponto físico — coincidência pura os fundiria num nó só, apagando a
@@ -33,7 +33,7 @@ from collections import defaultdict
 
 import psycopg2.extras
 
-TIPOS_REGRA_CONECTIVIDADE = ("conectividade_no_trecho", "conectividade_entre_nos")
+TIPOS_REGRA_CONECTIVIDADE = ("juncao_aresta", "juncao_juncao")
 _EPS_COMPRIMENTO_M = 1e-6  # abaixo disso o trecho é degenerado (origem == destino): "aresta sem nó"
 
 

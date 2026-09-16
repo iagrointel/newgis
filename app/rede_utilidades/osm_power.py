@@ -27,7 +27,7 @@ Topologia (explícita, vem dos refs do extrato — nunca de coincidência geomé
   subestação/gerador). Cada trecho grava `osm_way_id` nos atributos, então a contagem de LINHAS do
   extrato se confere por via, não por trecho;
 - torre/poste NÃO cortam a via: viram junção tipada LIGADA ao trecho por associação de fixação
-  estrutural (a regra fixacao_estrutural do pacote, validada pelo gatilho rede_associacao_validar);
+  estrutural (a regra estrutura do pacote, validada pelo gatilho rede_associacao_validar);
 - junção fora do polígono existe quando a via cruza o limite (a via entra inteira, sem corte);
   ativo (torre/poste/transformador/...) fora do polígono NÃO entra — conta em `fora_do_limite`.
 
@@ -645,7 +645,7 @@ class _Importador:
 
     def _gravar_fixacoes(self, plano: dict) -> None:
         """Associação de fixação estrutural torre/poste -> trecho, filtrada pela MESMA régua do
-        gatilho (regra fixacao_estrutural no catálogo): o que o pacote não cobre vira desvio."""
+        gatilho (regra estrutura no catálogo): o que o pacote não cobre vira desvio."""
         gravadas = 0
         for e in plano["estruturas"]:
             no = self.nos_por_osm.get(e["osm_id"])
@@ -661,7 +661,7 @@ class _Importador:
                 "INSERT INTO plat.rede_associacao (tenant_id, rede_id, tipo, de_no_id, para_aresta_id, origem) "
                 "SELECT %s, %s::uuid, 'fixacao', %s::uuid, %s::uuid, 'importacao' "
                 "WHERE EXISTS ("
-                "  SELECT 1 FROM plat.rede_regra r WHERE r.rede_id = %s::uuid AND r.tipo = 'fixacao_estrutural' "
+                "  SELECT 1 FROM plat.rede_regra r WHERE r.rede_id = %s::uuid AND r.tipo = 'estrutura' "
                 "  AND ((r.de_tipo_id = %s::uuid AND r.para_tipo_id = %s::uuid) "
                 "    OR (r.de_tipo_id = %s::uuid AND r.para_tipo_id = %s::uuid))"
                 ") RETURNING id",
@@ -714,7 +714,7 @@ class _Importador:
                     "SELECT %s, %s::uuid, 'conectividade', %s::uuid, %s::uuid, 'importacao' "
                     "WHERE EXISTS ("
                     "  SELECT 1 FROM plat.rede_aresta ar JOIN plat.rede_regra rr "
-                    "    ON rr.rede_id = %s::uuid AND rr.tipo = 'conectividade_no_trecho' "
+                    "    ON rr.rede_id = %s::uuid AND rr.tipo = 'juncao_aresta' "
                     "   AND ((rr.de_tipo_id = ar.tipo_id AND rr.para_tipo_id = %s::uuid) "
                     "     OR (rr.de_tipo_id = %s::uuid AND rr.para_tipo_id = ar.tipo_id)) "
                     "  WHERE ar.rede_id = %s::uuid AND (ar.no_origem_id = %s::uuid OR ar.no_destino_id = %s::uuid)"

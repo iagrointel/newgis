@@ -62,11 +62,11 @@ def _pares_compativeis(cur, rede_id: str, tolerancia_rede: float) -> None:
         "SELECT tipo_no, tipo_linha, max(tol) FROM ("
         "  SELECT de_tipo_id AS tipo_no, para_tipo_id AS tipo_linha, coalesce(tolerancia_m, %s) AS tol "
         "  FROM plat.rede_regra WHERE rede_id = %s::uuid "
-        "    AND tipo IN ('conectividade_no_trecho','conectividade_entre_nos') "
+        "    AND tipo IN ('juncao_aresta','juncao_juncao') "
         "  UNION ALL "
         "  SELECT para_tipo_id, de_tipo_id, coalesce(tolerancia_m, %s) "
         "  FROM plat.rede_regra WHERE rede_id = %s::uuid "
-        "    AND tipo IN ('conectividade_no_trecho','conectividade_entre_nos')"
+        "    AND tipo IN ('juncao_aresta','juncao_juncao')"
         ") p GROUP BY 1, 2",
         (tolerancia_rede, rede_id, tolerancia_rede, rede_id),
     )
