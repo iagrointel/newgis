@@ -18,13 +18,13 @@
     "integral": 6389.582478391498
   },
   "densidade_pontos": {
-    "carga_1min": 3.91,
+    "carga_1min": 3.04,
     "celulas": 474,
     "erro_relativo": 0.00010995306844196288,
     "integral": 59.99340281589348,
-    "medido_em": "2026-09-08T01:47:24+00:00",
+    "medido_em": "2026-09-16T13:06:12+00:00",
     "pontos": 60,
-    "ram_livre_gb": 7.02
+    "ram_livre_gb": 5.33
   },
   "ferramentas_registradas": [
     "centro_medio",
