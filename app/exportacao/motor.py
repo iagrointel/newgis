@@ -35,6 +35,7 @@ import psycopg2.extensions
 
 from app import limites
 from app.consulta import where_ast
+from app.consulta.cql2_selecao import compilar_cql2
 from app.exportacao.formatos import Formato
 from app.settings import settings
 
@@ -77,6 +78,9 @@ def montar_select(
     srid_tabela: int,
     colunas_brancas: dict[str, str],
     com_geometria: bool = True,
+    ids: list | None = None,
+    filtro_cql2: dict | None = None,
+    colunas_cql2: dict | None = None,
 ) -> str:
     """Comando SQL COMPLETO (sem parâmetro) para o `-sql` do ogr2ogr. Levanta `where_ast.ErroWhere` para
     filtro malformado e `psycopg2.Error` para o que só o banco recusa (tipo incompatível, função inexistente)
@@ -86,6 +90,16 @@ def montar_select(
         selecionadas.append(f'"{coluna_geom}"')
     condicoes: list[str] = []
     params: list = []
+    if ids is not None:
+        # exportação DA SELEÇÃO do mapa (item L2-01-l): a lista de fid entra como UM parâmetro (array), não
+        # como N literais concatenados — 200 mil fids num `IN (...)` viram megabytes de texto de SQL, e o
+        # `= ANY(%s)` usa o índice da chave primária do mesmo jeito.
+        condicoes.append('"fid" = ANY(%s)')
+        params.append([int(v) for v in ids])
+    if filtro_cql2 is not None:
+        consulta_cql2 = compilar_cql2(filtro_cql2, colunas_cql2 or {})
+        condicoes.append(f"({consulta_cql2.sql})")
+        params.extend(consulta_cql2.params)
     if where:
         consulta = where_ast.compilar_where(where, colunas_brancas)
         condicoes.append(f"({consulta.sql})")
@@ -168,13 +182,14 @@ def crs_de_saida(formato: Formato, srid_pedido: int | None) -> int | None:
     return int(srid_pedido) if srid_pedido else None
 
 
-def zipar_diretorio(origem: Path, destino_zip: Path) -> None:
+def zipar_diretorio(origem: Path, destino_zip: Path, nome_interno: str = "") -> None:
     """Zip de todos os arquivos que o driver escreveu (shapefile: .shp/.shx/.dbf/.prj/.cpg). `write` lê do
     disco em blocos — nenhum arquivo é montado inteiro em memória."""
     with zipfile.ZipFile(destino_zip, "w", zipfile.ZIP_DEFLATED) as z:
-        for arquivo in sorted(origem.iterdir()):
+        for arquivo in sorted(origem.rglob("*")):
             if arquivo.is_file():
-                z.write(arquivo, arquivo.name)
+                relativo = arquivo.relative_to(origem)
+                z.write(arquivo, str(Path(nome_interno) / relativo) if nome_interno else str(relativo))
 
 
 def zipar_arquivo(origem: Path, destino_zip: Path, nome_interno: str) -> None:
