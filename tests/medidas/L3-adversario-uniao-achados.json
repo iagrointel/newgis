@@ -1,0 +1,61 @@
+{
+  "linha": "L3-motor-amc",
+  "adversario": "adversário de linha, turno 16/09/2026, worktree wt/f2-adv-l31",
+  "suposicao_comum": "a linha assume que tudo marcado ENTREGUE num ramo wt/il3xx já está presente em wt/uniao; vários ramos nunca foram de fato integrados",
+  "achados": [
+    {
+      "item": "L3-02-c-smaa",
+      "clausula_afetada": "job amc.smaa (medido no ledger: '0,221 s para 1000x2000'; portão de desempenho da linha)",
+      "comando": "PLAT_TESTE_VAGAS=6 bash laco/roda_teste.sh tests/unit/test_amc_smaa.py -q",
+      "resultado": "AttributeError: module 'app.amc.tarefas' has no attribute 'amc_smaa' — 2 de 16 testes falham",
+      "carga_1min": 1.33,
+      "ram_livre_gb": 8.6,
+      "medido_em": "2026-09-16T05:47:00Z"
+    },
+    {
+      "item": "L3-16-desempenho-escala",
+      "clausula_afetada": "job de recombinação em SQL para >200 mil unidades com orçamento de memória",
+      "comando": "bash laco/roda_teste.sh tests/unit/test_amc_escala.py -q",
+      "resultado": "KeyError: 'amc.recombinar' em app.jobs.registro.REGISTRO — 1 de 31 testes falha",
+      "carga_1min": 3.36,
+      "ram_livre_gb": 8.0,
+      "medido_em": "2026-09-16T05:57:00Z"
+    },
+    {
+      "item": "L3-15-metadado-fator",
+      "clausula_afetada": "esquema aceita versao_fonte/proxy/ancora; relatório lista proxies e âncoras; tela tem o cartão de metadado",
+      "comando": "bash laco/roda_teste.sh tests/unit/test_amc_metadado.py -q",
+      "resultado": "13 de 13 testes do arquivo falham: esquema recusa versao_fonte (additionalProperties), teto de proxy nunca dispara, montar_relatorio() não aceita definicao=, e web/amc_explicacao.html não tem id=metadado-cartao",
+      "carga_1min": 1.10,
+      "ram_livre_gb": 8.9,
+      "medido_em": "2026-09-16T05:53:00Z"
+    },
+    {
+      "item": "L3-01-j-equivalencia-motor-logistico",
+      "clausula_afetada": "modelo de referência usado na prova de equivalência é válido contra o esquema atual",
+      "comando": "bash laco/roda_teste.sh tests/unit/test_amc_equivalencia_motor_referencia.py -q -rs",
+      "resultado": "test_modelo_valido falha com 19 violações de esquema (campos de metadado do L3-15 que o esquema não aceita); as 10 provas contra cbre.hex_fav/imoveis_fav pulam por falta de PLAT_MOTOR_REFERENCIA_ESQUEMA nesta trilha — a prova central do item é hoje INVERIFICÁVEL nesta base, não só quebrada",
+      "carga_1min": 1.5,
+      "ram_livre_gb": 8.8,
+      "medido_em": "2026-09-16T05:59:00Z"
+    },
+    {
+      "item": "L3-14-cobertura-dado-ausente",
+      "clausula_afetada": "varredura estática anti-COALESCE(coluna,0) integrada ao make check",
+      "comando": "bash laco/roda_teste.sh tests/unit/test_amc_sem_coalesce_zero.py -q",
+      "resultado": "1 de 1 teste falha: app/amc/agregacao.py:170 tem coalesce(t.area_vetada_m2, 0) fora da lista EXCECOES declarada — o gate do item está vermelho contra o código que L3-07-agregacao gravou",
+      "carga_1min": 1.10,
+      "ram_livre_gb": 8.9,
+      "medido_em": "2026-09-16T05:53:00Z"
+    },
+    {
+      "item": "L3-01-h-presets",
+      "clausula_afetada": "CRUD por API em /api/amc/presets",
+      "comando": "bash laco/roda_teste.sh tests/api/test_amc_presets_api.py -q",
+      "resultado": "12 de 12 testes falham com 404 'recurso inexistente': app/main.py importa app.amc.rotas.router duas vezes (uma com o apelido rotas_amc_presets) em vez do router de presets, que não existe como APIRouter em nenhum arquivo do repositório",
+      "carga_1min": 1.2,
+      "ram_livre_gb": 9.1,
+      "medido_em": "2026-09-16T06:03:00Z"
+    }
+  ]
+}
