@@ -9,7 +9,7 @@ def espelhar(cur, tenant_id: int, colecao: str, item_id: str, raster: dict | Non
     cur.execute(
         """
         INSERT INTO plat.raster_item (tenant_id, colecao, item_id, sha256, perfil, bytes, estado)
-        VALUES (%s, %s, %s, %s, %s, %s, coalesce(%s, 'ativo'))
+        VALUES (%s, %s, %s, %s, coalesce(%s, 'visual'), coalesce(%s, 0), coalesce(%s, 'ativo'))
         ON CONFLICT (tenant_id, colecao, item_id) DO UPDATE SET
             sha256 = EXCLUDED.sha256, perfil = EXCLUDED.perfil, bytes = EXCLUDED.bytes, estado = EXCLUDED.estado
         """,
