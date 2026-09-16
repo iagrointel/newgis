@@ -2,8 +2,10 @@
 para que o aplicador, os testes e as ferramentas do laço usem a MESMA regra sem precisar de ambiente.
 
 Duas famílias de nome convivem, e o nome é CHAVE em `plat.versao_migracao`, nunca etiqueta:
-  - legada `NNN_slug` (001 a 047), FECHADA e imutável — renumerar um arquivo já aplicado faria o
-    aplicador tratá-lo como novo e reaplicar;
+  - legada `NNN_slug` (001 a 048), FECHADA e imutável — renumerar um arquivo já aplicado faria o
+    aplicador tratá-lo como novo e reaplicar; o corte ficou em 048, e não em 047, porque
+    `048_smtp_convites_correcoes.sql` já estava em disco quando o ADR 0014 entrou, e a primeira
+    regra do ADR é que arquivo existente não é renomeado (ADR 0014, linha 39);
   - carimbo de tempo `YYYYMMDDTHHMM_slug` para toda migração nova, com 3 hexadecimais opcionais
     quando duas nascem no mesmo minuto em trilhas diferentes.
 """
@@ -13,7 +15,7 @@ from pathlib import Path
 
 RE_MIGRACAO_LEGADO = re.compile(r"^\d{3}_[a-z0-9_]+$")
 RE_MIGRACAO_CARIMBO = re.compile(r"^\d{8}T\d{4}(?:[0-9a-f]{3})?_[a-z0-9_]+$")
-ULTIMO_LEGADO = 47  # a família de três dígitos está fechada aqui; migração nova nasce com carimbo
+ULTIMO_LEGADO = 48  # a família de três dígitos está fechada aqui (ADR 0014: corte em 048, não 047)
 RE_DEPENDE = re.compile(r"^--\s*depende:\s*(\S+)\s*$", re.MULTILINE)
 
 

@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS plat_homolog.versao_migracao (
 SQL
 
 # Lista as migrações na ORDEM DE APLICAÇÃO. Duas famílias de nome (ADR 0014):
-#  - legada `NNN_slug.sql` (001 a 047), FECHADA e imutável;
+#  - legada `NNN_slug.sql` (001 a 048), FECHADA e imutável;
 #  - carimbo de tempo `YYYYMMDDTHHMM_slug.sql`, com 3 hex opcionais quando duas nascem no mesmo minuto.
 # Chave de ordenação: prefixo "0" para o legado e "1" para o carimbo, depois o nome. Assim todo o
 # legado vem antes de qualquer carimbo e a ordem lexicográfica continua válida dentro de cada família.
