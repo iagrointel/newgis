@@ -5,9 +5,10 @@ Achado 15/09 (wt/f2-tiposjob, família "tipo de job órfão"): 27 módulos com @
 (muitos com rota que já os enfileira) mas nunca eram importados aqui — o tipo nunca entrava em REGISTRO e a
 chamada batia em 422 tipo_desconhecido (POST /api/exportacoes entre elas). Ver
 tests/unit/test_jobs_registro.py::test_todo_tipo_enfileirado_esta_registrado (varredura geral, não lista
-fixa) para a prova de que isso não volta a acontecer em silêncio. Um 28º módulo, app.edicao.tarefas, FICA
-DE FORA — ver comentário junto à importação de app.correio abaixo (bug pré-existente e alheio em
-app/edicao/modelos.py, já presente em wt/uniao)."""
+fixa) para a prova de que isso não volta a acontecer em silêncio. O 28º módulo, app.edicao.tarefas
+(camadas.lote), estava fora por um bug alheio em app/edicao/modelos.py; consertado em 16/09 (b43e23414) e
+importado abaixo junto com app.correio (item L0-07-d-smtp-convites, cujo import tinha se perdido numa
+fusão e foi restaurado no mesmo turno da família 'tipo de job órfão')."""
 
 from app import (
     status_tarefas,  # noqa: F401 — L0-06-e-status: status.amostrar + periódico (achado L7-03-f)
@@ -35,17 +36,10 @@ from app.conexao import (
 from app.conexao import (
     tarefas_endpoints as conexao_tarefas_endpoints,  # noqa: F401 — achado 15/09: endpoints_publicos.retestar
 )
+from app.correio import tarefas as correio_tarefas  # noqa: F401 — L0-07-d: correio.enviar (somente_sistema)
 from app.edicao import (
-    tarefas as edicao_tarefas,  # noqa: F401 — camadas.lote: modelos restaurados em 16/09 (f2ce41ab4)  # noqa: F401 — L0-07-d: correio.enviar (somente_sistema)
+    tarefas as edicao_tarefas,  # noqa: F401 — L2-03-f: camadas.lote (modelos restaurados em 16/09, b43e23414)
 )
-
-# app.edicao.tarefas (camadas.lote) FICA DE FORA de propósito: acionado 15/09, `app/edicao/lote.py` importa
-# LoteEntrada/LoteFalha/LotePrevia/LoteSaida de app/edicao/modelos.py, que não os define (confirmado também
-# em wt/uniao HEAD — não é regressão deste ramo). Bug pré-existente e fora do escopo "tipo de job órfão"
-# (é o path SÍNCRONO de edição em lote que está quebrado, não o registro do tipo); nenhuma rota chama
-# "camadas.lote" hoje (não apareceu na varredura de test_todo_tipo_enfileirado_esta_registrado), então
-# importar aqui só derrubaria toda a suíte de jobs por um ImportError alheio. PARAR E RELATAR ao gerente
-# em vez de inventar os 4 modelos ou de forçar o import: decisão de quem sabe a forma pretendida do modelo.
 from app.exportacao import (
     tipos_job as exportacao_tipos_job,  # noqa: F401 — achado 15/09: exportacao.gerar (POST /api/exportacoes, 422 tipo_desconhecido) + exportacao.expirar
 )
