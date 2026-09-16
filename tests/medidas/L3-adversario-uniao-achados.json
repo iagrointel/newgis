@@ -34,7 +34,7 @@
       "item": "L3-01-j-equivalencia-motor-logistico",
       "clausula_afetada": "modelo de referência usado na prova de equivalência é válido contra o esquema atual",
       "comando": "bash laco/roda_teste.sh tests/unit/test_amc_equivalencia_motor_referencia.py -q -rs",
-      "resultado": "test_modelo_valido falha com 19 violações de esquema (campos de metadado do L3-15 que o esquema não aceita); as 10 provas contra cbre.hex_fav/imoveis_fav pulam por falta de PLAT_MOTOR_REFERENCIA_ESQUEMA nesta trilha — a prova central do item é hoje INVERIFICÁVEL nesta base, não só quebrada",
+      "resultado": "test_modelo_valido falha com 19 violações de esquema (campos de metadado do L3-15 que o esquema não aceita); as 10 provas contra <esquema de referência>.hex_fav/imoveis_fav pulam por falta de PLAT_MOTOR_REFERENCIA_ESQUEMA nesta trilha — a prova central do item é hoje INVERIFICÁVEL nesta base, não só quebrada",
       "carga_1min": 1.5,
       "ram_livre_gb": 8.8,
       "medido_em": "2026-09-16T05:59:00Z"
