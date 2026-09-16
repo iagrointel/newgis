@@ -360,6 +360,22 @@ chmod 600 "$ENVF"
 # 07/09 noite (achado do agente do L6-02-o): o passo c2c gravava PLAT_GIT_SHA e este `cat >` recriava o arquivo
 # sem a linha — o worker morria no arranque em qualquer worktree (.git é arquivo, não diretório). Regrava aqui.
 [ -n "${SHA_WT:-}" ] && echo "PLAT_GIT_SHA=$SHA_WT" >> "$ENVF" && echo "  PLAT_GIT_SHA regravado no env final"
+# 16/09 (achado GET /saude): trilha_systemd.sh só injeta PLAT_MARTIN_URL/PLAT_WORKER_URL via Environment=
+# das unidades (api/worker/martin) — nunca chega neste .env, que é o que a suíte de teste sourcia
+# (roda_teste.sh; TestClient em processo, sem systemd). Medido: /saude no processo de teste devolvia
+# servicos.worker=servicos.martin="ausente" com as duas unidades vivas e respondendo "ok" pela API real
+# (:8192). Igual PLAT_URL_PUBLICA acima: o valor tem de ficar certo AQUI, não só no Environment= da
+# unidade. Lido de $T.portas.env, que trilha_systemd.sh já grava (idempotente; ausente até a trilha
+# ganhar unidades systemd — nesse caso nem martin nem worker respondem HTTP mesmo, "ausente" segue
+# honesto). Titiler de propósito NÃO entra: não é uma unidade por trilha (compartilhado/externo).
+if [ -f "$VAR/$T.portas.env" ]; then
+  (
+    . "$VAR/$T.portas.env"
+    [ -n "${PLAT_TRILHA_PORTA_MARTIN:-}" ] && echo "PLAT_MARTIN_URL=http://127.0.0.1:${PLAT_TRILHA_PORTA_MARTIN}"
+    [ -n "${PLAT_TRILHA_PORTA_WORKER:-}" ] && echo "PLAT_WORKER_URL=http://127.0.0.1:${PLAT_TRILHA_PORTA_WORKER}"
+  ) >> "$ENVF"
+  echo "  PLAT_MARTIN_URL/PLAT_WORKER_URL alinhados com $T.portas.env"
+fi
 echo
 echo "pronto. Nesta trilha, rode a suíte SEM flock:"
 echo "  set -a; source $ENVF; set +a; venv/bin/pytest tests/unit tests/api -q"
