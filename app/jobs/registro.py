@@ -3,17 +3,22 @@
 timeout_s, tentativas, executor). A validação acontece na importação: nome único no padrão `<area>.<verbo>`,
 memória dentro do teto, executor 'gpu' só com PLAT_GPU_SSH e sempre pesado."""
 
+import logging
+import os
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
 
 from pydantic import BaseModel
 
+log = logging.getLogger(__name__)
+
 PADRAO_NOME = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")
 PERFIS = ("visualizador", "campo", "editor", "admin")
 EXECUTORES = ("local", "gpu")
 MINIMO_MB = 128
 TETO_LEVE_MB = 1024
+_EXECUTOR_DE_TESTE = re.compile(r"^teste:[0-9]+$")
 
 
 class ErroRegistro(ValueError):
@@ -64,6 +69,31 @@ def _gpu_configurado() -> bool:
     from app import settings as cfg
 
     return bool(cfg.obter().PLAT_GPU_SSH)
+
+
+def executor_efetivo(t: Tarefa) -> str:
+    """Válvula test-only (decisão G7: afinidade de executor em `plat.job_pegar`, migração
+    20260916T1600; espelha `app.conexao.seguranca.alvos_de_teste`). Quem ENFILEIRA um job
+    (`app/jobs/sistema.py::enfileirar` e `app/jobs/servico.py::criar`, os dois pontos que fazem
+    `INSERT INTO plat.job`) chama esta função em vez de usar `t.executor` direto, para que
+    `PLAT_TESTE_JOB_EXECUTOR` (lida de `os.environ` a cada chamada — nunca via `settings`, dataclass
+    congelada e cacheada) possa gravar `executor='teste:<pid>'` no job. É o que faz `plat.job_pegar`
+    recusar esse job para o worker do systemd (que anuncia 'padrao', o default do 3º argumento) e
+    reservá-lo para o worker PRIVADO do teste, que anuncia a MESMA identidade via
+    `PLAT_WORKER_EXECUTOR`. Só fora de produção — mesmo par de guardas de `alvos_de_teste`; fora dessa
+    janela (ou com o valor fora do padrão `teste:<pid>`) devolve `t.executor` sem alteração."""
+    bruto = os.environ.get("PLAT_TESTE_JOB_EXECUTOR", "").strip()
+    if not bruto:
+        return t.executor
+    from app import settings as cfg  # importação tardia: mesmo motivo de _teto_memoria/_gpu_configurado
+
+    if cfg.obter().producao:
+        log.warning("PLAT_TESTE_JOB_EXECUTOR ignorada em producao")
+        return t.executor
+    if not _EXECUTOR_DE_TESTE.match(bruto):
+        log.warning("PLAT_TESTE_JOB_EXECUTOR fora do padrão teste:<pid>: %r", bruto)
+        return t.executor
+    return bruto
 
 
 def ordem_perfil(perfil: str) -> int:

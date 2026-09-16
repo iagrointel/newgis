@@ -12,7 +12,7 @@ import psycopg2.extras
 
 from app import db as banco
 from app.jobs.contexto import ErroServico
-from app.jobs.registro import REGISTRO, Tarefa, chave_de, validar_parametros
+from app.jobs.registro import REGISTRO, Tarefa, chave_de, executor_efetivo, validar_parametros
 from app.jobs.servico import PENDENTES_MAX
 
 log = logging.getLogger("plat.jobs.sistema")
@@ -52,7 +52,7 @@ def _inserir(cur, tenant_id: int, t, params: dict, usuario_id: int | None, prior
         "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
         "RETURNING id",
         (tenant_id, usuario_id, t.nome, psycopg2.extras.Json(params), prioridade, chave_de(t, params),
-         t.pesado, t.memoria_mb, t.timeout_s, t.executor, t.tentativas,
+         t.pesado, t.memoria_mb, t.timeout_s, executor_efetivo(t), t.tentativas,
          agendado_para or datetime.datetime.now(datetime.UTC)),
     )
     return str(cur.fetchone()["id"])

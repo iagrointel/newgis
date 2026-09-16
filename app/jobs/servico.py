@@ -16,7 +16,7 @@ from app import db as banco
 from app import log as plat_log
 from app.jobs import agenda as mod_agenda
 from app.jobs.contexto import ErroServico, Sessao
-from app.jobs.registro import REGISTRO, Tarefa, chave_de, descrever, ordem_perfil, validar_parametros
+from app.jobs.registro import REGISTRO, Tarefa, chave_de, descrever, executor_efetivo, ordem_perfil, validar_parametros
 from app.jobs.tipos import REGISTRO as _registro_carregado  # noqa: F401 — garante os tipos registrados
 
 UTC = datetime.UTC
@@ -147,7 +147,7 @@ def criar(sessao: Sessao, tipo: str, parametros, prioridade: int = 5, agendado_p
             "somente_leitura) "
             "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, coalesce(%s, now()), %s, %s, %s, %s) RETURNING id",
             (sessao.tenant_id, sessao.usuario_id, t.nome, psycopg2.extras.Json(params), prioridade, chave_de(t, params),
-             t.pesado, t.memoria_mb, t.timeout_s, t.executor, t.tentativas, quando,
+             t.pesado, t.memoria_mb, t.timeout_s, executor_efetivo(t), t.tentativas, quando,
              psycopg2.extras.Json(prov) if prov else None, agenda_id, programado_para, t.somente_leitura),
         )
         novo = cur.fetchone()["id"]
