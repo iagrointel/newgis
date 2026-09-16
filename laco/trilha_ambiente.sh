@@ -303,11 +303,15 @@ SQL
 echo "  admins de plataforma/demo/demo2 semeados"
 
 echo "== e. $ENVF"
-# 06/09 19:45: o token do Garage SAIU do .env (conserto G6: segredos em /etc/plat/segredos). O grep no
-# .env devolvia 1 e, com set -e/pipefail, o script morria em silêncio antes de escrever o .env da
-# trilha — foi o que derrubou a base de integração da fila três vezes. Lê do cofre, com o .env de reserva.
-TOKEN_GARAGE=$(sudo cat /etc/plat/segredos/PLAT_GARAGE_ADMIN_TOKEN 2>/dev/null || true)
-[ -z "$TOKEN_GARAGE" ] && TOKEN_GARAGE=$(grep -m1 '^PLAT_GARAGE_ADMIN_TOKEN=' "$REPO/.env" 2>/dev/null | cut -d= -f2- || true)
+# 16/09 (D26, item F2/garage2): a trilha NUNCA MAIS lê o cofre de produção (/etc/plat/segredos) nem o
+# .env de produção para o token do Garage. Existe agora uma instância de Garage SEPARADA, só para
+# teste/homologação (unidade plataforma-garage-trilhas.service, S3 :3910, admin :3913, dados em
+# /mnt/pgdata/garage-trilhas/), com token de administração PRÓPRIO — quem tiver esse token administra
+# só os buckets de trilha, nunca os de produção. O segredo fica em laco/var/garage-trilhas.segredos
+# (umask 077, fora do repo), gerado uma vez com `openssl rand -hex 32` por esta mesma tarefa.
+GARAGE_TRILHAS_SEG="$LACO/var/garage-trilhas.segredos"
+TOKEN_GARAGE=$(grep -m1 '^PLAT_GARAGE_ADMIN_TOKEN=' "$GARAGE_TRILHAS_SEG" 2>/dev/null | cut -d= -f2- || true)
+[ -z "$TOKEN_GARAGE" ] && echo "  ! $GARAGE_TRILHAS_SEG sem PLAT_GARAGE_ADMIN_TOKEN — trilha ficará SEM Garage (nunca usar o token de produção para compensar)" >&2
 # 07/09 noite (adversário do L7-19, achado registrado como L7-31-a): a trilha NÃO precisa do PLAT_SECRET de
 # produção — ele assinava sessão e token só dentro da própria trilha e acabava em texto plano em ~100 .env e no
 # /proc de dezenas de processos do usuário dev. Cada trilha ganha um segredo aleatório próprio, guardado no
@@ -342,8 +346,8 @@ PLAT_SCHEMA=$SCHEMA
 PLAT_SCHEMA_TRABALHO=$SCHEMA_TRAB
 PLAT_CANAL_JOB=$CANAL
 PLAT_CANAL_WORKER=$WORKER
-PLAT_GARAGE_URL=http://127.0.0.1:3900
-PLAT_GARAGE_ADMIN_URL=http://127.0.0.1:3903
+PLAT_GARAGE_URL=http://127.0.0.1:3910
+PLAT_GARAGE_ADMIN_URL=http://127.0.0.1:3913
 PLAT_GARAGE_ADMIN_TOKEN=${TOKEN_GARAGE}
 PLAT_GARAGE_REGIAO=garage
 PLAT_GARAGE_BUCKET_PREFIXO=t$T-plat-
