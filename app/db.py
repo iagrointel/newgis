@@ -75,10 +75,15 @@ def _preparar(con, ctx: Contexto | None, somente_leitura: bool = False):
     cur = con.cursor(cursor_factory=CursorSchemaAmbiente)
     cur.execute(f"SET search_path = {settings.PLAT_SCHEMA}, public")
     if ctx is not None:
+        # application_name = 'plat:<tenant_id>' (item L7-06-a-metricas-exporters): o único jeito de o
+        # postgres_exporter contar conexões por inquilino em pg_stat_activity de FORA desta sessão, já que
+        # current_setting só lê os GUCs 'plat.*' da PRÓPRIA sessão. set_config(..., true) = SET LOCAL: dura só
+        # esta transação, então uma conexão do pool reaproveitada SEM contexto (somente_leitura de fundação,
+        # jobs sem tenant) nunca herda o application_name de um uso anterior com contexto.
         cur.execute(
             "SELECT set_config('plat.tenant_id', %s, true), set_config('plat.usuario_id', %s, true), "
-            "set_config('plat.login', %s, true)",
-            (str(ctx.tenant_id), str(ctx.usuario_id), ctx.login),
+            "set_config('plat.login', %s, true), set_config('application_name', %s, true)",
+            (str(ctx.tenant_id), str(ctx.usuario_id), ctx.login, f"plat:{ctx.tenant_id}"),
         )
     if somente_leitura:
         # superadmin lendo outro inquilino (ADR 0002 seção 10): a transação inteira é só leitura
