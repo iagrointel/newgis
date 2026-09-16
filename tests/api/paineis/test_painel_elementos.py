@@ -10,6 +10,7 @@ são criadas aqui pela mesma via da ingestão e apagadas ao fim."""
 import psycopg2.extras
 import pytest
 
+from app import esquema_dado
 from tests.api.paineis.conftest import FONTE_AGUA, FONTE_OCORRENCIAS
 from tests.api.test_rls import contexto, ids_por_slug
 
@@ -317,11 +318,15 @@ def camada_fronteira(conexao_plat_app, sessao_a):
     import uuid
 
     tenant_id, adm = _admin(conexao_plat_app)
-    schema, tabela = "d_demo", "c_" + uuid.uuid4().hex[:16]
+    tabela = "c_" + uuid.uuid4().hex[:16]
     item_id = str(uuid.uuid4())
     with conexao_plat_app.cursor() as cur:
         cur.execute("SET search_path = plat, public")
         cur.execute("SELECT plat.camada_schema_garantir('demo')")
+        # nunca "d_demo" cru: em trilha o schema de dado é prefixado por instalação
+        # (plat.camada_schema_prefixo(); achado F8, mesma classe do já corrigido em
+        # tests/api/ferramentas/apoio.py) — "d_demo" bate direto em produção, sem privilégio aqui.
+        schema = esquema_dado.esquema(cur, "demo")
         cur.execute(f'CREATE TABLE "{schema}"."{tabela}" (fid bigserial PRIMARY KEY, '
                     f'geom geometry(Point,4326), rotulo text, so_nulo numeric, grupo text, '
                     f'familia text, peso numeric)')
