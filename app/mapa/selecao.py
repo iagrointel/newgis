@@ -1,5 +1,5 @@
 """Seleção e filtro do mapa (item L2-01-h-selecao-filtros): construtor de filtro por atributo em
-CQL2-JSON (`app.consulta.cql2`, mesmo vocabulário declarado pela `vista_de_camada` na ADR 0004),
+CQL2-JSON (`app.consulta.cql2_selecao`, mesmo vocabulário declarado pela `vista_de_camada` na ADR 0004),
 seleção espacial por polígono/retângulo/laço desenhado no cliente e seleção "feições de A que
 intersectam/estão a X m de B" entre duas camadas.
 
@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field
 
 from app import db
 from app.auth.sessao import Auth, autenticado
-from app.consulta.cql2 import GEOJSON_TIPOS, compilar_cql2
+from app.consulta.cql2_selecao import GEOJSON_TIPOS, compilar_cql2
 from app.consulta.where_ast import ErroWhere
 from app.erros import ErroAPI
 from app.mapa.rotas import SQL_CAMADA
