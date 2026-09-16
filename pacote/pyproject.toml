@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "plat"
+name = "plat_geo"
 version = "0.1.0"
-description = "SDK Python da plataforma: catálogo, acervo, jobs e ferramentas por token de serviço"
+description = "SDK Python geoespacial da plataforma (camada sobre o SDK genérico `plat` de sdk/python): catálogo, acervo, jobs e ferramentas por token de serviço"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Proprietária" }
@@ -23,5 +23,5 @@ dependencies = ["requests>=2.31"]
 Documentacao = "docs/PARIDADE.md"
 
 [tool.setuptools]
-packages = ["plat"]
+packages = ["plat_geo"]
 package-dir = { "" = "." }

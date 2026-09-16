@@ -20,7 +20,7 @@ from urllib.parse import urljoin
 
 import requests
 
-from plat import erros
+from plat_geo import erros
 
 TEMPO_PADRAO_S = 60.0
 
@@ -87,36 +87,36 @@ class Plataforma:
     # -------------------------------------------------------------- domínios
     @property
     def catalogo(self):
-        """Catálogo de itens (`plat.catalogo.Catalogo`)."""
+        """Catálogo de itens (`plat_geo.catalogo.Catalogo`)."""
         if "catalogo" not in self._dominios:
-            from plat.catalogo import Catalogo
+            from plat_geo.catalogo import Catalogo
 
             self._dominios["catalogo"] = Catalogo(self)
         return self._dominios["catalogo"]
 
     @property
     def acervo(self):
-        """Acervo da casa (`plat.acervo.Acervo`)."""
+        """Acervo da casa (`plat_geo.acervo.Acervo`)."""
         if "acervo" not in self._dominios:
-            from plat.acervo import Acervo
+            from plat_geo.acervo import Acervo
 
             self._dominios["acervo"] = Acervo(self)
         return self._dominios["acervo"]
 
     @property
     def jobs(self):
-        """Fila de jobs (`plat.jobs.Jobs`)."""
+        """Fila de jobs (`plat_geo.jobs.Jobs`)."""
         if "jobs" not in self._dominios:
-            from plat.jobs import Jobs
+            from plat_geo.jobs import Jobs
 
             self._dominios["jobs"] = Jobs(self)
         return self._dominios["jobs"]
 
     @property
     def ferramentas(self):
-        """Ferramentas por job (`plat.ferramentas.Ferramentas`)."""
+        """Ferramentas por job (`plat_geo.ferramentas.Ferramentas`)."""
         if "ferramentas" not in self._dominios:
-            from plat.ferramentas import Ferramentas
+            from plat_geo.ferramentas import Ferramentas
 
             self._dominios["ferramentas"] = Ferramentas(self)
         return self._dominios["ferramentas"]

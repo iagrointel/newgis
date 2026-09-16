@@ -1,13 +1,16 @@
-# plat — SDK Python da plataforma
+# plat_geo — SDK Python geoespacial da plataforma
 
 Pacote Python que consome a API da plataforma por **token de serviço**: catálogo de itens, acervo da
-casa, fila de jobs e ferramentas geoespaciais (item L2-16-a-sdk-python-geo). Distribuição interna
-(`make pacote` gera o wheel em `pacote/dist/`); sem PyPI até decisão do dono.
+casa, fila de jobs e ferramentas geoespaciais (item L2-16-a-sdk-python-geo). Camada "geo" ao lado do
+SDK genérico `plat` (`sdk/python`, item L7-08-b) — nome distinto por decisão do gerente (G3):
+os dois pacotes existiam como `plat 0.1.0` com APIs incompatíveis; este é o `plat_geo`, o outro
+continua `plat`. Distribuição interna (`make pacote` gera o wheel em `pacote/dist/`); sem PyPI até
+decisão do dono.
 
 ## Instalação
 
 ```bash
-pip install pacote/dist/plat-<versão>.whl
+pip install pacote/dist/plat_geo-<versão>.whl
 ```
 
 ou, num checkout, apontando o `PYTHONPATH` para `pacote/`.
@@ -15,7 +18,7 @@ ou, num checkout, apontando o `PYTHONPATH` para `pacote/`.
 ## Uso
 
 ```python
-from plat import Plataforma
+from plat_geo import Plataforma
 
 pla = Plataforma("https://plataforma.exemplo", token="pt_…")
 
@@ -41,7 +44,7 @@ print(item["dados"]["procedencia"]["sha256_geometria_entrada"])
 
 ## Erros
 
-Toda recusa da API vira exceção tipada (`plat.erros`), com `.status`, `.codigo` e `.detalhe`:
+Toda recusa da API vira exceção tipada (`plat_geo.erros`), com `.status`, `.codigo` e `.detalhe`:
 
 | classe | status | quando |
 |---|---|---|

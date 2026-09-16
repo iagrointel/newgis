@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from plat.cliente import Plataforma
+from plat_geo.cliente import Plataforma
 
 TETOS = {"ferramentas.buffer": {"distancia_m": "até 100 km; acima disso a API recusa (422)"}}
 

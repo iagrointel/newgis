@@ -4,22 +4,23 @@ injetada em todos os módulos; o servidor e o worker são os subprocessos da su�
 
 import doctest
 
-import plat
-from plat import Plataforma
+import plat_geo
+from plat_geo import Plataforma
 
 
 def test_doctests_do_sdk_contra_a_demo(pla):
     globs = {
         "pla": pla,
         "Plataforma": Plataforma,
-        "plat": plat,
-        "ErroPlataforma": plat.ErroPlataforma,
-        "ErroPermissao": plat.ErroPermissao,
-        "NaoEncontrado": plat.NaoEncontrado,
-        "Pagina": plat.Pagina,
+        "plat_geo": plat_geo,
+        "ErroPlataforma": plat_geo.ErroPlataforma,
+        "ErroPermissao": plat_geo.ErroPermissao,
+        "NaoEncontrado": plat_geo.NaoEncontrado,
+        "Pagina": plat_geo.Pagina,
     }
     testes = 0
-    for modulo in (plat, plat.cliente, plat.erros, plat.catalogo, plat.acervo, plat.jobs, plat.ferramentas):
+    for modulo in (plat_geo, plat_geo.cliente, plat_geo.erros, plat_geo.catalogo, plat_geo.acervo,
+                   plat_geo.jobs, plat_geo.ferramentas):
         resultado = doctest.testmod(modulo, extraglobs=globs, verbose=False, optionflags=doctest.ELLIPSIS)
         assert not resultado.failed, f"doctest de {modulo.__name__}: {resultado.failed} falha(s)"
         testes += resultado.attempted

@@ -5,7 +5,7 @@ feliz; aqui ficam os cantos: RLS entre inquilinos, item inexistente e a lixeira)
 import secrets
 
 import pytest
-from plat import NaoEncontrado
+from plat_geo import NaoEncontrado
 
 from tests.sdk.conftest import PREFIXO
 
@@ -47,7 +47,7 @@ def test_criar_abrir_atualizar_apagar_redondo(pla, limpar_itens):
 
 
 def test_tipo_fora_do_vocabulario_e_422_tipado(pla):
-    from plat import ErroValidacao
+    from plat_geo import ErroValidacao
 
     with pytest.raises(ErroValidacao) as erro:
         pla.catalogo.criar(tipo=f"{PREFIXO}tipo-inexistente", titulo="x", dados={})

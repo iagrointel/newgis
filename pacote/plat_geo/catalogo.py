@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Iterator
 
-from plat.cliente import Plataforma
+from plat_geo.cliente import Plataforma
 
 
 @dataclass

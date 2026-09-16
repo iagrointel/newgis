@@ -17,23 +17,26 @@ import pytest
 import requests
 
 ROOT = Path(__file__).resolve().parents[2]
+# Decisão do gerente (G3): dois pacotes chamados `plat` (sdk/python/src/plat, o genérico do item
+# L7-08-b, e pacote/plat, a camada geo do item L2-16-a) colidiam sob o mesmo nome. Canônico agora é
+# `sdk/python/src/plat`; o de `pacote/` foi renomeado `plat_geo` — os dois nomes convivem em
+# sys.path sem sombra nenhuma, cada um resolve para o seu pacote.
 PACOTE = ROOT / "pacote"
-if str(PACOTE) not in sys.path:  # o pacote mora fora de app/: entra no caminho antes do import
+if str(PACOTE) not in sys.path:  # o pacote (plat_geo) mora fora de app/: entra no caminho antes do import
     sys.path.insert(0, str(PACOTE))
-# `plat_gerado` (o cliente gerado do OpenAPI) mora em sdk/python/src/, ao lado de um `plat/` antigo
-# que NÃO é o pacote — o `plat` de verdade é o de `pacote/` acima, que já entrou primeiro em sys.path
-# (posição 0) e por isso continua ganhando a resolução de `import plat`. Sem esta entrada,
-# `import plat_gerado` cai na cópia congelada em site-packages (instalada uma vez, de outra trilha/
-# worktree, `pip install ./sdk/python`) em vez da árvore regenerada em disco — é o que fazia
-# test_todo_modulo_gerado_expoe_as_quatro_funcoes_padrao importar um módulo que já não existe mais lá.
+# `plat_gerado` (o cliente gerado do OpenAPI) e `plat` (a camada ergonômica genérica) moram em
+# sdk/python/src/. Sem esta entrada, `import plat_gerado` cai na cópia congelada em site-packages
+# (instalada uma vez, de outra trilha/worktree, `pip install ./sdk/python`) em vez da árvore
+# regenerada em disco — é o que fazia test_todo_modulo_gerado_expoe_as_quatro_funcoes_padrao
+# importar um módulo que já não existe mais lá.
 SDK_SRC = ROOT / "sdk" / "python" / "src"
 if str(SDK_SRC) not in sys.path:
     sys.path.insert(1, str(SDK_SRC))
 
 os.environ.setdefault("PLAT_AMBIENTE", "dev")
 
-import plat  # noqa: E402
-from plat import Plataforma  # noqa: E402
+import plat_geo  # noqa: E402
+from plat_geo import Plataforma  # noqa: E402
 
 from tests.api.conftest import credenciais, totp_guardado  # noqa: E402
 
@@ -204,7 +207,7 @@ def limpar_itens(pla):
 
 @pytest.fixture(scope="session")
 def versao_sdk():
-    return plat.__versao__
+    return plat_geo.__versao__
 
 
 # --- aliases de compatibilidade (item L7-08-b): test_exemplos.py e test_adversario.py foram escritos

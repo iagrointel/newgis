@@ -4,7 +4,7 @@ escrever (a cláusula do portão), e o privilégio exigido exposto na exceção 
 import secrets
 
 import pytest
-from plat import ErroAutenticacao, ErroPermissao, Plataforma
+from plat_geo import ErroAutenticacao, ErroPermissao, Plataforma
 
 from tests.sdk.conftest import PREFIXO
 

@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from plat.cliente import Plataforma
+from plat_geo.cliente import Plataforma
 
 
 class Acervo:

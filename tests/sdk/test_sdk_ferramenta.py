@@ -8,7 +8,7 @@ import os
 import time
 
 import pytest
-from plat import ErroValidacao, FalhaJob, NaoEncontrado
+from plat_geo import ErroValidacao, FalhaJob, NaoEncontrado
 
 from tests.sdk.conftest import PREFIXO
 
@@ -84,7 +84,7 @@ def test_geometria_vazia_vira_falha_job_tipada(pla):
 
 
 def test_cancelar_job_nao_explode(pla):
-    from plat import Conflito
+    from plat_geo import Conflito
 
     job = pla.jobs.criar("ferramentas.buffer", {"geometria": PONTO, "distancia_m": 1.0})
     try:

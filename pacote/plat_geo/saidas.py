@@ -5,7 +5,7 @@ só pode ser afirmada por quem executou. O script declara os valores de cada sa�
 cabeçalho com `gravar(nome, valor)`; o job lê o arquivo no fim, recusa saída fora do declarado e
 registra o item `ferramenta_resultado`.
 
-    from plat import saidas
+    from plat_geo import saidas
     saidas.gravar("buffer", colecao_de_feicoes)
 
 O caminho do arquivo vem do ambiente (PLAT_SAIDA_DIR, posto pelo job); fora de execução de

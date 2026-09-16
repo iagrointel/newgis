@@ -4,7 +4,7 @@ explícita é 409 tipado (`Conflito`)."""
 
 import psycopg2
 import pytest
-from plat import Conflito, NaoEncontrado, Plataforma
+from plat_geo import Conflito, NaoEncontrado, Plataforma
 
 from tests.sdk.conftest import PREFIXO
 

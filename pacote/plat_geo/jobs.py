@@ -1,5 +1,5 @@
 """Fila de jobs: criar, acompanhar progresso, cancelar e ESPERAR. `Jobs.esperar` é o bloco de
-construção das ferramentas (`plat.ferramentas`): consulta o job num intervalo fixo até um estado
+construção das ferramentas (`plat_geo.ferramentas`): consulta o job num intervalo fixo até um estado
 final e devolve o job completo (com `resultado` ou `erro` e a procedência que o worker grava).
 
 Exemplo (`pla` é uma `Plataforma` já conectada; o doctest roda contra a demo com worker vivo):
@@ -18,8 +18,8 @@ from __future__ import annotations
 import time
 from typing import Any, Callable
 
-from plat import erros
-from plat.cliente import Plataforma
+from plat_geo import erros
+from plat_geo.cliente import Plataforma
 
 FINAIS = ("concluido", "falhou", "cancelado")
 
