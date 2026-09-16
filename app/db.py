@@ -104,6 +104,21 @@ def db(ctx: Contexto | None = None, somente_leitura: bool = False):
             con = cur = None
             if tentativa == TENTATIVAS - 1:
                 raise
+        except Exception:
+            # achado L0-06-a / adversário transversal (turno 9): qualquer OUTRA exceção de _preparar
+            # (ex.: psycopg2.ProgrammingError — "set_session cannot be used inside a transaction", medido ao
+            # vivo em backup.executar) é IRMÃ de OperationalError/InterfaceError na hierarquia do psycopg2,
+            # nunca subclasse — sem este ramo ela atravessava os dois únicos pontos de putconn() (o except
+            # acima e o finally do bloco de baixo, que nunca é alcançado) e a conexão obtida por
+            # obter_conexao() ficava marcada como "em uso" no pool para sempre. Não é retentável (é erro de
+            # programação, não de rede) — devolve a conexão (fechando-a, já que o estado dela após _preparar
+            # falhar no meio é desconhecido) e relança na hora, sem consumir as TENTATIVAS restantes.
+            try:
+                p.putconn(con, close=True)
+            except Exception:  # noqa: BLE001 — a conexão já pode estar em estado ruim; nada mais a fazer
+                pass
+            con = cur = None
+            raise
     try:
         yield cur
         con.commit()

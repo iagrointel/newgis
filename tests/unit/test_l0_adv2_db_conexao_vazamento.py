@@ -18,7 +18,11 @@ backup), a exceção atravessa o for-loop sem cair em nenhum `except` e sem pass
 baixo (que nunca chega a ser alcançado) — a conexão obtida por `obter_conexao()` nunca volta ao pool.
 Com `PLAT_POOL_MAX=2` (padrão de toda trilha, `laco/trilha_ambiente.sh`), duas ocorrências deste padrão de
 erro esgotam o pool inteiro da trilha (PoolError em todo pedido seguinte) — risco de negação de serviço
-generalizado a partir de UM job de backup que falha."""
+generalizado a partir de UM job de backup que falha.
+
+CONSERTADO (turno 9, f2fixfdwpool): `app/db.py::db()` ganhou um `except Exception` genérico no for-loop de
+tentativas — qualquer exceção não-retentável de `_preparar` (não só a dupla OperationalError/InterfaceError)
+agora devolve a conexão ao pool (fechando-a) antes de relançar. Teste deixou de ser xfail."""
 
 from __future__ import annotations
 
@@ -26,14 +30,6 @@ import psycopg2
 import pytest
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L0-06-a / transversal app.db: db() só devolve a conexão ao pool quando _preparar levanta "
-    "OperationalError/InterfaceError (ou tem êxito). psycopg2.ProgrammingError — a exceção real medida "
-    "em backup.executar nesta trilha ('set_session cannot be used inside a transaction') — atravessa o "
-    "for-loop de tentativas sem cair em nenhum except e sem putconn: a conexão fica marcada como 'em uso' "
-    "no pool para sempre. Com PLAT_POOL_MAX=2 (toda trilha), 2 falhas deste tipo esgotam o pool inteiro.",
-)
 def test_db_devolve_a_conexao_ao_pool_mesmo_quando_preparar_levanta_erro_nao_retentavel(monkeypatch):
     from app import db as db_mod
 
