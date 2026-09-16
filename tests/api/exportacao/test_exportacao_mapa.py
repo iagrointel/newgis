@@ -26,12 +26,27 @@ from pathlib import Path
 import pytest
 
 from app.exportacao.formatos import FORMATOS
+from tests.api.conftest import com_token, novo_cliente
 from tests.api.exportacao.conftest import (
     InquilinoDeExportacao,
     conexao,
     exportar,
     semear_camada,
 )
+
+
+def _cliente_com_token_de_upload(inquilino):
+    """`POST /api/mapa/pacotes/importar` é corpo cru (`application/zip`) — checar_escrita_sob_cookie
+    (app/auth/sessao.py) recusa qualquer corpo não-JSON sob sessão de cookie (CSRF, ADR 0002 seção 5.3;
+    a mesma regra que test_arquivos.py::test_api_enviar_exige_token_nunca_cookie_de_sessao prova para
+    envio de arquivo: "enviar arquivo é sempre por token de serviço, nunca por cookie"). A rota não
+    declara `escopo_token` explícito, então autenticado() usa o padrão "admin:inquilino" (app/auth/
+    sessao.py). O cliente de token é NOVO e sem cookie: sessão + Bearer juntos são recusados como
+    autenticação ambígua."""
+    tok = inquilino.admin.post("/api/tokens", json={"nome": f"zt-pacote-{inquilino.id}",
+                                                    "escopos": ["admin:inquilino"]})
+    assert tok.status_code == 201, tok.text
+    return novo_cliente(), tok.json()["token"]
 
 FEICOES_DA_CAMADA = 2_000
 SELECAO = 500
@@ -347,13 +362,28 @@ def test_dxf_declara_a_perda_de_atributos(inquilino_mapa, camada, selecao_de_500
 
 
 # ---------------------------------------------------------------- 4: pacote de mapa, ida e volta
+_ULID_ALFA = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+
+
+def _ulid() -> str:
+    import random
+    return "0" + "".join(random.choice(_ULID_ALFA) for _ in range(25))
+
+
+ULID_CAMADA_DO_MAPA = _ulid()
+
+
 @pytest.fixture(scope="module")
 def mapa_com_uma_camada(inquilino_mapa, camada, camada_nao_citada) -> str:
+    # achado 16/09: docs/esquemas/mapa-v1.json não aceita mais "centro"/"zoom" (usa "extensao_inicial",
+    # [oeste, sul, leste, norte]) nem "camada_id" na entrada de camada (renomeado para "ref"; "id" é o
+    # ULID da ENTRADA no documento, não da camada do catálogo — a mesma camada pode entrar duas vezes).
     r = inquilino_mapa.admin.post("/api/itens", json={
         "tipo": "mapa", "titulo": "zt mapa do pacote", "descricao": "mapa de teste do item L2-01-l",
         "dados": {"esquema_versao": 1, "corpo": {
-            "centro": [-46.54, -23.44], "zoom": 12,
-            "camadas": [{"camada_id": camada["item_id"], "titulo": "zt camada do mapa", "visivel": True}]}}})
+            "extensao_inicial": [-46.55, -23.45, -46.53, -23.43],
+            "camadas": [{"id": ULID_CAMADA_DO_MAPA, "ref": camada["item_id"],
+                        "titulo": "zt camada do mapa", "visivel": True}]}}})
     assert r.status_code == 201, r.text
     return r.json()["id"]
 
@@ -397,8 +427,9 @@ def test_pacote_de_mapa_ida_e_volta_em_outro_inquilino(pacote_gerado, inquilino_
     instalação" quer dizer. A prova compara o que o usuário vê: título do mapa, número e títulos de camada,
     contagem de feições e a simbologia (que é o que gera estilo e legenda, `app/mapa/simbologia.py`)."""
     destino = inquilino_destino.admin
-    r = destino.post("/api/mapa/pacotes/importar", content=pacote_gerado.read_bytes(),
-                     headers={"Content-Type": "application/zip"}, timeout=900)
+    cliente_tok, tok = _cliente_com_token_de_upload(inquilino_destino)
+    r = com_token(cliente_tok, tok, "POST", "/api/mapa/pacotes/importar", content=pacote_gerado.read_bytes(),
+                  headers={"Content-Type": "application/zip"}, timeout=900)
     assert r.status_code == 201, r.text
     novo = r.json()
     assert novo["titulo"] == "zt mapa do pacote", novo
@@ -407,10 +438,11 @@ def test_pacote_de_mapa_ida_e_volta_em_outro_inquilino(pacote_gerado, inquilino_
     r = destino.get(f"/api/itens/{novo['mapa_id']}")
     assert r.status_code == 200, r.text
     corpo_novo = r.json()["dados"]["corpo"]
-    assert corpo_novo["zoom"] == 12 and corpo_novo["centro"] == [-46.54, -23.44], corpo_novo
+    assert corpo_novo["extensao_inicial"] == [-46.55, -23.45, -46.53, -23.43], corpo_novo
     # o de-para reescreveu o corpo: o mapa do destino aponta para a camada NOVA, não para o uuid de origem
-    assert corpo_novo["camadas"][0]["camada_id"] == novo["camadas"][0]["id"], corpo_novo
-    assert corpo_novo["camadas"][0]["camada_id"] != novo["camadas"][0]["id_no_pacote"], corpo_novo
+    assert corpo_novo["camadas"][0]["ref"] == novo["camadas"][0]["id"], corpo_novo
+    assert corpo_novo["camadas"][0]["ref"] != novo["camadas"][0]["id_no_pacote"], corpo_novo
+    assert corpo_novo["camadas"][0]["id"] == ULID_CAMADA_DO_MAPA, corpo_novo
 
     ficha = destino.get(f"/api/mapa/camadas/{novo['camadas'][0]['id']}")
     assert ficha.status_code == 200, ficha.text
@@ -418,7 +450,7 @@ def test_pacote_de_mapa_ida_e_volta_em_outro_inquilino(pacote_gerado, inquilino_
     assert ficha["titulo"] == "zt camada do mapa", ficha
     assert ficha["n_feicoes"] in (None, FEICOES_DA_CAMADA), ficha["n_feicoes"]
 
-    original = inquilino_mapa.admin.get(f"/api/mapa/camadas/{corpo_novo['camadas'][0]['camada_id']}")
+    original = inquilino_mapa.admin.get(f"/api/mapa/camadas/{corpo_novo['camadas'][0]['ref']}")
     assert original.status_code == 404, "a camada do destino não pode ser visível do inquilino de origem"
 
     r = destino.get(f"/api/mapa/camadas/{novo['camadas'][0]['id']}/estilo?formato=maplibre")
@@ -435,8 +467,9 @@ def test_pacote_invalido_e_recusado_com_a_razao(inquilino_destino, tmp_path):
     zip_ruim = tmp_path / "ruim.zip"
     with zipfile.ZipFile(zip_ruim, "w") as z:
         z.writestr("leiame.txt", "isto não é um pacote")
-    r = inquilino_destino.admin.post("/api/mapa/pacotes/importar", content=zip_ruim.read_bytes(),
-                                     headers={"Content-Type": "application/zip"})
+    cliente_tok, tok = _cliente_com_token_de_upload(inquilino_destino)
+    r = com_token(cliente_tok, tok, "POST", "/api/mapa/pacotes/importar", content=zip_ruim.read_bytes(),
+                  headers={"Content-Type": "application/zip"})
     assert r.status_code == 422, r.text
     assert "MANIFESTO.json" in r.json()["mensagem"], r.text
 
