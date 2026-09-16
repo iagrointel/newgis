@@ -16,9 +16,18 @@ cruza três fontes e escreve `docs/COBERTURA_UI.md`:
 Estados de uma rota: `coberto` (chamada por módulo alcançável de uma tela), `sem controle` (o grupo de rotas tem
 tela, mas esta rota ninguém chama), `sem tela` (nenhuma rota do grupo é chamada por tela alguma), `externo` (rota
 para cliente externo — QGIS, ArcGIS, OGC — coberta quando alguma tela expõe o prefixo como URL; senão `externo sem
-exposição`). Estado de erro: `com erro` quando a chamada está a até 12 linhas de `catch`/`.erro(`/`mensagemDe`/
-`status`, ou quando o módulo lança `ErroApi` e todas as telas que o importam têm `catch`; senão `sem estado de erro`.
+exposição`), `sem tela por desenho` (rota interna/administrativa que NUNCA deve ganhar controle próprio — chamada
+por worker, appliance, webhook, callback OIDC/SAML, ou pela interface de um sistema de terceiros embutido/proxied
+como o Jupyter — declarada em `docs/cobertura_ui_excecoes.json` com `"tipo": "interno"`; ao contrário de `externo`,
+não exige nenhuma exposição de URL numa tela, porque não há usuário do lado de cá para copiar nada). Estado de
+erro: `com erro` quando a chamada está a até 12 linhas de `catch`/`.erro(`/`mensagemDe`/`status`, ou quando o
+módulo lança `ErroApi` e todas as telas que o importam têm `catch`; senão `sem estado de erro`.
 São heurísticas de texto, declaradas aqui e no cabeçalho do documento; o que elas não veem, o e2e vê.
+
+`docs/cobertura_ui_excecoes.json` tem duas entradas de exceção por prefixo de rota, uma por `"tipo"`: `"externo"`
+(padrão, comportamento antigo — cobre quando alguma tela EXPÕE o prefixo como URL a copiar; a comparação ignora
+`{param}` do lado da rota e `${var}` do lado do texto JS, então um prefixo com parâmetro casa com o template
+literal que a tela monta) e `"interno"` (novo — `sem tela por desenho`, cobre sempre, sem checar exposição).
 
 Lacunas em rotas de ESCRITA (POST/PUT/PATCH/DELETE) são a linha de base `docs/cobertura_ui_lacunas.json`: o teste
 `tests/unit/test_cobertura_ui.py` reprova quando aparece uma lacuna de escrita fora dessa lista — rota nova entra
@@ -319,6 +328,16 @@ def _excecao_de(caminho: str, excecoes: list[dict]) -> dict | None:
     return None
 
 
+RE_MARCADOR = re.compile(r"\$\{[^}]*\}|\{[^}]*\}")
+
+
+def _sem_marcadores(t: str) -> str:
+    """apaga `{param}` (rota) e `${var}` (template JS): dois jeitos de escrever o MESMO buraco variável no
+    caminho. Sem isto, um prefixo de exceção com `{token}` nunca casa com a URL que a tela monta como
+    `` `${origem}/svc/${tk}/stac/` `` — o texto ao redor do buraco é igual, só o nome da variável muda."""
+    return RE_MARCADOR.sub("", t)
+
+
 # ----------------------------------------------------------------------------------------------- cruzamento
 def cruzar(vivo: bool = True) -> dict:
     rotas = carregar_rotas(vivo)
@@ -352,6 +371,7 @@ def cruzar(vivo: bool = True) -> dict:
     grupos_com_tela: set[str] = set()
     cobertura_por_rota: dict[tuple[str, str], list[dict]] = defaultdict(list)
     exposicao_texto = "\n".join(a.read_text(encoding="utf-8", errors="replace") for a in arquivos)
+    exposicao_texto_normalizada = _sem_marcadores(exposicao_texto)
     for (metodo, caminho) in rotas:
         for c in todas:
             if c["metodo"] == metodo and _casa(c["url"], caminho):
@@ -373,8 +393,14 @@ def cruzar(vivo: bool = True) -> dict:
             estado_erro = "com erro" if erro_ok else "sem estado de erro"
             telas = sorted({t for c in chamadas_rota for t in c["telas"]})
             controles = sorted({f"{c['arquivo'].relative_to(RAIZ)}:{c['linha']}" for c in chamadas_rota})
+        elif exc and exc.get("tipo", "externo") == "interno":
+            # sem tela por desenho: worker/appliance/webhook/callback/terceiro embutido — não há usuário do
+            # lado de cá para expor URL nenhuma, ao contrário do "externo" abaixo.
+            estado = "sem tela por desenho"
+            estado_erro = "não se aplica"
+            telas, controles = [], [exc["motivo"]]
         elif exc:
-            expoe = exc["prefixo"] in exposicao_texto
+            expoe = _sem_marcadores(exc["prefixo"]) in exposicao_texto_normalizada
             estado = "externo" if expoe else "externo sem exposição"
             estado_erro = "não se aplica"
             telas, controles = [], [exc["motivo"]]
@@ -414,7 +440,8 @@ def cruzar_backlog(pags: dict[str, str], linhas_rotas: list[dict]) -> list[dict]
     if not ESTADO.exists():
         return []
     itens = json.loads(ESTADO.read_text(encoding="utf-8")).get("backlog", [])
-    cobertas = {(r["metodo"], r["caminho"]) for r in linhas_rotas if r["estado"] in ("coberto", "externo")}
+    cobertas = {(r["metodo"], r["caminho"]) for r in linhas_rotas
+                if r["estado"] in ("coberto", "externo", "sem tela por desenho")}
     caminhos_cobertos = {p for _m, p in cobertas}
     saida = []
     for it in itens:
@@ -442,7 +469,7 @@ def cruzar_backlog(pags: dict[str, str], linhas_rotas: list[dict]) -> list[dict]
 def lacunas_de_escrita(resultado: dict) -> list[str]:
     return sorted(
         f"{r['metodo']} {r['caminho']}" for r in resultado["rotas"]
-        if r["metodo"] in ESCRITA and r["estado"] not in ("coberto", "externo")
+        if r["metodo"] in ESCRITA and r["estado"] not in ("coberto", "externo", "sem tela por desenho")
     )
 
 
@@ -462,7 +489,7 @@ def gerar_markdown(resultado: dict) -> str:
     L.append("## Placar\n")
     L.append("| medida | valor |\n|---|---|")
     L.append(f"| rotas (método × caminho) | {total} |")
-    for est in ("coberto", "sem controle", "sem tela", "externo", "externo sem exposição"):
+    for est in ("coberto", "sem controle", "sem tela", "externo", "externo sem exposição", "sem tela por desenho"):
         L.append(f"| {est} | {contagem.get(est, 0)} |")
     L.append(f"| cobertas sem estado de erro perto da chamada | {sem_erro} |")
     L.append(f"| lacunas de ESCRITA (linha de base do teste) | {len(escrita_lacuna)} |")
@@ -536,7 +563,7 @@ def registrar_itens(resultado: dict) -> list[str]:
     """um item UX-<n> por grupo com lacuna de escrita; idempotente por `origem`; mesma trava de marcar_item.py."""
     por_grupo = defaultdict(list)
     for r in resultado["rotas"]:
-        if r["metodo"] in ESCRITA and r["estado"] not in ("coberto", "externo"):
+        if r["metodo"] in ESCRITA and r["estado"] not in ("coberto", "externo", "sem tela por desenho"):
             por_grupo[r["grupo"]].append(r)
     if not por_grupo:
         return []

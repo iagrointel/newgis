@@ -1,9 +1,22 @@
 {
- "descricao": "Rotas para CLIENTE EXTERNO (QGIS, ArcGIS Pro/AGOL, catálogo OGC, link assinado): não têm controle na tela; contam como cobertas quando alguma tela expõe o prefixo como URL a copiar. Lida por docs/gerar_cobertura_ui.py. Um prefixo por linha, sempre com motivo.",
+ "descricao": "Exceções por prefixo de rota, lidas por docs/gerar_cobertura_ui.py. Duas categorias por \"tipo\" (item UX-00, cobertura de UI): \"externo\" (padrão quando o campo falta — rota para CLIENTE EXTERNO: QGIS, ArcGIS Pro/AGOL, catálogo OGC/STAC, link assinado; conta como coberta só quando alguma tela EXPÕE o prefixo como URL a copiar — a comparação ignora `{param}` do lado da rota e `${var}` do lado do texto JS) e \"interno\" (rota administrativa/de máquina que NUNCA deve ganhar controle próprio — worker, appliance, webhook, callback OIDC/SAML, ou API de um sistema de terceiros embutido/proxied — conta como coberta sempre, SEM checar exposição, porque não há usuário do lado de cá para copiar nada). Estado no relatório: \"externo\"/\"externo sem exposição\" ou \"sem tela por desenho\". Um prefixo por linha, sempre com motivo.",
  "excecoes": [
-  {"prefixo": "/ogc/records", "motivo": "OGC API Records para catálogos externos (token catalogo:ler); a ficha do item ou a tela de tokens deve mostrar a URL"},
-  {"prefixo": "/rest/services/Geocodificador/GeocodeServer", "motivo": "GeocodeServer compatível com Esri, consumido por Pro/AGOL; a tela de tokens deve mostrar a URL"},
-  {"prefixo": "/api/publico/itens", "motivo": "leitura de item público por quem recebe o link, sem sessão; a ficha do item mostra o link"},
-  {"prefixo": "/api/objetos", "motivo": "entrega por URL assinada gerada pela API (ADR 0005); o navegador só a segue"}
+  {"tipo": "externo", "prefixo": "/ogc/records", "motivo": "OGC API Records para catálogos externos (token catalogo:ler); a ficha do item ou a tela de tokens deve mostrar a URL"},
+  {"tipo": "externo", "prefixo": "/rest/services/Geocodificador/GeocodeServer", "motivo": "GeocodeServer compatível com Esri, consumido por Pro/AGOL; a tela de tokens deve mostrar a URL"},
+  {"tipo": "externo", "prefixo": "/api/publico/itens", "motivo": "leitura de item público por quem recebe o link, sem sessão; a ficha do item mostra o link"},
+  {"tipo": "externo", "prefixo": "/api/objetos", "motivo": "entrega por URL assinada gerada pela API (ADR 0005); o navegador só a segue"},
+  {"tipo": "externo", "prefixo": "/ogc/features", "motivo": "OGC API Features (edição WFS-T) para QGIS/cliente OGC; a ficha da camada vetorial (web/js/catalogo/tipos/camada_vetorial.js) e a tela de tokens mostram a URL"},
+  {"tipo": "externo", "prefixo": "/svc/{token}/stac", "motivo": "catálogo STAC do item raster (mosaico) para cliente STAC/QGIS; a ficha do raster (web/js/catalogo/tipos/raster.js) mostra a URL com o token"},
+
+  {"tipo": "interno", "prefixo": "/rest/services/{item_id}/FeatureServer", "motivo": "protocolo FeatureServer da Esri (query/applyEdits/addFeatures/anexos/replica) consumido DIRETO por ArcGIS Pro/Field Maps/AGOL depois que o usuário cola a URL do serviço (mostrada na ficha da camada); não há operação individual para virar botão nosso"},
+  {"tipo": "interno", "prefixo": "/rest/services/{item_id}/VersionManagementServer", "motivo": "protocolo de versionamento por ramo da Esri (branch versioning), falado só por ArcGIS Pro depois de conectar ao serviço; app/versionamento/rotas_esri.py é fachada, não produto nosso"},
+  {"tipo": "interno", "prefixo": "/rest/services/{servico}/UtilityNetworkServer", "motivo": "fachada unitIdentifiers do Utility Network da Esri, consumida por ArcGIS Pro/Field Maps ao editar a rede de utilidades — mesma categoria do FeatureServer acima"},
+  {"tipo": "interno", "prefixo": "/svc/{token}/rest", "motivo": "fachada Esri por token (generateToken, info, GeometryServer, MapServer find/identify/export) consumida por widgets ArcGIS JS/Pro externos, nunca pela nossa web/"},
+  {"tipo": "interno", "prefixo": "/api/login/saml/acs", "motivo": "callback ACS do SAML: o navegador chega aqui por um POST que o IdP monta, nunca por chamada da nossa web/"},
+  {"tipo": "interno", "prefixo": "/api/sso/saml/acs", "motivo": "callback ACS do SAML (SSO por organização): idem — POST montado pelo IdP"},
+  {"tipo": "interno", "prefixo": "/api/sso/saml/slo", "motivo": "callback de Single Logout do SAML: POST montado pelo IdP, nunca pela nossa web/"},
+  {"tipo": "interno", "prefixo": "/api/telemetria/receber", "motivo": "receptor de telemetria do appliance (item L7-11-c): outra instância da própria aplicação publica aqui com chave própria, x-privilegio publico — não há sessão de usuário no meio"},
+  {"tipo": "interno", "prefixo": "/api/rede/medicao/leituras", "motivo": "lote de leituras de sensor/telemetria (item L4-13): publicado por script/logger de campo com escopo rede.medir, não por clique de usuário"},
+  {"tipo": "interno", "prefixo": "/notebooks/", "motivo": "proxy transparente para o Jupyter do inquilino (item L2-16-b): a UI é a própria interface do Jupyter dentro do iframe, não uma tela nossa em web/ — nunca vai haver chamador nosso para este prefixo"}
  ]
 }

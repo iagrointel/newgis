@@ -121,8 +121,6 @@ PAGINAS = {
     "/geocodificacoes/{geocodificacao_id}": "geocodificacao.html",
     # --- vídeos por tarefa (L7-04-d): arquivos em /videos/arquivo/... (app/rotas_videos.py)
     "/videos": "videos.html",
-    # --- geocodificação de tabela (L2-11-a-geocodificacao-csv): revisão manual dos pendentes
-    "/geocodificar/{item_id}": "geocodificar_revisao.html",
     # --- migração de Portal/AGOL (L2-08-a-leitor-portal-inventario)
     # --- sistema de referência (L2-17-crs-transformacoes): lista curada + reprojeção de coordenada/bbox
     "/crs": "crs.html",
