@@ -6,14 +6,15 @@ Dois achados independentes, ambos determinísticos (não dependem do estado da t
 1. `tests/api/test_dado_demo.py::_nomes_proibidos()` extrai a lista de nomes proibidos com
    `re.search(r"\\(([^)]*)\\)", padrao).group(1)` — o PRIMEIRO grupo entre parênteses do arquivo
    `laco/nomes_proibidos.regex`. Esse arquivo hoje começa com a flag inline `(?i)` (case-insensitive) antes
-   do grupo de nomes: `(?i)\\b(cbre|fgr|certel|...)\\b`. O primeiro parêntese do arquivo é o da PRÓPRIA flag,
+   do grupo de nomes: `(?i)\b(<nome1>|<nome2>|...)\b`. O primeiro parêntese do arquivo é o da PRÓPRIA flag,
    então `_nomes_proibidos()` devolve `["?i"]` em vez da lista real de 20+ nomes de cliente/parceiro. A
    cláusula 3 do portão ("nenhum nome de cliente, parceiro ou piloto ... grep = 0") está, agora, testando a
-   string literal "?i" — não testando NENHUM nome de cliente real. `tests/api/test_dado_demo.py::test_nenhum_nome_de_cliente_parceiro_ou_piloto`
+   string literal "?i" — não testando NENHUM nome de cliente real.
+   `tests/api/test_dado_demo.py::test_nenhum_nome_de_cliente_parceiro_ou_piloto`
    já falha hoje (por coincidência: a sequência de bytes "?i" aparece dentro de dois arquivos binários do
    conjunto — `demonstracao_3_camadas.gpkg` e `municipios_ap_rr.zip`), mas por um motivo que não tem nada a
    ver com o que o portão promete verificar: mesmo corrigindo esse falso positivo, o teste continuaria sem
-   testar "cbre", "novaterra", "fgr" etc.
+   testar os nomes reais do arquivo.
 
 2. `docs/DADO_DEMO.md` (o arquivo que a cláusula 2 do portão exige, "cada arquivo tem linha ... com fonte,
    URL, licença e data de acesso") foi TOMADO por outro item (`L2-01-e-mapas-base`, commit `35d00a434`) e hoje
@@ -52,8 +53,11 @@ def test_nomes_proibidos_extraidos_pelo_teste_incluem_nomes_de_cliente_reais():
         sys.path.remove(caminho)
 
     nomes = _nomes_proibidos()
-    esperados = {"cbre", "fgr", "novaterra", "sicredi"}
-    assert esperados & set(nomes), (
+    # a lista certa, lida do MESMO arquivo mas pulando as flags inline: nenhum nome fica literal neste teste
+    texto = (ROOT / "laco" / "nomes_proibidos.regex").read_text(encoding="utf-8").strip()
+    sem_flags = re.sub(r"^\(\?[a-z]+\)", "", texto)
+    esperados = {n.strip().lower() for n in sem_flags.strip("\\b()").split("|") if n.strip()}
+    assert len(esperados) > 5 and esperados & set(nomes), (
         f"_nomes_proibidos() devolveu {nomes!r} — nenhum nome de cliente real está sendo verificado"
     )
 

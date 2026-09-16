@@ -32,7 +32,9 @@ import pytest
 ROOT = Path(__file__).resolve().parents[3]
 MEDIDA = ROOT / "tests" / "medidas" / "L0-05-e-worker-em-container.json"
 CHAVES_QUE_PROVARIAM_EXECUCAO = (
-    "job_inspecionar_container", "job_carregar_container", "paridade_proposta_container_x_processo",
+    "job_inspecionar_container",
+    "job_carregar_container",
+    "paridade_proposta_container_x_processo",
     "job_devolvido_a_fila_apos_sigkill_container",
 )
 
@@ -56,4 +58,6 @@ def test_medida_do_item_prova_execucao_de_job_dentro_do_container():
         f"contêiner (só {sorted(medidas)}); a cláusula central do portão nunca foi provada"
     )
     imagens = subprocess.run(["docker", "images", "-q", "plat-worker"], capture_output=True, text=True).stdout
-    assert imagens.strip(), "nenhuma imagem plat-worker construída neste host — a prova, se existiu, foi apagada e não é reproduzível"
+    assert imagens.strip(), (
+        "nenhuma imagem plat-worker construída neste host — a prova, se existiu, foi apagada e não é reproduzível"
+    )
