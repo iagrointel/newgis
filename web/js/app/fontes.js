@@ -3,7 +3,7 @@
    para a memória no formato interno {id, propriedades, geometria} (GeoJSON de entrada; a chave `__id` das
    propriedades é o id). Origem `item`: lê o item (`GET /api/itens/{id}`) e escolhe o caminho pelo tipo — arquivo
    GeoJSON (`dados.chave` -> `GET /api/arquivos/{sha256}?classe=...`), camada vetorial (OGC API Features
-   `/ogc/collections/{id}/items`, quando o serviço existir nesta instalação) — sempre no mesmo domínio, nunca
+   `/api/camadas/{id}/feicoes`) — sempre no mesmo domínio, nunca
    endereço de fora (regra do L0-11). Origem `embutida`: feições dentro do documento (dado pequeno digitado
    pelo autor, como o "static data" dos Dashboards). Eventos: `registros_carregados`, `dado_adicionado`. */
 
@@ -72,7 +72,12 @@ async function lerDadosDoItem(item, buscar) {
     return buscar(`/api/arquivos/${item.dados.sha256}?classe=${encodeURIComponent(classe)}`);
   }
   if (tipo === 'camada_vetorial' || tipo === 'camada') {
-    return buscar(`/ogc/collections/${encodeURIComponent(item.id)}/items?f=json&limit=${LIMITE_FEICOES}`);
+    // 17/09/2026: apontava para a familia ogc-collections-items, rota que esta instalacao NUNCA
+    // publicou — o servico OGC de feicoes mora sob /ogc/features e exige a colecao, que aqui nao se
+    // tem. Resultado medido: 404 em toda camada vetorial usada como fonte,
+    // e a tela abria com zero feições sem dizer por quê. O caminho certo para "as feições desta
+    // camada" é o da própria API de camadas, e `normalizarLista` já entende o `{total, itens}` dela.
+    return buscar(`/api/camadas/${encodeURIComponent(item.id)}/feicoes?limite=${LIMITE_FEICOES}`);
   }
   throw new Error(`item do tipo ${tipo} não serve como fonte de feições`);
 }
