@@ -14,12 +14,10 @@ Depende de PLAT_DSN (trilha) e, para a régua, do Martin em PLAT_MARTIN_URL; sem
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import math
 import os
 import re
-import secrets
 import shutil
 import subprocess
 import time
@@ -29,7 +27,7 @@ import httpx
 import pytest
 
 from tests.e2e.apoio import credenciais
-from tests.render_apoio import derrubar_servidor, porta_livre, subir_servidor
+from tests.render_apoio import derrubar_servidor, porta_livre
 
 pytestmark = pytest.mark.lento
 RAIZ = Path(__file__).resolve().parents[2]
@@ -70,9 +68,37 @@ def servidor():
         pytest.skip("sem PLAT_DSN no ambiente (rode com o .env da trilha carregado)")
     porta = porta_livre()
     os.environ["PLAT_RENDER_BASE_URL"] = f"http://127.0.0.1:{porta}"
-    proc, base_url = subir_servidor(porta)
+    # o log do uvicorn de teste fica em disco (git-ignored): quando o quadro não sai, a razão está nele
+    capturas = RAIZ / "tests" / "e2e" / "capturas"
+    capturas.mkdir(parents=True, exist_ok=True)
+    log = open(capturas / "L2-12-b_uvicorn.log", "w", encoding="utf-8")  # noqa: SIM115 — vive o módulo inteiro
+    import subprocess as sp
+    import sys
+
+    proc = sp.Popen(
+        [sys.executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", str(porta)],
+        cwd=str(RAIZ),
+        env=dict(os.environ),
+        stdout=log,
+        stderr=sp.STDOUT,
+    )
+    base_url = f"http://127.0.0.1:{porta}"
+    inicio = time.time()
+    while time.time() - inicio < 60:
+        if proc.poll() is not None:
+            raise RuntimeError(f"uvicorn de teste morreu na partida; ver {capturas / 'L2-12-b_uvicorn.log'}")
+        try:
+            if httpx.get(f"{base_url}/api/versao", timeout=1.0).status_code == 200:
+                break
+        except httpx.HTTPError:
+            pass
+        time.sleep(0.2)
+    else:
+        derrubar_servidor(proc)
+        raise TimeoutError("uvicorn de teste não respondeu em 60 s")
     yield base_url
     derrubar_servidor(proc)
+    log.close()
 
 
 @pytest.fixture(scope="module")
@@ -89,56 +115,47 @@ def sessao(servidor):
     cli.close()
 
 
-def _script_demo():
-    caminho = RAIZ / "scripts" / "selecao_demo_camadas.py"
-    spec = importlib.util.spec_from_file_location("selecao_demo_camadas", caminho)
-    mod = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(mod)
-    return mod
-
-
 @pytest.fixture(scope="module")
-def camada_prova(servidor):
-    """Camada hospedada com DOIS pontos vermelhos a 1.000 m um do outro na latitude LAT (a régua do portão)."""
+def camada_prova(servidor, sessao):
+    """Camada da bancada `layout-regua` (scripts/mapa_demo_camadas.py criar): DOIS pontos vermelhos a 1.000 m um
+    do outro na latitude LAT. Vem da bancada, e não de uma tabela criada aqui, porque o Martin só descobre a
+    função de tile na subida — camada criada durante o teste responderia 404 no tile."""
     import psycopg2
-    import psycopg2.extras
 
-    mod = _script_demo()
+    from app.schema_ambiente import CursorSchemaAmbiente
+
+    r = sessao.get("/api/mapa/camadas")
+    assert r.status_code == 200, r.text
+    ficha = next(
+        (
+            c
+            for c in r.json()["camadas"]
+            if (c.get("titulo") or "").startswith("layout-regua (L2-12-b, sintética: 2 pontos")
+        ),
+        None,
+    )
+    if ficha is None:
+        pytest.skip("bancada sem a camada layout-regua: rode scripts/mapa_demo_camadas.py criar (Martin sobe depois)")
+    tj = sessao.get(f"/api/mapa/camadas/{ficha['id']}/tilejson")
+    assert tj.status_code == 200, tj.text
+    m = re.search(r"/tiles/d_demo/(t_[0-9a-f]{16})/", tj.json()["tiles"][0])
+    assert m, tj.json()["tiles"][0]
     dlon = DIST_M / (111320.0 * math.cos(math.radians(LAT)))
-    p1, p2 = (LON0, LAT), (LON0 + dlon, LAT)
-    tabela = "c_" + secrets.token_hex(8)
-    con = psycopg2.connect(os.environ["PLAT_DSN"])
+    con = psycopg2.connect(os.environ["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
     try:
-        with con.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            adm = mod._contexto(cur, "demo")
-            cur.execute(
-                f'CREATE TABLE "d_demo"."{tabela}" (fid bigserial PRIMARY KEY, nome text, geom geometry(Point, 4326))'
-            )
-            cur.execute(
-                f'INSERT INTO "d_demo"."{tabela}" (nome, geom) VALUES '
-                f"('oeste', ST_SetSRID(ST_MakePoint(%s, %s), 4326)), ('leste', ST_SetSRID(ST_MakePoint(%s, %s), 4326))",
-                (p1[0], p1[1], p2[0], p2[1]),
-            )
-            cur.execute(f'CREATE INDEX ON "d_demo"."{tabela}" USING gist(geom)')
-            saida = mod._publicar(
-                cur, adm, "layout-regua (L2-12-b, sintética)", tabela, "Point", [{"nome": "nome", "tipo": "text"}]
-            )
-            cur.execute(
-                "UPDATE plat.item SET dados = dados || %s::jsonb WHERE id = %s::uuid",
-                (json.dumps({"simbologia": {"tipo": "simples", "cor": "#ff0000", "tamanho": 9}}), saida["item"]),
-            )
-        con.commit()
-        yield {"item": saida["item"], "tabela": tabela, "p1": p1, "p2": p2}
+        with con.cursor() as cur:
+            cur.execute("SELECT usuario_id, tenant_id FROM plat.auth_login('demo', 'admin')")
+            adm = cur.fetchone()
     finally:
-        try:
-            with con.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                mod._contexto(cur, "demo")
-                cur.execute("DELETE FROM plat.item WHERE id = %s::uuid", (saida["item"],))
-                cur.execute(f'DROP TABLE IF EXISTS "d_demo"."{tabela}" CASCADE')
-            con.commit()
-        finally:
-            con.close()
+        con.close()
+    return {
+        "item": ficha["id"],
+        "funcao": m.group(1),
+        "p1": (LON0, LAT),
+        "p2": (LON0 + dlon, LAT),
+        "tenant_id": int(adm["tenant_id"]),
+        "usuario_id": int(adm["usuario_id"]),
+    }
 
 
 def _martin_no_ar() -> bool:
@@ -200,10 +217,9 @@ def test_estilo_por_token_interno(servidor, sessao, camada_prova):
 
     r = httpx.get(f"{servidor}/api/render/layout/estilo", params={"token": "x.y.z.w"}, timeout=30)
     assert r.status_code == 401
-    eu = sessao.get("/api/eu").json()
     payload = {
-        "t": eu["inquilino"]["id"],
-        "u": eu["id"],
+        "t": camada_prova["tenant_id"],
+        "u": camada_prova["usuario_id"],
         "b": "osm-guarulhos",
         "c": [{"camada_id": camada_prova["item"], "opacidade": 1.0, "visivel": True}],
     }
@@ -255,7 +271,7 @@ def test_export_web_map_pdf_escala_com_regua_legenda_grade_e_texto(servidor, ses
                 "title": "layout-regua",
                 "opacity": 1,
                 "visibility": True,
-                "url": f"{servidor}/tiles/d_demo/t_{camada_prova['tabela'][2:]}/{{z}}/{{x}}/{{y}}",
+                "url": f"{servidor}/tiles/d_demo/{camada_prova['funcao']}/{{z}}/{{x}}/{{y}}",
             },
             {
                 "id": "externa",
@@ -293,6 +309,7 @@ def test_export_web_map_pdf_escala_com_regua_legenda_grade_e_texto(servidor, ses
         avisos
     )  # camada externa: declarada fora, nunca copiada
     assert any("baseMap" in a for a in avisos)
+    assert not any("não foi desenhado" in a for a in avisos), avisos  # o quadro tem de ter sido desenhado pelo motor
     pdf = sessao.get(url)
     assert pdf.status_code == 200 and pdf.content[:5] == b"%PDF-", pdf.status_code
     arq = tmp_path / "impressao.pdf"
@@ -324,6 +341,11 @@ def test_export_web_map_pdf_escala_com_regua_legenda_grade_e_texto(servidor, ses
         ["pdftoppm", "-png", "-r", str(DPI), "-singlefile", str(arq), str(tmp_path / "pagina")], check=True, timeout=120
     )
     img = Image.open(tmp_path / "pagina.png").convert("RGB")
+    # artefatos do portão (git-ignored): o PDF e a página rasterizada em que a régua foi aplicada
+    capturas = RAIZ / "tests" / "e2e" / "capturas"
+    capturas.mkdir(parents=True, exist_ok=True)
+    shutil.copy(arq, capturas / "L2-12-b_export_web_map.pdf")
+    shutil.copy(tmp_path / "pagina.png", capturas / f"L2-12-b_regua_{DPI}dpi.png")
     w, h = img.size
     px = img.load()
     vermelhos = []

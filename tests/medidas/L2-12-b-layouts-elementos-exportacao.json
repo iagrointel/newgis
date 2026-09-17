@@ -1,0 +1,41 @@
+{
+ "item": "L2-12-b-layouts-elementos-exportacao",
+ "medidas": {
+  "export_web_map_task_ms": {
+   "valor": 2391,
+   "unidade": "ms",
+   "como": "POST execute A3 150 DPI com 1 camada nossa + motor de render, servidor uvicorn real",
+   "carga_1min": 9.15,
+   "ram_livre_gb": 5.6,
+   "medido_em": "2026-09-08T12:53:41"
+  },
+  "escala_medida_regua": {
+   "valor": 19992.6,
+   "unidade": "1:N",
+   "como": "50.02 mm entre dois pontos a 1000 m no PDF a 150 DPI (pdftoppm)",
+   "carga_1min": 9.22,
+   "ram_livre_gb": 5.8,
+   "medido_em": "2026-09-08T12:53:42"
+  },
+  "escala_erro_relativo": {
+   "valor": 0.037,
+   "unidade": "%",
+   "como": "|medida − pedida| / pedida; portão ≤ 1 %",
+   "carga_1min": 9.22,
+   "ram_livre_gb": 5.8,
+   "medido_em": "2026-09-08T12:53:42"
+  },
+  "legenda_cor_amostrada": {
+   "valor": [
+    255,
+    0,
+    0
+   ],
+   "unidade": "rgb",
+   "como": "pixel do quadradinho da legenda no PDF rasterizado vs #ff0000 do estilo",
+   "carga_1min": 9.22,
+   "ram_livre_gb": 5.8,
+   "medido_em": "2026-09-08T12:53:42"
+  }
+ }
+}

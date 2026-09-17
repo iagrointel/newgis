@@ -23,6 +23,7 @@ from pathlib import Path
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, Field
+from starlette.concurrency import run_in_threadpool
 
 from app import db, limites, objetos
 from app.auth import escopos as esc
@@ -206,6 +207,17 @@ def exportar(corpo: ExportarCorpo, request: Request, auth: Auth = autenticado("j
 
 
 # ---------------------------------------------------------------- página headless e estilo por token
+@router.get("/render/mapa", include_in_schema=False, response_class=HTMLResponse)
+def pagina_render_mapa():
+    """Página headless do motor genérico (L2-12-a, só mapa-base): a rota veio junto com o motor copiado de
+    wt/il212amotor, sem `app/mapas` — o teste do pool (tests/unit/test_motor_render.py) e o helper de servidor
+    (tests/render_apoio.py) esperam por ela."""
+    caminho = WEB / "render_mapa.html"
+    return HTMLResponse(
+        caminho.read_text(encoding="utf-8"), headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow"}
+    )
+
+
 @router.get("/render/layout-mapa", include_in_schema=False, response_class=HTMLResponse)
 def pagina_render_layout():
     caminho = WEB / "render_layout_mapa.html"
@@ -498,17 +510,24 @@ async def executar_export_web_map(request: Request):
     dpi = int(((wm.get("exportOptions") or {}).get("dpi")) or 96)
     dpi = max(limites.LAYOUT_DPI_MIN, min(limites.LAYOUT_DPI_MAX, dpi))
     relatorio: list[str] = []
-    with db.db(auth.contexto()) as cur:
-        try:
+
+    def compor_sincrono():
+        """Roda FORA do loop de eventos: a página headless do quadro pede /api/render/layout/estilo e /tiles a
+        este MESMO servidor durante a composição — compor dentro da corrotina bloquearia o loop e o render
+        esperaria por si mesmo até o teto de tempo (medido nesta suíte: 30 s e quadro cinza)."""
+        with db.db(auth.contexto()) as cur:
             doc, mapa = web_map_para_layout(cur, wm, modelo, relatorio)
-        except ErroLayout as e:
-            return _erro_esri(400, f"web map não pôde virar layout: {e}")
-        fontes = fontes_de(cur, auth.tenant_id, auth.usuario_id)
-        try:
+            fontes = fontes_de(cur, auth.tenant_id, auth.usuario_id)
             comp = compor_mod.compor(doc, mapa, fontes, dpi=dpi, formato=formato, nome="impressao")
-        except compor_mod.ErroComposicao as e:
-            return _erro_esri(500, f"composição falhou: {e}")
-        o = objetos.guardar(cur, CLASSE_SAIDA, comp.dados, comp.content_type, usuario_id=auth.usuario_id)
+            o = objetos.guardar(cur, CLASSE_SAIDA, comp.dados, comp.content_type, usuario_id=auth.usuario_id)
+        return comp, o
+
+    try:
+        comp, o = await run_in_threadpool(compor_sincrono)
+    except ErroLayout as e:
+        return _erro_esri(400, f"web map não pôde virar layout: {e}")
+    except compor_mod.ErroComposicao as e:
+        return _erro_esri(500, f"composição falhou: {e}")
     base = f"{request.url.scheme}://{request.url.netloc}"
     url = f"{base}{PREFIXO_ESRI}/saida/{o['sha256']}.{formato}"
     if request.query_params.get("token"):
