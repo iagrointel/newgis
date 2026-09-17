@@ -1310,3 +1310,19 @@ REDE_MEDICAO_SERIE_DIAS_MAX = 92              # mesmo teto de LOG_JANELA_DIAS
 REDE_MEDICAO_SERIE_PONTOS_MAX = 20_000        # linhas devolvidas por série (amostragem simples acima disso)
 REDE_MEDICAO_ALARME_JANELA_MIN = 30           # "carregamento > 100% por 30 min" (portão do item)
 REDE_MEDICAO_ALARME_LOOKBACK_MIN = 90         # quanto de histórico o motor olha para achar o início do surto
+
+# --- desempenho em escala do motor AMC (L3-16-desempenho-escala; ADR 0017 do L3-01-c-extracao-fator, tests/medidas/
+# L3-16-desempenho-escala.json). MEDIDO nesta máquina (12 vCPU, 23 GB de RAM): `app.amc.zonal.extrair` (extração
+# raster EXATA, por área) faz ~0,62 ms/unidade — projeta ~2,6 h para 1.000.000 de unidades × 15 fatores, muito acima
+# do orçamento; `app.amc.zonal_lote.extrair_em_lote` (grade regular, O(pixels), regra do centro do pixel) é o
+# caminho que fecha o portão. `app.amc.vetorial.extrair` já é set-based (geopandas/GEOS, índice STRtree) e é medido
+# nas mesmas condições — sem módulo novo. `app.amc.combinacao.combinar` (numpy puro) é rápido em qualquer N medido.
+AMC_ESCALA_NAVEGADOR_MAX = 50_000        # acima disto o navegador recusa recombinar e delega ao servidor
+                                          # (web/js/amc/combinacao.js::LIMITE_NAVEGADOR_UNIDADES — mesmo número)
+AMC_ESCALA_SQL_LOTE_MIN = 200_000        # acima disto a leitura de fator bruto é SEMPRE por consulta única (SQL
+                                          # por conjunto, nunca uma consulta por unidade) — ver app/amc/tarefas.py
+AMC_ESCALA_RECOMBINACAO_TETO_S = 5.0     # portão: recombinação de 1 mi de unidades em <= 5 s no servidor
+AMC_ESCALA_EXTRACAO_TETO_MIN = 30.0      # portão: 1 mi de unidades x 15 fatores extraídas em <= 30 min
+AMC_ESCALA_RAM_TETO_GB = 4.0             # guardrail de RAM por job de extração em lote (RLIMIT_DATA do job)
+AMC_ESCALA_JOB_MEMORIA_MB = 3072         # memoria_mb do job amc.medir_escala (folga sob o guardrail de 4 GB;
+                                          # app/jobs/filho.py soma isto ao VmData herdado do fork, nunca aos 4 GB inteiros)
