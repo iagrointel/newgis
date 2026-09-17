@@ -6,9 +6,10 @@ resultado como camada e repetir um traçado do histórico. Duplicar o despacho s
 um nome só; aqui ele é um, e as quatro rotas o chamam.
 
 Nada mudou na escolha: `tracado.py` para conectado/subrede, `direcao.py` para montante/jusante, `lacos.py`
-para laços, isolados e caminho mais curto, `config_tracado.py` quando o pedido vem de uma configuração
-salva. O que este módulo acrescenta é o REGISTRO da execução no histórico da pessoa, uma linha por traçado
-executado, guardando o PEDIDO (nunca o resultado, que envelheceria junto com a rede)."""
+para laços, isolados e caminho mais curto, `isolamento.py` para isolamento, `config_tracado.py` quando o
+pedido vem de uma configuração salva. O que este módulo acrescenta é o REGISTRO da execução no histórico
+da pessoa, uma linha por traçado executado, guardando o PEDIDO (nunca o resultado, que envelheceria junto
+com a rede)."""
 
 import json
 
@@ -17,7 +18,7 @@ import psycopg2
 from app import limites
 from app.auth import comum as auth_comum
 from app.erros import ErroAPI
-from app.rede_utilidades import config_tracado, direcao, fluxo, lacos, tracado
+from app.rede_utilidades import config_tracado, direcao, fluxo, isolamento, lacos, tracado
 
 HISTORICO_LIMITE = limites.TRACADO_HISTORICO_MAX  # "os 20 últimos", portão do item L4-02-f
 
@@ -53,6 +54,14 @@ def executar(cur, tenant_id: int, rede_id: str, corpo, usuario_id: int) -> dict:
             return lacos.detectar_lacos(cur, tenant_id, rede_id, barreiras)
         if corpo.tipo == "isolados":
             return lacos.isolados(cur, tenant_id, rede_id, corpo.categoria_controlador, barreiras)
+        if corpo.tipo == isolamento.TIPO:
+            # item L4-02-c: o motor de isolamento é o de `isolamento.py`, sobre o MESMO grafo dos outros
+            # traçados. `categoria_controlador` é a categoria da fonte, a mesma de `isolados`.
+            return isolamento.tracar_isolamento(
+                cur, tenant_id, rede_id, [p.model_dump() for p in corpo.pontos_partida], barreiras,
+                list(corpo.categorias_isolamento), corpo.categoria_controlador,
+                corpo.incluir_isolados, corpo.ignorar_inoperante,
+            )
         if corpo.tipo == "caminho_curto":
             if len(corpo.pontos_partida) != 1:
                 raise ErroAPI(422, "origem_invalida",

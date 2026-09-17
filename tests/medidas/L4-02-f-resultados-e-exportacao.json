@@ -1,0 +1,45 @@
+{
+ "item": "L4-02-f-resultados-e-exportacao",
+ "assinado_por": "backend (turno CONSTRUTOR L4 rede de utilidades, worktree wt/l4d)",
+ "gerado_em": "2026-09-17T23:43:13Z",
+ "git_sha": "37f2451b96aa64996f1dcfd70d0f35d7ace0206f",
+ "maquina": "12 vCPU, 23 GB RAM, disco / a 64%; PostgreSQL 16 em iagro_sat; base propria da trilha uniao (schema plat_tuniao, laco/trilha_ambiente.sh uniao), com outras sessoes da casa na mesma maquina",
+ "medidas": {
+  "tracado_devolve_agregacoes": {
+   "valor": true,
+   "unidade": "booleano",
+   "comando": "venv/bin/pytest tests/api/test_rede_tracado_resultado.py::test_tracado_traz_agregacao_por_tipo_e_por_nivel -q",
+   "observacao": "a resposta de POST /api/rede/{id}/tracar passa a trazer 'agregacoes' (total, por_tipo, por_nivel, comprimento_m), pelo MESMO resultados.agregar que a exportacao e a camada ja usavam"
+  },
+  "tracado_devolve_execucao_id": {
+   "valor": true,
+   "unidade": "booleano",
+   "comando": "venv/bin/pytest tests/api/test_rede_tracado_resultado.py::test_historico_lista_os_ultimos_e_repete -q",
+   "observacao": "a execucao passa a ser gravada em plat.rede_tracado_execucao por despacho.registrar e o id volta na resposta; superadmin lendo outro inquilino nao grava (auth.leitura_inquilino), como ja era em /repetir"
+  },
+  "historico_lista_vinte": {
+   "valor": 20,
+   "unidade": "tracados",
+   "comando": "venv/bin/pytest tests/api/test_rede_tracado_resultado.py::test_historico_e_por_pessoa_e_para_em_vinte -q",
+   "observacao": "antes GET /api/rede/{id}/tracados devolvia 0 porque nada escrevia no historico: a rota de tracar nunca chamava despacho. O teste traca 22 vezes e le 20 (limites.TRACADO_HISTORICO_MAX), e confere que o historico e por pessoa"
+  },
+  "causa_raiz": {
+   "valor": "copia do despacho na rota",
+   "unidade": "diagnostico",
+   "comando": "git diff master -- app/rede_utilidades/rotas_topologia.py",
+   "observacao": "rotas_topologia._tracar_sincrono repetia a escolha por tipo que ja morava em despacho.executar (o cabecalho de despacho.py diz que saiu de la, mas a copia velha ficou). Duas consequencias medidas: o tipo isolamento nunca chegou ao motor (L4-02-c) e a execucao nunca entrou no historico (L4-02-f). A rota agora delega, e ha um motor so"
+  },
+  "testes_do_item": {
+   "valor": 6,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/api/test_rede_tracado_resultado.py -q",
+   "observacao": "6 de 6 verdes (eram 2 de 6). Duracao do arquivo: 229 s"
+  },
+  "nao_medido": {
+   "valor": "refutacao de 20 mil elementos",
+   "unidade": "lacuna",
+   "comando": "-",
+   "observacao": "a refutacao declarada do item (exportar 20 mil elementos e conferir que nenhum se perde e que o arquivo nao tem coluna de outro inquilino) continua sem medida, como ja registrava o bloqueio_ao_promover do item"
+  }
+ }
+}

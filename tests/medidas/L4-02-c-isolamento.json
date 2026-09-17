@@ -1,17 +1,62 @@
 {
-  "p95_isolamento": {
-    "carga_1min": 10.95,
-    "medido": false,
-    "motivo": "carga acima de 8: o brief proíbe medir tempo sob disputa",
-    "ram_livre_gb": 5.0
-  },
-  "universo_da_rede_real": {
-    "conclusao": "a extração da cooperativa de teste não traz camada de dispositivo de manobra ou proteção de média tensão (nenhuma de ['unsemt', 'unsebt', 'chave', 'unremt'] existe no schema), então não há conjunto de isolamento a conferir nela; e o ramal de ligação, único caminho desenhado até a unidade consumidora, tem 0 de 26581 registros com geometria, de modo que a soma de UCBT a jusante também tem universo vazio. As duas metades desta cláusula ficam PENDENTES por falta de dado de origem, não por falta de traçado — o mesmo achado que o item irmão L4-02-b registrou para montante e jusante.",
-    "medido": true,
-    "ramais_com_geometria": 0,
-    "ramais_de_ligacao": 26581,
-    "tabelas_de_manobra_presentes": [],
-    "tabelas_do_ativo": 31,
-    "unidades_consumidoras_bt": 27587
+ "p95_isolamento": {
+  "carga_1min": 10.95,
+  "medido": false,
+  "motivo": "carga acima de 8: o brief proíbe medir tempo sob disputa",
+  "ram_livre_gb": 5.0
+ },
+ "universo_da_rede_real": {
+  "conclusao": "a extração da cooperativa de teste não traz camada de dispositivo de manobra ou proteção de média tensão (nenhuma de ['unsemt', 'unsebt', 'chave', 'unremt'] existe no schema), então não há conjunto de isolamento a conferir nela; e o ramal de ligação, único caminho desenhado até a unidade consumidora, tem 0 de 26581 registros com geometria, de modo que a soma de UCBT a jusante também tem universo vazio. As duas metades desta cláusula ficam PENDENTES por falta de dado de origem, não por falta de traçado — o mesmo achado que o item irmão L4-02-b registrou para montante e jusante.",
+  "medido": true,
+  "ramais_com_geometria": 0,
+  "ramais_de_ligacao": 26581,
+  "tabelas_de_manobra_presentes": [],
+  "tabelas_do_ativo": 31,
+  "unidades_consumidoras_bt": 27587
+ },
+ "turno_wt_l4d": {
+  "item": "L4-02-c-isolamento",
+  "assinado_por": "backend (turno CONSTRUTOR L4 rede de utilidades, worktree wt/l4d)",
+  "gerado_em": "2026-09-17T23:43:13Z",
+  "git_sha": "37f2451b96aa64996f1dcfd70d0f35d7ace0206f",
+  "maquina": "12 vCPU, 23 GB RAM, disco / a 64%; PostgreSQL 16 em iagro_sat; base propria da trilha uniao (schema plat_tuniao, laco/trilha_ambiente.sh uniao), com outras sessoes da casa na mesma maquina",
+  "medidas": {
+   "tipo_isolamento_aceito_pela_rota": {
+    "valor": true,
+    "unidade": "booleano",
+    "comando": "venv/bin/pytest tests/api/test_rede_isolamento.py -q",
+    "observacao": "antes: os 13 testes do arquivo oficial do item caiam com 422 tipo_invalido. Causa raiz em DUAS partes: (1) o pattern de TracadoEntrada.tipo nao listava 'isolamento'; (2) a rota POST /api/rede/{id}/tracar tinha uma COPIA do despacho por tipo (rotas_topologia._tracar_sincrono) que nunca ganhou o ramo do isolamento. O motor ja existia inteiro em app/rede_utilidades/isolamento.py (commit e9478c4b8, 349 linhas, so o motor, sem fiacao)"
+   },
+   "decisao_a_ou_b": {
+    "valor": "a",
+    "unidade": "escolha",
+    "comando": "git log --oneline -1 -- app/rede_utilidades/isolamento.py",
+    "observacao": "o item pedia decidir entre (a) o motor de tracado ganhar o tipo isolamento ligado ao despacho ou (b) promover o tracado de categorias.py a motor. Escolhido (a) COM a correcao do enunciado: nao foi preciso ESCREVER motor nenhum. app/rede_utilidades/isolamento.py ja implementa o portao inteiro (dispositivos_a_abrir minimos por inclusao num grafo reduzido de componentes, elementos_isolados com e sem incluir_isolados, resumo com clientes/trafos/km por nivel, barreira de condicao por estado/operavel). O que faltava era so a ligacao. categorias.py CONTINUA sendo a ilustracao da regra 'isolamento para no dispositivo de protecao' (item L4-06-d) e nao foi promovido a nada"
+   },
+   "testes_do_item": {
+    "valor": 13,
+    "unidade": "testes",
+    "comando": "venv/bin/pytest tests/api/test_rede_isolamento.py -q",
+    "observacao": "13 de 13 verdes (eram 0 de 13). Cobrem as 5 clausulas do portao: conjunto exato na rede de 3 chaves e 2 fusiveis, minimo por inclusao, resumo clientes/trafos/km por nivel, ignorar_inoperante muda o conjunto, e as recusas (isolavel=false sem caminho de manobra, ponto_ja_sem_fonte)"
+   },
+   "duracao_do_arquivo_de_teste": {
+    "valor": 141,
+    "unidade": "segundos",
+    "comando": "time venv/bin/pytest tests/api/test_rede_isolamento.py -q",
+    "observacao": "tempo de suite, nao de tracado; a clausula de p95 na cooperativa de teste fica em tests/api/test_rede_isolamento_medida.py e NAO foi medida neste turno"
+   },
+   "campos_novos_no_pedido": {
+    "valor": 3,
+    "unidade": "campos",
+    "comando": "git diff master -- app/rede_utilidades/modelos.py",
+    "observacao": "categorias_isolamento (lista, max 20), incluir_isolados (bool, padrao false) e ignorar_inoperante (bool, padrao true) em TracadoEntrada; a categoria de fonte reusa categoria_controlador, que ja existia para tipo=isolados"
+   },
+   "nao_medido": {
+    "valor": "p95 na cooperativa de teste; e2e com captura",
+    "unidade": "lacuna",
+    "comando": "-",
+    "observacao": "o portao pede <= 2 s p95 num trecho aleatorio de MT da cooperativa e uma captura e2e com os dispositivos em cor propria. tests/api/test_rede_isolamento_medida.py e tests/e2e/test_rede_isolamento.py existem e nao foram rodados neste turno (alvo estreito). Sem esses dois numeros o item NAO esta provado por inteiro"
+   }
   }
+ }
 }

@@ -28,5 +28,44 @@
   }
  },
  "gerado_em": "2026-09-07T21:03:16Z",
- "git_sha": "dee045fd19bd"
+ "git_sha": "dee045fd19bd",
+ "turno_wt_l4d": {
+  "item": "L4-04-a-controladores-e-tiers",
+  "assinado_por": "backend (turno CONSTRUTOR L4 rede de utilidades, worktree wt/l4d)",
+  "gerado_em": "2026-09-17T23:43:13Z",
+  "git_sha": "37f2451b96aa64996f1dcfd70d0f35d7ace0206f",
+  "maquina": "12 vCPU, 23 GB RAM, disco / a 64%; PostgreSQL 16 em iagro_sat; base propria da trilha uniao (schema plat_tuniao, laco/trilha_ambiente.sh uniao), com outras sessoes da casa na mesma maquina",
+  "medidas": {
+   "edicao_em_cima_da_subrede_a_deixa_suja": {
+    "valor": true,
+    "unidade": "booleano",
+    "comando": "venv/bin/pytest tests/api/test_rede_controladores.py::test_edicao_depois_da_topologia_deixa_a_subrede_suja -q",
+    "observacao": "criar uma feicao em cima de um elemento gravado da subrede a devolve para estado='suja', com estado_gravado='suja' e tocada_por_area_suja=true"
+   },
+   "edicao_longe_nao_suja": {
+    "valor": true,
+    "unidade": "booleano",
+    "comando": "venv/bin/pytest tests/api/test_rede_controladores.py::test_edicao_depois_da_topologia_deixa_a_subrede_suja -q",
+    "observacao": "par positivo da mesma regra, no mesmo teste: uma feicao criada a dezenas de km da subrede cria area suja na rede (areas_sujas_abertas >= 1) e NAO suja a subrede. E a prova de que a propagacao e por intersecao com a area DESTA edicao, nao por 'existe area suja na rede'"
+   },
+   "causa_raiz": {
+    "valor": "derivado nunca era avisado da edicao",
+    "unidade": "diagnostico",
+    "comando": "git diff master -- app/rede_utilidades/feicoes.py",
+    "observacao": "subredes.marcar_sujas ja existia e so era chamada por topologia.habilitar() e pela atualizacao em lote — nunca no instante da edicao. Como habilitar() APAGA as areas sujas, a subrede so era marcada quando a topologia era reconstruida. CAUSA COMUM com L4-04-d (ver aquele arquivo de medida): um unico conserto em feicoes.marcar_area_suja resolve os dois"
+   },
+   "testes_do_item": {
+    "valor": 17,
+    "unidade": "testes",
+    "comando": "venv/bin/pytest tests/api/test_rede_controladores.py -q",
+    "observacao": "17 de 17 verdes (eram 16 de 17). Duracao do arquivo: 186 s"
+   },
+   "nao_medido": {
+    "valor": "grupo de tier (tier group)",
+    "unidade": "lacuna",
+    "comando": "-",
+    "observacao": "lacuna ja nomeada no bloqueio_ao_promover do item e nao tocada neste turno: tier group nao existe no modelo"
+   }
+  }
+ }
 }
