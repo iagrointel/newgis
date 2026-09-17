@@ -182,7 +182,40 @@ def validar() -> None:
             "docs/DEMO.md: bloco 'não faz ainda' diverge de laco/PAINEL.md; "
             "rode venv/bin/python docs/gerar_demo.py --preencher e commit"
         )
+    _validar_painel_nao_esta_velho()
     print(f"roteiro válido: {len(passos)} passos, {soma} min declarados; versão de 10 min com {len(versao10)} passos")
+
+
+# 17/09/2026: existem DUAS cópias do laço — a viva em /home/dev/plataforma/laco (o gerente trabalha nela)
+# e esta, rastreada no git. Em 16/09 a rastreada estava congelada no turno 3 e este gerador leu dela, o que
+# fez o roteiro AFIRMAR que L1 e L4 inteiras não existiam, com código, tela e rota no mesmo tronco. Negar
+# funcionalidade que existe é pior para uma demonstração do que omitir. A trava abaixo compara o placar do
+# painel lido com o do estado VIVO; divergiu, reprova e diz o que rodar. Se o laço vivo não estiver nesta
+# máquina (instalação de cliente, appliance), não há o que comparar e a trava se cala.
+LACO_VIVO = Path("/home/dev/plataforma/laco/estado.json")
+
+
+def _validar_painel_nao_esta_velho() -> None:
+    if not LACO_VIVO.is_file() or not PAINEL.is_file():
+        return
+    import json
+
+    try:
+        vivo = json.loads(LACO_VIVO.read_text(encoding="utf-8")).get("placar") or {}
+    except Exception:
+        return
+    painel = PAINEL.read_text(encoding="utf-8")
+    for chave, rotulo in (("entregues", "entregue"), ("refutados", "refutado"), ("pendentes", "pendente")):
+        n = vivo.get(chave)
+        if n is None:
+            continue
+        if not re.search(rf"^\|\s*{rotulo}\s*\|\s*{n}\s*\|", painel, re.M):
+            raise SystemExit(
+                f"laco/PAINEL.md está velho: o estado vivo diz {rotulo}={n} e o painel não. "
+                "Regenere com `python3 /home/dev/plataforma/laco/gera_painel.py`, copie o PAINEL.md "
+                "para enterprise/laco/ e rode `--preencher` de novo. "
+                "Roteiro gerado de painel velho NEGA funcionalidade que existe."
+            )
 
 
 def main() -> None:

@@ -18,8 +18,7 @@
    "resultado": "passou"
   },
   "refutacao_n1_n100_texto_data": {
-   "prova": "tests/api/catalogo/test_classes_rota.py::test_n_igual_1, test_n_igual_100_maior_que_distintos, "
-             "test_campo_texto_para_metodo_numerico_e_4xx, test_campo_data_classificado_e_comparado_com_numpy",
+   "prova": "tests/api/catalogo/test_classes_rota.py::test_n_igual_1, test_n_igual_100_maior_que_distintos, test_campo_texto_para_metodo_numerico_e_4xx, test_campo_data_classificado_e_comparado_com_numpy",
    "resultado": "passou (n=100 acima do teto de 32 classes da rota devolve 422, não é silenciosamente truncado)"
   }
  },
