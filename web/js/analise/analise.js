@@ -134,14 +134,23 @@ async function executar(valores) {
 }
 
 async function carregar() {
-  const [rf, rc, rr] = await Promise.all([
+  /* item L2-15-b: as ferramentas grandes leem item de catálogo tipo `parquet` (publicado pelo job
+     geoparquet.gerar), não a camada do Postgres. A mesma lista serve às duas famílias, com o tipo no rótulo:
+     é o executor que decide o motor pelo tipo do item escolhido. O raster continua em lista própria. */
+  const [rf, rc, rr, rp] = await Promise.all([
     api.obter('/api/ferramentas'),
     api.obter('/api/itens?tipo=camada_vetorial&limite=200'),
     api.obter('/api/itens?tipo=raster&limite=200'),
+    api.obter('/api/itens?tipo=parquet&limite=200'),
   ]);
   if (rf.status !== 200) { aviso('aviso', `não foi possível listar as ferramentas: ${api.mensagemDe(rf)}`); return; }
   s.ferramentas = rf.json;
-  s.camadas = rc.status === 200 ? (rc.json.itens || []) : [];
+  const vetoriais = rc.status === 200 ? (rc.json.itens || []) : [];
+  const parquets = rp.status === 200 ? (rp.json.itens || []) : [];
+  s.camadas = [
+    ...parquets.map((c) => ({ id: c.id, titulo: `${c.titulo} [Parquet]` })),
+    ...vetoriais.map((c) => ({ id: c.id, titulo: c.titulo })),
+  ];
   s.rasters = rr.status === 200 ? (rr.json.itens || []) : [];
   const sel = porId('ferramenta');
   limpar(sel);
