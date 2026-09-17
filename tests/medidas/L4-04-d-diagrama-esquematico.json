@@ -168,5 +168,50 @@
   },
   "ok": true
  },
- "comando": "venv/bin/pytest tests/api/test_rede_diagrama_medida.py -m lento -q"
+ "comando": "venv/bin/pytest tests/api/test_rede_diagrama_medida.py -m lento -q",
+ "turno_wt_l4d": {
+  "item": "L4-04-d-diagrama-esquematico",
+  "assinado_por": "backend (turno CONSTRUTOR L4 rede de utilidades, worktree wt/l4d)",
+  "gerado_em": "2026-09-17T23:43:13Z",
+  "git_sha": "37f2451b96aa64996f1dcfd70d0f35d7ace0206f",
+  "maquina": "12 vCPU, 23 GB RAM, disco / a 64%; PostgreSQL 16 em iagro_sat; base propria da trilha uniao (schema plat_tuniao, laco/trilha_ambiente.sh uniao), com outras sessoes da casa na mesma maquina",
+  "medidas": {
+   "editar_a_rede_marca_o_diagrama_inconsistente": {
+    "valor": true,
+    "unidade": "booleano",
+    "comando": "venv/bin/pytest tests/api/test_rede_diagrama.py::test_editar_a_rede_deixa_o_diagrama_inconsistente -q",
+    "observacao": "applyEdits movendo uma chave sobre o alimentador desenhado deixa o diagrama estado='inconsistente'"
+   },
+   "trocar_layout_nao_conserta": {
+    "valor": true,
+    "unidade": "booleano",
+    "comando": "venv/bin/pytest tests/api/test_rede_diagrama.py::test_editar_a_rede_deixa_o_diagrama_inconsistente -q",
+    "observacao": "par negativo do mesmo teste: POST .../layout muda o desenho e o estado continua 'inconsistente'; so gerar de novo devolve 'consistente'"
+   },
+   "causa_raiz": {
+    "valor": "marcar_inconsistentes nunca era chamada",
+    "unidade": "diagnostico",
+    "comando": "git log -S 'marcar_inconsistentes' --oneline -- app/",
+    "observacao": "diagrama.marcar_inconsistentes existia, com as duas consultas certas (no do diagrama e aresta que aponta para linha), e NAO tinha um unico chamador em app/. MESMA causa de L4-04-a: o instante da edicao nao avisava os derivados"
+   },
+   "conserto_comum_aos_dois_itens": {
+    "valor": 1,
+    "unidade": "ponto de codigo",
+    "comando": "git diff master -- app/rede_utilidades/feicoes.py",
+    "observacao": "feicoes.marcar_area_suja e o unico ponto por onde passam as cinco portas de edicao (criar ponto, criar linha, applyEdits adds/updates/deletes) e so roda quando a rede ja tem topologia construida. Passou a devolver o id da area gravada e a chamar subredes.marcar_sujas(area_id) e diagrama.marcar_inconsistentes(area_id). Um conserto, dois itens: L4-04-a e L4-04-d"
+   },
+   "testes_do_item": {
+    "valor": 20,
+    "unidade": "testes",
+    "comando": "venv/bin/pytest tests/api/test_rede_diagrama.py -q",
+    "observacao": "20 de 20 verdes (eram 19 de 20; 16 funcoes de teste, 20 execucoes com parametrizacao); duracao do arquivo: 150 s"
+   },
+   "nao_medido": {
+    "valor": "medidas de tempo e layout",
+    "unidade": "lacuna",
+    "comando": "-",
+    "observacao": "tests/api/test_rede_diagrama_medida.py (10 s por alimentador, 0 pares de nos sobrepostos, reducao de junção) nao foi rodado neste turno"
+   }
+  }
+ }
 }

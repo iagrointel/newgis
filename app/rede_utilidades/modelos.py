@@ -134,7 +134,8 @@ class TracadoEntrada(BaseModel):
     exigem `pontos_partida` (operam sobre a rede inteira) — a validação por tipo é feita na rota, não aqui,
     porque cada tipo tem uma exigência diferente sobre a MESMA lista."""
     tipo: str | None = Field(
-        default=None, pattern="^(conectado|subrede|lacos|caminho_curto|isolados|montante|jusante)$")
+        default=None,
+        pattern="^(conectado|subrede|lacos|caminho_curto|isolados|montante|jusante|isolamento)$")
     # item L4-02-e: quando vem `config_id`, o TIPO e todo o resto do pedido saem da configuração salva
     # (`plat.rede_config_tracado`) e só os pontos de partida e as barreiras pontuais continuam vindo daqui.
     config_id: str | None = Field(default=None, min_length=36, max_length=36)
@@ -150,6 +151,13 @@ class TracadoEntrada(BaseModel):
     # controlador com nó na topologia, do atributo `direcao_fluxo` quando não tem; 'controlador' e 'atributo'
     # impõem um dos dois. Ignorado pelos demais tipos de traçado.
     origem_direcao: str = Field(default="auto", pattern="^(auto|controlador|atributo)$")
+    # isolamento (L4-02-c): categorias de rede cujos dispositivos podem ser abertos (vazio = o padrão do
+    # motor, proteção e manobra), se a resposta traz também o que fica sem energia ALÉM dos dispositivos, e
+    # se a barreira de condição ("dispositivo sem estado declarado não é ponto de corte") vale. A categoria
+    # que representa a fonte é a mesma `categoria_controlador` de `isolados`.
+    categorias_isolamento: list[str] = Field(default_factory=list, max_length=20)
+    incluir_isolados: bool = False
+    ignorar_inoperante: bool = True
 
 
 class ElementoTracado(BaseModel):

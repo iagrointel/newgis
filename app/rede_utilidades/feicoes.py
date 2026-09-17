@@ -115,9 +115,35 @@ def marcar_area_suja(cur, tenant_id: int, rede_id: str, motivo: str, feicao_id: 
     cur.execute(
         "INSERT INTO plat.rede_topo_area_suja(tenant_id, rede_id, motivo, feicao_id, geom) "
         f"SELECT %s, %s::uuid, %s, %s::uuid, "
-        f"ST_Buffer(ST_Envelope(ST_Collect(ARRAY[{partes}]))::geography, %s)::geometry",
+        f"ST_Buffer(ST_Envelope(ST_Collect(ARRAY[{partes}]))::geography, %s)::geometry "
+        "RETURNING id",
         (tenant_id, rede_id, motivo, feicao_id, *geoms, tolerancia_m),
     )
+    linha = cur.fetchone()
+    if linha is not None:
+        _propagar_aos_derivados(cur, rede_id, str(linha["id"]))
+
+
+def _propagar_aos_derivados(cur, rede_id: str, area_id: str) -> None:
+    """Uma área suja nova invalida, NO MESMO INSTANTE, o que foi derivado da rede e a edição tocou: a subrede
+    volta a `suja` (item L4-04-a) e o diagrama a `inconsistente` (item L4-04-d).
+
+    Por que aqui e por que agora. Os dois derivados já sabiam se marcar (`subredes.marcar_sujas` e
+    `diagrama.marcar_inconsistentes`), mas ninguém os chamava na edição: a primeira só era chamada por
+    `topologia.habilitar()` e pela atualização em lote, e a segunda não era chamada em lugar nenhum. O
+    estado tem de ser gravado no instante da edição, não calculado depois, porque `habilitar()` APAGA as
+    áreas sujas da rede — quem sobrevive à reconstrução é o estado gravado do derivado, não a área.
+
+    Este é o único ponto por onde passam as cinco portas de edição (criar ponto, criar linha, e
+    `applyEdits` de adição, alteração e remoção), e só roda quando a rede já tem topologia construída —
+    logo a propagação não pesa em carga inicial, onde não há derivado a invalidar. Passa o `area_id` desta
+    edição: o cruzamento é com a área desta feição, nunca com todas as áreas abertas da rede, para que uma
+    edição a quilômetros de distância não suje um derivado que ela não tocou."""
+    from app.rede_utilidades import diagrama as diagrama_mod
+    from app.rede_utilidades import subredes as subredes_mod
+
+    subredes_mod.marcar_sujas(cur, rede_id, area_id)
+    diagrama_mod.marcar_inconsistentes(cur, rede_id, area_id)
 
 
 def _wkt_ponto(lon: float, lat: float) -> str:
