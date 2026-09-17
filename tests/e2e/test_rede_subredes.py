@@ -18,6 +18,7 @@ import threading
 import time
 
 import pytest
+from playwright.sync_api import expect
 import uvicorn
 
 from tests.e2e.apoio import RAIZ, Tela, sufixo
@@ -113,8 +114,11 @@ def test_botao_atualizar_e_exportacao_na_tela(page, base_url, credenciais_demo, 
         assert float(comprimento) > 0, "a linha agregada da subrede tem comprimento medido"
 
         page.click("#atualizar-sujas")
-        page.wait_for_function(
-            "document.querySelector('#aviso').textContent.toLowerCase().includes('job')", timeout=30000)
+        # `wait_for_function` avalia uma STRING no mundo principal da página: a CSP do produto
+        # (script-src 'self' com nonce, sem 'unsafe-eval') recusa, e o e2e caía por defeito do
+        # próprio teste, não do produto. A asserção de locator do Playwright roda no mundo isolado
+        # dele e não depende de eval, então respeita a CSP e espera igual.
+        expect(page.locator("#aviso")).to_contain_text("job", ignore_case=True, timeout=30000)
         aviso = page.text_content("#aviso").strip()
         assert "job" in aviso.lower(), aviso
 
