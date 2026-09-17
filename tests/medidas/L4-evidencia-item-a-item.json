@@ -1,0 +1,92 @@
+{
+ "item": "L4-linha-parte-1 — EVIDENCIA ITEM A ITEM (pedido do coordenador)",
+ "descricao": "Para cada um dos 11 itens que o conserto transversal desbloqueou, o arquivo de teste OFICIAL do item rodado SOZINHO na trilha `uniao`, com a contagem de saida, e o confronto com o portao_de_pronto do estado.json. Nao ha promocao inferida pelo teste transversal: item sem teste que exercite a clausula aparece como PROVADO EM PARTE ou SEM PROVA.",
+ "como_rodou": "cd /home/dev/plataforma/wt/l4fix; set -a; source /home/dev/plataforma/laco/var/trilha/uniao.env; set +a; PLAT_TESTE_TIMEOUT=1500 bash /home/dev/plataforma/laco/roda_teste.sh tests/api/<arquivo>.py -p no:warnings --tb=line — um arquivo por vez, nunca a suite inteira.",
+ "como_rodou_e2e": "sudo systemd-run --scope --uid=dev --gid=dev -p MemoryMax=4G -p MemorySwapMax=0 bash -c 'cd <wt>; set -a; . <trilha>.env; set +a; exec venv/bin/pytest tests/e2e/<arquivo>.py -q' — sem ulimit -v, que era o que matava o Chromium com SIGTRAP.",
+ "itens": {
+  "L4-01-modelo-rede": {
+   "comando": "tests/api/test_rede_modelo.py",
+   "saida": "6 passed, 0 failed",
+   "veredito": "PROVADO EM PARTE",
+   "clausulas_cobertas": ["pgRouting instalado (test_pgrouting_resolve_menor_caminho)", "DDL plat.rede_* com conectividade validada por gatilho (3 testes de recusa: no fora da rede, subrede de nivel invertido, associacao fora do catalogo)", "importador BDGD com contagem conferida contra o arquivo (test_importa_distribuidora_real_e_confere_contagem)", "documento de paridade contra ArcGIS Utility Network escrito (docs/rede/MODELO_REDE.md)"],
+   "clausula_de_fora": "ESCALA: o portao pede 'a rede de 1 distribuidora INTEIRA (SUB/CTMT/SSDMT/UNTRMT/SSDBT/UCBT)'. O teste confere contagem contra o extrato que esta na maquina, nao contra uma distribuidora inteira; a regra da casa proibe trazer pacote novo (disco 98 %, D21 pendente)."
+  },
+  "L4-01-d-atributos-de-rede": {
+   "comando": "tests/api/test_rede_atributos.py",
+   "saida": "7 passed, 0 failed",
+   "veredito": "NAO PROVADO",
+   "razao": "O arquivo oficial passa, mas NAO exercita a clausula central do portao. Essa clausula foi medida e REPROVADA e a medida esta no proprio repositorio: tests/medidas/L4-01-d-atributos-de-rede.json, clausula 'concordancia_fase_mt', ok=false, 30888/43709 = 70,67 % contra o portao que pede >= 95 %. O motivo registrado ali e que o extrato nao tem subestacao, entao a raiz e a extremidade de grau 1 do alimentador e nao um controlador real. Isto e defeito PROPRIO do item, alheio aos dois achados transversais: o bloqueio transversal saiu, o portao continua aberto.",
+   "clausulas_cobertas": ["plat.rede_atributo declara flags (propagavel, traversabilidade)", "sincronizacao atributo->topologia por gatilho e por lote", "substituicao troca fase declarada por regra", "documento de paridade (docs/rede/ATRIBUTOS.md)"]
+  },
+  "L4-02-a-conectado-e-subrede": {
+   "comando": "tests/api/test_rede_tracado.py",
+   "saida": "13 passed, 0 failed",
+   "veredito": "PROVADO EM PARTE",
+   "clausulas_cobertas": ["pgRouting instalada", "POST tracar com tipo=conectado|subrede, ponto por feicao+terminal e por coordenada, barreiras", "rede sintetica de 12 nos com resposta conhecida: conectado = 9 elementos, subrede = 6 (bate com o portao; tests/medidas/L4-02-a-conectado-e-subrede.json)"],
+   "clausulas_de_fora": ["p95 <= 2 s medido 30 vezes no maior alimentador: NAO MEDIDO (a medida registra medido=false, motivo carga_1min=18,24 acima de 8; o brief proibe medir tempo sob disputa)", "e2e com captura (clicar no mapa -> destaque + tabela lateral): SEM PROVA — nao existe tests/e2e/test_rede_tracado.py. Observacao: o motivo gravado na medida ('nao existe front-end de rede de utilidades no repositorio') esta DESATUALIZADO — web/redes_tracado.html existe hoje; falta o teste, nao a tela."]
+  },
+  "L4-02-b-montante-jusante": {
+   "comando": "tests/api/test_rede_direcao.py",
+   "saida": "12 passed, 0 failed",
+   "veredito": "PROVADO EM PARTE",
+   "clausulas_cobertas": ["tipo=montante|jusante no mesmo endpoint", "laco na rede sintetica devolve indeterminado com os nos do laco", "universo da cooperativa medido (tests/medidas/L4-02-b-montante-jusante.json, universo_cooperativa medido=true)"],
+   "clausulas_de_fora": ["p95 <= 2 s: NAO MEDIDO (medida registra medido=false, carga acima de 8)", "e2e: SEM PROVA — nao existe tests/e2e/test_rede_direcao.py"]
+  },
+  "L4-02-d-lacos-e-caminho-curto": {
+   "comando": "tests/api/test_rede_lacos_caminho.py",
+   "saida": "13 passed, 0 failed",
+   "veredito": "PROVADO EM PARTE",
+   "clausulas_cobertas": ["tipo=lacos|caminho_curto|isolados", "caminho mais curto e k alternativas na rede de teste"],
+   "clausulas_de_fora": ["lacos da cooperativa de teste listados: NAO MEDIDO (medida registra medido=false, carga_1min=9,54)", "p95 caminho_curto no maior alimentador: NAO MEDIDO (mesma razao)", "e2e: SEM PROVA — nao existe tests/e2e/test_rede_lacos_caminho.py"]
+  },
+  "L4-02-e-configuracoes-de-tracado": {
+   "comando": "tests/api/test_rede_config_tracado.py + tests/e2e/test_rede_config_tracado.py",
+   "saida": "API 12 passed, 0 failed; E2E 1 passed, 0 failed",
+   "veredito": "PROVADO EM PARTE",
+   "clausulas_cobertas": ["CRUD de config_tracado e uso por config_id", "as 6 configuracoes prontas do pacote eletrica-BR", "e2e do formulario de configuracao: FECHADO NESTA RODADA — a tela /redes/configuracoes percorrida de ponta a ponta (escolher rede, ver as prontas, preencher, salvar, ver a linha nova, apagar) com o Chromium do venv"],
+   "clausula_de_fora": "funcao Soma kVA a jusante de um CTMT = Soma POT_NOM dos UNTRMT: a propria medida do item marca estado 'parcial_alcancado_pela_topologia', nao fechada."
+  },
+  "L4-04-b-atualizar-e-exportar-subrede": {
+   "comando": "tests/api/test_rede_subredes.py + tests/e2e/test_rede_subredes.py",
+   "saida": "API 11 passed, 0 failed; E2E 1 passed, 0 failed (era 1 failed antes do conserto da CSP neste ramo)",
+   "veredito": "PROVADO",
+   "clausulas_cobertas": ["atualizar todas as subredes em tempo medido (3 de 3 atualizadas, 0 recusadas)", "mover chave de fronteira suja so as 2 subredes afetadas (test_mover_chave_de_fronteira_suja_so_as_duas_subredes, que e a refutacao exigida pelo portao)", "nome da subrede = CTMT do arquivo em 13646 de 13646 trechos de MT = 100 % (portao pede >= 99 %)", "exportar devolve Soma de elementos = tracado de subrede (5392 == 5392)", "e2e do botao atualizar: FECHADO NESTA RODADA", "documento de paridade escrito"]
+  },
+  "L4-04-c-sumarios-por-subrede": {
+   "comando": "tests/api/test_rede_subredes_resumo.py",
+   "saida": "9 passed, 0 failed",
+   "veredito": "PROVADO EM PARTE",
+   "clausulas_cobertas": ["plat.rede_subrede_resumo com as colunas listadas", "km de MT por CTMT: maior desvio 0,000000 % contra a soma de COMP do arquivo, nos 20 alimentadores (portao pede +- 0,1 %)", "numero de UCBT por CTMT identico ao arquivo nos 20, 0 divergentes; soma 27587 = total do arquivo (dupla contagem apareceria como soma maior)", "exportacao CSV: 20 linhas + cabecalho, 21 colunas"],
+   "clausula_de_fora": "'painel (L2-06) consegue ligar a essa tabela': nao verificado nesta rodada — e acoplamento com outro item, sem teste no arquivo oficial deste."
+  },
+  "L4-05-a-exportar-opendss": {
+   "comando": "tests/api/test_rede_opendss.py",
+   "saida": "7 passed, 0 failed",
+   "veredito": "PROVADO EM PARTE",
+   "clausulas_cobertas": ["exportar gera a pasta .dss (Master, Linhas, Transformadores, Cargas, Curvas, resumo.json)", "opendssdirect compila sem erro (circuito_compilado.erro vazio)", "numero de barras e linhas do circuito compilado = nos e trechos da subrede (7 barras = 7 esperadas, 5 linhas = 5 esperadas), conferido por script independente", "dicionario TEN_NOM completo: 110 codigos, inclusive o 63 que faltava (23,1 kV)", "relatorio 'o que o conversor nao faz' anexado (NAO_FAZ.md na pasta)"],
+   "clausula_de_fora": "ESCALA: a conferencia corre sobre uma subrede de 5 trechos / 8 nos, nao sobre '1 alimentador' real da cooperativa. O portao nao fixa tamanho, mas quem promover deve saber que a prova e de mecanica, nao de porte."
+  },
+  "L4-05-c-pandapower-e-matpower": {
+   "comando": "tests/api/test_rede_matpower.py",
+   "saida": "12 passed, 0 failed",
+   "veredito": "PROVADO EM PARTE",
+   "clausulas_cobertas": ["exportar para pandapower JSON, pp.from_json e pp.runpp convergem (json_convergiu=true, vm_pu entre 0,9938 e 1,0)", "numero de bus/line/trafo = nos/trechos/trafos (7/5/1 contra 7/5/1 esperados, conferencia independente)", "importar caso MATPOWER publico: case9 (9 bus, 9 branch) e case30 (30 bus, 41 branch) convergem", "paridade escrita como conector, nao como capacidade Esri"],
+   "clausula_de_fora": "ESCALA: mesma ressalva do L4-05-a — o alimentador exportado e a rede pequena de teste; o motor de fluxo foi medido com venv proprio (/home/dev/plataforma/laco/var/venv-pandapower, pandapower 3.5.4)."
+  },
+  "L4-05-d-epanet-inp": {
+   "comando": "tests/api/test_rede_epanet.py",
+   "saida": "0 passed, 6 SKIPPED, 0 failed",
+   "veredito": "SEM PROVA nesta rodada",
+   "razao": "5 clausulas pulam com 'nenhum worker vivo em /saude': plat_tuniao.fila_estado() devolve workers_vivos=0 e plat_tuniao.worker esta VAZIA (ha um processo worker escutando em 127.0.0.1:8193 que se anuncia como trilha-uniao, mas nao grava heartbeat nesse schema). A 6a pula porque a fixture real rede_agua_real.inp nao esta neste checkout. Nada disso e defeito do produto nem dos dois achados transversais — e a trilha sem worker registrado e sem o arquivo. O arquivo tests/medidas/L4-05-d-epanet-inp.json tem numeros REAIS (11.119 junctions, 7 reservatorios, 14.756 tubos, 941.294,02 m, importacao em 2,1 s), mas sao de rodada ANTERIOR noutra trilha: evidencia previa, nao desta rodada."
+  }
+ },
+ "resumo": {
+  "provado": 1,
+  "provado_em_parte": 8,
+  "nao_provado": 1,
+  "sem_prova": 1,
+  "leitura": "O conserto transversal fez cair as duas paredes que impediam QUALQUER clausula de rodar; nao promove ninguem sozinho. Com o portao na frente: 1 item fecha (L4-04-b), 8 fecham a mecanica e ficam devendo clausula nomeada (p95 sob carga, e2e sem arquivo, escala de distribuidora, kVA a jusante, acoplamento de painel), 1 tem clausula MEDIDA E REPROVADA (L4-01-d, 70,67 % contra 95 %) e 1 nao teve prova nenhuma nesta rodada (L4-05-d, trilha sem worker e sem o .inp).",
+  "duas_clausulas_de_e2e_fechadas_nesta_rodada": "L4-02-e e L4-04-b — o navegador funciona quando nao ha ulimit -v; o e2e do L4-04-b ainda precisou de um conserto no proprio teste (usava wait_for_function com string, que a CSP do produto recusa)."
+ },
+ "gerado_em": "2026-09-17T23:30:00Z"
+}
