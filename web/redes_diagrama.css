@@ -10,12 +10,12 @@
    O nó é um <button> (marcador com DOM próprio no MapLibre): tem foco visível, é alcançável pelo teclado e
    anuncia o rótulo no leitor de tela. Um círculo desenhado no canvas não teria nada disso. */
 body.redes-diagrama {
-  --no-terminal: #2463a8;
-  --no-conexao: #8a8f98;
-  --no-conteiner: #d98a2b;
-  --no-selecionado: #b4341f;
-  --quadro-fundo: #f7f8fa;
-  --quadro-borda: #c8ced6;
+  --no-terminal: var(--i-no-terminal);
+  --no-conexao: var(--i-no-conexao);
+  --no-conteiner: var(--i-no-conteiner);
+  --no-selecionado: var(--i-no-selecionado);
+  --quadro-fundo: var(--i-no-quadro-fundo);
+  --quadro-borda: var(--i-no-quadro-borda);
 }
 
 body.redes-diagrama .quadros-diagrama {
@@ -40,7 +40,7 @@ body.redes-diagrama .marcador-no {
   width: 14px;
   height: 14px;
   padding: 0;
-  border: 2px solid #ffffff;
+  border: var(--i-fio-forte) solid var(--i-no-marcador-fio);
   border-radius: 50%;
   background: var(--no-conexao);
   cursor: pointer;

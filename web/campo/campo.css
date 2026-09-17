@@ -2,14 +2,11 @@
    de teste roda só uvicorn, sem nginx na frente) e pequena de propósito (orçamento do shell é 1,5 MB). */
 :root {
   color-scheme: light dark;
-  --cor-fundo: #0b1622;
-  --cor-texto: #e8f0fa;
-  --cor-superficie: #142333;
-  --cor-borda: #26405c;
-  --cor-marca: #1f3a5f;
-  --cor-aviso: #7a3b12;
-  --cor-aviso-fundo: #3a2410;
-  --cor-ok: #2f6f4f;
+  /* a paleta vem de web/estilo/tokens.css (item L0-14): aqui só os nomes que esta folha já usava, e o
+     alvo de toque, que é medida de ergonomia de campo, não cor. */
+  --cor-marca: var(--i-linha-forte);
+  --cor-aviso: var(--i-aviso);
+  --cor-aviso-fundo: var(--i-aviso-fraco);
   --alvo-toque: 44px;
 }
 * { box-sizing: border-box; }
@@ -36,22 +33,22 @@ body {
   display: inline-flex; align-items: center; background: var(--cor-superficie);
 }
 .estado-rede[data-estado="online"] { background: var(--cor-ok); }
-.estado-rede[data-estado="offline"] { background: var(--cor-aviso-fundo); color: #ffd8b0; }
+.estado-rede[data-estado="offline"] { background: var(--cor-aviso-fundo); color: var(--i-aviso); }
 main { max-width: 640px; margin: 0 auto; padding: var(--i-e4); }
 section { margin-bottom: var(--i-e5); }
-h2 { font-size: var(--i-t2); text-transform: uppercase; letter-spacing: var(--i-espaco-letra-titulo); color: #9fb3c8; }
+h2 { font-size: var(--i-t2); text-transform: uppercase; letter-spacing: var(--i-espaco-letra-titulo); color: var(--i-texto-fraco); }
 .aviso {
-  background: var(--cor-aviso-fundo); border: 1px solid var(--cor-aviso); color: #ffd8b0;
+  background: var(--cor-aviso-fundo); border: 1px solid var(--cor-aviso); color: var(--i-aviso);
   padding: var(--i-e3) var(--i-e4); border-radius: var(--i-raio);
 }
-.mensagem { color: #9fb3c8; }
+.mensagem { color: var(--i-texto-fraco); }
 .lista-mapas { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--i-e2); }
 .lista-mapas li {
   background: var(--cor-superficie); border: 1px solid var(--cor-borda); border-radius: var(--i-raio);
   padding: var(--i-e3) var(--i-e4); min-height: var(--alvo-toque); display: flex; flex-direction: column; justify-content: center;
 }
 .lista-mapas .titulo { font-weight: 600; }
-.lista-mapas .meta { font-size: var(--i-t0); color: #9fb3c8; }
+.lista-mapas .meta { font-size: var(--i-t0); color: var(--i-texto-fraco); }
 .fila-contagem { font-size: var(--i-t4); font-weight: 700; }
 .botao {
   min-height: var(--alvo-toque); min-width: var(--alvo-toque); padding: var(--i-e2) var(--i-e4);
@@ -59,11 +56,4 @@ h2 { font-size: var(--i-t2); text-transform: uppercase; letter-spacing: var(--i-
   color: var(--cor-texto); font: inherit; cursor: pointer;
 }
 .botao-primario { background: var(--cor-marca); border-color: var(--cor-marca); }
-.botao:focus-visible { outline: 2px solid #6fb1ff; outline-offset: 2px; }
-@media (prefers-color-scheme: light) {
-  :root {
-    --cor-fundo: #f4f7fb; --cor-texto: #12233a; --cor-superficie: #ffffff; --cor-borda: #cfdbea;
-    --cor-aviso-fundo: #fdecd8; --cor-aviso: #b96a1c;
-  }
-  .estado-rede[data-estado="offline"] { color: #7a3b12; }
-}
+.botao:focus-visible { outline: var(--i-foco-largura) solid var(--i-foco); outline-offset: 2px; }

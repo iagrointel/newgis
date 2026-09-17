@@ -15,6 +15,7 @@ import { h, limpar } from '../base/dom.js';
 import { enviar, mensagemDe } from '../base/api.js';
 import { t } from '../base/i18n.js';
 import { desenhar, tabela, csv, paraDom, paraTexto, LARGURA, ALTURA } from './grafico_svg.js';
+import { icone } from '../base/icones.js';
 
 const CHAVE = 'plat.mapa.graficos';
 const TIPOS = ['barras', 'pizza', 'linha', 'histograma', 'dispersao'];
@@ -412,7 +413,7 @@ export class PainelGraficos {
       const rotulo = `${t(`mapa.grafico_tipo_${c.tipo}`)} · ${c.campo}${c.campo_y ? ` × ${c.campo_y}` : ''}${c.filtro ? ' · filtro' : ''}`;
       this.salvos.append(h('li', { dataset: { salvo: String(i) } },
         h('button', { type: 'button', class: 'sugestao', onclick: () => this.aplicarConfiguracao(c) }, rotulo),
-        h('button', { type: 'button', class: 'botao-mini', 'aria-label': `remover ${rotulo}`, onclick: () => this.remover(i) }, '✕')));
+        h('button', { type: 'button', class: 'botao-mini', 'aria-label': `remover ${rotulo}`, onclick: () => this.remover(i) }, icone('fechar', { tamanho: 14 }))));
     });
   }
 }

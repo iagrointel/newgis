@@ -11,18 +11,18 @@
       contraste, seletor flutuante do executor). */
 
 .tema-aplicado {
-  --fundo: var(--t-fundo, var(--i-fundo, #f4f5f7));
-  --fundo-2: var(--t-fundo, var(--i-fundo, #f4f5f7));
-  --painel: var(--t-superficie, var(--i-superficie, #ffffff));
-  --painel-2: var(--t-superficie, var(--i-superficie-2, #f4f5f7));
-  --borda: var(--t-borda, var(--i-linha, #c9d1d9));
-  --borda-forte: var(--t-borda, var(--i-linha, #c9d1d9));
-  --texto: var(--t-texto, var(--i-texto, #1c2430));
-  --fraco: var(--t-texto-suave, var(--i-texto-fraco, #4e5d6e));
-  --ok: var(--t-sucesso, var(--i-sucesso, #1a6b3c));
-  --falha: var(--t-erro, var(--i-erro, #a12622));
-  --acento: var(--t-acento, var(--i-acento, #0b5cad));
-  --acento-texto: var(--t-texto-sobre-acento, var(--i-acento-texto, #ffffff));
+  --fundo: var(--t-fundo, var(--i-fundo));
+  --fundo-2: var(--t-fundo, var(--i-fundo));
+  --painel: var(--t-superficie, var(--i-superficie));
+  --painel-2: var(--t-superficie, var(--i-superficie-2));
+  --borda: var(--t-borda, var(--i-linha));
+  --borda-forte: var(--t-borda, var(--i-linha));
+  --texto: var(--t-texto, var(--i-texto));
+  --fraco: var(--t-texto-suave, var(--i-texto-fraco));
+  --ok: var(--t-sucesso, var(--i-sucesso));
+  --falha: var(--t-erro, var(--i-erro));
+  --acento: var(--t-acento, var(--i-acento));
+  --acento-texto: var(--t-texto-sobre-acento, var(--i-acento-texto));
   --raio: var(--t-raio-medio, var(--i-raio, 4px));
   --e1: var(--t-espacamento-pequeno, var(--i-e1, .25rem));
   --e2: var(--t-espacamento-pequeno, var(--i-e2, .5rem));
@@ -31,33 +31,33 @@
   --e5: var(--t-espacamento-grande, var(--i-e5, 1.5rem));
   --e6: var(--t-espacamento-grande, var(--i-e6, 2rem));
 
-  background: var(--t-fundo, var(--i-fundo, #f4f5f7));
-  color: var(--t-texto, var(--i-texto, #1c2430));
+  background: var(--t-fundo, var(--i-fundo));
+  color: var(--t-texto, var(--i-texto));
   font-family: var(--t-familia-texto, var(--i-fonte-texto, system-ui, sans-serif));
 }
 .tema-aplicado .exec-cabecalho, .tema-aplicado .exec-rodape {
   font-family: var(--t-familia-titulo, var(--i-fonte-titulo, inherit));
-  background: var(--t-superficie, var(--i-superficie, #ffffff));
+  background: var(--t-superficie, var(--i-superficie));
 }
 .tema-aplicado .exec-menu a[aria-current="page"] {
-  background: var(--t-acento, var(--i-acento, #0b5cad));
-  color: var(--t-texto-sobre-acento, var(--i-acento-texto, #ffffff));
+  background: var(--t-acento, var(--i-acento));
+  color: var(--t-texto-sobre-acento, var(--i-acento-texto));
 }
 .tema-aplicado .exec-janela-botao, .tema-aplicado .exec-acordeao-cabecalho,
 .tema-aplicado .exec-painel-lateral-alternar {
-  background: var(--t-superficie, var(--i-superficie, #ffffff));
-  color: var(--t-texto, var(--i-texto, #1c2430));
-  border: 1px solid var(--t-borda, var(--i-linha, #c9d1d9));
+  background: var(--t-superficie, var(--i-superficie));
+  color: var(--t-texto, var(--i-texto));
+  border: 1px solid var(--t-borda, var(--i-linha));
   border-radius: var(--t-raio-pequeno, var(--i-raio));
 }
 .tema-aplicado .exec-janela-modal, .tema-aplicado .exec-janela-ancorada,
 .tema-aplicado .exec-painel-fixo, .tema-aplicado .exec-painel-lateral {
-  background: var(--t-superficie, var(--i-superficie, #ffffff));
+  background: var(--t-superficie, var(--i-superficie));
   box-shadow: var(--t-sombra-nivel-2, var(--i-sombra, none));
 }
 .tema-aplicado .exec-mapa, .tema-aplicado .exec-tabela {
-  background: var(--t-superficie, var(--i-superficie, #ffffff));
-  border: 1px dashed var(--t-borda, var(--i-linha, #c9d1d9));
+  background: var(--t-superficie, var(--i-superficie));
+  border: 1px dashed var(--t-borda, var(--i-linha));
 }
 
 /* ---------------------------------------------------------------- seletor do executor (flutuante, canto
@@ -72,19 +72,19 @@
   align-items: center;
   gap: var(--e2);
   padding: var(--e2) var(--e3);
-  background: var(--painel, #12181a);
-  color: var(--texto, #e7ece9);
-  border: 1px solid var(--borda, #263133);
+  background: var(--painel);
+  color: var(--texto);
+  border: 1px solid var(--borda);
   border-radius: var(--raio);
   box-shadow: var(--sombra);
   font-size: var(--i-t0);
 }
-.tema-seletor label { color: var(--fraco, #8fa19c); }
+.tema-seletor label { color: var(--fraco); }
 .tema-seletor select {
   max-width: 180px;
-  background: var(--fundo-2, #1a2224);
-  color: var(--texto, #e7ece9);
-  border: 1px solid var(--borda, #263133);
+  background: var(--fundo-2);
+  color: var(--texto);
+  border: 1px solid var(--borda);
   border-radius: var(--raio);
   padding: var(--i-e0) var(--e2);
 }
@@ -95,7 +95,7 @@
 .tema-cartao[aria-pressed="true"] { border-color: var(--acento); outline: 2px solid var(--acento); outline-offset: 1px; }
 .tema-cartao .nome { font-weight: 600; }
 .tema-amostras { display: flex; gap: var(--i-e0); }
-.tema-amostra { width: 26px; height: 16px; border: 1px solid rgba(128, 128, 128, .35); }
+.tema-amostra { width: 26px; height: 16px; border: var(--i-fio) solid var(--i-amostra-contorno); }
 
 .tema-grade { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(280px, 1.2fr); gap: var(--e4); align-items: start; }
 @media (max-width: 900px) { .tema-grade { grid-template-columns: minmax(0, 1fr); } }
@@ -109,7 +109,7 @@
 
 .tema-paleta { display: flex; flex-wrap: wrap; gap: var(--e2); margin: var(--e2) 0; }
 .tema-chip { display: inline-flex; align-items: center; gap: var(--i-e1); padding: var(--i-e0) var(--i-e2); border: 1px solid var(--borda); border-radius: var(--raio); background: var(--painel); cursor: grab; font-size: var(--i-t-1); }
-.tema-chip .quad { width: 12px; height: 12px; border: 1px solid rgba(128, 128, 128, .4); }
+.tema-chip .quad { width: 12px; height: 12px; border: var(--i-fio) solid var(--i-amostra-contorno); }
 .tema-chip.arrastando { opacity: .5; }
 
 .tema-previa { border: 1px solid var(--borda); border-radius: var(--raio); overflow: hidden; min-height: 260px; display: flex; flex-direction: column; }

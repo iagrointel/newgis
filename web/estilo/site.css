@@ -6,16 +6,6 @@
    própria página a partir da configuração do inquilino, e a cor do texto sobre ela (`--site-cor-texto`) é
    escolhida no servidor pelo contraste (WCAG 1.4.3), nunca fixada aqui. */
 
-:root {
-  --site-fundo: #ffffff;
-  --site-tinta: #16191d;
-  --site-tinta-fraca: #4a5058;
-  --site-borda: #d7dce2;
-  --site-fundo-alt: #f2f4f7;
-  --site-cor: #1f4b99;
-  --site-cor-texto: #ffffff;
-}
-
 * { box-sizing: border-box; }
 
 body.site {
@@ -45,7 +35,7 @@ body.site {
 }
 
 .site-marca { display: flex; align-items: center; gap: var(--i-e3); }
-.site-logo { border-radius: var(--i-raio); background: #fff; }
+.site-logo { border-radius: var(--i-raio); background: var(--i-papel); }
 .site-titulo { font-size: var(--i-t5); font-weight: 700; }
 .site-subtitulo { margin: var(--i-e1) 0 0; opacity: .92; }
 
@@ -105,14 +95,4 @@ figure.cartao-imagem figcaption { color: var(--site-tinta-fraca); font-size: var
 
 a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
   outline: 3px solid var(--site-cor); outline-offset: 2px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --site-fundo: #14171b;
-    --site-tinta: #eef1f5;
-    --site-tinta-fraca: #b4bcc6;
-    --site-borda: #333a42;
-    --site-fundo-alt: #1c2026;
-  }
 }

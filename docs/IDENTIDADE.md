@@ -104,11 +104,25 @@ e demonstrados com os elementos reais em `/estilo`:
 
 ## 6. Como medir (e o que ainda não foi medido)
 
-- `tests/unit/test_estilo_tokens.py`: literal de cor/medida fora dos tokens, glifo/emoji, ícone fora da família,
-  fontes no vendor com sha, toda tela ligando as três folhas e o `tema.js`, rota `/estilo` registrada.
+- `make tokens` é o portão inteiro em um comando: `tests/unit/test_tokens_cor.py` (a varredura de cor, a única
+  do repositório — css, css dentro de html e js, com controle positivo que planta um literal e confere que a
+  varredura o pega), `tests/unit/test_telas_carregam_tokens.py` (toda tela carrega `tokens.css` antes de
+  qualquer outra folha), `tests/unit/test_estilo_tokens.py` (grupos de token, par tipográfico com sha256,
+  família única de ícones sem emoji, os 6 componentes nos 7 estados, rota `/estilo` gerada dos tokens) e
+  `tests/unit/test_tokens_visuais.py` (medida de escala).
+- Cor no JavaScript: existe código que NÃO resolve `var(--...)` por construção — o estilo do MapLibre é JSON
+  lido pelo canvas, a cena 3D é configuração de renderização, alguns gráficos são SVG montado em memória e
+  exportado fora do documento. Ali a cor é cartografia ou dado, nunca cromo. Esses arquivos não ficam
+  "liberados": cada um tem ORÇAMENTO CONTADO em `tests/tokens_cor.excecoes` (`caminho @N  # motivo`), e tanto
+  crescer quanto encolher sem atualizar o número reprova. CSS não tem orçamento: é zero absoluto.
 - `tests/e2e/test_estilo.py` (marcador `lento`, chromium do playwright): captura antes/depois das telas em
   `tests/e2e/capturas/L0-14_<tela>_{antes,depois_escuro,depois_claro}.png`; contraste de todo nó de texto
   visível nas telas, nos dois temas, com a fórmula WCAG 2 aplicada à cor calculada e ao fundo composto
   (`axe-core` roda por cima quando existe no disco, fora do repositório); página `/estilo` com o número de
   tokens igual ao do arquivo; os 6 × 7 estados presentes.
-- Resultados em `tests/medidas/L0-14.json`, cada um com o comando.
+- Resultados em `tests/medidas/L0-14-identidade-visual.json`, cada um com o comando.
+- O que ainda NÃO foi medido, e por quê: contraste AA por `axe-core` e as capturas antes/depois (cláusulas (f)
+  e (g)) exigem navegador, e o headless quebra nesta máquina. A migração das telas da folha antiga
+  `web/style.css` para `estilo/base.css` + `estilo/componentes.css` é item próprio; enquanto ela não acontece,
+  o número de telas na folha antiga está sob catraca (`TELAS_NA_FOLHA_ANTIGA` em
+  `tests/unit/test_estilo_tokens.py`): não pode crescer, e tela nova nasce na folha nova.

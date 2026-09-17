@@ -1,13 +1,13 @@
 /* folha dos exemplos do SDK JS (item L7-08-c-sdk-js): tudo local, sem fonte externa (CSP default-src 'none') */
-body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: #0b0f10; color: #d7dedc; }
+body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: var(--i-fundo); color: var(--i-texto); }
 main { max-width: 960px; margin: 0 auto; padding: var(--i-e4); }
 h1 { font-size: var(--i-t3); margin: 0 0 var(--i-e1); }
-p.doc { color: #8fa19c; margin: 0 0 var(--i-e3); }
+p.doc { color: var(--i-texto-fraco); margin: 0 0 var(--i-e3); }
 form { display: flex; gap: var(--i-e2); flex-wrap: wrap; align-items: end; margin-bottom: var(--i-e3); }
-label { display: flex; flex-direction: column; font-size: var(--i-t-1); color: #8fa19c; }
-input { background: #182420; color: #d7dedc; border: 1px solid #263133; padding: var(--i-e1) var(--i-e2); min-width: 140px; }
-button { background: #d98a2b; color: #0b0f10; border: 0; padding: var(--i-e2) var(--i-e3); font-weight: 600; cursor: pointer; }
-pre#saida { background: #101617; border: 1px solid #263133; padding: var(--i-e2); min-height: 80px; white-space: pre-wrap; }
-#mapa { height: 420px; border: 1px solid #263133; margin-bottom: var(--i-e3); }
-body[data-resultado='ok'] pre#saida { border-color: #3e9a5f; }
-body[data-resultado='erro'] pre#saida { border-color: #c04a3a; }
+label { display: flex; flex-direction: column; font-size: var(--i-t-1); color: var(--i-texto-fraco); }
+input { background: var(--i-superficie-2); color: var(--i-texto); border: var(--i-fio) solid var(--i-linha); padding: var(--i-e1) var(--i-e2); min-width: 140px; }
+button { background: var(--i-acento); color: var(--i-acento-texto); border: 0; padding: var(--i-e2) var(--i-e3); font-weight: 600; cursor: pointer; }
+pre#saida { background: var(--i-superficie); border: var(--i-fio) solid var(--i-linha); padding: var(--i-e2); min-height: 80px; white-space: pre-wrap; }
+#mapa { height: 420px; border: var(--i-fio) solid var(--i-linha); margin-bottom: var(--i-e3); }
+body[data-resultado='ok'] pre#saida { border-color: var(--i-sucesso); }
+body[data-resultado='erro'] pre#saida { border-color: var(--i-erro); }

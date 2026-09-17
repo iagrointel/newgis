@@ -80,7 +80,7 @@
         <h2 id="tabela-gaveta-titulo" class="tabela-gaveta-titulo"></h2>
         <span id="tabela-gaveta-contagem" class="tabela-gaveta-contagem"></span>
         <input id="tabela-gaveta-filtro" class="tabela-gaveta-filtro" type="search" placeholder="filtrar…" aria-label="filtrar linhas da tabela" data-i18n-aria="mapa.tabela_filtrar_linhas">
-        <button type="button" id="tabela-gaveta-fechar" class="tabela-gaveta-fechar" aria-label="fechar tabela" data-i18n-aria="mapa.tabela_fechar">✕</button>
+        <button type="button" id="tabela-gaveta-fechar" class="tabela-gaveta-fechar" aria-label="fechar tabela" data-i18n-aria="mapa.tabela_fechar"><span data-icone="fechar"></span></button>
       </div>
       <div class="tabela-gaveta-rolagem">
         <table class="tabela-gaveta-tabela">
@@ -103,7 +103,7 @@
     <div class="sig-painel" id="painel-camadas" data-painel-id="camadas" hidden>
       <header class="sig-painel-cabecalho" data-arrasto>
         <h2>Camadas</h2>
-        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar">✕</button>
+        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar"><span data-icone="fechar"></span></button>
       </header>
       <div class="sig-painel-corpo">
         <div class="sig-busca-camadas">
@@ -112,7 +112,7 @@
 
         <section class="sig-grupo" data-grupo="camadas">
           <div class="sig-grupo-cabecalho-linha">
-            <button type="button" class="sig-grupo-cabecalho" aria-expanded="true"><span>▾ Camadas</span></button>
+            <button type="button" class="sig-grupo-cabecalho" aria-expanded="true"><span><span data-icone="chevron_baixo"></span> Camadas</span></button>
             <button type="button" id="btn-novo-grupo" class="sig-botao-mini" aria-label="criar grupo">+ grupo</button>
           </div>
           <div class="sig-grupo-corpo">
@@ -123,7 +123,7 @@
 
         <section class="sig-grupo" data-grupo="rede">
           <button type="button" class="sig-grupo-cabecalho" aria-expanded="true">
-            <span>▾ Rede de utilidades</span>
+            <span><span data-icone="chevron_baixo"></span> Rede de utilidades</span>
           </button>
           <div class="sig-grupo-corpo">
             <p class="fraco" id="rede-status">carregando…</p>
@@ -133,7 +133,7 @@
 
         <section class="sig-grupo" data-grupo="bases">
           <button type="button" class="sig-grupo-cabecalho" aria-expanded="true">
-            <span>▾ Bases</span>
+            <span><span data-icone="chevron_baixo"></span> Bases</span>
           </button>
           <div class="sig-grupo-corpo">
             <ul id="lista-bases" class="lista-bases" role="radiogroup" aria-label="camada base"></ul>
@@ -142,7 +142,7 @@
 
         <section class="sig-grupo" data-grupo="legenda">
           <button type="button" class="sig-grupo-cabecalho" aria-expanded="true">
-            <span>▾ Legenda</span>
+            <span><span data-icone="chevron_baixo"></span> Legenda</span>
           </button>
           <div class="sig-grupo-corpo">
             <div id="legenda" class="legenda"></div>
@@ -154,7 +154,7 @@
     <div class="sig-painel" id="painel-envio" data-painel-id="envio" hidden>
       <header class="sig-painel-cabecalho" data-arrasto>
         <h2>Catálogo e envio</h2>
-        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar">✕</button>
+        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar"><span data-icone="fechar"></span></button>
       </header>
       <div class="sig-painel-corpo">
         <p class="fraco">arraste um arquivo para cima do mapa para publicar; ou escolha aqui.</p>
@@ -170,7 +170,7 @@
     <div class="sig-painel" id="painel-pesquisa" data-painel-id="pesquisa" hidden>
       <header class="sig-painel-cabecalho" data-arrasto>
         <h2>Pesquisar</h2>
-        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar">✕</button>
+        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar"><span data-icone="fechar"></span></button>
       </header>
       <div class="sig-painel-corpo">
         <form id="busca-form" role="search">
@@ -188,7 +188,7 @@
     <div class="sig-painel" id="painel-medicao" data-painel-id="medicao" hidden>
       <header class="sig-painel-cabecalho" data-arrasto>
         <h2>Medição</h2>
-        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar">✕</button>
+        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar"><span data-icone="fechar"></span></button>
       </header>
       <div class="sig-painel-corpo">
         <div class="sig-linha">
@@ -203,7 +203,7 @@
     <div class="sig-painel" id="painel-edicao" data-painel-id="edicao" hidden>
       <header class="sig-painel-cabecalho" data-arrasto>
         <h2>Edição</h2>
-        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar">✕</button>
+        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar"><span data-icone="fechar"></span></button>
       </header>
       <div class="sig-painel-corpo" id="edicao-painel"></div>
     </div>
@@ -211,7 +211,7 @@
     <div class="sig-painel" id="painel-impressao" data-painel-id="impressao" hidden>
       <header class="sig-painel-cabecalho" data-arrasto>
         <h2>Impressão</h2>
-        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar">✕</button>
+        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar"><span data-icone="fechar"></span></button>
       </header>
       <div class="sig-painel-corpo">
         <div class="sig-linha">
@@ -225,11 +225,11 @@
     <div class="sig-painel" id="painel-comparar" data-painel-id="comparar" hidden>
       <header class="sig-painel-cabecalho" data-arrasto>
         <h2>Comparar</h2>
-        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar">✕</button>
+        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar"><span data-icone="fechar"></span></button>
       </header>
       <div class="sig-painel-corpo">
         <section class="sig-grupo" data-grupo="comparar-modo">
-          <button type="button" class="sig-grupo-cabecalho" aria-expanded="true"><span>▾ Cortina, lado a lado, lupa</span></button>
+          <button type="button" class="sig-grupo-cabecalho" aria-expanded="true"><span><span data-icone="chevron_baixo"></span> Cortina, lado a lado, lupa</span></button>
           <div class="sig-grupo-corpo">
             <div class="sig-linha comparar-modos" role="radiogroup" aria-label="modo de comparação">
               <label><input type="radio" name="comparar-modo" value="desligado" checked> desligado</label>
@@ -247,7 +247,7 @@
           </div>
         </section>
         <section class="sig-grupo" data-grupo="comparar-tempo">
-          <button type="button" class="sig-grupo-cabecalho" aria-expanded="true"><span>▾ Tempo</span></button>
+          <button type="button" class="sig-grupo-cabecalho" aria-expanded="true"><span><span data-icone="chevron_baixo"></span> Tempo</span></button>
           <div class="sig-grupo-corpo">
             <label class="sig-rotulo" for="tempo-camada">camada com campo de data</label>
             <select id="tempo-camada"></select>
@@ -269,7 +269,7 @@
     <div class="sig-painel" id="painel-composicoes" data-painel-id="composicoes" hidden>
       <header class="sig-painel-cabecalho" data-arrasto>
         <h2>Composições</h2>
-        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar">✕</button>
+        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar"><span data-icone="fechar"></span></button>
       </header>
       <div class="sig-painel-corpo">
         <button type="button" id="composicao-nova" class="botao">nova composição</button>
@@ -281,7 +281,7 @@
     <div class="sig-painel" id="painel-conta" data-painel-id="conta" hidden>
       <header class="sig-painel-cabecalho" data-arrasto>
         <h2>Conta</h2>
-        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar">✕</button>
+        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar"><span data-icone="fechar"></span></button>
       </header>
       <div class="sig-painel-corpo">
         <p id="conta-usuario" class="saida"></p>

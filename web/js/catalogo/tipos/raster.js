@@ -150,7 +150,7 @@ async function painelRenderizacao(item, tk, mapa) {
   const opcoes = [
     { nome: '', titulo: t('tipo_raster.renderizacao_padrao') },
     ...r.json.fabrica.map((f) => ({ nome: f.nome, titulo: f.titulo })),
-    ...r.json.custom.map((c) => ({ nome: c.nome, titulo: `${c.titulo}${c.padrao ? ' ★' : ''}` })),
+    ...r.json.custom.map((c) => ({ nome: c.nome, titulo: `${c.titulo}${c.padrao ? ' (padrão)' : ''}` })),
   ];
   const select = h('select', { class: 'campo-select', 'aria-label': t('tipo_raster.renderizacao_titulo') },
     ...opcoes.map((o) => h('option', { value: o.nome }, o.titulo)));

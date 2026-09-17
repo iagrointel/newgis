@@ -21,9 +21,13 @@
   cursor: grab;
 }
 
-.chip-tipo:hover, .chip-tipo:focus-visible {
+.chip-tipo:hover { border-color: var(--i-acento); }
+.chip-tipo:focus-visible {
+  /* o foco é o mesmo anel de toda a base: trocar o anel por mudança de cor de borda deixa o foco invisível
+     para quem enxerga pouco (cláusula (d) do item L0-14: foco VISÍVEL). */
   border-color: var(--i-acento);
-  outline: none;
+  outline: var(--i-foco-largura) solid var(--i-foco);
+  outline-offset: var(--i-foco-recuo);
 }
 
 .chip-tipo:active { cursor: grabbing; }

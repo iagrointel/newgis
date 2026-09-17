@@ -5,16 +5,16 @@
 .migracao .medida {
   display: flex; flex-direction: column; gap: var(--i-e0); min-width: 8rem;
   border: 1px solid var(--borda); border-radius: var(--raio);
-  padding: var(--e2) var(--e3); background: var(--fundo-2, #0f1216);
+  padding: var(--e2) var(--e3); background: var(--fundo-2);
 }
 .migracao .medida-valor { font-size: var(--i-t4); font-variant-numeric: tabular-nums; }
 .migracao .medida-rotulo { color: var(--fraco); font-size: var(--i-t0); }
 .migracao .par { display: inline-flex; align-items: center; gap: var(--i-e1); margin-right: var(--i-e2); white-space: nowrap; }
 .migracao .ligacao {
-  font: inherit; color: var(--elo, #7aa2f7); background: none; border: 0; padding: 0;
+  font: inherit; color: var(--elo); background: none; border: 0; padding: 0;
   cursor: pointer; text-decoration: underline;
 }
-.migracao .ligacao:focus-visible { outline: 2px solid var(--elo, #7aa2f7); outline-offset: 2px; }
+.migracao .ligacao:focus-visible { outline: 2px solid var(--elo); outline-offset: 2px; }
 .migracao .formulario .campo { margin-bottom: var(--e3); max-width: 32rem; }
 .migracao details { margin-bottom: var(--e3); }
 .migracao details summary { cursor: pointer; color: var(--fraco); }

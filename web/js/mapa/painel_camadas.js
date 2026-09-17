@@ -8,6 +8,7 @@
    linha da camada mostra o selo "sem tiles" com o motivo que veio da API. */
 import { h, limpar } from '../base/dom.js';
 import { t } from '../base/i18n.js';
+import { icone } from '../base/icones.js';
 
 const ARRASTANDO = 'arrastando';
 
@@ -37,7 +38,7 @@ export function montarPainel({ raiz, camadas, aoReordenar, aoAlternarVisivel }) 
         title: t('mapa.camadas_mover_ajuda'),
         'aria-label': `${t('mapa.camadas_mover')}: ${c.titulo}`,
       },
-      '⠿',
+      icone('arrastar', { tamanho: 14 }),
     );
     const caixa = h('input', { type: 'checkbox', class: 'camada-visivel', checked: c.visivel !== false });
     caixa.addEventListener('change', () => aoAlternarVisivel(c.id, caixa.checked));
@@ -52,8 +53,8 @@ export function montarPainel({ raiz, camadas, aoReordenar, aoAlternarVisivel }) 
       h('span', { class: 'camada-tipo' }, c.tipo),
       selo,
       h('span', { class: 'camada-botoes' },
-        h('button', { type: 'button', class: 'pequeno camada-subir', 'aria-label': t('mapa.camadas_subir'), onclick: () => mover(li, -1) }, '↑'),
-        h('button', { type: 'button', class: 'pequeno camada-descer', 'aria-label': t('mapa.camadas_descer'), onclick: () => mover(li, +1) }, '↓')),
+        h('button', { type: 'button', class: 'pequeno camada-subir', 'aria-label': t('mapa.camadas_subir'), onclick: () => mover(li, -1) }, icone('seta_cima', { tamanho: 14 })),
+        h('button', { type: 'button', class: 'pequeno camada-descer', 'aria-label': t('mapa.camadas_descer'), onclick: () => mover(li, +1) }, icone('seta_baixo', { tamanho: 14 }))),
     );
     pega.addEventListener('keydown', (ev) => {
       if (!ev.altKey) return;

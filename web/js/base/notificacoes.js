@@ -4,6 +4,7 @@
 import { h, limpar } from './dom.js';
 import { t } from './i18n.js';
 import { chamar } from './api.js';
+import { icone } from './icones.js';
 
 const RECARGA_MS = 60000;
 let temporizador = null;
@@ -22,7 +23,7 @@ function linha(n, aoMarcar) {
   const item = h('li', { class: n.lida_em ? 'lida' : 'nao-lida', 'data-id': n.id },
     n.url ? h('a', { href: n.url }, corpo) : corpo);
   if (!n.lida_em) {
-    const bt = h('button', { type: 'button', class: 'pequeno', 'aria-label': t('notificacao.marcar_lida') }, '✓');
+    const bt = h('button', { type: 'button', class: 'pequeno', 'aria-label': t('notificacao.marcar_lida') }, icone('ok', { tamanho: 14 }));
     bt.addEventListener('click', async () => { await aoMarcar([n.id]); });
     item.append(bt);
   }
@@ -32,7 +33,7 @@ function linha(n, aoMarcar) {
 export function montarSino(aside) {
   const contador = h('span', { class: 'sino-contagem', id: 'sino-contagem', hidden: true }, '0');
   const botao = h('button', { type: 'button', class: 'sino', id: 'sino', 'aria-expanded': 'false',
-    'aria-controls': 'sino-painel', 'aria-label': t('notificacao.sino') }, h('span', { 'aria-hidden': 'true' }, '🔔'), contador);
+    'aria-controls': 'sino-painel', 'aria-label': t('notificacao.sino') }, icone('pendente'), contador);
   const lista = h('ul', { class: 'notificacoes' });
   const marcarTodas = h('button', { type: 'button', class: 'pequeno', id: 'sino-todas' }, t('notificacao.marcar_todas'));
   const painel = h('div', { class: 'sino-painel', id: 'sino-painel', hidden: true },

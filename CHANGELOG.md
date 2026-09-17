@@ -3,6 +3,43 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## setembro de 2026 (item L0-14-identidade-visual: cor fora dos tokens em zero e a varredura com dentes)
+
+O adversário G4 refutou o item por três coisas: literal de cor fora de `web/estilo/tokens.css`, varredura
+inexistente em `tests/` e no `Makefile`, e telas sem os tokens. Depois da união a medida ficou pior do que o
+laudo dizia — a varredura acusava **156 literais de cor em 18 folhas CSS** (G4 tinha visto 56 em quatro
+nomes) e a lista de exceções liberava esses 18 arquivos INTEIROS com o motivo "fora do escopo de G4".
+
+Conserto: os 156 viraram token. `var(--x, #reserva)` perdeu a reserva literal em 13 folhas (90 casos); as
+paletas próprias de `campo/campo.css`, `modelo.css`, `redes_diagrama.css` e `estilo/site.css` passaram a ler
+`web/estilo/tokens.css`, que ganhou as seções 7 a 10 (cor fixa de superfície sobre canvas, cor de categoria
+do diagrama de rede, site público do inquilino e a segunda leva de nomes de compatibilidade). A página
+pública do inquilino passou a carregar `tokens.css` antes de `site.css` — ela já usava `var(--i-*)` sem que
+ninguém os definisse. A varredura também passou a ler o CSS que mora DENTRO do HTML (bloco `<style>` e
+atributo `style=`), onde havia mais 6 literais.
+
+**Nenhuma exceção de CSS sobrou.** O que resta é JavaScript que não resolve `var()` por construção (paint do
+MapLibre, cena 3D, SVG montado em memória): 136 linhas em 37 arquivos, e nenhuma delas está "liberada" — cada
+arquivo tem ORÇAMENTO CONTADO em `tests/tokens_cor.excecoes` na forma `caminho @N  # motivo`, e tanto um
+literal novo quanto uma limpeza não registrada reprovam.
+
+A varredura ganhou controle positivo: planta um literal em `.css`, em `.js`, em `<style>` e em `style=`,
+confere que é pego e apaga o arquivo; mais um controle negativo com uma folha que só usa `var()`. Conferido
+também à mão: literal plantado em `web/mapa.css` e em `web/js/legenda.js` reprovou o `make tokens` (CSS em 1,
+orçamento `@3` medido 4).
+
+Cláusula (c): 63 linhas trocavam o ícone por glifo de texto, uma delas um emoji de sino. Todas passaram para
+a família única de `web/js/base/icones.js` (84 ícones); o HTML estático ganhou `<span data-icone="...">` com
+o pintor `pintarIcones()`. Cláusula (d) ganhou teste próprio (6 componentes × 7 estados, anel de foco único
+em `base.css` e proibição de apagá-lo — que pegou um `:focus-visible { outline: none }` real em
+`estilo/camada_esquema.css`).
+
+Prova: `make tokens` → **22 passed**. Medidas em `tests/medidas/L0-14-identidade-visual.json`: 0 literal de
+cor em CSS e em HTML, 82 de 82 telas carregando `tokens.css` primeiro (G4 mediu 5 de 19), 182 tokens, 84
+ícones, 0 emoji. NÃO medidas: (f) contraste por `axe-core` e (g) capturas antes/depois, que exigem navegador
+— o headless quebra nesta máquina; e 63 das 94 telas seguem na folha antiga `web/style.css`, agora sob
+catraca que impede crescer.
+
 ## setembro de 2026 (item L0-02-g residual: status do `POST /api/usuarios/lote` numa escalada 100% recusada)
 
 `test_l0_02g_ator_nao_atribui_papel_com_um_privilegio_a_mais_que_o_seu` media que a rota já RECUSAVA a

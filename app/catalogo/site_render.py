@@ -24,6 +24,8 @@ from urllib.parse import quote, urlencode
 from app import limites
 from app.catalogo.site import CARTOES, FAMILIAS_ROTULO
 
+# tokens.css primeiro: site.css consome --i-* e --site-* de lá (item L0-14, fonte única de cor e medida)
+TOKENS = "/static/estilo/tokens.css"
 CSS = "/static/estilo/site.css"
 
 
@@ -390,6 +392,7 @@ def renderizar(ctx: Contexto, corpo: dict, pagina: dict) -> str:
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         f'<meta name="robots" content="{robos}">\n'
         f"<title>{esc(titulo)} · {esc(ctx.tenant_nome)}</title>\n"
+        f'<link rel="stylesheet" href="{TOKENS}">\n'
         f'<link rel="stylesheet" href="{CSS}">\n'
         f'<style>:root {{ --site-cor: {esc(cor)}; --site-cor-texto: {esc(cor_do_texto(cor))}; }}</style>\n'
         "</head>\n"

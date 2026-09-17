@@ -12,10 +12,10 @@ body.simbolos .simbolos-campo label { font-size: var(--i-t-1); }
 body.simbolos .simbolos-filtros input, body.simbolos .simbolos-filtros select { width: 100%; }
 body.simbolos .simbolos-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: var(--e2); }
 body.simbolos .simbolos-icone { display: flex; flex-direction: column; align-items: center; gap: var(--i-e0); border: 1px solid var(--borda); border-radius: var(--i-raio); padding: var(--i-e1); background: none; cursor: pointer; }
-body.simbolos .simbolos-icone:hover, body.simbolos .simbolos-icone:focus-visible { border-color: var(--acento, #d98a2b); }
+body.simbolos .simbolos-icone:hover, body.simbolos .simbolos-icone:focus-visible { border-color: var(--acento); }
 body.simbolos .simbolos-icone canvas { width: 24px; height: 24px; image-rendering: pixelated; }
 body.simbolos .simbolos-icone span { font-size: var(--i-t-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 body.simbolos .simbolos-upload form { display: grid; gap: var(--e2); }
 body.simbolos .simbolos-mapa-caixa { position: relative; }
 body.simbolos #mapa { position: absolute; inset: 0; }
-body.simbolos .simbolos-dica { position: absolute; left: var(--e3); bottom: var(--e3); margin: 0; padding: var(--e2) var(--e3); background: rgba(18, 24, 26, .88); color: #e7ece9; border-radius: var(--i-raio); font-size: var(--i-t0); }
+body.simbolos .simbolos-dica { position: absolute; left: var(--e3); bottom: var(--e3); margin: 0; padding: var(--e2) var(--e3); background: var(--i-carta-painel); color: var(--i-carta-texto); border-radius: var(--i-raio); font-size: var(--i-t0); }

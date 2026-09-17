@@ -16,6 +16,7 @@ import * as doc from '../editor/documento.js';
 import { paginas, paginasNoMenu, paginaPorCaminho, paginaInicial } from './paginas.js';
 import { REGISTRO } from '../widgets/registro.js';
 import { BarramentoWidgets, montarWidgets } from '../widgets/motor.js';
+import { icone } from '../base/icones.js';
 
 /* --- widgets da tela (item L5-01-d-widgets-pagina-menu) --------------------------------------------------
    Um nó da paleta de páginas PODE ser também um widget do motor (REGISTRO, `../widgets/registro.js`): o
@@ -31,7 +32,7 @@ import { BarramentoWidgets, montarWidgets } from '../widgets/motor.js';
    sintético só com os tipos candidatos, montado num elemento nunca preso ao DOM (nunca fica visível nem
    dispara efeito nenhum — só devolve `falhas`, o mapa tipo→mensagem que a chamadora usa).
 
-   ⚡ Restaurado em 15/09/2026: o lote L5-01-d (`botão, cartão, incorporar, divisor, menu de widget,
+   Restaurado em 15/09/2026: o lote L5-01-d (`botão, cartão, incorporar, divisor, menu de widget,
    controlador, compartilhar, login, idioma, tema`) voltou a `editor/paleta_paginas.js` e a
    `widgets/registro.js` — nove tipos batem por NOME entre os dois catálogos e entram abaixo. Os que colidem
    por acaso (`texto`, `imagem`, `mapa`, `tabela`) continuam DE FORA de propósito: são esquemas DIFERENTES do
@@ -43,7 +44,7 @@ import { BarramentoWidgets, montarWidgets } from '../widgets/motor.js';
    `widgets/registro.js`); os dois nomes não batem de propósito, então `menu_widget` também fica fora desta
    lista.
 
-   ⚡ Completado em 16/09/2026 (resto do L5-01-d apontado pelo worker dos widgets): `desenharNo` agora MONTA
+   Completado em 16/09/2026 (resto do L5-01-d apontado pelo worker dos widgets): `desenharNo` agora MONTA
    os nove pelo motor de verdade (`desenharWidgetPagina` abaixo). Os módulos já foram importados por
    `prepararWidgets` ANTES desta função rodar (`executar_tela.js` sempre chama as duas nesta ordem) — então
    o custom element já está registrado em `customElements` e `document.createElement(manifesto.elemento)`
@@ -57,7 +58,7 @@ import { BarramentoWidgets, montarWidgets } from '../widgets/motor.js';
    não precisa de ligação: o próprio `emitir()` de `base.js` despacha um `CustomEvent` nativo (bubbles),
    então basta ouvir `botao.pagina`/`cartao.pagina` no elemento e chamar `irPara`. Módulo que falhou no
    preload (`falhas`, mapa tipo→mensagem) vira caixa de erro nomeada em vez do widget morto — mesma regra
-   de `widgets/motor.js::erroWidget`. ⛔ `menu_widget` continua de propósito fora de `TIPOS_WIDGET_PAGINA`
+   de `widgets/motor.js::erroWidget`. ATENÇÃO: `menu_widget` continua de propósito fora de `TIPOS_WIDGET_PAGINA`
    (nome não bate com o `menu` do registro) — segue caindo em `exec-desconhecido`, sem mudança aqui. */
 const TIPOS_WIDGET_PAGINA = new Set([
   'botao', 'cartao', 'incorporar', 'divisor', 'controlador', 'compartilhar', 'login', 'idioma', 'tema',
@@ -323,7 +324,7 @@ function desenharPainelLateral(no, documento, paleta, irPara, ctxWidgets) {
   const bt = h('button', {
     type: 'button', class: 'exec-painel-lateral-alternar', dataset: { painelLateralAlternar: no.id }, 'aria-expanded': String(aberto),
     'aria-label': aberto ? 'Recolher painel lateral' : 'Expandir painel lateral',
-  }, aberto ? '‹' : '›');
+  }, icone(aberto ? 'chevron_esq' : 'chevron_dir', { tamanho: 14 }));
   if (no.propriedades?.recolhivel === false) bt.hidden = true;
   bt.addEventListener('click', () => {
     aberto = !aberto;
@@ -331,7 +332,7 @@ function desenharPainelLateral(no, documento, paleta, irPara, ctxWidgets) {
     corpo.setAttribute('aria-hidden', aberto ? 'false' : 'true');
     bt.setAttribute('aria-expanded', String(aberto));
     bt.setAttribute('aria-label', aberto ? 'Recolher painel lateral' : 'Expandir painel lateral');
-    bt.textContent = aberto ? '‹' : '›';
+    bt.replaceChildren(icone(aberto ? 'chevron_esq' : 'chevron_dir', { tamanho: 14 }));
   });
   if (lado === 'direita') envolucro.append(corpo, bt);
   else envolucro.append(bt, corpo);

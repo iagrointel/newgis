@@ -1,0 +1,97 @@
+{
+ "item": "L0-14-identidade-visual",
+ "medidas": {
+  "literais_de_cor_em_css": {
+   "valor": 0,
+   "unidade": "ocorrências",
+   "comando": "venv/bin/pytest tests/unit/test_tokens_cor.py::test_nenhum_css_do_produto_tem_literal_de_cor (antes deste turno: 156)"
+  },
+  "literais_de_cor_em_css_embutido_no_html": {
+   "valor": 0,
+   "unidade": "ocorrências",
+   "comando": "_achados_html() de tests/unit/test_tokens_cor.py: bloco <style> e atributo style= (antes: 6)"
+  },
+  "literais_de_cor_em_js_sob_orcamento": {
+   "valor": 136,
+   "unidade": "linhas em 37 arquivos",
+   "comando": "_achados_js() × tests/tokens_cor.excecoes; nenhum resolve var() (paint MapLibre, cena 3D, SVG em memória)"
+  },
+  "arquivos_js_com_orcamento_declarado": {
+   "valor": 37,
+   "unidade": "arquivos",
+   "comando": "tests/tokens_cor.excecoes, forma `caminho @N  # motivo`; antes eram 18 CSS + 37 JS liberados por arquivo inteiro"
+  },
+  "excecoes_de_css_liberando_arquivo_inteiro": {
+   "valor": 0,
+   "unidade": "arquivos",
+   "comando": "tests/tokens_cor.excecoes: as 18 exceções de CSS do turno anterior foram eliminadas migrando o literal para token"
+  },
+  "achados_da_varredura_antiga": {
+   "valor": 0,
+   "unidade": "ocorrências",
+   "comando": "python3 docs/verificar_tokens.py (cor + medida de escala; antes deste turno: 223)"
+  },
+  "telas_html_do_produto": {
+   "valor": 82,
+   "unidade": "telas",
+   "comando": "web/**/*.html fora de vendor/, sdk/ e das 2 páginas de render headless"
+  },
+  "telas_que_carregam_tokens_css_primeiro": {
+   "valor": 82,
+   "unidade": "telas",
+   "comando": "venv/bin/pytest tests/unit/test_telas_carregam_tokens.py (G4 mediu 5 de 19)"
+  },
+  "telas_ainda_na_folha_antiga_style_css": {
+   "valor": 63,
+   "unidade": "telas",
+   "comando": "catraca TELAS_NA_FOLHA_ANTIGA em tests/unit/test_estilo_tokens.py: não pode crescer; migração é item próprio"
+  },
+  "tokens_declarados": {
+   "valor": 182,
+   "unidade": "variáveis em web/estilo/tokens.css",
+   "comando": "regex --nome: em web/estilo/tokens.css (cor clara e escura, tipo, grade, forma, densidade, site público)"
+  },
+  "icones_na_familia_unica": {
+   "valor": 84,
+   "unidade": "ícones",
+   "comando": "web/js/base/icones.js; 0 emoji e 0 glifo de texto no produto (test_c_icones_uma_familia_so_e_nenhum_glifo_fora_dela)"
+  },
+  "glifos_trocados_por_icone_da_familia": {
+   "valor": 63,
+   "unidade": "linhas",
+   "comando": "medido antes do conserto por test_c; inclui 1 emoji (sino) e 1 marcador de comentário"
+  },
+  "componentes_da_base_x_estados": {
+   "valor": "6 × 7",
+   "unidade": "componentes × estados",
+   "comando": "test_d_os_seis_componentes_da_base_tem_os_sete_estados: repouso, foco, ativo, desativado, carregando, vazio, erro"
+  },
+  "testes_do_portao": {
+   "valor": 22,
+   "unidade": "testes",
+   "comando": "make tokens (test_tokens_cor.py, test_telas_carregam_tokens.py, test_estilo_tokens.py, test_tokens_visuais.py)"
+  },
+  "controle_positivo_da_varredura": {
+   "valor": "4 de 4",
+   "unidade": "casos plantados pegos",
+   "comando": "test_a_varredura_pega_um_literal_plantado_em_css_e_em_js: css, js, <style> e style=; mais 1 controle negativo"
+  },
+  "controle_positivo_a_mao": {
+   "valor": "2 de 2",
+   "unidade": "literais plantados reprovaram",
+   "comando": "literal em web/mapa.css e em web/js/legenda.js: `make tokens` reprovou (CSS em 1, orçamento @3 medido 4)"
+  }
+ },
+ "clausulas_do_portao": {
+  "a_tokens_unicos_e_varredura": "provada para css e html (0 literal), com orçamento contado no js que não resolve var(); a varredura existe em tests/ e é o alvo `make tokens`",
+  "b_par_tipografico_vendorizado_sha256": "provada (já estava de pé; conferida por test_b_par_tipografico_vendorizado_com_sha256_e_referenciado_pelos_tokens)",
+  "c_familia_unica_de_icones_sem_emoji": "provada: 84 ícones em web/js/base/icones.js, 0 emoji e 0 glifo de texto fora dela",
+  "d_estados_completos_nos_6_componentes": "provada em estrutura (lista de componentes e estados, desenho em componentes.css, anel de foco único e proibição de apagá-lo); o exercício visual é o e2e, que exige navegador",
+  "e_pagina_viva_estilo": "provada: rota /estilo em app/paginas.py, página lê tokens.css pela rede e mede a cor calculada, com paleta, tipos, grade, forma, ícones, componentes e densidade",
+  "f_contraste_AA_medido_por_axe": "NÃO medida: sem navegador nesta máquina (o headless quebra aqui). A página /estilo calcula a razão de contraste no navegador de quem abre",
+  "g_telas_restiladas_com_captura": "NÃO medida pela mesma razão; 63 das 94 telas seguem na folha antiga web/style.css, agora sob catraca que impede crescer",
+  "h_traco_proprio_a_regua": "provada por test_h_documento_de_identidade_descreve_a_regua_que_existe_em_codigo (docs/IDENTIDADE.md × web/js/base/regua.js × base.css)"
+ },
+ "gerado_em": "2026-09-17T22:08:57Z",
+ "git_sha": "b81e2c788e65"
+}

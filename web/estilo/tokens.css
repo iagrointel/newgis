@@ -136,6 +136,12 @@
   --i-veu: rgba(0, 0, 0, .55);
   --i-sombra: 0 12px 40px rgba(0, 0, 0, .55);
   --i-sombra-leve: 0 2px 8px rgba(0, 0, 0, .35);
+  /* site público do inquilino em modo escuro (seção 9) */
+  --site-fundo: #14171b;
+  --site-tinta: #eef1f5;
+  --site-tinta-fraca: #b4bcc6;
+  --site-borda: #333a42;
+  --site-fundo-alt: #1c2026;
   color-scheme: dark;
 }
 
@@ -313,4 +319,83 @@
   --raio: var(--i-raio);
   --lateral-largura: var(--i-largura-lateral);
   --e1: var(--i-e1); --e2: var(--i-e2); --e3: var(--i-e3); --e4: var(--i-e4); --e5: var(--i-e5); --e6: var(--i-e6);
+}
+
+/* =====================================================================================================
+   7. COR FIXA DE SUPERFÍCIE QUE NÃO REFLUI COM O TEMA — papel de pré-visualização, moldura de amostra e
+   fundo do visualizador 3D. Mesma lógica do grupo --i-carta-*: o que fica sobre um canvas (mapa, modelo,
+   folha impressa) não troca de paleta com o sistema operacional de quem olha.
+   ===================================================================================================== */
+:root {
+  --i-papel: #ffffff;                       /* quadro de pré-visualização e miniatura de página impressa */
+  --i-modelo-fundo: #1c2629;                /* fundo do visualizador 3D (item L3-08) */
+  --i-carta-contorno: rgba(0, 0, 0, .35);   /* fio em volta da amostra de cor da legenda, sobre cor arbitrária */
+  --i-amostra-contorno: rgba(128, 128, 128, .38);  /* fio de amostra do editor de tema: cinza neutro, legível
+                                               sobre a cor que o inquilino escolher, clara ou escura */
+}
+
+/* =====================================================================================================
+   8. COR DE CATEGORIA DO DIAGRAMA DE REDE (item L4-02) — não é cromo, é distinção de classe de nó; fixa
+   nos dois temas para o mesmo nó ter sempre a mesma cor em qualquer máquina.
+   ===================================================================================================== */
+:root {
+  --i-no-terminal: #2463a8;
+  --i-no-conexao: #8a8f98;
+  --i-no-conteiner: #d98a2b;
+  --i-no-selecionado: #b4341f;
+  --i-no-quadro-fundo: #f7f8fa;
+  --i-no-quadro-borda: #c8ced6;
+  --i-no-marcador-fio: #ffffff;   /* fio em volta do marcador de nó: o quadro do diagrama é claro fixo */
+}
+
+/* =====================================================================================================
+   9. SITE PÚBLICO DO INQUILINO (item L5-20) — a página anônima é clara por padrão e não herda o
+   "instrumento" escuro das telas de trabalho. A cor da marca (--site-cor) e o texto sobre ela são gravados
+   na própria página pelo servidor, a partir da configuração do inquilino, e sobrepõem os valores daqui.
+   Os valores de modo escuro moram nos MESMOS blocos de tema da seção 1, não em blocos novos: um só lugar
+   por tema é o que deixa a simetria claro/escuro conferível por teste.
+   ===================================================================================================== */
+:root {
+  --site-fundo: #ffffff;
+  --site-tinta: #16191d;
+  --site-tinta-fraca: #4a5058;
+  --site-borda: #d7dce2;
+  --site-fundo-alt: #f2f4f7;
+  --site-cor: #1f4b99;
+  --site-cor-texto: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --site-fundo: #14171b;
+    --site-tinta: #eef1f5;
+    --site-tinta-fraca: #b4bcc6;
+    --site-borda: #333a42;
+    --site-fundo-alt: #1c2026;
+  }
+}
+
+/* =====================================================================================================
+   10. NOMES DE COMPATIBILIDADE, SEGUNDA LEVA — folhas que chegaram de outras frentes (widgets do SDK,
+   coleta de campo, painel, migração, cena, editor de conteúdo) nomeavam a própria cor e a repetiam como
+   reserva de `var()`. Os nomes ficam, o valor passa a sair daqui: um só valor por cor em todo o produto.
+   Nunca escreva literal nesta seção — só `var(--i-...)`.
+   ===================================================================================================== */
+:root {
+  --cor-fundo: var(--i-fundo);
+  --cor-fundo-secundario: var(--i-superficie-2);
+  --cor-superficie: var(--i-superficie);
+  --cor-texto: var(--i-texto);
+  --cor-texto-fraco: var(--i-texto-fraco);
+  --cor-borda: var(--i-linha);
+  --cor-acento: var(--i-acento);
+  --cor-atencao: var(--i-aviso);
+  --cor-atencao-fundo: var(--i-aviso-fraco);
+  --cor-erro: var(--i-erro);
+  --cor-ok: var(--i-sucesso);
+  --sucesso: var(--i-sucesso);
+  --erro: var(--i-erro);
+  --aviso: var(--i-aviso);
+  --realce: var(--i-acento);
+  --elo: var(--i-acento);
+  --painel-fundo-el: var(--i-superficie);
 }

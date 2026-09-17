@@ -13,6 +13,7 @@ import '../base/componentes.js';
 import { notificar, confirmar } from '../base/componentes.js';
 import { montarLayout, cabecalho, pronto } from '../base/layout.js';
 import { exigirSessao } from '../auth/sessao.js';
+import { icone } from '../base/icones.js';
 
 const el = (id) => document.getElementById(id);
 const NIVEIS = 3;
@@ -94,9 +95,9 @@ function linha(n, irmaos, nivel) {
   const bt = (rotulo, aria, fn, extra = {}) => h('button', { type: 'button', class: 'pequeno texto', 'aria-label': aria, title: aria, onclick: fn, ...extra }, rotulo);
   const acoes = h('div', { class: 'categoria-acoes' },
     nivel < NIVEIS ? bt('+', t('categorias.nova_filha'), () => { n.filhas.push(no()); marcarSujo(); desenhar(); }, { dataset: { novaFilha: n.id || n.nome } }) : null,
-    bt('↑', t('categorias.subir'), () => { if (i > 0) { irmaos.splice(i, 1); irmaos.splice(i - 1, 0, n); marcarSujo(); desenhar(); } }, { disabled: i === 0 }),
-    bt('↓', t('categorias.descer'), () => { if (i < irmaos.length - 1) { irmaos.splice(i, 1); irmaos.splice(i + 1, 0, n); marcarSujo(); desenhar(); } }, { disabled: i === irmaos.length - 1 }),
-    bt('✕', n.itens ? t('categorias.remover_em_uso', { n: n.itens }) : t('categorias.remover'),
+    bt(icone('seta_cima', { tamanho: 14 }), t('categorias.subir'), () => { if (i > 0) { irmaos.splice(i, 1); irmaos.splice(i - 1, 0, n); marcarSujo(); desenhar(); } }, { disabled: i === 0 }),
+    bt(icone('seta_baixo', { tamanho: 14 }), t('categorias.descer'), () => { if (i < irmaos.length - 1) { irmaos.splice(i, 1); irmaos.splice(i + 1, 0, n); marcarSujo(); desenhar(); } }, { disabled: i === irmaos.length - 1 }),
+    bt(icone('fechar', { tamanho: 14 }), n.itens ? t('categorias.remover_em_uso', { n: n.itens }) : t('categorias.remover'),
       () => { irmaos.splice(i, 1); marcarSujo(); desenhar(); }, { disabled: !!n.itens, dataset: { remover: n.id || n.nome } }));
   const li = h('li', { class: `categoria nivel-${nivel}`, dataset: { nivel: String(nivel) } },
     h('div', { class: 'categoria-linha' }, campo, meta, acoes));

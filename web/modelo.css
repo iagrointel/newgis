@@ -5,11 +5,13 @@
    lateral (info do item, ambientes do IFC) é CHROME do produto: volta a usar as cores do tema. */
 body.modelo3d {
   overflow: hidden;
-  --modelo-fundo: #1c2629;
-  --modelo-painel: rgba(18, 24, 26, .88);
-  --modelo-borda: #3a4550;
-  --modelo-texto: #e7ece9;
-  --modelo-texto-fraco: #9aa8ae;
+  /* fundo e painel do visualizador 3D: cor FIXA de tokens.css (o que fica sobre um canvas não reflui
+     de paleta com o sistema operacional — mesma regra do grupo --i-carta-*). */
+  --modelo-fundo: var(--i-modelo-fundo);
+  --modelo-painel: var(--i-carta-painel);
+  --modelo-borda: var(--i-carta-painel-borda);
+  --modelo-texto: var(--i-carta-texto);
+  --modelo-texto-fraco: var(--i-carta-texto-fraco);
 }
 body.modelo3d .principal.modelo3d-tela {
   padding: 0;
@@ -66,8 +68,8 @@ body.modelo3d .modelo3d-carregando {
 }
 body.modelo3d .modelo3d-erro {
   position: absolute; left: var(--e4); top: var(--e4); z-index: 5; max-width: 28rem;
-  background: var(--modelo-painel); border: 1px solid #a24444; border-radius: var(--raio);
-  padding: var(--e2) var(--e3); color: #ffb4b4; font-size: var(--i-t1);
+  background: var(--modelo-painel); border: var(--i-fio) solid var(--i-carta-falha-borda); border-radius: var(--raio);
+  padding: var(--e2) var(--e3); color: var(--i-carta-falha-texto); font-size: var(--i-t1);
 }
 
 /* foto 360 (pannellum) reaproveita a mesma área de tela cheia */

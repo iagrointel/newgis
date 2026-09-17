@@ -22,6 +22,7 @@ import { h, limpar } from '../base/dom.js';
 import { obter } from '../base/api.js';
 import { t } from '../base/i18n.js';
 import { SEM_VALOR, valorExibicao, urlSegura } from './formato.js';
+import { icone } from '../base/icones.js';
 
 const LARGURA_PAINEL_ACOPLADO = 480; // <= este valor: painel inferior, não popup flutuante (viewport 390 do portão)
 
@@ -240,10 +241,10 @@ export class JanelaPopup {
     if (this.itens.length > 1) {
       const pager = h('div', { class: 'popup-pager' },
         h('button', { type: 'button', class: 'botao-mini', 'aria-label': t('mapa.popup_anterior'),
-          onclick: () => { this.indice = (this.indice - 1 + this.itens.length) % this.itens.length; this.render(lngLat); } }, '◀'),
+          onclick: () => { this.indice = (this.indice - 1 + this.itens.length) % this.itens.length; this.render(lngLat); } }, icone('chevron_esq', { tamanho: 14 })),
         h('span', { class: 'popup-pager-texto' }, t('mapa.popup_paginacao', { i: this.indice + 1, n: this.itens.length })),
         h('button', { type: 'button', class: 'botao-mini', 'aria-label': t('mapa.popup_proximo'),
-          onclick: () => { this.indice = (this.indice + 1) % this.itens.length; this.render(lngLat); } }, '▶'));
+          onclick: () => { this.indice = (this.indice + 1) % this.itens.length; this.render(lngLat); } }, icone('chevron_dir', { tamanho: 14 })));
       corpo.append(pager);
     }
     corpo.append(montarFicha(item, this.fuso(), this.controlador.signal));

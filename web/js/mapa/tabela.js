@@ -17,6 +17,7 @@
 import { obter, enviar, alterar } from '../base/api.js';
 import { t } from '../base/i18n.js';
 import { h, limpar } from '../base/dom.js';
+import { icone } from '../base/icones.js';
 
 const FONTE = 'plat-tabela-feicoes';
 const CAMADAS = ['plat-tabela-poligono', 'plat-tabela-linha', 'plat-tabela-ponto'];
@@ -159,7 +160,9 @@ export function criarTabela(map, aviso) {
   function desenharCabecalho() {
     const tr = limpar(el('tabela-cabecalho'));
     for (const c of estado.colunas) {
-      const seta = estado.ordenarPor === c.nome ? (estado.ordem === 'asc' ? ' ▲' : ' ▼') : '';
+      const seta = estado.ordenarPor === c.nome
+        ? icone(estado.ordem === 'asc' ? 'ordenar_asc' : 'ordenar_desc', { tamanho: 14 })
+        : '';
       const th = h('th', {
         scope: 'col', dataset: { coluna: c.nome },
         title: c.nome,
@@ -172,7 +175,7 @@ export function criarTabela(map, aviso) {
           estado.pagina = 1;
           atualizarTabela();
         },
-      }, c.alias + seta), h('span', { class: 'tabela-puxador', dataset: { puxador: c.nome } }));
+      }, c.alias, seta), h('span', { class: 'tabela-puxador', dataset: { puxador: c.nome } }));
       if (c.largura) th.style.width = `${c.largura}px`;
       tr.append(th);
     }

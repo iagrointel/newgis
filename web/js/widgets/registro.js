@@ -14,7 +14,7 @@
    registros_carregados | selecao_mudou | vista_mudou; ações de dado filtrar | selecionar | limpar_filtro |
    limpar_selecao (resolvidas na VISTA do widget) e de widget zoom | pan | piscar | popup | abrir | fechar |
    definir_parametro (chamadas no elemento). `configuracao.vista` liga o widget a uma vista do documento.
-   ⚠ os widgets de página (`texto`/`imagem`/`botão`/`cartão`/... de `../widgets/*.js`, base `PlatWidget` de
+   ATENÇÃO: os widgets de página (`texto`/`imagem`/`botão`/`cartão`/... de `../widgets/*.js`, base `PlatWidget` de
    `base.js`) são catálogo independente dos tipos HOMÔNIMOS de `editor/paleta_paginas.js` (que o EXECUTOR
    desenha direto, sem passar pelo motor — ver o comentário de `TIPOS_WIDGET_PAGINA` em
    `executor/executor.js`): `texto`/`imagem` ficam aqui por completude do registro (outros construtores os

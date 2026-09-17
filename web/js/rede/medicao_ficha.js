@@ -85,7 +85,7 @@ async function iniciar() {
   const secPlaca = h('section', { class: 'ficha-secao' }, h('h2', {}, t('rede_medicao.ficha.placa')));
   const secGrafico = h('section', { class: 'ficha-secao' }, h('h2', {}, t('rede_medicao.ficha.grafico_7_dias')));
   const secMapa = h('section', { class: 'ficha-secao' }, h('h2', {}, t('rede_medicao.ficha.mapa')));
-  const mapaEl = h('div', { id: 'mapa-ficha', style: 'height:260px;border-radius:8px;overflow:hidden' });
+  const mapaEl = h('div', { id: 'mapa-ficha', class: 'ficha-mapa' });
   const marcaTempo = h('p', { class: 'fraco', id: 'atualizado-em' }, '');
   anexar(principal, [secUltima, secPlaca, secGrafico, secMapa, marcaTempo]);
   if (redeId) secMapa.append(mapaEl);

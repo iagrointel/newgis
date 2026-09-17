@@ -15,6 +15,7 @@ import '../base/componentes.js';
 import { montarLayout, cabecalho, pronto } from '../base/layout.js';
 import { exigirSessao } from '../auth/sessao.js';
 import { ligarOrigemPaleta, ligarAlvo, ligarOrigemNo } from '../editor/arrasto.js';
+import { icone } from '../base/icones.js';
 
 const camadaId = (/^\/camadas\/([0-9a-fA-F-]{36})\/formulario/.exec(location.pathname) || [])[1];
 const WIDGETS = ['texto', 'area_texto', 'numero', 'inteiro', 'booleano', 'data', 'selecao'];
@@ -80,7 +81,7 @@ async function iniciar() {
       h('div', { class: 'linha-arraste' },
         h('strong', {}, campo.campo), ' ',
         h('button', { type: 'button', class: 'pequeno perigo', title: 'remover',
-          onclick: () => removerCampo(grupo, campo.id) }, '✕')),
+          onclick: () => removerCampo(grupo, campo.id) }, icone('fechar', { tamanho: 14 }))),
       h('label', {}, 'Rótulo', h('input', {
         type: 'text', value: campo.rotulo || campo.campo,
         onchange: (ev) => { campo.rotulo = ev.target.value; },
