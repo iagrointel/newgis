@@ -46,6 +46,14 @@ VOCABULARIO_ADR = {
     "inquilinos/criar",
     "inquilinos/suspender",
     "inquilinos/reativar",
+    # L7-08-a-webhooks-eventos: o webhook escuta os fatos de domínio; a própria vida dele é fato.
+    "webhooks/criar",
+    "webhooks/atualizar",
+    "webhooks/rotacionar",
+    "webhooks/apagar",
+    "webhooks/reenvio",
+    "webhooks/desativar",
+    "webhooks/reativar",
 }
 
 

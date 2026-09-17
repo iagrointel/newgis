@@ -186,6 +186,7 @@ from app.versao import versao
 from app.versionamento.rotas import router as rotas_versionamento
 from app.versionamento.rotas_esri import router as rotas_versionamento_esri
 from app.vivo.rotas import router as rotas_vivo
+from app.webhooks.rotas import router as rotas_webhooks
 from app.widgets.rotas import router as rotas_widgets_externos
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -720,6 +721,9 @@ ROUTERS = [
     # GET /api/backup/ensaios (disparar usa a fila genérica: POST /api/jobs {tipo: backup.executar|
     # backup.ensaio_restauracao})
     rotas_backup.router,
+    # --- webhooks de eventos (L7-08-a): /api/webhooks (+ /{id}/rotacionar, /entregas, /reenviar, /reativar);
+    # despacho é gatilho sobre plat.evento, entrega é o job webhooks.entregar do worker
+    rotas_webhooks,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
