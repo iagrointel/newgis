@@ -298,7 +298,10 @@ done < "$CRED"
 "${PSQL[@]}" -Atc "UPDATE $SCHEMA.tenant SET config = config || '{\"cota_jobs_dia\": 100000}' WHERE slug IN ('demo','demo2') AND coalesce((config->>'cota_jobs_dia')::int,0) < 100000" >/dev/null
 "${PSQL[@]}" -f - <<SQL >/dev/null
 SELECT $SCHEMA.tenant_apagar_interno(id) FROM $SCHEMA.tenant WHERE slug LIKE 'zt-%';
-DELETE FROM $SCHEMA.usuario WHERE login LIKE 'zt%';
+-- 17/09/2026 (ensaio da união): a união levou de 16 para 59 as chaves estrangeiras que apontam para
+-- `usuario` sem cascata, e o DELETE direto passou a parar em job/exportação de usuário de teste que vive
+-- num inquilino não-zt. A função resolve as dependências antes (migração 20260917T2210).
+SELECT $SCHEMA.usuario_apagar_por_login('zt%');
 SQL
 echo "  admins de plataforma/demo/demo2 semeados"
 

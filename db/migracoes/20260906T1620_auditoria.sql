@@ -1,3 +1,11 @@
+-- reaplicavel
+-- ⚠ 17/09/2026 (ensaio da união, ENSAIO_MIGRACOES_20260917.md): este arquivo JÁ ESTAVA APLICADO em produção
+-- com o sha bbe7c7df… quando o ramo da união mudou DUAS LINHAS DE COMENTÁRIO (a referência cruzada
+-- `docs/adr/0021-trilha-auditoria.md` virou `0031-…`, porque o ADR foi renumerado). Nenhuma linha de SQL
+-- mudou. Sem esta marca o aplicador para com código 3 ("arquivo aplicado é imutável") logo no começo da
+-- janela de produção e NENHUMA das ~250 migrações novas entra. O arquivo é integralmente reexecutável
+-- (CREATE ... IF NOT EXISTS, DROP ... IF EXISTS + CREATE, CREATE OR REPLACE, INSERT ... ON CONFLICT DO
+-- NOTHING) e roda numa só transação, então reaplicar é no-op; medido no ensaio em 108 ms.
 -- 20260906T1620_auditoria — trilha de auditoria de negócio (item L7-20-trilha-auditoria).
 --
 -- O que já existia e por que não bastava:

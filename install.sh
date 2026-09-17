@@ -315,7 +315,10 @@ SELECT plat.tenant_apagar_interno(id) FROM plat.tenant WHERE slug LIKE 'zt-%';
 UPDATE plat.token_servico SET revogado_em = now() WHERE nome LIKE 'zt%' AND revogado_em IS NULL;
 DELETE FROM plat.grupo WHERE nome LIKE 'zt%';
 UPDATE plat.usuario SET papel_id = NULL WHERE login LIKE 'zt%' OR papel_id IN (SELECT id FROM plat.papel_personalizado WHERE nome LIKE 'zt%');
-DELETE FROM plat.usuario WHERE login LIKE 'zt%';
+-- 17/09/2026 (ensaio da união): a união levou de 16 para 59 as chaves estrangeiras que apontam para
+-- `usuario` sem cascata, e o DELETE direto passou a parar em job/exportação de usuário de teste que vive
+-- num inquilino não-zt. A função resolve as dependências antes (migração 20260917T2210).
+SELECT plat.usuario_apagar_por_login('zt%');
 DELETE FROM plat.papel_personalizado WHERE nome LIKE 'zt%';
 SQL
   echo "resíduos zt-* de teste apagados (modo dev)"

@@ -93,7 +93,10 @@ done < "$CRED_HOMOLOG"
 # resíduo zt-* de rodada anterior abortada (mesma faxina do install.sh em modo dev)
 "${PSQL[@]}" -f - <<'SQL'
 SELECT plat_homolog.tenant_apagar_interno(id) FROM plat_homolog.tenant WHERE slug LIKE 'zt-%';
-DELETE FROM plat_homolog.usuario WHERE login LIKE 'zt%';
+-- 17/09/2026 (ensaio da união): a união levou de 16 para 59 as chaves estrangeiras que apontam para
+-- `usuario` sem cascata, e o DELETE direto passou a parar em job/exportação de usuário de teste que vive
+-- num inquilino não-zt. A função resolve as dependências antes (migração 20260917T2210).
+SELECT plat_homolog.usuario_apagar_por_login('zt%');
 SQL
 
 echo "== f. var/homolog/homolog.env"

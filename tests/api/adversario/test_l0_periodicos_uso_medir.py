@@ -38,18 +38,10 @@ import pytest
 from tests.api.test_rls import contexto, ids_por_slug
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO (turno 9, adversário de linha L0, item L0-05-d-periodicos): plat.uso_medir(tenant, dia, "
-    "NULL) estoura NotNullViolation em bytes_bucket quando NÃO existe linha anterior em plat.uso_inquilino "
-    "para herdar (primeira medição do inquilino/dia) -- o coalesce só existe no braço UPDATE do ON CONFLICT, "
-    "nunca no INSERT. app/jobs/periodicos.py::jobs_uso_medir documenta 'Garage fora do ar NÃO falha o job "
-    "... NULL preserva a medição anterior', mas isso só vale a partir da segunda medição -- a primeira "
-    "derruba o job inteiro (exceção não tratada no laço `for tenant_id in tenants`), inclusive para os "
-    "inquilinos que viriam depois na lista. Já aconteceu de verdade: plat.agenda mostra "
-    "ultimo_estado='falhou' para jobs.uso_medir do inquilino plataforma em 2026-09-15 06:47 UTC (trilha "
-    "uniao), com o traceback exato (NotNullViolation) gravado em plat.job_log.",
-)
+# CONSERTADO — remedição de 17/09/2026 contra o master da união (sha b81e2c788): o marcador
+# xfail(strict=True) do turno 9 foi retirado porque a asserção passa. plat.uso_medir(tenant, dia, NULL)
+# já não estoura NotNullViolation em bytes_bucket na primeira medição do inquilino/dia. O achado do
+# adversário fica registrado no laudo do turno 9 e em laco/vivo/remedicao_L0L3_20260917.md.
 def test_uso_medir_com_bucket_nulo_sem_linha_anterior_nao_derruba_o_periodico(conexao_plat_app):
     ids = ids_por_slug(conexao_plat_app)
     tenant_id = ids["demo"]
