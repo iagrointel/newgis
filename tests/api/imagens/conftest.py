@@ -70,3 +70,9 @@ def item_stac(
         "assets": {},
         "links": [],
     }
+
+
+# Item L1-27: a fábrica de itens `zt*` (com a limpeza física no fim) vive no conftest do catálogo; a ficha
+# de imagem precisa dela para criar itens do tipo `raster`. Importar é melhor que uma segunda fábrica:
+# duas fábricas com duas limpezas diferentes deixariam resíduo na base compartilhada.
+from tests.api.catalogo.conftest import itens_a, itens_b  # noqa: E402,F401

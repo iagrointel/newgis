@@ -1394,6 +1394,21 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", "/api/camadas/{item_id}/grafico"): Caso(
         lambda p: f"/api/camadas/{p.item_b['id']}/grafico", lambda p: {"tipo": "contagem"},
     ),
+    # ---- L1-27 ficha de metadado e licença da imagem. A ficha de um item de B tem de dar 404 pelo mesmo
+    # `item_ou_404` + RLS; a tabela de licenças é do CÓDIGO (não tem inquilino nenhum dentro) e por isso é
+    # rota `proprio`: A recebe 200 com a lista fechada da casa e nada de B pode aparecer nela.
+    ("GET", "/api/imagens/licencas"): Caso(
+        lambda p: "/api/imagens/licencas", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("GET", "/api/imagens/{item_id}/ficha"): Caso(lambda p: f"/api/imagens/{p.item_b['id']}/ficha"),
+    ("PUT", "/api/imagens/{item_id}/ficha"): Caso(
+        lambda p: f"/api/imagens/{p.item_b['id']}/ficha",
+        lambda p: {
+            "plataforma": "plataforma de teste", "instrumentos": ["sensor de teste"], "gsd": 10,
+            "data_aquisicao": "2026-05-01T13:00:00Z", "fornecedor": "fornecedor de teste",
+            "licenca": "cc-by-4.0", "fonte": "upload", "atribuicao": "atribuição de teste",
+        },
+    ),
     # ---- L2-11-b geocodificador próprio (dado aberto CNEFE/IBGE, sem tabela de inquilino, mesmo padrão de
     # /api/rota-/api/matriz-/api/isocrona acima): 422 é resposta de NEGÓCIO (UF/logradouro não instalado
     # nesta trilha), não vazamento — aceito ao lado de 200.

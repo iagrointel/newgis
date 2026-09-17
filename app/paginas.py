@@ -38,6 +38,9 @@ PAGINAS = {
     "/conteudo": "conteudo.html",
     "/conteudo/lixeira": "conteudo_lixeira.html",
     "/conteudo/{id}": "conteudo_item.html",
+    "/c/{token}": "compartilhado.html",
+    # --- ficha de metadado e licença da imagem (L1-27)
+    "/imagens/{id}/ficha": "imagem_ficha.html",
     # --- mapa (L2-01-a)
     "/mapa": "mapa.html",
     # --- modelo 3D / foto 360 (L1-03-modelo3d)
