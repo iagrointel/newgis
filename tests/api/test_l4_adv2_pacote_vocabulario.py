@@ -60,6 +60,26 @@ def test_pacotes_de_ativos_ja_usam_o_vocabulario_novo_de_conectividade():
     )
 
 
+def test_codigo_que_monta_pacote_em_python_tambem_usa_o_vocabulario_novo():
+    """Estático, irmão do teste acima e da mesma causa raiz. O guarda anterior só varre
+    `app/rede_utilidades/pacotes/*.json`; nem todo pacote vem de arquivo. `simples.py::doc_minimo`
+    (rota `/api/rede/simples` e `/api/rede/{id}/promover`, item L4-18) monta o pacote mínimo EM PYTHON
+    e ficou com `conectividade_no_trecho` embutido depois da conversão dos 5 arquivos — a mesma
+    `CheckViolation` da primeira instalação, por um caminho que o guarda de arquivo não enxergava.
+    Varre o código-fonte do módulo de rede atrás do vocabulário anterior à migração 20260906T2058."""
+    raiz = Path(__file__).resolve().parents[2] / "app" / "rede_utilidades"
+    ofensores = {}
+    for arquivo in sorted(raiz.rglob("*.py")):
+        texto = arquivo.read_text(encoding="utf-8")
+        achados = sorted(v for v in VOCABULARIO_ANTIGO if v in texto)
+        if achados:
+            ofensores[str(arquivo.relative_to(raiz))] = achados
+    assert not ofensores, (
+        "código de rede ainda cita o vocabulário anterior à migração 20260906T2058 "
+        f"(item L4-03-a): {ofensores}"
+    )
+
+
 def _instalar_e_descartar(con, codigo_pacote: str, sufixo: str) -> None:
     ids = ids_por_slug(con)
     tenant_id = ids["demo"]

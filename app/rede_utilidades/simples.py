@@ -84,7 +84,7 @@ def doc_minimo(disciplina: str, nome: str) -> dict:
             "tipo_dado": "texto", "unidade": None, "obrigatorio": True,
         }],
         "regras": [{
-            "tipo": "conectividade_no_trecho", "de": "juncao/1", "para": "trecho/1",
+            "tipo": "juncao_aresta", "de": "juncao/1", "para": "trecho/1",
             "descricao": "uma junção conecta a ponta de um trecho coincidente dentro da tolerância da rede",
         }],
     }

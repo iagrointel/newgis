@@ -1,0 +1,49 @@
+{
+ "item": "L4-linha-transversais-CONSERTO (achados 1 e 2 do laudo linha-L4-laudo-adversario-1.md)",
+ "descricao": "Verificacao ao vivo dos dois achados transversais que o adversario usou para derrubar os 16 itens da linha L4 parte 1, mais o residuo do achado 2 que a conversao anterior nao alcancou. Rodado com TestClient real na trilha `uniao` (schema plat_tuniao, Postgres local, 307 migracoes aplicadas), um arquivo por vez via laco/roda_teste.sh. Nao houve rodada da suite inteira (11.792 testes, risco de OOM).",
+ "sha_medido": "b81e2c788 + conserto deste ramo",
+ "achado_1_tolerancia_m": {
+  "estado_em_master": "JA CONSERTADO antes deste turno pelo commit 1c44f7b2d (SQL_BASE, _json e INSERT de criar() voltaram a ler/escrever/devolver r.tolerancia_m).",
+  "verificacao": "tests/api/adversario/test_l4_adv1_transversais.py::test_l4_adv1_criar_rede_via_api_falta_tolerancia_m",
+  "resultado": "PASSA (o xfail ja havia sido retirado; confirmado ao vivo, nao apenas por leitura de diff)"
+ },
+ "achado_2_vocabulario_rede_regra_tipo": {
+  "estado_em_master": "PARCIALMENTE consertado antes deste turno pelo commit 722c1e385 (5 arquivos app/rede_utilidades/pacotes/*.json + esquema.py + topologia.py + diagnostico.py + osm_power.py).",
+  "residuo_achado_neste_turno": "app/rede_utilidades/simples.py::doc_minimo ainda montava a regra do pacote minimo com 'conectividade_no_trecho'. Nao vem de arquivo JSON, entao o guarda estatico existente (que so varre pacotes/*.json) nao o enxergava.",
+  "impacto_medido": "POST /api/rede/simples chama instalar_catalogo_minimo -> deposito.importar direto, sem passar por pacote.ler: bate no CHECK do banco (CheckViolation). POST /api/rede/{id}/promover chama pacote.ler antes: recusa com 422 ErroPacote. Os dois caminhos do item L4-18 ficavam quebrados.",
+  "conserto": "'conectividade_no_trecho' -> 'juncao_aresta' em simples.py; guarda estatico novo que varre app/rede_utilidades/**/*.py, nao so os JSON.",
+  "verificacao": "tests/api/test_l4_adv2_pacote_vocabulario.py (incl. o guarda novo) + tests/api/test_rede_simples.py + test_l4_adv1_transversais.py::test_l4_adv1_instalar_pacote_vocabulario_regra_divergente",
+  "resultado": "23 passed, 0 failed"
+ },
+ "os_16_itens_reexecutados": {
+  "verdes": {
+   "L4-01-modelo-rede": "tests/api/test_rede_modelo.py",
+   "L4-01-d-atributos-de-rede": "tests/api/test_rede_atributos.py",
+   "L4-02-a-conectado-e-subrede": "tests/api/test_rede_tracado.py",
+   "L4-02-b-montante-jusante": "tests/api/test_rede_direcao.py",
+   "L4-02-d-lacos-e-caminho-curto": "tests/api/test_rede_lacos_caminho.py",
+   "L4-02-e-configuracoes-de-tracado": "tests/api/test_rede_config_tracado.py",
+   "L4-04-b-atualizar-e-exportar-subrede": "tests/api/test_rede_subredes.py",
+   "L4-04-c-sumarios-por-subrede": "tests/api/test_rede_subredes_resumo.py",
+   "L4-05-a-exportar-opendss": "tests/api/test_rede_opendss.py",
+   "L4-05-c-pandapower-e-matpower": "tests/api/test_rede_matpower.py",
+   "L4-05-d-epanet-inp": "tests/api/test_rede_epanet.py"
+  },
+  "com_defeito_proprio_alem_dos_dois_achados": {
+   "L4-02-c-isolamento": "12/12 FAILED. Causa NOVA e independente: o padrao do campo body.tipo em app/rede_utilidades/modelos.py:137 e '^(conectado|subrede|lacos|caminho_curto|isolados|montante|jusante)$' e NAO inclui 'isolamento', que e o tipo que o arquivo oficial do item posta em POST /api/rede/{id}/tracar. Resposta 422 validacao, nunca 200.",
+   "L4-02-f-resultados-e-exportacao": "4 FAILED. A resposta do tracado nao traz as chaves 'agregacoes' (test_tracado_traz_agregacao_por_tipo_e_por_nivel) nem 'execucao_id' (historico), e o historico devolve 0 onde o portao espera 20.",
+   "L4-04-a-controladores-e-tiers": "1 FAILED: test_edicao_depois_da_topologia_deixa_a_subrede_suja (os outros 14 passam).",
+   "L4-04-d-diagrama-esquematico": "1 FAILED: test_editar_a_rede_deixa_o_diagrama_inconsistente (os outros 19 passam) — o diagrama nao e marcado inconsistente depois de editar a rede."
+  },
+  "sem_veredito_por_estouro_de_relogio": {
+   "L4-01-c-importador-bdgd": "tests/api/test_rede_bdgd_job.py: 5 clausulas passaram e a rodada ESTOUROU o teto de 2400 s do laco/roda_teste.sh, sem nenhuma FAILED ate ali. Pela regra da casa o estouro E o resultado: o item fica PARCIAL/PENDENTE por tempo de rodada, nao por defeito conhecido. O bloqueio do achado 2 saiu (este arquivo importa a fixture rede_eletrica de test_rede_modelo.py, que agora passa); o veredito proprio do item continua sem medida e precisa de uma rodada com teto maior ou maquina livre."
+  }
+ },
+ "limites_desta_medicao": [
+  "Trilha `uniao` compartilhada: a limpeza de inquilino devolve 409 Conflict em serie durante as rodadas. Nao alterou nenhum veredito acima (as falhas remanescentes tem causa lida no codigo, nao ruido), mas contagens finas podem variar entre rodadas.",
+  "Nao houve navegador nesta sessao: clausulas de e2e e captura de tela dos 16 portoes continuam NAO COBERTAS, nem aqui nem no laudo do adversario.",
+  "Clausulas de escala (distribuidora inteira, p95) nao foram medidas: a regra da casa proibe trazer pacote de dado novo e o disco esta a 98%.",
+  "A trilha propria l4fix chegou a ser construida no banco remoto (127.0.0.1:55432 via tunel SSH), mas as migracoes travaram em 41 de 306; foi abandonada e nada foi criado no Postgres local."
+ ],
+ "gerado_em": "2026-09-17T22:30:00Z"
+}
