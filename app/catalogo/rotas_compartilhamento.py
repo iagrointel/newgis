@@ -36,6 +36,7 @@ from app.catalogo.modelos import (
     LinkEntrada,
 )
 from app.erros import ErroAPI
+from app.imagens import ficha as ficha_imagem
 from app.paginas import WEB
 from app.settings import settings
 
@@ -110,6 +111,27 @@ def ver_compartilhamento(id: str, auth: Auth = autenticado(escopo_token="catalog
         return estado(cur, auth, item_ou_404(cur, id))
 
 
+
+def exigir_licenca_de_redistribuicao(r: dict) -> None:
+    """Item L1-27: imagem cuja licença não autoriza redistribuição (contrato do fornecedor) — e imagem SEM
+    licença escrita, que pela regra D17 da casa é auditável e não vendável — não sai por link público nem
+    por acesso público. A checagem usa a linha de `plat.item` que o chamador já carregou (RLS), sem uma
+    segunda leitura: a ficha é gravada em `dados['ficha']` e projetada no STAC, nunca o contrário."""
+    if r["tipo"] != "raster":
+        return
+    f = ficha_imagem.do_item(r["dados"])
+    if ficha_imagem.permite_link_publico(f.licenca if f else None):
+        return
+    lic = ficha_imagem.licenca(f.licenca if f else None)
+    raise ErroAPI(
+        400,
+        "licenca_sem_redistribuicao",
+        f"a licença desta imagem ({lic.rotulo}) não autoriza redistribuição: ela não pode ser compartilhada "
+        "por link público nem tornada pública",
+        {"licenca": lic.codigo, "redistribuicao": lic.redistribuicao, "vendavel": lic.vendavel},
+    )
+
+
 def aplicar_compartilhamento(
     cur,
     request: Request,
@@ -128,6 +150,8 @@ def aplicar_compartilhamento(
             raise ErroAPI(403, "sem_permissao", f"a operação exige o privilégio {exigido}", {"exigido": exigido})
         if acesso == "publico" and not (auth.config or {}).get("auth", {}).get("compartilhar_publico", False):
             raise ErroAPI(400, "publico_desligado", "o inquilino não permite compartilhamento público")
+        if acesso == "publico":
+            exigir_licenca_de_redistribuicao(r)
         cur.execute("UPDATE plat.item SET acesso = %s WHERE id = %s::uuid", (acesso, iid))
     if grupos is not None:
         if not auth.tem("compartilhar.grupo") and grupos:
@@ -254,7 +278,7 @@ def criar_link(
     expira = _expira(corpo.expira_em)
     try:
         with db.db(auth.contexto()) as cur:
-            exigir_edicao(cur, iid)
+            exigir_licenca_de_redistribuicao(exigir_edicao(cur, iid))
             cur.execute(
                 "SELECT count(*) AS n FROM plat.compartilhamento_link WHERE item_id = %s::uuid AND revogado_em IS NULL",
                 (iid,),

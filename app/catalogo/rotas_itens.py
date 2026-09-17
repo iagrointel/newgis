@@ -24,7 +24,9 @@ from app import db, limites
 from app.auth.comum import campos_json, paginacao
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo import busca as mod_busca
-from app.catalogo import comum, diff, documento, mesclagem, metadado, metadado_mgb, relacoes, site, texto, tipos
+from app.catalogo import (
+    comum, diff, documento, mesclagem, metadado, metadado_imagem, metadado_mgb, relacoes, site, texto, tipos,
+)
 from app.catalogo import procedencia as mod_procedencia
 from app.catalogo.comum import (
     carregar,
@@ -58,6 +60,7 @@ from app.catalogo.modelos import (
 from app.erros import ErroAPI
 from app.estilos import validador as estilos_validador
 from app.imagens import ciclo_vida  # L1-01-i: item de imagem na lixeira guarda STAC e agenda objetos
+from app.imagens import ficha as ficha_imagem
 from app.jobs import sistema
 from app.settings import settings
 
@@ -685,19 +688,33 @@ def ver(id: str, request: Request, auth: Auth = autenticado(escopo_token="catalo
 def metadado_iso(
     id: str,
     formato: str | None = Query(None, pattern=r"^19115-3$"),
+    perfil: str = Query("auto", pattern="^(auto|generico|imagem)$"),
     auth: Auth = autenticado(escopo_token="catalogo:ler"),
 ):
-    """Metadado ISO do item (item L0-09-metadado-catalogo; ADR 0004 D17). Padrão = ISO 19139/GMD (o que o
-    Perfil MGB/INDE consome); `?formato=19115-3` pede `mdb:MD_Metadata` (ISO 19115-1/19115-3, L0-09 cláusula
-    2/D42) — os dois validados contra o XSD oficial ANTES de sair (docs/xsd/cache/, baixado por
-    docs/xsd/baixar_iso19139.py --perfil iso19139|iso19115-3); `item_ou_404` + RLS de `plat.item` garantem que
-    o token/sessão de um inquilino nunca gera o XML de item de outro."""
+    """Metadado ISO do item (itens L0-09-metadado-catalogo e L1-27). Padrão = ISO 19139/GMD (o que o Perfil
+    MGB/INDE consome); `?formato=19115-3` pede `mdb:MD_Metadata` (ISO 19115-1/19115-3, L0-09 cláusula 2/D42);
+    item raster COM ficha de imagem sai por padrão em ISO 19115-2/gmi, o perfil de imagem (item L1-27), que
+    acrescenta aquisição, plataforma, instrumento, nuvem, ângulos do sol e a licença como restrição legal, e
+    `?perfil=generico` força o GMD de volta. Os três são validados contra o XSD oficial ANTES de sair
+    (docs/xsd/cache/, baixado por docs/xsd/baixar_iso19139.py --perfil iso19139|iso19115-3); `item_ou_404` +
+    RLS de `plat.item` garantem que o token/sessão de um inquilino nunca gera o XML de item de outro.
+    `formato=19115-3` e `perfil=imagem` são exclusivos: o 19115-3 é outro esquema, não outro perfil."""
     with db.db(auth.contexto()) as cur:
         r = item_ou_404(cur, id)
+    f = ficha_imagem.do_item(r["dados"]) if r["tipo"] == "raster" else None
+    if perfil == "imagem" and f is None:
+        raise ErroAPI(
+            409, "sem_ficha_de_imagem",
+            "o perfil de imagem (ISO 19115-2) exige um item raster com ficha de metadado preenchida",
+        )
+    gerador = metadado_imagem if (perfil in ("auto", "imagem") and f is not None) else metadado
     try:
         if formato == "19115-3":
             xml = metadado.gerar_xml_19115_3(r, auth.tenant_nome, settings.PLAT_URL_PUBLICA.rstrip("/"))
             metadado.validar_19115_3(xml)
+        elif gerador is metadado_imagem:
+            xml = metadado_imagem.gerar_xml(r, f, auth.tenant_nome, settings.PLAT_URL_PUBLICA.rstrip("/"))
+            metadado_imagem.validar(xml)
         else:
             xml = metadado.gerar_xml(r, auth.tenant_nome, settings.PLAT_URL_PUBLICA.rstrip("/"))
             metadado.validar(xml)

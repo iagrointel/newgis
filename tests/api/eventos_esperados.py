@@ -22,6 +22,13 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/eu/2fa/confirmar"): ["usuarios/2fa_ligar"],
     ("POST", "/api/eu/2fa/desativar"): ["usuarios/2fa_desligar"],
     ("POST", "/api/eu/2fa/codigos"): ["usuarios/2fa_codigos"],
+    # L1-27: a ficha grava sempre; afrouxar licença restrita -> livre gera o evento próprio (aprovada) ou o
+    # de recusa (sem o privilégio org.configurar), e é isso que a auditoria da casa lê
+    ("PUT", "/api/imagens/{item_id}/ficha"): [
+        "imagens/ficha_gravar",
+        "imagens/ficha_licenca_afrouxada",
+        "imagens/ficha_licenca_recusada",
+    ],
     ("POST", "/api/papeis"): ["papeis/criar"],
     ("PUT", "/api/papeis/{id}"): ["papeis/atualizar"],
     ("DELETE", "/api/papeis/{id}"): ["papeis/apagar"],

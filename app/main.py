@@ -101,6 +101,7 @@ from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.geocodificador.rotas_lote import router as rotas_geocodificacao_lote
 from app.geoparquet.rotas import router as rotas_geoparquet
 from app.imagens.rotas_cog import router as rotas_cog
+from app.imagens.rotas_ficha import router as rotas_ficha_imagem
 from app.imagens.rotas_imagens import router as rotas_imagens
 from app.imagens.rotas_imageserver import router as rotas_imageserver
 from app.imagens.rotas_ogc_tiles import router as rotas_ogc_tiles
@@ -503,6 +504,8 @@ ROUTERS = [
     # (pgstac + convenção de nome de coleção `<tenant_id>-<slug>`; plat.raster_item com RLS)
     rotas_imagens,
     rotas_stac,
+    # --- ficha de metadado e licença da imagem (L1-27): /api/imagens/licencas e /api/imagens/{id}/ficha
+    rotas_ficha_imagem,
     # --- ladrilho raster por token no caminho (L1-02): /svc/<token>/raster/<item>/{z}/{x}/{y}, WMTS,
     # TileJSON e mosaico por coleção; motor rio-tiler lendo COG no Garage por /vsis3
     rotas_tiles,
