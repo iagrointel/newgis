@@ -13,7 +13,13 @@ há byte depois do fim DENTRO da fatia) — e qualquer coisa colada a partir do 
 `<script>...` repetido, por exemplo) nunca é vista por nenhuma das 5 checagens da varredura. O
 resultado: um anexo de chamado com conteúdo executável embutido, bem abaixo do teto de 8 MB, passa
 por `_verificar_anexo` como PNG legítimo — o portão literal ("anexo malicioso recusado em duas
-camadas") não se sustenta para anexos entre 64 KiB e 8 MB com a carga colada depois do byte 65536."""
+camadas") não se sustenta para anexos entre 64 KiB e 8 MB com a carga colada depois do byte 65536.
+
+CONSERTADO (17/09/2026, turno de segurança): `_verificar_anexo` entrega o corpo INTEIRO à varredura —
+o teto de 8 MB já foi conferido em `anexar` (`413 arquivo_grande`) antes de chegar aqui, então o que a
+varredura recebe é sempre limitado. O teste deixou de ser `xfail`. O par legítimo (PNG do mesmo tamanho,
+sem carga, continua aceito) e o resto da bateria estão em
+`tests/seguranca/test_anexo_chamado_janela_de_varredura.py`."""
 
 from __future__ import annotations
 
@@ -46,15 +52,6 @@ def _png_estrutural_de_tamanho(tamanho_total: int) -> bytes:
     return png
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "_verificar_anexo só examina dados[:65536] mesmo com CHAMADO_ANEXO_BYTES_MAX=8_000_000: um "
-        "PNG estrutural que preenche exatamente os primeiros 65536 bytes (IEND no byte 65536, sem "
-        "sobra dentro da fatia) esconde qualquer carga colada depois desse byte de todas as 5 "
-        "checagens da varredura. Item L7-13-a-chamados, cláusula 'anexo malicioso recusado'."
-    ),
-)
 def test_anexo_com_carga_apos_65536_bytes_e_recusado():
     from app.chamados import rotas as chamados_rotas
 
@@ -63,5 +60,8 @@ def test_anexo_com_carga_apos_65536_bytes_e_recusado():
     dados = png_ate_janela + carga_maliciosa
     assert len(dados) < 8_000_000  # bem abaixo do teto de tamanho do anexo
 
-    with pytest.raises(Exception):  # noqa: B017 — a rota levanta HTTPException 422 nomeada; o que se afirma é que NÃO passa
+    from app.erros import ErroAPI
+
+    with pytest.raises(ErroAPI) as e:
         chamados_rotas._verificar_anexo("png", dados)
+    assert e.value.status_code == 415 and e.value.erro == "conteudo_recusado"
