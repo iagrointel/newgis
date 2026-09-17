@@ -35,8 +35,8 @@
    "L4-04-a-controladores-e-tiers": "1 FAILED: test_edicao_depois_da_topologia_deixa_a_subrede_suja (os outros 14 passam).",
    "L4-04-d-diagrama-esquematico": "1 FAILED: test_editar_a_rede_deixa_o_diagrama_inconsistente (os outros 19 passam) — o diagrama nao e marcado inconsistente depois de editar a rede."
   },
-  "em_execucao_quando_este_registro_foi_escrito": {
-   "L4-01-c-importador-bdgd": "tests/api/test_rede_bdgd_job.py — suite pesada (importa pacote de distribuidora real); rodada lancada nesta sessao, ainda sem veredito quando o registro foi gravado. O item herda a fixture rede_eletrica de test_rede_modelo.py, que PASSA; logo o bloqueio do achado 2 saiu, mas o veredito proprio do item fica pendente."
+  "sem_veredito_por_estouro_de_relogio": {
+   "L4-01-c-importador-bdgd": "tests/api/test_rede_bdgd_job.py: 5 clausulas passaram e a rodada ESTOUROU o teto de 2400 s do laco/roda_teste.sh, sem nenhuma FAILED ate ali. Pela regra da casa o estouro E o resultado: o item fica PARCIAL/PENDENTE por tempo de rodada, nao por defeito conhecido. O bloqueio do achado 2 saiu (este arquivo importa a fixture rede_eletrica de test_rede_modelo.py, que agora passa); o veredito proprio do item continua sem medida e precisa de uma rodada com teto maior ou maquina livre."
   }
  },
  "limites_desta_medicao": [
