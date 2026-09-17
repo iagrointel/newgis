@@ -16,6 +16,7 @@
 
 import { h, limpar, menuContexto } from './base/dom.js';
 import { t } from './base/i18n.js';
+import { icone } from './base/icones.js';
 
 const CHAVE_PADRAO = 'plat.mapa.documento.v1';
 const PROFUNDIDADE_MAXIMA = 6; // a refutação do item usa 3 níveis; a trava evita ciclo/estouro
@@ -264,7 +265,7 @@ export class Arvore {
   }
 
   /* sobe/desce UM lugar entre os irmãos do mesmo nível — usado pelo teclado (ArrowUp/ArrowDown) e pelos
-     botões ▲▼, e é o MESMO `mover()` do arrasto: arrasto para cima de um vizinho e ArrowUp resultam na
+     botões de subir e descer, e é o MESMO `mover()` do arrasto: arrasto para cima de um vizinho e ArrowUp resultam na
      idêntica troca de posição na lista de irmãos. */
   moverRelativo(chave, delta) {
     const achado = encontrar(this.itens, chave);
@@ -395,7 +396,7 @@ export class Arvore {
     });
     const tituloEl = no.tipo === 'grupo'
       ? h('button', { type: 'button', class: 'arvore-titulo arvore-titulo-grupo', onclick: () => { no.aberto = !no.aberto; this.desenhar(); } },
-          no.aberto ? '▾ ' : '▸ ', this.tituloExibido(no))
+          icone(no.aberto ? 'chevron_baixo' : 'chevron_dir', { tamanho: 14 }), this.tituloExibido(no))
       : h('label', { class: 'arvore-titulo camada-titulo', for: `chk-${no.chave}`, title: this.tituloExibido(no) }, this.tituloExibido(no));
     const cabecalho = h('div', { class: 'arvore-cabecalho' }, caixa, tituloEl);
     if (no.tipo === 'camada') {
@@ -410,7 +411,7 @@ export class Arvore {
         'aria-label': t('mapa.camadas_menu'), 'aria-haspopup': 'menu', onclick: (ev) => {
           ev.stopPropagation();
           const r = ev.currentTarget.getBoundingClientRect(); abrirMenu(r.left, r.bottom);
-        } }, '⋮'));
+        } }, icone('reticencias', { tamanho: 14 })));
     }
     if (no.tipo === 'camada') {
       // badge de tipo (Vetor · Imagem): reusa a classe `.camada-tipo` já estilizada (mono, --fraco) da
@@ -430,12 +431,12 @@ export class Arvore {
       const btn = (rotulo, acao, aria) => h('button', {
         type: 'button', class: 'botao-mini', dataset: { acao }, 'aria-label': aria,
         onclick: (ev) => { ev.stopPropagation(); this._acao(acao, no); },
-      }, rotulo);
+      }, icone(rotulo, { tamanho: 14 }));
       const linhaBotoes = h('div', { class: 'arvore-controles' },
-        btn('▲', 'subir', 'subir'), btn('▼', 'descer', 'descer'),
-        btn('⤢', 'enquadrar', 'enquadrar'), btn('✎', 'renomear', 'renomear no mapa'),
-        btn('⌗', 'tabela', 'mostrar tabela'), btn('ℹ', 'propriedades', 'propriedades'),
-        btn('◐', 'estilo', 'estilo'), btn('✕', 'remover', 'remover'));
+        btn('seta_cima', 'subir', 'subir'), btn('seta_baixo', 'descer', 'descer'),
+        btn('mapa', 'enquadrar', 'enquadrar'), btn('editar', 'renomear', 'renomear no mapa'),
+        btn('tabela', 'tabela', 'mostrar tabela'), btn('info', 'propriedades', 'propriedades'),
+        btn('estilo', 'estilo', 'estilo'), btn('fechar', 'remover', 'remover'));
       const faixa = this._controleDeEscala(no);
       li.append(cabecalho, h('div', { class: 'arvore-linha-controles' }, opacidade, linhaBotoes), faixa);
       if (f.n_feicoes !== undefined && f.n_feicoes !== null) {
@@ -443,7 +444,7 @@ export class Arvore {
       }
     } else if (no.tipo === 'grupo') {
       const btnRemover = h('button', { type: 'button', class: 'botao-mini', 'aria-label': 'remover grupo',
-        onclick: (ev) => { ev.stopPropagation(); this.remover(no.chave); } }, '✕');
+        onclick: (ev) => { ev.stopPropagation(); this.remover(no.chave); } }, icone('fechar', { tamanho: 14 }));
       cabecalho.append(btnRemover);
       li.append(cabecalho);
       if (no.aberto) {
@@ -453,7 +454,7 @@ export class Arvore {
       }
     } else {
       li.append(cabecalho, h('button', { type: 'button', class: 'botao-mini', 'aria-label': 'remover',
-        onclick: (ev) => { ev.stopPropagation(); this.remover(no.chave); } }, '✕'));
+        onclick: (ev) => { ev.stopPropagation(); this.remover(no.chave); } }, icone('fechar', { tamanho: 14 })));
     }
     return li;
   }

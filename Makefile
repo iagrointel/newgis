@@ -30,8 +30,9 @@ check-rapido: lint tokens sem-marcador limites teste  ## o que o driver roda
 lint:
 	$(VENV)/ruff check app tests docs/gerar_limites.py docs/gerar_pacote_rede.py
 
-tokens:                                     ## item L0-14: nenhum literal de cor fora de web/estilo/tokens.css e toda tela carrega tokens.css 1º; -p no:base_url tira a dependência de PLAT_DSN (só lê arquivo, não bate no banco)
-	$(VENV)/pytest tests/unit/test_tokens_cor.py tests/unit/test_telas_carregam_tokens.py -p no:base_url
+tokens:                                     ## item L0-14 (identidade visual): 0 literal de cor em css/html fora de web/estilo/tokens.css, orçamento contado no js que não resolve var(), toda tela carrega tokens.css 1º, família única de ícones sem emoji e página viva /estilo gerada dos tokens; -p no:base_url tira a dependência de PLAT_DSN (só lê arquivo, não bate no banco)
+	$(VENV)/pytest tests/unit/test_tokens_cor.py tests/unit/test_telas_carregam_tokens.py \
+	  tests/unit/test_estilo_tokens.py tests/unit/test_tokens_visuais.py -p no:base_url
 
 limites:                                    ## docs/LIMITES.md == app/limites.py (item L0-12); falha se divergir
 	$(VENV)/python docs/gerar_limites.py --check

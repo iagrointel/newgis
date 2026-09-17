@@ -1,6 +1,7 @@
 /* plat — FAMÍLIA ÚNICA DE ÍCONES (item L0-14-identidade-visual). Desenhados aqui, em SVG por DOM (sem HTML em
    string), caixa 24×24, traço de 1,6 px (--i-traco-icone), pontas e junções redondas, cor corrente. Todo ícone
-   do produto sai desta lista: nenhum emoji, nenhum glifo de texto (✓ ✗ ○ ● ⋯ ▾ ↑ ↓ ×) fora daqui —
+   do produto sai desta lista: nenhum emoji e nenhum glifo de texto (certo, errado, círculo, reticências,
+   chevron, seta, cruz de fechar) fora daqui —
    tests/unit/test_estilo_tokens.py varre web/ e reprova. aria-hidden porque o rótulo textual vai ao lado;
    quando o ícone está sozinho num botão, o botão leva aria-label. Nome desconhecido = ícone genérico. */
 const NS = 'http://www.w3.org/2000/svg';
@@ -126,6 +127,17 @@ export function icone(nome, { tamanho = 20, classe = '', rotulo } = {}) {
 export function temIcone(nome) { return Object.prototype.hasOwnProperty.call(ICONES, nome); }
 
 export function nomesDeIcones() { return Object.keys(ICONES); }
+
+/* HTML estático não pode chamar icone() de dentro da marcação, e escrever um glifo ali seria sair da família
+   (regra da casa: nenhum emoji, nenhum glifo de texto no produto). Então a tela escreve
+   `<span data-icone="fechar"></span>` e esta função troca o nó pelo SVG da família quando o módulo carrega. */
+export function pintarIcones(raiz = document) {
+  for (const no of raiz.querySelectorAll('[data-icone]:empty')) {
+    const nome = no.dataset.icone;
+    const tamanho = Number(no.dataset.iconeTamanho) || 14;
+    no.append(icone(nome, { tamanho }));
+  }
+}
 
 /* ícone do tipo de item: o nome vem de tipo_item.icone; se não existir aqui, a família; senão o genérico */
 export function iconeDoTipo(tipo, opcoes) {

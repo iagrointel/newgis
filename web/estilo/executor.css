@@ -62,7 +62,7 @@ body.executor { margin: 0; overflow-x: hidden; } /* overflow-x:hidden é a rede 
 
 /* ---------------------------------------------------------------- janela */
 .exec-janela-modal { border: 1px solid var(--borda-forte); border-radius: var(--raio); padding: var(--e4); max-width: min(90vw, 640px); }
-.exec-janela-modal::backdrop { background: rgba(0,0,0,.5); }
+.exec-janela-modal::backdrop { background: var(--i-veu); }
 .exec-janela-ancorada { position: absolute; z-index: 30; margin-top: var(--e2); background: var(--painel); border: 1px solid var(--borda-forte); border-radius: var(--raio); padding: var(--e3); box-shadow: var(--i-sombra-leve); max-width: min(90vw, 360px); }
 
 /* ---------------------------------------------------------------- seção com vistas (abas) */

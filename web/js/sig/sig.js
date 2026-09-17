@@ -28,6 +28,7 @@ import { paraPng, paraPdf, escalaNumerica } from '../mapa/impressao.js';
 import { Edicao } from '../mapa/edicao.js';
 import { instalarComparar } from './comparar.js';
 import { enviarArquivo, publicar, obterTipos, extensaoDe, TIPOS_RASTER } from '../uploads/nucleo.js';
+import { icone, pintarIcones } from '../base/icones.js';
 
 const el = (id) => document.getElementById(id);
 const CENTRO = [-46.593018, -23.493476];
@@ -364,7 +365,7 @@ function linkDeServico(catalogo, id) {
   return { url: `${location.origin}/wfs/${id}`, rotulo: 'WFS' };
 }
 
-/* ícone "compartilhar" direto em cada linha de camada ativa (pedido do orientador 10/09), além do menu ⋯
+/* ícone "compartilhar" direto em cada linha de camada ativa (pedido do orientador 10/09), além do menu de reticências
    que já existe. web/js/camadas.js não é editado nesta casca (é um dos quatro arquivos reservados para a
    outra frente) — o botão é injetado por fora, via MutationObserver no container que a Árvore desenha,
    sem duplicar o desenho dela nem guardar estado próprio (o observer roda de novo a cada redesenho e só
@@ -387,7 +388,7 @@ function instalarCompartilharCamadas(catalogo) {
           navigator.clipboard?.writeText(url).catch(() => {});
           el('aviso').ok(`link ${rotulo} copiado`);
         },
-      }, '⎘'));
+      }, icone('copiar', { tamanho: 14 })));
     });
   };
   new MutationObserver(injetar).observe(raiz, { childList: true, subtree: true });
@@ -518,7 +519,7 @@ async function instalarRede(map, maplibregl, { ativarTudo = false, gavetaTabela 
     li.querySelector('.camada-cabecalho').append(h('button', { type: 'button', class: 'botao-mini',
       'aria-label': t('mapa.camadas_menu'), 'aria-haspopup': 'menu', onclick: (ev) => {
         const r = ev.currentTarget.getBoundingClientRect(); abrirMenu(r.left, r.bottom);
-      } }, '⋮'));
+      } }, icone('reticencias', { tamanho: 14 })));
     return { li, caixa, aoAlternar };
   };
 
@@ -724,6 +725,7 @@ async function instalarComposicoes({ map, catalogo, arvore, legenda, edicao }) {
 /* ---------------------------------------------------------------------------------------------- início */
 async function iniciar() {
   instalarTema();
+  pintarIcones();  /* troca os <span data-icone> da marcação estática pelo SVG da família única */
   const paineis = instalarPaineis();
 
   const maplibregl = window.maplibregl;

@@ -1,39 +1,39 @@
 .plat-widgets { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--i-e4); }
 .plat-widgets > * { min-width: 0; }
-.plat-widget-erro { border: 1px solid var(--cor-erro, #b42318); padding: var(--i-e4); color: var(--cor-erro, #b42318); }
+.plat-widget-erro { border: 1px solid var(--cor-erro); padding: var(--i-e4); color: var(--cor-erro); }
 plat-w-mapa { display: block; min-height: 18rem; }
 plat-w-legenda ul { list-style: none; padding: 0; }
 plat-w-legenda button::before { content: ''; display: inline-block; width: .8rem; height: .8rem; margin-right: var(--i-e2); background: var(--cor); }
 plat-tabela { display: block; overflow: auto; }
 plat-tabela table { width: 100%; border-collapse: collapse; }
-plat-tabela th, plat-tabela td { padding: var(--i-e2); text-align: left; border-bottom: 1px solid var(--cor-borda, #ccd3d4); }
+plat-tabela th, plat-tabela td { padding: var(--i-e2); text-align: left; border-bottom: 1px solid var(--cor-borda); }
 plat-w-filtro label { display: grid; gap: var(--i-e1); }
 /* chrome de edição (construtor): só CSS sobre o atributo que motor.js alterna; o widget não muda */
-.plat-widgets[data-edicao] > [data-no-id] { position: relative; outline: 1px dashed var(--cor-acento, #1f6f8b); outline-offset: 2px; }
+.plat-widgets[data-edicao] > [data-no-id] { position: relative; outline: 1px dashed var(--cor-acento); outline-offset: 2px; }
 .plat-widgets[data-edicao] > [data-no-id]::before {
   content: attr(data-tipo); position: absolute; top: -1.1rem; left: 0; font-size: var(--i-t-1); line-height: 1;
-  padding: var(--i-e0) var(--i-e1); background: var(--cor-acento, #1f6f8b); color: var(--cor-fundo, #fff);
+  padding: var(--i-e0) var(--i-e1); background: var(--cor-acento); color: var(--cor-fundo);
 }
 .plat-widgets[data-edicao] > [data-no-id]:focus { outline-style: solid; }
 /* item L5-07: dado nos widgets (vista) */
-plat-w-mapa svg { display: block; width: 100%; background: var(--cor-fundo-secundario, #f3f5f6); border: 1px solid var(--cor-borda, #ccd3d4); }
-plat-w-mapa .feicao { fill: var(--cor-acento, #1f6f8b); fill-opacity: .55; stroke: var(--cor-acento, #1f6f8b); stroke-width: 1.5; cursor: pointer; }
+plat-w-mapa svg { display: block; width: 100%; background: var(--cor-fundo-secundario); border: 1px solid var(--cor-borda); }
+plat-w-mapa .feicao { fill: var(--cor-acento); fill-opacity: .55; stroke: var(--cor-acento); stroke-width: 1.5; cursor: pointer; }
 plat-w-mapa polyline.feicao { fill: none; stroke-width: 2.5; }
-plat-w-mapa .feicao.selecionada { fill: var(--cor-atencao, #d98a2b); stroke: var(--cor-atencao, #d98a2b); fill-opacity: .85; }
-plat-w-mapa .feicao.destaque { stroke: var(--cor-erro, #b42318); stroke-width: 4; }
+plat-w-mapa .feicao.selecionada { fill: var(--cor-atencao); stroke: var(--cor-atencao); fill-opacity: .85; }
+plat-w-mapa .feicao.destaque { stroke: var(--cor-erro); stroke-width: 4; }
 plat-w-mapa .feicao:focus { outline: none; stroke-width: 4; }
-plat-w-mapa .mapa-barra { font-size: var(--i-t0); color: var(--cor-texto-fraco, #666); padding: var(--i-e1) 0; }
-plat-w-mapa dialog.mapa-popup { position: relative; margin: var(--i-e1) 0; border: 1px solid var(--cor-borda, #ccd3d4); }
+plat-w-mapa .mapa-barra { font-size: var(--i-t0); color: var(--cor-texto-fraco); padding: var(--i-e1) 0; }
+plat-w-mapa dialog.mapa-popup { position: relative; margin: var(--i-e1) 0; border: 1px solid var(--cor-borda); }
 plat-w-mapa dialog.mapa-popup dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--i-e1) var(--i-e2); margin: 0 0 var(--i-e2); }
-plat-tabela tr[aria-selected="true"] td { background: var(--cor-atencao-fundo, #fff3e0); font-weight: 600; }
-plat-tabela caption { text-align: left; font-size: var(--i-t0); color: var(--cor-texto-fraco, #666); padding: var(--i-e1) 0; }
+plat-tabela tr[aria-selected="true"] td { background: var(--cor-atencao-fundo); font-weight: 600; }
+plat-tabela caption { text-align: left; font-size: var(--i-t0); color: var(--cor-texto-fraco); padding: var(--i-e1) 0; }
 plat-grafico { display: block; }
 plat-grafico .grafico-titulo { margin: 0 0 var(--i-e1); font-weight: 600; }
-plat-grafico .barra rect { fill: var(--cor-acento, #1f6f8b); cursor: pointer; }
-plat-grafico .barra.selecionada rect { fill: var(--cor-atencao, #d98a2b); }
-plat-grafico .barra text { font-size: var(--i-t-1); fill: var(--cor-texto, #222); }
-[data-piscando] { outline: 3px solid var(--cor-erro, #b42318); outline-offset: 2px; }
-.plat-avisos p { color: var(--cor-atencao, #d98a2b); font-size: var(--i-t1); margin: var(--i-e1) 0; }
+plat-grafico .barra rect { fill: var(--cor-acento); cursor: pointer; }
+plat-grafico .barra.selecionada rect { fill: var(--cor-atencao); }
+plat-grafico .barra text { font-size: var(--i-t-1); fill: var(--cor-texto); }
+[data-piscando] { outline: 3px solid var(--cor-erro); outline-offset: 2px; }
+.plat-avisos p { color: var(--cor-atencao); font-size: var(--i-t1); margin: var(--i-e1) 0; }
 .plat-avisos p[data-tipo="ciclo_cortado"]::before { content: 'ciclo cortado: '; font-weight: 600; }
 
 /* item L5-01-e: botão "Ações" do usuário nos widgets de dado */

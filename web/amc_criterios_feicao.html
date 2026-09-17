@@ -9,15 +9,15 @@
 <link rel="stylesheet" href="/static/estilo/tokens.css">
 <link rel="stylesheet" href="/static/style.css">
 <style>
-  #pedido { width: 100%; min-height: 12rem; font-family: ui-monospace, monospace; font-size: .85rem; }
-  #tabela-ranque td, #tabela-ranque th { padding: .3rem .6rem; text-align: left; white-space: nowrap; }
+  #pedido { width: 100%; min-height: 12rem; font-family: ui-monospace, monospace; font-size: var(--i-t1); }
+  #tabela-ranque td, #tabela-ranque th { padding: var(--i-e1) var(--i-e2); text-align: left; white-space: nowrap; }
   tr[data-estado="filtrada"] { opacity: .6; }
-  .histogramas { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 1rem; }
-  .histograma figcaption { color: var(--fraco); font-size: .85rem; }
-  #tabela-correlacao td, #tabela-correlacao th { padding: .3rem .5rem; text-align: right; }
+  .histogramas { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: var(--i-e4); }
+  .histograma figcaption { color: var(--fraco); font-size: var(--i-t1); }
+  #tabela-correlacao td, #tabela-correlacao th { padding: var(--i-e1) var(--i-e2); text-align: right; }
   #tabela-correlacao th:first-child, #tabela-correlacao td:first-child { text-align: left; }
-  #tabela-correlacao td[data-sinal="positivo"] { background: rgba(0, 110, 60, .18); }
-  #tabela-correlacao td[data-sinal="negativo"] { background: rgba(150, 40, 30, .18); }
+  #tabela-correlacao td[data-sinal="positivo"] { background: var(--i-sucesso-fraco); }
+  #tabela-correlacao td[data-sinal="negativo"] { background: var(--i-erro-fraco); }
   #tabela-correlacao td[data-sinal="sem"] { color: var(--fraco); }
 </style>
 </head>

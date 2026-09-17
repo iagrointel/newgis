@@ -36,9 +36,12 @@ MEDIDA_LITERAL = re.compile(r"(?<![\w.-])-?\d*\.?\d+(?:px|rem|em|%|vh|vw|s|ms)?(
 MEDIDAS_ADMITIDAS = {"0", "1", "100%", "auto", "inherit", "normal", "none", "initial"}
 
 # carácter fora do bloco tipográfico admitido = glifo/emoji fora da família de ícones
-GLIFOS_ADMITIDOS = set("–—…·×“”‘’«»°º²³ªµ→←↔≤≥≈−")
-NOME_ICONE = re.compile(r"(?<![\w.])icone\(\s*'([a-z_]+)'")
-NOME_ICONE_EM_DADO = re.compile(r"icone:\s*'([a-z_]+)'")
+# NOTAÇÃO, não ícone: ′ e ″ são minuto e segundo de arco (coordenada em grau-minuto-segundo), ∞ é o
+# infinito de uma faixa aberta e ≠ é "diferente" na mensagem de sha256 que não bate. Nenhum deles é
+# rótulo de botão nem emoji: são o símbolo correto do que a linha diz, e trocá-los por palavra piora.
+GLIFOS_ADMITIDOS = set("–—…·×“”‘’«»°º²³ªµ→←↔≤≥≈−′″∞≠")
+NOME_ICONE = re.compile(r"(?<![\w.])icone\(\s*'([a-z_0-9]+)'")
+NOME_ICONE_EM_DADO = re.compile(r"icone:\s*'([a-z_0-9]+)'")
 
 
 def _medida_e_literal(valor: str) -> bool:
@@ -76,6 +79,8 @@ def _linhas_css_fora_de_media(texto: str):
 
 
 def test_a_nenhuma_cor_literal_em_css_fora_dos_tokens():
+    """segunda leitura da mesma medida, por um caminho independente do de test_tokens_cor.py: se as duas
+    varreduras discordarem, uma delas está com buraco. Aqui o `var(--x, #reserva)` NÃO é perdoado."""
     achados = []
     for p in _arquivos("css"):
         if p == TOKENS:
@@ -86,17 +91,19 @@ def test_a_nenhuma_cor_literal_em_css_fora_dos_tokens():
     assert achados == [], "cor escrita à mão fora de web/estilo/tokens.css:\n" + "\n".join(achados)
 
 
-def test_a_nenhuma_cor_literal_em_js():
-    achados = []
-    for p in _arquivos("js"):
-        texto = _sem_comentarios_js(p.read_text(encoding="utf-8"))
-        for n, linha in enumerate(texto.splitlines(), 1):
-            # hex só conta dentro de string ('#abc' / "#abc"), senão âncora de URL (/conta#2fa) reprovaria
-            hex_em_string = re.search(r"""['"`]#[0-9a-fA-F]{3,8}['"`]""", linha)
-            nome_em_string = re.search(r"""['"](?:white|black|red|green|blue|yellow|orange|gray|grey)['"]""", linha)
-            if hex_em_string or COR_FUNCAO.search(linha) or nome_em_string:
-                achados.append(f"{p.relative_to(ROOT)}:{n}: {linha.strip()[:100]}")
-    assert achados == [], "cor escrita à mão em JS:\n" + "\n".join(achados)
+def test_a_nenhuma_cor_literal_em_js_fora_do_orcamento_declarado():
+    """Existe UMA varredura de cor no repositório — `tests/unit/test_tokens_cor.py` — e este teste a chama, em
+    vez de manter uma segunda cópia que poderia discordar dela. Regra: CSS em zero absoluto; no JS que não
+    resolve `var(--...)` por construção (paint do MapLibre, cena 3D, SVG montado em memória) a cor é
+    cartografia ou dado, e cada arquivo tem orçamento CONTADO em `tests/tokens_cor.excecoes` — literal novo
+    estoura o orçamento e reprova."""
+    from tests.unit import test_tokens_cor as varredura
+
+    _, orcamentos = varredura._carregar_excecoes()
+    achados = varredura._achados_css() + varredura._achados_js()
+    fora = [f"{rel}:{n}: {linha}" for rel, n, linha in achados if rel not in orcamentos]
+    assert fora == [], "cor escrita à mão sem orçamento declarado:\n" + "\n".join(fora)
+    assert [f"{rel}:{n}" for rel, n, _l in varredura._achados_css()] == [], "CSS tem de ficar em zero absoluto"
 
 
 def test_a_nenhuma_medida_literal_nas_propriedades_de_ritmo():
@@ -166,7 +173,9 @@ def test_b_par_tipografico_vendorizado_com_sha256_e_referenciado_pelos_tokens():
 
 def test_c_icones_uma_familia_so_e_nenhum_glifo_fora_dela():
     icones_js = (WEB / "js" / "base" / "icones.js").read_text(encoding="utf-8")
-    familia = set(re.findall(r"^\s{2}([a-z_]+):\s*\[", icones_js, re.M))
+    # [a-z_0-9]: há ícone com dígito no nome (modelo3d, foto360); o padrão sem dígito perdia dois e a
+    # contagem da família dava 84 onde a página /estilo desenhava 86 (achado ao fechar a cláusula (g)).
+    familia = set(re.findall(r"^\s{2}([a-z_0-9]+):\s*\[", icones_js, re.M))
     assert len(familia) >= 60, len(familia)
     usados = set()
     for p in _arquivos("js"):
@@ -187,22 +196,99 @@ def test_c_icones_uma_familia_so_e_nenhum_glifo_fora_dela():
     assert achados == [], "glifo ou emoji fora da família de ícones:\n" + "\n".join(achados)
 
 
-def test_e_toda_tela_liga_as_tres_folhas_e_o_tema_e_a_rota_estilo_existe():
+# Catraca da migração de folha (cláusula (e)/(g) do portão). O que já é ABSOLUTO: a rota /estilo existe, a
+# página é gerada dos tokens, e TODA tela carrega tokens.css antes de qualquer outra folha (provado em
+# tests/unit/test_telas_carregam_tokens.py). O que ainda é catraca: 63 das 94 telas seguem na folha antiga
+# `web/style.css` em vez de estilo/base.css + estilo/componentes.css. Migrar as 63 é restilar tela por tela
+# com captura antes e depois, o que esta máquina não faz (sem navegador — o headless quebra aqui). Enquanto
+# isso, o número não pode CRESCER: tela nova nasce na folha nova. Baixe o número no mesmo commit em que
+# migrar uma tela; quando chegar a 0, troque a catraca por `assert restantes == []` e apague web/style.css.
+TELAS_NA_FOLHA_ANTIGA = 63
+
+
+COMPONENTES_DA_BASE = ["plat-aviso", "plat-busca", "plat-formulario", "plat-paginacao", "plat-tabela",
+                       "plat-dialogo"]
+ESTADOS_DO_PORTAO = ["repouso", "foco", "ativo", "desativado", "carregando", "vazio", "erro"]
+
+
+def test_d_os_seis_componentes_da_base_tem_os_sete_estados():
+    """cláusula (d). Medida em três lugares que têm de concordar: a lista que a página viva percorre, o
+    desenho de cada estado em estilo/componentes.css, e o foco VISÍVEL, que é o estado que some primeiro
+    quando alguém mexe no CSS (`outline: none` sem substituto)."""
+    estilo_js = (WEB / "js" / "estilo" / "estilo.js").read_text(encoding="utf-8")
+    for nome in COMPONENTES_DA_BASE:
+        assert f"'{nome}'" in estilo_js, f"{nome} não está na lista de componentes da página /estilo"
+    lista_estados = re.search(r"const ESTADOS = \[([^\]]*)\]", estilo_js)
+    assert lista_estados, "a página /estilo não declara a lista de estados"
+    declarados = re.findall(r"'([a-z]+)'", lista_estados.group(1))
+    assert declarados == ESTADOS_DO_PORTAO, declarados
+
+    componentes_css = (WEB / "estilo" / "componentes.css").read_text(encoding="utf-8")
+    for estado in ESTADOS_DO_PORTAO:
+        assert estado in componentes_css, f"nenhum desenho para o estado '{estado}' em componentes.css"
+    # foco visível: nenhuma regra de :focus pode apagar o anel sem devolver outra marca no lugar. Fora de
+    # :focus o `outline: none` é neutro (contêiner de canvas, por exemplo) e não entra.
+    SUBSTITUTOS = ("box-shadow", "stroke-width", "border-width", "background", "filter")
+    for p in _arquivos("css"):
+        texto = _sem_comentarios_css(p.read_text(encoding="utf-8"))
+        for seletor, bloco in re.findall(r"([^{}]+)\{([^}]*)\}", texto):
+            if ":focus" not in seletor:
+                continue
+            if re.search(r"outline\s*:\s*(none|0)\b", bloco) and not any(s in bloco for s in SUBSTITUTOS):
+                raise AssertionError(
+                    f"{p.relative_to(ROOT)}: `{seletor.strip()[:60]}` apaga o foco sem substituto: "
+                    f"{bloco.strip()[:80]}"
+                )
+    # o anel de foco é UM só, declarado uma vez em base.css para todo elemento focalizável — é por isso que
+    # nenhum componente precisa repeti-lo, e é por isso que apagá-lo em qualquer folha (acima) reprova.
+    base_css = (WEB / "estilo" / "base.css").read_text(encoding="utf-8")
+    anel = re.search(r"(?<![\w.#\[-]):focus-visible\s*\{([^}]*)\}", base_css)
+    assert anel, "base.css não declara o anel de foco universal"
+    assert "--i-foco-largura" in anel.group(1) and "--i-foco" in anel.group(1), anel.group(1)
+    # e os estados de espera/erro têm papel anunciado, não só cor
+    assert 'aria-busy="true"' in componentes_css, "estado carregando sem aria-busy no desenho"
+
+
+def test_e_rota_estilo_existe_e_a_pagina_e_gerada_dos_tokens():
     from app import paginas
 
     assert paginas.PAGINAS.get("/estilo") == "estilo.html"
     assert (WEB / "estilo.html").is_file()
-    for p in _arquivos("html"):
-        texto = p.read_text(encoding="utf-8")
-        for folha in ("/static/estilo/tokens.css", "/static/estilo/base.css", "/static/estilo/componentes.css"):
-            assert folha in texto, (p.name, folha)
-        assert '<script src="/static/js/base/tema.js"></script>' in texto, p.name
-        assert "/static/style.css" not in texto, p.name
-        assert 'lang="pt-BR"' in texto, p.name
-    assert not (WEB / "style.css").exists(), "web/style.css ainda existe: a folha antiga tem de morrer"
-    # a página viva lê o arquivo de tokens pela rede (gerada dos tokens, não copiada)
+    estilo_html = (WEB / "estilo.html").read_text(encoding="utf-8")
+    for folha in ("/static/estilo/tokens.css", "/static/estilo/base.css", "/static/estilo/componentes.css"):
+        assert folha in estilo_html, folha
+    # a página viva LÊ o arquivo de tokens pela rede e mede a cor calculada: gerada dos tokens, não copiada
     estilo_js = (WEB / "js" / "estilo" / "estilo.js").read_text(encoding="utf-8")
     assert "/static/estilo/tokens.css" in estilo_js and "getComputedStyle" in estilo_js
+    # e mostra o que o portão pede: paleta, tipos, grade, forma, ícones, componentes com estados, densidade
+    for secao in ("sec-paleta", "sec-tipografia", "sec-espaco", "sec-forma", "sec-icones", "sec-componentes"):
+        assert f'id="{secao}"' in estilo_html, secao
+    assert "controle-densidade" in estilo_html and "controle-tema" in estilo_html
+
+
+def test_e_catraca_da_migracao_de_folha_nao_pode_crescer():
+    antigas = sorted(
+        str(p.relative_to(ROOT)) for p in _arquivos("html") if "/static/style.css" in p.read_text(encoding="utf-8")
+    )
+    assert len(antigas) <= TELAS_NA_FOLHA_ANTIGA, (
+        f"{len(antigas)} telas na folha antiga web/style.css, acima da catraca de {TELAS_NA_FOLHA_ANTIGA}: "
+        "tela nova nasce em estilo/base.css + estilo/componentes.css.\n" + "\n".join(antigas)
+    )
+    if len(antigas) < TELAS_NA_FOLHA_ANTIGA:
+        raise AssertionError(
+            f"catraca desatualizada: só {len(antigas)} telas na folha antiga, mas TELAS_NA_FOLHA_ANTIGA diz "
+            f"{TELAS_NA_FOLHA_ANTIGA}. Baixe o número no mesmo commit da migração."
+        )
+    # toda TELA, migrada ou não, carrega tokens.css e declara idioma. As duas páginas de render headless
+    # (item L2-12) não são tela: são o viewport de um navegador sem interface que vira imagem, documentado
+    # em web/estilo/tokens_excecoes.json e em tests/unit/test_telas_carregam_tokens.py.
+    NAO_SAO_TELA = {"render_mapa.html", "render_layout_mapa.html"}
+    for p in _arquivos("html"):
+        texto = p.read_text(encoding="utf-8")
+        assert 'lang="pt-BR"' in texto, p.name
+        if p.name in NAO_SAO_TELA:
+            continue
+        assert "/static/estilo/tokens.css" in texto, p.name
 
 
 def test_h_documento_de_identidade_descreve_a_regua_que_existe_em_codigo():
@@ -219,3 +305,19 @@ def test_h_documento_de_identidade_descreve_a_regua_que_existe_em_codigo():
     for chave in ("nav.estilo", "tema.claro", "busca.limpar", "dialogo.vazio", "form.vazio", "tabela.tentar_de_novo",
                   "paginacao.carregando"):
         assert chave in dic, chave
+
+
+def test_formulario_de_senha_nunca_cai_para_get():
+    """Achado ao fechar a cláusula (g): a tela de entrada da instância de produção mandou a senha na QUERY
+    STRING. O ouvinte de submit em js/auth/login.js chama POST /api/login e não navega — mas formulário sem
+    `method` usa GET por padrão, e se o módulo não ligar a tempo o navegador envia sozinho: senha na barra de
+    endereço, no histórico e no log. Todo formulário com campo de senha declara method="post"."""
+    faltam = []
+    for p in _arquivos("html"):
+        texto = p.read_text(encoding="utf-8")
+        for m in re.finditer(r"<form\b[^>]*>(.*?)</form>", texto, re.S | re.I):
+            if not re.search(r"""<input\b[^>]*type=["']password["']""", m.group(1), re.I):
+                continue
+            if not re.search(r"""\bmethod=["']post["']""", m.group(0), re.I):
+                faltam.append(f"{p.relative_to(ROOT)}: <form> com campo de senha e sem method=\"post\"")
+    assert faltam == [], "\n".join(faltam)

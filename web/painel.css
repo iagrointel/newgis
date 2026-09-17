@@ -6,8 +6,8 @@
    `corpo.elementos`, que é a ordem de inserção no DOM em render.js): nenhum JS decide o empilhamento, só CSS. */
 
 .painel-filtros { display: flex; flex-wrap: wrap; gap: var(--e3); padding: var(--e3) 0; }
-.painel-filtro { display: flex; flex-direction: column; gap: var(--i-e1); font-size: var(--i-t0); color: var(--fraco, #667); }
-.painel-filtro input { font: inherit; padding: var(--i-e1) var(--i-e2); border: 1px solid var(--borda, #ccd2d6); border-radius: var(--i-raio); }
+.painel-filtro { display: flex; flex-direction: column; gap: var(--i-e1); font-size: var(--i-t0); color: var(--fraco); }
+.painel-filtro input { font: inherit; padding: var(--i-e1) var(--i-e2); border: 1px solid var(--borda); border-radius: var(--i-raio); }
 
 .painel-grade {
   display: grid;
@@ -19,33 +19,33 @@
 .painel-el {
   grid-column: calc(var(--gx, 0) + 1) / span var(--gw, 1);
   grid-row: calc(var(--gy, 0) + 1) / span var(--gh, 1);
-  border: 1px solid var(--borda, #ccd2d6);
+  border: 1px solid var(--borda);
   border-radius: var(--i-raio);
   padding: var(--e3);
-  background: var(--painel-fundo-el, #fff);
+  background: var(--painel-fundo-el);
   overflow: auto;
   min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
 }
-.painel-el-titulo { margin: 0 0 var(--i-e1); font-size: var(--i-t1); font-weight: 600; color: var(--fraco, #667); }
+.painel-el-titulo { margin: 0 0 var(--i-e1); font-size: var(--i-t1); font-weight: 600; color: var(--fraco); }
 .painel-el-corpo { flex: 1; min-height: 0; }
 .painel-el-texto .painel-el-corpo { white-space: pre-wrap; font-size: var(--i-t1); }
 .painel-indicador-valor { font-size: var(--i-t5); font-weight: 700; line-height: 1; }
 
-.painel-escuro.painel-grade { --painel-fundo-el: #1b2226; color: #e7ece9; }
-.painel-escuro .painel-el { border-color: #3a4550; }
+.painel-escuro.painel-grade { --painel-fundo-el: var(--i-carta-edificacao); color: var(--i-carta-texto); }
+.painel-escuro .painel-el { border-color: var(--i-carta-painel-borda); }
 
 .painel-grafico-barras { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--i-e1); }
 .painel-grafico-barras li { display: grid; grid-template-columns: 7rem 1fr 4rem; align-items: center; gap: var(--i-e2); font-size: var(--i-t0); }
 .painel-grafico-rotulo { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.painel-grafico-barra-fundo { background: var(--borda, #e2e6e8); border-radius: var(--i-raio); height: 10px; overflow: hidden; }
-.painel-grafico-barra { display: block; height: 100%; background: var(--acento, #2f7d5b); }
+.painel-grafico-barra-fundo { background: var(--borda); border-radius: var(--i-raio); height: 10px; overflow: hidden; }
+.painel-grafico-barra { display: block; height: 100%; background: var(--acento); }
 .painel-grafico-valor { text-align: right; }
 
 .painel-tabela { width: 100%; border-collapse: collapse; font-size: var(--i-t0); }
-.painel-tabela th, .painel-tabela td { padding: var(--i-e1) var(--i-e1); border-bottom: 1px solid var(--borda, #e2e6e8); text-align: left; }
+.painel-tabela th, .painel-tabela td { padding: var(--i-e1) var(--i-e1); border-bottom: 1px solid var(--borda); text-align: left; }
 
 /* empilhamento em tela estreita — cláusula literal do portão do item */
 @media (max-width: 640px) {
@@ -57,6 +57,6 @@
 .painel-atualizado {
   margin: 0;
   font-size: var(--i-t0);
-  color: var(--cor-texto-fraco, #667);
+  color: var(--cor-texto-fraco);
   font-variant-numeric: tabular-nums;
 }

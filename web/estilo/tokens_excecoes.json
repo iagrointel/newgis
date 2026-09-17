@@ -1,5 +1,5 @@
 {
- "descricao": "Arquivos de web/ dispensados da guarda de tokens (docs/verificar_tokens.py), um por linha, sempre com motivo. Tudo o mais tem de usar só var(--...) de web/estilo/tokens.css.",
+ "descricao": "Arquivos de web/ dispensados da guarda ANTIGA de tokens (docs/verificar_tokens.py), um por linha, sempre com motivo. A guarda que o portão do item L0-14 cita é tests/unit/test_tokens_cor.py, que varre css, html e js e conta um ORÇAMENTO por arquivo em tests/tokens_cor.excecoes — todos os arquivos abaixo estão lá também, e lá o número é contado, não liberado. Tudo o mais tem de usar só var(--...) de web/estilo/tokens.css.",
  "excecoes": [
   {
    "arquivo": "web/js/mapa/estilo.js",
@@ -12,6 +12,18 @@
   {
    "arquivo": "web/render_layout_mapa.html",
    "motivo": "página headless do quadro de mapa do layout (L2-12-b): sem tokens.css; fundo branco de papel para a impressão"
+  },
+  {
+   "arquivo": "web/js/rede/diagrama.js",
+   "motivo": "diagrama unifilar da rede: o fundo do quadro vai em style= porque o SVG é montado em memória e exportado fora do documento, onde nenhuma folha de estilo chega; as mesmas cores de app/rede_utilidades/diagrama.py"
+  },
+  {
+   "arquivo": "web/js/rede/medicao_ficha.js",
+   "motivo": "ficha de medição: mesmo SVG exportável do diagrama, mesma razão — cor de cartografia copiada dos tokens"
+  },
+  {
+   "arquivo": "web/js/temas/tela.js",
+   "motivo": "editor do tema do INQUILINO (item L5-10): a amostra pinta a cor que o usuário escolheu, e o cinza de reserva é o valor inicial de um tema ainda não definido — dado, não cromo"
   }
  ]
 }

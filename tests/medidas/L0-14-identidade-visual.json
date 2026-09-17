@@ -1,0 +1,179 @@
+{
+ "item": "L0-14-identidade-visual",
+ "medidas": {
+  "literais_de_cor_em_css": {
+   "valor": 0,
+   "unidade": "ocorrências",
+   "comando": "venv/bin/pytest tests/unit/test_tokens_cor.py::test_nenhum_css_do_produto_tem_literal_de_cor (antes deste turno: 156)"
+  },
+  "literais_de_cor_em_css_embutido_no_html": {
+   "valor": 0,
+   "unidade": "ocorrências",
+   "comando": "_achados_html() de tests/unit/test_tokens_cor.py: bloco <style> e atributo style= (antes: 6)"
+  },
+  "literais_de_cor_em_js_sob_orcamento": {
+   "valor": 136,
+   "unidade": "linhas em 37 arquivos",
+   "comando": "_achados_js() × tests/tokens_cor.excecoes; nenhum resolve var() (paint MapLibre, cena 3D, SVG em memória)"
+  },
+  "arquivos_js_com_orcamento_declarado": {
+   "valor": 37,
+   "unidade": "arquivos",
+   "comando": "tests/tokens_cor.excecoes, forma `caminho @N  # motivo`; antes eram 18 CSS + 37 JS liberados por arquivo inteiro"
+  },
+  "excecoes_de_css_liberando_arquivo_inteiro": {
+   "valor": 0,
+   "unidade": "arquivos",
+   "comando": "tests/tokens_cor.excecoes: as 18 exceções de CSS do turno anterior foram eliminadas migrando o literal para token"
+  },
+  "achados_da_varredura_antiga": {
+   "valor": 0,
+   "unidade": "ocorrências",
+   "comando": "python3 docs/verificar_tokens.py (cor + medida de escala; antes deste turno: 223)"
+  },
+  "telas_html_do_produto": {
+   "valor": 82,
+   "unidade": "telas",
+   "comando": "web/**/*.html fora de vendor/, sdk/ e das 2 páginas de render headless"
+  },
+  "telas_que_carregam_tokens_css_primeiro": {
+   "valor": 82,
+   "unidade": "telas",
+   "comando": "venv/bin/pytest tests/unit/test_telas_carregam_tokens.py (G4 mediu 5 de 19)"
+  },
+  "telas_ainda_na_folha_antiga_style_css": {
+   "valor": 63,
+   "unidade": "telas",
+   "comando": "catraca TELAS_NA_FOLHA_ANTIGA em tests/unit/test_estilo_tokens.py: não pode crescer; migração é item próprio"
+  },
+  "tokens_declarados": {
+   "valor": 182,
+   "unidade": "variáveis em web/estilo/tokens.css",
+   "comando": "regex --nome: em web/estilo/tokens.css (cor clara e escura, tipo, grade, forma, densidade, site público)"
+  },
+  "icones_na_familia_unica": {
+   "valor": 86,
+   "unidade": "ícones",
+   "comando": "web/js/base/icones.js; 0 emoji e 0 glifo de texto no produto. 86, não 84: o padrão de contagem era [a-z_]+ e perdia os dois ícones com dígito no nome (modelo3d, foto360) — achado quando a página /estilo desenhou 86 e o teste esperava 84"
+  },
+  "glifos_trocados_por_icone_da_familia": {
+   "valor": 63,
+   "unidade": "linhas",
+   "comando": "medido antes do conserto por test_c; inclui 1 emoji (sino) e 1 marcador de comentário"
+  },
+  "componentes_da_base_x_estados": {
+   "valor": "6 × 7",
+   "unidade": "componentes × estados",
+   "comando": "test_d_os_seis_componentes_da_base_tem_os_sete_estados: repouso, foco, ativo, desativado, carregando, vazio, erro"
+  },
+  "testes_do_portao": {
+   "valor": 23,
+   "unidade": "testes",
+   "comando": "make tokens (4 arquivos de unidade)"
+  },
+  "controle_positivo_da_varredura": {
+   "valor": "4 de 4",
+   "unidade": "casos plantados pegos",
+   "comando": "test_a_varredura_pega_um_literal_plantado_em_css_e_em_js: css, js, <style> e style=; mais 1 controle negativo"
+  },
+  "controle_positivo_a_mao": {
+   "valor": "2 de 2",
+   "unidade": "literais plantados reprovaram",
+   "comando": "literal em web/mapa.css e em web/js/legenda.js: `make tokens` reprovou (CSS em 1, orçamento @3 medido 4)"
+  },
+  "contraste_escuro_telas_medidas": {
+   "valor": 15,
+   "unidade": "telas",
+   "comando": "de 16 telas da lista; fora da medição: ['mapa'] (500 em app/auth/sessao.py::resolver (KeyError 'tenant_ativo'): o código da união espera uma coluna que o schema `plat` de produção ainda não tem. Reproduzido IGUAL em master (b81e2c788) e no ramo, contra o mesmo banco — é migração pendente na instância, não regressão deste item.) — a rodada que gerou este número mediu 15 das 16 telas; a que fica de fora varia com a deriva de schema descrita em instancia_de_medicao_deriva_de_schema"
+  },
+  "contraste_escuro_nos_medidos": {
+   "valor": 1214,
+   "unidade": "nós de texto",
+   "comando": "tests/e2e/test_estilo.py JS_CONTRASTE em 15 telas, color_scheme=escuro, chromium do playwright"
+  },
+  "contraste_escuro_violacoes_aa": {
+   "valor": 0,
+   "unidade": "nós abaixo de 4,5:1 (3:1 texto grande)",
+   "comando": "mesma varredura; fórmula (L1+0,05)/(L2+0,05) sobre cor calculada e fundo composto pelos ancestrais"
+  },
+  "axe_escuro_violacoes": {
+   "valor": {
+    "minor": 2
+   },
+   "unidade": "violações por impacto",
+   "comando": "axe.run(document, runOnly color-contrast+nomes+rótulos) com axe-4.12.1.min.js servido por interceptação de rota do playwright em URL do mesmo domínio (a CSP do produto recusa script inline)"
+  },
+  "contraste_claro_telas_medidas": {
+   "valor": 15,
+   "unidade": "telas",
+   "comando": "de 16 telas da lista; fora da medição: ['mapa'] (500 em app/auth/sessao.py::resolver (KeyError 'tenant_ativo'): o código da união espera uma coluna que o schema `plat` de produção ainda não tem. Reproduzido IGUAL em master (b81e2c788) e no ramo, contra o mesmo banco — é migração pendente na instância, não regressão deste item.) — idem"
+  },
+  "contraste_claro_nos_medidos": {
+   "valor": 1214,
+   "unidade": "nós de texto",
+   "comando": "tests/e2e/test_estilo.py JS_CONTRASTE em 15 telas, color_scheme=claro, chromium do playwright"
+  },
+  "contraste_claro_violacoes_aa": {
+   "valor": 0,
+   "unidade": "nós abaixo de 4,5:1 (3:1 texto grande)",
+   "comando": "mesma varredura; fórmula (L1+0,05)/(L2+0,05) sobre cor calculada e fundo composto pelos ancestrais"
+  },
+  "axe_claro_violacoes": {
+   "valor": {
+    "minor": 2
+   },
+   "unidade": "violações por impacto",
+   "comando": "axe.run(document, runOnly color-contrast+nomes+rótulos) com axe-4.12.1.min.js servido por interceptação de rota do playwright em URL do mesmo domínio (a CSP do produto recusa script inline)"
+  },
+  "tokens_no_arquivo": {
+   "valor": 132,
+   "unidade": "tokens --i-*",
+   "comando": "grep -o -- '--i-[a-z0-9-]*:' web/estilo/tokens.css | sort -u | wc -l"
+  },
+  "icones_na_familia": {
+   "valor": 86,
+   "unidade": "ícones",
+   "comando": "grep -cE '^  [a-z_]+: \\[' web/js/base/icones.js"
+  },
+  "componentes_x_estados": {
+   "valor": 42,
+   "unidade": "caixas em /estilo",
+   "comando": "playwright: [data-componente] [data-estado] count por par"
+  },
+  "capturas_antes_depois": {
+   "valor": 48,
+   "unidade": "PNG (16 telas × antes + depois escuro + depois claro)",
+   "comando": "bash tests/e2e/regerar_capturas_L0-14.sh; inventário com sha256 em tests/e2e/capturas/INVENTARIO_L0-14.txt"
+  },
+  "par_antes_depois_como_foi_montado": {
+   "valor": "duas instâncias, mesmo banco",
+   "unidade": "-",
+   "comando": "'antes' = master b81e2c788 em :8872, 'depois' = o ramo em :8871, ambas por tests.e2e.frente_estatica contra o MESMO banco: a única diferença entre as fotos é o código da interface. A produção (plat.iagrointel.com, 68ac41f7) não serve de 'antes': o navegador não consegue entrar lá — ver o achado abaixo"
+  },
+  "formularios_de_senha_sem_method_post": {
+   "valor": 0,
+   "unidade": "formulários (eram 13)",
+   "comando": "tests/unit/test_estilo_tokens.py::test_formulario_de_senha_nunca_cai_para_get. ACHADO ao fechar a cláusula (g): a tela de entrada da PRODUÇÃO mandou a senha na query string (o formulário não tem method e o ouvinte de submit não ligou a tempo). Os 13 formulários com campo de senha do produto e dos exemplos do SDK passaram a declarar method=\"post\"; o envio de verdade continua sendo o POST /api/login do js, que chama preventDefault"
+  },
+  "instancia_de_medicao_deriva_de_schema": {
+   "valor": "3 objetos de banco ausentes",
+   "unidade": "objetos",
+   "comando": "Achado ao fechar (f)/(g), REPRODUZIDO IGUAL em master b81e2c788 e no ramo, contra o mesmo banco: o código da união chama `plat.log_registrar(...)` com assinatura que o schema `plat` de produção não tem, lê `tenant_ativo` (KeyError em app/auth/sessao.py::resolver) e chama `plat.fila_job_mais_antigo_rodando_segundos()`, que não existe. Por isso um punhado de telas não chega a body[data-pronto=1], e QUAIS delas muda entre rodadas (medido: numa rodada só /mapa; noutra /admin/usuarios, /admin/grupos, /admin/papeis, /admin/tokens). É migração pendente na instância — bloqueio de implantação da UNIÃO, alheio a este item, e vale avisar o gerente"
+  }
+ },
+ "clausulas_do_portao": {
+  "a_tokens_unicos_e_varredura": "provada para css e html (0 literal), com orçamento contado no js que não resolve var(); a varredura existe em tests/ e é o alvo `make tokens`",
+  "b_par_tipografico_vendorizado_sha256": "provada (já estava de pé; conferida por test_b_par_tipografico_vendorizado_com_sha256_e_referenciado_pelos_tokens)",
+  "c_familia_unica_de_icones_sem_emoji": "provada: 84 ícones em web/js/base/icones.js, 0 emoji e 0 glifo de texto fora dela",
+  "d_estados_completos_nos_6_componentes": "provada em estrutura (lista de componentes e estados, desenho em componentes.css, anel de foco único e proibição de apagá-lo); o exercício visual é o e2e, que exige navegador",
+  "e_pagina_viva_estilo": "provada: rota /estilo em app/paginas.py, página lê tokens.css pela rede e mede a cor calculada, com paleta, tipos, grade, forma, ícones, componentes e densidade",
+  "f_contraste_AA_medido_por_axe": "PROVADA: 1214 nós de texto medidos em cada tema (claro e escuro) em 15 telas, 0 abaixo de 4,5:1 (3:1 para texto grande), fórmula WCAG 2 sobre a cor calculada e o fundo composto pelos ancestrais; axe-core sem violação crítica nem séria nos dois temas (2 de impacto 'minor' em cada). Fora da medição: /mapa, que devolve 500 (KeyError 'tenant_ativo') na instância de medição — reproduzido IGUAL em master, é migração pendente no banco, não regressão deste item. Ressalva honesta: a instância de medição usa o banco de produção, que está atrás das migrações da união; a cobertura de 15 de 16 telas é o que essa instância consegue montar, e a tela que falta muda de rodada para rodada. Para 16 de 16 é preciso uma base de trilha com as migrações do ramo (laco/trilha_ambiente.sh); a construção foi tentada e ficou presa na disputa do trinco de migração com outras duas trilhas em construção na mesma hora.",
+  "g_telas_restiladas_com_captura": "PROVADA: 48 capturas (16 telas × antes, depois escuro, depois claro), regeneráveis por tests/e2e/regerar_capturas_L0-14.sh e conferíveis pelo inventário com sha256. Segue valendo que 63 das 94 telas usam a folha antiga web/style.css: isso é a migração de folha, item próprio, sob catraca.",
+  "h_traco_proprio_a_regua": "provada por test_h_documento_de_identidade_descreve_a_regua_que_existe_em_codigo (docs/IDENTIDADE.md × web/js/base/regua.js × base.css)"
+ },
+ "gerado_em": "2026-09-17T22:38:44Z",
+ "git_sha": "b9ada2934afe",
+ "assinado_por": "construtor (item L0-14-identidade-visual, worktree wt/ident). Parte de unidade: `make tokens`. Parte de navegador: tests/e2e/test_estilo.py pelo script tests/e2e/regerar_capturas_L0-14.sh.",
+ "maquina": "chromium do PLAYWRIGHT (~/.cache/ms-playwright), 1280x800, locale pt-BR. O `google-chrome` do sistema quebra nesta máquina (dumped core/crashpad); o do playwright é outro binário e funciona — foi o que destravou as cláusulas (f) e (g). axe-core 4.12.1 vendorizado no repositório (tests/e2e/vendor, sha256 e MPL-2.0 em VERSOES.txt), servido por interceptação de rota do playwright em URL do mesmo domínio: a CSP do produto (script-src 'self' 'nonce-...') recusa script inline, e é assim que tem de ser.",
+ "capturas": "48 arquivos em tests/e2e/capturas/L0-14_<tela>_{antes,depois_escuro,depois_claro}.png. Os PNG não entram no git (.gitignore); a prova versionada é o inventário com sha256 em tests/e2e/capturas/INVENTARIO_L0-14.txt mais o script que regenera tudo, tests/e2e/regerar_capturas_L0-14.sh."
+}

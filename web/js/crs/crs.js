@@ -38,7 +38,7 @@ function linhaTabela(d) {
 }
 
 function opcao(d) {
-  return h('option', { value: String(d.epsg) }, `${d.epsg} — ${d.nome}${d.curada ? ' ★' : ''}`);
+  return h('option', { value: String(d.epsg) }, `${d.epsg} — ${d.nome}${d.curada ? ' (curada)' : ''}`);
 }
 
 function montarSeletores() {

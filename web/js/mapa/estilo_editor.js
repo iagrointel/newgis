@@ -9,6 +9,7 @@
 import { obter, enviar, alterar } from '../base/api.js';
 import { h, limpar } from '../base/dom.js';
 import { cores as coresDaRampa, sugerirCategorias, sugerirClasses, normalizar, COR_OUTROS } from './estilo_sugestao.js';
+import { icone } from '../base/icones.js';
 
 const TIPOS = [
   ['unico', 'símbolo único'], ['categoria', 'por categoria'], ['classes', 'por classe (cor / tamanho)'],
@@ -180,7 +181,7 @@ export class EditorEstilo {
     const numericos = campos.filter((c) => /int|numeric|double|real|decimal|float/i.test(c.tipo || '')).map((c) => c.nome);
     const cab = h('div', { class: 'estilo-cabecalho' },
       h('h2', {}, 'simbologia'), h('span', { class: 'estilo-camada', id: 'estilo-camada' }, this.ficha.titulo),
-      h('button', { type: 'button', class: 'botao-mini', id: 'estilo-fechar', 'aria-label': 'fechar', onclick: () => this.fechar() }, '✕'));
+      h('button', { type: 'button', class: 'botao-mini', id: 'estilo-fechar', 'aria-label': 'fechar', onclick: () => this.fechar() }, icone('fechar', { tamanho: 14 })));
     const tipo = this._campo('tipo', 'tipo', this._select('tipo', d.tipo, TIPOS.filter(([t]) => !(d.geometria !== 'ponto' && ['proporcional', 'calor', 'agrupamento'].includes(t))), (v) => this._mudar((doc) => this._trocarTipo(doc, v))));
     const secoes = [cab, h('p', { class: 'estilo-aviso', id: 'estilo-aviso', 'aria-live': 'polite' }), tipo];
     if (['categoria', 'classes', 'proporcional'].includes(d.tipo)) {
@@ -251,8 +252,8 @@ export class EditorEstilo {
       this._cor(`${lista}-${i}-cor`, item.cor, mud('cor')),
       h('input', { type: 'text', class: 'estilo-rotulo', name: `${lista}-${i}-rotulo`, value: item.rotulo ?? (item.valor ?? `${item.min} a ${item.max}`), 'aria-label': 'rótulo', onchange: (e) => mud('rotulo')(e.target.value) }),
       ...extras(mud),
-      h('button', { type: 'button', class: 'botao-mini', 'aria-label': 'subir', onclick: () => this._mudar((doc) => { if (i > 0) doc[lista].splice(i - 1, 0, doc[lista].splice(i, 1)[0]); }) }, '↑'),
-      h('button', { type: 'button', class: 'botao-mini', 'aria-label': 'remover', onclick: () => this._mudar((doc) => { doc[lista].splice(i, 1); }) }, '✕'));
+      h('button', { type: 'button', class: 'botao-mini', 'aria-label': 'subir', onclick: () => this._mudar((doc) => { if (i > 0) doc[lista].splice(i - 1, 0, doc[lista].splice(i, 1)[0]); }) }, icone('seta_cima', { tamanho: 14 })),
+      h('button', { type: 'button', class: 'botao-mini', 'aria-label': 'remover', onclick: () => this._mudar((doc) => { doc[lista].splice(i, 1); }) }, icone('fechar', { tamanho: 14 })));
     return li;
   }
 
@@ -351,8 +352,8 @@ export class EditorEstilo {
     const arquivo = h('input', { type: 'file', accept: 'application/json', id: 'estilo-importar-arquivo', hidden: true });
     arquivo.addEventListener('change', async () => { const f = arquivo.files[0]; if (f) this.importar(await f.text()); arquivo.value = ''; });
     return h('div', { class: 'estilo-rodape' },
-      h('button', { type: 'button', class: 'botao-mini', id: 'estilo-desfazer', title: 'desfazer', onclick: () => this.desfazer() }, '↶'),
-      h('button', { type: 'button', class: 'botao-mini', id: 'estilo-refazer', title: 'refazer', onclick: () => this.refazer() }, '↷'),
+      h('button', { type: 'button', class: 'botao-mini', id: 'estilo-desfazer', title: 'desfazer', onclick: () => this.desfazer() }, icone('atualizar', { tamanho: 14 })),
+      h('button', { type: 'button', class: 'botao-mini', id: 'estilo-refazer', title: 'refazer', onclick: () => this.refazer() }, icone('atualizar', { tamanho: 14, classe: 'espelhado' })),
       h('button', { type: 'button', class: 'botao', id: 'estilo-exportar', onclick: () => this.exportar() }, 'exportar JSON'),
       h('button', { type: 'button', class: 'botao', id: 'estilo-importar', onclick: () => arquivo.click() }, 'importar JSON'), arquivo,
       h('button', { type: 'button', class: 'botao primario', id: 'estilo-salvar', onclick: () => this.salvar() }, 'salvar'));

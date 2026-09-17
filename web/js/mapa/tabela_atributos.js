@@ -6,6 +6,7 @@
 import { h, limpar } from '../base/dom.js';
 import { t } from '../base/i18n.js';
 import { obter, consulta, mensagemDe } from '../base/api.js';
+import { icone } from '../base/icones.js';
 
 const TETO = 20000;
 const LOTE = 200;
@@ -226,7 +227,7 @@ export function montarGaveta({ elGaveta, elAlca, elTitulo, elContagem, elFiltro,
       tr.append(h('th', { scope: 'col', tabindex: '0', 'aria-sort': atual === 1 ? 'ascending' : atual === -1 ? 'descending' : 'none',
         onclick: ordenar, onkeydown: (ev) => {
           if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ordenar(); }
-        } }, c.rotulo || c.nome, atual === 1 ? ' ▲' : atual === -1 ? ' ▼' : ''));
+        } }, c.rotulo || c.nome, atual === 0 ? '' : icone(atual === 1 ? 'ordenar_asc' : 'ordenar_desc', { tamanho: 14 })));
     }
     elCabecalho.append(tr);
   }

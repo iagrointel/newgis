@@ -5,17 +5,17 @@
 .coleta-campo label { font-weight: 600; }
 .coleta-campo .dica { font-size: var(--i-t1); opacity: 0.8; }
 .coleta-campo input, .coleta-campo select, .coleta-campo textarea { width: 100%; box-sizing: border-box; min-height: 2.75rem; font-size: var(--i-t2); }
-.coleta-campo .erro { color: var(--cor-erro, #b00020); font-size: var(--i-t1); min-height: 1rem; }
-.coleta-campo.com-erro input, .coleta-campo.com-erro select { outline: 2px solid var(--cor-erro, #b00020); }
-.coleta-nota { padding: var(--i-e2) var(--i-e3); border-left: 3px solid var(--cor-borda, #999); }
-.coleta-grupo { border: 1px solid var(--cor-borda, #ccc); border-radius: var(--i-raio); padding: var(--i-e2) var(--i-e3); }
+.coleta-campo .erro { color: var(--cor-erro); font-size: var(--i-t1); min-height: 1rem; }
+.coleta-campo.com-erro input, .coleta-campo.com-erro select { outline: 2px solid var(--cor-erro); }
+.coleta-nota { padding: var(--i-e2) var(--i-e3); border-left: 3px solid var(--cor-borda); }
+.coleta-grupo { border: 1px solid var(--cor-borda); border-radius: var(--i-raio); padding: var(--i-e2) var(--i-e3); }
 .coleta-grupo > summary { cursor: pointer; font-weight: 700; padding: var(--i-e1) 0; }
 .coleta-grupo .coleta-filhos { display: flex; flex-direction: column; gap: var(--i-e3); padding-top: var(--i-e2); }
-.coleta-repeticao { border: 1px dashed var(--cor-borda, #999); border-radius: var(--i-raio); padding: var(--i-e2) var(--i-e3); }
-.coleta-linha { border-top: 1px solid var(--cor-borda, #ddd); padding-top: var(--i-e2); margin-top: var(--i-e2); display: flex; flex-direction: column; gap: var(--i-e2); }
+.coleta-repeticao { border: 1px dashed var(--cor-borda); border-radius: var(--i-raio); padding: var(--i-e2) var(--i-e3); }
+.coleta-linha { border-top: 1px solid var(--cor-borda); padding-top: var(--i-e2); margin-top: var(--i-e2); display: flex; flex-direction: column; gap: var(--i-e2); }
 .coleta-linha .coleta-linha-cabecalho { display: flex; justify-content: space-between; align-items: center; }
 .coleta-busca { margin-bottom: var(--i-e1); }
 .coleta-caixas { display: flex; flex-direction: column; gap: var(--i-e1); }
 .coleta-caixas label { font-weight: 400; display: flex; gap: var(--i-e2); align-items: center; }
-.coleta-rodape { position: sticky; bottom: 0; background: var(--cor-fundo, #fff); padding: var(--i-e3) 0; display: flex; gap: var(--i-e2); align-items: center; border-top: 1px solid var(--cor-borda, #ddd); }
+.coleta-rodape { position: sticky; bottom: 0; background: var(--cor-fundo); padding: var(--i-e3) 0; display: flex; gap: var(--i-e2); align-items: center; border-top: 1px solid var(--cor-borda); }
 .coleta-idiomas { display: flex; gap: var(--i-e2); align-items: center; font-size: var(--i-t1); }

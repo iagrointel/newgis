@@ -3,6 +3,84 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## setembro de 2026 (item L0-14-identidade-visual: cláusulas (f) e (g) fechadas — a trava do navegador não existia)
+
+O que bloqueava (f) contraste AA e (g) captura antes/depois era a crença de que não há navegador nesta máquina.
+Há: o `google-chrome` do sistema é que quebra (dumped core/crashpad); o **chromium empacotado pelo playwright**
+(`~/.cache/ms-playwright`) é outro binário e funciona. O e2e `tests/e2e/test_estilo.py` já existia pronto desde a
+união — bastava conseguir rodá-lo.
+
+Três coisas atrapalhavam, e as três foram consertadas:
+
+1. **A CSP do produto recusava o axe.** `add_script_tag(path=...)`/`content=...` injeta script INLINE, e
+   `script-src 'self' 'nonce-...'` recusa — corretamente. Agora `tests/e2e/apoio_axe.py::injetar` serve o
+   axe por **interceptação de rota do playwright**, numa URL do mesmo domínio: passa pela CSP sem afrouxá-la,
+   nada é escrito em `web/` e o produto não ganha rota. Vale para todos os e2e que usam o apoio.
+2. **Duas cópias do axe.** `axe-4.12.1` (com sha256 e MPL-2.0 no VERSOES.txt) e `axe-core-4.10.3` (sem linha
+   nenhuma). A sem procedência foi apagada e o apoio aponta para a declarada.
+3. **A produção não serve de "antes".** O par antes/depois passou a ser duas instâncias locais contra o MESMO
+   banco: `master b81e2c788` em :8872 e o ramo em :8871, ambas por `tests.e2e.frente_estatica`. Assim a única
+   diferença entre as fotos é o código da interface. Tudo isso está no script versionado
+   `tests/e2e/regerar_capturas_L0-14.sh` — a prova é repetível, não uma imagem solta.
+
+Medido: **1214 nós de texto por tema, 0 abaixo de 4,5:1** (3:1 para texto grande) em claro e escuro, pela
+fórmula WCAG 2 sobre a cor calculada e o fundo composto pelos ancestrais; **axe-core sem violação crítica nem
+séria** nos dois temas (2 de impacto `minor` em cada); **48 capturas** (16 telas × antes, depois escuro, depois
+claro), inventariadas com sha256 em `tests/e2e/capturas/INVENTARIO_L0-14.txt` (os PNG não entram no git).
+
+Dois achados do caminho, nenhum deles deste item:
+
+- ACHADO GRAVE: **senha na barra de endereço.** Ao tentar usar `plat.iagrointel.com` como "antes", o login levou a senha na
+  QUERY STRING. Causa: o formulário não declara `method`, então o padrão é GET; o envio de verdade é o ouvinte
+  de submit do `js/auth/login.js`, e quando ele não liga a tempo o navegador envia sozinho — senha na URL, no
+  histórico e no log do servidor. Os **13 formulários com campo de senha** do produto e dos exemplos do SDK
+  passaram a declarar `method="post"`, e `test_formulario_de_senha_nunca_cai_para_get` impede a volta.
+- ACHADO GRAVE: **o código da união não roda contra o banco de produção.** `plat.log_registrar(...)` com assinatura que o
+  schema não tem, `tenant_ativo` inexistente (KeyError em `app/auth/sessao.py::resolver`) e
+  `plat.fila_job_mais_antigo_rodando_segundos()` ausente. Reproduzido IGUAL em `master` e no ramo, contra o
+  mesmo banco: são **migrações pendentes na instância**, e é por isso que 1 das 16 telas fica fora da medição —
+  e que QUAL delas fica muda entre rodadas.
+
+Corrigido de passagem: a contagem da família de ícones usava `[a-z_]+` e perdia `modelo3d` e `foto360` — são
+**86 ícones**, não 84.
+
+## setembro de 2026 (item L0-14-identidade-visual: cor fora dos tokens em zero e a varredura com dentes)
+
+O adversário G4 refutou o item por três coisas: literal de cor fora de `web/estilo/tokens.css`, varredura
+inexistente em `tests/` e no `Makefile`, e telas sem os tokens. Depois da união a medida ficou pior do que o
+laudo dizia — a varredura acusava **156 literais de cor em 18 folhas CSS** (G4 tinha visto 56 em quatro
+nomes) e a lista de exceções liberava esses 18 arquivos INTEIROS com o motivo "fora do escopo de G4".
+
+Conserto: os 156 viraram token. `var(--x, #reserva)` perdeu a reserva literal em 13 folhas (90 casos); as
+paletas próprias de `campo/campo.css`, `modelo.css`, `redes_diagrama.css` e `estilo/site.css` passaram a ler
+`web/estilo/tokens.css`, que ganhou as seções 7 a 10 (cor fixa de superfície sobre canvas, cor de categoria
+do diagrama de rede, site público do inquilino e a segunda leva de nomes de compatibilidade). A página
+pública do inquilino passou a carregar `tokens.css` antes de `site.css` — ela já usava `var(--i-*)` sem que
+ninguém os definisse. A varredura também passou a ler o CSS que mora DENTRO do HTML (bloco `<style>` e
+atributo `style=`), onde havia mais 6 literais.
+
+**Nenhuma exceção de CSS sobrou.** O que resta é JavaScript que não resolve `var()` por construção (paint do
+MapLibre, cena 3D, SVG montado em memória): 136 linhas em 37 arquivos, e nenhuma delas está "liberada" — cada
+arquivo tem ORÇAMENTO CONTADO em `tests/tokens_cor.excecoes` na forma `caminho @N  # motivo`, e tanto um
+literal novo quanto uma limpeza não registrada reprovam.
+
+A varredura ganhou controle positivo: planta um literal em `.css`, em `.js`, em `<style>` e em `style=`,
+confere que é pego e apaga o arquivo; mais um controle negativo com uma folha que só usa `var()`. Conferido
+também à mão: literal plantado em `web/mapa.css` e em `web/js/legenda.js` reprovou o `make tokens` (CSS em 1,
+orçamento `@3` medido 4).
+
+Cláusula (c): 63 linhas trocavam o ícone por glifo de texto, uma delas um emoji de sino. Todas passaram para
+a família única de `web/js/base/icones.js` (84 ícones); o HTML estático ganhou `<span data-icone="...">` com
+o pintor `pintarIcones()`. Cláusula (d) ganhou teste próprio (6 componentes × 7 estados, anel de foco único
+em `base.css` e proibição de apagá-lo — que pegou um `:focus-visible { outline: none }` real em
+`estilo/camada_esquema.css`).
+
+Prova: `make tokens` → **22 passed**. Medidas em `tests/medidas/L0-14-identidade-visual.json`: 0 literal de
+cor em CSS e em HTML, 82 de 82 telas carregando `tokens.css` primeiro (G4 mediu 5 de 19), 182 tokens, 84
+ícones, 0 emoji. NÃO medidas: (f) contraste por `axe-core` e (g) capturas antes/depois, que exigem navegador
+— o headless quebra nesta máquina; e 63 das 94 telas seguem na folha antiga `web/style.css`, agora sob
+catraca que impede crescer.
+
 ## setembro de 2026 (item L0-02-g residual: status do `POST /api/usuarios/lote` numa escalada 100% recusada)
 
 `test_l0_02g_ator_nao_atribui_papel_com_um_privilegio_a_mais_que_o_seu` media que a rota já RECUSAVA a

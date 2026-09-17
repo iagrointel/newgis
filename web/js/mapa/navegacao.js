@@ -10,6 +10,7 @@
 import { h, limpar } from '../base/dom.js';
 import { CRS, formatarCoordenada } from './crs.js';
 import { escalaNumerica } from './impressao.js';
+import { icone } from '../base/icones.js';
 
 const CHAVE_CRS = 'plat.mapa.crs';
 
@@ -149,7 +150,7 @@ export class Favoritos {
     for (const f of this.itens) {
       this.lista.append(h('li', { dataset: { favorito: f.nome } },
         h('button', { type: 'button', class: 'sugestao', dataset: { irFavorito: f.nome }, onclick: () => this.ir(f.nome) }, f.nome),
-        h('button', { type: 'button', class: 'botao-mini', 'aria-label': `remover ${f.nome}`, onclick: () => this.remover(f.nome) }, '✕')));
+        h('button', { type: 'button', class: 'botao-mini', 'aria-label': `remover ${f.nome}`, onclick: () => this.remover(f.nome) }, icone('fechar', { tamanho: 14 }))));
     }
   }
 }

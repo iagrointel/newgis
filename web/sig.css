@@ -62,7 +62,7 @@ body.sig .app, body.sig .lateral { display: none; } /* a casca do SIG não usa a
 
 .sig-largar {
   position: absolute; inset: var(--e4); z-index: 40; display: flex; align-items: center; justify-content: center;
-  border: 3px dashed var(--acento); border-radius: calc(var(--raio) * 2); background: rgba(217, 138, 43, .12);
+  border: 3px dashed var(--acento); border-radius: calc(var(--raio) * 2); background: var(--i-acento-fraco);
   pointer-events: none;
 }
 .sig-largar p { font-family: var(--i-fonte-titulo); text-transform: uppercase; letter-spacing: var(--i-espaco-letra-media); color: var(--acento); font-size: var(--i-t3); }
@@ -97,7 +97,8 @@ body.sig .app, body.sig .lateral { display: none; } /* a casca do SIG não usa a
   letter-spacing: var(--i-espaco-letra-media); font-weight: 600; padding: var(--i-e1) 0; cursor: pointer;
 }
 .sig-grupo[data-fechado] .sig-grupo-corpo { display: none; }
-.sig-grupo[data-fechado] .sig-grupo-cabecalho span:first-child::first-letter { content: "▸"; }
+.sig-grupo[data-fechado] .sig-grupo-cabecalho [data-icone] { transform: rotate(-90deg); }
+.sig-grupo-cabecalho [data-icone] { display: inline-flex; transition: transform var(--i-tempo); }
 .sig-grupo-corpo { padding-top: var(--e2); }
 .sig-botao-mini {
   background: var(--painel-2); border: 1px solid var(--borda); color: var(--texto);
@@ -159,7 +160,7 @@ body.sig .app, body.sig .lateral { display: none; } /* a casca do SIG não usa a
 .legenda-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--i-e1); }
 .legenda-lista li { display: flex; align-items: center; gap: var(--e2); font-size: var(--i-t0); }
 .legenda-svg { flex: 0 0 auto; }
-.legenda-amostra { display: inline-block; background: var(--cor); border: 1px solid rgba(0, 0, 0, .35); }
+.legenda-amostra { display: inline-block; background: var(--cor); border: var(--i-fio) solid var(--i-carta-contorno); }
 .legenda-ponto { width: .7rem; height: .7rem; border-radius: 50%; }
 .legenda-linha { width: 1.1rem; height: .2rem; border-radius: var(--i-raio); }
 .legenda-poligono { width: 1rem; height: .7rem; border-radius: var(--i-raio); }
