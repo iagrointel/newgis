@@ -101,11 +101,11 @@ from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.geocodificador.rotas_lote import router as rotas_geocodificacao_lote
 from app.geoparquet.rotas import router as rotas_geoparquet
 from app.imagens.rotas_cog import router as rotas_cog
+from app.imagens.rotas_ficha import router as rotas_ficha_imagem
 from app.imagens.rotas_imagens import router as rotas_imagens
 from app.imagens.rotas_imageserver import router as rotas_imageserver
 from app.imagens.rotas_ogc_tiles import router as rotas_ogc_tiles
 from app.imagens.rotas_predefinicoes import router as rotas_predefinicoes
-from app.imagens.rotas_ficha import router as rotas_ficha_imagem
 from app.imagens.rotas_stac import router as rotas_stac
 from app.imagens.rotas_tiles import router as rotas_tiles
 from app.imagens.rotas_wms import router as rotas_wms_raster

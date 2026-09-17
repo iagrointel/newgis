@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Ficha da imagem · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/estilo/tokens.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="tela instrumento imagem-ficha">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1 data-i18n="ficha.titulo">Ficha da imagem</h1>
+    <p id="ficha-item" class="fraco"></p>
+    <plat-aviso id="aviso"></plat-aviso>
+    <section class="cartao" id="ficha-licenca-cartao" aria-labelledby="t-licenca">
+      <h2 id="t-licenca" data-i18n="ficha.licenca_e_uso">Licença e uso</h2>
+      <plat-aviso id="aviso-licenca"></plat-aviso>
+      <dl class="ficha-resumo">
+        <dt data-i18n="ficha.licenca">Licença</dt><dd id="ficha-licenca-rotulo">—</dd>
+        <dt data-i18n="ficha.atribuicao">Atribuição</dt><dd id="ficha-atribuicao">—</dd>
+        <dt data-i18n="ficha.redistribuicao">Redistribuição</dt><dd id="ficha-redistribuicao">—</dd>
+        <dt data-i18n="ficha.link_publico">Link público</dt><dd id="ficha-link-publico">—</dd>
+      </dl>
+      <p><a id="ficha-iso" href="#" data-i18n="ficha.baixar_iso">baixar o metadado ISO 19115-2 (perfil de imagem)</a></p>
+    </section>
+    <section class="cartao" id="ficha-editor" aria-labelledby="t-editor">
+      <h2 id="t-editor" data-i18n="ficha.editor">Editar a ficha</h2>
+      <plat-formulario id="form-ficha"></plat-formulario>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/js/imagens/ficha.js"></script>
+</body>
+</html>
