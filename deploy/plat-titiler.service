@@ -1,0 +1,41 @@
+[Unit]
+Description=plat — ladrilho raster por inquilino (TiTiler :PORTA_TITILER). Interno. Análise / beta privado.
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=APP_USER
+Group=APP_USER
+WorkingDirectory=APP_DIR
+# nunca ~/.local de ninguém: só a venv e os pacotes dpkg (ADR 0001 seção 2.1)
+Environment=PYTHONNOUSERSITE=1
+# Mesmos segredos do plat-api, pelo mesmo mecanismo (LoadCredential=, nunca Environment=/argv/journal):
+# este processo resolve o item no banco (PLAT_DSN) e valida o token de serviço (PLAT_SECRET). A chave
+# só-leitura do balde do inquilino NÃO está aqui: é lida do banco a cada pedido e vive só dentro do
+# rasterio.Env que envolve a leitura (app/imagens/servico_titiler.py).
+LoadCredential=PLAT_SECRET:/etc/plat/segredos/PLAT_SECRET
+LoadCredential=PLAT_SECRET_ANTERIOR:/etc/plat/segredos/PLAT_SECRET_ANTERIOR
+LoadCredential=PLAT_DSN:/etc/plat/segredos/PLAT_DSN
+LoadCredential=PLAT_GARAGE_ADMIN_TOKEN:/etc/plat/segredos/PLAT_GARAGE_ADMIN_TOKEN
+# Ajustes de GDAL que valem para a instalação inteira (não são por inquilino nem credencial): abrir COG
+# remoto sem listar diretório, ler o cabeçalho de uma vez e guardar faixas de bytes em memória.
+Environment=GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR
+Environment=GDAL_INGESTED_BYTES_AT_OPEN=32768
+Environment=GDAL_HTTP_MULTIRANGE=YES
+Environment=GDAL_HTTP_MERGE_CONSECUTIVE_RANGES=YES
+Environment=VSI_CACHE=TRUE
+Environment=VSI_CACHE_SIZE=67108864
+Environment=CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.tif,.TIF,.tiff
+# 4 trabalhadores: ler ladrilho é espera de rede (faixa de bytes no Garage) mais descompressão; com 2 a
+# fila de uma tela de mapa (~40 ladrilhos) serializa. Escuta só em 127.0.0.1 — quem publica é o nginx.
+ExecStart=APP_DIR/venv/bin/python -m uvicorn app.imagens.servico_titiler:app --host 127.0.0.1 --port PORTA_TITILER --workers 4 --proxy-headers --forwarded-allow-ips 127.0.0.1 --no-access-log
+Restart=on-failure
+RestartSec=3
+MemoryHigh=1G
+MemoryMax=1500M
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
