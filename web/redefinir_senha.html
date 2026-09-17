@@ -17,7 +17,7 @@
     <div class="marca"><strong data-i18n="app.nome">plat</strong> <span class="aviso-beta" data-i18n="app.beta">análise / beta privado</span></div>
     <h1 data-i18n="redefinir_senha.titulo">Redefinir senha</h1>
     <plat-aviso id="aviso"></plat-aviso>
-    <form id="form-solicitar" class="form" novalidate hidden autocomplete="off">
+    <form id="form-solicitar" class="form" novalidate hidden autocomplete="off" method="post">
       <p class="fraco" data-i18n="redefinir_senha.solicitar_ajuda">informe o inquilino e o e-mail cadastrado; se existir uma conta com esse e-mail, enviaremos um link</p>
       <div class="campo">
         <label for="inquilino" data-i18n="login.inquilino">inquilino</label>
@@ -30,7 +30,7 @@
       <div class="botoes"><button type="submit" id="solicitar" class="primario" data-i18n="redefinir_senha.enviar_link">Enviar link</button></div>
     </form>
     <p id="solicitado" hidden data-i18n="redefinir_senha.solicitado">Se existir uma conta com esse e-mail, um link foi enviado. Confira sua caixa de entrada.</p>
-    <form id="form-aplicar" class="form" novalidate hidden autocomplete="off">
+    <form id="form-aplicar" class="form" novalidate hidden autocomplete="off" method="post">
       <div class="campo">
         <label for="senha" data-i18n="aceitar_convite.senha">escolha uma senha</label>
         <div class="linha-senha">
