@@ -25,6 +25,8 @@ done
 set -- "${ARGS[@]+"${ARGS[@]}"}"
 DOM=${1:?uso: sudo bash install.sh <dominio> [porta] [--worker-container] [--imagem-notebook]}
 PORTA=${2:-8150}
+# porta do serviço de ladrilho raster (item L1-02-a); é a que vai em PLAT_TITILER_URL e no /saude
+PORTA_TITILER=${PORTA_TITILER:-8152}
 APP_DIR=${APP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}
 APP_USER=${APP_USER:-$(stat -c %U "$APP_DIR")}
 DB=${PLAT_DB:-iagro_sat}
@@ -65,7 +67,7 @@ PLAT_AMBIENTE=producao
 PLAT_URL_PUBLICA=https://$DOM
 PLAT_GIT_SHA=
 PLAT_MARTIN_URL=
-PLAT_TITILER_URL=
+PLAT_TITILER_URL=http://127.0.0.1:$PORTA_TITILER/healthz
 PLAT_GARAGE_URL=http://127.0.0.1:3900
 PLAT_GARAGE_ADMIN_URL=http://127.0.0.1:3903
 PLAT_GARAGE_REGIAO=garage
@@ -371,6 +373,19 @@ for i in $(seq 1 30); do
   sleep 1
 done
 systemctl --no-pager --lines=0 status plat-fluxo | sed -n '1,4p'
+
+echo "== h2c. systemd plat-titiler (item L1-02-a: ladrilho raster por inquilino, :$PORTA_TITILER)"
+sed -e "s#APP_DIR#$APP_DIR#g" -e "s#APP_USER#$APP_USER#g" -e "s#PORTA_TITILER#$PORTA_TITILER#g" \
+    deploy/plat-titiler.service > /etc/systemd/system/plat-titiler.service
+systemctl daemon-reload
+systemctl enable -q plat-titiler
+systemctl restart plat-titiler
+for i in $(seq 1 30); do
+  if curl -fsS -m 2 "http://127.0.0.1:$PORTA_TITILER/healthz" >/dev/null 2>&1; then echo "/healthz do titiler respondeu 200 em ${i} s"; break; fi
+  if [ "$i" -eq 30 ]; then echo "plat-titiler não respondeu em 30 s:" >&2; journalctl -u plat-titiler -n 30 --no-pager >&2; exit 1; fi
+  sleep 1
+done
+systemctl --no-pager --lines=0 status plat-titiler | sed -n '1,4p'
 
 echo "== h3. timer de expiração do PLAT_SECRET_ANTERIOR (item L7-19: a dupla-chave vale 24 h de verdade)"
 sed -e "s#APP_DIR#$APP_DIR#g" deploy/plat-segredo-expira.service > /etc/systemd/system/plat-segredo-expira.service
