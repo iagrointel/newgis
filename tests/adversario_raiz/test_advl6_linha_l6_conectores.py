@@ -133,22 +133,18 @@ class _CursorColunasFalso:
         return [{"column_name": c} for c in self._colunas]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L6-01-a/L6-01-f: _COLUNA_NEGADA (scripts/acervo_sync.py) é correspondência EXATA por nome, e "
-    "o próprio docstring do script confessa que é 'rede de segurança GROSSA' esperando a checagem fina "
-    "por CONTEÚDO do item L6-01-f — que nunca foi construída como scanner automático (o que existe é "
-    "curadoria manual por FONTE inteira em plat.acervo_lgpd, não por coluna e não repetível em CI). "
-    "Variações reais de nome de cadastro público brasileiro (cpf_titular, nr_cpf, proprietario_nome, "
-    "nome_do_proprietario) não estão no conjunto fixo e saem como EXPOSTAS, não bloqueadas.",
-)
+# CONSERTADO (17/09/2026, turno de segurança): a comparação por nome INTEIRO virou comparação por TERMO
+# (`scripts/acervo_sync.py::_e_pii_por_nome`), e `scripts/acervo_fdw_sync.py` passou a usar a mesma
+# função em vez da lista de nomes. Deixou de ser xfail. O controle positivo — 15 colunas geográficas/
+# administrativas que continuam EXPOSTAS e os 29 nomes da lista antiga que continuam bloqueados — está em
+# `tests/seguranca/test_acervo_sync_coluna_pii.py`. A checagem fina por CONTEÚDO segue sendo o L6-01-f.
 @pytest.mark.parametrize(
     "coluna_pii", ["cpf_titular", "nr_cpf", "proprietario_nome", "nome_do_proprietario"]
 )
-def test_l6_01_a_variacao_de_nome_de_coluna_pii_nao_e_bloqueada(coluna_pii):
+def test_l6_01_a_variacao_de_nome_de_coluna_pii_e_bloqueada(coluna_pii):
     cur = _CursorColunasFalso(["ogc_fid", coluna_pii, "geom"])
     expostas, bloqueadas = acervo_sync._colunas_da_tabela(cur, "public", "tabela_teste", "geom")
-    # o teste PASSA (xfail vira xpass=falha) só se a variação for bloqueada, não exposta.
+    # a variação tem de sair BLOQUEADA, nunca exposta.
     assert coluna_pii in bloqueadas
     assert coluna_pii not in expostas
 

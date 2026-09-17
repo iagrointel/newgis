@@ -12,9 +12,20 @@ O que faz, em ordem:
      + `segredo_ref`, nome do arquivo de senha no diretório de segredos — a senha nunca está no banco).
   2. Garante, por servidor: `CREATE/ALTER SERVER fdw_<schema>_<servidor>` (postgres_fdw, com
      `connect_timeout`, para que servidor fora do ar falhe em segundos e nunca pendure a rodada),
-     `USER MAPPING` para o postgres E para o papel da aplicação (`<schema>_app`) com a senha lida do
-     cofre (a API lê as foreign tables como `<schema>_app`, papel que no remoto é SÓ-LEITURA),
-     `GRANT USAGE ON FOREIGN SERVER` para o papel da aplicação.
+     `USER MAPPING` para o postgres E para um papel-contêiner NOLOGIN por instalação
+     (`<schema>_fdw_acervo`) com a senha lida do cofre — NUNCA para `<schema>_app`.
+     ACHADO L0-04-i (adversário, turno 9): `pg_user_mappings.umoptions` só fica escondido de quem NÃO é
+     dono do mapeamento nem superusuário, e o dono era o papel de LOGIN compartilhado por todos os
+     inquilinos (ADR 0001: isolamento por RLS/GUC, nunca por papel de banco) — logo a senha do Postgres
+     remoto ficava legível, em claro e para sempre, por qualquer sessão de qualquer inquilino. Com o
+     mapeamento no papel-contêiner (do qual `<schema>_app` nunca é membro) `pg_has_role` é falso e o
+     catálogo devolve NULL. Mesmo conserto da migração `20260916T0643_fdw_papel_por_inquilino.sql`, que
+     fechou o outro caminho (conexão publicada por inquilino).
+     A aplicação continua lendo: as foreign tables ficam no schema privado `<espelho>_ft`, com o
+     papel-contêiner como DONO, e o que `<schema>_app` enxerga é uma VISTA de mesmo nome em `<espelho>`,
+     também do papel-contêiner. Vista sem `security_invoker` executa com os direitos do DONO, e é o dono
+     que o postgres_fdw usa para escolher o USER MAPPING — por isso a leitura funciona sem que o papel de
+     login precise de mapeamento (e de senha) nenhum.
   3. Candidatas: `acervo.objeto` (canônicas, tipo 'fonte', daquele servidor/banco — origem
      'registro_acervo') UNIÃO `<schema>.acervo_servidor_tabela` (declaradas manualmente — origem
      'manual'; é também como a base de teste monta a fixture sem poluir `acervo.objeto`).
@@ -26,7 +37,7 @@ O que faz, em ordem:
      padrão de `acervo_sync.py`/`contagem2.py`), com a latência MEDIDA gravada em `fdw_latencia_ms`
      (o portão pede tempo medido; número nunca digitado). SRID/tipo da geometria lidos do typmod da
      foreign table (`postgis_typmod_srid/type`), nunca assumidos. Lista branca de colunas pela MESMA
-     rede grossa de nomes de `acervo_sync.py` (`_COLUNA_NEGADA`, importada — as duas listas nunca
+     rede grossa de nomes de `acervo_sync.py` (`_e_pii_por_nome`, importada — as duas regras nunca
      divergem). Estado: 'pendente_de_licenca' se `acervo.fonte.licenca` vazia (regra D17), 'exposta'
      senão; contagem não concluída = 'bloqueada', nunca zero.
   6. FALHA DE REDE (servidor não responde, IMPORT ou COUNT estouram por conexão): a camada vira
@@ -60,7 +71,7 @@ import psycopg2.errors
 import psycopg2.extras
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from acervo_sync import _COLUNA_NEGADA, _log  # noqa: E402 — mesma rede grossa de nomes, mesma saída
+from acervo_sync import _e_pii_por_nome, _log  # noqa: E402 — mesma rede grossa de nomes, mesma saída
 
 TIMEOUT_CONTAGEM_MS = 25_000
 CONNECT_TIMEOUT_S = 10
@@ -155,10 +166,37 @@ def _senha_do_cofre(diretorio: Path, segredo_ref: str) -> str | None:
         return None
 
 
-def _garantir_servidor_fdw(conn, schema_plat: str, srv: dict, senha: str, papel_app: str) -> str:
-    """CREATE/ALTER idempotente do SERVER postgres_fdw + USER MAPPING (postgres e papel da aplicação) +
-    GRANT USAGE. `connect_timeout` fica SEMPRE gravado no servidor: é o que faz uma queda de rede virar
-    erro em segundos (e aviso na camada), nunca uma rodada pendurada. Devolve o nome do SERVER."""
+def _espelho_ft(espelho: str) -> str:
+    """Schema privado onde as foreign tables moram (as vistas ficam no `espelho`, que é o que a
+    aplicação enxerga)."""
+    return _nome_curto(espelho, "ft")
+
+
+def _papel_fdw(schema_plat: str) -> str:
+    """Papel-contêiner NOLOGIN dono dos USER MAPPINGs, das foreign tables e das vistas do acervo remoto
+    (achado L0-04-i). Nunca é papel de login e `<schema>_app` nunca é membro dele — é isso que mantém
+    `pg_user_mappings.umoptions` em NULL para a aplicação e, portanto, para todo inquilino."""
+    return _nome_curto(_san(schema_plat), "fdw_acervo")
+
+
+def _garantir_papel_fdw(conn, schema_plat: str) -> str:
+    papel = _papel_fdw(schema_plat)
+    with conn.cursor() as cur:
+        cur.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (papel,))
+        if cur.fetchone() is None:
+            cur.execute(f"CREATE ROLE {_ident(conn, papel)} NOLOGIN")
+        # o dono das vistas precisa poder ler as foreign tables; ninguém mais entra neste papel
+        cur.execute(f"ALTER ROLE {_ident(conn, papel)} NOLOGIN")
+    conn.commit()
+    return papel
+
+
+def _garantir_servidor_fdw(conn, schema_plat: str, srv: dict, senha: str, papel_app: str,
+                           papel_fdw: str) -> str:
+    """CREATE/ALTER idempotente do SERVER postgres_fdw + USER MAPPING (postgres e papel-contêiner
+    `papel_fdw`, NUNCA o papel de login da aplicação — achado L0-04-i) + GRANT USAGE. `connect_timeout`
+    fica SEMPRE gravado no servidor: é o que faz uma queda de rede virar erro em segundos (e aviso na
+    camada), nunca uma rodada pendurada. Devolve o nome do SERVER."""
     nome_srv = _nome_curto("fdw", _san(schema_plat), _san(srv["servidor"]))
     with conn.cursor() as cur:
         cur.execute(
@@ -186,7 +224,7 @@ def _garantir_servidor_fdw(conn, schema_plat: str, srv: dict, senha: str, papel_
                 f"(SET host {v(srv['host'])}, SET port {v(srv['porta'])}, SET dbname {v(srv['banco'])}, "
                 f"SET connect_timeout {v(CONNECT_TIMEOUT_S)})"
             )
-        for papel in ("CURRENT_USER", _ident(conn, papel_app)):
+        for papel in ("CURRENT_USER", _ident(conn, papel_fdw)):
             cur.execute(
                 f"CREATE USER MAPPING IF NOT EXISTS FOR {papel} SERVER {_ident(conn, nome_srv)} "
                 f"OPTIONS (user {v(srv['fdw_usuario'])}, password {v(senha)})"
@@ -195,7 +233,9 @@ def _garantir_servidor_fdw(conn, schema_plat: str, srv: dict, senha: str, papel_
                 f"ALTER USER MAPPING FOR {papel} SERVER {_ident(conn, nome_srv)} "
                 f"OPTIONS (SET user {v(srv['fdw_usuario'])}, SET password {v(senha)})"
             )
-        cur.execute(f"GRANT USAGE ON FOREIGN SERVER {_ident(conn, nome_srv)} TO {_ident(conn, papel_app)}")
+        # USAGE no servidor é do papel-contêiner (dono das vistas); a aplicação lê pelas vistas e nunca
+        # precisa tocar o servidor estrangeiro diretamente.
+        cur.execute(f"GRANT USAGE ON FOREIGN SERVER {_ident(conn, nome_srv)} TO {_ident(conn, papel_fdw)}")
     conn.commit()
     return nome_srv
 
@@ -243,8 +283,8 @@ def _colunas_da_foreign(conn, espelho: str, tabela: str, coluna_geom: str) -> tu
             (espelho, tabela),
         )
         todas = [r["column_name"] for r in cur.fetchall()]
-    expostas = [c for c in todas if c != coluna_geom and c.lower() not in _COLUNA_NEGADA]
-    bloqueadas = [c for c in todas if c != coluna_geom and c.lower() in _COLUNA_NEGADA]
+    expostas = [c for c in todas if c != coluna_geom and not _e_pii_por_nome(c)]
+    bloqueadas = [c for c in todas if c != coluna_geom and _e_pii_por_nome(c)]
     return expostas, bloqueadas
 
 
@@ -299,6 +339,7 @@ def sincronizar(dsn_kwargs: dict, schema_plat: str, segredos: Path, so_servidore
     stats = {"servidores_ok": 0, "servidores_fora": 0, "tabelas_fdw": 0, "indisponiveis": 0,
              "puladas": 0, "sem_geometria": 0, "estourou_prazo": False}
     try:
+        papel_fdw = _garantir_papel_fdw(conn, schema_plat)
         with conn.cursor() as cur:
             cur.execute("CREATE EXTENSION IF NOT EXISTS postgres_fdw")
             cur.execute(
@@ -339,7 +380,7 @@ def sincronizar(dsn_kwargs: dict, schema_plat: str, segredos: Path, so_servidore
                 stats["servidores_ok"] += 1
                 continue
 
-            nome_srv = _garantir_servidor_fdw(conn, schema_plat, srv, senha, papel_app)
+            nome_srv = _garantir_servidor_fdw(conn, schema_plat, srv, senha, papel_app, papel_fdw)
             servidor_vivo = False
 
             # agrupa por schema remoto: um IMPORT FOREIGN SCHEMA ... LIMIT TO por grupo
@@ -352,10 +393,19 @@ def sincronizar(dsn_kwargs: dict, schema_plat: str, segredos: Path, so_servidore
                     stats["estourou_prazo"] = True
                     break
                 espelho = _nome_curto(f"{_san(schema_plat)}_rm", _san(nome), _san(schema_remoto))
+                espelho_ft = _espelho_ft(espelho)
                 tabelas_sql = ", ".join(_ident(conn, c["tabela"]) for c in grupo)
                 try:
                     with conn.cursor() as cur:
                         cur.execute(f"CREATE SCHEMA IF NOT EXISTS {_ident(conn, espelho)}")
+                        # schema PRIVADO das foreign tables (achado L0-04-i): a aplicação nunca tem USAGE
+                        # aqui; ela lê as VISTAS de `espelho`, que pertencem ao papel-contêiner e por isso
+                        # resolvem o USER MAPPING por ele, não pelo papel de login.
+                        cur.execute(f"CREATE SCHEMA IF NOT EXISTS {_ident(conn, espelho_ft)}")
+                        cur.execute(
+                            f"ALTER SCHEMA {_ident(conn, espelho_ft)} OWNER TO {_ident(conn, papel_fdw)}"
+                        )
+                        cur.execute(f"REVOKE ALL ON SCHEMA {_ident(conn, espelho_ft)} FROM PUBLIC")
                         # IMPORT FOREIGN SCHEMA não é idempotente por si só (erra "relation already
                         # exists" numa segunda rodada): apaga só as foreign tables DESTE grupo antes de
                         # reimportar — reimportar de novo é o que deixa o espelho igual à definição
@@ -363,13 +413,29 @@ def sincronizar(dsn_kwargs: dict, schema_plat: str, segredos: Path, so_servidore
                         # herdar a definição congelada da primeira vez.
                         for cand in grupo:
                             cur.execute(
+                                f"DROP VIEW IF EXISTS "
+                                f"{_ident(conn, espelho)}.{_ident(conn, cand['tabela'])}"
+                            )
+                            cur.execute(
+                                f"DROP FOREIGN TABLE IF EXISTS "
+                                f"{_ident(conn, espelho_ft)}.{_ident(conn, cand['tabela'])}"
+                            )
+                            # herança da versão anterior deste script, quando a foreign table morava no
+                            # próprio `espelho` e a aplicação a lia direto (com mapeamento dela, o furo)
+                            cur.execute(
                                 f"DROP FOREIGN TABLE IF EXISTS "
                                 f"{_ident(conn, espelho)}.{_ident(conn, cand['tabela'])}"
                             )
                         cur.execute(
                             f"IMPORT FOREIGN SCHEMA {_ident(conn, schema_remoto)} LIMIT TO ({tabelas_sql}) "
-                            f"FROM SERVER {_ident(conn, nome_srv)} INTO {_ident(conn, espelho)}"
+                            f"FROM SERVER {_ident(conn, nome_srv)} INTO {_ident(conn, espelho_ft)}"
                         )
+                        for cand in grupo:
+                            alvo = f"{_ident(conn, espelho_ft)}.{_ident(conn, cand['tabela'])}"
+                            cur.execute(f"ALTER FOREIGN TABLE {alvo} OWNER TO {_ident(conn, papel_fdw)}")
+                            vista = f"{_ident(conn, espelho)}.{_ident(conn, cand['tabela'])}"
+                            cur.execute(f"CREATE OR REPLACE VIEW {vista} AS SELECT * FROM {alvo}")
+                            cur.execute(f"ALTER VIEW {vista} OWNER TO {_ident(conn, papel_fdw)}")
                         cur.execute(
                             f"GRANT USAGE ON SCHEMA {_ident(conn, espelho)} TO {_ident(conn, papel_app)}"
                         )
@@ -410,14 +476,14 @@ def sincronizar(dsn_kwargs: dict, schema_plat: str, segredos: Path, so_servidore
                         processadas += 1
                         continue
 
-                    geom = _geom_da_foreign(conn, espelho, cand["tabela"])
+                    geom = _geom_da_foreign(conn, espelho_ft, cand["tabela"])
                     if geom is None:
                         _log(f"{camada_id}: sem coluna de geometria no espelho; não é camada, fora do registro")
                         stats["sem_geometria"] += 1
                         processadas += 1
                         continue
                     coluna_geom, srid, tipo_geom = geom
-                    expostas, bloqueadas = _colunas_da_foreign(conn, espelho, cand["tabela"], coluna_geom)
+                    expostas, bloqueadas = _colunas_da_foreign(conn, espelho_ft, cand["tabela"], coluna_geom)
                     n_exato, latencia_ms, erro = _contar_via_fdw(conn, espelho, cand["tabela"])
 
                     with conn.cursor() as cur:
@@ -501,15 +567,19 @@ def sincronizar(dsn_kwargs: dict, schema_plat: str, segredos: Path, so_servidore
                         "JOIN pg_foreign_server fs ON fs.oid = ft.ftserver WHERE fs.srvname = %s",
                         (nome_srv,),
                     )
-                    esperadas = {
-                        (
-                            _nome_curto(f"{_san(schema_plat)}_rm", _san(nome), _san(c["schema_nome"])),
-                            c["tabela"],
-                        )
-                        for c in candidatas
-                    }
+                    esperadas = set()
+                    for c in candidatas:
+                        base = _nome_curto(f"{_san(schema_plat)}_rm", _san(nome), _san(c["schema_nome"]))
+                        esperadas.add((_espelho_ft(base), c["tabela"]))
+                        esperadas.add((base, c["tabela"]))  # herança da versão anterior do espelho
                     for r in cur.fetchall():
                         if (r["espelho"], r["tabela"]) not in esperadas:
+                            # a vista vive no schema sem o sufixo `_ft`; cai junto com a foreign table
+                            visivel = r["espelho"][:-3] if r["espelho"].endswith("_ft") else r["espelho"]
+                            cur.execute(
+                                f"DROP VIEW IF EXISTS "
+                                f"{_ident(conn, visivel)}.{_ident(conn, r['tabela'])}"
+                            )
                             cur.execute(
                                 f"DROP FOREIGN TABLE IF EXISTS "
                                 f"{_ident(conn, r['espelho'])}.{_ident(conn, r['tabela'])}"

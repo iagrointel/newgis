@@ -26,6 +26,7 @@ from urllib.parse import urlparse
 
 import psycopg2
 import psycopg2.extras
+import psycopg2.sql
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -270,3 +271,80 @@ def test_falha_de_rede_vira_aviso_nao_camada_vazia(fdw_fixture, medida):
     _psql(f"UPDATE {schema_plat}.acervo_servidor SET porta = 5432 WHERE servidor = '{d['servidor']}'")
     r3 = _rodar_fdw_sync(schema_plat, d["segredos"], servidor=d["servidor"])
     assert r3.returncode == 0, r3.stderr
+
+
+# -------------------------------------------------------------------------------------------------
+# Furo 3 do turno de segurança (17/09/2026) — achado `L0-04-i` no caminho do ACERVO REMOTO.
+#
+# A migração `20260916T0643_fdw_papel_por_inquilino.sql` fechou o caminho da conexão publicada por
+# inquilino, mas `scripts/acervo_fdw_sync.py` continuava criando `USER MAPPING FOR <schema>_app` com a
+# senha do Postgres remoto nas OPTIONS. `pg_user_mappings.umoptions` só fica escondido de quem não é
+# dono do mapeamento nem superusuário, e `<schema>_app` é o papel de LOGIN compartilhado por todos os
+# inquilinos (ADR 0001) — a senha ficava legível, em claro e para sempre, por qualquer sessão de
+# qualquer inquilino.
+#
+# CONSERTO: o mapeamento passa a pertencer ao papel-contêiner NOLOGIN `<schema>_fdw_acervo`, do qual
+# `<schema>_app` nunca é membro; as foreign tables vivem no schema privado `<espelho>_ft` com esse dono
+# e a aplicação lê VISTAS de mesmo nome em `<espelho>`, também do papel-contêiner (vista sem
+# `security_invoker` executa com os direitos do dono, e é o dono que o postgres_fdw usa para escolher o
+# USER MAPPING).
+#
+# Par de provas: o ATAQUE (ler a senha pelo catálogo, como a aplicação) e o CONTROLE POSITIVO (a
+# mesma sessão continua contando as linhas da tabela remota pela vista).
+def test_ataque_senha_do_fdw_nao_e_legivel_pela_aplicacao_no_catalogo(fdw_fixture, env):
+    """ATAQUE: `SELECT umoptions FROM pg_user_mappings` numa sessão `<schema>_app` — a mesma que
+    qualquer inquilino tem. Nenhuma opção de nenhum mapeamento pode voltar preenchida."""
+    d = fdw_fixture
+    r = _rodar_fdw_sync(d["schema_plat"], d["segredos"], servidor=d["servidor"])
+    assert r.returncode == 0, r.stderr
+
+    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        with con.cursor() as cur:
+            cur.execute("SELECT current_user AS u")
+            papel_de_login = cur.fetchone()["u"]
+            cur.execute(
+                "SELECT srvname, usename, umoptions FROM pg_user_mappings "
+                "WHERE srvname LIKE 'fdw\\_%' AND umoptions IS NOT NULL"
+            )
+            visiveis = cur.fetchall()
+    finally:
+        con.close()
+    assert papel_de_login.endswith("_app"), papel_de_login
+    # nunca imprime o valor: só o nome do servidor e do papel dono do mapeamento
+    assert visiveis == [], (
+        "a sessão da aplicação enxerga as OPTIONS (senha em claro) destes mapeamentos: "
+        + str([(v["srvname"], v["usename"]) for v in visiveis])
+    )
+
+
+def test_legitimo_aplicacao_continua_lendo_a_camada_remota_pela_vista(fdw_fixture, env):
+    """CONTROLE POSITIVO: sem mapeamento próprio, a sessão da aplicação ainda lê a tabela remota — pela
+    vista do papel-contêiner — e a contagem bate com o que a tabela remota tem de verdade."""
+    d = fdw_fixture
+    r = _rodar_fdw_sync(d["schema_plat"], d["segredos"], servidor=d["servidor"])
+    assert r.returncode == 0, r.stderr
+
+    from app.schema_ambiente import CursorSchemaAmbiente
+
+    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
+    try:
+        with con.cursor() as cur:
+            cur.execute(
+                "SELECT tabela, fdw_tabela FROM plat.acervo_camada WHERE servidor = %s ORDER BY tabela",
+                (d["servidor"],),
+            )
+            linhas = cur.fetchall()
+            assert len(linhas) == 3, linhas
+            for linha in linhas:
+                esperado = d["linhas_por_tabela"][linha["tabela"]]
+                schema, _, tabela = linha["fdw_tabela"].partition(".")
+                cur.execute(
+                    psycopg2.sql.SQL("SELECT count(*) AS n FROM {}.{}").format(
+                        psycopg2.sql.Identifier(schema), psycopg2.sql.Identifier(tabela)
+                    )
+                )
+                assert cur.fetchone()["n"] == esperado, linha
+                print(f"  {linha['tabela']}: {esperado} linhas lidas por {linha['fdw_tabela']} como app")
+    finally:
+        con.close()

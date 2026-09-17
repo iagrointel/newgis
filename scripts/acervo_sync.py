@@ -36,8 +36,10 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 import time
+import unicodedata
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -51,14 +53,63 @@ from app.schema_ambiente import CursorSchemaAmbiente  # noqa: E402 -- depois do 
 TIMEOUT_CONTAGEM_MS = 25_000
 PRAZO_TOTAL_S = 270.0  # folga de 30 s sob o portão de 5 min
 
-# rede de segurança GROSSA por nome de coluna (case-insensitive, casamento EXATO — nunca substring, para não
-# confundir "nom_tema"/"nom_munic" com identificador de pessoa); a varredura fina por conteúdo é L6-01-f.
-_COLUNA_NEGADA = {
-    "cpf", "cnpj", "nome", "nome_completo", "nome_pessoa", "nome_titular", "nome_proprietario",
-    "nome_socio", "nome_responsavel", "nome_paciente", "nome_mae", "nome_pai", "razao_social_pf",
-    "email", "e_mail", "telefone", "celular", "fone", "rg", "identidade", "passaporte",
-    "pis", "nis", "nit", "cns", "titular_cpf", "titular_nome", "proprietario_cpf", "endereco_residencial",
+# Rede de segurança por NOME de coluna (a varredura fina por CONTEÚDO é o item L6-01-f).
+#
+# ACHADO L6-01-a (adversário, turno 9): esta barreira comparava o nome INTEIRO da coluna, em igualdade
+# exata, contra um conjunto fixo de 34 nomes — então `cpf_titular`, `nr_cpf`, `proprietario_nome` e
+# `nome_do_proprietario`, todos formatos correntes de cadastro público brasileiro, saíam EXPOSTOS. Uma lista
+# de nomes inteiros é um catálogo de grafias; o que identifica pessoa é o TERMO dentro do nome.
+#
+# A regra agora é por TERMO (o nome é quebrado em palavras por qualquer caractere que não seja letra ou
+# dígito, e também entre letra e dígito, e cada palavra é comparada inteira):
+#   1. termo que é documento/contato de pessoa por si só (cpf, cnpj, rg, pis, nis, nit, cns, email,
+#      telefone, ...) bloqueia a coluna, esteja onde estiver no nome;
+#   2. `nome`/`nom`/`sobrenome` bloqueia quando o nome da coluna também traz um termo de PESSOA
+#      (titular, proprietario, socio, responsavel, paciente, mae, ...) ou quando a coluna se chama só
+#      `nome` — é o que separa `nome_do_proprietario` (bloqueada) de `nom_tema`/`nome_municipio`
+#      (expostas), sem cair na comparação por substring que o comentário anterior já alertava.
+# Continua sendo rede GROSSA: o que ela não pega por nome é trabalho do L6-01-f, por conteúdo.
+_TERMO_DOCUMENTO = {
+    "cpf", "cnpj", "cpfcnpj", "rg", "identidade", "passaporte", "pis", "pasep", "nis", "nit", "cns",
+    "email", "mail", "telefone", "celular", "fone", "whatsapp",
 }
+_TERMO_PESSOA = {
+    "titular", "proprietario", "proprietaria", "socio", "socia", "responsavel", "paciente", "pessoa",
+    "mae", "pai", "completo", "civil", "requerente", "beneficiario", "beneficiaria", "contratante",
+    "declarante", "arrendatario", "posseiro", "produtor", "produtora", "cliente", "usuario", "morador",
+    "autor", "reu", "servidor", "funcionario", "empregado", "motorista", "condutor", "portador",
+    "outorgante", "outorgado", "herdeiro", "conjuge", "dependente", "representante",
+}
+_TERMO_NOME = {"nome", "nomes", "nom", "sobrenome", "nmpessoa"}
+# nome de coluna inteiro que bloqueia sozinho, mesmo sem termo de pessoa junto
+_COLUNA_NEGADA = {
+    "nome", "nomes", "endereco_residencial", "razao_social_pf", "logradouro_residencial",
+}
+_SEPARADOR = re.compile(r"[^a-z0-9]+")
+
+
+def _termos(coluna: str) -> set[str]:
+    """Quebra o nome da coluna em termos: por separador (`_`, `-`, espaço, ponto) e na fronteira
+    letra-dígito (`cpf1`, `nr2cpf`). Acento some antes (`proprietário` -> `proprietario`)."""
+    plano = unicodedata.normalize("NFKD", coluna.lower()).encode("ascii", "ignore").decode()
+    partes = [p for p in _SEPARADOR.split(plano) if p]
+    termos: set[str] = set()
+    for parte in partes:
+        termos.add(parte)
+        termos.update(t for t in re.findall(r"[a-z]+|[0-9]+", parte) if t)
+    return termos
+
+
+def _e_pii_por_nome(coluna: str) -> bool:
+    """A coluna identifica pessoa pelo NOME dela? (rede grossa; a fina por conteúdo é L6-01-f)"""
+    plano = unicodedata.normalize("NFKD", coluna.lower()).encode("ascii", "ignore").decode()
+    if plano in _COLUNA_NEGADA:
+        return True
+    termos = _termos(coluna)
+    if termos & _TERMO_DOCUMENTO:
+        return True
+    return bool(termos & _TERMO_NOME and termos & _TERMO_PESSOA)
+
 
 SQL_CANDIDATAS = """
 SELECT DISTINCT ON (o.schema_nome, o.tabela)
@@ -110,7 +161,7 @@ def _colunas_da_tabela(cur, schema: str, tabela: str, coluna_geom: str) -> tuple
     for c in todas:
         if c == coluna_geom:
             continue
-        if c.lower() in _COLUNA_NEGADA:
+        if _e_pii_por_nome(c):
             bloqueadas.append(c)
         else:
             expostas.append(c)

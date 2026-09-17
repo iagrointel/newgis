@@ -1,0 +1,77 @@
+{
+ "item": "SEG-T10-furos-isolamento-entre-inquilinos",
+ "medidas": {
+  "furo1_2_href_ataques_recusados": {
+   "valor": 3,
+   "unidade": "testes",
+   "comando": "roda_teste.sh tests/api/imagens/test_advl1_isolamento_href.py -q -rxX (trilha seg)"
+  },
+  "furo1_2_href_controles_positivos": {
+   "valor": 3,
+   "unidade": "testes",
+   "comando": "mesmos arquivos: item legitimo aceito 201, COG proprio servido 200 com os bytes, conferir le o proprio objeto"
+  },
+  "furo1_2_href_xfail_restante": {
+   "valor": 1,
+   "unidade": "testes",
+   "comando": "L1-02-b escopo por lista com id de item nao-UUID: vocabulario, fora deste conserto"
+  },
+  "furo3_fdw_mapeamentos_com_opcoes_visiveis_a_aplicacao": {
+   "valor": 0,
+   "unidade": "mapeamentos",
+   "comando": "SELECT srvname, usename FROM pg_user_mappings WHERE srvname LIKE 'fdw_%' AND umoptions IS NOT NULL, na sessao <schema>_app"
+  },
+  "furo3_fdw_camadas_remotas_lidas_pela_vista_como_aplicacao": {
+   "valor": 3,
+   "unidade": "camadas",
+   "comando": "roda_teste.sh tests/api/test_acervo_fdw.py::test_legitimo_aplicacao_continua_lendo_a_camada_remota_pela_vista"
+  },
+  "furo4_token_admin_garage_em_homologacao": {
+   "valor": 0,
+   "unidade": "tokens",
+   "comando": "var/homolog/homolog.env declara PLAT_GARAGE_ADMIN_TOKEN vazio; conferido em test_homologacao_segredo_proprio.py"
+  },
+  "furo4_credenciais_de_homologacao_aceitas_como_admin": {
+   "valor": 0,
+   "unidade": "credenciais",
+   "comando": "GET :3903/v2/ListBuckets com cada credencial >=16 bytes do homolog.env; todas 401/403"
+  },
+  "furo4_envs_de_trilha_com_o_token_de_producao": {
+   "valor": 0,
+   "unidade": "arquivos",
+   "comando": "sha256 de /etc/plat/segredos/PLAT_GARAGE_ADMIN_TOKEN comparado com os 221 laco/var/trilha/*.env que trazem a chave; 2 valores distintos, nenhum igual, ambos recusados (403) pela API de administracao"
+  },
+  "furo5_anexo_ataques_que_falham_sem_o_conserto": {
+   "valor": 5,
+   "unidade": "testes",
+   "comando": "git stash de app/chamados/rotas.py e roda_teste.sh tests/seguranca/test_anexo_chamado_janela_de_varredura.py"
+  },
+  "furo5_anexo_testes_verdes_com_o_conserto": {
+   "valor": 14,
+   "unidade": "testes",
+   "comando": "roda_teste.sh tests/seguranca/test_anexo_chamado_janela_de_varredura.py (54,3 s)"
+  },
+  "furo5_janela_de_varredura_do_anexo": {
+   "valor": 8000000,
+   "unidade": "bytes",
+   "comando": "app/chamados/rotas.py::_verificar_anexo passa o corpo inteiro; o teto e limites.CHAMADO_ANEXO_BYTES_MAX (era fatia de 65536)"
+  },
+  "furo6_colunas_pii_testadas": {
+   "valor": 56,
+   "unidade": "testes",
+   "comando": "roda_teste.sh tests/seguranca/test_acervo_sync_coluna_pii.py (58,3 s): 12 ataques, 15 controles positivos, 29 nomes da lista antiga"
+  },
+  "furo6_variacoes_de_nome_que_passavam": {
+   "valor": 12,
+   "unidade": "colunas",
+   "comando": "cpf_titular, nr_cpf, proprietario_nome, nome_do_proprietario e 8 variantes do mesmo formato"
+  },
+  "furo6_colunas_legitimas_perdidas": {
+   "valor": 0,
+   "unidade": "colunas",
+   "comando": "15 nomes geograficos/administrativos continuam expostos com a regra por termo"
+  }
+ },
+ "gerado_em": "2026-09-17T22:20:00Z",
+ "nota": "Nenhum valor de credencial e lido, impresso ou gravado por estes testes: toda comparacao de segredo e por sha256."
+}

@@ -183,7 +183,14 @@ def _verificar_anexo(tipo: str, dados: bytes) -> None:
         raise ErroAPI(422, "tipo_desconhecido", f"tipo {tipo!r} não aceito em anexo de chamado",
                       {"aceitos": sorted(TIPOS_ANEXO)})
     try:
-        objetos.escanear_cabecalho(dados[:65536], _content_type_de(tipo))
+        # ACHADO L7-13-a (adversário, turno 9): esta chamada entregava só `dados[:65536]` enquanto o teto do
+        # anexo é `limites.CHAMADO_ANEXO_BYTES_MAX` (8 MB) — um PNG estruturalmente válido cujo `IEND` termina
+        # exatamente no byte 65536 preenche a fatia inteira (a checagem 4, "byte depois do fim do formato",
+        # nada vê) e a carga colada depois nunca era examinada por checagem nenhuma. A varredura só enxerga o
+        # que o chamador entrega (docstring de app/varredura_conteudo.py): aqui o chamador já tem o corpo
+        # inteiro em memória — o teto de 8 MB é conferido em `anexar` antes de chegar aqui —, então entrega o
+        # corpo inteiro. A checagem 3 (carga executável) passa a cobrir o anexo todo.
+        objetos.escanear_cabecalho(dados, _content_type_de(tipo))
     except objetos.ConteudoRecusado as e:
         raise ErroAPI(415, "conteudo_recusado", f"conteúdo recusado pela varredura: {e.resultado.motivo}") from e
     if tipo == "png" and not dados.startswith(_PNG):

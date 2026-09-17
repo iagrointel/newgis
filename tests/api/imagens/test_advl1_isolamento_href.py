@@ -183,6 +183,107 @@ def test_conferir_nao_deve_ler_objeto_de_outro_inquilino_por_href_forjado(
 
 
 # ---------------------------------------------------------------------------------------------------------
+# CONTROLES POSITIVOS do conserto (turno de segurança, 17/09/2026): sem eles o conserto não vale, porque
+# recusar TUDO também faria os três testes de ataque acima passarem. Cada um é o par legítimo exato de um
+# ataque: mesmo caminho, mesma rota, mesma função — só que o objeto é do PRÓPRIO inquilino do token.
+def _semear_objeto_do_proprio(conexao_plat_app, tenant_id_a, conteudo: bytes) -> dict:
+    from app import objetos
+
+    contexto(conexao_plat_app, tenant_id_a, usuario_id=0, login="teste")
+    with conexao_plat_app.cursor() as cur:
+        objeto = objetos.guardar(cur, "zt_advl1_legitimo", conteudo, "image/tiff")
+    conexao_plat_app.commit()
+    assert objeto["chave"].startswith("demo/"), objeto["chave"]
+    return objeto
+
+
+def test_legitimo_item_stac_com_href_do_proprio_inquilino_e_aceito_na_escrita(
+    conexao_plat_app, tenant_id_a, token_a_leitura_escrita
+):
+    """PAR de `test_item_stac_recusa_href_de_outro_inquilino_na_escrita`: o MESMO corpo, com o asset
+    apontando para um objeto do PRÓPRIO inquilino, continua sendo aceito (201) — a validação de escrita
+    não fechou a porta legítima junto com a forjada."""
+    objeto = _semear_objeto_do_proprio(conexao_plat_app, tenant_id_a, b"COG-LEGITIMO-" + secrets.token_hex(8).encode())
+    c = _cliente()
+    try:
+        token = token_a_leitura_escrita["token"]
+        slug = f"advl1-ok-{secrets.token_hex(4)}"
+        rc = c.post(f"/svc/{token}/stac/collections", params={"slug": slug}, json={})
+        assert rc.status_code == 201, rc.text
+        colecao = rc.json()["id"]
+        corpo = item_stac("item-legitimo-escrita", colecao)
+        corpo["assets"] = {
+            "cientifico": {"href": f"/api/objetos/{objeto['chave']}", "type": "image/tiff",
+                           "file:checksum": "1220" + "0" * 64},
+        }
+        ri = c.post(f"/svc/{token}/stac/collections/{colecao}/items", json=corpo)
+        assert ri.status_code == 201, ri.text
+    finally:
+        from app import objetos
+
+        objetos.apagar(objeto["chave"])
+
+
+def test_legitimo_cog_do_proprio_inquilino_continua_sendo_servido(
+    conexao_plat_app, tenant_id_a, token_a_leitura_escrita
+):
+    """PAR de `test_cog_nao_deve_servir_objeto_de_outro_inquilino_por_href_forjado`: mesma rota, mesmo
+    caminho de código (`objetos.tamanho`/`ler_intervalo` com `tenant_slug_esperado`), objeto do próprio
+    inquilino — tem de devolver 200 e os bytes de verdade."""
+    conteudo = b"COG-LEGITIMO-" + secrets.token_hex(16).encode()
+    objeto = _semear_objeto_do_proprio(conexao_plat_app, tenant_id_a, conteudo)
+    c = _cliente()
+    try:
+        token = token_a_leitura_escrita["token"]
+        slug = f"advl1-ok-{secrets.token_hex(4)}"
+        rc = c.post(f"/svc/{token}/stac/collections", params={"slug": slug}, json={})
+        assert rc.status_code == 201, rc.text
+        colecao = rc.json()["id"]
+        item_id = "item-legitimo-1"
+        contexto(conexao_plat_app, tenant_id_a, usuario_id=0, login="teste")
+        with conexao_plat_app.cursor() as cur:
+            _semear_item_direto_no_pgstac(cur, tenant_id_a, colecao, item_id, f"/api/objetos/{objeto['chave']}")
+        conexao_plat_app.commit()
+        resp = c.get(f"/svc/{token}/cog/{item_id}/cientifico.tif")
+        assert resp.status_code == 200, f"o caso legítimo deixou de funcionar: {resp.status_code} {resp.text[:200]}"
+        assert conteudo in resp.content
+    finally:
+        from app import objetos
+
+        objetos.apagar(objeto["chave"])
+
+
+def test_legitimo_conferir_le_objeto_do_proprio_inquilino(conexao_plat_app, tenant_id_a):
+    """PAR de `test_conferir_nao_deve_ler_objeto_de_outro_inquilino_por_href_forjado`: a conferência de
+    proveniência continua lendo e comparando o objeto quando ele é do próprio inquilino — aqui o
+    `file:checksum` do item é de propósito um valor falso, então o veredito esperado é 'não confere'
+    (o sha256 foi RECALCULADO), nunca o erro de acesso do caso forjado."""
+    import hashlib
+
+    from app import objetos
+    from app.imagens import pgstac as ps
+    from app.imagens import proveniencia as prov
+
+    conteudo = b"CONFERIR-LEGITIMO-" + secrets.token_hex(16).encode()
+    objeto = _semear_objeto_do_proprio(conexao_plat_app, tenant_id_a, conteudo)
+    try:
+        contexto(conexao_plat_app, tenant_id_a, usuario_id=0, login="teste")
+        slug = f"advl1-ok-{secrets.token_hex(4)}"
+        item_id = "item-legitimo-2"
+        with conexao_plat_app.cursor() as cur:
+            colecao = ps.nome_colecao(tenant_id_a, slug)
+            ps.colecao_criar(cur, tenant_id_a, slug, {})
+            _semear_item_direto_no_pgstac(cur, tenant_id_a, colecao, item_id, f"/api/objetos/{objeto['chave']}")
+            resultado = prov.conferir_item(cur, tenant_id_a, colecao, item_id)
+        ativo = resultado["ativos"][0]
+        assert not ativo.get("erro"), f"o caso legítimo passou a dar erro de acesso: {ativo}"
+        # o sha256 informado no item é falso de propósito; o que importa é que a leitura ACONTECEU
+        assert hashlib.sha256(conteudo).hexdigest() in repr(ativo), ativo
+    finally:
+        objetos.apagar(objeto["chave"])
+
+
+# ---------------------------------------------------------------------------------------------------------
 # L1-02-b (token de serviço com escopo por LISTA de itens/coleções/mosaicos): o vocabulário de escopo
 # (app/auth/escopos.py::ESCOPO) só aceita `tiles:ler:<uuid>` no formato ESTRITO 8-4-4-4-12; a ingestão de
 # verdade (app/imagens/ingestao.py::imagens_ingestar, linha 236) sempre gera `item_id = str(uuid.uuid4())`,
