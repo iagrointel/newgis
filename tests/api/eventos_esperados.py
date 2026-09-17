@@ -203,4 +203,13 @@ ROTAS_SEM_EVENTO: dict[tuple[str, str], str] = {
         "geocodificação reversa no protocolo Esri: leitura pura, mesmo caso do findAddressCandidates acima",
     ("POST", "/rest/services/Geocodificador/GeocodeServer/geocodeAddresses"):
         "geocodificação em lote no protocolo Esri: leitura pura, mesmo caso do findAddressCandidates acima",
+    # ---- webhooks de eventos (L7-08-a-webhooks-eventos; vocabulário na migração 20260909T0345):
+    # toda escrita narra evento, e o próprio webhook escuta esses fatos (subscribe em webhooks/*);
+    # webhooks/desativar entra no log sem rota (nasce da tarefa de entrega por falhas seguidas).
+    ("POST", "/api/webhooks"): ["webhooks/criar"],
+    ("PATCH", "/api/webhooks/{id}"): ["webhooks/atualizar"],
+    ("DELETE", "/api/webhooks/{id}"): ["webhooks/apagar"],
+    ("POST", "/api/webhooks/{id}/rotacionar"): ["webhooks/rotacionar"],
+    ("POST", "/api/webhooks/{id}/reativar"): ["webhooks/reativar"],
+    ("POST", "/api/webhooks/{id}/entregas/{entrega_id}/reenviar"): ["webhooks/reenvio"],
 }

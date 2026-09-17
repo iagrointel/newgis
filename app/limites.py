@@ -1310,3 +1310,22 @@ REDE_MEDICAO_SERIE_DIAS_MAX = 92              # mesmo teto de LOG_JANELA_DIAS
 REDE_MEDICAO_SERIE_PONTOS_MAX = 20_000        # linhas devolvidas por série (amostragem simples acima disso)
 REDE_MEDICAO_ALARME_JANELA_MIN = 30           # "carregamento > 100% por 30 min" (portão do item)
 REDE_MEDICAO_ALARME_LOOKBACK_MIN = 90         # quanto de histórico o motor olha para achar o início do surto
+
+# --- webhooks de eventos (L7-08-a-webhooks-eventos; app/webhooks/): entrega assinada dos eventos de domínio
+# gravados em plat.evento, com assinatura Standard Webhooks. A régua de tentativas é a da Esri (1-5); a espera
+# entre tentativas é a do próprio worker de jobs (2**tentativa segundos, db/migrações 006 job_devolver), então
+# as 5 tentativas de uma entrega falhada levam ~30 s e os intervalos são crescentes por construção. O teto de
+# falhas para desativação automática segue o modelo Esri e é POR INQUILINO (config.webhooks.desativar_apos,
+# lido por app/webhooks/tarefas.py dentro dos clamps abaixo).
+WEBHOOK_NOME_MAX = 120
+WEBHOOK_URL_MAX = 2048                   # o mesmo teto de CONEXAO_URL_MAX (URL de terceiro é URL de terceiro)
+WEBHOOK_EVENTOS_MAX = 30                 # tipos de plat.evento_tipo por assinatura
+WEBHOOK_TENTATIVAS_MAX = 5               # idem Tarefa.tentativas do job webhooks.entregar (uma fonte só)
+WEBHOOK_TIMEOUT_CONECTAR_S = 5
+WEBHOOK_TIMEOUT_LER_S = 10
+WEBHOOK_PAYLOAD_MAX_BYTES = 65_536       # payload montado no despacho; passa disso a entrega nasce recusada
+WEBHOOK_ENTREGA_ERRO_MAX = 500           # corpo/motivo da última resposta guardado truncado
+WEBHOOK_FALHAS_DESATIVAR_PADRAO = 20     # entregas (não tentativas) falhadas em sequência
+WEBHOOK_FALHAS_DESATIVAR_MIN = 2
+WEBHOOK_FALHAS_DESATIVAR_MAX = 100
+WEBHOOK_ENTREGA_RETENCAO_DIAS = 30       # expurgo do log de entregas (periódico webhooks.expurgar)

@@ -192,3 +192,8 @@ openpyxl==3.1.5
 # aqui de propósito: arrasta numpy/pandas/scipy e só serve a UMA cláusula do portão, que o teste marca como
 # não medida quando a biblioteca falta (`pytest.importorskip`); quem quiser medir instala à parte.
 networkx==3.6.1
+#
+# webhooks de eventos (app/webhooks/assinatura.py; item L7-08-a): a BIBLIOTECA DE REFERÊNCIA do Standard
+# Webhooks — o portão do item exige que a verificação no receptor seja feita por ela. Puro Python, sem
+# dependências além de httpx (opcional na lib) — a assinatura/verificação HMAC-SHA256 é dela.
+standardwebhooks==1.1.0

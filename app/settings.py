@@ -75,6 +75,11 @@ class Settings:
     PLAT_GPU_SSH: str | None
     PLAT_GPU_DIR: str | None
     PLAT_RELOGIO_TESTE: str | None
+    # webhooks de eventos (L7-08-a): esquemas admitidos na URL de um webhook. O padrão é só https (uma
+    # entrega leva assinatura e dado do inquilino; em texto claro o http não tem defesa). A trilha de
+    # homologação pode declarar "https,http" para receber em receptor local de teste — a proteção de
+    # IP privado/loopback do guarda SSRF (app/conexao/seguranca.py) vale para qualquer esquema.
+    PLAT_WEBHOOK_ESQUEMAS: str
     PLAT_DSN_WORKER: str | None  # role plat_worker (006): só ela muda estado de job
     # rede de rota (L2-11-c): OSRM isolado plat-osrm-guarulhos (:5010), só recorte de teste ≤ 50 MB;
     # nunca aponta para os OSRM de outras frentes da casa (5000-5003)
@@ -277,6 +282,7 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_GPU_SSH=_opcional(valores, "PLAT_GPU_SSH"),
         PLAT_GPU_DIR=_opcional(valores, "PLAT_GPU_DIR"),
         PLAT_RELOGIO_TESTE=_opcional(valores, "PLAT_RELOGIO_TESTE"),
+        PLAT_WEBHOOK_ESQUEMAS=(_opcional(valores, "PLAT_WEBHOOK_ESQUEMAS") or "https"),
         PLAT_DSN_WORKER=_dsn_worker(valores, f"{schema}_worker"),
         PLAT_OSRM_URL=(_opcional(valores, "PLAT_OSRM_URL") or "http://127.0.0.1:5010").rstrip("/"),
         PLAT_BDGD_RAIZ=_opcional(valores, "PLAT_BDGD_RAIZ"),
