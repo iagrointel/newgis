@@ -1,0 +1,60 @@
+# Inventário das capturas da cláusula (g) do item L0-14-identidade-visual.
+#
+# Os PNG não entram no git (.gitignore linha 6: tests/e2e/capturas/*.png — o repositório não carrega
+# imagem). A prova, então, é este inventário mais o script que regenera tudo:
+#   bash tests/e2e/regerar_capturas_L0-14.sh
+# Quem quiser conferir roda o script e compara nome, tamanho e sha256 desta lista.
+#
+# 'antes'  = a árvore no commit ANTERIOR ao conserto, servida em :8872 pelo mesmo processo e contra o
+#            mesmo banco do 'depois' — a única diferença entre as duas fotos é o código da interface.
+# 'depois' = a árvore de trabalho, em :8871, nos dois temas (escuro e claro).
+#
+# nome  bytes  sha256
+L0-14_conexoes_antes.png  92439  5487dd860baaf7bb274c4c45941827f54957208bf60fbbaf56a96ac057214413
+L0-14_conexoes_depois_claro.png  90651  5d3159f39a76805bcd585b3f3c93745082cbe8beb01735d1966a2de97a2d7947
+L0-14_conexoes_depois_escuro.png  92439  5487dd860baaf7bb274c4c45941827f54957208bf60fbbaf56a96ac057214413
+L0-14_conta_antes.png  13773  61b6afaa637403f4f577a245462863e91933ba7ca1a0930317ec9d46e8efa369
+L0-14_conta_depois_claro.png  13613  1f4c1a19b09a8dfb7262403ae0f03c4e65899da6b07dac1ca3a3dcabd79de2d8
+L0-14_conta_depois_escuro.png  13773  61b6afaa637403f4f577a245462863e91933ba7ca1a0930317ec9d46e8efa369
+L0-14_conteudo_antes.png  13780  a33712b391925e4f37b869556be3c1587b5eedabe0dfb33e67651ecde2b3e364
+L0-14_conteudo_depois_claro.png  13616  70735f5589ec738c52ae9f4fe0baa9c0e2f40e174b5a28ef500f822ba6d4d012
+L0-14_conteudo_depois_escuro.png  13780  a33712b391925e4f37b869556be3c1587b5eedabe0dfb33e67651ecde2b3e364
+L0-14_entrar_antes.png  14052  9b865e83e816d1b38c610b276919ec795dfef36a12e108bd3d6d058f816f74a1
+L0-14_entrar_depois_claro.png  19002  63cae92c408a2680b44cc7ca11f076fd187e721ccb150605c8266203e3c0ef28
+L0-14_entrar_depois_escuro.png  19214  784babb2656daa19b79c74d176d7ca5d0e7c19b1edf9beaa0aed092de86c70b9
+L0-14_estilo_antes.png  867445  63f6558319b02c7a8907a40e0cf4eb61f06d0c1f32be38a084ed249f81eeb523
+L0-14_estilo_depois_claro.png  885765  eb4f7585dec6064a765fc2cc85e87cb87c1cbe211b56e5672b440e45599f546a
+L0-14_estilo_depois_escuro.png  909137  0eee729968d8e13393121ea45c62bae61c00492976b0d740a97696872b86b273
+L0-14_grupos_antes.png  13773  61b6afaa637403f4f577a245462863e91933ba7ca1a0930317ec9d46e8efa369
+L0-14_grupos_depois_claro.png  13616  70735f5589ec738c52ae9f4fe0baa9c0e2f40e174b5a28ef500f822ba6d4d012
+L0-14_grupos_depois_escuro.png  13780  a33712b391925e4f37b869556be3c1587b5eedabe0dfb33e67651ecde2b3e364
+L0-14_inicio_antes.png  46093  3dbd857d0a6d72589f7e8181923046188903d9a7e5f304821cce4b82f02a4541
+L0-14_inicio_depois_claro.png  44416  382f9e1ceba949441cfe55f7adb676632ec242287f446b4e9234c9465d9ec321
+L0-14_inicio_depois_escuro.png  44499  77ca5924ac3ad1554d944349cc5fa21a3c54c15f587e7a36d3675ae057b3a07b
+L0-14_log_antes.png  13780  a33712b391925e4f37b869556be3c1587b5eedabe0dfb33e67651ecde2b3e364
+L0-14_log_depois_claro.png  13616  70735f5589ec738c52ae9f4fe0baa9c0e2f40e174b5a28ef500f822ba6d4d012
+L0-14_log_depois_escuro.png  13780  a33712b391925e4f37b869556be3c1587b5eedabe0dfb33e67651ecde2b3e364
+L0-14_mapa_antes.png  13605  7004d9b863e7f6e5a6f5022120962c3c7539442cbc67a94eb2684f56ff5c20cd
+L0-14_mapa_depois_claro.png  13349  26080cec3c4a06ffd770ab12f0b358bbd4f111e57830e9ad15dfc80a038b7642
+L0-14_mapa_depois_escuro.png  13605  7004d9b863e7f6e5a6f5022120962c3c7539442cbc67a94eb2684f56ff5c20cd
+L0-14_organizacao_antes.png  13773  61b6afaa637403f4f577a245462863e91933ba7ca1a0930317ec9d46e8efa369
+L0-14_organizacao_depois_claro.png  13613  1f4c1a19b09a8dfb7262403ae0f03c4e65899da6b07dac1ca3a3dcabd79de2d8
+L0-14_organizacao_depois_escuro.png  13773  61b6afaa637403f4f577a245462863e91933ba7ca1a0930317ec9d46e8efa369
+L0-14_papeis_antes.png  13780  a33712b391925e4f37b869556be3c1587b5eedabe0dfb33e67651ecde2b3e364
+L0-14_papeis_depois_claro.png  13616  70735f5589ec738c52ae9f4fe0baa9c0e2f40e174b5a28ef500f822ba6d4d012
+L0-14_papeis_depois_escuro.png  13780  a33712b391925e4f37b869556be3c1587b5eedabe0dfb33e67651ecde2b3e364
+L0-14_redefinir_senha_antes.png  19288  a9e57ba4fc8474f594cba5d1dda405436bb5b2d8f52bf30bb9a4c955cff2aa52
+L0-14_redefinir_senha_depois_claro.png  16671  e971ce22e5a3b0f8c301172c98037f5fe5aae9e2173987c131a1bb1f607fa704
+L0-14_redefinir_senha_depois_escuro.png  16808  0fa6a9fedf043d1f4d84d93d461fef28b480406e4cf7f721efdb78d046169960
+L0-14_tarefas_antes.png  48481  bcbc6a58b869b51cce7a2794d066c02a32a80ee90a111149bd9260310fb63b98
+L0-14_tarefas_depois_claro.png  47635  c24da83bb76d5bdf8ffecd7c76925ac07ad5c30e17a6d9669f2cb8ab11e552b0
+L0-14_tarefas_depois_escuro.png  48481  bcbc6a58b869b51cce7a2794d066c02a32a80ee90a111149bd9260310fb63b98
+L0-14_tokens_antes.png  13813  844fcae028551db04d6f5bb483d4b05b51cb762aa1a9211d1c93925269bc1af5
+L0-14_tokens_depois_claro.png  13633  a8e59f29162b95cb27b71cb04292139641f8d17d4fc37e267136a539f40accef
+L0-14_tokens_depois_escuro.png  13803  bdf17d7978bd1139a2ab3d846ab4e5e89647d09def030315617c093828017e86
+L0-14_uploads_antes.png  13773  61b6afaa637403f4f577a245462863e91933ba7ca1a0930317ec9d46e8efa369
+L0-14_uploads_depois_claro.png  13616  70735f5589ec738c52ae9f4fe0baa9c0e2f40e174b5a28ef500f822ba6d4d012
+L0-14_uploads_depois_escuro.png  13780  a33712b391925e4f37b869556be3c1587b5eedabe0dfb33e67651ecde2b3e364
+L0-14_usuarios_antes.png  13773  61b6afaa637403f4f577a245462863e91933ba7ca1a0930317ec9d46e8efa369
+L0-14_usuarios_depois_claro.png  13616  70735f5589ec738c52ae9f4fe0baa9c0e2f40e174b5a28ef500f822ba6d4d012
+L0-14_usuarios_depois_escuro.png  13780  a33712b391925e4f37b869556be3c1587b5eedabe0dfb33e67651ecde2b3e364

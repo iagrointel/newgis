@@ -3,6 +3,47 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## setembro de 2026 (item L0-14-identidade-visual: cláusulas (f) e (g) fechadas — a trava do navegador não existia)
+
+O que bloqueava (f) contraste AA e (g) captura antes/depois era a crença de que não há navegador nesta máquina.
+Há: o `google-chrome` do sistema é que quebra (dumped core/crashpad); o **chromium empacotado pelo playwright**
+(`~/.cache/ms-playwright`) é outro binário e funciona. O e2e `tests/e2e/test_estilo.py` já existia pronto desde a
+união — bastava conseguir rodá-lo.
+
+Três coisas atrapalhavam, e as três foram consertadas:
+
+1. **A CSP do produto recusava o axe.** `add_script_tag(path=...)`/`content=...` injeta script INLINE, e
+   `script-src 'self' 'nonce-...'` recusa — corretamente. Agora `tests/e2e/apoio_axe.py::injetar` serve o
+   axe por **interceptação de rota do playwright**, numa URL do mesmo domínio: passa pela CSP sem afrouxá-la,
+   nada é escrito em `web/` e o produto não ganha rota. Vale para todos os e2e que usam o apoio.
+2. **Duas cópias do axe.** `axe-4.12.1` (com sha256 e MPL-2.0 no VERSOES.txt) e `axe-core-4.10.3` (sem linha
+   nenhuma). A sem procedência foi apagada e o apoio aponta para a declarada.
+3. **A produção não serve de "antes".** O par antes/depois passou a ser duas instâncias locais contra o MESMO
+   banco: `master b81e2c788` em :8872 e o ramo em :8871, ambas por `tests.e2e.frente_estatica`. Assim a única
+   diferença entre as fotos é o código da interface. Tudo isso está no script versionado
+   `tests/e2e/regerar_capturas_L0-14.sh` — a prova é repetível, não uma imagem solta.
+
+Medido: **1214 nós de texto por tema, 0 abaixo de 4,5:1** (3:1 para texto grande) em claro e escuro, pela
+fórmula WCAG 2 sobre a cor calculada e o fundo composto pelos ancestrais; **axe-core sem violação crítica nem
+séria** nos dois temas (2 de impacto `minor` em cada); **48 capturas** (16 telas × antes, depois escuro, depois
+claro), inventariadas com sha256 em `tests/e2e/capturas/INVENTARIO_L0-14.txt` (os PNG não entram no git).
+
+Dois achados do caminho, nenhum deles deste item:
+
+- ACHADO GRAVE: **senha na barra de endereço.** Ao tentar usar `plat.iagrointel.com` como "antes", o login levou a senha na
+  QUERY STRING. Causa: o formulário não declara `method`, então o padrão é GET; o envio de verdade é o ouvinte
+  de submit do `js/auth/login.js`, e quando ele não liga a tempo o navegador envia sozinho — senha na URL, no
+  histórico e no log do servidor. Os **13 formulários com campo de senha** do produto e dos exemplos do SDK
+  passaram a declarar `method="post"`, e `test_formulario_de_senha_nunca_cai_para_get` impede a volta.
+- ACHADO GRAVE: **o código da união não roda contra o banco de produção.** `plat.log_registrar(...)` com assinatura que o
+  schema não tem, `tenant_ativo` inexistente (KeyError em `app/auth/sessao.py::resolver`) e
+  `plat.fila_job_mais_antigo_rodando_segundos()` ausente. Reproduzido IGUAL em `master` e no ramo, contra o
+  mesmo banco: são **migrações pendentes na instância**, e é por isso que 1 das 16 telas fica fora da medição —
+  e que QUAL delas fica muda entre rodadas.
+
+Corrigido de passagem: a contagem da família de ícones usava `[a-z_]+` e perdia `modelo3d` e `foto360` — são
+**86 ícones**, não 84.
+
 ## setembro de 2026 (item L0-14-identidade-visual: cor fora dos tokens em zero e a varredura com dentes)
 
 O adversário G4 refutou o item por três coisas: literal de cor fora de `web/estilo/tokens.css`, varredura

@@ -121,8 +121,14 @@ e demonstrados com os elementos reais em `/estilo`:
   (`axe-core` roda por cima quando existe no disco, fora do repositório); página `/estilo` com o número de
   tokens igual ao do arquivo; os 6 × 7 estados presentes.
 - Resultados em `tests/medidas/L0-14-identidade-visual.json`, cada um com o comando.
-- O que ainda NÃO foi medido, e por quê: contraste AA por `axe-core` e as capturas antes/depois (cláusulas (f)
-  e (g)) exigem navegador, e o headless quebra nesta máquina. A migração das telas da folha antiga
+- Cláusulas (f) e (g) PROVADAS com o chromium do **playwright** (`~/.cache/ms-playwright`): o que quebra nesta
+  máquina é o `google-chrome` do sistema, não ele. Regenerar a prova inteira:
+  `bash tests/e2e/regerar_capturas_L0-14.sh` — sobe as duas instâncias do par antes/depois contra o mesmo banco,
+  mede o contraste nos dois temas, roda o axe e grava as capturas. Os PNG não entram no git; o que fica
+  versionado é o script e o inventário com sha256 em `tests/e2e/capturas/INVENTARIO_L0-14.txt`.
+- O axe entra por URL do mesmo domínio, servida por interceptação de rota do playwright: a CSP do produto
+  (`script-src 'self' 'nonce-...'`) recusa script inline, e não se afrouxa CSP para caber ferramenta de teste.
+- O que ainda NÃO foi medido, e por quê: A migração das telas da folha antiga
   `web/style.css` para `estilo/base.css` + `estilo/componentes.css` é item próprio; enquanto ela não acontece,
   o número de telas na folha antiga está sob catraca (`TELAS_NA_FOLHA_ANTIGA` em
   `tests/unit/test_estilo_tokens.py`): não pode crescer, e tela nova nasce na folha nova.

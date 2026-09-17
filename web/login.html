@@ -22,7 +22,13 @@
     <p class="inquilino-nome" id="inquilino-nome" hidden><span data-i18n="login.entrar_em">Entrar em:</span> <strong id="inquilino-rotulo"></strong></p>
     <plat-aviso id="aviso"></plat-aviso>
     <plat-estado id="estado-entrada" hidden></plat-estado>
-    <form id="form-senha" class="form" novalidate autocomplete="on" aria-describedby="aviso">
+    <!-- method="post": rede de segurança. O envio de verdade é o ouvinte de submit em js/auth/login.js, que
+     chama POST /api/login e nunca navega. Mas um formulário SEM method usa GET por padrão: se o módulo
+     não carregar (rede lenta, erro de script, clique antes de o JS ligar), o navegador envia sozinho e a
+     SENHA vai para a barra de endereço, para o histórico e para o log do servidor. Observado uma vez na
+     instância de produção (sha 68ac41f7) ao fechar a cláusula (g) do item L0-14. Com method="post" a
+     falha vira um 405 sem segredo nenhum exposto. -->
+<form id="form-senha" class="form" method="post" novalidate autocomplete="on" aria-describedby="aviso">
       <div class="campo" id="campo-inquilino">
         <label for="inquilino" data-i18n="login.inquilino">inquilino</label>
         <input id="inquilino" name="inquilino" type="text" autocomplete="organization" autocapitalize="none" spellcheck="false" required aria-describedby="inquilino-ajuda">
@@ -43,7 +49,7 @@
     </form>
     <div class="provedores" id="provedores" data-i18n-aria="login.entrar_com_rotulo" aria-label="provedores de login"></div>
     <p class="ajuda" id="ldap-dica" hidden></p>
-    <form id="form-2fa" class="form" novalidate hidden aria-labelledby="passo-2fa">
+    <form id="form-2fa" class="form" method="post" novalidate hidden aria-labelledby="passo-2fa">
       <p class="fraco" id="passo-2fa" data-i18n="login.passo_2fa">segundo passo: código do aplicativo autenticador</p>
       <div class="campo">
         <label for="codigo" id="codigo-rotulo" data-i18n="login.codigo">código do autenticador</label>

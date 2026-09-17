@@ -40,8 +40,8 @@ MEDIDAS_ADMITIDAS = {"0", "1", "100%", "auto", "inherit", "normal", "none", "ini
 # infinito de uma faixa aberta e ≠ é "diferente" na mensagem de sha256 que não bate. Nenhum deles é
 # rótulo de botão nem emoji: são o símbolo correto do que a linha diz, e trocá-los por palavra piora.
 GLIFOS_ADMITIDOS = set("–—…·×“”‘’«»°º²³ªµ→←↔≤≥≈−′″∞≠")
-NOME_ICONE = re.compile(r"(?<![\w.])icone\(\s*'([a-z_]+)'")
-NOME_ICONE_EM_DADO = re.compile(r"icone:\s*'([a-z_]+)'")
+NOME_ICONE = re.compile(r"(?<![\w.])icone\(\s*'([a-z_0-9]+)'")
+NOME_ICONE_EM_DADO = re.compile(r"icone:\s*'([a-z_0-9]+)'")
 
 
 def _medida_e_literal(valor: str) -> bool:
@@ -173,7 +173,9 @@ def test_b_par_tipografico_vendorizado_com_sha256_e_referenciado_pelos_tokens():
 
 def test_c_icones_uma_familia_so_e_nenhum_glifo_fora_dela():
     icones_js = (WEB / "js" / "base" / "icones.js").read_text(encoding="utf-8")
-    familia = set(re.findall(r"^\s{2}([a-z_]+):\s*\[", icones_js, re.M))
+    # [a-z_0-9]: há ícone com dígito no nome (modelo3d, foto360); o padrão sem dígito perdia dois e a
+    # contagem da família dava 84 onde a página /estilo desenhava 86 (achado ao fechar a cláusula (g)).
+    familia = set(re.findall(r"^\s{2}([a-z_0-9]+):\s*\[", icones_js, re.M))
     assert len(familia) >= 60, len(familia)
     usados = set()
     for p in _arquivos("js"):
@@ -303,3 +305,19 @@ def test_h_documento_de_identidade_descreve_a_regua_que_existe_em_codigo():
     for chave in ("nav.estilo", "tema.claro", "busca.limpar", "dialogo.vazio", "form.vazio", "tabela.tentar_de_novo",
                   "paginacao.carregando"):
         assert chave in dic, chave
+
+
+def test_formulario_de_senha_nunca_cai_para_get():
+    """Achado ao fechar a cláusula (g): a tela de entrada da instância de produção mandou a senha na QUERY
+    STRING. O ouvinte de submit em js/auth/login.js chama POST /api/login e não navega — mas formulário sem
+    `method` usa GET por padrão, e se o módulo não ligar a tempo o navegador envia sozinho: senha na barra de
+    endereço, no histórico e no log. Todo formulário com campo de senha declara method="post"."""
+    faltam = []
+    for p in _arquivos("html"):
+        texto = p.read_text(encoding="utf-8")
+        for m in re.finditer(r"<form\b[^>]*>(.*?)</form>", texto, re.S | re.I):
+            if not re.search(r"""<input\b[^>]*type=["']password["']""", m.group(1), re.I):
+                continue
+            if not re.search(r"""\bmethod=["']post["']""", m.group(0), re.I):
+                faltam.append(f"{p.relative_to(ROOT)}: <form> com campo de senha e sem method=\"post\"")
+    assert faltam == [], "\n".join(faltam)

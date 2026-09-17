@@ -18,7 +18,7 @@
     <h1 data-i18n="aceitar_convite.titulo">Aceitar convite</h1>
     <plat-aviso id="aviso"></plat-aviso>
     <p id="convite-info" hidden><span data-i18n="aceitar_convite.convidado_para">Convite para</span> <strong id="convite-tenant"></strong>, <span id="convite-email"></span></p>
-    <form id="form-aceitar" class="form" novalidate hidden autocomplete="off">
+    <form id="form-aceitar" class="form" novalidate hidden autocomplete="off" method="post">
       <div class="campo">
         <label for="login" data-i18n="login.usuario">usuário</label>
         <input id="login" name="login" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="128" pattern="^[a-z0-9][a-z0-9._@-]*$">
