@@ -185,8 +185,8 @@ from app.versao import versao
 from app.versionamento.rotas import router as rotas_versionamento
 from app.versionamento.rotas_esri import router as rotas_versionamento_esri
 from app.vivo.rotas import router as rotas_vivo
-from app.widgets.rotas import router as rotas_widgets_externos
 from app.webhooks.rotas import router as rotas_webhooks
+from app.widgets.rotas import router as rotas_widgets_externos
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
