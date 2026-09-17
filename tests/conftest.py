@@ -143,3 +143,48 @@ def pytest_sessionfinish(session, exitstatus):
         session.config.pluginmanager.get_plugin("terminalreporter").write_line(
             f"[limpeza] varredura de resíduo zt-* no controlador falhou: {type(e).__name__}: {e}"
         )
+
+
+# --- guarda de memória (17/09/2026) -------------------------------------------------------------
+# Às 23:49 um pytest chegou a 3,2 GB de memória residente, o núcleo o matou, e o Postgres que serve
+# CLIENTE PAGANTE entrou em recuperação. A instrução para rodar dentro de um teto existia; não foi
+# seguida — e não foi má vontade: o lançador da casa usava `ulimit -v`, que mata DuckDB (rc=134) e
+# Chromium (SIGTRAP), então quem obedecia tinha os testes quebrados e quem desviava rodava sem teto.
+#
+# Instrução não é garantia. Esta guarda recusa a coleta quando o processo NÃO está sob um cgroup com
+# limite de memória residente. Ela não julga o valor do limite: só exige que exista um.
+#
+# Saída consciente: PLAT_TESTE_SEM_TETO=1, para a rara vez em que se quer medir o consumo real.
+
+def _limite_de_memoria_do_cgroup() -> str | None:
+    try:
+        caminho = open("/proc/self/cgroup", encoding="utf-8").read().strip().split(":")[-1]
+        for base in ("/sys/fs/cgroup" + caminho, "/sys/fs/cgroup"):
+            try:
+                valor = open(base + "/memory.max", encoding="utf-8").read().strip()
+            except OSError:
+                continue
+            return None if valor == "max" else valor
+    except OSError:
+        return None
+    return None
+
+
+def pytest_configure(config):
+    import os as _os
+    if _os.environ.get("PLAT_TESTE_SEM_TETO") == "1":
+        return
+    if _os.environ.get("PLAT_TESTE_EM_CGROUP") == "1" or _limite_de_memoria_do_cgroup():
+        return
+    import pytest as _pytest
+    raise _pytest.UsageError(
+        "\n[guarda de memoria] pytest sem teto de memoria residente: RECUSADO.\n"
+        "  Em 17/09/2026 um pytest de 3,2 GB derrubou o Postgres que serve cliente pagante.\n"
+        "  Rode assim, que o lancador da casa ja faz por voce:\n"
+        "      bash /home/dev/plataforma/laco/roda_teste.sh <alvo estreito>\n"
+        "  Ou, a mao:\n"
+        "      sudo systemd-run --scope --uid=$(id -u) --gid=$(id -g) -p MemoryMax=4G \\\n"
+        "        -p MemorySwapMax=0 venv/bin/pytest <alvo>\n"
+        "  NUNCA use `ulimit -v`: enderecamento virtual nao e memoria, e ele mata DuckDB e Chromium.\n"
+        "  Saida consciente, so para medir consumo real: PLAT_TESTE_SEM_TETO=1\n"
+    )
