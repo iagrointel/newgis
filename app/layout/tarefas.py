@@ -138,7 +138,14 @@ def resolver_layout_e_mapa(cur, p: dict[str, Any]) -> tuple[dict, dict, str]:
         mapa = compor_mod.mapa_de_item(item_ou_404(cur, p["mapa_id"]))
     elif p.get("mapa"):
         m = p["mapa"] or {}
-        mapa = {"titulo": m.get("titulo"), "camadas": m.get("camadas") or [], "base": m.get("base") or "osm-guarulhos"}
+        mapa = {
+            "titulo": m.get("titulo"),
+            "camadas": m.get("camadas") or [],
+            "base": m.get("base") or "osm-guarulhos",
+            "extensao": m.get("extensao"),
+            "centro": m.get("centro"),
+            "zoom": m.get("zoom"),
+        }
     elif layout.get("mapa_id"):
         mapa = compor_mod.mapa_de_item(item_ou_404(cur, layout["mapa_id"]))
     else:

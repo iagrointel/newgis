@@ -16,7 +16,9 @@ Uso:  set -a; source <env da trilha>; set +a
       venv/bin/python scripts/mapa_demo_camadas.py criar|apagar
 Idempotente: `criar` apaga a bancada anterior (mesma marca) antes de recriar.
 """
+
 import json
+import math
 import os
 import secrets
 import sys
@@ -48,20 +50,29 @@ def _contexto(cur, slug):
 def _publicar(cur, adm, titulo, tabela, tipo, campos, simbologia=None):
     """DDL já feita pelo chamador; aqui: camada_preparar + item no catálogo + função de tile."""
     esquema = "d_demo"
-    cur.execute("SELECT plat.camada_preparar(%s, %s, 4326, %s, %s)",
-                (esquema, tabela, tipo, adm["usuario_id"]))
+    cur.execute("SELECT plat.camada_preparar(%s, %s, 4326, %s, %s)", (esquema, tabela, tipo, adm["usuario_id"]))
     cur.execute(f'SELECT ST_Extent(geom)::text AS e, count(*) AS n FROM "{esquema}"."{tabela}"')
     r = cur.fetchone()
     caixa = r["e"] or ""
     nums = [float(v) for v in caixa.replace("BOX(", "").replace(")", "").replace(",", " ").split()] if caixa else []
-    dados = {"schema": esquema, "tabela": tabela, "geometria": tipo, "srid": 4326, "campos": campos,
-             "fonte": "hospedada", "marca": MARCA, "n_feicoes": r["n"],
-             "extensao": nums if len(nums) == 4 else None}
+    dados = {
+        "schema": esquema,
+        "tabela": tabela,
+        "geometria": tipo,
+        "srid": 4326,
+        "campos": campos,
+        "fonte": "hospedada",
+        "marca": MARCA,
+        "n_feicoes": r["n"],
+        "extensao": nums if len(nums) == 4 else None,
+    }
     if simbologia:
         dados["simbologia"] = simbologia
-    cur.execute("INSERT INTO plat.item(tenant_id, tipo, titulo, dono_id, criado_por, dados) "
-                "VALUES (%s, 'camada_vetorial', %s, %s, %s, %s::jsonb) RETURNING id",
-                (adm["tenant_id"], titulo, adm["usuario_id"], adm["usuario_id"], json.dumps(dados)))
+    cur.execute(
+        "INSERT INTO plat.item(tenant_id, tipo, titulo, dono_id, criado_por, dados) "
+        "VALUES (%s, 'camada_vetorial', %s, %s, %s, %s::jsonb) RETURNING id",
+        (adm["tenant_id"], titulo, adm["usuario_id"], adm["usuario_id"], json.dumps(dados)),
+    )
     item = cur.fetchone()["id"]
     cur.execute("SELECT plat.camada_tile_garantir(%s, %s, %s) AS f", (esquema, tabela, item))
     return {"item": str(item), "tabela": tabela, "funcao": cur.fetchone()["f"], "n": r["n"], "titulo": titulo}
@@ -69,6 +80,7 @@ def _publicar(cur, adm, titulo, tabela, tipo, campos, simbologia=None):
 
 def criar():
     from app.schema_ambiente import CursorSchemaAmbiente
+
     con = psycopg2.connect(DSN, cursor_factory=CursorSchemaAmbiente)
     con.autocommit = False
     saida, t0 = {}, time.perf_counter()
@@ -78,29 +90,46 @@ def criar():
 
             # 1. 1 milhão de pontos
             t = "c_" + _hex16()
-            cur.execute(f'CREATE TABLE "d_demo"."{t}" (fid bigserial PRIMARY KEY, rotulo text, '
-                        f'categoria text, valor double precision, geom geometry(Point, 4326))')
+            cur.execute(
+                f'CREATE TABLE "d_demo"."{t}" (fid bigserial PRIMARY KEY, rotulo text, '
+                f"categoria text, valor double precision, geom geometry(Point, 4326))"
+            )
             ini = time.perf_counter()
             cur.execute(
                 f'INSERT INTO "d_demo"."{t}" (rotulo, categoria, valor, geom) '
                 f"SELECT 'ponto ' || g, (ARRAY['norte','sul','leste','oeste'])[1 + (g % 4)], "
                 f"round((random() * 100)::numeric, 2)::double precision, "
                 f"ST_SetSRID(ST_MakePoint(-73.0 + random() * 39.0, -33.0 + random() * 28.0), 4326) "
-                f"FROM generate_series(1, {N_MI}) g")
+                f"FROM generate_series(1, {N_MI}) g"
+            )
             cur.execute(f'CREATE INDEX ON "d_demo"."{t}" USING gist(geom)')
             seg_carga = round(time.perf_counter() - ini, 1)
             saida["um_milhao"] = _publicar(
-                cur, adm, "mapa-1mi (L2-01, sintética)", t, "Point",
-                [{"nome": "rotulo", "tipo": "text"}, {"nome": "categoria", "tipo": "text"},
-                 {"nome": "valor", "tipo": "double precision"}],
-                simbologia={"tipo": "valores_unicos", "campo": "categoria",
-                            "valores": ["norte", "sul", "leste", "oeste"], "tamanho": 3})
+                cur,
+                adm,
+                "mapa-1mi (L2-01, sintética)",
+                t,
+                "Point",
+                [
+                    {"nome": "rotulo", "tipo": "text"},
+                    {"nome": "categoria", "tipo": "text"},
+                    {"nome": "valor", "tipo": "double precision"},
+                ],
+                simbologia={
+                    "tipo": "valores_unicos",
+                    "campo": "categoria",
+                    "valores": ["norte", "sul", "leste", "oeste"],
+                    "tamanho": 3,
+                },
+            )
             saida["um_milhao"]["segundos_carga"] = seg_carga
 
             # 2. 5.000 multipolígonos com campo nulo em 1 de cada 4
             t = "c_" + _hex16()
-            cur.execute(f'CREATE TABLE "d_demo"."{t}" (fid bigserial PRIMARY KEY, nome text, '
-                        f'classe text, area_ha double precision, geom geometry(MultiPolygon, 4326))')
+            cur.execute(
+                f'CREATE TABLE "d_demo"."{t}" (fid bigserial PRIMARY KEY, nome text, '
+                f"classe text, area_ha double precision, geom geometry(MultiPolygon, 4326))"
+            )
             cur.execute(
                 f'INSERT INTO "d_demo"."{t}" (nome, classe, area_ha, geom) '
                 f"SELECT CASE WHEN g % 4 = 0 THEN NULL ELSE 'gleba ' || g END, "
@@ -110,45 +139,90 @@ def criar():
                 f"  ST_Buffer(ST_SetSRID(ST_MakePoint(x, y), 4326), 0.02), "
                 f"  ST_Buffer(ST_SetSRID(ST_MakePoint(x + 0.08, y + 0.08), 4326), 0.02)])) "
                 f"FROM (SELECT g, -60.0 + (g % 100) * 0.35 AS x, -25.0 + ((g / 100) % 50) * 0.35 AS y "
-                f"      FROM generate_series(1, 5000) g) s")
+                f"      FROM generate_series(1, 5000) g) s"
+            )
             cur.execute(f'CREATE INDEX ON "d_demo"."{t}" USING gist(geom)')
             saida["poligonos"] = _publicar(
-                cur, adm, "mapa-poligonos (L2-01, sintética, campos nulos)", t, "MultiPolygon",
-                [{"nome": "nome", "tipo": "text"}, {"nome": "classe", "tipo": "text"},
-                 {"nome": "area_ha", "tipo": "double precision"}],
-                simbologia={"tipo": "simples", "cor": "#2f7f6f", "opacidade": 0.55, "contorno": "#0b3b33"})
+                cur,
+                adm,
+                "mapa-poligonos (L2-01, sintética, campos nulos)",
+                t,
+                "MultiPolygon",
+                [
+                    {"nome": "nome", "tipo": "text"},
+                    {"nome": "classe", "tipo": "text"},
+                    {"nome": "area_ha", "tipo": "double precision"},
+                ],
+                simbologia={"tipo": "simples", "cor": "#2f7f6f", "opacidade": 0.55, "contorno": "#0b3b33"},
+            )
 
             # 3. 20.000 linhas
             t = "c_" + _hex16()
-            cur.execute(f'CREATE TABLE "d_demo"."{t}" (fid bigserial PRIMARY KEY, nome text, '
-                        f'geom geometry(LineString, 4326))')
+            cur.execute(
+                f'CREATE TABLE "d_demo"."{t}" (fid bigserial PRIMARY KEY, nome text, geom geometry(LineString, 4326))'
+            )
             cur.execute(
                 f'INSERT INTO "d_demo"."{t}" (nome, geom) '
                 f"SELECT 'trecho ' || g, ST_SetSRID(ST_MakeLine("
                 f"ST_MakePoint(-60.0 + (g % 200) * 0.2, -25.0 + ((g / 200) % 100) * 0.2), "
                 f"ST_MakePoint(-60.0 + (g % 200) * 0.2 + 0.15, -25.0 + ((g / 200) % 100) * 0.2 + 0.1)), 4326) "
-                f"FROM generate_series(1, 20000) g")
+                f"FROM generate_series(1, 20000) g"
+            )
             cur.execute(f'CREATE INDEX ON "d_demo"."{t}" USING gist(geom)')
             saida["linhas"] = _publicar(
-                cur, adm, "mapa-linhas (L2-01, sintética)", t, "LineString",
+                cur,
+                adm,
+                "mapa-linhas (L2-01, sintética)",
+                t,
+                "LineString",
                 [{"nome": "nome", "tipo": "text"}],
-                simbologia={"tipo": "simples", "cor": "#d98a2b", "largura": 1.5})
+                simbologia={"tipo": "simples", "cor": "#d98a2b", "largura": 1.5},
+            )
 
             # 4. sete camadas pequenas, só para a refutação das 10 camadas simultâneas
             saida["extras"] = []
             for i in range(1, 8):
                 t = "c_" + _hex16()
-                cur.execute(f'CREATE TABLE "d_demo"."{t}" (fid bigserial PRIMARY KEY, rotulo text, '
-                            f'geom geometry(Point, 4326))')
+                cur.execute(
+                    f'CREATE TABLE "d_demo"."{t}" (fid bigserial PRIMARY KEY, rotulo text, geom geometry(Point, 4326))'
+                )
                 cur.execute(
                     f'INSERT INTO "d_demo"."{t}" (rotulo, geom) '
                     f"SELECT 'e{i}-' || g, ST_SetSRID(ST_MakePoint("
                     f"-70.0 + random() * 35.0, -30.0 + random() * 25.0), 4326) "
-                    f"FROM generate_series(1, 1000) g")
+                    f"FROM generate_series(1, 1000) g"
+                )
                 cur.execute(f'CREATE INDEX ON "d_demo"."{t}" USING gist(geom)')
-                saida["extras"].append(_publicar(
-                    cur, adm, f"mapa-extra-{i} (L2-01, sintética)", t, "Point",
-                    [{"nome": "rotulo", "tipo": "text"}]))
+                saida["extras"].append(
+                    _publicar(
+                        cur, adm, f"mapa-extra-{i} (L2-01, sintética)", t, "Point", [{"nome": "rotulo", "tipo": "text"}]
+                    )
+                )
+
+            # 5. régua do layout (item L2-12-b): dois pontos vermelhos a exatamente 1.000 m um do outro na latitude
+            # -23,46 — o teste de impressão mede a distância entre eles no PDF rasterizado e confere a escala
+            t = "c_" + _hex16()
+            lat, lon0 = -23.46, -46.53
+            dlon = 1000.0 / (111320.0 * math.cos(math.radians(lat)))
+            cur.execute(
+                f'CREATE TABLE "d_demo"."{t}" (fid bigserial PRIMARY KEY, nome text, geom geometry(Point, 4326))'
+            )
+            cur.execute(
+                f'INSERT INTO "d_demo"."{t}" (nome, geom) VALUES '
+                f"('oeste', ST_SetSRID(ST_MakePoint(%s, %s), 4326)), ('leste', ST_SetSRID(ST_MakePoint(%s, %s), 4326))",
+                (lon0, lat, lon0 + dlon, lat),
+            )
+            cur.execute(f'CREATE INDEX ON "d_demo"."{t}" USING gist(geom)')
+            saida["regua"] = _publicar(
+                cur,
+                adm,
+                "layout-regua (L2-12-b, sintética: 2 pontos a 1 km)",
+                t,
+                "Point",
+                [{"nome": "nome", "tipo": "text"}],
+                simbologia={"tipo": "simples", "cor": "#ff0000", "tamanho": 9},
+            )
+            saida["regua"]["pontos"] = [[lon0, lat], [lon0 + dlon, lat]]
         con.commit()
         saida["segundos_total"] = round(time.perf_counter() - t0, 1)
         print(json.dumps(saida, indent=1, ensure_ascii=False))
@@ -159,13 +233,17 @@ def criar():
 
 def apagar():
     from app.schema_ambiente import CursorSchemaAmbiente
+
     con = psycopg2.connect(DSN, cursor_factory=CursorSchemaAmbiente)
     con.autocommit = False
     try:
         with con.cursor() as cur:
             _contexto(cur, "demo")
-            cur.execute("SELECT id, dados->>'schema' AS e, dados->>'tabela' AS t FROM plat.item "
-                        "WHERE dados->>'marca' = %s AND apagado_em IS NULL", (MARCA,))
+            cur.execute(
+                "SELECT id, dados->>'schema' AS e, dados->>'tabela' AS t FROM plat.item "
+                "WHERE dados->>'marca' = %s AND apagado_em IS NULL",
+                (MARCA,),
+            )
             itens = cur.fetchall()
             for it in itens:
                 cur.execute("SELECT plat.item_lixeira(%s::uuid, true)", (it["id"],))
