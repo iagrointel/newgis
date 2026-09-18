@@ -783,3 +783,108 @@ def test_l108_o_asset_scl_de_outro_inquilino_nao_e_lido(token_tiles_b, mosaico_s
     r = _cliente().get(f"/svc/{token_tiles_b['token']}/mosaico/{mosaico_scl_a['id']}/{z}/{x}/{y}.png",
                        params={"metodo": "sem_nuvem"})
     assert r.status_code == 403, f"token de outro inquilino devolveu {r.status_code}"
+
+
+# --------------------------------------------- item L1-08: CRS nativos diferentes no MESMO mosaico (UTM 22S/23S)
+# Refutação exigida pelo item, verbatim: "cenas de CRS nativos diferentes (UTM 22S e 23S) num MESMO
+# mosaico, alinhamento na costura <= 1 px". O motor já era medido em unidade
+# (tests/unit/test_l108_sem_nuvem_e_crs.py); aqui a mesma pergunta é feita à ROTA, que é onde a cena
+# chega pelo catálogo STAC e não por um caminho de arquivo.
+@pytest.fixture(scope="module")
+def cenas_crs_misto_a(tenant_id_a, inquilinos_mosaico):
+    from tests.api.imagens.apoio_mosaico import apagar_grade, semear_crs_misto
+
+    dados = semear_crs_misto(tenant_id_a, inquilinos_mosaico[0].slug)
+    yield dados
+    apagar_grade(tenant_id_a, dados)
+
+
+@pytest.fixture(scope="module")
+def mosaico_crs_misto_a(token_stac_a, cenas_crs_misto_a):
+    c, tok = _cliente(), token_stac_a["token"]
+    r = c.post(f"/svc/{tok}/stac/mosaicos", json={
+        "nome": f"{PREFIXO_TESTE} CRS misto 22S/23S L1-08",
+        "collections": [cenas_crs_misto_a["colecao"]]})
+    assert r.status_code == 201, r.text
+    dados = r.json()
+    yield dados
+    c.delete(f"/svc/{tok}/stac/mosaicos/{dados['id']}")
+
+
+@pytest.fixture(scope="module")
+def token_tiles_crs_misto_a(sessao_a, mosaico_crs_misto_a):
+    r = sessao_a.post("/api/tokens", json={"nome": f"{PREFIXO_TESTE}-tiles-crsmisto",
+                                           "escopos": [f"tiles:ler:{mosaico_crs_misto_a['id']}"]})
+    assert r.status_code == 201, r.text
+    dados = r.json()
+    yield dados
+    sessao_a.delete(f"/api/tokens/{dados['id']}")
+
+
+def _ladrilho_da_costura(z: int = 14):
+    """Ladrilho que contém o meridiano 48 W na altura das duas cenas."""
+    from app.imagens import tiles
+    from tests.api.imagens.apoio_mosaico import CANTO_LAT, MERIDIANO_FUSO
+
+    t = tiles.TMS.tile(MERIDIANO_FUSO, CANTO_LAT - 0.01, z)
+    return z, t.x, t.y
+
+
+def _faixa_da_costura(token, mosaico, z, x, y):
+    import io
+
+    import numpy as np
+    from PIL import Image
+
+    r = _cliente().get(f"/svc/{token}/mosaico/{mosaico['id']}/{z}/{x}/{y}.png",
+                       params={"faixa": "0,255", "bandas": "1"})
+    assert r.status_code == 200, r.text[:300]
+    pixels = np.asarray(Image.open(io.BytesIO(r.content)).convert("RGBA"))
+    return pixels
+
+
+def test_l108_mosaico_de_crs_nativos_diferentes_mostra_as_duas_cenas(token_tiles_crs_misto_a,
+                                                                     mosaico_crs_misto_a,
+                                                                     cenas_crs_misto_a):
+    """As duas cenas (UTM 22S e UTM 23S) aparecem no MESMO ladrilho. Se o compositor ignorasse o CRS
+    nativo de uma delas, ou ela sumiria, ou cairia no lugar errado."""
+    import numpy as np
+
+    z, x, y = _ladrilho_da_costura()
+    pixels = _faixa_da_costura(token_tiles_crs_misto_a["token"], mosaico_crs_misto_a, z, x, y)
+    visivel = pixels[:, :, 3] > 0
+    assert visivel.any(), "o ladrilho da costura veio inteiramente vazio"
+    banda = pixels[:, :, 0][visivel]
+    valores = {it["lado"]: it["valor"] for it in cenas_crs_misto_a["itens"]}
+    perto_oeste = int(np.sum(np.abs(banda.astype(int) - valores["oeste"]) <= 2))
+    perto_leste = int(np.sum(np.abs(banda.astype(int) - valores["leste"]) <= 2))
+    assert perto_oeste > 100 and perto_leste > 100, (
+        f"o ladrilho tinha de conter as duas cenas; pixels perto de {valores['oeste']} = {perto_oeste}, "
+        f"perto de {valores['leste']} = {perto_leste}")
+
+
+def test_l108_a_costura_entre_dois_crs_nao_deixa_buraco(token_tiles_crs_misto_a, mosaico_crs_misto_a):
+    """Alinhamento na costura: entre a última coluna de uma cena e a primeira da outra não pode haver
+    coluna vazia. Uma coluna de 20 m a mais ou a menos apareceria aqui como buraco.
+
+    A tolerância é de 1 coluna de pixel, que é o que o portão pede ("<= 1 px"): a reamostragem do
+    ladrilho pode deixar meia coluna de mistura na junta, mas nunca uma coluna inteira sem dado."""
+    import numpy as np
+
+    z, x, y = _ladrilho_da_costura()
+    pixels = _faixa_da_costura(token_tiles_crs_misto_a["token"], mosaico_crs_misto_a, z, x, y)
+    visivel = pixels[:, :, 3] > 0
+    linhas_com_dado = np.where(visivel.any(axis=1))[0]
+    assert len(linhas_com_dado) > 10, "faltou área coberta para medir a costura"
+    buracos = []
+    for linha in linhas_com_dado:
+        colunas = np.where(visivel[linha])[0]
+        if len(colunas) < 2:
+            continue
+        saltos = np.diff(colunas)
+        maior = int(saltos.max())
+        if maior > 2:  # salto de 1 = contíguo; 2 = uma coluna de mistura tolerada
+            buracos.append((int(linha), maior - 1))
+    assert not buracos, (
+        f"a costura entre UTM 22S e UTM 23S deixou coluna(s) sem dado em {len(buracos)} linha(s); "
+        f"pior salto: {max(b[1] for b in buracos)} px (amostra: {buracos[:5]})")

@@ -375,3 +375,114 @@ def semear_com_scl(tenant_id: int, slug: str, valores: list[int], nublada: int =
                      "nublada": indice == nublada})
 
     return {"tenant_id": tenant_id, "colecao": colecao, "itens": itens, "indice_nublado": nublada}
+
+
+# Borda entre os fusos UTM 22S (EPSG:31982) e 23S (EPSG:31983): o meridiano 48 W. As duas cenas de
+# `semear_crs_misto` encostam nele, uma de cada lado, cada uma no seu CRS NATIVO — é a refutação que o
+# item L1-08 exige ("cenas de CRS nativos diferentes num MESMO mosaico, alinhamento na costura <= 1 px").
+MERIDIANO_FUSO = -48.0
+CRS_OESTE, CRS_LESTE = "EPSG:31982", "EPSG:31983"
+
+
+def semear_crs_misto(tenant_id: int, slug: str, valor_oeste: int = 60, valor_leste: int = 220,
+                     colecao_slug: str = "mosaicocrsmisto") -> dict:
+    """Duas cenas ADJACENTES que encostam no meridiano 48 W, cada uma no CRS nativo do seu fuso UTM.
+
+    Nenhuma das duas é reprojetada no disco: o que se mede é se o compositor do mosaico alinha, na
+    costura, dois rasters cujos sistemas de referência nativos são diferentes. Valores constantes e
+    bem separados (60 e 220) para que a coluna onde um vira o outro seja inequívoca no ladrilho."""
+    import numpy as np
+    import pyproj
+    import rasterio
+    from rasterio.transform import from_origin
+
+    from app import db, objetos
+    from app.catalogo.comum import jsonb
+    from app.imagens import pgstac as ps
+    from app.imagens import raster_item as ri
+
+    with db.db(db.Contexto(tenant_id=tenant_id, usuario_id=0, login="teste")) as cur:
+        cur.execute("SELECT id FROM plat.usuario WHERE tenant_id = %s ORDER BY id LIMIT 1", (tenant_id,))
+        usuario_id = cur.fetchone()["id"]
+    ctx = db.Contexto(tenant_id=tenant_id, usuario_id=usuario_id, login="teste")
+    with db.db(ctx) as cur:
+        objetos.garantir_bucket(cur, tenant_id, slug)
+
+    colecao = ps.nome_colecao(tenant_id, colecao_slug)
+    tipo_cog = "image/tiff; application=geotiff; profile=cloud-optimized"
+    hoje = datetime.datetime(2026, 8, 18, 13, 30, tzinfo=datetime.timezone.utc)
+    lado_m = LADO_PX * RESOLUCAO
+    itens = []
+
+    with db.db(ctx) as cur:
+        if ps.colecao_obter(cur, tenant_id, colecao) is None:
+            ps.colecao_criar(cur, tenant_id, colecao_slug, {
+                "title": "Cenas de CRS nativos diferentes (L1-08)",
+                "description": "Dois COGs sintéticos encostados no meridiano 48 W, um em UTM 22S e "
+                "outro em UTM 23S, para medir o alinhamento da costura — não é dado de produto."})
+
+    lado = [
+        {"nome": "oeste", "crs": CRS_OESTE, "valor": valor_oeste, "sinal": -1},
+        {"nome": "leste", "crs": CRS_LESTE, "valor": valor_leste, "sinal": 0},
+    ]
+    for indice, cfg in enumerate(lado):
+        item_id = str(uuid.uuid4())
+        para_nativo = pyproj.Transformer.from_crs("EPSG:4326", cfg["crs"], always_xy=True)
+        para_4326 = pyproj.Transformer.from_crs(cfg["crs"], "EPSG:4326", always_xy=True)
+        # o canto superior ESQUERDO: a cena oeste termina no meridiano, a leste começa nele
+        borda_x, topo_y = para_nativo.transform(MERIDIANO_FUSO, CANTO_LAT)
+        x0 = borda_x + cfg["sinal"] * lado_m
+        with tempfile.TemporaryDirectory() as tmp:
+            cog = Path(tmp) / f"{cfg['nome']}.tif"
+            bruto = Path(tmp) / f"bruto_{cfg['nome']}.tif"
+            banda = np.full((LADO_PX, LADO_PX), cfg["valor"], dtype="uint16")
+            with rasterio.open(bruto, "w", driver="GTiff", height=LADO_PX, width=LADO_PX, count=4,
+                               dtype="uint16", crs=cfg["crs"], nodata=0,
+                               transform=from_origin(x0, topo_y, RESOLUCAO, RESOLUCAO)) as dst:
+                for i in range(1, 5):
+                    dst.write(banda, i)
+            subprocess.run(["gdal_translate", "-q", "-of", "COG", "-co", "COMPRESS=ZSTD",
+                            "-co", "BLOCKSIZE=128", str(bruto), str(cog)], check=True)
+            with db.db(ctx) as cur:
+                objeto = objetos.guardar_arquivo(cur, "raster", cog, "image/tiff", item_id=item_id,
+                                                 usuario_id=usuario_id)
+            with rasterio.open(cog) as ds:
+                oeste_m, sul_m, leste_m, norte_m = ds.bounds
+            cantos = [para_4326.transform(px, py) for px, py in
+                      ((oeste_m, sul_m), (leste_m, sul_m), (leste_m, norte_m), (oeste_m, norte_m))]
+            lons = [p[0] for p in cantos]
+            lats = [p[1] for p in cantos]
+            bbox = [min(lons), min(lats), max(lons), max(lats)]
+            geometry = {"type": "Polygon", "coordinates": [[list(p) for p in cantos] + [list(cantos[0])]]}
+            quando = hoje - datetime.timedelta(days=indice)
+            asset = {"href": f"/api/objetos/{objeto['chave']}", "type": tipo_cog}
+            stac = {
+                "type": "Feature", "stac_version": "1.0.0", "id": item_id, "collection": colecao,
+                "geometry": geometry, "bbox": bbox,
+                "properties": {
+                    "datetime": quando.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "title": f"cena {cfg['nome']} em {cfg['crs']} (valor {cfg['valor']})",
+                    "eo:cloud_cover": 0.0, "plat:valor_teste": cfg["valor"],
+                    "proj:epsg": int(cfg["crs"].split(":")[1]),
+                },
+                "assets": {"cientifico": {**asset, "roles": ["data"]}, "visual": {**asset, "roles": ["visual"]}},
+                "links": [],
+            }
+            srid = int(cfg["crs"].split(":")[1])
+            with db.db(ctx) as cur:
+                ps.item_criar(cur, tenant_id, colecao, stac)
+                ri.espelhar(cur, tenant_id, colecao, item_id, {
+                    "sha256": objeto["sha256"], "perfil": "cientifico", "bytes": objeto["bytes"],
+                    "estado": "ativo"})
+                cur.execute(
+                    "INSERT INTO plat.item(id, tenant_id, tipo, titulo, dono_id, dados, tamanho_bytes, "
+                    "criado_por, modificado_por) VALUES (%s::uuid, %s, 'raster', %s, %s, %s, %s, %s, %s)",
+                    (item_id, tenant_id, stac["properties"]["title"], usuario_id,
+                     jsonb({"colecao": colecao, "stac_id": item_id, "perfil": "cientifico",
+                            "origem": "copiado", "srid_nativo": srid}),
+                     objeto["bytes"], usuario_id, usuario_id))
+        itens.append({"item_id": item_id, "indice": indice, "lado": cfg["nome"], "crs": cfg["crs"],
+                     "valor": cfg["valor"], "bbox": bbox})
+
+    return {"tenant_id": tenant_id, "colecao": colecao, "itens": itens,
+            "meridiano": MERIDIANO_FUSO, "lado_m": lado_m}

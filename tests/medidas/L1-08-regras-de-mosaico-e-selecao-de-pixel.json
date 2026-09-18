@@ -1,0 +1,37 @@
+{
+ "item": "L1-08-regras-de-mosaico-e-selecao-de-pixel",
+ "medidas": {
+  "suite_do_mosaico_sem_regressao": {
+   "valor": 68,
+   "unidade": "testes passando",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_mosaico.py tests/unit/test_l108_sem_nuvem_e_crs.py -W ignore -q   (trilha uniao, schema plat_tuniao; cgroup MemoryMax=4G)  [68 passed, 0 falha]"
+  },
+  "regra_sem_nuvem_pela_rota": {
+   "valor": 3,
+   "unidade": "testes passando",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_mosaico.py -W ignore -q   (trilha uniao, schema plat_tuniao; cgroup MemoryMax=4G)  -k 'l108_sem_nuvem or l108_o_asset'  [par de referencia com a MESMA cena mudando so a regra; recusa quando falta o asset scl; 403 para token de outro inquilino no caminho da mascara]"
+  },
+  "crs_nativos_diferentes_no_mesmo_mosaico": {
+   "valor": 2,
+   "unidade": "testes passando",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_mosaico.py -W ignore -q   (trilha uniao, schema plat_tuniao; cgroup MemoryMax=4G)  -k 'crs_misto or crs_nativos or costura'  [cenas em EPSG:31982 (UTM 22S) e EPSG:31983 (UTM 23S) encostadas no meridiano 48 W, no MESMO mosaico]"
+  },
+  "buraco_na_costura_entre_dois_crs": {
+   "valor": 0,
+   "unidade": "colunas de pixel sem dado",
+   "comando": "ladrilho z=14 sobre o meridiano 48 W: em nenhuma linha com dado o salto entre colunas visiveis passa de 2 (1 = contiguo, 2 = uma coluna de mistura da reamostragem). O portao pede alinhamento <= 1 px."
+  },
+  "portao_do_adversario": {
+   "valor": 3,
+   "unidade": "clausulas XPASS(strict)",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/unit/test_l1_adv2_mosaico_gate.py -W ignore -q   (trilha uniao, schema plat_tuniao; cgroup MemoryMax=4G)  -rxX  [regra ciente de nuvem/SCL existe e e testada em tests/api/imagens/; refutacao de CRS misto tem teste; docs/PARIDADE.md atualizado]"
+  },
+  "classes_scl_tratadas_como_nao_observaveis": {
+   "valor": 5,
+   "unidade": "classes",
+   "comando": "app/imagens/tiles.py::CLASSES_NUVEM_SCL = (1, 3, 8, 9, 10) — saturado/defeituoso, sombra de nuvem, nuvem media, nuvem alta e cirrus. Neve NAO entra: neve nao e nuvem."
+  }
+ },
+ "gerado_em": "2026-09-18T01:57:37Z",
+ "git_sha": "785c64890"
+}
