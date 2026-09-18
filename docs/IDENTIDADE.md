@@ -132,3 +132,38 @@ e demonstrados com os elementos reais em `/estilo`:
   `web/style.css` para `estilo/base.css` + `estilo/componentes.css` é item próprio; enquanto ela não acontece,
   o número de telas na folha antiga está sob catraca (`TELAS_NA_FOLHA_ANTIGA` em
   `tests/unit/test_estilo_tokens.py`): não pode crescer, e tela nova nasce na folha nova.
+
+## 7. Migração da folha antiga, tela a tela (item L0-14-b)
+
+O item L0-14 deixou o sistema de design de pé e a catraca `TELAS_NA_FOLHA_ANTIGA` marcando quantas telas
+ainda carregam `web/style.css` em vez de `estilo/base.css` + `estilo/componentes.css`. Este item desce essa
+catraca. A regra é uma só: **troca de folha, não redesenho**. Desenho é decisão do dono; aqui só se troca a
+folha que a tela carrega, e prova-se que a tela continua a mesma.
+
+Como uma leva é migrada e provada:
+
+1. a ordem é de RISCO, escrita em `tests/e2e/telas_migracao.json`: tela sem folha própria antes de tela com
+   folha própria, mapa/SIG/construtor por último, e por tamanho dentro de cada grupo. Leva = 8 telas;
+2. `bash tests/e2e/regerar_capturas_migracao.sh <leva>` sobe DUAS instâncias contra o MESMO banco de trilha
+   (`plat_ttelas`, nunca o schema `plat` de produção): o "antes" é o HEAD anterior à leva, servido de uma
+   worktree própria, e o "depois" é a árvore de trabalho. A única diferença entre as fotos é a folha;
+3. `tests/e2e/test_migracao_folha.py` roda as duas fases: fotografa cada tela nos dois temas, grava a
+   IMPRESSÃO DIGITAL DA ÁRVORE (tag, id e classes de cada elemento, em ordem de documento), mede o contraste
+   de todo nó de texto visível com a fórmula do L0-14 e roda o axe-core;
+4. `tests/e2e/compara_migracao.py` dá o veredito da leva. Reprova se a árvore mudou, se a tela montava e
+   deixou de montar, ou se apareceu violação de contraste ou de axe que não existia antes. Violação que já
+   existia na folha antiga fica registrada como HERDADA: não é regressão desta migração, e não se conserta
+   aqui — consertar seria redesenhar;
+5. `tests/e2e/grava_medida_migracao.py` escreve `tests/medidas/L0-14-b-migracao-folha.json` a partir dos
+   vereditos. Nenhum número é digitado.
+
+O que a fase "antes" mede e que decide a migração: os seletores de `web/style.css` que de fato PEGAM naquela
+tela (`document.querySelector` de cada um, no navegador) e, desses, os que a folha nova não cobre
+(`so_na_antiga_e_pegam`). Regra de corte: regra de LAYOUT que só existe na folha antiga é levada para a folha
+nova, verbatim; regra puramente cosmética cuja equivalente já existe na folha nova é descartada, e a diferença
+aparece no par de capturas. Tela que não passa sem redesenho PARA: fica com `estado: deixada_para_tras` e o
+motivo escrito no manifesto.
+
+Armadilhas desta máquina: o chromium é o do PLAYWRIGHT (o `google-chrome` do sistema quebra), e **nunca se
+contém memória com `ulimit -v`** — endereçamento virtual não é memória e o Chromium morre com SIGTRAP sob esse
+teto; o teto vai em `systemd-run --scope -p MemoryMax=`.
