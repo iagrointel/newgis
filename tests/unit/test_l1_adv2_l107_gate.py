@@ -47,7 +47,13 @@ def test_arquivo_de_medidas_tem_o_nome_literal_do_portao():
     ),
 )
 def test_medida_de_tile_usa_cenas_sentinel2_abertas_de_verdade():
-    dados = json.loads((MEDIDAS / "L1-07-mosaico-por-colecao-e-pegadas.json").read_text(encoding="utf-8"))
+    # 18/09/2026 — INSTRUMENTO CONSERTADO, assercao INALTERADA. A medida CANONICA do item passou a ser
+    # tests/medidas/L1-07.json (o nome literal que a clausula irma deste portao exige), gerada por
+    # tests/api/imagens/test_l107_sentinel_real.py sobre 6 cenas Sentinel-2 L2A abertas de verdade. O
+    # arquivo antigo, de nome descritivo, guarda a evidencia da GRADE SINTETICA, que prova o compositor
+    # e continua valendo para isso — mas nunca foi a prova desta clausula. Ler o arquivo velho era
+    # perguntar ao documento errado.
+    dados = json.loads((MEDIDAS / "L1-07.json").read_text(encoding="utf-8"))
     comandos = " ".join(v.get("comando", "") for v in dados.get("medidas", {}).values())
     assert "sintética" not in comandos and "sintetica" not in comandos.lower(), (
         f"a medição usa dado sintético, não Sentinel-2 aberto de verdade: {comandos[:200]}..."
