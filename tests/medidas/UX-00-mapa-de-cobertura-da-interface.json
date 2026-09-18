@@ -1,0 +1,29 @@
+{
+ "item": "UX-00-mapa-de-cobertura-da-interface",
+ "medidas": {
+  "rotas_cruzadas": {
+   "valor": 958,
+   "unidade": "rotas",
+   "comando": "venv/bin/python docs/gerar_cobertura_ui.py"
+  },
+  "lacunas_de_escrita": {
+   "valor": 194,
+   "unidade": "rotas",
+   "comando": "venv/bin/python docs/gerar_cobertura_ui.py (era 184 antes de a varredura deixar de contar comentario)"
+  },
+  "rotas_de_escrita_cobertas_so_por_codigo_morto": {
+   "valor": 10,
+   "unidade": "rotas",
+   "comando": "venv/bin/python docs/gerar_cobertura_ui.py --check antes de regravar a linha de base: modelos3d (2), webhooks (6), anexo de feicao (1), metadado.xml (1)"
+  },
+  "teste_que_reprova_rota_nova_sem_cobertura": {
+   "valor": 1,
+   "unidade": "testes",
+   "comando": "tests/unit/test_cobertura_ui.py (linha de base docs/cobertura_ui_lacunas.json) + tests/api/adversario/test_ux00_cobertura_ignora_codigo_morto.py"
+  }
+ },
+ "nao_medido": {
+  "zero_lacunas_de_escrita_ao_fim_da_trilha_ux": "a clausula do portao e condicao de FIM da trilha UX (itens UX-10..UX-23), nao deste item: hoje sao 194 lacunas de escrita registradas na linha de base. UX-00 entrega a ferramenta e a linha de base honesta, nao o fechamento das lacunas."
+ },
+ "gerado_em": "2026-09-18T01:07:12Z"
+}
