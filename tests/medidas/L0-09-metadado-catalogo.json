@@ -15,8 +15,21 @@
    "valor": 611925,
    "unidade": "bytes",
    "comando": "soma de bytes de docs/xsd/cache/MANIFESTO.json['arquivos']"
+  },
+  "paridade_editor_para_saidas_iso": {
+   "valor": {
+    "valores_escritos": 3,
+    "de_volta_no_editor": 3,
+    "nas_saidas": {
+     "metadado_xml_19139": 0,
+     "metadado_xml_19115_3": 0,
+     "csw_getrecordbyid_iso": 0
+    }
+   },
+   "unidade": "valores do editor encontrados em cada saída do catálogo (de 3)",
+   "comando": "pytest tests/api/catalogo/test_csw_paridade.py::test_medida_paridade -q"
   }
  },
- "gerado_em": "2026-09-06T12:30:34Z",
- "git_sha": "e30515b57814"
+ "gerado_em": "2026-09-18T01:22:37Z",
+ "git_sha": "d48a8b813230"
 }

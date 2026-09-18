@@ -1,0 +1,16 @@
+{
+ "item": "L0-03-k-favoritos-notificacoes",
+ "medidas": {
+  "portas_fechadas_para_outro_inquilino": {
+   "valor": {
+    "portas": 4,
+    "recusadas": 4,
+    "dono_continua_vendo": true
+   },
+   "unidade": "rotas de /api/notificacoes experimentadas por um inquilino que não é o dono",
+   "comando": "pytest tests/api/test_notificacoes.py -q"
+  }
+ },
+ "gerado_em": "2026-09-18T01:22:31Z",
+ "git_sha": "d48a8b813230"
+}

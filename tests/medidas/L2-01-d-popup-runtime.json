@@ -19,10 +19,21 @@
    },
    "unidade": "erro relativo (adimensional)",
    "comando": "pytest tests/api/test_mapa_popup_api.py::test_expressao_de_area_bate_com_st_area_geografica -q"
+  },
+  "expressao_no_servidor_e_isolamento_por_inquilino": {
+   "valor": {
+    "feicoes_com_expressao": 5,
+    "valores_distintos": 5,
+    "urls": 2,
+    "servidas_ao_dono": 2,
+    "recusadas_ao_outro_inquilino": 2
+   },
+   "unidade": "feições com expressão avaliada no servidor e URLs de popup experimentadas pelos dois inquilinos",
+   "comando": "pytest tests/api/test_popup_runtime.py -q"
   }
  },
- "gerado_em": "2026-09-07T18:31:55Z",
- "git_sha": "52cd0194a32f",
+ "gerado_em": "2026-09-18T01:22:40Z",
+ "git_sha": "d48a8b813230",
  "clausulas_do_portao": {
   "3_feicoes_coincidentes_mostra_1_de_3_e_navega": {
    "status": "passa",
