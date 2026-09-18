@@ -349,7 +349,10 @@ Ao terminar, marque o item (o script já trava e escreve atômico):
 
 ```bash
 python3 {BASE}/marcar_item.py {item['id']} <entregue|parcial|refutado> "<nota honesta>" <sha>
-```""")
+```
+
+`entregue` só é aceito se um laudo adversário em `handoffs/` já citar o item (HARD-03); sem
+laudo, marque `parcial` e peça o adversário.""")
     return "\n\n".join(p)
 
 

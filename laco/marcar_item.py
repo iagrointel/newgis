@@ -1,16 +1,33 @@
 #!/usr/bin/env python3
 """Atualiza um item do estado.json (read-modify-write curto, com lock). Uso:
-marcar_item.py <id> <estado: entregue|parcial|pendente> "<bloqueio ou nota>" [commit_sha]"""
+marcar_item.py <id> <estado: entregue|parcial|pendente> "<bloqueio ou nota>" [commit_sha]
+
+HARD-03 (laudo T9 linha-L7-2): 'entregue' é RECUSADO quando nenhum laudo adversário em
+handoffs/ cita o item — cinco itens ficaram entregues por turnos sem laudo porque este script
+não conferia. Escape só do dono: PLAT_MARCAR_SEM_LAUDO="<motivo>" no ambiente; o motivo fica
+gravado na nota do ledger como SEM-LAUDO(dono) e o lote (adversario_lote.py) o lista em alto
+relevo até o laudo existir. A base inteira pode ser trocada com PLAT_LACO (testes)."""
 import fcntl, json, os, sys, datetime
-p = '/home/dev/plataforma/laco/estado.json'
-TRAVA = '/home/dev/plataforma/laco/.estado.lock'  # combinado com a outra sessão em 06/09: TODA
+BASE = os.environ.get('PLAT_LACO', '/home/dev/plataforma/laco')
+p = f'{BASE}/estado.json'
+TRAVA = f'{BASE}/.estado.lock'  # combinado com a outra sessão em 06/09: TODA
 # leitura-modifica-escrita do estado.json passa por esta trava externa. A trava no próprio arquivo
 # não bastava: só protege contra quem também trava, e a outra sessão escrevia sem trava nenhuma
 # (uma escrita minha foi perdida assim). Quem não usa a trava continua podendo sobrescrever.
-_trava = open(TRAVA, 'a+')
-fcntl.flock(_trava, fcntl.LOCK_EX)
 iid, estado, nota = sys.argv[1], sys.argv[2], sys.argv[3]
 sha = sys.argv[4] if len(sys.argv) > 4 else None
+if estado == 'entregue':
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from adversario_lote import itens_com_laudo
+    if not itens_com_laudo(BASE, [iid]):
+        motivo = os.environ.get('PLAT_MARCAR_SEM_LAUDO')
+        if not motivo:
+            sys.exit(f"RECUSADO (HARD-03): '{iid}' não pode virar entregue — nenhum laudo "
+                     f"adversário em {BASE}/handoffs o cita. Marque 'parcial', chame o adversário "
+                     f"(prompt_adversario) e só depois de escrito o laudo marque entregue.")
+        nota = f'SEM-LAUDO(dono): {motivo} | {nota}'
+_trava = open(TRAVA, 'a+')
+fcntl.flock(_trava, fcntl.LOCK_EX)
 with open(p, 'r+', encoding='utf-8') as f:
     fcntl.flock(f, fcntl.LOCK_EX)
     e = json.load(f)
