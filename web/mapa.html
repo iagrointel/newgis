@@ -22,10 +22,13 @@
       <h1 data-i18n="mapa.titulo">Mapa</h1>
       <span class="mapa-nome" id="mapa-nome"></span>
       <plat-aviso id="aviso"></plat-aviso>
+      <button type="button" id="btn-painel-camadas" class="pequeno" data-i18n="mapa.camadas">Camadas</button>
+      <button type="button" id="btn-painel-desenho" class="pequeno" data-i18n="mapa.desenho">Desenho</button>
+      <button type="button" id="btn-painel-anotacoes" class="pequeno" data-i18n="mapa.anotacoes">Anotações</button>
       <button type="button" id="salvar-mapa" class="pequeno" hidden data-i18n="mapa.salvar">salvar</button>
     </div>
     <div class="mapa-corpo">
-    <section class="mapa-camadas" id="painel-camadas" hidden aria-labelledby="camadas-titulo">
+    <section class="mapa-camadas mapa-painel mapa-painel-item" id="painel-camadas" hidden aria-labelledby="camadas-titulo">
       <h2 id="camadas-titulo" data-i18n="mapa.camadas">Camadas</h2>
       <p class="fraco" id="camadas-ajuda" data-i18n="mapa.camadas_ajuda">arraste para reordenar; a de cima desenha por último</p>
       <div id="camadas"></div>
@@ -45,12 +48,68 @@
         <p id="acervo-resumo" class="acervo-resumo"></p>
         <ul id="acervo-lista" aria-labelledby="acervo-titulo"></ul>
       </div>
+      <!-- item L2-01-k-desenho-anotacoes: desenho local salvo no documento do mapa (corpo.desenho,
+           GeoJSON + estilo, sem tabela) e anotações de feição visíveis ao grupo. -->
+      <plat-painel id="painel-desenho" class="mapa-painel mapa-painel-item" fechavel hidden>
+        <div id="bloco-desenho">
+          <div class="linha desenho-ferramentas" role="group" data-i18n-aria="mapa.desenho_ferramentas" aria-label="ferramentas de desenho">
+            <button type="button" class="pequeno" data-desenho="ponto" data-i18n="mapa.desenho_ponto">Ponto</button>
+            <button type="button" class="pequeno" data-desenho="linha" data-i18n="mapa.desenho_linha">Linha</button>
+            <button type="button" class="pequeno" data-desenho="poligono" data-i18n="mapa.desenho_poligono">Polígono</button>
+            <button type="button" class="pequeno" data-desenho="retangulo" data-i18n="mapa.desenho_retangulo">Retângulo</button>
+            <button type="button" class="pequeno" data-desenho="circulo" data-i18n="mapa.desenho_circulo">Círculo</button>
+            <button type="button" class="pequeno" data-desenho="texto" data-i18n="mapa.desenho_texto">Texto</button>
+            <button type="button" class="pequeno" data-desenho="seta" data-i18n="mapa.desenho_seta">Seta</button>
+            <button type="button" id="btn-desenho-parar" class="pequeno texto" data-i18n="mapa.desenho_parar">Parar</button>
+            <button type="button" id="btn-desenho-editar-fim" class="pequeno texto" data-i18n="mapa.desenho_editar_fim">Terminar edição</button>
+          </div>
+          <div class="grade-campos desenho-estilo">
+            <label for="desenho-cor" data-i18n="mapa.desenho_cor">cor</label>
+            <input type="color" id="desenho-cor" value="#d98a2b">
+            <label for="desenho-opacidade" data-i18n="mapa.desenho_opacidade">opacidade</label>
+            <input type="range" id="desenho-opacidade" min="0" max="1" step="0.05" value="0.85">
+            <label for="desenho-largura" data-i18n="mapa.desenho_largura">largura</label>
+            <input type="number" id="desenho-largura" min="0" max="50" step="1" value="2">
+            <label for="desenho-fonte" data-i18n="mapa.desenho_tamanho_fonte">tam. fonte</label>
+            <input type="number" id="desenho-fonte" min="4" max="96" step="1" value="14">
+            <label for="desenho-snap" data-i18n="mapa.desenho_snap">encaixar (10 px)</label>
+            <input type="checkbox" id="desenho-snap">
+          </div>
+          <ul id="lista-desenho" class="lista-camadas" data-i18n-aria="mapa.desenho_feicoes" aria-label="feições desenhadas"></ul>
+          <div class="linha">
+            <button type="button" id="btn-desenho-limpar" class="pequeno texto" data-i18n="mapa.desenho_limpar">Limpar tudo</button>
+            <button type="button" id="btn-desenho-salvar" class="pequeno" data-i18n="mapa.desenho_salvar">Salvar no mapa</button>
+            <button type="button" id="btn-desenho-promover" class="pequeno" data-i18n="mapa.desenho_promover">Promover a camada</button>
+            <label for="desenho-importar" class="botao pequeno" data-i18n="mapa.desenho_importar">Importar GeoJSON/KML</label>
+            <input type="file" id="desenho-importar" accept=".geojson,.json,.kml" hidden>
+          </div>
+          <p id="desenho-saida" class="saida" aria-live="polite"></p>
+        </div>
+      </plat-painel>
+      <plat-painel id="painel-anotacoes" class="mapa-painel mapa-painel-item" fechavel hidden>
+        <div id="bloco-anotacoes">
+          <button type="button" id="btn-anotar" class="pequeno" aria-pressed="false" data-i18n="mapa.anotacao_modo">Clicar numa feição para anotar</button>
+          <plat-aviso id="anotacoes-aviso"></plat-aviso>
+          <plat-estado id="anotacoes-estado" hidden></plat-estado>
+          <div id="anotacoes-corpo" class="form" hidden>
+            <p id="anotacoes-alvo" class="saida"></p>
+            <ul id="lista-anotacoes" class="lista-camadas anotacoes" data-i18n-aria="mapa.anotacoes" aria-label="anotações da feição"></ul>
+            <div class="campo"><label for="anotacao-grupo" data-i18n="mapa.anotacao_grupo">grupo</label><select id="anotacao-grupo"></select></div>
+            <div class="campo"><label for="anotacao-texto" data-i18n="mapa.anotacao_texto">comentário</label><textarea id="anotacao-texto" maxlength="4000" rows="2"></textarea></div>
+            <div class="botoes"><button type="button" id="btn-anotacao-enviar" class="pequeno primario" data-i18n="mapa.anotacao_enviar">Comentar</button></div>
+          </div>
+        </div>
+      </plat-painel>
     </div>
     </div>
   </main>
 </div>
 <script src="/static/vendor/maplibre-gl-4.7.1.js"></script>
 <script src="/static/vendor/pmtiles-4.5.0.js"></script>
+<!-- terra-draw (item L2-01-k): UMD de propósito, como maplibre/pmtiles — expõe window.terraDraw e
+     window.terraDrawMaplibreGlAdapter, lidos por web/js/mapa/desenho.js -->
+<script src="/static/vendor/terra-draw/terra-draw-1.33.0.umd.js"></script>
+<script src="/static/vendor/terra-draw/terra-draw-maplibre-gl-adapter-1.4.1.umd.js"></script>
 <script type="module" src="/static/js/mapa/mapa.js"></script>
 </body>
 </html>

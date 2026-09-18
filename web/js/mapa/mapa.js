@@ -17,6 +17,10 @@ import { construirEstilo } from './estilo.js';
 import * as api from '../base/api.js';
 import { h, limpar } from '../base/dom.js';
 import { AVISO_VENCIDA, selo } from '../acervo/frescor.js';
+import { Desenho, kmlParaGeoJSON } from './desenho.js';
+import { PainelAnotacoes } from './anotacoes.js';
+import { Catalogo } from './catalogo.js';
+import { icone } from '../base/icones.js';
 
 const BASES = [
   { id: 'osm-guarulhos', rotuloChave: 'mapa.base_osm_guarulhos', arquivo: 'guarulhos.pmtiles' },
@@ -84,6 +88,174 @@ async function montarPainelAcervo() {
   return { total, vencidas };
 }
 
+/* item L2-01-k-desenho-anotacoes: painéis de desenho e de anotações ligados à tela. O desenho mora no
+   documento do mapa (POST/PUT /api/itens tipo 'mapa', corpo.desenho.features — GeoJSON + estilo, sem
+   tabela); "promover a camada" chama /api/mapa/{id}/desenho/promover (job de ingestão do L0-04); as
+   anotações são as rotas /api/anotacoes (visibilidade por grupo, prova em tests/api/catalogo). */
+const PAINEIS_FLUTUANTES = { desenho: 'painel-desenho', anotacoes: 'painel-anotacoes', camadas: 'painel-camadas' };
+
+function abrirPainel(nome, { foco = true } = {}) {
+  const painel = el(PAINEIS_FLUTUANTES[nome]);
+  if (!painel) return;
+  if (typeof painel.abrir === 'function') {
+    painel.titulo = t(nome === 'desenho' ? 'mapa.desenho' : 'mapa.anotacoes');
+    painel.abrir();
+  } else {
+    painel.hidden = false;
+  }
+  if (foco) painel.querySelector('button, input, select, textarea')?.focus();
+}
+
+/* painel de camadas do catálogo: a lista vem de /api/mapa/camadas (Catalogo, item L2-01-mapa-web); clicar
+   liga/desliga a camada no mapa. Sem lista o painel fica escondido — painel vazio não é informação. */
+async function montarPainelCamadas(map, catalogo) {
+  const secao = el('painel-camadas');
+  const lista = h('ul', { id: 'lista-camadas', class: 'lista-camadas', 'aria-labelledby': 'camadas-titulo' });
+  el('camadas').append(lista);
+  const redesenhar = () => {
+    limpar(lista);
+    for (const c of catalogo.disponiveis) {
+      const ativa = catalogo.ativas.includes(c.id);
+      lista.append(h('li', { class: 'camada-item', dataset: { camada: c.id } },
+        h('button', {
+          type: 'button', class: 'pequeno texto camada-titulo', 'aria-pressed': String(ativa),
+          onclick: async () => {
+            try {
+              if (ativa) catalogo.desligar(c.id);
+              else await catalogo.ligar(c.id);
+              redesenhar();
+            } catch (e) {
+              el('aviso').erro(`${t('mapa.erro_carregar')}: ${(e && e.message) || e}`);
+            }
+          },
+        }, c.titulo || c.id)));
+    }
+    secao.hidden = !catalogo.disponiveis.length;
+  };
+  try {
+    await catalogo.carregar();
+  } catch {
+    secao.hidden = true; // catálogo indisponível: o resto da tela continua de pé
+    return;
+  }
+  redesenhar();
+}
+
+async function montarDesenhoAnotacoes(map) {
+  el('btn-painel-desenho').addEventListener('click', () => abrirPainel('desenho'));
+  el('btn-painel-anotacoes').addEventListener('click', () => abrirPainel('anotacoes'));
+  el('btn-painel-camadas').addEventListener('click', () => abrirPainel('camadas'));
+
+  const desenho = new Desenho(map, window.maplibregl, el('bloco-desenho'));
+  const catalogo = new Catalogo(map);
+  let mapaId = new URLSearchParams(location.search).get('mapa');
+
+  const listaDesenho = el('lista-desenho');
+  desenho.aoMudar((features) => {
+    limpar(listaDesenho);
+    for (const f of features) {
+      const medida = desenho.medidaDe(f);
+      const emEdicao = desenho.editando() === f.id;
+      listaDesenho.append(h('li', { class: 'camada-item', dataset: { desenho: f.id } },
+        h('span', { class: 'camada-titulo' }, `${f.properties.tipo_desenho}${medida ? ` · ${medida}` : ''}`),
+        h('button', { type: 'button', class: 'pequeno texto',
+          'aria-label': t(emEdicao ? 'mapa.desenho_editar_fim' : 'mapa.desenho_editar'),
+          onclick: () => (emEdicao ? desenho.terminarEdicao() : desenho.editar(f.id)) },
+          icone(emEdicao ? 'ok' : 'editar', { tamanho: 14 })),
+        h('button', { type: 'button', class: 'pequeno texto', 'aria-label': t('mapa.desenho_mover_cima'),
+          onclick: () => desenho.mover(f.id, -1) }, icone('seta_cima', { tamanho: 14 })),
+        h('button', { type: 'button', class: 'pequeno texto', 'aria-label': t('mapa.desenho_mover_baixo'),
+          onclick: () => desenho.mover(f.id, 1) }, icone('seta_baixo', { tamanho: 14 })),
+        h('button', { type: 'button', class: 'pequeno texto', 'aria-label': t('mapa.desenho_apagar'),
+          onclick: () => desenho.apagar(f.id) }, icone('fechar', { tamanho: 14 }))));
+    }
+  });
+  for (const botao of document.querySelectorAll('[data-desenho]')) {
+    botao.addEventListener('click', () => {
+      desenho.iniciarModo(botao.dataset.desenho);
+      document.querySelectorAll('[data-desenho]').forEach((b) => b.setAttribute('aria-pressed', String(b === botao)));
+    });
+  }
+  const pararDesenho = () => {
+    desenho.pararModo();
+    document.querySelectorAll('[data-desenho]').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+  };
+  el('btn-desenho-parar').addEventListener('click', pararDesenho);
+  el('btn-desenho-limpar').addEventListener('click', () => desenho.limparTudo());
+  el('btn-desenho-editar-fim').addEventListener('click', () => desenho.terminarEdicao());
+  const atualizarEstiloAtual = () => desenho.definirEstilo({
+    cor: el('desenho-cor').value,
+    contorno: getComputedStyle(document.documentElement).getPropertyValue('--i-fundo').trim(),
+    opacidade: Number(el('desenho-opacidade').value),
+    largura: Number(el('desenho-largura').value),
+    tamanho_fonte: Number(el('desenho-fonte').value),
+  });
+  for (const id of ['desenho-cor', 'desenho-opacidade', 'desenho-largura', 'desenho-fonte']) {
+    el(id).addEventListener('input', atualizarEstiloAtual);
+  }
+  atualizarEstiloAtual();
+  el('desenho-snap').addEventListener('change', (ev) => desenho.definirSnap(ev.target.checked));
+
+  const salvarDesenho = async () => {
+    const corpo = { esquema_versao: 1, corpo: { desenho: { features: desenho.lista() } } };
+    const r = mapaId
+      ? await api.alterar(`/api/itens/${mapaId}`, { dados: corpo })
+      : await api.enviar('/api/itens', { tipo: 'mapa', titulo: `${t('mapa.titulo')} ${new Date().toLocaleString('pt-BR')}`, dados: corpo });
+    if (r.status >= 400) { el('desenho-saida').textContent = api.mensagemDe(r); return; }
+    if (!mapaId) {
+      mapaId = r.json.id;
+      const novaUrl = new URL(location.href);
+      novaUrl.searchParams.set('mapa', mapaId);
+      history.replaceState(null, '', novaUrl);
+    }
+    el('desenho-saida').textContent = t('mapa.desenho_salvo');
+  };
+  el('btn-desenho-salvar').addEventListener('click', salvarDesenho);
+  el('btn-desenho-promover').addEventListener('click', async () => {
+    if (!mapaId) await salvarDesenho();
+    if (!mapaId) return;
+    const titulo = window.prompt(t('mapa.desenho_promover_pedir_titulo'), `${t('mapa.desenho')} ${new Date().toLocaleDateString('pt-BR')}`);
+    if (!titulo) return;
+    const r = await api.enviar(`/api/mapa/${mapaId}/desenho/promover`, { titulo });
+    if (r.status >= 400) { el('desenho-saida').textContent = api.mensagemDe(r); return; }
+    el('desenho-saida').textContent = t('mapa.desenho_promovido', { titulo, n: r.json.n_feicoes });
+  });
+  el('desenho-importar').addEventListener('change', async (ev) => {
+    const arquivo = ev.target.files[0];
+    if (!arquivo) return;
+    const texto = await arquivo.text();
+    try {
+      const colecao = arquivo.name.toLowerCase().endsWith('.kml') ? kmlParaGeoJSON(texto) : JSON.parse(texto);
+      el('desenho-saida').textContent = t('mapa.desenho_importado', { n: desenho.importarGeoJSON(colecao) });
+    } catch (e) {
+      el('desenho-saida').textContent = `${t('mapa.erro_carregar')}: ${(e && e.message) || e}`;
+    }
+    ev.target.value = '';
+  });
+
+  const anotacoes = new PainelAnotacoes(map, catalogo, {
+    btnModo: el('btn-anotar'), corpo: el('anotacoes-corpo'), alvo: el('anotacoes-alvo'),
+    lista: el('lista-anotacoes'), selGrupo: el('anotacao-grupo'), campoTexto: el('anotacao-texto'),
+    btnEnviar: el('btn-anotacao-enviar'), estado: el('anotacoes-estado'), aviso: el('anotacoes-aviso'),
+  });
+
+  await montarPainelCamadas(map, catalogo);
+
+  if (mapaId) {
+    try {
+      const r = await api.obter(`/api/itens/${mapaId}`);
+      if (r.status === 200) {
+        const features = r.json.dados?.corpo?.desenho?.features || [];
+        if (features.length) desenho.carregarFeatures(features);
+      }
+    } catch { /* documento novo ou inexistente: começa vazio, sem quebrar a tela */ }
+  }
+
+  // ponto de inspeção do e2e, nunca de negócio
+  window.plat = window.plat || {};
+  window.plat.mapa = { map, desenho, anotacoes, painelAnotacoes: anotacoes, catalogo, abrirPainel, get mapaId() { return mapaId; } };
+}
+
 async function iniciarMapa(usuario) {
   if (!window.maplibregl || !window.pmtiles) {
     el('aviso').erro(t('mapa.erro_biblioteca'));
@@ -132,6 +304,7 @@ async function iniciarMapa(usuario) {
   } catch (e) {
     el('aviso').mostrar(`camadas do acervo indisponíveis: ${(e && e.message) || e}`, 'atencao');
   }
+  await montarDesenhoAnotacoes(map);
   document.body.dataset.pronto = '1';
 }
 

@@ -35,6 +35,20 @@ ITEM = "L2-01-k-desenho-anotacoes"
 HTML_CRU = "<b>não interpretar</b>"
 
 
+def _esperar_js(page, expressao, timeout_ms=15000):
+    """wait_for_function sem eval na página: a CSP do documento (script-src com nonce, sem unsafe-eval)
+    barra o predicado-string do playwright; page.evaluate vai por CDP e não passa pela CSP."""
+    import time
+
+    fim = time.monotonic() + timeout_ms / 1000
+    while True:
+        if page.evaluate(expressao):
+            return
+        if time.monotonic() > fim:
+            raise AssertionError(f"expressão não ficou verdadeira em {timeout_ms} ms: {expressao}")
+        time.sleep(0.1)
+
+
 @pytest.fixture(scope="session")
 def browser_context_args(browser_context_args):
     """Numa BASE DE TRILHA o servidor sobe com certificado próprio: a plataforma exige `PLAT_URL_PUBLICA`
@@ -55,9 +69,13 @@ def mapa(page, base_url, credenciais_demo, api_auth):
     return tela
 
 
-def _camada_ligada(page) -> str:
+def _camada_ligada(page, tela) -> str:
     """Liga a primeira camada servível da bancada e devolve o id — a anotação é sempre de uma FEIÇÃO de
-    camada, então sem camada não há alvo (o teste salta dizendo isso, em vez de falhar por seletor)."""
+    camada, então sem camada não há alvo (o teste salta dizendo isso, em vez de falhar por seletor).
+
+    O 503 dos ladrilhos é DECLARADO: a trilha não sobe a infra de tiles (PLAT_DSN_LEITOR/Martin, item
+    L2-01-b — ver app/tiles/rotas.py), então a camada liga mas não pinta; o que este teste mede é a
+    persistência da anotação (camada_id, fid), que não depende do ladrilho chegar."""
     page.evaluate("() => window.plat.mapa.abrirPainel('camadas', { foco: false })")
     page.wait_for_selector("#lista-camadas li", timeout=20000)
     ids = page.evaluate(
@@ -65,6 +83,7 @@ def _camada_ligada(page) -> str:
     )
     if not ids:
         pytest.skip("nenhuma camada servível nesta base: sem feição, não há alvo de anotação")
+    tela.esperar_status(503)
     page.evaluate("(id) => window.plat.mapa.catalogo.ligar(id)", ids[0])
     return ids[0]
 
@@ -74,10 +93,10 @@ def _abrir_anotacoes(page, camada_id: str, fid: str) -> None:
     clicar no pixel exato de uma feição da bancada seria sorteio, e o que se mede aqui é a persistência."""
     page.evaluate("() => window.plat.mapa.abrirPainel('anotacoes', { foco: false })")
     page.evaluate("([c, f]) => window.plat.mapa.painelAnotacoes.abrir(c, f)", [camada_id, fid])
-    page.wait_for_function(
+    _esperar_js(
+        page,
         "() => { const e = document.querySelector('#anotacoes-estado'); "
         "return !e.hidden ? e.getAttribute('tipo') !== 'carregando' : true; }",
-        timeout=15000,
     )
 
 
@@ -90,20 +109,11 @@ def _desenhar_ponto(page) -> None:
     page.wait_for_timeout(250)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="MEDIDO 17/09 em master: a tela /mapa NÃO tem os painéis. `web/mapa.html` tem 55 linhas e carrega "
-           "só `web/js/mapa/mapa.js` (133 linhas, item L2-01-a, mapa-base PMTiles); `web/js/mapa/desenho.js` e "
-           "`web/js/mapa/anotacoes.js` existem no repositório mas NINGUÉM os importa, e não há "
-           "`window.plat.mapa`/`abrirPainel`. Por isso este e2e — e os vizinhos test_l201k_desenho.py e "
-           "test_ux23_selecao_anotacoes_pacote.py, que erram do mesmo jeito — não medem nada hoje. O xfail é "
-           "estrito de propósito: no dia em que a tela ganhar os painéis, ele vira FALHA e a marca sai.",
-)
 def test_anotacao_e_desenho_voltam_depois_de_recarregar_a_pagina(mapa, page, base_url):
     assert page.evaluate("() => !!(window.plat && window.plat.mapa && window.plat.mapa.abrirPainel)"), (
         "a tela /mapa não expõe window.plat.mapa.abrirPainel: sem painel de desenho/anotação não há o que medir"
     )
-    camada_id = _camada_ligada(page)
+    camada_id = _camada_ligada(page, mapa)
     fid = "1"
     s = sufixo()
     texto = f"nota de portao {s} {HTML_CRU}"
@@ -116,7 +126,7 @@ def test_anotacao_e_desenho_voltam_depois_de_recarregar_a_pagina(mapa, page, bas
     _desenhar_ponto(page)
     page.evaluate("() => window.plat.mapa.abrirPainel('desenho', { foco: false })")
     page.click("#btn-desenho-salvar")
-    page.wait_for_function("window.plat.mapa.mapaId", timeout=15000)
+    _esperar_js(page, "!!window.plat.mapa.mapaId")
     mapa_id = page.evaluate("window.plat.mapa.mapaId")
     desenho_antes = page.evaluate("JSON.stringify(window.plat.mapa.desenho.lista())")
 
@@ -135,12 +145,24 @@ def test_anotacao_e_desenho_voltam_depois_de_recarregar_a_pagina(mapa, page, bas
         page.goto(f"{base_url}/mapa?mapa={mapa_id}", wait_until="domcontentloaded")
         page.wait_for_selector("body[data-pronto='1']", timeout=20000)
         page.wait_for_selector("#mapa canvas.maplibregl-canvas", timeout=20000)
-        page.wait_for_function(
+        _esperar_js(
+            page,
             "() => window.plat && window.plat.mapa && window.plat.mapa.desenho.lista().length > 0",
-            timeout=20000,
+            timeout_ms=20000,
         )
         desenho_depois = page.evaluate("JSON.stringify(window.plat.mapa.desenho.lista())")
-        assert desenho_depois == desenho_antes, "o desenho salvo não voltou igual ao reabrir o mapa"
+        # a ida e volta pelo servidor reordena as CHAVES do JSON (jsonb); a comparação é do conteúdo
+        import json as _json
+
+        def _canonico(txt):
+            return sorted(
+                ((f["id"], _json.dumps(f["geometry"], sort_keys=True),
+                  _json.dumps(f["properties"], sort_keys=True)) for f in _json.loads(txt)),
+            )
+
+        assert _canonico(desenho_depois) == _canonico(desenho_antes), (
+            "o desenho salvo não voltou igual ao reabrir o mapa"
+        )
 
         _abrir_anotacoes(page, camada_id, fid)
         item = page.locator(f"#lista-anotacoes li[data-anotacao='{anotacao_id}']")
@@ -150,9 +172,9 @@ def test_anotacao_e_desenho_voltam_depois_de_recarregar_a_pagina(mapa, page, bas
         assert item.locator("b").count() == 0
         mapa.capturar("anotacao_reaberta")
 
-        # --- par negativo: apagada, não volta
-        page.once("dialog", lambda d: d.accept())
+        # --- par negativo: apagada, não volta (a confirmação é <plat-dialogo>, não dialog nativo)
         item.locator("[data-acao='apagar']").click()
+        page.locator("plat-dialogo button[data-id='ok']").click()
         page.wait_for_selector(f"#lista-anotacoes li[data-anotacao='{anotacao_id}']", state="detached",
                                timeout=15000)
         anotacao_id_apagada, anotacao_id = anotacao_id, None

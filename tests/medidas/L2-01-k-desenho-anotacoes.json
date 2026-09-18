@@ -2,42 +2,38 @@
  "item": "L2-01-k-desenho-anotacoes",
  "medidas": {
   "salvar_5000_desenhos_ms": {
-   "valor": 190,
+   "valor": 261,
    "unidade": "ms",
    "comando": "pytest tests/api/catalogo/test_desenho_anotacoes.py::test_5000_desenhos_salvam_reabrem_identicos_e_o_tempo_fica_registrado"
   },
   "reabrir_5000_desenhos_ms": {
-   "valor": 39,
+   "valor": 37,
    "unidade": "ms",
    "comando": "pytest tests/api/catalogo/test_desenho_anotacoes.py::test_5000_desenhos_salvam_reabrem_identicos_e_o_tempo_fica_registrado"
   },
   "carga_1min": {
-   "valor": 14.12,
+   "valor": 3.73,
    "unidade": "média de 1 min (12 núcleos)",
    "comando": "pytest tests/api/catalogo/test_desenho_anotacoes.py::test_5000_desenhos_salvam_reabrem_identicos_e_o_tempo_fica_registrado"
   },
   "ram_livre_gb": {
-   "valor": 7.8,
+   "valor": 47.7,
    "unidade": "GB",
    "comando": "pytest tests/api/catalogo/test_desenho_anotacoes.py::test_5000_desenhos_salvam_reabrem_identicos_e_o_tempo_fica_registrado"
   },
   "medido_em": {
-   "valor": "2026-09-07T18:46:13Z",
+   "valor": "2026-09-18T10:28:25Z",
    "unidade": "UTC",
    "comando": "pytest tests/api/catalogo/test_desenho_anotacoes.py::test_5000_desenhos_salvam_reabrem_identicos_e_o_tempo_fica_registrado"
   },
   "modulos_alcancados_pela_pagina_do_mapa": {
-   "valor": 24,
+   "valor": 29,
    "unidade": "arquivos .js",
    "comando": "pytest tests/unit/test_l201k_frente_desenho.py::test_medida_da_ligacao_da_tela_de_desenho"
   },
   "modulos_de_mapa_orfaos": {
    "valor": [
-    "anotacoes.js",
     "atributos.js",
-    "catalogo.js",
-    "crs.js",
-    "desenho.js",
     "documento.js",
     "edicao.js",
     "estilo_editor.js",
@@ -47,7 +43,6 @@
     "grafico_svg.js",
     "graficos.js",
     "impressao.js",
-    "medicao.js",
     "motor.js",
     "navegacao.js",
     "painel_camadas.js",
@@ -62,11 +57,14 @@
    "comando": "pytest tests/unit/test_l201k_frente_desenho.py::test_medida_da_ligacao_da_tela_de_desenho"
   },
   "desenho_e_anotacao_ligados_a_tela": {
-   "valor": false,
+   "valor": [
+    "anotacoes.js",
+    "desenho.js"
+   ],
    "unidade": "módulos do item alcançados pela página (False = nenhum)",
    "comando": "pytest tests/unit/test_l201k_frente_desenho.py::test_medida_da_ligacao_da_tela_de_desenho"
   }
  },
- "gerado_em": "2026-09-18T10:07:15Z",
- "git_sha": "37eee9719c22"
+ "gerado_em": "2026-09-18T10:28:25Z",
+ "git_sha": "5c9564af7a22"
 }

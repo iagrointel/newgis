@@ -1,15 +1,18 @@
 """Portão do item L2-01-k-desenho-anotacoes, metade da TELA: os módulos de desenho e de anotação
 precisam estar LIGADOS à página do mapa, não apenas existir no repositório.
 
-Por que um teste estático e não só o e2e: `tests/e2e/test_mapa_desenho.py` (e os vizinhos
-`test_l201k_desenho.py` e `test_ux23_selecao_anotacoes_pacote.py`) só conseguem dizer "a tela não
-expõe window.plat.mapa" depois de subir navegador, servidor e banco — e, sem navegador na máquina,
-saltam e não dizem nada. Aqui a mesma cláusula é medida em milissegundos, lendo o que a página
-importa: `web/mapa.html` -> `web/js/mapa/mapa.js` -> imports, transitivamente.
+Por que um teste estático e não só o e2e: `tests/e2e/test_l201k_desenho.py` só consegue dizer "a tela
+não expõe window.plat.mapa" depois de subir navegador, servidor e banco — e, sem navegador na máquina,
+salta e não diz nada. Aqui a mesma cláusula é medida em milissegundos, lendo o que a página importa:
+`web/mapa.html` -> `web/js/mapa/mapa.js` -> imports, transitivamente.
+
+Histórico: em 18/09 os módulos existiam mas NINGUÉM os importava (a junção do tronco tinha revertido
+mapa.js/mapa.html para a versão sem painéis). A ligação foi refeita na mesma data; este teste, que era
+xfail estrito medindo a lacuna, passou a valer como guarda contra nova regressão.
 
 O par positivo é obrigatório e está junto: a mesma travessia TEM de alcançar `estilo.js`, que a tela
 comprovadamente usa. Sem esse par, uma travessia quebrada (regex errada, caminho errado) devolveria
-"nada alcançado" e o teste da lacuna passaria por engano.
+"nada alcançado" e o teste passaria por engano.
 """
 
 from __future__ import annotations
@@ -66,15 +69,9 @@ def test_a_travessia_enxerga_o_que_a_tela_usa_de_fato(alcancaveis):
     assert len(alcancaveis) > 5, sorted(nomes)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="MEDIDO 18/09 em master: web/js/mapa/desenho.js e web/js/mapa/anotacoes.js existem mas "
-           "NINGUÉM os importa — web/mapa.html carrega só web/js/mapa/mapa.js, que não os alcança. "
-           "A cláusula do portão 'desenho salvo e reaberto pela tela' e 'anotação aparece para outro "
-           "usuário do grupo' não tem por onde ser medida na tela. Estrito de propósito: no dia em que "
-           "a página importar os dois, este teste XPASSA, vira falha e a marca sai.",
-)
 def test_modulos_de_desenho_e_anotacao_estao_ligados_a_pagina_do_mapa(alcancaveis):
+    """A cláusula do portão 'desenho salvo e reaberto pela tela' e 'anotação aparece para outro usuário
+    do grupo' só tem por onde ser medida na tela se a página importar os dois módulos."""
     nomes = {p.name for p in alcancaveis}
     assert {"desenho.js", "anotacoes.js"} <= nomes, sorted(nomes)
 
@@ -104,5 +101,6 @@ def test_medida_da_ligacao_da_tela_de_desenho(alcancaveis, medida):
             "módulo alcançado a partir da tela do mapa (web/mapa.html ou web/sig.html; "
             "False = e2e da tela impossível hoje)", cmd)
 
-    assert "desenho.js" in orfaos and "anotacoes.js" in orfaos, orfaos
+    assert "desenho.js" not in orfaos and "anotacoes.js" not in orfaos, orfaos
+    # os itens vizinhos continuam com a lacuna deles medida aqui (não é deste item fechá-la)
     assert "edicao.js" in orfaos and "exportar.js" in orfaos, orfaos
