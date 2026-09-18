@@ -12,6 +12,7 @@ MESMO globalid (senão qualquer referência externa a esse id — anexo, seleç�
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from typing import Any
 
 import psycopg2
@@ -48,18 +49,154 @@ def _linha_json(r: dict) -> dict:
     }
 
 
-def listar(cur, camada_id: str, globalid: str) -> list[dict]:
+def _cursor_par(cursor: str | None) -> tuple[datetime, int] | None:
+    """Cursor chaveset "<epoch com microssegundos>|<id>" da página anterior — epoch (não ISO) porque o
+    cursor viaja em query string, onde o '+' do fuso vira espaço e corromperia o valor. Inválido = 400,
+    nunca silêncio: um cursor quebrado que virasse "primeira página" faria o cliente varrer o histórico
+    duas vezes sem perceber."""
+    if not cursor:
+        return None
+    try:
+        momento_txt, id_txt = cursor.rsplit("|", 1)
+        return datetime.fromtimestamp(float(momento_txt), tz=timezone.utc), int(id_txt)
+    except (ValueError, TypeError, OverflowError, OSError) as e:
+        raise ErroAPI(400, "cursor_invalido", "cursor de paginação inválido") from e
+
+
+def _dif_atributos(antes: dict | None, depois: dict | None) -> dict:
+    """Diff campo a campo (sem os campos de rastreio/sistema, que mudam em TODA escrita e não são decisão
+    do editor). `mudou` por valor — o mesmo padrão do diff de reconciliação de ramos (L2-13-a), para que
+    exista UMA resposta só para "o que mudou"."""
+    a, d = antes or {}, depois or {}
+    campos = sorted((set(a) | set(d)) - set(RESERVADOS))
+    return {c: {"antes": a.get(c), "depois": d.get(c), "mudou": a.get(c) != d.get(c)} for c in campos}
+
+
+def _dif_geometria(cur, r: dict, srid: int | None) -> dict | None:
+    """Área/comprimento antes e depois em METROS (geography sobre o geom reprojetado para 4326 — o GeoJSON
+    do histórico está no SRID da camada). NULL quando a camada não tem geometria ou a operação não a toca."""
+    if not srid or (r["geom_antes"] is None and r["geom_depois"] is None):
+        return None
+    cur.execute(
+        "SELECT "
+        " CASE WHEN %(ga)s IS NOT NULL THEN ST_Area((ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON(%(ga)s), %(srid)s), 4326))::geography) END AS area_antes_m2,"
+        " CASE WHEN %(gd)s IS NOT NULL THEN ST_Area((ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON(%(gd)s), %(srid)s), 4326))::geography) END AS area_depois_m2,"
+        " CASE WHEN %(ga)s IS NOT NULL THEN ST_Length((ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON(%(ga)s), %(srid)s), 4326))::geography) END AS comp_antes_m,"
+        " CASE WHEN %(gd)s IS NOT NULL THEN ST_Length((ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON(%(gd)s), %(srid)s), 4326))::geography) END AS comp_depois_m",
+        {"ga": r["geom_antes"], "gd": r["geom_depois"], "srid": int(srid)},
+    )
+    m = cur.fetchone()
+    return {
+        "mudou": r["geom_antes"] != r["geom_depois"],
+        "area_antes_m2": m["area_antes_m2"],
+        "area_depois_m2": m["area_depois_m2"],
+        "comprimento_antes_m": m["comp_antes_m"],
+        "comprimento_depois_m": m["comp_depois_m"],
+    }
+
+
+def listar(
+    cur, camada_id: str, globalid: str, cursor: str | None = None,
+    limite: int | None = None, dif: bool = False,
+) -> dict:
     """Portão: "histórico consultável" — quem, quando, o quê, mais recente primeiro. Só exige que a camada seja
-    legível (a mesma RLS de `plat.item`); não exige privilégio de edição (consultar histórico não é editar)."""
+    legível (a mesma RLS de `plat.item`); não exige privilégio de edição (consultar histórico não é editar).
+
+    Paginação chaveset por (momento, id) — refutação do adversário: 100 mil versões de uma feição têm de ser
+    percorríveis SEM deslocamento (OFFSET varre de novo o que já foi lido e mistura páginas se uma escrita
+    acontece no meio do percurso; o chaveset é estável nos dois casos). `proximo_cursor` ausente = acabou.
+    `dif=1` anexa o diff campo a campo e da geometria já calculado (área/comprimento antes/depois), para a
+    tela não recalcular nada."""
     _item, dados = camada_ou_404(cur, camada_id)
     schema, tabela = _schema_tabela(dados)
+    limite = min(limite or HISTORICO_LISTA_MAX, HISTORICO_LISTA_MAX)
+    par = _cursor_par(cursor)
+    cur.execute(
+        "SELECT count(*) AS n FROM plat.feicao_historico "
+        "WHERE schema_dado = %s AND tabela_dado = %s AND globalid = %s",
+        (schema, tabela, globalid),
+    )
+    total = cur.fetchone()["n"]
     cur.execute(
         "SELECT id, operacao, versao, atributos_antes, atributos_depois, geom_antes, geom_depois, usuario_id, "
-        "momento FROM plat.feicao_historico WHERE schema_dado = %s AND tabela_dado = %s AND globalid = %s "
+        "momento FROM plat.feicao_historico "
+        "WHERE schema_dado = %s AND tabela_dado = %s AND globalid = %s "
+        "AND (%s::timestamptz IS NULL OR (momento, id) < (%s::timestamptz, %s::bigint)) "
         "ORDER BY momento DESC, id DESC LIMIT %s",
-        (schema, tabela, globalid, HISTORICO_LISTA_MAX),
+        (schema, tabela, globalid, par[0] if par else None, par[0] if par else None,
+         par[1] if par else None, limite + 1),
     )
-    return [_linha_json(r) for r in cur.fetchall()]
+    linhas = cur.fetchall()
+    tem_mais = len(linhas) > limite
+    linhas = linhas[:limite]
+    srid = dados.get("srid")
+    entradas = []
+    for r in linhas:
+        e = _linha_json(r)
+        if dif:
+            e["dif"] = {
+                "atributos": _dif_atributos(r["atributos_antes"], r["atributos_depois"]),
+                "geometria": _dif_geometria(cur, r, srid),
+            }
+        entradas.append(e)
+    proximo = None
+    if tem_mais and linhas:
+        ultimo = linhas[-1]
+        proximo = f"{ultimo['momento'].timestamp():.6f}|{ultimo['id']}"
+    return {"entradas": entradas, "total": total, "proximo_cursor": proximo}
+
+
+def como_era(
+    cur, camada_id: str, em: datetime, cursor: str | None = None, limite: int | None = None,
+) -> dict:
+    """"Como era a camada em <em>" (o historicMoment do FeatureServer, portão L2-03-d): a view temporal é
+    MONTADA DO HISTÓRICO — para cada globalid, a entrada mais recente até `em`; quem terminou apagado não
+    aparece. Não toca a tabela viva: feição sem NENHUMA linha de histórico (criada antes de o gatilho existir
+    e nunca editada) não é reconstruível e não entra — fronteira declarada no relatório do item."""
+    _item, dados = camada_ou_404(cur, camada_id)
+    schema, tabela = _schema_tabela(dados)
+    limite = min(limite or HISTORICO_LISTA_MAX, HISTORICO_LISTA_MAX)
+    cur.execute(
+        "WITH ultima AS ("
+        " SELECT DISTINCT ON (globalid) globalid, operacao, versao, atributos_depois, geom_depois"
+        " FROM plat.feicao_historico"
+        " WHERE schema_dado = %(s)s AND tabela_dado = %(t)s AND momento <= %(em)s"
+        " ORDER BY globalid, momento DESC, id DESC"
+        ") SELECT count(*) AS n FROM ultima WHERE operacao <> 'apagar'",
+        {"s": schema, "t": tabela, "em": em},
+    )
+    total = cur.fetchone()["n"]
+    cur.execute(
+        "WITH ultima AS ("
+        " SELECT DISTINCT ON (globalid) globalid, operacao, versao, atributos_depois, geom_depois"
+        " FROM plat.feicao_historico"
+        " WHERE schema_dado = %(s)s AND tabela_dado = %(t)s AND momento <= %(em)s"
+        " ORDER BY globalid, momento DESC, id DESC"
+        ") SELECT globalid, versao, atributos_depois, geom_depois FROM ultima"
+        " WHERE operacao <> 'apagar' AND (%(cursor)s::uuid IS NULL OR globalid > %(cursor)s::uuid)"
+        " ORDER BY globalid LIMIT %(lim)s",
+        {"s": schema, "t": tabela, "em": em, "cursor": cursor, "lim": limite + 1},
+    )
+    linhas = cur.fetchall()
+    tem_mais = len(linhas) > limite
+    linhas = linhas[:limite]
+    feicoes = [
+        {
+            "id": str(r["globalid"]),
+            "versao": r["versao"],
+            "atributos": {
+                c: v for c, v in (r["atributos_depois"] or {}).items() if c not in RESERVADOS
+            },
+            "geometria": json.loads(r["geom_depois"]) if r["geom_depois"] else None,
+        }
+        for r in linhas
+    ]
+    return {
+        "em": em.isoformat(),
+        "total": total,
+        "feicoes": feicoes,
+        "proximo_cursor": str(linhas[-1]["globalid"]) if tem_mais and linhas else None,
+    }
 
 
 def _historico_ou_404(cur, schema: str, tabela: str, globalid: str, historico_id: int) -> dict:

@@ -150,6 +150,8 @@ PAGINAS = {
     # --- construtor por arrasto (L5-08-editor-arrasto): ?item=<id de item app/painel>
     # --- ramos de versão e diff de reconciliação (L2-13-a): ?camada=<id>
     "/versoes": "versoes.html",
+    # --- histórico da feição com diff campo a campo e geometria lado a lado (L2-03-d)
+    "/camadas/{id}/feicoes/{globalid}/historico": "feicao_historico.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
     # --- provedores de login e regras de provisionamento (L0-08-e-mapeamento-provisionamento)
     "/admin/logins": "admin/logins.html",

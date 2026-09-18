@@ -2,17 +2,17 @@
  "item": "L2-03-d-historico-restauracao",
  "medidas": {
   "lote_1000_com_historico_s": {
-   "valor": 0.897,
+   "valor": 1.247,
    "unidade": "s",
    "comando": "pytest tests/api/test_historico_feicao.py::test_lote_de_mil_feicoes_gera_mil_linhas_de_historico_e_nao_dobra_o_tempo"
   },
   "lote_1000_sem_historico_s": {
-   "valor": 0.819,
+   "valor": 0.863,
    "unidade": "s",
    "comando": "mesma rodada, tg_historico desligado"
   },
   "razao_com_sem_historico": {
-   "valor": 1.09,
+   "valor": 1.44,
    "unidade": "x",
    "comando": "mesma rodada"
   },
@@ -22,8 +22,13 @@
    ],
    "unidade": "papel:privilégios concedidos sobre plat.feicao_historico em db/migracoes",
    "comando": "pytest tests/api/test_historico_feicao.py::test_as_migracoes_nunca_dao_update_nem_delete_do_historico_ao_papel_de_aplicacao"
+  },
+  "pagina_pronta_ms_histfeicao": {
+   "valor": 232.1,
+   "unidade": "ms",
+   "comando": "pytest tests/e2e/test_historico_diff.py (chromium do playwright)"
   }
  },
- "gerado_em": "2026-09-18T01:59:14Z",
- "git_sha": "f6ea5322e909"
+ "gerado_em": "2026-09-18T08:07:47Z",
+ "git_sha": "f7d794e3758a"
 }

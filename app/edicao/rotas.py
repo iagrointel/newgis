@@ -6,6 +6,8 @@ aqui são dois em OU, então a checagem é feita à mão dentro de outra depend�
 `tests/api/test_privilegios_matriz.py`, que chama a rota sem NENHUM dos dois e exige 403 antes do corpo)."""
 
 import psycopg2
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, Request, Response
 
 from app import db, entrega_conteudo, limites
@@ -111,12 +113,28 @@ LER_HISTORICO = {"x-auth": "S/T", "x-privilegio": "rls:visibilidade"}
 
 
 @router.get("/api/camadas/{id}/feicoes/{globalid}/historico", openapi_extra=LER_HISTORICO)
-def listar_historico(id: str, globalid: str, auth: Auth = autenticado(escopo_token="camada:ler")) -> list[dict]:
+def listar_historico(
+    id: str, globalid: str, cursor: str | None = None, limite: int | None = None,
+    dif: bool = False, auth: Auth = autenticado(escopo_token="camada:ler"),
+) -> dict:
     iid = comum.uuid_ok(id)
     globalid = comum.uuid_ok(globalid, "feicao_inexistente", "feição inexistente nesta camada")
     esc.exigir_escopo(auth, "camada:ler", iid)
     with db.db(auth.contexto()) as cur:
-        return historico.listar(cur, iid, globalid)
+        return historico.listar(cur, iid, globalid, cursor=cursor, limite=limite, dif=dif)
+
+
+@router.get("/api/camadas/{id}/como-era", openapi_extra=LER_HISTORICO)
+def como_era_camada(
+    id: str, em: datetime, cursor: str | None = None, limite: int | None = None,
+    auth: Auth = autenticado(escopo_token="camada:ler"),
+) -> dict:
+    """"Como era a camada em <em>" (equivalente ao historicMoment do FeatureServer, item L2-03-d): estado
+    reconstruído DO HISTÓRICO por gatilho — vale para qualquer escrita, não só a da API."""
+    iid = comum.uuid_ok(id)
+    esc.exigir_escopo(auth, "camada:ler", iid)
+    with db.db(auth.contexto()) as cur:
+        return historico.como_era(cur, iid, em, cursor=cursor, limite=limite)
 
 
 @router.post(

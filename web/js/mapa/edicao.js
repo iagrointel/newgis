@@ -439,7 +439,7 @@ export class Edicao {
     const r = await obter(`/api/camadas/${this.camadaId}/feicoes/${globalid}/historico`);
     const raiz = h('div', { class: 'bloco' }, h('h3', {}, t('mapa.edicao_historico')));
     const lista = h('ul', { class: 'edicao-historico' });
-    const entradas = (r.status === 200 && r.json) || [];
+    const entradas = (r.status === 200 && r.json && r.json.entradas) || [];
     if (!entradas.length) lista.append(h('li', {}, t('mapa.edicao_historico_vazio')));
     for (const e of entradas) {
       lista.append(h('li', {}, `${e.operacao} · ${new Date(e.momento).toLocaleString('pt-BR')} `,
