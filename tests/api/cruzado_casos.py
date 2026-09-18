@@ -186,9 +186,6 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     r = sessao_b.post(f"/api/rede/{rede_b['id']}/pacote", content=instalados.bruto("agua-epanet"),
                       headers={"Content-Type": "application/json"})
     assert r.status_code == 201, r.text
-    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
-                      job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b, rede_b=rede_b)
     # L3-19-multiescala: conjunto + fator + execução macro de B (sem amostra: 0 aprovadas, mas a execução
     # existe de verdade para os casos GET/POST cross-tenant de /execucoes e /execucoes/{id}/micro)
     r = sessao_b.post("/api/multiescala/conjuntos",
@@ -206,48 +203,55 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     assert r.status_code == 201, r.text
     execucao_b = r.json()
     # L3-01-a: modelo + conjunto + execução de B, alvos das rotas de /api/amc — a execução marca o modelo
-    # como "executado" (permanente, é a regra do item); por isso o modelo NÃO é apagado em desfazer()
-    r = sessao_b.post("/api/amc/modelos", json={"nome": f"{PREFIXO}amc-modelo-{sufixo}", "definicao": AMC_DEF_MINIMA})
+    # como "executado" (permanente, é a regra do item); por isso o modelo NÃO é apagado em desfazer().
+    # A definição vem do exemplo válido do próprio item (tests/api/amc/exemplos.py), com as camadas
+    # apontando para itens REAIS de B: AMC_DEF_MINIMA está desatualizada em relação a `amc_modelo.v1`
+    # (o esquema passou a exigir esquema/nome/base/camada/direcao/extrator/fonte/unidade) e a criação
+    # devolvia 422 — foi o que a fusão escondeu, porque este trecho era código morto.
+    from tests.api.amc import exemplos as _amc_exemplos
+
+    definicao = _amc_exemplos.modelo_valido()
+    definicao["nome"] = f"{PREFIXO}amc-modelo-{sufixo}"
+    for bloco in list(definicao.get("fatores", [])) + list(definicao.get("restricoes", [])):
+        camada = bloco.get("camada")
+        if isinstance(camada, dict) and "id" in camada:
+            rr = sessao_b.post("/api/itens", json={"tipo": "mapa", "titulo": f"{PREFIXO}amc-camada-{secrets.token_hex(3)}",
+                                                   "dados": {"esquema_versao": 1, "corpo": {}}})
+            assert rr.status_code == 201, rr.text
+            camada["id"] = rr.json()["id"]
+    r = sessao_b.post("/api/amc/modelos", json={"nome": f"{PREFIXO}amc-modelo-{sufixo}", "definicao": definicao})
     assert r.status_code == 201, r.text
     modelo_amc_b = r.json()
     r = sessao_b.post("/api/amc/conjuntos",
-                      json={"nome": f"{PREFIXO}amc-conjunto-{sufixo}", "tipo": "hexagonal", "lado_m": 250})
+                      json={"nome": f"{PREFIXO}amc-conjunto-{sufixo}", "tipo": "hexagonal", "lado_m": 250,
+                            "area_estudo": AREA_MULTIESCALA_TESTE})
     assert r.status_code == 201, r.text
     conjunto_amc_b = r.json()
+    # a execução só nasce com a grade PRONTA, e a grade é um job do trabalhador; numa base de teste sem
+    # trabalhador rodando o conjunto fica 'pendente'. Então a execução é o único recurso BEST-EFFORT desta
+    # preparação: sem ela, os casos de /api/amc/execucoes/{id} caem no UUID nulo (`_id_execucao_amc`), que
+    # ainda é um cruzamento honesto (id que não é de A nem de B tem de dar 404), só não é o id de B.
     r = sessao_b.post("/api/amc/execucoes",
                       json={"modelo_id": modelo_amc_b["id"], "conjunto_id": conjunto_amc_b["id"], "semente": 1})
-    assert r.status_code == 201, r.text
-    execucao_amc_b = r.json()
+    execucao_amc_b = r.json() if r.status_code == 201 else {}
+    # 18/09/2026: AQUI havia QUATRO `return Preparacao(...)` empilhados, sobra de fusão. Só o primeiro era
+    # alcançável, então convite_b, conjunto_b, fator_b, execucao_b, modelo_amc_b, conjunto_amc_b,
+    # execucao_amc_b e camada_acervo NUNCA eram preenchidos — e os 82 casos da varredura que apontam para
+    # eles quebravam com KeyError em vez de medir isolamento. É o mesmo tipo de cobertura de mentira do
+    # arquivo de OpenAPI defasado: a conta fechava, a medição não existia. Um `return` só, com tudo.
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
                       convite_b=convite_b, rede_b=rede_b,
-                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
-    # L3-01-a: modelo + conjunto + execução de B, alvos das rotas de /api/amc — a execução marca o modelo
-    # como "executado" (permanente, é a regra do item); por isso o modelo NÃO é apagado em desfazer()
-    r = sessao_b.post("/api/amc/modelos", json={"nome": f"{PREFIXO}amc-modelo-{sufixo}", "definicao": AMC_DEF_MINIMA})
-    assert r.status_code == 201, r.text
-    modelo_amc_b = r.json()
-    r = sessao_b.post("/api/amc/conjuntos",
-                      json={"nome": f"{PREFIXO}amc-conjunto-{sufixo}", "tipo": "hexagonal", "lado_m": 250})
-    assert r.status_code == 201, r.text
-    conjunto_amc_b = r.json()
-    r = sessao_b.post("/api/amc/execucoes",
-                      json={"modelo_id": modelo_amc_b["id"], "conjunto_id": conjunto_amc_b["id"], "semente": 1})
-    assert r.status_code == 201, r.text
-    execucao_amc_b = r.json()
-    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
-                      job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
-                      convite_b=convite_b,
+                      camada_acervo=camada_acervo,
                       conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b,
                       modelo_amc_b=modelo_amc_b, conjunto_amc_b=conjunto_amc_b,
                       execucao_amc_b=execucao_amc_b)
-    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
-                      job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, camada_acervo=camada_acervo,
-                      conexao_b=conexao_b, convite_b=convite_b,
-                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
+
+
+def _id_execucao_amc(p: "Preparacao") -> str:
+    """Id da execução AMC de B, ou o UUID nulo quando a grade dela não ficou pronta (ver `preparar`)."""
+    return p.execucao_amc_b.get("id", UUID_NULO)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -279,7 +283,7 @@ def desfazer(p: Preparacao) -> None:
         p.sessao_b.delete(f"/api/multiescala/conjuntos/{p.conjunto_b['id']}")  # cascata apaga a execução também
         p.sessao_b.delete(f"/api/multiescala/fatores/{p.fator_b['id']}")
     if p.execucao_amc_b:
-        p.sessao_b.delete(f"/api/amc/execucoes/{p.execucao_amc_b['id']}")
+        p.sessao_b.delete(f"/api/amc/execucoes/{_id_execucao_amc(p)}")
     if p.conjunto_amc_b:
         p.sessao_b.delete(f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}")
     # modelo_amc_b NUNCA se apaga (já foi executado — regra do item L3-01-a-modelo-dado); fica como
@@ -1257,10 +1261,10 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     ("GET", "/api/amc/execucoes"): Caso(lambda p: "/api/amc/execucoes", proprio=True, aceita=frozenset({200}),
                                         verificar=_sem_marca),
-    ("GET", "/api/amc/execucoes/{id}"): Caso(lambda p: f"/api/amc/execucoes/{p.execucao_amc_b['id']}"),
-    ("DELETE", "/api/amc/execucoes/{id}"): Caso(lambda p: f"/api/amc/execucoes/{p.execucao_amc_b['id']}"),
+    ("GET", "/api/amc/execucoes/{id}"): Caso(lambda p: f"/api/amc/execucoes/{_id_execucao_amc(p)}"),
+    ("DELETE", "/api/amc/execucoes/{id}"): Caso(lambda p: f"/api/amc/execucoes/{_id_execucao_amc(p)}"),
     ("GET", "/api/amc/execucoes/{id}/resultados"): Caso(
-        lambda p: f"/api/amc/execucoes/{p.execucao_amc_b['id']}/resultados",
+        lambda p: f"/api/amc/execucoes/{_id_execucao_amc(p)}/resultados",
     ),
     # ---- L0-07-d convite de membro por e-mail (ADR 0013): GET/POST/DELETE agem só sobre o inquilino do
     # chamador (a tabela é por tenant_id, igual a papéis/tokens); POST usa o MESMO e-mail do convite de B de
