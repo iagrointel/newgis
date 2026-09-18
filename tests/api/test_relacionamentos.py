@@ -7,6 +7,8 @@ plat.camada_preparar, INSERT direto como plat_app — não é mock)."""
 
 from __future__ import annotations
 
+import time
+
 import psycopg2
 import pytest
 
@@ -355,3 +357,75 @@ def test_refutacao_paginacao_com_muitos_relacionados(sessao, quadras, lotes, med
          f"{n} lotes inseridos, limite_relacionados=10, pedido limite=9999 -> devolveu {tamanho}"
          " (100 mil não medido nesta rodada: custo de disco/tempo compartilhado, ver handoff)")
     assert tamanho == 10, "limite_relacionados tem de vencer o `limite` pedido pela consulta"
+
+
+# ------------------------------------------------- refutação do portão, com os 100 mil de verdade (lento)
+@pytest.mark.lento
+def test_refutacao_100000_relacionados_numa_origem(sessao, quadras, lotes, medida):
+    """A refutação que o portão do item exige LITERALMENTE: "100 mil relacionados numa origem (paginação)".
+
+    Até 18/09/2026 nenhum teste do repositório tentava esse N — o teste vizinho prova o MECANISMO com 25
+    linhas e diz, com todas as letras, que 100 mil não foi medido. O adversário do T9 anotou a diferença:
+    não é "não medido", é "nunca tentado em código". Aqui é tentado.
+
+    As 100 mil linhas entram num único `INSERT ... SELECT generate_series` (não 100 mil idas ao banco): o
+    que está sob prova é a CONSULTA de relacionados com muitos destinos, não a velocidade de inserção. O
+    teste é `lento` para ficar fora da rodada do driver e entrar em `make check`, onde o portão é conferido.
+    """
+    grava = medida(ITEM)
+    n = 100_000
+    q1 = quadras.inserir(nome="Q1 cem mil")
+    g1 = _globalid(quadras, q1)
+    lotes.contexto()
+    t0 = time.perf_counter()
+    with lotes.con.cursor() as cur:
+        cur.execute(
+            f"INSERT INTO {lotes.esquema}.{lotes.tabela} (geom, quadra_globalid, endereco) "
+            "SELECT ST_SetSRID(ST_MakePoint(-46.5, -23.5), 4326), %s, 'rua ' || i "
+            "FROM generate_series(1, %s) AS i", (g1, n),
+        )
+        cur.execute(f"SELECT count(*) AS n FROM {lotes.esquema}.{lotes.tabela} WHERE quadra_globalid = %s", (g1,))
+        inseridos = int(cur.fetchone()["n"])
+    lotes.con.commit()
+    segundos_insercao = time.perf_counter() - t0
+    assert inseridos == n, inseridos
+
+    r = sessao.post("/api/relacionamentos", json={
+        "origem_item_id": quadras.item_id, "destino_item_id": lotes.item_id,
+        "cardinalidade": "1:N", "chave_origem": "globalid", "chave_destino": "quadra_globalid",
+        "composto": False, "nome_direto": "lotes", "nome_inverso": "quadra",
+    })
+    assert r.status_code == 200, r.text
+
+    # 1. a consulta NÃO devolve as 100 mil de uma vez, e responde em tempo medido
+    t0 = time.perf_counter()
+    resp = sessao.get(f"/api/camadas/{quadras.item_id}/relacionados/lotes",
+                      params={"fids": str(q1), "limite": 9999})
+    ms_pagina = (time.perf_counter() - t0) * 1000
+    assert resp.status_code == 200, resp.text
+    pagina = resp.json()["grupos"][str(q1)]
+    assert 0 < len(pagina) <= 9999, len(pagina)
+
+    # 2. a paginação percorre: páginas seguintes trazem linhas DIFERENTES, sem repetir nem pular
+    vistos, deslocamento, paginas = set(), 0, 0
+    while deslocamento < 3000:  # três páginas de mil: prova o passeio sem gastar o turno inteiro
+        r2 = sessao.get(f"/api/camadas/{quadras.item_id}/relacionados/lotes",
+                        params={"fids": str(q1), "limite": 1000, "deslocamento": deslocamento})
+        assert r2.status_code == 200, r2.text
+        linhas = r2.json()["grupos"][str(q1)]
+        if not linhas:
+            break
+        fids = [x["fid"] for x in linhas]
+        assert not (set(fids) & vistos), f"a página em deslocamento={deslocamento} repetiu fid já devolvido"
+        vistos.update(fids)
+        deslocamento += 1000
+        paginas += 1
+
+    grava("relacionados_numa_origem", n, "linhas",
+          f"INSERT ... generate_series em {segundos_insercao:.1f} s "
+          "(pytest -m lento tests/api/test_relacionamentos.py::test_refutacao_100000_relacionados_numa_origem)")
+    grava("primeira_pagina_de_relacionados_ms", round(ms_pagina, 1), "ms",
+          f"GET /api/camadas/<quadras>/relacionados/lotes com limite=9999 sobre {n} destinos "
+          f"-> devolveu {len(pagina)} linhas")
+    grava("paginas_percorridas_sem_repeticao", paginas, "páginas",
+          f"{len(vistos)} fids distintos em {paginas} páginas de 1.000, deslocamento crescente")
