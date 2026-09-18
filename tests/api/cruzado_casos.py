@@ -2782,7 +2782,8 @@ CASOS.update({
     ("POST", "/api/geoparquet"): Caso(
         lambda p: "/api/geoparquet", lambda p: {"item_id": _it(p)}),
     ("POST", "/api/intercambio/exportacoes"): Caso(
-        lambda p: "/api/intercambio/exportacoes", lambda p: {"tipo": "camada", "item_id": _it(p)}),
+        lambda p: "/api/intercambio/exportacoes",
+        lambda p: {"tipo": "camada", "item_id": _it(p), "formato": "csv"}),
     ("POST", "/api/anotacoes"): Caso(
         lambda p: "/api/anotacoes",
         lambda p: {"camada_id": _it(p), "fid": "1", "grupo_id": p.grupo_b["id"], "texto": "zt-cruzado"}),
@@ -2818,7 +2819,7 @@ CASOS.update({
         proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca),
     ("POST", "/api/formularios/xlsform"): Caso(
         lambda p: "/api/formularios/xlsform",
-        lambda p: {"nome": "zt-cruzado", "conteudo": "zz", "camada_destino": _it(p)}),
+        lambda p: {"nome": "zt-cruzado", "conteudo": "enp6", "camada_destino": _it(p)}),
     ("POST", "/api/foto360"): Caso(lambda p: "/api/foto360", lambda p: {"arquivo_id": UUID_NULO}),
     ("POST", "/api/imagens/ingestoes"): Caso(
         lambda p: "/api/imagens/ingestoes", lambda p: {"arquivo_id": UUID_NULO}),
@@ -2829,13 +2830,16 @@ CASOS.update({
         lambda p: {"itens": [{"arquivo_id": UUID_NULO, "formato": "geojson"}]}),
     ("POST", "/api/odk/pontes"): Caso(
         lambda p: "/api/odk/pontes",
-        lambda p: {"conexao": UUID_NULO, "formulario": UUID_NULO, "projeto": 1, "conteudo": "zz"}),
+        lambda p: {"conexao": UUID_NULO, "formulario": UUID_NULO, "projeto": 1, "conteudo": "enp6"}),
     ("POST", "/api/csw/buscar"): Caso(
-        lambda p: "/api/csw/buscar", lambda p: {"url": URL_CONEXAO_TESTE, "texto": "zt-cruzado"}),
+        # 502 `csw_resposta_invalida`: o endereco aberto usado no teste nao fala CSW 2.0.2. Desfecho legitimo,
+        # nao e 2xx, e a resposta nao carrega linha de inquilino nenhum.
+        lambda p: "/api/csw/buscar", lambda p: {"url": URL_CONEXAO_TESTE, "texto": "zt-cruzado"},
+        publico=True, aceita=frozenset({502}), verificar=_sem_marca),
     ("POST", "/api/csw/conexoes"): Caso(
         # 502 e o desfecho legitimo: o endereco publico do teste nao fala CSW 2.0.2. Nao e 2xx e nao traz B.
         lambda p: "/api/csw/conexoes", lambda p: {"url": URL_CONEXAO_TESTE, "identificador": "zz"},
-        aceita=frozenset({502})),
+        publico=True, aceita=frozenset({502}), verificar=_sem_marca),
     # ---- (2) criação na coleção de A com corpo que não cita recurso nenhum: `proprio`, e o que prende é o
     # `_sem_marca` da resposta mais a recusa da chamada com X-Plat-Inquilino
     ("POST", "/api/webhooks"): Caso(
@@ -2852,7 +2856,7 @@ CASOS.update({
         limpar=_apagar_criado(("DELETE", "/api/amc/presets/{id}"))),
     ("POST", "/api/amc/presets/importar"): Caso(
         lambda p: "/api/amc/presets/importar",
-        lambda p: {"formato": "amc_preset", "versao": 1, "nome": f"{PREFIXO}pi-{secrets.token_hex(3)}",
+        lambda p: {"formato": "plat/amc_preset", "versao": 1, "nome": f"{PREFIXO}pi-{secrets.token_hex(3)}",
                    "conteudo": _PRESET_CONT},
         proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
         limpar=_apagar_criado(("DELETE", "/api/amc/presets/{id}"))),
@@ -2878,8 +2882,11 @@ CASOS.update({
         proprio=True, aceita=frozenset({201}), verificar=_sem_marca),
     ("POST", "/api/fluxos"): Caso(
         lambda p: "/api/fluxos", lambda p: {"nome": f"{PREFIXO}fluxo-{secrets.token_hex(3)}", "tipo": "mqtt",
-                   "config": {"host": "127.0.0.1", "porta": 1883, "topico": "zt"}},
-        proprio=True, aceita=frozenset({201}), verificar=_sem_marca),
+                   "config": {"host": "servicodados.ibge.gov.br", "porta": 1883, "topico": "zt"}},
+        # o corpo do caso e montado UMA vez por rota e reusado nas quatro chamadas da matriz, entao a 1a
+        # cria e as seguintes batem em 409 `nome_existente`; 422 e a recusa de SSRF a um host sem MQTT.
+        # Nenhum dos dois e 2xx com dado de B, que e o que a rota tem de nunca devolver.
+        proprio=True, aceita=frozenset({201, 409, 422}), verificar=_sem_marca),
     ("POST", "/api/ferramentas/script"): Caso(
         lambda p: "/api/ferramentas/script", lambda p: {"codigo": _SCRIPT_MINIMO},
         proprio=True, aceita=frozenset({201}), verificar=_sem_marca),
@@ -2912,8 +2919,10 @@ CASOS.update({
     **{("POST", c): Caso(lambda p, u=c: u, proprio=True, aceita=a, verificar=_sem_marca)
        for c, a in (
            ("/api/campo/sessao", frozenset({200, 201})),
-           ("/api/inquilino/exportar", frozenset({200, 202})),
-           ("/api/org/exportar", frozenset({200, 202})),
+           # 429 `exportacao_inquilino_ja_pedida_hoje`: so uma por dia, entao da 2a chamada da matriz em diante
+           # a resposta e 429. E do PROPRIO inquilino de A e nunca 2xx com dado de B.
+           ("/api/inquilino/exportar", frozenset({200, 202, 429})),
+           ("/api/org/exportar", frozenset({200, 202, 429})),
            ("/api/mapas-base/instalar", frozenset({200, 201})),
            ("/api/render/token", frozenset({200, 201})),
            ("/api/telemetria/enviar", frozenset({200, 202, 204, 422, 503})),
@@ -2940,8 +2949,8 @@ CASOS.update({
     ("POST", "/api/estilos/compilar"): Caso(
         # 422 `plat_construtor_invalido` e desfecho legitimo de construtor vazio: a rota compila estilo e nao
         # le inquilino. Prende-se o que se pode: sem marca de B, e a matriz recusando o header.
-        lambda p: "/api/estilos/compilar", lambda p: {"plat_construtor": {}}, aceita=frozenset({200, 422}),
-        proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
+        lambda p: "/api/estilos/compilar", lambda p: {"plat_construtor": {}},
+        proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca),
     **{("POST", c): Caso(lambda p, u=c: u, lambda p: {"conteudo": ""},
                          proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca)
        for c in ("/api/pacotes/verificar", "/api/pacotes/importar")},
