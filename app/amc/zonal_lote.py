@@ -32,7 +32,8 @@ Diferença DECLARADA e deliberada em relação a `app.amc.zonal` (decisão deste
   tempo medido antes desta correção (achado ao medir a escala real: 100 mil unidades em 1 bloco já levavam
   ~9,4 s por fator; o item L3-16 exige que blocos MÚLTIPLOS não paguem esse custo outra vez por bloco).
 
-Sem banco de dados: só rasterio, numpy e shapely/pyproj (as mesmas de `zonal.py`, sem dependência nova). Mesma regra de `zonal.py`: raster sem CRS aborta a extração inteira
+Sem banco de dados: só rasterio, numpy e shapely/pyproj (as mesmas de `zonal.py`, sem dependência nova). Mesma regra
+de `zonal.py`: raster sem CRS aborta a extração inteira
 (nunca produz coluna de zeros)."""
 
 from __future__ import annotations

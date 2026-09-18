@@ -25,7 +25,17 @@ from app.auth.comum import campos_json, paginacao
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo import busca as mod_busca
 from app.catalogo import (
-    comum, diff, documento, mesclagem, metadado, metadado_imagem, metadado_mgb, relacoes, site, texto, tipos,
+    comum,
+    diff,
+    documento,
+    mesclagem,
+    metadado,
+    metadado_imagem,
+    metadado_mgb,
+    relacoes,
+    site,
+    texto,
+    tipos,
 )
 from app.catalogo import procedencia as mod_procedencia
 from app.catalogo.comum import (
