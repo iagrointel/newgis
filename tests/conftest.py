@@ -95,18 +95,46 @@ def medida():
         def gravar(nome: str, valor, unidade: str, comando: str) -> None:
             if os.environ.get("PLAT_GRAVAR_MEDIDAS") != "1":
                 return  # a suite nao pode sujar a arvore; o testador grava com PLAT_GRAVAR_MEDIDAS=1
-            MEDIDAS.mkdir(parents=True, exist_ok=True)
-            dados = {"item": item, "medidas": {}}
-            if caminho.exists():
-                dados = json.loads(caminho.read_text(encoding="utf-8"))
-            dados["gerado_em"] = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-            dados["git_sha"] = git_sha_curto()
-            dados.setdefault("medidas", {})[nome] = {"valor": valor, "unidade": unidade, "comando": comando}
-            caminho.write_text(json.dumps(dados, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+            # 18/09/2026: a gravacao acontecia AQUI, no meio do teste. Se uma asercao posterior
+            # reprovasse, o numero ja estava no disco — medida de rodada que nao passou, indistinguivel
+            # de medida boa. Quatro arquivos faziam isso sem querer. Agora a escrita fica em espera e
+            # so vai para o disco se ESTE teste APROVAR (ver _despejar_medidas, no fim do arquivo).
+            _EM_ESPERA.setdefault(_NO_AR.get("id") or "", []).append(
+                (caminho, item, nome, valor, unidade, comando))
 
         return gravar
 
     return para_item
+
+
+# --- medida so vai ao disco se o teste APROVAR (18/09/2026) --------------------------------------
+_EM_ESPERA: dict[str, list] = {}
+_NO_AR: dict[str, str] = {}
+
+
+def _escrever_medida(caminho, item, nome, valor, unidade, comando) -> None:
+    from app.versao import git_sha_curto
+
+    MEDIDAS.mkdir(parents=True, exist_ok=True)
+    dados = {"item": item, "medidas": {}}
+    if caminho.exists():
+        dados = json.loads(caminho.read_text(encoding="utf-8"))
+    dados["gerado_em"] = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    dados["git_sha"] = git_sha_curto()
+    dados.setdefault("medidas", {})[nome] = {"valor": valor, "unidade": unidade, "comando": comando}
+    caminho.write_text(json.dumps(dados, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+
+def pytest_runtest_setup(item):
+    _NO_AR["id"] = item.nodeid
+
+
+def _despejar_medidas(nodeid: str, aprovou: bool) -> None:
+    pendentes = _EM_ESPERA.pop(nodeid, [])
+    if not aprovou:
+        return  # rodada que nao passou nao deixa numero no disco
+    for args in pendentes:
+        _escrever_medida(*args)
 
 
 def pytest_sessionfinish(session, exitstatus):
@@ -213,6 +241,10 @@ _PASSOU = {"n": 0}
 
 
 def pytest_runtest_logreport(report):
+    if report.when == "call":
+        # o despejo da medida anda junto com o veredito do caso: aprovou, escreve; nao aprovou,
+        # descarta. Antes a medida ia ao disco no meio do teste e sobrevivia a reprovacao.
+        _despejar_medidas(report.nodeid, report.passed)
     if report.when == "call" and report.passed:
         _PASSOU["n"] += 1
     elif report.skipped and report.when in ("setup", "call"):
