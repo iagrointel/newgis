@@ -41,7 +41,8 @@ A fusão de dois candidatos dentro da tolerância segue esta ordem:
 1. **trecho ↔ trecho, mesmo grupo** — sempre funde (continuação natural do mesmo tipo de ativo: dois
    segmentos de trecho de média tensão que se tocam).
 2. **trecho ↔ trecho ou trecho ↔ dispositivo, grupos diferentes** — funde só se existir uma linha em
-   `plat.rede_regra` (`conectividade_no_trecho` ou `conectividade_entre_nos`) ligando os dois TIPOS
+   `plat.rede_regra` (`juncao_aresta` ou `juncao_juncao` — os dois tipos de regra de conectividade, ver
+   `TIPOS_REGRA_CONECTIVIDADE` em `app/rede_utilidades/topologia.py`) ligando os dois TIPOS
    envolvidos. Sem essa regra, a coincidência geométrica sozinha NÃO conecta — impede, por exemplo, que um
    poste (estrutura) "vaze" conectividade elétrica só por estar perto de um trecho.
 3. **dispositivo com 2+ terminais** (ex.: transformador `alta`/`baixa`, ambos no MESMO ponto físico) — cada
