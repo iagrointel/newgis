@@ -461,7 +461,41 @@ def test_nenhuma_resposta_usa_a_palavra_proibida(rede_com_tres_conjuntos_reais):
     ]
     texto = json.dumps(corpos, ensure_ascii=False, default=str).lower()
     assert "transgress" not in texto
-    assert continuidade.ACIMA in json.dumps(corpos[3], ensure_ascii=False) or True
+    assert "infra" + "ção" not in texto and "infrator" not in texto
+
+    # --- o PAR POSITIVO. Sem ele este teste só provaria que a palavra proibida não aparece, o que um
+    # módulo que não dissesse NADA também cumpriria. O par: forçar um limite ABAIXO do apurado (dentro
+    # desta transação, que termina em rollback) e exigir que a comparação diga a frase autorizada, com o
+    # número e o limite do lado. No dado real destes conjuntos a situação é 'dentro do limite' — é por isso
+    # que o caso de excesso precisa ser construído, e não esperado do arquivo.
+    alvo = None
+    for f in continuidade.ficha_conjuntos(cur, rede.rede_id, ANO_DE, ANO_ATE):
+        d = f["indicadores"]["DEC"]
+        if d["apurado"] is not None and d["apurado"] > 0:
+            alvo = (f["conjunto_id"], f["ano"], d["apurado"])
+            break
+    assert alvo is not None, "nenhum conjunto real trouxe DEC apurado: o par positivo não pôde ser montado"
+    conjunto_id, ano, apurado = alvo
+    cur.execute(
+        "UPDATE plat.rede_continuidade_limite SET valor = %(v)s "
+        " WHERE conjunto_id = %(c)s AND indicador = 'DEC' AND ano = %(a)s",
+        {"v": apurado / 2.0, "c": conjunto_id, "a": ano})
+    assert cur.rowcount == 1, "o limite do ano do alvo não estava na base para ser rebaixado"
+
+    fichas = {(f["conjunto_id"], f["ano"]): f for f in
+              continuidade.ficha_conjuntos(cur, rede.rede_id, ANO_DE, ANO_ATE)}
+    acima = fichas[(conjunto_id, ano)]["indicadores"]["DEC"]
+    assert acima["situacao"] == continuidade.ACIMA == "acima do limite regulatório"
+    assert acima["apurado"] == apurado and acima["limite"] == apurado / 2.0
+    assert acima["limite_arquivo"], "o excesso apareceu sem dizer de que arquivo veio o limite"
+    # e a frase autorizada não abre a porta para a proibida em nenhuma das quatro leituras
+    depois = json.dumps([
+        continuidade.ficha_conjuntos(cur, rede.rede_id, ANO_DE, ANO_ATE),
+        continuidade.ficha_alimentadores(cur, rede.rede_id, ano),
+        continuidade.painel(cur, rede.rede_id, ANO_DE, ANO_ATE),
+    ], ensure_ascii=False, default=str)
+    assert continuidade.ACIMA in depois, "o excesso existe na base e nenhuma leitura o mostra"
+    assert "transgress" not in depois.lower()
     con.rollback()
 
 
