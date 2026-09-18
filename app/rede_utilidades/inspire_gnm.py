@@ -48,8 +48,7 @@ _NAMESPACE_ONTOLOGIA = "https://iagrointel.invalido/esquemas/plat.rede.pacote/1#
 
 # ---------------------------------------------------------------------------
 # Mapeamento campo a campo, disciplina a disciplina — mesma fonte para o
-# documento (docs/INSPIRE_GNM.md, gerado por docs/gerar_pacote_rede.py-like
-# script `docs/gerar_mapeamento_gnm.py`) e para o exportador.
+# documento (docs/INSPIRE_GNM.md) e para o exportador.
 # ---------------------------------------------------------------------------
 
 MAPEAMENTO_GNM: dict[str, dict] = {
@@ -118,6 +117,25 @@ MAPEAMENTO_GNM: dict[str, dict] = {
             "campos": {
                 "pipeDiameter": "SEM correspondência direta — viria de atributo do grupo 'tubo' "
                 "no pacote água-EPANET, hoje não modelado com unidade normalizada; exportado nil",
+            },
+        },
+    },
+    "gas": {
+        "no": {
+            "gnm": "us-net-common:Appurtenance",
+            "geometria": "gml:PointPropertyType",
+            "campos": {
+                "appurtenanceType": "xlink:href fixo 'urn:iagrointel:gnm:gas:no' (mesma lacuna de "
+                "codelist da elétrica: não há vocabulário INSPIRE publicado para aparelhos de gás)",
+            },
+        },
+        "elo": {
+            "gnm": "us-net-common:Pipe (subtipo concreto de UtilityLinkSet; o INSPIRE não publica "
+            "us-net-og (oil&gas) utilizável — tubulacao_de_gas usa o Pipe genérico, como água)",
+            "geometria": "gml:CurvePropertyType via centrelineGeometry (grupo 'tubulacao_de_gas')",
+            "campos": {
+                "pipeDiameter": "SEM correspondência direta — o pacote gas-br não modela diâmetro "
+                "nominal com unidade normalizada; exportado nil",
             },
         },
     },
@@ -205,6 +223,31 @@ def rede_teste_eletrica_br() -> RedeTeste:
             EloRedeTeste(
                 id="elo-2", grupo="alimentador", de="no-2-chave", para="no-3-capacitor",
                 pontos=[(-47.9200, -15.7750), (-47.9110, -15.7700)],
+            ),
+        ],
+    )
+
+
+def rede_teste_gas_br() -> RedeTeste:
+    """Rede de 3 nós / 2 elos derivada de códigos reais do pacote gas-br (city_gate alimentando um
+    regulador de rede, que alimenta um ponto de entrega industrial, via tubulacao_de_gas de média
+    pressão), coordenadas dentro do Brasil (recorte de teste, sem dado de cliente)."""
+    return RedeTeste(
+        codigo="rede-teste-gas-br-01",
+        disciplina="gas",
+        nos=[
+            NoRedeTeste(id="no-1-city-gate", grupo="city_gate", lon=-46.6333, lat=-23.5505),
+            NoRedeTeste(id="no-2-regulador", grupo="regulador", lon=-46.6250, lat=-23.5450),
+            NoRedeTeste(id="no-3-entrega", grupo="ponto_de_entrega", lon=-46.6160, lat=-23.5400),
+        ],
+        elos=[
+            EloRedeTeste(
+                id="elo-1", grupo="tubulacao_de_gas", de="no-1-city-gate", para="no-2-regulador",
+                pontos=[(-46.6333, -23.5505), (-46.6250, -23.5450)],
+            ),
+            EloRedeTeste(
+                id="elo-2", grupo="tubulacao_de_gas", de="no-2-regulador", para="no-3-entrega",
+                pontos=[(-46.6250, -23.5450), (-46.6160, -23.5400)],
             ),
         ],
     )
