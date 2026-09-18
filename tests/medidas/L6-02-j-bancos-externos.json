@@ -30,8 +30,13 @@
    "valor": true,
    "unidade": "bool",
    "comando": "sedes_municipais: tipo POINT srid 4674 vindo de geometry_columns"
+  },
+  "remedicao_20260918_testes_verdes": {
+   "valor": 6,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/adversario_raiz/test_advl6_linha_l6_conectores.py -k l6_02_j -p no:randomly (trilha seg, teto 4G): 6 passed. consulta_sql passou a barrar a FAMILIA pg_ls_ inteira (logdir/waldir/tmpdir/archive_statusdir) e a conferir TODA chamada de funcao, inclusive na projecao, contra uma lista branca de leitura (FUNCOES_PERMITIDAS + prefixo st_ do PostGIS); par positivo: agregacao, texto e PostGIS continuam passando numa consulta util. RESSALVA: o portao do item (tests/api/test_bancos_externos.py, 6 testes) segue PULADO nesta bancada por falta do segundo Postgres/PostGIS de teste em docker na porta 55499 — nao foi levantado por causa do teto de disco e de memoria da maquina."
   }
  },
- "gerado_em": "2026-09-08T06:35:31Z",
- "git_sha": "937865411946"
+ "gerado_em": "2026-09-18T01:49:09Z",
+ "git_sha": "605a459f2de4"
 }
