@@ -36,16 +36,10 @@ from app.catalogo.site_render import cartao_incorporado
 ITEM = "L5-20-sites-paginas-publicas"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "L5-20: app/catalogo/site_render.py::cartao_incorporado monta "
-        'sandbox="allow-scripts allow-same-origin allow-popups" — a combinação que '
-        "web/js/widgets/seguro.js (L5-01-d) e tests/e2e/test_widget_externo.py (L5-36) tratam, na MESMA "
-        "casa, como 'isolamento de mentira' (allow-same-origin nunca pode conviver com allow-scripts no "
-        "sandbox de conteúdo incorporado escolhido por terceiro)"
-    ),
-)
+# CONSERTADO (17/09/2026, ramo wt/l56): `site_render.SANDBOX_INCORPORADO` passou a ser a mesma lista
+# seleta do widget do L5-01-d — allow-scripts allow-forms allow-popups allow-presentation, sem
+# allow-same-origin. O par positivo (o iframe continua existindo e continua com sandbox) está no
+# segundo teste.
 def test_cartao_incorporado_do_site_nunca_combina_allow_scripts_com_allow_same_origin():
     no = {"propriedades": {"url": "https://exemplo.invalido/pagina", "titulo": "quadro de teste"}}
     html_gerado = cartao_incorporado(None, no)
@@ -56,3 +50,14 @@ def test_cartao_incorporado_do_site_nunca_combina_allow_scripts_com_allow_same_o
         "combinação que o restante da linha L5 (seguro.js, test_widget_externo.py) trata como sandbox "
         f"anulado: {html_gerado!r}"
     )
+
+
+def test_cartao_incorporado_continua_com_iframe_sandbox_e_url():
+    """Par positivo: tirar `allow-same-origin` não pode ter tirado o cartão do ar nem afrouxado o resto —
+    o iframe continua sendo emitido, com sandbox declarado e com a URL do administrador."""
+    no = {"propriedades": {"url": "https://exemplo.invalido/pagina", "titulo": "quadro de teste"}}
+    html_gerado = cartao_incorporado(None, no)
+    assert "<iframe" in html_gerado and 'sandbox="' in html_gerado, html_gerado
+    assert "https://exemplo.invalido/pagina" in html_gerado, html_gerado
+    assert "allow-scripts" in html_gerado, "o cartão precisa continuar rodando o conteúdo incorporado"
+    assert 'referrerpolicy="no-referrer"' in html_gerado, html_gerado

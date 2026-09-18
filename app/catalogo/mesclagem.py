@@ -8,8 +8,12 @@ identificado pelo `id` (ULID, estável entre versões — o editor nunca troca o
   - nó que os dois lados mudaram de forma DIFERENTE (inclusive um removeu e o outro alterou) é CONFLITO —
     a função devolve a lista e quem chama responde 409 com o documento atual; nada é escolhido às escondidas.
 
-`ligacoes` e as demais chaves de `corpo` (fora `nos`) seguem a mesma regra, cada ligação identificada pelo seu
-JSON canônico (a lista é um conjunto) e cada chave de corpo como uma unidade.
+`ligacoes` e as demais chaves de `corpo` (fora `nos`) seguem a mesma regra. Uma ligação não tem id próprio:
+ela é identificada pelo PAR (`de`, `para`), que é a identidade lógica dela no documento — assim, dois lados
+que mudam um campo da mesma ligação (o `tipo`, por exemplo) caem na mesma unidade e viram CONFLITO, como
+qualquer nó mudado dos dois lados. Quando o mesmo par aparece duas vezes num dos lados (o documento admite
+duas ligações distintas entre os mesmos nós), essas voltam a ser identificadas pelo JSON canônico, e aí a
+lista é um conjunto. Cada chave de corpo fora `nos`/`ligacoes` é uma unidade.
 
 Ordem dos nós no resultado: a ordem do CLIENTE para os nós que ele tem, com os nós que só o servidor criou (ou
 que o cliente não conhecia) inseridos logo depois do nó que os antecede no servidor. Determinístico e sem tocar
@@ -69,6 +73,44 @@ def _tres_vias(base: Any, servidor: Any, cliente: Any) -> tuple[str, Any]:
     return "conflito", None
 
 
+def _chave_par(x: Any):
+    """Identidade lógica de uma ligação: o par (de, para). `None` quando o objeto não tem os dois."""
+    if isinstance(x, dict) and isinstance(x.get("de"), str) and isinstance(x.get("para"), str):
+        return (x["de"], x["para"])
+    return None
+
+
+def _mapas_de_ligacoes(base, servidor, cliente) -> tuple[dict, dict, dict]:
+    """Os três lados indexados pela MESMA chave. Sem id próprio, uma ligação é reconhecida pelo par
+    (de, para): é isso que faz "os dois lados mudaram o `tipo` da mesma ligação" virar uma unidade só, que
+    `_tres_vias` consegue chamar de conflito, em vez de duas adições independentes que sobrevivem juntas.
+
+    Quando o mesmo par aparece mais de uma vez em QUALQUER dos três lados (o documento admite duas ligações
+    distintas entre os mesmos dois nós), o par deixa de ser identidade e essas ligações voltam à chave
+    canônica do objeto inteiro — o comportamento antigo, de conjunto, que para esse caso é o correto."""
+    listas = [list(base or []), list(servidor or []), list(cliente or [])]
+    repetidos: set = set()
+    for lista in listas:
+        vistos: set = set()
+        for x in lista:
+            par = _chave_par(x)
+            if par is None:
+                continue
+            if par in vistos:
+                repetidos.add(par)
+            vistos.add(par)
+
+    def mapa(lista: list) -> dict:
+        saida: dict = {}
+        for x in lista:
+            par = _chave_par(x)
+            chave = ("par", par) if (par is not None and par not in repetidos) else ("canonico", _canonico(x))
+            saida[chave] = x
+        return saida
+
+    return mapa(listas[0]), mapa(listas[1]), mapa(listas[2])
+
+
 def mesclar(base: dict | None, servidor: dict | None, cliente: dict | None) -> Resultado:
     base, servidor, cliente = base or {}, servidor or {}, cliente or {}
     nb, ns, nc = _por_id(base.get("nos")), _por_id(servidor.get("nos")), _por_id(cliente.get("nos"))
@@ -99,15 +141,19 @@ def mesclar(base: dict | None, servidor: dict | None, cliente: dict | None) -> R
         vistos.add(nid)
     res.corpo["nos"] = [decidido[nid] for nid in ordem if decidido.get(nid) is not None]
 
-    # ligações: conjunto por JSON canônico
-    lb = {_canonico(x): x for x in base.get("ligacoes") or []}
-    ls = {_canonico(x): x for x in servidor.get("ligacoes") or []}
-    lc = {_canonico(x): x for x in cliente.get("ligacoes") or []}
+    # ligações: identidade LÓGICA pelo par (de, para) quando ele existe e é único nos três lados; só quando
+    # não dá é que se cai no JSON canônico do objeto inteiro (ver `_mapas_de_ligacoes`).
+    lb, ls, lc = _mapas_de_ligacoes(base.get("ligacoes"), servidor.get("ligacoes"), cliente.get("ligacoes"))
     ligacoes: list = []
     for chave in list(dict.fromkeys([*lc, *ls, *lb])):
         origem, valor = _tres_vias(lb.get(chave), ls.get(chave), lc.get(chave))
-        if origem == "conflito":  # impossível para conjunto (presença/ausência iguais ou não); fica por segurança
+        if origem == "conflito":
+            # os dois lados mudaram a MESMA ligação lógica de formas diferentes: quem chama responde 409 com
+            # o documento atual. O corpo devolvido fica com a ligação como o SERVIDOR a tem — nunca com as
+            # duas variantes contraditórias lado a lado, que era o que acontecia com a chave canônica.
             res.chaves_conflito.append("ligacoes")
+            if ls.get(chave) is not None:
+                ligacoes.append(copy.deepcopy(ls[chave]))
             continue
         if valor is not None:
             ligacoes.append(copy.deepcopy(valor))

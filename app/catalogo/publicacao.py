@@ -50,6 +50,8 @@ from app.settings import settings
 _MIN, _MAX = limites.PUBLICACAO_SLUG_MIN - 2, limites.PUBLICACAO_SLUG_MAX - 2
 SLUG = re.compile(rf"^[a-z0-9][a-z0-9-]{{{_MIN},{_MAX}}}[a-z0-9]$")
 FAMILIAS_PUBLICAVEIS = {"app", "painel", "narrativa"}
+# famílias de item que carregam DADO e por isso entram no escopo do token da publicação
+FAMILIAS_DE_DADO = {"camada", "raster"}
 
 
 def _slug_ok(slug: str) -> str:
@@ -87,10 +89,16 @@ def _dominios_ok(dominios: list[str] | None) -> list[str]:
 
 
 def camadas_citadas(cur, item_id: str, profundidade: int = limites.PUBLICACAO_CAMADAS_PROFUNDIDADE) -> list[str]:
-    """Fecho de itens da família `camada` alcançáveis a partir de `item_id` pelo grafo de dependências
-    declaradas (`plat.item_relacao`; app -> mapa -> camada é o caminho comum, mas qualquer profundidade até
-    o teto conta). Item oculto (que o publicador não lê) não entra: não dá para escopar um token para o que
-    nem o próprio publicador vê."""
+    """Fecho de itens de DADO alcançáveis a partir de `item_id` pelo grafo de dependências declaradas
+    (`plat.item_relacao`; app -> mapa -> camada é o caminho comum, mas qualquer profundidade até o teto
+    conta). Item oculto (que o publicador não lê) não entra: não dá para escopar um token para o que nem o
+    próprio publicador vê.
+
+    "Dado" aqui é a família `camada` E a família `raster`: `raster`/`mosaico` têm família `raster` em
+    `plat.tipo_item`, mas `app/catalogo/relacoes.py` já os trata como camada de mapa
+    (`FAMILIA_RELACAO_MAPA: "raster" -> "camada_de_mapa"`), e o app publicado precisa do escopo
+    `tiles:ler:<id>` deles para desenhar os próprios tiles. Antes desta correção um app com camada de
+    imagem publicava com um token que não lia a imagem (refutação do adversário T9 da linha L5)."""
     vistos = {item_id}
     fila = [item_id]
     camadas: list[str] = []
@@ -106,7 +114,7 @@ def camadas_citadas(cur, item_id: str, profundidade: int = limites.PUBLICACAO_CA
                     familia = tipos.familia_de(d["tipo"])
                 except ErroAPI:
                     familia = None
-                if familia == "camada":
+                if familia in FAMILIAS_DE_DADO:
                     camadas.append(did)
                 else:
                     proxima.append(did)

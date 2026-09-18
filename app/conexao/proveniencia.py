@@ -80,6 +80,28 @@ def _sondar_xml(url: str, protocolo: str) -> tuple[dict, str | None, str, bytes]
     return {"licenca": licenca, "fonte": titulo, "fees": fees}, titulo, alvo, r.corpo
 
 
+# O próprio spec STAC manda usar `license: "various"`/`"proprietary"` quando a licença não cabe num
+# identificador SPDX, e nesses dois casos a licença de verdade vem no link `rel=license`. Tratar esses dois
+# valores como "nada declarado" é o que faz a coleção que declarou a licença do jeito padronizado deixar de
+# sair com `licenca=None` (refutação do adversário T9 da linha L6, item L6-05).
+_LICENCA_SEM_CONTEUDO = {"", "various", "proprietary", "null", "none", "unknown", "não registrado"}
+
+
+def _licenca_declarada(doc: dict) -> str | None:
+    """`license` do JSON-raiz quando ele diz alguma coisa; senão, o link `rel=license` (título, ou o
+    endereço quando o serviço não deu título). `None` quando o serviço não declarou nada."""
+    licenca = doc.get("license")
+    licenca = licenca if isinstance(licenca, str) else None
+    if licenca and licenca.strip().lower() not in _LICENCA_SEM_CONTEUDO:
+        return licenca
+    for link in doc.get("links") or []:
+        if isinstance(link, dict) and str(link.get("rel") or "").strip().lower() == "license":
+            do_link = link.get("title") or link.get("href")
+            if isinstance(do_link, str) and do_link.strip():
+                return do_link
+    return licenca or None
+
+
 def _sondar_json(url: str, protocolo: str) -> tuple[dict, str | None, str, bytes]:
     alvo = url
     if protocolo == "esri_rest" and "f=json" not in url.lower():
@@ -102,16 +124,11 @@ def _sondar_json(url: str, protocolo: str) -> tuple[dict, str | None, str, bytes
         fonte = doc.get("serviceDescription") or doc.get("description") or doc.get("name") or None
         return {"licenca": licenca or None, "fonte": fonte}, licenca or fonte, alvo, r.corpo
     if protocolo == "stac":
-        licenca = doc.get("license") or None
+        licenca = _licenca_declarada(doc)
         fonte = doc.get("title") or doc.get("id") or None
         return {"licenca": licenca, "fonte": fonte}, licenca, alvo, r.corpo
     # ogc_api: license pode vir solto ou como link rel=license (Part 1 do OGC API - Records/Features)
-    licenca = doc.get("license") or None
-    if not licenca:
-        for link in doc.get("links") or []:
-            if isinstance(link, dict) and link.get("rel") == "license":
-                licenca = link.get("title") or link.get("href")
-                break
+    licenca = _licenca_declarada(doc)
     fonte = doc.get("title") or doc.get("id") or None
     return {"licenca": licenca, "fonte": fonte}, licenca, alvo, r.corpo
 

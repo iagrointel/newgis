@@ -58,15 +58,10 @@ def _inserir_raster_direto(tenant_id: int, usuario_id: int) -> str:
     return raster_id
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "L5-14: publicacao.camadas_citadas() só aceita familia=='camada' (app/catalogo/publicacao.py); "
-        "raster/mosaico têm familia 'raster' (medido: SELECT nome,familia FROM plat.tipo_item) e por isso "
-        "NUNCA entram no escopo do token do app publicado, mesmo citados por um mapa do documento — "
-        "publicar um app com camada de imagem produz um token que não lê os próprios tiles dela"
-    ),
-)
+# CONSERTADO (17/09/2026, ramo wt/l56): `publicacao.FAMILIAS_DE_DADO` passou a incluir a família
+# `raster` (raster/mosaico) além de `camada`. O par positivo — camada vetorial continua entrando, e
+# item que NÃO é dado continua fora do escopo — está em tests/api/catalogo/test_publicacao.py e no
+# segundo teste abaixo.
 def test_camada_raster_citada_pelo_mapa_entra_no_escopo_do_token_publicado(sessao_a, itens_a, conexao_plat_app):
     ids = ids_por_slug(conexao_plat_app)
     tenant_id = ids["demo"]
@@ -98,3 +93,15 @@ def test_camada_raster_citada_pelo_mapa_entra_no_escopo_do_token_publicado(sessa
         )
         escopos = set(cur.fetchone()["escopos"])
     assert f"tiles:ler:{raster_id}" in escopos, escopos
+
+
+def test_item_sem_dado_fisico_continua_fora_do_escopo_do_token(sessao_a, itens_a, conexao_plat_app):
+    """Par positivo: abrir o escopo para a família `raster` não pode ter aberto para tudo — um `mapa`
+    citado pelo app continua NÃO recebendo `tiles:ler:<id>` (mapa não tem dado, é documento)."""
+    mapa = itens_a.criar("mapa", dados={"esquema_versao": 1, "corpo": {"camadas": []}})
+    app_item = itens_a.criar("app", dados={"tipo": "app", "esquema_versao": 2,
+                                           "corpo": {"nos": [], "mapas": [mapa["id"]]}})
+    slug = f"zt-pub-semdado-{uuid.uuid4().hex[:8]}"
+    r = sessao_a.post(f"/api/itens/{app_item['id']}/publicacao", json={"slug": slug})
+    assert r.status_code == 201, r.text
+    assert mapa["id"] not in r.json()["camadas_citadas"], r.json()["camadas_citadas"]

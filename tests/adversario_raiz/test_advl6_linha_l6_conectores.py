@@ -56,13 +56,7 @@ from scripts import acervo_sync
 TABELAS = {"sedes_municipais"}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L6-02-j: FUNCOES_PROIBIDAS não cobre a família pg_ls_logdir/pg_ls_waldir/pg_ls_tmpdir/"
-    "pg_ls_archive_statusdir (funções de listagem de diretório do servidor) — a Camada 1 (FORMA) do "
-    "módulo promete bloquear 'função de sistema/tempo/arquivo/rede' mas só cobre os nomes citados como "
-    "exemplo no comentário, não a família inteira. validar() aceita a consulta sem levantar.",
-)
+# CONSERTADO (17/09/2026, ramo wt/l56): `pg_ls_` entrou em FUNCOES_PROIBIDAS como FAMÍLIA.
 @pytest.mark.parametrize("funcao", ["pg_ls_logdir", "pg_ls_waldir", "pg_ls_tmpdir", "pg_ls_archive_statusdir"])
 def test_l6_02_j_funcao_de_arquivo_fora_do_denylist(funcao):
     sql = f"SELECT {funcao}() FROM sedes_municipais LIMIT 1"
@@ -71,15 +65,9 @@ def test_l6_02_j_funcao_de_arquivo_fora_do_denylist(funcao):
         consulta_sql.validar(sql, TABELAS, "public")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L6-02-j: a 'lista branca de SELECT' só é aplicada a identificadores depois de FROM/JOIN. "
-    "Qualquer função que NÃO esteja em FUNCOES_PROIBIDAS pode ser chamada livremente na lista de "
-    "projeção (fora de FROM/JOIN) — não existe allowlist de funções, só um denylist de nomes fixos. "
-    "Num Postgres remoto com extensão de rede/arquivo instalada (ex. pgsql-http, dblink por outro nome, "
-    "UDF do cliente), essa 'consulta só de leitura sobre a tabela dele' vira canal para qualquer função "
-    "que o papel de conexão tiver EXECUTE, não só sobre as tabelas listadas na conexão.",
-)
+# CONSERTADO (17/09/2026, ramo wt/l56): existe agora `FUNCOES_PERMITIDAS` (+ prefixo `st_`), e toda
+# chamada de função da consulta, inclusive na projeção, é conferida contra ela. Par positivo em
+# `test_l6_02_j_funcao_de_leitura_da_lista_branca_continua_passando`.
 def test_l6_02_j_funcao_arbitraria_na_projecao_nao_e_bloqueada():
     sql = "SELECT uma_funcao_de_extensao_no_banco_do_cliente() FROM sedes_municipais LIMIT 1"
     with pytest.raises(consulta_sql.ConsultaRecusada):
@@ -94,14 +82,9 @@ def _resposta_json(doc: dict) -> seguranca.ResultadoBusca:
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L6-05: o docstring de app/conexao/proveniencia.py promete 'STAC/OGC API: license/link "
-    "rel=license', e o ramo ogc_api desta MESMA função já lê o link; o ramo stac só olha doc['license'] "
-    "e nunca cai para links[].rel=='license'. Uma coleção STAC que declara a licença só por link (comum "
-    "quando 'license' é 'various' ou 'proprietary', conforme o próprio spec STAC) fica com licenca=None "
-    "em silêncio, mesmo com o serviço tendo declarado a licença do jeito padronizado.",
-)
+# CONSERTADO (17/09/2026, ramo wt/l56): `proveniencia._licenca_declarada` lê o link `rel=license` quando
+# o `license` do JSON-raiz não diz nada (ausente, "various", "proprietary"). Par positivo em
+# `test_l6_05_licenca_declarada_no_json_raiz_continua_ganhando_do_link`.
 def test_l6_05_stac_licenca_via_link_nao_e_lida():
     doc = {
         "id": "colecao-de-teste-interno",
@@ -227,3 +210,40 @@ def test_l6_02_k_teto_de_agendas_por_usuario_tem_corrida_de_checar_e_agir():
         if id2:
             _psql(f"DELETE FROM plat.agenda WHERE id = '{id2}'")
         _psql(f"UPDATE plat.tenant SET config = config - 'cota_agendas_usuario' WHERE id = {tenant_id}")
+
+
+def test_l6_02_j_funcao_de_leitura_da_lista_branca_continua_passando():
+    """Par positivo da lista branca de função: fechar a projeção não pode ter fechado a consulta útil —
+    agregação, texto e PostGIS (as três que o próprio item mede em tests/api/test_bancos_externos.py)
+    continuam passando."""
+    v = consulta_sql.validar(
+        "SELECT count(*) AS n, upper(nome) AS nome, ST_AsText(geom) AS wkt FROM sedes_municipais "
+        "GROUP BY nome, geom LIMIT 10",
+        TABELAS, "public",
+    )
+    assert v.limite == 10 and v.tabelas == ["sedes_municipais"]
+
+
+def test_l6_05_licenca_declarada_no_json_raiz_continua_ganhando_do_link():
+    """Par positivo da leitura de licença: quando o serviço declara a licença de verdade no `license` do
+    JSON-raiz, é ELA que vale — o link não passa a atropelar o valor declarado."""
+    doc = {
+        "id": "colecao-de-teste-interno",
+        "title": "Coleção de teste interno",
+        "license": "CC-BY-SA-4.0",
+        "links": [{"rel": "license", "href": "https://exemplo.org/outra", "title": "OUTRA-LICENCA"}],
+    }
+    with mock.patch.object(seguranca, "buscar_seguro", return_value=_resposta_json(doc)):
+        achados, _atrib, _url, _corpo = pv._sondar_json(
+            "https://fixture.local/collections/colecao-de-teste-interno", "stac"
+        )
+    assert achados["licenca"] == "CC-BY-SA-4.0", achados
+
+
+def test_l6_05_servico_que_nao_declara_licenca_continua_sem_licenca():
+    """Par positivo 2: nada é inventado — sem `license` e sem link `rel=license`, a ficha sai com
+    `licenca=None` (o campo é marcado como não registrado, nunca preenchido com padrão)."""
+    doc = {"id": "sem-licenca", "title": "Sem licença", "links": [{"rel": "self", "href": "https://x.invalido"}]}
+    with mock.patch.object(seguranca, "buscar_seguro", return_value=_resposta_json(doc)):
+        achados, _atrib, _url, _corpo = pv._sondar_json("https://fixture.local/collections/sem-licenca", "stac")
+    assert achados["licenca"] is None, achados

@@ -271,13 +271,19 @@ def cartao_estatisticas(ctx: Contexto, no: dict) -> str:
             f'<span>itens compartilhados com todos</span></div>{celulas}</div></div>')
 
 
+# Mesma lista seleta de `web/js/widgets/seguro.js` (item L5-01-d) e do e2e do L5-36: `allow-same-origin`
+# NUNCA convive com `allow-scripts` num iframe cuja URL é escolhida por terceiro — juntos, o conteúdo
+# remove o próprio sandbox e volta a ter a origem verdadeira da plataforma.
+SANDBOX_INCORPORADO = "allow-scripts allow-forms allow-popups allow-presentation"
+
+
 def cartao_incorporado(ctx: Contexto, no: dict) -> str:
     p = _prop(no)
     url = str(p.get("url") or "")
     titulo = p.get("titulo") or "conteúdo incorporado"
     return (f'<div class="cartao cartao-incorporado">{_titulo_cartao(p)}'
             f'<iframe src="{esc(url)}" title="{esc(titulo)}" height="{_altura(p)}" loading="lazy"'
-            f' sandbox="allow-scripts allow-same-origin allow-popups" referrerpolicy="no-referrer"></iframe>'
+            f' sandbox="{SANDBOX_INCORPORADO}" referrerpolicy="no-referrer"></iframe>'
             f'<p><a href="{esc(url)}" rel="noopener nofollow">abrir em nova página</a></p></div>')
 
 

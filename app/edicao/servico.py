@@ -34,6 +34,7 @@ from app.edicao.modelos import (
     FeicaoAtualizar,
     ResultadoFeicao,
 )
+from app.formulario.regras_valor import campo_nao_preenchido
 from app.erros import ErroAPI
 from app.ingestao.geometria import MULTI_DE, TIPOS_CONCRETOS
 
@@ -198,13 +199,13 @@ def validar_atributos(atributos: dict | None, dados: dict, operacao: str) -> tup
             if condicionais:
                 for campo, estado in avaliar_condicionais(contexto, condicionais, onde="camada").items():
                     if estado.get("obrigatorio") and campo in campos_validos:
-                        if campo not in limpos or limpos[campo] is None:
+                        if campo_nao_preenchido(limpos, campo):
                             raise ErroAPI(
                                 422, "campo_obrigatorio", f"campo obrigatório ausente: {campo}", {"campo": campo}
                             )
         for campo, regra in regras.items():
             if regra.get("obrigatorio") and not regra.get("somente_leitura") and campo in campos_validos:
-                if campo not in limpos or limpos[campo] is None:
+                if campo_nao_preenchido(limpos, campo):
                     raise ErroAPI(422, "campo_obrigatorio", f"campo obrigatório ausente: {campo}", {"campo": campo})
     return limpos, avisos
 
