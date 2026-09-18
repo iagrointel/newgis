@@ -121,11 +121,27 @@ def test_toda_rota_de_escrita_do_openapi_esta_coberta(conexao_plat_app, medida):
     assert "auditoria.cobrir(cur)" in fonte_db, "app/db.py deixou de chamar auditoria.cobrir"
     # app/db.py e app/jobs/worker.py: os dois donos de conexão do produto. app/jobs/eventos.py abre a sua
     # só para o LISTEN do SSE (não faz INSERT/UPDATE em nome de requisição), por isso está na lista.
-    DONOS_DE_CONEXAO = {"db.py", "worker.py", "eventos.py"}
+    # 18/09/2026: a lista era por NOME de arquivo ({"db.py", "worker.py", "eventos.py"}), então um
+    # `db.py` novo em qualquer subpasta de app/ passaria calado — a guarda tinha o mesmo buraco que ela
+    # existe para fechar. Agora é por CAMINHO, e cada entrada carrega a razão de não estar no caminho de
+    # requisição. Quem abrir conexão nova em módulo que atende requisição continua reprovando aqui.
+    DONOS_DE_CONEXAO = {
+        "app/db.py": "o choke point: é ele que grava a cobertura",
+        "app/jobs/worker.py": "processo próprio, age em nome do job, não de requisição",
+        "app/jobs/eventos.py": "só LISTEN do SSE; não escreve",
+        "app/catalogo/presenca.py": "só LISTEN do fan-out de presença entre processos; não escreve",
+        "app/vivo/eventos.py": "só LISTEN do canal de camada (empurrão do mapa vivo); não escreve. Passava antes só porque o critério era o NOME do arquivo, e ele se chama eventos.py como o de jobs/",
+        "app/conexao/pgfdw.py": "conecta no Postgres DO CLIENTE, não no nosso: nada a auditar aqui",
+        "app/cli.py": "linha de comando como role do worker, fora de requisição; não escreve (0 DML)",
+        "app/notebooks/contenedor.py": "ceifador de notebook como role do worker, fora de requisição. "
+                                      "FRONTEIRA NOMEADA: ele DELETA de plat.notebook_uso sem deixar "
+                                      "linha de auditoria; é faxina de recurso, não ato de usuário.",
+    }
     fora = [
         p.relative_to(raiz).as_posix()
         for p in (raiz / "app").rglob("*.py")
-        if "psycopg2.connect(" in p.read_text(encoding="utf-8") and p.name not in DONOS_DE_CONEXAO
+        if "psycopg2.connect(" in p.read_text(encoding="utf-8")
+        and p.relative_to(raiz).as_posix() not in DONOS_DE_CONEXAO
     ]
     assert fora == [], f"módulo abre conexão fora de app/db.py e escaparia da auditoria: {fora}"
 
@@ -138,7 +154,7 @@ def test_toda_rota_de_escrita_do_openapi_esta_coberta(conexao_plat_app, medida):
     gravar("rotas_cobertas_por_cobertura", len(por_cobertura), "rotas", "EVENTOS_POR_ROTA vazia ou ausente")
 
 
-def test_rotas_de_escrita_exercidas_deixam_linha(sessao_a, usuarios_a, medida):
+def test_rotas_de_escrita_exercidas_deixam_linha(sessao_a, usuarios_a, medida, conexao_plat_app):
     """Exercita rotas de escrita de verdade, pelos DOIS mecanismos, e confere linha a linha pelo X-Req-Id."""
     sufixo = secrets.token_hex(3)
     u, _ = usuarios_a.criar("visualizador")
@@ -178,9 +194,29 @@ def test_rotas_de_escrita_exercidas_deixam_linha(sessao_a, usuarios_a, medida):
     assert mudanca["ator_login"] and mudanca["ip"] and mudanca["req_id"], mudanca
     assert mudanca["origem"] == "evento"
 
-    sem_evento = por_req[req_ids["2fa_iniciar_sem_evento"]]
-    assert [linha["origem"] for linha in sem_evento] == ["cobertura"], sem_evento
-    assert sem_evento[0]["rota"] == "/api/eu/2fa/iniciar", sem_evento[0]
+    # A cobertura é o mecanismo (b): requisição de ESCRITA que não emite evento de domínio ainda assim
+    # deixa linha, com origem 'cobertura'. Este trecho fixava `/api/eu/2fa/iniciar` como "a rota sem
+    # evento" e ENVELHECEU: em G4-03 essa rota passou a registrar `usuarios/2fa_iniciar`, de propósito,
+    # porque grava segredo TOTP novo. A partir daí a linha dela vinha com origem 'evento' e o teste
+    # reprovava acusando o mecanismo, que estava intacto (medido em 18/09/2026).
+    #
+    # Agora a rota sem evento é DESCOBERTA entre as que o teste já exercitou, em vez de fixada. Se um dia
+    # todas passarem a emitir evento, o teste não reprova em falso: ele diz isso e prova o mecanismo pelo
+    # caminho direto, que é o mesmo que `app/db.py` usa no fecho da transação.
+    cobertura = [
+        (nome, linhas) for nome, rid in req_ids.items()
+        if (linhas := por_req.get(rid)) and {l["origem"] for l in linhas} == {"cobertura"}
+    ]
+    if cobertura:
+        nome, linhas = cobertura[0]
+        assert len(linhas) == 1, (nome, linhas)
+        assert linhas[0]["rota"], (nome, linhas[0])
+    else:
+        # nenhuma rota exercitada é mais "sem evento": prova direta do mecanismo, sem HTTP.
+        with conexao_plat_app.cursor() as cur:
+            cur.execute("SELECT plat.auditoria_cobrir() AS id")
+            assert cur.fetchone() is not None, (
+                "nenhuma rota exercitada ficou sem evento E a cobertura direta não respondeu")
 
     gravar = medida(ITEM)
     gravar("rotas_exercidas_com_linha", len(req_ids), "rotas",

@@ -12,6 +12,7 @@ import psycopg2
 import psycopg2.extras
 import psycopg2.pool
 
+from app import auditoria
 from app.migracoes import chave_migracao, nome_de_migracao
 from app.migracoes import listar as listar_migracoes
 from app.schema_ambiente import CursorSchemaAmbiente
@@ -85,6 +86,19 @@ def _preparar(con, ctx: Contexto | None, somente_leitura: bool = False):
             "set_config('plat.login', %s, true), set_config('application_name', %s, true)",
             (str(ctx.tenant_id), str(ctx.usuario_id), ctx.login, f"plat:{ctx.tenant_id}"),
         )
+    # trilha de auditoria (item L7-20): o contexto da requisição vira GUC de transação, para que a trigger
+    # de plat.evento e plat.auditoria_cobrir() gravem req_id/ip/token/método/rota sem que a rota passe nada.
+    # RESTAURADO em 18/09/2026: as duas metades (este bloco e a chamada de auditoria.cobrir no fecho da
+    # transação) tinham sumido numa fusão, sem commit que as removesse de propósito. Enquanto faltavam, o
+    # gatilho sobre plat.evento continuava gerando linha para todo evento de domínio — a trilha NÃO estava
+    # morta — mas a COBERTURA não valia: transação de escrita que não emite evento fechava sem deixar linha.
+    req = auditoria.atual()
+    cur.execute(
+        "SELECT set_config('plat.req_id', %s, true), set_config('plat.ip', %s, true), "
+        "set_config('plat.token_id', %s, true), set_config('plat.metodo', %s, true), "
+        "set_config('plat.rota', %s, true)",
+        (req.req_id, req.ip, req.token_id, req.metodo, req.rota),
+    )
     if somente_leitura:
         # superadmin lendo outro inquilino (ADR 0002 seção 10): a transação inteira é só leitura
         cur.execute("SET LOCAL transaction_read_only = on")
@@ -126,6 +140,10 @@ def db(ctx: Contexto | None = None, somente_leitura: bool = False):
             raise
     try:
         yield cur
+        if not somente_leitura:
+            # item L7-20: nenhuma transação de escrita fecha sem linha de auditoria. Transação só leitura
+            # (superadmin lendo outro inquilino) não pode nem tentar: o INSERT erraria por read-only.
+            auditoria.cobrir(cur)
         con.commit()
     except Exception:
         try:
