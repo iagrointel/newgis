@@ -33,7 +33,8 @@ async function iniciar() {
   window.maplibregl.addProtocol('pmtiles', protocolo.tile);
   const estilo = extra.base === 'sem-base'
     ? { version: 8, name: 'plat-sem-base', sources: {}, layers: [{ id: 'fundo', type: 'background', paint: { 'background-color': '#ffffff' } }] }
-    : construirEstilo(urlDado('guarulhos.pmtiles'));
+    // mesmo conserto de render_entrada.js (18/09): descritor, nunca a URL crua
+    : construirEstilo({ tipo: 'pmtiles', url: urlDado('guarulhos.pmtiles') });
   Object.assign(estilo.sources, extra.fontes || {});
   estilo.layers.push(...(extra.camadas || []));
 

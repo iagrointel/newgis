@@ -30,7 +30,13 @@ async function iniciar() {
 
   const map = new window.maplibregl.Map({
     container: 'mapa',
-    style: construirEstilo(urlDado('guarulhos.pmtiles')),
+    // 18/09/2026: era `construirEstilo(urlDado(...))` com a URL CRUA. A assinatura aceita um
+    // DESCRITOR `{tipo, url}` (ver web/js/mapa/estilo.js) e, recebendo string, cai no estilo
+    // 'plat-sem-base' — 0 fontes, 1 camada de fundo. Efeito medido hoje: a pagina do render
+    // desenhava SO O FUNDO, e a clausula de fidelidade do portao de L2-12-a reprovava com
+    // 504.773 de 783.904 pixels diferentes (64,4 %) contra o teto de 2 %. `mapa.js` ja passava
+    // o descritor desde o conserto de L0-07-a; as duas paginas de render ficaram de fora.
+    style: construirEstilo({ tipo: 'pmtiles', url: urlDado('guarulhos.pmtiles') }),
     center: [lng, lat],
     zoom,
     attributionControl: false,
