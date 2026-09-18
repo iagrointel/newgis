@@ -70,8 +70,16 @@
    "valor": 0.3,
    "unidade": "GB",
    "comando": "SC_AVPHYS_PAGES * SC_PAGE_SIZE no fim da rodada"
+  },
+  "remedicao_20260918_testes_verdes": {
+   "valor": 20,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/api/test_acervo.py -p no:randomly (trilha seg, teto 4G): 20 passed (antes 6 failed). O bloqueio registrado de 07/09 ('sem pagina/JS de tela em web/') caducou: web/acervo.html existe. O que faltava era a API — GET /api/acervo/dominios (taxonomia inteira com contagem de visiveis por dominio), GET /api/acervo/meu-mapa (camadas do acervo do proprio inquilino, para a legenda) e licenca_curada_tipo no cartao, na ficha e congelado no item ao adicionar."
   }
  },
- "gerado_em": "2026-09-07T18:11:16Z",
- "git_sha": "0f0af7c5af43"
+ "gerado_em": "2026-09-18T01:48:49Z",
+ "git_sha": "088c190838fd",
+ "nao_passa": [
+  "clausula e2e do portao NAO fechada em 18/09/2026: a API esta verde (tests/api/test_acervo.py, 20 passed), mas a TELA que tests/e2e/test_acervo.py exige nao existe. web/acervo.html hoje e a pagina de frescor/licencas, nao a de navegacao do acervo: faltam a grade de cartoes (#grade .acervo-cartao[data-fonte-id]), a busca (#busca input), o dialogo da ficha (dialog .acervo-ficha e .acervo-atribuicao), o botao #acervo-ver-no-mapa e a legenda do mapa (#acervo-legenda li[data-fonte-id]) — nenhum desses seletores aparece em web/. web/js/acervo/acervo.js so consome /api/acervo/camadas e /api/acervo/frescor; nao consome nem /api/acervo/dominios nem /api/acervo/meu-mapa, que agora existem. E trabalho de frontend, com clausula de responsivo e de 0 erro de console, e precisa de bancada viva com --base-url."
+ ]
 }

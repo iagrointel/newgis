@@ -95,6 +95,13 @@ class _Saneador(HTMLParser):
         self.partes.append("<" + " ".join(saida) + (" />" if tag in VAZIAS else ">"))
 
     def handle_startendtag(self, tag, attrs):
+        """Tag AUTOFECHADA (`<style/>`, `<svg/>`, `<button/>`): o parser NUNCA vai chamar `handle_endtag`
+        para ela, então passar por `handle_starttag` deixaria `self._remover` positivo para sempre e todo o
+        texto seguinte do documento sumiria em silêncio (item L5-37: o pacote importado perdia o resto da
+        descrição). Uma tag autofechada da lista perigosa não tem conteúdo para remover: descarta-se a tag
+        e segue-se lendo o texto."""
+        if REBAIXADAS.get(tag, tag) in COM_CONTEUDO_REMOVIDO:
+            return
         self.handle_starttag(tag, attrs)
 
     def handle_endtag(self, tag):

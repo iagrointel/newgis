@@ -35,8 +35,13 @@
    "valor": 0,
    "unidade": "alteracoes",
    "comando": "2 rodadas com PATCH retido >= 3 s (playwright route) e liberado depois da outra aba gravar; 4 nós no servidor e nas 2 telas"
+  },
+  "remedicao_20260918_testes_verdes": {
+   "valor": 15,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/unit/test_mesclagem.py tests/unit/test_mesclagem_adversario.py tests/api/catalogo/test_edicao_concorrente.py -p no:randomly (trilha seg, teto 4G): 15 passed em 20,00 s. A ligacao passou a ser identificada pelo par logico (de, para): dois lados mudando o mesmo campo dela viram CONFLITO nomeado em vez de duas adicoes que sobrevivem juntas; com duas ligacoes entre o mesmo par volta a valer o conjunto por JSON canonico (par positivo)."
   }
  },
- "gerado_em": "2026-09-08T11:11:05Z",
- "git_sha": "36665b9a6d91"
+ "gerado_em": "2026-09-18T01:21:10Z",
+ "git_sha": "e7a20b04bccc"
 }

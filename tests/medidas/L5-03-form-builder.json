@@ -5,8 +5,13 @@
    "valor": true,
    "unidade": "bool",
    "comando": "e2e: 5 campos em 2 grupos, montados por page.drag_and_drop; condicional/cálculo publicados batem com o que POST /api/campo/visitas exige/recomputa na mesma sessão"
+  },
+  "remedicao_20260918_testes_verdes": {
+   "valor": 4,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/api/adversario/test_l5_adv1_form_obrigatorio_string_vazia.py -p no:randomly (trilha seg, teto 4G por cgroup): 4 passed em 55,50 s. Os 2 testes da refutacao (string vazia em campo obrigatorio, edicao web e PWA de campo) + 2 pares positivos (obrigatorio preenchido passa; 0/False nao contam como vazio). Antes: os 2 morriam em 'fixture camada not found' e o xfail(strict) mascarava isso de refutacao viva."
   }
  },
- "gerado_em": "2026-09-10T22:02:03Z",
- "git_sha": "bb4ea4c081b8"
+ "gerado_em": "2026-09-18T01:11:54Z",
+ "git_sha": "23267b9f3e92"
 }

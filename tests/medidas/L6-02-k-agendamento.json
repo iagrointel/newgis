@@ -1,8 +1,8 @@
 {
  "item": "L6-02-k-agendamento",
  "assinado_por": "backend/dados/testador/adversario (trilha wt/il602kagend, turno T3)",
- "gerado_em": "2026-09-07T17:05:00Z",
- "git_sha": "642cf206344e",
+ "gerado_em": "2026-09-18T01:48:49Z",
+ "git_sha": "088c190838fd",
  "maquina": "trilha isolada plat_til602kagend_*, worker próprio na porta 8293 (o :8153 de produção estava ocupado)",
  "medidas": {
   "tres_ocorrencias_aceleradas_ok": {
@@ -69,6 +69,11 @@
    "valor": "32 passed",
    "unidade": "testes",
    "comando": "bash laco/roda_teste.sh tests/api/jobs/test_jobs_agenda.py tests/api/test_conexoes.py -q -> 32/32 verdes (7 + 25; nada quebrado pelo teto por usuário nem pela extensão de agenda_registrar_fim)"
+  },
+  "remedicao_20260918_testes_verdes": {
+   "valor": 16,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/adversario_raiz/test_advl6_linha_l6_conectores.py -p no:randomly (trilha seg, teto 4G): 16 passed em 1,25 s. O teto de agendas ativas por usuario saiu da aplicacao para o BANCO (migracao 20260917T2300: gatilho BEFORE INSERT/UPDATE com pg_advisory_xact_lock pela chave do usuario, SQLSTATE 53400). A segunda transacao da corrida agora e RECUSADA; pares positivos: quem esta abaixo do teto continua criando, e editar agenda ja ativa nao conta de novo."
   }
  },
  "nao_passa": [

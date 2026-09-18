@@ -10,8 +10,13 @@
    "valor": 1,
    "unidade": "bool",
    "comando": "POST /api/camadas/esquema com 300 campos hostis"
+  },
+  "remedicao_20260918_testes_verdes": {
+   "valor": 3,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/api/adversario/test_l5_adv2_esquema_colisao_normalizacao.py -p no:randomly (trilha seg, teto 4G por cgroup): 3 passed em 68,38 s. Colisao de normalizacao ('Area' e 'area' viram a mesma coluna) agora sai do PLANO como recusada com motivo, o PUT devolve 200 com 1 aplicada + 1 recusada em vez de psycopg2.errors.DuplicateColumn cru, e duas colunas de nomes distintos continuam entrando as duas (par positivo)."
   }
  },
- "gerado_em": "2026-09-07T15:25:01Z",
- "git_sha": "325b004a38bd"
+ "gerado_em": "2026-09-18T01:13:14Z",
+ "git_sha": "564c98044618"
 }

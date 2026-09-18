@@ -39,16 +39,9 @@ from app.catalogo import texto
 ITEM = "L5-37-pacotes-modelos-entre-inquilinos"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "L5-37 (causa raiz em app/catalogo/texto.py::_Saneador, usado por pacote.py::_inserir para "
-        "descricao/termos_de_uso): uma tag autofechada da lista perigosa (ex. <style/>) incrementa o "
-        "contador _remover em handle_starttag sem par de handle_endtag correspondente (tag autofechada "
-        "não tem fechamento) — o contador nunca volta a 0 e TODO texto seguinte, no documento inteiro, "
-        "some do HTML sem erro nem aviso"
-    ),
-)
+# CONSERTADO (17/09/2026, ramo wt/l56): `_Saneador.handle_startendtag` descarta a tag autofechada da lista
+# perigosa em vez de contá-la como abertura sem fechamento. O par positivo — a mesma tag COM conteúdo real
+# continua sendo removida com o conteúdo — está em `test_tag_perigosa_com_conteudo_continua_removida`.
 def test_saneador_de_markdown_nao_perde_conteudo_apos_tag_autofechada_perigosa():
     bruto = "<style/>depois disso o texto deveria continuar aparecendo normalmente"
     saida = texto.sanear(bruto)
@@ -59,16 +52,6 @@ def test_saneador_de_markdown_nao_perde_conteudo_apos_tag_autofechada_perigosa()
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "L5-37: app/catalogo/pacote.py::_inserir grava descricao_html com "
-        "texto.markdown_para_html(doc['descricao']) — o mesmo saneador do teste irmão. Um pacote cuja "
-        "descricao tenha um parágrafo com <style/>/<svg/>/<button/> autofechado antes de outro parágrafo "
-        "importa com o segundo parágrafo APAGADO, ao contrário da promessa de que o documento é "
-        "reproduzido no destino"
-    ),
-)
 def test_importar_documento_com_tag_autofechada_na_descricao_preserva_paragrafo_seguinte():
     doc = {
         "tipo": "mapa",
@@ -85,3 +68,27 @@ def test_importar_documento_com_tag_autofechada_na_descricao_preserva_paragrafo_
         "o segundo parágrafo da descricao do documento importado desapareceu do HTML gerado por "
         f"_inserir (esperado no descricao_html do item novo): {html_gerado!r}"
     )
+
+
+@pytest.mark.parametrize("tag", ["style", "script", "iframe", "svg", "button", "form", "noscript"])
+def test_tag_perigosa_com_conteudo_continua_removida(tag):
+    """Par positivo do conserto acima: a tag perigosa ABERTA E FECHADA continua levando o conteúdo dela
+    embora (é o que o saneador existe para fazer) — o conserto só desfaz o contador para a forma
+    autofechada, que não tem conteúdo nenhum para remover."""
+    saida = texto.sanear(f"antes <{tag}>miolo perigoso</{tag}> depois")
+    assert "miolo perigoso" not in saida, saida
+    assert f"<{tag}" not in saida, saida
+    assert "antes" in saida and "depois" in saida, saida
+
+
+@pytest.mark.parametrize("bruto", [
+    '<svg/><img src="x" onerror="alert(1)">texto',
+    '<style/><a href="javascript:alert(1)">clique</a>texto',
+    '<button/><script>alert(1)</script>texto',
+])
+def test_tag_autofechada_nao_abre_porta_para_conteudo_perigoso(bruto):
+    """A forma autofechada volta a deixar o texto passar, mas nada do que passa depois dela escapa das
+    outras regras do saneador: sem `on*`, sem `javascript:`, sem script."""
+    saida = texto.sanear(bruto)
+    assert "texto" in saida, saida
+    assert "onerror" not in saida and "javascript:" not in saida and "<script" not in saida, saida

@@ -1,0 +1,12 @@
+{
+ "item": "L6-05-proveniencia-camada-externa",
+ "medidas": {
+  "remedicao_20260918_testes_verdes": {
+   "valor": 3,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/adversario_raiz/test_advl6_linha_l6_conectores.py -k l6_05 -p no:randomly (trilha seg): 3 passed, dentro dos 16 do arquivo. proveniencia._licenca_declarada le o link rel=license quando o campo license do JSON-raiz nao diz nada (ausente, 'various', 'proprietary'); pares positivos: licenca declarada no JSON-raiz continua ganhando do link, e servico que nao declara nada continua com licenca None (nada e inventado)."
+  }
+ },
+ "gerado_em": "2026-09-18T01:48:49Z",
+ "git_sha": "088c190838fd"
+}

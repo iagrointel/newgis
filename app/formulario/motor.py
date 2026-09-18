@@ -21,6 +21,7 @@ from typing import Any
 
 from app.erros import ErroAPI
 from app.expressao.avaliador_py import Binario, Campo, Chamada, ErroExpressao, No, Unario, analisar, avaliar_texto
+from app.formulario.regras_valor import campo_nao_preenchido
 
 WIDGETS = {"texto", "area_texto", "numero", "inteiro", "booleano", "data", "selecao"}
 
@@ -269,7 +270,7 @@ def validar_dados_livre(desenho: dict, valores: dict[str, Any]) -> tuple[dict, l
         obrigatorio = bool(c.get("obrigatorio")) and nome not in estado
         if nome in estado:
             obrigatorio = estado[nome]["obrigatorio"]
-        if obrigatorio and (nome not in limpos or limpos[nome] is None):
+        if obrigatorio and campo_nao_preenchido(limpos, nome):
             raise ErroAPI(422, "campo_obrigatorio", f"campo obrigatório ausente: {nome}", {"campo": nome})
     for nome in valores:
         if nome not in campos:

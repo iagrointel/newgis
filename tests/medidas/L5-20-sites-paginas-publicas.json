@@ -30,8 +30,13 @@
    "valor": 0,
    "unidade": "violações",
    "comando": "axe.run() na página publicada, filtro impact in (critical, serious)"
+  },
+  "remedicao_20260918_testes_verdes": {
+   "valor": 28,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/unit/test_site_documento.py tests/api/catalogo/test_site.py tests/api/adversario/test_l5_adv2_site_iframe_sandbox_de_mentira.py -p no:randomly (trilha seg, teto 4G): 28 passed em 142,49 s. O iframe do cartao incorporado deixou de combinar allow-scripts com allow-same-origin (mesma lista seleta do widget do L5-01-d) e continua sendo emitido, com sandbox e com referrerpolicy no-referrer."
   }
  },
- "gerado_em": "2026-09-08T12:06:31Z",
- "git_sha": "4486c56bf9cb"
+ "gerado_em": "2026-09-18T01:21:10Z",
+ "git_sha": "e7a20b04bccc"
 }

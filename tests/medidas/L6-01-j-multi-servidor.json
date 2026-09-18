@@ -25,8 +25,13 @@
    "valor": 0,
    "unidade": "camadas",
    "comando": "test_falha_de_rede_vira_aviso_nao_camada_vazia"
+  },
+  "remedicao_20260918_testes_verdes": {
+   "valor": 5,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/api/test_acervo_fdw.py -p no:randomly (trilha seg, teto 4G): 5 passed (antes 1 failed com KeyError 'camadas'). A ficha da fonte passou a trazer as camadas com estado exposta, cada uma com servidor, modo_acesso e o texto de origem por extenso — 'servidor remoto (<nome>)' quando lida por FDW."
   }
  },
- "gerado_em": "2026-09-07T02:35:39Z",
- "git_sha": "90d03c07da0c"
+ "gerado_em": "2026-09-18T01:48:49Z",
+ "git_sha": "088c190838fd"
 }

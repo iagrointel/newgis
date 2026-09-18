@@ -326,8 +326,13 @@ def _coluna_info(cur, schema: str, tabela: str, coluna: str) -> dict | None:
     return cur.fetchone()
 
 
-def _avaliar_mudanca(cur, schema: str, tabela: str, m: MudancaEntrada) -> dict:
+def _avaliar_mudanca(cur, schema: str, tabela: str, m: MudancaEntrada, reservadas: set[str] | None = None) -> dict:
+    """`reservadas`: nomes de coluna que as mudanças ANTERIORES do MESMO pedido já vão criar. Sem esse
+    estado compartilhado, dois `adicionar_campo` cujos nomes normalizam para o mesmo identificador
+    ("Área" e "área" viram os dois "area") saíam os DOIS como aplicáveis — o plano mentia, e aplicar
+    estourava `psycopg2.errors.DuplicateColumn` cru no PUT (refutação do adversário T9 da linha L5)."""
     base = {"tipo": m.tipo, "campo": m.campo}
+    reservadas = set() if reservadas is None else reservadas
     if m.tipo == "adicionar_campo":
         if m.novo_campo is None:
             return {**base, "aplicavel": False, "motivo": "novo_campo é obrigatório para adicionar_campo"}
@@ -335,6 +340,9 @@ def _avaliar_mudanca(cur, schema: str, tabela: str, m: MudancaEntrada) -> dict:
         existe = _coluna_info(cur, schema, tabela, nome)
         if existe:
             return {**base, "aplicavel": False, "motivo": f"já existe uma coluna chamada {nome!r}"}
+        if nome in reservadas:
+            return {**base, "aplicavel": False, "coluna_normalizada": nome,
+                    "motivo": f"outra mudança deste mesmo pedido já cria a coluna {nome!r}"}
         return {**base, "aplicavel": True, "motivo": None, "coluna_normalizada": nome, "aviso_nome": motivo_nome}
 
     if m.campo is None:
@@ -385,8 +393,17 @@ def _avaliar_mudanca(cur, schema: str, tabela: str, m: MudancaEntrada) -> dict:
 
 
 def _plano(cur, item: dict, entrada: PlanoEntrada) -> list[dict]:
+    """Avalia as mudanças NA ORDEM do pedido, carregando de uma para a outra os nomes de coluna que já
+    serão criados: é o que faz duas mudanças do mesmo pedido enxergarem uma à outra."""
     schema, tabela = item["dados"]["schema"], item["dados"]["tabela"]
-    return [_avaliar_mudanca(cur, schema, tabela, m) for m in entrada.mudancas]
+    reservadas: set[str] = set()
+    saida: list[dict] = []
+    for m in entrada.mudancas:
+        av = _avaliar_mudanca(cur, schema, tabela, m, reservadas)
+        if av.get("aplicavel") and av.get("coluna_normalizada"):
+            reservadas.add(av["coluna_normalizada"])
+        saida.append(av)
+    return saida
 
 
 @router.post("/api/camadas/{item_id}/esquema/plano", openapi_extra=EDITAR)

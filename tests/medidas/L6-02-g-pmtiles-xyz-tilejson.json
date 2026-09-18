@@ -1,0 +1,12 @@
+{
+ "item": "L6-02-g-pmtiles-xyz-tilejson",
+ "medidas": {
+  "remedicao_20260918_testes_verdes": {
+   "valor": 9,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/api/conexao/test_pmtiles_xyz_tilejson.py -p no:randomly (trilha seg, teto 4G): 9 passed em 18,70 s (antes: 2 failed com 422 conexao_tipo_check em POST /api/conexoes para XYZ raster). Causa: a guarda da migracao 20260916T1530 consultava pg_constraint sem amarrar a TABELA; com 37 restricoes do mesmo nome no banco (uma por trilha), bastava UMA ja corrigida para o DO virar no-op em todas as outras, inclusive no schema de producao plat."
+  }
+ },
+ "gerado_em": "2026-09-18T01:31:15Z",
+ "git_sha": "f2c385e03123"
+}

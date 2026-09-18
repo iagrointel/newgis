@@ -27,7 +27,6 @@ que o PLANO reporta a colisão como aplicável duas vezes (já basta para provar
 aplicar" está errado) e, com fixture separada, que a aplicação real do PUT quebra com erro de banco cru."""
 
 import pytest
-from psycopg2 import errors as pg_errors
 
 from tests.api.catalogo.test_camada_esquema import FabricaCamada
 
@@ -41,15 +40,8 @@ def camada_a(sessao_a, env):
     f.limpar()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "L5-31: app/catalogo/camada_esquema.py::_avaliar_mudanca chama normalizar(nome, set()) com um "
-        "set() novo por mudança — duas mudanças 'adicionar_campo' no mesmo plano cujos nomes normalizam "
-        "para o mesmo identificador ('Área' e 'área' -> 'area') são as DUAS relatadas como aplicavel=true "
-        "com o mesmo coluna_normalizada; o plano não avisa da colisão entre si mesmo"
-    ),
-)
+# CONSERTADO (17/09/2026, ramo wt/l56): `_plano` avalia as mudanças em ordem carregando as colunas já
+# reservadas, e `_avaliar_mudanca` recusa a segunda com motivo nomeado.
 def test_plano_de_esquema_nao_detecta_colisao_entre_duas_mudancas_do_mesmo_pedido(sessao_a, camada_a):
     r = camada_a.criar()
     assert r.status_code == 201, r.text
@@ -76,17 +68,10 @@ def test_plano_de_esquema_nao_detecta_colisao_entre_duas_mudancas_do_mesmo_pedid
         )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=pg_errors.DuplicateColumn,
-    reason=(
-        "L5-31: PUT /api/camadas/{id}/esquema aplica as duas mudanças 'adicionar_campo' colididas (ver "
-        "teste irmão sobre o plano) sem tratar o erro do banco — psycopg2.errors.DuplicateColumn atravessa "
-        "a rota sem virar 422 'recusado com mensagem', ao contrário do que o item promete para qualquer "
-        "mudança que não possa ser aplicada"
-    ),
-)
-def test_aplicar_esquema_com_colisao_de_nome_estoura_erro_de_banco_cru(sessao_a, camada_a):
+def test_aplicar_esquema_com_colisao_de_nome_recusa_com_mensagem_em_vez_de_erro_de_banco(sessao_a, camada_a):
+    """A mesma colisão pelo PUT: a rota devolve 200 com a primeira mudança aplicada e a segunda RECUSADA
+    com motivo — nunca `psycopg2.errors.DuplicateColumn` atravessando crua (o item promete que o que não
+    pode ser aplicado é recusado com mensagem)."""
     r = camada_a.criar()
     assert r.status_code == 201, r.text
     item_id = r.json()["item_id"]
@@ -97,6 +82,27 @@ def test_aplicar_esquema_com_colisao_de_nome_estoura_erro_de_banco_cru(sessao_a,
             {"tipo": "adicionar_campo", "novo_campo": {"nome": "área", "tipo": "double precision"}},
         ]
     }
-    # a rota deveria devolver 422 'coluna já usada pela outra mudança do mesmo pedido', nunca deixar o
-    # psycopg2.errors.DuplicateColumn atravessar cru até o chamador.
-    sessao_a.put(f"/api/camadas/{item_id}/esquema", json=corpo)
+    r = sessao_a.put(f"/api/camadas/{item_id}/esquema", json=corpo)
+    assert r.status_code == 200, r.text
+    j = r.json()
+    assert len(j["aplicadas"]) == 1, j
+    assert len(j["recusadas"]) == 1, j
+    assert "mesmo pedido" in (j["recusadas"][0]["motivo"] or ""), j["recusadas"][0]
+
+
+def test_duas_colunas_novas_com_nomes_distintos_continuam_sendo_aplicadas(sessao_a, camada_a):
+    """Par positivo: a trava é só para a COLISÃO — duas colunas novas de nomes diferentes no mesmo pedido
+    continuam entrando as duas."""
+    r = camada_a.criar()
+    assert r.status_code == 201, r.text
+    item_id = r.json()["item_id"]
+    corpo = {
+        "mudancas": [
+            {"tipo": "adicionar_campo", "novo_campo": {"nome": "Área", "tipo": "double precision"}},
+            {"tipo": "adicionar_campo", "novo_campo": {"nome": "Perímetro", "tipo": "double precision"}},
+        ]
+    }
+    r = sessao_a.put(f"/api/camadas/{item_id}/esquema", json=corpo)
+    assert r.status_code == 200, r.text
+    j = r.json()
+    assert len(j["aplicadas"]) == 2 and not j["recusadas"], j

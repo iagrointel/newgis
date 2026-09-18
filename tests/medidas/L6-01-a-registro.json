@@ -1,0 +1,12 @@
+{
+ "item": "L6-01-a-registro",
+ "medidas": {
+  "remedicao_20260918_testes_verdes": {
+   "valor": 72,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/adversario_raiz/test_advl6_linha_l6_conectores.py (16 passed, 1,25 s) + tests/seguranca/test_acervo_sync_coluna_pii.py (56 passed, 97,34 s), trilha seg, teto 4G. As 4 variacoes de nome de coluna que o adversario mostrou expostas (cpf_titular, nr_cpf, proprietario_nome, nome_do_proprietario) saem BLOQUEADAS: a comparacao virou por TERMO. Controle positivo junto: 15 colunas geograficas/administrativas continuam expostas e os 29 nomes da lista antiga continuam bloqueados."
+  }
+ },
+ "gerado_em": "2026-09-18T01:48:49Z",
+ "git_sha": "088c190838fd"
+}

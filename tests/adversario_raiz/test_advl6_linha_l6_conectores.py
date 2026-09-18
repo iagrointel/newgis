@@ -56,13 +56,7 @@ from scripts import acervo_sync
 TABELAS = {"sedes_municipais"}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L6-02-j: FUNCOES_PROIBIDAS não cobre a família pg_ls_logdir/pg_ls_waldir/pg_ls_tmpdir/"
-    "pg_ls_archive_statusdir (funções de listagem de diretório do servidor) — a Camada 1 (FORMA) do "
-    "módulo promete bloquear 'função de sistema/tempo/arquivo/rede' mas só cobre os nomes citados como "
-    "exemplo no comentário, não a família inteira. validar() aceita a consulta sem levantar.",
-)
+# CONSERTADO (17/09/2026, ramo wt/l56): `pg_ls_` entrou em FUNCOES_PROIBIDAS como FAMÍLIA.
 @pytest.mark.parametrize("funcao", ["pg_ls_logdir", "pg_ls_waldir", "pg_ls_tmpdir", "pg_ls_archive_statusdir"])
 def test_l6_02_j_funcao_de_arquivo_fora_do_denylist(funcao):
     sql = f"SELECT {funcao}() FROM sedes_municipais LIMIT 1"
@@ -71,15 +65,9 @@ def test_l6_02_j_funcao_de_arquivo_fora_do_denylist(funcao):
         consulta_sql.validar(sql, TABELAS, "public")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L6-02-j: a 'lista branca de SELECT' só é aplicada a identificadores depois de FROM/JOIN. "
-    "Qualquer função que NÃO esteja em FUNCOES_PROIBIDAS pode ser chamada livremente na lista de "
-    "projeção (fora de FROM/JOIN) — não existe allowlist de funções, só um denylist de nomes fixos. "
-    "Num Postgres remoto com extensão de rede/arquivo instalada (ex. pgsql-http, dblink por outro nome, "
-    "UDF do cliente), essa 'consulta só de leitura sobre a tabela dele' vira canal para qualquer função "
-    "que o papel de conexão tiver EXECUTE, não só sobre as tabelas listadas na conexão.",
-)
+# CONSERTADO (17/09/2026, ramo wt/l56): existe agora `FUNCOES_PERMITIDAS` (+ prefixo `st_`), e toda
+# chamada de função da consulta, inclusive na projeção, é conferida contra ela. Par positivo em
+# `test_l6_02_j_funcao_de_leitura_da_lista_branca_continua_passando`.
 def test_l6_02_j_funcao_arbitraria_na_projecao_nao_e_bloqueada():
     sql = "SELECT uma_funcao_de_extensao_no_banco_do_cliente() FROM sedes_municipais LIMIT 1"
     with pytest.raises(consulta_sql.ConsultaRecusada):
@@ -94,14 +82,9 @@ def _resposta_json(doc: dict) -> seguranca.ResultadoBusca:
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L6-05: o docstring de app/conexao/proveniencia.py promete 'STAC/OGC API: license/link "
-    "rel=license', e o ramo ogc_api desta MESMA função já lê o link; o ramo stac só olha doc['license'] "
-    "e nunca cai para links[].rel=='license'. Uma coleção STAC que declara a licença só por link (comum "
-    "quando 'license' é 'various' ou 'proprietary', conforme o próprio spec STAC) fica com licenca=None "
-    "em silêncio, mesmo com o serviço tendo declarado a licença do jeito padronizado.",
-)
+# CONSERTADO (17/09/2026, ramo wt/l56): `proveniencia._licenca_declarada` lê o link `rel=license` quando
+# o `license` do JSON-raiz não diz nada (ausente, "various", "proprietary"). Par positivo em
+# `test_l6_05_licenca_declarada_no_json_raiz_continua_ganhando_do_link`.
 def test_l6_05_stac_licenca_via_link_nao_e_lida():
     doc = {
         "id": "colecao-de-teste-interno",
@@ -176,21 +159,23 @@ def _contexto(cur, tenant_id: int, usuario_id: int) -> None:
                 "set_config('plat.login', 'admin', true)", (str(tenant_id), str(usuario_id)))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L6-02-k: agenda_criar/agenda_retomar fazem 'SELECT conta, compara com a cota, INSERT' na mesma "
-    "transação, sem SELECT ... FOR UPDATE, sem advisory lock e sem constraint no banco. Duas transações que "
-    "leem o mesmo n antes de qualquer uma commitar passam as duas pelo teto — reproduzido aqui de forma "
-    "determinística (as duas leituras acontecem antes de qualquer INSERT, sem depender de timing de "
-    "thread): o teto de 1 agenda ativa (cota rebaixada para o teste) não impede a segunda inserção.",
-)
-def test_l6_02_k_teto_de_agendas_por_usuario_tem_corrida_de_checar_e_agir():
+# CONSERTADO (17-18/09/2026, ramo wt/l56): a migração 20260917T2300_agenda_teto_usuario_sem_corrida.sql
+# pôs o teto NO BANCO — gatilho BEFORE INSERT/UPDATE em plat.agenda que primeiro pega
+# `pg_advisory_xact_lock` pela chave do usuário e só então conta. A trava de transação serializa o
+# "checar-e-agir": a segunda transação espera a primeira commitar e reconta com o resultado dela à vista.
+# O teste deixou de ser xfail e passou a provar o OPOSTO: a segunda inserção é RECUSADA com SQLSTATE
+# 53400. Os pares positivos estão nos dois testes seguintes.
+def test_l6_02_k_teto_de_agendas_por_usuario_nao_tem_mais_corrida_de_checar_e_agir():
+    """Mesmo cenário determinístico da refutação (as duas leituras acontecem antes de qualquer INSERT, sem
+    depender de timing de thread). Antes, as duas inserções passavam e o usuário terminava com uma agenda
+    ativa acima do teto. Agora a segunda morre no gatilho e o total final respeita a cota."""
     tenant_id, usuario_id = 1, 2  # tenant 'demo', usuário 'admin' — o mesmo par de tests/jobs_sessao.py
     existentes = int(_psql(f"SELECT plat.agendas_ativas_usuario({usuario_id})"))
     cota_nova = existentes + 1
     _psql(f"UPDATE plat.tenant SET config = config || jsonb_build_object('cota_agendas_usuario', {cota_nova}) "
           f"WHERE id = {tenant_id}")
-    id1 = id2 = None
+    id1 = None
+    con1 = con2 = None
     try:
         con1, con2 = _conectar_app(), _conectar_app()
         cur1, cur2 = con1.cursor(), con2.cursor()
@@ -212,18 +197,100 @@ def test_l6_02_k_teto_de_agendas_por_usuario_tem_corrida_de_checar_e_agir():
         id1 = cur1.fetchone()["id"]
         con1.commit()  # primeira transação já commitou a agenda dela
 
-        cur2.execute("INSERT INTO plat.agenda(tenant_id, usuario_id, nome, tipo, parametros, cron) "
-                     "VALUES (%s, %s, %s, 'prova.progresso', '{}'::jsonb, '*/15 * * * *') RETURNING id",
-                     (tenant_id, usuario_id, f"zt-adv-l6-corrida-2-{selo}"))
-        id2 = cur2.fetchone()["id"]
-        con2.commit()  # segunda transação nunca releu a cota: insere mesmo já tendo 1 a mais que o teto
+        with pytest.raises(psycopg2.errors.ConfigurationLimitExceeded):
+            cur2.execute("INSERT INTO plat.agenda(tenant_id, usuario_id, nome, tipo, parametros, cron) "
+                         "VALUES (%s, %s, %s, 'prova.progresso', '{}'::jsonb, '*/15 * * * *') RETURNING id",
+                         (tenant_id, usuario_id, f"zt-adv-l6-corrida-2-{selo}"))
+        con2.rollback()
 
         final = int(_psql(f"SELECT plat.agendas_ativas_usuario({usuario_id})"))
-        # o teste PASSA (xfail vira xpass=falha) só se o banco tiver recusado a segunda inserção.
-        assert final <= cota_nova, f"{final} agendas ativas com cota {cota_nova}: o teto foi contornado"
+        assert final == cota_nova, f"{final} agendas ativas com cota {cota_nova}"
     finally:
+        for c in (con1, con2):
+            if c is not None:
+                c.close()
         if id1:
             _psql(f"DELETE FROM plat.agenda WHERE id = '{id1}'")
-        if id2:
-            _psql(f"DELETE FROM plat.agenda WHERE id = '{id2}'")
         _psql(f"UPDATE plat.tenant SET config = config - 'cota_agendas_usuario' WHERE id = {tenant_id}")
+
+
+def test_l6_02_k_usuario_abaixo_do_teto_continua_criando_agenda():
+    """Par positivo 1: o gatilho não fechou o uso legítimo — com espaço na cota, a inserção passa."""
+    tenant_id, usuario_id = 1, 2
+    existentes = int(_psql(f"SELECT plat.agendas_ativas_usuario({usuario_id})"))
+    _psql(f"UPDATE plat.tenant SET config = config || jsonb_build_object('cota_agendas_usuario', "
+          f"{existentes + 2}) WHERE id = {tenant_id}")
+    novo = None
+    try:
+        novo = _psql(
+            f"INSERT INTO plat.agenda(tenant_id, usuario_id, nome, tipo, parametros, cron) VALUES "
+            f"({tenant_id}, {usuario_id}, 'zt-adv-l6-positivo-{int(time.time() * 1000)}', 'prova.progresso', "
+            f"'{{}}'::jsonb, '*/15 * * * *') RETURNING id"
+        )
+        assert novo, "a inserção abaixo do teto tem de passar"
+        assert int(_psql(f"SELECT plat.agendas_ativas_usuario({usuario_id})")) == existentes + 1
+    finally:
+        if novo:
+            _psql(f"DELETE FROM plat.agenda WHERE id = '{novo}'")
+        _psql(f"UPDATE plat.tenant SET config = config - 'cota_agendas_usuario' WHERE id = {tenant_id}")
+
+
+def test_l6_02_k_editar_agenda_que_ja_estava_ativa_nao_conta_de_novo():
+    """Par positivo 2: o teto conta agendas ATIVAS, e uma agenda que já estava ativa não passa a contar
+    duas vezes ao ser editada — senão, com a cota cheia, ninguém mais conseguiria renomear a própria
+    agenda. É a razão do desvio `TG_OP = UPDATE AND OLD.ativa` no gatilho."""
+    tenant_id, usuario_id = 1, 2
+    existentes = int(_psql(f"SELECT plat.agendas_ativas_usuario({usuario_id})"))
+    alvo = None
+    try:
+        _psql(f"UPDATE plat.tenant SET config = config || jsonb_build_object('cota_agendas_usuario', "
+              f"{existentes + 1}) WHERE id = {tenant_id}")
+        alvo = _psql(
+            f"INSERT INTO plat.agenda(tenant_id, usuario_id, nome, tipo, parametros, cron) VALUES "
+            f"({tenant_id}, {usuario_id}, 'zt-adv-l6-edita-{int(time.time() * 1000)}', 'prova.progresso', "
+            f"'{{}}'::jsonb, '*/15 * * * *') RETURNING id"
+        )
+        # cota agora esgotada; editar a MESMA agenda ativa continua passando
+        _psql(f"UPDATE plat.agenda SET cron = '*/30 * * * *' WHERE id = '{alvo}'")
+        assert _psql(f"SELECT cron FROM plat.agenda WHERE id = '{alvo}'") == "*/30 * * * *"
+    finally:
+        if alvo:
+            _psql(f"DELETE FROM plat.agenda WHERE id = '{alvo}'")
+        _psql(f"UPDATE plat.tenant SET config = config - 'cota_agendas_usuario' WHERE id = {tenant_id}")
+
+
+def test_l6_02_j_funcao_de_leitura_da_lista_branca_continua_passando():
+    """Par positivo da lista branca de função: fechar a projeção não pode ter fechado a consulta útil —
+    agregação, texto e PostGIS (as três que o próprio item mede em tests/api/test_bancos_externos.py)
+    continuam passando."""
+    v = consulta_sql.validar(
+        "SELECT count(*) AS n, upper(nome) AS nome, ST_AsText(geom) AS wkt FROM sedes_municipais "
+        "GROUP BY nome, geom LIMIT 10",
+        TABELAS, "public",
+    )
+    assert v.limite == 10 and v.tabelas == ["sedes_municipais"]
+
+
+def test_l6_05_licenca_declarada_no_json_raiz_continua_ganhando_do_link():
+    """Par positivo da leitura de licença: quando o serviço declara a licença de verdade no `license` do
+    JSON-raiz, é ELA que vale — o link não passa a atropelar o valor declarado."""
+    doc = {
+        "id": "colecao-de-teste-interno",
+        "title": "Coleção de teste interno",
+        "license": "CC-BY-SA-4.0",
+        "links": [{"rel": "license", "href": "https://exemplo.org/outra", "title": "OUTRA-LICENCA"}],
+    }
+    with mock.patch.object(seguranca, "buscar_seguro", return_value=_resposta_json(doc)):
+        achados, _atrib, _url, _corpo = pv._sondar_json(
+            "https://fixture.local/collections/colecao-de-teste-interno", "stac"
+        )
+    assert achados["licenca"] == "CC-BY-SA-4.0", achados
+
+
+def test_l6_05_servico_que_nao_declara_licenca_continua_sem_licenca():
+    """Par positivo 2: nada é inventado — sem `license` e sem link `rel=license`, a ficha sai com
+    `licenca=None` (o campo é marcado como não registrado, nunca preenchido com padrão)."""
+    doc = {"id": "sem-licenca", "title": "Sem licença", "links": [{"rel": "self", "href": "https://x.invalido"}]}
+    with mock.patch.object(seguranca, "buscar_seguro", return_value=_resposta_json(doc)):
+        achados, _atrib, _url, _corpo = pv._sondar_json("https://fixture.local/collections/sem-licenca", "stac")
+    assert achados["licenca"] is None, achados
