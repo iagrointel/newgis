@@ -21,11 +21,11 @@ verdade em https://www.openstreetmap.org/copyright, exige HTTP 200 e os termos e
 recorte literal como evidência — o mesmo critério do script de curadoria, na hora do teste. Uma segunda
 camada (feições de ferrovia, fonte `dnit-osm-rodovias`, SEM licença curada) prova a recusa D17.
 
-⛔ PENDÊNCIA (item T9): a curadoria original usava duas tabelas de OSM de um schema de cliente do
-acervo compartilhado, e este repositório é público — nome de cliente não pode aparecer em arquivo do
-produto. Não há, hoje, tabela equivalente (feições reais de OSM com geometria) fora de um schema de
-cliente nesta base; os nomes abaixo são placeholders que NÃO existem, e o módulo fica marcado
-`skip` até que o item T9 traga a mesma curadoria sobre um schema de dado aberto.
+⛔ PENDÊNCIA T9 RESOLVIDA (18/09): as duas tabelas NASCEM de dado aberto na própria fixture — download da
+API oficial do OSM (/api/0.6/map, caixas pequenas sobre São Paulo, dentro do limite de 50 mil nós da
+chamada) para o schema ABERTO `acervo_teste` desta base, com a caixa e a data do download gravadas em
+COMMENT na tabela. Nenhum schema de cliente aparece neste arquivo. Tabela já cheia (desta ou de outra
+trilha na mesma base) é reaproveitada — os asserts medem DELTAS, nunca valores absolutos digitados.
 """
 
 import hashlib
@@ -34,14 +34,14 @@ import json
 import os
 import subprocess
 import time
+import xml.etree.ElementTree as ET
 import zipfile
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 import pytest
-
-pytestmark = pytest.mark.skip(reason="depende de schema de cliente; substituir por dado aberto — T9")
 
 ROOT = Path(__file__).resolve().parents[2]
 PUBLICAR = ROOT / "scripts" / "acervo_publicar.py"
@@ -56,6 +56,26 @@ VIEW_ODBL = "acervo_teste_osm_aeroway_aberto"
 CAMADA_SEM_LICENCA_ID = "dnit-osm-rodovias/acervo_teste.osm_rail_aberto"
 VIEW_SEM_LICENCA = "acervo_teste_osm_rail_aberto"
 
+# feições reais do OpenStreetMap, baixadas da API oficial na hora do teste (pendência T9 resolvida):
+# way[aeroway] sobre o Campo de Marte e way[railway] sobre o trecho do Brás (São Paulo) — caixas pequenas,
+# dentro do limite de 50 mil nós da chamada /api/0.6/map (ordem: oeste,sul,leste,norte).
+CONSULTAS_OSM = {
+    "osm_aeroway_aberto": ("-46.644,-23.513,-46.630,-23.503", "aeroway"),
+    "osm_rail_aberto": ("-46.6220,-23.5445,-46.6105,-23.5365", "railway"),
+}
+MIN_FEICOES_OSM = 5
+
+
+def _banco() -> str:
+    """Base alvo dos comandos como postgres: a do PLAT_DSN do ambiente (plat_trilhas nas trilhas remotas;
+    iagro_sat na casa de desenvolvimento). PLAT_BANCO explícito ainda vale; o default histórico é iagro_sat."""
+    dsn = os.environ.get("PLAT_DSN")
+    if dsn:
+        nome = urlparse(dsn).path.lstrip("/")
+        if nome:
+            return nome
+    return os.environ.get("PLAT_BANCO", "iagro_sat")
+
 
 def _schema() -> str:
     return os.environ.get("PLAT_SCHEMA", "plat")
@@ -65,7 +85,7 @@ def _psql(sql: str, *params: str) -> str:
     """psql como postgres — a identidade que escreve os registros do acervo (nunca plat_app). Parâmetros vão
     por -v e se citam no SQL como :'p1' — nunca por formatação de string. O SQL vai por STDIN (não -c):
     a substituição de variável do psql só acontece lendo de arquivo/stdin."""
-    cmd = ["sudo", "-u", "postgres", "psql", "-d", os.environ.get("PLAT_BANCO", "iagro_sat"),
+    cmd = ["sudo", "-u", "postgres", "psql", "-d", _banco(),
            "-X", "-q", "-tA", "-v", "ON_ERROR_STOP=1"]
     for i, p in enumerate(params, start=1):
         cmd += ["-v", f"p{i}={p}"]
@@ -76,6 +96,78 @@ def _psql(sql: str, *params: str) -> str:
 
 def _tabela_existe(nome: str) -> bool:
     return _psql(f"SELECT to_regclass('{nome}') IS NOT NULL") == "t"
+
+
+def _baixar_osm(bbox: str, etiqueta: str) -> list[tuple]:
+    """GET de verdade na API do OpenStreetMap (a mesma casa da página de licença): todos os nós e ways da
+    caixa. Devolve [(osm_id, tipo, nome, ref, ewkt)] dos ways com a etiqueta — feição nunca é digitada."""
+    r = httpx.get(f"https://api.openstreetmap.org/api/0.6/map?bbox={bbox}", timeout=120,
+                  headers={"User-Agent": "plat-teste-acervo/1.0 (item L6-01-e)"})
+    assert r.status_code == 200, f"API do OSM respondeu {r.status_code}: {r.text[:200]}"
+    raiz = ET.fromstring(r.text)
+    nos = {n.get("id"): (n.get("lon"), n.get("lat")) for n in raiz.iter("node")}
+    linhas = []
+    for w in raiz.iter("way"):
+        tags = {t.get("k"): t.get("v") for t in w.iter("tag")}
+        if etiqueta not in tags:
+            continue
+        pontos = [nos[nd.get("ref")] for nd in w.iter("nd") if nd.get("ref") in nos]
+        if len(pontos) < 2:
+            continue
+        texto = ", ".join(f"{x} {y}" for x, y in pontos)
+        if etiqueta == "aeroway" and len(pontos) >= 4 and pontos[0] == pontos[-1]:
+            ewkt = f"SRID=4326;POLYGON(({texto}))"
+        else:
+            ewkt = f"SRID=4326;LINESTRING({texto})"
+        linhas.append((int(w.get("id")), tags[etiqueta], tags.get("name"), tags.get("ref"), ewkt))
+    assert len(linhas) >= MIN_FEICOES_OSM, f"a caixa {bbox} devolveu só {len(linhas)} ways {etiqueta}"
+    return linhas
+
+
+_CARREGADOR = r"""
+import json, sys
+import psycopg2
+banco = sys.argv[1]
+dado = json.load(sys.stdin)
+con = psycopg2.connect(dbname=banco)
+con.autocommit = True
+cur = con.cursor()
+cur.execute("CREATE SCHEMA IF NOT EXISTS acervo_teste")
+for tabela in ("osm_aeroway_aberto", "osm_rail_aberto"):
+    cur.execute("CREATE TABLE IF NOT EXISTS acervo_teste." + tabela + " ("
+                "osm_id bigint PRIMARY KEY, tipo text, nome text, ref text, "
+                "geom geometry(Geometry,4326) NOT NULL)")
+    cur.execute("CREATE INDEX IF NOT EXISTS " + tabela + "_gix "
+                "ON acervo_teste." + tabela + " USING gist (geom)")
+    cur.execute("SELECT count(*) FROM acervo_teste." + tabela)
+    if cur.fetchone()[0] == 0:
+        cur.executemany("INSERT INTO acervo_teste." + tabela + " (osm_id, tipo, nome, ref, geom) "
+                        "VALUES (%s, %s, %s, %s, ST_GeomFromEWKT(%s)) "
+                        "ON CONFLICT (osm_id) DO NOTHING", dado["tabelas"][tabela])
+    cur.execute("COMMENT ON TABLE acervo_teste." + tabela + " IS %s", (dado["comentario"][tabela],))
+con.close()
+"""
+
+
+def _garantir_tabelas_osm() -> None:
+    """As duas tabelas de dado aberto que o teste publica. Já existindo E cheias nesta base (criadas por
+    esta ou por outra trilha), reusa — o conteúdo é estável e os asserts medem deltas. Faltando ou vazias,
+    baixa do OSM AGORA e carrega como postgres (a mesma identidade das outras escritas do acervo)."""
+    if (_tabela_existe("acervo_teste.osm_aeroway_aberto") and _tabela_existe("acervo_teste.osm_rail_aberto")
+            and int(_psql("SELECT count(*) FROM acervo_teste.osm_aeroway_aberto")) > 0
+            and int(_psql("SELECT count(*) FROM acervo_teste.osm_rail_aberto")) > 0):
+        return
+    agora = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    tabelas, comentario = {}, {}
+    for tabela, (bbox, etiqueta) in CONSULTAS_OSM.items():
+        tabelas[tabela] = _baixar_osm(bbox, etiqueta)
+        comentario[tabela] = (
+            "OpenStreetMap contributors (ODbL, https://www.openstreetmap.org/copyright), baixado da API "
+            f"oficial /api/0.6/map em {agora}; bbox (oeste,sul,leste,norte): {bbox}; etiqueta: {etiqueta}")
+    r = subprocess.run(["sudo", "-u", "postgres", "python3", "-c", _CARREGADOR, _banco()],
+                       input=json.dumps({"tabelas": tabelas, "comentario": comentario}),
+                       capture_output=True, text=True, timeout=300)
+    assert r.returncode == 0, r.stderr
 
 
 def _colunas_reais(tabela: str) -> list[str]:
@@ -100,11 +192,12 @@ def _registrar_camada(camada_id: str, fonte_id: str, tabela: str, tipo_geom: str
         f"INSERT INTO {s}.acervo_camada (acervo_camada_id, fonte_id, servidor, banco, schema_nome, tabela, "
         f"coluna_geom, srid, tipo_geom, colunas_expostas, colunas_bloqueadas, linhas_exatas, "
         f"linhas_contadas_em, estado) "
-        f"VALUES (:'p1', :'p2', 'vultr', 'iagro_sat', :'p3', :'p4', 'geom', 4326, :'p5', "
+        f"VALUES (:'p1', :'p2', 'vultr', :'p6', :'p3', :'p4', 'geom', 4326, :'p5', "
         f"ARRAY[{lista}], ARRAY[]::text[], {exatas}, current_date, 'exposta') "
         f"ON CONFLICT (acervo_camada_id) DO UPDATE SET estado = 'exposta', "
-        f"colunas_expostas = EXCLUDED.colunas_expostas, linhas_exatas = EXCLUDED.linhas_exatas",
-        camada_id, fonte_id, schema_nome, tabela_nome, tipo_geom)
+        f"colunas_expostas = EXCLUDED.colunas_expostas, linhas_exatas = EXCLUDED.linhas_exatas, "
+        f"banco = EXCLUDED.banco",
+        camada_id, fonte_id, schema_nome, tabela_nome, tipo_geom, _banco())
 
 
 def _verificar_licenca_osm_agora() -> tuple[int, str]:
@@ -137,7 +230,7 @@ def _semeia_licenca(http_status: int, evidencia: str) -> None:
 def _publicar() -> None:
     r = subprocess.run(
         ["sudo", "-u", "postgres", "python3", str(PUBLICAR), "--schema", _schema(),
-         "--banco", os.environ.get("PLAT_BANCO", "iagro_sat")],
+         "--banco", _banco()],
         capture_output=True, text=True, timeout=300)
     assert r.returncode == 0, r.stderr
 
@@ -155,9 +248,9 @@ def _limpar_estado() -> None:
 
 @pytest.fixture(scope="module")
 def camadas_prontas():
-    """Camada ODbL publicada COM licença verificada por HTTP na hora + camada SEM licença para a recusa."""
-    if not (_tabela_existe("acervo_teste.osm_aeroway_aberto") and _tabela_existe("acervo_teste.osm_rail_aberto")):
-        pytest.skip("tabelas acervo_teste.osm_aeroway_aberto/acervo_teste.osm_rail_aberto não existem nesta base")
+    """Camada ODbL publicada COM licença verificada por HTTP na hora + camada SEM licença para a recusa.
+    As tabelas de feições são dado aberto de verdade (OSM), criadas pela própria fixture se faltarem."""
+    _garantir_tabelas_osm()
     status, evidencia = _verificar_licenca_osm_agora()
     _semeia_licenca(status, evidencia)
     _registrar_camada(CAMADA_ODBL_ID, FONTE_ODBL, "acervo_teste.osm_aeroway_aberto", "GEOMETRY")
