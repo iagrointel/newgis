@@ -19,9 +19,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.formulario.regras_valor import campo_nao_preenchido
 from app.erros import ErroAPI
 from app.expressao.avaliador_py import Binario, Campo, Chamada, ErroExpressao, No, Unario, analisar, avaliar_texto
+from app.formulario.regras_valor import campo_nao_preenchido
 
 WIDGETS = {"texto", "area_texto", "numero", "inteiro", "booleano", "data", "selecao"}
 

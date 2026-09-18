@@ -22,7 +22,7 @@ from tests.api.test_formulario import _ponto, _publicar, _visita_corpo, camada, 
 ITEM = "L5-03-form-builder"
 
 
-def test_edicao_web_recusa_campo_obrigatorio_com_string_vazia(sessao_a, camada):
+def test_edicao_web_recusa_campo_obrigatorio_com_string_vazia(sessao_a, camada):  # noqa: F811 — fixture do pytest, importada de proposito
     _publicar(sessao_a, camada["id"])
     corpo = {
         "adicionar": [{"atributos": {"nome": "", "categoria": "B"}, "geometria": _ponto()}],
@@ -34,14 +34,14 @@ def test_edicao_web_recusa_campo_obrigatorio_com_string_vazia(sessao_a, camada):
     assert r.json()["erro"] == "campo_obrigatorio", r.text
 
 
-def test_pwa_campo_recusa_campo_obrigatorio_com_string_vazia(sessao_a, camada):
+def test_pwa_campo_recusa_campo_obrigatorio_com_string_vazia(sessao_a, camada):  # noqa: F811 — fixture do pytest, importada de proposito
     _publicar(sessao_a, camada["id"])
     r = sessao_a.post("/api/campo/visitas", json=_visita_corpo(camada["id"], {"nome": "", "categoria": "B"}))
     assert r.status_code == 422, r.text
     assert r.json()["erro"] == "campo_obrigatorio", r.text
 
 
-def test_edicao_web_com_campo_obrigatorio_preenchido_continua_passando(sessao_a, camada):
+def test_edicao_web_com_campo_obrigatorio_preenchido_continua_passando(sessao_a, camada):  # noqa: F811 — fixture do pytest, importada de proposito
     """Par positivo 1: recusar a string vazia não pode ter fechado a escrita legítima — a mesma feição
     com o campo obrigatório preenchido continua entrando."""
     _publicar(sessao_a, camada["id"])
@@ -54,7 +54,7 @@ def test_edicao_web_com_campo_obrigatorio_preenchido_continua_passando(sessao_a,
     assert r.status_code == 200, r.text
 
 
-def test_zero_e_falso_nao_contam_como_campo_vazio(sessao_a, camada):
+def test_zero_e_falso_nao_contam_como_campo_vazio(sessao_a, camada):  # noqa: F811 — fixture do pytest, importada de proposito
     """Par positivo 2: `0`, `0.0` e `False` são VALORES preenchidos, não ausência. A camada exige `ativo`
     quando `categoria == 'A'` (condicional do desenho); mandar `ativo=False` e `area=0` tem de passar."""
     _publicar(sessao_a, camada["id"])

@@ -29,8 +29,6 @@ padrão de segurança que o restante da linha declara como doutrina ("nunca allo
 
 from __future__ import annotations
 
-import pytest
-
 from app.catalogo.site_render import cartao_incorporado
 
 ITEM = "L5-20-sites-paginas-publicas"

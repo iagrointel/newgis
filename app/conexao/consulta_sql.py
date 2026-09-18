@@ -74,7 +74,7 @@ FUNCOES_PERMITIDAS = frozenset({
     "make_date", "make_time", "make_timestamp", "make_interval", "justify_days", "justify_hours", "date",
     # conversão, nulos, JSON e array
     "cast", "coalesce", "nullif", "to_json", "to_jsonb", "json_build_object", "jsonb_build_object",
-    "json_build_array", "jsonb_build_array", "row_to_json", "json_agg", "json_extract_path",
+    "json_build_array", "jsonb_build_array", "row_to_json", "json_extract_path",
     "json_extract_path_text", "jsonb_extract_path", "jsonb_extract_path_text", "jsonb_array_elements",
     "json_array_elements", "jsonb_array_length", "json_array_length", "jsonb_object_keys", "array_length",
     "array_position", "array_remove", "array_append", "array_cat", "array_to_string", "string_to_array",

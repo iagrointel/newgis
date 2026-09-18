@@ -20,8 +20,6 @@ diferentes."""
 
 from __future__ import annotations
 
-import pytest
-
 from app.catalogo import mesclagem
 
 ULIDS = [f"01J{str(i).zfill(23)}"[:26] for i in range(4)]

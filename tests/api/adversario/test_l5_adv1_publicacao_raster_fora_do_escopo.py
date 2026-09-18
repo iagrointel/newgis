@@ -27,8 +27,6 @@ catálogo, antes de qualquer leitura de pixel) citado por um `mapa`, citado por 
 
 import uuid
 
-import pytest
-
 # `itens_a` e uma FIXTURE do conftest do pacote tests/api/catalogo — conftest de pacote nao alcanca
 # tests/api/adversario/, e sem trazer o nome para ca os dois testes morriam em "fixture 'itens_a' not
 # found" (erro de PREPARO, nao refutacao). Medido em 18/09/2026.
@@ -65,7 +63,7 @@ def _inserir_raster_direto(tenant_id: int, usuario_id: int) -> str:
 # `raster` (raster/mosaico) além de `camada`. O par positivo — camada vetorial continua entrando, e
 # item que NÃO é dado continua fora do escopo — está em tests/api/catalogo/test_publicacao.py e no
 # segundo teste abaixo.
-def test_camada_raster_citada_pelo_mapa_entra_no_escopo_do_token_publicado(sessao_a, itens_a, conexao_plat_app):
+def test_camada_raster_citada_pelo_mapa_entra_no_escopo_do_token_publicado(sessao_a, itens_a, conexao_plat_app):  # noqa: F811 — fixture do pytest, importada de proposito
     ids = ids_por_slug(conexao_plat_app)
     tenant_id = ids["demo"]
     with conexao_plat_app.cursor() as cur:
@@ -98,7 +96,7 @@ def test_camada_raster_citada_pelo_mapa_entra_no_escopo_do_token_publicado(sessa
     assert f"tiles:ler:{raster_id}" in escopos, escopos
 
 
-def test_item_sem_dado_fisico_continua_fora_do_escopo_do_token(sessao_a, itens_a, conexao_plat_app):
+def test_item_sem_dado_fisico_continua_fora_do_escopo_do_token(sessao_a, itens_a, conexao_plat_app):  # noqa: F811 — fixture do pytest, importada de proposito
     """Par positivo: abrir o escopo para a família `raster` não pode ter aberto para tudo — um `mapa`
     citado pelo app continua NÃO recebendo `tiles:ler:<id>` (mapa não tem dado, é documento)."""
     mapa = itens_a.criar("mapa", dados=documento_mapa())

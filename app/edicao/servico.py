@@ -34,8 +34,8 @@ from app.edicao.modelos import (
     FeicaoAtualizar,
     ResultadoFeicao,
 )
-from app.formulario.regras_valor import campo_nao_preenchido
 from app.erros import ErroAPI
+from app.formulario.regras_valor import campo_nao_preenchido
 from app.ingestao.geometria import MULTI_DE, TIPOS_CONCRETOS
 
 # campos de rastreio e sistema: NUNCA aceitos do cliente, mesmo que ele os inclua em `atributos` — ignorados em
