@@ -2,16 +2,27 @@
  "item": "L0-02-e",
  "medidas": {
   "rotas_total": {
-   "valor": 138,
+   "valor": 960,
    "unidade": "rotas",
    "comando": "len(paths×methods) de docs/openapi.json"
   },
   "rotas_cobertas": {
-   "valor": 138,
+   "valor": 960,
    "unidade": "rotas",
    "comando": "rotas do OpenAPI com caso em tests/api/cruzado_casos.py"
+  },
+  "rotas_com_alvo_real_de_b": {
+   "valor": 505,
+   "unidade": "rotas",
+   "comando": "casos cuja URL ou corpo cita um identificador de um recurso que demo2 criou nesta rodada"
+  },
+  "rotas_sem_alvo_real_de_b": {
+   "valor": 455,
+   "unidade": "rotas",
+   "comando": "casos que apontam UUID nulo ou literal zz-: provam que id de ninguem da 404, nao que o id DE B da"
   }
  },
- "gerado_em": "2026-09-06T12:23:52Z",
- "git_sha": "e30515b57814"
+ "gerado_em": "2026-09-18T03:36:07Z",
+ "git_sha": "1ef6f713b192",
+ "nota": "18/09/2026. O numero anterior deste arquivo era rotas_total=138 e rotas_cobertas=138, gravado em 06/09/2026 (git_sha e30515b57814), quando a API servia 138 rotas. Ele continuou sendo lido como '100 % de cobertura da varredura cruzada A->B' depois que a API cresceu para 960 operacoes: em 18/09, antes desta rodada, 439 rotas tinham caso e 521 NAO tinham — o isolamento entre inquilinos delas nunca havia sido exercido por teste nenhum. As sete levas de 18/09 fecharam 960/960 e a suite passa inteira. LEIA rotas_com_alvo_real_de_b JUNTO com rotas_cobertas: cobertura e o piso (a rota entrou na varredura), e so o subconjunto com alvo real aponta para um recurso que demo2 criou na mesma rodada e portanto poe a RLS a prova; o resto aponta identificador que nao e de ninguem e prova apenas que id inexistente da 404. rotas_com_alvo_real_de_b varia alguns pontos entre rodadas porque a execucao AMC de B so nasce com a grade pronta, que depende de um trabalhador rodando (ver `preparar` em tests/api/cruzado_casos.py)."
 }
