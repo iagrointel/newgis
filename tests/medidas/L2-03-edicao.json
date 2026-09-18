@@ -15,12 +15,12 @@
   "ambiente": "servidor local (scripts/servir_local.py :8182) atras de nginx minimo que reescreve Origin para PLAT_URL_PUBLICA (achado: sem isso toda escrita sob cookie bate em 403 origem_invalida, exatamente o aviso do brief) + Martin proprio desta trilha em :8241 (deploy/local/martin_edicao.yaml, fora do git, nao afeta a unidade plat-martin :8151 de nenhuma outra trilha)",
   "rodado_2x_para_estabilidade": true
  },
- "gerado_em": "2026-09-18T01:54:43Z",
- "git_sha": "d9c1d9c7d79a",
+ "gerado_em": "2026-09-18T10:07:15Z",
+ "git_sha": "37eee9719c22",
  "medidas": {
   "edicao_ligado_a_pagina_do_mapa": {
-   "valor": false,
-   "unidade": "módulo alcançado a partir de web/mapa.html (False = e2e da tela impossível hoje)",
+   "valor": true,
+   "unidade": "módulo alcançado a partir da tela do mapa (web/mapa.html ou web/sig.html; False = e2e da tela impossível hoje)",
    "comando": "pytest tests/unit/test_l201k_frente_desenho.py::test_medida_da_ligacao_da_tela_de_desenho"
   },
   "suite_dedicada_18_09": {

@@ -44,6 +44,10 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="6" y="14" width="12" height="7" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
         <span>Impressão</span>
       </button>
+      <button type="button" class="sig-icone" data-painel="exportar" aria-pressed="false" aria-label="Exportar (X)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span>Exportar</span>
+      </button>
       <button type="button" class="sig-icone" data-painel="comparar" aria-pressed="false" aria-label="Comparar (C)">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="1" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 4v16" stroke="currentColor" stroke-width="1.8"/><path d="m8 10-3 2 3 2M16 10l3 2-3 2" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <span>Comparar</span>
@@ -221,6 +225,14 @@
         </div>
         <p id="impressao-saida" class="saida" aria-live="polite"></p>
       </div>
+    </div>
+
+    <div class="sig-painel exportar" id="painel-exportar" data-painel-id="exportar" hidden>
+      <header class="sig-painel-cabecalho" data-arrasto>
+        <h2>Exportar</h2>
+        <button type="button" class="sig-painel-fechar" data-fechar aria-label="fechar"><span data-icone="fechar"></span></button>
+      </header>
+      <div class="sig-painel-corpo" id="exportar-corpo"></div>
     </div>
 
     <div class="sig-painel" id="painel-comparar" data-painel-id="comparar" hidden>

@@ -113,6 +113,17 @@ body.sig .app, body.sig .lateral { display: none; } /* a casca do SIG não usa a
 .sig-linha { display: flex; gap: var(--e2); align-items: center; flex-wrap: wrap; }
 .sig-linha input[type=search] { flex: 1; min-width: 8rem; }
 .saida { margin: var(--e2) 0 0; font-family: var(--mono); font-size: var(--i-t0); }
+
+/* ---- bloco Exportar (L2-01-l): o PainelExportar de web/js/mapa/exportar.js monta .linha/.rotulo/.saida,
+   as mesmas classes que ele usava na casca antiga (regras de mapa.css, reescopadas ao painel) ---- */
+#exportar-corpo .linha { display: flex; gap: var(--e2); align-items: center; flex-wrap: wrap; margin-bottom: var(--e2); }
+#exportar-corpo select { max-width: 100%; }
+#exportar-corpo #exp-crs { width: 6.5rem; }
+#exportar-corpo .rotulo { display: inline-flex; gap: var(--i-e1); align-items: center; font-size: var(--i-t-1); color: var(--fraco); }
+#exportar-corpo #exp-perda { color: var(--fraco); font-size: var(--i-t-1); font-family: inherit; }
+#exportar-corpo .exp-importar { margin-top: var(--e3); border-top: 1px solid var(--borda); padding-top: var(--e2); }
+#exportar-corpo .exp-importar h3 { margin: 0 0 var(--i-e1); font-size: var(--i-t0); }
+#exportar-corpo .ajuda { margin: 0 0 var(--e2); font-size: var(--i-t-1); color: var(--fraco); }
 .sugestoes { list-style: none; margin: var(--e2) 0 0; padding: 0; }
 .sugestoes .sugestao {
   display: block; width: 100%; text-align: left; background: none; border: 0;

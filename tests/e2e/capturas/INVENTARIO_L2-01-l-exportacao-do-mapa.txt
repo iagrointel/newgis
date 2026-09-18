@@ -1,0 +1,32 @@
+# Inventário das capturas do portão e2e do item L2-01-l-exportacao-do-mapa.
+#
+# Os PNG não entram no git (.gitignore: tests/e2e/capturas/*.png — o repositório não carrega
+# imagem). A prova é este inventário mais o teste que regenera tudo:
+#   set -a; source <env da trilha>; set +a
+#   export PLAT_GARAGE_ADMIN_TOKEN=<token do Garage local>   # trilha é sem Garage; ver relatório
+#   PLAT_URL_PUBLICA=https://127.0.0.1:8157 venv/bin/python scripts/servir_local.py --porta 8157 \
+#     --cert <crt> --chave <key> &   # cert autoassinado de /tmp; CSRF exige Origin == PLAT_URL_PUBLICA
+#   PLAT_WORKER_URL=http://127.0.0.1:8158 venv/bin/python -m app.jobs.worker &
+#   SSL_CERT_FILE=<crt> bash /home/dev/plat-frota/laco/roda_teste.sh tests/e2e/test_exportar_mapa.py \
+#     -q --base-url=https://127.0.0.1:8157
+# Quem quiser conferir roda o teste e compara nome, tamanho e sha256 desta lista (bytes/sha256 variam
+# a cada corrida: o sufixo aleatório do inquilino e o dado semeado entram nas imagens — os valores
+# abaixo são da corrida do relatório, 18/09/2026).
+#
+# bloco_exportar  = painel Exportar da casca /sig aberto pela tela, camada do e2e ligada e escolhida
+#                   no seletor, formato GeoPackage e EPSG:31983 prestes a ser pedidos.
+# arquivo_pronto  = o mesmo painel com o link de download publicado pelo job de exportação (o arquivo
+#                   foi baixado e reaberto pelo ogrinfo: EPSG:31983, 2000 feições).
+# perda_declarada = GeoJSON selecionado: campo de EPSG desligado e a perda do formato escrita na tela
+#                   ("EPSG:4326"), antes de exportar — a tela não deixa pedir o impossível.
+# png_com_legenda = bitmap composto DENTRO da página pelo mesmo caminho do botão PNG, com legenda e
+#                   atribuição (classe da camada + faixa © OpenStreetMap).
+# png_sem_legenda = a mesma composição sem legenda nem atribuição: o par da comparação pixel a pixel
+#                   (as cores da legenda só existem na primeira; a faixa da atribuição difere).
+#
+# nome  bytes  sha256
+L2-01-l-exportacao-do-mapa_arquivo_pronto.png  1232585  d452f5eb0de5f1a4b99d5ee239336f7e7d6ca6adeb3b4225127eb99b52af4898
+L2-01-l-exportacao-do-mapa_bloco_exportar.png  1255462  d5a0124555ebc84d6e9cb26e1cde51fbe950319ca5766a9a52736c38e34e5fe8
+L2-01-l-exportacao-do-mapa_perda_declarada.png  1242498  ffbb57c46e52e11cfe5308a0ee52c3b582fd0220ed54adb56a18fdbfbb2afc20
+L2-01-l-exportacao-do-mapa_png_com_legenda.png  1736351  cebfd5f12aa510725976b1c357d67d0d7e034c036ff8681f79c211d6a6f76a49
+L2-01-l-exportacao-do-mapa_png_sem_legenda.png  1737202  b85352ae861861c2b21201ff3090a1cbefab1a150febd4f2e36f7964b5693726

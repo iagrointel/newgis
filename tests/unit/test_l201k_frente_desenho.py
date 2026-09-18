@@ -21,15 +21,18 @@ import pytest
 
 WEB = Path(__file__).resolve().parents[2] / "web"
 PAGINA = WEB / "mapa.html"
+# a casca nova do mapa (L2-01-a-casca-sig): /mapa continua no ar, mas a tela cheia de trabalho é /sig —
+# a "página do mapa" de fato, para os itens cujo e2e precisa de camada ligada e painel (L2-01-l, L2-03)
+PAGINA_SIG = WEB / "sig.html"
 # `import ... from './x.js'`, `import './x.js'` e `import(`./x.js`) dinâmico
 _IMPORT = re.compile(r"""(?:from|import)\s*\(?\s*['"`]([^'"`]+\.js)['"`]""")
 _SCRIPT_MODULO = re.compile(r"""<script[^>]*type=["']module["'][^>]*src=["']([^"']+)["']""")
 
 
-def _alcancaveis() -> set[Path]:
+def _alcancaveis(pagina: Path = PAGINA) -> set[Path]:
     """Fecho transitivo dos módulos que a PÁGINA carrega, começando pelos <script type="module">."""
     fila = []
-    for src in _SCRIPT_MODULO.findall(PAGINA.read_text(encoding="utf-8")):
+    for src in _SCRIPT_MODULO.findall(pagina.read_text(encoding="utf-8")):
         caminho = WEB / src.removeprefix("/static/").lstrip("/")
         if caminho.exists():
             fila.append(caminho.resolve())
@@ -91,12 +94,15 @@ def test_medida_da_ligacao_da_tela_de_desenho(alcancaveis, medida):
            "módulos do item alcançados pela página (False = nenhum)", cmd)
 
     # a MESMA medida vale para os itens vizinhos que dependem da mesma página: o e2e de edição
-    # (L2-03-edicao) espera `#edicao-camada` na tela /mapa, e o botão de exportar do mapa (L2-01-l)
-    # espera exportar.js — os dois módulos estão na mesma lista de órfãos.
+    # (L2-03-edicao) espera `#edicao-camada` na tela do mapa, e o botão de exportar do mapa (L2-01-l)
+    # espera exportar.js. Desde a casca /sig a "tela do mapa" são as DUAS páginas: o módulo conta como
+    # ligado se QUALQUER uma das duas o alcança (a /mapa antiga segue no ar até a casca ser aprovada).
+    alcancados_tela = alcancados | {p.name for p in _alcancaveis(PAGINA_SIG)}
     for item, modulo in (("L2-03-edicao", "edicao.js"), ("L2-01-l-exportacao-do-mapa", "exportar.js")):
         medida(item)(
-            f"{modulo.removesuffix('.js')}_ligado_a_pagina_do_mapa", modulo in alcancados,
-            "módulo alcançado a partir de web/mapa.html (False = e2e da tela impossível hoje)", cmd)
+            f"{modulo.removesuffix('.js')}_ligado_a_pagina_do_mapa", modulo in alcancados_tela,
+            "módulo alcançado a partir da tela do mapa (web/mapa.html ou web/sig.html; "
+            "False = e2e da tela impossível hoje)", cmd)
 
     assert "desenho.js" in orfaos and "anotacoes.js" in orfaos, orfaos
     assert "edicao.js" in orfaos and "exportar.js" in orfaos, orfaos

@@ -94,16 +94,19 @@ def mapa(page, base_url, inquilino_com_camada):
     inq, camada = inquilino_com_camada
     tela = TelaMapa(page, base_url)
     tela.entrar(inq.slug, "admin", inq.senha)
-    tela.ir("/mapa", "pagina_pronta_ms_mapa")
+    tela.ir("/sig", "pagina_pronta_ms_mapa")
     page.wait_for_selector('body[data-pronto="1"]', timeout=30000)
-    page.evaluate("() => window.plat.mapa.abrirPainel('camadas', { foco: false })")  # UX-04: painel na gaveta
+    page.evaluate("() => window.plat.sig.abrirPainel('camadas')")
     page.wait_for_selector("#lista-camadas li", timeout=20000)
     linha = page.locator('#lista-camadas li:has(.camada-titulo:text-matches("e2e do mapa"))').first
     caixa = linha.locator("input[type=checkbox]")
     if not caixa.is_checked():
         caixa.check()
-    page.evaluate("() => window.plat.mapa.abrirPainel('exportar', { foco: false })")  # UX-04: painel na gaveta
+    page.evaluate("() => window.plat.sig.abrirPainel('exportar')")
     page.wait_for_selector("#exp-camada", timeout=20000)
+    # a casca /sig liga camadas por padrão na abertura: a camada do e2e é escolhida à mão no seletor,
+    # senão a exportação sai da camada errada e a contagem do ogrinfo não é a semeada
+    page.select_option("#exp-camada", camada["item_id"])
     return tela, inq, camada
 
 
@@ -112,7 +115,7 @@ def _compor_no_navegador(page, com_legenda: bool) -> Image.Image:
     dados = page.evaluate(
         """async (comLegenda) => {
             const mod = await import('/static/js/mapa/impressao.js');
-            const { map, catalogo } = window.plat.mapa;
+            const { map, catalogo } = window.plat.sig;
             const legenda = comLegenda
               ? catalogo.ativas.map((id) => catalogo.ficha(id)).filter(Boolean)
                   .flatMap((f) => f.legenda || []).slice(0, 12)
@@ -138,7 +141,7 @@ def test_png_do_mapa_traz_a_legenda_e_a_atribuicao(mapa, medida):
     tela, _inq, _camada = mapa
     page = tela.page
     cores_legenda = page.evaluate(
-        """() => { const { catalogo } = window.plat.mapa;
+        """() => { const { catalogo } = window.plat.sig;
              return catalogo.ativas.map((id) => catalogo.ficha(id)).filter(Boolean)
                .flatMap((f) => f.legenda || []).map((e) => e.cor); }"""
     )
@@ -173,7 +176,7 @@ def test_png_do_mapa_traz_a_legenda_e_a_atribuicao(mapa, medida):
 def _esperar_link(page, segundos: int = 180) -> str:
     fim = time.monotonic() + segundos
     while time.monotonic() < fim:
-        page.evaluate("() => window.plat.mapa.abrirPainel('exportar', { foco: false })")  # UX-04: painel na gaveta
+        page.evaluate("() => window.plat.sig.abrirPainel('exportar')")
         if page.locator("#exp-link").count():
             return page.locator("#exp-link").get_attribute("href")
         page.wait_for_timeout(500)
@@ -187,7 +190,7 @@ def test_botao_exportar_do_mapa_gera_arquivo_no_crs_pedido(mapa, medida, tmp_pat
     tela, _inq, _camada = mapa
     page = tela.page
     tela.capturar("bloco_exportar")
-    page.evaluate("() => window.plat.mapa.abrirPainel('exportar', { foco: false })")  # UX-04: painel na gaveta
+    page.evaluate("() => window.plat.sig.abrirPainel('exportar')")
     page.select_option("#exp-formato", "gpkg")
     page.fill("#exp-crs", "31983")
     inicio = time.monotonic()
@@ -224,7 +227,7 @@ def test_formato_de_crs_preso_desabilita_o_campo_e_declara_a_perda(mapa):
     formato aparece escrita, antes de exportar."""
     tela, _inq, _camada = mapa
     page = tela.page
-    page.evaluate("() => window.plat.mapa.abrirPainel('exportar', { foco: false })")  # UX-04: painel na gaveta
+    page.evaluate("() => window.plat.sig.abrirPainel('exportar')")
     page.select_option("#exp-formato", "geojson")
     assert page.locator("#exp-crs").is_disabled()
     assert "EPSG:4326" in page.text_content("#exp-perda")
