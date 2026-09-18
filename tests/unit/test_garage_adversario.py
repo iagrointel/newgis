@@ -1046,6 +1046,12 @@ def test_9_apagar_item_devolve_os_contadores_do_garage(ambiente):
 
 
 def test_zz_grava_medidas():
+    # 18/09/2026: gravava SEMPRE, sujando a árvore a cada rodada. Mesmo defeito que `2c80c333c`
+    # consertou no vizinho e que o próprio commit nomeou aqui. Ruído recorrente esconde sinal:
+    # a varredura do ciclo achava medida "modificada" que ninguém tinha mexido. Quem mede de
+    # propósito usa PLAT_GRAVAR_MEDIDAS=1, como já faz tests/conftest.py.
+    if __import__("os").environ.get("PLAT_GRAVAR_MEDIDAS") != "1":
+        return
     destino = RAIZ / "tests" / "medidas" / "L1-01-d-adversario.json"
     destino.parent.mkdir(parents=True, exist_ok=True)
     destino.write_text(json.dumps(MEDIDAS, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

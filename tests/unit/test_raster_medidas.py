@@ -1,3 +1,4 @@
+import os as _os
 """Medidas do portão do item L2-05-e, gravadas em `tests/medidas/L2-05-e-raster-basico.json`.
 
 Quatro cláusulas do portão viram número aqui:
@@ -67,6 +68,12 @@ def carga() -> dict:
 
 
 def gravar(chave: str, valor: dict) -> None:
+    # 18/09/2026: gravava SEMPRE, sujando a árvore a cada rodada com carimbo de hora, carga e RAM
+    # novos — o mesmo defeito que `2c80c333c` consertou no vizinho e que o próprio commit nomeou
+    # aqui. Ruído recorrente esconde sinal: toda varredura do ciclo achava medida "modificada"
+    # que ninguém tinha mexido. Quem mede de propósito usa PLAT_GRAVAR_MEDIDAS=1, como o conftest.
+    if _os.environ.get("PLAT_GRAVAR_MEDIDAS") != "1":
+        return
     MEDIDAS.parent.mkdir(parents=True, exist_ok=True)
     atual = json.loads(MEDIDAS.read_text()) if MEDIDAS.exists() else {"item": "L2-05-e-raster-basico"}
     atual[chave] = {**valor, **carga()}

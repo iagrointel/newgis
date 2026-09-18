@@ -270,6 +270,12 @@ def test_fluxo_de_potencia_converge():
 
     MEDIDAS.parent.mkdir(parents=True, exist_ok=True)
     registro = json.loads(MEDIDAS.read_text(encoding="utf-8")) if MEDIDAS.exists() else {}
+    # 18/09/2026: gravava SEMPRE, sujando a árvore a cada rodada. Mesmo defeito que `2c80c333c`
+    # consertou no vizinho e que o próprio commit nomeou aqui. Ruído recorrente esconde sinal:
+    # a varredura do ciclo achava medida "modificada" que ninguém tinha mexido. Quem mede de
+    # propósito usa PLAT_GRAVAR_MEDIDAS=1, como já faz tests/conftest.py.
+    if __import__("os").environ.get("PLAT_GRAVAR_MEDIDAS") != "1":
+        return
     registro["fluxo_de_potencia"] = {
         "medido_por": executavel,
         "pandapower_pinado_em_requirements": "3.5.4",
@@ -342,6 +348,10 @@ def test_conferencia_cruzada_opendss(tmp_path):
 
     MEDIDAS.parent.mkdir(parents=True, exist_ok=True)
     registro = json.loads(MEDIDAS.read_text(encoding="utf-8")) if MEDIDAS.exists() else {}
+    # segunda gravação do mesmo arquivo, com a mesma guarda da primeira (18/09/2026): sem ela, o
+    # controle negativo continuava sujo e eu teria dado a dívida por paga com metade feita.
+    if __import__("os").environ.get("PLAT_GRAVAR_MEDIDAS") != "1":
+        return
     registro["conferencia_cruzada_opendss"] = {
         "medido_por": executavel,
         "opendss": opendss_versao(),
