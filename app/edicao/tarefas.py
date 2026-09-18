@@ -54,3 +54,29 @@ def camadas_lote(ctx, camada_id: str, corpo: dict, editar_total: bool = False) -
         raise FalhaDefinitiva(f"{e.erro}: {e.detail}") from e
     ctx.progresso(100, f"{saida.alteradas + saida.apagadas + saida.criadas + saida.corrigidas} feições tocadas")
     return saida.model_dump()
+
+
+# ---------------------------------------------------------------- edicao.anexos_ceifar (L2-03-e)
+class CeifarParametros(BaseModel):
+    limite: int = Field(1000, ge=1, le=100000)
+
+
+@tarefa(
+    nome="edicao.anexos_ceifar",
+    descricao="Ceife de objetos órfãos de anexo: remove do Garage o objeto de anexo com apagado_em marcado "
+              "(por DELETE de anexo ou pela cascata do apagar da feição) e sem linha viva na mesma chave",
+    parametros=CeifarParametros, pesado=False, memoria_mb=256, timeout_s=1800, tentativas=1,
+    chave=lambda p: "anexos_ceifar",
+    perfil_minimo="admin",
+)
+def edicao_anexos_ceifar(ctx, limite: int = 1000) -> dict:
+    """Periódico diário (app/jobs/periodicos.py). Roda sem contexto de inquilino: a seleção é a função
+    SECURITY DEFINER `plat.feicao_anexo_orfaos` (cross-inquilino por construção — um ceife por inquilino
+    deixaria órfão em todo inquilino cujo job não rodou)."""
+    from app.edicao import anexos
+
+    with ctx.db() as cur:
+        saida = anexos.ceifar_orfaos(cur, limite=limite)
+    ctx.log("INFO", f"ceife de anexos: {saida['objetos_removidos']} removidos, "
+                    f"{saida['falhas']} falhas, {saida['candidatos']} candidatos")
+    return saida

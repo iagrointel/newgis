@@ -23,8 +23,6 @@ motor sem duplicá-lo:
    a expressão só usa aritmética (`$area_m2 / 10000`), que o núcleo já resolve.
 
 Fora deste item, com o motivo (fronteira honesta, não fingida):
-  * **anexos** (lista) — não existe armazenamento de anexo POR FEIÇÃO na casa; a plataforma tem
-    upload por ITEM do catálogo (L0-04), não por linha de tabela hospedada.
   * **registros relacionados** — item L2-10-b-relacionamentos está `pendente` no backlog
     (`laco/estado.json`); sem relação declarada não há o que listar.
   * **popup de raster com valor de pixel** — item L1-02-h está `pendente`; esta camada (`/api/mapa/
@@ -32,6 +30,10 @@ Fora deste item, com o motivo (fronteira honesta, não fingida):
   * **ações "selecionar" e "editar"** — dependem de L2-01-h/L2-03, que não existem nesta lineage
     (`app/mapa`, família L2-01-mapa-web); zoom-para-a-feição é cliente puro e ENTRA (não depende de
     nada disso).
+
+**anexos** entrou pelo item L2-03-e-anexos: a resposta traz a lista viva de `plat.feicao_anexo` da feição
+(id, nome, content_type, bytes, `miniatura`: bool) — é o que o popup do mapa usa para listar os anexos com
+prévia (`GET .../anexos/{id}/miniatura`) e link de download.
 """
 
 from __future__ import annotations
@@ -260,6 +262,28 @@ def popup_da_feicao(
             "fuso": fuso_efetivo,
             "campos_servidor": campos_servidor,
             "expressoes": expressoes_saida,
+            "anexos": _anexos_da_feicao(cur, id, esquema, tabela, feicao.get("globalid")),
             "relacionados": None,
             "relacionados_motivo": "item L2-10-b-relacionamentos pendente no backlog",
         }
+
+
+def _anexos_da_feicao(cur, camada_id: str, esquema: str, tabela: str, globalid) -> list[dict]:
+    """Anexos vivos da feição (item L2-03-e): o popup lista com prévia e link de download. As URLs vêm
+    prontas porque a rota de anexo é endereçada por GLOBALID, que o cliente não tem (ele conhece o fid
+    inteiro do tile). Camada sem coluna globalid não tem anexo possível — lista vazia."""
+    if globalid is None:
+        return []
+    cur.execute(
+        "SELECT id, nome, content_type, bytes, (mini_chave IS NOT NULL) AS miniatura "
+        "FROM plat.feicao_anexo WHERE schema_dado = %s AND tabela_dado = %s AND globalid = %s "
+        "AND apagado_em IS NULL ORDER BY criado_em DESC",
+        (esquema, tabela, str(globalid)),
+    )
+    base = f"/api/camadas/{camada_id}/feicoes/{globalid}/anexos"
+    return [
+        {"id": str(r["id"]), "nome": r["nome"], "content_type": r["content_type"],
+         "bytes": r["bytes"], "url": f"{base}/{r['id']}",
+         "miniatura_url": f"{base}/{r['id']}/miniatura" if r["miniatura"] else None}
+        for r in cur.fetchall()
+    ]

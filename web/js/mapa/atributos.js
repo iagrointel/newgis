@@ -17,7 +17,10 @@
    nunca vêm do tile: a janela pede `GET /api/camadas/{id}/feicoes/{fid}/popup` só quando o usuário está
    OLHANDO aquela feição (não para as N-1 outras da paginação) e escreve o resultado por cima do
    texto de espera "carregando…" quando chega — cliques rápidos cancelam o pedido anterior
-   (AbortController), a refutação "50 cliques sem consulta pendurada". */
+   (AbortController), a refutação "50 cliques sem consulta pendurada". Desde o item L2-03-e a mesma
+   resposta traz a lista de ANEXOS da feição (com miniatura e link de download), então a chamada ao
+   /popup acontece SEMPRE, mesmo sem campo `servidor`/expressão configurados; feição sem anexo tem a
+   seção removida, não exibida vazia. */
 import { h, limpar } from '../base/dom.js';
 import { obter } from '../base/api.js';
 import { t } from '../base/i18n.js';
@@ -118,13 +121,15 @@ function linhaServidor(nome, rotulo) {
     h('th', { scope: 'row' }, rotulo), h('td', { class: 'carregando' }, t('mapa.popup_carregando')));
 }
 
-/* busca os campos "servidor" e as expressões desta feição e escreve por cima do "carregando…";
+/* busca os campos "servidor", as expressões e os ANEXOS desta feição e escreve por cima do "carregando…";
    `sinal` cancela um pedido anterior ainda em voo (refutação "50 cliques sem consulta pendurada"). */
 async function preencherDoServidor(caixa, camadaId, fid, ficha, sinal) {
   const r = await obter(`/api/camadas/${camadaId}/feicoes/${fid}/popup`, { signal: sinal });
   if (sinal.aborted) return; // outro clique já assumiu; nunca escreve numa janela que não é mais a atual
   if (r.status !== 200) {
     caixa.querySelectorAll('td.carregando').forEach((td) => { td.textContent = SEM_VALOR; td.classList.remove('carregando'); });
+    const blocoErro = caixa.querySelector('.popup-anexos');
+    if (blocoErro) blocoErro.remove();
     return;
   }
   const corpo = r.json;
@@ -149,6 +154,24 @@ async function preencherDoServidor(caixa, camadaId, fid, ficha, sinal) {
     td.classList.remove('carregando');
     td.append(res.erro ? SEM_VALOR : (res.formatado ?? SEM_VALOR));
   }
+  // anexos (item L2-03-e): a seção nasce "carregando…" em montarFicha e é preenchida aqui; sem anexos
+  // na feição a seção some — a janela não mostra um bloco vazio de "anexos (0)" em toda feição clicada.
+  const bloco = caixa.querySelector('.popup-anexos');
+  if (bloco) {
+    const anexos = corpo.anexos || [];
+    limpar(bloco);
+    if (!anexos.length) { bloco.remove(); return; }
+    bloco.append(h('div', { class: 'popup-anexos-titulo' }, `${t('mapa.popup_anexos')} (${anexos.length})`));
+    const lista = h('ul', { class: 'popup-anexos-lista' });
+    for (const a of anexos) {
+      const link = h('a', { href: a.url, target: '_blank', rel: 'noopener noreferrer' }, a.nome);
+      const li = h('li', { dataset: { anexo: a.id } });
+      if (a.miniatura_url) li.append(h('img', { src: a.miniatura_url, alt: a.nome, loading: 'lazy', class: 'popup-anexo-mini' }));
+      li.append(link);
+      lista.append(li);
+    }
+    bloco.append(lista);
+  }
 }
 
 /* monta a ficha de UMA feição (o corpo do popup, sem o cabeçalho de paginação) */
@@ -171,9 +194,13 @@ function montarFicha(item, fuso, sinalServidor) {
   }
   tabela.append(tbody);
   corpo.append(tabela);
+  // anexos (L2-03-e): a lista chega com a resposta do /popup; nasce como espera e preencherDoServidor a
+  // substitui (ou a remove, quando a feição não tem anexo).
+  corpo.append(h('div', { class: 'popup-anexos carregando' }, t('mapa.popup_carregando')));
 
-  const temServidor = campos.some((c) => c.servidor) || ((ficha.popup && ficha.popup.expressoes) || []).length > 0;
-  if (temServidor && fid !== undefined && fid !== null) {
+  // desde o L2-03-e a chamada ao /popup é SEMPRE feita: mesmo camada sem campo `servidor` nem expressão
+  // tem a lista de anexos vinda do servidor (antes a ida só acontecia quando temServidor).
+  if (fid !== undefined && fid !== null) {
     preencherDoServidor(corpo, camadaId, fid, ficha, sinalServidor).catch(() => {
       /* aborto ou rede fora: os "carregando…" ficam SEM_VALOR só se a resposta chegar; senão a janela
          mostra "carregando…" até fechar — aceitável, nunca escreve dado errado (fronteira honesta) */

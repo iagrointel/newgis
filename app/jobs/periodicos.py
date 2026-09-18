@@ -157,4 +157,5 @@ PERIODICOS: list[tuple[str, str, str, dict]] = [
     ("sessões vencidas", "0 * * * *", "jobs.sessoes_expurgar", {}),
     ("manutenção semanal", "0 4 * * 0", "jobs.manutencao_analyze", {}),
     ("medição de uso diária", "47 3 * * *", "jobs.uso_medir", {}),
+    ("anexos órfãos diário", "15 4 * * *", "edicao.anexos_ceifar", {}),  # L2-03-e: objeto físico some depois do apagado lógico
 ]

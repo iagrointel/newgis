@@ -218,19 +218,34 @@ def linhas(item_id: str, corpo: PedidoLinhas = Body(default_factory=PedidoLinhas
 
         com_geometria = bool(corpo.geometria and geom and corpo.por_pagina <= limites.TABELA_GEOMETRIA_LIMITE)
         campos = consulta.selecao(visiveis, chave, geom, com_geometria)
+        # contagem de anexos por linha (item L2-03-e): precisa do globalid da página; sai como __globalid
+        # (nunca coluna de atributo, mesmo destino do __geometria) quando já não veio entre as visíveis.
+        tem_globalid = any(c["nome"] == "globalid" for c in _todas)
+        globalid_selecionado = any(c["nome"] == "globalid" for c in visiveis) or chave == "globalid"
+        if tem_globalid and not globalid_selecionado:
+            campos += ', "globalid" AS __globalid'
         ordem = consulta.ordenacao(_todas, chave, corpo.ordenar_por, corpo.ordem)
         deslocamento = (corpo.pagina - 1) * corpo.por_pagina
         cur.execute(f"SELECT {campos} FROM {alvo}{clausula}{ordem} LIMIT %s OFFSET %s",
                     [*params, corpo.por_pagina, deslocamento])
         brutas = cur.fetchall()
 
+        anexos_por_feicao = {}
+        if tem_globalid:
+            from app.edicao import anexos
+            gids = [r.get("__globalid") if not globalid_selecionado else r.get("globalid") for r in brutas]
+            anexos_por_feicao = anexos.contar_das_feicoes(cur, schema, tabela, [g for g in gids if g])
+
     saida = []
     for r in brutas:
         linha = dict(r)
         geometria = linha.pop("__geometria", None)
+        gid = linha.pop("__globalid", None) if not globalid_selecionado else linha.get("globalid")
         registro = {"valores": linha}
         if chave:
             registro["id"] = linha.get(chave)
+        if tem_globalid:
+            registro["anexos"] = anexos_por_feicao.get(str(gid), 0) if gid else 0
         if com_geometria:
             registro["geometria"] = json.loads(geometria) if geometria else None
         saida.append(registro)

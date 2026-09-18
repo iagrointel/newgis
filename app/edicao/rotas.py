@@ -199,6 +199,19 @@ def baixar_anexo(id: str, globalid: str, anexo_id: str, auth: Auth = autenticado
     )
 
 
+@router.get("/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}/miniatura", openapi_extra=LER_HISTORICO)
+def baixar_miniatura_anexo(id: str, globalid: str, anexo_id: str, auth: Auth = autenticado(escopo_token="camada:ler")):
+    """PNG ≤ 256 px gerado no envio (portão L2-03-e); 404 `anexo_sem_miniatura` quando o tipo não tem prévia."""
+    iid = comum.uuid_ok(id)
+    globalid = comum.uuid_ok(globalid, "feicao_inexistente", "feição inexistente nesta camada")
+    anexo_id = comum.uuid_ok(anexo_id, "anexo_inexistente", "anexo inexistente")
+    esc.exigir_escopo(auth, "camada:ler", iid)
+    with db.db(auth.contexto()) as cur:
+        dados = anexos.baixar_miniatura(cur, iid, globalid, anexo_id)
+    return Response(content=dados, media_type="image/png",
+                    headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=300"})
+
+
 @router.delete(
     "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}",
     status_code=204, response_class=Response, openapi_extra=EDITAR,

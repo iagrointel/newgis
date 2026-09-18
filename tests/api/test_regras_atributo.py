@@ -46,19 +46,28 @@ VIRTUAIS = [{"nome": "area_m2", "expressao": "$area * 10000", "alias": "área em
 def fabrica(conexao_plat_app):
     f = FabricaCamada(conexao_plat_app)
     yield f
-    # a camada de erros (tabela e_ + item) que o job cria fica fora da lista da fábrica: limpa aqui
+    # a camada de erros (tabela e_ + item) que o job cria fica fora da lista da fábrica: limpa aqui.
+    # plat.item não aceita DELETE direto de plat_app (política `USING (false)`): lixeira + expurgo, o
+    # caminho de produção — senão o item de erros vazava órfão (mesma falha que o FabricaCamada tinha).
+    # try/finally: se esta limpeza extra quebrar (fixture de worker que não subiu deixa a conexão
+    # abortada), o f.limpar() ainda assim roda — medido 18/09 com uma camada viva vazada aqui.
     con = conexao_plat_app
-    for schema, _tabela, item_id in list(f.criadas):
-        with con.cursor() as cur:
-            cur.execute("SELECT dados FROM plat.item WHERE id = %s::uuid", (item_id,))
-            r = cur.fetchone()
-            val = ((r or {}).get("dados") or {}).get("validacao") or {}
-            if val.get("tabela_erros"):
-                cur.execute(f'DROP TABLE IF EXISTS "{schema}"."{val["tabela_erros"]}" CASCADE')
-            if val.get("item_erros_id"):
-                cur.execute("DELETE FROM plat.item WHERE id = %s::uuid", (val["item_erros_id"],))
-    con.commit()
-    f.limpar()
+    con.rollback()
+    try:
+        for schema, _tabela, item_id, tenant_id, usuario_id in list(f.criadas):
+            contexto(con, tenant_id, usuario_id=usuario_id, login="admin")
+            with con.cursor() as cur:
+                cur.execute("SELECT dados FROM plat.item WHERE id = %s::uuid", (item_id,))
+                r = cur.fetchone()
+                val = ((r or {}).get("dados") or {}).get("validacao") or {}
+                if val.get("tabela_erros"):
+                    cur.execute(f'DROP TABLE IF EXISTS "{schema}"."{val["tabela_erros"]}" CASCADE')
+                if val.get("item_erros_id"):
+                    cur.execute("SELECT plat.item_lixeira(%s::uuid, true)", (val["item_erros_id"],))
+                    cur.execute("SELECT plat.item_expurgar(%s::uuid)", (val["item_erros_id"],))
+        con.commit()
+    finally:
+        f.limpar()
 
 
 @pytest.fixture

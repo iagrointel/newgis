@@ -79,16 +79,27 @@ class FabricaCamada:
             return cur.fetchall()
 
     def limpar(self):
+        # Rollback primeiro: se o teste (ou outra fixture, ex. um worker que não subiu) deixou a
+        # conexão com a transação abortada, o primeiro execute da limpeza levantaria e a camada
+        # vazava viva (medido 18/09: zt com tabela e sem função de tile derrubava o /sig com 502).
+        self.con.rollback()
+        # DELETE cru em plat.item some EM SILÊNCIO sob RLS FORCE (achado 18/09: dezenas de linhas
+        # "zt camada L2-03-a" vazadas no catálogo do inquilino demo, com a tabela já derrubada,
+        # derrubavam o /sig inteiro — 500 no tilejson de cada uma ao ligar). plat.item tem política de
+        # DELETE `USING (false)` para plat_app: o único caminho é o de produção (lixeira lógica +
+        # expurgo, SECURITY DEFINER com as cascatas de versões/relações), o mesmo de
+        # scripts/edicao_demo_camadas.py::apagar. Como o DROP TABLE passa (DDL ignora RLS), o item
+        # virava órfão de tabela inexistente (216 acumulados nesta trilha).
         for schema, tabela, item_id, tenant_id, usuario_id in self.criadas:
-            # DELETE cru em plat.item some EM SILÊNCIO sob RLS FORCE (achado 18/09: dezenas de linhas
-            # "zt camada L2-03-a" vazadas no catálogo do inquilino demo, com a tabela já derrubada,
-            # derrubavam o /sig inteiro — 500 no tilejson de cada uma ao ligar). O caminho de verdade é
-            # lixeira + expurgo, o mesmo de scripts/edicao_demo_camadas.py::apagar.
             contexto(self.con, tenant_id, usuario_id=usuario_id, login="admin")
             with self.con.cursor() as cur:
+                cur.execute(f'DROP TABLE IF EXISTS "{schema}"."{tabela}" CASCADE')
+                # anexos das feições da camada: a chave é (schema_dado, tabela_dado) — o DROP não
+                # cascateia para cá e a pilha crescia ~1000 linhas por rodada da suíte de anexos
+                cur.execute("DELETE FROM plat.feicao_anexo WHERE schema_dado = %s AND tabela_dado = %s",
+                            (schema, tabela))
                 cur.execute("SELECT plat.item_lixeira(%s::uuid, true)", (item_id,))
                 cur.execute("SELECT plat.item_expurgar(%s::uuid)", (item_id,))
-                cur.execute(f'DROP TABLE IF EXISTS "{schema}"."{tabela}" CASCADE')
         self.con.commit()
         self.criadas.clear()
 

@@ -187,6 +187,13 @@ body.sig .app, body.sig .lateral { display: none; } /* a casca do SIG não usa a
 .popup-tabela td.nulo { color: var(--fraco); font-style: italic; }
 .popup-mais { margin: 0; font-size: var(--i-t-1); color: var(--fraco); }
 
+/* anexos da feição no popup (item L2-03-e) */
+.popup-anexos { font-size: var(--i-t0); margin-bottom: var(--i-e2); }
+.popup-anexos-titulo { color: var(--fraco); font-weight: 500; margin-bottom: var(--i-e0); }
+.popup-anexos-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--i-e0); }
+.popup-anexos-lista li { display: flex; align-items: center; gap: var(--i-e1); }
+.popup-anexo-mini { width: 48px; height: 48px; object-fit: cover; border-radius: var(--raio); border: 1px solid var(--borda); }
+
 /* edição (item L2-03) */
 #edicao-painel select#edicao-camada { width: 100%; margin-bottom: var(--e2); }
 #edicao-painel .linha { display: flex; flex-wrap: wrap; gap: var(--i-e1); align-items: center; margin-bottom: var(--e2); }
