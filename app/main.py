@@ -182,6 +182,7 @@ from app.tiles.exportacao import router as rotas_tiles_exportacao
 from app.tiles.rotas import router as rotas_tiles_martin_verificar
 from app.tiles.vector_tile_server import router as rotas_vector_tile_server
 from app.uploads.rotas import router as rotas_uploads
+from app.uso import rotas as rotas_uso
 from app.versao import versao
 from app.versionamento.rotas import router as rotas_versionamento
 from app.versionamento.rotas_esri import router as rotas_versionamento_esri
@@ -724,6 +725,8 @@ ROUTERS = [
     # GET /api/backup/ensaios (disparar usa a fila genérica: POST /api/jobs {tipo: backup.executar|
     # backup.ensaio_restauracao})
     rotas_backup.router,
+    # --- serie de uso do inquilino (L0-07-c-cotas-uso): le plat.uso_inquilino de volta
+    rotas_uso.router,
     # --- webhooks de eventos (L7-08-a): /api/webhooks (+ /{id}/rotacionar, /entregas, /reenviar, /reativar);
     # despacho é gatilho sobre plat.evento, entrega é o job webhooks.entregar do worker
     rotas_webhooks,

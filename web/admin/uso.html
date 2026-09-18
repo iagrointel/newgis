@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Uso · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/estilo/tokens.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="tela instrumento">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1 data-i18n="uso.titulo">Uso</h1>
+    <div class="linha-ferramentas" id="ferramentas"></div>
+    <plat-aviso id="aviso"></plat-aviso>
+    <section class="cartao" id="agora" aria-labelledby="t-agora">
+      <h2 id="t-agora" data-i18n="uso.agora_titulo">Agora, contra a cota</h2>
+      <div id="agora-corpo" class="fraco" data-i18n="uso.carregando">carregando…</div>
+    </section>
+    <section class="cartao" id="grafico" aria-labelledby="t-grafico">
+      <h2 id="t-grafico" data-i18n="uso.grafico_titulo">Armazenamento por dia</h2>
+      <div id="grafico-corpo"></div>
+    </section>
+    <section class="cartao" id="serie" aria-labelledby="t-serie">
+      <h2 id="t-serie"><span data-i18n="uso.serie_titulo">Série diária</span> <span id="serie-total" class="contagem"></span></h2>
+      <plat-tabela id="tabela-serie" legenda="medição diária de uso deste inquilino"></plat-tabela>
+    </section>
+    <p class="rodape-tela" data-i18n="uso.rodape">a série é medida uma vez por dia pelo periódico de medição de uso; "agora" são os contadores vivos da plataforma e por isso podem divergir do último ponto</p>
+  </main>
+</div>
+<script type="module" src="/static/js/admin/uso.js"></script>
+</body>
+</html>
