@@ -259,6 +259,13 @@ echo "venv: $(venv/bin/python --version) · fastapi $("${PY[@]}" -c 'import fast
 echo "== f2. cache do XSD ISO 19139 (item L0-09-metadado-catalogo): comitado no repo; idempotente, sem rede quando já presente"
 "${PY[@]}" docs/xsd/baixar_iso19139.py
 
+echo "== f2b. grades NTv2 do IBGE (item L2-17-crs-transformacoes)"
+# Atesta que os .gsb versionados no repositorio sao exatamente os baixados do IBGE (sha256 contra
+# grades_ibge/SHA256SUMS). O cabecalho de grades_ibge/instalar.sh sempre disse "chamado pelo install.sh",
+# e o install.sh nunca chamou (achado do adversario do T9): a transformacao SAD69 -> SIRGAS 2000 pela
+# grade e' o que separa 0,05 m de dezenas de metros, e uma grade trocada falha em silencio.
+bash grades_ibge/instalar.sh || { echo "conferencia das grades NTv2 do IBGE falhou" >&2; exit 1; }
+
 echo "== f3. validador oficial da MapLibre Style Spec (item L2-02-a-modelo-estilo): versão fixada em ferramentas/estilo/package.json"
 command -v node >/dev/null || { echo "node ausente (apt install nodejs)" >&2; exit 1; }
 (cd ferramentas/estilo && npm ci --no-audit --no-fund --silent 2>/dev/null || npm install --no-audit --no-fund --silent)

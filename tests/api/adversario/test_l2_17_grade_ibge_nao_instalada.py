@@ -25,19 +25,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 ROOT = Path(__file__).resolve().parents[3]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "L2-17: install.sh nunca chama grades_ibge/instalar.sh (a conferência de sha256 das grades "
-        "NTv2 do IBGE), apesar do cabeçalho do script e da hipótese do item afirmarem que o install.sh "
-        "faz isso; a seção 'h5' real do instalador é a imagem docker do notebook (L2-16-b), não as grades"
-    ),
-)
+# REMEDIADO (wt/l02, 18/09/2026): install.sh ganhou o passo f2b, que roda grades_ibge/instalar.sh e aborta a
+# instalacao quando o sha256 de qualquer .gsb diverge de grades_ibge/SHA256SUMS. Fica ANTES do venv usar PROJ,
+# e nao no fim, porque uma grade trocada nao levanta erro: ela devolve coordenada errada em silencio.
 def test_l2_17_install_sh_chama_conferencia_das_grades_ibge():
     texto_install = (ROOT / "install.sh").read_text()
     assert "grades_ibge" in texto_install, (
