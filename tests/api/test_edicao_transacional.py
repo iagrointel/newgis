@@ -34,7 +34,7 @@ class FabricaCamada:
 
     def __init__(self, con):
         self.con = con
-        self.criadas: list[tuple[str, str, str]] = []
+        self.criadas: list[tuple[str, str, str, int, int]] = []
 
     def criar(
         self, slug, tenant_id, usuario_id, campos, geometria="Point", regras_campo=None, edicao=None
@@ -66,7 +66,7 @@ class FabricaCamada:
                  usuario_id, usuario_id),
             )
         self.con.commit()
-        self.criadas.append((schema, tabela, item_id))
+        self.criadas.append((schema, tabela, item_id, tenant_id, usuario_id))
         return item_id, dados
 
     def linhas(self, schema: str, tabela: str, tenant_id: int, usuario_id: int) -> list[dict]:
@@ -79,10 +79,16 @@ class FabricaCamada:
             return cur.fetchall()
 
     def limpar(self):
-        for schema, tabela, item_id in self.criadas:
+        for schema, tabela, item_id, tenant_id, usuario_id in self.criadas:
+            # DELETE cru em plat.item some EM SILÊNCIO sob RLS FORCE (achado 18/09: dezenas de linhas
+            # "zt camada L2-03-a" vazadas no catálogo do inquilino demo, com a tabela já derrubada,
+            # derrubavam o /sig inteiro — 500 no tilejson de cada uma ao ligar). O caminho de verdade é
+            # lixeira + expurgo, o mesmo de scripts/edicao_demo_camadas.py::apagar.
+            contexto(self.con, tenant_id, usuario_id=usuario_id, login="admin")
             with self.con.cursor() as cur:
+                cur.execute("SELECT plat.item_lixeira(%s::uuid, true)", (item_id,))
+                cur.execute("SELECT plat.item_expurgar(%s::uuid)", (item_id,))
                 cur.execute(f'DROP TABLE IF EXISTS "{schema}"."{tabela}" CASCADE')
-                cur.execute("DELETE FROM plat.item WHERE id = %s::uuid", (item_id,))
         self.con.commit()
         self.criadas.clear()
 
@@ -443,3 +449,44 @@ def test_edicao_concorrente_de_duas_sessoes_nunca_sobrescreve_em_silencio(sessao
         assert codigos == [200, 409], (r1.status_code, r2.status_code, r1.text[:200], r2.text[:200])
     finally:
         outra_sessao.close()
+
+
+# ---------------------------------------------------------------- extensão gravada acompanha a edição
+def test_extensao_gravada_expande_quando_a_edicao_sai_dela(sessao_a, camada_a, fabrica):
+    """Achado do e2e deste item: o TileJSON publica `dados.extensao` como `bounds` e o MapLibre não pede
+    tile fora dele — feição criada/movida para fora da extensão gravada salvava no banco mas ficava
+    INVISÍVEL e imselecionável no mapa. A porta única de escrita agora expande a extensão com o envelope
+    das linhas tocadas; aqui a prova pela leitura pública do TileJSON (sem navegador)."""
+    contexto(fabrica.con, camada_a["tenant_id"], usuario_id=camada_a["admin_id"], login="admin")
+    with fabrica.con.cursor() as cur:
+        cur.execute("UPDATE plat.item SET dados = dados || %s::jsonb WHERE id = %s::uuid",
+                    (json.dumps({"extensao": [-46.0, -23.0, -45.99, -22.99]}), camada_a["id"]))
+    fabrica.con.commit()
+
+    r = sessao_a.post(f"/api/camadas/{camada_a['id']}/edicoes",
+                      json={"adicionar": [{"atributos": {"nome": "longe", "categoria": "A"},
+                                            "geometria": _ponto(-46.5, -23.5)}],
+                            "atualizar": [], "apagar": []})
+    assert r.status_code == 200, r.text
+
+    tj = sessao_a.get(f"/api/mapa/camadas/{camada_a['id']}/tilejson")
+    assert tj.status_code == 200, tj.text
+    oeste, sul, leste, norte = tj.json()["bounds"]
+    assert oeste <= -46.5 and leste >= -46.5 and sul <= -23.5 and norte >= -23.5
+    # e o lado original continua coberto (expande, nunca troca)
+    assert leste >= -45.99 and norte >= -22.99
+
+
+def test_camada_sem_extensao_gravada_nao_ganha_uma_por_causa_da_edicao(sessao_a, camada_a):
+    """A expansão só vale para quem JÁ tem extensão gravada (ingestão); camada sem ela segue caindo na
+    medição ao vivo do TileJSON — gravar uma extensão parcial aqui apertaria o bounds em volta das
+    edições e esconderia o resto da tabela, o mesmo bug pelo avesso."""
+    r = sessao_a.post(f"/api/camadas/{camada_a['id']}/edicoes",
+                      json={"adicionar": [{"atributos": {"nome": "x", "categoria": "A"}, "geometria": _ponto()}],
+                            "atualizar": [], "apagar": []})
+    assert r.status_code == 200, r.text
+    tj = sessao_a.get(f"/api/mapa/camadas/{camada_a['id']}/tilejson")
+    assert tj.status_code == 200, tj.text
+    oeste, sul, leste, norte = tj.json()["bounds"]
+    # medição ao vivo da tabela inteira: o ponto criado E nada menos que isso (tabela só tem ele)
+    assert oeste <= -46.5 <= leste and sul <= -23.5 <= norte

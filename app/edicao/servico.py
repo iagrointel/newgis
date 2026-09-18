@@ -484,6 +484,36 @@ def _processar_lista(cur, lista: list, aplicar, modo: str, prefixo: str) -> tupl
     return resultados, avisos
 
 
+def _expandir_extensao(cur, item: dict, dados: dict, resultados: list) -> None:
+    """Feição criada/movida FORA da extensão gravada fica invisível no mapa: o TileJSON publica
+    `dados.extensao` como `bounds` e o MapLibre não pede tile fora dele (medido no e2e deste item: ponto
+    criado ~200 m a oeste da extensão da bancada salvou no banco mas nunca renderizou — o tile daquele
+    quadrante nem era pedido). Expande (só expande — encolher exigiria varrer a tabela inteira) com o
+    envelope das linhas tocadas. Sem `extensao` gravada não grava nada: o TileJSON já cai na medição ao
+    vivo de `plat.camada_extensao` nesse caso."""
+    ext = dados.get("extensao")
+    ids = [r.id for r in resultados if r.sucesso and r.id]
+    if not ids or not (isinstance(ext, list) and len(ext) == 4):
+        return
+    esquema, tabela = _schema_tabela(dados)
+    cur.execute(
+        f'SELECT ST_XMin(cx) AS o, ST_YMin(cx) AS s, ST_XMax(cx) AS l, ST_YMax(cx) AS n '
+        f'FROM (SELECT ST_SetSRID(ST_Extent(ST_Transform(geom, 4326)), 4326) AS cx '
+        f'FROM "{esquema}"."{tabela}" WHERE globalid = ANY(%s::uuid[])) q',
+        (ids,),
+    )
+    r = cur.fetchone()
+    if not r or r["o"] is None:
+        return
+    nova = [min(float(ext[0]), r["o"]), min(float(ext[1]), r["s"]),
+            max(float(ext[2]), r["l"]), max(float(ext[3]), r["n"])]
+    if nova != [float(v) for v in ext]:
+        cur.execute(
+            "UPDATE plat.item SET dados = dados || jsonb_build_object('extensao', %s::jsonb) WHERE id = %s::uuid",
+            (json.dumps(nova), item["id"]),
+        )
+
+
 def aplicar_edicoes(cur, request: Request, auth: Auth, camada_id: str, corpo: EdicoesEntrada) -> EdicoesSaida:
     if corpo.versao:
         # edição dentro de um ramo de versão (item L2-13-a): a linha vai para a tabela companheira do
@@ -519,6 +549,7 @@ def aplicar_edicoes(cur, request: Request, auth: Auth, camada_id: str, corpo: Ed
             "coalesce((dados->>'tiles_versao')::int, 0) + 1) WHERE id = %s::uuid",
             (item["id"],),
         )
+        _expandir_extensao(cur, item, dados, resultados_add + resultados_upd)
     comum.registrar_evento(
         cur, request, "camadas/editar", "item", item["id"],
         {"adicionados": n_add, "atualizados": n_upd, "apagados": n_del, "modo": corpo.modo},

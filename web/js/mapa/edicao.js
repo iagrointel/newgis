@@ -62,7 +62,10 @@ export class Edicao {
     this.rascunho = [];
     this.selecionadas = new Map(); // id -> {versao, atributos, geometria}
     this.arrastando = null;
-    this.pilha = []; this.indicePilha = -1; // desfazer/refazer (adicionar/atualizar; ver README do item)
+    // desfazer/refazer: pilha local de pares de ações {camadaId, desfazer:[...], refazer:[...]} — ver
+    // _registrar* abaixo. Edição em lote (L2-03-f) NÃO entra: uma ação por feição seria milhares de
+    // chamadas de API; quem desfaz um lote usa o histórico de cada feição.
+    this.pilha = []; this.indicePilha = -1;
     this._desenhoFormulario = null; // item L5-03-form-builder: desenho publicado da camada atual (ou null)
     // shift+arrastar é "caixa de zoom" por padrão no MapLibre — some com o shift+clique de seleção
     // múltipla desta tela (achado do e2e: com boxZoom ligado, o evento 'click' nunca dispara sob shift)
@@ -222,6 +225,7 @@ export class Edicao {
     await this._religar();
     this._mensagem(t('mapa.edicao_salvo'));
     this._desenharPainelSelecao();
+    await this._registrarApagar(this.camadaId, globalid);
   }
 
   async _salvarGeometria(globalid) {
@@ -232,6 +236,7 @@ export class Edicao {
       sel.versao = r.json.atualizar[0].versao;
       await this._religar();
       this._mensagem(t('mapa.edicao_salvo'));
+      await this._registrarAtualizar(this.camadaId, globalid);
     } else if (r.json && r.json.erro === 'conflito_versao') {
       // modo "transacao" (padrão): um item em conflito reprova a chamada inteira com 409 — o corpo é o
       // ErroAPI, não o EdicoesSaida por item (esse formato só existe em modo "parcial", que esta tela
@@ -258,6 +263,135 @@ export class Edicao {
     if (this.saida) this.saida.textContent = txt;
   }
 
+  // ---------------------------------------------------------------- desfazer/refazer (pilha local)
+  /* Cada operação atômica bem-sucedida (criar, atualizar atributo/geometria, apagar, dividir, unir) grava
+     um par de listas de ações: o que DESFAZ e o que REFAZ. As ações são só duas: `apagar` (pela porta
+     única, com a versão relida na hora — outra sessão pode ter mexido) e `restaurar` (pelo histórico do
+     servidor, que ressuscita feição apagada com o MESMO globalid — referências externas não quebram). Os
+     ids de histórico são lidos logo depois da operação, quando a linha do topo É a operação feita —
+     por isso nunca há ambiguidade com restaurações posteriores. */
+  _primeiroNaoApagar(entradas, desde = 0) {
+    for (let i = desde; i < entradas.length; i++) if (entradas[i].operacao !== 'apagar') return entradas[i];
+    return null;
+  }
+
+  async _historicoDe(camadaId, globalid) {
+    const r = await obter(`/api/camadas/${camadaId}/feicoes/${globalid}/historico`);
+    return r.status === 200 && Array.isArray(r.json) ? r.json : null;
+  }
+
+  async _registrarCriar(camadaId, globalid) {
+    const hist = await this._historicoDe(camadaId, globalid);
+    if (!hist || !hist.length) return;
+    this._empilhar({ camadaId, desfazer: [{ apagar: globalid }], refazer: [{ restaurar: [globalid, hist[0].id] }] });
+  }
+
+  async _registrarAtualizar(camadaId, globalid) {
+    const hist = await this._historicoDe(camadaId, globalid);
+    if (!hist || !hist.length) return;
+    const antes = this._primeiroNaoApagar(hist, 1);
+    if (!antes) return; // sem estado anterior conhecido (histórico truncado): não entra na pilha
+    this._empilhar({ camadaId, desfazer: [{ restaurar: [globalid, antes.id] }],
+      refazer: [{ restaurar: [globalid, hist[0].id] }] });
+  }
+
+  async _registrarApagar(camadaId, globalid) {
+    const hist = await this._historicoDe(camadaId, globalid);
+    const alvo = hist && this._primeiroNaoApagar(hist);
+    if (!alvo) return;
+    this._empilhar({ camadaId, desfazer: [{ restaurar: [globalid, alvo.id] }], refazer: [{ apagar: globalid }] });
+  }
+
+  async _registrarDividir(camadaId, origem, novas) {
+    const histOrigem = await this._historicoDe(camadaId, origem);
+    const alvo = histOrigem && this._primeiroNaoApagar(histOrigem);
+    if (!alvo) return;
+    const refazer = [{ apagar: origem }];
+    for (const n of novas) {
+      const histNova = await this._historicoDe(camadaId, n.id);
+      if (!histNova || !histNova.length) return;
+      refazer.push({ restaurar: [n.id, histNova[0].id] });
+    }
+    this._empilhar({ camadaId,
+      desfazer: [...novas.map((n) => ({ apagar: n.id })), { restaurar: [origem, alvo.id] }], refazer });
+  }
+
+  async _registrarUnir(camadaId, origens, nova) {
+    const histNova = await this._historicoDe(camadaId, nova);
+    if (!histNova || !histNova.length) return;
+    const desfazer = [{ apagar: nova }];
+    const refazer = [];
+    for (const o of origens) {
+      const histOrigem = await this._historicoDe(camadaId, o);
+      const alvo = histOrigem && this._primeiroNaoApagar(histOrigem);
+      if (!alvo) return;
+      desfazer.push({ restaurar: [o, alvo.id] });
+      refazer.push({ apagar: o });
+    }
+    refazer.push({ restaurar: [nova, histNova[0].id] });
+    this._empilhar({ camadaId, desfazer, refazer });
+  }
+
+  _empilhar(entrada) {
+    this.pilha = this.pilha.slice(0, this.indicePilha + 1); // operação nova mata a cauda de refazer
+    this.pilha.push(entrada);
+    this.indicePilha += 1;
+    this._pilhaUI();
+  }
+
+  _pilhaUI() {
+    if (this.btnDesfazer) this.btnDesfazer.disabled = this.indicePilha < 0;
+    if (this.btnRefazer) this.btnRefazer.disabled = this.indicePilha + 1 >= this.pilha.length;
+  }
+
+  async _executarAcoes(camadaId, acoes) {
+    for (const a of acoes) {
+      if (a.apagar) {
+        const rf = await obter(`/api/camadas/${camadaId}/feicoes/${a.apagar}`);
+        if (rf.status === 404) continue; // já não existe (ex.: feição de origem ainda não ressuscitada)
+        if (rf.status !== 200) { this._mostrarErro(rf); return false; }
+        const r = await enviar(`/api/camadas/${camadaId}/edicoes`,
+          { adicionar: [], atualizar: [], apagar: [{ id: a.apagar, versao: rf.json.versao }] });
+        if (r.status !== 200) { this._mostrarErro(r); return false; }
+      } else {
+        const [globalid, historicoId] = a.restaurar;
+        const r = await enviar(`/api/camadas/${camadaId}/feicoes/${globalid}/historico/${historicoId}/restaurar`);
+        if (r.status !== 200) { this._mostrarErro(r); return false; }
+      }
+    }
+    return true;
+  }
+
+  async desfazer() {
+    if (this.indicePilha < 0) return;
+    const entrada = this.pilha[this.indicePilha];
+    if (!(await this._executarAcoes(entrada.camadaId, entrada.desfazer))) return;
+    this.indicePilha -= 1;
+    this._pilhaUI();
+    if (entrada.camadaId === this.camadaId) {
+      this.selecionadas.clear();
+      this._verticesRedesenhar();
+      await this._religar();
+      this._desenharPainelSelecao();
+    }
+    this._mensagem(t('mapa.edicao_desfeito'));
+  }
+
+  async refazer() {
+    if (this.indicePilha + 1 >= this.pilha.length) return;
+    const entrada = this.pilha[this.indicePilha + 1];
+    if (!(await this._executarAcoes(entrada.camadaId, entrada.refazer))) return;
+    this.indicePilha += 1;
+    this._pilhaUI();
+    if (entrada.camadaId === this.camadaId) {
+      this.selecionadas.clear();
+      this._verticesRedesenhar();
+      await this._religar();
+      this._desenharPainelSelecao();
+    }
+    this._mensagem(t('mapa.edicao_refeito'));
+  }
+
   // ---------------------------------------------------------------- dividir/unir
   async _dividirNoPonto(ponto) {
     const [id] = this.selecionadas.keys();
@@ -271,6 +405,7 @@ export class Edicao {
     await this._religar();
     this._mensagem(t('mapa.edicao_salvo'));
     this._desenharPainelSelecao();
+    await this._registrarDividir(this.camadaId, id, r.json.novas || []);
   }
 
   async unirSelecionadas() {
@@ -285,6 +420,7 @@ export class Edicao {
     await this._religar();
     this._mensagem(t('mapa.edicao_salvo'));
     this._desenharPainelSelecao();
+    await this._registrarUnir(this.camadaId, ids, r.json.id);
   }
 
   // ---------------------------------------------------------------- formulário de atributos
@@ -412,6 +548,7 @@ export class Edicao {
           await this._religar();
           this._mensagem(t('mapa.edicao_salvo'));
           this.painelDinamico && limpar(this.painelDinamico);
+          await this._registrarCriar(this.camadaId, r.json.adicionar[0].id);
         } else {
           this._mostrarErro(r.status === 200 ? { json: r.json.adicionar[0] } : r);
         }
@@ -527,6 +664,7 @@ export class Edicao {
           await this._religar();
           await this._desenharPainelSelecao(); // histórico/anexos ficam desatualizados senão (achado do e2e)
           this._mensagem(t('mapa.edicao_salvo'));
+          await this._registrarAtualizar(this.camadaId, primeiroId);
         } else if (r.json && r.json.erro === 'conflito_versao') {
           // ver nota equivalente em _salvarGeometria: modo "transacao" devolve 409 com o corpo do ErroAPI
           this._mensagem(t('mapa.edicao_conflito'));
@@ -724,6 +862,10 @@ export class Edicao {
     }, t('mapa.edicao_apagar'));
     const aderirCk = h('input', { type: 'checkbox', id: 'edicao-aderir', checked: true,
       onchange: (ev) => { this.aderir = ev.target.checked; } });
+    this.btnDesfazer = h('button', { type: 'button', class: 'botao secundario', id: 'edicao-desfazer',
+      disabled: true, onclick: () => this.desfazer() }, t('mapa.edicao_desfazer'));
+    this.btnRefazer = h('button', { type: 'button', class: 'botao secundario', id: 'edicao-refazer',
+      disabled: true, onclick: () => this.refazer() }, t('mapa.edicao_refazer'));
 
     this.saida = h('p', { class: 'saida', id: 'edicao-saida', 'aria-live': 'polite' });
     this.painelDinamico = h('div', { id: 'edicao-dinamico' });
@@ -747,6 +889,7 @@ export class Edicao {
       h('label', { class: 'rotulo', for: 'edicao-camada' }, t('mapa.edicao_camada')), seletor,
       h('div', { class: 'linha' }, ...Object.values(modoBotoes).filter((b) => b !== dividirBtn), concluir),
       h('div', { class: 'linha' }, dividirBtn, unirBtn, apagarBtn),
+      h('div', { class: 'linha' }, this.btnDesfazer, this.btnRefazer),
       h('div', { class: 'linha' }, aderirCk, h('label', { for: 'edicao-aderir' }, t('mapa.edicao_aderir'))),
       this.saida,
       this.painelDinamico,

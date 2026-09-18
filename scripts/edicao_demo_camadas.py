@@ -19,6 +19,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import psycopg2  # noqa: E402
 
+from app.esquema_dado import esquema as esquema_dado  # noqa: E402
+
 DSN = os.environ["PLAT_DSN"]
 MARCA = "edicao-l2-03"
 
@@ -39,10 +41,11 @@ def _contexto(cur, slug):
 
 def _publicar(cur, adm, titulo, tabela, tipo, campos, edicao, regras_campo=None, simbologia=None):
     # schema de dado com o prefixo da instalação (d_ em produção, d_plat_t<trilha>_ na trilha) — o literal
-    # "d_demo" só existe em produção e quebrava a bancada em TODA trilha (achado 18/09 no e2e do L2-03-d)
-    from app.esquema_dado import esquema as esquema_dado
+    # "d_demo" só existe em produção e quebrava a bancada em TODA trilha (achado 18/09 no e2e do L2-03-d).
+    # Os dois lados desta fusão consertaram isto por conta própria; ficou a consulta PARAMETRIZADA do ramo
+    # com o comentário de master, e o import de módulo (linha 22) no lugar dos imports locais repetidos.
     esquema = esquema_dado(cur, "demo")
-    cur.execute("SELECT plat.camada_schema_garantir('demo')")
+    cur.execute("SELECT plat.camada_schema_garantir(%s)", ("demo",))
     cur.execute("SELECT plat.camada_preparar(%s, %s, 4326, %s, %s)", (esquema, tabela, tipo, adm["usuario_id"]))
     cur.execute(f'SELECT ST_Extent(geom)::text AS e, count(*) AS n FROM "{esquema}"."{tabela}"')
     r = cur.fetchone()
@@ -71,9 +74,8 @@ def criar():
     try:
         with con.cursor() as cur:
             adm = _contexto(cur, "demo")
-            from app.esquema_dado import esquema as esquema_dado
             esquema = esquema_dado(cur, "demo")
-            cur.execute("SELECT plat.camada_schema_garantir('demo')")
+            cur.execute("SELECT plat.camada_schema_garantir(%s)", ("demo",))
 
             t = "c_" + _hex16()
             # `ordem`/`calc` (item L2-03-f): campo numérico de entrada e campo alvo para "calcular campo" no e2e

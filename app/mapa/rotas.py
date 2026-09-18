@@ -124,6 +124,12 @@ def _ficha(cur, linha: dict, completo: bool) -> dict:
         "legenda": simb_mod.legenda(simb, geometria),
         "estilo": simb_mod.camadas_maplibre(simb, geometria, fonte, fonte, funcao or "camada"),
         "tilejson": f"/api/mapa/camadas/{linha['id']}/tilejson" if funcao else None,
+        # item L2-03-edicao: o que a tela de edição precisa saber SEM abrir outra rota — nunca schema/tabela
+        # (isso fica só no servidor). "editavel" já resume fonte hospedada + edicao.habilitada.
+        "editavel": bool(dados.get("fonte") == "hospedada" and (dados.get("edicao") or {}).get("habilitada")),
+        "regras_campo": dados.get("regras_campo") or {},
+        "somente_proprias": bool((dados.get("edicao") or {}).get("somente_proprias")),
+        "geometria_travada": bool((dados.get("edicao") or {}).get("geometria_travada")),
         "estilo_id": None, "plat_construtor": None, "agrupamento": None,
     }
     estilo = _estilo_da_camada(cur, linha["id"])
