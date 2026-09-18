@@ -208,6 +208,18 @@ if ! env PYTHONNOUSERSITE=1 "$VENV_PY" "$AQUI/plat_assinatura.py" allowed-signer
   echo "RELEASE RECUSADA: lista de confiança sem chave — a etiqueta não teria contra o que ser conferida" >&2
   exit 4
 fi
+# ⛔ A SEÇÃO DO CHANGELOG VEM ANTES DA ETIQUETA (item L7-15). Até 18/09/2026 a conferência rodava DEPOIS
+# de `git tag -s` e a divergência saía como AVISO com saída 0: uma etiqueta assinada sem seção no
+# CHANGELOG era criada e a release seguia. Etiqueta assinada é um fato público e difícil de desfazer;
+# seção de changelog é texto que o autor ainda pode escrever. Logo a ordem certa é conferir primeiro e
+# etiquetar depois. O rascunho já foi gerado acima ($CHANGELOG_DRAFT): o passo humano é colá-lo.
+if ! grep -qE "^## \[$VERSAO\]" "$APP_DIR/CHANGELOG.md" 2>/dev/null; then
+  echo "RELEASE RECUSADA: CHANGELOG.md não tem a seção '## [$VERSAO]'." >&2
+  echo "Cole o rascunho $CHANGELOG_DRAFT em CHANGELOG.md e rode de novo. A etiqueta v$VERSAO NÃO foi" >&2
+  echo "criada: etiqueta assinada sem seção de changelog é exatamente o que este portão proíbe." >&2
+  exit 4
+fi
+
 git config gpg.format ssh
 git config user.signingkey "$CHAVE_SSH"
 git config gpg.ssh.allowedSignersFile "$ASSINANTES"
@@ -220,8 +232,13 @@ if ! git tag -v "$TAG" > /dev/null 2>&1; then
   echo "RELEASE RECUSADA: a etiqueta $TAG não se verifica contra $ASSINANTES (etiqueta apagada)" >&2
   exit 4
 fi
-if ! bash "$AQUI/conferir_changelog_releases.sh" > /dev/null 2>&1; then
-  echo "AVISO: $TAG ainda não tem seção em CHANGELOG.md — cole $CHANGELOG_DRAFT lá antes de publicar" >&2
+# Segunda rede, agora com a etiqueta nova no lugar: confere a correspondência de TODAS as etiquetas com
+# TODAS as seções (uma seção órfã de outra versão também reprova). Sai != 0, nunca mais como aviso; a
+# etiqueta recém-criada é desfeita para não deixar fato público sobre uma árvore que não passou.
+if ! bash "$AQUI/conferir_changelog_releases.sh"; then
+  git tag -d "$TAG" > /dev/null 2>&1 || true
+  echo "RELEASE RECUSADA: etiquetas e CHANGELOG.md divergem (lista acima). Etiqueta $TAG apagada." >&2
+  exit 4
 fi
 
 echo
