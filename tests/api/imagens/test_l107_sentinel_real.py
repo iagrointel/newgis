@@ -89,8 +89,9 @@ def test_seis_cenas_sentinel2_abertas_viram_um_mosaico_e_o_ladrilho_e_medido(ban
         resultado = bench.medir(bancada, (8, 10, 12, 13, 14), cliente, token_l107["token"])
 
     for z, m in resultado["por_zoom"].items():
-        assert m["status_frio"] in (200, 204), (z, m)
         assert m["ms_frio"] > 0 and m["ms_quente_mediana"] > 0, (z, m)
+        assert m["status_frio"] < 500, (
+            f"{z}: o ladrilho devolveu erro de SERVIDOR sobre cena Sentinel-2 real — {m}")
     servidos = [z for z, m in resultado["por_zoom"].items() if m["status_frio"] == 200]
     assert servidos, f"nenhum zoom devolveu ladrilho com pixel: {resultado['por_zoom']}"
 

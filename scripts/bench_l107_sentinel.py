@@ -68,20 +68,25 @@ def recortar(cena: dict, centro_lon: float, centro_lat: float, destino: Path) ->
     from rasterio.warp import transform as warp_transform
     from rasterio.windows import Window
 
-    os.environ.setdefault("GDAL_DISABLE_READDIR_ON_OPEN", "EMPTY_DIR")
-    os.environ.setdefault("AWS_NO_SIGN_REQUEST", "YES")
+    # ⛔ estas opções vão num `rasterio.Env` de ESCOPO, nunca em os.environ. Medido em 18/09/2026: com
+    # `AWS_NO_SIGN_REQUEST=YES` no ambiente do processo, a leitura do bucket PÚBLICO da Sentinel passava,
+    # mas a aplicação, no mesmo processo, passava a falar com o Garage DELA sem assinar e o armazenamento
+    # respondia "AccessDenied: Garage does not support anonymous access yet" — 502 em todo ladrilho. O
+    # defeito era desta bancada, não do produto: variável de ambiente de GDAL é global ao processo.
+    opcoes = {"GDAL_DISABLE_READDIR_ON_OPEN": "EMPTY_DIR", "AWS_NO_SIGN_REQUEST": "YES"}
     caminhos = [f"/vsicurl/{cena['assets'][b]['href']}" for b in BANDAS]
-    with rasterio.open(caminhos[0]) as src:
-        xs, ys = warp_transform("EPSG:4326", src.crs, [centro_lon], [centro_lat])
-        linha, coluna = src.index(xs[0], ys[0])
-        janela = Window(coluna - LADO_PX // 2, linha - LADO_PX // 2, LADO_PX, LADO_PX)
-        perfil = src.profile
-        transformada = src.window_transform(janela)
-        crs = src.crs
-    pilha = []
-    for caminho in caminhos:
-        with rasterio.open(caminho) as src:
-            pilha.append(src.read(1, window=janela))
+    with rasterio.Env(**opcoes):
+        with rasterio.open(caminhos[0]) as src:
+            xs, ys = warp_transform("EPSG:4326", src.crs, [centro_lon], [centro_lat])
+            linha, coluna = src.index(xs[0], ys[0])
+            janela = Window(coluna - LADO_PX // 2, linha - LADO_PX // 2, LADO_PX, LADO_PX)
+            perfil = src.profile
+            transformada = src.window_transform(janela)
+            crs = src.crs
+        pilha = []
+        for caminho in caminhos:
+            with rasterio.open(caminho) as src:
+                pilha.append(src.read(1, window=janela))
     arranjo = np.stack(pilha)
     bruto = destino.with_name("bruto_" + destino.name)
     perfil.update(driver="GTiff", height=LADO_PX, width=LADO_PX, count=len(BANDAS),
@@ -212,13 +217,16 @@ def medir(dados: dict, zooms: tuple[int, ...], cliente, tok: str) -> dict:
                 i2 = time.perf_counter()
                 ultima = cliente.get(caminho)
                 repeticoes.append((time.perf_counter() - i2) * 1000)
-            medidas[f"z{z}"] = {
+            registro = {
                 "status_frio": primeira.status_code,
                 "bytes": len(primeira.content),
                 "ms_frio": round(ms_frio, 1),
                 "ms_quente_mediana": round(statistics.median(repeticoes), 1),
                 "status_quente": ultima.status_code,
             }
+            if primeira.status_code >= 400:
+                registro["corpo"] = primeira.text[:400]
+            medidas[f"z{z}"] = registro
     finally:
         cliente.delete(f"/svc/{tok}/stac/mosaicos/{mosaico_id}")
     return {"mosaico_id": mosaico_id, "centro": [centro_lon, centro_lat], "por_zoom": medidas}
@@ -259,6 +267,24 @@ def montar_saida(dados: dict, resultado: dict, tenant_slug: str, lon: float, lat
             "valor": m["ms_quente_mediana"], "unidade": "ms", "comando": comando}
         saida["medidas"][f"ladrilho_{z}_bytes"] = {
             "valor": m["bytes"], "unidade": "bytes", "comando": comando}
+    por_zoom = resultado["por_zoom"]
+    saida["observacao"] = (
+        "O custo por ladrilho cai com o zoom, e muito: o recorte tem 5,1 km de lado, entao em z8 "
+        f"({por_zoom.get('z8', {}).get('ms_frio')} ms) o ladrilho cobre uma area centenas de vezes "
+        "maior que o dado e o motor reamostra tudo para devolver poucos pixels uteis; de z12 em "
+        f"diante ({por_zoom.get('z12', {}).get('ms_frio')} ms) o ladrilho ja esta na escala do dado. "
+        "Isto confirma, sobre cena REAL e por medicao independente, a limitacao que o adversario do "
+        "item L1-02-i registrou no motor de pixel compartilhado (zoom abaixo do minzoom nativo do "
+        "item e lento). Nao e defeito desta bancada nem do mosaico: e o mesmo motor, e vale para XYZ, "
+        "WMS e OGC API. Quem publica recorte pequeno deve declarar minzoom."
+    )
+    saida["armadilha_da_bancada"] = (
+        "Medido em 18/09/2026: pôr AWS_NO_SIGN_REQUEST=YES em os.environ para ler o bucket PUBLICO da "
+        "Sentinel fazia a propria aplicacao, no MESMO processo, falar com o Garage dela sem assinar — "
+        "'AccessDenied: Garage does not support anonymous access yet', 502 em todo ladrilho. Variavel "
+        "de ambiente de GDAL e global ao processo; a opcao vai em rasterio.Env de escopo. O defeito "
+        "era da bancada, nao do produto."
+    )
     saida["detalhe"] = resultado
     return saida
 
