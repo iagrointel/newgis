@@ -634,11 +634,11 @@ conserto); o mínimo é a regra geral de são para a instalação (inteiro >= 1;
 
 | chave | padrão | mínimo | usada por |
 |---|---|---|---|
-| `PLAT_RENDER_POOL_TAMANHO` | `0` | `1` | `app/render/motor.py::Motor` — nº de páginas do chromium mantidas quentes (ADR 0023: medido com 2 em produção, `deploy/plat-render.service`) |
-| `PLAT_RENDER_FILA_MAX` | `0` | `1` | idem — acima disso, `429 fila_cheia` (ADR 0023 item 1) |
-| `PLAT_RENDER_TIMEOUT_S` | `0` | `1` | idem — teto de tempo único cobrindo fila + execução (ADR 0023 item 2) |
-| `PLAT_RENDER_TOKEN_TTL_S` | `0` | `1` | `app/render/token.py` — prazo do token interno do render, sempre cortado a 60 s mesmo se pedirem mais |
-| `PLAT_RENDER_MAX_PX` | `0` | `1` | `app/render/rotas.py`, `app/ogc_mapas/pool.py` — teto de largura/altura de imagem pedida |
+| `PLAT_RENDER_POOL_TAMANHO` | `2` | `1` | `app/render/motor.py::Motor` — nº de páginas do chromium mantidas quentes (ADR 0023: medido com 2 em produção, `deploy/plat-render.service`); padrão 2 desde 18/09/2026 — o 0 herdado da montagem de ramos era motor morto, não "desligado" |
+| `PLAT_RENDER_FILA_MAX` | `20` | `1` | idem — acima disso, `429 fila_cheia` (ADR 0023 item 1); padrão 20 desde 18/09/2026 (0 fazia todo pedido voltar 429) |
+| `PLAT_RENDER_TIMEOUT_S` | `30` | `1` | idem — teto de tempo único cobrindo fila + execução (ADR 0023 item 2); padrão 30 desde 18/09/2026 |
+| `PLAT_RENDER_TOKEN_TTL_S` | `60` | `1` | `app/render/token.py` — prazo do token interno do render, sempre cortado a 60 s mesmo se pedirem mais; padrão 60 desde 18/09/2026 |
+| `PLAT_RENDER_MAX_PX` | `8192` | `64` | `app/render/rotas.py`, `app/ogc_mapas/pool.py` — teto de largura/altura de imagem pedida (padrão 8192 desde o conserto do L7-08-d: o 0 tornava `64 <= x <= 0` vazio e a rota respondia 422 para qualquer tamanho) |
 | `PLAT_RENDER_MEMORIA_MB` | `0` | `1` | valor nominal do pool de render (`deploy/plat-render.service`); a unidade systemd corta o `MemoryMax` um pouco acima |
 | `PLAT_RENDER_IGNORAR_HTTPS` | `false` | — | `docs/adr/20260908T1230-layout-de-impressao.md` — aceita certificado autoassinado da trilha ao render buscar a própria página |
 | `PLAT_SSE_LIGADO` | `false` | — | `app/vivo/rotas.py` — interruptor de operação; desligado, a rota de atualização viva por SSE responde 503 na hora |

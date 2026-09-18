@@ -137,10 +137,16 @@ class Settings:
     # ------------------------------------------------------------------------------------------
     # (entrega 10/09) União dos campos que outros ramos declararam neste mesmo dataclass e que a
     # fusão perdeu ao ficar com um lado só. Todos com padrão, para não quebrar a ordem do dataclass.
-    PLAT_RENDER_POOL_TAMANHO: int = 0  # (entrega 10/09) de wt/il212blayou
-    PLAT_RENDER_FILA_MAX: int = 0  # (entrega 10/09) de wt/il212blayou
-    PLAT_RENDER_TIMEOUT_S: int = 0  # (entrega 10/09) de wt/il212blayou
-    PLAT_RENDER_TOKEN_TTL_S: int = 0  # (entrega 10/09) de wt/il212blayou
+    # 18/09/2026 (item L2-12-a): os padrões eram 0, herdados da montagem de ramos, e 0 aqui não é
+    # "desligado" — é motor MORTO: fila 0 faz todo pedido a /api/render/mapa voltar 429 "fila cheia (0)"
+    # (medido na trilha l212amo6b2d: tests/api/test_render.py inteiro vermelho numa instalação sem as
+    # variáveis), pool 0 não abre página nenhuma e timeout 0 estoura na hora. Os padrões do ADR 0023
+    # (pool 2, fila 20, teto 30 s, token 60 s) são os mesmos da entrega original do item (900c0b16) e
+    # da unidade deploy/plat-render.service; quem precisar de outros valores declara no .env.
+    PLAT_RENDER_POOL_TAMANHO: int = 2  # (entrega 10/09) de wt/il212blayou; padrão do ADR 0023
+    PLAT_RENDER_FILA_MAX: int = 20  # (entrega 10/09) de wt/il212blayou; padrão do ADR 0023
+    PLAT_RENDER_TIMEOUT_S: int = 30  # (entrega 10/09) de wt/il212blayou; padrão do ADR 0023
+    PLAT_RENDER_TOKEN_TTL_S: int = 60  # (entrega 10/09) de wt/il212blayou; padrão do ADR 0023
     # 18/09/2026 (item L7-08-d): o padrão era 0, herdado da montagem de ramos, e 0 aqui não é "sem
     # limite" — é limite ZERO. Duas consequências medidas: (1) o esquema OpenAPI de RenderEntrada saía
     # com "maximum": 0.0 ao lado de "default": 1024 e "minimum": 64, e o openapi-spec-validator reprovava
@@ -343,16 +349,16 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_SEGURANCA_CONTATO=_opcional(valores, "PLAT_SEGURANCA_CONTATO") or "",
         # (conserto 15/09, item de wt/segur) os 9 campos abaixo são a segunda metade do mesmo achado dos
         # 16 campos string acima: numéricos/booleanos, ficaram para depois por não ter padrão/mínimo
-        # documentado em docs/LIMITES.md, app/limites.py ou MANUAL.md. Nenhum dos dois é: o padrão
-        # registrado aqui é exatamente o default que o dataclass já tinha (o valor que o código assume
-        # hoje, com `carregar()` nunca lendo a chave — nenhuma instalação muda de comportamento com este
-        # conserto), e o mínimo é a regra geral de são (inteiro >= 1; booleano pelas mesmas palavras que
-        # `PLAT_SMTP_TLS` já aceita). Documentado em MANUAL.md, seção "Configuração — motor de render, SSE
-        # e processos da API".
-        PLAT_RENDER_POOL_TAMANHO=_inteiro(valores, "PLAT_RENDER_POOL_TAMANHO", 0, 1),
-        PLAT_RENDER_FILA_MAX=_inteiro(valores, "PLAT_RENDER_FILA_MAX", 0, 1),
-        PLAT_RENDER_TIMEOUT_S=_inteiro(valores, "PLAT_RENDER_TIMEOUT_S", 0, 1),
-        PLAT_RENDER_TOKEN_TTL_S=_inteiro(valores, "PLAT_RENDER_TOKEN_TTL_S", 0, 1),
+        # documentado em docs/LIMITES.md, app/limites.py ou MANUAL.md. O mínimo é a regra geral de são
+        # (inteiro >= 1; booleano pelas mesmas palavras que `PLAT_SMTP_TLS` já aceita). Documentado em
+        # MANUAL.md, seção "Configuração — motor de render, SSE e processos da API".
+        # (18/09/2026, item L2-12-a) os 4 primeiros padrões saem de 0 para os valores do ADR 0023: com 0
+        # o motor nascia morto (fila 0 = 429 em todo pedido; pool 0 = nenhuma página; timeout 0) —
+        # ver o comentário no dataclass acima.
+        PLAT_RENDER_POOL_TAMANHO=_inteiro(valores, "PLAT_RENDER_POOL_TAMANHO", 2, 1),
+        PLAT_RENDER_FILA_MAX=_inteiro(valores, "PLAT_RENDER_FILA_MAX", 20, 1),
+        PLAT_RENDER_TIMEOUT_S=_inteiro(valores, "PLAT_RENDER_TIMEOUT_S", 30, 1),
+        PLAT_RENDER_TOKEN_TTL_S=_inteiro(valores, "PLAT_RENDER_TOKEN_TTL_S", 60, 1),
         PLAT_RENDER_MAX_PX=_inteiro(valores, "PLAT_RENDER_MAX_PX", 8192, 64),
         PLAT_RENDER_MEMORIA_MB=_inteiro(valores, "PLAT_RENDER_MEMORIA_MB", 0, 1),
         PLAT_RENDER_IGNORAR_HTTPS=_booleano(valores, "PLAT_RENDER_IGNORAR_HTTPS", False),
