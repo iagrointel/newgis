@@ -88,7 +88,10 @@ class AcervoMeuMapaCamada(Saida):
     a qual a camada entrou no mapa."""
 
     item_id: str
-    fonte_id: str
+    # opcional de proposito: item de protocolo `acervo` sem `fonte_id` nos parametros e um item MALFORMADO,
+    # e a legenda tem de mostra-lo assim (com o campo vazio) em vez de sumir com ele ou derrubar a rota com
+    # um 500 de validacao. Some-lo seria esconder o defeito de quem precisa conserta-lo.
+    fonte_id: str | None = None
     titulo: str
     licenca_curada_tipo: str | None = None
     licenca: str | None = None
