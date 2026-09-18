@@ -278,8 +278,12 @@ export async function atualizarResumo() {
     porId('resumo-texto').textContent = t('tarefas.resumo', {
       pendente: numero(r.pendente), rodando: numero(r.rodando), concluido: numero(r.concluido_24h), falhou: numero(r.falhou_24h),
     });
-    if (s.ativos !== null && s.ativos !== ativos && s.deslocamento === 0) carregar();
-    s.ativos = ativos;
+    // recarrega a 1ª página quando QUALQUER contador muda — antes era só o de ativos, e um job que nascia e
+    // concluía dentro do mesmo intervalo de 10 s (ex.: ferramentas.buffer, ~1 s) deixava ativos=0 nos dois
+    // ticks e a linha nunca aparecia sem F5 (achado do e2e L0-05-c, rodada da trilha l005cte6303)
+    const chave = [r.pendente, r.rodando, r.concluido_24h, r.falhou_24h].map((v) => Number(v) || 0).join(",");
+    if (s.ativos !== null && s.ativos !== chave && s.deslocamento === 0) carregar();
+    s.ativos = chave;
   } catch (e) {
     if (e.status !== 401) porId('resumo-texto').textContent = t('tarefas.resumo_indisponivel', { status: e.status || t('tarefas.rede') });
   }

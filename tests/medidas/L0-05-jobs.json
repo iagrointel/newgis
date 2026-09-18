@@ -52,12 +52,12 @@
    "comando": "systemctl restart plat-worker no meio de prova.progresso até o job voltar a pendente/rodando com reinicios=1 (tests/api/jobs/test_jobs_reinicio.py)"
   },
   "pagina_tarefas_pronta_ms": {
-   "valor": 182.6,
+   "valor": 214.9,
    "unidade": "ms",
    "comando": "goto('/tarefas') até body[data-pronto=1] (chromium)"
   },
   "linha_nova_aparece_s": {
-   "valor": 10.3,
+   "valor": 10.4,
    "unidade": "s",
    "comando": "POST /api/jobs pela API até tr[data-id] na tela sem recarregar"
   },
@@ -67,7 +67,7 @@
    "comando": "leituras distintas de .c-progresso .valor na linha durante o job de 60 s"
   },
   "cancelamento_tela_s": {
-   "valor": 0.24,
+   "valor": 0.34,
    "unidade": "s",
    "comando": "clique em cancelar + confirmação até tr[data-estado=cancelado] (job pendente ou rodando)"
   },
@@ -102,12 +102,12 @@
    "comando": "cruzado_jobs.py: toda rota /api/jobs* e /api/agendas* do OpenAPI público chamada com sessão de demo2 sobre recurso de demo: 15 rotas, 0 falhas (404 nas rotas com id; listas/resumo sem o recurso de A); 17 de 17 chamadas sem sessão = 401"
   },
   "primeira_pintura_tarefas_ms": {
-   "valor": 32,
+   "valor": 52,
    "unidade": "ms",
    "comando": "first-contentful-paint de /tarefas com 1.000 jobs semeados por plat.jobs_semear_demo no inquilino de demonstração (chromium)"
   },
   "pagina_tarefas_mil_pronta_ms": {
-   "valor": 161.5,
+   "valor": 299.2,
    "unidade": "ms",
    "comando": "goto('/tarefas') até body[data-pronto=1] com 1.000 jobs semeados"
   },
@@ -127,6 +127,6 @@
    "comando": "prova_012.py 17:58:07-17:59:56Z: worker manual fora do systemd com PLAT_WORKER_NOME = hostname (mesmo nome-base da unidade) durante job de 240 s na unidade: reinicios ficou 0 e o progresso subiu de 3 para 20 em 35 s; kill -9 no manual com job de 240 s rodando: ceifado pela unidade 68,4 s depois (heartbeat vencido, limite 60 s), nunca antes de 55 s; estado pendente, erro 'worker sem sinal'"
   }
  },
- "gerado_em": "2026-09-06T00:27:09Z",
- "git_sha": "65a9fc2c0869"
+ "gerado_em": "2026-09-18T05:38:42Z",
+ "git_sha": "ad31fdae4fb3"
 }
