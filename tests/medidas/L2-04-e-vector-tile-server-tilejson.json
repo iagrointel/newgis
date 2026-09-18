@@ -1,15 +1,14 @@
 {
- "gerado_em": "2026-09-17T23:40:00Z",
- "git_sha": "e9e2b1e3b1b4",
+ "gerado_em": "2026-09-18T08:38:05Z",
+ "git_sha": "be8a27e6ffb8",
  "item": "L2-04-e-vector-tile-server-tilejson",
  "medidas": {
   "geojson_1mi_rss_kb": {
-   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/provalocal.env; set +a; PLAT_GRAVAR_MEDIDAS=1 sudo -E systemd-run --scope --uid=dev --gid=dev -p MemoryMax=8G -p MemorySwapMax=0 ./venv/bin/python -m pytest tests/api/test_vector_tile_server.py -q::test_geojson_1_milhao_streaming_sem_estourar_rss — GET /svc/<token>/camadas/<item>.geojson (1.000.000 feições, 355.378.070 bytes) contra uvicorn real; amostra de /proc/<pid>/status:VmRSS a cada 100 ms",
-   "em": "2026-09-17T23:40:00Z",
-   "resultado": "REPROVOU o teto de 300 MB do portão (394,75 MB de pico), duas medidas seguidas: 404.224 kB e 404.124 kB",
-   "sha": "e9e2b1e3b1b4",
+   "comando": "GET /svc/<token>/camadas/<item>.geojson (1.000.000 feições, 355377659 bytes) contra uvicorn real; amostra de /proc/<pid>/status:VmRSS a cada 100 ms",
+   "em": "2026-09-18T08:38:04.945098+00:00",
+   "sha": "be8a27e6ffb8",
    "unidade": "kB",
-   "valor": 404224
+   "valor": 267196
   },
   "kml_10_mil_feicoes_ogrinfo": {
    "comando": "GET /svc/<token>/camadas/<item>.kml (10.000 linhas) -> ogrinfo -so; saída: atualizado_por: String (0.0)",
@@ -17,7 +16,7 @@
    "valor": 10000
   },
   "mvt_decodificado_feicoes": {
-   "comando": "ogrinfo -al -so (driver MVT do GDAL) sobre os bytes de GET /svc/<token>/.../VectorTileServer/tile/6/34/22.pbf gravados em <tmp>/6/22/34.pbf; camada decodificada = t_cb30295c9f6d6bf7",
+   "comando": "ogrinfo -al -so (driver MVT do GDAL) sobre os bytes de GET /svc/<token>/.../VectorTileServer/tile/6/34/22.pbf gravados em <tmp>/6/22/34.pbf; camada decodificada = t_79f85a3506e9e7ee",
    "unidade": "feições",
    "valor": {
     "na_tabela": 30,
@@ -31,7 +30,7 @@
    "valor": true
   },
   "sprites_e_fontes_200": {
-   "comando": "GET /svc/plat_Yu8ygPjTru4yPYjFtIpLoTV8kXVIxQrCMXuWlgRbJ59/rest/services/89166ab0-5b00-4e61-9fa2-a8038c837dd7/VectorTileServer/resources/sprites/sprite.json|.png e /fonts/Arial Regular/0-255.pbf",
+   "comando": "GET /svc/plat_<revogado>/rest/services/5c39cd9c-be33-4da7-84a6-4a6a8d879ee3/VectorTileServer/resources/sprites/sprite.json|.png e /fonts/Arial Regular/0-255.pbf",
    "unidade": "status",
    "valor": {
     "fontes_pbf": 200,
@@ -44,6 +43,11 @@
    "unidade": "testes",
    "valor": "13 passed, 1 failed"
   },
+  "suite_do_item_18_09": {
+   "comando": "set -a; source /home/dev/plat-frota/laco/var/trilha/l204eve31cf.env; set +a; bash /home/dev/plat-frota/laco/roda_teste.sh tests/api/test_vector_tile_server.py -q (trilha wt/L2-04-e-vector-tile-server-tilejson no Hetzner)",
+   "unidade": "testes",
+   "valor": "14 passed"
+  },
   "tile_esri_ordem_zyx_igual_a_maplibre_zxy_bytes": {
    "comando": "GET /tiles/<token>/<item>/2/2/2.pbf vs GET /svc/<token>/.../VectorTileServer/tile/2/2/2.pbf",
    "unidade": "bytes",
@@ -55,28 +59,27 @@
    "valor": true
   },
   "token_revogado_401_em_todas_as_rotas": {
-   "comando": "revoga o token e repete as 10 rotas",
-   "unidade": "status",
    "valor": {
-    "/svc/plat_Yu8ygPjTru4yPYjFtIpLoTV8kXVIxQrCMXuWlgRbJ59/camadas/89166ab0-5b00-4e61-9fa2-a8038c837dd7.csv": 401,
-    "/svc/plat_Yu8ygPjTru4yPYjFtIpLoTV8kXVIxQrCMXuWlgRbJ59/camadas/89166ab0-5b00-4e61-9fa2-a8038c837dd7.geojson": 401,
-    "/svc/plat_Yu8ygPjTru4yPYjFtIpLoTV8kXVIxQrCMXuWlgRbJ59/camadas/89166ab0-5b00-4e61-9fa2-a8038c837dd7.kml": 401,
-    "/svc/plat_Yu8ygPjTru4yPYjFtIpLoTV8kXVIxQrCMXuWlgRbJ59/rest/services/89166ab0-5b00-4e61-9fa2-a8038c837dd7/VectorTileServer": 401,
-    "/svc/plat_Yu8ygPjTru4yPYjFtIpLoTV8kXVIxQrCMXuWlgRbJ59/rest/services/89166ab0-5b00-4e61-9fa2-a8038c837dd7/VectorTileServer/resources/fonts/Arial/0-255.pbf": 401,
-    "/svc/plat_Yu8ygPjTru4yPYjFtIpLoTV8kXVIxQrCMXuWlgRbJ59/rest/services/89166ab0-5b00-4e61-9fa2-a8038c837dd7/VectorTileServer/resources/sprites/sprite.json": 401,
-    "/svc/plat_Yu8ygPjTru4yPYjFtIpLoTV8kXVIxQrCMXuWlgRbJ59/rest/services/89166ab0-5b00-4e61-9fa2-a8038c837dd7/VectorTileServer/resources/styles/root.json": 401,
-    "/svc/plat_Yu8ygPjTru4yPYjFtIpLoTV8kXVIxQrCMXuWlgRbJ59/rest/services/89166ab0-5b00-4e61-9fa2-a8038c837dd7/VectorTileServer/tile/0/0/0.pbf": 401,
-    "/tiles/plat_Yu8ygPjTru4yPYjFtIpLoTV8kXVIxQrCMXuWlgRbJ59/89166ab0-5b00-4e61-9fa2-a8038c837dd7/0/0/0.pbf": 401,
-    "/tiles/plat_Yu8ygPjTru4yPYjFtIpLoTV8kXVIxQrCMXuWlgRbJ59/89166ab0-5b00-4e61-9fa2-a8038c837dd7/tilejson.json": 401
-   }
+    "/tiles/plat_<revogado>/5c39cd9c-be33-4da7-84a6-4a6a8d879ee3/tilejson.json": 401,
+    "/tiles/plat_<revogado>/5c39cd9c-be33-4da7-84a6-4a6a8d879ee3/0/0/0.pbf": 401,
+    "/svc/plat_<revogado>/rest/services/5c39cd9c-be33-4da7-84a6-4a6a8d879ee3/VectorTileServer": 401,
+    "/svc/plat_<revogado>/rest/services/5c39cd9c-be33-4da7-84a6-4a6a8d879ee3/VectorTileServer/resources/styles/root.json": 401,
+    "/svc/plat_<revogado>/rest/services/5c39cd9c-be33-4da7-84a6-4a6a8d879ee3/VectorTileServer/resources/sprites/sprite.json": 401,
+    "/svc/plat_<revogado>/rest/services/5c39cd9c-be33-4da7-84a6-4a6a8d879ee3/VectorTileServer/resources/fonts/Arial/0-255.pbf": 401,
+    "/svc/plat_<revogado>/rest/services/5c39cd9c-be33-4da7-84a6-4a6a8d879ee3/VectorTileServer/tile/0/0/0.pbf": 401,
+    "/svc/plat_<revogado>/camadas/5c39cd9c-be33-4da7-84a6-4a6a8d879ee3.geojson": 401,
+    "/svc/plat_<revogado>/camadas/5c39cd9c-be33-4da7-84a6-4a6a8d879ee3.csv": 401,
+    "/svc/plat_<revogado>/camadas/5c39cd9c-be33-4da7-84a6-4a6a8d879ee3.kml": 401
+   },
+   "unidade": "status",
+   "comando": "revoga o token e repete as 10 rotas"
   },
   "uvicorn_rss_ocioso_kb": {
    "comando": "mesmo uvicorn (mesmo env de trilha), logo após um GET /saude devolver 200 e ANTES de qualquer exportação: grep VmRSS /proc/<pid>/status",
-   "em": "2026-09-17T23:40:00Z",
-   "leitura": "o pico de 404.224 kB da exportação está 14.272 kB (13,9 MB) acima deste piso: o GeoJSON de 1 milhão de feições CONTINUA em fluxo (13,9 MB de acréscimo para 355 MB de corpo, 0,04x). Quem estourou o teto de 300 MB foi o PISO do processo, que era da ordem de 130 MB em 07/09 (pico medido então: 144.944 kB) e hoje nasce em 389.952 kB. A regressão é de carga de importação da aplicação, não do exportador — e não foi consertada aqui porque está fora dos arquivos deste item",
-   "sha": "e9e2b1e3b1b4",
+   "em": "2026-09-18T08:50:00Z",
+   "leitura": "CONSERTADO nesta entrega: o piso era 389.952 kB em 17/09 (era ~130 MB em 07/09, pico medido então: 144.944 kB) porque o arranque importava pandas+scipy+geopandas+xarray sem uso imediato. Medida: bloqueio de xarray/rioxarray em app.main (só serviam ao XarrayReader do rio_tiler, que nada em app/ usa; arrastavam pandas+scipy) + import preguiçoso (app.tardio.Tardio) de geopandas/pandas em amc/vetorial.py, scipy.stats em amc/sensibilidade.py, scipy.ndimage em amc/regioes.py e scipy.* em ferramentas/estatistica_espacial.py. Piso novo: 253.404 kB; pico da exportação de 1 mi: 267.196 kB (13,8 MB acima do piso para 355 MB de corpo — o fluxo continua fluxo).",
    "unidade": "kB",
-   "valor": 389952
+   "valor": 253404
   }
  },
  "medidas_manuais_reproduziveis": {

@@ -34,7 +34,11 @@ import math
 from dataclasses import dataclass, field
 
 import numpy as np
-from scipy import ndimage
+
+from app.tardio import Tardio
+
+# scipy.ndimage no primeiro uso real, não no arranque: scipy inteiro custa dezenas de MB de RSS por worker.
+ndimage = Tardio("scipy.ndimage")
 
 N_REGIOES_MAX = 30
 COMPROMISSO_MIN, COMPROMISSO_MAX = 0, 100

@@ -6,7 +6,15 @@ Cada trilha acrescenta o seu router na lista ROUTERS (uma linha por trilha; orde
 
 import datetime
 import os
+import sys
 from pathlib import Path
+
+# xarray/rioxarray estão no venv só pelo XarrayReader do rio_tiler, que a aplicação não usa (nada em app/
+# importa xarray): o pacote arrasta pandas e scipy e custa ~90 MB de RSS por worker no arranque (medido em
+# 18/09/2026: 370 -> 242 MB). sys.modules[nome] = None faz `import xarray` falhar com ImportError, que o
+# rio_tiler já trata como "não instalado" (try/except em rio_tiler/io/xarray.py). Antes de QUALQUER router.
+sys.modules["xarray"] = None
+sys.modules["rioxarray"] = None
 
 from fastapi import FastAPI, Request
 from fastapi.openapi.docs import get_swagger_ui_html
