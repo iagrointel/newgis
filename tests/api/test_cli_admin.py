@@ -22,14 +22,30 @@ from tests.api.conftest import CREDENCIAIS, CREDENCIAIS_TOTP, PREFIXO_TESTE
 
 RAIZ = Path(__file__).resolve().parents[2]
 PLAT = RAIZ / "scripts" / "plat"
-PORTA_PREFERIDA = int(os.environ.get("PLAT_CLI_PORTA_TESTE", "8358"))
+PORTA_PREFERIDA = int(os.environ.get("PLAT_CLI_PORTA_TESTE", "0"))
 
 
 def _porta_livre(inicio: int) -> int:
+    """Porta que ninguém está usando AGORA, reservada por `bind` e não por `connect_ex`.
+
+    18/09/2026: `connect_ex != 0` só diz que naquele instante nada respondeu — e nesta máquina há dezenas
+    de uvicorn de OUTRAS trilhas na mesma faixa fixa (8358+). Quando um deles subia no intervalo entre a
+    checagem e o nosso `Popen`, o nosso uvicorn não conseguia a porta e a fixture passava 60 s perguntando
+    /saude ao servidor ALHEIO, que responde 503 por estar em outro schema — e o laudo saía como "o uvicorn
+    de teste não respondeu", acusando esta árvore por um vizinho. Com `inicio = 0` (o padrão agora) quem
+    escolhe é o sistema operacional, na faixa efêmera, onde não há convenção de trilha nenhuma."""
+    if inicio == 0:
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", 0))
+            return s.getsockname()[1]
     for porta in range(inicio, inicio + 40):
         with socket.socket() as s:
-            if s.connect_ex(("127.0.0.1", porta)) != 0:
-                return porta
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                s.bind(("127.0.0.1", porta))
+            except OSError:
+                continue
+            return porta
     pytest.skip(f"nenhuma porta livre a partir de {inicio}")
     raise AssertionError
 
