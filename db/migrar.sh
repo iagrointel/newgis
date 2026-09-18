@@ -24,6 +24,24 @@ case "$_raiz" in /home/dev/plataforma/wt/*)
 esac
 DB=${PLAT_DB:-iagro_sat}
 DIR=${PLAT_MIGRACOES:-"$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/migracoes"}
+
+# 18/09/2026: este aplicador fala com `plat.versao_migracao` LITERALMENTE — ele nao conhece
+# PLAT_SCHEMA, e nunca conheceu. Com o .env de uma trilha carregado no ambiente, ele continuava
+# lendo e gravando o registro de PRODUCAO: dizia "iguais N · pendentes 0" e NAO migrava a trilha.
+# O efeito medido no mesmo dia: a trilha ficava sem a migracao, a instancia dela respondia 503 em
+# /saude, e todo teste que sobe uma aplicacao viva se auto-PULAVA ("uvicorn nao subiu em 10 s") —
+# a clausula central do item L2-04-e desapareceu assim, e o gerente recusou o item por falta de
+# prova que existia. A instrucao de usar trilha_ambiente.sh ja estava escrita acima; instrucao nao
+# e garantia. Agora o aplicador RECUSA quando o ambiente aponta para outro esquema.
+if [ -n "${PLAT_SCHEMA:-}" ] && [ "$PLAT_SCHEMA" != plat ]; then
+  echo "[migrar] RECUSADO: PLAT_SCHEMA=$PLAT_SCHEMA, mas este aplicador so escreve em plat.*" >&2
+  echo "[migrar] Rodar assim NAO migra a sua trilha: ele leria o registro de PRODUCAO e diria" >&2
+  echo "[migrar] 'iguais N · pendentes 0' sem aplicar nada, e a trilha ficaria 503 em /saude." >&2
+  echo "[migrar] Para a trilha, use:" >&2
+  echo "[migrar]     bash /home/dev/plataforma/laco/migrar_trilha.sh <nome> <worktree>" >&2
+  echo "[migrar] Para producao, limpe a variavel: env -u PLAT_SCHEMA bash db/migrar.sh" >&2
+  exit 9
+fi
 if [ "$(id -un)" = postgres ]; then PSQL=(psql); else PSQL=(sudo -u postgres psql); fi
 PSQL+=(-d "$DB" -X -q -v ON_ERROR_STOP=1)
 
