@@ -56,8 +56,17 @@ def _contexto(cur, slug):
     return r
 
 
-def _publicar(cur, adm, titulo, tabela, tipo, campos, popup, simbologia=None):
-    esquema = "d_demo"
+def _esquema(cur, slug="demo"):
+    """O schema de dado do inquilino. Em produção é `d_<slug>`; numa trilha isolada é
+    `d_plat_t<trilha>_<slug>` (migração *_isolamento_schema_de_dado.sql). Fixar "d_demo" fazia esta
+    bancada morrer com `permission denied for schema d_demo` em qualquer trilha, porque a trilha não
+    tem — de propósito — privilégio nos schemas de dado de produção."""
+    cur.execute("SELECT plat.camada_schema_prefixo() || %s AS e", (slug,))
+    return cur.fetchone()["e"]
+
+
+def _publicar(cur, adm, titulo, tabela, tipo, campos, popup, simbologia=None, esquema=None):
+    esquema = esquema or _esquema(cur)
     cur.execute("SELECT plat.camada_preparar(%s, %s, 4326, %s, %s)",
                 (esquema, tabela, tipo, adm["usuario_id"]))
     cur.execute(f'SELECT ST_Extent(geom)::text AS e, count(*) AS n FROM "{esquema}"."{tabela}"')
@@ -85,16 +94,17 @@ def criar():
     try:
         with con.cursor() as cur:
             adm = _contexto(cur, "demo")
+            esq = _esquema(cur)
 
             # 1. pontos — pager, formatos e campo de servidor
             t = "c_" + _hex16()
             cur.execute(
-                f'CREATE TABLE "d_demo"."{t}" (fid bigserial PRIMARY KEY, nome text, valor_numero '
+                f'CREATE TABLE "{esq}"."{t}" (fid bigserial PRIMARY KEY, nome text, valor_numero '
                 f'double precision, data_evento_ms double precision, preco double precision, '
                 f'site text, foto text, obs_bruta text, geom geometry(Point, 4326))')
             # três feições EXATAMENTE coincidentes (fid 1, 2, 3) — a paginação "1 de 3"
             cur.execute(
-                f'INSERT INTO "d_demo"."{t}" (nome, valor_numero, data_evento_ms, preco, site, foto, '
+                f'INSERT INTO "{esq}"."{t}" (nome, valor_numero, data_evento_ms, preco, site, foto, '
                 f'obs_bruta, geom) VALUES '
                 f"('coincidente 1', %s, %s, 199.9, 'https://exemplo.iagrointel.com/ficha/1', "
                 f"'/static/favicon.svg', "
@@ -107,7 +117,7 @@ def criar():
                 (VALOR_GRANDE, float(DATA_EVENTO_MS), float(DATA_EVENTO_MS), float(DATA_EVENTO_MS)))
             # mais 27 pontos espalhados, campo nulo em 1 de cada 5
             cur.execute(
-                f'INSERT INTO "d_demo"."{t}" (nome, valor_numero, data_evento_ms, preco, site, foto, '
+                f'INSERT INTO "{esq}"."{t}" (nome, valor_numero, data_evento_ms, preco, site, foto, '
                 f'obs_bruta, geom) '
                 f"SELECT CASE WHEN g % 5 = 0 THEN NULL ELSE 'ponto ' || g END, "
                 f"round((random() * 9000)::numeric, 2)::double precision, "
@@ -118,14 +128,14 @@ def criar():
                 f"'observação ' || g, "
                 f"ST_SetSRID(ST_MakePoint(-60.0 + (g % 30) * 0.5, -25.0 + (g % 20) * 0.5), 4326) "
                 f"FROM generate_series(1, 27) g")
-            cur.execute(f'CREATE INDEX ON "d_demo"."{t}" USING gist(geom)')
+            cur.execute(f'CREATE INDEX ON "{esq}"."{t}" USING gist(geom)')
             # tabela companheira: campo que o MVT NUNCA carrega (não é coluna da tabela tilada); a rota
             # do popup faz LEFT JOIN por fid só quando o campo está marcado "servidor" na configuração
             t_x = t + "_x"
-            cur.execute(f'CREATE TABLE "d_demo"."{t_x}" (fid bigint PRIMARY KEY, nota_servidor text)')
-            cur.execute(f'INSERT INTO "d_demo"."{t_x}" (fid, nota_servidor) '
+            cur.execute(f'CREATE TABLE "{esq}"."{t_x}" (fid bigint PRIMARY KEY, nota_servidor text)')
+            cur.execute(f'INSERT INTO "{esq}"."{t_x}" (fid, nota_servidor) '
                         f"SELECT fid, 'nota do servidor para o fid ' || fid "
-                        f'FROM "d_demo"."{t}" WHERE fid <= 5')
+                        f'FROM "{esq}"."{t}" WHERE fid <= 5')
             popup = {
                 "titulo": "{nome}",
                 "campos": [
@@ -149,15 +159,15 @@ def criar():
 
             # 2. multipolígonos com área conhecida — expressão de área do servidor
             t2 = "c_" + _hex16()
-            cur.execute(f'CREATE TABLE "d_demo"."{t2}" (fid bigserial PRIMARY KEY, nome text, '
+            cur.execute(f'CREATE TABLE "{esq}"."{t2}" (fid bigserial PRIMARY KEY, nome text, '
                         f'geom geometry(MultiPolygon, 4326))')
             cur.execute(
-                f'INSERT INTO "d_demo"."{t2}" (nome, geom) '
+                f'INSERT INTO "{esq}"."{t2}" (nome, geom) '
                 f"SELECT 'gleba ' || g, ST_Multi(ST_Union(ARRAY[ "
                 f"  ST_Buffer(ST_SetSRID(ST_MakePoint(-55.0 + g * 0.4, -22.0), 4326), 0.01 * g), "
                 f"  ST_Buffer(ST_SetSRID(ST_MakePoint(-55.0 + g * 0.4 + 0.05, -22.0 + 0.05), 4326), 0.01 * g)])) "
                 f"FROM generate_series(1, 5) g")
-            cur.execute(f'CREATE INDEX ON "d_demo"."{t2}" USING gist(geom)')
+            cur.execute(f'CREATE INDEX ON "{esq}"."{t2}" USING gist(geom)')
             popup2 = {
                 "titulo": "{nome}",
                 "campos": [{"nome": "nome", "rotulo": "Nome"}],
