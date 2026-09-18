@@ -126,6 +126,8 @@
   "acervo.vazio_filtro": "no source matches the search or domain",
   "acervo.vazio_titulo": "no source to show",
   "acervo.ver_no_mapa": "view on map",
+  "acervo.ver_frescor": "freshness verification",
+  "acervo.ver_catalogo": "acervo catalog",
   "acervo.vivo": "alive",
   "admin.acervo_fontes": "sources with a written license",
   "admin.acessos_24h": "accesses in the last 24 h",

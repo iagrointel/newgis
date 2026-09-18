@@ -24,6 +24,10 @@ from tests.e2e.apoio import CAPTURAS, RAIZ, Tela
 ITEM = "L6-01-c-tela-acervo"
 WEB = (RAIZ / "web").resolve()
 
+# banco onde o psql como postgres lê/escreve: iagro_sat em produção; na trilha remota (Hetzner) o schema da
+# trilha vive no banco plat_trilhas — passa-se PLAT_BANCO=plat_trilhas inline no comando de prova.
+BANCO = os.environ.get("PLAT_BANCO", "iagro_sat")
+
 pytestmark = [pytest.mark.lento, pytest.mark.e2e]
 
 # `plat.acervo_licenca` (item L6-01-g) só é povoada por scripts/acervo_licenca_sync.py rodando como postgres, sem
@@ -49,7 +53,7 @@ def _capturar(page, nome: str) -> Path:
 
 def _psql(sql: str) -> str:
     r = subprocess.run(
-        ["sudo", "-u", "postgres", "psql", "-d", "iagro_sat", "-X", "-q", "-t", "-A", "-v", "ON_ERROR_STOP=1",
+        ["sudo", "-u", "postgres", "psql", "-d", BANCO, "-X", "-q", "-t", "-A", "-v", "ON_ERROR_STOP=1",
          "-c", sql],
         check=True, capture_output=True, text=True,
     )

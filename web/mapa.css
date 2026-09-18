@@ -85,3 +85,25 @@ body.mapa .mapa-painel-acervo code { font-family: var(--mono); font-size: var(--
 body.mapa .mapa-painel-acervo .marcador { font-size: var(--i-t-1); white-space: nowrap; }
 body.mapa .mapa-painel-acervo .marcador.falha { background: var(--i-carta-falha-fundo); color: var(--i-carta-falha-texto); border-color: var(--i-carta-falha-borda); }
 body.mapa .mapa-painel-acervo .marcador.ok { background: var(--i-carta-ok-fundo); color: var(--i-carta-ok-texto); border-color: var(--i-carta-ok-borda); }
+
+/* item L6-01-c-tela-acervo: legenda das camadas do acervo adicionadas ao mapa, canto inferior DIREITO (o
+   painel de frescor do L6-01-h fica no esquerdo). Mesmas variáveis --mapa-* fixas do resto do chrome;
+   a linha de atribuição usa --atencao porque a licença ODbL/CC-BY-SA obriga o crédito a ficar visível. */
+body.mapa .mapa-acervo-legenda {
+  left: auto; right: var(--e4); top: auto; bottom: calc(var(--e4) + 2.2rem);
+  max-width: min(22rem, calc(100% - var(--e4) * 2));
+  max-height: 40vh; overflow: auto;
+  font-family: var(--sans);
+}
+body.mapa .mapa-acervo-legenda[hidden] { display: none; }
+body.mapa .mapa-acervo-legenda h2 { margin: 0 0 var(--e1); font-size: var(--i-t1); color: var(--mapa-texto); }
+body.mapa .mapa-acervo-legenda ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e2); }
+body.mapa .mapa-acervo-legenda li { border-top: 1px solid var(--mapa-borda); padding-top: var(--e2); }
+body.mapa .mapa-acervo-legenda li:first-child { border-top: none; padding-top: 0; }
+body.mapa .mapa-acervo-legenda .titulo { display: block; color: var(--mapa-texto); overflow-wrap: anywhere; }
+body.mapa .mapa-acervo-legenda .licenca { display: block; color: var(--mapa-texto-fraco); font-size: var(--i-t-1); overflow-wrap: anywhere; }
+body.mapa .mapa-acervo-legenda .atribuicao { display: block; color: var(--atencao); font-size: var(--i-t-1); }
+
+@media (max-width: 640px) {
+  body.mapa .mapa-acervo-legenda { right: var(--e2); left: var(--e2); bottom: var(--e2); max-width: none; max-height: 30vh; }
+}

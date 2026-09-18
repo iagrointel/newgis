@@ -126,6 +126,8 @@
   "acervo.vazio_filtro": "nenhuma fonte corresponde à busca ou ao domínio",
   "acervo.vazio_titulo": "nenhuma fonte para mostrar",
   "acervo.ver_no_mapa": "ver no mapa",
+  "acervo.ver_frescor": "verificação de frescor",
+  "acervo.ver_catalogo": "catálogo do acervo",
   "acervo.vivo": "vivo",
   "admin.acervo_fontes": "fontes com licença escrita",
   "admin.acessos_24h": "acessos nas últimas 24 h",
