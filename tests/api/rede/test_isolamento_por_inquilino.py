@@ -102,6 +102,25 @@ def _rotas_de_rede_utilidades() -> list[tuple[str, str]]:
 SEM_ALVO = {
     ("GET", "/api/rede"), ("POST", "/api/rede"),
     ("GET", "/api/rede/pacotes"), ("GET", "/api/rede/pacotes/{codigo}"),
+    ("POST", "/api/rede/simples"),                      # cria rede nova; o id sai da resposta, não entra na URL
+    ("GET", "/api/rede/medicao/grandezas"),             # catálogo instalado, igual para todo inquilino
+    ("GET", "/api/rede/consumidores/enderecos-sem-rede"),   # lista do próprio inquilino (filtro `tenant_atual()`)
+    ("POST", "/api/rede/consumidores/enderecos-sem-rede"),  # gera para o próprio inquilino
+    ("POST", "/api/rede/consumidores/jusante/calcular"),    # calcula sobre o próprio inquilino
+    ("POST", "/api/rede/medicao/leituras"),                 # publica no próprio inquilino
+}
+
+# Rotas de /api/rede que apontam um recurso de OUTRA família (unidade consumidora, trecho, ativo de medição)
+# e não a rede: não têm `{rede_id}` para trocar, então a varredura acima não as alcança. Não são "sem alvo" —
+# são alvo de outro tipo, e ficam com prova própria em `test_rotas_irmas_com_alvo_proprio_tambem_isolam`.
+# 18/09: estavam fora de toda medição — nem na varredura, nem em teste próprio.
+IRMAS_COM_ALVO_PROPRIO = {
+    ("GET", "/api/rede/consumidores/uc/{id}"),
+    ("GET", "/api/rede/consumidores/trecho/{id}"),
+    ("GET", "/api/rede/medicao/ativos/{ativo}"),
+    ("GET", "/api/rede/medicao/ativos/{ativo}/serie"),
+    ("GET", "/api/rede/medicao/ativos/{ativo}/ultimas"),
+    ("PUT", "/api/rede/medicao/ativos/{ativo}"),
 }
 
 
@@ -142,6 +161,10 @@ def _url_para(caminho: str, alvo: dict) -> str:
     url = caminho.replace("{rede_id}", alvo["rede_id"])
     if "/topologia/alcance" in url:
         url = url.replace("/topologia/alcance", f"/topologia/alcance?no={alvo['no_id']}")
+    if caminho == "/api/rede/medicao/jusante":
+        # esta rota leva o rede_id na QUERY, não no caminho: sem tratá-la aqui ela não seria alcançada pela
+        # troca de `{rede_id}` e sairia da varredura sem ninguém notar.
+        url = f"{caminho}?rede_id={alvo['rede_id']}&ativo={alvo['no_id']}"
     if url.endswith("/tracar"):
         # GET /{rede_id}/tracar recusa com 422 "entrada_vazia" antes de olhar a rede: sem um dos dois
         # parâmetros a rota nunca chegaria à decisão de dono, e a varredura mediria o esquema, não o
@@ -183,7 +206,7 @@ def test_toda_rota_de_rede_com_alvo_falha_cruzada(sessao_a, rede_b_com_topologia
     alvo = rede_b_com_topologia
     testadas = []
     for metodo, caminho in rotas:
-        if (metodo, caminho) in SEM_ALVO:
+        if (metodo, caminho) in SEM_ALVO or (metodo, caminho) in IRMAS_COM_ALVO_PROPRIO:
             continue
         url = _url_para(caminho, alvo)
         r = _pedir_cruzado(sessao_a, metodo, caminho, alvo)
@@ -224,7 +247,7 @@ def test_resposta_cruzada_nao_distingue_alheia_de_inexistente(sessao_a, rede_b_c
     fantasma = {"rede_id": UUID_INVENTADO, "no_id": str(uuid.uuid4())}
     comparadas = []
     for metodo, caminho in _rotas_de_rede_utilidades():
-        if (metodo, caminho) in SEM_ALVO:
+        if (metodo, caminho) in SEM_ALVO or (metodo, caminho) in IRMAS_COM_ALVO_PROPRIO:
             continue
         real = _pedir_cruzado(sessao_a, metodo, caminho, alvo)
         inexistente = _pedir_cruzado(sessao_a, metodo, caminho, fantasma)
