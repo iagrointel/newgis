@@ -13,16 +13,25 @@ import io
 import json
 import os
 import time
+from pathlib import Path
 
+import httpx
 import pytest
 from PIL import Image
 from playwright.async_api import Error as ErroPlaywright
 
 from app.render.motor import ErroFilaCheia, ErroRenderTimeout, Motor
-from tests.render_apoio import derrubar_servidor, subir_servidor
+from tests.render_apoio import (
+    derrubar_servidor,
+    memoria_max_do_cgroup,
+    memoria_pico_do_cgroup,
+    rss_dos_descendentes,
+    subir_servidor,
+)
 
 pytestmark = pytest.mark.lento
 
+ITEM = "L2-12-a-motor-render-servidor"
 MEDIDAS = None  # preenchido por test_medidas_completo ao fim; ver tests/medidas/L2-12-a-motor-render-servidor.json
 
 
@@ -169,28 +178,54 @@ def test_pool_se_recupera_de_pagina_que_travou_no_meio(servidor):
     assert len(dados) > 0
 
 
-def test_20_pedidos_simultaneos_respeitam_o_pool_e_terminam_em_30s(servidor):
-    """Cláusula do portão: "20 pedidos simultâneos: fila respeita o limite e nenhum pedido passa de 30 s nem
-    derruba a API". Pool de 2, fila de 20 (>= 20 pedidos): todos entram, nenhum falha, tempo total plausível
-    para 20 renders / 2 páginas em paralelo."""
+def test_20_pedidos_simultaneos_respeitam_o_pool_e_terminam_em_30s(servidor, medida):
+    """Cláusula do portão, inteira: "20 pedidos simultâneos: fila respeita o limite e nenhum pedido passa de
+    30 s nem derruba a API (RSS do pool <= MemoryMax)". Quatro coisas, medidas na MESMA rodada:
+
+    1. **fila respeita o limite** — um observador amostra `stats.em_execucao` e `stats.fila_atual` enquanto
+       os 20 pedidos correm: em execução nunca passa de `tamanho_pool` (senão o semáforo não vale nada) e a
+       fila nunca passa de `fila_max`. E exige-se que a fila tenha de fato PASSADO do tamanho do pool em
+       algum instante — sem isso o teste estaria provando enfileiramento num cenário que nunca enfileirou.
+    2. **nenhum pedido passa de 30 s** — o tempo é medido POR PEDIDO (o teto do portão é por pedido, não do
+       lote); o máximo individual é o número que vai ao laudo.
+    3. **não derruba a API** — depois do lote, o mesmo servidor uvicorn responde 200 em `/render/mapa` e em
+       `/api/render/saude`. Um pool que morre no meio derruba o servidor junto, e só uma chamada DEPOIS do
+       lote distingue isso de "os 20 renders voltaram".
+    4. **RSS do pool <= MemoryMax** — o teto NÃO é escolhido aqui: é o `memory.max` do cgroup em que
+       `laco/roda_teste.sh` põe o pytest (`MemoryMax=${PLAT_TESTE_RSS:-4G}`, `MemorySwapMax=0`). Mede-se o
+       pico do RSS somado de todos os descendentes deste processo (driver node + processos do chromium) e,
+       junto, o `memory.peak` do cgroup inteiro — o primeiro é o pool, o segundo é o que o núcleo mataria.
+    """
     m = Motor(tamanho_pool=2, fila_max=20, timeout_s=30)
     maximo_em_execucao = 0
+    maximo_na_fila = 0
+    pico_rss_pool = 0
+    pico_n_processos = 0
 
     async def observar():
-        nonlocal maximo_em_execucao
+        nonlocal maximo_em_execucao, maximo_na_fila, pico_rss_pool, pico_n_processos
+        passo = 0
         while True:
             maximo_em_execucao = max(maximo_em_execucao, m.stats.em_execucao)
+            maximo_na_fila = max(maximo_na_fila, m.stats.fila_atual)
+            if passo % 10 == 0:  # varrer /proc a cada ~0,2 s; a cada 20 ms custaria mais que o que se mede
+                rss, n = rss_dos_descendentes()
+                if rss > pico_rss_pool:
+                    pico_rss_pool, pico_n_processos = rss, n
+            passo += 1
             await asyncio.sleep(0.02)
+
+    async def um_pedido():
+        t0 = time.perf_counter()
+        dados, media = await m.renderizar(url_demo(servidor, zoom=13), largura=1024, altura=768)
+        return (time.perf_counter() - t0) * 1000, len(dados), media
 
     async def cenario():
         await m.iniciar()
         try:
             obs = asyncio.create_task(observar())
             inicio = time.perf_counter()
-            tarefas = [
-                asyncio.create_task(m.renderizar(url_demo(servidor, zoom=13), largura=500, altura=400))
-                for _ in range(20)
-            ]
+            tarefas = [asyncio.create_task(um_pedido()) for _ in range(20)]
             resultados = await asyncio.gather(*tarefas, return_exceptions=True)
             total_s = time.perf_counter() - inicio
             obs.cancel()
@@ -202,8 +237,60 @@ def test_20_pedidos_simultaneos_respeitam_o_pool_e_terminam_em_30s(servidor):
     falhas = [r for r in resultados if isinstance(r, Exception)]
     assert not falhas, falhas
     assert len(resultados) == 20
-    assert total_s < 30, f"20 pedidos levaram {total_s:.1f}s (teto de 30s por pedido, não para o lote inteiro)"
-    assert maximo_em_execucao <= m.tamanho_pool, f"chegou a {maximo_em_execucao} em execução com pool={m.tamanho_pool}"
+    tempos_ms = [round(r[0], 1) for r in resultados]
+    assert all(r[2] == "image/png" and r[1] > 0 for r in resultados)
+    pior_ms = max(tempos_ms)
+
+    # a API continua de pé DEPOIS do lote (o servidor é o mesmo uvicorn que serviu as 20 páginas)
+    pagina = httpx.get(f"{servidor}/render/mapa", timeout=10)
+    saude = httpx.get(f"{servidor}/api/render/saude", timeout=10)
+
+    teto_rss = memoria_max_do_cgroup()
+    pico_cgroup = memoria_pico_do_cgroup()
+    carga = [round(x, 2) for x in os.getloadavg()]
+    laudo = {
+        "pedidos": 20, "pool": m.tamanho_pool, "fila_max": m.fila_max,
+        "tempos_ms": tempos_ms, "pior_pedido_ms": pior_ms, "lote_total_s": round(total_s, 1),
+        "maximo_em_execucao": maximo_em_execucao, "maximo_na_fila": maximo_na_fila,
+        "pico_rss_pool_mb": round(pico_rss_pool / 1048576, 1), "processos_no_pico": pico_n_processos,
+        "memoria_max_cgroup_mb": None if teto_rss is None else round(teto_rss / 1048576, 1),
+        "pico_cgroup_mb": None if pico_cgroup is None else round(pico_cgroup / 1048576, 1),
+        "carga_1min": carga[0], "carga_5min": carga[1], "carga_15min": carga[2],
+        "api_depois_render_mapa": pagina.status_code, "api_depois_saude": saude.status_code,
+    }
+
+    gravar = medida(ITEM)
+    gravar("concorrencia_pior_pedido_ms", pior_ms, "ms",
+           RESSALVA_FIDELIDADE + " | maior tempo de um pedido individual entre 20 renders "
+           "1024x768 simultâneos (pool=2, fila_max=20); "
+           "teto do portão: 30.000 ms por pedido. Laudo completo: " + json.dumps(laudo, ensure_ascii=False))
+    gravar("concorrencia_maximo_em_execucao", maximo_em_execucao, "pedidos",
+           f"pico de pedidos em execução ao mesmo tempo, amostrado a cada 20 ms; o pool é {m.tamanho_pool}")
+    gravar("concorrencia_maximo_na_fila", maximo_na_fila, "pedidos",
+           f"pico da fila interna; o limite é fila_max={m.fila_max}")
+    gravar("concorrencia_pico_rss_pool_mb", laudo["pico_rss_pool_mb"], "MB",
+           RESSALVA_FIDELIDADE + " | pico do RSS somado de todos os descendentes do pytest "
+           "(driver node + chromium) durante os 20 "
+           "pedidos, amostrado a cada ~0,2 s em /proc/<pid>/statm")
+    gravar("concorrencia_memoria_max_cgroup_mb", laudo["memoria_max_cgroup_mb"], "MB",
+           "memory.max do cgroup em que laco/roda_teste.sh põe o pytest (MemoryMax=${PLAT_TESTE_RSS:-4G}) — "
+           "o teto do portão não é escolhido no teste")
+    gravar("concorrencia_carga_1min", carga[0], "carga",
+           "carga de 1 min da máquina no instante da medida (máquina compartilhada por dezenas de trilhas)")
+
+    assert maximo_em_execucao <= m.tamanho_pool, laudo
+    assert maximo_na_fila <= m.fila_max, laudo
+    assert maximo_na_fila > m.tamanho_pool, ("a fila nunca passou do tamanho do pool: este lote não chegou a "
+                                             "enfileirar, então não prova a cláusula da fila", laudo)
+    assert pior_ms < 30000, laudo
+    assert pagina.status_code == 200 and saude.status_code == 200, laudo
+    assert saude.json()["ativo"] is False or saude.json()["tamanho_pool"] >= 0, laudo
+    assert teto_rss is not None, ("sem teto de memória no cgroup: rode por "
+                                  "`bash /home/dev/plataforma/laco/roda_teste.sh`, que é quem põe o "
+                                  "MemoryMax que esta cláusula compara")
+    assert pico_rss_pool <= teto_rss, laudo
+    if pico_cgroup is not None:
+        assert pico_cgroup <= teto_rss, laudo
 
 
 def test_pagina_headless_nao_alcanca_host_externo(servidor, motor_novo):
@@ -239,6 +326,16 @@ def test_pagina_headless_nao_alcanca_host_externo(servidor, motor_novo):
     resultado = asyncio.run(cenario())
     assert resultado.startswith("bloqueado"), resultado
 
+
+RESSALVA_FIDELIDADE = (
+    "RESSALVA (18/09/2026, medida por tests/e2e/test_render_fidelidade.py): estes tempos e este consumo foram "
+    "colhidos com a página do render desenhando SÓ O FUNDO. `web/static/js/mapa/render_entrada.js` chama "
+    "`construirEstilo(urlDado(...))` passando uma STRING, e a assinatura de web/js/mapa/estilo.js espera o "
+    "descritor `{tipo, url}` — a string cai em `plat-sem-base` (0 fontes, 1 camada), enquanto o visualizador monta "
+    "`plat-instrumento-guarulhos` (6 camadas). Medido no navegador contra a bancada, não deduzido. Logo: 64,4 % dos "
+    "pixels diferem do visualizador, e todo tempo/RSS deste arquivo vai MUDAR quando o mapa-base passar a pintar de "
+    "verdade. Ler estes números como 'render de mapa' seria erro."
+)
 
 TETO_QUENTE_MS = 1000
 TETO_FRIO_MS = 3000
@@ -381,10 +478,92 @@ def test_frio_e_quente_p95_da_demo_1024x768(servidor):
         "n_quente_ok": ultima["n_quente_ok"],
         "n_quente_falhou": ultima["n_quente_falhou"],
         "comando": "venv/bin/pytest tests/unit/test_motor_render.py::test_frio_e_quente_p95_da_demo_1024x768 -q",
+        "ressalva": RESSALVA_FIDELIDADE,
     }
 
     # as asserções vêm ANTES da escrita: rodada reprovada não deixa arquivo na árvore para ser commitado
     # como "prova" (o furo do f2a8cb15 era exatamente este — escrita no meio do teste, asserção depois).
     assert aprovou(ultima), medida
-    with open("tests/medidas/L2-12-a-motor-render-servidor.json", "w", encoding="utf-8") as f:
-        json.dump(medida, f, ensure_ascii=False, indent=2, sort_keys=True)
+    _gravar_no_arquivo_da_medida(medida)
+
+
+CAMINHO_MEDIDA = "tests/medidas/L2-12-a-motor-render-servidor.json"
+
+
+def _gravar_no_arquivo_da_medida(novos: dict) -> None:
+    """Escreve no JSON do item PRESERVANDO as chaves que já estão lá.
+
+    Antes era um `json.dump` do dicionário inteiro: qualquer rodada deste teste APAGAVA o que a fixture
+    `medida` de tests/conftest.py tinha escrito na chave `medidas` (é onde moram, hoje, a concorrência e a
+    fidelidade de imagem deste mesmo item). Duas cláusulas medidas sumiam sem ninguém notar, porque o
+    arquivo continuava existindo e com números bons dentro."""
+    caminho = Path(CAMINHO_MEDIDA)
+    atual = {}
+    if caminho.exists():
+        atual = json.loads(caminho.read_text(encoding="utf-8"))
+    atual.update(novos)
+    caminho.write_text(json.dumps(atual, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+                        encoding="utf-8")
+
+
+N_FRIO_PORTAO = 50  # portão literal: "frio <= 3 s (p95 de 50)"
+
+
+def test_frio_p95_com_50_amostras(servidor, medida):
+    """Cláusula do portão "frio <= 3 s (p95 de 50)". A medida anterior deste item tinha DUAS amostras frias,
+    porque frio, pela definição do motor (docstring de app/render/motor.py), são os primeiros `tamanho_pool`
+    renders de um Motor recém-iniciado — um Motor de pool=2 só produz duas. Cinquenta amostras frias exigem,
+    portanto, cinquenta PÁGINAS que nunca navegaram: aqui isso é feito com Motores de pool=1 abertos e
+    fechados em sequência, um por amostra. Cada amostra custa uma subida de chromium, e é por isso que o
+    número de amostras vai ao laudo junto do p95: se o orçamento de relógio estourar antes das 50, o teste
+    REPROVA dizendo quantas deu — nunca publica um p95 de amostra curta como se fosse o do portão."""
+    prazo = time.perf_counter() + 420
+    tempos, falhas = [], []
+
+    async def uma_amostra_fria():
+        m = Motor(tamanho_pool=1, fila_max=2, timeout_s=60)
+        await m.iniciar()
+        try:
+            t0 = time.perf_counter()
+            await m.renderizar(url_demo(servidor, zoom=13), largura=1024, altura=768, formato="png",
+                                espera_timeout_ms=15000)
+            return (time.perf_counter() - t0) * 1000
+        finally:
+            await m.parar()
+
+    for i in range(N_FRIO_PORTAO):
+        if time.perf_counter() > prazo:
+            print(f"orçamento de relógio esgotado na amostra fria {i}", flush=True)
+            break
+        try:
+            dt = asyncio.run(uma_amostra_fria())
+        except Exception as e:  # noqa: BLE001 — vira falha na medida, não crash do teste
+            falhas.append(str(e))
+            print(f"frio[{i}] FALHOU: {e}", flush=True)
+            continue
+        tempos.append(dt)
+        print(f"frio[{i}] {dt:.1f}ms", flush=True)
+
+    def p95(xs):
+        if not xs:
+            return None
+        xs = sorted(xs)
+        return round(xs[max(0, min(len(xs) - 1, int(round(0.95 * (len(xs) - 1)))))], 1)
+
+    carga = [round(x, 2) for x in os.getloadavg()]
+    valor = p95(tempos)
+    laudo = {"n_frio_ok": len(tempos), "n_frio_falhou": len(falhas), "frio_p95_ms": valor,
+             "frio_ms": [round(x, 1) for x in tempos], "carga_1min": carga[0], "carga_5min": carga[1],
+             "carga_15min": carga[2], "teto_ms": TETO_FRIO_MS,
+             "cenario": "1024x768, mapa-base local (pmtiles Guarulhos), um Motor de pool=1 por amostra"}
+    gravar = medida(ITEM)
+    gravar("frio_p95_ms_50_amostras", valor, "ms",
+           RESSALVA_FIDELIDADE + " | p95 do render FRIO 1024x768 (pool=1, um Motor novo por "
+           "amostra); teto do portão 3.000 ms. "
+           "Laudo: " + json.dumps(laudo, ensure_ascii=False))
+    gravar("frio_n_amostras", len(tempos), "amostras",
+           "quantas amostras frias entraram no p95 acima; o portão pede 50")
+    gravar("frio_carga_1min", carga[0], "carga", "carga de 1 min da máquina no instante da medida")
+
+    assert len(tempos) >= N_FRIO_PORTAO, laudo
+    assert valor is not None and valor <= TETO_FRIO_MS, laudo

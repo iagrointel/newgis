@@ -84,3 +84,88 @@ def derrubar_servidor(proc: subprocess.Popen) -> None:
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait(timeout=5)
+
+
+# --- memória do pool e teto do cgroup (cláusula "RSS do pool <= MemoryMax" do item L2-12-a) -------
+# `laco/roda_teste.sh` roda o pytest dentro de um escopo do systemd com `MemoryMax=${PLAT_TESTE_RSS:-4G}`
+# e `MemorySwapMax=0`. O teto do portão é, portanto, o `memory.max` do cgroup deste processo — não um
+# número escolhido no teste. Se o pytest for chamado fora do lançador (sem cgroup com teto), não há teto
+# a comparar e o teste diz isso em vez de inventar um.
+
+
+def cgroup_do_processo() -> Path | None:
+    """Caminho em /sys/fs/cgroup do cgroup (v2) deste processo, ou None se não houver."""
+    try:
+        linhas = Path("/proc/self/cgroup").read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+    for linha in linhas:
+        partes = linha.split(":", 2)
+        if len(partes) == 3 and partes[0] == "0":
+            caminho = Path("/sys/fs/cgroup") / partes[2].lstrip("/")
+            return caminho if caminho.exists() else None
+    return None
+
+
+def memoria_max_do_cgroup() -> int | None:
+    """`memory.max` em bytes, ou None quando não há teto ("max") nem cgroup."""
+    base = cgroup_do_processo()
+    if base is None:
+        return None
+    try:
+        bruto = (base / "memory.max").read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    return None if bruto == "max" else int(bruto)
+
+
+def memoria_pico_do_cgroup() -> int | None:
+    """`memory.peak` (pico de uso do cgroup inteiro) em bytes; None se o núcleo não expõe."""
+    base = cgroup_do_processo()
+    if base is None:
+        return None
+    for nome in ("memory.peak", "memory.current"):
+        try:
+            return int((base / nome).read_text(encoding="utf-8").strip())
+        except OSError:
+            continue
+    return None
+
+
+def _filhos_por_pai() -> dict[int, list[int]]:
+    mapa: dict[int, list[int]] = {}
+    for entrada in Path("/proc").iterdir():
+        if not entrada.name.isdigit():
+            continue
+        try:
+            stat = (entrada / "stat").read_text(encoding="utf-8")
+        except OSError:
+            continue
+        # o nome do processo vem entre parênteses e pode conter espaços: corta depois do ')'
+        resto = stat[stat.rfind(")") + 2:].split()
+        if len(resto) < 2:
+            continue
+        mapa.setdefault(int(resto[1]), []).append(int(entrada.name))
+    return mapa
+
+
+def rss_dos_descendentes(pid: int | None = None) -> tuple[int, int]:
+    """(RSS somado em bytes, nº de processos) de TODOS os descendentes deste processo — que é onde o pool
+    vive: o playwright sobe o driver em node e o node sobe o chromium (navegador + zigoto + um processo por
+    contexto/renderizador). Soma-se o RSS de cada um; páginas compartilhadas entram mais de uma vez, então
+    o número é um LIMITE SUPERIOR do que o pool ocupa, que é o lado seguro para um teto."""
+    pid = pid or os.getpid()
+    filhos = _filhos_por_pai()
+    pilha = list(filhos.get(pid, []))
+    total = n = 0
+    pagina = os.sysconf("SC_PAGE_SIZE")
+    while pilha:
+        atual = pilha.pop()
+        pilha.extend(filhos.get(atual, []))
+        try:
+            campos = Path(f"/proc/{atual}/statm").read_text(encoding="utf-8").split()
+        except OSError:
+            continue
+        total += int(campos[1]) * pagina
+        n += 1
+    return total, n
