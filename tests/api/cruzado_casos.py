@@ -215,7 +215,8 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     for bloco in list(definicao.get("fatores", [])) + list(definicao.get("restricoes", [])):
         camada = bloco.get("camada")
         if isinstance(camada, dict) and "id" in camada:
-            rr = sessao_b.post("/api/itens", json={"tipo": "mapa", "titulo": f"{PREFIXO}amc-camada-{secrets.token_hex(3)}",
+            titulo = f"{PREFIXO}amc-camada-{secrets.token_hex(3)}"
+            rr = sessao_b.post("/api/itens", json={"tipo": "mapa", "titulo": titulo,
                                                    "dados": {"esquema_versao": 1, "corpo": {}}})
             assert rr.status_code == 201, rr.text
             camada["id"] = rr.json()["id"]
