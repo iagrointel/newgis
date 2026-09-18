@@ -1,6 +1,6 @@
 {
  "fluxo_de_potencia": {
-  "medido_por": "/home/dev/plataforma/laco/var/venv-pandapower/bin/python",
+  "medido_por": "/home/dev/plat-frota/wt/l405cpaf362/.venvpp/bin/python",
   "pandapower_pinado_em_requirements": "3.5.4",
   "json_bus": 3,
   "json_line": 1,
@@ -88,5 +88,27 @@
    "arestas_no_caminho": 5,
    "ramos_sem_comprimento_no_caminho": 5
   }
+ },
+ "conferencia_cruzada_opendss": {
+  "medido_por": "/home/dev/plat-frota/wt/l405cpaf362/.venvpp/bin/python",
+  "opendss": "DSS C-API Library version 0.14.5 revision 87d85c2622c8281b92255335bc7c09b11191b21d based on OpenDSS SVN 3723 [FPC 3.2.2] (64-bit build) MVMULT INCREMENTAL_Y CONTEXT_API PM 20240329033721",
+  "vm_pu_por_barra": {
+   "b1": {
+    "opendss": 0.9999964151215619,
+    "pandapower": 1.0,
+    "diferenca": 3.584878438100958e-06
+   },
+   "b2": {
+    "opendss": 0.9999933841366961,
+    "pandapower": 0.9999969728134325,
+    "diferenca": 3.5886767363324523e-06
+   },
+   "b3": {
+    "opendss": 0.9936854944800029,
+    "pandapower": 0.9937775950278687,
+    "diferenca": 9.210054786579214e-05
+   }
+  },
+  "criterio": "tensão de barra dentro de ±1 % (0,01 pu) onde ambos convergem"
  }
 }

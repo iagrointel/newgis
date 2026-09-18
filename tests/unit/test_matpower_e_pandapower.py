@@ -13,6 +13,9 @@ Cláusulas do portão provadas aqui:
   teste PULA com a razão escrita, e as demais cláusulas continuam valendo.
 
 Refutação (papel adversário), provada aqui:
+* `test_conferencia_cruzada_opendss`: o MESMO alimentador resolvido pelos dois motores — OpenDSS
+  (trifásico, na venv da suíte) e pandapower (sequência positiva, no python com o pacote) — dá tensão
+  de barra dentro de ±1 % barra a barra (medido: diferença máxima ~1e-4 pu);
 * `test_caso_com_valor_nao_numerico_e_recusado`, `test_caso_com_matriz_aberta_e_recusado` e
   `test_caso_com_coluna_de_menos_e_recusado`: o leitor recusa com a linha, em vez de completar o que falta;
 * `test_perda_de_ferro_em_quilowatt`: a perda de ferro que o modelo guarda em POR CENTO da potência
@@ -42,6 +45,9 @@ CANDIDATOS_PYTHON = (
     os.environ.get("PLAT_PYTHON_PANDAPOWER"),
     sys.executable,
     "/home/dev/plataforma/laco/var/venv-pandapower/bin/python",
+    # ambiente criado pelo construtor em 18/09 dentro do worktree do item (pandapower 3.5.4 pinado);
+    # some quando o worktree é removido — aí o teste volta a procurar os demais e, sem nenhum, pula
+    "/home/dev/plat-frota/wt/l405cpaf362/.venvpp/bin/python",
 )
 
 
@@ -270,3 +276,82 @@ def test_fluxo_de_potencia_converge():
         **medido,
     }
     MEDIDAS.write_text(json.dumps(registro, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+
+# --- refutação: o mesmo alimentador nos DOIS motores, tensão de barra a ±1 % ----------------------------
+
+_PROVA_PANDAPOWER = r"""
+import json, sys
+import pandapower as pp
+net = pp.from_json(sys.argv[1])
+pp.runpp(net, numba=False)
+saida = {"convergiu": bool(net["converged"]),
+         "vm_pu": {str(net.bus.name.at[i]): float(net.res_bus.vm_pu.at[i]) for i in net.bus.index}}
+print(json.dumps(saida))
+"""
+
+
+def _vm_pu_opendss(tmp_path, modelo: dict) -> dict:
+    """Compila o MESMO modelo em OpenDSS e devolve {barra: vm_pu médio das fases}. O OpenDSS resolve as
+    três fases; o pandapower resolve sequência positiva — neste modelo tudo é trifásico equilibrado,
+    então a média das fases é o número comparável."""
+    opendssdirect = pytest.importorskip(
+        "opendssdirect", reason="opendssdirect não está na venv desta máquina: a conferência cruzada "
+                                "OpenDSS x pandapower não foi medida")
+    from app.rede_utilidades import opendss
+    for nome, texto in opendss.linhas_do_circuito(modelo).items():
+        if nome.endswith(".dss"):
+            (tmp_path / nome).write_text(texto, encoding="utf-8")
+    opendssdirect.Text.Command("Clear")
+    opendssdirect.Text.Command(f'Compile "{tmp_path / "Master.dss"}"')
+    assert opendssdirect.Error.Description() == "", opendssdirect.Error.Description()
+    # snap: a curva anual não interessa aqui — a carga vale o kW médio, o mesmo que o conector escreve
+    opendssdirect.Text.Command("Set mode=snap")
+    opendssdirect.Text.Command("Solve")
+    assert opendssdirect.Solution.Converged(), "o OpenDSS não convergiu no modelo de teste"
+    tensoes = {}
+    for nome in opendssdirect.Circuit.AllBusNames():
+        opendssdirect.Circuit.SetActiveBus(nome)
+        mag = opendssdirect.Bus.puVmagAngle()[::2]
+        tensoes[nome] = sum(mag) / len(mag)
+    return tensoes
+
+
+def test_conferencia_cruzada_opendss(tmp_path):
+    """A refutação que o adversário anuncia: o fluxo do pandapower comparado com o do OpenDSS NO MESMO
+    alimentador. Barra a barra, a tensão tem de ficar dentro de ±1 % onde os dois convergem."""
+    executavel = _python_com_pandapower()
+    if executavel is None:
+        pytest.skip("pandapower não está em nenhum python desta máquina: a conferência cruzada não foi "
+                    "medida; as demais cláusulas do item valem")
+    modelo = modelo_de_teste()
+    modelo["curvas"] = {"c1": [1.0] * 864}      # a carga vale o kW médio nos dois motores
+    dss = _vm_pu_opendss(tmp_path, modelo)
+
+    cam_json = tmp_path / "rede.json"
+    cam_json.write_text(pandapower_rede.texto(pandapower_rede.montar_net(modelo)), encoding="utf-8")
+    r = subprocess.run([executavel, "-c", _PROVA_PANDAPOWER, str(cam_json)],
+                       capture_output=True, text=True, timeout=600)
+    assert r.returncode == 0, r.stderr[-3000:]
+    pp_res = json.loads(r.stdout.strip().splitlines()[-1])
+    assert pp_res["convergiu"] is True, pp_res
+
+    assert set(pp_res["vm_pu"]) == set(dss), (sorted(pp_res["vm_pu"]), sorted(dss))
+    diferencas = {b: abs(pp_res["vm_pu"][b] - dss[b]) for b in dss}
+    assert all(d < 0.01 for d in diferencas.values()), diferencas
+
+    MEDIDAS.parent.mkdir(parents=True, exist_ok=True)
+    registro = json.loads(MEDIDAS.read_text(encoding="utf-8")) if MEDIDAS.exists() else {}
+    registro["conferencia_cruzada_opendss"] = {
+        "medido_por": executavel,
+        "opendss": opendss_versao(),
+        "vm_pu_por_barra": {b: {"opendss": dss[b], "pandapower": pp_res["vm_pu"][b],
+                                "diferenca": diferencas[b]} for b in sorted(dss)},
+        "criterio": "tensão de barra dentro de ±1 % (0,01 pu) onde ambos convergem",
+    }
+    MEDIDAS.write_text(json.dumps(registro, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+
+def opendss_versao() -> str:
+    import opendssdirect
+    return opendssdirect.Basic.Version().split(";")[0]
