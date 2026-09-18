@@ -1,0 +1,26 @@
+{
+ "item": "L4-01-c-importador-bdgd",
+ "medido_em": "2026-09-18T12:00:00",
+ "servidor": "hetzner (trilha l401cim8520)",
+ "carga_1min": 2.84,
+ "ram_livre_gb": 47.9,
+ "o_que_esta_provado_aqui": {
+  "job_pela_porta_da_frente": "POST /api/jobs tipo rede.importar_bdgd -> plat.job_pegar (role worker) -> ContextoJob real -> plat.job_terminar: progresso=100, mensagem preenchida, log 'contrato: A/61 avaliadas' em plat.job_log",
+  "contagens_sintetico_igual_arquivo": {
+   "SUB": 1, "CTMT": 1, "SSDMT": 12, "UNTRMT": 3, "SSDBT": 1, "UCBT_tab": 30,
+   "PIP": 3, "UGBT_tab": 2,
+   "regra": "COUNT(*) de rede_no/rede_aresta == pyogrio read_info (GetFeatureCount) do MESMO pacote, camada a camada; conferido=True"
+  },
+  "pip_e_ugbt_entram_na_carga": "o importador nao tinha as duas camadas que o portao conta (12.666 PIP, 1.385 UGBT); adicionadas pelo MESMO caminho de UCBT_tab (PN_CON/UNI_TR_MT), tipos ponto_de_iluminacao_publica:1 e geracao_distribuida:1 do pacote eletrica-br, regras juncao_aresta ja existentes no pacote",
+  "comp_detectado_pela_razao": "SSDMT e SSDBT: unidade 'metros', fator 1, razao COMP/geodesico dentro de 0.9..1.2; refutacao km->fator 1000 coberta por test_refutacao_comp_em_quilometros_detectado_pela_razao (requer o extrato real; pula neste servidor)",
+  "contrato_salvo_com_o_job": "rede_importacao.contrato com total=61 expectativas, avaliadas>=30 no pacote sintetico (7 das 8 camadas do contrato), job_id preenchido",
+  "raiz_obrigatoria": "caminho fora de PLAT_BDGD_RAIZ falha na hora (FalhaDefinitiva); sem PLAT_BDGD_RAIZ a importacao por caminho local fica desligada (D21)",
+  "bloqueio_t9_transversal": "os 2 achados do laudo linha-L4-laudo-adversario-1.md (tolerancia_m em rotas.py; vocabulario rede_regra.tipo nos 5 pacotes) seguem consertados: tests/api/adversario/test_l4_adv1_transversais.py 2 passed"
+ },
+ "fronteira_nao_provada": {
+  "tres_pacotes_reais": "/home/dev/liga/*_2024.gdb.zip NAO EXISTE neste servidor (caminho da maquina do dono); as clausulas de escala (20 CTMT, 5.481 UNTRMT, 44.268 SSDMT, 29.244 SSDBT, 27.587 UCBT, 12.666 PIP, 60.549 PONNOT, 1.385 UGBT; km MT = SOMA COMP +-0.1%) ficam na suite lento, que pula sem o ativo",
+  "ram_do_pacote_es_476mb": "nao medida (pacote ausente; disco 99%)",
+  "segunda_cooperativa_vs_ogrinfo": "nao conferida (pacote ausente)"
+ },
+ "pre_existente_sem_relacao": "tests/unit/test_dependencias.py falha 2x neste servidor (dotenv resolvendo de /usr/local/lib/python3.12/dist-packages, fora da venv) — reproduzido identico sem as mudancas deste item"
+}
