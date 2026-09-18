@@ -46,6 +46,11 @@ class AcervoCartao(Saida):
     camadas_vencidas: int = 0
     verificada_em: str | None = None
     endpoints_mortos: int = 0
+    # item L6-01-c: tipo da licença CURADA (vocabulário fechado do L6-01-g, plat.acervo_licenca). É ele que
+    # aciona o aviso de atribuição obrigatória (ODbL/CC-BY-SA) na tela. NUNCA é inferido do texto livre de
+    # `licenca`: medido, o texto livre de fontes como `aneel` diz "licença não declarada" mesmo quando a
+    # curadoria por HTTP achou ODbL de verdade. Sem curadoria, fica None — "não curada", nunca um padrão.
+    licenca_curada_tipo: str | None = None
 
 
 class AcervoEndpoint(Saida):
@@ -58,6 +63,37 @@ class AcervoEndpoint(Saida):
     testado_em: str | None = None
     confirmado: bool | None = None
     vivo: bool
+
+
+class AcervoCamadaNaFicha(Saida):
+    """Uma camada EXPOSTA da fonte, como a ficha a mostra (itens L6-01-c e L6-01-j-multi-servidor).
+    `origem` é o texto que a tela escreve: camada lida por FDW de outro servidor da casa sai como
+    "servidor remoto (<nome>)", por extenso — nunca um código que o leitor tenha de decifrar."""
+
+    acervo_camada_id: str
+    servidor: str
+    schema_nome: str
+    tabela: str
+    estado: str
+    modo_acesso: str
+    origem: str
+    linhas_exatas: int | None = None
+    fdw_tabela: str | None = None
+    aviso: str | None = None
+
+
+class AcervoMeuMapaCamada(Saida):
+    """Camada do acervo já adicionada pelo inquilino (legenda do mapa, item L6-01-c). `licenca_curada_tipo`
+    é o valor CONGELADO no item no dia em que foi adicionado, não o de hoje: a legenda mostra a licença sob
+    a qual a camada entrou no mapa."""
+
+    item_id: str
+    fonte_id: str
+    titulo: str
+    licenca_curada_tipo: str | None = None
+    licenca: str | None = None
+    dominio: str | None = None
+    adicionado_em: str | None = None
 
 
 class AcervoFicha(AcervoCartao):
@@ -82,6 +118,8 @@ class AcervoFicha(AcervoCartao):
     endpoints_confirmados_vivos: int = 0
     # completude por extenso ("4,5/10"), nunca só o número cru — ausência é "não registrado", nunca 0/10 silencioso
     completude_texto: str | None = None
+    # item L6-01-j: as camadas EXPOSTAS da fonte, com o servidor de onde cada uma é lida
+    camadas: list[AcervoCamadaNaFicha] = []
 
 
 class AcervoPagina(Saida):
