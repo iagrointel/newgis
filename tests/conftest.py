@@ -126,6 +126,7 @@ def pytest_sessionfinish(session, exitstatus):
     """
     import os
 
+    _guarda_tudo_pulado(session)  # vale em serial E sob xdist; o return abaixo é só da varredura zt-*
     if os.environ.get("PYTEST_XDIST_WORKER") or not getattr(session.config.option, "numprocesses", None):
         return
     from tests.api.catalogo.conftest import _expurgar_zt
@@ -188,3 +189,54 @@ def pytest_configure(config):
         "  NUNCA use `ulimit -v`: enderecamento virtual nao e memoria, e ele mata DuckDB e Chromium.\n"
         "  Saida consciente, so para medir consumo real: PLAT_TESTE_SEM_TETO=1\n"
     )
+
+
+# --- guarda de rodada inteiramente pulada (18/09/2026) ------------------------------------------
+# Terceira vez que a mesma FORMA de defeito aparece: a regra existe, o buraco dela empurra quem
+# obedece para o erro. Aqui o buraco é `pytest.skip("... nesta base")`.
+#
+# `tests/api/test_acervo_frescor.py` tem SEIS pulos desse feitio. Numa trilha cujo banco não tem o
+# schema `acervo` — e `trilha_ambiente.sh` só dá o GRANT quando ele já existe, nunca o cria — os seis
+# pulam, o arquivo sai com código 0, e o item parece MEDIDO. Foi assim que a medição cegou duas vezes.
+# O mesmo vale para test_acervo_no_motor (public.icmbio_...) e para qualquer arquivo futuro.
+#
+# A regra: rodada que não APROVOU um único caso não é prova de nada. Se nada passou e alguma coisa
+# pulou, a rodada REPROVA, dizendo por que cada caso saiu de cena. Ninguém precisa lembrar de olhar.
+#
+# Não cobre o caso de um arquivo em que 1 passa e 9 pulam — esse continua verde, e é uma fronteira
+# honesta desta guarda: ela pega o desaparecimento TOTAL da medição, não a erosão parcial.
+#
+# Saída consciente: PLAT_TESTE_TUDO_PULADO_OK=1 (coleta exploratória, varredura de marcadores).
+
+_PULOS: list[str] = []
+_PASSOU = {"n": 0}
+
+
+def pytest_runtest_logreport(report):
+    if report.when == "call" and report.passed:
+        _PASSOU["n"] += 1
+    elif report.skipped and report.when in ("setup", "call"):
+        razao = report.longrepr[2] if isinstance(report.longrepr, tuple) else str(report.longrepr)
+        _PULOS.append(f"{report.nodeid}: {razao}")
+
+
+def _guarda_tudo_pulado(session):
+    import os as _os
+    if _os.environ.get("PLAT_TESTE_TUDO_PULADO_OK") == "1":
+        return
+    if _os.environ.get("PYTEST_XDIST_WORKER"):
+        return
+    if _PASSOU["n"] or not _PULOS:
+        return
+    relator = session.config.pluginmanager.get_plugin("terminalreporter")
+    if relator is not None:
+        relator.write_line("")
+        relator.write_line("[guarda de rodada pulada] REPROVADO: nenhum caso APROVOU e "
+                           f"{len(_PULOS)} pularam. Rodada sem medição não é prova.")
+        for linha in _PULOS[:20]:
+            relator.write_line(f"  - {linha}")
+        if len(_PULOS) > 20:
+            relator.write_line(f"  ... e mais {len(_PULOS) - 20}")
+        relator.write_line("  Conserte a BASE da trilha (schema que falta, dado que falta) e remeça. "
+                           "Saída consciente: PLAT_TESTE_TUDO_PULADO_OK=1")
+    session.exitstatus = 1
