@@ -5,7 +5,7 @@ camadas normais e editáveis; `habilitar()` RECONSTRÓI o índice derivado intei
 apaga e refaz — a partir delas: `plat.rede_topo_no` (um nó por vértice de conexão e por terminal de dispositivo)
 e `plat.rede_topo_aresta` (uma aresta por trecho). Coincidência geométrica com a tolerância DA REDE (`geography`,
 `ST_DWithin`) mais associações explícitas (`plat.rede_regra`, tipos `juncao_aresta`/
-`juncao_juncao`) decidem o que vira o MESMO nó.
+`juncao_juncao`/`aresta_juncao_aresta`) decidem o que vira o MESMO nó.
 
 Por que "mais associações explícitas" não é enfeite: um dispositivo com 2+ terminais (ex.: transformador,
 `alta`/`baixa`) tem os terminais no MESMO ponto físico — coincidência pura os fundiria num nó só, apagando a
@@ -33,7 +33,8 @@ from collections import defaultdict
 
 import psycopg2.extras
 
-TIPOS_REGRA_CONECTIVIDADE = ("juncao_aresta", "juncao_juncao")
+# Os três tipos de CONECTIVIDADE do vocabulário (contencao/estrutura são associação, não ligam nó).
+TIPOS_REGRA_CONECTIVIDADE = ("juncao_aresta", "juncao_juncao", "aresta_juncao_aresta")
 _EPS_COMPRIMENTO_M = 1e-6  # abaixo disso o trecho é degenerado (origem == destino): "aresta sem nó"
 
 
@@ -88,16 +89,34 @@ def _carregar_esquema(cur, rede_id: str) -> dict:
     cur.execute("SELECT id, terminais FROM plat.rede_terminal_config WHERE rede_id = %s::uuid", (rede_id,))
     terminais_por_config = {r["id"]: r["terminais"] for r in cur.fetchall()}
     cur.execute(
-        "SELECT tipo, de_tipo_id, para_tipo_id FROM plat.rede_regra WHERE rede_id = %s::uuid AND tipo = ANY(%s)",
+        "SELECT tipo, de_tipo_id, para_tipo_id, via_tipo_id FROM plat.rede_regra "
+        "WHERE rede_id = %s::uuid AND tipo = ANY(%s)",
         (rede_id, list(TIPOS_REGRA_CONECTIVIDADE)),
     )
-    regra_pares = {frozenset((r["de_tipo_id"], r["para_tipo_id"])) for r in cur.fetchall()}
+    regras = cur.fetchall()
 
     def terminais_do_tipo(tipo_id):
         cfg_id = tipos[tipo_id]["terminal_id"]
         if cfg_id is None:
             return []
         return terminais_por_config.get(cfg_id, [])
+
+    # O par permitido depende do tipo da regra:
+    # * juncao_aresta/juncao_juncao: a junção toca a aresta (ou outra junção) — par (de, para) direto;
+    # * aresta_juncao_aresta: as duas arestas se ligam ATRAVÉS da junção do meio — pares (de, via) e
+    #   (para, via). O par direto (de, para) só vale quando a via é PASSAGEM (menos de 2 terminais, ex.:
+    #   o poste/ponto_notavel do ramal_de_ligacao): com 2+ terminais a via é FRONTEIRA (transformador,
+    #   chave) e unir as arestas de cara fundiria os dois lados do dispositivo num nó só — a regressão
+    #   medida em 18/09 (ramal sem par => consumidor fora da subrede; par direto => MT e BT colados).
+    regra_pares = set()
+    for r in regras:
+        if r["tipo"] == "aresta_juncao_aresta":
+            regra_pares.add(frozenset((r["de_tipo_id"], r["via_tipo_id"])))
+            regra_pares.add(frozenset((r["para_tipo_id"], r["via_tipo_id"])))
+            if len(terminais_do_tipo(r["via_tipo_id"])) < 2:
+                regra_pares.add(frozenset((r["de_tipo_id"], r["para_tipo_id"])))
+        else:
+            regra_pares.add(frozenset((r["de_tipo_id"], r["para_tipo_id"])))
 
     return {
         "tipos": tipos, "tier_ordem": tier_ordem, "regra_pares": regra_pares,
@@ -115,13 +134,18 @@ def _carregar_feicoes(cur, rede_id: str) -> tuple[list[dict], list[dict]]:
         "ST_X(ST_EndPoint(f.geom)) AS x1, ST_Y(ST_EndPoint(f.geom)) AS y1, "
         "ST_Length(f.geom::geography) AS comprimento_m, f.fase_bitmask, f.atributos, ST_AsText(f.geom) AS geom_wkt "
         "FROM plat.rede_feicao_linha f JOIN plat.rede_tipo t ON t.id = f.tipo_id "
-        "WHERE f.rede_id = %s::uuid AND f.geom IS NOT NULL",
+        "WHERE f.rede_id = %s::uuid AND f.geom IS NOT NULL "
+        # a ORDEM alimenta o desempate do dispositivo multi-terminal de um tier só em _resolver_uniao
+        # (primeiro vizinho -> terminal 1): sem ORDER BY a ordem física da tabela decide, e a barreira
+        # do terminal 2 vira cara-ou-coroa (flake medido em 18/09 no test_barreira_interrompe_o_tracado)
+        "ORDER BY f.criado_em, f.id",
         (rede_id,),
     )
     linhas = cur.fetchall()
     cur.execute(
         "SELECT f.id, f.tipo_id, ST_X(f.geom) AS x, ST_Y(f.geom) AS y "
-        "FROM plat.rede_feicao_ponto f WHERE f.rede_id = %s::uuid AND f.geom IS NOT NULL",
+        "FROM plat.rede_feicao_ponto f WHERE f.rede_id = %s::uuid AND f.geom IS NOT NULL "
+        "ORDER BY f.criado_em, f.id",
         (rede_id,),
     )
     pontos = cur.fetchall()
