@@ -349,6 +349,26 @@ for i in $(seq 1 30); do
 done
 systemctl --no-pager --lines=0 status $UNIDADE | sed -n '1,4p'
 
+echo "== h1b. inquilinos de demonstração pela CLI (item L0-14: o instalador usa `plat inquilino criar`)"
+# A API já responde (passo h), então daqui em diante o instalador para de falar SQL com o banco e passa a
+# usar a mesma linha de comando que o operador usa — que por sua vez chama a mesma rota que a tela chama
+# (ADR docs/adr/20260907T2318-linha-de-comando-plat.md, decisão 2). `--se-nao-existir` torna o passo
+# idempotente: numa base que as migrações já semearam, ele confirma; numa base em que o inquilino foi
+# apagado (ou em que a semente sair das migrações), ele cria, com o primeiro administrador.
+# A senha NUNCA entra por argumento: vai por arquivo modo 600, um por inquilino, apagado ao fim (o passo g
+# continua sendo quem escolhe a senha, porque o superadmin precisa existir ANTES de a CLI poder entrar).
+SENHA_TMP=$(mktemp); chmod 600 "$SENHA_TMP"; trap 'rm -f "$SENHA_TMP"' EXIT
+while read -r slug login senha; do
+  case "$slug" in demo|demo2) ;; *) continue ;; esac
+  printf '%s' "$senha" > "$SENHA_TMP"
+  sudo -u "$APP_USER" env PLAT_CLI_URL="http://127.0.0.1:$PORTA" \
+    ./scripts/plat inquilino criar --slug "$slug" --nome "Inquilino de demonstração ($slug)" \
+      --admin-login "$login" --admin-nome "Administrador $slug" \
+      --se-nao-existir --senha-arquivo "$SENHA_TMP" \
+    || { echo "plat inquilino criar falhou para $slug" >&2; exit 1; }
+done < "$CRED"
+rm -f "$SENHA_TMP"; trap - EXIT
+
 echo "== h2. systemd plat-worker"
 install -d -o "$APP_USER" -g "$APP_USER" var/jobs
 sed -e "s#APP_DIR#$APP_DIR#g" -e "s#APP_USER#$APP_USER#g" deploy/plat-worker.service > /etc/systemd/system/plat-worker.service
