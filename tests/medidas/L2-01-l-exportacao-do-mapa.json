@@ -115,8 +115,13 @@
    "valor": 1,
    "unidade": "páginas",
    "comando": "pdftoppm -png -r 60 sobre o PDF gerado"
+  },
+  "exportar_ligado_a_pagina_do_mapa": {
+   "valor": false,
+   "unidade": "módulo alcançado a partir de web/mapa.html (False = e2e da tela impossível hoje)",
+   "comando": "pytest tests/unit/test_l201k_frente_desenho.py::test_medida_da_ligacao_da_tela_de_desenho"
   }
  },
- "gerado_em": "2026-09-18T01:43:58Z",
- "git_sha": "0e1182b9e4d2"
+ "gerado_em": "2026-09-18T01:49:42Z",
+ "git_sha": "ac77aa551e5f"
 }

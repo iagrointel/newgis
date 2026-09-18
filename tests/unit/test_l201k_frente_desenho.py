@@ -90,4 +90,13 @@ def test_medida_da_ligacao_da_tela_de_desenho(alcancaveis, medida):
     gravar("desenho_e_anotacao_ligados_a_tela", sorted({"desenho.js", "anotacoes.js"} & alcancados) or False,
            "módulos do item alcançados pela página (False = nenhum)", cmd)
 
+    # a MESMA medida vale para os itens vizinhos que dependem da mesma página: o e2e de edição
+    # (L2-03-edicao) espera `#edicao-camada` na tela /mapa, e o botão de exportar do mapa (L2-01-l)
+    # espera exportar.js — os dois módulos estão na mesma lista de órfãos.
+    for item, modulo in (("L2-03-edicao", "edicao.js"), ("L2-01-l-exportacao-do-mapa", "exportar.js")):
+        medida(item)(
+            f"{modulo.removesuffix('.js')}_ligado_a_pagina_do_mapa", modulo in alcancados,
+            "módulo alcançado a partir de web/mapa.html (False = e2e da tela impossível hoje)", cmd)
+
     assert "desenho.js" in orfaos and "anotacoes.js" in orfaos, orfaos
+    assert "edicao.js" in orfaos and "exportar.js" in orfaos, orfaos
