@@ -48758,6 +48758,53 @@
     "x-privilegio": "org.configurar",
     "x-plat-escopo": "publico"
    }
+  },
+  "/api/uso": {
+   "get": {
+    "tags": [
+     "uso"
+    ],
+    "summary": "Serie",
+    "description": "Série diária do inquilino da sessão, do dia mais antigo para o mais recente (a ordem que um gráfico\nde linha desenha sem inverter nada no navegador).",
+    "operationId": "serie_api_uso_get",
+    "parameters": [
+     {
+      "name": "dias",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 30,
+       "title": "Dias"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SerieUso"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.configurar",
+    "x-plat-escopo": "publico"
+   }
   }
  },
  "components": {
@@ -71818,6 +71865,221 @@
      "nome"
     ],
     "title": "VersaoEntrada"
+   },
+   "SerieUso": {
+    "properties": {
+     "inquilino": {
+      "type": "string",
+      "title": "Inquilino"
+     },
+     "dias": {
+      "type": "integer",
+      "title": "Dias"
+     },
+     "pontos": {
+      "items": {
+       "$ref": "#/components/schemas/PontoUso"
+      },
+      "type": "array",
+      "title": "Pontos"
+     },
+     "cotas": {
+      "$ref": "#/components/schemas/Cotas"
+     },
+     "agora": {
+      "$ref": "#/components/schemas/Agora"
+     },
+     "ultimo_medido_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ultimo Medido Em"
+     }
+    },
+    "type": "object",
+    "required": [
+     "inquilino",
+     "dias",
+     "pontos",
+     "cotas",
+     "agora",
+     "ultimo_medido_em"
+    ],
+    "title": "SerieUso"
+   },
+   "PontoUso": {
+    "properties": {
+     "dia": {
+      "type": "string",
+      "title": "Dia"
+     },
+     "bytes_banco": {
+      "type": "integer",
+      "title": "Bytes Banco"
+     },
+     "bytes_bucket": {
+      "type": "integer",
+      "title": "Bytes Bucket"
+     },
+     "bytes_total": {
+      "type": "integer",
+      "title": "Bytes Total"
+     },
+     "itens": {
+      "type": "integer",
+      "title": "Itens"
+     },
+     "itens_lixeira": {
+      "type": "integer",
+      "title": "Itens Lixeira"
+     },
+     "usuarios_total": {
+      "type": "integer",
+      "title": "Usuarios Total"
+     },
+     "usuarios_ativos_30d": {
+      "type": "integer",
+      "title": "Usuarios Ativos 30D"
+     },
+     "jobs": {
+      "type": "integer",
+      "title": "Jobs"
+     },
+     "job_tempo_ms": {
+      "type": "integer",
+      "title": "Job Tempo Ms"
+     },
+     "requisicoes": {
+      "type": "integer",
+      "title": "Requisicoes"
+     },
+     "bytes_servidos": {
+      "type": "integer",
+      "title": "Bytes Servidos"
+     },
+     "medido_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Medido Em"
+     }
+    },
+    "type": "object",
+    "required": [
+     "dia",
+     "bytes_banco",
+     "bytes_bucket",
+     "bytes_total",
+     "itens",
+     "itens_lixeira",
+     "usuarios_total",
+     "usuarios_ativos_30d",
+     "jobs",
+     "job_tempo_ms",
+     "requisicoes",
+     "bytes_servidos",
+     "medido_em"
+    ],
+    "title": "PontoUso"
+   },
+   "Cotas": {
+    "properties": {
+     "cota_bytes": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cota Bytes"
+     },
+     "cota_usuarios": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cota Usuarios"
+     },
+     "cota_itens": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cota Itens"
+     },
+     "cota_jobs_dia": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cota Jobs Dia"
+     }
+    },
+    "type": "object",
+    "required": [
+     "cota_bytes",
+     "cota_usuarios",
+     "cota_itens",
+     "cota_jobs_dia"
+    ],
+    "title": "Cotas"
+   },
+   "Agora": {
+    "properties": {
+     "bytes_total": {
+      "type": "integer",
+      "title": "Bytes Total"
+     },
+     "itens": {
+      "type": "integer",
+      "title": "Itens"
+     },
+     "itens_lixeira": {
+      "type": "integer",
+      "title": "Itens Lixeira"
+     },
+     "usuarios_total": {
+      "type": "integer",
+      "title": "Usuarios Total"
+     },
+     "jobs_hoje": {
+      "type": "integer",
+      "title": "Jobs Hoje"
+     }
+    },
+    "type": "object",
+    "required": [
+     "bytes_total",
+     "itens",
+     "itens_lixeira",
+     "usuarios_total",
+     "jobs_hoje"
+    ],
+    "title": "Agora"
    }
   },
   "securitySchemes": {

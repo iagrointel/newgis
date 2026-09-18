@@ -1,0 +1,30 @@
+{
+ "item": "L0-07-c-cotas-uso",
+ "medidas": {
+  "rotas_que_leem_a_serie": {
+   "valor": 1,
+   "unidade": "rotas",
+   "comando": "GET /api/uso (docs/openapi.json e app vivo); antes de 18/09 nenhuma rota lia plat.uso_inquilino"
+  },
+  "pontos_na_serie_diaria": {
+   "valor": 30,
+   "unidade": "pontos",
+   "comando": "tests/api/test_uso.py::test_serie_devolve_os_30_pontos_em_ordem_com_as_cotas (30 dias gravados pela mesma funcao do periodico, plat.uso_medir)"
+  },
+  "capturas_da_tela_uso": {
+   "valor": 2,
+   "unidade": "capturas",
+   "comando": "tests/e2e/test_l007c_uso.py -> tests/e2e/capturas/L0-07-c_uso_390.png e _1280.png (390 e 1280 px)"
+  },
+  "erros_de_console_na_tela": {
+   "valor": 0,
+   "unidade": "erros",
+   "comando": "tests/e2e/test_l007c_uso.py (Tela.verificar)"
+  }
+ },
+ "nao_medido": {
+  "413_ao_importar_acima_da_cota_e_429_no_11o_job": "clausulas de IMPOSICAO de cota, cobertas por tests/api/test_cotas.py (item irmao). 2 dos 12 testes de la falham hoje NESTA trilha por motivo alheio a este item: a fixture cai no inquilino tecnico 'plataforma' (id 1), cujo teto e da plataforma, e recebe 409 teto_e_da_plataforma / cota_usuarios_acima_do_teto em vez de 204/422. Nao foi tocado aqui.",
+  "serie_de_30_dias_por_30_execucoes_do_periodico": "os 30 pontos foram gravados pela funcao plat.uso_medir (a mesma que o periodico chama), um por dia, e nao por 30 execucoes do job na fila: o que este item entrega e a LEITURA. A escrita ja era provada em tests/api/test_periodicos_uso.py."
+ },
+ "gerado_em": "2026-09-18T02:30:00Z"
+}
