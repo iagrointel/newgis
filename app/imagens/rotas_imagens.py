@@ -264,6 +264,22 @@ def conexao_s3(request: Request, auth: Auth = autenticado("conteudo.publicar_cam
     return JSONResponse(corpo, headers={"Cache-Control": "no-store, must-revalidate"})
 
 
+# ------------------------------------------------- taxa de acerto do cache de ladrilhos (item L1-02-d)
+@router.get("/api/imagens/cache/status", openapi_extra={"x-auth": "S", "x-privilegio": "proprio"})
+def cache_status(desde: str = "-7d", ate: str | None = None,
+                 auth: Auth = autenticado(so_sessao=True)):
+    """Taxa de acerto do cache de ladrilhos, por dia.
+
+    O número não pode sair daqui de dentro: o cache fica no nginx, ANTES da aplicação, e um acerto
+    nunca chega a este processo. A fonte é `$upstream_cache_status` no log do nginx — ver
+    `app/imagens/cache_status.py`, que também explica por que a resposta diz `sem_dado` em vez de
+    0 % quando o campo não está sendo gravado."""
+    from app.imagens import cache_status as modulo
+
+    return JSONResponse(modulo.por_dia(desde=desde, ate=ate),
+                        headers={"Cache-Control": "no-store"})
+
+
 @router.post("/api/imagens/ingestoes", status_code=202, openapi_extra=PUBLICAR)
 def ingestao_criar(corpo: IngestaoEntrada, request: Request, auth: Auth = autenticado("conteudo.publicar_camada")):
     arquivo_id = uuid_ok(corpo.arquivo_id, "item_inexistente", "item de arquivo inexistente")
