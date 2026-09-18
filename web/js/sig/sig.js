@@ -25,6 +25,7 @@ import { montarGaveta, fonteDeCamada, fonteDeRede } from '../mapa/tabela_atribut
 import { Medicao } from '../mapa/medicao.js';
 import { interpretarCoordenada, sugerir, geocodificar } from '../mapa/busca.js';
 import { paraPng, paraPdf, escalaNumerica } from '../mapa/impressao.js';
+import { PainelExportar } from '../mapa/exportar.js';
 import { Edicao } from '../mapa/edicao.js';
 import { instalarComparar } from './comparar.js';
 import { enviarArquivo, publicar, obterTipos, extensaoDe, TIPOS_RASTER } from '../uploads/nucleo.js';
@@ -264,7 +265,7 @@ function instalarPaineis() {
     const digitando = alvo && (alvo.tagName === 'INPUT' || alvo.tagName === 'TEXTAREA' || alvo.isContentEditable);
     if (digitando || ev.metaKey || ev.ctrlKey || ev.altKey) return;
     const tecla = ev.key.toLowerCase();
-    const mapa = { l: 'camadas', f: 'pesquisa', m: 'medicao', e: 'edicao', c: 'comparar' };
+    const mapa = { l: 'camadas', f: 'pesquisa', m: 'medicao', e: 'edicao', c: 'comparar', x: 'exportar' };
     if (mapa[tecla]) { ev.preventDefault(); alternar(mapa[tecla]); }
   });
 
@@ -780,6 +781,15 @@ async function iniciar() {
   instalarCompartilharCamadas(catalogo);
   instalarMedicao(medicao);
   instalarImpressao(map);
+  /* bloco Exportar (item L2-01-l): o MESMO PainelExportar do /mapa antigo — camada ligada, formato, EPSG,
+     "só a vista", job no servidor e link com validade; estilo MapLibre/SLD e importação de pacote. */
+  const exportar = new PainelExportar(catalogo, map,
+    { raiz: el('exportar-corpo'), aoErro: (e) => el('aviso').erro(`exportar: ${(e && e.message) || e}`) });
+  try {
+    await exportar.iniciar();
+  } catch (e) {
+    el('aviso').erro(`exportar: ${(e && e.message) || e}`);
+  }
   let edicao = null;
 
   el('btn-novo-grupo').addEventListener('click', () => {
@@ -864,7 +874,8 @@ async function iniciar() {
   }
 
   window.plat = window.plat || {};
-  window.plat.sig = { map, catalogo, medicao, arvore, legenda, edicao, comparar }; // ponto de inspeção do e2e
+  window.plat.sig = { map, catalogo, medicao, arvore, legenda, edicao, comparar, exportar,
+    abrirPainel: paineis.abrir, fecharPainel: paineis.fechar }; // ponto de inspeção do e2e
   document.body.dataset.pronto = '1';
 }
 

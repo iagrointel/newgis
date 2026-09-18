@@ -5,27 +5,27 @@
    "valor": {
     "classes_na_legenda": 1,
     "pixels_da_atribuicao": 775,
-    "largura": 712,
-    "altura": 777
+    "largura": 1224,
+    "altura": 876
    },
    "unidade": "pixels comparados entre a composição com e sem legenda/atribuição",
    "comando": "tests/e2e/test_exportar_mapa.py::test_png_do_mapa_traz_a_legenda_e_a_atribuicao"
   },
   "pagina_pronta_ms_mapa": {
-   "valor": 569.1,
+   "valor": 435.5,
    "unidade": "ms",
    "comando": "tests/e2e/test_exportar_mapa.py::test_botao_exportar_do_mapa_gera_arquivo_no_crs_pedido"
   },
   "exportar_do_mapa_ms": {
-   "valor": 1046.9,
+   "valor": 1049.2,
    "unidade": "ms",
    "comando": "tests/e2e/test_exportar_mapa.py::test_botao_exportar_do_mapa_gera_arquivo_no_crs_pedido"
   },
   "carga_da_maquina_na_medida": {
    "valor": {
-    "carga_1min": 13.00390625,
-    "ram_livre_gb": 0.6,
-    "medido_em": "2026-09-07T20:26:02Z"
+    "carga_1min": 2.62744140625,
+    "ram_livre_gb": 0.8,
+    "medido_em": "2026-09-18T10:06:22Z"
    },
    "unidade": "carga de 1 min e RAM livre no instante da medida acima",
    "comando": "os.getloadavg / os.sysconf"
@@ -45,7 +45,7 @@
     "shapefile": {
      "feicoes": 500,
      "epsg": 31983,
-     "bytes": 16090
+     "bytes": 16089
     },
     "csv": {
      "feicoes": 500,
@@ -90,7 +90,7 @@
     "filegdb": {
      "feicoes": 500,
      "epsg": 31983,
-     "bytes": 22229
+     "bytes": 22227
     }
    },
    "unidade": "feições e EPSG lidos do arquivo baixado",
@@ -102,12 +102,12 @@
    "comando": "tests/e2e/test_mapa_exportacao.py::test_png_por_layout_sai_no_tamanho_do_papel_e_com_o_titulo_dentro"
   },
   "previa_layout_a4_96dpi_bytes": {
-   "valor": 11712,
+   "valor": 12162,
    "unidade": "bytes",
    "comando": "POST /api/layouts/previa pela tela"
   },
   "pdf_por_layout_bytes": {
-   "valor": 6785,
+   "valor": 6712,
    "unidade": "bytes",
    "comando": "tests/e2e/test_mapa_exportacao.py::test_pdf_por_layout_e_um_pdf_de_verdade_com_o_titulo"
   },
@@ -117,11 +117,11 @@
    "comando": "pdftoppm -png -r 60 sobre o PDF gerado"
   },
   "exportar_ligado_a_pagina_do_mapa": {
-   "valor": false,
-   "unidade": "módulo alcançado a partir de web/mapa.html (False = e2e da tela impossível hoje)",
+   "valor": true,
+   "unidade": "módulo alcançado a partir da tela do mapa (web/mapa.html ou web/sig.html; False = e2e da tela impossível hoje)",
    "comando": "pytest tests/unit/test_l201k_frente_desenho.py::test_medida_da_ligacao_da_tela_de_desenho"
   }
  },
- "gerado_em": "2026-09-18T01:49:42Z",
- "git_sha": "ac77aa551e5f"
+ "gerado_em": "2026-09-18T10:12:08Z",
+ "git_sha": "37eee9719c22"
 }
