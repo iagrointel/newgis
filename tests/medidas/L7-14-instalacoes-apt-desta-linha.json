@@ -1,0 +1,37 @@
+{
+ "item": "L7-14-instalacoes-apt-desta-linha",
+ "assinado_por": "construtor L7 (turno de 17/09/2026)",
+ "gerado_em": "2026-09-17T23:54:28Z",
+ "git_sha": "7d9c7d80fc13",
+ "maquina": "contêiner ubuntu:24.04 limpo (docker run --rm), nenhum pacote da casa instalado; hospedeiro 12 vCPU, 23 GB RAM",
+ "clausulas": {
+  "caminho_de_pacote_ausente_exercitado": {
+   "resultado": "passou",
+   "comando": "docker run --rm -v deploy/pacotes_apt.txt:/prova/pacotes_apt.txt:ro ubuntu:24.04 bash -c '<bloco e2 de install.sh: dpkg -s por pacote, apt-get install -y só nos que faltam, conferência final>'",
+   "pacotes_da_lista": 15,
+   "ausentes_antes": 15,
+   "rc_apt_get_install": 0,
+   "ausentes_depois": 0,
+   "segundos": 33,
+   "nota": "é o caminho que na máquina da casa nunca roda porque os 15 já estão instalados. Aqui os 15 estavam ausentes, incluindo postgresql-client-16, que o comentário da lista supunha vir só do repositório pgdg: o pacote existe no repositório padrão do Ubuntu 24.04 e instalou sem repositório extra."
+  },
+  "idempotencia": {
+   "resultado": "passou",
+   "nota": "segunda passagem do mesmo bloco no mesmo contêiner: 0 pacote ausente, nenhum apt-get install disparado (o laço de dpkg -s não acha nada faltando)."
+  },
+  "confere_depois_de_instalar": {
+   "resultado": "passou",
+   "nota": "o laço de conferência final do install.sh (dpkg -s por pacote, exit 1 se algum continuar ausente) foi executado e não achou pacote sem candidato."
+  },
+  "lista_cobre_o_que_install_sh_exige": {
+   "resultado": "passou",
+   "comando": "pytest tests/adversario_raiz/test_g6_apt_e_cve.py::test_lista_apt_cobre_o_que_install_sh_exige",
+   "nota": "cláusula já verde desde 15/09 (nginx/certbot/openssl/curl/postgresql-client-16 entraram na lista fechada)."
+  },
+  "portao_do_item": {
+   "resultado": "pendente",
+   "razao": "o campo portao_de_pronto de laco/estado.json ainda é texto de espera ('portão a fixar pelo arquiteto'). Esta medida cobre a refutação escrita (caminho nunca exercitado), não um portão redigido — fixar o portão continua com o arquiteto."
+  }
+ },
+ "resumo": "o caminho 'pacote ausente -> apt-get install -y instala -> conferência não acha ausente' foi exercitado de verdade, num ubuntu:24.04 limpo, com a lista fechada real (15 pacotes): 15 ausentes antes, 0 depois, 33 s, e segunda passagem sem instalar nada. O portão do item continua por redigir."
+}

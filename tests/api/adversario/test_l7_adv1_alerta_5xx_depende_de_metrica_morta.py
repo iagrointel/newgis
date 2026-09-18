@@ -35,15 +35,7 @@ def _metrica_e_incrementada_em_algum_lugar() -> bool:
     return False
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "a regra de alerta '5xx > 1% em 5 min' (deploy/alertas.yml) consulta plat_http_requests_total, "
-        "que nunca recebe amostra (app/metricas.py::registrar_requisicao não é chamada de lugar nenhum — "
-        "achado transversal nº 1 do laudo L7 parte 1). rate() sobre uma métrica sem série nenhuma não "
-        "dispara alerta, não importa quantos 5xx reais aconteçam. Item L7-06-b-alertas."
-    ),
-)
+# CONSERTADO (17/09/2026, turno L7 do construtor): a marca xfail saiu junto com o defeito.
 def test_regra_de_5xx_usa_metrica_que_e_incrementada():
     texto_alertas = ALERTAS.read_text()
     assert METRICA_HTTP.search(texto_alertas), "deploy/alertas.yml não cita mais plat_http_requests_total"

@@ -53,15 +53,7 @@ def _expressoes_do_painel(caminho: Path) -> list[str]:
     return expressoes
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "deploy/grafana/paineis/plat-visao-geral.json não usa nenhuma das métricas HTTP/tiles/jobs "
-        "que app/metricas.py declara mas nunca incrementa — na verdade usa pelo menos duas delas "
-        "(plat_http_requests_total no quadro 8, plat_jobs_processados_total no quadro 10). Item "
-        "L7-06-d-paineis, achado transversal nº1 herdado."
-    ),
-)
+# CONSERTADO (17/09/2026, turno L7 do construtor): a marca xfail saiu junto com o defeito.
 def test_painel_visao_geral_evita_as_metricas_sem_chamador():
     expressoes = " ".join(_expressoes_do_painel(PAINEL_VISAO_GERAL))
     usadas = [m for m in METRICAS_SEM_CHAMADOR if m in expressoes]

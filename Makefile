@@ -21,7 +21,7 @@ SEGREDOS=PLAT_SECRET=$$(sudo cat /etc/plat/segredos/PLAT_SECRET 2>/dev/null); \
 	[ -n "$$PLAT_DSN" ] && export PLAT_DSN; \
 	[ -n "$$PLAT_GARAGE_ADMIN_TOKEN" ] && export PLAT_GARAGE_ADMIN_TOKEN;
 
-.PHONY: check check-rapido lint tokens sem-marcador teste e2e medidas migrar openapi vendor limites seguranca-deps varredura-cve correcoes seguranca seguranca-gravar seguranca-zap ferramentas homolog pacote-rede conformidade conformidade-conferir videos videos-validar
+.PHONY: check check-rapido lint tokens sem-marcador teste e2e medidas migrar openapi vendor limites seguranca-deps varredura-cve correcoes seguranca seguranca-gravar seguranca-zap ferramentas homolog pacote-rede conformidade conformidade-conferir videos videos-validar manual manual-validar
 
 check: lint tokens sem-marcador limites seguranca teste e2e  ## suíte inteira (portão P3); seguranca = item HARD-01
 
@@ -126,3 +126,14 @@ videos:                                     ## item L7-04-d: >= 10 vídeos de ta
 
 videos-validar:                             ## confere o que está gerado (10+ vídeos, vídeo+áudio, duração <= 3 min, 3 legendas, seção do manual)
 	$(VENV)/python scripts/videos/gerar.py --validar
+
+# semáforo de testes do laço (fora do repositório; nas trilhas passe RODA_TESTE=<caminho absoluto>)
+RODA_TESTE ?= $(abspath ../laco/roda_teste.sh)
+
+manual:                                     ## item L7-04-a: valida o conjunto, regenera as capturas pelo e2e (semáforo), monta docs/manual (HTML+PDF) e web/dados/manual.json; captura de versão antiga REPROVA
+	$(VENV)/python docs/gerar_manual.py --validar
+	bash $(RODA_TESTE) $$($(VENV)/python docs/gerar_manual.py --arquivos-e2e) -m lento --base-url $(URL_PUBLICA) -q
+	$(VENV)/python docs/gerar_manual.py $(if $(findstring 1,$(MANUAL_SEM_PDF)),--sem-pdf,)
+
+manual-validar:                             ## confere o manual gerado (toda tela do e2e tem seção, toda seção tem captura da versão atual)
+	$(VENV)/python docs/gerar_manual.py --validar

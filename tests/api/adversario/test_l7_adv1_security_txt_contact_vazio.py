@@ -20,14 +20,7 @@ def local():
     return novo_cliente()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "/.well-known/security.txt tem o campo Contact presente mas VAZIO ('Contact: '), violando a RFC "
-        "9116 (Contact é o único campo obrigatório e precisa de um valor mailto:/https:/tel:). Item "
-        "L7-03-e-cabecalhos-csp-tls."
-    ),
-)
+# CONSERTADO (17/09/2026, turno L7 do construtor): a marca xfail saiu junto com o defeito.
 def test_security_txt_tem_contact_com_valor(local):
     r = local.get("/.well-known/security.txt")
     assert r.status_code == 200

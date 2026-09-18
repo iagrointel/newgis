@@ -6,8 +6,9 @@ Cada tarefa é uma lista de passos executados contra a instalação real pelo ge
 A legenda só é registrada DEPOIS que a ação do passo aconteceu de verdade: um passo que não
 existe na versão instalada derruba a geração, nunca entra no vídeo.
 
-O campo `manual` é o começo do título de uma seção de MANUAL.md; o gerador confere que a
-seção existe antes de gerar. Regras para o texto (regra de escrita de 03/09): uma ideia por
+O campo `manual_id` é o id de uma seção do manual GERADO (docs/manual/<id>.md, item
+L7-04-a); o gerador confere que a seção existe antes de gerar. O campo `manual` guarda o
+título da seção correspondente do MANUAL.md histórico, só para leitura humana. Regras para o texto (regra de escrita de 03/09): uma ideia por
 frase, sem metáfora, sem exclamação, sem nome de cliente, sem superlativo.
 """
 
@@ -30,6 +31,7 @@ TAREFAS = [
         "id": "saude",
         "titulo": "Saúde do serviço",
         "manual": "1. Acesso e saúde do serviço",
+        "manual_id": "inicio",
         "passos": [
             {
                 "acoes": [{"ir": "/"}, {"esperar": "#versao-numero"}],
@@ -61,6 +63,7 @@ TAREFAS = [
         "id": "entrar",
         "titulo": "Entrar",
         "manual": "2. Entrar",
+        "manual_id": "entrar",
         "passos": [
             {
                 "acoes": [{"ir": "/entrar"}, {"esperar": "#login"}, {"pausa": 1.5}],
@@ -103,6 +106,7 @@ TAREFAS = [
         "id": "conta",
         "titulo": "Minha conta",
         "manual": "3. Minha conta",
+        "manual_id": "conta",
         "passos": [
             {
                 "acoes": [{"ir": "/conta"}, {"esperar": "#form-senha"}],
@@ -134,6 +138,7 @@ TAREFAS = [
         "id": "usuarios",
         "titulo": "Usuários",
         "manual": "4. Usuários",
+        "manual_id": "usuarios",
         "passos": [
             {
                 "acoes": [{"ir": "/admin/usuarios"}, {"esperar": "#tabela tbody"}],
@@ -180,6 +185,7 @@ TAREFAS = [
         "id": "grupos",
         "titulo": "Grupos",
         "manual": "5. Grupos",
+        "manual_id": "grupos",
         "passos": [
             {
                 "acoes": [{"ir": "/admin/grupos"}, {"esperar": "#tabela tbody"}],
@@ -225,6 +231,7 @@ TAREFAS = [
         "id": "papeis",
         "titulo": "Papéis e privilégios",
         "manual": "6. Papéis e privilégios",
+        "manual_id": "papeis",
         "passos": [
             {
                 "acoes": [{"ir": "/admin/papeis"}, {"esperar": "#tabela-perfis tbody tr"}],
@@ -263,6 +270,7 @@ TAREFAS = [
         "id": "tokens",
         "titulo": "Tokens de serviço",
         "manual": "7. Tokens de serviço",
+        "manual_id": "tokens",
         "passos": [
             {
                 "acoes": [
@@ -316,6 +324,7 @@ TAREFAS = [
         "id": "log",
         "titulo": "Log de acesso",
         "manual": "8. Log de acesso",
+        "manual_id": "log",
         "passos": [
             {
                 "acoes": [{"ir": "/admin/log"}, {"esperar": "#tabela tbody tr"}],
@@ -351,6 +360,7 @@ TAREFAS = [
         "id": "tarefas",
         "titulo": "Tarefas",
         "manual": "9. Tarefas",
+        "manual_id": "tarefas",
         "passos": [
             {
                 "acoes": [
@@ -392,6 +402,7 @@ TAREFAS = [
         "id": "mapa",
         "titulo": "Mapa",
         "manual": "13. Mapa",
+        "manual_id": "mapa",
         "passos": [
             {
                 "acoes": [{"ir": "/mapa"}, {"esperar": ".maplibregl-ctrl-zoom-in"}, {"pausa": 3.0}],
@@ -428,6 +439,7 @@ TAREFAS = [
         "id": "conexoes",
         "titulo": "Conexões externas",
         "manual": "18. Registro de camadas do acervo e modelo de conexão externa",
+        "manual_id": "conexoes",
         "passos": [
             {
                 "acoes": [

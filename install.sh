@@ -472,6 +472,13 @@ chown -R www-data:www-data /var/cache/nginx/plat_tiles_vetor /var/cache/nginx/pl
   printf 'proxy_cache_path /var/cache/nginx/plat_tiles_auth levels=1:2 keys_zone=plat_tiles_auth:8m max_size=64m inactive=1m use_temp_path=off;\n'
 } > "$LIMITES.novo"
 if [ -f "$LIMITES" ] && cmp -s "$LIMITES" "$LIMITES.novo"; then rm -f "$LIMITES.novo"; echo "$LIMITES já existe (igual)"; else mv "$LIMITES.novo" "$LIMITES"; echo "$LIMITES escrito"; fi
+# formatos de log em contexto http (itens L7-06-a e L7-06-c): plat_tiles e plat_json, mais o `map` que
+# redige o token de serviço que vive no CAMINHO da URL. Sem este arquivo o `access_log ... plat_json` do
+# bloco server não carrega e o nginx nem sobe, e a fonte `plat_nginx` de `plat logs --req-id` fica vazia.
+FORMATOS=/etc/nginx/conf.d/plat_log_formats.conf
+cp deploy/nginx-log-formats.conf "$FORMATOS.novo"
+if [ -f "$FORMATOS" ] && cmp -s "$FORMATOS" "$FORMATOS.novo"; then rm -f "$FORMATOS.novo"; echo "$FORMATOS já existe (igual)"
+else mv "$FORMATOS.novo" "$FORMATOS"; echo "$FORMATOS escrito"; fi
 # perfil TLS + HTTP/2 + OCSP stapling (item L7-03-e): contexto http, só faz sentido com certificado no disco
 TLSCONF=/etc/nginx/conf.d/plat_tls.conf
 escrever_tls() {

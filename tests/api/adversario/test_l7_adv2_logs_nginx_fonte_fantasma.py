@@ -53,28 +53,13 @@ def _grep_recursivo(padrao_substr: str) -> list[str]:
     return achados
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Nenhum arquivo em deploy/*.conf configura `access_log syslog:...,tag=plat_nginx` (ou "
-        "qualquer variante com a tag `plat_nginx`) — a fonte 'nginx' de FONTES_PADRAO em "
-        "app/logs_consulta.py aponta para uma tag de journal que install.sh nunca escreve em "
-        "nenhum lugar. Item L7-06-c-logs-consulta-req-id."
-    ),
-)
+# CONSERTADO (17/09/2026, turno L7 do construtor): a marca xfail saiu junto com o defeito.
 def test_algum_arquivo_de_deploy_liga_a_tag_plat_nginx_ao_journal():
     achados = _grep_recursivo("plat_nginx")
     assert achados, "nenhum deploy/*.conf referencia a tag de journal 'plat_nginx' (fonte fantasma)"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "app/logs_consulta.py docstring afirma que $request_id é logado por um `log_format "
-        "plat_json` em deploy/nginx.conf — esse log_format não existe em arquivo nenhum do "
-        "repositório (só o docstring o descreve). Item L7-06-c-logs-consulta-req-id."
-    ),
-)
+# CONSERTADO (17/09/2026, turno L7 do construtor): a marca xfail saiu junto com o defeito.
 def test_log_format_plat_json_existe_em_algum_deploy_conf():
     achados = _grep_recursivo("log_format plat_json")
     assert achados, "log_format plat_json citado no docstring não existe em deploy/"
@@ -97,18 +82,7 @@ def test_journal_tem_alguma_linha_com_a_tag_plat_nginx():
     assert resultado.stdout.strip(), "journalctl -t plat_nginx não tem NENHUMA linha nesta máquina"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "O único log_format em produção que cita $request_id (plat_tiles, "
-        "deploy/nginx-log-formats.conf) loga \"$request\" (linha de requisição inteira, com "
-        "caminho) sem nenhuma redação, e o token de serviço dos tiles vive no CAMINHO da URL "
-        "(app/tiles/autorizacao.py, /svc/<token>/...) — logo o token completo cai em texto claro "
-        "no access log sempre que esse log_format está em uso (visto em "
-        "/etc/nginx/sites-enabled/plat.iagrointel.com). Item L7-06-c-logs-consulta-req-id, "
-        "cláusula 'nenhum segredo nem token completo em log'."
-    ),
-)
+# CONSERTADO (17/09/2026, turno L7 do construtor): a marca xfail saiu junto com o defeito.
 def test_log_format_plat_tiles_nao_expoe_o_caminho_bruto():
     texto = (DEPLOY / "nginx-log-formats.conf").read_text(encoding="utf-8")
     assert '"$request"' not in texto, "plat_tiles loga $request inteiro (inclui /svc/<token>/... sem redação)"
