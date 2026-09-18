@@ -79,3 +79,29 @@ def test_fid_fora_da_tabela_e_404_e_nao_500(sessao_a, camada_area):
     r = sessao_a.get(f"/api/camadas/{camada_area['id']}/feicoes/987654321/popup")
     assert r.status_code == 404, r.text
     assert r.json()["erro"] == "feicao_inexistente"
+
+
+def test_medida_expressao_e_isolamento_do_popup(sessao_a, sessao_b, camada_area, camada_pontos, medida):
+    """A medida deste eixo: a expressão avaliada no servidor fecha com o valor cru da MESMA resposta em
+    todas as feições da bancada, e a mesma URL que serve o dono recusa o outro inquilino. As duas metades
+    na mesma rodada — sem o par positivo, uma rota que recusasse todo mundo mediria igual."""
+    fids = (1, 2, 3, 4, 5)
+    corpos = {fid: sessao_a.get(f"/api/camadas/{camada_area['id']}/feicoes/{fid}/popup") for fid in fids}
+    assert all(r.status_code == 200 for r in corpos.values()), {f: r.status_code for f, r in corpos.items()}
+    hectares = {fid: r.json()["expressoes"]["area_ha"]["bruto"] for fid, r in corpos.items()}
+    assert all(isinstance(v, float) and v > 0 for v in hectares.values()), hectares
+    assert len(set(hectares.values())) == len(fids), hectares
+
+    urls = [f"/api/camadas/{camada_area['id']}/feicoes/1/popup",
+            f"/api/camadas/{camada_pontos['id']}/feicoes/1/popup"]
+    servidas = sum(1 for u in urls if sessao_a.get(u).status_code == 200)
+    recusadas = sum(1 for u in urls if sessao_b.get(u).status_code == 404)
+    assert servidas == len(urls) and recusadas == len(urls), (servidas, recusadas)
+
+    medida(ITEM)(
+        "expressao_no_servidor_e_isolamento_por_inquilino",
+        {"feicoes_com_expressao": len(fids), "valores_distintos": len(set(hectares.values())),
+         "urls": len(urls), "servidas_ao_dono": servidas, "recusadas_ao_outro_inquilino": recusadas},
+        "feições com expressão avaliada no servidor e URLs de popup experimentadas pelos dois inquilinos",
+        "pytest tests/api/test_popup_runtime.py -q",
+    )
