@@ -4,7 +4,7 @@
  "evidencia": [
   "test_1_token_de_escopo_leitura_nao_escreve: catalogo:ler dá 403 escopo_insuficiente em criar item e criar camada",
   "test_2_token_de_um_inquilino_nao_le_item_de_outro: 404 (não 403) ao ler/apagar item de outro inquilino; o item original sobrevive",
-  "test_3_toda_rota_do_openapi_tem_metodo_no_sdk_gerado: 0 rota sem módulo gerado (196 operações, ver tests/sdk/test_cobertura_openapi.py)"
+  "test_3_toda_rota_do_openapi_tem_metodo_no_sdk_gerado: 0 rota sem módulo gerado (977 operações, ver tests/sdk/test_cobertura_openapi.py)"
  ],
  "o_que_nao_prova": [
   "não testou paridade contra o ArcGIS API for Python real (sem credencial do parceiro; decisão D20 aberta)",

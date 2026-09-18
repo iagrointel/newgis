@@ -8,6 +8,8 @@ from attrs import define as _attrs_define
 from ..types import UNSET, Unset
 
 if TYPE_CHECKING:
+    from ..models.confirmar_entrada_cad_type_0 import ConfirmarEntradaCadType0
+    from ..models.confirmar_entrada_camada_type_0 import ConfirmarEntradaCamadaType0
     from ..models.confirmar_entrada_campos_type_0_item import ConfirmarEntradaCamposType0Item
     from ..models.confirmar_entrada_codificacao_type_0 import ConfirmarEntradaCodificacaoType0
     from ..models.confirmar_entrada_crs_type_0 import ConfirmarEntradaCrsType0
@@ -30,6 +32,8 @@ class ConfirmarEntrada:
             geometria (ConfirmarEntradaGeometriaType0 | None | Unset):
             campos (list[ConfirmarEntradaCamposType0Item] | None | Unset):
             validade (ConfirmarEntradaValidadeType0 | None | Unset):
+            cad (ConfirmarEntradaCadType0 | None | Unset):
+            camada (ConfirmarEntradaCamadaType0 | None | Unset):
     """
 
     titulo: None | str | Unset = UNSET
@@ -38,8 +42,12 @@ class ConfirmarEntrada:
     geometria: ConfirmarEntradaGeometriaType0 | None | Unset = UNSET
     campos: list[ConfirmarEntradaCamposType0Item] | None | Unset = UNSET
     validade: ConfirmarEntradaValidadeType0 | None | Unset = UNSET
+    cad: ConfirmarEntradaCadType0 | None | Unset = UNSET
+    camada: ConfirmarEntradaCamadaType0 | None | Unset = UNSET
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.confirmar_entrada_cad_type_0 import ConfirmarEntradaCadType0  # noqa: PLC0415
+        from ..models.confirmar_entrada_camada_type_0 import ConfirmarEntradaCamadaType0  # noqa: PLC0415
         from ..models.confirmar_entrada_codificacao_type_0 import ConfirmarEntradaCodificacaoType0  # noqa: PLC0415
         from ..models.confirmar_entrada_crs_type_0 import ConfirmarEntradaCrsType0  # noqa: PLC0415
         from ..models.confirmar_entrada_geometria_type_0 import ConfirmarEntradaGeometriaType0  # noqa: PLC0415
@@ -95,6 +103,22 @@ class ConfirmarEntrada:
         else:
             validade = self.validade
 
+        cad: dict[str, Any] | None | Unset
+        if isinstance(self.cad, Unset):
+            cad = UNSET
+        elif isinstance(self.cad, ConfirmarEntradaCadType0):
+            cad = self.cad.to_dict()
+        else:
+            cad = self.cad
+
+        camada: dict[str, Any] | None | Unset
+        if isinstance(self.camada, Unset):
+            camada = UNSET
+        elif isinstance(self.camada, ConfirmarEntradaCamadaType0):
+            camada = self.camada.to_dict()
+        else:
+            camada = self.camada
+
         field_dict: dict[str, Any] = {}
 
         field_dict.update({})
@@ -110,11 +134,17 @@ class ConfirmarEntrada:
             field_dict["campos"] = campos
         if validade is not UNSET:
             field_dict["validade"] = validade
+        if cad is not UNSET:
+            field_dict["cad"] = cad
+        if camada is not UNSET:
+            field_dict["camada"] = camada
 
         return field_dict
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.confirmar_entrada_cad_type_0 import ConfirmarEntradaCadType0  # noqa: PLC0415
+        from ..models.confirmar_entrada_camada_type_0 import ConfirmarEntradaCamadaType0  # noqa: PLC0415
         from ..models.confirmar_entrada_campos_type_0_item import ConfirmarEntradaCamposType0Item  # noqa: PLC0415
         from ..models.confirmar_entrada_codificacao_type_0 import ConfirmarEntradaCodificacaoType0  # noqa: PLC0415
         from ..models.confirmar_entrada_crs_type_0 import ConfirmarEntradaCrsType0  # noqa: PLC0415
@@ -222,6 +252,40 @@ class ConfirmarEntrada:
 
         validade = _parse_validade(d.pop("validade", UNSET))
 
+        def _parse_cad(data: object) -> ConfirmarEntradaCadType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                cad_type_0 = ConfirmarEntradaCadType0.from_dict(data)
+
+                return cad_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(ConfirmarEntradaCadType0 | None | Unset, data)
+
+        cad = _parse_cad(d.pop("cad", UNSET))
+
+        def _parse_camada(data: object) -> ConfirmarEntradaCamadaType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                camada_type_0 = ConfirmarEntradaCamadaType0.from_dict(data)
+
+                return camada_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(ConfirmarEntradaCamadaType0 | None | Unset, data)
+
+        camada = _parse_camada(d.pop("camada", UNSET))
+
         confirmar_entrada = cls(
             titulo=titulo,
             crs=crs,
@@ -229,6 +293,8 @@ class ConfirmarEntrada:
             geometria=geometria,
             campos=campos,
             validade=validade,
+            cad=cad,
+            camada=camada,
         )
 
         return confirmar_entrada

@@ -550,6 +550,9 @@ class TracadoAreaSujaResultado(BaseModel):
 
 # de wt/il406dcateg
 class CategoriasEntrada(BaseModel):
+    # título único no OpenAPI: colidia com app.catalogo.modelos.CategoriasEntrada
+    model_config = ConfigDict(title="CategoriasEntradaRede")
+
     categorias: list[str] = Field(min_length=0, max_length=64)
 
 
@@ -560,6 +563,9 @@ class RestricoesEntrada(BaseModel):
 
 # de wt/il406dcateg
 class FeicaoEntrada(BaseModel):
+    # título único no OpenAPI: colidia com app.dominios.rotas_feicoes.FeicaoEntrada
+    model_config = ConfigDict(title="FeicaoEntradaRede")
+
     tipo_id: str
     codigo: str = Field(min_length=1, max_length=120)
     controlador_ativo: bool = False
@@ -567,6 +573,9 @@ class FeicaoEntrada(BaseModel):
 
 # de wt/il406dcateg
 class LigacaoEntrada(BaseModel):
+    # título único no OpenAPI: colidia com app.dominios.modelos.LigacaoEntrada
+    model_config = ConfigDict(title="LigacaoEntradaRede")
+
     para_feicao_id: str
 
 

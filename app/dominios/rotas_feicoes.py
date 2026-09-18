@@ -16,7 +16,7 @@ import json
 
 import psycopg2
 from fastapi import APIRouter, Request
-from pydantic import Field
+from pydantic import ConfigDict, Field
 
 from app import db
 from app.auth.sessao import Auth, autenticado
@@ -33,6 +33,9 @@ CAMPOS_INTERNOS = ("fid", "geom", "globalid", "versao", "tenant_id", "criado_em"
 
 
 class FeicaoEntrada(Modelo):
+    # título único no OpenAPI: colidia com app.rede_utilidades.modelos.FeicaoEntrada
+    model_config = ConfigDict(title="FeicaoEntradaDominios")
+
     atributos: dict[str, object] = Field(default_factory=dict)
     geometria: dict | None = None   # GeoJSON, no SRID declarado da camada
 

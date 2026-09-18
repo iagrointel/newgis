@@ -5,15 +5,18 @@ from .acervo_assinatura_entrada import AcervoAssinaturaEntrada
 from .acervo_assinatura_saida import AcervoAssinaturaSaida
 from .acervo_camada_frescor import AcervoCamadaFrescor
 from .acervo_camada_frescor_pagina import AcervoCamadaFrescorPagina
+from .acervo_camada_na_ficha import AcervoCamadaNaFicha
 from .acervo_camada_pagina import AcervoCamadaPagina
 from .acervo_camada_publicada import AcervoCamadaPublicada
 from .acervo_cartao import AcervoCartao
+from .acervo_dominio import AcervoDominio
 from .acervo_endpoint import AcervoEndpoint
 from .acervo_execucao import AcervoExecucao
 from .acervo_execucao_pagina import AcervoExecucaoPagina
 from .acervo_feicoes import AcervoFeicoes
 from .acervo_feicoes_features_item import AcervoFeicoesFeaturesItem
 from .acervo_ficha import AcervoFicha
+from .acervo_meu_mapa_camada import AcervoMeuMapaCamada
 from .acervo_mudanca import AcervoMudanca
 from .acervo_mudanca_pagina import AcervoMudancaPagina
 from .acervo_pagina import AcervoPagina
@@ -25,6 +28,7 @@ from .acervo_verificacao_historico import AcervoVerificacaoHistorico
 from .agenda import Agenda
 from .agenda_parametros import AgendaParametros
 from .agenda_pedido import AgendaPedido
+from .agora import Agora
 from .agregado_jusante_api_rede_medicao_jusante_get_response_agregado_jusante_api_rede_medicao_jusante_get import (
     AgregadoJusanteApiRedeMedicaoJusanteGetResponseAgregadoJusanteApiRedeMedicaoJusanteGet,
 )
@@ -36,12 +40,15 @@ from .analise_pacote_documentos_item import AnalisePacoteDocumentosItem
 from .analise_pacote_fontes_item import AnalisePacoteFontesItem
 from .analise_pacote_origem_type_0 import AnalisePacoteOrigemType0
 from .anexo_criar import AnexoCriar
+from .anexo_entrada import AnexoEntrada
 from .anexo_resposta import AnexoResposta
 from .anotacao_edicao import AnotacaoEdicao
 from .anotacao_entrada import AnotacaoEntrada
 from .apagar_versao_api_camadas_id_versoes_versao_delete_response_apagar_versao_api_camadas_id_versoes_versao_delete import (
     ApagarVersaoApiCamadasIdVersoesVersaoDeleteResponseApagarVersaoApiCamadasIdVersoesVersaoDelete,
 )
+from .aplicacao_feita import AplicacaoFeita
+from .aplicacao_feita_resultado import AplicacaoFeitaResultado
 from .appliance_entrada import ApplianceEntrada
 from .apply_edits_entrada import ApplyEditsEntrada
 from .apply_edits_resultado import ApplyEditsResultado
@@ -67,6 +74,9 @@ from .atualizar_agenda_api_agendas_agenda_id_put_corpo import AtualizarAgendaApi
 from .backtest_entrada import BacktestEntrada
 from .backup_saida import BackupSaida
 from .backups_pagina import BackupsPagina
+from .bloco_galeria import BlocoGaleria
+from .bloco_links import BlocoLinks
+from .bloco_texto import BlocoTexto
 from .build_entrada import BuildEntrada
 from .build_entrada_tipo_type_0 import BuildEntradaTipoType0
 from .busca_entrada import BuscaEntrada
@@ -91,14 +101,17 @@ from .camada_mudancas import CamadaMudancas
 from .camadas_pagina import CamadasPagina
 from .campo_entrada import CampoEntrada
 from .campo_entrada_dominio_type_0_item import CampoEntradaDominioType0Item
+from .campo_saida import CampoSaida
 from .campo_virtual_entrada import CampoVirtualEntrada
 from .campos_da_camada_api_camadas_id_campos_get_response_campos_da_camada_api_camadas_id_campos_get import (
     CamposDaCamadaApiCamadasIdCamposGetResponseCamposDaCamadaApiCamadasIdCamposGet,
 )
+from .campos_saida import CamposSaida
 from .categoria_no import CategoriaNo
 from .categorias import Categorias
 from .categorias_arvore_item import CategoriasArvoreItem
-from .categorias_entrada import CategoriasEntrada
+from .categorias_entrada_catalogo import CategoriasEntradaCatalogo
+from .categorias_entrada_rede import CategoriasEntradaRede
 from .chamado_criar import ChamadoCriar
 from .chamado_criar_contexto import ChamadoCriarContexto
 from .clip_entrada import ClipEntrada
@@ -109,9 +122,14 @@ from .clip_entrada_parent_parcels_item import ClipEntradaParentParcelsItem
 from .codigo_entrada import CodigoEntrada
 from .codigos_recuperacao import CodigosRecuperacao
 from .colecao_criar_svc_token_stac_collections_post_corpo import ColecaoCriarSvcTokenStacCollectionsPostCorpo
+from .colecao_saida import ColecaoSaida
+from .colecoes_pagina import ColecoesPagina
 from .coluna_vista import ColunaVista
 from .coluna_vista_dominio_type_0 import ColunaVistaDominioType0
 from .comentario_criar import ComentarioCriar
+from .como_era_camada_api_camadas_id_como_era_get_response_como_era_camada_api_camadas_id_como_era_get import (
+    ComoEraCamadaApiCamadasIdComoEraGetResponseComoEraCamadaApiCamadasIdComoEraGet,
+)
 from .compartilhado import Compartilhado
 from .compartilhado_item import CompartilhadoItem
 from .compartilhado_itens_incluidos_item import CompartilhadoItensIncluidosItem
@@ -147,6 +165,8 @@ from .config_tracado_entrada import ConfigTracadoEntrada
 from .config_tracado_entrada_config import ConfigTracadoEntradaConfig
 from .config_tracado_pagina import ConfigTracadoPagina
 from .confirmar_entrada import ConfirmarEntrada
+from .confirmar_entrada_cad_type_0 import ConfirmarEntradaCadType0
+from .confirmar_entrada_camada_type_0 import ConfirmarEntradaCamadaType0
 from .confirmar_entrada_campos_type_0_item import ConfirmarEntradaCamposType0Item
 from .confirmar_entrada_codificacao_type_0 import ConfirmarEntradaCodificacaoType0
 from .confirmar_entrada_crs_type_0 import ConfirmarEntradaCrsType0
@@ -154,6 +174,8 @@ from .confirmar_entrada_geometria_type_0 import ConfirmarEntradaGeometriaType0
 from .confirmar_entrada_validade_type_0 import ConfirmarEntradaValidadeType0
 from .confirmar_lote_entrada import ConfirmarLoteEntrada
 from .confirmar_lote_item import ConfirmarLoteItem
+from .confirmar_lote_item_cad_type_0 import ConfirmarLoteItemCadType0
+from .confirmar_lote_item_camada_type_0 import ConfirmarLoteItemCamadaType0
 from .confirmar_lote_item_campos_type_0_item import ConfirmarLoteItemCamposType0Item
 from .confirmar_lote_item_codificacao_type_0 import ConfirmarLoteItemCodificacaoType0
 from .confirmar_lote_item_crs_type_0 import ConfirmarLoteItemCrsType0
@@ -190,11 +212,12 @@ from .corredor_entrada import CorredorEntrada
 from .corredor_saida import CorredorSaida
 from .corredor_saida_corredor_type_0 import CorredorSaidaCorredorType0
 from .corredor_saida_linha import CorredorSaidaLinha
+from .cotas import Cotas
 from .create_seeds_entrada import CreateSeedsEntrada
 from .credencial_entrada import CredencialEntrada
 from .credencial_saida import CredencialSaida
 from .criar_agenda_api_agendas_post_corpo import CriarAgendaApiAgendasPostCorpo
-from .criar_api_modelos_post_corpo import CriarApiModelosPostCorpo
+from .criar_api_modelos_3d_post_corpo import CriarApiModelos3DPostCorpo
 from .criar_entrada import CriarEntrada
 from .criar_job_api_jobs_post_corpo import CriarJobApiJobsPostCorpo
 from .criar_replica_api_replicas_post_response_criar_replica_api_replicas_post import (
@@ -215,6 +238,10 @@ from .diagrama_modelo_entrada_regras_item import DiagramaModeloEntradaRegrasItem
 from .divide_entrada import DivideEntrada
 from .divide_entrada_divide_option_type_0 import DivideEntradaDivideOptionType0
 from .divide_entrada_divide_parcel_type_type_0 import DivideEntradaDivideParcelTypeType0
+from .dividir_feicao_api_camadas_id_feicoes_dividir_post_response_dividir_feicao_api_camadas_id_feicoes_dividir_post import (
+    DividirFeicaoApiCamadasIdFeicoesDividirPostResponseDividirFeicaoApiCamadasIdFeicoesDividirPost,
+)
+from .divisao_entrada import DivisaoEntrada
 from .documento_publico import DocumentoPublico
 from .documento_publico_corpo import DocumentoPublicoCorpo
 from .dominio_entrada import DominioEntrada
@@ -228,13 +255,18 @@ from .edicoes_saida import EdicoesSaida
 from .editar_api_itens_id_put_corpo import EditarApiItensIdPutCorpo
 from .editar_eu_api_eu_put_corpo import EditarEuApiEuPutCorpo
 from .editar_parcial_api_itens_id_patch_corpo import EditarParcialApiItensIdPatchCorpo
-from .elemento_tracado import ElementoTracado
 from .endpoint_publico import EndpointPublico
 from .endpoint_publico_pagina import EndpointPublicoPagina
 from .ensaio_saida import EnsaioSaida
 from .ensaios_pagina import EnsaiosPagina
 from .entidades_api_odk_pontes_id_entidades_dataset_get_response_entidades_api_odk_pontes_id_entidades_dataset_get import (
     EntidadesApiOdkPontesIdEntidadesDatasetGetResponseEntidadesApiOdkPontesIdEntidadesDatasetGet,
+)
+from .entrega import Entrega
+from .entrega_pagina import EntregaPagina
+from .entrega_payload import EntregaPayload
+from .enviar_anexo_api_camadas_id_feicoes_globalid_anexos_post_response_enviar_anexo_api_camadas_id_feicoes_globalid_anexos_post import (
+    EnviarAnexoApiCamadasIdFeicoesGlobalidAnexosPostResponseEnviarAnexoApiCamadasIdFeicoesGlobalidAnexosPost,
 )
 from .epanet_importacao import EpanetImportacao
 from .epanet_importacao_aceita import EpanetImportacaoAceita
@@ -270,6 +302,7 @@ from .execucao_pagina import ExecucaoPagina
 from .executar_entrada import ExecutarEntrada
 from .executar_entrada_parametros import ExecutarEntradaParametros
 from .exportacao_entrada import ExportacaoEntrada
+from .exportacao_entrada_filtro_type_0 import ExportacaoEntradaFiltroType0
 from .exportacao_entrada_intercambio import ExportacaoEntradaIntercambio
 from .exportar_camada_entrada import ExportarCamadaEntrada
 from .exportar_camada_entrada_campos_type_0_item import ExportarCamadaEntradaCamposType0Item
@@ -305,15 +338,19 @@ from .feicao_atualizar_edicao import FeicaoAtualizarEdicao
 from .feicao_atualizar_edicao_atributos_type_0 import FeicaoAtualizarEdicaoAtributosType0
 from .feicao_atualizar_edicao_geometria_type_0 import FeicaoAtualizarEdicaoGeometriaType0
 from .feicao_atualizar_geometria_type_0 import FeicaoAtualizarGeometriaType0
-from .feicao_entrada import FeicaoEntrada
-from .feicao_entrada_atributos import FeicaoEntradaAtributos
-from .feicao_entrada_geometria_type_0 import FeicaoEntradaGeometriaType0
+from .feicao_entrada_dominios import FeicaoEntradaDominios
+from .feicao_entrada_dominios_atributos import FeicaoEntradaDominiosAtributos
+from .feicao_entrada_dominios_geometria_type_0 import FeicaoEntradaDominiosGeometriaType0
+from .feicao_entrada_rede import FeicaoEntradaRede
 from .feicao_linha_entrada import FeicaoLinhaEntrada
 from .feicao_linha_entrada_atributos import FeicaoLinhaEntradaAtributos
 from .feicao_ponto_entrada import FeicaoPontoEntrada
 from .feicao_ponto_entrada_atributos import FeicaoPontoEntradaAtributos
-from .feicoes_saida import FeicoesSaida
-from .feicoes_saida_itens_item import FeicoesSaidaItensItem
+from .feicoes_saida_conexao import FeicoesSaidaConexao
+from .feicoes_saida_conexao_features_item import FeicoesSaidaConexaoFeaturesItem
+from .feicoes_saida_regras import FeicoesSaidaRegras
+from .feicoes_saida_regras_itens_item import FeicoesSaidaRegrasItensItem
+from .ficha_entrada import FichaEntrada
 from .fila_alvos_adicionar import FilaAlvosAdicionar
 from .fila_criar import FilaCriar
 from .fila_ordem import FilaOrdem
@@ -384,9 +421,10 @@ from .importacao_resultado import ImportacaoResultado
 from .importacao_resultado_contagens import ImportacaoResultadoContagens
 from .importado_categorias import ImportadoCategorias
 from .importar_categorias import ImportarCategorias
-from .importar_entrada import ImportarEntrada
-from .importar_entrada_fields_item import ImportarEntradaFieldsItem
-from .importar_entrada_types_item import ImportarEntradaTypesItem
+from .importar_entrada_continuidade import ImportarEntradaContinuidade
+from .importar_entrada_dominios import ImportarEntradaDominios
+from .importar_entrada_dominios_fields_item import ImportarEntradaDominiosFieldsItem
+from .importar_entrada_dominios_types_item import ImportarEntradaDominiosTypesItem
 from .importar_grupo_entrada import ImportarGrupoEntrada
 from .importar_saida import ImportarSaida
 from .importar_saida_criados_item import ImportarSaidaCriadosItem
@@ -432,20 +470,28 @@ from .layout_corpo_mapa_type_0 import LayoutCorpoMapaType0
 from .leitura_entrada import LeituraEntrada
 from .leitura_entrada_bruta import LeituraEntradaBruta
 from .leituras_lote import LeiturasLote
-from .ligacao_entrada import LigacaoEntrada
+from .ligacao_entrada_dominios import LigacaoEntradaDominios
+from .ligacao_entrada_rede import LigacaoEntradaRede
 from .ligacao_saida import LigacaoSaida
 from .limites import Limites
 from .linha_log import LinhaLog
-from .link import Link
+from .link_catalogo import LinkCatalogo
 from .link_criado import LinkCriado
 from .link_criado_avisos_item import LinkCriadoAvisosItem
 from .link_entrada import LinkEntrada
+from .link_org import LinkOrg
 from .lista_agendas import ListaAgendas
 from .lista_jobs import ListaJobs
 from .lista_notificacoes import ListaNotificacoes
 from .lista_notificacoes_itens_item import ListaNotificacoesItensItem
+from .listar_anexos_api_camadas_id_feicoes_globalid_anexos_get_response_200_item import (
+    ListarAnexosApiCamadasIdFeicoesGlobalidAnexosGetResponse200Item,
+)
 from .listar_filas_api_campo_filas_get_response_listar_filas_api_campo_filas_get import (
     ListarFilasApiCampoFilasGetResponseListarFilasApiCampoFilasGet,
+)
+from .listar_historico_api_camadas_id_feicoes_globalid_historico_get_response_listar_historico_api_camadas_id_feicoes_globalid_historico_get import (
+    ListarHistoricoApiCamadasIdFeicoesGlobalidHistoricoGetResponseListarHistoricoApiCamadasIdFeicoesGlobalidHistoricoGet,
 )
 from .listar_replicas_api_replicas_get_response_200_item import ListarReplicasApiReplicasGetResponse200Item
 from .listar_roteiros_api_campo_roteiros_get_response_listar_roteiros_api_campo_roteiros_get import (
@@ -500,6 +546,7 @@ from .merge_entrada_target_parcel_type_type_0 import MergeEntradaTargetParcelTyp
 from .metadado_editor_entrada import MetadadoEditorEntrada
 from .metadado_editor_entrada_item_type_0 import MetadadoEditorEntradaItemType0
 from .metadado_editor_entrada_metadado import MetadadoEditorEntradaMetadado
+from .metadado_iso_entrada import MetadadoIsoEntrada
 from .metrica import Metrica
 from .miniatura import Miniatura
 from .miniatura_entrada import MiniaturaEntrada
@@ -520,6 +567,9 @@ from .mudanca_servidor_geometria_type_0 import MudancaServidorGeometriaType0
 from .municipio_geo_json import MunicipioGeoJson
 from .nivel_definir import NivelDefinir
 from .objetivo import Objetivo
+from .obter_feicao_rota_api_camadas_id_feicoes_globalid_get_response_obter_feicao_rota_api_camadas_id_feicoes_globalid_get import (
+    ObterFeicaoRotaApiCamadasIdFeicoesGlobalidGetResponseObterFeicaoRotaApiCamadasIdFeicoesGlobalidGet,
+)
 from .obter_replica_api_replicas_id_get_response_obter_replica_api_replicas_id_get import (
     ObterReplicaApiReplicasIdGetResponseObterReplicaApiReplicasIdGet,
 )
@@ -537,6 +587,8 @@ from .org_saida import OrgSaida
 from .org_saida_armazenamento import OrgSaidaArmazenamento
 from .org_saida_auth import OrgSaidaAuth
 from .org_saida_mapa import OrgSaidaMapa
+from .org_saida_pagina_inicial_item import OrgSaidaPaginaInicialItem
+from .org_saida_regional import OrgSaidaRegional
 from .org_saida_usuarios import OrgSaidaUsuarios
 from .pacote_entrada import PacoteEntrada
 from .pacote_entrada_mapeamento import PacoteEntradaMapeamento
@@ -601,13 +653,30 @@ from .ponte_pagina import PontePagina
 from .ponte_saida import PonteSaida
 from .ponto import Ponto
 from .ponto_tracado import PontoTracado
+from .ponto_uso import PontoUso
 from .predefinicao_entrada import PredefinicaoEntrada
 from .predefinicao_entrada_esticamento_type_0 import PredefinicaoEntradaEsticamentoType0
 from .preencher_pendentes_entrada import PreencherPendentesEntrada
 from .presenca_entrada import PresencaEntrada
+from .preset import Preset
+from .preset_aplicar import PresetAplicar
+from .preset_conteudo import PresetConteudo
+from .preset_editar import PresetEditar
+from .preset_editar_conteudo_type_0 import PresetEditarConteudoType0
+from .preset_editar_escopo_type_0 import PresetEditarEscopoType0
+from .preset_entrada import PresetEntrada
+from .preset_entrada_conteudo import PresetEntradaConteudo
+from .preset_entrada_escopo import PresetEntradaEscopo
+from .preset_importado import PresetImportado
+from .preset_importar import PresetImportar
+from .preset_importar_conteudo import PresetImportarConteudo
+from .preset_importar_escopo import PresetImportarEscopo
+from .preset_pagina import PresetPagina
 from .previa_corpo import PreviaCorpo
 from .previa_corpo_layout_type_0 import PreviaCorpoLayoutType0
 from .previa_corpo_mapa_type_0 import PreviaCorpoMapaType0
+from .previsao_entrada import PrevisaoEntrada
+from .previsao_entrada_transformacao import PrevisaoEntradaTransformacao
 from .privilegio import Privilegio
 from .promover_entrada import PromoverEntrada
 from .propagadores_entrada import PropagadoresEntrada
@@ -699,7 +768,9 @@ from .resposta_entrada import RespostaEntrada
 from .resposta_entrada_repeticoes import RespostaEntradaRepeticoes
 from .resposta_entrada_repeticoes_additional_property_item import RespostaEntradaRepeticoesAdditionalPropertyItem
 from .resposta_entrada_valores import RespostaEntradaValores
+from .restaurar_saida import RestaurarSaida
 from .restaurar_versao_entrada import RestaurarVersaoEntrada
+from .restricoes_entrada import RestricoesEntrada
 from .resultado_feicao import ResultadoFeicao
 from .resultado_feicao_atributos_type_0 import ResultadoFeicaoAtributosType0
 from .resumo import Resumo
@@ -721,6 +792,7 @@ from .senha_temporaria import SenhaTemporaria
 from .serie_api_rede_medicao_ativos_ativo_serie_get_response_serie_api_rede_medicao_ativos_ativo_serie_get import (
     SerieApiRedeMedicaoAtivosAtivoSerieGetResponseSerieApiRedeMedicaoAtivosAtivoSerieGet,
 )
+from .serie_uso import SerieUso
 from .servico_saida import ServicoSaida
 from .sessao import Sessao
 from .simbolo_entrada import SimboloEntrada
@@ -772,15 +844,21 @@ from .token_criar_restricao_type_0 import TokenCriarRestricaoType0
 from .token_dono import TokenDono
 from .token_restricao import TokenRestricao
 from .topologia_resumo import TopologiaResumo
+from .tracado_area_suja_resultado import TracadoAreaSujaResultado
+from .tracado_area_suja_resultado_area_suja_type_0 import TracadoAreaSujaResultadoAreaSujaType0
 from .tracado_entrada import TracadoEntrada
-from .tracado_resultado import TracadoResultado
-from .tracado_resultado_geometria_type_0 import TracadoResultadoGeometriaType0
 from .transferencia import Transferencia
 from .transferencia_entrada import TransferenciaEntrada
 from .transferencia_novo_dono import TransferenciaNovoDono
 from .transferencia_plano_item import TransferenciaPlanoItem
 from .ultimas_leituras_api_rede_medicao_ativos_ativo_ultimas_get_response_ultimas_leituras_api_rede_medicao_ativos_ativo_ultimas_get import (
     UltimasLeiturasApiRedeMedicaoAtivosAtivoUltimasGetResponseUltimasLeiturasApiRedeMedicaoAtivosAtivoUltimasGet,
+)
+from .uniao_entrada import UniaoEntrada
+from .uniao_entrada_atributos_type_0 import UniaoEntradaAtributosType0
+from .uniao_entrada_versoes import UniaoEntradaVersoes
+from .unir_feicoes_api_camadas_id_feicoes_unir_post_response_unir_feicoes_api_camadas_id_feicoes_unir_post import (
+    UnirFeicoesApiCamadasIdFeicoesUnirPostResponseUnirFeicoesApiCamadasIdFeicoesUnirPost,
 )
 from .upload_criar import UploadCriar
 from .usado_por import UsadoPor
@@ -844,6 +922,11 @@ from .vista_entrada import VistaEntrada
 from .vista_entrada_estilo_type_0 import VistaEntradaEstiloType0
 from .vista_entrada_popup_type_0 import VistaEntradaPopupType0
 from .visualizacao_dia import VisualizacaoDia
+from .webhook import Webhook
+from .webhook_editar import WebhookEditar
+from .webhook_entrada import WebhookEntrada
+from .webhook_pagina import WebhookPagina
+from .webhook_segredo import WebhookSegredo
 from .xlsform_entrada import XlsformEntrada
 
 __all__ = (
@@ -852,15 +935,18 @@ __all__ = (
     "AcervoAssinaturaSaida",
     "AcervoCamadaFrescor",
     "AcervoCamadaFrescorPagina",
+    "AcervoCamadaNaFicha",
     "AcervoCamadaPagina",
     "AcervoCamadaPublicada",
     "AcervoCartao",
+    "AcervoDominio",
     "AcervoEndpoint",
     "AcervoExecucao",
     "AcervoExecucaoPagina",
     "AcervoFeicoes",
     "AcervoFeicoesFeaturesItem",
     "AcervoFicha",
+    "AcervoMeuMapaCamada",
     "AcervoMudanca",
     "AcervoMudancaPagina",
     "AcervoPagina",
@@ -872,6 +958,7 @@ __all__ = (
     "Agenda",
     "AgendaParametros",
     "AgendaPedido",
+    "Agora",
     "AgregadoJusanteApiRedeMedicaoJusanteGetResponseAgregadoJusanteApiRedeMedicaoJusanteGet",
     "AmostraEntrada",
     "AmostrasEntrada",
@@ -881,10 +968,13 @@ __all__ = (
     "AnalisePacoteFontesItem",
     "AnalisePacoteOrigemType0",
     "AnexoCriar",
+    "AnexoEntrada",
     "AnexoResposta",
     "AnotacaoEdicao",
     "AnotacaoEntrada",
     "ApagarVersaoApiCamadasIdVersoesVersaoDeleteResponseApagarVersaoApiCamadasIdVersoesVersaoDelete",
+    "AplicacaoFeita",
+    "AplicacaoFeitaResultado",
     "ApplianceEntrada",
     "ApplyEditsEntrada",
     "ApplyEditsResultado",
@@ -910,6 +1000,9 @@ __all__ = (
     "BacktestEntrada",
     "BackupSaida",
     "BackupsPagina",
+    "BlocoGaleria",
+    "BlocoLinks",
+    "BlocoTexto",
     "BuildEntrada",
     "BuildEntradaTipoType0",
     "BuscaEntrada",
@@ -928,12 +1021,15 @@ __all__ = (
     "CamadasPagina",
     "CampoEntrada",
     "CampoEntradaDominioType0Item",
+    "CampoSaida",
     "CamposDaCamadaApiCamadasIdCamposGetResponseCamposDaCamadaApiCamadasIdCamposGet",
+    "CamposSaida",
     "CampoVirtualEntrada",
     "CategoriaNo",
     "Categorias",
     "CategoriasArvoreItem",
-    "CategoriasEntrada",
+    "CategoriasEntradaCatalogo",
+    "CategoriasEntradaRede",
     "ChamadoCriar",
     "ChamadoCriarContexto",
     "ClipEntrada",
@@ -944,9 +1040,12 @@ __all__ = (
     "CodigoEntrada",
     "CodigosRecuperacao",
     "ColecaoCriarSvcTokenStacCollectionsPostCorpo",
+    "ColecaoSaida",
+    "ColecoesPagina",
     "ColunaVista",
     "ColunaVistaDominioType0",
     "ComentarioCriar",
+    "ComoEraCamadaApiCamadasIdComoEraGetResponseComoEraCamadaApiCamadasIdComoEraGet",
     "Compartilhado",
     "CompartilhadoItem",
     "CompartilhadoItensIncluidosItem",
@@ -982,6 +1081,8 @@ __all__ = (
     "ConfigTracadoEntradaConfig",
     "ConfigTracadoPagina",
     "ConfirmarEntrada",
+    "ConfirmarEntradaCadType0",
+    "ConfirmarEntradaCamadaType0",
     "ConfirmarEntradaCamposType0Item",
     "ConfirmarEntradaCodificacaoType0",
     "ConfirmarEntradaCrsType0",
@@ -989,6 +1090,8 @@ __all__ = (
     "ConfirmarEntradaValidadeType0",
     "ConfirmarLoteEntrada",
     "ConfirmarLoteItem",
+    "ConfirmarLoteItemCadType0",
+    "ConfirmarLoteItemCamadaType0",
     "ConfirmarLoteItemCamposType0Item",
     "ConfirmarLoteItemCodificacaoType0",
     "ConfirmarLoteItemCrsType0",
@@ -1023,11 +1126,12 @@ __all__ = (
     "CorredorSaida",
     "CorredorSaidaCorredorType0",
     "CorredorSaidaLinha",
+    "Cotas",
     "CreateSeedsEntrada",
     "CredencialEntrada",
     "CredencialSaida",
     "CriarAgendaApiAgendasPostCorpo",
-    "CriarApiModelosPostCorpo",
+    "CriarApiModelos3DPostCorpo",
     "CriarEntrada",
     "CriarJobApiJobsPostCorpo",
     "CriarReplicaApiReplicasPostResponseCriarReplicaApiReplicasPost",
@@ -1044,6 +1148,8 @@ __all__ = (
     "DivideEntrada",
     "DivideEntradaDivideOptionType0",
     "DivideEntradaDivideParcelTypeType0",
+    "DividirFeicaoApiCamadasIdFeicoesDividirPostResponseDividirFeicaoApiCamadasIdFeicoesDividirPost",
+    "DivisaoEntrada",
     "DocumentoPublico",
     "DocumentoPublicoCorpo",
     "DominioEntrada",
@@ -1057,12 +1163,15 @@ __all__ = (
     "EditarApiItensIdPutCorpo",
     "EditarEuApiEuPutCorpo",
     "EditarParcialApiItensIdPatchCorpo",
-    "ElementoTracado",
     "EndpointPublico",
     "EndpointPublicoPagina",
     "EnsaioSaida",
     "EnsaiosPagina",
     "EntidadesApiOdkPontesIdEntidadesDatasetGetResponseEntidadesApiOdkPontesIdEntidadesDatasetGet",
+    "Entrega",
+    "EntregaPagina",
+    "EntregaPayload",
+    "EnviarAnexoApiCamadasIdFeicoesGlobalidAnexosPostResponseEnviarAnexoApiCamadasIdFeicoesGlobalidAnexosPost",
     "EpanetImportacao",
     "EpanetImportacaoAceita",
     "EpanetImportacaoContagensType0",
@@ -1095,6 +1204,7 @@ __all__ = (
     "ExecutarEntrada",
     "ExecutarEntradaParametros",
     "ExportacaoEntrada",
+    "ExportacaoEntradaFiltroType0",
     "ExportacaoEntradaIntercambio",
     "ExportarCamadaEntrada",
     "ExportarCamadaEntradaCamposType0Item",
@@ -1128,15 +1238,19 @@ __all__ = (
     "FeicaoAtualizarEdicaoAtributosType0",
     "FeicaoAtualizarEdicaoGeometriaType0",
     "FeicaoAtualizarGeometriaType0",
-    "FeicaoEntrada",
-    "FeicaoEntradaAtributos",
-    "FeicaoEntradaGeometriaType0",
+    "FeicaoEntradaDominios",
+    "FeicaoEntradaDominiosAtributos",
+    "FeicaoEntradaDominiosGeometriaType0",
+    "FeicaoEntradaRede",
     "FeicaoLinhaEntrada",
     "FeicaoLinhaEntradaAtributos",
     "FeicaoPontoEntrada",
     "FeicaoPontoEntradaAtributos",
-    "FeicoesSaida",
-    "FeicoesSaidaItensItem",
+    "FeicoesSaidaConexao",
+    "FeicoesSaidaConexaoFeaturesItem",
+    "FeicoesSaidaRegras",
+    "FeicoesSaidaRegrasItensItem",
+    "FichaEntrada",
     "FilaAlvosAdicionar",
     "FilaCriar",
     "FilaOrdem",
@@ -1193,9 +1307,10 @@ __all__ = (
     "ImportacaoResultadoContagens",
     "ImportadoCategorias",
     "ImportarCategorias",
-    "ImportarEntrada",
-    "ImportarEntradaFieldsItem",
-    "ImportarEntradaTypesItem",
+    "ImportarEntradaContinuidade",
+    "ImportarEntradaDominios",
+    "ImportarEntradaDominiosFieldsItem",
+    "ImportarEntradaDominiosTypesItem",
     "ImportarGrupoEntrada",
     "ImportarSaida",
     "ImportarSaidaCriadosItem",
@@ -1239,19 +1354,23 @@ __all__ = (
     "LeituraEntrada",
     "LeituraEntradaBruta",
     "LeiturasLote",
-    "LigacaoEntrada",
+    "LigacaoEntradaDominios",
+    "LigacaoEntradaRede",
     "LigacaoSaida",
     "Limites",
     "LinhaLog",
-    "Link",
+    "LinkCatalogo",
     "LinkCriado",
     "LinkCriadoAvisosItem",
     "LinkEntrada",
+    "LinkOrg",
     "ListaAgendas",
     "ListaJobs",
     "ListaNotificacoes",
     "ListaNotificacoesItensItem",
+    "ListarAnexosApiCamadasIdFeicoesGlobalidAnexosGetResponse200Item",
     "ListarFilasApiCampoFilasGetResponseListarFilasApiCampoFilasGet",
+    "ListarHistoricoApiCamadasIdFeicoesGlobalidHistoricoGetResponseListarHistoricoApiCamadasIdFeicoesGlobalidHistoricoGet",
     "ListarReplicasApiReplicasGetResponse200Item",
     "ListarRoteirosApiCampoRoteirosGetResponseListarRoteirosApiCampoRoteirosGet",
     "ListarVersoesApiCamadasIdVersoesGetResponse200Item",
@@ -1299,6 +1418,7 @@ __all__ = (
     "MetadadoEditorEntrada",
     "MetadadoEditorEntradaItemType0",
     "MetadadoEditorEntradaMetadado",
+    "MetadadoIsoEntrada",
     "Metrica",
     "Miniatura",
     "MiniaturaEntrada",
@@ -1319,6 +1439,7 @@ __all__ = (
     "MunicipioGeoJson",
     "NivelDefinir",
     "Objetivo",
+    "ObterFeicaoRotaApiCamadasIdFeicoesGlobalidGetResponseObterFeicaoRotaApiCamadasIdFeicoesGlobalidGet",
     "ObterReplicaApiReplicasIdGetResponseObterReplicaApiReplicasIdGet",
     "ObterVersaoApiCamadasIdVersoesVersaoGetResponseObterVersaoApiCamadasIdVersoesVersaoGet",
     "OpcoesCsv",
@@ -1332,6 +1453,8 @@ __all__ = (
     "OrgSaidaArmazenamento",
     "OrgSaidaAuth",
     "OrgSaidaMapa",
+    "OrgSaidaPaginaInicialItem",
+    "OrgSaidaRegional",
     "OrgSaidaUsuarios",
     "PacoteEntrada",
     "PacoteEntradaMapeamento",
@@ -1392,13 +1515,30 @@ __all__ = (
     "PonteSaida",
     "Ponto",
     "PontoTracado",
+    "PontoUso",
     "PredefinicaoEntrada",
     "PredefinicaoEntradaEsticamentoType0",
     "PreencherPendentesEntrada",
     "PresencaEntrada",
+    "Preset",
+    "PresetAplicar",
+    "PresetConteudo",
+    "PresetEditar",
+    "PresetEditarConteudoType0",
+    "PresetEditarEscopoType0",
+    "PresetEntrada",
+    "PresetEntradaConteudo",
+    "PresetEntradaEscopo",
+    "PresetImportado",
+    "PresetImportar",
+    "PresetImportarConteudo",
+    "PresetImportarEscopo",
+    "PresetPagina",
     "PreviaCorpo",
     "PreviaCorpoLayoutType0",
     "PreviaCorpoMapaType0",
+    "PrevisaoEntrada",
+    "PrevisaoEntradaTransformacao",
     "Privilegio",
     "PromoverEntrada",
     "PropagadoresEntrada",
@@ -1482,7 +1622,9 @@ __all__ = (
     "RespostaEntradaRepeticoes",
     "RespostaEntradaRepeticoesAdditionalPropertyItem",
     "RespostaEntradaValores",
+    "RestaurarSaida",
     "RestaurarVersaoEntrada",
+    "RestricoesEntrada",
     "ResultadoFeicao",
     "ResultadoFeicaoAtributosType0",
     "Resumo",
@@ -1502,6 +1644,7 @@ __all__ = (
     "SenhaSoEntrada",
     "SenhaTemporaria",
     "SerieApiRedeMedicaoAtivosAtivoSerieGetResponseSerieApiRedeMedicaoAtivosAtivoSerieGet",
+    "SerieUso",
     "ServicoSaida",
     "Sessao",
     "SimboloEntrada",
@@ -1551,14 +1694,18 @@ __all__ = (
     "TokenDono",
     "TokenRestricao",
     "TopologiaResumo",
+    "TracadoAreaSujaResultado",
+    "TracadoAreaSujaResultadoAreaSujaType0",
     "TracadoEntrada",
-    "TracadoResultado",
-    "TracadoResultadoGeometriaType0",
     "Transferencia",
     "TransferenciaEntrada",
     "TransferenciaNovoDono",
     "TransferenciaPlanoItem",
     "UltimasLeiturasApiRedeMedicaoAtivosAtivoUltimasGetResponseUltimasLeiturasApiRedeMedicaoAtivosAtivoUltimasGet",
+    "UniaoEntrada",
+    "UniaoEntradaAtributosType0",
+    "UniaoEntradaVersoes",
+    "UnirFeicoesApiCamadasIdFeicoesUnirPostResponseUnirFeicoesApiCamadasIdFeicoesUnirPost",
     "UploadCriar",
     "UsadoPor",
     "UsoSaida",
@@ -1609,5 +1756,10 @@ __all__ = (
     "VistaEntradaEstiloType0",
     "VistaEntradaPopupType0",
     "VisualizacaoDia",
+    "Webhook",
+    "WebhookEditar",
+    "WebhookEntrada",
+    "WebhookPagina",
+    "WebhookSegredo",
     "XlsformEntrada",
 )

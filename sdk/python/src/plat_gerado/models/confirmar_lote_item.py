@@ -8,6 +8,8 @@ from attrs import define as _attrs_define
 from ..types import UNSET, Unset
 
 if TYPE_CHECKING:
+    from ..models.confirmar_lote_item_cad_type_0 import ConfirmarLoteItemCadType0
+    from ..models.confirmar_lote_item_camada_type_0 import ConfirmarLoteItemCamadaType0
     from ..models.confirmar_lote_item_campos_type_0_item import ConfirmarLoteItemCamposType0Item
     from ..models.confirmar_lote_item_codificacao_type_0 import ConfirmarLoteItemCodificacaoType0
     from ..models.confirmar_lote_item_crs_type_0 import ConfirmarLoteItemCrsType0
@@ -29,6 +31,8 @@ class ConfirmarLoteItem:
         geometria (ConfirmarLoteItemGeometriaType0 | None | Unset):
         campos (list[ConfirmarLoteItemCamposType0Item] | None | Unset):
         validade (ConfirmarLoteItemValidadeType0 | None | Unset):
+        cad (ConfirmarLoteItemCadType0 | None | Unset):
+        camada (ConfirmarLoteItemCamadaType0 | None | Unset):
     """
 
     importacao_id: str
@@ -38,8 +42,12 @@ class ConfirmarLoteItem:
     geometria: ConfirmarLoteItemGeometriaType0 | None | Unset = UNSET
     campos: list[ConfirmarLoteItemCamposType0Item] | None | Unset = UNSET
     validade: ConfirmarLoteItemValidadeType0 | None | Unset = UNSET
+    cad: ConfirmarLoteItemCadType0 | None | Unset = UNSET
+    camada: ConfirmarLoteItemCamadaType0 | None | Unset = UNSET
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.confirmar_lote_item_cad_type_0 import ConfirmarLoteItemCadType0  # noqa: PLC0415
+        from ..models.confirmar_lote_item_camada_type_0 import ConfirmarLoteItemCamadaType0  # noqa: PLC0415
         from ..models.confirmar_lote_item_codificacao_type_0 import ConfirmarLoteItemCodificacaoType0  # noqa: PLC0415
         from ..models.confirmar_lote_item_crs_type_0 import ConfirmarLoteItemCrsType0  # noqa: PLC0415
         from ..models.confirmar_lote_item_geometria_type_0 import ConfirmarLoteItemGeometriaType0  # noqa: PLC0415
@@ -97,6 +105,22 @@ class ConfirmarLoteItem:
         else:
             validade = self.validade
 
+        cad: dict[str, Any] | None | Unset
+        if isinstance(self.cad, Unset):
+            cad = UNSET
+        elif isinstance(self.cad, ConfirmarLoteItemCadType0):
+            cad = self.cad.to_dict()
+        else:
+            cad = self.cad
+
+        camada: dict[str, Any] | None | Unset
+        if isinstance(self.camada, Unset):
+            camada = UNSET
+        elif isinstance(self.camada, ConfirmarLoteItemCamadaType0):
+            camada = self.camada.to_dict()
+        else:
+            camada = self.camada
+
         field_dict: dict[str, Any] = {}
 
         field_dict.update(
@@ -116,11 +140,17 @@ class ConfirmarLoteItem:
             field_dict["campos"] = campos
         if validade is not UNSET:
             field_dict["validade"] = validade
+        if cad is not UNSET:
+            field_dict["cad"] = cad
+        if camada is not UNSET:
+            field_dict["camada"] = camada
 
         return field_dict
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.confirmar_lote_item_cad_type_0 import ConfirmarLoteItemCadType0  # noqa: PLC0415
+        from ..models.confirmar_lote_item_camada_type_0 import ConfirmarLoteItemCamadaType0  # noqa: PLC0415
         from ..models.confirmar_lote_item_campos_type_0_item import ConfirmarLoteItemCamposType0Item  # noqa: PLC0415
         from ..models.confirmar_lote_item_codificacao_type_0 import ConfirmarLoteItemCodificacaoType0  # noqa: PLC0415
         from ..models.confirmar_lote_item_crs_type_0 import ConfirmarLoteItemCrsType0  # noqa: PLC0415
@@ -229,6 +259,40 @@ class ConfirmarLoteItem:
 
         validade = _parse_validade(d.pop("validade", UNSET))
 
+        def _parse_cad(data: object) -> ConfirmarLoteItemCadType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                cad_type_0 = ConfirmarLoteItemCadType0.from_dict(data)
+
+                return cad_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(ConfirmarLoteItemCadType0 | None | Unset, data)
+
+        cad = _parse_cad(d.pop("cad", UNSET))
+
+        def _parse_camada(data: object) -> ConfirmarLoteItemCamadaType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                camada_type_0 = ConfirmarLoteItemCamadaType0.from_dict(data)
+
+                return camada_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(ConfirmarLoteItemCamadaType0 | None | Unset, data)
+
+        camada = _parse_camada(d.pop("camada", UNSET))
+
         confirmar_lote_item = cls(
             importacao_id=importacao_id,
             titulo=titulo,
@@ -237,6 +301,8 @@ class ConfirmarLoteItem:
             geometria=geometria,
             campos=campos,
             validade=validade,
+            cad=cad,
+            camada=camada,
         )
 
         return confirmar_lote_item

@@ -3,6 +3,20 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## 18 de setembro de 2026 (item L7-08-b-sdk-python: re-prova contra o tronco e restauração da paridade)
+
+O bloqueio registrado ("artefato ausente em master") já não valia: o SDK está no tronco desde a junção de
+`wt/il708bsdkpy`. O que a re-prova achou de verdade: (1) o `docs/openapi.json` do tronco cresceu de 196
+para 977 operações com as junções da semana e o `plat_gerado/` comitado não cobria as rotas novas;
+(2) sete classes Pydantic novas repetiam o vício do `title` duplicado (`FeicoesSaida` regras×conexão,
+`ImportarEntrada` domínios×continuidade, `Link` org×catálogo — e `LinkCriado`, que herda o `title` do
+pai —, `CategoriasEntrada`, `LigacaoEntrada`, `FeicaoEntrada` catálogo/domínios×rede), derrubando o
+gerador com "duplicate models"; (3) a seção "SDK Python" de `docs/PARIDADE.md` tinha sumido numa fusão
+(mesmo modo de falha do L2-02-f, acima). Corrigido com `model_config = ConfigDict(title="...")` nas 7
+classes (mesmo padrão do ADR `20260907T1541-sdk-python.md` §3), `docs/openapi.json` e `plat_gerado/`
+regenerados, seção de paridade restaurada com as contagens de hoje. Prova: `tests/sdk` — 37 passed
+(cobertura 977/977, regeneração byte a byte, 10 exemplos contra a API real, 3 ataques do adversário).
+
 ## 18 de setembro de 2026 (item L2-02-f-estilo-raster: restauração da ponte perdida em fusão)
 
 A ponte "estilo salvo → parâmetros de ladrilho → legenda" do editor de estilo raster (entregue em

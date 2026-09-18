@@ -7,7 +7,7 @@ import httpx
 from ... import errors
 from ...client import AuthenticatedClient, Client
 from ...models.http_validation_error import HTTPValidationError
-from ...models.ligacao_entrada import LigacaoEntrada
+from ...models.ligacao_entrada_dominios import LigacaoEntradaDominios
 from ...models.ligacao_saida import LigacaoSaida
 from ...types import Response
 
@@ -15,7 +15,7 @@ from ...types import Response
 def _get_kwargs(
     item_id: str,
     *,
-    body: LigacaoEntrada,
+    body: LigacaoEntradaDominios,
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
 
@@ -68,7 +68,7 @@ def sync_detailed(
     item_id: str,
     *,
     client: AuthenticatedClient | Client,
-    body: LigacaoEntrada,
+    body: LigacaoEntradaDominios,
 ) -> Response[HTTPValidationError | LigacaoSaida]:
     """Ligar
 
@@ -77,7 +77,7 @@ def sync_detailed(
 
     Args:
         item_id (str):
-        body (LigacaoEntrada):
+        body (LigacaoEntradaDominios):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -103,7 +103,7 @@ def sync(
     item_id: str,
     *,
     client: AuthenticatedClient | Client,
-    body: LigacaoEntrada,
+    body: LigacaoEntradaDominios,
 ) -> HTTPValidationError | LigacaoSaida | None:
     """Ligar
 
@@ -112,7 +112,7 @@ def sync(
 
     Args:
         item_id (str):
-        body (LigacaoEntrada):
+        body (LigacaoEntradaDominios):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -133,7 +133,7 @@ async def asyncio_detailed(
     item_id: str,
     *,
     client: AuthenticatedClient | Client,
-    body: LigacaoEntrada,
+    body: LigacaoEntradaDominios,
 ) -> Response[HTTPValidationError | LigacaoSaida]:
     """Ligar
 
@@ -142,7 +142,7 @@ async def asyncio_detailed(
 
     Args:
         item_id (str):
-        body (LigacaoEntrada):
+        body (LigacaoEntradaDominios):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -166,7 +166,7 @@ async def asyncio(
     item_id: str,
     *,
     client: AuthenticatedClient | Client,
-    body: LigacaoEntrada,
+    body: LigacaoEntradaDominios,
 ) -> HTTPValidationError | LigacaoSaida | None:
     """Ligar
 
@@ -175,7 +175,7 @@ async def asyncio(
 
     Args:
         item_id (str):
-        body (LigacaoEntrada):
+        body (LigacaoEntradaDominios):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

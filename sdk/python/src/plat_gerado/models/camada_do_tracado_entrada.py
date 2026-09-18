@@ -31,6 +31,9 @@ class CamadaDoTracadoEntrada:
             k (int | Unset):  Default: 1.
             categoria_controlador (str | Unset):  Default: 'fonte'.
             origem_direcao (str | Unset):  Default: 'auto'.
+            categorias_isolamento (list[str] | Unset):
+            incluir_isolados (bool | Unset):  Default: False.
+            ignorar_inoperante (bool | Unset):  Default: True.
     """
 
     titulo: str
@@ -43,6 +46,9 @@ class CamadaDoTracadoEntrada:
     k: int | Unset = 1
     categoria_controlador: str | Unset = "fonte"
     origem_direcao: str | Unset = "auto"
+    categorias_isolamento: list[str] | Unset = UNSET
+    incluir_isolados: bool | Unset = False
+    ignorar_inoperante: bool | Unset = True
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -96,6 +102,14 @@ class CamadaDoTracadoEntrada:
 
         origem_direcao = self.origem_direcao
 
+        categorias_isolamento: list[str] | Unset = UNSET
+        if not isinstance(self.categorias_isolamento, Unset):
+            categorias_isolamento = self.categorias_isolamento
+
+        incluir_isolados = self.incluir_isolados
+
+        ignorar_inoperante = self.ignorar_inoperante
+
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
@@ -121,6 +135,12 @@ class CamadaDoTracadoEntrada:
             field_dict["categoria_controlador"] = categoria_controlador
         if origem_direcao is not UNSET:
             field_dict["origem_direcao"] = origem_direcao
+        if categorias_isolamento is not UNSET:
+            field_dict["categorias_isolamento"] = categorias_isolamento
+        if incluir_isolados is not UNSET:
+            field_dict["incluir_isolados"] = incluir_isolados
+        if ignorar_inoperante is not UNSET:
+            field_dict["ignorar_inoperante"] = ignorar_inoperante
 
         return field_dict
 
@@ -199,6 +219,12 @@ class CamadaDoTracadoEntrada:
 
         origem_direcao = d.pop("origem_direcao", UNSET)
 
+        categorias_isolamento = cast(list[str], d.pop("categorias_isolamento", UNSET))
+
+        incluir_isolados = d.pop("incluir_isolados", UNSET)
+
+        ignorar_inoperante = d.pop("ignorar_inoperante", UNSET)
+
         camada_do_tracado_entrada = cls(
             titulo=titulo,
             tipo=tipo,
@@ -210,6 +236,9 @@ class CamadaDoTracadoEntrada:
             k=k,
             categoria_controlador=categoria_controlador,
             origem_direcao=origem_direcao,
+            categorias_isolamento=categorias_isolamento,
+            incluir_isolados=incluir_isolados,
+            ignorar_inoperante=ignorar_inoperante,
         )
 
         camada_do_tracado_entrada.additional_properties = d

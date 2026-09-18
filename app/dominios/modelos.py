@@ -5,7 +5,7 @@ propósito: a API responde 422 com o campo errado antes de gastar transação, e
 
 from __future__ import annotations
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import ConfigDict, Field, field_validator, model_validator
 
 from app.catalogo.modelos import UUID_PADRAO, Modelo, Saida
 
@@ -85,6 +85,9 @@ class DominioPagina(Saida):
 
 
 class LigacaoEntrada(Modelo):
+    # título único no OpenAPI: colidia com app.rede_utilidades.modelos.LigacaoEntrada
+    model_config = ConfigDict(title="LigacaoEntradaDominios")
+
     campo: str = Field(pattern=CAMPO_PADRAO)
     dominio_id: str = Field(pattern=UUID_PADRAO)
     subtipo_codigo: int | None = None
@@ -140,6 +143,9 @@ class CsvEntrada(Modelo):
 class ImportarEntrada(Modelo):
     """Recorte do JSON de uma camada de FeatureServer/FGDB: `fields` com `domain`, e `types` com
     `domains`/`templates`. É o mesmo objeto que a Esri publica em `/FeatureServer/0?f=json`."""
+
+    # título único no OpenAPI: colidia com o ImportarEntrada de rotas_continuidade e impedia gerar o SDK
+    model_config = ConfigDict(title="ImportarEntradaDominios")
 
     fields: list[dict] = Field(default_factory=list, max_length=500)
     types: list[dict] = Field(default_factory=list, max_length=500)

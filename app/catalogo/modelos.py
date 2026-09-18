@@ -200,6 +200,9 @@ class CategoriaNo(Modelo):
 
 
 class CategoriasEntrada(Modelo):
+    # título único no OpenAPI: colidia com app.rede_utilidades.modelos.CategoriasEntrada
+    model_config = ConfigDict(title="CategoriasEntradaCatalogo")
+
     arvore: list[CategoriaNo] = Field(max_length=900)
 
 
@@ -312,6 +315,9 @@ class Compartilhamento(Saida):
 
 
 class Link(Saida):
+    # título único no OpenAPI: colidia com o Link de app.auth.rotas_org e impedia a geração do SDK
+    model_config = ConfigDict(title="LinkCatalogo")
+
     id: str
     prefixo: str
     nome: str | None
@@ -323,6 +329,9 @@ class Link(Saida):
 
 
 class LinkCriado(Link):
+    # título próprio: sem ele herda "LinkCatalogo" do pai e volta a colisão que o título do pai resolveu
+    model_config = ConfigDict(title="LinkCriado")
+
     token: str
     url: str
     # dependências do item que ficaram FORA do link (o anônimo não as vê): publica mesmo assim é decisão

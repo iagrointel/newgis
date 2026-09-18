@@ -114,6 +114,10 @@ def escrever_veredito(veredito: dict) -> None:
 def test_4_registra_o_veredito():
     """Não refaz as chamadas (já rodaram acima, dentro da MESMA sessão de pytest) — só registra
     que os 3 ataques do item foram tentados e o resultado é PASSA."""
+    # contagem lida do OpenAPI comitado, nunca escrita à mão: um número fixo aqui fica velho na
+    # primeira junção que acrescenta rota (ficou: dizia 196 quando o tronco já tinha 977)
+    doc = json.loads((RAIZ / "docs" / "openapi.json").read_text(encoding="utf-8"))
+    total = sum(1 for p in doc["paths"].values() for m in p if m in {"get", "post", "put", "patch", "delete"})
     escrever_veredito(
         {
             "item": "L7-08-b-sdk-python",
@@ -124,7 +128,7 @@ def test_4_registra_o_veredito():
                 "test_2_token_de_um_inquilino_nao_le_item_de_outro: 404 (não 403) ao ler/apagar item de "
                 "outro inquilino; o item original sobrevive",
                 "test_3_toda_rota_do_openapi_tem_metodo_no_sdk_gerado: 0 rota sem módulo gerado "
-                "(196 operações, ver tests/sdk/test_cobertura_openapi.py)",
+                f"({total} operações, ver tests/sdk/test_cobertura_openapi.py)",
             ],
             "o_que_nao_prova": [
                 "não testou paridade contra o ArcGIS API for Python real (sem credencial do parceiro; "

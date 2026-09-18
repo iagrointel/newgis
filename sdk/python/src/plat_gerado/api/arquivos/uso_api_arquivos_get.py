@@ -43,6 +43,12 @@ def sync_detailed(
 ) -> Response[Any]:
     """Uso
 
+     Uso × cota do balde do inquilino, lido do PRÓPRIO Garage (GetBucketInfo), nas DUAS dimensões que o
+    balde
+    tem desde o item L1-01-d: bytes e número de objetos. `cota_bytes` continua no corpo com o mesmo nome
+    e o
+    mesmo significado de antes (item L0-11); `objetos_usados`/`cota_objetos` são os campos novos.
+
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
@@ -65,6 +71,12 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
 ) -> Response[Any]:
     """Uso
+
+     Uso × cota do balde do inquilino, lido do PRÓPRIO Garage (GetBucketInfo), nas DUAS dimensões que o
+    balde
+    tem desde o item L1-01-d: bytes e número de objetos. `cota_bytes` continua no corpo com o mesmo nome
+    e o
+    mesmo significado de antes (item L0-11); `objetos_usados`/`cota_objetos` são os campos novos.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

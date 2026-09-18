@@ -14,6 +14,7 @@ def _get_kwargs(
     id: str,
     *,
     formato: None | str | Unset = UNSET,
+    perfil: str | Unset = "auto",
 ) -> dict[str, Any]:
 
     params: dict[str, Any] = {}
@@ -24,6 +25,8 @@ def _get_kwargs(
     else:
         json_formato = formato
     params["formato"] = json_formato
+
+    params["perfil"] = perfil
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
 
@@ -72,20 +75,27 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     formato: None | str | Unset = UNSET,
+    perfil: str | Unset = "auto",
 ) -> Response[Any | HTTPValidationError]:
     """Metadado Iso
 
-     Metadado ISO do item (item L0-09-metadado-catalogo; ADR 0004 D17). Padrão = ISO 19139/GMD (o que o
-    Perfil MGB/INDE consome); `?formato=19115-3` pede `mdb:MD_Metadata` (ISO 19115-1/19115-3, L0-09
-    cláusula
-    2/D42) — os dois validados contra o XSD oficial ANTES de sair (docs/xsd/cache/, baixado por
-    docs/xsd/baixar_iso19139.py --perfil iso19139|iso19115-3); `item_ou_404` + RLS de `plat.item`
-    garantem que
-    o token/sessão de um inquilino nunca gera o XML de item de outro.
+     Metadado ISO do item (itens L0-09-metadado-catalogo e L1-27). Padrão = ISO 19139/GMD (o que o Perfil
+    MGB/INDE consome); `?formato=19115-3` pede `mdb:MD_Metadata` (ISO 19115-1/19115-3, L0-09 cláusula
+    2/D42);
+    item raster COM ficha de imagem sai por padrão em ISO 19115-2/gmi, o perfil de imagem (item L1-27),
+    que
+    acrescenta aquisição, plataforma, instrumento, nuvem, ângulos do sol e a licença como restrição
+    legal, e
+    `?perfil=generico` força o GMD de volta. Os três são validados contra o XSD oficial ANTES de sair
+    (docs/xsd/cache/, baixado por docs/xsd/baixar_iso19139.py --perfil iso19139|iso19115-3);
+    `item_ou_404` +
+    RLS de `plat.item` garantem que o token/sessão de um inquilino nunca gera o XML de item de outro.
+    `formato=19115-3` e `perfil=imagem` são exclusivos: o 19115-3 é outro esquema, não outro perfil.
 
     Args:
         id (str):
         formato (None | str | Unset):
+        perfil (str | Unset):  Default: 'auto'.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -98,6 +108,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         id=id,
         formato=formato,
+        perfil=perfil,
     )
 
     response = client.get_httpx_client().request(
@@ -112,20 +123,27 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     formato: None | str | Unset = UNSET,
+    perfil: str | Unset = "auto",
 ) -> Any | HTTPValidationError | None:
     """Metadado Iso
 
-     Metadado ISO do item (item L0-09-metadado-catalogo; ADR 0004 D17). Padrão = ISO 19139/GMD (o que o
-    Perfil MGB/INDE consome); `?formato=19115-3` pede `mdb:MD_Metadata` (ISO 19115-1/19115-3, L0-09
-    cláusula
-    2/D42) — os dois validados contra o XSD oficial ANTES de sair (docs/xsd/cache/, baixado por
-    docs/xsd/baixar_iso19139.py --perfil iso19139|iso19115-3); `item_ou_404` + RLS de `plat.item`
-    garantem que
-    o token/sessão de um inquilino nunca gera o XML de item de outro.
+     Metadado ISO do item (itens L0-09-metadado-catalogo e L1-27). Padrão = ISO 19139/GMD (o que o Perfil
+    MGB/INDE consome); `?formato=19115-3` pede `mdb:MD_Metadata` (ISO 19115-1/19115-3, L0-09 cláusula
+    2/D42);
+    item raster COM ficha de imagem sai por padrão em ISO 19115-2/gmi, o perfil de imagem (item L1-27),
+    que
+    acrescenta aquisição, plataforma, instrumento, nuvem, ângulos do sol e a licença como restrição
+    legal, e
+    `?perfil=generico` força o GMD de volta. Os três são validados contra o XSD oficial ANTES de sair
+    (docs/xsd/cache/, baixado por docs/xsd/baixar_iso19139.py --perfil iso19139|iso19115-3);
+    `item_ou_404` +
+    RLS de `plat.item` garantem que o token/sessão de um inquilino nunca gera o XML de item de outro.
+    `formato=19115-3` e `perfil=imagem` são exclusivos: o 19115-3 é outro esquema, não outro perfil.
 
     Args:
         id (str):
         formato (None | str | Unset):
+        perfil (str | Unset):  Default: 'auto'.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -139,6 +157,7 @@ def sync(
         id=id,
         client=client,
         formato=formato,
+        perfil=perfil,
     ).parsed
 
 
@@ -147,20 +166,27 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     formato: None | str | Unset = UNSET,
+    perfil: str | Unset = "auto",
 ) -> Response[Any | HTTPValidationError]:
     """Metadado Iso
 
-     Metadado ISO do item (item L0-09-metadado-catalogo; ADR 0004 D17). Padrão = ISO 19139/GMD (o que o
-    Perfil MGB/INDE consome); `?formato=19115-3` pede `mdb:MD_Metadata` (ISO 19115-1/19115-3, L0-09
-    cláusula
-    2/D42) — os dois validados contra o XSD oficial ANTES de sair (docs/xsd/cache/, baixado por
-    docs/xsd/baixar_iso19139.py --perfil iso19139|iso19115-3); `item_ou_404` + RLS de `plat.item`
-    garantem que
-    o token/sessão de um inquilino nunca gera o XML de item de outro.
+     Metadado ISO do item (itens L0-09-metadado-catalogo e L1-27). Padrão = ISO 19139/GMD (o que o Perfil
+    MGB/INDE consome); `?formato=19115-3` pede `mdb:MD_Metadata` (ISO 19115-1/19115-3, L0-09 cláusula
+    2/D42);
+    item raster COM ficha de imagem sai por padrão em ISO 19115-2/gmi, o perfil de imagem (item L1-27),
+    que
+    acrescenta aquisição, plataforma, instrumento, nuvem, ângulos do sol e a licença como restrição
+    legal, e
+    `?perfil=generico` força o GMD de volta. Os três são validados contra o XSD oficial ANTES de sair
+    (docs/xsd/cache/, baixado por docs/xsd/baixar_iso19139.py --perfil iso19139|iso19115-3);
+    `item_ou_404` +
+    RLS de `plat.item` garantem que o token/sessão de um inquilino nunca gera o XML de item de outro.
+    `formato=19115-3` e `perfil=imagem` são exclusivos: o 19115-3 é outro esquema, não outro perfil.
 
     Args:
         id (str):
         formato (None | str | Unset):
+        perfil (str | Unset):  Default: 'auto'.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -173,6 +199,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         id=id,
         formato=formato,
+        perfil=perfil,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -185,20 +212,27 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     formato: None | str | Unset = UNSET,
+    perfil: str | Unset = "auto",
 ) -> Any | HTTPValidationError | None:
     """Metadado Iso
 
-     Metadado ISO do item (item L0-09-metadado-catalogo; ADR 0004 D17). Padrão = ISO 19139/GMD (o que o
-    Perfil MGB/INDE consome); `?formato=19115-3` pede `mdb:MD_Metadata` (ISO 19115-1/19115-3, L0-09
-    cláusula
-    2/D42) — os dois validados contra o XSD oficial ANTES de sair (docs/xsd/cache/, baixado por
-    docs/xsd/baixar_iso19139.py --perfil iso19139|iso19115-3); `item_ou_404` + RLS de `plat.item`
-    garantem que
-    o token/sessão de um inquilino nunca gera o XML de item de outro.
+     Metadado ISO do item (itens L0-09-metadado-catalogo e L1-27). Padrão = ISO 19139/GMD (o que o Perfil
+    MGB/INDE consome); `?formato=19115-3` pede `mdb:MD_Metadata` (ISO 19115-1/19115-3, L0-09 cláusula
+    2/D42);
+    item raster COM ficha de imagem sai por padrão em ISO 19115-2/gmi, o perfil de imagem (item L1-27),
+    que
+    acrescenta aquisição, plataforma, instrumento, nuvem, ângulos do sol e a licença como restrição
+    legal, e
+    `?perfil=generico` força o GMD de volta. Os três são validados contra o XSD oficial ANTES de sair
+    (docs/xsd/cache/, baixado por docs/xsd/baixar_iso19139.py --perfil iso19139|iso19115-3);
+    `item_ou_404` +
+    RLS de `plat.item` garantem que o token/sessão de um inquilino nunca gera o XML de item de outro.
+    `formato=19115-3` e `perfil=imagem` são exclusivos: o 19115-3 é outro esquema, não outro perfil.
 
     Args:
         id (str):
         formato (None | str | Unset):
+        perfil (str | Unset):  Default: 'auto'.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -213,5 +247,6 @@ async def asyncio(
             id=id,
             client=client,
             formato=formato,
+            perfil=perfil,
         )
     ).parsed

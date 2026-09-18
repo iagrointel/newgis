@@ -73,9 +73,10 @@ def sync_detailed(
     """Arquivo Configurar
 
      Marca a conexão como fonte de arquivo por URL e define o intervalo da atualização agendada (item
-    L6-02-h). Só faz sentido em conexão `http` no modo `copiada`: `referenciada` significa que o dado
-    FICA no
-    serviço de origem, e este item copia o arquivo para dentro da plataforma.
+    L6-02-h; `google_sheets` entra pelo item L6-02-i — a planilha vira o MESMO CSV por URL). Só faz
+    sentido
+    em conexão no modo `copiada`: `referenciada` significa que o dado FICA no serviço de origem, e este
+    item copia o arquivo para dentro da plataforma.
 
     Args:
         id (str):
@@ -112,9 +113,10 @@ def sync(
     """Arquivo Configurar
 
      Marca a conexão como fonte de arquivo por URL e define o intervalo da atualização agendada (item
-    L6-02-h). Só faz sentido em conexão `http` no modo `copiada`: `referenciada` significa que o dado
-    FICA no
-    serviço de origem, e este item copia o arquivo para dentro da plataforma.
+    L6-02-h; `google_sheets` entra pelo item L6-02-i — a planilha vira o MESMO CSV por URL). Só faz
+    sentido
+    em conexão no modo `copiada`: `referenciada` significa que o dado FICA no serviço de origem, e este
+    item copia o arquivo para dentro da plataforma.
 
     Args:
         id (str):
@@ -146,9 +148,10 @@ async def asyncio_detailed(
     """Arquivo Configurar
 
      Marca a conexão como fonte de arquivo por URL e define o intervalo da atualização agendada (item
-    L6-02-h). Só faz sentido em conexão `http` no modo `copiada`: `referenciada` significa que o dado
-    FICA no
-    serviço de origem, e este item copia o arquivo para dentro da plataforma.
+    L6-02-h; `google_sheets` entra pelo item L6-02-i — a planilha vira o MESMO CSV por URL). Só faz
+    sentido
+    em conexão no modo `copiada`: `referenciada` significa que o dado FICA no serviço de origem, e este
+    item copia o arquivo para dentro da plataforma.
 
     Args:
         id (str):
@@ -183,9 +186,10 @@ async def asyncio(
     """Arquivo Configurar
 
      Marca a conexão como fonte de arquivo por URL e define o intervalo da atualização agendada (item
-    L6-02-h). Só faz sentido em conexão `http` no modo `copiada`: `referenciada` significa que o dado
-    FICA no
-    serviço de origem, e este item copia o arquivo para dentro da plataforma.
+    L6-02-h; `google_sheets` entra pelo item L6-02-i — a planilha vira o MESMO CSV por URL). Só faz
+    sentido
+    em conexão no modo `copiada`: `referenciada` significa que o dado FICA no serviço de origem, e este
+    item copia o arquivo para dentro da plataforma.
 
     Args:
         id (str):

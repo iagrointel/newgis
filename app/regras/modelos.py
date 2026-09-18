@@ -61,6 +61,9 @@ class ValidarSaida(Saida):
 
 
 class FeicoesSaida(Saida):
+    # título único no OpenAPI: colidia com app.conexao.modelos.FeicoesSaida e impedia a geração do SDK
+    model_config = ConfigDict(title="FeicoesSaidaRegras")
+
     total: int
     itens: list[dict[str, Any]]
     campos_virtuais: list[str]

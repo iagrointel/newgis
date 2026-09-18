@@ -2,19 +2,19 @@
  "item": "L7-08-b-sdk-python",
  "medidas": {
   "openapi_operacoes_total": {
-   "valor": 196,
+   "valor": 977,
    "unidade": "operacoes",
    "comando": "python3 -c \"import json; d=json.load(open('docs/openapi.json')); print(sum(1 for p in d['paths'].values() for m in p if m in ('get','post','put','patch','delete')))\""
   },
   "sdk_operacoes_cobertas": {
-   "valor": 196,
+   "valor": 977,
    "unidade": "operacoes",
    "comando": "tests/sdk/test_cobertura_openapi.py::test_contagem_de_modulos_gerados_bate_com_a_contagem_de_operacoes"
   },
   "sdk_cobertura_percentual": {
    "valor": 100.0,
    "unidade": "%",
-   "comando": "196/196, tests/sdk/test_cobertura_openapi.py"
+   "comando": "977/977, tests/sdk/test_cobertura_openapi.py"
   },
   "exemplos_executaveis": {
    "valor": 10,
@@ -32,17 +32,15 @@
    "comando": "tests/sdk/test_regeneracao.py::test_regeneracao_do_sdk_e_reproducivel (gerado numa pasta irmã do repo, comparado byte a byte com sdk/python/src/plat_gerado/ comitado)"
   },
   "suite_sdk_testes_total": {
-   "valor": 19,
+   "valor": 37,
    "unidade": "testes",
    "comando": "bash laco/roda_teste.sh tests/sdk -v"
   },
   "suite_sdk_tempo_s": {
-   "valor": 10.17,
+   "valor": 21.79,
    "unidade": "s",
-   "comando": "bash laco/roda_teste.sh tests/sdk -v (19 passed in 10.17s)",
-   "carga_1min": 6.61,
-   "ram_livre_gb": 0,
-   "medido_em": "2026-09-07T15:36:18Z"
+   "comando": "bash laco/roda_teste.sh tests/sdk -v (37 passed in 21.79s)",
+   "medido_em": "2026-09-18T12:00:00Z"
   },
   "adversario_ataques": {
    "valor": 3,
@@ -55,9 +53,9 @@
    "comando": "tests/sdk/refutacao.json"
   },
   "modelos_pydantic_titulo_corrigido": {
-   "valor": 6,
+   "valor": 13,
    "unidade": "classes",
-   "comando": "app/auth/modelos.py + app/catalogo/modelos.py: Pagina, LoteEntrada, LoteSaida (2 modulos x 3 classes) — colisao de title que impedia geracao de qualquer SDK"
+   "comando": "07/09: Pagina, LoteEntrada, LoteSaida (auth x catalogo, 6 classes). 18/09: FeicoesSaida (regras x conexao), ImportarEntrada (dominios x continuidade), Link (org x catalogo), LinkCriado (herdava o titulo do pai), CategoriasEntrada (catalogo x rede), LigacaoEntrada (dominios x rede), FeicaoEntrada (dominios x rede) — 7 classes; mesma colisao de title que impede a geracao de qualquer SDK"
   }
  }
 }

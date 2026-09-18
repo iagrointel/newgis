@@ -190,6 +190,9 @@ class FeicoesSaida(Saida):
     """GeoJSON + o que a paginação apurou. `numero_matched` é o total DECLARADO pelo serviço (pode ser None:
     nem todo serviço declara) e `numberReturned` é o que veio nesta resposta — os dois juntos, nunca um só."""
 
+    # título único no OpenAPI: colidia com app.regras.modelos.FeicoesSaida e impedia a geração do SDK
+    model_config = ConfigDict(title="FeicoesSaidaConexao")
+
     type: str = "FeatureCollection"
     features: list[dict]
     numberReturned: int  # noqa: N815 — nome do padrão OGC API - Features, não do repositório
