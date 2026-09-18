@@ -114,6 +114,31 @@ tests/api/test_usuarios_papel_escalada.py` → 8 passed (sem o teardown 409 audi
 laudo citava como de outro item — não apareceu nesta rodada). `MANUAL.md` §4.4 atualizado.
 
 ## setembro de 2026 (item L3-01-a-modelo-dado: refutação "execute_values manda bytes e fura a reescrita de schema")
+Medido na cooperativa de teste (três maiores alimentadores da BDGD, 13.646 trechos de média tensão;
+`tests/medidas/L4-04-b-atualizar-e-exportar-subrede.json`): 3 subredes, 14.878 elementos em 9,3 s com carga
+12,66; nome da subrede igual ao `CTMT` do arquivo em 13.646 de 13.646 (1,0); a exportação do maior alimentador
+traz 5.392 elementos, 4.963 ligações e 337.047 m de linha agregada. Achado no caminho e corrigido: sem a
+camada de chaves no arquivo, a marcação automática elegia o TRANSFORMADOR como controlador do tier de média
+tensão, e o traçado partia do lado de lá da fronteira de subrede — 4 elementos alcançados de 13.646 trechos.
+## turno 3, setembro de 2026 (item L4-10-continuidade-dec-fec: DEC/FEC por conjunto e por alimentador)
+
+Os indicadores coletivos de continuidade da ANEEL (DEC e FEC) ligados à rede da BDGD pela chave `CONJ`, com
+o limite do ano ao lado. Tabelas novas `plat.rede_continuidade`, `plat.rede_continuidade_limite` e
+`plat.rede_continuidade_fonte` (migração `20260908T1328_rede_continuidade.sql`, RLS por inquilino como o
+resto da linha L4); job `rede.importar_continuidade` e rotas
+`/api/rede/{id}/continuidade/{conjuntos,alimentadores,dic-fic,painel,importar}`; painel `/redes/continuidade`
+com a série 2020-2025. Medido em dado aberto real (`tests/medidas/L4-10-continuidade-dec-fec.json`):
+importação com contagem conferida contra o arquivo (432 de 432 linhas apuradas, 36 de 36 limites, resumo
+criptográfico gravado); três conjuntos recontados direto do parquet em Python puro batem em 36 valores; e,
+sobre as 26.584 unidades consumidoras e os 5.481 transformadores da cooperativa de teste, 15 alimentadores
+recebem o DEC do conjunto por média ponderada e 4.967 transformadores saem com DIC e FIC médios.
+Duas regras que o item trava em teste: a palavra de acusação não aparece em nenhum arquivo (a comparação
+diz "dentro do limite" ou "acima do limite regulatório", com o número e o limite ao lado), e conjunto sem
+par no arquivo da agência sai como "sem dado", nunca como zero. Fora do escopo, declarado: a compensação
+paga (o conjunto de dados da agência usa outros 96 códigos de indicador, nenhum deles DEC ou FEC) e as
+interrupções com causa e data. ADR `20260908T1400-continuidade-dec-fec.md`.
+
+## turno 3, setembro de 2026 (item L4-15-serie-temporal-da-rede: várias safras da mesma rede)
 
 Já estava CONSERTADO antes deste turno (achado 1 do laudo, 06/09/2026), em dois níveis: `gravar_feicoes`
 (`app/amc/unidades.py`) não usa mais `psycopg2.extras.execute_values` — grava em `cur.execute` de TEXTO

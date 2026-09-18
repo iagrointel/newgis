@@ -1223,6 +1223,20 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: f"/api/rede/{p.rede_b['id']}/subrede/zt-inexistente/fluxo"),
     ("GET", "/api/rede/{rede_id}/subrede/{nome}/fluxo/camada"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/subrede/zt-inexistente/fluxo/camada"),
+    # ---- L4-10 continuidade DEC/FEC: as seis rotas apontam a rede de B e têm de dar 404. A leitura em
+    # CSV segue a mesma rota (/dic-fic com formato=csv), por isso não tem caso separado.
+    ("GET", "/api/rede/{rede_id}/continuidade/conjuntos"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/continuidade/conjuntos"),
+    ("GET", "/api/rede/{rede_id}/continuidade/alimentadores"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/continuidade/alimentadores"),
+    ("GET", "/api/rede/{rede_id}/continuidade/dic-fic"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/continuidade/dic-fic"),
+    ("GET", "/api/rede/{rede_id}/continuidade/painel"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/continuidade/painel"),
+    ("POST", "/api/rede/{rede_id}/continuidade/importar"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/continuidade/importar", lambda p: {}),
+    ("DELETE", "/api/rede/{rede_id}/continuidade"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/continuidade"),
     ("GET", "/api/org"): Caso(lambda p: "/api/org", proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
     ("PUT", "/api/org"): Caso(
         lambda p: "/api/org", _corpo_org_atual, proprio=True, aceita=frozenset({200}), verificar=_sem_marca,

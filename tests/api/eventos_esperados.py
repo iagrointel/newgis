@@ -219,4 +219,7 @@ ROTAS_SEM_EVENTO: dict[tuple[str, str], str] = {
     ("POST", "/api/webhooks/{id}/rotacionar"): ["webhooks/rotacionar"],
     ("POST", "/api/webhooks/{id}/reativar"): ["webhooks/reativar"],
     ("POST", "/api/webhooks/{id}/entregas/{entrega_id}/reenviar"): ["webhooks/reenvio"],
+    # L4-10 continuidade DEC/FEC: a importação do dado aberto da ANEEL e o apagamento por conjunto
+    ("POST", "/api/rede/{rede_id}/continuidade/importar"): ["redes/continuidade_importar"],
+    ("DELETE", "/api/rede/{rede_id}/continuidade"): ["redes/continuidade_apagar"],
 }

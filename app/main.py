@@ -147,6 +147,7 @@ from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rede_utilidades.rotas_areas_sujas import router as rotas_rede_areas_sujas
 from app.rede_utilidades.rotas_atributos import router as rotas_rede_atributos
 from app.rede_utilidades.rotas_config_tracado import router as rotas_rede_config_tracado
+from app.rede_utilidades.rotas_continuidade import router as rotas_rede_continuidade
 from app.rede_utilidades.rotas_controladores import router as rotas_rede_controladores
 from app.rede_utilidades.rotas_curto import router as rotas_rede_curto
 from app.rede_utilidades.rotas_diagrama import router as rotas_rede_diagrama
@@ -498,6 +499,12 @@ ROUTERS = [
     # --- gás e esgoto (L4-05-e): GET /api/rede/{rede_id}/esgoto/escoamento e .../gas/pressao (conferências
     # que só leem) e POST .../teksi (GeoPackage no esquema TEKSI vira feição no vocabulário do pacote)
     rotas_rede_gas_esgoto,
+    # --- série temporal da rede (L4-15): /api/rede-serie (séries e safras), /calcular (linhagem por
+    # COD_ID, carregamento e crescimento) e as leituras /linhagem, /tendencia, /alimentadores
+    rotas_rede_serie,
+    # --- continuidade DEC/FEC (L4-10): /api/rede/{rede_id}/continuidade/{conjuntos,alimentadores,
+    # dic-fic,painel,importar} — o dado aberto da ANEEL ligado à rede pela chave CONJ da BDGD
+    rotas_rede_continuidade,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,

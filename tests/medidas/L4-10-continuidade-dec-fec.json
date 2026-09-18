@@ -1,0 +1,132 @@
+{
+  "comparacao_com_limite": {
+    "anos_conjunto_indicador_com_limite": 36,
+    "carga_1min": 9.51,
+    "medido_em": "2026-09-08T13:45:47",
+    "ram_livre_gb": 5.99
+  },
+  "cooperativa_de_teste": {
+    "alimentadores": 15,
+    "alimentadores_com_dec": 15,
+    "camadas_carregadas": {
+      "ucbt": {
+        "linhas": 26584,
+        "segundos": 0.896
+      },
+      "untrmt": {
+        "linhas": 5481,
+        "segundos": 0.183
+      }
+    },
+    "carga_1min": 9.66,
+    "conjuntos_com_dec_apurado": 6,
+    "conjuntos_declarados": 1,
+    "dec_por_ano": {
+      "2020": 29.77,
+      "2021": 23.2,
+      "2022": 25.07,
+      "2023": 31.39,
+      "2024": 27.03,
+      "2025": 24.76
+    },
+    "duracao_total_s": 2.58,
+    "limite_por_ano": {
+      "2020": 59.0,
+      "2021": 56.0,
+      "2022": 53.0,
+      "2023": 50.0,
+      "2024": 48.0,
+      "2025": 48.0
+    },
+    "medido_em": "2026-09-08T13:45:55",
+    "ram_livre_gb": 5.7,
+    "situacao_por_ano": {
+      "2020": "dentro do limite",
+      "2021": "dentro do limite",
+      "2022": "dentro do limite",
+      "2023": "dentro do limite",
+      "2024": "dentro do limite",
+      "2025": "dentro do limite"
+    },
+    "trafos_com_dic_medio": 4967,
+    "trafos_com_uc": 4967
+  },
+  "dic_fic_por_trafo": {
+    "T-1": {
+      "dic_medio": 14.375,
+      "fic_medio": 5.75,
+      "n_uc": 8,
+      "n_uc_com_dic": 8
+    },
+    "T-2": {
+      "dic_medio": 30.0,
+      "fic_medio": 12.0,
+      "n_uc": 7,
+      "n_uc_com_dic": 4
+    },
+    "carga_1min": 9.55,
+    "medido_em": "2026-09-08T13:45:51",
+    "ram_livre_gb": 5.72,
+    "trafos": 2
+  },
+  "importacao": {
+    "arquivos": [
+      {
+        "arquivo": "dec_2020_2029.parquet",
+        "especie": "apurado",
+        "linhas_arquivo": 432,
+        "linhas_gravadas": 432
+      },
+      {
+        "arquivo": "dec_fec_limite.csv",
+        "especie": "limite",
+        "linhas_arquivo": 36,
+        "linhas_gravadas": 36
+      }
+    ],
+    "carga_1min": 9.51,
+    "conjuntos_pedidos": 4,
+    "duracao_ms": 1065,
+    "linhas_apuradas_gravadas": 432,
+    "medido_em": "2026-09-08T13:45:46",
+    "ram_livre_gb": 5.93
+  },
+  "item": "L4-10-continuidade-dec-fec",
+  "painel": {
+    "anos": [
+      2020,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+    ],
+    "carga_1min": 9.55,
+    "conjuntos": 4,
+    "medido_em": "2026-09-08T13:45:48",
+    "ram_livre_gb": 5.97
+  },
+  "refutacao_recontagem_independente": {
+    "anos": [
+      2020,
+      2025
+    ],
+    "carga_1min": 9.55,
+    "conjuntos": [
+      12591,
+      14562,
+      14563
+    ],
+    "medido_em": "2026-09-08T13:45:49",
+    "ram_livre_gb": 5.74,
+    "valores_conferidos": 36
+  },
+  "refutacao_sem_dado": {
+    "anos_sem_dado": 6,
+    "carga_1min": 9.55,
+    "conjunto_fantasma": 999999999,
+    "medido_em": "2026-09-08T13:45:50",
+    "ram_livre_gb": 5.69,
+    "uc_sem_dado_no_alimentador": 3
+  }
+}

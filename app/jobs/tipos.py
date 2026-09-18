@@ -93,6 +93,9 @@ from app.rede_utilidades import (
 from app.regras import tarefas as regras_tarefas  # noqa: F401 — achado 15/09: camadas.validar
 from app.relatorios import tarefas as relatorios_tarefas  # noqa: F401 — achado 15/09: relatorios.gerar
 from app.replica import tarefas as replica_tarefas  # noqa: F401 — achado 15/09: replicas.criar
+from app.rede_utilidades import (
+    tarefas_continuidade as rede_tarefas_continuidade,  # noqa: F401 — L4-10 rede.importar_continuidade
+)
 from app.uploads import tarefas as uploads_tarefas  # noqa: F401 — L0-04-a: uploads.expirar + periódico
 from app.webhooks import tarefas as webhooks_tarefas  # noqa: F401 — L7-08-a: webhooks.entregar + periódico
 
