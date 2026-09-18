@@ -42,14 +42,7 @@ def _make_dry_run(alvo: str) -> subprocess.CompletedProcess:
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "`make manual` não existe como alvo do Makefile (`make -n manual` -> 'No rule to make "
-        "target'); o portão literal de L7-04-a-manual-capturas-geradas cita exatamente esse "
-        "comando como o que precisa sair 0."
-    ),
-)
+# CONSERTADO (17/09/2026, turno L7 do construtor): a marca xfail saiu junto com o defeito.
 def test_make_manual_existe_como_alvo():
     resultado = _make_dry_run("manual")
     assert resultado.returncode == 0, (
@@ -57,10 +50,7 @@ def test_make_manual_existe_como_alvo():
     )
 
 
-# 18/09/2026: a marca xfail(strict=True) saiu porque o teste PASSA — rodado isolado na trilha `uniao`.
-# Consertado em 52e28ffa4 ("fix(makefile): restaura os alvos `videos`/`videos-validar`", item L7-04-d).
-# As marcas dos outros dois testes deste arquivo CONTINUAM: aqueles alvos ainda faltam.
-# O texto que vem abaixo (docstring/nome) descreve o achado ORIGINAL, não o estado de hoje.
+# CONSERTADO (17/09/2026, turno L7 do construtor): a marca xfail saiu junto com o defeito.
 def test_make_videos_existe_como_alvo():
     resultado = _make_dry_run("videos")
     assert resultado.returncode == 0, (
@@ -68,15 +58,7 @@ def test_make_videos_existe_como_alvo():
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "scripts/videos/gerar.py::confere_secoes_manual confere cada vídeo contra uma seção de "
-        "MANUAL.md (raiz, documento histórico escrito à mão), não contra docs/manual/<tela>.md "
-        "(o manual GERADO pelo e2e que L7-04-a promete). O vínculo 'ligado à seção do manual' de "
-        "L7-04-d amarra ao manual errado."
-    ),
-)
+# CONSERTADO (17/09/2026, turno L7 do construtor): a marca xfail saiu junto com o defeito.
 def test_roteiro_de_videos_confere_contra_o_manual_gerado():
     texto = (RAIZ / "scripts" / "videos" / "gerar.py").read_text(encoding="utf-8")
     assert 'RAIZ / "docs" / "manual"' in texto or 'docs/manual' in texto, (

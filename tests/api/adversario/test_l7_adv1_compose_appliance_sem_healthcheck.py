@@ -37,15 +37,7 @@ def _servicos_do_perfil(perfil: str) -> dict:
     }
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "deploy/compose/docker-compose.yml só define healthcheck: para o serviço 'db' no perfil "
-        "appliance; garage/martin/titiler/api-appliance/worker-appliance/nginx não têm healthcheck "
-        "nenhum, então o portão ('sobe todos os serviços com healthcheck verde') não pode ser satisfeito "
-        "hoje — não é falta de medição, é ausência da declaração. Item L7-01-a-compose-perfis."
-    ),
-)
+# CONSERTADO (17/09/2026, turno L7 do construtor): a marca xfail saiu junto com o defeito.
 def test_todo_servico_appliance_tem_healthcheck():
     servicos = _servicos_do_perfil("appliance")
     assert len(servicos) >= 5, servicos  # sanidade: o compose tem de ter os serviços esperados

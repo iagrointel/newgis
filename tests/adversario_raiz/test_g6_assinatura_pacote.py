@@ -59,12 +59,15 @@ def test_assinar_nao_pode_tornar_a_propria_chave_confiavel(tmp_path):
         confiaveis.write_text(antes, encoding="utf-8")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L7-16 (refutação literal do item): PLAT_CHAVES_CONFIAVEIS troca a lista de chaves confiáveis por "
-    "um arquivo do atacante, e verificar_pacote.sh aceita. A 'chave pública embutida no código' não existe: "
-    "é um arquivo de texto cujo caminho vem do ambiente.",
-)
+# CONSERTADO (18/09/2026). A refutação literal do item ("adversário tenta substituir a chave pública
+# embutida via variável de ambiente") é sobre uma INSTALAÇÃO, e instalação é produção. O teste não dizia
+# em que ambiente rodava e herdava o PLAT_AMBIENTE de quem o chamasse: na bancada das trilhas esse valor
+# é `dev`, e em `dev` a variável ACRESCENTA chaves de propósito, com aviso em stderr
+# (scripts/plat_assinatura.py::chaves_confiaveis_efetivas). Ou seja, o xfail media a porta de
+# desenvolvimento e a chamava de defeito de produção; medido em 18/09, o MESMO teste dava XPASS quando o
+# ambiente não vinha declarado. Agora o ambiente é PINADO nos dois casos, e o par positivo está logo
+# abaixo: em produção a variável é ignorada e a chave do atacante é recusada; em dev ela acrescenta, o
+# aviso sai, e a lista do produto não é substituída — é acrescida.
 def test_variavel_de_ambiente_nao_pode_substituir_a_lista_de_chaves(tmp_path):
     pacote = _pacote(tmp_path)
     priv = tmp_path / "atacante.pem"
@@ -92,11 +95,32 @@ def test_variavel_de_ambiente_nao_pode_substituir_a_lista_de_chaves(tmp_path):
             str(pacote) + ".sig",
         ]
     )
-    cod, saida, _ = rodar(
+    cod, saida, erro = rodar(
         ["bash", "scripts/verificar_pacote.sh", str(pacote)],
-        env={"PLAT_CHAVES_CONFIAVEIS": str(confiaveis_falso)},
+        env={"PLAT_CHAVES_CONFIAVEIS": str(confiaveis_falso), "PLAT_AMBIENTE": "producao"},
     )
-    assert cod != 0, f"chave do atacante aceita por variável de ambiente: {saida}"
+    assert cod != 0, f"chave do atacante aceita por variável de ambiente em produção: {saida}"
+    assert "IGNORADA" in erro, f"a recusa tem de dizer que a variável foi ignorada: {erro}"
+
+
+def test_em_dev_a_variavel_acrescenta_e_avisa_nunca_substitui(tmp_path):
+    """Par positivo do teste acima: a porta de desenvolvimento existe, é declarada e é barulhenta. O que
+    ela NÃO pode fazer é substituir a lista do produto — só acrescentar, e dizendo quantas chaves entraram
+    por essa via, para que nenhum log de aceitação fique ambíguo."""
+    pacote = _pacote(tmp_path)
+    priv = tmp_path / "dev.pem"
+    confiaveis_extra = tmp_path / "confiaveis_extra.txt"
+    rodar(["venv/bin/python", "scripts/plat_assinatura.py", "gerar-chave", "--chave-privada", str(priv),
+           "--confiaveis", str(confiaveis_extra)])
+    rodar(["venv/bin/python", "scripts/plat_assinatura.py", "assinar", str(pacote), "--chave-privada",
+           str(priv), "--saida", str(pacote) + ".sig"])
+    amb = {"PLAT_CHAVES_CONFIAVEIS": str(confiaveis_extra), "PLAT_AMBIENTE": "dev"}
+    cod, _, erro = rodar(["bash", "scripts/verificar_pacote.sh", str(pacote)], env=amb)
+    assert cod == 0, f"em dev a chave acrescentada devia ser aceita: {erro}"
+    assert "acrescentando" in erro, f"a aceitação em dev tem de sair avisada em stderr: {erro}"
+    # e a lista do produto continua intacta: a variável nunca a reescreve
+    do_produto = (RAIZ / "deploy" / "chaves_publicas_release.txt").read_text(encoding="utf-8")
+    assert confiaveis_extra.read_text(encoding="utf-8") not in do_produto
 
 
 # CONSERTADO em 15/09/2026 (marca xfail(strict=True) removida; motivo original mantido como registro):

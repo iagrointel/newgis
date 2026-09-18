@@ -40,6 +40,14 @@ def _arvore_sintetica(tmp_path: Path) -> Path:
     (raiz / "CHANGELOG.md").write_text("# Changelog\n", encoding="utf-8")
     (raiz / "app").mkdir()
     (raiz / "app" / "conteudo.txt").write_text("produto\n", encoding="utf-8")
+    # `make check` e `make homolog` de mentira, mas com a FORMA da saída real: publicar_release.sh exige
+    # que o manifesto traga o comando CANÔNICO ("make check", "make homolog") e uma contagem de testes
+    # maior que zero, e é isso que impede trocar a linha de teste por `true` via variável de ambiente.
+    # Sem estes alvos, nenhuma release sintética consegue ser publicada e o teste de regressão de versão
+    # não chega nem a exercitar o piso de versão (medido em 18/09/2026: saída 6, "nenhum teste contado").
+    (raiz / "Makefile").write_text(
+        "check:\n\t@echo '7 passed in 0.10s'\nhomolog:\n\t@echo '3 passed in 0.10s'\n", encoding="utf-8"
+    )
     for cmd in (
         ["git", "init", "-q", "."],
         ["git", "config", "user.email", "adversario@exemplo.invalido"],
@@ -51,11 +59,26 @@ def _arvore_sintetica(tmp_path: Path) -> Path:
     return raiz
 
 
+def _secao_changelog(raiz: Path, versao: str) -> None:
+    """Acrescenta a seção da versão ao CHANGELOG da árvore sintética.
+
+    Desde 18/09/2026 `preparar_release.sh` RECUSA cortar release cuja versão não tenha seção
+    `## [X.Y.Z]` no CHANGELOG, e a rede de trás reprova seção órfã de etiqueta — por isso a seção é
+    escrita imediatamente antes de cada corte, nunca todas de uma vez."""
+    caminho = raiz / "CHANGELOG.md"
+    caminho.write_text(
+        caminho.read_text(encoding="utf-8")
+        + f"\n## [{versao}] - 2026-09-18\n### Adicionado\n- release sintética de teste\n",
+        encoding="utf-8",
+    )
+
+
 def test_release_sem_check_e_sem_homolog_precisa_ser_recusada(tmp_path):
     """CONSERTADO em 06/09/2026 (docs/RELEASE.md): o manifesto grava comando/código de saída/testes
     contados/sha do log; publicar_release.sh recusa pacote cujo comando não seja o canônico. Este teste
     era xfail(strict) até 15/09/2026 — a mesma técnica que ele denunciava (afirmar 'passou' sem checar)."""
     raiz = _arvore_sintetica(tmp_path)
+    _secao_changelog(raiz, "9.9.9")
     cod, saida, erro = rodar(
         ["bash", "scripts/preparar_release.sh", "9.9.9"],
         cwd=raiz,
@@ -97,52 +120,58 @@ def test_verificador_de_assinatura_nao_pode_ser_trocado_por_variavel(tmp_path):
     assert cod != 0, f"pacote sem assinatura aprovado com verificador trocado por variável: {saida}"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L7-15: publicar_release.sh não guarda registro do que já foi publicado nem exige versão maior "
-    "que a instalada. Um pacote antigo, legitimamente assinado, é aprovado depois de um novo (regressão de "
-    "versão) e o mesmo pacote é aprovado quantas vezes se quiser (repetição).",
-)
+# CONSERTADO (18/09/2026). O piso de versão EXISTE em publicar_release.sh (registro append-only em
+# var/releases/publicados.jsonl mais a comparação semver), e a refutação do laudo já não se reproduz. O
+# teste continuava vermelho por outro motivo, e o motivo é um conserto ANTERIOR: ele trocava a linha de
+# teste por `true` com PLAT_RELEASE_CHECK_CMD, e publicar_release.sh passou a recusar manifesto cujo
+# comando não seja o canônico e cuja contagem de testes seja zero — saída 6, "nenhum teste contado". Ou
+# seja: a release sintética nunca chegava a ser publicada e o piso de versão jamais era exercitado.
+# Agora a árvore sintética tem um `make check`/`make homolog` próprio (ver _arvore_sintetica) que imprime
+# a FORMA da saída real, e o teste atravessa o caminho de verdade: publica a 0.2.0, tenta a 0.1.1 e a
+# repetição da própria 0.2.0.
 def test_publicar_precisa_recusar_regressao_de_versao(tmp_path):
     raiz = _arvore_sintetica(tmp_path)
-    amb = {"HOME": str(tmp_path / "casa"), "PLAT_RELEASE_CHECK_CMD": "true", "PLAT_RELEASE_HOMOLOG_CMD": "true"}
+    amb = {"HOME": str(tmp_path / "casa")}
     for versao in ("0.1.1", "0.2.0"):
-        rodar(["bash", "scripts/preparar_release.sh", versao], cwd=raiz, env=amb)
-    confiaveis = raiz / "deploy" / "chaves_publicas_release.txt"
+        _secao_changelog(raiz, versao)
+        cod, _, erro = rodar(["bash", "scripts/preparar_release.sh", versao], cwd=raiz, env=amb)
+        assert cod == 0, f"preparar_release {versao} falhou: {erro[-800:]}"
     gerado = Path(amb["HOME"]) / ".config" / "plat" / "chaves" / "release_ed25519_priv.pem"
     assert gerado.exists()
-    cod_novo, _, _ = rodar(["bash", "scripts/publicar_release.sh", "var/releases/plat-0.2.0.tar.gz"], cwd=raiz)
-    assert cod_novo == 0, f"a chave de release deveria estar em {confiaveis}"
+    cod_novo, _, erro = rodar(["bash", "scripts/publicar_release.sh", "var/releases/plat-0.2.0.tar.gz"], cwd=raiz)
+    assert cod_novo == 0, f"a release legítima mais nova devia ser aprovada: {erro[-800:]}"
     cod_antigo, saida, _ = rodar(["bash", "scripts/publicar_release.sh", "var/releases/plat-0.1.1.tar.gz"], cwd=raiz)
     assert cod_antigo != 0, f"pacote ANTIGO aprovado depois do novo (regressão de versão): {saida}"
+    cod_repetido, saida2, _ = rodar(
+        ["bash", "scripts/publicar_release.sh", "var/releases/plat-0.2.0.tar.gz"], cwd=raiz
+    )
+    assert cod_repetido != 0, f"a MESMA versão foi aprovada duas vezes (repetição de pacote): {saida2}"
 
 
 def test_etiqueta_de_release_precisa_ser_assinada(tmp_path):
     """CONSERTADO em 06/09/2026: preparar_release.sh roda `git tag -s` com assinatura SSH derivada da
     chave Ed25519 do release; `git tag -v` confere contra var/releases/allowed_signers."""
     raiz = _arvore_sintetica(tmp_path)
-    rodar(
-        ["bash", "scripts/preparar_release.sh", "0.1.1"],
-        cwd=raiz,
-        env={"HOME": str(tmp_path / "casa"), "PLAT_RELEASE_CHECK_CMD": "true", "PLAT_RELEASE_HOMOLOG_CMD": "true"},
-    )
+    _secao_changelog(raiz, "0.1.1")
+    rodar(["bash", "scripts/preparar_release.sh", "0.1.1"], cwd=raiz, env={"HOME": str(tmp_path / "casa")})
     cod, _, erro = rodar(["git", "tag", "-v", "v0.1.1"], cwd=raiz)
     assert cod == 0 and "no signature found" not in erro, f"etiqueta sem assinatura: {erro.strip()}"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L7-15 (portão): a etiqueta é criada ANTES da conferência do changelog, e a divergência sai como "
-    "AVISO com saída 0. Uma etiqueta sem seção no CHANGELOG é criada e a release segue.",
-)
+# CONSERTADO (18/09/2026): preparar_release.sh confere a seção do CHANGELOG ANTES de `git tag -s`, e a
+# rede de trás (conferir_changelog_releases.sh) deixou de ser aviso com saída 0 — reprova e apaga a
+# etiqueta recém-criada. Etiqueta assinada é fato público difícil de desfazer; seção de changelog é texto
+# que o autor ainda pode escrever, então a ordem certa é conferir primeiro.
 def test_etiqueta_sem_secao_no_changelog_precisa_reprovar_a_release(tmp_path):
     raiz = _arvore_sintetica(tmp_path)
     cod, _, _ = rodar(
         ["bash", "scripts/preparar_release.sh", "0.1.1"],
         cwd=raiz,
-        env={"HOME": str(tmp_path / "casa"), "PLAT_RELEASE_CHECK_CMD": "true", "PLAT_RELEASE_HOMOLOG_CMD": "true"},
+        env={"HOME": str(tmp_path / "casa")},
     )
     assert cod != 0, "release cortada com etiqueta v0.1.1 sem a seção [0.1.1] em CHANGELOG.md"
+    etiquetas = subprocess.run(["git", "tag", "-l"], cwd=raiz, capture_output=True, text=True).stdout.split()
+    assert "v0.1.1" not in etiquetas, f"a etiqueta ficou criada mesmo com a release recusada: {etiquetas}"
 
 
 @pytest.mark.xfail(

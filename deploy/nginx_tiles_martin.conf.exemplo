@@ -14,14 +14,16 @@
 # interno (nunca responde a um navegador) e por isso não leva cabeçalho nenhum.
 
 location /tiles/ {
+        # item L7-03-e: nesta location a resposta vem da aplicação, que já manda
+        # Referrer-Policy/X-Content-Type-Options/Permissions-Policy/CSP/COOP/CORP. `add_header` do
+        # nginx ACRESCENTA em vez de substituir, então repeti-los aqui faria o cabeçalho sair
+        # duplicado (medido em produção em 16/09). Uma origem só: a aplicação.
     auth_request /internal/tiles/verificar;
     auth_request_set $motivo $upstream_http_x_motivo_recusa;
     proxy_pass http://127.0.0.1:8151/;
     proxy_set_header X-Real-IP $remote_addr;
     add_header Strict-Transport-Security "max-age=31536000" always;
     add_header X-Frame-Options "DENY" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 }
 
 location = /internal/tiles/verificar {

@@ -18,6 +18,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app import auditoria, db
 from app import log as plat_log
+from app import metricas
 from app.auth.redigir import rota_redigida
 
 log = logging.getLogger("plat.acesso")
@@ -64,6 +65,19 @@ def instalar(app: FastAPI) -> None:
             # escrita de log_acesso depois do corpo (contado(), abaixo) manda o req_id explícito.
             plat_log.limpar_req_id_atual(token_ctx)
         resposta.headers["X-Req-Id"] = rid
+        # item L7-06-a: este é o único ponto que vê TODA requisição, então é daqui que as famílias
+        # plat_http_requests_total / plat_http_request_duracao_segundos ganham série. O rótulo de rota
+        # é o PADRÃO casado pelo roteador (app.metricas.rota_para_metrica), nunca o caminho literal:
+        # o contrato de cardinalidade de docs/OBSERVABILIDADE.md proíbe id de recurso em rótulo.
+        try:
+            metricas.registrar_requisicao(
+                metricas.rota_para_metrica(request),
+                resposta.status_code,
+                getattr(request.state, "tenant_id", None),
+                time.perf_counter() - inicio,
+            )
+        except Exception:  # noqa: BLE001 — métrica nunca derruba a requisição
+            log.exception("falha ao registrar métrica de requisição")
         # Cache-Control com UMA origem só (decisão T2): a aplicação. O nginx não acrescenta o dele nas rotas
         # proxiadas (add_header ACRESCENTA, nunca substitui: saíam dois cabeçalhos, e uma rota que precisa de
         # cache — miniatura `private, max-age=300` — sairia contradita). Aqui fica o PISO; a rota que declara o

@@ -1,0 +1,15 @@
+{
+ "item": "L7-16-assinatura-pacote",
+ "assinado_por": "construtor L7 (turno de 18/09/2026)",
+ "gerado_em": "2026-09-18T01:56:30Z",
+ "git_sha": "635ffccce919",
+ "maquina": "iagrosat-db-sp; trilha seg (schema plat_tseg), pytest sob cgroup MemoryMax=4G",
+ "clausulas": {
+  "prova_do_item": {
+   "resultado": "medido",
+   "comando": "bash laco/roda_teste.sh tests/adversario_raiz/test_g6_assinatura_pacote.py -q -p no:randomly",
+   "contagem": "6 passed, 1 xfailed",
+   "nota": "em producao PLAT_CHAVES_CONFIAVEIS e ignorada e a chave do atacante recusada; em dev ela acrescenta, avisa e nao substitui a lista do produto. Xfail que resta: scripts/empacotar.sh da hipotese nunca foi construido"
+  }
+ }
+}

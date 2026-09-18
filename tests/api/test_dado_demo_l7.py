@@ -41,7 +41,14 @@ def _nomes_proibidos() -> list[str]:
     cliente em arquivo do produto — nunca listado aqui, para não virar ele mesmo uma ocorrência do
     que proíbe."""
     padrao = (RAIZ / "laco" / "nomes_proibidos.regex").read_text(encoding="utf-8").strip()
-    return re.search(r"\(([^)]*)\)", padrao).group(1).split("|")
+    # o arquivo começa com o grupo de OPÇÃO `(?i)`; pegar o primeiro parêntese devolvia a lista
+    # ["?i"], que nunca casa com nome nenhum (a conferência ficava vazia) e ainda produzia
+    # ocorrência falsa em arquivo binário. O grupo que interessa é o da alternância, depois do `\b`.
+    grupo = re.search(r"\\b\(([^)]*)\)", padrao)
+    assert grupo, "laco/nomes_proibidos.regex não tem o grupo de alternância esperado"
+    nomes = [n for n in grupo.group(1).split("|") if n and not n.startswith("?")]
+    assert len(nomes) >= 10, f"lista de nomes proibidos curta demais: {len(nomes)}"
+    return nomes
 
 
 NOMES_PROIBIDOS = _nomes_proibidos()
@@ -194,16 +201,23 @@ def test_plat_cli_tem_demo_semear_e_demo_verificar():
 
 
 def _titulos(sessao, rota="/api/itens") -> dict[str, dict]:
+    """Percorre a lista pelo CURSOR, nunca por deslocamento: a própria API recusa deslocamento acima de
+    `limites.ITENS_DESLOCAMENTO_MAX` com 422 `deslocamento_alto` ("use cursor"), e numa bancada com muitos
+    itens no inquilino demo a paginação por deslocamento batia nesse teto e derrubava o teste por um
+    comportamento CORRETO do produto."""
     saida = {}
-    deslocamento = 0
+    cursor = None
     while True:
-        r = sessao.get(rota, params={"limite": 200, "deslocamento": deslocamento})
+        params = {"limite": 200}
+        if cursor:
+            params["cursor"] = cursor
+        r = sessao.get(rota, params=params)
         assert r.status_code == 200, r.text
         corpo = r.json()
         for it in corpo["itens"]:
             saida[it["titulo"]] = it
-        deslocamento += len(corpo["itens"])
-        if not corpo["itens"] or deslocamento >= corpo["total"]:
+        cursor = corpo.get("proximo_cursor")
+        if not corpo["itens"] or not cursor:
             return saida
 
 

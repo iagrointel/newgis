@@ -121,6 +121,15 @@ services:
     volumes:
       - garage_meta:/garage/meta
       - garage_dados:/garage/data
+    # mesmo comando do HEALTHCHECK de deploy/Dockerfile.garage, repetido aqui para que
+    # `docker compose ps` e o `condition: service_healthy` dos dependentes tenham o estado
+    # declarado no próprio compose (item L7-01-a: "todos os serviços com healthcheck verde").
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:3903/health || exit 1"]
+      interval: 15s
+      timeout: 3s
+      start_period: 10s
+      retries: 5
     restart: "no"
 
   martin:
@@ -140,6 +149,12 @@ services:
       # de swarm só monta ARQUIVO em /run/secrets, martin.yaml pediria um `_file` que martin 1.15.0 não
       # oferece para connection_string — MEDIDO no --help do binário, seção postgres).
       PLAT_DSN_LEITOR: ${PLAT_DSN_LEITOR:-}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:3000/health || exit 1"]
+      interval: 15s
+      timeout: 3s
+      start_period: 10s
+      retries: 5
     restart: "no"
 
   titiler:
@@ -160,6 +175,12 @@ services:
       AWS_VIRTUAL_HOSTING: "FALSE"
       AWS_DEFAULT_REGION: garage
       PLATAFORMA_BUCKET: demo
+    healthcheck:
+      test: ["CMD-SHELL", "venv/bin/python -c \"import urllib.request as u; u.urlopen('http://127.0.0.1:8131/healthz', timeout=2)\" || exit 1"]
+      interval: 15s
+      timeout: 3s
+      start_period: 15s
+      retries: 5
     restart: "no"
 
   api-appliance:
@@ -194,6 +215,12 @@ services:
         target: PLAT_SECRET
       - source: PLAT_DSN_WORKER_APPLIANCE
         target: PLAT_DSN_WORKER
+    healthcheck:
+      test: ["CMD-SHELL", "venv/bin/python -c \"import urllib.request as u,sys; sys.exit(0 if u.urlopen('http://127.0.0.1:8150/saude', timeout=2).status==200 else 1)\" || exit 1"]
+      interval: 15s
+      timeout: 3s
+      start_period: 15s
+      retries: 5
     restart: "no"
 
   worker-appliance:
@@ -219,6 +246,12 @@ services:
         target: PLAT_DSN_WORKER
     mem_limit: 2g
     memswap_limit: 2g
+    healthcheck:
+      test: ["CMD-SHELL", "venv/bin/python -c \"import os,urllib.request as u; u.urlopen((os.environ.get('PLAT_WORKER_URL') or 'http://127.0.0.1:8153')+'/saude', timeout=2).read()\" || exit 1"]
+      interval: 15s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
     restart: "no"
     stop_grace_period: 40s
 
@@ -233,7 +266,15 @@ services:
       - "8150:80"
     depends_on:
       api-appliance:
-        condition: service_started
+        condition: service_healthy
+    # a imagem de nginx ainda é o esboço de Dockerfile.nginx (PENDENTE por disco, D21); o healthcheck
+    # já é o definitivo: o proxy só é verde quando entrega o /saude da API por dentro da rede interna.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1/saude || exit 1"]
+      interval: 15s
+      timeout: 3s
+      start_period: 15s
+      retries: 5
     restart: "no"
 
 networks:

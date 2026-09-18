@@ -138,7 +138,14 @@ class Settings:
     PLAT_RENDER_FILA_MAX: int = 0  # (entrega 10/09) de wt/il212blayou
     PLAT_RENDER_TIMEOUT_S: int = 0  # (entrega 10/09) de wt/il212blayou
     PLAT_RENDER_TOKEN_TTL_S: int = 0  # (entrega 10/09) de wt/il212blayou
-    PLAT_RENDER_MAX_PX: int = 0  # (entrega 10/09) de wt/il212blayou
+    # 18/09/2026 (item L7-08-d): o padrão era 0, herdado da montagem de ramos, e 0 aqui não é "sem
+    # limite" — é limite ZERO. Duas consequências medidas: (1) o esquema OpenAPI de RenderEntrada saía
+    # com "maximum": 0.0 ao lado de "default": 1024 e "minimum": 64, e o openapi-spec-validator reprovava
+    # o documento inteiro ("1024 is greater than the maximum of 0.0"); (2) nenhuma largura ou altura
+    # podia passar, porque 64 <= x <= 0 é vazio — a rota de render estava morta em toda instalação que
+    # não declarasse a variável. 8192 px é o teto usual de tela de um navegador sem headroom especial e
+    # cobre A1 a 300 dpi; quem precisar de mais declara PLAT_RENDER_MAX_PX no .env.
+    PLAT_RENDER_MAX_PX: int = 8192
     PLAT_RENDER_MEMORIA_MB: int = 0  # (entrega 10/09) de wt/il212blayou
     PLAT_RENDER_BASE_URL: str | None = None  # (entrega 10/09) de wt/il212blayou
     PLAT_RENDER_IGNORAR_HTTPS: bool = False  # (entrega 10/09) de wt/il212blayou
@@ -342,7 +349,7 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_RENDER_FILA_MAX=_inteiro(valores, "PLAT_RENDER_FILA_MAX", 0, 1),
         PLAT_RENDER_TIMEOUT_S=_inteiro(valores, "PLAT_RENDER_TIMEOUT_S", 0, 1),
         PLAT_RENDER_TOKEN_TTL_S=_inteiro(valores, "PLAT_RENDER_TOKEN_TTL_S", 0, 1),
-        PLAT_RENDER_MAX_PX=_inteiro(valores, "PLAT_RENDER_MAX_PX", 0, 1),
+        PLAT_RENDER_MAX_PX=_inteiro(valores, "PLAT_RENDER_MAX_PX", 8192, 64),
         PLAT_RENDER_MEMORIA_MB=_inteiro(valores, "PLAT_RENDER_MEMORIA_MB", 0, 1),
         PLAT_RENDER_IGNORAR_HTTPS=_booleano(valores, "PLAT_RENDER_IGNORAR_HTTPS", False),
         PLAT_SSE_LIGADO=_booleano(valores, "PLAT_SSE_LIGADO", False),

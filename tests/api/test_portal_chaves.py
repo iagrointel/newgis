@@ -294,10 +294,17 @@ def test_erro_de_validacao_tambem_e_problem_details(cliente, chave_leitura):
     ("verbo", "caminho"),
     [("post", "/api/itens"), ("post", "/api/pastas"), ("put", "/api/categorias"), ("post", "/api/usuarios")],
 )
-def test_chave_de_leitura_em_rota_de_escrita_403(cliente, chave_leitura, verbo, caminho):
+def test_chave_de_leitura_em_rota_de_escrita_403(cliente, esquema, chave_leitura, verbo, caminho):
+    """O que o portão pede é 403 `escopo_insuficiente` com o exigido e o que o token tem. O escopo exigido
+    é o DA ROTA, não um valor único: em 18/09/2026 este teste esperava `admin:inquilino` em todas as
+    quatro e POST /api/itens respondia `conteudo:criar`, que é o certo. Passou a ser conferido contra o
+    `x-plat-escopo` que a própria operação declara no OpenAPI — o que também prova que a etiqueta e o
+    servidor dizem a mesma coisa, rota a rota."""
+    declarado = esquema["paths"][caminho][verbo][portal_openapi.CHAVE]
     r = getattr(cliente, verbo)(caminho, headers=cabecalho(chave_leitura["token"]), json={})
     corpo = _conferir_problem_details(r, 403, "escopo_insuficiente")
-    assert corpo["detalhe"]["exigido"] == "admin:inquilino", corpo
+    assert corpo["detalhe"]["exigido"] == declarado, (corpo, declarado)
+    assert declarado not in ESCOPOS_DA_CHAVE_DE_LEITURA, declarado
     assert sorted(corpo["detalhe"]["token_tem"]) == sorted(ESCOPOS_DA_CHAVE_DE_LEITURA), corpo
 
 

@@ -42,28 +42,13 @@ def _chamadores_fora_de_metricas(nome_funcao: str) -> list[str]:
 
 
 @pytest.mark.parametrize("funcao", FUNCOES_DE_REGISTRO)
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "app/metricas.py define registrar_requisicao/registrar_tile/registrar_job_processado mas nenhuma "
-        "é chamada fora do próprio módulo — app/main.py e app/auth/middleware.py (o middleware que vê "
-        "toda requisição) nunca importam app.metricas. Achado transversal nº 1 do laudo L7 parte 1; "
-        "item L7-06-a-metricas-exporters."
-    ),
-)
+# CONSERTADO (17/09/2026, turno L7 do construtor): a marca xfail saiu junto com o defeito.
 def test_funcao_de_registro_de_metrica_tem_chamador(funcao):
     chamadores = _chamadores_fora_de_metricas(funcao)
     assert chamadores, f"{funcao} não é chamada em nenhum arquivo fora de app/metricas.py"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "GET /metrics na trilha viva, depois de tráfego real (login, /api/eu, /api/versao), mostra "
-        "0 séries de plat_http_requests_total — o contador nunca incrementa porque nada o chama (ver "
-        "teste acima). Item L7-06-a-metricas-exporters."
-    ),
-)
+# CONSERTADO (17/09/2026, turno L7 do construtor): a marca xfail saiu junto com o defeito.
 def test_metrica_http_tem_pelo_menos_uma_serie_apos_trafego(cliente):
     for _ in range(5):
         cliente.get("/api/versao")

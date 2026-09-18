@@ -1,0 +1,14 @@
+-- 20260918T0145_sistema_trilha_leitura_para_o_worker: leitura do histórico do modo pela role que o
+-- escreve (item L7-33-modo-somente-leitura). Arquivo separado de 20260918T0130 de propósito: aquele já
+-- estava registrado em versao_migracao pelo sha, e migração aplicada não se reescreve.
+--
+-- Mesma razão para o histórico: quem liga e desliga o modo é a role do worker, pela CLI, e a única
+-- forma de CONFERIR que a ação ficou registrada é ler plat.sistema_trilha. Sem leitura, a cláusula do
+-- portão "`plat modo` com motivo obrigatório grava trilha" não tem como ser provada por quem executa o
+-- comando (medido em 18/09/2026: "permission denied for table sistema_trilha").
+--
+-- É SELECT, e só. INSERT/UPDATE/DELETE continuam sem GRANT para todo mundo: as linhas entram apenas por
+-- dentro de plat.modo_ligar/modo_desligar, que são SECURITY DEFINER — o histórico segue append-only e
+-- ninguém o reescreve. A tabela guarda chave, ação, motivo e quem: infraestrutura, sem dado de
+-- inquilino. plat_app continua sem acesso nenhum (o REVOKE de 20260906T2109 vale).
+GRANT SELECT ON plat.sistema_trilha TO plat_worker;

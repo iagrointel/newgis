@@ -6,6 +6,10 @@ Dois grupos, um ponto de entrada só (nunca um script novo por comando):
 - `demo` (item L7-01-c-dado-demonstracao): semeia e confere o pacote de dado de demonstração. Roda de
   dentro do repositório, lendo a base venv/ do próprio worktree; não faz nada sozinho, fala com a API já
   no ar (--base-url), a mesma que o navegador usa.
+- `modo` (item L7-33-modo-somente-leitura): liga, desliga e mostra o modo somente-leitura/manutenção,
+  global ou de um inquilino. Fala DIRETO com o banco pela role do worker (`PLAT_DSN_WORKER`), nunca pela
+  API: a API não liga o próprio modo, e é isso que permite ligá-lo quando a API está fora do ar. Motivo é
+  obrigatório nos dois sentidos e cada chamada grava uma linha em `plat.sistema_trilha`.
 - `segredo rotacionar` (item L7-19-segredos-e-certificados): repassa para `scripts/segredo_rotacionar.py`,
   rodado pelo Python do venv, como antes. Procedimento completo em docs/RUNBOOKS/segredos.md.
 """
@@ -35,6 +39,71 @@ def cmd_demo_verificar(a: argparse.Namespace) -> int:
     resultado = demo_semear.verificar(a.base_url, Path(a.credenciais), verboso=not a.silencioso)
     print(json.dumps(resultado, ensure_ascii=False, indent=2))
     return 0 if resultado["ok"] else 1
+
+
+# ---------------------------------------------------------------- modo (item L7-33-modo-somente-leitura)
+def _conexao_worker():
+    """Conexão como `plat_worker`, a única role com EXECUTE em plat.modo_ligar/modo_desligar (migração
+    20260906T2109). CursorSchemaAmbiente porque o SQL abaixo escreve `plat.` literal: sem a reescrita, uma
+    trilha com PLAT_SCHEMA próprio iria bater no schema de produção (mesma razão do conftest da suíte)."""
+    import psycopg2
+
+    from app.schema_ambiente import CursorSchemaAmbiente
+
+    dsn = os.environ.get("PLAT_DSN_WORKER")
+    if not dsn:
+        raise ErroModo("PLAT_DSN_WORKER não está no ambiente: o modo é escrito pela role do worker")
+    con = psycopg2.connect(dsn, cursor_factory=CursorSchemaAmbiente)
+    con.autocommit = True
+    return con
+
+
+class ErroModo(Exception):
+    pass
+
+
+def _quem() -> str:
+    """Quem ligou/desligou vai para a trilha. Sem valor bom, `plat.modo_ligar` recusa (quem obrigatório)."""
+    return (os.environ.get("PLAT_OPERADOR") or os.environ.get("SUDO_USER")
+            or os.environ.get("USER") or "desconhecido")
+
+
+def _tenant_id(cur, slug: str) -> int:
+    """Pela função `plat.tenant_publico`, não por SELECT em plat.tenant: `plat_worker` não tem (nem deve
+    ter) leitura direta na tabela de inquilinos — a função é SECURITY DEFINER, devolve só id/slug/nome/
+    ativo e já é a porta usada pelo pré-contexto de login pelo mesmo motivo."""
+    cur.execute("SELECT id FROM plat.tenant_publico(%s)", (slug,))
+    linha = cur.fetchone()
+    if not linha:
+        raise ErroModo(f"inquilino inexistente: {slug}")
+    return linha["id"] if isinstance(linha, dict) else linha[0]
+
+
+def _um_valor(linha):
+    if linha is None:
+        raise ErroModo("a função do banco não devolveu resultado")
+    return list(linha.values())[0] if isinstance(linha, dict) else linha[0]
+
+
+def cmd_modo(a: argparse.Namespace) -> int:
+    con = _conexao_worker()
+    try:
+        with con.cursor() as cur:
+            escopo = "inquilino" if a.inquilino else "global"
+            tid = _tenant_id(cur, a.inquilino) if a.inquilino else None
+            if a.acao == "estado":
+                cur.execute("SELECT plat.modo_ler(%s) AS v", (tid,))
+            elif a.acao == "ligar":
+                cur.execute("SELECT plat.modo_ligar(%s, %s, %s, %s, %s) AS v",
+                            (escopo, tid, a.motivo, _quem(), a.retry_after))
+            else:
+                cur.execute("SELECT plat.modo_desligar(%s, %s, %s, %s) AS v",
+                            (escopo, tid, a.motivo, _quem()))
+            estado_atual = _um_valor(cur.fetchone())
+    finally:
+        con.close()
+    print(json.dumps(estado_atual, ensure_ascii=False, default=str))
+    return 0
 
 
 def _repassar_segredo(extras: list[str]) -> int:
@@ -92,10 +161,28 @@ def main(argv: list[str] | None = None) -> int:
     p_verificar.add_argument("--silencioso", action="store_true")
     p_verificar.set_defaults(func=cmd_demo_verificar)
 
+    # ------------------------------------------------------------ modo (item L7-33)
+    modo = sub.add_parser("modo", help="modo somente-leitura/manutenção (global ou de um inquilino)")
+    modo_sub = modo.add_subparsers(dest="acao", required=True)
+    for acao, ajuda in (("ligar", "liga o modo (bloqueia escrita; mapa, leitura e exportação seguem)"),
+                        ("desligar", "desliga o modo e devolve a escrita"),
+                        ("estado", "mostra o estado efetivo sem mudar nada")):
+        q = modo_sub.add_parser(acao, help=ajuda)
+        q.add_argument("--inquilino", default=None, metavar="SLUG",
+                       help="limita ao inquilino; sem isto o escopo é global")
+        if acao != "estado":
+            # motivo obrigatório é cláusula do portão do item, e o banco também o exige: vale nos dois
+            # sentidos, porque a trilha tem de dizer por que a escrita voltou.
+            q.add_argument("--motivo", required=True, help="por que (obrigatório; vai para a trilha)")
+        if acao == "ligar":
+            q.add_argument("--retry-after", type=int, default=300, metavar="S",
+                           help="segundos no cabeçalho Retry-After das respostas 503 (padrão 300)")
+        q.set_defaults(func=cmd_modo)
+
     a = p.parse_args(args)
     try:
         return a.func(a)
-    except demo_semear.Erro as e:
+    except (demo_semear.Erro, ErroModo) as e:
         print(f"plat {a.grupo} {a.acao} falhou: {e}", file=sys.stderr)
         return 1
 

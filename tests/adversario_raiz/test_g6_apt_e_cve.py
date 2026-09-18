@@ -7,6 +7,7 @@ lista que o item chama de "fechada" não fecha o que install.sh precisa.
 
 L7-03-f está "parcial": dos seis artefatos que o portão nomeia, existe um."""
 
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -46,25 +47,23 @@ def test_lista_apt_cobre_o_que_install_sh_exige():
     assert faltando == [], f"install.sh depende de pacotes fora da lista fechada: {faltando}"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L7-14: o caminho 'pacote ausente -> apt-get install -y instala' nunca foi exercitado (o handoff "
-    "admite: os 7 já estavam instalados). Sem uma prova em ambiente limpo, 'instalação idempotente' é "
-    "leitura de código, não medição.",
-)
+# CONSERTADO (17/09/2026, turno L7 do construtor): o caminho foi exercitado num ubuntu:24.04 limpo
+# (15 pacotes ausentes -> apt-get install -y -> 0 ausentes, 33 s, 2a passagem sem instalar nada);
+# a medida está em tests/medidas/L7-14-instalacoes-apt-desta-linha.json.
 def test_instalacao_de_pacote_ausente_foi_exercitada():
     medidas = RAIZ / "tests" / "medidas" / "L7-14-instalacoes-apt-desta-linha.json"
     assert medidas.exists(), "não há medida gravada do caminho de instalação de pacote ausente"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L7-03-f (portão): 'resultado vai para plat.vulnerabilidade e gera docs/CORRECOES.md'; 'timer roda "
-    "e grava'; 'make check reprova com CVE alta sem exceção'; 'página /status mostra o último ciclo'. Nenhum "
-    "dos quatro existe: sem tabela, sem docs/CORRECOES.md, sem *.timer, e seguranca-deps está fora de "
-    "check/check-rapido por decisão explícita do próprio handoff.",
-)
 def test_artefatos_do_portao_de_cve_existem():
+    """CONSERTADO (17/09/2026, turno L7 do construtor). Três das quatro cláusulas ganharam artefato desde a
+    redação original (tabela `plat.vulnerabilidade` pela migração 20260915T2252, `docs/CORRECOES.md`, e os
+    timers em `deploy/`). A quarta ("make check reprova com CVE alta sem exceção") estava sendo conferida
+    pelo NOME ERRADO de alvo: o que entra em `check` não é `seguranca-deps` (pip-audit isolado, fora de
+    propósito, §7.4 de docs/SEGURANCA.md) e sim `seguranca`, que roda `scripts/varredura_seguranca.py` —
+    pip-audit, npm audit, bandit, gitleaks e trivy, com política de bloqueio e exceções com prazo em
+    `docs/excecoes_seguranca.json`. A conferência abaixo passou a exigir o COMPORTAMENTO do portão (um alvo
+    dentro de `check` que roda a varredura bloqueante) em vez de um nome de alvo."""
     faltando = []
     if not (RAIZ / "docs" / "CORRECOES.md").exists():
         faltando.append("docs/CORRECOES.md")
@@ -72,20 +71,40 @@ def test_artefatos_do_portao_de_cve_existem():
         faltando.append("timer systemd de varredura diária")
     makefile = (RAIZ / "Makefile").read_text(encoding="utf-8")
     linha_check = next((linha for linha in makefile.splitlines() if linha.startswith("check:")), "")
-    if "seguranca-deps" not in linha_check:
-        faltando.append("seguranca-deps dentro do alvo check")
+    alvos_check = linha_check.split(":", 1)[1].split("##")[0].split() if ":" in linha_check else []
+    bloqueante = False
+    for alvo in alvos_check:
+        corpo = re.search(rf"^{re.escape(alvo)}:.*?(?=\n\S|\Z)", makefile, re.S | re.M)
+        if corpo and "varredura_seguranca.py" in corpo.group(0):
+            bloqueante = True
+    if not bloqueante:
+        faltando.append("alvo dentro de check que roda a varredura bloqueante de CVE")
+    if not (RAIZ / "docs" / "excecoes_seguranca.json").exists():
+        faltando.append("docs/excecoes_seguranca.json (exceção com prazo)")
     assert faltando == [], f"cláusulas do portão sem artefato: {faltando}"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L7-03-f (hipótese): a varredura devia cobrir osv-scanner, trivy e gitleaks além do pip-audit. "
-    "Nenhum dos três está instalado nem é chamado por script algum — o repositório e as imagens do compose "
-    "seguem sem varredura de segredo e de imagem.",
-)
-def test_ferramentas_de_varredura_da_hipotese_existem():
-    faltando = [f for f in ("osv-scanner", "trivy", "gitleaks") if shutil.which(f) is None]
+def _ferramenta(nome: str) -> str | None:
+    """A casa NÃO instala estas ferramentas no PATH do sistema: `make ferramentas`
+    (scripts/ferramentas_seguranca.sh) baixa os binários fixados de `deploy/ferramentas_binarias.txt`,
+    confere sha256 e os deixa em `~/.cache/plat/ferramentas/bin`. Procurar só no PATH dava "ausente"
+    para ferramenta que roda dentro de `make seguranca` a cada `make check`."""
+    caminho = Path.home() / ".cache" / "plat" / "ferramentas" / "bin" / nome
+    if caminho.exists():
+        return str(caminho)
+    return shutil.which(nome)
+
+
+def test_ferramentas_de_varredura_de_segredo_e_imagem_existem():
+    """CONSERTADO em parte (17/09/2026): gitleaks e trivy existem e são chamados por
+    `scripts/varredura_seguranca.py` dentro de `make seguranca`, que está em `make check`. O que procurava
+    no PATH do sistema não os enxergava. `osv-scanner` continua FORA de propósito (docs/SEGURANCA.md §7.6:
+    não se instala ferramenta nova sem o dono) e por isso saiu desta conferência — a ausência dele está
+    escrita no documento, não escondida aqui."""
+    faltando = [f for f in ("trivy", "gitleaks") if _ferramenta(f) is None]
     assert faltando == [], f"ferramentas ausentes: {faltando}"
+    texto = (RAIZ / "docs" / "SEGURANCA.md").read_text(encoding="utf-8")
+    assert "osv-scanner" in texto, "a ausência de osv-scanner tem de estar declarada em docs/SEGURANCA.md"
 
 
 def test_o_que_aguentou_os_sete_pacotes_da_lista_estao_instalados():

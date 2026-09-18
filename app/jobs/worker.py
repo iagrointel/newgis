@@ -27,6 +27,7 @@ import psycopg2.extras
 
 from app import limites
 from app import log as plat_log
+from app import metricas
 from app.jobs import agenda as mod_agenda
 from app.jobs import filho as mod_filho
 from app.jobs.tipos import REGISTRO
@@ -361,6 +362,10 @@ class Worker:
         if tarefa is None:
             self.sql("SELECT plat.job_terminar(%s, %s, 'falhou', NULL, %s, NULL)",
                      (job["id"], self.nome, f"tipo de job não registrado neste worker: {job['tipo']}"))
+            try:  # item L7-06-a: este caminho também termina o job de vez
+                metricas.registrar_job_processado(job["tipo"], "falhou")
+            except Exception:  # noqa: BLE001
+                log.exception("falha ao registrar métrica de job processado")
             return
         r, w = os.pipe()
         os.set_blocking(r, False)
@@ -475,6 +480,14 @@ class Worker:
             estado = r["estado"] if r else None
             if estado == "falhou":  # tentativas esgotadas: job_devolver termina fora de job_terminar
                 self._notificar_dono(job, "falhou")
+        if estado in ("concluido", "falhou", "cancelado"):
+            # item L7-06-a: plat_jobs_processados_total só ganha série aqui, no único ponto do worker
+            # que conhece o estado FINAL do job. "pendente" é devolução para nova tentativa, não fim,
+            # e por isso não conta. Rótulos de vocabulário fechado (tipo do job, estado final).
+            try:
+                metricas.registrar_job_processado(job["tipo"], estado)
+            except Exception:  # noqa: BLE001 — métrica nunca derruba o worker
+                log.exception("falha ao registrar métrica de job processado")
         if estado in ("concluido", "cancelado", "pendente"):
             mod_filho.apagar_dir(self.dir_jobs, job["id"])
         log.info("job terminou: %s (código %s)", estado, codigo,

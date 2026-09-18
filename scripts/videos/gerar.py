@@ -101,20 +101,41 @@ def _interpola_corpo(corpo, var: dict[str, str]):
     return corpo
 
 
-def secoes_do_manual() -> list[str]:
-    caminho = RAIZ / "MANUAL.md"
-    linhas = caminho.read_text(encoding="utf-8").splitlines() if caminho.exists() else []
-    return [linha[3:].strip() for linha in linhas if linha.startswith("## ")]
+def secoes_do_manual() -> dict[str, str]:
+    """Seções do manual GERADO (item L7-04-a): docs/manual/<id>.md, uma por tela do e2e.
+
+    O vínculo do vídeo é com o manual gerado, não com o MANUAL.md histórico escrito à mão:
+    o que o vídeo mostra é a tela da versão instalada, e é dessa tela que a seção é gerada.
+    """
+    pasta = RAIZ / "docs" / "manual"
+    secoes: dict[str, str] = {}
+    for caminho in sorted(pasta.glob("*.md")):
+        ident = titulo = ""
+        for linha in caminho.read_text(encoding="utf-8").splitlines():
+            if linha.startswith("id:"):
+                ident = linha[3:].strip()
+            elif linha.startswith("titulo:"):
+                titulo = linha[7:].strip().strip('"')
+            if ident and titulo:
+                break
+        if ident:
+            secoes[ident] = titulo or ident
+    return secoes
 
 
 def confere_secoes_manual() -> None:
-    """Cada tarefa declara o começo do título de uma seção de MANUAL.md; divergência derruba a geração."""
+    """Cada tarefa declara o id de uma seção de docs/manual/<id>.md; divergência derruba a geração."""
     secoes = secoes_do_manual()
+    if not secoes:
+        sys.exit("docs/manual está vazio: gere o manual (make manual) antes de gerar os vídeos")
     for tarefa in TAREFAS:
-        if not any(s.startswith(tarefa["manual"]) for s in secoes):
+        ident = tarefa.get("manual_id")
+        if not ident:
+            sys.exit(f"tarefa {tarefa['id']}: sem campo manual_id (seção de docs/manual)")
+        if ident not in secoes:
             sys.exit(
-                f"tarefa {tarefa['id']}: a seção do manual '{tarefa['manual']}' "
-                "não existe em MANUAL.md"
+                f"tarefa {tarefa['id']}: a seção do manual gerado "
+                f"'docs/manual/{ident}.md' não existe"
             )
 
 

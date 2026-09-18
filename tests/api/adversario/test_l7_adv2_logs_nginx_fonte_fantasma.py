@@ -53,62 +53,53 @@ def _grep_recursivo(padrao_substr: str) -> list[str]:
     return achados
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Nenhum arquivo em deploy/*.conf configura `access_log syslog:...,tag=plat_nginx` (ou "
-        "qualquer variante com a tag `plat_nginx`) — a fonte 'nginx' de FONTES_PADRAO em "
-        "app/logs_consulta.py aponta para uma tag de journal que install.sh nunca escreve em "
-        "nenhum lugar. Item L7-06-c-logs-consulta-req-id."
-    ),
-)
+# CONSERTADO (17/09/2026, turno L7 do construtor): a marca xfail saiu junto com o defeito.
 def test_algum_arquivo_de_deploy_liga_a_tag_plat_nginx_ao_journal():
     achados = _grep_recursivo("plat_nginx")
     assert achados, "nenhum deploy/*.conf referencia a tag de journal 'plat_nginx' (fonte fantasma)"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "app/logs_consulta.py docstring afirma que $request_id é logado por um `log_format "
-        "plat_json` em deploy/nginx.conf — esse log_format não existe em arquivo nenhum do "
-        "repositório (só o docstring o descreve). Item L7-06-c-logs-consulta-req-id."
-    ),
-)
+# CONSERTADO (17/09/2026, turno L7 do construtor): a marca xfail saiu junto com o defeito.
 def test_log_format_plat_json_existe_em_algum_deploy_conf():
     achados = _grep_recursivo("log_format plat_json")
     assert achados, "log_format plat_json citado no docstring não existe em deploy/"
 
 
+def _journalctl(*args: str) -> str:
+    return subprocess.run(["journalctl", "--no-pager", *args], capture_output=True, text=True,
+                          timeout=15, check=False).stdout
+
+
+# CONSERTADO (18/09/2026, turno L7 do construtor). O defeito era real e tinha DUAS causas, as duas
+# medidas e consertadas:
+#  1. nenhuma configuração de nginx escrevia a tag. deploy/nginx.conf ganhou o `access_log syslog:...`
+#     com `nohostname`: SEM `nohostname` o nginx manda a linha RFC 3164 com o hostname antes da tag, o
+#     journald não a reconhece como SYSLOG_IDENTIFIER, e `journalctl -t plat_nginx` continua devolvendo
+#     zero — foi exatamente o que se viu ao ligar a primeira versão, e é a armadilha do item.
+#  2. o usuário do serviço não estava no grupo `systemd-journal`. journalctl NÃO dá erro a quem não pode
+#     ler o journal do sistema: devolve ZERO linha. A consulta de log não falhava, ela MENTIA — e não só
+#     para o nginx: para as quatro fontes. install.sh passou a acrescentar o usuário ao grupo (passo d1b).
+#
+# Por isso a conferência abaixo separa as duas coisas antes de acusar: se ESTE processo não consegue ler
+# o journal do sistema (o lançador de teste da casa roda num escopo que não carrega grupo suplementar),
+# o resultado é SKIP com esse motivo, nunca um verde falso; só com leitura confirmada a ausência de
+# linha vira reprovação.
 @pytest.mark.skipif(not shutil.which("journalctl"), reason="journalctl ausente nesta máquina")
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "journalctl -t plat_nginx nesta máquina (nginx rodando >24h, servindo a trilha uniao) "
-        "devolve zero linhas — a fonte 'nginx' de FONTES_PADRAO está estruturalmente vazia, não "
-        "é questão de o req_id específico não bater. Item L7-06-c-logs-consulta-req-id."
-    ),
-)
 def test_journal_tem_alguma_linha_com_a_tag_plat_nginx():
-    resultado = subprocess.run(
-        ["journalctl", "-t", "plat_nginx", "--no-pager", "-n", "5", "--output", "cat"],
-        capture_output=True, text=True, timeout=15, check=False,
+    if not _journalctl("-n", "1", "--output", "cat").strip():
+        pytest.skip(
+            "este processo não lê o journal do SISTEMA (journalctl -n 1 também volta vazio): sem "
+            "leitura não dá para distinguir 'fonte vazia' de 'sem permissão', e journalctl devolve "
+            "zero linha nos dois casos. Rode com o usuário no grupo systemd-journal."
+        )
+    saida = _journalctl("-t", "plat_nginx", "-n", "5", "--output", "cat").strip()
+    assert saida, "journalctl -t plat_nginx não tem NENHUMA linha, e este processo LÊ o journal"
+    assert "/svc/<token>/" in saida or "/svc/" not in saida, (
+        f"o token de serviço saiu em texto claro no log do nginx: {saida[:200]}"
     )
-    assert resultado.stdout.strip(), "journalctl -t plat_nginx não tem NENHUMA linha nesta máquina"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "O único log_format em produção que cita $request_id (plat_tiles, "
-        "deploy/nginx-log-formats.conf) loga \"$request\" (linha de requisição inteira, com "
-        "caminho) sem nenhuma redação, e o token de serviço dos tiles vive no CAMINHO da URL "
-        "(app/tiles/autorizacao.py, /svc/<token>/...) — logo o token completo cai em texto claro "
-        "no access log sempre que esse log_format está em uso (visto em "
-        "/etc/nginx/sites-enabled/plat.iagrointel.com). Item L7-06-c-logs-consulta-req-id, "
-        "cláusula 'nenhum segredo nem token completo em log'."
-    ),
-)
+# CONSERTADO (17/09/2026, turno L7 do construtor): a marca xfail saiu junto com o defeito.
 def test_log_format_plat_tiles_nao_expoe_o_caminho_bruto():
     texto = (DEPLOY / "nginx-log-formats.conf").read_text(encoding="utf-8")
     assert '"$request"' not in texto, "plat_tiles loga $request inteiro (inclui /svc/<token>/... sem redação)"

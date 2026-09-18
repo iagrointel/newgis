@@ -18,14 +18,20 @@ ESCOPO = re.compile(
     rf"^(catalogo:(ler|escrever)|camada:(ler|editar)(:{UUID})?|tiles:ler(:{UUID})?|jobs:executar|"
     rf"rota:usar|geocodificar:usar|multiescala:usar|parcelas:usar|conteudo:(criar|exportar)|"
     rf"imagens:(ler|escrever)|rede:(ler|editar|validar|analisar)|campo:usar|crs:usar|fluxo:ler|"
-    rf"analise3d:usar|admin:inquilino)$"
+    rf"analise3d:usar|modelo3d:ler|admin:inquilino)$"
 )
 ESCOPOS_SEM_UUID = (
     "catalogo:ler", "catalogo:escrever", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar",
     "rota:usar", "geocodificar:usar", "multiescala:usar", "parcelas:usar", "conteudo:criar", "conteudo:exportar",
     "imagens:ler", "imagens:escrever", "rede:ler", "rede:editar", "rede:validar", "rede:analisar",
     "campo:usar",
-    "crs:usar", "fluxo:ler", "analise3d:usar", "admin:inquilino",
+    "crs:usar", "fluxo:ler", "analise3d:usar",
+    # 18/09/2026 (item L7-08-d): `modelo3d:ler` já era exigido por app/modelo3d/rotas.py e não estava no
+    # vocabulário — só apareceu quando `x-plat-escopo` voltou a ser derivado de verdade. Enquanto faltava
+    # aqui, POST /api/tokens recusava a chave que quisesse esse escopo (escopo inválido), ou seja: a rota
+    # exigia um escopo que nenhuma chave podia ter, e por tabela ficava inacessível a token de serviço.
+    "modelo3d:ler",
+    "admin:inquilino",
 )
 DESCRICAO = {
     "catalogo:ler": "listar e ler metadado de itens que o dono pode ler",
@@ -57,6 +63,7 @@ DESCRICAO = {
     "campo:usar": "fila, roteiro, visita e foto do módulo de campo (o app do aparelho usa este escopo)",
     "crs:usar": "converter coordenada entre sistemas de referência",
     "fluxo:ler": "ler definição e execução de fluxo de geoprocessamento",
+    "modelo3d:ler": "ler modelo 3D e foto 360 de item legível pelo dono (L2-09-c)",
     "analise3d:usar": "linha de visada, bacia visual, perfil de elevação e sombra projetada sobre terreno "
     "inline (L2-09-d); salvar o resultado como item exige conteudo.criar no dono",
     "admin:inquilino": "tudo o que o dono pode fazer pela API, exceto gerir tokens, senha, 2FA e sessões",

@@ -807,8 +807,17 @@ def security_txt():
     """RFC 9116. Gerado a cada leitura porque o campo Expires é obrigatório e um arquivo com data fixa
     envelhece em silêncio: aqui a validade é sempre a de hoje mais SEGURANCA_TXT_DIAS dias."""
     expira = datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=SEGURANCA_TXT_DIAS)
+    # RFC 9116: Contact é o único campo obrigatório e precisa de valor utilizável (mailto:/https:/tel:).
+    # Sem PLAT_SEGURANCA_CONTATO configurado, o documento cai na própria tela de chamados desta
+    # instalação — que é um endereço https válido e existe em toda instalação (item L7-13-a) — em vez
+    # de servir um "Contact: " vazio, que vale o mesmo que não ter contato nenhum.
+    contato = (settings.PLAT_SEGURANCA_CONTATO or "").strip()
+    if not contato:
+        contato = f"{settings.PLAT_URL_PUBLICA.rstrip('/')}/chamados"
+    elif "@" in contato and not contato.startswith(("mailto:", "http://", "https://", "tel:")):
+        contato = f"mailto:{contato}"
     linhas = [
-        f"Contact: {settings.PLAT_SEGURANCA_CONTATO}",
+        f"Contact: {contato}",
         f"Expires: {expira.strftime('%Y-%m-%dT%H:%M:%SZ')}",
         "Preferred-Languages: pt-BR, pt, en",
         f"Canonical: {settings.PLAT_URL_PUBLICA}/.well-known/security.txt",

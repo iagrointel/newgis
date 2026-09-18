@@ -25,7 +25,7 @@ import psycopg2
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import Response
 
-from app import db_leitor
+from app import db_leitor, metricas
 
 router = APIRouter()
 log = logging.getLogger("plat.tiles")
@@ -113,6 +113,14 @@ def verificar(request: Request, token: str | None = Query(default=None)):
     origem = request.headers.get("origin") or request.headers.get("referer")
     caminho_original = request.headers.get("x-original-uri") or ""
     v = autorizar(caminho_original, token or None, ip, origem)
+    # item L7-06-a: esta é a autorização de ladrilho que a API atende de verdade (auth_request do nginx
+    # antes do Martin), então é daqui que plat_tiles_requisicoes_total ganha série. Rótulos de
+    # cardinalidade fechada: `origem` = quem pediu a verificação, `resultado` = autorizado ou o motivo
+    # da recusa (vocabulário fechado de `_motivo`), nunca o token nem o caminho do ladrilho.
+    try:
+        metricas.registrar_tile("tiles_verificar", "autorizado" if v.status == 204 else v.motivo)
+    except Exception:  # noqa: BLE001 — métrica nunca derruba a autorização
+        log.exception("falha ao registrar métrica de ladrilho")
     if v.status == 204:
         return Response(status_code=204)
     return Response(status_code=v.status, headers={"X-Motivo-Recusa": v.motivo})

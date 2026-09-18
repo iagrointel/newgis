@@ -98,6 +98,23 @@ for chave in PLAT_OSRM_URL=http://127.0.0.1:5010 PLAT_ROTA_MATRIZ_MAX=625 PLAT_R
   grep -q "^${chave%%=*}=" .env || echo "$chave" >> .env
 done
 
+echo "== d1b. leitura do journal para o usuário do serviço (item L7-06-c)"
+# `plat logs --req-id` junta as linhas dos 4 serviços chamando `journalctl -t <tag>` / `-u <unidade>`
+# (app/logs_consulta.py). journalctl NÃO devolve erro a quem não pode ler o journal do sistema: devolve
+# ZERO linha. Sem este grupo, portanto, a consulta de log não falha — ela mente, em silêncio, dizendo
+# que não houve linha nenhuma. MEDIDO em 18/09/2026: o usuário do serviço não estava em
+# `systemd-journal`, `journalctl -t plat_nginx` como ele saía vazio e como root trazia as linhas.
+# É leitura, e só: o grupo `systemd-journal` não dá escrita no journal nem privilégio nenhum além de ler.
+if getent group systemd-journal > /dev/null; then
+  if id -nG "$APP_USER" | tr ' ' '\n' | grep -qx systemd-journal; then
+    echo "$APP_USER já está em systemd-journal"
+  else
+    usermod -aG systemd-journal "$APP_USER" && echo "$APP_USER acrescentado a systemd-journal (relogar/reiniciar unidades para valer)"
+  fi
+else
+  echo "AVISO: grupo systemd-journal não existe nesta máquina; plat logs não lerá o journal do sistema" >&2
+fi
+
 echo "== d2. segredos fora do .env (item L7-19, docs/SEGURANCA.md)"
 # PLAT_SECRET e a senha da role plat_worker (PLAT_DSN_WORKER) moram em arquivo fora do repositório, dono
 # root, modo 600; só o systemd (LoadCredential=, deploy/plat-api.service e plat-worker.service) entrega
@@ -472,6 +489,13 @@ chown -R www-data:www-data /var/cache/nginx/plat_tiles_vetor /var/cache/nginx/pl
   printf 'proxy_cache_path /var/cache/nginx/plat_tiles_auth levels=1:2 keys_zone=plat_tiles_auth:8m max_size=64m inactive=1m use_temp_path=off;\n'
 } > "$LIMITES.novo"
 if [ -f "$LIMITES" ] && cmp -s "$LIMITES" "$LIMITES.novo"; then rm -f "$LIMITES.novo"; echo "$LIMITES já existe (igual)"; else mv "$LIMITES.novo" "$LIMITES"; echo "$LIMITES escrito"; fi
+# formatos de log em contexto http (itens L7-06-a e L7-06-c): plat_tiles e plat_json, mais o `map` que
+# redige o token de serviço que vive no CAMINHO da URL. Sem este arquivo o `access_log ... plat_json` do
+# bloco server não carrega e o nginx nem sobe, e a fonte `plat_nginx` de `plat logs --req-id` fica vazia.
+FORMATOS=/etc/nginx/conf.d/plat_log_formats.conf
+cp deploy/nginx-log-formats.conf "$FORMATOS.novo"
+if [ -f "$FORMATOS" ] && cmp -s "$FORMATOS" "$FORMATOS.novo"; then rm -f "$FORMATOS.novo"; echo "$FORMATOS já existe (igual)"
+else mv "$FORMATOS.novo" "$FORMATOS"; echo "$FORMATOS escrito"; fi
 # perfil TLS + HTTP/2 + OCSP stapling (item L7-03-e): contexto http, só faz sentido com certificado no disco
 TLSCONF=/etc/nginx/conf.d/plat_tls.conf
 escrever_tls() {

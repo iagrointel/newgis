@@ -29,11 +29,9 @@ def _token(sessao_a, nome):
     return sessao_a.post("/api/tokens", json={"nome": nome, "escopos": ["admin:inquilino"]}).json()
 
 
-# 18/09/2026: a marca xfail(strict=True) saiu porque o teste PASSA — rodado isolado na trilha `uniao`.
-# Consertado em 94a65a46a ("fix(upload): restaura o pipeline único por classe (Politica/MotorClamd)
-# perdido na fusão"). As marcas dos testes de SVG e de HTML, mais abaixo, CONTINUAM: aqueles dois
-# defeitos ainda existem.
-# O texto que vem abaixo (docstring/nome) descreve o achado ORIGINAL, não o estado de hoje.
+# CONSERTADO (medido em 18/09/2026: este teste vinha dando XPASS(strict), ou seja, reprovava a suíte
+# pela marca velha e não pelo defeito). A integração com clamd existe em app/varredura_conteudo.py e
+# PLAT_CLAMD deixou de ser configuração morta. A marca xfail saiu; o motivo original fica como registro.
 def test_modulo_de_varredura_conhece_endereco_do_clamd():
     assert hasattr(varredura, "endereco_clamd"), (
         "app.varredura_conteudo não tem endereco_clamd — não há integração com ClamAV no código integrado"
@@ -83,10 +81,9 @@ def test_anexo_html_e_aceito_para_servir_com_sandbox_nao_rejeitado(cliente, sess
         sessao_a.delete(f"/api/tokens/{tok['id']}")
 
 
-# 18/09/2026: a marca xfail(strict=True) saiu porque o teste PASSA — rodado isolado na trilha `uniao`.
-# Mesma causa e mesmo conserto do primeiro teste deste arquivo (94a65a46a): a tabela de tipos
-# permitidos por CLASSE de rota passou a existir, então a recusa acontece.
-# O texto que vem abaixo (docstring/nome) descreve o achado ORIGINAL, não o estado de hoje.
+# CONSERTADO (medido em 18/09/2026: XPASS(strict), mesma situação do teste do clamd acima). A tabela de
+# tipos permitidos por CLASSE de rota existe e POST /api/arquivos?classe=foto_campo recusa
+# application/octet-stream com 415. A marca xfail saiu; o motivo original fica como registro.
 def test_tipo_fora_da_lista_da_rota_e_recusado(cliente, sessao_a):
     tok = _token(sessao_a, "zt-l7adv1-rota")
     try:
