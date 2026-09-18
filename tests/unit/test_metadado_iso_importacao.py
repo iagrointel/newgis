@@ -71,6 +71,33 @@ TRES_ITENS = (
         },
     ),
     linha(titulo="Item obsoleto de teste interno", status="obsoleto", tags=["zt-uma-etiqueta"]),
+    # paridade escrita (L0-09): tudo que o editor grava em plat.item.metadado_iso tem de ir para o XML e
+    # voltar na leitura com diff = 0 — contato, licença, CRS, manutenção, formato e extensão temporal.
+    # A extensão espacial DECLARADA diverge do extent do item de propósito: é ela que tem de aparecer no
+    # XML (regra `metadado_mgb.espacial_efetivo`, espelhada em `metadado._espacial_efetivo`)
+    linha(
+        titulo="Item com metadado do editor de teste interno",
+        xmin=-48.5,
+        ymin=-16.2,
+        xmax=-47.1,
+        ymax=-15.3,
+        metadado_iso={
+            "contato": {
+                "organizacao": "Organização do editor de teste",
+                "individuo": "Maria do Editor",
+                "email": "editor@exemplo.invalido",
+                "papel": "custodian",
+            },
+            "restricoes": {"licenca": "ODbL 1.0"},
+            "sistema_referencia": {"codigo": "31983", "codespace": "EPSG"},
+            "manutencao": {"frequencia": "monthly", "proxima_atualizacao": "2026-12-01"},
+            "distribuicao": {"formato": "GeoPackage"},
+            "extensao": {
+                "temporal": {"inicio": "2020-01-01", "fim": "2020-12-31"},
+                "espacial": {"xmin": -50.25, "ymin": -18.5, "xmax": -46.75, "ymax": -14.125},
+            },
+        },
+    ),
 )
 
 
@@ -78,19 +105,37 @@ def _gerado(row: dict) -> bytes:
     return metadado.gerar_xml(row, TENANT, BASE_URL)
 
 
-@pytest.mark.parametrize("row", TRES_ITENS, ids=("minimo", "completo", "obsoleto"))
+@pytest.mark.parametrize("row", TRES_ITENS, ids=("minimo", "completo", "obsoleto", "editor"))
 def test_xml_gerado_valida_no_xsd_sem_nenhum_erro(row):
-    """Cláusula 'XML gerado de 3 itens valida no XSD (0 erros)' — os três itens são os do parâmetro."""
+    """Cláusula 'XML gerado de 3 itens valida no XSD (0 erros)' — os três itens são os do parâmetro,
+    mais o quarto que prova a paridade escrita do editor (L0-09)."""
     doc = metadado.ler_documento(_gerado(row))
     assert metadado.erros_xsd(doc) == []
 
 
-@pytest.mark.parametrize("row", TRES_ITENS, ids=("minimo", "completo", "obsoleto"))
+@pytest.mark.parametrize("row", TRES_ITENS, ids=("minimo", "completo", "obsoleto", "editor"))
 def test_ida_e_volta_nao_perde_campo_do_perfil(row):
     """Cláusula 'exportar → importar sem perda nos campos do perfil (diff = 0)'."""
     lido = metadado.analisar(_gerado(row))
     esperado = metadado.perfil_do_item(row, TENANT, BASE_URL)
     assert metadado.diferencas(esperado, lido) == []
+
+
+def test_19115_3_com_metadado_do_editor_valida_no_xsd_e_devolve_os_valores():
+    """O outro gerador (D42) lê o mesmo `metadado_iso`: valida contra o XSD mdb cacheado e cada valor
+    escrito pelo editor aparece no texto — contato, licença, CRS, manutenção, formato e temporal."""
+    xml = metadado.gerar_xml_19115_3(TRES_ITENS[3], TENANT, BASE_URL)
+    metadado.validar_19115_3(xml)
+    texto = xml.decode("utf-8")
+    for escrito in (
+        "Organização do editor de teste", "Maria do Editor", "editor@exemplo.invalido",
+        "ODbL 1.0", "31983", "monthly", "2026-12-01", "GeoPackage", "2020-01-01", "2020-12-31",
+    ):
+        assert escrito in texto, escrito
+    # a bbox é a DECLARADA no editor, não o extent do item (-48.5..-15.3 não pode aparecer)
+    for declarado in ("-50.25", "-18.5", "-46.75", "-14.125"):
+        assert declarado in texto, declarado
+    assert "-48.5" not in texto
 
 
 def test_registro_real_da_inde_preenche_pelo_menos_quinze_campos():

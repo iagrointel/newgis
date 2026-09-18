@@ -16,7 +16,14 @@ Decisões (a ADR completa de L0-09 fica pendente de um turno próprio; isto docu
 - `dataQualityInfo`/lineage só aparece quando `dados.procedencia` existe no item (D17: "procedência errada é
   pior que nenhuma" — sem bloco de procedência, sem lineage, não um texto genérico).
 - `dono_id` vira `pointOfContact` com `role="owner"`; o inquilino (`tenant_nome`) vira o `contact` do
-  `MD_Metadata` (o "quem responde por este catálogo"), com `role="pointOfContact"`, refletindo D17."""
+  `MD_Metadata` (o "quem responde por este catálogo"), com `role="pointOfContact"`, refletindo D17.
+- O que o EDITOR gravou em `plat.item.metadado_iso` (item L0-09-b) MANDA nos campos que têm casa na ISO —
+  contato do recurso (à frente do dono), sistema de referência, licença, manutenção, formato de distribuição
+  e extensão temporal/espacial declarada (esta última pela regra `metadado_mgb.espacial_efetivo`: as quatro
+  ordenadas declaradas vencem o extent registrado no item); os fallbacks de plataforma (dono/inquilino/
+  EPSG:4326/extent do item) só valem quando o editor está vazio. É a cláusula "paridade escrita" do L0-09:
+  o catálogo publica a ficha que o dono preencheu, não uma montada só das colunas do item (defeito medido
+  em 17/09, registrado em tests/api/catalogo/test_csw_paridade.py)."""
 
 import dataclasses
 import datetime
@@ -29,8 +36,9 @@ from app import limites
 
 GMD = "http://www.isotc211.org/2005/gmd"
 GCO = "http://www.isotc211.org/2005/gco"
+GML = "http://www.opengis.net/gml/3.2"
 XSI = "http://www.w3.org/2001/XMLSchema-instance"
-NSMAP = {"gmd": GMD, "gco": GCO, "xsi": XSI}
+NSMAP = {"gmd": GMD, "gco": GCO, "gml": GML, "xsi": XSI}
 CODELIST_BASE = "http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml"
 XSD_ENTRADA = (
     Path(__file__).resolve().parents[2]
@@ -132,8 +140,56 @@ def _ci_citation(pai, tag: str, titulo: str, datas: list[tuple[datetime.date, st
     return el
 
 
+def _stored(row: dict) -> dict:
+    """O que o editor de metadado (L0-09-b) gravou em `plat.item.metadado_iso` — `{}` quando vazio/ausente."""
+    bruto = row.get("metadado_iso")
+    return bruto if isinstance(bruto, dict) else {}
+
+
+def _sistema_referencia(stored: dict) -> dict:
+    """EPSG:4326/EPSG de plataforma quando o editor não declarou; declarado parcial sai como está (D17:
+    não inventar codespace para um código que o produtor não qualificou). O MESMO dicionário é o que a
+    leitura (`analisar`) recolhe de volta — por isso `perfil_do_item` usa esta função, não uma cópia."""
+    srs = stored.get("sistema_referencia") or {}
+    saida = {"codigo": srs.get("codigo") or "4326"}
+    if srs.get("codespace"):
+        saida["codespace"] = srs["codespace"]
+    elif not srs:
+        saida["codespace"] = "EPSG"
+    return saida
+
+
+def _temporal(stored: dict) -> dict:
+    return (stored.get("extensao") or {}).get("temporal") or {}
+
+
+def _espacial_efetivo(stored: dict, row: dict) -> dict | None:
+    """A extensão espacial DECLARADA no editor (as quatro ordenadas preenchidas) manda sobre o extent
+    registrado no item — mesma regra de `metadado_mgb.espacial_efetivo`, repetida aqui de propósito:
+    este módulo é ISO pura e não importa o módulo do editor (que puxa `app.auth`)."""
+    esp = (stored.get("extensao") or {}).get("espacial") or {}
+    if all(esp.get(k) is not None for k in ("xmin", "ymin", "xmax", "ymax")):
+        return esp
+    if row.get("xmin") is not None:
+        return {"xmin": row["xmin"], "ymin": row["ymin"], "xmax": row["xmax"], "ymax": row["ymax"]}
+    return None
+
+
+def _gml_time_period(pai, item_id: str, temporal: dict, ns_gml: str = GML):
+    """<gml:TimePeriod gml:id="t-<id>"><gml:beginPosition>.../<gml:endPosition>...</gml:TimePeriod> — a casa
+    ISO de `extensao.temporal` do editor (gml está no cache XSD dos dois perfis)."""
+    tp = etree.SubElement(pai, f"{{{ns_gml}}}TimePeriod")
+    tp.set(f"{{{ns_gml}}}id", f"t-{item_id}")
+    if temporal.get("inicio"):
+        etree.SubElement(tp, f"{{{ns_gml}}}beginPosition").text = temporal["inicio"]
+    if temporal.get("fim"):
+        etree.SubElement(tp, f"{{{ns_gml}}}endPosition").text = temporal["fim"]
+    return tp
+
+
 def _ci_responsible_party(
-    pai, tag: str, papel: str, nome_individual: str | None = None, organizacao: str | None = None
+    pai, tag: str, papel: str, nome_individual: str | None = None, organizacao: str | None = None,
+    email: str | None = None,
 ):
     el = _e(pai, tag)
     crp = _e(el, "CI_ResponsibleParty")
@@ -141,6 +197,12 @@ def _ci_responsible_party(
         _texto(crp, "individualName", nome_individual)
     if organizacao:
         _texto(crp, "organisationName", organizacao)
+    if email:
+        info = _e(crp, "contactInfo")
+        contato = _e(info, "CI_Contact")
+        endereco = _e(contato, "address")
+        ci_endereco = _e(endereco, "CI_Address")
+        _texto(ci_endereco, "electronicMailAddress", email)
     _codigo(crp, "role", "CI_RoleCode", papel)
     return el
 
@@ -160,6 +222,12 @@ def _online_resource(pai, tag: str, url: str, nome: str, descricao: str | None =
 def montar_md_metadata(row: dict, tenant_nome: str, base_url: str) -> etree._Element:
     """`row` é a linha crua de `comum.carregar()`/`comum.SQL_ITEM` (com xmin/ymin/xmax/ymax e dono_nome)."""
     item_id = str(row["id"])
+    stored = _stored(row)
+    contato = stored.get("contato") or {}
+    manutencao = stored.get("manutencao") or {}
+    licenca = (stored.get("restricoes") or {}).get("licenca")
+    formato = (stored.get("distribuicao") or {}).get("formato")
+    temporal = _temporal(stored)
     md = etree.Element(f"{{{GMD}}}MD_Metadata", nsmap=NSMAP)
     md.set(
         f"{{{XSI}}}schemaLocation",
@@ -181,12 +249,14 @@ def montar_md_metadata(row: dict, tenant_nome: str, base_url: str) -> etree._Ele
     _texto(md, "metadataStandardName", "ISO 19115:2003/19139")
     _texto(md, "metadataStandardVersion", "1.0")
 
+    srs = _sistema_referencia(stored)
     ref = _e(md, "referenceSystemInfo")
     md_rs = _e(ref, "MD_ReferenceSystem")
     rs_id_prop = _e(md_rs, "referenceSystemIdentifier")
     rs_id = _e(rs_id_prop, "RS_Identifier")
-    _texto(rs_id, "code", "4326")
-    _texto(rs_id, "codeSpace", "EPSG")
+    _texto(rs_id, "code", srs["codigo"])
+    if srs.get("codespace"):
+        _texto(rs_id, "codeSpace", srs["codespace"])
 
     ident_prop = _e(md, "identificationInfo")
     ident = _e(ident_prop, "MD_DataIdentification")
@@ -199,9 +269,24 @@ def montar_md_metadata(row: dict, tenant_nome: str, base_url: str) -> etree._Ele
     progresso = MD_PROGRESSO.get(row.get("status"))
     if progresso:
         _codigo(ident, "status", "MD_ProgressCode", progresso)
+    # o contato que o editor declarou é o contato do RECURSO e vem primeiro (a leitura de `analisar` prefere
+    # o primeiro pointOfContact); o dono da plataforma continua registrado como owner logo atrás
+    if contato:
+        _ci_responsible_party(
+            ident, "pointOfContact", contato.get("papel") or "pointOfContact",
+            nome_individual=contato.get("individuo"), organizacao=contato.get("organizacao"),
+            email=contato.get("email"),
+        )
     dono_nome = row.get("dono_nome")
     if dono_nome:
         _ci_responsible_party(ident, "pointOfContact", "owner", nome_individual=dono_nome)
+    if manutencao.get("frequencia") or manutencao.get("proxima_atualizacao"):
+        rm_prop = _e(ident, "resourceMaintenance")
+        manut = _e(rm_prop, "MD_MaintenanceInformation")
+        if manutencao.get("frequencia"):
+            _codigo(manut, "maintenanceAndUpdateFrequency", "MD_MaintenanceFrequencyCode", manutencao["frequencia"])
+        if manutencao.get("proxima_atualizacao"):
+            _data_simples(manut, "dateOfNextUpdate", datetime.date.fromisoformat(manutencao["proxima_atualizacao"]))
     if row.get("miniatura_chave"):
         graf = _e(ident, "graphicOverview")
         browse = _e(graf, "MD_BrowseGraphic")
@@ -213,29 +298,46 @@ def montar_md_metadata(row: dict, tenant_nome: str, base_url: str) -> etree._Ele
         for t in tags:
             _texto(kw, "keyword", t)
         _codigo(kw, "type", "MD_KeywordTypeCode", "theme")
-    if row.get("termos_de_uso"):
+    if row.get("termos_de_uso") or licenca:
         rc_prop = _e(ident, "resourceConstraints")
         legal = _e(rc_prop, "MD_LegalConstraints")
-        _texto(legal, "useLimitation", row["termos_de_uso"])
+        if row.get("termos_de_uso"):
+            _texto(legal, "useLimitation", row["termos_de_uso"])
+        if licenca:
+            _texto(legal, "otherConstraints", licenca)
     _texto(ident, "language", "por")
-    xmin, ymin, xmax, ymax = row.get("xmin"), row.get("ymin"), row.get("xmax"), row.get("ymax")
-    if xmin is not None:
+    espacial = _espacial_efetivo(stored, row)
+    tem_temporal = bool(temporal.get("inicio") or temporal.get("fim"))
+    if espacial or tem_temporal:
         ext_prop = _e(ident, "extent")
         ext = _e(ext_prop, "EX_Extent")
-        geo_prop = _e(ext, "geographicElement")
-        bbox = _e(geo_prop, "EX_GeographicBoundingBox")
-        for tag, valor in (
-            ("westBoundLongitude", xmin),
-            ("eastBoundLongitude", xmax),
-            ("southBoundLatitude", ymin),
-            ("northBoundLatitude", ymax),
-        ):
-            el = _e(bbox, tag)
-            dec = _e(el, "Decimal", GCO)
-            dec.text = repr(float(valor))
+        if espacial:
+            geo_prop = _e(ext, "geographicElement")
+            bbox = _e(geo_prop, "EX_GeographicBoundingBox")
+            for tag, valor in (
+                ("westBoundLongitude", espacial["xmin"]),
+                ("eastBoundLongitude", espacial["xmax"]),
+                ("southBoundLatitude", espacial["ymin"]),
+                ("northBoundLatitude", espacial["ymax"]),
+            ):
+                el = _e(bbox, tag)
+                dec = _e(el, "Decimal", GCO)
+                dec.text = repr(float(valor))
+        if tem_temporal:
+            tt_prop = _e(ext, "temporalElement")
+            tet = _e(tt_prop, "EX_TemporalExtent")
+            _gml_time_period(_e(tet, "extent"), item_id, temporal)
 
     dist_prop = _e(md, "distributionInfo")
     dist = _e(dist_prop, "MD_Distribution")
+    if formato:
+        df_prop = _e(dist, "distributionFormat")
+        fmt = _e(df_prop, "MD_Format")
+        _texto(fmt, "name", formato)
+        # version é obrigatório no MD_Format do 19139 e o editor não o tem: nilReason="unknown" é a
+        # resposta idiomática da ISO (D17: declarar desconhecido, nunca inventar um número de versão)
+        versao = _e(fmt, "version")
+        versao.set(f"{{{GCO}}}nilReason", "unknown")
     transfer_prop = _e(dist, "transferOptions")
     transfer = _e(transfer_prop, "MD_DigitalTransferOptions")
     _online_resource(transfer, "onLine", f"{base_url}/api/itens/{item_id}", titulo, "item na plataforma (JSON)")
@@ -319,7 +421,8 @@ MRD = "http://standards.iso.org/iso/19115/-3/mrd/1.0"
 MRL = "http://standards.iso.org/iso/19115/-3/mrl/2.0"
 NSMAP_19115_3 = {
     "mdb": MDB, "mcc": MCC, "cit": CIT, "gco": GCO3, "gex": GEX, "mri": MRI,
-    "mrs": MRS, "mmi": MMI, "mco": MCO, "mrd": MRD, "mrl": MRL, "lan": LAN, "xsi": XSI,
+    "mrs": MRS, "mmi": MMI, "mco": MCO, "mrd": MRD, "mrl": MRL, "lan": LAN,
+    "gml": GML, "xsi": XSI,
 }
 # convenção usada por catálogos ISO 19115-3 reais (INSPIRE/geocatálogos francófonos) para o atributo
 # `codeList`; `codeListValue`/`codeList` são `xs:anyURI` no gco 1.0 (não mais token solto como no 19139), mas
@@ -393,21 +496,38 @@ def _ci_citation3(
     return wrapper
 
 
+def _contato_info3(party, email: str):
+    """<cit:contactInfo><cit:CI_Contact><cit:address><cit:CI_Address><cit:electronicMailAddress> — depois de
+    `name` na sequência de AbstractCI_Party."""
+    info = _e3(party, "contactInfo", CIT)
+    contato = _e3(info, "CI_Contact", CIT)
+    endereco = _e3(contato, "address", CIT)
+    ci_endereco = _e3(endereco, "CI_Address", CIT)
+    _texto3(ci_endereco, "electronicMailAddress", email, CIT)
+
+
 def _ci_responsibility3(
-    pai, tag: str, ns: str, papel: str, nome_individual: str | None = None, organizacao: str | None = None
+    pai, tag: str, ns: str, papel: str, nome_individual: str | None = None, organizacao: str | None = None,
+    email: str | None = None,
 ):
     """<ns:tag><cit:CI_Responsibility><cit:role .../><cit:party><cit:CI_Organisation|CI_Individual><cit:name>
     .../cit:name></.../></cit:party></cit:CI_Responsibility></ns:tag> — `party` é obrigatório (>=1) em
-    CI_Responsibility_Type; sempre emitimos exatamente um."""
+    CI_Responsibility_Type e é 1..n: organização e indivíduo declarados juntos saem como duas `party`."""
     wrapper = _e3(pai, tag, ns)
     resp = _e3(wrapper, "CI_Responsibility", CIT)
     _codigo3(resp, "role", CIT, "CI_RoleCode", CIT, papel)
-    party_wrap = _e3(resp, "party", CIT)
-    party_tag = "CI_Organisation" if organizacao else "CI_Individual"
-    party = _e3(party_wrap, party_tag, CIT)
-    nome = organizacao or nome_individual
-    if nome:
-        _texto3(party, "name", nome, CIT)
+    if organizacao:
+        party = _e3(_e3(resp, "party", CIT), "CI_Organisation", CIT)
+        _texto3(party, "name", organizacao, CIT)
+        if email:
+            _contato_info3(party, email)
+            email = None
+    if nome_individual or not organizacao:
+        party = _e3(_e3(resp, "party", CIT), "CI_Individual", CIT)
+        if nome_individual:
+            _texto3(party, "name", nome_individual, CIT)
+        if email:
+            _contato_info3(party, email)
     return wrapper
 
 
@@ -425,6 +545,12 @@ def montar_md_metadata_19115_3(row: dict, tenant_nome: str, base_url: str) -> et
     """`row` é a mesma linha crua de `comum.carregar()`/`comum.SQL_ITEM` que `montar_md_metadata` usa —
     um só lugar de verdade para o que entra no metadado, dois geradores para os dois formatos de saída."""
     item_id = str(row["id"])
+    stored = _stored(row)
+    contato = stored.get("contato") or {}
+    manutencao = stored.get("manutencao") or {}
+    licenca = (stored.get("restricoes") or {}).get("licenca")
+    formato = (stored.get("distribuicao") or {}).get("formato")
+    temporal = _temporal(stored)
     md = etree.Element(f"{{{MDB}}}MD_Metadata", nsmap=NSMAP_19115_3)
     md.set(
         f"{{{XSI}}}schemaLocation",
@@ -451,12 +577,14 @@ def montar_md_metadata_19115_3(row: dict, tenant_nome: str, base_url: str) -> et
     padrao_cit = _e3(padrao_wrap, "CI_Citation", CIT)
     _texto3(padrao_cit, "title", "ISO 19115-1:2014/19115-3:2016", CIT)
 
+    srs = _sistema_referencia(stored)
     ref_wrap = _e3(md, "referenceSystemInfo", MDB)
     md_rs = _e3(ref_wrap, "MD_ReferenceSystem", MRS)
     rs_id_wrap = _e3(md_rs, "referenceSystemIdentifier", MRS)
     rs_id = _e3(rs_id_wrap, "MD_Identifier", MCC)
-    _texto3(rs_id, "code", "4326", MCC)
-    _texto3(rs_id, "codeSpace", "EPSG", MCC)
+    _texto3(rs_id, "code", srs["codigo"], MCC)
+    if srs.get("codespace"):
+        _texto3(rs_id, "codeSpace", srs["codespace"], MCC)
 
     ident_info_wrap = _e3(md, "identificationInfo", MDB)
     ident = _e3(ident_info_wrap, "MD_DataIdentification", MRI)
@@ -469,26 +597,47 @@ def montar_md_metadata_19115_3(row: dict, tenant_nome: str, base_url: str) -> et
     progresso = MD_PROGRESSO.get(row.get("status"))
     if progresso:
         _codigo3(ident, "status", MRI, "MD_ProgressCode", MCC, progresso)
+    # mesmo critério do gerador 19139: o contato declarado no editor vem primeiro, o dono logo atrás
+    if contato:
+        _ci_responsibility3(
+            ident, "pointOfContact", MRI, contato.get("papel") or "pointOfContact",
+            nome_individual=contato.get("individuo"), organizacao=contato.get("organizacao"),
+            email=contato.get("email"),
+        )
     dono_nome = row.get("dono_nome")
     if dono_nome:
         _ci_responsibility3(ident, "pointOfContact", MRI, "owner", nome_individual=dono_nome)
     # ordem do XSD (AbstractMD_Identification_Type): extent vem ANTES de graphicOverview, que vem ANTES de
     # descriptiveKeywords/resourceConstraints — inverter quebra a validação (sequence, não bag de campos).
-    xmin, ymin, xmax, ymax = row.get("xmin"), row.get("ymin"), row.get("xmax"), row.get("ymax")
-    if xmin is not None:
+    espacial = _espacial_efetivo(stored, row)
+    tem_temporal = bool(temporal.get("inicio") or temporal.get("fim"))
+    if espacial or tem_temporal:
         ext_wrap = _e3(ident, "extent", MRI)
         ext = _e3(ext_wrap, "EX_Extent", GEX)
-        geo_wrap = _e3(ext, "geographicElement", GEX)
-        bbox = _e3(geo_wrap, "EX_GeographicBoundingBox", GEX)
-        for tag, valor in (
-            ("westBoundLongitude", xmin),
-            ("eastBoundLongitude", xmax),
-            ("southBoundLatitude", ymin),
-            ("northBoundLatitude", ymax),
-        ):
-            el = _e3(bbox, tag, GEX)
-            dec = _e3(el, "Decimal", GCO3)
-            dec.text = repr(float(valor))
+        if espacial:
+            geo_wrap = _e3(ext, "geographicElement", GEX)
+            bbox = _e3(geo_wrap, "EX_GeographicBoundingBox", GEX)
+            for tag, valor in (
+                ("westBoundLongitude", espacial["xmin"]),
+                ("eastBoundLongitude", espacial["xmax"]),
+                ("southBoundLatitude", espacial["ymin"]),
+                ("northBoundLatitude", espacial["ymax"]),
+            ):
+                el = _e3(bbox, tag, GEX)
+                dec = _e3(el, "Decimal", GCO3)
+                dec.text = repr(float(valor))
+        if tem_temporal:
+            tet = _e3(_e3(ext, "temporalElement", GEX), "EX_TemporalExtent", GEX)
+            _gml_time_period(_e3(tet, "extent", GEX), item_id, temporal)
+    # resourceMaintenance (mri, tipo abstrato do mcc) vem depois de extent e ANTES de graphicOverview
+    if manutencao.get("frequencia") or manutencao.get("proxima_atualizacao"):
+        rm_wrap = _e3(ident, "resourceMaintenance", MRI)
+        manut = _e3(rm_wrap, "MD_MaintenanceInformation", MMI)
+        if manutencao.get("frequencia"):
+            _codigo3(manut, "maintenanceAndUpdateFrequency", MMI, "MD_MaintenanceFrequencyCode", MMI, manutencao["frequencia"])
+        if manutencao.get("proxima_atualizacao"):
+            data_prox = datetime.date.fromisoformat(manutencao["proxima_atualizacao"])
+            _ci_date3(manut, "maintenanceDate", MMI, data_prox, "nextUpdate")
     if row.get("miniatura_chave"):
         graf_wrap = _e3(ident, "graphicOverview", MRI)
         browse = _e3(graf_wrap, "MD_BrowseGraphic", MCC)
@@ -500,13 +649,22 @@ def montar_md_metadata_19115_3(row: dict, tenant_nome: str, base_url: str) -> et
         for t in tags:
             _texto3(kw, "keyword", t, MRI)
         _codigo3(kw, "type", MRI, "MD_KeywordTypeCode", MRI, "theme")
-    if row.get("termos_de_uso"):
+    if row.get("termos_de_uso") or licenca:
         rc_wrap = _e3(ident, "resourceConstraints", MRI)
         legal = _e3(rc_wrap, "MD_LegalConstraints", MCO)
-        _texto3(legal, "useLimitation", row["termos_de_uso"], MCO)
+        if row.get("termos_de_uso"):
+            _texto3(legal, "useLimitation", row["termos_de_uso"], MCO)
+        if licenca:
+            _texto3(legal, "otherConstraints", licenca, MCO)
 
     dist_wrap = _e3(md, "distributionInfo", MDB)
     dist = _e3(dist_wrap, "MD_Distribution", MRD)
+    if formato:
+        df_wrap = _e3(dist, "distributionFormat", MRD)
+        fmt = _e3(df_wrap, "MD_Format", MRD)
+        citacao_fmt = _e3(fmt, "formatSpecificationCitation", MRD)
+        cit_el = _e3(citacao_fmt, "CI_Citation", CIT)
+        _texto3(cit_el, "title", formato, CIT)
     transfer_wrap = _e3(dist, "transferOptions", MRD)
     transfer = _e3(transfer_wrap, "MD_DigitalTransferOptions", MRD)
     _online_resource3(transfer, "onLine", MRD, f"{base_url}/api/itens/{item_id}", titulo, "item na plataforma (JSON)")
@@ -555,6 +713,7 @@ _PERFIL_19115_3_IMPORTS = (
     (MCO, "mco/1.0/mco.xsd"),
     (MRD, "mrd/1.0/mrd.xsd"),
     (MRL, "mrl/2.0/mrl.xsd"),
+    (MMI, "mmi/1.0/mmi.xsd"),  # resourceMaintenance do editor (mmi:MD_MaintenanceInformation substitui o abstrato)
 )
 
 
@@ -595,9 +754,9 @@ def validar_19115_3(xml_bytes: bytes) -> None:
 # 2. Entidade externa nunca é resolvida (`resolve_entities=False`, `no_network=True`, sem DTD): o corpo é
 #    documento de terceiro por definição.
 # 3. O que não tem onde ser guardado NÃO é inventado: vira relatório (`nao_coube`), com caminho, quantas vezes
-#    apareceu, um exemplo e a linha do XML. Guardar contato/manutenção/formato é o item L0-09-b (coluna
-#    `plat.item.metadado_iso`), que ainda não entrou em master — enquanto não entra, esses campos saem no
-#    relatório em vez de irem para um armazém improvisado.
+#    apareceu, um exemplo e a linha do XML. Contato/manutenção/formato/sistema de referência TÊM onde ser
+#    guardados: a coluna `plat.item.metadado_iso` (item L0-09-b) — e os geradores acima leem essa mesma coluna
+#    na exportação, fechando a paridade escrita (o que o editor grava é o que o catálogo publica).
 
 PARSER_SEGURO = etree.XMLParser(
     resolve_entities=False,
@@ -949,6 +1108,7 @@ def perfil_do_item(row: dict, tenant_nome: str, base_url: str) -> Analise:
     que não são campo editável do item (dono, miniatura, endereços da própria API, idioma/conjunto de caracteres
     fixos, nome e versão do padrão): reimportá-los seria reinventar identidade da plataforma a partir do texto."""
     esperado = Analise()
+    stored = _stored(row)
     for chave in ("titulo", "resumo", "creditos", "termos_de_uso"):
         if row.get(chave):
             esperado.campos[chave] = row[chave]
@@ -956,15 +1116,11 @@ def perfil_do_item(row: dict, tenant_nome: str, base_url: str) -> Analise:
         esperado.campos["tags"] = list(row["tags"])
     if row.get("status") in MD_PROGRESSO:
         esperado.campos["status"] = row["status"]
-    if row.get("xmin") is not None:
-        esperado.campos["extent"] = [float(row["xmin"]), float(row["ymin"]), float(row["xmax"]), float(row["ymax"])]
+    espacial = _espacial_efetivo(stored, row)
+    if espacial:
+        esperado.campos["extent"] = [float(espacial[k]) for k in ("xmin", "ymin", "xmax", "ymax")]
         esperado.metadado_iso["extensao"] = {
-            "espacial": {
-                "xmin": float(row["xmin"]),
-                "ymin": float(row["ymin"]),
-                "xmax": float(row["xmax"]),
-                "ymax": float(row["ymax"]),
-            }
+            "espacial": {k: float(espacial[k]) for k in ("xmin", "ymin", "xmax", "ymax")}
         }
     dados = row.get("dados") or {}
     procedencia = dados.get("procedencia") if isinstance(dados, dict) else None
@@ -975,11 +1131,19 @@ def perfil_do_item(row: dict, tenant_nome: str, base_url: str) -> Analise:
             if procedencia.get(chave)
         }
     # o que a exportação escreve fora do bloco de procedência e a leitura recolhe de volta para ele: a
-    # organização do inquilino (gmd:contact), o endereço do próprio item (distributionInfo) e as duas datas
-    # do item. Quando o item JÁ tem esses valores em `dados.procedencia`, o do item manda — é ele que a
-    # exportação escreveu na linhagem.
-    esperado.procedencia.setdefault("fonte", tenant_nome)
+    # organização de contato (a do editor quando declarada, senão a do inquilino), a licença do editor, o
+    # endereço do próprio item e as duas datas do item. Quando o item JÁ tem esses valores em
+    # `dados.procedencia`, o do item manda — é ele que a exportação escreveu na linhagem.
+    contato = stored.get("contato") or {}
+    esperado.procedencia.setdefault("fonte", contato.get("organizacao") or tenant_nome)
     esperado.procedencia.setdefault("url", f"{base_url.rstrip('/')}/api/itens/{row['id']}")
+    licenca = (stored.get("restricoes") or {}).get("licenca")
+    if licenca:
+        esperado.procedencia.setdefault("licenca", licenca)
+    frequencia = (stored.get("manutencao") or {}).get("frequencia")
+    if frequencia in MD_MAINTENANCE_FREQUENCY_CODE:
+        esperado.procedencia.setdefault("frescor", frequencia)
+        esperado.metadado_iso["manutencao"] = {"frequencia": frequencia}
     esperado.procedencia.setdefault(
         "data_de_acesso",
         (row["modificado_em"].date() if hasattr(row["modificado_em"], "date") else row["modificado_em"]).isoformat(),
@@ -988,13 +1152,23 @@ def perfil_do_item(row: dict, tenant_nome: str, base_url: str) -> Analise:
         "data_do_dado",
         (row["criado_em"].date() if hasattr(row["criado_em"], "date") else row["criado_em"]).isoformat(),
     )
-    # contato: a exportação põe o DONO como pointOfContact do recurso (papel owner) e o inquilino como
-    # contato do metadado; a leitura prefere o do recurso, que é o mais específico.
-    if row.get("dono_nome"):
+    # contato: o do EDITOR é o primeiro pointOfContact do recurso (papel declarado ou pointOfContact) e é ele
+    # que a leitura recolhe; sem editor, a exportação põe o DONO como owner e o inquilino como contato do
+    # metadado — a leitura prefere o do recurso, que é o mais específico.
+    if contato:
+        esperado_contato = {
+            chave: contato[chave] for chave in ("organizacao", "individuo", "email") if contato.get(chave)
+        }
+        esperado_contato["papel"] = contato.get("papel") or "pointOfContact"
+        esperado.metadado_iso["contato"] = esperado_contato
+    elif row.get("dono_nome"):
         esperado.metadado_iso["contato"] = {"individuo": row["dono_nome"], "papel": "owner"}
     else:
         esperado.metadado_iso["contato"] = {"organizacao": tenant_nome, "papel": "pointOfContact"}
-    esperado.metadado_iso["sistema_referencia"] = {"codigo": "4326", "codespace": "EPSG"}
+    esperado.metadado_iso["sistema_referencia"] = _sistema_referencia(stored)
+    formato = (stored.get("distribuicao") or {}).get("formato")
+    if formato:
+        esperado.metadado_iso["distribuicao"] = {"formato": formato}
     esperado.identificador_arquivo = str(row["id"])
     return esperado
 

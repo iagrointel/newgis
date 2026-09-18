@@ -17,6 +17,7 @@ import secrets
 import psycopg2
 import pytest
 
+from app.esquema_dado import esquema as esquema_dado
 from app.schema_ambiente import CursorSchemaAmbiente
 from tests.api.conftest import PREFIXO_TESTE
 
@@ -43,16 +44,19 @@ def _conexao(env):
 
 
 def _criar_camada(sessao, env, feicoes: int, indexar: list[str] | None = None):
-    """(item_id, schema, tabela, fecha) — tabela real em d_demo, preparada como a ingestão prepara."""
+    """(item_id, schema, tabela, fecha) — tabela real no schema de dado do inquilino demo, preparada como a
+    ingestão prepara. O schema vem de `plat.camada_schema_prefixo()` (app.esquema_dado): `d_demo` na bancada,
+    `d_<prefixo>_demo` numa trilha — hardcodar `d_demo` quebrava toda trilha com `schema does not exist`."""
     tabela = "c_" + secrets.token_hex(8)
     con, usuario_id = _conexao(env)
     with con.cursor() as cur:
+        schema = esquema_dado(cur, "demo")
         cur.execute(
-            f'CREATE TABLE d_demo."{tabela}" (fid serial PRIMARY KEY, municipio text, classe text, '
+            f'CREATE TABLE "{schema}"."{tabela}" (fid serial PRIMARY KEY, municipio text, classe text, '
             f"area_ha double precision, geom geometry(MultiPolygon, 4674))"
         )
         cur.execute(
-            f'INSERT INTO d_demo."{tabela}" (municipio, classe, area_ha, geom) '
+            f'INSERT INTO "{schema}"."{tabela}" (municipio, classe, area_ha, geom) '
             f"SELECT 'Município ' || i, (ARRAY{list(CLASSES)!r})[1 + (i %% {len(CLASSES)})], "
             f"CASE WHEN i %% 10 = 0 THEN NULL ELSE i * 1.5 END, "
             f"ST_Multi(ST_MakeEnvelope(-46.8 + (i %% 100) * 0.01, -23.7 + (i / 100.0) * 0.0001, "
@@ -63,14 +67,14 @@ def _criar_camada(sessao, env, feicoes: int, indexar: list[str] | None = None):
         # nesta base (MEDIDO: varredura sequencial com ordenação top-N em vez de percurso do índice).
         if indexar:
             colunas = ", ".join(f'"{c}"' for c in indexar)
-            cur.execute(f'CREATE INDEX ON d_demo."{tabela}" ({colunas})')
+            cur.execute(f'CREATE INDEX ON "{schema}"."{tabela}" ({colunas})')
         cur.execute("SELECT plat.camada_preparar(%s, %s, %s, %s, %s)",
-                    ("d_demo", tabela, 4674, "MultiPolygon", usuario_id))
-        cur.execute(f'ANALYZE d_demo."{tabela}"')
+                    (schema, tabela, 4674, "MultiPolygon", usuario_id))
+        cur.execute(f'ANALYZE "{schema}"."{tabela}"')
 
     r = sessao.post("/api/itens", json={
         "tipo": "camada_vetorial", "titulo": f"{PREFIXO_TESTE} tabela de atributos",
-        "dados": {"schema": "d_demo", "tabela": tabela, "geometria": "MultiPolygon", "srid": 4674,
+        "dados": {"schema": schema, "tabela": tabela, "geometria": "MultiPolygon", "srid": 4674,
                   "campos": CAMPOS, "fonte": "hospedada"},
     })
     assert r.status_code == 201, r.text
@@ -82,11 +86,11 @@ def _criar_camada(sessao, env, feicoes: int, indexar: list[str] | None = None):
                 cur.execute("SELECT set_config('plat.lixeira', 'on', true)")
                 cur.execute("SELECT plat.item_lixeira(%s::uuid, true)", (item_id,))
                 cur.execute("SELECT plat.item_expurgar(%s::uuid)", (item_id,))
-                cur.execute(f'DROP TABLE IF EXISTS d_demo."{tabela}"')
+                cur.execute(f'DROP TABLE IF EXISTS "{schema}"."{tabela}"')
         finally:
             con.close()
 
-    return item_id, "d_demo", tabela, fechar
+    return item_id, schema, tabela, fechar
 
 
 @pytest.fixture

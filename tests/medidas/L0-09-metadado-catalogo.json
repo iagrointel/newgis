@@ -21,15 +21,30 @@
     "valores_escritos": 3,
     "de_volta_no_editor": 3,
     "nas_saidas": {
-     "metadado_xml_19139": 0,
-     "metadado_xml_19115_3": 0,
-     "csw_getrecordbyid_iso": 0
+     "metadado_xml_19139": 3,
+     "metadado_xml_19115_3": 3,
+     "csw_getrecordbyid_iso": 3
     }
    },
    "unidade": "valores do editor encontrados em cada saída do catálogo (de 3)",
    "comando": "pytest tests/api/catalogo/test_csw_paridade.py::test_medida_paridade -q"
+  },
+  "mediana_5_metadado_19115_3_xml_ms": {
+   "valor": 15.8,
+   "unidade": "ms",
+   "comando": "mediana de 5x GET /api/itens/{id}/metadado.xml?formato=19115-3 (gera + valida contra o XSD mdb)"
+  },
+  "xsd_cache_arquivos_iso19115_3": {
+   "valor": 14,
+   "unidade": "sementes",
+   "comando": "sementes do perfil iso19115-3 em docs/xsd/cache/MANIFESTO.json['perfis']"
+  },
+  "e2e_paridade_editor_tela_iso_passou": {
+   "valor": 1,
+   "unidade": "bool",
+   "comando": "playwright chromium (servidor local da trilha): aba Metadado, preencher essencial, validar, salvar e conferir os 6 valores nas 3 saídas ISO (19139, 19115-3, CSW GetRecordById)"
   }
  },
- "gerado_em": "2026-09-18T01:22:37Z",
- "git_sha": "d48a8b813230"
+ "gerado_em": "2026-09-18T06:37:54Z",
+ "git_sha": "47f9770a0092"
 }
