@@ -50,6 +50,9 @@ SAIDA = AQUI / "migracao_saida"
 # vazio/erro dela. A foto do estado vazio serve ao par antes/depois tanto quanto a do estado cheio.
 PARAMETRO = "00000000-0000-0000-0000-000000000000"
 
+# teto da foto de pagina inteira, em pixels de altura (ver o comentario no ponto da captura)
+ALTURA_MAXIMA_DA_FOTO = 30000
+
 # impressao digital da ARVORE: tag, id e classes de cada elemento, em ordem de documento. Nao entra estilo
 # nenhum - o que muda de proposito na migracao e a folha, nao a arvore.
 JS_ESTRUTURA = r"""
@@ -186,16 +189,19 @@ def test_migracao_mede_a_leva(sessao: Tela):
                     pega_nova = page.evaluate(JS_SELETORES_QUE_PEGAM, sorted(set(nova)))
                     registro["seletores_da_antiga_que_pegam"] = pega_antiga
                     registro["so_na_antiga_e_pegam"] = sorted(set(pega_antiga) - set(pega_nova))
-            # Pagina muito alta estoura o limite de captura do Chromium ("Unable to capture screenshot").
-            # Medido na leva 6. A foto da area visivel serve ao par antes/depois do mesmo jeito -- as duas
-            # fases caem no mesmo caminho -- e o que reprova a leva e a arvore, o contraste e o axe, que nao
-            # dependem da foto. O inventario registra qual foi.
+            # Foto da pagina inteira so ate uma altura que o Chromium aguenta. Medido na leva 6: /crs
+            # desenha a lista de sistemas de coordenadas com 47.049 elementos e 439.805 px de altura --
+            # um bitmap de 1280 x 439.805 nao cabe, e a tentativa nao levanta excecao: derruba o processo
+            # do navegador (TargetClosedError na chamada seguinte) e leva a leva inteira junto. Acima do
+            # teto fica a foto da area visivel, registrada no relatorio. O que reprova a leva e a arvore,
+            # o contraste e o axe; nenhum deles depende da foto.
             caminho_png = CAPTURAS / f"{ITEM}_{nome}_{fase}_{tema}.png"
-            try:
+            altura = page.evaluate("() => document.documentElement.scrollHeight")
+            if altura <= ALTURA_MAXIMA_DA_FOTO:
                 page.screenshot(path=str(caminho_png), full_page=True)
-            except Exception:  # noqa: BLE001
+            else:
                 page.screenshot(path=str(caminho_png))
-                registro.setdefault("captura_so_da_area_visivel", []).append(tema)
+                registro.setdefault("captura_so_da_area_visivel", {})[tema] = altura
         relatorio[nome] = registro
     leva = int(os.environ.get("PLAT_LEVA", "1"))
     (SAIDA / f"leva{leva}_{fase}.json").write_text(json.dumps(relatorio, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
