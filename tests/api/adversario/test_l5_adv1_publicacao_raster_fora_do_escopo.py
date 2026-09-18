@@ -29,7 +29,10 @@ import uuid
 
 import pytest
 
-from tests.api.catalogo.conftest import titulo_zt
+# `itens_a` e uma FIXTURE do conftest do pacote tests/api/catalogo — conftest de pacote nao alcanca
+# tests/api/adversario/, e sem trazer o nome para ca os dois testes morriam em "fixture 'itens_a' not
+# found" (erro de PREPARO, nao refutacao). Medido em 18/09/2026.
+from tests.api.catalogo.conftest import documento_mapa, itens_a, titulo_zt  # noqa: F401
 from tests.api.test_rls import contexto, ids_por_slug
 
 ITEM = "L5-14-publicacao-links-embed"
@@ -71,7 +74,7 @@ def test_camada_raster_citada_pelo_mapa_entra_no_escopo_do_token_publicado(sessa
 
     raster_id = _inserir_raster_direto(tenant_id, adm)
 
-    mapa = itens_a.criar("mapa", dados={"esquema_versao": 1, "corpo": {"camadas": [{"ref": raster_id}]}})
+    mapa = itens_a.criar("mapa", dados=documento_mapa(raster_id))
     corpo_app = {"nos": [], "mapas": [mapa["id"]]}
     app_item = itens_a.criar("app", dados={"tipo": "app", "esquema_versao": 2, "corpo": corpo_app})
 
@@ -98,7 +101,7 @@ def test_camada_raster_citada_pelo_mapa_entra_no_escopo_do_token_publicado(sessa
 def test_item_sem_dado_fisico_continua_fora_do_escopo_do_token(sessao_a, itens_a, conexao_plat_app):
     """Par positivo: abrir o escopo para a família `raster` não pode ter aberto para tudo — um `mapa`
     citado pelo app continua NÃO recebendo `tiles:ler:<id>` (mapa não tem dado, é documento)."""
-    mapa = itens_a.criar("mapa", dados={"esquema_versao": 1, "corpo": {"camadas": []}})
+    mapa = itens_a.criar("mapa", dados=documento_mapa())
     app_item = itens_a.criar("app", dados={"tipo": "app", "esquema_versao": 2,
                                            "corpo": {"nos": [], "mapas": [mapa["id"]]}})
     slug = f"zt-pub-semdado-{uuid.uuid4().hex[:8]}"
