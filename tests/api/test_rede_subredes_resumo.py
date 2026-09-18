@@ -11,16 +11,23 @@ conferíveis à mão:
    declarada aparece em toda linha — `test_tabela_descreve_as_colunas_para_o_painel`;
 4. exportação CSV com o mesmo conteúdo — `test_csv_tem_cabecalho_e_uma_linha_por_subrede`;
 5. o tronco é medido pela topologia quando há topologia e controlador, e fica NULO (com a razão escrita)
-   quando não há — `test_tronco_medido_pela_topologia`, `test_tronco_nulo_sem_topologia`.
+   quando não há — `test_tronco_medido_pela_topologia`, `test_tronco_nulo_sem_topologia`;
+6. o painel (L2-06) LIGA na tabela: uma camada do catálogo apontando para a tabela física do sumário e
+   uma fonte de painel sobre ela respondem os pedidos oficiais (indicadores e tabela) pela rota de dados
+   do painel, conferidos contra SQL direto — `test_painel_liga_na_tabela_do_sumario`.
 
 A conferência contra o arquivo real da cooperativa de teste (20 alimentadores, km de MT e contagem de
 unidades consumidoras por CTMT) está em `test_rede_subredes_resumo_medida.py`, marcada `lento`."""
 
 import json
+import os
+import uuid
 
+import psycopg2.extras
 import pytest
 
 from tests.api.conftest import PREFIXO_TESTE
+from tests.api.test_rls import contexto, ids_por_slug
 
 ITEM = "L4-04-c-sumarios-por-subrede"
 
@@ -296,3 +303,119 @@ def test_subrede_inexistente_nao_cria_linha(sessao_a, limpar_redes):
     _rede_bdgd(sessao_a, rid)
     contagem = _calcular(sessao_a, rid, subrede_id="00000000-0000-4000-8000-000000000001")
     assert contagem["subredes"] == 0 and contagem["calculadas"] == 0, contagem
+
+
+# --- cláusula 6: o painel (L2-06) liga na tabela ------------------------------------------------------------
+
+FONTE_RESUMO = "01JPA1NEKEXEMPK0F0NTE0000C"
+ELEM_INDICADOR = "01JPA1NEKEXEMPK0F0NTE000E1"
+ELEM_TABELA = "01JPA1NEKEXEMPK0F0NTE000E2"
+
+# as colunas do sumário que a fonte expõe (lista branca do painel — nunca SELECT *)
+CAMPOS_FONTE_RESUMO = ["subrede_nome", "rede_id", "km_declarado", "trafos", "kva_instalado",
+                       "ucs", "energia_anual_kwh", "gd_unidades", "gd_potencia_kw"]
+
+
+def test_painel_liga_na_tabela_do_sumario(sessao_a, limpar_redes, conexao_plat_app):
+    """O portão exige que o painel (L2-06) consiga LIGAR a esta tabela. A ligação de um painel é uma
+    FONTE: camada do catálogo (schema+tabela) + campos + filtro, lida pela rota oficial de dados
+    (`POST /api/itens/{id}/paineis/fontes/{fonte}/dados`, motor do L2-06-b). A prova monta a camada
+    apontando para a tabela física do sumário e pede indicadores e linhas — cada número conferido
+    contra SQL direto na tabela, por caminho independente.
+
+    A camada é registrada por SQL (mesma via da semente `plat.painel_exemplo_semear`): não existe rota
+    de catálogo para apontar uma camada a uma tabela do próprio schema plat — camadas de catálogo vivem
+    em `d_<slug>`. Sem função de tile de propósito: a tabela do sumário não tem geometria."""
+    rid = _criar_rede(sessao_a, "painel-liga", limpar_redes)
+    _rede_bdgd(sessao_a, rid)
+    _calcular(sessao_a, rid)
+
+    ids = ids_por_slug(conexao_plat_app)
+    contexto(conexao_plat_app, ids["demo"])
+    with conexao_plat_app.cursor() as cur:
+        cur.execute("SET search_path = plat, public")
+        cur.execute("SELECT usuario_id FROM plat.auth_login('demo', 'admin')")
+        adm = cur.fetchone()["usuario_id"]
+    contexto(conexao_plat_app, ids["demo"], usuario_id=adm, login="admin")
+
+    camada_id = str(uuid.uuid4())
+    painel_id = None
+    try:
+        with conexao_plat_app.cursor() as cur:
+            cur.execute(
+                "INSERT INTO plat.item(id, tenant_id, tipo, titulo, dono_id, dados, acesso, criado_por, "
+                "modificado_por) VALUES (%s::uuid, %s, 'camada_vetorial', %s, %s, %s, 'inquilino', %s, %s)",
+                (camada_id, ids["demo"], f"{PREFIXO_TESTE}-camada-resumo", adm,
+                 psycopg2.extras.Json({
+                     "schema": os.environ["PLAT_SCHEMA"], "tabela": "rede_subrede_resumo",
+                     "fonte": "hospedada",
+                     "campos": [{"nome": c, "tipo": "text" if c in ("subrede_nome", "rede_id") else "numeric"}
+                                for c in CAMPOS_FONTE_RESUMO]}),
+                 adm, adm),
+            )
+            # o esperado por caminho INDEPENDENTE: SQL direto na tabela, antes de chamar a rota do painel
+            cur.execute(
+                "SELECT count(*) AS n, sum(kva_instalado) AS kva, sum(ucs) AS ucs, "
+                "sum(energia_anual_kwh) AS ene FROM plat.rede_subrede_resumo WHERE rede_id = %s::uuid",
+                (rid,),
+            )
+            esperado = dict(cur.fetchone())
+        conexao_plat_app.commit()
+        assert esperado["n"] == 3 and float(esperado["kva"]) == 75.0, esperado
+
+        corpo = {
+            "grade": {"colunas": 12, "linha_px": 36},
+            "fontes": [{"id": FONTE_RESUMO, "nome": "sumário por subrede",
+                        "camada": {"ref": camada_id}, "campos": CAMPOS_FONTE_RESUMO,
+                        "filtro": {"op": "=", "args": [{"property": "rede_id"}, rid]}}],
+            "elementos": [
+                {"id": ELEM_INDICADOR, "tipo": "indicador", "titulo": "kVA instalado", "fonte": FONTE_RESUMO,
+                 "x": 0, "y": 0, "largura": 3, "altura": 3,
+                 "opcoes": {"agregacao": "soma", "campo": "kva_instalado"}},
+                {"id": ELEM_TABELA, "tipo": "tabela", "titulo": "subredes", "fonte": FONTE_RESUMO,
+                 "x": 0, "y": 3, "largura": 8, "altura": 6,
+                 "opcoes": {"campos": ["subrede_nome", "ucs", "kva_instalado"], "max_linhas": 10}},
+            ],
+        }
+        r = sessao_a.post("/api/itens", json={"tipo": "painel", "titulo": f"{PREFIXO_TESTE}-painel-resumo",
+                                              "dados": {"tipo": "painel", "esquema_versao": 3,
+                                                        "corpo": corpo}})
+        assert r.status_code == 201, r.text
+        painel_id = r.json()["id"]
+
+        r = sessao_a.post(
+            f"/api/itens/{painel_id}/paineis/fontes/{FONTE_RESUMO}/dados",
+            json={"pedidos": {
+                "subredes": {"agregacao": "indicador", "estatistica": "contagem"},
+                "kva": {"agregacao": "indicador", "estatistica": "soma", "campo": "kva_instalado"},
+                "ucs": {"agregacao": "indicador", "estatistica": "soma", "campo": "ucs"},
+                "energia": {"agregacao": "indicador", "estatistica": "soma", "campo": "energia_anual_kwh"},
+                "linhas": {"agregacao": "linhas",
+                           "campos": ["subrede_nome", "ucs", "kva_instalado", "km_declarado"],
+                           "ordenacao": {"campo": "subrede_nome", "direcao": "asc"},
+                           "limite": 10, "total": True},
+            }, "filtro_execucao": {}})
+        assert r.status_code == 200, r.text
+        res = r.json()["resultados"]
+        # cada número do painel bate com o SQL direto na tabela
+        assert res["subredes"]["valor"] == esperado["n"] == 3, res
+        assert res["kva"]["valor"] == pytest.approx(float(esperado["kva"])), res
+        assert res["ucs"]["valor"] == esperado["ucs"] == 6, res          # 3 UCs do alimentador + 3 da BT
+        assert res["energia"]["valor"] == pytest.approx(float(esperado["ene"])), res
+        # a tabela do painel lê as linhas da tabela do sumário, uma por subrede, na ordem pedida
+        assert res["linhas"]["total"] == 3, res
+        assert [linha["subrede_nome"] for linha in res["linhas"]["linhas"]] == [CTMT_A, CTMT_B, TRAFO_A], res
+        primeiro = res["linhas"]["linhas"][0]
+        assert primeiro["ucs"] == 3 and primeiro["kva_instalado"] == pytest.approx(75.0), primeiro
+        assert primeiro["km_declarado"] == pytest.approx(0.350), primeiro
+    finally:
+        if painel_id:
+            sessao_a.delete(f"/api/itens/{painel_id}")
+        # plat.item não aceita DELETE nem UPDATE direto (p_item_apagar é false de propósito): a casa
+        # apaga pela lixeira, SECURITY DEFINER — mesmo padrão da fixture de fronteira do L2-06-b.
+        # `contexto` é transaction-local: o commit acima o limpou, então é posto de novo aqui.
+        contexto(conexao_plat_app, ids["demo"], usuario_id=adm, login="admin")
+        with conexao_plat_app.cursor() as cur:
+            cur.execute("SELECT plat.item_lixeira(%s::uuid, true) AS ok", (camada_id,))
+            assert cur.fetchone()["ok"] is True, "lixeira recusou a camada do sumário"
+        conexao_plat_app.commit()
