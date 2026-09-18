@@ -42,26 +42,26 @@ button.primario[aria-busy="true"]::after { border-color: var(--i-acento-texto); 
 
 /* ---------- campo e formulário ---------- */
 .form { display: grid; gap: var(--i-e3); }
-.form .campo { display: grid; gap: var(--i-e1); }
-.form .campo > label, .campo-rotulo, .filtros label { color: var(--i-texto-fraco); font-size: var(--i-t1); }
+.form .campo, .campo { display: grid; gap: var(--i-e1); }
+.form .campo > label, .campo > label, .campo-rotulo, .filtros label { color: var(--i-texto-fraco); font-size: var(--i-t1); }
 .form .campo .obrigatorio { color: var(--i-aviso); }
-.form input:not([type="checkbox"]):not([type="radio"]), .form select, .form textarea, .busca input, .filtros input, .filtros select, select.campo-solto, input.campo-solto {
+.form input:not([type="checkbox"]):not([type="radio"]), .form select, .form textarea, .campo input:not([type="checkbox"]):not([type="radio"]), .campo select, .campo textarea, .busca input, .filtros input, .filtros select, select.campo-solto, input.campo-solto, select.controle, input.controle {
   font: inherit; color: var(--i-texto); background: var(--i-fundo);
   border: var(--i-fio) solid var(--i-linha-forte); border-radius: var(--i-raio);
   padding: var(--i-e2) var(--i-e3); width: 100%; min-width: 0;
   transition: border-color var(--i-tempo);
 }
-.form input:hover, .form select:hover, .form textarea:hover, .busca input:hover, .filtros input:hover, .filtros select:hover { border-color: var(--i-texto-fraco); }
-.form input:focus, .form select:focus, .form textarea:focus, .busca input:focus, .filtros input:focus, .filtros select:focus {
+.form input:hover, .form select:hover, .form textarea:hover, .campo input:hover, .campo select:hover, .campo textarea:hover, .busca input:hover, .filtros input:hover, .filtros select:hover { border-color: var(--i-texto-fraco); }
+.form input:focus, .form select:focus, .form textarea:focus, .campo input:focus, .campo select:focus, .campo textarea:focus, .busca input:focus, .filtros input:focus, .filtros select:focus {
   border-color: var(--i-acento); outline: var(--i-foco-largura) solid var(--i-foco); outline-offset: var(--i-fio);
 }
-.form input[disabled], .form select[disabled], .form textarea[disabled], .busca input[disabled], .filtros select[disabled] { opacity: .55; cursor: not-allowed; background: var(--i-superficie-2); }
-.form input[aria-invalid="true"], .form select[aria-invalid="true"], .form textarea[aria-invalid="true"], .busca input[aria-invalid="true"] { border-color: var(--i-erro); box-shadow: inset var(--i-fio-marca) 0 0 var(--i-erro); }
-.form textarea { min-height: calc(var(--i-e8) + var(--i-e3)); font-family: var(--i-fonte-texto); }
-.form .ajuda { color: var(--i-texto-fraco); font-size: var(--i-t0); }
-.form .erro-campo, .erro-campo { color: var(--i-erro); font-size: var(--i-t0); display: inline-flex; align-items: center; gap: var(--i-e1); }
-.form .caixa { display: flex; align-items: center; gap: var(--i-e2); }
-.form .caixa input, .tabela input[type="checkbox"] { width: var(--i-e4); height: var(--i-e4); accent-color: var(--i-acento); margin: 0; }
+.form input[disabled], .form select[disabled], .form textarea[disabled], .campo :disabled, .busca input[disabled], .filtros select[disabled] { opacity: .55; cursor: not-allowed; background: var(--i-superficie-2); }
+.form input[aria-invalid="true"], .form select[aria-invalid="true"], .form textarea[aria-invalid="true"], .campo [aria-invalid="true"], .busca input[aria-invalid="true"] { border-color: var(--i-erro); box-shadow: inset var(--i-fio-marca) 0 0 var(--i-erro); }
+.form textarea, .campo textarea { min-height: calc(var(--i-e8) + var(--i-e3)); font-family: var(--i-fonte-texto); }
+.form .ajuda, .campo .ajuda { color: var(--i-texto-fraco); font-size: var(--i-t0); }
+.form .erro-campo, .campo .erro-campo, .erro-campo { color: var(--i-erro); font-size: var(--i-t0); display: inline-flex; align-items: center; gap: var(--i-e1); }
+.form .caixa, .caixa { display: flex; align-items: center; gap: var(--i-e2); }
+.form .caixa input, .caixa input, .tabela input[type="checkbox"] { width: var(--i-e4); height: var(--i-e4); accent-color: var(--i-acento); margin: 0; }
 .form .caixas { display: grid; gap: var(--i-e1); border: 0; padding: 0; margin: 0; }
 .form .caixas .grupo-caixas { color: var(--i-texto-fraco); font-size: var(--i-t0); margin-top: var(--i-e2); text-transform: uppercase; letter-spacing: var(--i-espaco-letra-titulo); }
 .form .info { color: var(--i-texto); }
@@ -241,3 +241,15 @@ plat-estado .esqueleto span:nth-child(2) { width: 80%; }
 plat-estado .esqueleto span:nth-child(3) { width: 60%; }
 @keyframes esqueleto { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { plat-estado .esqueleto span { animation: none; } }
+
+/* ---------- tela de entrada e escolha de idioma ----------
+   Levado na leva 3 do item L0-14-b: estes seletores so existiam em web/style.css e a tela /entrar
+   usa todos (medido no navegador). Sao regras de leiaute; os valores sao os da folha nova.
+   --t-1 e --t-2 nao existem em tokens.css e nao existiam na folha antiga: o tamanho aqui e o da
+   escala nova (--i-t0), unica diferenca deliberada, para nao carregar nome morto para folha nova. */
+plat-idioma { display: inline-flex; align-items: center; gap: var(--i-e2); }
+plat-idioma select.controle { width: auto; padding: var(--i-e1) var(--i-e2); font-size: var(--i-t0); }
+.aviso-caps { color: var(--i-aviso); font-size: var(--i-t0); }
+.entrar .topo { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--i-e3); margin-bottom: var(--i-e5); }
+.entrar .topo .marca { margin-bottom: 0; }
+.entrar plat-estado { margin: var(--i-e3) 0; }

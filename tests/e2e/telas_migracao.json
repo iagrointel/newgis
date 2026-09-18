@@ -214,7 +214,7 @@
    "pesada": false,
    "rota_com_parametro": true,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "admin_atividade",
@@ -226,7 +226,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "amc_criterios_feicao",
@@ -238,7 +238,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "admin_logins",
@@ -250,7 +250,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "login",
@@ -264,7 +264,7 @@
    "classes_so_na_folha_antiga_estimadas": [
     "topo"
    ],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "aplicativo",
@@ -278,7 +278,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "visualizar",
@@ -292,7 +292,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "sites",
@@ -306,7 +306,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "coleta",
@@ -881,6 +881,32 @@
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
    "estado": "pendente"
+  },
+  {
+   "nome": "admin_organizacao",
+   "arquivo": "web/admin/organizacao.html",
+   "rota": "/admin/organizacao",
+   "leva": 3,
+   "bytes": 0,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "ja_na_folha_nova",
+   "nota": "Nao esta na folha antiga e nao conta na catraca. Entra na leva 3 porque a leva levou `.caixa` para a folha nova e esta tela tem 8 `.caixa` (medido no navegador): a regra levada tem de ser provada tambem onde ela chega sem ser chamada."
+  },
+  {
+   "nome": "campo_index",
+   "arquivo": "web/campo/index.html",
+   "rota": "/campo",
+   "leva": 3,
+   "bytes": 0,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "ja_na_folha_nova",
+   "nota": "Mesmo motivo: a leva levou `.campo` fora de `.form` para a folha nova e esta tela tem 1."
   }
  ]
 }

@@ -264,6 +264,84 @@
      "axe_novas": []
     }
    }
+  },
+  "admin_organizacao": {
+   "rota": "/admin/organizacao",
+   "montou_antes": true,
+   "montou_depois": true,
+   "estrutura_igual": true,
+   "elementos": 326,
+   "temas": {
+    "escuro": {
+     "nos_medidos_antes": 126,
+     "nos_medidos_depois": 126,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    },
+    "claro": {
+     "nos_medidos_antes": 126,
+     "nos_medidos_depois": 126,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    }
+   }
+  },
+  "campo_index": {
+   "rota": "/campo",
+   "montou_antes": true,
+   "montou_depois": true,
+   "estrutura_igual": true,
+   "elementos": 39,
+   "temas": {
+    "escuro": {
+     "nos_medidos_antes": 15,
+     "nos_medidos_depois": 15,
+     "contraste_antes": 1,
+     "contraste_depois": 1,
+     "contraste_novas": [],
+     "contraste_herdadas": [
+      "span#estado-rede.estado-rede|online"
+     ],
+     "contraste_resolvidas": [],
+     "axe_antes": [
+      "color-contrast|serious"
+     ],
+     "axe_depois": [
+      "color-contrast|serious"
+     ],
+     "axe_novas": []
+    },
+    "claro": {
+     "nos_medidos_antes": 15,
+     "nos_medidos_depois": 15,
+     "contraste_antes": 1,
+     "contraste_depois": 1,
+     "contraste_novas": [],
+     "contraste_herdadas": [
+      "span#estado-rede.estado-rede|online"
+     ],
+     "contraste_resolvidas": [],
+     "axe_antes": [
+      "color-contrast|serious"
+     ],
+     "axe_depois": [
+      "color-contrast|serious"
+     ],
+     "axe_novas": []
+    }
+   }
   }
  },
  "reprovas": []
