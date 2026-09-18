@@ -1,9 +1,36 @@
 {
+  "gerado_em": "2026-09-18T11:36:02Z",
+  "git_sha": "c9ce19746250",
+  "medidas": {
+    "abrir_tracado_ms": {
+      "comando": "goto até body[data-pronto=1] no chromium do playwright",
+      "unidade": "ms",
+      "valor": 54.6
+    }
+  },
   "p95_jusante": {
-    "carga_1min": 12.08,
-    "medido": false,
-    "motivo": "carga acima de 8: o brief proíbe medir tempo sob disputa",
-    "ram_livre_gb": 5.0
+    "carga_1min": 3.1,
+    "contagem": 51,
+    "direcao": "definida",
+    "max_ms": 115.3,
+    "media_ms": 96.8,
+    "medido": true,
+    "n_amostras": 30,
+    "nos_alcancados": 51,
+    "origem_direcao": "controlador",
+    "p95_ms": 104.2,
+    "ram_livre_gb": 47.0,
+    "rede_sintetica": {
+      "arestas": 4500,
+      "nos": 4530,
+      "postes": 0,
+      "ramais": 0,
+      "trafos": 30,
+      "trafos_orfaos": 0,
+      "trechos_bt": 1500,
+      "trechos_degenerados": 0,
+      "trechos_mt": 3000
+    }
   },
   "universo_cooperativa": {
     "medido": true,

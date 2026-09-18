@@ -27,6 +27,7 @@ from app.schema_ambiente import CursorSchemaAmbiente
 from tests.api.conftest import PREFIXO_TESTE
 from tests.api.test_rede_tracado import _criar_rede, _importar_eletrica, limpar_redes  # noqa: F401
 from tests.api.test_rede_tracado_medida import _carga_da_maquina
+from tests.api.test_rls import ids_por_slug
 from tests.dados import carga_bdgd, gerar_rede
 
 MEDIDAS = Path(__file__).resolve().parent.parent / "medidas" / "L4-02-b-montante-jusante.json"
@@ -92,14 +93,20 @@ def test_medida_p95_jusante_rede_sintetica(sessao_a, env, limpar_redes):  # noqa
 
     rid = _criar_rede(sessao_a, "medida-direcao", limpar_redes)
     _importar_eletrica(sessao_a, rid)
+    # tenant/usuario AO VIVO (padrão do irmão test_rede_tracado_medida): os ids numéricos variam por trilha —
+    # fixar '1','1' quebra a RLS (usuario_do_inquilino) onde o usuário 1 não é do inquilino demo.
+    eu = sessao_a.get("/api/eu").json()
     con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
     try:
         with con.cursor() as cur:
-            cur.execute("SELECT set_config('plat.tenant_id', '1', false), "
-                        "set_config('plat.usuario_id', '1', false), "
-                        "set_config('plat.login', %s, false)", (PREFIXO_TESTE + "-medida",))
-            contagem = gerar_rede.gerar(cur, 1, rid, n_mt=N_MT, n_bt=N_BT, n_ramais=0, n_trafos=N_TRAFOS,
-                                        n_postes=0, n_trafos_orfaos=0, n_trechos_degenerados=0)
+            tenant_id = ids_por_slug(con)["demo"]
+            cur.execute("SELECT set_config('plat.tenant_id', %s, false), "
+                        "set_config('plat.usuario_id', %s, false), "
+                        "set_config('plat.login', %s, false)",
+                        (str(tenant_id), str(eu["id"]), PREFIXO_TESTE + "-medida"))
+            contagem = gerar_rede.gerar(cur, tenant_id, rid, n_mt=N_MT, n_bt=N_BT, n_ramais=0,
+                                        n_trafos=N_TRAFOS, n_postes=0, n_trafos_orfaos=0,
+                                        n_trechos_degenerados=0)
         con.commit()
     finally:
         con.close()

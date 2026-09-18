@@ -93,6 +93,13 @@ async function iniciar() {
     for (const bt of [btSelecionar, btCamada, btExportar]) bt.disabled = elementos.length === 0;
   }
 
+  // o traçado por direção (montante/jusante) pode responder 'indeterminado' (laço, malha sem atributo):
+  // a tabela fica vazia de propósito, e a situação diz o porquê em vez de "traçado concluído"
+  function mostrarDirecao(json) {
+    situacao.dataset.direcao = json.direcao || '';
+    if (json.direcao === 'indeterminado') situacao.textContent = json.mensagem || '';
+  }
+
   async function tracar() {
     if (!selRede.value) { aviso.mostrar(t('tracadoresultado.escolha'), 'erro'); return; }
     ultimoPedido = pedido();
@@ -100,6 +107,7 @@ async function iniciar() {
     if (r.status !== 200) { aviso.mostrar(mensagemDe(r), 'erro'); return; }
     desenharResultado(r.json);
     situacao.textContent = t('tracadoresultado.tracado_pronto');
+    mostrarDirecao(r.json);
     await desenharHistorico();
   }
 
@@ -165,6 +173,7 @@ async function iniciar() {
     desenharResultado(r.json);
     situacao.dataset.repetido = execucaoId;
     situacao.textContent = `${t('tracadoresultado.repetido')} (${r.json.contagem})`;
+    mostrarDirecao(r.json);
     await desenharHistorico();
   }
 
