@@ -2,41 +2,31 @@
  "item": "L2-08-b-clonar-camadas-hospedadas",
  "medidas": {
   "segundos_clone_servico_publico_gravado": {
-   "valor": 6.44,
+   "valor": 0.42,
    "unidade": "s",
-   "comando": "2 camadas, 20+ feições, 3 anexos, portal de mentira",
-   "carga_1min": 8.79,
-   "ram_livre_gb": 6.7,
-   "medido_em": "2026-09-07T21:35:32Z",
-   "nota": "medido sob carga acima de 8 (12 nucleos); camada de 500 mil feicoes nao medida"
+   "comando": "2 camadas, 20+ feições, 3 anexos, portal de mentira"
   },
   "segundos_clone_2000_feicoes_fonte_propria": {
-   "valor": 3.87,
+   "valor": 0.47,
    "unidade": "s",
-   "comando": "carga_1min=9.8 (clone do próprio FeatureServer da trilha)",
-   "carga_1min": 8.79,
-   "ram_livre_gb": 6.7,
-   "medido_em": "2026-09-07T21:35:32Z",
-   "nota": "medido sob carga acima de 8 (12 nucleos); camada de 500 mil feicoes nao medida"
+   "comando": "carga_1min=2.6 (clone do próprio FeatureServer da trilha)"
   },
   "camadas_clonadas_nos_testes": {
-   "valor": 3,
+   "valor": 5,
    "unidade": "camadas",
-   "comando": "tests/api/test_migracao_clonar.py (2 do servico publico gravado + 1 da propria plataforma, 2.000 feicoes)"
+   "comando": "test_escala_do_portao_5_camadas_e_500_mil_feicoes: Point, LineString, Polygon, Point e Point com 500 mil — todas com contagem_igual e hash_amostra_igual"
   },
   "anexos_sha256_iguais": {
    "valor": 3,
    "unidade": "anexos",
    "comando": "test_servico_publico_gravado_clona_esquema_dominios_relacionamento_e_anexos"
+  },
+  "segundos_clone_500_mil_feicoes": {
+   "valor": 125.15,
+   "unidade": "s",
+   "comando": "carga_1min=4.6; fonte: o próprio FeatureServer da trilha (sem rede externa)"
   }
  },
- "gerado_em": "2026-09-18T02:52:59Z",
- "git_sha": "77411ed09942",
- "nao_medido": {
-  "triagem_18_09_2026_wt_l02": {
-   "veredito": "causa raiz descrita, nao consertada nesta rodada (depende de credencial de terceiro)",
-   "o_que_falta": "Duas clausulas de ESCALA do portao nunca foram exercitadas: '5 camadas clonadas com contagem igual' (a evidencia cobre 3) e 'camada de 500 mil feicoes em tempo medido' (o proprio JSON de fechamento admite 'nao medida'; o maior teste real foi de 2.000 feicoes).",
-   "bloqueio": "as camadas publicas de teste precisam estar registradas com URL e data, e o portao tambem cita a credencial do parceiro (decisao D20, PENDENTE). Clonar 500 mil feicoes de um FeatureServer publico e trafego e tempo de rede que nao cabem numa rodada do laco sem alvo declarado."
-  }
- }
+ "gerado_em": "2026-09-18T12:23:58Z",
+ "git_sha": "99d0d599400c"
 }

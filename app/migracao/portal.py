@@ -290,3 +290,49 @@ class ClientePortal:
             return None
         valor = dado.get("count")
         return int(valor) if isinstance(valor, (int, float)) else None
+
+    # ------------------------------------------------------------------ clonagem (item L2-08-b): esquema, feições
+    # paginadas e anexos de UMA camada, sempre por GET (a lista fechada de caminhos de leitura é conferida por
+    # tests/unit/test_migracao_classificacao.py)
+    def camada(self, url_servico: str, camada_id: int) -> dict:
+        """`<servico>/<id>?f=json`: campos, domínios, subtipos, relacionamentos, anexos, extensão, CRS."""
+        return self._json("GET", _juntar(url_servico, f"{camada_id}", {"f": "json"}))
+
+    def feicoes(self, url_servico: str, camada_id: int, deslocamento: int, tamanho: int,
+                campo_ordem: str | None = None, out_sr: int | None = None) -> dict:
+        """Página de `query` por `resultOffset`/`resultRecordCount` (ordem estável pelo campo de id); devolve o
+        JSON inteiro (features, exceededTransferLimit, spatialReference)."""
+        parametros = {"where": "1=1", "outFields": "*", "returnGeometry": "true", "resultOffset": deslocamento,
+                      "resultRecordCount": tamanho, "f": "json"}
+        if campo_ordem:
+            parametros["orderByFields"] = campo_ordem
+        if out_sr:
+            parametros["outSR"] = out_sr
+        return self._json("GET", _juntar(url_servico, f"{camada_id}/query", parametros))
+
+    def ids_camada(self, url_servico: str, camada_id: int) -> list:
+        """`returnIdsOnly=true` — caminho alternativo quando o serviço não pagina por resultOffset."""
+        dado = self._json("GET", _juntar(url_servico, f"{camada_id}/query",
+                                         {"where": "1=1", "returnIdsOnly": "true", "f": "json"}))
+        return list(dado.get("objectIds") or [])
+
+    def feicoes_por_ids(self, url_servico: str, camada_id: int, ids: list, out_sr: int | None = None) -> dict:
+        parametros = {"objectIds": ",".join(str(i) for i in ids), "outFields": "*", "returnGeometry": "true",
+                      "f": "json"}
+        if out_sr:
+            parametros["outSR"] = out_sr
+        return self._json("GET", _juntar(url_servico, f"{camada_id}/query", parametros))
+
+    def anexos_de(self, url_servico: str, camada_id: int, oid: int) -> list[dict]:
+        dado = self._json("GET", _juntar(url_servico, f"{camada_id}/{oid}/attachments", {"f": "json"}))
+        return list(dado.get("attachmentInfos") or [])
+
+    def anexo_bytes(self, url_servico: str, camada_id: int, oid: int, anexo_id: int, maximo: int) -> tuple[bytes, str]:
+        """Bytes de um anexo (com a mesma defesa de origem/tamanho de `_requisitar`) e o content-type."""
+        status, corpo, cabecalhos = self._requisitar(
+            "GET", _juntar(url_servico, f"{camada_id}/{oid}/attachments/{anexo_id}", {}))
+        if status != 200:
+            raise ErroPortal("anexo_recusado", f"HTTP {status}")
+        if len(corpo) > maximo:
+            raise ErroPortal("anexo_grande_demais", f"{len(corpo)} > {maximo}")
+        return corpo, (cabecalhos.get("content-type") or "application/octet-stream").split(";")[0].strip()

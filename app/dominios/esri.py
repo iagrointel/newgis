@@ -24,6 +24,8 @@ TIPO_ESRI = {
     "numeric": "esriFieldTypeDouble",
     "date": "esriFieldTypeDate",
     "timestamp with time zone": "esriFieldTypeDate",
+    "timestamptz": "esriFieldTypeDate",  # nome curto que app/catalogo/camada_nova.py grava em dados.campos
+    "timestamp without time zone": "esriFieldTypeDate",
     "boolean": "esriFieldTypeSmallInteger",
     "uuid": "esriFieldTypeGUID",
 }

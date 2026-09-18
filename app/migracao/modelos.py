@@ -54,3 +54,29 @@ class InventarioPagina(Saida):
 class ItemPagina(Saida):
     total: int
     itens: list[dict[str, Any]]
+
+
+# ------------------------------------------------------------------ clonagem (item L2-08-b)
+class CloneEntrada(Modelo):
+    conexao_id: str = Field(min_length=36, max_length=36)
+    url_servico: str = Field(min_length=12, max_length=2048)  # .../rest/services/<nome>/FeatureServer
+    camadas: list[int] | None = Field(default=None, max_length=200)  # ausente = todas as camadas e tabelas
+
+
+class CloneCartao(Saida):
+    id: str
+    conexao_id: str
+    url_servico: str
+    estado: str
+    camadas_pedidas: list[int] | None = None
+    job_id: str | None = None
+    mensagem: str | None = None
+    camadas: list[dict[str, Any]] = []
+    relatorio: dict[str, Any] = {}
+    criado_em: str
+    atualizado_em: str
+
+
+class ClonePagina(Saida):
+    total: int
+    itens: list[CloneCartao]

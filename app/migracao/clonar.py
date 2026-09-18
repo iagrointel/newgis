@@ -378,6 +378,9 @@ class Clonagem:
     def _verificacao(self, url: str, esq: dict, dados: dict) -> dict:
         contagem_origem = self.cliente.contagem_camada(url, esq["id_origem"])
         with self.bd() as cur:
+            # a amostra é comparada por hash contra a origem (datas em ISO UTC, esquema.valor_para_coluna):
+            # o readback tem de renderizar timestamptz em UTC também, senão o fuso DA SESSÃO quebra o hash
+            cur.execute("SET LOCAL TIME ZONE 'UTC'")
             cur.execute(f'SELECT count(*) AS n FROM "{dados["schema"]}"."{dados["tabela"]}"')
             contagem_destino = int(cur.fetchone()["n"])
             cur.execute(

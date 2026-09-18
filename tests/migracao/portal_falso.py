@@ -237,6 +237,8 @@ class _Manipulador(http.server.BaseHTTPRequestHandler):
 
     def _servico(self, caminho: str, consulta: dict):
         a = self.server.acervo
+        if caminho.startswith("/server/rest/services/publico/"):
+            return self._servico_publico(caminho[len("/server/rest/services/publico"):], consulta)
         chave = BASE_SERVICO_GRAVADA + caminho.split("/server/rest/services", 1)[1]
         if chave in a["servicos"]:
             descricao = dict(a["servicos"][chave])
@@ -253,6 +255,65 @@ class _Manipulador(http.server.BaseHTTPRequestHandler):
                 return self._erro_portal(400, "este servidor de teste só responde returnCountOnly=true")
             return self._responder({"count": contagens[camada]})
         return self._erro_portal(400, f"serviço desconhecido: {caminho}")
+
+    # ------------------------------------------------------------------ serviço público gravado (item L2-08-b):
+    # /server/rest/services/publico/FeatureServer[/{id}[/query | /{oid}/attachments[/{aid}]]] a partir de
+    # tests/migracao/respostas/publicas/servico_publico.json (URL e data no próprio arquivo)
+    def _servico_publico(self, resto: str, consulta: dict):
+        import base64
+
+        g = self.server.publico
+        partes = [p for p in resto.split("/") if p]
+        if not partes or partes[0] != "FeatureServer":
+            return self._erro_portal(400, f"serviço desconhecido: {resto}")
+        if len(partes) == 1:
+            return self._responder(g["raiz"])
+        camada = partes[1]
+        if camada not in g["camadas"]:
+            return self._erro_portal(400, "Invalid or missing input parameters.")
+        if len(partes) == 2:
+            return self._responder(g["camadas"][camada])
+        if partes[2] == "query":
+            paginas = g["paginas"][camada]
+            feicoes = [f for p in paginas for f in p["features"]]
+            if consulta.get("returnCountOnly") == "true":
+                return self._responder({"count": len(feicoes)})  # a gravação é uma amostra: a contagem é dela
+            oid = g["camadas"][camada]["objectIdField"]
+            if consulta.get("returnIdsOnly") == "true":
+                return self._responder({"objectIdFieldName": oid, "objectIds": [f["attributes"][oid] for f in feicoes]})
+            if consulta.get("objectIds"):
+                pedidos = {int(x) for x in consulta["objectIds"].split(",") if x.strip()}
+                fatia = [f for f in feicoes if int(f["attributes"][oid]) in pedidos]
+                return self._responder(
+                    {
+                        **{k: v for k, v in paginas[0].items() if k != "features"},
+                        "features": fatia,
+                        "exceededTransferLimit": False,
+                    }
+                )
+            deslocamento = int(consulta.get("resultOffset") or 0)
+            tamanho = int(consulta.get("resultRecordCount") or 10)
+            fatia = feicoes[deslocamento : deslocamento + tamanho]
+            return self._responder(
+                {
+                    **{k: v for k, v in paginas[0].items() if k != "features"},
+                    "features": fatia,
+                    "exceededTransferLimit": deslocamento + tamanho < len(feicoes),
+                }
+            )
+        if len(partes) >= 4 and partes[3] == "attachments":
+            anexos = (g["anexos"].get(camada) or {}).get(partes[2]) or {"attachmentInfos": [], "bytes": {}}
+            if len(partes) == 4:
+                return self._responder({"attachmentInfos": anexos["attachmentInfos"]})
+            b64 = anexos["bytes"].get(partes[4])
+            if b64 is None:
+                return self._erro_portal(400, "anexo inexistente")
+            tipo = next(
+                (a["contentType"] for a in anexos["attachmentInfos"] if str(a["id"]) == partes[4]),
+                "application/octet-stream",
+            )
+            return self._responder(base64.b64decode(b64), tipo=tipo)
+        return self._erro_portal(400, f"serviço desconhecido: {resto}")
 
 
 class PortalFalso:
@@ -275,6 +336,9 @@ class PortalFalso:
         self.servidor.recusas_429 = 0
         self.servidor.tokens_na_query = []
         self.servidor.sinteticos = []
+        self.servidor.publico = json.loads(
+            (RESPOSTAS.parent / "publicas" / "servico_publico.json").read_text(encoding="utf-8")
+        )
         self.thread = threading.Thread(target=self.servidor.serve_forever, daemon=True)
         self.thread.start()
         return self
