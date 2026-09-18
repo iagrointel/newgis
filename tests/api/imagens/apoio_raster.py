@@ -95,6 +95,14 @@ def semear_raster(tenant_id: int, slug: str) -> dict:
             ps.colecao_criar(cur, tenant_id, "imagens", {
                 "title": "Imagens do inquilino",
                 "description": "Coleção STAC das imagens ingeridas pela plataforma."})
+        else:
+            # O pgstac e `plat.raster_colecao` são duas guardas para a mesma coisa e só a SEGUNDA tem a
+            # chave estrangeira de `plat.raster_item` (app/imagens/pgstac.py::colecao_espelhar). O schema
+            # do pgstac é um só na máquina, enquanto cada trilha tem o seu `plat_t*`: numa base cujo
+            # espelho ainda está vazio, `colecao_obter` acha a coleção que OUTRA trilha criou, a criação é
+            # pulada e o `espelhar` do item morre em `raster_item_colecao_fkey` (medido 17/09 na trilha
+            # provalocal). Mesma lição que app/imagens/ingestao.py:56 já tinha aprendido: garantir SEMPRE.
+            ps.colecao_espelhar(cur, tenant_id, "imagens", colecao)
         ps.item_criar(cur, tenant_id, colecao, stac)
         ri.espelhar(cur, tenant_id, colecao, item_id, {
             "sha256": objeto["sha256"], "perfil": "cientifico", "bytes": objeto["bytes"], "estado": "ativo"})

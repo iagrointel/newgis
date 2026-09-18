@@ -5,8 +5,18 @@
    "valor": 92.1,
    "unidade": "MB/s",
    "comando": "tests/api/uploads/test_uploads.py::test_100mb_em_7_partes_com_reenvio_da_4_sha256_igual"
+  },
+  "partes_retomavel_token_nao_admin": {
+   "valor": {
+    "bytes": 41943040,
+    "partes": 3,
+    "escopo": "conteudo:criar",
+    "perfil": "editor"
+   },
+   "unidade": "partes (fora de ordem + 1 reenviada)",
+   "comando": "pytest tests/api/uploads/test_uploads_nao_admin.py::test_editor_completa_o_retomavel_inteiro_com_o_proprio_token -q"
   }
  },
- "gerado_em": "2026-09-06T15:06:39Z",
- "git_sha": "9a69cebb2476"
+ "gerado_em": "2026-09-17T23:54:04Z",
+ "git_sha": "e9e2b1e3b1b4"
 }

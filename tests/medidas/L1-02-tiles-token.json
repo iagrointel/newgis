@@ -85,6 +85,16 @@
    "valor": 61,
    "unidade": "casos",
    "comando": "pytest tests/api/imagens/test_tiles_token.py tests/unit/test_tiles_expressao_e_wmts.py  (32 + 29)"
+  },
+  "recorte_por_item_do_escopo": {
+   "valor": {
+    "superficies": 3,
+    "servidas_no_item_do_token": 3,
+    "recusadas_no_item_vizinho": 3,
+    "escopo": "tiles:ler:<uuid>"
+   },
+   "unidade": "superfícies de leitura (XYZ, TileJSON, WMTS) por token de item",
+   "comando": "pytest tests/api/imagens/test_tiles_raster_token.py -q"
   }
  },
  "ambiente": {
@@ -93,6 +103,6 @@
   "cache": "proxy_cache em /tmp (bancada); em producao o install.sh cria /var/cache/nginx/plat_tiles, 20 GB",
   "aviso": "numero de UMA maquina e de um COG sintetico pequeno; nao extrapolar para acervo grande sem remedir"
  },
- "gerado_em": "2026-09-07T03:15:03Z",
- "git_sha": "c59b2396e38f"
+ "gerado_em": "2026-09-17T23:49:21Z",
+ "git_sha": "e9e2b1e3b1b4"
 }
