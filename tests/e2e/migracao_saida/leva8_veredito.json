@@ -1,0 +1,48 @@
+{
+ "leva": 8,
+ "telas": {
+  "sig": {
+   "rota": "/sig",
+   "montou_antes": true,
+   "montou_depois": true,
+   "estrutura_igual": false,
+   "elementos": 1756,
+   "diferencas_de_estrutura": [
+    "135: 'input#chk-ab27vskj' -> 'input#chk-drjsurjy'",
+    "149: 'input#chk-8p8l1i23' -> 'input#chk-f3gqm722'",
+    "163: 'input#chk-jo7wlu9g' -> 'input#chk-rj4vatxy'",
+    "177: 'input#chk-ybggujrc' -> 'input#chk-xs7undn8'",
+    "191: 'input#chk-h1d3riwd' -> 'input#chk-uczpci8j'"
+   ],
+   "temas": {
+    "escuro": {
+     "nos_medidos_antes": 153,
+     "nos_medidos_depois": 153,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    },
+    "claro": {
+     "nos_medidos_antes": 153,
+     "nos_medidos_depois": 153,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    }
+   }
+  }
+ },
+ "reprovas": [
+  "sig: a arvore mudou (135: 'input#chk-ab27vskj' -> 'input#chk-drjsurjy'; 149: 'input#chk-8p8l1i23' -> 'input#chk-f3gqm722'; 163: 'input#chk-jo7wlu9g' -> 'input#chk-rj4vatxy'; 177: 'input#chk-ybggujrc' -> 'input#chk-xs7undn8'; 191: 'input#chk-h1d3riwd' -> 'input#chk-uczpci8j')"
+ ]
+}
