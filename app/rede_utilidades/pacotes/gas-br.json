@@ -473,7 +473,7 @@
   }
  ],
  "esquema": "plat.rede.pacote",
- "esquema_versao": 1,
+ "esquema_versao": 2,
  "grupos": [
   {
    "camadas_fonte": [
@@ -548,185 +548,359 @@
  ],
  "pacote": {
   "codigo": "gas-br",
-  "descricao": "Pacote de ativos da rede de gás canalizado. O tier é o degrau de pressão (transporte, alta, média e baixa) e o regulador é o ativo que muda de tier: é ele que controla o degrau, e é por isso que a conferência de pressão da plataforma o exige em toda transição. Os atributos são o vocabulário próprio do pacote, não a cópia de um esquema externo: nenhum tem coluna de origem, e a paridade com a Gas Utility Network Foundation da Esri está escrita em docs/rede/PARIDADE_GAS.md.",
+  "descricao": "Pacote de ativos da rede de gás canalizado. O tier é o degrau de pressão (transporte, alta, média e baixa) e o regulador é o ativo que muda de tier: é ele que controla o degrau, e é por isso que a conferência de pressão da plataforma o exige em toda transição. Os atributos são o vocabulário próprio do pacote, não a cópia de um esquema externo: nenhum tem coluna de origem, e a paridade com a Gas Utility Network Foundation da Esri está escrita em docs/rede/PARIDADE_GAS.md. Desde a versão 1.0.1 as regras seguem o esquema 2 (lados {grupo, tipo, terminal?}; a junção fica no lado \"de\" da junção-aresta), sem mudança de conteúdo.",
   "disciplina": "gas",
   "fonte": "https://solutions.arcgis.com/utilities/gas/help/gas-utility-network-foundation/",
   "nome": "Gás canalizado (tiers por pressão)",
-  "versao": "1.0.0"
+  "versao": "1.0.1"
  },
  "regras": [
   {
-   "de": "city_gate/1",
+   "de": {
+    "grupo": "city_gate",
+    "tipo": 1
+   },
    "descricao": "city gate recebe da rede de transporte",
-   "para": "tubulacao_de_gas/1",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 1
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "city_gate/1",
+   "de": {
+    "grupo": "city_gate",
+    "tipo": 1
+   },
    "descricao": "city gate entrega na rede de alta pressão",
-   "para": "tubulacao_de_gas/2",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 2
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "estacao_de_medicao/1",
+   "de": {
+    "grupo": "estacao_de_medicao",
+    "tipo": 1
+   },
    "descricao": "medidor de transferência instalado na rede de alta pressão",
-   "para": "tubulacao_de_gas/2",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 2
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "estacao_de_medicao/2",
+   "de": {
+    "grupo": "estacao_de_medicao",
+    "tipo": 2
+   },
    "descricao": "medidor de faturamento instalado no ramal de serviço",
-   "para": "tubulacao_de_gas/5",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 5
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "juncao_de_gas/1",
+   "de": {
+    "grupo": "juncao_de_gas",
+    "tipo": 1
+   },
    "descricao": "junção conecta tubulações no tier de transporte",
-   "para": "tubulacao_de_gas/1",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 1
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "juncao_de_gas/2",
+   "de": {
+    "grupo": "juncao_de_gas",
+    "tipo": 2
+   },
    "descricao": "junção conecta tubulações no tier de alta pressão",
-   "para": "tubulacao_de_gas/2",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 2
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "juncao_de_gas/3",
+   "de": {
+    "grupo": "juncao_de_gas",
+    "tipo": 3
+   },
    "descricao": "junção conecta tubulações no tier de média pressão",
-   "para": "tubulacao_de_gas/3",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 3
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "juncao_de_gas/4",
+   "de": {
+    "grupo": "juncao_de_gas",
+    "tipo": 4
+   },
    "descricao": "junção conecta tubulações no tier de baixa pressão",
-   "para": "tubulacao_de_gas/4",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 4
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "juncao_de_gas/4",
+   "de": {
+    "grupo": "juncao_de_gas",
+    "tipo": 4
+   },
    "descricao": "ramal de serviço derivado por junção na baixa pressão",
-   "para": "tubulacao_de_gas/5",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 5
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "juncao_de_gas/4",
+   "de": {
+    "grupo": "juncao_de_gas",
+    "tipo": 4
+   },
    "descricao": "tubulação desativada permanece ligada à junção que a derivava",
-   "para": "tubulacao_de_gas/6",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 6
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "ponto_de_entrega/1",
+   "de": {
+    "grupo": "ponto_de_entrega",
+    "tipo": 1
+   },
    "descricao": "entrega residencial no fim do ramal de serviço",
-   "para": "tubulacao_de_gas/5",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 5
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "ponto_de_entrega/2",
+   "de": {
+    "grupo": "ponto_de_entrega",
+    "tipo": 2
+   },
    "descricao": "entrega comercial no fim do ramal de serviço",
-   "para": "tubulacao_de_gas/5",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 5
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "ponto_de_entrega/3",
+   "de": {
+    "grupo": "ponto_de_entrega",
+    "tipo": 3
+   },
    "descricao": "entrega industrial direto da rede de média pressão",
-   "para": "tubulacao_de_gas/3",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 3
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "regulador/1",
+   "de": {
+    "grupo": "regulador",
+    "tipo": 1
+   },
    "descricao": "regulador de city gate recebe da rede de transporte",
-   "para": "tubulacao_de_gas/1",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 1
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "regulador/1",
+   "de": {
+    "grupo": "regulador",
+    "tipo": 1
+   },
    "descricao": "regulador de city gate entrega na rede de alta pressão",
-   "para": "tubulacao_de_gas/2",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 2
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "regulador/2",
+   "de": {
+    "grupo": "regulador",
+    "tipo": 2
+   },
    "descricao": "regulador de rede recebe da rede de alta pressão",
-   "para": "tubulacao_de_gas/2",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 2
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "regulador/2",
+   "de": {
+    "grupo": "regulador",
+    "tipo": 2
+   },
    "descricao": "regulador de rede entrega na rede de média pressão",
-   "para": "tubulacao_de_gas/3",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 3
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "regulador/3",
+   "de": {
+    "grupo": "regulador",
+    "tipo": 3
+   },
    "descricao": "regulador de ramal recebe da rede de média pressão",
-   "para": "tubulacao_de_gas/3",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 3
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "regulador/3",
+   "de": {
+    "grupo": "regulador",
+    "tipo": 3
+   },
    "descricao": "regulador de ramal entrega na rede de baixa pressão",
-   "para": "tubulacao_de_gas/4",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 4
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "regulador/4",
+   "de": {
+    "grupo": "regulador",
+    "tipo": 4
+   },
    "descricao": "regulador monitor fica em série na rede de alta pressão",
-   "para": "tubulacao_de_gas/2",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 2
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "valvula_de_gas/1",
+   "de": {
+    "grupo": "valvula_de_gas",
+    "tipo": 1
+   },
    "descricao": "válvula de bloqueio instalada na rede de média pressão",
-   "para": "tubulacao_de_gas/3",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 3
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "valvula_de_gas/1",
+   "de": {
+    "grupo": "valvula_de_gas",
+    "tipo": 1
+   },
    "descricao": "válvula de bloqueio instalada na rede de baixa pressão",
-   "para": "tubulacao_de_gas/4",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 4
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "valvula_de_gas/2",
+   "de": {
+    "grupo": "valvula_de_gas",
+    "tipo": 2
+   },
    "descricao": "válvula de alívio derivada da rede de alta pressão",
-   "para": "tubulacao_de_gas/2",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 2
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "valvula_de_gas/3",
+   "de": {
+    "grupo": "valvula_de_gas",
+    "tipo": 3
+   },
    "descricao": "válvula de purga derivada da rede de média pressão",
-   "para": "tubulacao_de_gas/3",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 3
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "valvula_de_gas/4",
+   "de": {
+    "grupo": "valvula_de_gas",
+    "tipo": 4
+   },
    "descricao": "válvula de retenção instalada na rede de alta pressão",
-   "para": "tubulacao_de_gas/2",
+   "para": {
+    "grupo": "tubulacao_de_gas",
+    "tipo": 2
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "city_gate/1",
+   "de": {
+    "grupo": "city_gate",
+    "tipo": 1
+   },
    "descricao": "o medidor de transferência faz parte do conjunto do city gate",
-   "para": "estacao_de_medicao/1",
+   "para": {
+    "grupo": "estacao_de_medicao",
+    "tipo": 1
+   },
    "tipo": "juncao_juncao"
   },
   {
-   "de": "city_gate/1",
+   "de": {
+    "grupo": "city_gate",
+    "tipo": 1
+   },
    "descricao": "o regulador de city gate faz parte do conjunto do city gate",
-   "para": "regulador/1",
+   "para": {
+    "grupo": "regulador",
+    "tipo": 1
+   },
    "tipo": "juncao_juncao"
   },
   {
-   "de": "regulador/3",
+   "de": {
+    "grupo": "regulador",
+    "tipo": 3
+   },
    "descricao": "regulador de ramal e medidor de faturamento no mesmo abrigo",
-   "para": "estacao_de_medicao/2",
+   "para": {
+    "grupo": "estacao_de_medicao",
+    "tipo": 2
+   },
    "tipo": "juncao_juncao"
   },
   {
-   "de": "regulador/4",
+   "de": {
+    "grupo": "regulador",
+    "tipo": 4
+   },
    "descricao": "regulador monitor em série com o regulador de city gate",
-   "para": "regulador/1",
+   "para": {
+    "grupo": "regulador",
+    "tipo": 1
+   },
    "tipo": "juncao_juncao"
   }
  ],

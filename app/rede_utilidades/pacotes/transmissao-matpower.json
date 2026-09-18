@@ -354,7 +354,7 @@
   }
  ],
  "esquema": "plat.rede.pacote",
- "esquema_versao": 1,
+ "esquema_versao": 2,
  "grupos": [
   {
    "camadas_fonte": [
@@ -379,59 +379,107 @@
  ],
  "pacote": {
   "codigo": "transmissao-matpower",
-  "descricao": "Pacote de ativos de rede de transmissão/subtransmissão no vocabulário do caseformat versão 2 do MATPOWER: barra e ramo (linha e transformador de potência); o que a matriz gen declara entra como atributo da barra. Existe porque o caso do MATPOWER descreve uma rede ELÉTRICA SEM GEOMETRIA — as matrizes bus/branch/gen não têm coordenada nenhuma. Por isso todo grupo deste pacote tem geometria 'sem_geometria': a barra importada vira objeto não espacial, e nunca um ponto na coordenada (0, 0). O vocabulário de distribuição (pacote eletrica-br, da BDGD) não serve aqui: lá o objeto é o trecho de média tensão com traçado medido em campo.",
+  "descricao": "Pacote de ativos de rede de transmissão/subtransmissão no vocabulário do caseformat versão 2 do MATPOWER: barra e ramo (linha e transformador de potência); o que a matriz gen declara entra como atributo da barra. Existe porque o caso do MATPOWER descreve uma rede ELÉTRICA SEM GEOMETRIA — as matrizes bus/branch/gen não têm coordenada nenhuma. Por isso todo grupo deste pacote tem geometria 'sem_geometria': a barra importada vira objeto não espacial, e nunca um ponto na coordenada (0, 0). O vocabulário de distribuição (pacote eletrica-br, da BDGD) não serve aqui: lá o objeto é o trecho de média tensão com traçado medido em campo. Desde a versão 1.0.1 as regras seguem o esquema 2 (lados {grupo, tipo, terminal?}; a junção fica no lado \"de\" da junção-aresta), sem mudança de conteúdo.",
   "disciplina": "eletrica",
   "fonte": "https://github.com/MATPOWER/matpower",
   "nome": "Transmissão no vocabulário do MATPOWER",
-  "versao": "1.0.0"
+  "versao": "1.0.1"
  },
  "regras": [
   {
-   "de": "ramo/1",
+   "de": {
+    "grupo": "barra",
+    "tipo": 1
+   },
    "descricao": "ramo ligado à barra",
-   "para": "barra/1",
+   "para": {
+    "grupo": "ramo",
+    "tipo": 1
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "ramo/1",
+   "de": {
+    "grupo": "barra",
+    "tipo": 1
+   },
    "descricao": "ramo ligado à barra",
-   "para": "barra/2",
+   "para": {
+    "grupo": "ramo",
+    "tipo": 2
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "ramo/1",
+   "de": {
+    "grupo": "barra",
+    "tipo": 2
+   },
    "descricao": "ramo ligado à barra",
-   "para": "barra/3",
+   "para": {
+    "grupo": "ramo",
+    "tipo": 1
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "ramo/1",
+   "de": {
+    "grupo": "barra",
+    "tipo": 2
+   },
    "descricao": "ramo ligado à barra",
-   "para": "barra/4",
+   "para": {
+    "grupo": "ramo",
+    "tipo": 2
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "ramo/2",
+   "de": {
+    "grupo": "barra",
+    "tipo": 3
+   },
    "descricao": "ramo ligado à barra",
-   "para": "barra/1",
+   "para": {
+    "grupo": "ramo",
+    "tipo": 1
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "ramo/2",
+   "de": {
+    "grupo": "barra",
+    "tipo": 3
+   },
    "descricao": "ramo ligado à barra",
-   "para": "barra/2",
+   "para": {
+    "grupo": "ramo",
+    "tipo": 2
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "ramo/2",
+   "de": {
+    "grupo": "barra",
+    "tipo": 4
+   },
    "descricao": "ramo ligado à barra",
-   "para": "barra/3",
+   "para": {
+    "grupo": "ramo",
+    "tipo": 1
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "ramo/2",
+   "de": {
+    "grupo": "barra",
+    "tipo": 4
+   },
    "descricao": "ramo ligado à barra",
-   "para": "barra/4",
+   "para": {
+    "grupo": "ramo",
+    "tipo": 2
+   },
    "tipo": "juncao_aresta"
   }
  ],

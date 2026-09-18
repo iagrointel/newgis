@@ -28,6 +28,7 @@ class Rede(BaseModel):
     descricao: str | None
     tolerancia_m: float
     pacote: dict | None
+    regras_ativas: bool
     contagens: dict
     dono: dict
     criado_em: str

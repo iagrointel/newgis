@@ -11,6 +11,8 @@ inclusive como null."""
 
 import json
 
+from app.rede_utilidades.esquema import GEOMETRIA_JUNCAO
+
 CHAVE_PACOTE = ("codigo", "nome", "versao", "disciplina", "descricao", "fonte")
 
 
@@ -117,13 +119,16 @@ def importar(cur, tenant_id: int, rede_id: str, doc: dict, usuario_id: int, sha2
         )
 
     for r in doc["regras"]:
-        de_g, _, de_c = r["de"].partition("/")
-        pa_g, _, pa_c = r["para"].partition("/")
+        via = r.get("via")
         cur.execute(
-            "INSERT INTO plat.rede_regra(tenant_id, rede_id, tipo, de_tipo_id, para_tipo_id, descricao) "
-            "VALUES (%s, %s::uuid, %s, %s, %s, %s)",
-            (tenant_id, rede_id, r["tipo"], tipos[(de_g, int(de_c))], tipos[(pa_g, int(pa_c))],
-             _texto(r.get("descricao"))),
+            "INSERT INTO plat.rede_regra(tenant_id, rede_id, tipo, de_tipo_id, para_tipo_id, via_tipo_id, "
+            "de_terminal, para_terminal, via_terminal, descricao) "
+            "VALUES (%s, %s::uuid, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (tenant_id, rede_id, r["tipo"], tipos[(r["de"]["grupo"], r["de"]["tipo"])],
+             tipos[(r["para"]["grupo"], r["para"]["tipo"])],
+             tipos[(via["grupo"], via["tipo"])] if via else None,
+             _texto(r["de"].get("terminal")), _texto(r["para"].get("terminal")),
+             _texto(via.get("terminal")) if via else None, _texto(r.get("descricao"))),
         )
 
     # item L4-02-e: as configurações de traçado que vêm prontas com este pacote. Ficam em módulo Python e
@@ -193,8 +198,8 @@ def exportar(cur, rede_id: str) -> dict | None:
                 "FROM plat.rede_atributo WHERE rede_id = %s::uuid "
                 "AND coalesce(origem->>'calculado', 'false') <> 'true'", (rede_id,))
     atributos = [dict(r) for r in cur.fetchall()]
-    cur.execute("SELECT tipo, de_tipo_id, para_tipo_id, descricao FROM plat.rede_regra WHERE rede_id = %s::uuid",
-                (rede_id,))
+    cur.execute("SELECT tipo, de_tipo_id, para_tipo_id, via_tipo_id, de_terminal, para_terminal, via_terminal, "
+                "descricao FROM plat.rede_regra WHERE rede_id = %s::uuid", (rede_id,))
     regras = [dict(r) for r in cur.fetchall()]
 
     meta = {"codigo": rede["pacote_codigo"], "nome": rede["pacote_nome"], "versao": rede["pacote_versao"],
@@ -202,9 +207,28 @@ def exportar(cur, rede_id: str) -> dict | None:
     _com(meta, "descricao", rede["pacote_descricao"])
     _com(meta, "fonte", rede["pacote_fonte"])
 
-    def _alvo(tipo_id):
+    def _ref(tipo_id, terminal=None):
+        """Lado de regra na forma 2: {grupo, tipo, terminal?}. Na junção-aresta a JUNÇÃO vai no lado `de`;
+        linha antiga (pré-versão 2) pode ter gravado a aresta em `de` — a exportação normaliza pela
+        geometria do grupo, com a mesma regra da conversão de pacote versão 1."""
         t = tipos[tipo_id]
-        return f"{grupos[t['grupo_id']]['codigo']}/{t['codigo']}"
+        ref = {"grupo": grupos[t["grupo_id"]]["codigo"], "tipo": t["codigo"]}
+        if terminal is not None:
+            ref["terminal"] = terminal
+        return ref
+
+    def _regra(r):
+        de_ref = _ref(r["de_tipo_id"], r["de_terminal"])
+        para_ref = _ref(r["para_tipo_id"], r["para_terminal"])
+        if r["tipo"] == "juncao_aresta":
+            geo_de = grupos[tipos[r["de_tipo_id"]]["grupo_id"]]["geometria"]
+            geo_para = grupos[tipos[r["para_tipo_id"]]["grupo_id"]]["geometria"]
+            if geo_para in GEOMETRIA_JUNCAO and geo_de not in GEOMETRIA_JUNCAO:
+                de_ref, para_ref = para_ref, de_ref
+        doc_r = {"tipo": r["tipo"], "de": de_ref, "para": para_ref}
+        if r["via_tipo_id"] is not None:
+            doc_r["via"] = _ref(r["via_tipo_id"], r["via_terminal"])
+        return _com(doc_r, "descricao", r["descricao"])
 
     return {
         "esquema": "plat.rede.pacote",
@@ -249,38 +273,29 @@ def exportar(cur, rede_id: str) -> dict | None:
                  "origem", a["origem"])
             for a in atributos
         ],
-        "regras": [
-            _com({"tipo": r["tipo"], "de": _alvo(r["de_tipo_id"]), "para": _alvo(r["para_tipo_id"])},
-                 "descricao", r["descricao"])
-            for r in regras
-        ],
+        "regras": [_regra(r) for r in regras],
     }
 
 
 
 # --- regras avaliáveis e feições (item L4-03-a-regras-de-conectividade) --------------------------------------
 #
-# 18/09/2026 — REGRESSÃO DE FUSÃO, restaurada. `carregar_regras` e `mapas_catalogo` entraram em
-# 2e93420a5 e sumiram numa fusão posterior, sem que nenhum teste apontasse a causa: o sintoma era
-# `AttributeError: module ... has no attribute 'mapas_catalogo'` em rotas_regras.py:339, dentro de um
-# 500 da API, longe do arquivo que perdeu o código. As duas funções abaixo são a cópia literal da
-# versão de 2e93420a5 (conferida byte a byte); nada do que veio depois foi desfeito.
+# 18/09/2026 — REGRESSÃO DE FUSÃO, restaurada e AGORA FECHADA. `carregar_regras` e `mapas_catalogo`
+# entraram em 2e93420a5 e sumiram numa fusão posterior, sem que nenhum teste apontasse a causa: o
+# sintoma era `AttributeError: module ... has no attribute 'mapas_catalogo'` em rotas_regras.py:339,
+# dentro de um 500 da API, longe do arquivo que perdeu o código.
 #
-# É a terceira do mesmo tipo em dois dias (as outras: `tolerancia_m` em rotas.py e o vocabulário de
+# Foi a terceira do mesmo tipo em dois dias (as outras: `tolerancia_m` em rotas.py e o vocabulário de
 # `rede_regra.tipo` em simples.py). O padrão é sempre o mesmo: a fusão resolve o conflito ficando com
 # o lado que NÃO tem o código novo, e o teste que o cobria passa a falhar por um sintoma que não
 # nomeia a perda. Conferir perda de símbolo depois de fundir (`git log -S <nome> -- <arquivo>`) é mais
 # barato que caçar o sintoma.
 #
-# ⛔ A MESMA fusão reverteu mais coisa e ISSO SEGUE ABERTO: o pacote de rede voltou de esquema versão 2
-# (a2f383a56: regra com `via`, `terminal` e lado-objeto, 58 regras em eletrica-br) para a versão 1
-# (24 regras, lado em texto "grupo/tipo", sem terminal nem via). `importar`/`exportar` neste arquivo,
-# `esquema.py`, `pacote.py` e os dois JSON de pacote estão todos na versão 1, enquanto `regras.py` e
-# `carregar_regras` avaliam na versão 2 — daí as 12 falhas que sobram em test_regras_conectividade.py,
-# test_regras_csv.py e rede/test_regras_atributo.py. O gerador determinístico `scripts/rede_gerar_pacotes.py`
-# SOBREVIVEU à fusão e é por onde a volta à versão 2 deve passar. Não é trabalho de uma linha: esquema.py
-# e pacote.py têm trabalho NOVO por cima da reversão (155+/211- e 9+/194- contra a2f383a56), então
-# `git checkout a2f383a56 -- ...` destruiria o que veio depois.
+# A MESMA fusão tinha revertido o esquema de pacote da versão 2 para a versão 1 (24 regras com lado em
+# texto, contra 58 com lado-objeto, `via` e `terminal`). Isso ficou aberto por um turno e foi fechado
+# pelo ramo wt/L4-03-a: as cinco funções que as rotas chamam foram restauradas e os cinco pacotes
+# voltaram à v2, com a forma canônica conferida byte a byte na subida — sem desfazer o que veio
+# depois (config_tracado de L4-02-e, atributos calculados de L4-01-d, categorias de controlador do G4).
 
 
 def carregar_regras(cur, rede_id: str) -> list:

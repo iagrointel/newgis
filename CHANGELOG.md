@@ -3,6 +3,23 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## setembro de 2026 (item L4-03-a-regras-de-conectividade: re-restauração após "artefato ausente em master")
+
+Refutado duas vezes por "sem regras de conectividade em master" (auditoria HARD-03 07/09): o trabalho do turno 4
+existia, mas uma cadeia de fusões tinha apagado do master o esquema de pacote versão 2, os 5 pacotes em v2 e as
+cinco funções de `deposito.py` que `rotas_regras.py` chama (`carregar_regras`, `mapas_catalogo`,
+`substituir_regras`, `regras_ativas`, `definir_regras_ativas`) — as rotas e os testes sobreviveram, o chão
+debaixo deles não. Restaurado de `a2f383a5`/`2e93420a` SEM perder o que veio depois: `config_tracado` (L4-02-e),
+atributos calculados e flags (L4-01-d) e as categorias `controlador` do G4 (80fbb686) ficaram por cima da
+restauração; os 5 pacotes convertidos para v2 em disco (`instalados.catalogo()` confere a forma canônica de
+cada um na subida). Duas colisões NOVAS da mesma família consertadas ao provar: (1) o gatilho
+`rede_associacao_validar` (desenho de NÓ/ARESTA, importadores BDGD/OSM) recusava TODA associação do desenho de
+FEIÇÃO escrita pelo applyEdits — migração `20260918T0100` faz o gatilho passar direto nas linhas de feição, já
+avaliadas pelo motor antes do INSERT; (2) `plat.rede_regra` tinha 5 políticas RLS (as 4 por comando de 2058 mais
+a FOR ALL redundante que L4-29 recriou no padrão antigo) — migração `20260918T0120` derruba a redundante e o
+INSERT fica mais estrito (inquilino E usuário). Prova: 34 testes do item + 58 dos pacotes de ativos, 0 falhas,
+na base da trilha (números em `tests/medidas/L4-03-a-regras-de-conectividade.json`).
+
 ## setembro de 2026 (item L0-14-identidade-visual: cláusulas (f) e (g) fechadas — a trava do navegador não existia)
 
 O que bloqueava (f) contraste AA e (g) captura antes/depois era a crença de que não há navegador nesta máquina.

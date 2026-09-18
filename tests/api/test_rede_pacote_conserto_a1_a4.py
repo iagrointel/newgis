@@ -9,7 +9,6 @@ Prova completa em `handoffs/T3/L4-01-a-CONSERTO.md`."""
 import copy
 import json
 import os
-import re
 import socket
 import subprocess
 import sys
@@ -243,22 +242,22 @@ def test_nul_no_pacote_e_recusado_com_422(sessao_a, limpar_redes, onde):
 # ----------------------------------------------------------------------------------------- semântica da ida e volta
 
 def test_numero_3_0_e_codigo_01_entram_e_saem_normalizados(sessao_a, limpar_redes):
-    """Não é achado, é fronteira medida: `ordem: 3.0` e `de: "grupo/01"` passam no esquema e voltam como `3` e
-    `grupo/1`. A ida e volta é canônica, como o handoff admite; fica registrado que a normalização é silenciosa
-    (o evento grava o sha256 do arquivo ENVIADO, que nunca mais bate com a exportação)."""
+    """Não é achado, é fronteira medida: `ordem: 3.0` e `tipo: 1.0` no lado de uma regra passam no esquema e
+    voltam como `3` e `1`. A ida e volta é canônica, como o handoff admite; fica registrado que a
+    normalização é silenciosa (o evento grava o sha256 do arquivo ENVIADO, que nunca mais bate com a
+    exportação). (Versão 2 do esquema, item L4-03-a: o lado da regra virou objeto {grupo, tipo, terminal?};
+    o caso "grupo/01" da versão 1 não existe mais porque `tipo` é inteiro JSON.)"""
     rid = _criar(sessao_a, "norm")
     limpar_redes.append((sessao_a, rid))
     doc = _doc()
     doc["tiers"][0]["ordem"] = float(doc["tiers"][0]["ordem"])
-    regra = doc["regras"][0]
-    g, _, c = regra["de"].partition("/")
-    regra["de"] = f"{g}/0{c}"
+    doc["regras"][0]["de"]["tipo"] = float(doc["regras"][0]["de"]["tipo"])
     bruto = _bytes(doc)
     r = _importar(sessao_a, rid, bruto)
     assert r.status_code == 201, r.text
     volta = json.loads(sessao_a.get(f"/api/rede/{rid}/pacote").content)
     assert isinstance(volta["tiers"][0]["ordem"], int)
-    assert all(not re.search(r"/0\d", x["de"]) for x in volta["regras"])
+    assert all(isinstance(x["de"]["tipo"], int) for x in volta["regras"])
     assert r.json()["sha256"] != sessao_a.get(f"/api/rede/{rid}/pacote").headers["ETag"].strip('"')
 
 
@@ -272,24 +271,56 @@ def test_codigo_de_pacote_igual_em_dois_inquilinos_e_em_duas_redes_nao_colide(se
 
 # ----------------------------------------------------------------------------------------- privilégio nas rotas
 
-def test_toda_rota_de_escrita_de_rede_exige_rede_editar_no_openapi_e_na_pratica(sessao_a, usuarios_a, limpar_redes):
+def test_toda_rota_de_escrita_de_rede_exige_editar_ou_administrar_no_openapi_e_na_pratica(
+        sessao_a, usuarios_a, limpar_redes):
+    """Atualizado pelo item L4-03-a-regras-de-conectividade: além das rotas de `rede.editar`, a comporta de
+    regras abriu rotas de `rede.administrar` (`regras.csv` POST, `regras/ativacao` PUT e, depois,
+    `area_sujas/modo` PUT de L4-03-d) — quem edita feição não abre a comporta nem troca o conjunto de regras
+    (ver `app/rede_utilidades/rotas_regras.py`, docstring do módulo, e ADR do item). O contrato aqui é que
+    NENHUMA rota de escrita de /api/rede fica aberta a visualizador: toda escrita exige um dos dois
+    privilégios de edição da rede."""
     from app.main import app
 
     esquema = app.openapi()
     escritas = [(c, m) for c, ops in esquema["paths"].items() if c.startswith("/api/rede")
                 for m in ops if m in ("post", "put", "patch", "delete")]
     # 07/09: a contagem era fixa em 3 e quebrou quando o L4-28 acrescentou ativos e faixas ao mesmo
-    # prefixo. O contrato do teste é o LAÇO abaixo (toda rota de escrita de /api/rede exige rede.editar);
-    # o número só existe para o caso de a lista vir vazia por erro de coleta.
+    # prefixo. O contrato do teste é o LAÇO abaixo; o número só existe para o caso de a lista vir vazia
+    # por erro de coleta.
     assert len(escritas) >= 3, escritas
+    # 18/09: o contrato continua "nenhuma escrita aberta a visualizador", mas o prefixo cresceu e
+    # hoje tem DUAS classes: (a) escrita de verdade — rede.editar, rede.administrar (a comporta de
+    # regras/área suja), rede.medir (medição, L4) e conteudo.criar (traçado sobre camada do mapa);
+    # (b) CÁLCULO com corpo grande, que não grava nada do inquilino — os três POSTs de traçado,
+    # que respondem com a visibilidade de leitura (rls:visibilidade), como um GET faria.
+    calculo = {("/api/rede/{rede_id}/tracar", "post"),
+               ("/api/rede/{rede_id}/tracar/exportar", "post"),
+               ("/api/rede/{rede_id}/tracados/{execucao_id}/repetir", "post")}
     for c, m in escritas:
-        assert esquema["paths"][c][m].get("x-privilegio") == "rede.editar", (c, m)
+        priv = esquema["paths"][c][m].get("x-privilegio")
+        if (c, m) in calculo:
+            assert priv == "rls:visibilidade", (c, m)
+        else:
+            assert priv in ("rede.editar", "rede.administrar", "rede.medir", "conteudo.criar"), (c, m)
     rid = _rede_com_pacote(sessao_a, limpar_redes, "priv")
     visual, _, _ = usuarios_a.sessao("visualizador")
     assert visual.get(f"/api/rede/{rid}").status_code == 200
     assert visual.post("/api/rede", json={"nome": "zadv-x", "disciplina": "agua"}).status_code == 403
     assert _importar(visual, rid, instalados.bruto("agua-epanet")).status_code == 403
     assert visual.delete(f"/api/rede/{rid}").status_code == 403
+
+    editor, _, _ = usuarios_a.sessao("editor")
+    assert editor.post(f"/api/rede/{rid}/applyEdits", json={"adicionar": [], "atualizar": [], "apagar": []}
+                        ).status_code in (200, 201)
+    # rede.editar não abre a comporta de admin: ativação continua 403 para o editor
+    assert editor.get(f"/api/rede/{rid}/regras.csv").status_code == 200  # leitura é `rede:visibilidade`
+    assert editor.put(f"/api/rede/{rid}/regras/ativacao", json={"ativa": False}).status_code == 403
+    # CSV é corpo não-JSON: sob sessão de navegador o CSRF (ADR 0002 §5.3) recusa com 415 ANTES do
+    # privilégio, mesmo padrão de `POST /api/arquivos` (ADR 0006) — ver test_regras_csv.py para o
+    # round-trip de verdade, feito por token, e a prova de que o visualizador nem chega no CSRF.
+    csv_regras = editor.get(f"/api/rede/{rid}/regras.csv").content
+    assert editor.post(f"/api/rede/{rid}/regras.csv", content=csv_regras,
+                        headers={"Content-Type": "text/csv"}).status_code == 415
 
 
 # ------------------------------------------------------------------------------ servidor real (laço de eventos)
