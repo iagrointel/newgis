@@ -193,6 +193,31 @@ def worker_vivo(cliente):
     fila = r.get("fila") or {}
     if not fila.get("workers_vivos"):
         pytest.fail(f"nenhum worker vivo em /saude ({fila}); rode `sudo systemctl restart plat-worker`")
+    # 18/09/2026: a contagem de `/saude` usa janela de 90 s (004_jobs.sql), então um worker MORTO há
+    # menos de 90 s ainda aparece como vivo. Medido ao vivo: logo depois de encerrar um worker de
+    # bancada, o fixture deu por vivo um worker morto, deixou os testes correrem, e eles falharam por
+    # espera — dois vermelhos sem causa aparente, em vez de uma mensagem útil. A guarda protegia
+    # contra "nunca houve worker" e não contra "o worker acabou de morrer". Aqui a janela é apertada:
+    # quem vai ESPERAR um job ser consumido precisa de batida recente, não de batida dentro do minuto
+    # e meio. O valor sai de PLAT_TESTE_HEARTBEAT_S para quem tiver bancada mais lenta.
+    import datetime as _dt
+    import os as _os
+
+    limite = float(_os.environ.get("PLAT_TESTE_HEARTBEAT_S", "25"))
+    bat = fila.get("ultimo_heartbeat")
+    if bat:
+        try:
+            quando = _dt.datetime.fromisoformat(str(bat).replace("Z", "+00:00"))
+            idade = (_dt.datetime.now(_dt.UTC) - quando).total_seconds()
+        except ValueError:
+            idade = None
+        if idade is not None and idade > limite:
+            pytest.fail(
+                f"o worker bateu ponto há {idade:.0f} s, acima do limite de {limite:.0f} s: "
+                f"`/saude` ainda o conta como vivo (janela de 90 s), mas ele provavelmente MORREU e "
+                f"o job ficaria pendente para sempre. Rode `sudo systemctl restart plat-worker` "
+                f"(ou ajuste PLAT_TESTE_HEARTBEAT_S se a bancada for lenta de propósito)."
+            )
     return fila
 
 
