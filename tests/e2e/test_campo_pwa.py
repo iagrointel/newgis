@@ -121,7 +121,9 @@ def mapa_de_campo(api_campo):
         data={
             "tipo": "mapa",
             "titulo": "Mapa de campo E2E — sem rede",
-            "dados": {"esquema_versao": 1, "corpo": {"camadas": [{"id": "c1", "nome": "talhões"}]}},
+            # corpo vazio: o documento de mapa exige camadas[].id em ULID + ref real; o portão deste item é a
+            # LISTAGEM do mapa offline (o conteúdo das camadas é do L2-07-d).
+            "dados": {"esquema_versao": 1, "corpo": {}},
         },
     )
     assert r.status == 201, (r.status, r.text())

@@ -31,17 +31,25 @@ import psycopg2.extras
 import pytest
 from PIL import Image
 
-from app import limites
+from app import esquema_dado, limites
 from app.schema_ambiente import CursorSchemaAmbiente
+from app.settings import settings
 from tests.api.conftest import PREFIXO_TESTE, com_token
 
 PREFIXO_TABELA = "zt_campo_"
 
+# trilha isolada não tem Garage admin (PLAT_GARAGE_ADMIN_TOKEN vazio): a etapa de FOTO do fluxo sobe para
+# object storage e não pode rodar aqui — skip declarado (nunca reprovar por infraestrutura ausente, mesmo
+# princípio do lighthouse no e2e deste item); na máquina com Garage o teste roda inteiro, como sempre rodou.
+SEM_GARAGE_ADMIN = not (settings.PLAT_GARAGE_ADMIN_URL and settings.PLAT_GARAGE_ADMIN_TOKEN)
+
 
 def _mapa(sessao, titulo: str):
+    # corpo vazio: o documento exige camadas[].id em ULID + ref de item real desde a migração do documento de
+    # mapa; o que este item prova é LISTAGEM/RLS de mapas (o conteúdo das camadas é do L2-07-d, não deste).
     r = sessao.post(
         "/api/itens",
-        json={"tipo": "mapa", "titulo": titulo, "dados": {"esquema_versao": 1, "corpo": {"camadas": [{"id": "c1"}]}}},
+        json={"tipo": "mapa", "titulo": titulo, "dados": {"esquema_versao": 1, "corpo": {}}},
     )
     assert r.status_code == 201, r.text
     return r.json()
@@ -163,12 +171,16 @@ def _conexao_com_contexto_demo():
     return con
 
 
-def _criar_camada_pontos(sessao, titulo: str, pontos: list[tuple[float, float]], schema: str = "d_demo"):
+def _criar_camada_pontos(sessao, titulo: str, pontos: list[tuple[float, float]], schema: str | None = None):
     """Camada vetorial hospedada com N pontos; devolve (camada_id, [globalid, ...]) na mesma ordem de `pontos`."""
     tabela = (PREFIXO_TABELA + titulo).replace("-", "_")
     con = _conexao()
     try:
         with con.cursor() as cur:
+            if schema is None:
+                # schema de dado do inquilino demo DESTA instalação (`d_` em produção, `d_<schema>_` em
+                # trilha — app/esquema_dado.py); `d_demo` fixo bate no schema de OUTRA instalação, revogado.
+                schema = esquema_dado.esquema(cur, "demo")
             cur.execute(
                 f'CREATE TABLE IF NOT EXISTS "{schema}"."{tabela}" '
                 f"(fid bigserial PRIMARY KEY, globalid uuid NOT NULL DEFAULT gen_random_uuid() UNIQUE, "
@@ -210,6 +222,7 @@ def itens_teste(sessao_a):
 
 
 # ---------------------------------------------------------------------- fluxo completo
+@pytest.mark.skipif(SEM_GARAGE_ADMIN, reason="trilha sem Garage admin: a foto da visita sobe para object storage")
 def test_fluxo_completo(sessao_a, itens_teste):
     camada_id, globalids = _criar_camada_pontos(sessao_a, f"fluxo-{uuid.uuid4().hex[:8]}", [
         (-46.6, -23.5), (-46.61, -23.51), (-46.62, -23.52),
