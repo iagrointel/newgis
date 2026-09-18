@@ -5,8 +5,13 @@
    "valor": 18.9,
    "unidade": "ms",
    "comando": "DELETE link + GET /api/p/<inquilino>/<slug>?link=<token> -> 401/403"
+  },
+  "remedicao_20260918_testes_verdes": {
+   "valor": 9,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/api/adversario/test_l5_adv1_publicacao_raster_fora_do_escopo.py -p no:randomly (trilha seg, teto 4G): 2 passed em 46,36 s — o raster citado pelo mapa do app publicado entra em camadas_citadas e ganha tiles:ler:<id> no token, e um mapa (item sem dado fisico) continua FORA do escopo. Portao do item conferido junto, sem regressao: venv/bin/pytest tests/api/catalogo/test_publicacao.py = 7 passed em 55,90 s."
   }
  },
- "gerado_em": "2026-09-07T15:14:49Z",
- "git_sha": "325b004a38bd"
+ "gerado_em": "2026-09-18T01:16:14Z",
+ "git_sha": "83c7d4125306"
 }
