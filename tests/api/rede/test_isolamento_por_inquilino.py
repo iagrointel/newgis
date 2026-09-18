@@ -30,6 +30,9 @@ Refutação do item (mesmo arquivo):
   `nao_aplicavel` em vez de fingida (regra do brief: cláusula que não fechar vira nomeada, nunca inventada).
 """
 
+import json
+import uuid
+
 import psycopg2
 import pytest
 
@@ -40,6 +43,10 @@ from tests.api.test_rede_topologia import _criar_rede, _habilitar, _importar_ele
 from tests.api.test_rls import contexto, ids_por_slug
 
 ITEM = "L4-23-isolamento-por-inquilino-na-rede"
+
+# uuid que não existe em inquilino nenhum: serve de recurso-fantasma na prova de que a resposta
+# à tentativa cruzada é indistinguível da resposta a um recurso que simplesmente não existe.
+UUID_INVENTADO = str(uuid.uuid4())
 
 
 @pytest.fixture
@@ -100,7 +107,13 @@ SEM_ALVO = {
 
 def _corpo_para(metodo: str, caminho: str):
     """Corpo válido (passa o pydantic) para cada rota de escrita, para que a única coisa em jogo na
-    varredura cruzada seja RLS/dono — nunca um 422 de esquema escondendo o 403/404 esperado."""
+    varredura cruzada seja RLS/dono — nunca um 422 de esquema escondendo o 403/404 esperado.
+
+    18/09: esta tabela estava incompleta e era o buraco de cobertura do item. Trinta rotas de escrita
+    respondiam 422 (esquema) à tentativa cruzada e NUNCA chegavam ao ponto em que a rota decide sobre o
+    recurso de outro inquilino — o teste as dava por testadas sem nunca ter exercido a autorização delas.
+    Cada corpo abaixo foi conferido contra o esquema que a própria aplicação publica (padrões de `tipo`,
+    `modo` e `codigo` não aceitam texto genérico) e medido: a rota passa a responder 404, não 422."""
     if caminho == "/api/rede/{rede_id}/pacote" and metodo == "POST":
         return {"__bruto__": instalados.bruto("eletrica-br")}
     if caminho.endswith("/feicoes/pontos") and metodo == "POST":
@@ -109,7 +122,19 @@ def _corpo_para(metodo: str, caminho: str):
         return {"tipo_codigo": 1, "grupo": "trecho_de_media_tensao",
                 "coordenadas": [[-46.0, -16.0], [-46.0, -15.999]]}
     if caminho.endswith("/applyEdits") and metodo == "POST":
-        return {"adds": []}
+        return {"adicionar": [], "atualizar": [], "apagar": []}
+    if caminho.endswith("/tracar") and metodo == "POST":
+        return {"tipo": "conectado"}
+    if caminho.endswith("/config_tracado") or caminho.endswith("/config_tracado/{config_id}"):
+        if metodo in ("POST", "PUT"):
+            return {"codigo": "zt-l423", "nome": f"{PREFIXO_TESTE}-l423", "tipo": "conectado"}
+    if caminho.endswith("/area_sujas/modo") and metodo == "PUT":
+        return {"modo": "avisar"}
+    # corpo bruto (não-JSON): a rota lê `await request.body()` e só depois resolve a rede
+    if caminho.endswith("/epanet") and metodo == "POST":
+        return {"__bruto__": b"[TITLE]\nzt-l423\n[END]\n"}
+    if caminho.endswith("/teksi") and metodo == "POST":
+        return {"__bruto__": b"SQLite format 3\x00"}
     return None
 
 
@@ -117,7 +142,38 @@ def _url_para(caminho: str, alvo: dict) -> str:
     url = caminho.replace("{rede_id}", alvo["rede_id"])
     if "/topologia/alcance" in url:
         url = url.replace("/topologia/alcance", f"/topologia/alcance?no={alvo['no_id']}")
+    if url.endswith("/tracar"):
+        # GET /{rede_id}/tracar recusa com 422 "entrada_vazia" antes de olhar a rede: sem um dos dois
+        # parâmetros a rota nunca chegaria à decisão de dono, e a varredura mediria o esquema, não o
+        # isolamento. O uuid é inventado aqui — nunca uma feição real de B.
+        url += f"?feicao_id={UUID_INVENTADO}"
     return url
+
+
+def _pedir_cruzado(sessao, metodo: str, caminho: str, alvo: dict):
+    """Um pedido da varredura cruzada: `sessao` autenticada como um inquilino, a URL apontando o recurso de
+    OUTRO."""
+    url = _url_para(caminho, alvo)
+    corpo = _corpo_para(metodo, caminho)
+    if corpo and "__bruto__" in corpo:
+        return sessao.request(metodo, url, content=corpo["__bruto__"],
+                              headers={"Content-Type": "application/json"})
+    return sessao.request(metodo, url, json=corpo)
+
+
+def _sem_eco(texto: str) -> str:
+    """A resposta sem os dois campos que não falam do recurso: `instance` (membro da RFC 9457 que devolve
+    verbatim o caminho que o PRÓPRIO cliente acabou de pedir — ver `app/erros.py:corpo_erro`) e `req_id`
+    (identificador do pedido, sorteado). O que sobra é tudo o que a resposta conta sobre o recurso; é aí
+    que um vazamento apareceria."""
+    try:
+        d = json.loads(texto)
+    except ValueError:
+        return texto
+    if isinstance(d, dict):
+        d.pop("instance", None)
+        d.pop("req_id", None)
+    return json.dumps(d, sort_keys=True, ensure_ascii=False)
 
 
 def test_toda_rota_de_rede_com_alvo_falha_cruzada(sessao_a, rede_b_com_topologia, medida):
@@ -130,14 +186,21 @@ def test_toda_rota_de_rede_com_alvo_falha_cruzada(sessao_a, rede_b_com_topologia
         if (metodo, caminho) in SEM_ALVO:
             continue
         url = _url_para(caminho, alvo)
-        corpo = _corpo_para(metodo, caminho)
-        if corpo and "__bruto__" in corpo:
-            r = sessao_a.request(metodo, url, content=corpo["__bruto__"],
-                                  headers={"Content-Type": "application/json"})
-        else:
-            r = sessao_a.request(metodo, url, json=corpo)
+        r = _pedir_cruzado(sessao_a, metodo, caminho, alvo)
         assert r.status_code in (403, 404), f"{metodo} {url} → {r.status_code}: {r.text[:300]}"
-        assert alvo["rede_id"] not in r.text and "l423-alvo-b" not in r.text, f"{metodo} {url} vazou dado de B"
+        # o corpo, tirado o eco do pedido do próprio cliente, não pode conter NADA de B: nem o id da rede,
+        # nem o id do nó, nem o nome. Antes daqui a comparação era sobre o texto inteiro e batia no membro
+        # `instance` — o caminho que A acabou de digitar, devolvido verbatim — e parava a varredura na
+        # primeira rota, deixando as outras cem sem nunca serem medidas.
+        corpo = _sem_eco(r.text)
+        for rotulo, agulha in (("id da rede", alvo["rede_id"]), ("id do nó", alvo["no_id"]),
+                               ("nome", "l423-alvo-b")):
+            assert agulha not in corpo, f"{metodo} {url} devolveu o {rotulo} de B: {corpo[:300]}"
+        # e o eco, quando existe, é exatamente o caminho pedido — nada mais. Um id de B que apareça em
+        # `instance` sem estar na URL seria vazamento de verdade.
+        if alvo["rede_id"] in r.text:
+            eco = json.loads(r.text).get("instance")
+            assert eco == url.split("?")[0], f"{metodo} {url}: instance={eco!r} não é o caminho pedido"
         testadas.append(f"{metodo} {caminho}")
 
     medida(ITEM)("rotas_de_rede_no_openapi", len(rotas), "rotas",
@@ -150,6 +213,33 @@ def test_toda_rota_de_rede_com_alvo_falha_cruzada(sessao_a, rede_b_com_topologia
     # que não existe para bater o número.
     assert len(rotas) >= 20, rotas  # trava de regressão: a suíte falha se a superfície REGREDIR, não se crescer
     assert testadas, "nenhuma rota com alvo cruzável encontrada — a varredura ficaria vazia"
+
+
+def test_resposta_cruzada_nao_distingue_alheia_de_inexistente(sessao_a, rede_b_com_topologia, medida):
+    """Canal lateral também é vazamento: se a resposta a "a rede de B" fosse diferente da resposta a "uma
+    rede que não existe em lugar nenhum", A poderia enumerar os ids de B sem nunca ler um byte do conteúdo.
+    Toda rota com alvo é chamada duas vezes — uma com o id real de B, outra com um uuid inventado — e as
+    duas respostas têm de ter o mesmo status e o mesmo corpo, tirado o eco do caminho pedido."""
+    alvo = rede_b_com_topologia
+    fantasma = {"rede_id": UUID_INVENTADO, "no_id": str(uuid.uuid4())}
+    comparadas = []
+    for metodo, caminho in _rotas_de_rede_utilidades():
+        if (metodo, caminho) in SEM_ALVO:
+            continue
+        real = _pedir_cruzado(sessao_a, metodo, caminho, alvo)
+        inexistente = _pedir_cruzado(sessao_a, metodo, caminho, fantasma)
+        assert real.status_code == inexistente.status_code, (
+            f"{metodo} {caminho}: rede de outro inquilino → {real.status_code}, rede inexistente → "
+            f"{inexistente.status_code}; a diferença enumera os ids do vizinho")
+        assert _sem_eco(real.text) == _sem_eco(inexistente.text), (
+            f"{metodo} {caminho}: corpos diferentes para rede alheia e rede inexistente\n"
+            f"  alheia:      {_sem_eco(real.text)[:200]}\n"
+            f"  inexistente: {_sem_eco(inexistente.text)[:200]}")
+        comparadas.append(f"{metodo} {caminho}")
+    medida(ITEM)("rotas_sem_oraculo_de_existencia", len(comparadas), "rotas",
+                 "cada rota com alvo chamada com o id real de outro inquilino e com um uuid inventado; "
+                 "mesmo status e mesmo corpo (sem o membro `instance`, que é o eco do caminho pedido)")
+    assert comparadas
 
 
 def test_rotas_sem_alvo_nao_vazam_lista_de_b(sessao_a, sessao_b, rede_b_com_topologia):
