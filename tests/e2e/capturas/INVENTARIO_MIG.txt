@@ -1,4 +1,8 @@
 # capturas da migracao de folha (tests/e2e/test_migracao_folha.py). sha256  bytes  arquivo
+502912994c77461a11f929a018b1e7aa609b4ab1ef84b0a3aac2fafb7b95039a     129443  MIG_acervo_antes_claro.png
+41b6a58cc49557c59df4712d1c9bc37d2394f99a8b7a3656644dc1116aa30d63     132536  MIG_acervo_antes_escuro.png
+02958db2a77df1c8779907f525d9c82b9b1a92d2c3eb0c9b4f98682a8220c83f     108286  MIG_acervo_depois_claro.png
+ca2174137475c28c33523e12ff6139cdb0dcc9633ff9cea5d9a107d6fd0b99af     110483  MIG_acervo_depois_escuro.png
 2cae9831297b0d6f0fdf3f783ccaa3c38011e0a2fbe87747f37f93282ed90731     933418  MIG_admin_acervo_antes_claro.png
 fd82ac4af85f33435b4bcc55473d91b2d7a7c467b03aff122ccdbb50cde2b51f     952035  MIG_admin_acervo_antes_escuro.png
 3faae5338d0392163683ca04e31597b32adaf9812760d051eef9db4eb5170b3e     585592  MIG_admin_acervo_depois_claro.png
@@ -107,6 +111,7 @@ aba76d9af0976c3abef3cfbb9ab04052fffba1c2c40762ee9cc6f701f6e74df1      99297  MIG
 652b14f23fab9f24b201c40f9657b084a5524c5e250eae5251f002128cb93c74     101043  MIG_conteudo_lixeira_antes_escuro.png
 aba76d9af0976c3abef3cfbb9ab04052fffba1c2c40762ee9cc6f701f6e74df1      99297  MIG_conteudo_lixeira_depois_claro.png
 652b14f23fab9f24b201c40f9657b084a5524c5e250eae5251f002128cb93c74     101043  MIG_conteudo_lixeira_depois_escuro.png
+16cbc32020ef41c73ec788a2f7661a911411219dbe5e447cbef61c1fc33b0e40     134569  MIG_crs_antes_escuro.png
 1abb591aad7107f655b2a916e5b7d2473e07d5de5c6480bf6ec5d4a0d7306918     963370  MIG_estilo_antes_claro.png
 b38db5eb9a2306665d3345f1d8cb910d97f78a206dd0fcb603ca177e79d88a2e     988663  MIG_estilo_antes_escuro.png
 75bdf3b5b0e961ad0771ea311d2f650bd6b6e73ec0089cce61565e982e856096     963259  MIG_estilo_depois_claro.png
@@ -119,10 +124,18 @@ e22cb735a38297a8e52898643e15a6c909261ad236c23109e9e8ee2cbb362fca     275428  MIG
 8fc487039db6b1042294b0f39c063b697ce2e58451eeb42036f8b6682df20c40      38739  MIG_ferramenta_antes_escuro.png
 14acaabcae6372a62e915e5f596ed04d2dd31174cd9870a162daf9cb5f3c51a7      31270  MIG_ferramenta_depois_claro.png
 83a7e2a6903301a810a8641b1552c594b29a4f16192a37723f6c5c0ca35334dc      31819  MIG_ferramenta_depois_escuro.png
+4bf1ebddae08e2f601743bcef9f1f9ec4b6a8e416d973ed3efb9aca32a8d33ef    1675442  MIG_ferramentas_antes_claro.png
+b933667b7f8dcba602aacb5b5e280f03992ef3c8c92dbb3377f9856bb8913b34    1707957  MIG_ferramentas_antes_escuro.png
+8dcf88e856990fc7e18001e9bdae3e0a7298c6639fb9a80215644491ca7e65bb    1229107  MIG_ferramentas_depois_claro.png
+a45d623e890a47a60fec5d367ed15fefe0b40e06e55cfc90a86bea0cb523a762    1262797  MIG_ferramentas_depois_escuro.png
 2d9a5224a26009ef987065075fa6ac97c207679d2de4418b1cb74f80fa662963      36095  MIG_formulario_construtor_antes_claro.png
 d8cb81176abaf76178495e5e386ff5ccaf61542159d2327821fb7f9ea5f312ee      36945  MIG_formulario_construtor_antes_escuro.png
 abdef950cc949fc8880ea4942e16593c111f8185d544672ce8724e7e3f782827      32520  MIG_formulario_construtor_depois_claro.png
 1a158cef0e94140622ed46696c11a2ed94661b0fc84f45d648a6f09f7a6ed563      33144  MIG_formulario_construtor_depois_escuro.png
+da674c34229007f561e4c8e4cb90548c0983519843816991ba2ca39e81360a56     108048  MIG_geocodificar_antes_claro.png
+9ab43024d987ff00d0a10785b2609cdbadb2b5ca6f22b0dca65a671de610c1a2     110250  MIG_geocodificar_antes_escuro.png
+4df3757feb285c60ab0fdaf8ba00a896a29bacd76df7242c302044c168296407      87836  MIG_geocodificar_depois_claro.png
+b83de21db0f974fd9736fc0d01c4246ed005b6ed2805401fb5e0598f853f2acc      89823  MIG_geocodificar_depois_escuro.png
 074262a56c5b8dfa89bf73bb288536bcd061d4d45f77f168d79e4bc0250d497a     108537  MIG_importacoes_antes_claro.png
 ad90490f6d28697eeee0922b4a01990fa6201e35b76ee0216760669702533150     110453  MIG_importacoes_antes_escuro.png
 7f206c4993738c70c85ad08ea8db10dec79d3241b2856ce6b639a22c95df2cc9      86362  MIG_importacoes_depois_claro.png
@@ -131,6 +144,10 @@ c1264c3e70905a5fd36e857e9f35b57320c29230c8a5f3724a90151890824c30      87797  MIG
 784babb2656daa19b79c74d176d7ca5d0e7c19b1edf9beaa0aed092de86c70b9      19214  MIG_login_antes_escuro.png
 53cc536f3d56ef68eea31f53666ec8453b4754ff5c430d2175daa780470f0992      16838  MIG_login_depois_claro.png
 712c08d99020f44c4346d78bee5120307f735e9dd77fafead0dcfdf8c6be4247      16980  MIG_login_depois_escuro.png
+3d2c47a9be092cea16508db185a41e8de93e4984f55b311535d6398761d7426b      72602  MIG_migracao_antes_claro.png
+0371e50239f0f5ddbd1334379a470c6ce67cc6e6b69da74d262c0ea832e8bf23      74082  MIG_migracao_antes_escuro.png
+c9319ae42b5d264a0ced4ec82b2422db21c3920a0a0cbc8bb9532386580d5f76      58546  MIG_migracao_depois_claro.png
+b2fa5be4040488140b0d41befa3197c3259b820dd563124ac88838cfb7719975      60244  MIG_migracao_depois_escuro.png
 f29149c83d6b36a6ba9d76e9cc0a6d04f613082c552605422274df8202865bb0      39784  MIG_modelos_antes_claro.png
 2f6d583187ba045405a0f9aa2c44a3051cbe8f85bd7b644635f401c37af1d855      40886  MIG_modelos_antes_escuro.png
 9a35e55e171d0c277c980eadaf25f918055f945882cc8cd590c2c925bc902bc5      34204  MIG_modelos_depois_claro.png
@@ -143,6 +160,10 @@ ea2c2dc19e0c1a0aefe6b703e530e8105ba2863dec3e906e14f3d23373479e45      11882  MIG
 ff3cadaca63c9848cab29e67696969245f365f3513b4d9fdbb7cd316842584d6      12135  MIG_plataforma_antes_escuro.png
 1c3ae4bec87ae3c537d2a7fe1a74555b5e16cbf297739e7743ba53a623f3e3f4      11690  MIG_plataforma_depois_claro.png
 b3b81d6b66cdea77f3e9c60efaa371eadbfead03b8ca807b82df1690a61e90ea      11817  MIG_plataforma_depois_escuro.png
+dba734816051eb3e39751e9d8b12ba196a0d24811d03278585bdba3d655fac0d     354546  MIG_portal_antes_claro.png
+ae24ad14668ab751c808ff8603aad4f4cef0e26d9d815dfb3b79b98afb575377     358981  MIG_portal_antes_escuro.png
+d99bf13cce9fd264736201f0ea0f1cffeafc54769832af26d47fa3c5a028245d     273921  MIG_portal_depois_claro.png
+0066d471d1150daef390b63a526acc5213273d3ab03c287abdc6d5d73c91a85e     276417  MIG_portal_depois_escuro.png
 08e3148aad046c2daac9b2941577ae462a42bf467607a307379db6c09412f9f0      41594  MIG_redes_configuracoes_antes_claro.png
 295d7e6e7174e8345455188c89943bdf96eec0928b44f421d0dbfa4fd0fadfb1      42839  MIG_redes_configuracoes_antes_escuro.png
 6a2fe43549fc26b4d51c652763028bf7abb428ab6f7f4072cba1443b1045761b      35615  MIG_redes_configuracoes_depois_claro.png
@@ -167,6 +188,10 @@ baf3996fdbc4f520336a679a9292f3820468b922d823882abbafcbd68a9cdc38      92691  MIG
 087859ec49b0dda3550852b6c3f76d72c880a4c3a7e8d9c3395b7ea7d90cef7e     305544  MIG_status_antes_escuro.png
 855b31b09ef2bcb352eaeece2fc21be529c36a77ba7943b8aafaa73f39bd3328     251469  MIG_status_depois_claro.png
 7b1fdf1503f68eaa966457aebe99e6effafc1415ad001b1acfe53f7a08a930d2     260082  MIG_status_depois_escuro.png
+e6cd4dd03ce9e9dfa58363308f6400bbe97434a7b98886ee9fa26c9f46dbb191     191198  MIG_temas_antes_claro.png
+451b8f59b2dee3128c628b4a9609a1d1640f512499a086d55399021eaf6ffc6a     191496  MIG_temas_antes_escuro.png
+e56f5f1a760305afc9e05c233041f3f9e943c59d69ab54b10810bfe56afd790e     156791  MIG_temas_depois_claro.png
+224a750f399e90c96591764c2e490381be38a5077410fd7f452ad131ffe68d7c     158023  MIG_temas_depois_escuro.png
 66526535035fe27f5adf0044e6e39e9fa76af651dcd993d7e62f826acd73acdf      37220  MIG_versoes_antes_claro.png
 4e157b6cd1097df27453f24ce5d738ff55b3e5edb914a21fd757ec0c00ecf85f      38343  MIG_versoes_antes_escuro.png
 68b2ce0502185b98bd75aa331a97f78d39c4e8796a4d329f5b0d6043e8bc9ded      32283  MIG_versoes_depois_claro.png
@@ -175,6 +200,10 @@ b7380325cbed67aed1a04b025d50c392654710d76a27c9b1d5f54b726ac59a51      32811  MIG
 d2a6ae6cd092f287ac2f21e6972a661854bc7ee2a0cad8779ae934c2fffcbc85      56952  MIG_videos_antes_escuro.png
 6965438aed779e684c928ead539393a3c4fa0e29613596a811e9b59ffeaafb77      45159  MIG_videos_depois_claro.png
 01c4d1ed9180ce5a08c4f72456dba497bf445b792126a963597ddb9a15eefdc2      46118  MIG_videos_depois_escuro.png
+76ebe799d63648a6178675d432d24c07d52cc3a059a4c3bc8be608e9e0d0f268      74114  MIG_vista_camada_antes_claro.png
+02d7c5a45a1cb61a5c2d161d43cbb777b163a97e7fa0c67efec64e5008a05695      75760  MIG_vista_camada_antes_escuro.png
+7e39585bb2bb33f407dad1a40aec9c9534b32b52091125ce3f3001c2133b179e      66728  MIG_vista_camada_depois_claro.png
+dfef10780c470f3bddc8f5ce2c0ebba786e6c13adf30bc2323429b81ca873071      68019  MIG_vista_camada_depois_escuro.png
 20151166939a6b4d8e305950d24e59623d2d891c76f858099dba75ae9810d97a       4717  MIG_visualizar_antes_claro.png
 81fd782b4f4213609eb7212a5e7f4b99e8e45e5f20c64c8416955716dfa3746e       4717  MIG_visualizar_antes_escuro.png
 20151166939a6b4d8e305950d24e59623d2d891c76f858099dba75ae9810d97a       4717  MIG_visualizar_depois_claro.png

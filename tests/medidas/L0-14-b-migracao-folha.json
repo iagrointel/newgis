@@ -2,32 +2,32 @@
  "item": "L0-14-b-migracao-folha",
  "medidas": {
   "telas_migradas_neste_ramo": {
-   "valor": 40,
+   "valor": 47,
    "unidade": "telas",
    "comando": "tests/e2e/telas_migracao.json, campo estado=migrada (o mesmo manifesto que o e2e percorre)"
   },
   "telas_ainda_na_folha_antiga": {
-   "valor": 23,
+   "valor": 16,
    "unidade": "telas",
    "comando": "grep '/static/style.css' em web/**/*.html; e a MESMA contagem de tests/unit/test_estilo_tokens.py::test_e_catraca_da_migracao_de_folha_nao_pode_crescer"
   },
   "catraca_no_codigo": {
-   "valor": 23,
+   "valor": 16,
    "unidade": "telas",
    "comando": "TELAS_NA_FOLHA_ANTIGA em tests/unit/test_estilo_tokens.py (o teste reprova se a contagem real for diferente, para cima ou para baixo)"
   },
   "telas_deixadas_para_tras": {
-   "valor": 0,
+   "valor": 1,
    "unidade": "telas",
-   "comando": "tests/e2e/telas_migracao.json, campo estado=deixada_para_tras, com o motivo no campo `motivo`: nenhuma"
+   "comando": "tests/e2e/telas_migracao.json, campo estado=deixada_para_tras, com o motivo no campo `motivo`: crs: sem motivo escrito"
   },
   "arvore_identica_antes_e_depois": {
-   "valor": "45 de 45",
+   "valor": "52 de 52",
    "unidade": "telas",
    "comando": "tests/e2e/compara_migracao.py: impressao digital tag#id.classe de cada elemento, em ordem de documento, nas duas fases. Troca de folha nao mexe em estrutura"
   },
   "elementos_conferidos": {
-   "valor": 11120,
+   "valor": 18528,
    "unidade": "elementos de DOM",
    "comando": "soma dos elementos da impressao digital das telas medidas (tema escuro)"
   },
@@ -62,7 +62,7 @@
    "comando": "axe-core 4.12.1 (color-contrast, aria-allowed-attr, button-name, link-name, label) pelo apoio_axe, antes e depois; conta regra que aparece so no depois"
   },
   "capturas_no_inventario": {
-   "valor": 180,
+   "valor": 209,
    "unidade": "PNG",
    "comando": "tests/e2e/capturas/INVENTARIO_MIG.txt (sha256 e bytes de cada uma). As PNG nao entram no git; o que fica versionado e o inventario e o script que regenera"
   }
@@ -137,10 +137,22 @@
     "status"
    ],
    "reprovas": []
+  },
+  "6": {
+   "telas": [
+    "acervo",
+    "ferramentas",
+    "geocodificar",
+    "migracao",
+    "portal",
+    "temas",
+    "vista_camada"
+   ],
+   "reprovas": []
   }
  },
- "gerado_em": "2026-09-18T01:44:26Z",
- "git_sha": "aa703abe4dfc",
+ "gerado_em": "2026-09-18T02:06:17Z",
+ "git_sha": "72bd7211bae2",
  "assinado_por": "construtor (migracao da folha antiga web/style.css; continuacao do item L0-14-identidade-visual, ramo wt/telas)",
  "maquina": "chromium do PLAYWRIGHT (~/.cache/ms-playwright), 1280x800, locale pt-BR, dois temas. NUNCA conter memoria com `ulimit -v` (o Chromium morre com SIGTRAP: enderecamento virtual nao e memoria) - o teto vai em systemd-run --scope -p MemoryMax=. Base de dados: schema de TRILHA plat_ttelas (laco/trilha_ambiente.sh telas), nunca o schema `plat` de producao.",
  "capturas": "tests/e2e/capturas/MIG_<tela>_{antes,depois}_{escuro,claro}.png, regeneraveis por `bash tests/e2e/regerar_capturas_migracao.sh <leva>`"

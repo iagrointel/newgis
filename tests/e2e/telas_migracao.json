@@ -550,7 +550,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "geocodificar",
@@ -564,7 +564,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "temas",
@@ -578,7 +578,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "acervo",
@@ -592,7 +592,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "portal",
@@ -606,7 +606,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "crs",
@@ -636,7 +636,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "migracao",
@@ -651,7 +651,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "rede_medicao_ficha",

@@ -275,3 +275,12 @@ plat-tema label:has(input:focus-visible) { outline: var(--i-foco-largura) solid 
 plat-tema input { position: absolute; opacity: 0; width: var(--i-fio); height: var(--i-fio); }
 .ref-suporte { font-family: var(--i-fonte-dado); font-size: var(--i-t0); color: var(--i-texto-fraco); user-select: all; }
 button[aria-pressed="true"]:not(.texto) { background: var(--i-acento); color: var(--i-acento-texto); border-color: var(--i-acento); }
+
+/* ---------- barra de andamento em linha ----------
+   Levada na leva 6 do item L0-14-b: a folha nova so tinha a barra de upload (<progress id=upload-progresso>)
+   e a tela /ferramentas usa esta outra (medido no navegador). Leiaute da folha antiga, tokens --i-*.
+   --borda-largura e --andamento nao existem em tokens.css e nao existiam na folha antiga: valem --i-fio e
+   --i-acento, que sao o fio e a cor de andamento que a folha nova ja usa na barra de upload. */
+.progresso { display: flex; align-items: center; gap: var(--i-e2); }
+.barra-progresso { flex: 1; height: var(--i-e2); min-width: 80px; background: var(--i-fundo); border: var(--i-fio) solid var(--i-linha); border-radius: var(--i-raio-pilula); overflow: hidden; }
+.barra-progresso .preenchido, .progresso span { display: block; height: 100%; background: var(--i-acento); transition: width var(--i-tempo) ease; }
