@@ -907,6 +907,45 @@
    "classes_so_na_folha_antiga_estimadas": [],
    "estado": "ja_na_folha_nova",
    "nota": "Mesmo motivo: a leva levou `.campo` fora de `.form` para a folha nova e esta tela tem 1."
+  },
+  {
+   "nome": "conteudo",
+   "arquivo": "web/conteudo.html",
+   "rota": "/conteudo",
+   "leva": 4,
+   "bytes": 0,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "ja_na_folha_nova",
+   "nota": "Nao esta na folha antiga e nao conta na catraca. Entra na leva 4 porque a leva levou `button[aria-pressed=\"true\"]:not(.texto)` para a folha nova (a folha nova so cobria o caso `.seletor-tema`) e esta tela tem botao de vista nesse estado, medido no navegador."
+  },
+  {
+   "nome": "conteudo_lixeira",
+   "arquivo": "web/conteudo_lixeira.html",
+   "rota": "/conteudo/lixeira",
+   "leva": 4,
+   "bytes": 0,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "ja_na_folha_nova",
+   "nota": "Nao esta na folha antiga e nao conta na catraca. Entra na leva 4 porque a leva levou `button[aria-pressed=\"true\"]:not(.texto)` para a folha nova (a folha nova so cobria o caso `.seletor-tema`) e esta tela tem botao de vista nesse estado, medido no navegador."
+  },
+  {
+   "nome": "estilo",
+   "arquivo": "web/estilo.html",
+   "rota": "/estilo",
+   "leva": 4,
+   "bytes": 0,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "ja_na_folha_nova",
+   "nota": "Nao esta na folha antiga e nao conta na catraca. Entra na leva 4 porque a leva levou `button[aria-pressed=\"true\"]:not(.texto)` para a folha nova (a folha nova so cobria o caso `.seletor-tema`) e esta tela tem botao de vista nesse estado, medido no navegador."
   }
  ]
 }

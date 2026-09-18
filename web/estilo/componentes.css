@@ -253,3 +253,25 @@ plat-idioma select.controle { width: auto; padding: var(--i-e1) var(--i-e2); fon
 .entrar .topo { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--i-e3); margin-bottom: var(--i-e5); }
 .entrar .topo .marca { margin-bottom: 0; }
 .entrar plat-estado { margin: var(--i-e3) 0; }
+
+/* ---------- painel encaixavel (<plat-painel>), interruptor de tema (<plat-tema>) e referencia de suporte
+   ----------
+   Levados na leva 4 do item L0-14-b: a folha nova nao tinha regra nenhuma para eles e a tela /estilo-guia
+   usa os tres (medido no navegador). Leiaute e o mesmo da folha antiga, com os tokens --i-*. Onde a folha
+   antiga citava nome morto (--borda-largura, --t0, --t-1) vale o token vivo equivalente da escala nova:
+   --i-fio e --i-t0, que sao os valores que a folha nova ja usa em todo painel e rotulo. */
+plat-painel { display: flex; flex-direction: column; background: var(--i-superficie); border: var(--i-fio) solid var(--i-linha); border-radius: var(--i-raio); min-width: 0; min-height: 0; }
+plat-painel > .painel-cabecalho { display: flex; align-items: center; gap: var(--i-e2); padding: var(--i-e2) var(--i-e3); border-bottom: var(--i-fio) solid var(--i-linha); }
+plat-painel > .painel-cabecalho h2 { font-size: var(--i-t1); margin: 0; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+plat-painel > .painel-cabecalho .painel-acoes { display: flex; gap: var(--i-e1); }
+plat-painel > .painel-corpo { padding: var(--i-e3); overflow: auto; flex: 1; min-height: 0; }
+plat-painel[recolhido] > .painel-corpo, plat-painel[recolhido] > .painel-rodape { display: none; }
+plat-painel > .painel-rodape { padding: var(--i-e2) var(--i-e3); border-top: var(--i-fio) solid var(--i-linha); display: flex; gap: var(--i-e2); justify-content: flex-end; }
+plat-painel[denso] > .painel-corpo { padding: 0; }
+plat-tema { display: inline-flex; border: var(--i-fio) solid var(--i-linha-forte); border-radius: var(--i-raio); overflow: hidden; }
+plat-tema label { padding: var(--i-e1) var(--i-e3); cursor: pointer; color: var(--i-texto-fraco); font-size: var(--i-t0); display: inline-flex; align-items: center; gap: var(--i-e1); }
+plat-tema label:has(input:checked) { background: var(--i-acento); color: var(--i-acento-texto); }
+plat-tema label:has(input:focus-visible) { outline: var(--i-foco-largura) solid var(--i-foco); outline-offset: calc(-1 * var(--i-foco-largura)); }
+plat-tema input { position: absolute; opacity: 0; width: var(--i-fio); height: var(--i-fio); }
+.ref-suporte { font-family: var(--i-fonte-dado); font-size: var(--i-t0); color: var(--i-texto-fraco); user-select: all; }
+button[aria-pressed="true"]:not(.texto) { background: var(--i-acento); color: var(--i-acento-texto); border-color: var(--i-acento); }
