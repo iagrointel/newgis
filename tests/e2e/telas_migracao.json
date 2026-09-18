@@ -667,7 +667,7 @@
    "classes_so_na_folha_antiga_estimadas": [
     "rede-medicao-ficha"
    ],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "conexoes",
@@ -683,7 +683,7 @@
    "classes_so_na_folha_antiga_estimadas": [
     "conexoes"
    ],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "redes_isolamento",
@@ -698,7 +698,7 @@
    "pesada": true,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "redes_fluxo",
@@ -713,7 +713,7 @@
    "pesada": true,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "redes_diagrama",
@@ -728,7 +728,7 @@
    "pesada": true,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "modelo",
@@ -743,7 +743,7 @@
    "pesada": true,
    "rota_com_parametro": true,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "simbolos",
@@ -758,7 +758,7 @@
    "pesada": true,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "mapa",
@@ -773,7 +773,7 @@
    "pesada": true,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "sig",

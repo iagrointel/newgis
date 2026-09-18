@@ -111,9 +111,18 @@ JS_SELETORES_QUE_PEGAM = r"""
 
 
 def _telas_da_leva() -> list[dict]:
+    """As telas da leva, menos as deixadas para tras.
+
+    PLAT_TELAS (nomes separados por virgula) corta a leva num pedaco menor. Serve a uma coisa so: esta
+    maquina e partilhada e uma leva de telas de mapa acumula memoria no mesmo navegador ate o oom-kill
+    (medido em 18/09/2026). Cortar em dois pedacos nao muda a prova -- as duas fases leem a mesma
+    variavel, e o veredito da leva junta o que foi medido.
+    """
     leva = int(os.environ.get("PLAT_LEVA", "1"))
     todas = json.loads(MANIFESTO.read_text(encoding="utf-8"))["telas"]
-    return [t for t in todas if t["leva"] == leva and t.get("estado") != "deixada_para_tras"]
+    fora = [t for t in todas if t["leva"] == leva and t.get("estado") != "deixada_para_tras"]
+    pedaco = [n.strip() for n in os.environ.get("PLAT_TELAS", "").split(",") if n.strip()]
+    return [t for t in fora if t["nome"] in pedaco] if pedaco else fora
 
 
 def _caminho(rota: str) -> str:

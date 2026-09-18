@@ -4,6 +4,7 @@
 # derruba nada entre levas -- subir dois uvicorn por leva custava mais que a medida.
 #
 #   bash tests/e2e/leva.sh <leva> <sha do "antes">
+#   PLAT_TELAS=nome,nome bash tests/e2e/leva.sh <leva> <sha>   (pedaco da leva; ver _telas_da_leva)
 #
 # Chromium do playwright. Teto de memoria por cgroup (systemd-run), NUNCA `ulimit -v`.
 set -euo pipefail
@@ -26,7 +27,7 @@ fase() {
     --setenv=HOME="$HOME" --setenv=PLAT_CREDENCIAIS_ARQUIVO="$PLAT_CREDENCIAIS_ARQUIVO" \
     --setenv=PLAT_DSN="$PLAT_DSN" --setenv=PLAT_SECRET="$PLAT_SECRET" \
     --setenv=PLAT_URL_PUBLICA="$PLAT_URL_PUBLICA" \
-    --setenv=PLAT_FASE="$1" --setenv=PLAT_LEVA="$LEVA" \
+    --setenv=PLAT_FASE="$1" --setenv=PLAT_LEVA="$LEVA" --setenv=PLAT_TELAS="${PLAT_TELAS:-}" \
     "$RAIZ/venv/bin/pytest" tests/e2e/test_migracao_folha.py \
     --base-url="http://127.0.0.1:$2" -q -p no:cacheprovider 2>&1 | tail -6
 }
