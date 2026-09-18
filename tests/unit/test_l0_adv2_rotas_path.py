@@ -4,22 +4,18 @@ ALGORITMO da varredura, reproduzida com uma mini-app FastAPI descartável."""
 
 from __future__ import annotations
 
-import pytest
-
-
-@pytest.mark.xfail(
-    strict=True,
-    reason="L0-04-k: _cobre() (tests/unit/test_rotas_sombreamento.py) só compara caminhos com o MESMO número "
-    "de segmentos. O convertor `path` do Starlette usa regex '.*' e casa qualquer número de segmentos "
-    "(inclusive barra) — logo uma rota fixa de MAIS segmentos declarada depois de uma {x:path} no mesmo "
-    "prefixo fica inalcançável e a varredura não vê o par (segmentos diferentes -> len(a)!=len(b) -> "
-    "retorna False antes de olhar o convertor). É a MESMA classe de bug que motivou o item (rota fixa "
-    "engolida por parametrizada), agora invisível para a ferramenta que deveria pegá-la sozinha. O app real "
-    "já tem 5 rotas com {x:path} hoje (app/acervo/rotas_frescor.py, app/modelos3d/rotas.py, "
-    "app/catalogo/rotas_compartilhamento.py, app/notebooks/rotas.py x2); nenhuma colide agora por cuidado "
-    "manual na ordem de include_router (ver comentário em app/main.py linha 310), não por garantia da "
-    "varredura — o cuidado manual é exatamente o que este item deveria ter tornado desnecessário.",
-)
+# REMEDIADO (wt/l02, 17/09/2026): `_cobre()` deixou de reimplementar o casamento segmento a segmento e passou
+# a usar `starlette.routing.compile_path` — o mesmo regex que o roteador usa. Com isso o convertor `path`
+# (`.*`, que casa qualquer número de segmentos, barra inclusive) passa a ser enxergado pela varredura, e os
+# convertores `int`/`float`/`uuid` valem de graça, sem a tabela paralela que havia antes.
+#
+# O `xfail(strict=True)` saiu junto com uma correção de ENUNCIADO na segunda asserção, registrada aqui para que
+# ninguém a leia como abrandamento: a versão original exigia que, declarada DEPOIS, `/api/x/{b}/{c}/fim`
+# respondesse mesmo assim. Isso não é alcançável e nunca foi do item — quem decide é o Starlette, cujo regex
+# `.*` é guloso por construção. O que o item promete, e o que aqui se prova, é que a varredura ACUSA o par
+# antes de ele chegar a produção e que, corrigida a ordem que ela aponta, a rota fixa volta a responder.
+# A varredura sobre a aplicação viva achou, nesta rodada, um par real que estava em master:
+# `GET /api/imagens/licencas` engolida por `GET /api/imagens/{item_id}` (consertado em app/main.py).
 def test_varredura_de_sombreamento_detecta_parametro_path_multisegmento():
     """Reprodução mínima com o padrão real: uma rota `{a:path}` de 4 segmentos declarada ANTES de uma rota
     fixa de 5 segmentos no mesmo prefixo. Starlette engole a segunda; `_cobre`, importado sem alteração do
@@ -48,12 +44,19 @@ def test_varredura_de_sombreamento_detecta_parametro_path_multisegmento():
             if _cobre(caminho_antes, caminho_depois):
                 achados.append((caminho_antes, caminho_depois))
 
-    cliente = TestClient(app)
-    resposta = cliente.get("/api/x/foo/bar/fim")
-
-    # a promessa do portão: a rota fixa responde pelo que ela é, e a varredura teria acusado o par ANTES
-    # disso chegar a produção. Nenhuma das duas é verdade hoje.
     assert achados, "a varredura deveria ter achado o par {a:path} x {b}/{c} (segmentos diferentes) e não achou"
-    assert resposta.json()["rota"] == "fixa_dois_segmentos", (
-        f"'/api/x/{{b}}/{{c}}/fim' foi engolida por '/api/x/{{a:path}}/fim': resposta real = {resposta.json()}"
-    )
+    assert achados == [("/api/x/{a:path}/fim", "/api/x/{b}/{c}/fim")], achados
+
+    # declarada na ordem que a varredura prescreve (a fixa antes da {a:path}), a rota engolida volta a
+    # responder pelo que ela é — é isto que torna o cuidado manual em `include_router` desnecessário.
+    corrigida = FastAPI()
+
+    @corrigida.get("/api/x/{b}/{c}/fim")
+    def rota_fixa_primeiro(b: str, c: str):
+        return {"rota": "fixa_dois_segmentos", "b": b, "c": c}
+
+    @corrigida.get("/api/x/{a:path}/fim")
+    def rota_generica_depois(a: str):
+        return {"rota": "generica"}
+
+    assert TestClient(corrigida).get("/api/x/foo/bar/fim").json()["rota"] == "fixa_dois_segmentos"

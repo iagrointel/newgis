@@ -39,15 +39,8 @@ sys.path.insert(0, str(ROOT / "docs"))
 import gerar_cobertura_ui as cov  # noqa: E402
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "UX-00: docs/gerar_cobertura_ui.py::chamadas() não remove comentário de linha/bloco antes de "
-        "procurar literais de URL — uma rota de escrita mencionada só num comentário (código morto, "
-        "nunca executado, sem controle nenhum na tela) já basta para o gerador marcar a rota como "
-        "'coberto', o que esvazia a prova que UX-10..UX-23 citam ('cobertura_ui_lacunas.json encolhe')"
-    ),
-)
+# REMEDIADO (wt/l02, 17/09/2026): docs/gerar_cobertura_ui.py ganhou `sem_comentarios()`, que apaga comentário
+# de linha e de bloco (preservando a numeração das linhas) ANTES de procurar literal de URL. O `xfail` saiu.
 def test_ux00_url_dentro_de_comentario_nao_deveria_contar_como_coberta(tmp_path):
     arquivo = tmp_path / "modulo_morto.js"
     arquivo.write_text(
