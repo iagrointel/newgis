@@ -15,8 +15,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-import httpx
-
 WEB = (Path(__file__).resolve().parents[2] / "web").resolve()
 MIME = {
     ".js": "text/javascript",
@@ -103,11 +101,24 @@ class FrenteTrilha:
 
     @classmethod
     def se_preciso(cls, base_url: str, url_publica: str):
-        """None quando a URL já serve /static/ (há nginx na frente); a frente quando é um uvicorn de trilha."""
-        try:
-            if httpx.get(f"{base_url}/static/style.css", timeout=10).status_code == 200:
-                return None
-        except httpx.HTTPError:
+        """None quando o navegador já vai chegar com o Origin certo; a frente quando não vai.
+
+        18/09/2026 — esta decisão era tomada por outra pergunta: "`/static/style.css` responde 200?". A
+        premissa era que só o nginx serve estático. Deixou de ser verdade: `app/main.py` monta `/static`
+        para QUALQUER ambiente que não seja produção (dois blocos `if not settings.producao`, de duas
+        trilhas que acrescentaram o mesmo remendo). Com isso a resposta era sempre "sim", a frente nunca
+        subia, e o navegador chegava com `Origin: http://127.0.0.1:<porta>` — que o CSRF da sessão (ADR
+        0002 seção 5.3) recusa com 403 `origem da requisição não é a da plataforma`. Efeito medido no item
+        L0-03-f: TODA ação de escrita pela tela (criar pasta, mover, compartilhar) reprovava o e2e de
+        trilha, e a falha parecia da tela.
+
+        A pergunta certa é a que a frente existe para responder: o Origin que o navegador vai mandar é o
+        que o CSRF espera? Se for (rodando contra a URL pública, com nginx), nada a fazer."""
+        def origem(u: str) -> tuple[str, str]:
+            p = urlparse(u)
+            return (p.scheme, p.netloc)
+
+        if not url_publica or origem(base_url) == origem(url_publica):
             return None
         return cls(base_url, url_publica)
 

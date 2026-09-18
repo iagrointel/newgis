@@ -24,13 +24,31 @@ class TelaCatalogo(Tela):
         )
         return v
 
-    def soma_modulos_kb(self) -> float:
-        """soma (kB decodificados) dos módulos ES de /static/js/ carregados nesta navegação."""
+    def _kb_de(self, filtro_js: str) -> float:
         return self.page.evaluate(
             "() => Math.round(performance.getEntriesByType('resource')"
-            ".filter(r => r.name.includes('/static/js/'))"
+            f".filter(r => r.name.includes('/static/js/') && ({filtro_js}))"
             ".reduce((s, r) => s + (r.decodedBodySize || r.encodedBodySize || 0), 0) / 1024 * 10) / 10"
         )
+
+    def soma_modulos_kb(self) -> float:
+        """soma (kB decodificados) dos MÓDULOS ES carregados nesta navegação — código, sem o catálogo de
+        tradução.
+
+        18/09/2026 (ADR docs/adr/20260918T0240-orcamento-da-tela-separa-modulo-de-catalogo-de-traducao.md):
+        a conta antiga somava tudo sob `/static/js/`, e o catálogo de tradução mora em `web/js/i18n/*.json`.
+        Eram 511 kB na tela /conteudo: 314,6 de módulo e 193,9 de UM arquivo de dados que é o mesmo em toda
+        tela do produto e cresce a cada item que acrescenta texto. Somados, o número deixava de dizer o que
+        o orçamento governa (o código da tela) e reprovava a tela que por acaso fosse medida primeiro.
+        As duas partes continuam medidas e as duas reprovam — cada uma contra o seu teto."""
+        return self._kb_de("!r.name.includes('/static/js/i18n/')")
+
+    def catalogo_traducao_kb(self) -> float:
+        """kB do catálogo de tradução buscado nesta navegação (`/static/js/i18n/<idioma>.json`).
+
+        Orçamento próprio de 220 kB (ADR acima). Passou disso, a saída é partir o catálogo por tela — não
+        subir o teto."""
+        return self._kb_de("r.name.includes('/static/js/i18n/')")
 
 
 def gravar_medidas_catalogo(medida, tela: Tela) -> None:
