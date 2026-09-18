@@ -38,5 +38,8 @@
   }
  },
  "gerado_em": "2026-09-18T01:49:09Z",
- "git_sha": "605a459f2de4"
+ "git_sha": "605a459f2de4",
+ "nao_passa": [
+  "portao vivo NAO exercitado em 18/09/2026: tests/api/test_bancos_externos.py deu 6 skipped — o segundo Postgres/PostGIS de teste (docker plat-il004ifonte-pg, 127.0.0.1:55499, banco amostra_aberta com sedes_municipais e tabela_grande) nao esta no ar e nao foi levantado por causa do teto de disco (98 %) e de memoria da maquina. O que foi medido hoje e a refutacao do adversario (6 passed), que e offline. A medicao anterior do portao continua sendo a do fechamento do item."
+ ]
 }
