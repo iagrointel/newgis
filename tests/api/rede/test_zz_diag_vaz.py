@@ -1,96 +1,62 @@
+"""Sonda de diagnostico (temporaria) do item L4-23: mede, rota a rota de /api/rede, (a) o status da
+tentativa cruzada, (b) o que da resposta e dado de B fora do membro `instance` da RFC 9457, e (c) se a
+resposta para o id REAL de B se distingue da resposta para um id que nao existe em lugar nenhum
+(oraculo de existencia = canal lateral). Nao asserta nada: imprime a tabela."""
 import json as J
+import re
 import uuid as U
 
-from tests.api.rede.test_isolamento_por_inquilino import rede_b_com_topologia
-from app.rede_utilidades import instalados
+import pytest
+
+from tests.api.rede.test_isolamento_por_inquilino import (
+    SEM_ALVO, _corpo_para, _rotas_de_rede_utilidades, _url_para, rede_b_com_topologia,  # noqa: F401
+)
+
+RE_UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I)
 
 
-def _esquemas():
-    from app.main import app
-    return app.openapi()
+def _pedir(sessao, metodo, caminho, alvo):
+    url = _url_para(caminho, alvo)
+    corpo = _corpo_para(metodo, caminho)
+    if corpo and "__bruto__" in corpo:
+        return sessao.request(metodo, url, content=corpo["__bruto__"],
+                              headers={"Content-Type": "application/json"})
+    return sessao.request(metodo, url, json=corpo)
 
 
-def _min_do_esquema(esq, comps, prof=0):
-    if prof > 6 or not isinstance(esq, dict):
-        return None
-    if "$ref" in esq:
-        nome = esq["$ref"].rsplit("/", 1)[-1]
-        return _min_do_esquema(comps.get(nome, {}), comps, prof + 1)
-    for chave in ("anyOf", "oneOf", "allOf"):
-        if chave in esq:
-            for alt in esq[chave]:
-                if not (isinstance(alt, dict) and alt.get("type") == "null"):
-                    return _min_do_esquema(alt, comps, prof + 1)
-    if "default" in esq:
-        return esq["default"]
-    if "enum" in esq and esq["enum"]:
-        return esq["enum"][0]
-    t = esq.get("type")
-    if t == "object" or ("properties" in esq):
-        obj = {}
-        props = esq.get("properties", {})
-        for nome in esq.get("required", []):
-            obj[nome] = _min_do_esquema(props.get(nome, {}), comps, prof + 1)
-        return obj
-    if t == "array":
-        mn = esq.get("minItems", 0)
-        if mn:
-            return [_min_do_esquema(esq.get("items", {}), comps, prof + 1) for _ in range(mn)]
-        return []
-    if t == "integer":
-        return max(int(esq.get("minimum", 1)), 1)
-    if t == "number":
-        return float(max(esq.get("minimum", 1), 1))
-    if t == "boolean":
-        return False
-    if t == "string":
-        if esq.get("format") == "uuid":
-            return str(U.uuid4())
-        return "x" * max(int(esq.get("minLength", 1)), 1)
-    return None
+def _normal(texto):
+    """Corpo sem `instance` (eco do caminho pedido), sem req_id e com todo uuid mascarado — o que sobra e
+    o que a resposta REALMENTE conta sobre o recurso."""
+    try:
+        d = J.loads(texto)
+    except Exception:
+        return RE_UUID.sub("<uuid>", texto)
+    if isinstance(d, dict):
+        d.pop("instance", None)
+        d.pop("req_id", None)
+    return RE_UUID.sub("<uuid>", J.dumps(d, sort_keys=True))
 
 
 def test_diag(sessao_a, rede_b_com_topologia):
     alvo = rede_b_com_topologia
-    esq = _esquemas()
-    comps = esq.get("components", {}).get("schemas", {})
+    fantasma = {"rede_id": str(U.uuid4()), "no_id": str(U.uuid4())}
     linhas = []
-    for caminho, ops in sorted(esq["paths"].items()):
-        if not caminho.startswith("/api/rede"):
+    for metodo, caminho in _rotas_de_rede_utilidades():
+        if (metodo, caminho) in SEM_ALVO:
             continue
-        for metodo, op in sorted(ops.items()):
-            metodo = metodo.upper()
-            url = caminho.replace("{rede_id}", alvo["rede_id"])
-            # qualquer outro marcador vira uuid aleatorio (nunca dado de A)
-            while "{" in url:
-                ini = url.index("{"); fim = url.index("}", ini)
-                url = url[:ini] + str(U.uuid4()) + url[fim + 1:]
-            # parametros de consulta obrigatorios
-            q = {}
-            for p in op.get("parameters", []):
-                if p.get("in") == "query" and p.get("required"):
-                    v = _min_do_esquema(p.get("schema", {}), comps)
-                    q[p["name"]] = alvo["no_id"] if p["name"] == "no" else v
-            corpo = None
-            rb = op.get("requestBody")
-            if rb:
-                ct = rb.get("content", {})
-                if "application/json" in ct:
-                    corpo = _min_do_esquema(ct["application/json"].get("schema", {}), comps)
-            if caminho.endswith("/pacote") and metodo == "POST":
-                r = sessao_a.request(metodo, url, params=q, content=instalados.bruto("eletrica-br"),
-                                     headers={"Content-Type": "application/json"})
-            else:
-                r = sessao_a.request(metodo, url, params=q, json=corpo)
-            alvo_na_url = "{rede_id}" in caminho
-            try:
-                d = J.loads(r.text); inst = d.pop("instance", None); resto = J.dumps(d)
-            except Exception:
-                inst = None; resto = r.text
-            marcas = [m for m, v in (("REDEID", alvo["rede_id"]), ("NOID", alvo["no_id"]), ("NOME_B", "l423-alvo-b")) if v in resto]
-            ok = (r.status_code in (403, 404)) if alvo_na_url else True
-            linhas.append(f"{'OK ' if ok and not marcas else 'RUIM'} {r.status_code:>3} {metodo:<6} {caminho:<58} alvoB={alvo_na_url!s:<5} vaz={','.join(marcas) or '-'}")
+        r = _pedir(sessao_a, metodo, caminho, alvo)
+        f = _pedir(sessao_a, metodo, caminho, fantasma)
+        marcas = []
+        resto = _normal(r.text)
+        if alvo["rede_id"] in resto or alvo["no_id"] in resto:
+            marcas.append("UUID_DE_B")
+        if "l423-alvo-b" in resto:
+            marcas.append("NOME_DE_B")
+        if alvo["rede_id"] in r.text and "UUID_DE_B" not in marcas:
+            marcas.append("so_instance")
+        oraculo = "" if (r.status_code == f.status_code and resto == _normal(f.text)) else \
+            f"ORACULO({r.status_code}/{f.status_code})"
+        linhas.append(f"{r.status_code:>3} {metodo:<7}{caminho:<55} {','.join(marcas) or '-':<22}{oraculo}")
     print("\n===DIAG===")
-    print("\n".join(l for l in linhas if l.startswith("RUIM")) or "(nenhuma RUIM)")
-    print(f"--- total {len(linhas)}, ruins {sum(1 for l in linhas if l.startswith('RUIM'))}")
+    print("\n".join(linhas))
     print("===FIM===")
