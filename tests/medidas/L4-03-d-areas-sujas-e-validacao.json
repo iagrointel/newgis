@@ -1,18 +1,18 @@
 {
  "item": "L4-03-d-areas-sujas-e-validacao",
- "assinado_por": "gerente (retomada após queda por cota da sessão anterior; trabalho em disco recolhido e concluído)",
- "gerado_em": "2026-09-07T13:20:00Z",
- "git_sha": "12edbce60d62748860fe6e8e216fb44bef1118b3",
- "maquina": "12 vCPU, 23 GB RAM (0 GB livres reportado, 13 GB buff/cache, load average 17-19 no momento das medidas de tempo — ver ressalva de carga em cada medida), disco / a 98%; PostgreSQL 16 em iagro_sat; base própria da trilha (schema plat_til403dareas, laco/trilha_ambiente.sh il403dareas)",
+ "assinado_por": "construtor l403dmerge (fusao de wt/L4-03-d-areas-sujas-e-validacao em master; re-medido contra master)",
+ "gerado_em": "2026-09-18T00:00:00Z",
+ "git_sha": "be8a27e6ffb8 (master no momento da fusao) + a fusao deste item",
+ "maquina": "12 vCPU, PostgreSQL 16 em iagro_sat; base propria da trilha (schema plat_tl403dmerge, laco/trilha_ambiente.sh l403dmerge), 321 migracoes iguais / 0 pendentes. Re-medido APOS a fusao em master: o ramo trazia o pacote de ativos na forma 1 e master ja esta na forma 2 (esquema_versao 2) — a resolucao ficou com master nesses arquivos, e o portao foi re-provado assim, nao no esquema do ramo.",
  "medidas": {
   "testes_dedicados_do_item": {
    "valor": 19,
    "unidade": "casos pytest, 0 falhas",
-   "comando": "set -a; source laco/var/trilha/il403dareas.env; set +a; bash laco/roda_teste.sh tests/api/test_areas_sujas_e_validacao.py -q"
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/l403dmerge.env; set +a; bash /home/dev/plataforma/laco/roda_teste.sh tests/api/test_areas_sujas_e_validacao.py -q -p no:warnings"
   },
   "suite_do_item_e_regressao_da_familia": {
-   "valor": "31 casos, 0 falhas (test_rede_pacote_conserto_a1_a4.py + test_regras_conectividade.py + test_regras_csv.py, atualizados para as novas rotas)",
-   "comando": "bash laco/roda_teste.sh tests/api/test_rede_pacote_conserto_a1_a4.py tests/api/test_regras_conectividade.py tests/api/test_regras_csv.py -q"
+   "valor": "19/19 do item contra master. Familia re-provada na mesma trilha: 113 casos, 0 falhas (test_regras_motor, test_pacote, test_rede_pacote_formato, test_rede_pacote, test_rede_pacote_adversario, test_rede_pacote_conserto_a1_a4, test_privilegios_declarados, test_regras_csv, test_rede_feicoes_geojson, test_rede_categorias), com test_toda_rota_declara_auth_e_privilegio deselecionado por ser falha PRE-EXISTENTE de master (14 rotas estrangeiras sem x-privilegio no docs/openapi.json comitado, arquivo que esta fusao nao tocou).",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/unit/test_regras_motor.py tests/unit/test_pacote.py tests/unit/test_rede_pacote_formato.py tests/api/test_rede_pacote.py tests/api/test_rede_pacote_adversario.py tests/api/test_rede_pacote_conserto_a1_a4.py tests/api/test_privilegios_declarados.py tests/api/test_regras_csv.py tests/api/test_rede_feicoes_geojson.py tests/api/test_rede_categorias.py -q -p no:warnings --deselect tests/api/test_privilegios_declarados.py::test_toda_rota_declara_auth_e_privilegio"
   },
   "regressao_ampla_ja_verde_com_ajuste": {
    "valor": "test_eventos.py (2 casos) verde após acrescentar as 9 rotas de rede/mapas que faltavam em eventos_esperados.py; test_privilegios_declarados.py e sem-marcador (ARQUITETURA.md) continuam com falha PRE-EXISTENTE, não tocada por este item (ver handoff)",
@@ -25,18 +25,23 @@
    "comando": "test_editar_uma_feicao_cria_uma_area_suja_visivel_no_mapa"
   },
   "validar_extensao_reconstroi_menos_que_o_total": {
-   "valor": {"feicoes_em_escopo": 2, "feicoes_total": 4, "areas_processadas": 2, "areas_restantes": 2},
+   "valor": {
+    "feicoes_em_escopo": 2,
+    "feicoes_total": 4,
+    "areas_processadas": 2,
+    "areas_restantes": 2
+   },
    "unidade": "feições",
    "portao": "contagem de linhas reescritas ≪ total, medida",
    "comando": "test_validar_extensao_pequena_limpa_so_a_area_e_reconstroi_menos_que_o_total"
   },
   "validar_tudo_tempo_medido": {
-   "valor": 74.1,
+   "valor": 28.45,
    "unidade": "ms",
-   "carga_1min": 17.26,
-   "ram_livre_gb": 0,
-   "medido_em": "2026-09-07T13:19:28Z",
-   "ressalva": "carga acima do limiar de 8 recomendado pelo brief (12 núcleos); passou com folga larga mesmo assim (74 ms contra um teto informal de segundos) — conta a favor, mas não é medida de máquina calma",
+   "carga_1min": 1.06,
+   "ram_livre_gb": 10.85,
+   "medido_em": "2026-09-18T00:00:00Z",
+   "ressalva": "medido contra master na trilha l403dmerge, maquina calma (carga 1,06 em 12 nucleos, 10,85 GB livres); lido do corpo da resposta de POST /validar_extensao (tempo_ms), com o mesmo caso do portao. As medidas anteriores ficam no historico: 74,1 ms sob carga 17 (07/09) e 36,3 ms no esquema do ramo (18/09). Teto do portao e o assert do proprio teste: espera de parede < 10 s.",
    "portao": "validar tudo na cooperativa de teste em tempo medido",
    "comando": "test_validar_tudo_com_extensao_nula_limpa_todas_as_areas_ativas (log de acesso da rota /validar_extensao)"
   },
@@ -44,11 +49,23 @@
    "valor": 15,
    "unidade": "códigos",
    "portao": ">= 15 códigos de erro documentados",
-   "lista": ["sem_regra", "terminal_errado", "regra_inexistente", "terminal_invalido",
-             "terminal_obrigatorio_ausente", "feicao_sem_conexao", "sobreposicao_dispositivo",
-             "ciclo_tier_hierarquico", "subrede_sem_controlador", "atributo_obrigatorio_nulo",
-             "geometria_invalida", "associacao_ciclo", "feicao_duplicada_geometria",
-             "tipo_sem_regra_no_pacote", "atributo_tipo_invalido"],
+   "lista": [
+    "sem_regra",
+    "terminal_errado",
+    "regra_inexistente",
+    "terminal_invalido",
+    "terminal_obrigatorio_ausente",
+    "feicao_sem_conexao",
+    "sobreposicao_dispositivo",
+    "ciclo_tier_hierarquico",
+    "subrede_sem_controlador",
+    "atributo_obrigatorio_nulo",
+    "geometria_invalida",
+    "associacao_ciclo",
+    "feicao_duplicada_geometria",
+    "tipo_sem_regra_no_pacote",
+    "atributo_tipo_invalido"
+   ],
    "ressalva": "14 de 15 provocados por teste de ponta a ponta; regra_inexistente é defensivo e inalcançável pela API com a FK corrigida (migração 20260907T1308) — ver ADR seção 'fronteira honesta'",
    "comando": "app/rede_utilidades/validacao.py (docstring do módulo) + tests/api/test_areas_sujas_e_validacao.py"
   },
@@ -69,7 +86,15 @@
    "comando": "test_validar_extensao_pequena_nao_altera_o_checksum_do_resto_da_rede"
   },
   "rotas_de_escrita_de_rede_apos_o_item": {
-   "valor": {"total": 9, "rede.editar": 6, "rede.administrar": 3, "so_leitura_get": "tracar"},
+   "valor": {
+    "total": 56,
+    "rede.editar": 47,
+    "rede.administrar": 3,
+    "rede.medir": 2,
+    "conteudo.criar": 1,
+    "rls:visibilidade": 3,
+    "nota": "o total cresceu de 9 para 56 porque o ramo agora carrega a fusão de TODOS os itens L4 (subredes, diagrama, osm/bdgd/teksi, medicao, atributos). A distribuição por privilégio é a que test_toda_rota_de_escrita... fixa em `excecoes` e confere na prática"
+   },
    "unidade": "rotas HTTP",
    "comando": "app.main.app.openapi() filtrado por /api/rede e método post/put/patch/delete; test_toda_rota_de_escrita_de_rede_exige_rede_editar_ou_administrar_no_openapi_e_na_pratica atualizado"
   },

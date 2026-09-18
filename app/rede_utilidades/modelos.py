@@ -538,6 +538,16 @@ class ModoTracadoResultado(BaseModel):
     modo: str
 
 
+# de wt/il403dareas — na fusão de 11/09 este resultado se chamava TracadoResultado e colidiu com o
+# TracadoResultado do traçado de rede (item L4-02-a), de campos diferentes; o nome novo desempata os dois.
+class TracadoAreaSujaResultado(BaseModel):
+    rede_id: str
+    cruza_area_suja: bool
+    bloqueado: bool
+    modo: str
+    area_suja: dict | None = None
+
+
 # de wt/il406dcateg
 class CategoriasEntrada(BaseModel):
     categorias: list[str] = Field(min_length=0, max_length=64)

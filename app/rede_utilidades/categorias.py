@@ -113,13 +113,16 @@ def redefinir_restricoes(cur, tenant_id: int, rede_id: str, tipo_id: str, restri
 
 
 def criar_feicao(cur, tenant_id: int, rede_id: str, tipo_id: str, codigo: str, controlador_ativo: bool) -> dict:
-    _tipo(cur, rede_id, tipo_id)
+    t = _tipo(cur, rede_id, tipo_id)
 
     try:
+        # grupo_id passou a NOT NULL quando a linhagem do applyEdits fez de rede_feicao a tabela de feição
+        # com geometria; aqui a feição é o nó abstrato do passeio de isolamento (sem geometria, atributos
+        # default '{}'), e o grupo é o do tipo — sempre conhecido.
         cur.execute(
-            "INSERT INTO plat.rede_feicao(tenant_id, rede_id, tipo_id, codigo, controlador_ativo, suja) "
-            "VALUES (%s, %s::uuid, %s::uuid, %s, %s, true) RETURNING id, codigo, controlador_ativo, suja",
-            (tenant_id, rede_id, tipo_id, codigo, controlador_ativo),
+            "INSERT INTO plat.rede_feicao(tenant_id, rede_id, grupo_id, tipo_id, codigo, controlador_ativo, suja) "
+            "VALUES (%s, %s::uuid, %s::uuid, %s::uuid, %s, %s, true) RETURNING id, codigo, controlador_ativo, suja",
+            (tenant_id, rede_id, t["grupo_id"], tipo_id, codigo, controlador_ativo),
         )
     except psycopg2.errors.UniqueViolation as e:
         raise ErroAPI(409, "feicao_existente", "já existe feição com esse código para este tipo") from e
