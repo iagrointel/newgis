@@ -2161,3 +2161,75 @@ CASOS.update({
         publico=True, verificar=_sem_marca)
     for metodo, caminho, url in _SVC3
 })
+
+
+def _descritor_un_constante(p: Preparacao, j: Any) -> None:
+    """O descritor de `unitIdentifiers` tem de ser uma CONSTANTE. É o que o torna inofensivo: como a
+    resposta é idêntica para um id de rede de A, um de B e um que não existe, ela não conta a ninguém se a
+    rede do vizinho existe. Comparar o corpo inteiro com o literal é o que prende essa propriedade — se um
+    dia a rota passar a refletir o `{servico}` pedido, o nome da rede, a contagem de tipos ou o inquilino,
+    este caso reprova. `_sem_marca` sozinho não pegaria um reflexo que não fosse marca de B.
+    """
+    esperado = {"currentVersion", "description", "operations"}
+    assert isinstance(j, dict) and set(j) == esperado, f"descritor de unitIdentifiers mudou de forma: {j}"
+    assert j["operations"] == ["query", "reserve"], j
+    _sem_marca(p, j)
+
+
+# ---- LEVA 3b: notebooks, fachadas ArcGIS sem item, CSW e servidor de vídeo.
+#
+# `/notebooks/{slug}` é o cruzamento mais direto de toda esta varredura: `{slug}` É o slug do INQUILINO
+# (app/notebooks/rotas.py chama `_slug_ou_404(auth, slug)`), então A pedindo `/notebooks/demo2/...` é
+# literalmente A pedindo o ambiente de notebook de B — com o contêiner, os arquivos e o kernel de B dentro.
+# Os cinco métodos do proxy (`{caminho:path}`) entram um a um.
+_NB = "demo2"
+_CAM_NB = "lab/api/contents"
+CASOS.update({
+    ("GET", "/notebooks/{slug}"): Caso(lambda p: f"/notebooks/{_NB}"),
+    ("GET", "/notebooks/{slug}/"): Caso(lambda p: f"/notebooks/{_NB}/"),
+    **{(m, "/notebooks/{slug}/{caminho}"): Caso(lambda p: f"/notebooks/{_NB}/{_CAM_NB}", lambda p: {})
+       for m in ("GET", "POST", "PUT", "PATCH", "DELETE")},
+    # ---- UtilityNetworkServer: `{servico}` é a rede, e o alvo é a rede REAL de B.
+    # O DESCRITOR (`/unitIdentifiers` sem sufixo) e um caso a parte: ele so autentica e devolve uma
+    # constante — `currentVersion`, texto fixo e a lista de operacoes — sem NUNCA ler `{servico}`
+    # (app/rede_utilidades/rotas_esri_un.py::descritor). Por isso responde 200 tambem para a rede de B, e
+    # isso NAO e vazamento: a resposta e a mesma para id de A, id de B e id que nao existe, entao nao serve
+    # de oraculo de existencia. E exatamente isso que o caso prende — 200 constante e sem marca de B.
+    **{(m, "/rest/services/{servico}/UtilityNetworkServer/unitIdentifiers"): Caso(
+        lambda p: f"/rest/services/{_rd(p)}/UtilityNetworkServer/unitIdentifiers?f=json", lambda p: {},
+        publico=True, aceita=frozenset({200}), verificar=_descritor_un_constante)
+       for m in ("GET", "POST")},
+    # `query` e `reserve`, ao contrario, RESOLVEM o servico numa rede (`_rede_do_servico`) e leem faixa,
+    # numeracao e ativo dela — sao o cruzamento de verdade. `objects`/`object` sao obrigatorios: sem eles o
+    # 422 vem antes de a rota chegar a rede de B e nada e medido.
+    **{(m, "/rest/services/{servico}/UtilityNetworkServer/unitIdentifiers/query"): Caso(
+        lambda p: (f"/rest/services/{_rd(p)}/UtilityNetworkServer/unitIdentifiers/query?f=json"
+                   f"&objects=%5B%7B%22sourceId%22%3A1%2C%22globalIds%22%3A%5B%22{UUID_NULO}%22%5D%7D%5D"),
+        lambda p: {}) for m in ("GET", "POST")},
+    **{(m, "/rest/services/{servico}/UtilityNetworkServer/unitIdentifiers/reserve"): Caso(
+        lambda p: (f"/rest/services/{_rd(p)}/UtilityNetworkServer/unitIdentifiers/reserve?f=json"
+                   f"&object=%7B%22sourceId%22%3A1%2C%22globalId%22%3A%22{UUID_NULO}%22%7D"),
+        lambda p: {}) for m in ("GET", "POST")},
+    # ---- GPServer: geoprocessamento por ferramenta. A ferramenta é da instalação (não é de A nem de B) e o
+    # job é o alvo cruzado — um job_id de outro inquilino não pode ser lido nem cancelado por A.
+    ("GET", "/rest/services/{ferramenta}/GPServer"): Caso(
+        lambda p: "/rest/services/zz-ferramenta/GPServer?f=json"),
+    ("GET", "/rest/services/{ferramenta}/GPServer/{tarefa}"): Caso(
+        lambda p: "/rest/services/zz-ferramenta/GPServer/zz-tarefa?f=json"),
+    **{(m, f"/rest/services/{{ferramenta}}/GPServer/{{tarefa}}/{acao}"): Caso(
+        lambda p, a=acao: f"/rest/services/zz-ferramenta/GPServer/zz-tarefa/{a}?f=json", lambda p: {})
+       for acao in ("execute", "submitJob") for m in ("GET", "POST")},
+    ("GET", "/rest/services/{ferramenta}/GPServer/{tarefa}/jobs/{job_id}"): Caso(
+        lambda p: f"/rest/services/zz-ferramenta/GPServer/zz-tarefa/jobs/{p.job_b['id']}?f=json"),
+    **{(m, "/rest/services/{ferramenta}/GPServer/{tarefa}/jobs/{job_id}/cancel"): Caso(
+        lambda p: f"/rest/services/zz-ferramenta/GPServer/zz-tarefa/jobs/{p.job_b['id']}/cancel?f=json",
+        lambda p: {}) for m in ("GET", "POST")},
+    ("GET", "/rest/services/{ferramenta}/GPServer/{tarefa}/jobs/{job_id}/results/{parametro}"): Caso(
+        lambda p: f"/rest/services/zz-ferramenta/GPServer/zz-tarefa/jobs/{p.job_b['id']}/results/saida?f=json"),
+    # ---- CSW: catálogo OGC aberto da instalação. Não pode listar item de inquilino nenhum sem credencial.
+    ("GET", "/csw"): Caso(lambda p: "/csw?service=CSW&request=GetCapabilities",
+                          publico=True, aceita=frozenset({200}), verificar=_sem_marca),
+    # ---- servidor de vídeo por caminho: a defesa aqui é de travessia de caminho, e o caso tenta sair da raiz
+    ("GET", "/videos/arquivo/{caminho}"): Caso(
+        lambda p: "/videos/arquivo/..%2F..%2Fetc%2Fpasswd", publico=True, verificar=_sem_marca),
+})
