@@ -280,9 +280,10 @@ def _rotas_amc() -> list[tuple[str, str]]:
 
 
 def test_adv_as_21_rotas_de_amc_estao_todas_cobertas_por_este_ataque():
-    # achado 16/09: 25 rotas hoje (chegaram as 4 de L3-06-criterios-de-feicao e L3-08-pareto depois das 21
-    # originais); o nome do teste fica como prova histórica do número que motivou o ataque.
-    assert len(_rotas_amc()) == 25, _rotas_amc()
+    # achado 18/09: 35 rotas hoje — as 25 de 16/09 mais as 10 que chegaram depois (7 de L3-01-h-presets, matriz
+    # e previsão de L3-01-g e L3-01-matriz); o nome do teste fica como prova histórica do número que motivou o
+    # ataque.
+    assert len(_rotas_amc()) == 35, _rotas_amc()
 
 
 def test_adv_nenhuma_das_21_rotas_entrega_dado_de_outro_inquilino(sessao_a, sessao_b, conexao_plat_app):
@@ -306,10 +307,20 @@ def test_adv_nenhuma_das_21_rotas_entrega_dado_de_outro_inquilino(sessao_a, sess
     # (plat.escala_execucao, não plat.amc_execucao): motor de grades multiescala, próprio de B.
     pareto_b = _execucao_pareto_de(sessao_b)
     eid_pareto, fid_pareto = pareto_b["execucao"]["id"], pareto_b["fator"]["id"]
+    # as 7 rotas de L3-01-h-presets (achado 18/09): preset de B por uuid de tabela — fora do inquilino é 404
+    # pela RLS de plat.amc_preset. O documento de exportar não carrega o id (app/amc/presets.py), então A
+    # importar a cópia não ecoa marca nenhuma de B.
+    r = sessao_b.post("/api/amc/presets", json={"nome": f"{PREFIXO} preset b", "descricao": "da sonda",
+                                                "escopo": "usuario",
+                                                "conteudo": {"fatores": ["chuva"], "pesos": {"chuva": 1.0}}})
+    assert r.status_code == 201, r.text
+    preset_b = r.json()
+    pid = preset_b["id"]
+    doc_export_b = sessao_b.get(f"/api/amc/presets/{pid}/exportar").json()
 
     mid, cid, eid, vh = modelo_b["id"], conjunto_b["id"], execucao_b["id"], modelo_b["versao_hash"]
     # marcas longas de propósito: "b1" apareceria por acaso dentro de qualquer sha256
-    marcas = {mid, cid, eid, MARCA_UNIDADE, eid_pareto, fid_pareto}
+    marcas = {mid, cid, eid, MARCA_UNIDADE, eid_pareto, fid_pareto, pid}
     # o hash da versão e o id do item de B são função do DOCUMENTO que A mandou (A escreve o que quiser no
     # próprio modelo), então nas duas rotas que ECOAM o documento eles não são vazamento. O que importaria —
     # A conseguir RESOLVER a camada de B — é conferido logo abaixo com POST /api/amc/execucoes.
@@ -363,8 +374,25 @@ def test_adv_nenhuma_das_21_rotas_entrega_dado_de_outro_inquilino(sessao_a, sess
         ("POST", "/api/amc/pareto/camada", "/api/amc/pareto/camada",
          {"execucao_id": eid_pareto,
           "objetivos": [{"fator_id": fid_pareto, "direcao": "maximizar", "base": "favorabilidade"}]}),
+        # L3-01-h-presets, L3-01-g-matriz e previsão (achado 18/09): preset de B por id é 404 (o integrado é de
+        # todos e não carrega marca de B); a listagem não traz B; importar a cópia não ecoa id de B; a matriz da
+        # execução de B é 404; a previsão não tem estado — o pedido inteiro vem de quem chama.
+        ("GET", "/api/amc/presets", "/api/amc/presets?limite=200", None),
+        ("POST", "/api/amc/presets", "/api/amc/presets",
+         {"nome": f"{PREFIXO} sonda preset", "descricao": "da sonda", "escopo": "usuario",
+          "conteudo": {"fatores": ["chuva"], "pesos": {"chuva": 1.0}}}),
+        ("GET", "/api/amc/presets/{id}", f"/api/amc/presets/{pid}", None),
+        ("PATCH", "/api/amc/presets/{id}", f"/api/amc/presets/{pid}", {"nome": "x"}),
+        ("DELETE", "/api/amc/presets/{id}", f"/api/amc/presets/{pid}", None),
+        ("GET", "/api/amc/presets/{id}/exportar", f"/api/amc/presets/{pid}/exportar", None),
+        ("POST", "/api/amc/presets/importar", "/api/amc/presets/importar", doc_export_b),
+        ("POST", "/api/amc/presets/{id}/aplicar", f"/api/amc/presets/{pid}/aplicar",
+         {"ids_fatores": ["chuva"], "fatores": [[80.0], [70.0]]}),
+        ("GET", "/api/amc/execucoes/{execucao_id}/matriz", f"/api/amc/execucoes/{eid}/matriz", None),
+        ("POST", "/api/amc/transformacoes/previsao", "/api/amc/transformacoes/previsao",
+         {"transformacao": {"tipo": "linear", "minimo": 0, "maximo": 100}, "valores": [1.0, 50.0, 100.0]}),
     ]
-    assert sorted((m, p) for m, p, _u, _c in sondas) == _rotas_amc(), "sonda não cobre as 25 rotas"
+    assert sorted((m, p) for m, p, _u, _c in sondas) == _rotas_amc(), "sonda não cobre as 35 rotas"
     criados = []
     try:
         for metodo, _padrao, url, corpo in sondas:
@@ -382,6 +410,9 @@ def test_adv_nenhuma_das_21_rotas_entrega_dado_de_outro_inquilino(sessao_a, sess
                 criados.append(("/api/amc/modelos", resposta.json()["id"]))
             if resposta.status_code == 201 and metodo == "POST" and url.endswith("/conjuntos"):
                 criados.append(("/api/amc/conjuntos", resposta.json()["id"]))
+            if resposta.status_code == 201 and metodo == "POST" and \
+                    (url.endswith("/presets") or url.endswith("/presets/importar")):
+                criados.append(("/api/amc/presets", resposta.json()["id"]))
         # A copiou o documento de B (ele foi ecoado); mesmo assim não consegue RESOLVER as camadas de B
         r = sessao_a.post("/api/amc/modelos", json={"definicao": definicao_b})
         assert r.status_code == 201, r.text
@@ -409,6 +440,7 @@ def test_adv_nenhuma_das_21_rotas_entrega_dado_de_outro_inquilino(sessao_a, sess
         sessao_b.delete(f"/api/amc/execucoes/{eid}")
         sessao_b.delete(f"/api/amc/conjuntos/{cid}")
         sessao_b.delete(f"/api/amc/modelos/{mid}")
+        sessao_b.delete(f"/api/amc/presets/{pid}")
         _limpar_execucao_pareto(sessao_b, pareto_b)
 
 
@@ -680,7 +712,11 @@ def test_adv_o_milhao_de_celulas_que_nao_foi_gerado(sessao_a, conexao_plat_app):
     /mnt/pgdata não tiver folga, o teste é pulado em vez de encher o disco."""
     import shutil
 
-    livre_gb = shutil.disk_usage("/mnt/pgdata").free / 1e9
+    try:
+        livre_gb = shutil.disk_usage("/mnt/pgdata").free / 1e9
+    except FileNotFoundError:
+        # 18/09: neste servidor o Postgres da trilha não mora em /mnt/pgdata — pular em vez de quebrar
+        pytest.skip("/mnt/pgdata não existe neste servidor")
     if livre_gb < 8:
         pytest.skip(f"/mnt/pgdata com {livre_gb:.1f} GB livres: não se gera 1 milhão de células aqui")
     # 0,92° dava 1.000.175 células com o teto em 1.000.000: desde o conserto do achado 4 (06/09/2026) o teto vale
