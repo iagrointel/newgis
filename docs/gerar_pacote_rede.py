@@ -129,9 +129,19 @@ def gerar_markdown() -> str:
         )
 
         partes.append("\n### Regras de conexão\n")
+
+        def _ref(ref):
+            if not isinstance(ref, dict):
+                return "—"
+            texto = f"`{ref['grupo']}/{ref['tipo']}`"
+            if ref.get("terminal"):
+                texto += f" (terminal `{ref['terminal']}`)"
+            return texto
+
         partes += _tabela(
-            [[r["tipo"], f"`{r['de']}`", f"`{r['para']}`", r.get("descricao", "")] for r in doc["regras"]],
-            ["tipo de regra", "de", "para", "o que diz"],
+            [[r["tipo"], _ref(r["de"]), _ref(r.get("via")), _ref(r["para"]), r.get("descricao", "")]
+             for r in doc["regras"]],
+            ["tipo de regra", "de", "via", "para", "o que diz"],
         )
     return "\n".join(partes) + "\n"
 

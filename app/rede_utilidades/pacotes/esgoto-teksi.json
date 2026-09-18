@@ -1630,7 +1630,7 @@
   }
  ],
  "esquema": "plat.rede.pacote",
- "esquema_versao": 1,
+ "esquema_versao": 2,
  "grupos": [
   {
    "camadas_fonte": [
@@ -1726,185 +1726,359 @@
  ],
  "pacote": {
   "codigo": "esgoto-teksi",
-  "descricao": "Pacote de ativos de esgoto sanitário e drenagem pluvial, com o tier na BACIA (partição, não hierarquia) e o escoamento por gravidade: o trecho declara o sentido pela ordem dos vértices e carrega a cota de montante e a de jusante, e a plataforma confere se a cota concorda com o sentido declarado. Trecho de categoria recalque fica de fora dessa conferência, porque ali quem manda é a bomba. As colunas de origem são as do datamodel aberto TEKSI (views tww_app.vw_tww_reach e tww_app.vw_tww_wastewater_structure), lidas na definição de tabela do projeto e ainda não conferidas contra dado real: todo atributo sai com origem.conferida = false.",
+  "descricao": "Pacote de ativos de esgoto sanitário e drenagem pluvial, com o tier na BACIA (partição, não hierarquia) e o escoamento por gravidade: o trecho declara o sentido pela ordem dos vértices e carrega a cota de montante e a de jusante, e a plataforma confere se a cota concorda com o sentido declarado. Trecho de categoria recalque fica de fora dessa conferência, porque ali quem manda é a bomba. As colunas de origem são as do datamodel aberto TEKSI (views tww_app.vw_tww_reach e tww_app.vw_tww_wastewater_structure), lidas na definição de tabela do projeto e ainda não conferidas contra dado real: todo atributo sai com origem.conferida = false. Desde a versão 1.0.1 as regras seguem o esquema 2 (lados {grupo, tipo, terminal?}; a junção fica no lado \"de\" da junção-aresta), sem mudança de conteúdo.",
   "disciplina": "esgoto",
   "fonte": "https://teksi.github.io/wastewater/",
   "nome": "Esgoto sanitário e drenagem (esquema TEKSI)",
-  "versao": "1.0.0"
+  "versao": "1.0.1"
  },
  "regras": [
   {
-   "de": "poco_de_visita/1",
+   "de": {
+    "grupo": "poco_de_visita",
+    "tipo": 1
+   },
    "descricao": "caixa de inspeção pode estar contida no mesmo conjunto do poço de visita",
-   "para": "poco_de_visita/3",
+   "para": {
+    "grupo": "poco_de_visita",
+    "tipo": 3
+   },
    "tipo": "contencao"
   },
   {
-   "de": "elevatoria/1",
+   "de": {
+    "grupo": "elevatoria",
+    "tipo": 1
+   },
    "descricao": "caixa de passagem apoiada na estrutura da elevatória",
-   "para": "estrutura_especial/3",
+   "para": {
+    "grupo": "estrutura_especial",
+    "tipo": 3
+   },
    "tipo": "estrutura"
   },
   {
-   "de": "boca_de_lobo/1",
+   "de": {
+    "grupo": "boca_de_lobo",
+    "tipo": 1
+   },
    "descricao": "boca de lobo entrega na galeria pluvial",
-   "para": "galeria_pluvial/1",
+   "para": {
+    "grupo": "galeria_pluvial",
+    "tipo": 1
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "boca_de_lobo/2",
+   "de": {
+    "grupo": "boca_de_lobo",
+    "tipo": 2
+   },
    "descricao": "poço de visita pluvial recebe e entrega galeria pluvial",
-   "para": "galeria_pluvial/1",
+   "para": {
+    "grupo": "galeria_pluvial",
+    "tipo": 1
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "boca_de_lobo/2",
+   "de": {
+    "grupo": "boca_de_lobo",
+    "tipo": 2
+   },
    "descricao": "poço de visita pluvial entrega no canal de drenagem",
-   "para": "galeria_pluvial/2",
+   "para": {
+    "grupo": "galeria_pluvial",
+    "tipo": 2
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "elevatoria/1",
+   "de": {
+    "grupo": "elevatoria",
+    "tipo": 1
+   },
    "descricao": "elevatória recebe coletor tronco por gravidade",
-   "para": "coletor/2",
+   "para": {
+    "grupo": "coletor",
+    "tipo": 2
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "elevatoria/1",
+   "de": {
+    "grupo": "elevatoria",
+    "tipo": 1
+   },
    "descricao": "elevatória recebe o interceptor por gravidade",
-   "para": "coletor/3",
+   "para": {
+    "grupo": "coletor",
+    "tipo": 3
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "elevatoria/1",
+   "de": {
+    "grupo": "elevatoria",
+    "tipo": 1
+   },
    "descricao": "elevatória entrega na linha de recalque, e daí em diante a cota não decide o sentido",
-   "para": "coletor/5",
+   "para": {
+    "grupo": "coletor",
+    "tipo": 5
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "estacao_de_tratamento/1",
+   "de": {
+    "grupo": "estacao_de_tratamento",
+    "tipo": 1
+   },
    "descricao": "interceptor termina na estação de tratamento",
-   "para": "coletor/3",
+   "para": {
+    "grupo": "coletor",
+    "tipo": 3
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "estacao_de_tratamento/1",
+   "de": {
+    "grupo": "estacao_de_tratamento",
+    "tipo": 1
+   },
    "descricao": "emissário termina na estação de tratamento",
-   "para": "coletor/4",
+   "para": {
+    "grupo": "coletor",
+    "tipo": 4
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "estrutura_especial/1",
+   "de": {
+    "grupo": "estrutura_especial",
+    "tipo": 1
+   },
    "descricao": "extravasor instalado no interceptor",
-   "para": "coletor/3",
+   "para": {
+    "grupo": "coletor",
+    "tipo": 3
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "estrutura_especial/1",
+   "de": {
+    "grupo": "estrutura_especial",
+    "tipo": 1
+   },
    "descricao": "extravasor desvia o excedente para o emissário",
-   "para": "coletor/4",
+   "para": {
+    "grupo": "coletor",
+    "tipo": 4
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "estrutura_especial/2",
+   "de": {
+    "grupo": "estrutura_especial",
+    "tipo": 2
+   },
    "descricao": "câmara de transição entre dois coletores de rede",
-   "para": "coletor/1",
+   "para": {
+    "grupo": "coletor",
+    "tipo": 1
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "estrutura_especial/3",
+   "de": {
+    "grupo": "estrutura_especial",
+    "tipo": 3
+   },
    "descricao": "caixa de passagem no coletor tronco",
-   "para": "coletor/2",
+   "para": {
+    "grupo": "coletor",
+    "tipo": 2
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "poco_de_visita/1",
+   "de": {
+    "grupo": "poco_de_visita",
+    "tipo": 1
+   },
    "descricao": "poço de visita recebe e entrega coletor de rede",
-   "para": "coletor/1",
+   "para": {
+    "grupo": "coletor",
+    "tipo": 1
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "poco_de_visita/1",
+   "de": {
+    "grupo": "poco_de_visita",
+    "tipo": 1
+   },
    "descricao": "poço de visita recebe e entrega coletor tronco",
-   "para": "coletor/2",
+   "para": {
+    "grupo": "coletor",
+    "tipo": 2
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "poco_de_visita/1",
+   "de": {
+    "grupo": "poco_de_visita",
+    "tipo": 1
+   },
    "descricao": "poço de visita recebe e entrega interceptor",
-   "para": "coletor/3",
+   "para": {
+    "grupo": "coletor",
+    "tipo": 3
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "poco_de_visita/1",
+   "de": {
+    "grupo": "poco_de_visita",
+    "tipo": 1
+   },
    "descricao": "poço de visita recebe e entrega emissário",
-   "para": "coletor/4",
+   "para": {
+    "grupo": "coletor",
+    "tipo": 4
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "poco_de_visita/1",
+   "de": {
+    "grupo": "poco_de_visita",
+    "tipo": 1
+   },
    "descricao": "a linha de recalque termina num poço de visita, onde volta a escoar por gravidade",
-   "para": "coletor/5",
+   "para": {
+    "grupo": "coletor",
+    "tipo": 5
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "poco_de_visita/1",
+   "de": {
+    "grupo": "poco_de_visita",
+    "tipo": 1
+   },
    "descricao": "sifão invertido começa e termina em poço de visita",
-   "para": "coletor/6",
+   "para": {
+    "grupo": "coletor",
+    "tipo": 6
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "poco_de_visita/1",
+   "de": {
+    "grupo": "poco_de_visita",
+    "tipo": 1
+   },
    "descricao": "ligação predial pode chegar direto no poço de visita",
-   "para": "ligacao_predial/1",
+   "para": {
+    "grupo": "ligacao_predial",
+    "tipo": 1
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "poco_de_visita/2",
+   "de": {
+    "grupo": "poco_de_visita",
+    "tipo": 2
+   },
    "descricao": "poço de queda recebe coletor de rede com desnível",
-   "para": "coletor/1",
+   "para": {
+    "grupo": "coletor",
+    "tipo": 1
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "poco_de_visita/2",
+   "de": {
+    "grupo": "poco_de_visita",
+    "tipo": 2
+   },
    "descricao": "poço de queda recebe coletor tronco com desnível",
-   "para": "coletor/2",
+   "para": {
+    "grupo": "coletor",
+    "tipo": 2
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "poco_de_visita/3",
+   "de": {
+    "grupo": "poco_de_visita",
+    "tipo": 3
+   },
    "descricao": "caixa de inspeção entrega no coletor de rede",
-   "para": "coletor/1",
+   "para": {
+    "grupo": "coletor",
+    "tipo": 1
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "poco_de_visita/3",
+   "de": {
+    "grupo": "poco_de_visita",
+    "tipo": 3
+   },
    "descricao": "caixa de inspeção recebe a ligação predial",
-   "para": "ligacao_predial/1",
+   "para": {
+    "grupo": "ligacao_predial",
+    "tipo": 1
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "ponto_de_lancamento/1",
+   "de": {
+    "grupo": "ponto_de_lancamento",
+    "tipo": 1
+   },
    "descricao": "emissário termina no ponto de lançamento",
-   "para": "coletor/4",
+   "para": {
+    "grupo": "coletor",
+    "tipo": 4
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "ponto_de_lancamento/1",
+   "de": {
+    "grupo": "ponto_de_lancamento",
+    "tipo": 1
+   },
    "descricao": "galeria pluvial termina no ponto de lançamento",
-   "para": "galeria_pluvial/1",
+   "para": {
+    "grupo": "galeria_pluvial",
+    "tipo": 1
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "ponto_de_lancamento/1",
+   "de": {
+    "grupo": "ponto_de_lancamento",
+    "tipo": 1
+   },
    "descricao": "canal de drenagem termina no ponto de lançamento",
-   "para": "galeria_pluvial/2",
+   "para": {
+    "grupo": "galeria_pluvial",
+    "tipo": 2
+   },
    "tipo": "juncao_aresta"
   },
   {
-   "de": "elevatoria/1",
+   "de": {
+    "grupo": "elevatoria",
+    "tipo": 1
+   },
    "descricao": "conjunto motobomba faz parte da elevatória",
-   "para": "elevatoria/2",
+   "para": {
+    "grupo": "elevatoria",
+    "tipo": 2
+   },
    "tipo": "juncao_juncao"
   }
  ],
