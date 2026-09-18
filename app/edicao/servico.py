@@ -443,6 +443,11 @@ def _apagar(
             {"id": feicao.id, "versao_enviada": feicao.versao, "versao_atual": atual["versao"]},
         )
     cur.execute(f'DELETE FROM "{schema}"."{tabela}" WHERE globalid = %s', (feicao.id,))
+    # cascata de anexos (portão L2-03-e: "apagar feição apaga anexos"): apagamento LÓGICO na mesma
+    # transação do DELETE — o objeto do Garage sai depois, pelo ceife de órfãos. Import local: anexos já
+    # importa este módulo no topo, um import aqui fecharia ciclo.
+    from app.edicao.anexos import apagar_das_feicoes
+    apagar_das_feicoes(cur, schema, tabela, [feicao.id])
     return ResultadoFeicao(sucesso=True, id=feicao.id, fid=atual["fid"]), []
 
 

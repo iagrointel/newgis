@@ -127,6 +127,7 @@ class OrgEntrada(Modelo):
     termo_acesso: str | None = Field(default=None, max_length=limites.ORG_TERMO_MAX)
     cota_bytes: int = Field(ge=limites.ORG_COTA_BYTES_MIN)
     cota_usuarios: int = Field(ge=limites.ORG_COTA_USUARIOS_MIN)
+    anexos_remover_exif_gps: bool = Field(default=False)
     auth: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -152,6 +153,7 @@ class OrgSaida(Saida):
     termo_acesso: str | None
     armazenamento: dict[str, Any]
     usuarios: dict[str, Any]
+    anexos_remover_exif_gps: bool
     auth: dict[str, Any]
 
 
@@ -230,6 +232,8 @@ def _org_json(cur, auth: Auth) -> dict:
             "bytes_usados": objetos.uso(auth.tenant_slug),
         },
         "usuarios": {"cota": u["cota"], "teto": u["teto"], "ativos": u["ativos"]},
+        # L2-03-e (LGPD): ligado = anexo de imagem entra no Garage já sem o bloco GPS do EXIF
+        "anexos_remover_exif_gps": bool(config.get("anexos_remover_exif_gps")),
         "auth": _auth_completo(politica),
     }
 
@@ -346,6 +350,7 @@ def org_gravar(corpo: OrgEntrada, request: Request, auth: Auth = autenticado("or
         "banner_aviso": _txt(corpo.banner_aviso),
         "termo_acesso": _txt(corpo.termo_acesso),
         "cota_usuarios": corpo.cota_usuarios,
+        "anexos_remover_exif_gps": bool(corpo.anexos_remover_exif_gps),
         "auth": corpo.auth,
     }
     with db.db(auth.contexto()) as cur:

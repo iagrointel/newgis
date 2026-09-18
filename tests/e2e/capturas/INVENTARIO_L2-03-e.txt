@@ -1,0 +1,18 @@
+# Inventário da captura do portão e2e do item L2-03-e-anexos.
+#
+# Os PNG não entram no git (.gitignore: tests/e2e/capturas/*.png — o repositório não carrega imagem).
+# A prova é este inventário mais o teste que regenera tudo (sobe a própria infra em portas efêmeras:
+# GarageDuble em processo, Martin da trilha, app por scripts/servir_local.py com cert autoassinado):
+#   set -a; source laco/var/trilha/<t>.env; set +a
+#   bash laco/roda_teste.sh tests/e2e/test_mapa_popup_anexos.py -q
+# Quem quiser conferir roda o teste e compara nome, tamanho e sha256 desta lista (bytes/sha256 variam
+# a cada corrida: porta efêmera e ids novos entram na imagem — os valores abaixo são da corrida do
+# relatório, 18/09/2026).
+#
+# anexos_popup = /sig com a bancada mapa-popup (L2-01-d) ligada, clique no centro das três feições
+#                coincidentes: popup na página "1 de 3" com a seção "anexos (1)", a miniatura do anexo
+#                foto-e2e-fid1.png carregada (GET /anexos/{id}/miniatura, naturalWidth > 0) e o link de
+#                download apontando para /anexos/{id}.
+#
+# nome  bytes  sha256
+L2-03-e-anexos_popup.png  696286  e0fd3766dfd421ec8434cca1b8e3803cee73bd6b6952ba35c82a005c009dc11a

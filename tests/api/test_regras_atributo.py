@@ -46,9 +46,12 @@ VIRTUAIS = [{"nome": "area_m2", "expressao": "$area * 10000", "alias": "área em
 def fabrica(conexao_plat_app):
     f = FabricaCamada(conexao_plat_app)
     yield f
-    # a camada de erros (tabela e_ + item) que o job cria fica fora da lista da fábrica: limpa aqui
+    # a camada de erros (tabela e_ + item) que o job cria fica fora da lista da fábrica: limpa aqui.
+    # plat.item não aceita DELETE direto de plat_app (política `USING (false)`): lixeira + expurgo, o
+    # caminho de produção — senão o item de erros vazava órfão (mesma falha que o FabricaCamada tinha).
     con = conexao_plat_app
-    for schema, _tabela, item_id in list(f.criadas):
+    for schema, _tabela, item_id, tenant_id, usuario_id in list(f.criadas):
+        contexto(con, tenant_id, usuario_id=usuario_id, login="admin")
         with con.cursor() as cur:
             cur.execute("SELECT dados FROM plat.item WHERE id = %s::uuid", (item_id,))
             r = cur.fetchone()
@@ -56,7 +59,8 @@ def fabrica(conexao_plat_app):
             if val.get("tabela_erros"):
                 cur.execute(f'DROP TABLE IF EXISTS "{schema}"."{val["tabela_erros"]}" CASCADE')
             if val.get("item_erros_id"):
-                cur.execute("DELETE FROM plat.item WHERE id = %s::uuid", (val["item_erros_id"],))
+                cur.execute("SELECT plat.item_lixeira(%s::uuid, true)", (val["item_erros_id"],))
+                cur.execute("SELECT plat.item_expurgar(%s::uuid)", (val["item_erros_id"],))
     con.commit()
     f.limpar()
 

@@ -11,9 +11,13 @@ EXATAMENTE o contrato que o caminho usa:
   Admin: ListBuckets/CreateBucket, ListKeys/CreateKey, AllowBucketKey, UpdateBucket (cota) e
          GetBucketInfo — o que `objetos.garantir_bucket` chama.
 
-O que ele NÃO faz, de propósito: multipart, ListObjects, Range, GetKeyInfo, endpoint web. Nada disso
-passa no caminho provado aqui (arquivos pequenos entram num PUT só por `objetos.guardar`); quem precisar
-disso está testando o L0-11, não um item que o USA, e deve rodar contra o Garage real.
+O que ele NÃO faz, de propósito: multipart, ListObjects, Range, GetKeyInfo, endpoint web e verificação da assinatura
+SigV4 em si — ela é prova do L0-11 contra o Garage real, não deste duble. O que ele EXIGE, desde o item
+L2-03-e-anexos: cabeçalho `Authorization` presente (assinada ou não) em todo acesso S3 e `Bearer` qualquer
+na Admin API — o Garage real devolve 403 AccessDenied ao acesso ANÔNIMO (MEDIDO na instância v2.3.0, ver
+ADR 0006 seção 3 e o docstring de `definir_web`: "GET/LIST anônimos no endpoint S3 continuam 403"), e é essa
+recusa que o portão do L2-03-e prova para a "URL direta do Garage". A API sempre assina (ClienteS3/ClienteAdmin),
+logo quem passa pela aplicação não nota a exigência.
 """
 
 from __future__ import annotations
@@ -62,8 +66,16 @@ class GarageDuble:
                 corpo = b"<Error><Code>NoSuchKey</Code><Message>nao existe</Message></Error>"
                 self._responder(404, corpo, {"Content-Type": "application/xml"})
 
+            def _proibido_anonimo(self):
+                # MEDIDO no Garage real v2.3.0 (ADR 0006): acesso sem Authorization = 403 AccessDenied.
+                corpo = b"<Error><Code>AccessDenied</Code><Message>Access Denied.</Message></Error>"
+                self._responder(403, corpo, {"Content-Type": "application/xml"})
+
             # ------------------------------------------------------------ S3 path-style
             def _s3(self, metodo: str):
+                if not self.headers.get("Authorization"):
+                    self._proibido_anonimo()
+                    return
                 partes = urllib.parse.unquote(self.path.split("?")[0]).lstrip("/").split("/", 1)
                 balde = partes[0]
                 chave = partes[1] if len(partes) > 1 else ""
@@ -153,6 +165,9 @@ class GarageDuble:
             def do_GET(self):  # noqa: N802 — nome exigido pela BaseHTTPRequestHandler
                 caminho, _, qs = self.path.partition("?")
                 if caminho.startswith("/v2/"):
+                    if not self.headers.get("Authorization", "").startswith("Bearer "):
+                        self._json(403, {"error": "AccessDenied"})
+                        return
                     self._admin_get(caminho, {k: v[0] for k, v in urllib.parse.parse_qs(qs).items()})
                 else:
                     self._s3("GET")
@@ -169,6 +184,9 @@ class GarageDuble:
             def do_POST(self):  # noqa: N802
                 caminho, _, qs = self.path.partition("?")
                 if caminho.startswith("/v2/"):
+                    if not self.headers.get("Authorization", "").startswith("Bearer "):
+                        self._json(403, {"error": "AccessDenied"})
+                        return
                     self._admin_post(caminho, {k: v[0] for k, v in urllib.parse.parse_qs(qs).items()})
                 else:
                     self._responder(405, b"")
@@ -226,4 +244,12 @@ if __name__ == "__main__":
         except FileNotFoundError:
             pass
         assert admin.info_bucket(balde["id"])["quotas"]["maxSize"] == 1000
+        # acesso ANÔNIMO (sem Authorization) é recusado como no Garage real (item L2-03-e)
+        import urllib.request
+        for url in (f"{g.url}/t-plat-demo/classe/x.bin", f"{g.url}/v2/ListBuckets"):
+            try:
+                urllib.request.urlopen(url, timeout=5)
+                raise AssertionError(f"anonimo devia dar 403: {url}")
+            except urllib.error.HTTPError as e:
+                assert e.code == 403, (url, e.code)
     print("servidor_garage: auto-checagem ok")

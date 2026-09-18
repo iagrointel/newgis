@@ -16,10 +16,37 @@ from tests.api.test_edicao_transacional import (  # noqa: F401 — fixtures reap
     camada_b,
     fabrica,
 )
+from tests.servidor_garage import GarageDuble
 
 PNG_1X1 = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
 )
+
+
+@pytest.fixture(scope="module")
+def garage_duble():
+    """Sem Garage nesta máquina (ver test_feicao_anexo.py): o envio de anexo grava o objeto com
+    `objetos.guardar`, que exige PLAT_GARAGE_* no Settings — remendo só neste processo (TestClient),
+    restaurado ao fim do módulo."""
+    from app.settings import settings
+
+    with GarageDuble() as g:
+        anteriores = {k: getattr(settings, k)
+                      for k in ("PLAT_GARAGE_URL", "PLAT_GARAGE_ADMIN_URL", "PLAT_GARAGE_ADMIN_TOKEN")}
+        object.__setattr__(settings, "PLAT_GARAGE_URL", g.url)
+        object.__setattr__(settings, "PLAT_GARAGE_ADMIN_URL", g.url)
+        object.__setattr__(settings, "PLAT_GARAGE_ADMIN_TOKEN", "token-do-duble-de-teste")
+        try:
+            yield g
+        finally:
+            for k, v in anteriores.items():
+                object.__setattr__(settings, k, v)
+
+
+@pytest.fixture(autouse=True)
+def _garage_pronto(garage_duble):
+    """Amarra o duble de módulo a TODOS os testes deste arquivo (o escopo de módulo não desce sozinho)."""
+    yield
 
 
 def _b64(dados: bytes) -> str:
@@ -248,7 +275,7 @@ def test_anexo_acima_do_limite_de_tamanho_e_recusado(sessao_a, camada_a, monkeyp
         f"/api/camadas/{camada_a['id']}/feicoes/{f['id']}/anexos",
         json={"nome": "grande.png", "content_type": "image/png", "conteudo": _b64(grande)},
     )
-    assert r.status_code == 422
+    assert r.status_code == 413
     assert r.json()["erro"] == "anexo_grande"
 
 
@@ -256,13 +283,15 @@ def test_anexo_no_teto_real_ainda_da_anexo_grande_nao_corpo_grande(sessao_a, cam
     """Achado do adversário (07/09): o envio é JSON com o conteúdo em base64, que incha o arquivo em ~4/3.
     Com `ANEXO_TAMANHO_MAX` (não substituído por monkeypatch aqui, ao contrário do teste acima) igual ao
     teto de corpo do middleware (item L0-12), o 413 genérico disparava ANTES desta checagem rodar, e o
-    422 "anexo_grande" nunca aparecia — o limite documentado de anexo virava letra morta na prática.
-    `ANEXO_TAMANHO_MAX` foi reduzido para caber, com folga, dentro do teto de corpo mesmo codificado."""
+    "anexo_grande" nunca aparecia — o limite documentado de anexo virava letra morta na prática.
+    `ANEXO_TAMANHO_MAX` foi reduzido para caber, com folga, dentro do teto de corpo mesmo codificado.
+    Desde o L2-03-e o específico também é 413 (portão do item; era 422 — convergência registrada em
+    tests/api/test_feicao_anexo.py): os dois 413 se distinguem pelo `erro` do corpo."""
     from app import limites
 
     assert limites.ANEXO_TAMANHO_MAX < limites.CORPO_MAX_PADRAO_BYTES * 3 // 4, (
         "ANEXO_TAMANHO_MAX tem de caber em CORPO_MAX_PADRAO_BYTES mesmo depois do inchaço de base64 (~4/3), "
-        "senão o 413 do corpo dispara antes do 422 específico do anexo"
+        "senão o 413 do corpo dispara antes do 413 específico do anexo"
     )
     f = _criar_ponto(sessao_a, camada_a["id"])
     grande = b"\x89PNG\r\n\x1a\n" + b"0" * (limites.ANEXO_TAMANHO_MAX + 10_000)
@@ -270,7 +299,7 @@ def test_anexo_no_teto_real_ainda_da_anexo_grande_nao_corpo_grande(sessao_a, cam
         f"/api/camadas/{camada_a['id']}/feicoes/{f['id']}/anexos",
         json={"nome": "grande.png", "content_type": "image/png", "conteudo": _b64(grande)},
     )
-    assert r.status_code == 422, r.text
+    assert r.status_code == 413, r.text
     assert r.json()["erro"] == "anexo_grande"
 
 

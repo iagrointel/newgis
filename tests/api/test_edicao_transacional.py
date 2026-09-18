@@ -34,7 +34,7 @@ class FabricaCamada:
 
     def __init__(self, con):
         self.con = con
-        self.criadas: list[tuple[str, str, str]] = []
+        self.criadas: list[tuple[str, str, str, int, int]] = []
 
     def criar(
         self, slug, tenant_id, usuario_id, campos, geometria="Point", regras_campo=None, edicao=None
@@ -66,7 +66,7 @@ class FabricaCamada:
                  usuario_id, usuario_id),
             )
         self.con.commit()
-        self.criadas.append((schema, tabela, item_id))
+        self.criadas.append((schema, tabela, item_id, tenant_id, usuario_id))
         return item_id, dados
 
     def linhas(self, schema: str, tabela: str, tenant_id: int, usuario_id: int) -> list[dict]:
@@ -79,10 +79,20 @@ class FabricaCamada:
             return cur.fetchall()
 
     def limpar(self):
-        for schema, tabela, item_id in self.criadas:
+        # plat.item tem política de DELETE `USING (false)` para plat_app: o único caminho é o de produção
+        # (lixeira lógica + expurgo, SECURITY DEFINER com as cascatas de versões/relações). DELETE direto
+        # remove 0 linhas EM SILÊNCIO — e como o DROP TABLE passa (DDL ignora RLS), o item virava órfão de
+        # tabela inexistente e o /sig devolvia tilejson 500 para cada um (216 acumulados nesta trilha).
+        for schema, tabela, item_id, tenant_id, usuario_id in self.criadas:
+            contexto(self.con, tenant_id, usuario_id=usuario_id, login="admin")
             with self.con.cursor() as cur:
                 cur.execute(f'DROP TABLE IF EXISTS "{schema}"."{tabela}" CASCADE')
-                cur.execute("DELETE FROM plat.item WHERE id = %s::uuid", (item_id,))
+                # anexos das feições da camada: a chave é (schema_dado, tabela_dado) — o DROP não
+                # cascateia para cá e a pilha crescia ~1000 linhas por rodada da suíte de anexos
+                cur.execute("DELETE FROM plat.feicao_anexo WHERE schema_dado = %s AND tabela_dado = %s",
+                            (schema, tabela))
+                cur.execute("SELECT plat.item_lixeira(%s::uuid, true)", (item_id,))
+                cur.execute("SELECT plat.item_expurgar(%s::uuid)", (item_id,))
         self.con.commit()
         self.criadas.clear()
 

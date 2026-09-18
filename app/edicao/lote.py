@@ -509,7 +509,13 @@ def _copiar_lote(cur, plano: Plano, lote: list[int], ator: Ator, mover: bool) ->
     _conferir_dominio_sql(cur, d["schema"], d["tabela"], d["colunas"], d["dados"].get("regras_campo") or {},
                           list(d["colunas"]), "globalid::text", novos, True)
     if mover:
+        # os anexos NÃO seguem a feição copiada (fronteira do L2-03-e, declarada no relatório do item);
+        # os da origem são marcados como em todo apagar de feição.
+        cur.execute(f'SELECT globalid FROM "{plano.schema}"."{plano.tabela}" WHERE fid = ANY(%s::bigint[])', (lote,))
+        globalids = [r["globalid"] for r in cur.fetchall()]
         cur.execute(f'DELETE FROM "{plano.schema}"."{plano.tabela}" WHERE fid = ANY(%s::bigint[])', (lote,))
+        from app.edicao.anexos import apagar_das_feicoes  # import local: anexos importa servico, ciclo
+        apagar_das_feicoes(cur, plano.schema, plano.tabela, globalids)
     return len(novos)
 
 
@@ -532,8 +538,13 @@ def executar(cur, plano: Plano, corpo: LoteEntrada, ator: Ator, progresso: Progr
             elif op == "atribuir":
                 saida.alteradas += _atualizar_sql(cur, plano, lote, ator, f"%s::{plano.tipo_campo}", [plano.valor])
             elif op == "apagar":
+                cur.execute(f'SELECT globalid FROM "{plano.schema}"."{plano.tabela}" WHERE fid = ANY(%s::bigint[])', (lote,))
+                globalids = [r["globalid"] for r in cur.fetchall()]
                 cur.execute(f'DELETE FROM "{plano.schema}"."{plano.tabela}" WHERE fid = ANY(%s::bigint[])', (lote,))
-                saida.apagadas += cur.rowcount
+                apagadas = cur.rowcount
+                from app.edicao.anexos import apagar_das_feicoes  # import local: anexos importa servico, ciclo
+                apagar_das_feicoes(cur, plano.schema, plano.tabela, globalids)
+                saida.apagadas += apagadas
             elif op == "corrigir_geometria":
                 saida.corrigidas += _corrigir_lote(cur, plano, lote, ator)
             elif op in ("copiar", "mover"):
