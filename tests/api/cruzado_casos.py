@@ -1953,3 +1953,107 @@ CASOS.update({
         lambda p: f"/api/compartilhado/{_TOK}/paineis/{_it(p)}/fontes/{UUID_NULO}/dados",
         lambda p: _PEDIDOS, publico=True, verificar=_sem_marca),
 })
+
+
+# =====================================================================================================
+# LEVA 2 (18/09/2026) — rotas de /api/rede: A aponta para a rede REAL de B (`p.rede_b`), que já nasce com o
+# pacote de ativos importado em `preparar()`. É o alvo certo: a rede carrega esquema, ativos, faixas e
+# regras de um inquilino inteiro, e o vazamento aqui seria de cadastro de rede de utilidade, não de metadado.
+#
+# `{global_id}`, `{faixa_id}`, `{importacao_id}` e `{ativo}` são nomes DENTRO da rede de B; para conhecê-los
+# de fora seria preciso atravessar a rede primeiro — que é o que o caso põe à prova. Ficam com literal `zz-`
+# ou o UUID nulo. `/api/rede/medicao/*` não leva `rede_id` no caminho: o ativo é identificado por código, e
+# o cruzamento ali é o código de medição de B pedido pela sessão de A.
+_GID = "{00000000-0000-0000-0000-000000000000}"
+
+
+def _rd(p: Preparacao) -> str:
+    return p.rede_b["id"]
+
+
+CASOS.update({
+    # ---- leitura do cadastro da rede de B
+    ("GET", "/api/rede/{rede_id}/ativos"): Caso(lambda p: f"/api/rede/{_rd(p)}/ativos"),
+    ("GET", "/api/rede/{rede_id}/ativos/{global_id}"): Caso(lambda p: f"/api/rede/{_rd(p)}/ativos/{_GID}"),
+    ("GET", "/api/rede/{rede_id}/ativos/{global_id}/renomeacoes"): Caso(
+        lambda p: f"/api/rede/{_rd(p)}/ativos/{_GID}/renomeacoes"),
+    ("GET", "/api/rede/{rede_id}/areas_sujas"): Caso(lambda p: f"/api/rede/{_rd(p)}/areas_sujas"),
+    ("GET", "/api/rede/{rede_id}/atributos/discrepancias"): Caso(
+        lambda p: f"/api/rede/{_rd(p)}/atributos/discrepancias"),
+    ("GET", "/api/rede/{rede_id}/erros"): Caso(lambda p: f"/api/rede/{_rd(p)}/erros"),
+    ("GET", "/api/rede/{rede_id}/faixas"): Caso(lambda p: f"/api/rede/{_rd(p)}/faixas"),
+    ("GET", "/api/rede/{rede_id}/importacoes"): Caso(lambda p: f"/api/rede/{_rd(p)}/importacoes"),
+    ("GET", "/api/rede/{rede_id}/regras"): Caso(lambda p: f"/api/rede/{_rd(p)}/regras"),
+    ("GET", "/api/rede/{rede_id}/regras.csv"): Caso(lambda p: f"/api/rede/{_rd(p)}/regras.csv"),
+    ("GET", "/api/rede/{rede_id}/tracar"): Caso(# `feicao_id` ou `geometria` sao obrigatorios na pratica: sem um deles o 422 vem antes da rede de B
+        lambda p: f"/api/rede/{_rd(p)}/tracar?feicao_id={UUID_NULO}"),
+    ("GET", "/api/rede/{rede_id}/epanet"): Caso(lambda p: f"/api/rede/{_rd(p)}/epanet"),
+    ("GET", "/api/rede/{rede_id}/epanet/{importacao_id}"): Caso(
+        lambda p: f"/api/rede/{_rd(p)}/epanet/{UUID_NULO}"),
+    ("GET", "/api/rede/{rede_id}/esgoto/escoamento"): Caso(lambda p: f"/api/rede/{_rd(p)}/esgoto/escoamento"),
+    ("GET", "/api/rede/{rede_id}/gas/pressao"): Caso(lambda p: f"/api/rede/{_rd(p)}/gas/pressao"),
+    # ---- escrita sobre a rede de B
+    ("POST", "/api/rede/{rede_id}/ativos"): Caso(
+        lambda p: f"/api/rede/{_rd(p)}/ativos", lambda p: {"tipo_id": UUID_NULO}),
+    ("PATCH", "/api/rede/{rede_id}/ativos/{global_id}"): Caso(
+        lambda p: f"/api/rede/{_rd(p)}/ativos/{_GID}", lambda p: {"codigo_externo": "zt-cruzado"}),
+    ("POST", "/api/rede/{rede_id}/applyEdits"): Caso(
+        lambda p: f"/api/rede/{_rd(p)}/applyEdits", lambda p: {}),
+    ("POST", "/api/rede/{rede_id}/atributos/conectividade"): Caso(
+        lambda p: f"/api/rede/{_rd(p)}/atributos/conectividade"),
+    ("POST", "/api/rede/{rede_id}/atributos/propagar-fase"): Caso(
+        lambda p: f"/api/rede/{_rd(p)}/atributos/propagar-fase"),
+    ("POST", "/api/rede/{rede_id}/atributos/sincronizar"): Caso(
+        lambda p: f"/api/rede/{_rd(p)}/atributos/sincronizar"),
+    ("POST", "/api/rede/{rede_id}/atributos/substituicoes"): Caso(
+        lambda p: f"/api/rede/{_rd(p)}/atributos/substituicoes",
+        lambda p: {"tipo_id": UUID_NULO, "atributo_codigo": "zz", "de_valor": 0, "para_valor": 1}),
+    ("POST", "/api/rede/{rede_id}/faixas"): Caso(
+        lambda p: f"/api/rede/{_rd(p)}/faixas", lambda p: {"tipo_id": UUID_NULO, "quantidade": 1}),
+    ("DELETE", "/api/rede/{rede_id}/faixas/{faixa_id}"): Caso(
+        lambda p: f"/api/rede/{_rd(p)}/faixas/{UUID_NULO}"),
+    ("POST", "/api/rede/{rede_id}/epanet"): Caso(lambda p: f"/api/rede/{_rd(p)}/epanet", lambda p: {}),
+    ("POST", "/api/rede/{rede_id}/teksi"): Caso(lambda p: f"/api/rede/{_rd(p)}/teksi", lambda p: {}),
+    ("POST", "/api/rede/{rede_id}/regras.csv"): Caso(lambda p: f"/api/rede/{_rd(p)}/regras.csv", lambda p: {}),
+    ("POST", "/api/rede/{rede_id}/validar"): Caso(lambda p: f"/api/rede/{_rd(p)}/validar"),
+    ("POST", "/api/rede/{rede_id}/validar_extensao"): Caso(
+        lambda p: f"/api/rede/{_rd(p)}/validar_extensao", lambda p: {}),
+    ("POST", "/api/rede/{rede_id}/importar-osm"): Caso(
+        lambda p: f"/api/rede/{_rd(p)}/importar-osm",
+        lambda p: {"caminho": "zz/nao/existe.osm.pbf", "nome_municipio": "zz",
+                   "municipio": AREA_MULTIESCALA_TESTE}),
+    ("PUT", "/api/rede/{rede_id}/area_sujas/modo"): Caso(
+        lambda p: f"/api/rede/{_rd(p)}/area_sujas/modo", lambda p: {"modo": "avisar"}),
+    ("PUT", "/api/rede/{rede_id}/regras/ativacao"): Caso(
+        lambda p: f"/api/rede/{_rd(p)}/regras/ativacao", lambda p: {"ativa": False}),
+    # ---- medição por ativo: o caminho não leva rede_id, o alvo é o código de medição de B
+    ("GET", "/api/rede/medicao/grandezas"): Caso(
+        lambda p: "/api/rede/medicao/grandezas", proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
+    ("GET", "/api/rede/medicao/ativos/{ativo}"): Caso(lambda p: "/api/rede/medicao/ativos/zz-ativo-de-b"),
+    ("GET", "/api/rede/medicao/ativos/{ativo}/ultimas"): Caso(
+        lambda p: "/api/rede/medicao/ativos/zz-ativo-de-b/ultimas"),
+    ("GET", "/api/rede/medicao/ativos/{ativo}/serie"): Caso(
+        lambda p: "/api/rede/medicao/ativos/zz-ativo-de-b/serie?grandeza=tensao"),
+    ("PUT", "/api/rede/medicao/ativos/{ativo}"): Caso(
+        lambda p: "/api/rede/medicao/ativos/zz-ativo-de-b", lambda p: {"cod_id": "zz-cruzado"}),
+    ("GET", "/api/rede/medicao/jusante"): Caso(
+        lambda p: f"/api/rede/medicao/jusante?rede_id={_rd(p)}&ativo=zz-ativo-de-b"),
+    # ingestao em LOTE no proprio inquilino: o 201 e o recibo do lote, e cada leitura e aceita ou
+    # rejeitada uma a uma. O cruzamento medido aqui e que uma leitura endereçada a um ativo que NAO e do
+    # inquilino do chamador nao e aceita (`aceitas == 0`) e que a resposta nao carrega marca de B.
+    # ⛔ LIMITE DECLARADO: o teste mais forte — A empurrando leitura para um ativo que EXISTE em B, para
+    # ver se a razao da recusa serve de oraculo de existencia — exige uma INSTANCIA de ativo em B, e o
+    # pacote `agua-epanet` importado em `preparar()` traz so o esquema (0 ativos, medido em 18/09). Fica
+    # como lacuna nomeada, nao como silencio.
+    ("POST", "/api/rede/medicao/leituras"): Caso(
+        lambda p: "/api/rede/medicao/leituras",
+        lambda p: {"leituras": [{"ativo": UUID_NULO, "grandeza": "tensao", "fonte": "simulador",
+                                 "ts": "2026-01-01T00:00:00Z", "valor": 1.0, "unidade": "V"}]},
+        proprio=True, aceita=frozenset({201}),
+        verificar=lambda p, j: [
+            _sem_marca(p, j),
+            (lambda: (_ for _ in ()).throw(AssertionError(
+                f"leitura para ativo fora do inquilino do chamador foi ACEITA: {j}")))()
+            if j.get("aceitas") else None,
+        ]),
+})
