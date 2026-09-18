@@ -1,0 +1,27 @@
+{
+ "item": "L1-02-e-cog-direto-por-https-e-endpoint-s3-para-o-pro",
+ "medidas": {
+  "par_da_porta_2_contra_o_armazenamento_real": {
+   "valor": 6,
+   "unidade": "testes passando",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_l102e_conexao_s3.py -W ignore -q   (trilha uniao, schema plat_tuniao; cgroup MemoryMax=4G)  [a credencial le o proprio balde (HEAD+GET); NAO escreve (PUT recusado); NAO abre o balde do outro inquilino (GET 403); token de servico nao obtem a credencial; o segredo nao entra no registro de evento; a resposta vem no-store]"
+  },
+  "isolamento_entre_inquilinos": {
+   "valor": 403,
+   "unidade": "HTTP na recusa cruzada",
+   "comando": "chave so-leitura do inquilino A contra o balde do inquilino B, mesmo endpoint e mesma assinatura: GET recusado com 403. O par positivo (mesma chave, proprio balde) devolve os bytes gravados."
+  },
+  "portao_do_adversario": {
+   "valor": 2,
+   "unidade": "clausulas XPASS(strict)",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/unit/test_l1_adv2_cog_s3_gate.py -W ignore -q   (trilha uniao, schema plat_tuniao; cgroup MemoryMax=4G)  -rxX  [docs/PRO_CONEXAO.md existe; endpoint S3 por inquilino existe]"
+  },
+  "defeito_achado_pelo_primeiro_teste": {
+   "valor": 500,
+   "unidade": "HTTP antes do conserto",
+   "comando": "GET /api/imagens/conexao-s3 falhava em TODA chamada com ForeignKeyViolation: a rota registra evento do tipo 'imagens/conexao-s3' e esse nome nao estava em plat.evento_tipo. Conserto: db/migracoes/20260918T0210_imagens_conexao_s3_evento.sql. O portao nao via porque so conferia por grep que a rota existia no codigo."
+  }
+ },
+ "gerado_em": "2026-09-18T01:49:58Z",
+ "git_sha": "e12ae8c92"
+}
