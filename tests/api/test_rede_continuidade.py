@@ -24,6 +24,7 @@ Cláusulas do portão provadas aqui:
 # ruff: noqa: F811  (fixtures importadas de módulo irmão: padrão do pytest neste repositório)
 from __future__ import annotations
 
+import datetime
 import json
 import os
 import time
@@ -71,11 +72,45 @@ def _carga_maquina() -> dict:
             "medido_em": time.strftime("%Y-%m-%dT%H:%M:%S")}
 
 
+# o comando que reproduz TODAS as medidas deste arquivo (vai dentro de cada bloco, como nos vizinhos)
+COMANDO_MEDIDA = (
+    "PLAT_ANEEL_CONTINUIDADE_RAIZ=<pasta do dado aberto da ANEEL> "
+    "PLAT_REDE_REFERENCIA_ESQUEMA=<schema da cooperativa> PLAT_GRAVAR_MEDIDAS=1 "
+    "bash laco/roda_teste.sh tests/api/test_rede_continuidade.py"
+)
+
+
 def _gravar_medida(chave: str, valor) -> None:
+    """Grava um bloco de medida no formato dos vizinhos de tests/medidas/.
+
+    ⛔ Só grava com PLAT_GRAVAR_MEDIDAS=1. Sem isso a suíte SUJAVA a árvore: rodar o teste reescrevia
+    tests/medidas/L4-10-continuidade-dec-fec.json com carimbo de hora novo, e quem rodasse a suíte para
+    conferir outra coisa encontrava o arquivo modificado. É a mesma regra da fixture `medida` de
+    tests/conftest.py, e o formato daqui é o de lá: {item, gerado_em, git_sha, medidas: {nome: {valor,
+    unidade, comando}}}.
+    """
+    if os.environ.get("PLAT_GRAVAR_MEDIDAS") != "1":
+        return
+    from app.versao import git_sha_curto
+
     MEDIDAS.parent.mkdir(parents=True, exist_ok=True)
     dados = json.loads(MEDIDAS.read_text()) if MEDIDAS.exists() else {}
     dados.setdefault("item", "L4-10-continuidade-dec-fec")
-    dados[chave] = valor
+    dados["gerado_em"] = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    dados["git_sha"] = git_sha_curto()
+    dados["maquina"] = (
+        "12 vCPU, 23 GB RAM; PostgreSQL 16 em iagro_sat; base própria da trilha "
+        "(laco/trilha_ambiente.sh), com outras sessões da casa na mesma máquina. Dado aberto da ANEEL "
+        "lido do disco local (PLAT_ANEEL_CONTINUIDADE_RAIZ); nada é baixado da agência (D21, disco)."
+    )
+    dados.setdefault("medidas", {})[chave] = {
+        "valor": valor,
+        "unidade": "contagens do bloco, com a carga da máquina no momento da medição",
+        "comando": COMANDO_MEDIDA,
+    }
+    # o formato flat da primeira escrita (08/09) não tinha `medidas`: some com as chaves soltas
+    for antiga in [k for k in dados if k not in ("item", "gerado_em", "git_sha", "medidas", "maquina")]:
+        dados.pop(antiga)
     MEDIDAS.write_text(json.dumps(dados, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
 
 
