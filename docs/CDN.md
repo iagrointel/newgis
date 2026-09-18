@@ -21,7 +21,8 @@ ADR `20260907T0300`) e o que foi decidido para ela (ADR `20260907T1522`). Ver ta
 - **A API da aplicação** (`/api/...`) nunca tem `Cache-Control` de CDN — testado em
   `tests/api/imagens/test_cdn_tiles.py::test_rota_de_api_nunca_tem_cache_control_de_cdn`.
 - **Simulação local do mecanismo de CDN** (`scripts/cdn_simulada.py`): um proxy HTTP real (socket de
-  verdade, sem biblioteca de mock) que cacheia por CAMINHO sem query string, respeita o
+  verdade, sem biblioteca de mock) que cacheia por CAMINHO + QUERY STRING completa (ver o passo 2 abaixo
+  e o ADR: chave sem query string fazia RGB e NDVI do mesmo ladrilho colidirem), respeita o
   `Cache-Control` da origem para decidir o que guardar, marca `cf-cache-status: HIT|MISS|BYPASS` e
   aceita purge por prefixo em `POST /__purgar__ {"prefixos": [...]}` (até 100 por pedido, mesmo teto
   da API real da Cloudflare).
@@ -122,4 +123,6 @@ venv/bin/python scripts/prova_cdn.py --porta-api 8274 --porta-cdn 8275 \
 
 O script sobe a API de verdade e a CDN simulada em processos próprios, mede as cláusulas 1-4 do
 portão contra sockets reais, roda as duas refutações e derruba os dois processos ao final (sucesso
-ou falha). Não precisa de rede externa nem de conta Cloudflare.
+ou falha). Não precisa de rede externa nem de conta Cloudflare. Se o Garage da trilha não responder
+(servidor sem `plataforma-garage-trilhas.service`), o script sobe o duble em memória de
+`tests/servidor_garage.py` antes de subir a API — onde o Garage existe, a prova roda contra ele.

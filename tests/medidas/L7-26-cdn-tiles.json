@@ -14,7 +14,7 @@
       "tentativas_de_purge": 9,
       "terceira_status": 403,
       "terceira_cf_cache_status": "MISS",
-      "segundos_ate_403": 2.124,
+      "segundos_ate_403": 2.115,
       "passou": true,
       "achado": "a origem cacheia autorização por AUTH_TTL_S=2s; um purge SÓ na hora da revogação pode ser recacheado com 200 se cair dentro dessa janela — o purge precisa repetir por >= AUTH_TTL_S depois da revogação (ver docs/CDN.md)"
     },
@@ -30,6 +30,10 @@
     "4_api_sem_cache_de_cdn": {
       "status": 401,
       "cache_control": "no-store, must-revalidate",
+      "via_cdn_status": 401,
+      "via_cdn_cf_cache_status": "BYPASS",
+      "server_direto": "uvicorn",
+      "server_via_cdn": "uvicorn",
       "passou": true
     }
   },
@@ -45,9 +49,9 @@
     "cf_cache_status": "MISS",
     "recusado": true
   },
-  "medido_em": "2026-09-07T15:28:25Z",
-  "carga_1min": 6.87,
-  "ram_livre_gb": 8.9,
+  "medido_em": "2026-09-18T10:37:57Z",
+  "carga_1min": 3.9,
+  "ram_livre_gb": 47.9,
   "todas_clausulas_testaveis_localmente_passaram": true,
   "nota": "cláusula 5 (docs/CDN.md) é conferida por leitura, não por este script; a configuração real da Cloudflare (DNS, Cache Rule, purge de produção) é PENDENTE DO DONO — ver docs/CDN.md"
 }
