@@ -13,7 +13,7 @@
    "classes_so_na_folha_antiga_estimadas": [
     "campo-fila"
    ],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "campo_filas",
@@ -27,7 +27,7 @@
    "classes_so_na_folha_antiga_estimadas": [
     "campo-filas"
    ],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "campo_roteiro",
@@ -41,7 +41,7 @@
    "classes_so_na_folha_antiga_estimadas": [
     "campo-roteiro"
    ],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "redes_simples",
@@ -55,7 +55,7 @@
    "classes_so_na_folha_antiga_estimadas": [
     "redes-simples"
    ],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "redes_tracado",
@@ -67,7 +67,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "redes_controladores",
@@ -79,7 +79,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "redes_configuracoes",
@@ -91,7 +91,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "ferramenta",
@@ -103,7 +103,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "modelos",

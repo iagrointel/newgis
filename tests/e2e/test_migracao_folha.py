@@ -58,12 +58,33 @@ JS_ESTRUTURA = r"""
   const andar = document.createTreeWalker(document.documentElement, NodeFilter.SHOW_ELEMENT);
   for (let e = document.documentElement; e; e = andar.nextNode()) {
     if (e.closest('script, style, noscript')) continue;
+    // <link> fica FORA da impressao digital: trocar a folha que a tela liga e exatamente o que esta
+    // migracao faz (uma linha de style.css vira duas, base.css + componentes.css). Medir o <link>
+    // faria a prova acusar como "arvore mudou" a unica mudanca deliberada, e nenhuma leva passaria.
+    // O que tem de ficar igual, e fica medido, e a arvore que o usuario ve: head sem link, e o body
+    // inteiro com tag, id e classes de cada elemento em ordem de documento.
+    if (e.tagName === 'LINK') continue;
     const cls = (e.getAttribute('class') || '').trim().split(/\s+/).filter(Boolean).sort().join('.');
     saida.push(e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (cls ? '.' + cls : ''));
   }
   return saida;
 }
 """
+
+# A tela monta sozinha (busca a API, desenha lista, formulario). Fotografar e medir a arvore no
+# primeiro instante em que body[data-pronto=1] aparece pega a tela em pontos DIFERENTES do desenho a
+# cada corrida -- na leva 1 a mesma tela deu 72 elementos numa fase e 247 na outra, sem nenhuma relacao
+# com a folha. Antes de medir, espera-se a arvore PARAR: duas leituras iguais separadas por um intervalo,
+# ate um teto. Nao e conserto de tela nenhuma; e tirar o relogio de dentro da medida.
+def _esperar_assentar(page, intervalo_ms: int = 400, teto_ms: int = 12000) -> None:
+    anterior, gasto = None, 0
+    while gasto < teto_ms:
+        atual = page.evaluate("() => document.documentElement.getElementsByTagName('*').length")
+        if atual == anterior:
+            return
+        anterior = atual
+        page.wait_for_timeout(intervalo_ms)
+        gasto += intervalo_ms
 
 
 def seletores_da_folha(caminho: Path) -> list[str]:
@@ -141,6 +162,7 @@ def test_migracao_mede_a_leva(sessao: Tela):
             except Exception:  # noqa: BLE001 - tela que nao chega a pronto ainda vale foto e medida; fica registrado
                 page.wait_for_timeout(2000)
             page.wait_for_timeout(250)
+            _esperar_assentar(page)
             contraste = page.evaluate(JS_CONTRASTE)
             axe_viol = []
             if apoio_axe.AXE.is_file():

@@ -1,0 +1,90 @@
+{
+ "item": "L0-14-b-migracao-folha",
+ "medidas": {
+  "telas_migradas_neste_ramo": {
+   "valor": 8,
+   "unidade": "telas",
+   "comando": "tests/e2e/telas_migracao.json, campo estado=migrada (o mesmo manifesto que o e2e percorre)"
+  },
+  "telas_ainda_na_folha_antiga": {
+   "valor": 55,
+   "unidade": "telas",
+   "comando": "grep '/static/style.css' em web/**/*.html; e a MESMA contagem de tests/unit/test_estilo_tokens.py::test_e_catraca_da_migracao_de_folha_nao_pode_crescer"
+  },
+  "catraca_no_codigo": {
+   "valor": 55,
+   "unidade": "telas",
+   "comando": "TELAS_NA_FOLHA_ANTIGA em tests/unit/test_estilo_tokens.py (o teste reprova se a contagem real for diferente, para cima ou para baixo)"
+  },
+  "telas_deixadas_para_tras": {
+   "valor": 0,
+   "unidade": "telas",
+   "comando": "tests/e2e/telas_migracao.json, campo estado=deixada_para_tras, com o motivo no campo `motivo`: nenhuma"
+  },
+  "arvore_identica_antes_e_depois": {
+   "valor": "8 de 8",
+   "unidade": "telas",
+   "comando": "tests/e2e/compara_migracao.py: impressao digital tag#id.classe de cada elemento, em ordem de documento, nas duas fases. Troca de folha nao mexe em estrutura"
+  },
+  "elementos_conferidos": {
+   "valor": 999,
+   "unidade": "elementos de DOM",
+   "comando": "soma dos elementos da impressao digital das telas medidas (tema escuro)"
+  },
+  "violacoes_de_contraste_antes": {
+   "valor": 0,
+   "unidade": "nos abaixo de 4,5:1 (3:1 texto grande)",
+   "comando": "tests/e2e/test_migracao_folha.py com o JS_CONTRASTE do L0-14, nos dois temas, na instancia ANTES da migracao"
+  },
+  "violacoes_de_contraste_depois": {
+   "valor": 0,
+   "unidade": "nos abaixo de 4,5:1 (3:1 texto grande)",
+   "comando": "mesma varredura na instancia DEPOIS da migracao"
+  },
+  "violacoes_de_contraste_introduzidas": {
+   "valor": 0,
+   "unidade": "nos",
+   "comando": "violacao que existe depois e nao existia antes (chave seletor|texto). E este o alvo do item: zero"
+  },
+  "violacoes_de_contraste_herdadas": {
+   "valor": 0,
+   "unidade": "nos",
+   "comando": "ja existiam na folha antiga e continuam: nao sao regressao desta migracao, ficam registradas"
+  },
+  "violacoes_de_contraste_resolvidas": {
+   "valor": 0,
+   "unidade": "nos",
+   "comando": "existiam na folha antiga e sumiram com a folha nova"
+  },
+  "violacoes_de_axe_introduzidas": {
+   "valor": 0,
+   "unidade": "regras",
+   "comando": "axe-core 4.12.1 (color-contrast, aria-allowed-attr, button-name, link-name, label) pelo apoio_axe, antes e depois; conta regra que aparece so no depois"
+  },
+  "capturas_no_inventario": {
+   "valor": 32,
+   "unidade": "PNG",
+   "comando": "tests/e2e/capturas/INVENTARIO_MIG.txt (sha256 e bytes de cada uma). As PNG nao entram no git; o que fica versionado e o inventario e o script que regenera"
+  }
+ },
+ "levas": {
+  "1": {
+   "telas": [
+    "campo_fila",
+    "campo_filas",
+    "campo_roteiro",
+    "ferramenta",
+    "redes_configuracoes",
+    "redes_controladores",
+    "redes_simples",
+    "redes_tracado"
+   ],
+   "reprovas": []
+  }
+ },
+ "gerado_em": "2026-09-18T01:24:50Z",
+ "git_sha": "f6517fb3b51f",
+ "assinado_por": "construtor (migracao da folha antiga web/style.css; continuacao do item L0-14-identidade-visual, ramo wt/telas)",
+ "maquina": "chromium do PLAYWRIGHT (~/.cache/ms-playwright), 1280x800, locale pt-BR, dois temas. NUNCA conter memoria com `ulimit -v` (o Chromium morre com SIGTRAP: enderecamento virtual nao e memoria) - o teto vai em systemd-run --scope -p MemoryMax=. Base de dados: schema de TRILHA plat_ttelas (laco/trilha_ambiente.sh telas), nunca o schema `plat` de producao.",
+ "capturas": "tests/e2e/capturas/MIG_<tela>_{antes,depois}_{escuro,claro}.png, regeneraveis por `bash tests/e2e/regerar_capturas_migracao.sh <leva>`"
+}
