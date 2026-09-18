@@ -352,7 +352,12 @@ def _apagar_criado(metodo_url):
 
     def limpar(p: Preparacao, j: Any) -> None:
         if isinstance(j, dict) and j.get("id") is not None:
-            r = p.sessao_a.request(metodo_url[0], metodo_url[1].format(id=j["id"]))
+            # 18/09: era `.format(id=...)`, que estourava KeyError em template com outro nome de marcador
+            # (`{dominio_id}`, `{modelo_id}`, `{conjunto_id}`) — o caso morria na LIMPEZA, depois de medir.
+            import re as _re
+
+            url = _re.sub(r"\{[a-z_]+\}", str(j["id"]), metodo_url[1])
+            r = p.sessao_a.request(metodo_url[0], url)
             assert r.status_code in (204, 404), r.text
 
     return limpar
@@ -1245,8 +1250,8 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     ("POST", "/api/amc/modelos"): Caso(
         lambda p: "/api/amc/modelos",
-        lambda p: {"nome": f"{PREFIXO}amc-modelo-a", "definicao": _amc_def_valida()},
-        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        lambda p: {"nome": f"{PREFIXO}amc-mod-{secrets.token_hex(3)}", "definicao": _amc_def_valida()},
+        proprio=True, aceita=frozenset({201, 409}), verificar=_sem_marca,
         limpar=_apagar_criado(("DELETE", "/api/amc/modelos/{modelo_id}")),
     ),
     ("GET", "/api/amc/modelos"): Caso(lambda p: "/api/amc/modelos", proprio=True, aceita=frozenset({200}),
@@ -2743,4 +2748,234 @@ CASOS.update({
                  "/api/odk/pontes/{id}/entidades/{dataset}", "/api/relacionamentos/{rel_id}",
                  "/api/widgets/externos/{nome}",
                  "/api/widgets/externos/{nome}/i18n.json", "/api/widgets/externos/{nome}/modulo.js")},
+})
+
+
+# =====================================================================================================
+# LEVA 7 (18/09/2026) — o que sobrou de POST. Fecha a varredura.
+#
+# A maioria destas rotas não leva id no CAMINHO: o recurso vem no CORPO (`item_id`, `camada_id`,
+# `conexao_id`, `mapa_id`, `origem_item_id`...). É um vetor de cruzamento inteiro que ninguém tinha medido —
+# A manda o pedido para a sua própria coleção e nomeia, lá dentro, um recurso de B. Se a checagem de dono
+# estiver só na rota e não na resolução do id, é aqui que aparece: A exportaria a camada de B, publicaria a
+# camada de B no AGOL, abriria uma fila de campo sobre a camada de B, ligaria um relacionamento entre um item
+# de A e um de B. Em todos, o esperado é 401/403/404.
+#
+# Efeito colateral bom: como o corpo aponta para B, a chamada não pode criar nada em A — a varredura não
+# deixa resíduo e não precisa de limpeza.
+#
+# As que não referenciam recurso nenhum (calculadora de CRS, transformações da AMC, similaridade, fábrica de
+# parcelas, compilador de estilo, verificação de pacote) agem sobre o corpo e só. Nelas o caso é `proprio`:
+# o 2xx é legítimo e o que se prende é `_sem_marca` — nenhuma resposta pode trazer linha de B — e a terceira
+# chamada da matriz, com `X-Plat-Inquilino: demo2`, que continua tendo de ser recusada.
+# a fabrica de parcelas quer {id, layerId} por item (app/parcelas/rotas.py); com a forma errada o 422
+# vinha antes de a rota fazer qualquer coisa
+_LSA_FEICOES = [{"id": UUID_NULO, "layerId": 0}]
+_EXTENT_LSA = {"xmin": -46.7, "ymin": -23.6, "xmax": -46.5, "ymax": -23.4, "spatialReference": {"wkid": 4326}}
+_PRESET_CONT = {"combinador": "soma_ponderada", "fatores": ["f1"], "pesos": {"f1": 1.0}}
+CASOS.update({
+    # ---- (1) o id de B vai NO CORPO: o cruzamento que faltava
+    ("POST", "/api/agol/publicacoes"): Caso(
+        lambda p: "/api/agol/publicacoes", lambda p: {"item_id": _it(p), "titulo": "zt-cruzado"}),
+    ("POST", "/api/exportacoes"): Caso(
+        lambda p: "/api/exportacoes", lambda p: {"item_id": _it(p), "formato": "geojson"}),
+    ("POST", "/api/geoparquet"): Caso(
+        lambda p: "/api/geoparquet", lambda p: {"item_id": _it(p)}),
+    ("POST", "/api/intercambio/exportacoes"): Caso(
+        lambda p: "/api/intercambio/exportacoes", lambda p: {"tipo": "camada", "item_id": _it(p)}),
+    ("POST", "/api/anotacoes"): Caso(
+        lambda p: "/api/anotacoes",
+        lambda p: {"camada_id": _it(p), "fid": "1", "grupo_id": p.grupo_b["id"], "texto": "zt-cruzado"}),
+    ("POST", "/api/campo/filas"): Caso(
+        lambda p: "/api/campo/filas", lambda p: {"titulo": "zt-cruzado", "camada_id": _it(p)}),
+    ("POST", "/api/campo/visitas"): Caso(
+        lambda p: "/api/campo/visitas",
+        lambda p: {"cliente_uuid": UUID_NULO, "camada_id": _it(p), "globalid": UUID_NULO,
+                   "status": "visitado", "capturado_em": "2026-01-01T00:00:00Z"}),
+    ("POST", "/api/campo/roteiros"): Caso(
+        lambda p: "/api/campo/roteiros",
+        lambda p: {"fila_id": UUID_NULO, "origem": {"lon": -46.6, "lat": -23.5}}),
+    ("POST", "/api/relacionamentos"): Caso(
+        lambda p: "/api/relacionamentos",
+        lambda p: {"origem_item_id": _it(p), "destino_item_id": _it(p), "cardinalidade": "1:N",
+                   "nome_direto": "zt-direto", "nome_inverso": "zt-inverso"}),
+    ("POST", "/api/mapa/selecao-espacial"): Caso(
+        lambda p: "/api/mapa/selecao-espacial",
+        lambda p: {"camada_a": _it(p), "camada_b": _it(p), "relacao": "intersects"}),
+    ("POST", "/api/dominios/importar"): Caso(
+        lambda p: "/api/dominios/importar", lambda p: {"item_id": _it(p)}),
+    ("POST", "/api/modelos"): Caso(
+        lambda p: "/api/modelos", lambda p: {"nome": "zt-cruzado", "item_id": _it(p)}),
+    ("POST", "/api/migracao/inventarios"): Caso(
+        lambda p: "/api/migracao/inventarios", lambda p: {"conexao_id": p.conexao_b["id"]}),
+    ("POST", "/api/render/mapa"): Caso(
+        lambda p: "/api/render/mapa", lambda p: {"mapa_id": _it(p)}),
+    **{("POST", c): Caso(lambda p, u=c: u, lambda p: {"mapa_id": _it(p), "layout_id": _it(p)})
+       for c in ("/api/layouts/exportar", "/api/layouts/previa")},
+    # `validar` exige o documento `layout` no corpo (o id sozinho da 422 antes de olhar o mapa de B)
+    ("POST", "/api/layouts/validar"): Caso(
+        lambda p: "/api/layouts/validar", lambda p: {"layout": {}, "mapa_id": _it(p)},
+        proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca),
+    ("POST", "/api/formularios/xlsform"): Caso(
+        lambda p: "/api/formularios/xlsform",
+        lambda p: {"nome": "zt-cruzado", "conteudo": "zz", "camada_destino": _it(p)}),
+    ("POST", "/api/foto360"): Caso(lambda p: "/api/foto360", lambda p: {"arquivo_id": UUID_NULO}),
+    ("POST", "/api/imagens/ingestoes"): Caso(
+        lambda p: "/api/imagens/ingestoes", lambda p: {"arquivo_id": UUID_NULO}),
+    ("POST", "/api/modelo3d/ingestoes"): Caso(
+        lambda p: "/api/modelo3d/ingestoes", lambda p: {"arquivo_id": UUID_NULO}),
+    ("POST", "/api/intercambio/importacoes-lote"): Caso(
+        lambda p: "/api/intercambio/importacoes-lote",
+        lambda p: {"itens": [{"arquivo_id": UUID_NULO, "formato": "geojson"}]}),
+    ("POST", "/api/odk/pontes"): Caso(
+        lambda p: "/api/odk/pontes",
+        lambda p: {"conexao": UUID_NULO, "formulario": UUID_NULO, "projeto": 1, "conteudo": "zz"}),
+    ("POST", "/api/csw/buscar"): Caso(
+        lambda p: "/api/csw/buscar", lambda p: {"url": URL_CONEXAO_TESTE, "texto": "zt-cruzado"}),
+    ("POST", "/api/csw/conexoes"): Caso(
+        # 502 e o desfecho legitimo: o endereco publico do teste nao fala CSW 2.0.2. Nao e 2xx e nao traz B.
+        lambda p: "/api/csw/conexoes", lambda p: {"url": URL_CONEXAO_TESTE, "identificador": "zz"},
+        aceita=frozenset({502})),
+    # ---- (2) criação na coleção de A com corpo que não cita recurso nenhum: `proprio`, e o que prende é o
+    # `_sem_marca` da resposta mais a recusa da chamada com X-Plat-Inquilino
+    ("POST", "/api/webhooks"): Caso(
+        lambda p: "/api/webhooks",
+        lambda p: {"nome": f"{PREFIXO}wh-{secrets.token_hex(3)}", "url": URL_CONEXAO_TESTE,
+                   "eventos": ["acervo/assinar"]},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/webhooks/{id}"))),
+    ("POST", "/api/amc/presets"): Caso(
+        lambda p: "/api/amc/presets",
+        lambda p: {"nome": f"{PREFIXO}preset-{secrets.token_hex(3)}", "escopo": "inquilino",
+                   "conteudo": _PRESET_CONT},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/amc/presets/{id}"))),
+    ("POST", "/api/amc/presets/importar"): Caso(
+        lambda p: "/api/amc/presets/importar",
+        lambda p: {"formato": "amc_preset", "versao": 1, "nome": f"{PREFIXO}pi-{secrets.token_hex(3)}",
+                   "conteudo": _PRESET_CONT},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/amc/presets/{id}"))),
+    ("POST", "/api/mapas"): Caso(
+        # ⚠ nao existe DELETE /api/mapas/{id}: o mapa e um ITEM, e a limpeza vai por /api/itens/{id}
+        lambda p: "/api/mapas", lambda p: {"titulo": f"{PREFIXO}mapa-{secrets.token_hex(3)}"},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/itens/{id}"))),
+    ("POST", "/api/dominios"): Caso(
+        lambda p: "/api/dominios", # o nome leva sufixo aleatorio da rodada: sem ele a 2a chamada da matriz colide com a 1a (409)
+        lambda p: dict(_DOMINIO_MIN, nome=f"{PREFIXO}dom-{secrets.token_hex(3)}"),
+        proprio=True, aceita=frozenset({201, 409}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/dominios/{dominio_id}"))),
+    ("POST", "/api/chamados"): Caso(
+        lambda p: "/api/chamados",
+        lambda p: {"titulo": f"{PREFIXO}chamado-{secrets.token_hex(3)}",
+                   "descricao": "varredura cruzada", "severidade": "baixa"},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca),
+    ("POST", "/api/simbolos"): Caso(
+        lambda p: "/api/simbolos",
+        lambda p: {"nome": f"{PREFIXO}simbolo-{secrets.token_hex(3)}",
+                   "conteudo_svg": '<svg xmlns="http://www.w3.org/2000/svg"/>'},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca),
+    ("POST", "/api/fluxos"): Caso(
+        lambda p: "/api/fluxos", lambda p: {"nome": f"{PREFIXO}fluxo-{secrets.token_hex(3)}", "tipo": "mqtt",
+                   "config": {"host": "127.0.0.1", "porta": 1883, "topico": "zt"}},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca),
+    ("POST", "/api/ferramentas/script"): Caso(
+        lambda p: "/api/ferramentas/script", lambda p: {"codigo": _SCRIPT_MINIMO},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca),
+    ("POST", "/api/telemetria/appliances"): Caso(
+        lambda p: "/api/telemetria/appliances",
+        lambda p: {"chave": f"{PREFIXO}ap", "nome": f"{PREFIXO}ap"}),
+    ("POST", "/api/widgets/externos"): Caso(
+        lambda p: "/api/widgets/externos", lambda p: {}, proprio=True,
+        aceita=frozenset({201, 422}), verificar=_sem_marca),
+    ("POST", "/api/modelos3d"): Caso(
+        lambda p: "/api/modelos3d", lambda p: {}, proprio=True,
+        aceita=frozenset({201, 422}), verificar=_sem_marca),
+    ("POST", "/api/dominios/csv"): Caso(
+        lambda p: "/api/dominios/csv", lambda p: {"csv": "dominio;tipo;codigo;descricao\nzt-cruzado;codificado;a;A\n"},
+        proprio=True, aceita=frozenset({200, 201}), verificar=_sem_marca),
+    ("POST", "/api/log/nivel"): Caso(
+        lambda p: "/api/log/nivel", lambda p: {"componente": "zz-cruzado", "nivel": "INFO", "minutos": 1}),
+    ("POST", "/api/org/oidc"): Caso(lambda p: "/api/org/oidc", lambda p: dict(_OIDC_MIN),
+        # 409 `provedor_duplicado`: o inquilino de A já tem esse provedor de rodadas anteriores. É resposta
+        # do PRÓPRIO inquilino de A, nunca de B — e continua não sendo 2xx.
+        proprio=True, aceita=frozenset({201, 409}), verificar=_sem_marca),
+    ("POST", "/api/org/saml"): Caso(
+        lambda p: "/api/org/saml", lambda p: {"metadado_xml": _SAML_METADADO_XML},
+        proprio=True, aceita=frozenset({201, 409}), verificar=_sem_marca),
+    # ---- (3) ações da instalação / do próprio inquilino, sem corpo
+    # Estas agem sobre o PRÓPRIO inquilino do chamador e o 2xx delas é legítimo — abrir sessão de campo,
+    # exportar o próprio inquilino, instalar os mapas-base da casa, emitir token de renderização. O que o
+    # caso mede é `_sem_marca` na resposta e, sobretudo, a terceira chamada da matriz: com
+    # `X-Plat-Inquilino: demo2` nenhuma delas pode passar — seria A exportando o inquilino de B.
+    **{("POST", c): Caso(lambda p, u=c: u, proprio=True, aceita=a, verificar=_sem_marca)
+       for c, a in (
+           ("/api/campo/sessao", frozenset({200, 201})),
+           ("/api/inquilino/exportar", frozenset({200, 202})),
+           ("/api/org/exportar", frozenset({200, 202})),
+           ("/api/mapas-base/instalar", frozenset({200, 201})),
+           ("/api/render/token", frozenset({200, 201})),
+           ("/api/telemetria/enviar", frozenset({200, 202, 204, 422, 503})),
+           # 422 `agol_nao_configurado`: o inquilino de teste não tem credencial ArcGIS Online, e a rota
+           # para aí. É desfecho legítimo desta base, e não 2xx.
+           ("/api/agol/testar", frozenset({200, 422})),
+           # a importação de pacote recebe o ZIP como corpo cru; com corpo vazio o 422 `pacote_vazio` é o
+           # desfecho legítimo, e nenhum dos dois toca inquilino de B
+           ("/api/mapa/pacotes/importar", frozenset({200, 201, 202, 422})),
+       )},
+    ("POST", "/api/imagens/proveniencia/preencher-pendentes"): Caso(
+        lambda p: "/api/imagens/proveniencia/preencher-pendentes", lambda p: {"limite": 1},
+        proprio=True, aceita=frozenset({200, 202}), verificar=_sem_marca),
+    # ---- (4) CÁLCULO PURO sobre o corpo: não tocam recurso de inquilino nenhum. O 2xx é legítimo e o que
+    # se prende é que a resposta não traz linha de B e que a chamada com X-Plat-Inquilino é recusada.
+    ("POST", "/api/crs/transformar"): Caso(
+        lambda p: "/api/crs/transformar",
+        lambda p: {"origem": 4326, "destino": 31983, "coordenadas": [-46.6, -23.5], "tipo": "ponto"},
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
+    ("POST", "/api/amc/transformacoes/previsao"): Caso(
+        lambda p: "/api/amc/transformacoes/previsao",
+        lambda p: {"transformacao": {"tipo": "linear", "minimo": 0, "maximo": 1}, "valores": [0.0, 0.5, 1.0]},
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
+    ("POST", "/api/estilos/compilar"): Caso(
+        # 422 `plat_construtor_invalido` e desfecho legitimo de construtor vazio: a rota compila estilo e nao
+        # le inquilino. Prende-se o que se pode: sem marca de B, e a matriz recusando o header.
+        lambda p: "/api/estilos/compilar", lambda p: {"plat_construtor": {}}, aceita=frozenset({200, 422}),
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
+    **{("POST", c): Caso(lambda p, u=c: u, lambda p: {"conteudo": ""},
+                         proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca)
+       for c in ("/api/pacotes/verificar", "/api/pacotes/importar")},
+    ("POST", "/api/parcelas/qualidade"): Caso(
+        lambda p: "/api/parcelas/qualidade", lambda p: {},
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
+    # ⛔ LIMITE DECLARADO: a fabrica de parcelas e calculo sobre o CORPO — nao le item, camada nem inquilino.
+    # Onde o corpo minimo nao satisfaz a regra de dominio, a resposta e 422 e o caso a aceita: o que ele
+    # prende nessas rotas NAO e a computacao, e a matriz — a chamada com `X-Plat-Inquilino: demo2` continua
+    # tendo de ser recusada, e nenhuma resposta pode trazer linha de B.
+    **{("POST", c): Caso(lambda p, u=c: u, lambda p, b=corpo: dict(b),
+                         proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca)
+       for c, corpo in (
+           ("/api/parcelas/fabrica/analyzeByLSA", {"parcelFeatures": _LSA_FEICOES}),
+           ("/api/parcelas/fabrica/applyLSA", {"parcelFeatures": _LSA_FEICOES}),
+           ("/api/parcelas/fabrica/assignFeaturesToRecord",
+            {"parcelFeatures": _LSA_FEICOES, "record": UUID_NULO, "writeAttribute": "CreatedByRecord"}),
+           ("/api/parcelas/fabrica/build", {"record": UUID_NULO}),
+           ("/api/parcelas/fabrica/clip",
+            {"parentParcels": _LSA_FEICOES, "record": UUID_NULO, "clipOption": "DiscardArea"}),
+           ("/api/parcelas/fabrica/createSeeds", {"record": UUID_NULO}),
+           ("/api/parcelas/fabrica/divide", {"record": UUID_NULO, "divideParcelGuid": UUID_NULO}),
+           ("/api/parcelas/fabrica/merge", {"parentParcels": _LSA_FEICOES, "record": UUID_NULO}),
+           ("/api/parcelas/fabrica/reconstructFromSeeds", {"extent": _EXTENT_LSA, "record": UUID_NULO}),
+       )},
+    **{("POST", c): Caso(
+        lambda p, u=c: u,
+        lambda p: {"feicoes": [{"id": "1", "valores": {"c1": 1.0}}],
+                   "criterios": [{"id": "c1", "peso": 1.0, "direcao": "maximizar"}]},
+        proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca)
+       for c in ("/api/amc/criterios-feicao", "/api/amc/criterios-feicao/exportar")},
+    **{("POST", c): Caso(
+        lambda p, u=c: u,
+        lambda p: {"unidades": {"u1": {"c1": 1.0}}, "referencias": ["u1"], "campos": ["c1"]},
+        proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca)
+       for c in ("/api/amc/similaridade", "/api/amc/similaridade/exportar")},
 })
