@@ -1,104 +1,16 @@
-#!/usr/bin/env python3
-"""`plat` — utilitário de linha de comando do administrador da plataforma.
-
-Dois grupos, um ponto de entrada só (nunca um script novo por comando):
-
-- `demo` (item L7-01-c-dado-demonstracao): semeia e confere o pacote de dado de demonstração. Roda de
-  dentro do repositório, lendo a base venv/ do próprio worktree; não faz nada sozinho, fala com a API já
-  no ar (--base-url), a mesma que o navegador usa.
-- `segredo rotacionar` (item L7-19-segredos-e-certificados): repassa para `scripts/segredo_rotacionar.py`,
-  rodado pelo Python do venv, como antes. Procedimento completo em docs/RUNBOOKS/segredos.md.
-"""
-
-from __future__ import annotations
-
-import argparse
-import json
-import os
-import sys
-from pathlib import Path
-
-RAIZ = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(RAIZ))
-
-from dados.demo import semear as demo_semear  # noqa: E402
-
-
-def cmd_demo_semear(a: argparse.Namespace) -> int:
-    medida = Path(a.medida) if a.medida else None
-    resumo = demo_semear.semear(a.base_url, Path(a.credenciais), medida, verboso=not a.silencioso)
-    print(json.dumps(resumo, ensure_ascii=False, indent=2 if not a.silencioso else None))
-    return 0
-
-
-def cmd_demo_verificar(a: argparse.Namespace) -> int:
-    resultado = demo_semear.verificar(a.base_url, Path(a.credenciais), verboso=not a.silencioso)
-    print(json.dumps(resultado, ensure_ascii=False, indent=2))
-    return 0 if resultado["ok"] else 1
-
-
-def _repassar_segredo(extras: list[str]) -> int:
-    """`plat segredo rotacionar ...` -> scripts/segredo_rotacionar.py, com o Python do venv.
-
-    Fica FORA do argparse de propósito: as opções de rotação são do outro programa e mudam com ele; o
-    dispatcher não deve conhecê-las nem validá-las (era o que o dispatcher em bash fazia antes desta
-    junção, e é o contrato que docs/SEGURANCA.md e docs/RUNBOOKS/segredos.md descrevem)."""
-    executavel = RAIZ / "venv" / "bin" / "python"
-    if not executavel.exists():
-        print(f"plat segredo rotacionar: venv ausente em {executavel}", file=sys.stderr)
-        return 1
-    os.execv(str(executavel), [str(executavel), str(RAIZ / "scripts" / "segredo_rotacionar.py"),
-                               "rotacionar", *extras])
-    return 1  # inalcançável: execv só volta se falhar, e aí levanta OSError
-
-
-USO_SEGREDO = """uso: plat segredo rotacionar <NOME> [opções]
-
-NOME em: PLAT_SECRET | PLAT_DSN | PLAT_DSN_WORKER | PLAT_GARAGE_ADMIN_TOKEN | PLAT_GARAGE_CHAVE_S3:<slug>
-
-Ver docs/RUNBOOKS/segredos.md para o procedimento completo (o que cada segredo invalida, quando avisar
-antes de rodar em produção com usuários ativos)."""
-
-
-def main(argv: list[str] | None = None) -> int:
-    args = list(sys.argv[1:] if argv is None else argv)
-    if args[:1] == ["segredo"]:
-        if args[1:2] == ["rotacionar"]:
-            return _repassar_segredo(args[2:])
-        print(USO_SEGREDO, file=sys.stderr)
-        return 1
-
-    p = argparse.ArgumentParser(prog="plat", description="utilitário de linha de comando da plataforma")
-    sub = p.add_subparsers(dest="grupo", required=True)
-
-    sub.add_parser("segredo", help="rotação de segredo (repassa para scripts/segredo_rotacionar.py)")
-    demo = sub.add_parser("demo", help="pacote de dado de demonstração")
-    demo_sub = demo.add_subparsers(dest="acao", required=True)
-
-    p_semear = demo_sub.add_parser("semear", help="cria o inquilino demo/demo2 com os itens do catálogo")
-    p_semear.add_argument("--base-url", default=os.environ.get("PLAT_URL_TESTE", "http://127.0.0.1:8150"))
-    p_semear.add_argument(
-        "--credenciais", default=os.environ.get("PLAT_CREDENCIAIS_ARQUIVO", str(RAIZ / "tests" / "credenciais.txt"))
-    )
-    p_semear.add_argument("--medida", default=None, help="grava o resultado e o tempo neste JSON")
-    p_semear.add_argument("--silencioso", action="store_true")
-    p_semear.set_defaults(func=cmd_demo_semear)
-
-    p_verificar = demo_sub.add_parser("verificar", help="confere contagens e sha256 do pacote semeado")
-    p_verificar.add_argument("--base-url", default=os.environ.get("PLAT_URL_TESTE", "http://127.0.0.1:8150"))
-    p_verificar.add_argument(
-        "--credenciais", default=os.environ.get("PLAT_CREDENCIAIS_ARQUIVO", str(RAIZ / "tests" / "credenciais.txt"))
-    )
-    p_verificar.add_argument("--silencioso", action="store_true")
-    p_verificar.set_defaults(func=cmd_demo_verificar)
-
-    a = p.parse_args(args)
-    try:
-        return a.func(a)
-    except demo_semear.Erro as e:
-        print(f"plat {a.grupo} {a.acao} falhou: {e}", file=sys.stderr)
-        return 1
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+#!/bin/bash
+# `plat` — ponto de entrada ÚNICO da linha de comando de administração (item L0-14-cli-admin, ADR
+# docs/adr/20260907T2318-linha-de-comando-plat.md decisão 1: "ele não decide nada: escolhe o Python da
+# venv e chama `python -m app.cli`").
+#
+# 18/09/2026: este arquivo havia sido SUBSTITUÍDO por um segundo utilitário de mesmo nome, vindo dos itens
+# L7-01-c (grupo `demo`) e L7-19 (`segredo rotacionar`) — e com isso os grupos inquilino/usuario/token/
+# camada/job/evento sumiram do executável, embora continuassem inteiros em app/cli/. Era o achado do
+# adversário do T9 (16 de 16 testes de tests/api/test_cli_admin.py falhando com "invalid choice"). Os dois
+# grupos que haviam tomado o lugar viraram subcomandos do parser único, onde `plat docs` os documenta.
+set -euo pipefail
+RAIZ="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+PY="$RAIZ/venv/bin/python"
+[ -x "$PY" ] || PY=python3
+cd "$RAIZ"
+exec "$PY" -m app.cli "$@"
