@@ -16,9 +16,11 @@ O que faz, em ordem:
      exceção — é o que a refutação do item cobra.
   3. Monta a lista branca de colunas: todas as colunas de `information_schema.columns` MENOS a própria
      geometria (fica em `coluna_geom`) MENOS o que casar (nome EXATO, case-insensitive) com `_COLUNA_NEGADA`
-     — checagem GROSSA, só pelo NOME da coluna. Isto é rede de segurança provisória; a checagem fina por
-     CONTEÚDO (regex de CPF/CNPJ em amostra) é o item L6-01-f, que ainda não existe — nenhuma camada deste
-     sincronizador é exposta à tela antes de o L6-01-f rodar em cima dela (ver docs/adr/0012).
+     — checagem GROSSA, por TERMO do nome da coluna (`_e_pii_por_nome`). A checagem fina por CONTEÚDO
+     (regex de CPF/CNPJ com dígito verificador, em amostra de 1.000 linhas) é o item L6-01-f e EXISTE desde
+     18/09/2026: `app/acervo/varredura_pii.py`, varrida sobre as views expostas por
+     tests/seguranca/test_acervo_varredura_pii_conteudo.py, que entra no `make check`. As duas redes se
+     somam — nenhuma substitui a outra, nem a curadoria manual de `plat.acervo_lgpd` (ver docs/adr/0012).
   4. Estado: 'bloqueada' se a contagem não concluiu OU se é tabela fantasma (estimativa > 0, exata = 0);
      'pendente_de_licenca' se `acervo.fonte.licenca` está vazia (regra D17, mesmo critério de `plat.acervo_ficha`
      na migração 021); senão 'exposta'.
