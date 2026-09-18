@@ -9,11 +9,17 @@ publica uma ficha diferente da que o dono preencheu.
 
 Par positivo/negativo em cada asserção de isolamento: o inquilino A lê a própria ficha na mesma rodada
 em que B recebe 404 dela.
+
+Histórico: medido em 17/09 que o que o editor gravava NÃO chegava a nenhuma saída ISO (os dois testes de
+paridade ISO nasceram xfail estrito e a medida registrou 0 de 3). Resolvido neste ramo (18/09):
+`app/catalogo/metadado.py` passou a ler `plat.item.metadado_iso` nos dois geradores — o que o editor grava
+manda nos campos com casa na ISO; dono/inquilino/EPSG:4326 viraram fallback de quando o editor está vazio.
+`perfil_do_item` espelha a mesma fonte, então a ida e volta da importação continua fechando
+(tests/unit/test_metadado_iso_importacao.py).
 """
 
 import secrets
 
-import pytest
 from lxml import etree
 
 from app.catalogo import csw as mod_csw
@@ -57,22 +63,6 @@ def _get(sessao, params):
     return etree.fromstring(r.content)
 
 
-MOTIVO = (
-    "DEFEITO MEDIDO 17/09 (trilha provalocal, sha e9e2b1e3b): o que o EDITOR de metadado grava "
-    "(PUT /api/itens/{id}/metadado -> contato.organizacao, restricoes.licenca, sistema_referencia.codigo) "
-    "persiste e volta no GET /api/itens/{id}/metadado, mas NÃO chega a nenhuma exportação ISO: nem "
-    "/api/itens/{id}/metadado.xml (19139), nem ?formato=19115-3, nem o CSW. "
-    "`app/catalogo/metadado.py::montar_md_metadata` monta o XML só das COLUNAS do item — põe o nome do "
-    "inquilino em gmd:contact, o dono em pointOfContact e escreve EPSG:4326 fixo (linhas 172-190) — e "
-    "nunca lê o `metadado_iso` do editor. Medido: escrevi ORGDIG/LICDIG/31983 e as três saídas ISO "
-    "devolveram False para os três valores. Não foi consertado aqui porque o conserto não é pequeno: "
-    "mexe no gerador 19139, no 19115-3, no perfil MGB, no CSW e na tabela de paridade de "
-    "`metadado.py::paridade_esperada` (que hoje DECLARA como esperado o contato do inquilino/dono e o "
-    "4326 fixo) — é decisão de produto sobre qual fonte manda, não conserto de teste."
-)
-
-
-@pytest.mark.xfail(strict=True, reason=MOTIVO)
 def test_o_que_o_editor_gravou_volta_no_getrecordbyid_iso(sessao_a, itens_a):
     marca = "ztpar" + secrets.token_hex(5)
     it = _escrito(sessao_a, itens_a, marca)
@@ -107,7 +97,6 @@ def test_paridade_no_dublin_core_titulo_resumo_e_palavras_chave(sessao_a, itens_
         assert escrito in texto, f"Dublin Core sem o que foi escrito: {escrito!r}"
 
 
-@pytest.mark.xfail(strict=True, reason=MOTIVO)
 def test_edicao_posterior_aparece_no_catalogo_e_a_anterior_some(sessao_a, itens_a):
     """Paridade não é só do primeiro salvamento: trocar a licença tem de trocar o que a descoberta serve."""
     marca = "ztpar" + secrets.token_hex(5)
@@ -131,8 +120,8 @@ def test_ficha_escrita_em_a_nunca_sai_para_b(sessao_a, sessao_b, itens_a):
 
 
 def test_medida_paridade(sessao_a, itens_a, medida):
-    """Quantos valores escritos pelo editor voltam em cada saída do catálogo. Enquanto o defeito acima
-    não for decidido, este número é 0 de 3 nas saídas ISO — e é assim que ele fica registrado."""
+    """Quantos valores escritos pelo editor voltam em cada saída do catálogo. Desde a resolução acima são 3 de 3
+    nas três saídas ISO — a asserção trava o número aqui para qualquer regressão derrubar o teste, não a medida."""
     marca = "ztpar" + secrets.token_hex(5)
     it = _escrito(sessao_a, itens_a, marca)
     escritos = {"contato.organizacao": ORGANIZACAO, "restricoes.licenca": LICENCA,
@@ -151,6 +140,7 @@ def test_medida_paridade(sessao_a, itens_a, medida):
     }
     placar = {nome: sum(1 for v in escritos.values() if v in texto) for nome, texto in saidas.items()}
     assert de_volta_no_editor == 3, lido
+    assert placar == {nome: 3 for nome in saidas}, placar
     medida(ITEM)(
         "paridade_editor_para_saidas_iso",
         {"valores_escritos": len(escritos), "de_volta_no_editor": de_volta_no_editor, "nas_saidas": placar},
