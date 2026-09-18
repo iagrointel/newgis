@@ -6,14 +6,14 @@ import httpx
 from ... import errors
 from ...client import AuthenticatedClient, Client
 from ...models.http_validation_error import HTTPValidationError
-from ...models.importar_entrada import ImportarEntrada
+from ...models.importar_entrada_dominios import ImportarEntradaDominios
 from ...models.importar_saida import ImportarSaida
 from ...types import Response
 
 
 def _get_kwargs(
     *,
-    body: ImportarEntrada,
+    body: ImportarEntradaDominios,
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
 
@@ -63,7 +63,7 @@ def _build_response(
 def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
-    body: ImportarEntrada,
+    body: ImportarEntradaDominios,
 ) -> Response[HTTPValidationError | ImportarSaida]:
     """Importar De Servico
 
@@ -74,8 +74,8 @@ def sync_detailed(
     domínio (e o subtipo, se o objeto trouxer `types`) são criadas na camada.
 
     Args:
-        body (ImportarEntrada): Recorte do JSON de uma camada de FeatureServer/FGDB: `fields` com
-            `domain`, e `types` com
+        body (ImportarEntradaDominios): Recorte do JSON de uma camada de FeatureServer/FGDB:
+            `fields` com `domain`, e `types` com
             `domains`/`templates`. É o mesmo objeto que a Esri publica em `/FeatureServer/0?f=json`.
 
     Raises:
@@ -100,7 +100,7 @@ def sync_detailed(
 def sync(
     *,
     client: AuthenticatedClient | Client,
-    body: ImportarEntrada,
+    body: ImportarEntradaDominios,
 ) -> HTTPValidationError | ImportarSaida | None:
     """Importar De Servico
 
@@ -111,8 +111,8 @@ def sync(
     domínio (e o subtipo, se o objeto trouxer `types`) são criadas na camada.
 
     Args:
-        body (ImportarEntrada): Recorte do JSON de uma camada de FeatureServer/FGDB: `fields` com
-            `domain`, e `types` com
+        body (ImportarEntradaDominios): Recorte do JSON de uma camada de FeatureServer/FGDB:
+            `fields` com `domain`, e `types` com
             `domains`/`templates`. É o mesmo objeto que a Esri publica em `/FeatureServer/0?f=json`.
 
     Raises:
@@ -132,7 +132,7 @@ def sync(
 async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
-    body: ImportarEntrada,
+    body: ImportarEntradaDominios,
 ) -> Response[HTTPValidationError | ImportarSaida]:
     """Importar De Servico
 
@@ -143,8 +143,8 @@ async def asyncio_detailed(
     domínio (e o subtipo, se o objeto trouxer `types`) são criadas na camada.
 
     Args:
-        body (ImportarEntrada): Recorte do JSON de uma camada de FeatureServer/FGDB: `fields` com
-            `domain`, e `types` com
+        body (ImportarEntradaDominios): Recorte do JSON de uma camada de FeatureServer/FGDB:
+            `fields` com `domain`, e `types` com
             `domains`/`templates`. É o mesmo objeto que a Esri publica em `/FeatureServer/0?f=json`.
 
     Raises:
@@ -167,7 +167,7 @@ async def asyncio_detailed(
 async def asyncio(
     *,
     client: AuthenticatedClient | Client,
-    body: ImportarEntrada,
+    body: ImportarEntradaDominios,
 ) -> HTTPValidationError | ImportarSaida | None:
     """Importar De Servico
 
@@ -178,8 +178,8 @@ async def asyncio(
     domínio (e o subtipo, se o objeto trouxer `types`) são criadas na camada.
 
     Args:
-        body (ImportarEntrada): Recorte do JSON de uma camada de FeatureServer/FGDB: `fields` com
-            `domain`, e `types` com
+        body (ImportarEntradaDominios): Recorte do JSON de uma camada de FeatureServer/FGDB:
+            `fields` com `domain`, e `types` com
             `domains`/`templates`. É o mesmo objeto que a Esri publica em `/FeatureServer/0?f=json`.
 
     Raises:

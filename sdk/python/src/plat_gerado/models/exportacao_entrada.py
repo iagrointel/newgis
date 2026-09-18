@@ -8,6 +8,7 @@ from attrs import define as _attrs_define
 from ..types import UNSET, Unset
 
 if TYPE_CHECKING:
+    from ..models.exportacao_entrada_filtro_type_0 import ExportacaoEntradaFiltroType0
     from ..models.opcoes_csv import OpcoesCsv
 
 
@@ -28,6 +29,8 @@ class ExportacaoEntrada:
         codificacao (None | str | Unset):
         pasta_id (None | str | Unset):
         csv (None | OpcoesCsv | Unset):
+        ids (list[int] | None | Unset):
+        filtro (ExportacaoEntradaFiltroType0 | None | Unset):
     """
 
     item_id: str
@@ -40,8 +43,11 @@ class ExportacaoEntrada:
     codificacao: None | str | Unset = UNSET
     pasta_id: None | str | Unset = UNSET
     csv: None | OpcoesCsv | Unset = UNSET
+    ids: list[int] | None | Unset = UNSET
+    filtro: ExportacaoEntradaFiltroType0 | None | Unset = UNSET
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.exportacao_entrada_filtro_type_0 import ExportacaoEntradaFiltroType0  # noqa: PLC0415
         from ..models.opcoes_csv import OpcoesCsv  # noqa: PLC0415
 
         item_id = self.item_id
@@ -104,6 +110,23 @@ class ExportacaoEntrada:
         else:
             csv = self.csv
 
+        ids: list[int] | None | Unset
+        if isinstance(self.ids, Unset):
+            ids = UNSET
+        elif isinstance(self.ids, list):
+            ids = self.ids
+
+        else:
+            ids = self.ids
+
+        filtro: dict[str, Any] | None | Unset
+        if isinstance(self.filtro, Unset):
+            filtro = UNSET
+        elif isinstance(self.filtro, ExportacaoEntradaFiltroType0):
+            filtro = self.filtro.to_dict()
+        else:
+            filtro = self.filtro
+
         field_dict: dict[str, Any] = {}
 
         field_dict.update(
@@ -128,11 +151,16 @@ class ExportacaoEntrada:
             field_dict["pasta_id"] = pasta_id
         if csv is not UNSET:
             field_dict["csv"] = csv
+        if ids is not UNSET:
+            field_dict["ids"] = ids
+        if filtro is not UNSET:
+            field_dict["filtro"] = filtro
 
         return field_dict
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.exportacao_entrada_filtro_type_0 import ExportacaoEntradaFiltroType0  # noqa: PLC0415
         from ..models.opcoes_csv import OpcoesCsv  # noqa: PLC0415
 
         d = dict(src_dict)
@@ -236,6 +264,40 @@ class ExportacaoEntrada:
 
         csv = _parse_csv(d.pop("csv", UNSET))
 
+        def _parse_ids(data: object) -> list[int] | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                ids_type_0 = cast(list[int], data)
+
+                return ids_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[int] | None | Unset, data)
+
+        ids = _parse_ids(d.pop("ids", UNSET))
+
+        def _parse_filtro(data: object) -> ExportacaoEntradaFiltroType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                filtro_type_0 = ExportacaoEntradaFiltroType0.from_dict(data)
+
+                return filtro_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(ExportacaoEntradaFiltroType0 | None | Unset, data)
+
+        filtro = _parse_filtro(d.pop("filtro", UNSET))
+
         exportacao_entrada = cls(
             item_id=item_id,
             formato=formato,
@@ -247,6 +309,8 @@ class ExportacaoEntrada:
             codificacao=codificacao,
             pasta_id=pasta_id,
             csv=csv,
+            ids=ids,
+            filtro=filtro,
         )
 
         return exportacao_entrada

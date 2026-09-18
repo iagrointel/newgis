@@ -77,6 +77,13 @@ def sync_detailed(
     diferente
     de 0 responde 404 em vez de devolver a mesma camada com outro número.
 
+    O `:int` no molde do caminho (Starlette) é o conserto do achado de rotas: sem ele, `camada: int` só
+    filtrava DEPOIS do roteamento escolher esta função (por ordem de registro em `app/main.py`, este
+    router vem antes de `rotas_sync_esri`) — qualquer palavra de um segmento só (`/replicas`,
+    `/createReplica`) caía aqui e morria com 422 de conversão, nunca chegando à rota certa do item
+    L2-04-k. Com o conversor no molde, um segmento não-numérico deixa de casar aqui e o Starlette
+    tenta a próxima rota registrada — sem precisar reordenar `app/main.py`.
+
     Args:
         item_id (str):
         camada (int):
@@ -116,6 +123,13 @@ def sync(
     diferente
     de 0 responde 404 em vez de devolver a mesma camada com outro número.
 
+    O `:int` no molde do caminho (Starlette) é o conserto do achado de rotas: sem ele, `camada: int` só
+    filtrava DEPOIS do roteamento escolher esta função (por ordem de registro em `app/main.py`, este
+    router vem antes de `rotas_sync_esri`) — qualquer palavra de um segmento só (`/replicas`,
+    `/createReplica`) caía aqui e morria com 422 de conversão, nunca chegando à rota certa do item
+    L2-04-k. Com o conversor no molde, um segmento não-numérico deixa de casar aqui e o Starlette
+    tenta a próxima rota registrada — sem precisar reordenar `app/main.py`.
+
     Args:
         item_id (str):
         camada (int):
@@ -149,6 +163,13 @@ async def asyncio_detailed(
      Só a camada 0 existe: um item de catálogo `camada_vetorial` é UMA tabela (ADR 0005). Índice
     diferente
     de 0 responde 404 em vez de devolver a mesma camada com outro número.
+
+    O `:int` no molde do caminho (Starlette) é o conserto do achado de rotas: sem ele, `camada: int` só
+    filtrava DEPOIS do roteamento escolher esta função (por ordem de registro em `app/main.py`, este
+    router vem antes de `rotas_sync_esri`) — qualquer palavra de um segmento só (`/replicas`,
+    `/createReplica`) caía aqui e morria com 422 de conversão, nunca chegando à rota certa do item
+    L2-04-k. Com o conversor no molde, um segmento não-numérico deixa de casar aqui e o Starlette
+    tenta a próxima rota registrada — sem precisar reordenar `app/main.py`.
 
     Args:
         item_id (str):
@@ -186,6 +207,13 @@ async def asyncio(
      Só a camada 0 existe: um item de catálogo `camada_vetorial` é UMA tabela (ADR 0005). Índice
     diferente
     de 0 responde 404 em vez de devolver a mesma camada com outro número.
+
+    O `:int` no molde do caminho (Starlette) é o conserto do achado de rotas: sem ele, `camada: int` só
+    filtrava DEPOIS do roteamento escolher esta função (por ordem de registro em `app/main.py`, este
+    router vem antes de `rotas_sync_esri`) — qualquer palavra de um segmento só (`/replicas`,
+    `/createReplica`) caía aqui e morria com 422 de conversão, nunca chegando à rota certa do item
+    L2-04-k. Com o conversor no molde, um segmento não-numérico deixa de casar aqui e o Starlette
+    tenta a próxima rota registrada — sem precisar reordenar `app/main.py`.
 
     Args:
         item_id (str):

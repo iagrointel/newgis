@@ -33,6 +33,7 @@ class AcervoCartao:
         camadas_vencidas (int | Unset):  Default: 0.
         verificada_em (None | str | Unset):
         endpoints_mortos (int | Unset):  Default: 0.
+        licenca_curada_tipo (None | str | Unset):
     """
 
     fonte_id: str
@@ -53,6 +54,7 @@ class AcervoCartao:
     camadas_vencidas: int | Unset = 0
     verificada_em: None | str | Unset = UNSET
     endpoints_mortos: int | Unset = 0
+    licenca_curada_tipo: None | str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -120,6 +122,12 @@ class AcervoCartao:
 
         endpoints_mortos = self.endpoints_mortos
 
+        licenca_curada_tipo: None | str | Unset
+        if isinstance(self.licenca_curada_tipo, Unset):
+            licenca_curada_tipo = UNSET
+        else:
+            licenca_curada_tipo = self.licenca_curada_tipo
+
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
@@ -156,6 +164,8 @@ class AcervoCartao:
             field_dict["verificada_em"] = verificada_em
         if endpoints_mortos is not UNSET:
             field_dict["endpoints_mortos"] = endpoints_mortos
+        if licenca_curada_tipo is not UNSET:
+            field_dict["licenca_curada_tipo"] = licenca_curada_tipo
 
         return field_dict
 
@@ -247,6 +257,15 @@ class AcervoCartao:
 
         endpoints_mortos = d.pop("endpoints_mortos", UNSET)
 
+        def _parse_licenca_curada_tipo(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        licenca_curada_tipo = _parse_licenca_curada_tipo(d.pop("licenca_curada_tipo", UNSET))
+
         acervo_cartao = cls(
             fonte_id=fonte_id,
             nome=nome,
@@ -266,6 +285,7 @@ class AcervoCartao:
             camadas_vencidas=camadas_vencidas,
             verificada_em=verificada_em,
             endpoints_mortos=endpoints_mortos,
+            licenca_curada_tipo=licenca_curada_tipo,
         )
 
         acervo_cartao.additional_properties = d

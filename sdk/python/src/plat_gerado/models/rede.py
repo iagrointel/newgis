@@ -25,6 +25,7 @@ class Rede:
         descricao (None | str):
         tolerancia_m (float):
         pacote (None | RedePacoteType0):
+        regras_ativas (bool):
         contagens (RedeContagens):
         dono (RedeDono):
         criado_em (str):
@@ -37,6 +38,7 @@ class Rede:
     descricao: None | str
     tolerancia_m: float
     pacote: None | RedePacoteType0
+    regras_ativas: bool
     contagens: RedeContagens
     dono: RedeDono
     criado_em: str
@@ -63,6 +65,8 @@ class Rede:
         else:
             pacote = self.pacote
 
+        regras_ativas = self.regras_ativas
+
         contagens = self.contagens.to_dict()
 
         dono = self.dono.to_dict()
@@ -81,6 +85,7 @@ class Rede:
                 "descricao": descricao,
                 "tolerancia_m": tolerancia_m,
                 "pacote": pacote,
+                "regras_ativas": regras_ativas,
                 "contagens": contagens,
                 "dono": dono,
                 "criado_em": criado_em,
@@ -127,6 +132,8 @@ class Rede:
 
         pacote = _parse_pacote(d.pop("pacote"))
 
+        regras_ativas = d.pop("regras_ativas")
+
         contagens = RedeContagens.from_dict(d.pop("contagens"))
 
         dono = RedeDono.from_dict(d.pop("dono"))
@@ -142,6 +149,7 @@ class Rede:
             descricao=descricao,
             tolerancia_m=tolerancia_m,
             pacote=pacote,
+            regras_ativas=regras_ativas,
             contagens=contagens,
             dono=dono,
             criado_em=criado_em,

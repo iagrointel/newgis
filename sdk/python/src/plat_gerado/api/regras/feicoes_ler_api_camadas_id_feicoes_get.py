@@ -6,7 +6,7 @@ import httpx
 
 from ... import errors
 from ...client import AuthenticatedClient, Client
-from ...models.feicoes_saida import FeicoesSaida
+from ...models.feicoes_saida_regras import FeicoesSaidaRegras
 from ...models.http_validation_error import HTTPValidationError
 from ...types import UNSET, Response, Unset
 
@@ -47,9 +47,9 @@ def _get_kwargs(
 
 def _parse_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> FeicoesSaida | HTTPValidationError | None:
+) -> FeicoesSaidaRegras | HTTPValidationError | None:
     if response.status_code == 200:
-        response_200 = FeicoesSaida.from_dict(response.json())
+        response_200 = FeicoesSaidaRegras.from_dict(response.json())
 
         return response_200
 
@@ -66,7 +66,7 @@ def _parse_response(
 
 def _build_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> Response[FeicoesSaida | HTTPValidationError]:
+) -> Response[FeicoesSaidaRegras | HTTPValidationError]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -82,7 +82,7 @@ def sync_detailed(
     limite: int | Unset = 100,
     deslocamento: int | Unset = 0,
     fid: int | None | Unset = UNSET,
-) -> Response[FeicoesSaida | HTTPValidationError]:
+) -> Response[FeicoesSaidaRegras | HTTPValidationError]:
     """Feicoes Ler
 
      Feições com atributos, geometria (GeoJSON) e os CAMPOS VIRTUAIS avaliados na leitura (só leitura;
@@ -100,7 +100,7 @@ def sync_detailed(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[FeicoesSaida | HTTPValidationError]
+        Response[FeicoesSaidaRegras | HTTPValidationError]
     """
 
     kwargs = _get_kwargs(
@@ -124,7 +124,7 @@ def sync(
     limite: int | Unset = 100,
     deslocamento: int | Unset = 0,
     fid: int | None | Unset = UNSET,
-) -> FeicoesSaida | HTTPValidationError | None:
+) -> FeicoesSaidaRegras | HTTPValidationError | None:
     """Feicoes Ler
 
      Feições com atributos, geometria (GeoJSON) e os CAMPOS VIRTUAIS avaliados na leitura (só leitura;
@@ -142,7 +142,7 @@ def sync(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        FeicoesSaida | HTTPValidationError
+        FeicoesSaidaRegras | HTTPValidationError
     """
 
     return sync_detailed(
@@ -161,7 +161,7 @@ async def asyncio_detailed(
     limite: int | Unset = 100,
     deslocamento: int | Unset = 0,
     fid: int | None | Unset = UNSET,
-) -> Response[FeicoesSaida | HTTPValidationError]:
+) -> Response[FeicoesSaidaRegras | HTTPValidationError]:
     """Feicoes Ler
 
      Feições com atributos, geometria (GeoJSON) e os CAMPOS VIRTUAIS avaliados na leitura (só leitura;
@@ -179,7 +179,7 @@ async def asyncio_detailed(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[FeicoesSaida | HTTPValidationError]
+        Response[FeicoesSaidaRegras | HTTPValidationError]
     """
 
     kwargs = _get_kwargs(
@@ -201,7 +201,7 @@ async def asyncio(
     limite: int | Unset = 100,
     deslocamento: int | Unset = 0,
     fid: int | None | Unset = UNSET,
-) -> FeicoesSaida | HTTPValidationError | None:
+) -> FeicoesSaidaRegras | HTTPValidationError | None:
     """Feicoes Ler
 
      Feições com atributos, geometria (GeoJSON) e os CAMPOS VIRTUAIS avaliados na leitura (só leitura;
@@ -219,7 +219,7 @@ async def asyncio(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        FeicoesSaida | HTTPValidationError
+        FeicoesSaidaRegras | HTTPValidationError
     """
 
     return (

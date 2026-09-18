@@ -22,7 +22,7 @@ import uuid as uuid_mod
 
 import psycopg2
 from fastapi import APIRouter, Request, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
 
 from app import db
@@ -46,6 +46,9 @@ FAIXA_MAX_ANOS = 30
 
 
 class ImportarEntrada(BaseModel):
+    # título único no OpenAPI: colidia com app.dominios.modelos.ImportarEntrada e impedia gerar o SDK
+    model_config = ConfigDict(title="ImportarEntradaContinuidade")
+
     ano_de: int = Field(default=ANO_PADRAO_DE, ge=ANO_MIN, le=ANO_MAX)
     ano_ate: int = Field(default=ANO_PADRAO_ATE, ge=ANO_MIN, le=ANO_MAX)
     caminho: str | None = Field(default=None, max_length=1024,

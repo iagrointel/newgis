@@ -54,6 +54,7 @@ class Job:
         erro (None | str | Unset):
         proveniencia (Any | None | Unset):
         somente_leitura (bool | Unset):  Default: False.
+        posicao_fila (int | None | Unset):
     """
 
     id: UUID
@@ -90,6 +91,7 @@ class Job:
     erro: None | str | Unset = UNSET
     proveniencia: Any | None | Unset = UNSET
     somente_leitura: bool | Unset = False
+    posicao_fila: int | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -231,6 +233,12 @@ class Job:
 
         somente_leitura = self.somente_leitura
 
+        posicao_fila: int | None | Unset
+        if isinstance(self.posicao_fila, Unset):
+            posicao_fila = UNSET
+        else:
+            posicao_fila = self.posicao_fila
+
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
@@ -289,6 +297,8 @@ class Job:
             field_dict["proveniencia"] = proveniencia
         if somente_leitura is not UNSET:
             field_dict["somente_leitura"] = somente_leitura
+        if posicao_fila is not UNSET:
+            field_dict["posicao_fila"] = posicao_fila
 
         return field_dict
 
@@ -492,6 +502,15 @@ class Job:
 
         somente_leitura = d.pop("somente_leitura", UNSET)
 
+        def _parse_posicao_fila(data: object) -> int | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(int | None | Unset, data)
+
+        posicao_fila = _parse_posicao_fila(d.pop("posicao_fila", UNSET))
+
         job = cls(
             id=id,
             tipo=tipo,
@@ -527,6 +546,7 @@ class Job:
             erro=erro,
             proveniencia=proveniencia,
             somente_leitura=somente_leitura,
+            posicao_fila=posicao_fila,
         )
 
         job.additional_properties = d

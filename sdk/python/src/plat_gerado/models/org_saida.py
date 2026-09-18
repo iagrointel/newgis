@@ -10,6 +10,8 @@ if TYPE_CHECKING:
     from ..models.org_saida_armazenamento import OrgSaidaArmazenamento
     from ..models.org_saida_auth import OrgSaidaAuth
     from ..models.org_saida_mapa import OrgSaidaMapa
+    from ..models.org_saida_pagina_inicial_item import OrgSaidaPaginaInicialItem
+    from ..models.org_saida_regional import OrgSaidaRegional
     from ..models.org_saida_usuarios import OrgSaidaUsuarios
 
 
@@ -25,8 +27,16 @@ class OrgSaida:
         ativo (bool):
         cor (str):
         logo (None | str):
+        resumo (None | str):
+        contato (None | str):
+        contatos_admin (list[str]):
         idioma_padrao (str):
+        regional (OrgSaidaRegional):
         mapa (OrgSaidaMapa):
+        pagina_inicial (list[OrgSaidaPaginaInicialItem]):
+        galeria_destaque (None | str):
+        banner_aviso (None | str):
+        termo_acesso (None | str):
         armazenamento (OrgSaidaArmazenamento):
         usuarios (OrgSaidaUsuarios):
         auth (OrgSaidaAuth):
@@ -37,8 +47,16 @@ class OrgSaida:
     ativo: bool
     cor: str
     logo: None | str
+    resumo: None | str
+    contato: None | str
+    contatos_admin: list[str]
     idioma_padrao: str
+    regional: OrgSaidaRegional
     mapa: OrgSaidaMapa
+    pagina_inicial: list[OrgSaidaPaginaInicialItem]
+    galeria_destaque: None | str
+    banner_aviso: None | str
+    termo_acesso: None | str
     armazenamento: OrgSaidaArmazenamento
     usuarios: OrgSaidaUsuarios
     auth: OrgSaidaAuth
@@ -56,9 +74,33 @@ class OrgSaida:
         logo: None | str
         logo = self.logo
 
+        resumo: None | str
+        resumo = self.resumo
+
+        contato: None | str
+        contato = self.contato
+
+        contatos_admin = self.contatos_admin
+
         idioma_padrao = self.idioma_padrao
 
+        regional = self.regional.to_dict()
+
         mapa = self.mapa.to_dict()
+
+        pagina_inicial = []
+        for pagina_inicial_item_data in self.pagina_inicial:
+            pagina_inicial_item = pagina_inicial_item_data.to_dict()
+            pagina_inicial.append(pagina_inicial_item)
+
+        galeria_destaque: None | str
+        galeria_destaque = self.galeria_destaque
+
+        banner_aviso: None | str
+        banner_aviso = self.banner_aviso
+
+        termo_acesso: None | str
+        termo_acesso = self.termo_acesso
 
         armazenamento = self.armazenamento.to_dict()
 
@@ -75,8 +117,16 @@ class OrgSaida:
                 "ativo": ativo,
                 "cor": cor,
                 "logo": logo,
+                "resumo": resumo,
+                "contato": contato,
+                "contatos_admin": contatos_admin,
                 "idioma_padrao": idioma_padrao,
+                "regional": regional,
                 "mapa": mapa,
+                "pagina_inicial": pagina_inicial,
+                "galeria_destaque": galeria_destaque,
+                "banner_aviso": banner_aviso,
+                "termo_acesso": termo_acesso,
                 "armazenamento": armazenamento,
                 "usuarios": usuarios,
                 "auth": auth,
@@ -90,6 +140,8 @@ class OrgSaida:
         from ..models.org_saida_armazenamento import OrgSaidaArmazenamento  # noqa: PLC0415
         from ..models.org_saida_auth import OrgSaidaAuth  # noqa: PLC0415
         from ..models.org_saida_mapa import OrgSaidaMapa  # noqa: PLC0415
+        from ..models.org_saida_pagina_inicial_item import OrgSaidaPaginaInicialItem  # noqa: PLC0415
+        from ..models.org_saida_regional import OrgSaidaRegional  # noqa: PLC0415
         from ..models.org_saida_usuarios import OrgSaidaUsuarios  # noqa: PLC0415
 
         d = dict(src_dict)
@@ -108,9 +160,55 @@ class OrgSaida:
 
         logo = _parse_logo(d.pop("logo"))
 
+        def _parse_resumo(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        resumo = _parse_resumo(d.pop("resumo"))
+
+        def _parse_contato(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        contato = _parse_contato(d.pop("contato"))
+
+        contatos_admin = cast(list[str], d.pop("contatos_admin"))
+
         idioma_padrao = d.pop("idioma_padrao")
 
+        regional = OrgSaidaRegional.from_dict(d.pop("regional"))
+
         mapa = OrgSaidaMapa.from_dict(d.pop("mapa"))
+
+        pagina_inicial = []
+        _pagina_inicial = d.pop("pagina_inicial")
+        for pagina_inicial_item_data in _pagina_inicial:
+            pagina_inicial_item = OrgSaidaPaginaInicialItem.from_dict(pagina_inicial_item_data)
+
+            pagina_inicial.append(pagina_inicial_item)
+
+        def _parse_galeria_destaque(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        galeria_destaque = _parse_galeria_destaque(d.pop("galeria_destaque"))
+
+        def _parse_banner_aviso(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        banner_aviso = _parse_banner_aviso(d.pop("banner_aviso"))
+
+        def _parse_termo_acesso(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        termo_acesso = _parse_termo_acesso(d.pop("termo_acesso"))
 
         armazenamento = OrgSaidaArmazenamento.from_dict(d.pop("armazenamento"))
 
@@ -124,8 +222,16 @@ class OrgSaida:
             ativo=ativo,
             cor=cor,
             logo=logo,
+            resumo=resumo,
+            contato=contato,
+            contatos_admin=contatos_admin,
             idioma_padrao=idioma_padrao,
+            regional=regional,
             mapa=mapa,
+            pagina_inicial=pagina_inicial,
+            galeria_destaque=galeria_destaque,
+            banner_aviso=banner_aviso,
+            termo_acesso=termo_acesso,
             armazenamento=armazenamento,
             usuarios=usuarios,
             auth=auth,

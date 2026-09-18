@@ -41,7 +41,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Request
 from PIL import Image, ImageOps
-from pydantic import Field, field_validator
+from pydantic import ConfigDict, Field, field_validator
 
 from app import db, limites, objetos
 from app.auth.comum import registrar_evento
@@ -58,6 +58,9 @@ _EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,190}\.[^@\s]+$")
 
 # ---------------------------------------------------------------- modelos
 class Link(Modelo):
+    # título único no OpenAPI: colidia com app.catalogo.modelos.Link e impedia a geração do SDK
+    model_config = ConfigDict(title="LinkOrg")
+
     rotulo: str = Field(min_length=1, max_length=limites.ORG_LINK_ROTULO_MAX)
     url: str = Field(min_length=1, max_length=limites.ORG_LINK_URL_MAX)
 

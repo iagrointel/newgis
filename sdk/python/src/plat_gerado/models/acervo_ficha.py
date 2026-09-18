@@ -9,6 +9,7 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 if TYPE_CHECKING:
+    from ..models.acervo_camada_na_ficha import AcervoCamadaNaFicha
     from ..models.acervo_endpoint import AcervoEndpoint
 
 
@@ -37,6 +38,7 @@ class AcervoFicha:
         camadas_vencidas (int | Unset):  Default: 0.
         verificada_em (None | str | Unset):
         endpoints_mortos (int | Unset):  Default: 0.
+        licenca_curada_tipo (None | str | Unset):
         url (None | str | Unset):
         url_http (None | str | Unset):
         url_conferida_em (None | str | Unset):
@@ -56,6 +58,7 @@ class AcervoFicha:
         endpoints_total (int | Unset):  Default: 0.
         endpoints_confirmados_vivos (int | Unset):  Default: 0.
         completude_texto (None | str | Unset):
+        camadas (list[AcervoCamadaNaFicha] | Unset):
     """
 
     fonte_id: str
@@ -76,6 +79,7 @@ class AcervoFicha:
     camadas_vencidas: int | Unset = 0
     verificada_em: None | str | Unset = UNSET
     endpoints_mortos: int | Unset = 0
+    licenca_curada_tipo: None | str | Unset = UNSET
     url: None | str | Unset = UNSET
     url_http: None | str | Unset = UNSET
     url_conferida_em: None | str | Unset = UNSET
@@ -95,6 +99,7 @@ class AcervoFicha:
     endpoints_total: int | Unset = 0
     endpoints_confirmados_vivos: int | Unset = 0
     completude_texto: None | str | Unset = UNSET
+    camadas: list[AcervoCamadaNaFicha] | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -161,6 +166,12 @@ class AcervoFicha:
             verificada_em = self.verificada_em
 
         endpoints_mortos = self.endpoints_mortos
+
+        licenca_curada_tipo: None | str | Unset
+        if isinstance(self.licenca_curada_tipo, Unset):
+            licenca_curada_tipo = UNSET
+        else:
+            licenca_curada_tipo = self.licenca_curada_tipo
 
         url: None | str | Unset
         if isinstance(self.url, Unset):
@@ -269,6 +280,13 @@ class AcervoFicha:
         else:
             completude_texto = self.completude_texto
 
+        camadas: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.camadas, Unset):
+            camadas = []
+            for camadas_item_data in self.camadas:
+                camadas_item = camadas_item_data.to_dict()
+                camadas.append(camadas_item)
+
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
@@ -305,6 +323,8 @@ class AcervoFicha:
             field_dict["verificada_em"] = verificada_em
         if endpoints_mortos is not UNSET:
             field_dict["endpoints_mortos"] = endpoints_mortos
+        if licenca_curada_tipo is not UNSET:
+            field_dict["licenca_curada_tipo"] = licenca_curada_tipo
         if url is not UNSET:
             field_dict["url"] = url
         if url_http is not UNSET:
@@ -343,11 +363,14 @@ class AcervoFicha:
             field_dict["endpoints_confirmados_vivos"] = endpoints_confirmados_vivos
         if completude_texto is not UNSET:
             field_dict["completude_texto"] = completude_texto
+        if camadas is not UNSET:
+            field_dict["camadas"] = camadas
 
         return field_dict
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.acervo_camada_na_ficha import AcervoCamadaNaFicha  # noqa: PLC0415
         from ..models.acervo_endpoint import AcervoEndpoint  # noqa: PLC0415
 
         d = dict(src_dict)
@@ -435,6 +458,15 @@ class AcervoFicha:
         verificada_em = _parse_verificada_em(d.pop("verificada_em", UNSET))
 
         endpoints_mortos = d.pop("endpoints_mortos", UNSET)
+
+        def _parse_licenca_curada_tipo(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        licenca_curada_tipo = _parse_licenca_curada_tipo(d.pop("licenca_curada_tipo", UNSET))
 
         def _parse_url(data: object) -> None | str | Unset:
             if data is None:
@@ -593,6 +625,15 @@ class AcervoFicha:
 
         completude_texto = _parse_completude_texto(d.pop("completude_texto", UNSET))
 
+        _camadas = d.pop("camadas", UNSET)
+        camadas: list[AcervoCamadaNaFicha] | Unset = UNSET
+        if _camadas is not UNSET:
+            camadas = []
+            for camadas_item_data in _camadas:
+                camadas_item = AcervoCamadaNaFicha.from_dict(camadas_item_data)
+
+                camadas.append(camadas_item)
+
         acervo_ficha = cls(
             fonte_id=fonte_id,
             nome=nome,
@@ -612,6 +653,7 @@ class AcervoFicha:
             camadas_vencidas=camadas_vencidas,
             verificada_em=verificada_em,
             endpoints_mortos=endpoints_mortos,
+            licenca_curada_tipo=licenca_curada_tipo,
             url=url,
             url_http=url_http,
             url_conferida_em=url_conferida_em,
@@ -631,6 +673,7 @@ class AcervoFicha:
             endpoints_total=endpoints_total,
             endpoints_confirmados_vivos=endpoints_confirmados_vivos,
             completude_texto=completude_texto,
+            camadas=camadas,
         )
 
         acervo_ficha.additional_properties = d

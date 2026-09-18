@@ -58,7 +58,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
 ) -> Response[Any | HTTPValidationError]:
-    """WMS 1.3.0 (GetCapabilities, GetMap e GetLegendGraphic)
+    """WMS 1.3.0 (GetCapabilities, GetMap, GetFeatureInfo e GetLegendGraphic)
 
     Args:
         token (str):
@@ -87,7 +87,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
 ) -> Any | HTTPValidationError | None:
-    """WMS 1.3.0 (GetCapabilities, GetMap e GetLegendGraphic)
+    """WMS 1.3.0 (GetCapabilities, GetMap, GetFeatureInfo e GetLegendGraphic)
 
     Args:
         token (str):
@@ -111,7 +111,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
 ) -> Response[Any | HTTPValidationError]:
-    """WMS 1.3.0 (GetCapabilities, GetMap e GetLegendGraphic)
+    """WMS 1.3.0 (GetCapabilities, GetMap, GetFeatureInfo e GetLegendGraphic)
 
     Args:
         token (str):
@@ -138,7 +138,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
 ) -> Any | HTTPValidationError | None:
-    """WMS 1.3.0 (GetCapabilities, GetMap e GetLegendGraphic)
+    """WMS 1.3.0 (GetCapabilities, GetMap, GetFeatureInfo e GetLegendGraphic)
 
     Args:
         token (str):

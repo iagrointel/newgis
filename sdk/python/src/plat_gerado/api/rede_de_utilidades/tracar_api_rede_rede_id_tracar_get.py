@@ -7,7 +7,7 @@ import httpx
 from ... import errors
 from ...client import AuthenticatedClient, Client
 from ...models.http_validation_error import HTTPValidationError
-from ...models.tracado_resultado import TracadoResultado
+from ...models.tracado_area_suja_resultado import TracadoAreaSujaResultado
 from ...types import UNSET, Response, Unset
 
 
@@ -49,9 +49,9 @@ def _get_kwargs(
 
 def _parse_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> HTTPValidationError | TracadoResultado | None:
+) -> HTTPValidationError | TracadoAreaSujaResultado | None:
     if response.status_code == 200:
-        response_200 = TracadoResultado.from_dict(response.json())
+        response_200 = TracadoAreaSujaResultado.from_dict(response.json())
 
         return response_200
 
@@ -68,7 +68,7 @@ def _parse_response(
 
 def _build_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> Response[HTTPValidationError | TracadoResultado]:
+) -> Response[HTTPValidationError | TracadoAreaSujaResultado]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -83,7 +83,7 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
     feicao_id: None | str | Unset = UNSET,
     geometria: None | str | Unset = UNSET,
-) -> Response[HTTPValidationError | TracadoResultado]:
+) -> Response[HTTPValidationError | TracadoAreaSujaResultado]:
     """Tracar
 
      Ponto de partida de um traçado: `feicao_id` (uuid de uma feição já gravada) OU `geometria` (GeoJSON
@@ -102,7 +102,7 @@ def sync_detailed(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[HTTPValidationError | TracadoResultado]
+        Response[HTTPValidationError | TracadoAreaSujaResultado]
     """
 
     kwargs = _get_kwargs(
@@ -124,7 +124,7 @@ def sync(
     client: AuthenticatedClient | Client,
     feicao_id: None | str | Unset = UNSET,
     geometria: None | str | Unset = UNSET,
-) -> HTTPValidationError | TracadoResultado | None:
+) -> HTTPValidationError | TracadoAreaSujaResultado | None:
     """Tracar
 
      Ponto de partida de um traçado: `feicao_id` (uuid de uma feição já gravada) OU `geometria` (GeoJSON
@@ -143,7 +143,7 @@ def sync(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        HTTPValidationError | TracadoResultado
+        HTTPValidationError | TracadoAreaSujaResultado
     """
 
     return sync_detailed(
@@ -160,7 +160,7 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
     feicao_id: None | str | Unset = UNSET,
     geometria: None | str | Unset = UNSET,
-) -> Response[HTTPValidationError | TracadoResultado]:
+) -> Response[HTTPValidationError | TracadoAreaSujaResultado]:
     """Tracar
 
      Ponto de partida de um traçado: `feicao_id` (uuid de uma feição já gravada) OU `geometria` (GeoJSON
@@ -179,7 +179,7 @@ async def asyncio_detailed(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[HTTPValidationError | TracadoResultado]
+        Response[HTTPValidationError | TracadoAreaSujaResultado]
     """
 
     kwargs = _get_kwargs(
@@ -199,7 +199,7 @@ async def asyncio(
     client: AuthenticatedClient | Client,
     feicao_id: None | str | Unset = UNSET,
     geometria: None | str | Unset = UNSET,
-) -> HTTPValidationError | TracadoResultado | None:
+) -> HTTPValidationError | TracadoAreaSujaResultado | None:
     """Tracar
 
      Ponto de partida de um traçado: `feicao_id` (uuid de uma feição já gravada) OU `geometria` (GeoJSON
@@ -218,7 +218,7 @@ async def asyncio(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        HTTPValidationError | TracadoResultado
+        HTTPValidationError | TracadoAreaSujaResultado
     """
 
     return (

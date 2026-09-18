@@ -43,6 +43,10 @@ def sync_detailed(
 ) -> Response[Any]:
     """Formatos Aceitos
 
+     Item L0-04-d: a instalação declara TODOS os formatos que conhece, aceitos ou não, com o motivo de
+    cada
+    recusa — nunca omite um formato como se ele não existisse (achado do adversário do turno 3).
+
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
@@ -65,6 +69,10 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
 ) -> Response[Any]:
     """Formatos Aceitos
+
+     Item L0-04-d: a instalação declara TODOS os formatos que conhece, aceitos ou não, com o motivo de
+    cada
+    recusa — nunca omite um formato como se ele não existisse (achado do adversário do turno 3).
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

@@ -6,7 +6,7 @@ import httpx
 
 from ... import errors
 from ...client import AuthenticatedClient, Client
-from ...models.feicao_entrada import FeicaoEntrada
+from ...models.feicao_entrada_dominios import FeicaoEntradaDominios
 from ...models.http_validation_error import HTTPValidationError
 from ...types import Response
 
@@ -14,7 +14,7 @@ from ...types import Response
 def _get_kwargs(
     item_id: str,
     *,
-    body: FeicaoEntrada,
+    body: FeicaoEntradaDominios,
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
 
@@ -66,13 +66,13 @@ def sync_detailed(
     item_id: str,
     *,
     client: AuthenticatedClient | Client,
-    body: FeicaoEntrada,
+    body: FeicaoEntradaDominios,
 ) -> Response[Any | HTTPValidationError]:
     """Criar Feicao
 
     Args:
         item_id (str):
-        body (FeicaoEntrada):
+        body (FeicaoEntradaDominios):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -98,13 +98,13 @@ def sync(
     item_id: str,
     *,
     client: AuthenticatedClient | Client,
-    body: FeicaoEntrada,
+    body: FeicaoEntradaDominios,
 ) -> Any | HTTPValidationError | None:
     """Criar Feicao
 
     Args:
         item_id (str):
-        body (FeicaoEntrada):
+        body (FeicaoEntradaDominios):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -125,13 +125,13 @@ async def asyncio_detailed(
     item_id: str,
     *,
     client: AuthenticatedClient | Client,
-    body: FeicaoEntrada,
+    body: FeicaoEntradaDominios,
 ) -> Response[Any | HTTPValidationError]:
     """Criar Feicao
 
     Args:
         item_id (str):
-        body (FeicaoEntrada):
+        body (FeicaoEntradaDominios):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -155,13 +155,13 @@ async def asyncio(
     item_id: str,
     *,
     client: AuthenticatedClient | Client,
-    body: FeicaoEntrada,
+    body: FeicaoEntradaDominios,
 ) -> Any | HTTPValidationError | None:
     """Criar Feicao
 
     Args:
         item_id (str):
-        body (FeicaoEntrada):
+        body (FeicaoEntradaDominios):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
