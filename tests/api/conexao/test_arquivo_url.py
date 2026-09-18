@@ -11,6 +11,7 @@ neste ramo — a unidade `plat-worker` da máquina roda o código de `master` e 
 from __future__ import annotations
 
 import json
+import os
 import time
 import uuid
 
@@ -19,6 +20,7 @@ import pytest
 from tests.api.conftest import PREFIXO_TESTE
 from tests.api.jobs.conftest import WorkerExtra
 from tests.servidor_arquivo import ServidorArquivos
+from tests.servidor_garage import GarageDuble
 from tests.unit.test_conexao_arquivo_url import CSV_TROCADO, CSV_VIRGULA, GEOJSON, GEORSS, GPX, KML, kmz
 
 # porta livre por rodada: worker órfão de uma rodada anterior não confunde o /saude desta
@@ -51,13 +53,45 @@ def anota(medida):
 
 
 @pytest.fixture(scope="module")
+def garage_duble():
+    """Garage de trilhas não existe em toda máquina (a unidade `plataforma-garage-trilhas.service` e o
+    arquivo de segredos dela podem não ter sido provisionados — é o caso deste servidor). O job grava o
+    arquivo baixado com `objetos.guardar` e a ingestão o lê com `objetos.ler`: os dois precisam de UM S3
+    falando o contrato do Garage. O duble em memória (tests/servidor_garage.py) cobre esse contrato; a
+    assinatura SigV4 e a cota física são prova do L0-11 contra o Garage real, não deste item.
+
+    Remendo nos DOIS lados do processo: `os.environ` para o worker em subprocesso (ele monta o Settings
+    do zero ao subir, lendo o ambiente) e o objeto `settings` deste processo (a API em TestClient), que
+    já foi montado quando a fixture roda. Restaurado ao fim do módulo."""
+    from app.settings import settings
+
+    chaves = ("PLAT_GARAGE_URL", "PLAT_GARAGE_ADMIN_URL", "PLAT_GARAGE_ADMIN_TOKEN")
+    with GarageDuble() as g:
+        ambiente_anterior = {k: os.environ.get(k) for k in chaves}
+        atributos_anteriores = {k: getattr(settings, k) for k in chaves}
+        for k, v in {"PLAT_GARAGE_URL": g.url, "PLAT_GARAGE_ADMIN_URL": g.url,
+                     "PLAT_GARAGE_ADMIN_TOKEN": "token-do-duble-de-teste"}.items():
+            os.environ[k] = v
+            object.__setattr__(settings, k, v)  # Settings é dataclass frozen; o remendo é só de teste
+        try:
+            yield g
+        finally:
+            for k in chaves:
+                if ambiente_anterior[k] is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = ambiente_anterior[k]
+                object.__setattr__(settings, k, atributos_anteriores[k])
+
+
+@pytest.fixture(scope="module")
 def servidor():
     with ServidorArquivos() as s:
         yield s
 
 
 @pytest.fixture(scope="module")
-def worker(env):
+def worker(env, garage_duble):
     # 2 processos de propósito: o periódico `conexoes.saude_verificar` (item L6-02-l) roda no mesmo banco de
     # teste e testa TODAS as conexões de todos os inquilinos, uma a uma, com timeout de 3 s cada — com um
     # processo só ele segura a fila por minutos e os jobos deste arquivo ficam pendentes sem nunca rodar.
