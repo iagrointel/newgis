@@ -54,20 +54,37 @@ def http():
         yield c
 
 
-@pytest.mark.parametrize("cabecalho", ["referrer-policy", "permissions-policy"])
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "o nginx da instalação pública usa add_header para Referrer-Policy/Permissions-Policy, que "
-        "ACRESCENTA ao cabeçalho que a aplicação já mandou em vez de substituir — a decisão 'Cache-Control "
-        "com UMA origem só' (app/auth/middleware.py) só foi aplicada ao Cache-Control. Medido: "
-        "Referrer-Policy chega duplicado com o MESMO valor, Permissions-Policy chega com DOIS valores "
-        "DIFERENTES na mesma resposta. (Strict-Transport-Security, conferido à parte, NÃO duplica — fora "
-        "deste parametrize.) Item L7-03-e-cabecalhos-csp-tls."
-    ),
-)
-def test_cabecalho_de_seguranca_aparece_uma_unica_vez(http, cabecalho):
-    r = http.get("/")
-    assert r.status_code == 200
+# CONSERTADO (18/09/2026, turno L7 do construtor). O defeito era real e foi medido de novo antes do
+# conserto: `curl -sD - https://sistema.iagrointel.com/` trazia Referrer-Policy duas vezes,
+# X-Content-Type-Options duas vezes e Permissions-Policy com DOIS valores, o do nginx mais fraco que o
+# da aplicação. A causa é a que o laudo apontou: `add_header` do nginx ACRESCENTA, nunca substitui.
+#
+# O conserto tem duas metades, e a primeira sozinha abre um buraco:
+#  1. nas rotas proxiadas comuns (/, /api/login, /api/login/2fa) o nginx deixou de declarar os três; a
+#     origem é a aplicação (app/auth/middleware.py);
+#  2. nas rotas /svc/ guardadas por `auth_request`, tirar sozinho deixava a resposta 403 — que o
+#     PRÓPRIO nginx gera, sem montante nenhum — sem cabeçalho de segurança algum (medido em 18/09,
+#     contagem zero nos três). Ali vale `proxy_hide_header` dos três mais `add_header` dos três: um
+#     valor no 200 e um valor no 403.
+# deploy/nginx.conf carrega as duas metades; o vhost vivo foi realinhado com ele no mesmo dia.
+ROTAS = ["/", "/api/login", "/svc/x/raster/y/info"]
+CABECALHOS = ["referrer-policy", "permissions-policy", "x-content-type-options",
+              "strict-transport-security"]
+
+
+@pytest.mark.parametrize("rota", ROTAS)
+@pytest.mark.parametrize("cabecalho", CABECALHOS)
+def test_cabecalho_de_seguranca_aparece_uma_unica_vez(http, cabecalho, rota):
+    r = http.get(rota)
     valores = r.headers.get_list(cabecalho)
-    assert len(valores) == 1, (cabecalho, valores)
+    assert len(valores) == 1, (rota, r.status_code, cabecalho, valores)
+
+
+def test_permissions_policy_nao_sai_com_dois_valores_diferentes(http):
+    """Par positivo do achado mais grave: a duplicata do nginx trazia uma lista CURTA (geolocation,
+    camera, microphone, payment, usb) ao lado da lista longa da aplicação. Um cliente que lesse a
+    primeira teria a política errada. Aqui exige-se um valor só, e que seja o completo."""
+    r = http.get("/")
+    valores = r.headers.get_list("permissions-policy")
+    assert len(valores) == 1, valores
+    assert "accelerometer=()" in valores[0], valores
