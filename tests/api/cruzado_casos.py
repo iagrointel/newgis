@@ -1794,3 +1794,162 @@ CASOS[("POST", "/api/multiescala/execucoes/{id}/regioes")] = Caso(
     lambda p: f"/api/multiescala/execucoes/{p.execucao_b['id']}/regioes", lambda p: {"n_regioes": 1},
 )
 
+
+
+# =====================================================================================================
+# LEVA 1 (18/09/2026) — as rotas de {item_id}: A aponta para o item REAL de B.
+#
+# Motivo: a medida de `tests/medidas/L0-02-e.json` dizia 138/138 = "100 % de cobertura" e era de 06/09,
+# quando a API servia 138 rotas. Medido hoje contra o `docs/openapi.json` regerado: 960 rotas servidas,
+# 439 com caso — 521 rotas vivas cujo isolamento entre inquilinos nunca foi exercido por teste nenhum.
+# Este bloco fecha as que têm `{item_id}` no caminho, que são as de maior valor: o alvo não é um id
+# inventado, é o item que B criou nesta mesma rodada (`p.item_b`), e a RLS de `plat.item` é exatamente
+# o que está sendo posto à prova.
+#
+# `{colecao_id}`, `{fid}`, `{feature_id}`, `{rel}`, `{fonte_id}`, `{nome}` e `{versao_guid}` são nomes de
+# recursos DENTRO do item de B. Não há como conhecê-los de fora sem antes atravessar o item — é esse o
+# ponto. Com o item recusado, o valor deles não muda a resposta; ficam com um literal marcado `zz-`.
+_VG = "{00000000-0000-0000-0000-000000000000}"  # GUID de versão no formato do VersionManagementServer
+_PRED = {"nome": "zz-cruzado", "titulo": "zt-cruzado-pred"}
+# `pedidos` do painel e um OBJETO chave->pedido (validado a mao em app/paineis/rotas.py), nunca uma lista
+_PEDIDOS = {"pedidos": {"p1": {"tipo": "contagem"}}}
+
+
+def _it(p: Preparacao) -> str:
+    return p.item_b["id"]
+
+
+CASOS.update({
+    # ---- catálogo e publicação do item de B
+    ("GET", "/api/agol/publicacoes/{item_id}"): Caso(lambda p: f"/api/agol/publicacoes/{_it(p)}"),
+    ("GET", "/api/foto360/{item_id}"): Caso(lambda p: f"/api/foto360/{_it(p)}"),
+    ("GET", "/api/modelo3d/{item_id}"): Caso(lambda p: f"/api/modelo3d/{_it(p)}"),
+    # ---- camada de B: esquema, domínios, subtipos, tabela e feições
+    ("GET", "/api/camadas/{item_id}/classes"): Caso(lambda p: f"/api/camadas/{_it(p)}/classes?campo=zz_campo"),
+    ("GET", "/api/camadas/{item_id}/dominios"): Caso(lambda p: f"/api/camadas/{_it(p)}/dominios"),
+    ("POST", "/api/camadas/{item_id}/dominios"): Caso(
+        lambda p: f"/api/camadas/{_it(p)}/dominios",
+        lambda p: {"campo": "zz_campo", "dominio_id": UUID_NULO},
+    ),
+    ("DELETE", "/api/camadas/{item_id}/dominios/{ligacao_id}"): Caso(
+        lambda p: f"/api/camadas/{_it(p)}/dominios/{UUID_NULO}"),
+    ("POST", "/api/camadas/{item_id}/feicoes"): Caso(
+        lambda p: f"/api/camadas/{_it(p)}/feicoes",
+        lambda p: {"atributos": {}, "geometria": {"type": "Point", "coordinates": [-46.6, -23.5]}},
+    ),
+    ("GET", "/api/camadas/{item_id}/relacionados/{rel}"): Caso(
+        lambda p: f"/api/camadas/{_it(p)}/relacionados/zz-rel"),
+    ("GET", "/api/camadas/{item_id}/relacionamentos"): Caso(lambda p: f"/api/camadas/{_it(p)}/relacionamentos"),
+    ("GET", "/api/camadas/{item_id}/subtipos"): Caso(lambda p: f"/api/camadas/{_it(p)}/subtipos"),
+    ("PUT", "/api/camadas/{item_id}/subtipos"): Caso(
+        lambda p: f"/api/camadas/{_it(p)}/subtipos",
+        lambda p: {"campo": "zz_campo", "valores": [{"codigo": 1, "nome": "zz"}]}),
+    ("DELETE", "/api/camadas/{item_id}/subtipos"): Caso(lambda p: f"/api/camadas/{_it(p)}/subtipos"),
+    ("GET", "/api/camadas/{item_id}/tabela/colunas"): Caso(lambda p: f"/api/camadas/{_it(p)}/tabela/colunas"),
+    ("POST", "/api/camadas/{item_id}/tabela/estatisticas"): Caso(
+        lambda p: f"/api/camadas/{_it(p)}/tabela/estatisticas", lambda p: {}),
+    ("POST", "/api/camadas/{item_id}/tabela/linhas"): Caso(
+        lambda p: f"/api/camadas/{_it(p)}/tabela/linhas", lambda p: {}),
+    ("GET", "/api/camadas/{item_id}/tabela/vista"): Caso(lambda p: f"/api/camadas/{_it(p)}/tabela/vista"),
+    ("PUT", "/api/camadas/{item_id}/tabela/vista"): Caso(
+        lambda p: f"/api/camadas/{_it(p)}/tabela/vista", lambda p: {"colunas": []}),
+    # ---- geocodificador em lote sobre a camada de B
+    ("GET", "/api/geocodificador/lote/{item_id}"): Caso(lambda p: f"/api/geocodificador/lote/{_it(p)}"),
+    ("GET", "/api/geocodificador/lote/{item_id}/pendentes"): Caso(
+        lambda p: f"/api/geocodificador/lote/{_it(p)}/pendentes"),
+    ("PATCH", "/api/geocodificador/lote/{item_id}/pendentes/{fid}"): Caso(
+        lambda p: f"/api/geocodificador/lote/{_it(p)}/pendentes/1", lambda p: {"lon": -46.6, "lat": -23.5}),
+    ("POST", "/api/geocodificador/lote/{item_id}/regeocodificar"): Caso(
+        lambda p: f"/api/geocodificador/lote/{_it(p)}/regeocodificar", lambda p: {}),
+    # ---- imagens de B: metadados, tiles e predefinições de renderização
+    ("GET", "/api/imagens/{item_id}"): Caso(lambda p: f"/api/imagens/{_it(p)}"),
+    ("POST", "/api/imagens/{item_id}/conferir"): Caso(lambda p: f"/api/imagens/{_it(p)}/conferir"),
+    ("GET", "/api/imagens/{item_id}/predefinicoes"): Caso(lambda p: f"/api/imagens/{_it(p)}/predefinicoes"),
+    ("POST", "/api/imagens/{item_id}/predefinicoes"): Caso(
+        lambda p: f"/api/imagens/{_it(p)}/predefinicoes", lambda p: dict(_PRED)),
+    ("PUT", "/api/imagens/{item_id}/predefinicoes/{nome}"): Caso(
+        lambda p: f"/api/imagens/{_it(p)}/predefinicoes/zz-cruzado", lambda p: dict(_PRED)),
+    ("DELETE", "/api/imagens/{item_id}/predefinicoes/{nome}"): Caso(
+        lambda p: f"/api/imagens/{_it(p)}/predefinicoes/zz-cruzado"),
+    ("POST", "/api/imagens/{item_id}/predefinicoes/{nome}/tornar-padrao"): Caso(
+        lambda p: f"/api/imagens/{_it(p)}/predefinicoes/zz-cruzado/tornar-padrao"),
+    ("GET", "/api/imagens/{item_id}/tiles/{z}/{x}/{y}.png"): Caso(
+        lambda p: f"/api/imagens/{_it(p)}/tiles/1/0/0.png"),
+    # ---- painéis: a fonte de dados é do item de B
+    ("POST", "/api/itens/{item_id}/paineis/fontes/{fonte_id}/dados"): Caso(
+        lambda p: f"/api/itens/{_it(p)}/paineis/fontes/{UUID_NULO}/dados", lambda p: _PEDIDOS),
+    # ---- OGC API - Features sobre o item de B
+    ("GET", "/ogc/features/{item_id}/api"): Caso(lambda p: f"/ogc/features/{_it(p)}/api"),
+    ("GET", "/ogc/features/{item_id}/collections/{colecao_id}/queryables"): Caso(
+        lambda p: f"/ogc/features/{_it(p)}/collections/zz-colecao/queryables"),
+    ("POST", "/ogc/features/{item_id}/collections/{colecao_id}/items"): Caso(
+        lambda p: f"/ogc/features/{_it(p)}/collections/zz-colecao/items",
+        lambda p: {"type": "Feature", "properties": {},
+                   "geometry": {"type": "Point", "coordinates": [-46.6, -23.5]}}),
+    ("PUT", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): Caso(
+        lambda p: f"/ogc/features/{_it(p)}/collections/zz-colecao/items/1",
+        lambda p: {"type": "Feature", "properties": {},
+                   "geometry": {"type": "Point", "coordinates": [-46.6, -23.5]}}),
+    ("PATCH", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): Caso(
+        lambda p: f"/ogc/features/{_it(p)}/collections/zz-colecao/items/1",
+        lambda p: {"properties": {}}),
+    ("DELETE", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): Caso(
+        lambda p: f"/ogc/features/{_it(p)}/collections/zz-colecao/items/1"),
+    # ---- fachada ArcGIS REST sobre o item de B (FeatureServer e VersionManagementServer)
+    ("GET", "/rest/services/{item_id}/FeatureServer/{camada}"): Caso(
+        lambda p: f"/rest/services/{_it(p)}/FeatureServer/0?f=json"),
+    ("GET", "/rest/services/{item_id}/FeatureServer/0/queryRelatedRecords"): Caso(
+        lambda p: f"/rest/services/{_it(p)}/FeatureServer/0/queryRelatedRecords?f=json&relationshipId=0"),
+    ("GET", "/rest/services/{item_id}/VersionManagementServer"): Caso(
+        lambda p: f"/rest/services/{_it(p)}/VersionManagementServer?f=json"),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer"): Caso(
+        lambda p: f"/rest/services/{_it(p)}/VersionManagementServer?f=json"),
+    ("GET", "/rest/services/{item_id}/VersionManagementServer/versionInfos"): Caso(
+        lambda p: f"/rest/services/{_it(p)}/VersionManagementServer/versionInfos?f=json"),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/versionInfos"): Caso(
+        lambda p: f"/rest/services/{_it(p)}/VersionManagementServer/versionInfos?f=json"),
+    ("GET", "/rest/services/{item_id}/VersionManagementServer/versions"): Caso(
+        lambda p: f"/rest/services/{_it(p)}/VersionManagementServer/versions?f=json"),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/versions"): Caso(
+        lambda p: f"/rest/services/{_it(p)}/VersionManagementServer/versions?f=json"),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/create"): Caso(
+        lambda p: f"/rest/services/{_it(p)}/VersionManagementServer/create?f=json&versionName=zt-cruzado"),
+    ("GET", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/conflicts"): Caso(
+        lambda p: f"/rest/services/{_it(p)}/VersionManagementServer/{_VG}/conflicts?f=json"),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/conflicts"): Caso(
+        lambda p: f"/rest/services/{_it(p)}/VersionManagementServer/{_VG}/conflicts?f=json"),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/delete"): Caso(
+        lambda p: f"/rest/services/{_it(p)}/VersionManagementServer/{_VG}/delete?f=json"),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/post"): Caso(
+        lambda p: f"/rest/services/{_it(p)}/VersionManagementServer/{_VG}/post?f=json"),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/reconcile"): Caso(
+        lambda p: f"/rest/services/{_it(p)}/VersionManagementServer/{_VG}/reconcile?f=json"),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/startEditing"): Caso(
+        lambda p: f"/rest/services/{_it(p)}/VersionManagementServer/{_VG}/startEditing?f=json"),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/startReading"): Caso(
+        lambda p: f"/rest/services/{_it(p)}/VersionManagementServer/{_VG}/startReading?f=json"),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/stopEditing"): Caso(
+        lambda p: f"/rest/services/{_it(p)}/VersionManagementServer/{_VG}/stopEditing?f=json"),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/stopReading"): Caso(
+        lambda p: f"/rest/services/{_it(p)}/VersionManagementServer/{_VG}/stopReading?f=json"),
+    # ---- OGC de desenho sobre o item de B (WMS/WMTS). O token do caminho, quando existe, é inválido de
+    # propósito: quem credencia essas rotas é a URL, e o cruzamento por token está em
+    # tests/api/imagens/test_isolamento.py (item L1-02).
+    ("GET", "/wms/{item_id}"): Caso(
+        lambda p: f"/wms/{_it(p)}?service=WMS&request=GetCapabilities"),
+    ("GET", "/wmts/{item_id}"): Caso(
+        lambda p: f"/wmts/{_it(p)}?service=WMTS&request=GetCapabilities"),
+    ("GET", "/wmts/{item_id}/rest/WMTSCapabilities.xml"): Caso(
+        lambda p: f"/wmts/{_it(p)}/rest/WMTSCapabilities.xml"),
+    ("GET", "/wmts/{item_id}/rest/{camada}/{estilo}/{tms}/{z}/{y}/{x}.png"): Caso(
+        # `camada` tem de ser o proprio item_id e `tms` o identificador da grade, senao o 400 de parametro
+        # vem ANTES de a rota chegar ao item de B e o cruzamento nao e medido (app/ogc_mapas/rotas_wmts.py)
+        lambda p: f"/wmts/{_it(p)}/rest/{_it(p)}/default/GoogleMapsCompatible/1/0/0.png"),
+    ("GET", "/tiles/{token}/{item_id}/tilejson.json"): Caso(
+        lambda p: f"/tiles/{_TOK}/{_it(p)}/tilejson.json", publico=True, verificar=_sem_marca),
+    ("GET", "/tiles/{token}/{item_id}/{z}/{x}/{y}.pbf"): Caso(
+        lambda p: f"/tiles/{_TOK}/{_it(p)}/1/0/0.pbf", publico=True, verificar=_sem_marca),
+    ("POST", "/api/compartilhado/{token}/paineis/{item_id}/fontes/{fonte_id}/dados"): Caso(
+        lambda p: f"/api/compartilhado/{_TOK}/paineis/{_it(p)}/fontes/{UUID_NULO}/dados",
+        lambda p: _PEDIDOS, publico=True, verificar=_sem_marca),
+})
