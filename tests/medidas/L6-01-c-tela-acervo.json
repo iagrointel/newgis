@@ -78,5 +78,8 @@
   }
  },
  "gerado_em": "2026-09-18T01:48:49Z",
- "git_sha": "088c190838fd"
+ "git_sha": "088c190838fd",
+ "nao_passa": [
+  "clausula e2e do portao NAO fechada em 18/09/2026: a API esta verde (tests/api/test_acervo.py, 20 passed), mas a TELA que tests/e2e/test_acervo.py exige nao existe. web/acervo.html hoje e a pagina de frescor/licencas, nao a de navegacao do acervo: faltam a grade de cartoes (#grade .acervo-cartao[data-fonte-id]), a busca (#busca input), o dialogo da ficha (dialog .acervo-ficha e .acervo-atribuicao), o botao #acervo-ver-no-mapa e a legenda do mapa (#acervo-legenda li[data-fonte-id]) — nenhum desses seletores aparece em web/. web/js/acervo/acervo.js so consome /api/acervo/camadas e /api/acervo/frescor; nao consome nem /api/acervo/dominios nem /api/acervo/meu-mapa, que agora existem. E trabalho de frontend, com clausula de responsivo e de 0 erro de console, e precisa de bancada viva com --base-url."
+ ]
 }
