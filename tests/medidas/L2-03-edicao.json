@@ -15,13 +15,23 @@
   "ambiente": "servidor local (scripts/servir_local.py :8182) atras de nginx minimo que reescreve Origin para PLAT_URL_PUBLICA (achado: sem isso toda escrita sob cookie bate em 403 origem_invalida, exatamente o aviso do brief) + Martin proprio desta trilha em :8241 (deploy/local/martin_edicao.yaml, fora do git, nao afeta a unidade plat-martin :8151 de nenhuma outra trilha)",
   "rodado_2x_para_estabilidade": true
  },
- "gerado_em": "2026-09-18T01:49:42Z",
- "git_sha": "ac77aa551e5f",
+ "gerado_em": "2026-09-18T01:54:43Z",
+ "git_sha": "d9c1d9c7d79a",
  "medidas": {
   "edicao_ligado_a_pagina_do_mapa": {
    "valor": false,
    "unidade": "módulo alcançado a partir de web/mapa.html (False = e2e da tela impossível hoje)",
    "comando": "pytest tests/unit/test_l201k_frente_desenho.py::test_medida_da_ligacao_da_tela_de_desenho"
+  },
+  "suite_dedicada_18_09": {
+   "valor": "75 passed, 8 skipped (os 8 saltam por bancada ausente: scripts/mapa_demo_camadas.py criar)",
+   "unidade": "resultado real na trilha seg",
+   "comando": "bash laco/roda_teste.sh tests/api/test_edicao_transacional.py tests/api/test_edicao_historico_anexos.py tests/api/test_edicao_dividir_unir.py tests/api/test_mapa_api.py tests/api/test_arquivos.py --deselect tests/api/test_mapa_api.py::test_tile_de_tabela_fora_do_catalogo_e_recusado -q"
+  },
+  "e2e_dedicado_18_09": {
+   "valor": "7 skipped (Martin de edição fora do ar em 127.0.0.1:8241); com Martin no ar a tela /mapa ainda não tem #edicao-camada, porque web/js/mapa/edicao.js é módulo órfão",
+   "unidade": "resultado real na trilha seg",
+   "comando": "bash laco/roda_teste.sh tests/e2e/test_mapa_edicao.py -m lento --base-url http://127.0.0.1:8477"
   }
  }
 }
