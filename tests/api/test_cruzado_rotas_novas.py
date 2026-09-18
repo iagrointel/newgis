@@ -532,3 +532,158 @@ def test_post_previsao_de_transformacao_nao_toca_dado_de_ninguem(sessao_a, sessa
     de_a, de_b = ra.json(), rb.json()
     for chave in ("entrada_histograma", "saida_histograma", "n", "n_nulo", "curva"):
         assert de_a[chave] == de_b[chave], f"a previsão diverge entre inquilinos em {chave!r}"
+
+
+# ================================================================== as 29 rotas de LEITURA invisíveis
+# Vazamento de leitura é vazamento igual: é por leitura que se lê o dado do vizinho. As que endereçam um
+# recurso de B levam o par completo (A recusada, B lê o próprio); as globais levam a conta que cabe nelas —
+# a resposta de A não pode trazer marca de B.
+@pytest.fixture(scope="module")
+def recursos_de_leitura(env, sessao_b, camada_b):
+    """Recursos de B usados só pelas leituras, criados uma vez por módulo."""
+    from tests.apoio_modelos3d import ALTURA_M, LAT, LON, glb_caixa
+
+    s = _sufixo()
+    criados = []
+    r = sessao_b.post("/api/webhooks", json={"nome": f"{PREFIXO}ler-wh-{s}", "url": URL_WEBHOOK,
+                                             "eventos": ["acervo/assinar"]})
+    assert r.status_code == 201, r.text
+    webhook = r.json()
+    criados.append(("/api/webhooks/{}", webhook["id"]))
+    r = sessao_b.post("/api/amc/presets", json={"nome": f"{PREFIXO}ler-preset-{s}", "escopo": "inquilino",
+                                                "conteudo": PRESET_CONTEUDO})
+    assert r.status_code == 201, r.text
+    preset = r.json()
+    criados.append(("/api/amc/presets/{}", preset["id"]))
+    r = sessao_b.post("/api/tokens", json={"nome": f"{PREFIXO}ler-tk-{s}", "escopos": ["admin:inquilino"]})
+    assert r.status_code == 201, r.text
+    token = r.json()
+    try:
+        envio = novo_cliente().post(
+            "/api/arquivos?classe=modelo3d", content=glb_caixa(),
+            headers={"Content-Type": "application/octet-stream", "Authorization": f"Bearer {token['token']}"})
+        assert envio.status_code == 201, envio.text
+        sha = envio.json()["sha256"]
+    finally:
+        sessao_b.delete(f"/api/tokens/{token['id']}")
+    r = sessao_b.post("/api/modelos3d", json={"nome": f"{PREFIXO}ler-m3d-{s}", "origem": "gltf",
+                                              "arquivo_sha256": sha, "lon": LON, "lat": LAT,
+                                              "altura_m": ALTURA_M})
+    assert r.status_code == 201, r.text
+    modelo = r.json()
+    criados.append(("/api/modelos3d/{}", modelo["id"]))
+    r = sessao_b.post("/api/conexoes", json={"nome": f"{PREFIXO}ler-conexao-{s}", "tipo": "ogc_features",
+                                             "url": URL_WEBHOOK})
+    conexao = r.json() if r.status_code == 201 else {}
+    if conexao:
+        criados.append(("/api/conexoes/{}", conexao["id"]))
+    r = sessao_b.post("/api/itens", json={
+        "tipo": "raster", "titulo": f"{PREFIXO}ler-raster-{s}",
+        "dados": {"colecao": f"{PREFIXO}colecao", "stac_id": f"{PREFIXO}cena-{s}", "perfil": "visual",
+                  "origem": "referenciado", "srid_nativo": 4326}})
+    raster = r.json() if r.status_code == 201 else {}
+    if raster:
+        criados.append(("/api/itens/{}", raster["id"]))
+    feicao = _feicoes(sessao_b, camada_b["id"])[0]
+    url_anexos = f"/api/camadas/{camada_b['id']}/feicoes/{feicao['id']}/anexos"
+    r = sessao_b.post(url_anexos, json={"nome": f"{PREFIXO}ler-anexo.png", "content_type": "image/png",
+                                        "conteudo": PNG_1PX})
+    assert r.status_code == 201, r.text
+    anexo = r.json()
+    yield {"webhook": webhook, "preset": preset, "modelo": modelo, "conexao": conexao, "raster": raster,
+           "feicao": feicao, "anexo": anexo, "camada": camada_b}
+    sessao_b.delete(f"{url_anexos}/{anexo['id']}")
+    for molde, ident in reversed(criados):
+        sessao_b.delete(molde.format(ident))
+
+
+def _leituras(r) -> list[tuple[str, str, bool]]:
+    """(rótulo, url, B consegue ler) para cada rota de leitura que aponta um recurso de B."""
+    cam, fe = r["camada"]["id"], r["feicao"]["id"]
+    itens = [
+        ("GET /api/webhooks/{id}", f"/api/webhooks/{r['webhook']['id']}", True),
+        ("GET /api/webhooks/{id}/entregas", f"/api/webhooks/{r['webhook']['id']}/entregas", True),
+        ("GET /api/amc/presets/{id}", f"/api/amc/presets/{r['preset']['id']}", True),
+        ("GET /api/amc/presets/{id}/exportar", f"/api/amc/presets/{r['preset']['id']}/exportar", True),
+        ("GET /api/modelos3d/{id}", f"/api/modelos3d/{r['modelo']['id']}", True),
+        ("GET /api/modelos3d/{id}/elementos", f"/api/modelos3d/{r['modelo']['id']}/elementos", True),
+        # o glb e o 3dtiles só existem depois da conversão (job); para B o 404 é do ARTEFATO, não do modelo
+        ("GET /api/modelos3d/{id}/elementos/{guid}", f"/api/modelos3d/{r['modelo']['id']}/elementos/zzz", False),
+        ("GET /api/modelos3d/{id}/glb", f"/api/modelos3d/{r['modelo']['id']}/glb", False),
+        ("GET /api/modelos3d/{id}/3dtiles/{caminho}", f"/api/modelos3d/{r['modelo']['id']}/3dtiles/tileset.json",
+         False),
+        ("GET /api/camadas/{id}/feicoes/{globalid}", f"/api/camadas/{cam}/feicoes/{fe}", True),
+        ("GET .../feicoes/{globalid}/historico", f"/api/camadas/{cam}/feicoes/{fe}/historico", True),
+        ("GET .../feicoes/{globalid}/anexos", f"/api/camadas/{cam}/feicoes/{fe}/anexos", True),
+        ("GET .../anexos/{anexo_id}", f"/api/camadas/{cam}/feicoes/{fe}/anexos/{r['anexo']['id']}", True),
+        ("GET /api/camadas/{item_id}/classes", f"/api/camadas/{cam}/classes?campo=valor&metodo=quantil&n=3", True),
+        ("GET /api/camadas/{item_id}/esquema/campos", f"/api/camadas/{cam}/esquema/campos", True),
+    ]
+    if r["conexao"]:
+        cid = r["conexao"]["id"]
+        itens += [
+            ("GET /api/conexoes/{id}/colecoes", f"/api/conexoes/{cid}/colecoes", False),
+            ("GET /api/conexoes/{id}/colecoes/{colecao}/campos", f"/api/conexoes/{cid}/colecoes/zz/campos", False),
+            ("GET /api/conexoes/{id}/colecoes/{colecao}/feicoes", f"/api/conexoes/{cid}/colecoes/zz/feicoes", False),
+            ("GET /api/conexoes/{id}/tilejson", f"/api/conexoes/{cid}/tilejson", False),
+        ]
+    if r["raster"]:
+        itens.append(("GET /api/imagens/{item_id}/ficha", f"/api/imagens/{r['raster']['id']}/ficha", True))
+    return itens
+
+
+def test_leituras_sobre_recurso_de_b_nao_vazam(sessao_a, sessao_b, token_a, cliente, recursos_de_leitura):
+    """As 20 leituras invisíveis que endereçam um recurso de B, uma a uma, com o par na mesma rodada."""
+    r = recursos_de_leitura
+    marcas = [r["webhook"]["nome"], r["preset"]["nome"], r["modelo"]["nome"], r["camada"]["titulo"],
+              r["anexo"]["nome"], r["webhook"]["url"]]
+    marcas += [r["conexao"]["nome"]] if r["conexao"] else []
+    marcas += [r["raster"]["titulo"]] if r["raster"] else []
+    falhas = []
+    for rotulo, url, b_le in _leituras(r):
+        try:
+            negar(sessao_a, token_a, cliente, "GET", url, marcas=marcas)
+        except AssertionError as e:
+            falhas.append(f"{rotulo}: {e}")
+            continue
+        resposta_b = sessao_b.get(url)
+        if b_le and resposta_b.status_code != 200:
+            falhas.append(f"{rotulo}: B legítimo não lê o próprio recurso ({resposta_b.status_code})")
+        if not b_le and resposta_b.status_code in (401, 403):
+            falhas.append(f"{rotulo}: B legítimo barrado por autorização ({resposta_b.status_code})")
+    assert not falhas, "\n".join(falhas)
+
+
+def test_leituras_globais_nao_trazem_dado_de_b(sessao_a, sessao_b, recursos_de_leitura):
+    """As leituras que não endereçam recurso nenhum (lista do inquilino, tabela da casa, chave de leitura):
+    A pode receber 200, mas nunca com marca de B dentro."""
+    r = recursos_de_leitura
+    marcas = [r["webhook"]["nome"], r["preset"]["nome"], r["modelo"]["nome"], r["webhook"]["url"]]
+    falhas = []
+    for url in ("/api/webhooks", "/api/amc/presets", "/api/modelos3d", "/api/acervo/frescor/camadas",
+                "/api/imagens/formatos", "/api/imagens/licencas", "/api/arquivos/_chave-leitura",
+                "/api/arquivos/_cog/autorizar"):
+        resposta = sessao_a.get(url)
+        if resposta.status_code >= 500:
+            falhas.append(f"{url}: {resposta.status_code}")
+            continue
+        for marca in marcas:
+            if marca in resposta.text:
+                falhas.append(f"{url}: resposta de A traz {marca!r} (dado de B)")
+        assert sessao_b.get(url).status_code < 500, f"{url} quebra para B"
+    assert not falhas, "\n".join(falhas)
+
+
+def test_matriz_de_execucao_amc_de_outro_inquilino(sessao_a, sessao_b, token_a, cliente):
+    """`GET /api/amc/execucoes/{id}/matriz`: sem execução AMC pronta nesta base (a grade é job do
+    trabalhador), o que se mede é o id que não é de ninguém — tem de dar 404 para A E para B, sem
+    diferença de resposta que sirva de oráculo de existência."""
+    url = "/api/amc/execucoes/00000000-0000-0000-0000-000000000000/matriz"
+    respostas = negar(sessao_a, token_a, cliente, "GET", url)
+    de_b = sessao_b.get(url)
+    assert de_b.status_code == 404, de_b.text[:200]
+    for nome, r in respostas:
+        if nome == "sessão de A":
+            assert r.status_code == de_b.status_code, (
+                f"A e B recebem respostas diferentes para o mesmo id inexistente ({r.status_code} × "
+                f"{de_b.status_code}): isso é oráculo de existência")
