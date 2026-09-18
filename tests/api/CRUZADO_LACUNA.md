@@ -1,5 +1,15 @@
 # Rotas vivas SEM caso na varredura cruzada A→B — medido em 18/09/2026
 
+> **FECHADO no mesmo dia.** As sete levas de 18/09 levaram a varredura de 439 para **960 de 960** rotas com
+> caso, e `tests/api/test_cruzado.py` passa inteiro (961 testes). Este documento fica como o RETRATO DA
+> LACUNA no momento em que ela foi medida — é ele que explica por que a marca de "100 %" era falsa.
+>
+> O que continua aberto não é cobertura, é FORÇA DO ALVO: cerca de 455 dos 960 casos apontam para um
+> identificador que não é de ninguém (UUID nulo ou literal `zz-`), porque esta preparação não constrói um
+> recurso de B daquela família. Esses provam que um id inexistente dá 404 — não provam que o id DE B dá 404.
+> A conta viva está em `tests/medidas/L0-02-e.json` (`rotas_com_alvo_real_de_b`), e fechar cada lacuna é
+> criar o recurso em `preparar()`, uma família por vez.
+
 `docs/openapi.json` (regerado hoje do esquema vivo) lista **960** operacoes.
 `tests/api/cruzado_casos.py` tem caso para **439**. Sem caso: **521** (54,3 %).
 

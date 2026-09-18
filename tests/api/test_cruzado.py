@@ -78,6 +78,44 @@ def test_cobertura_100_por_cento(medida):
     assert sobrando == [], f"casos de rota inexistente: {sobrando}"
 
 
+def test_quantas_rotas_tem_alvo_real_de_b(preparacao, medida):
+    """A conta que a marca de "100 %" escondia. Cobertura é o piso — diz que a rota ENTROU na varredura.
+    O que decide o valor de cada caso é o ALVO: se o identificador que A pede é um recurso que B criou de
+    verdade nesta rodada, a RLS está sendo posta à prova; se é o UUID nulo (ou um literal `zz-`), o caso só
+    prova que um id de ninguém dá 404 — cruzamento honesto, mas fraco, e é preciso dizer qual é qual.
+
+    Medido em 18/09/2026, depois de as sete levas fecharem 960/960. A medida anterior de
+    `tests/medidas/L0-02-e.json` dizia 138/138 = "100 %" e era de 06/09, quando a API servia 138 rotas.
+    """
+    p = preparacao
+    identificadores_de_b = {
+        str(p.item_b["id"]), str(p.rede_b["id"]), str(p.conexao_b["id"]), str(p.usuario_b["id"]),
+        str(p.grupo_b["id"]), str(p.papel_b["id"]), str(p.token_b["id"]), str(p.inquilino_b),
+        str(p.job_b.get("id", "")), str(p.agenda_b.get("id", "")), str(p.pasta_b.get("id", "")),
+        str(p.convite_b.get("id", "")), str(p.conjunto_b.get("id", "")), str(p.fator_b.get("id", "")),
+        str(p.execucao_b.get("id", "")), str(p.modelo_amc_b.get("id", "")),
+        str(p.conjunto_amc_b.get("id", "")), str(p.execucao_amc_b.get("id", "")),
+        str(p.webhook_b.get("id", "")), str(p.preset_amc_b.get("id", "")), "demo2",
+    } - {""}
+    com_alvo_real, sem_alvo_real = [], []
+    for (metodo, caminho), caso in sorted(cc.CASOS.items()):
+        url = caso.url(p)
+        corpo = caso.corpo(p)
+        texto = f"{url} {corpo}"
+        (com_alvo_real if any(i in texto for i in identificadores_de_b) else sem_alvo_real).append(
+            f"{metodo} {caminho}")
+    for item in ("L0-02-tenant-auth", "L0-02-e"):
+        medida(item)(
+            "rotas_com_alvo_real_de_b", len(com_alvo_real), "rotas",
+            "casos cuja URL ou corpo cita um identificador de um recurso que demo2 criou nesta rodada")
+        medida(item)(
+            "rotas_sem_alvo_real_de_b", len(sem_alvo_real), "rotas",
+            "casos que apontam UUID nulo ou literal zz-: provam que id de ninguem da 404, nao que o id DE B da")
+    # não é um portão: é o retrato. O portão de cobertura é test_cobertura_100_por_cento.
+    assert len(com_alvo_real) + len(sem_alvo_real) == len(cc.CASOS)
+    print(f"\nalvo REAL de B: {len(com_alvo_real)} rotas | sem alvo de B: {len(sem_alvo_real)} rotas")
+
+
 def _chamar(cliente, metodo, url, corpo, headers):
     kw = {"headers": headers}
     if corpo is not None:
