@@ -73,7 +73,17 @@ export function montarLayout({ usuario, ativo = location.pathname }) {
   limpar(aside);
   document.body.classList.add('com-lateral');
   const inq = usuario.inquilino || {};
-  aside.append(h('div', { class: 'marca' }, h('strong', {}, t('app.nome')), h('span', { title: inq.slug }, inq.nome || inq.slug || '')));
+  /* item L0-07-a: marca do inquilino na barra — logotipo e cor principal (tenant.config via /api/eu
+     config_publica). A cor vira um CHIP ao lado do nome, nunca sobrepõe os tokens do sistema de design:
+     repintar --acento com uma cor arbitrária derrubaria o contraste medido do tema (a marca completa por
+     tokens é o L5-10, /temas, com aviso de contraste). Sem logo/cor, sem elemento nenhum. */
+  const pub = inq.config_publica || {};
+  const marcaFilhos = [];
+  if (pub.logo) marcaFilhos.push(h('img', { id: 'marca-logo', class: 'marca-logo', src: `/api/arquivos/${pub.logo}?classe=org_logo`, alt: '', width: 28, height: 28 }));
+  marcaFilhos.push(h('strong', {}, t('app.nome')));
+  if (pub.cor) marcaFilhos.push(h('span', { id: 'marca-cor', class: 'marca-cor', title: pub.cor, style: `background:${pub.cor}` }));
+  marcaFilhos.push(h('span', { title: inq.slug, id: 'marca-inquilino' }, inq.nome || inq.slug || ''));
+  aside.append(h('div', { class: 'marca' }, ...marcaFilhos));
   const ul = h('ul');
   let grupoAberto = null;
   for (const tela of telasVisiveis(usuario)) {

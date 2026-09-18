@@ -28,7 +28,7 @@ function urlDado(arquivo) {
   return `${location.origin}/static/dados/basemap/${arquivo}`;
 }
 
-function montarSeletorBase(map) {
+function montarSeletorBase(map, baseAtual) {
   const sel = el('seletor-base');
   for (const base of BASES) {
     const opt = document.createElement('option');
@@ -36,10 +36,12 @@ function montarSeletorBase(map) {
     opt.textContent = t(base.rotuloChave);
     sel.append(opt);
   }
-  sel.value = BASES[0].id;
+  sel.value = (baseAtual || BASES[0]).id;
   sel.addEventListener('change', () => {
     const base = BASES.find((b) => b.id === sel.value) || BASES[0];
-    map.setStyle(construirEstilo(urlDado(base.arquivo)));
+    /* construirEstilo recebe o descritor {tipo, url} (a união 10/09 trocou a assinatura e os chamadores
+       de mapa.js ficaram passando string — caiam em estiloSemBase e a base nunca pintava; achado L0-07-a) */
+    map.setStyle(construirEstilo({ tipo: 'pmtiles', url: urlDado(base.arquivo) }));
   });
 }
 
@@ -82,7 +84,7 @@ async function montarPainelAcervo() {
   return { total, vencidas };
 }
 
-async function iniciarMapa() {
+async function iniciarMapa(usuario) {
   if (!window.maplibregl || !window.pmtiles) {
     el('aviso').erro(t('mapa.erro_biblioteca'));
     return;
@@ -90,12 +92,25 @@ async function iniciarMapa() {
   const protocolo = new window.pmtiles.Protocol();
   window.maplibregl.addProtocol('pmtiles', protocolo.tile);
 
-  const base = BASES[0];
+  /* item L0-07-a: o mapa abre na vista padrão DO INQUILINO (Organização > Configurações > Mapa padrão,
+     servida em /api/eu config_publica): centro+zoom quando há centro; senão extent (moldura); sem nada,
+     o recorte do pmtiles de Guarulhos (metadado em PROVENIENCIA.md). basemap casa pelo id da lista BASES;
+     id desconhecido cai na primeira base (o seletor continua mostrando o que está de fato ligado). */
+  const pub = usuario?.inquilino?.config_publica || {};
+  const base = BASES.find((b) => b.id === pub.basemap) || BASES[0];
+  const vista = { style: construirEstilo({ tipo: 'pmtiles', url: urlDado(base.arquivo) }) };
+  if (Array.isArray(pub.centro) && pub.centro.length === 2) {
+    vista.center = pub.centro;
+    vista.zoom = typeof pub.zoom === 'number' ? pub.zoom : 13;
+  } else if (Array.isArray(pub.extent) && pub.extent.length === 4) {
+    vista.bounds = [[pub.extent[0], pub.extent[1]], [pub.extent[2], pub.extent[3]]];
+  } else {
+    vista.center = [-46.593018, -23.493476]; // centro do recorte (metadado do pmtiles, PROVENIENCIA.md)
+    vista.zoom = 13;
+  }
   const map = new window.maplibregl.Map({
     container: 'mapa',
-    style: construirEstilo(urlDado(base.arquivo)),
-    center: [-46.593018, -23.493476], // centro do recorte (metadado do pmtiles, PROVENIENCIA.md)
-    zoom: 13,
+    ...vista,
     attributionControl: false,
     hash: false,
   });
@@ -103,7 +118,7 @@ async function iniciarMapa() {
   map.addControl(new window.maplibregl.ScaleControl({ maxWidth: 140, unit: 'metric' }), 'bottom-left');
   map.addControl(new window.maplibregl.AttributionControl({ compact: false }), 'bottom-right');
 
-  montarSeletorBase(map);
+  montarSeletorBase(map, base);
   montarCoordenadas(map);
 
   map.on('error', (ev) => {
@@ -125,7 +140,7 @@ const usuario = await exigirSessao();
 if (usuario) {
   montarLayout({ usuario, ativo: '/mapa' });
   try {
-    await iniciarMapa();
+    await iniciarMapa(usuario);
   } catch (e) {
     el('aviso').erro(`${t('erro.carregar')}: ${(e && e.message) || e}`);
     pronto();

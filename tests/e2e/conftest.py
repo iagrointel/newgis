@@ -4,7 +4,7 @@ backend não publica /api/login (o frontend foi escrito contra o ADR 0002 antes 
 import httpx
 import pytest
 
-from tests.e2e.apoio import credenciais
+from tests.e2e.apoio import credenciais, local
 from tests.e2e.apoio_catalogo import ROTAS_CATALOGO
 
 
@@ -62,7 +62,7 @@ def api_catalogo(api_auth) -> set[str]:
 def admin_api(playwright, base_url, credenciais_demo):
     """contexto de API já autenticado como admin de demo (cookie), para preparar e limpar dados dos e2e."""
     slug, login, senha = credenciais_demo
-    ctx = playwright.request.new_context(base_url=base_url)
+    ctx = playwright.request.new_context(base_url=base_url, ignore_https_errors=local(base_url))
     r = ctx.post("/api/login", data={"inquilino": slug, "login": login, "senha": senha})
     assert r.status == 200 and r.json().get("ok") is True, (r.status, r.text())
     yield ctx

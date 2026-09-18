@@ -22,6 +22,15 @@
       <h2 id="t-identidade" data-i18n="org.identidade">Identidade</h2>
       <plat-formulario id="form-identidade"></plat-formulario>
     </section>
+    <section class="cartao" id="contatos" aria-labelledby="t-contatos">
+      <h2 id="t-contatos" data-i18n="org.contatos">Contatos administrativos</h2>
+      <p class="fraco" data-i18n="org.contatos_ajuda">logins de membros admin que recebem os avisos da organização (pelo menos um)</p>
+      <plat-formulario id="form-contatos"></plat-formulario>
+    </section>
+    <section class="cartao" id="regional" aria-labelledby="t-regional">
+      <h2 id="t-regional" data-i18n="org.regional">Regional</h2>
+      <plat-formulario id="form-regional"></plat-formulario>
+    </section>
     <section class="cartao" id="logotipo" aria-labelledby="t-logotipo">
       <h2 id="t-logotipo" data-i18n="org.logo">Logotipo</h2>
       <p class="fraco" data-i18n="org.logo_ajuda">PNG, JPEG, GIF ou WEBP, até 1 MB; a imagem é ajustada a um quadro de 300×300</p>
@@ -37,6 +46,32 @@
       <h2 id="t-mapa" data-i18n="org.mapa">Mapa padrão</h2>
       <p class="fraco" data-i18n="org.mapa_ajuda">centro, zoom e mapa-base com que um mapa novo abre neste inquilino</p>
       <plat-formulario id="form-mapa"></plat-formulario>
+    </section>
+    <section class="cartao" id="pagina-inicial" aria-labelledby="t-pagina-inicial">
+      <h2 id="t-pagina-inicial" data-i18n="org.pagina_inicial">Página inicial</h2>
+      <p class="fraco" data-i18n="org.pagina_inicial_ajuda">blocos mostrados na entrada de todo membro: texto, lista de links ou a galeria em destaque (até 15 blocos, até 8 links por bloco)</p>
+      <div id="blocos-lista"></div>
+      <div class="botoes">
+        <select id="bloco-add-tipo" class="controle" aria-label="tipo do bloco">
+          <option value="texto" data-i18n="org.bloco_texto">texto</option>
+          <option value="links" data-i18n="org.bloco_links">links</option>
+          <option value="galeria" data-i18n="org.bloco_galeria">galeria</option>
+        </select>
+        <button type="button" id="bloco-adicionar" class="pequeno" data-i18n="org.bloco_adicionar">Adicionar bloco</button>
+      </div>
+      <div class="campo">
+        <label for="galeria-destaque" data-i18n="org.galeria_destaque">Galeria em destaque</label>
+        <select id="galeria-destaque"></select>
+        <span class="ajuda" data-i18n="org.galeria_destaque_ajuda">grupo cujos itens aparecem nos blocos do tipo galeria</span>
+      </div>
+      <div class="botoes">
+        <button type="button" id="blocos-salvar" class="primario" data-i18n="acao.salvar">Salvar</button>
+      </div>
+    </section>
+    <section class="cartao" id="avisos" aria-labelledby="t-avisos">
+      <h2 id="t-avisos" data-i18n="org.avisos">Avisos de acesso</h2>
+      <p class="fraco" data-i18n="org.avisos_ajuda">mostrados na tela de entrada ANTES do login; texto puro, nunca HTML</p>
+      <plat-formulario id="form-avisos"></plat-formulario>
     </section>
     <section class="cartao" id="cotas" aria-labelledby="t-armazenamento">
       <h2 id="t-armazenamento" data-i18n="org.armazenamento">Armazenamento</h2>

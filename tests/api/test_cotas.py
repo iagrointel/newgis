@@ -18,8 +18,16 @@ def test_admin_do_inquilino_nao_ultrapassa_o_teto_so_superadmin_move_o_teto(sess
     def _corpo(org):
         return {
             "nome": org["nome"], "cor": org["cor"], "idioma_padrao": org["idioma_padrao"],
+            "resumo": org["resumo"], "contato": org["contato"],
+            "contatos_admin": list(org["contatos_admin"]),
+            "unidades": org["regional"]["unidades"], "formato_data": org["regional"]["formato_data"],
+            "formato_numero_data": org["regional"]["formato_numero_data"],
             "centro": org["mapa"]["centro"], "zoom": org["mapa"]["zoom"], "basemap": org["mapa"]["basemap"],
+            "extent": org["mapa"]["extent"],
             "srid_padrao": org["mapa"]["srid_padrao"], "cota_bytes": org["armazenamento"]["cota_bytes"],
+            "pagina_inicial": [dict(b) for b in org["pagina_inicial"]],
+            "galeria_destaque": org["galeria_destaque"],
+            "banner_aviso": org["banner_aviso"], "termo_acesso": org["termo_acesso"],
             "cota_usuarios": org["usuarios"]["cota"], "auth": dict(org["auth"]),
         }
 

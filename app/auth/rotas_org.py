@@ -1,10 +1,17 @@
 """Configurações da organização/inquilino (item L0-07-a-configuracoes-org; ADR 0002 seção 11): `GET/PUT /api/org`
 sobre `plat.tenant` — nome (coluna), cota de armazenamento (coluna `cota_bytes`, já lida ao vivo por
-`GET /api/arquivos`: mudar aqui reflete lá na próxima chamada, sem cache) e o resto (cor, logotipo, mapa
-padrão, idioma padrão, cota de usuários, política de senha/2FA) em `tenant.config` — mesma coluna jsonb que o
-L0-02 já usa para `config.auth`. Esta rota NUNCA reescreve `config` inteiro: grava só as chaves que possui
-(merge `config || jsonb`), preservando `config.logo` (gravado por `POST/DELETE /api/org/logo`, endpoint
-separado porque é a única chave binária) e qualquer chave futura de outro item.
+`GET /api/arquivos`: mudar aqui reflete lá na próxima chamada, sem cache) e o resto em `tenant.config` — mesma
+coluna jsonb que o L0-02 já usa para `config.auth`. Superfície com paridade às abas General / Home page / Map /
+Gallery / Security do ArcGIS Enterprise 11.4 (fora, como o portão declara: legado, Bing e Living Atlas): cor,
+logotipo, resumo (≤ 310), contato (e-mail), contatos administrativos (≥ 1, membros ativos com perfil admin do
+próprio inquilino — a migração 20260918T1300 semeia o admin mais antigo nos inquilinos antigos para o PUT
+full-replace não trancar a primeira gravação), idioma padrão, unidades e formato de número/data, mapa padrão
+(centro, zoom, basemap, extent, SRID de exibição), página inicial em blocos (texto / links / galeria; ≤ 15
+blocos, ≤ 8 links por bloco, URL só https:// ou caminho relativo), galeria em destaque (grupo), banner de aviso
+e termo de acesso (textos pré-login, servidos ao /entrar por `plat.tenant_publico`), cota de usuários e a
+política de senha/2FA/domínios/compartilhamento/2FA. Esta rota NUNCA reescreve `config` inteiro: grava só as
+chaves que possui (merge `config || jsonb`), preservando `config.logo` (gravado por `POST/DELETE /api/org/logo`,
+endpoint separado porque é a única chave binária) e qualquer chave futura de outro item.
 
 Privilégio único `org.configurar` (já semeado na migração 003, teto só do perfil admin) para leitura e
 escrita — o portão do item ("editor comum recebe 403") é a checagem padrão de `autenticado()`, a mesma que
@@ -27,12 +34,14 @@ import base64
 import binascii
 import io
 import json
+import re
+import uuid
 import warnings
-from typing import Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Request
 from PIL import Image, ImageOps
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from app import db, limites, objetos
 from app.auth.comum import registrar_evento
@@ -44,17 +53,78 @@ from app.erros import ErroAPI
 router = APIRouter(prefix="/api", tags=["org"])
 PRIV = {"x-auth": "S/T", "x-privilegio": "org.configurar"}
 _FORMATOS_LOGO = {"PNG", "JPEG", "GIF", "WEBP"}
+_EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,190}\.[^@\s]+$")
 
 
 # ---------------------------------------------------------------- modelos
+class Link(Modelo):
+    rotulo: str = Field(min_length=1, max_length=limites.ORG_LINK_ROTULO_MAX)
+    url: str = Field(min_length=1, max_length=limites.ORG_LINK_URL_MAX)
+
+    @field_validator("url")
+    @classmethod
+    def _url_segura(cls, v: str) -> str:
+        """Só https absoluto ou caminho relativo da própria origem: um `javascript:`/`data:` aqui viraria
+        âncora clicável na página inicial de todo membro (o HTML é montado com textContent, mas o HREF
+        precisa nascer limpo — defesa em profundidade, não confiança no front)."""
+        if v.startswith("https://") or (v.startswith("/") and not v.startswith("//")):
+            return v
+        raise ValueError("url precisa começar por https:// ou ser caminho relativo (/)")
+
+
+class BlocoTexto(Modelo):
+    tipo: Literal["texto"]
+    titulo: str = Field(default="", max_length=limites.ORG_BLOCO_TITULO_MAX)
+    texto: str = Field(min_length=1, max_length=limites.ORG_BLOCO_TEXTO_MAX)
+
+
+class BlocoLinks(Modelo):
+    tipo: Literal["links"]
+    titulo: str = Field(default="", max_length=limites.ORG_BLOCO_TITULO_MAX)
+    links: list[Link] = Field(min_length=1, max_length=limites.ORG_BLOCO_LINKS_MAX)
+
+
+class BlocoGaleria(Modelo):
+    """Galeria de itens: mostra os itens do grupo `galeria_destaque` (a fonte é única por inquilino, como o
+    'featured content' da aba Gallery da Esri — o bloco só decide ONDE ela aparece na página inicial)."""
+    tipo: Literal["galeria"]
+    titulo: str = Field(default="", max_length=limites.ORG_BLOCO_TITULO_MAX)
+
+
+Bloco = Annotated[BlocoTexto | BlocoLinks | BlocoGaleria, Field(discriminator="tipo")]
+
+
 class OrgEntrada(Modelo):
     nome: str = Field(min_length=1, max_length=limites.ORG_NOME_MAX)
     cor: str = Field(default=limites.ORG_COR_PADRAO, pattern=r"^#[0-9a-fA-F]{6}$")
+    resumo: str | None = Field(default=None, max_length=limites.ORG_RESUMO_MAX)
+    contato: str | None = Field(default=None, max_length=limites.ORG_CONTATO_MAX)
+    contatos_admin: list[str] = Field(min_length=1, max_length=limites.ORG_CONTATOS_ADMIN_MAX)
     idioma_padrao: str = Field(default=limites.ORG_IDIOMAS[0], max_length=10)
+    unidades: str = Field(default=limites.ORG_UNIDADES[0])
+    formato_data: str = Field(default=limites.ORG_FORMATOS_DATA[0])
+    formato_numero_data: str = Field(default=limites.ORG_FORMATOS_NUMERO_DATA[0])
     centro: list[float] | None = Field(default=None, min_length=2, max_length=2)
     zoom: int | None = Field(default=None, ge=0, le=limites.ORG_ZOOM_MAX)
     basemap: str | None = Field(default=None, max_length=limites.ORG_BASEMAP_MAX)
+    extent: list[float] | None = Field(default=None, min_length=4, max_length=4)
     srid_padrao: int | None = Field(default=None, ge=1024, le=999999)
+    pagina_inicial: list[Bloco] = Field(default_factory=list, max_length=limites.ORG_BLOCOS_MAX)
+    galeria_destaque: str | None = Field(default=None)
+
+    @field_validator("galeria_destaque")
+    @classmethod
+    def _galeria_uuid(cls, v: str | None) -> str | None:
+        """O id vai a uma consulta `WHERE id = %s` em coluna uuid: uma string que não é uuid explodiria em
+        DataError 500 — recusar aqui como 422 com o campo nomeado."""
+        if v is None:
+            return v
+        try:
+            return str(uuid.UUID(v))
+        except ValueError as e:
+            raise ValueError("galeria_destaque precisa ser um uuid") from e
+    banner_aviso: str | None = Field(default=None, max_length=limites.ORG_BANNER_MAX)
+    termo_acesso: str | None = Field(default=None, max_length=limites.ORG_TERMO_MAX)
     cota_bytes: int = Field(ge=limites.ORG_COTA_BYTES_MIN)
     cota_usuarios: int = Field(ge=limites.ORG_COTA_USUARIOS_MIN)
     auth: dict[str, Any] = Field(default_factory=dict)
@@ -70,8 +140,16 @@ class OrgSaida(Saida):
     ativo: bool
     cor: str
     logo: str | None
+    resumo: str | None
+    contato: str | None
+    contatos_admin: list[str]
     idioma_padrao: str
+    regional: dict[str, Any]
     mapa: dict[str, Any]
+    pagina_inicial: list[dict[str, Any]]
+    galeria_destaque: str | None
+    banner_aviso: str | None
+    termo_acesso: str | None
     armazenamento: dict[str, Any]
     usuarios: dict[str, Any]
     auth: dict[str, Any]
@@ -124,13 +202,26 @@ def _org_json(cur, auth: Auth) -> dict:
         "ativo": t["ativo"],
         "cor": config.get("cor") or limites.ORG_COR_PADRAO,
         "logo": config.get("logo"),
+        "resumo": config.get("resumo"),
+        "contato": config.get("contato"),
+        "contatos_admin": list(config.get("contatos_admin") or []),
         "idioma_padrao": config.get("idioma_padrao") or limites.ORG_IDIOMAS[0],
+        "regional": {
+            "unidades": config.get("unidades") or limites.ORG_UNIDADES[0],
+            "formato_data": config.get("formato_data") or limites.ORG_FORMATOS_DATA[0],
+            "formato_numero_data": config.get("formato_numero_data") or limites.ORG_FORMATOS_NUMERO_DATA[0],
+        },
         "mapa": {
             "centro": config.get("centro"),
             "zoom": config.get("zoom"),
             "basemap": config.get("basemap"),
+            "extent": config.get("extent"),
             "srid_padrao": config.get("srid_padrao"),
         },
+        "pagina_inicial": list(config.get("pagina_inicial") or []),
+        "galeria_destaque": config.get("galeria_destaque"),
+        "banner_aviso": config.get("banner_aviso"),
+        "termo_acesso": config.get("termo_acesso"),
         # cota_bytes_teto/teto (item L0-07-c-cotas-uso): teto IMPOSTO PELA PLATAFORMA (só o superadmin move,
         # plat.tenant_cotas_definir) — o inquilino edita a própria cota livremente ABAIXO do teto, nunca acima
         # (achado do adversário 06/09: sem isso o admin do inquilino elevava a própria cota sem limite).
@@ -156,11 +247,32 @@ def org_gravar(corpo: OrgEntrada, request: Request, auth: Auth = autenticado("or
             422, "validacao", f"idioma_padrao precisa ser um de {list(limites.ORG_IDIOMAS)}",
             {"campo": "idioma_padrao"},
         )
+    if corpo.unidades not in limites.ORG_UNIDADES:
+        raise ErroAPI(422, "validacao", f"unidades precisa ser um de {list(limites.ORG_UNIDADES)}",
+                      {"campo": "unidades"})
+    if corpo.formato_data not in limites.ORG_FORMATOS_DATA:
+        raise ErroAPI(422, "validacao", f"formato_data precisa ser um de {list(limites.ORG_FORMATOS_DATA)}",
+                      {"campo": "formato_data"})
+    if corpo.formato_numero_data not in limites.ORG_FORMATOS_NUMERO_DATA:
+        raise ErroAPI(422, "validacao",
+                      f"formato_numero_data precisa ser um de {list(limites.ORG_FORMATOS_NUMERO_DATA)}",
+                      {"campo": "formato_numero_data"})
+    if corpo.contato is not None and corpo.contato.strip() and not _EMAIL.match(corpo.contato.strip()):
+        raise ErroAPI(422, "validacao", "contato precisa ser um e-mail", {"campo": "contato"})
     if corpo.centro is not None:
         lon, lat = corpo.centro
         if not (-180 <= lon <= 180 and -90 <= lat <= 90):
             raise ErroAPI(422, "validacao", "centro fora do intervalo geográfico (lon -180..180, lat -90..90)",
                           {"campo": "centro"})
+    if corpo.extent is not None:
+        oeste, sul, leste, norte = corpo.extent
+        lon_ok = -180 <= oeste <= 180 and -180 <= leste <= 180
+        lat_ok = -90 <= sul <= 90 and -90 <= norte <= 90
+        if not (lon_ok and lat_ok and oeste < leste and sul < norte):
+            raise ErroAPI(422, "validacao",
+                          "extent precisa ser [oeste, sul, leste, norte] dentro de lon -180..180, lat -90..90, "
+                          "com oeste < leste e sul < norte",
+                          {"campo": "extent"})
     erros_auth = validar_config_auth(corpo.auth)
     if erros_auth:
         raise ErroAPI(422, "validacao", "política de senha/2FA/domínios inválida", erros_auth)
@@ -168,11 +280,36 @@ def org_gravar(corpo: OrgEntrada, request: Request, auth: Auth = autenticado("or
     # inquilino sobe/desce a própria cota livremente, mas nunca acima do teto que só o superadmin move
     # (plat.tenant_cotas_definir) — sem esta checagem a rota só tinha piso (Field ge=...), e um adversário
     # provou que o admin elevava a própria cota_bytes/cota_usuarios sem limite algum.
+    # Os contatos administrativos precisam ser membros ATIVOS com perfil admin do PRÓPRIO inquilino (RLS
+    # esconde qualquer outro inquilino — um login estranho sai simplesmente como "não encontrado"), e o
+    # grupo da galeria em destaque precisa existir aqui também.
+    contatos = sorted({(c or "").strip().lower() for c in corpo.contatos_admin if (c or "").strip()})
+    if not contatos:
+        # refutação do adversário: "define contato administrativo vazio" — nunca gravar a lista zerada
+        raise ErroAPI(422, "validacao", "pelo menos um contato administrativo", {"campo": "contatos_admin"})
     with db.db(auth.contexto()) as cur:
         cur.execute("SELECT cota_bytes_teto FROM plat.tenant WHERE id = plat.tenant_atual()")
         teto_bytes = cur.fetchone()["cota_bytes_teto"]
         cur.execute("SELECT plat.cota_usuarios_teto(%s) AS teto", (auth.tenant_id,))
         teto_usuarios = cur.fetchone()["teto"]
+        cur.execute(
+            "SELECT login FROM plat.usuario WHERE login = ANY(%s) AND ativo AND perfil = 'admin'",
+            (contatos,),
+        )
+        encontrados = {r["login"] for r in cur.fetchall()}
+        faltam = [c for c in contatos if c not in encontrados]
+        if faltam:
+            raise ErroAPI(
+                422, "validacao",
+                f"contato administrativo precisa ser um usuário ativo com perfil admin do inquilino: "
+                f"{', '.join(faltam)}",
+                {"campo": "contatos_admin", "logins": faltam},
+            )
+        if corpo.galeria_destaque is not None:
+            cur.execute("SELECT 1 FROM plat.grupo WHERE id = %s", (corpo.galeria_destaque,))
+            if cur.fetchone() is None:
+                raise ErroAPI(422, "validacao", "grupo da galeria em destaque inexistente",
+                              {"campo": "galeria_destaque"})
     if corpo.cota_bytes > teto_bytes:
         raise ErroAPI(
             422, "cota_bytes_acima_do_teto",
@@ -187,13 +324,27 @@ def org_gravar(corpo: OrgEntrada, request: Request, auth: Auth = autenticado("or
             "(fale com o superadmin para subir o teto)",
             {"campo": "cota_usuarios", "teto": teto_usuarios},
         )
+    def _txt(v: str | None) -> str | None:
+        return (v or "").strip() or None
+
     merge = {
         "cor": corpo.cor,
+        "resumo": _txt(corpo.resumo),
+        "contato": _txt(corpo.contato),
+        "contatos_admin": contatos,
         "idioma_padrao": corpo.idioma_padrao,
+        "unidades": corpo.unidades,
+        "formato_data": corpo.formato_data,
+        "formato_numero_data": corpo.formato_numero_data,
         "centro": corpo.centro,
         "zoom": corpo.zoom,
-        "basemap": corpo.basemap,
+        "basemap": _txt(corpo.basemap),
+        "extent": corpo.extent,
         "srid_padrao": corpo.srid_padrao,
+        "pagina_inicial": [b.model_dump() for b in corpo.pagina_inicial],
+        "galeria_destaque": corpo.galeria_destaque,
+        "banner_aviso": _txt(corpo.banner_aviso),
+        "termo_acesso": _txt(corpo.termo_acesso),
         "cota_usuarios": corpo.cota_usuarios,
         "auth": corpo.auth,
     }
@@ -206,7 +357,8 @@ def org_gravar(corpo: OrgEntrada, request: Request, auth: Auth = autenticado("or
         registrar_evento(
             cur, request, "org/configurar", "tenant", auth.tenant_id,
             {"nome": corpo.nome.strip(), "cota_bytes": corpo.cota_bytes, "cota_usuarios": corpo.cota_usuarios,
-             "exigir_2fa": corpo.auth.get("exigir_2fa")},
+             "exigir_2fa": corpo.auth.get("exigir_2fa"), "contatos_admin": contatos,
+             "blocos": len(corpo.pagina_inicial)},
         )
         saida = _org_json(cur, auth)
     return saida

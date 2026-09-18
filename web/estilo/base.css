@@ -59,6 +59,11 @@ body:not(.com-lateral) .lateral { display: none; }
   letter-spacing: var(--i-espaco-letra-titulo); text-transform: uppercase; display: block; line-height: var(--i-entrelinha-titulo);
 }
 .lateral .marca span { color: var(--i-texto-fraco); font-size: var(--i-t0); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* item L0-07-a: logotipo e chip da cor principal do inquilino na marca (ver web/js/base/layout.js) */
+.lateral .marca .marca-logo { display: block; border-radius: var(--i-raio); margin-bottom: var(--i-e1); }
+.lateral .marca .marca-cor { display: inline-block; width: 0.9em; height: 0.9em; border-radius: var(--i-raio-redondo); border: var(--i-fio) solid var(--i-linha); }
+.aviso-org { background: var(--i-acento-fraco); border: var(--i-fio) solid var(--i-acento); border-radius: var(--i-raio); padding: var(--i-e2) var(--i-e3); white-space: pre-wrap; }
+.termo-org { font-size: var(--i-t0); color: var(--i-texto-fraco); white-space: pre-wrap; max-height: 12em; overflow: auto; }
 .lateral nav { flex: 1; padding: var(--i-e2) 0; overflow: auto; }
 .lateral nav ul { list-style: none; margin: 0; padding: 0; }
 /* rotulo de grupo do menu: regra de LAYOUT que so existia em web/style.css e que as telas usam de

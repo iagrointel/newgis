@@ -99,19 +99,32 @@ function mensagemLdap(r) {
   return null;
 }
 
+/* item L0-07-a: banner de aviso e termo de acesso do inquilino, vindos do GET /api/login/provedores.
+   SEMPRE textContent — a refutação do item injeta HTML no texto do banner e ele tem de aparecer escrito,
+   caractere por caractere, nunca virar marcação. */
+function mostrarAvisosOrg(inq) {
+  for (const [id, txt] of [['org-banner', inq?.banner_aviso], ['org-termo', inq?.termo_acesso]]) {
+    const e = el(id);
+    if (typeof txt === 'string' && txt.trim()) { e.textContent = txt; e.hidden = false; }
+    else { e.textContent = ''; e.hidden = true; }
+  }
+}
+
 async function carregarInquilino() {
   estado.limpar();
   formSenha.hidden = false;
-  if (!slug) { pedirInquilino(); return; }
+  if (!slug) { pedirInquilino(); mostrarAvisosOrg(null); return; }
   formSenha.setAttribute('aria-busy', 'true');
   const r = await obter(`/api/login/provedores?inquilino=${encodeURIComponent(slug)}`);
   formSenha.removeAttribute('aria-busy');
   if (r.status === 200) {
     mostrarInquilino(r.json.inquilino?.nome || slug);
     mostrarProvedores(r.json.provedores);
+    mostrarAvisosOrg(r.json.inquilino);
     if (r.json.login_local === false) { formSenha.hidden = true; aviso.mostrar(t('login.so_externo'), 'info'); }
     return;
   }
+  mostrarAvisosOrg(null);
   if (r.status === 0 || r.status >= 500) {
     // sem servidor: estado de erro com nova tentativa, em vez de um formulário que falharia em silêncio
     formSenha.hidden = true;

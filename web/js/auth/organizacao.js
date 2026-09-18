@@ -9,6 +9,7 @@
 import { obter, enviar, alterar, apagar, mensagemDe } from '../base/api.js';
 import { carregar, t } from '../base/i18n.js';
 import '../base/componentes.js';
+import { h, limpar } from '../base/dom.js';
 import { montarLayout, cabecalho, pronto } from '../base/layout.js';
 import { exigirSessao } from './sessao.js';
 
@@ -28,6 +29,15 @@ let atual = null;
 // só aparecesse depois estaria na zona morta temporal (achado UX-01: a página nunca marcava body[data-pronto])
 let smtpAtual = null;
 
+/* declaradas ANTES dos awaits de nível de módulo: carregarOrg() as usa durante iniciar(), e uma const que
+   só aparecesse depois estaria na zona morta temporal (o mesmo achado UX-01 do smtpAtual, duas linhas acima). */
+const UNIDADES = ['metrico', 'imperial'];
+const FORMATOS_DATA = ['dd/mm/aaaa', 'mm/dd/aaaa', 'aaaa-mm-dd'];
+const FORMATOS_NUMERO_DATA = ['idioma', 'navegador'];
+const BLOCOS_MAX = 15;
+const BLOCO_LINKS_MAX = 8;
+let blocosOuvintesLigados = false; // os ouvintes do editor de blocos ligam uma vez; a lista remonta a cada gravação
+
 await carregar();
 const usuario = await exigirSessao({ privilegio: 'org.configurar' });
 if (usuario) await iniciar();
@@ -45,7 +55,11 @@ async function carregarOrg() {
   atual = r.json;
   montarLogo();
   montarIdentidade();
+  montarContatos();
+  montarRegional();
   montarMapa();
+  montarPaginaInicial();
+  montarAvisos();
   montarArmazenamento();
   montarUsuarios();
   montarSeguranca();
@@ -58,11 +72,22 @@ function corpoBase(sobre) {
   return {
     nome: atual.nome,
     cor: atual.cor,
+    resumo: atual.resumo,
+    contato: atual.contato,
+    contatos_admin: [...atual.contatos_admin],
     idioma_padrao: atual.idioma_padrao,
+    unidades: atual.regional.unidades,
+    formato_data: atual.regional.formato_data,
+    formato_numero_data: atual.regional.formato_numero_data,
     centro: atual.mapa.centro,
     zoom: atual.mapa.zoom,
     basemap: atual.mapa.basemap,
+    extent: atual.mapa.extent,
     srid_padrao: atual.mapa.srid_padrao,
+    pagina_inicial: atual.pagina_inicial.map((b) => ({ ...b })),
+    galeria_destaque: atual.galeria_destaque,
+    banner_aviso: atual.banner_aviso,
+    termo_acesso: atual.termo_acesso,
     cota_bytes: atual.armazenamento.cota_bytes,
     cota_usuarios: atual.usuarios.cota,
     auth: { ...atual.auth },
@@ -88,34 +113,200 @@ function montarIdentidade() {
   f.campos = [
     { nome: 'nome', rotulo: t('campo.nome'), tipo: 'texto', obrigatorio: true, padrao: atual.nome, atributos: { maxlength: 55 } },
     { nome: 'cor', rotulo: t('org.cor'), tipo: 'texto', obrigatorio: true, padrao: atual.cor, ajuda: t('org.cor_ajuda'), atributos: { maxlength: 7, pattern: '^#[0-9a-fA-F]{6}$' } },
+    { nome: 'resumo', rotulo: t('org.resumo'), tipo: 'area', padrao: atual.resumo || '', atributos: { rows: 3, maxlength: 310 } },
+    { nome: 'contato', rotulo: t('org.contato'), tipo: 'texto', padrao: atual.contato || '', ajuda: t('org.contato_ajuda'), atributos: { maxlength: 254, type: 'email' } },
     { nome: 'idioma_padrao', rotulo: t('org.idioma'), tipo: 'select', padrao: atual.idioma_padrao, opcoes: IDIOMAS },
   ];
   f.botoes = [{ id: 'salvar', rotulo: t('acao.salvar'), tipo: 'submit' }];
   f.addEventListener('enviar', async (e) => {
     const v = e.detail.valores;
     if (!/^#[0-9a-fA-F]{6}$/.test(v.cor)) { f.erro('cor', t('org.cor_ajuda')); return; }
-    const ok = await salvar(f, { nome: v.nome, cor: v.cor, idioma_padrao: v.idioma_padrao });
+    const ok = await salvar(f, { nome: v.nome, cor: v.cor, resumo: v.resumo || null, contato: v.contato || null, idioma_padrao: v.idioma_padrao });
     if (ok) montarLayout({ usuario: { ...usuario, inquilino: { ...usuario.inquilino, nome: v.nome } }, ativo: '/admin/organizacao' });
+  });
+}
+
+function montarContatos() {
+  const f = document.getElementById('form-contatos');
+  f.campos = [
+    { nome: 'contatos_admin', rotulo: t('org.contatos_lista'), tipo: 'lista', obrigatorio: true, padrao: atual.contatos_admin, linhas: 3, ajuda: t('org.contatos_lista_ajuda') },
+  ];
+  f.botoes = [{ id: 'salvar', rotulo: t('acao.salvar'), tipo: 'submit' }];
+  f.addEventListener('enviar', async (e) => {
+    const lista = (e.detail.valores.contatos_admin || []).map((s) => String(s).trim().toLowerCase()).filter(Boolean);
+    if (!lista.length) { f.erro('contatos_admin', t('org.contatos_vazio')); return; }
+    await salvar(f, { contatos_admin: [...new Set(lista)] });
+  });
+}
+
+function montarRegional() {
+  const f = document.getElementById('form-regional');
+  const rotulos = (valores) => valores.map((v) => ({ valor: v, rotulo: t(`org.regional_${v.replace(/\//g, '_')}`) }));
+  f.campos = [
+    { nome: 'unidades', rotulo: t('org.unidades'), tipo: 'select', padrao: atual.regional.unidades, opcoes: rotulos(UNIDADES) },
+    { nome: 'formato_data', rotulo: t('org.formato_data'), tipo: 'select', padrao: atual.regional.formato_data, opcoes: rotulos(FORMATOS_DATA) },
+    { nome: 'formato_numero_data', rotulo: t('org.formato_numero_data'), tipo: 'select', padrao: atual.regional.formato_numero_data, opcoes: rotulos(FORMATOS_NUMERO_DATA) },
+  ];
+  f.botoes = [{ id: 'salvar', rotulo: t('acao.salvar'), tipo: 'submit' }];
+  f.addEventListener('enviar', (e) => {
+    const v = e.detail.valores;
+    salvar(f, { unidades: v.unidades, formato_data: v.formato_data, formato_numero_data: v.formato_numero_data });
   });
 }
 
 function montarMapa() {
   const f = document.getElementById('form-mapa');
   const c = atual.mapa.centro || [null, null];
+  const ex = atual.mapa.extent || [null, null, null, null];
   f.campos = [
     { nome: 'centro_lon', rotulo: t('org.centro_lon'), tipo: 'numero', padrao: c[0], atributos: { step: 'any', min: -180, max: 180 } },
     { nome: 'centro_lat', rotulo: t('org.centro_lat'), tipo: 'numero', padrao: c[1], atributos: { step: 'any', min: -90, max: 90 } },
     { nome: 'zoom', rotulo: t('org.zoom'), tipo: 'numero', padrao: atual.mapa.zoom, atributos: { min: 0, max: 24, step: 1 } },
     { nome: 'basemap', rotulo: t('org.basemap'), tipo: 'texto', padrao: atual.mapa.basemap || '', atributos: { maxlength: 100 } },
+    { nome: 'extent_o', rotulo: t('org.extent_o'), tipo: 'numero', padrao: ex[0], atributos: { step: 'any', min: -180, max: 180 } },
+    { nome: 'extent_s', rotulo: t('org.extent_s'), tipo: 'numero', padrao: ex[1], atributos: { step: 'any', min: -90, max: 90 } },
+    { nome: 'extent_l', rotulo: t('org.extent_l'), tipo: 'numero', padrao: ex[2], atributos: { step: 'any', min: -180, max: 180 } },
+    { nome: 'extent_n', rotulo: t('org.extent_n'), tipo: 'numero', padrao: ex[3], atributos: { step: 'any', min: -90, max: 90 } },
     { nome: 'srid_padrao', rotulo: t('org.srid'), tipo: 'numero', padrao: atual.mapa.srid_padrao, atributos: { min: 1024, max: 999999, step: 1 } },
   ];
   f.botoes = [{ id: 'salvar', rotulo: t('acao.salvar'), tipo: 'submit' }];
   f.addEventListener('enviar', (e) => {
     const v = e.detail.valores;
     const centro = v.centro_lon === null || v.centro_lat === null ? null : [v.centro_lon, v.centro_lat];
-    salvar(f, { centro, zoom: v.zoom, basemap: v.basemap || null, srid_padrao: v.srid_padrao });
+    const exVals = [v.extent_o, v.extent_s, v.extent_l, v.extent_n];
+    const extent = exVals.some((x) => x === null) ? null : exVals;
+    if (extent && !(extent[0] < extent[2] && extent[1] < extent[3])) { f.erro('extent_o', t('org.extent_invalido')); return; }
+    salvar(f, { centro, zoom: v.zoom, basemap: v.basemap || null, extent, srid_padrao: v.srid_padrao });
   });
 }
+
+/* ---------------- página inicial (item L0-07-a): editor de blocos fora do plat-formulario — o componente
+   declarativo não tem "lista de sub-formulários por tipo". Cada bloco é um fieldset com os campos do seu tipo;
+   links entram como linhas "rótulo | URL" (o mesmo formato do mapa grupo→perfil do LDAP, que o admin já
+   conhece). Validado no cliente antes do PUT e de novo no servidor (422 com caminho). */
+function blocoParaFieldset(bloco, i) {
+  const fs = h('fieldset', { class: 'bloco-edit', dataset: { tipo: bloco.tipo } });
+  fs.append(h('legend', {}, `${t(`org.bloco_${bloco.tipo}`)} ${i + 1}`));
+  const titulo = h('input', { class: 'bloco-titulo', type: 'text', value: bloco.titulo || '', maxlength: 80 });
+  fs.append(h('label', { class: 'fraco' }, t('org.bloco_titulo'), titulo));
+  if (bloco.tipo === 'texto') {
+    fs.append(h('textarea', { class: 'bloco-texto', rows: 3, maxlength: 4000 }, bloco.texto || ''));
+  } else if (bloco.tipo === 'links') {
+    const linhas = (bloco.links || []).map((l) => `${l.rotulo} | ${l.url}`).join('\n');
+    fs.append(h('textarea', { class: 'bloco-links', rows: 4, placeholder: t('org.bloco_links_formato') }, linhas));
+  } else {
+    fs.append(h('p', { class: 'fraco' }, t('org.bloco_galeria_info')));
+  }
+  const subir = h('button', { type: 'button', class: 'pequeno bloco-subir', 'aria-label': t('org.bloco_subir') }, '↑');
+  const remover = h('button', { type: 'button', class: 'pequeno perigo bloco-remover' }, t('org.bloco_remover'));
+  fs.append(h('div', { class: 'botoes' }, subir, remover));
+  return fs;
+}
+
+function montarPaginaInicial() {
+  const lista = document.getElementById('blocos-lista');
+  limpar(lista);
+  atual.pagina_inicial.forEach((bloco, i) => lista.append(blocoParaFieldset(bloco, i)));
+  montarGaleriaDestaque();
+  if (blocosOuvintesLigados) return;
+  blocosOuvintesLigados = true;
+  document.getElementById('bloco-adicionar').addEventListener('click', () => {
+    if (lista.children.length >= BLOCOS_MAX) { document.getElementById('aviso').erro(t('org.blocos_max', { n: BLOCOS_MAX })); return; }
+    const tipo = document.getElementById('bloco-add-tipo').value;
+    const bloco = tipo === 'texto' ? { tipo, titulo: '', texto: '' } : tipo === 'links' ? { tipo, titulo: '', links: [] } : { tipo, titulo: '' };
+    lista.append(blocoParaFieldset(bloco, lista.children.length));
+    renumerarBlocos();
+  });
+  lista.addEventListener('click', (e) => {
+    const fs = e.target.closest('fieldset.bloco-edit');
+    if (!fs) return;
+    if (e.target.closest('.bloco-remover')) { fs.remove(); renumerarBlocos(); }
+    else if (e.target.closest('.bloco-subir') && fs.previousElementSibling) { fs.previousElementSibling.before(fs); renumerarBlocos(); }
+  });
+  document.getElementById('blocos-salvar').addEventListener('click', salvarBlocos);
+}
+
+function renumerarBlocos() {
+  document.querySelectorAll('#blocos-lista fieldset.bloco-edit legend').forEach((leg, i) => {
+    leg.textContent = leg.textContent.replace(/\d+$/, `${i + 1}`);
+  });
+}
+
+async function montarGaleriaDestaque() {
+  const sel = document.getElementById('galeria-destaque');
+  limpar(sel);
+  sel.append(h('option', { value: '' }, t('org.galeria_nenhuma')));
+  const r = await obter('/api/grupos?limite=100');
+  if (r.status === 200 && r.json && Array.isArray(r.json.itens)) {
+    for (const g of r.json.itens) sel.append(h('option', { value: g.id }, g.nome));
+  }
+  sel.value = atual.galeria_destaque || '';
+  if (atual.galeria_destaque && sel.value !== atual.galeria_destaque) {
+    sel.append(h('option', { value: atual.galeria_destaque }, atual.galeria_destaque));
+    sel.value = atual.galeria_destaque;
+  }
+}
+
+function coletarBlocos() {
+  const blocos = [];
+  for (const fs of document.querySelectorAll('#blocos-lista fieldset.bloco-edit')) {
+    const tipo = fs.dataset.tipo;
+    const titulo = fs.querySelector('.bloco-titulo').value.trim();
+    if (tipo === 'texto') {
+      const texto = fs.querySelector('.bloco-texto').value.trim();
+      if (!texto) return { erro: t('org.bloco_texto_vazio') };
+      blocos.push({ tipo, titulo, texto });
+    } else if (tipo === 'links') {
+      const links = [];
+      for (const linha of fs.querySelector('.bloco-links').value.split('\n')) {
+        const li = linha.trim();
+        if (!li) continue;
+        const corte = li.indexOf('|');
+        const rotulo = (corte >= 0 ? li.slice(0, corte) : li).trim();
+        const url = (corte >= 0 ? li.slice(corte + 1) : '').trim();
+        if (!rotulo || !url || !(url.startsWith('https://') || (url.startsWith('/') && !url.startsWith('//')))) {
+          return { erro: t('org.bloco_link_invalido', { linha: li }) };
+        }
+        links.push({ rotulo, url });
+      }
+      if (!links.length || links.length > BLOCO_LINKS_MAX) return { erro: t('org.bloco_links_max', { n: BLOCO_LINKS_MAX }) };
+      blocos.push({ tipo, titulo, links });
+    } else {
+      blocos.push({ tipo, titulo });
+    }
+  }
+  if (blocos.length > BLOCOS_MAX) return { erro: t('org.blocos_max', { n: BLOCOS_MAX }) };
+  return { blocos };
+}
+
+async function salvarBlocos() {
+  const aviso = document.getElementById('aviso');
+  aviso.limpar();
+  const { blocos, erro } = coletarBlocos();
+  if (erro) { aviso.erro(erro); return; }
+  const bt = document.getElementById('blocos-salvar');
+  bt.disabled = true;
+  const r = await alterar('/api/org', corpoBase({ pagina_inicial: blocos, galeria_destaque: document.getElementById('galeria-destaque').value || null }));
+  bt.disabled = false;
+  if (r.status !== 200) { aviso.erro(mensagemDe(r)); return; }
+  atual = r.json;
+  montarPaginaInicial();
+  aviso.ok(t('org.salvo'));
+}
+
+function montarAvisos() {
+  const f = document.getElementById('form-avisos');
+  f.campos = [
+    { nome: 'banner_aviso', rotulo: t('org.banner'), tipo: 'area', padrao: atual.banner_aviso || '', atributos: { rows: 2, maxlength: 500 } },
+    { nome: 'termo_acesso', rotulo: t('org.termo'), tipo: 'area', padrao: atual.termo_acesso || '', atributos: { rows: 6, maxlength: 4000 } },
+  ];
+  f.botoes = [{ id: 'salvar', rotulo: t('acao.salvar'), tipo: 'submit' }];
+  f.addEventListener('enviar', (e) => {
+    const v = e.detail.valores;
+    salvar(f, { banner_aviso: v.banner_aviso || null, termo_acesso: v.termo_acesso || null });
+  });
+}
+
 
 function montarArmazenamento() {
   const f = document.getElementById('form-armazenamento');

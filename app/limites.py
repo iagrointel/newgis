@@ -372,6 +372,22 @@ ORG_COTA_USUARIOS_PADRAO = 2000           # bem acima do maior lote (LOTE_MAX=10
 ORG_COTA_ITENS_MIN = 1                    # cota de itens do catálogo (tenant.config.catalogo.cota_itens, D16 da 011)
 ORG_USO_DIAS_PADRAO = 30                  # período padrão da tela/relatório de uso (L0-07-admin-org)
 ORG_USO_DIAS_MAX = 366                    # acima disso = 422 (a série é diária; um ano basta para o console)
+# restante da superfície "Organização > Configurações" (paridade ArcGIS Enterprise 11.4: General, Home page,
+# Map, Gallery, Security — ficam fora legado, Bing e Living Atlas, como o portão declara):
+ORG_RESUMO_MAX = 310                      # "Organization summary" da Esri
+ORG_CONTATO_MAX = 254                     # e-mail (teto prático do RFC 5321)
+ORG_CONTATOS_ADMIN_MAX = 20               # logins de admins listados como contato (refutação: lista vazia = 422)
+ORG_UNIDADES = ("metrico", "imperial")    # = PERFIL_UNIDADES: o padrão do inquilino usa o vocabulário do perfil
+ORG_FORMATOS_DATA = ("dd/mm/aaaa", "mm/dd/aaaa", "aaaa-mm-dd")  # = PERFIL_FORMATOS_DATA
+ORG_FORMATOS_NUMERO_DATA = ("idioma", "navegador")  # paridade "Number and date format": idioma do inquilino ou browser
+ORG_BLOCOS_MAX = 15                       # portão do item: "≤ 15 blocos" (16 = 422 com caminho)
+ORG_BLOCO_LINKS_MAX = 8                   # portão do item: "≤ 8 links por bloco"
+ORG_BLOCO_TITULO_MAX = 80
+ORG_BLOCO_TEXTO_MAX = 4000
+ORG_LINK_ROTULO_MAX = 60
+ORG_LINK_URL_MAX = 300
+ORG_BANNER_MAX = 500                      # banner de aviso pré-login (Security > Notice, paridade 11.4)
+ORG_TERMO_MAX = 4000                      # termo de acesso pré-login (Security > Access notice, paridade 11.4)
 
 # --- perfil próprio do usuário (L0-02-g-perfil-usuario; POST/PUT /api/eu, app/auth/rotas_eu.py): idioma,
 # unidades, formato de data, visibilidade e foto (mesmo padrão do org_logo do L0-07-a — reaproveita

@@ -45,7 +45,7 @@ button.primario[aria-busy="true"]::after { border-color: var(--i-acento-texto); 
 .form .campo, .campo { display: grid; gap: var(--i-e1); }
 .form .campo > label, .campo > label, .campo-rotulo, .filtros label { color: var(--i-texto-fraco); font-size: var(--i-t1); }
 .form .campo .obrigatorio { color: var(--i-aviso); }
-.form input:not([type="checkbox"]):not([type="radio"]), .form select, .form textarea, .campo input:not([type="checkbox"]):not([type="radio"]), .campo select, .campo textarea, .busca input, .filtros input, .filtros select, select.campo-solto, input.campo-solto, select.controle, input.controle {
+.form input:not([type="checkbox"]):not([type="radio"]), .form select, .form textarea, .campo input:not([type="checkbox"]):not([type="radio"]), .campo select, .campo textarea, .busca input, .filtros input, .filtros select, select.campo-solto, input.campo-solto, select.controle, input.controle, .bloco-edit input, .bloco-edit textarea {
   font: inherit; color: var(--i-texto); background: var(--i-fundo);
   border: var(--i-fio) solid var(--i-linha-forte); border-radius: var(--i-raio);
   padding: var(--i-e2) var(--i-e3); width: 100%; min-width: 0;
@@ -58,6 +58,10 @@ button.primario[aria-busy="true"]::after { border-color: var(--i-acento-texto); 
 .form input[disabled], .form select[disabled], .form textarea[disabled], .campo :disabled, .busca input[disabled], .filtros select[disabled] { opacity: .55; cursor: not-allowed; background: var(--i-superficie-2); }
 .form input[aria-invalid="true"], .form select[aria-invalid="true"], .form textarea[aria-invalid="true"], .campo [aria-invalid="true"], .busca input[aria-invalid="true"] { border-color: var(--i-erro); box-shadow: inset var(--i-fio-marca) 0 0 var(--i-erro); }
 .form textarea, .campo textarea { min-height: calc(var(--i-e8) + var(--i-e3)); font-family: var(--i-fonte-texto); }
+/* item L0-07-a: fieldset de um bloco da página inicial no editor de /admin/organizacao */
+.bloco-edit { border: var(--i-fio) solid var(--i-linha); border-radius: var(--i-raio); padding: var(--i-e3); margin: 0 0 var(--i-e3); display: grid; gap: var(--i-e2); }
+.bloco-edit legend { font-size: var(--i-t0); color: var(--i-texto-fraco); text-transform: uppercase; letter-spacing: var(--i-espaco-letra-media); padding: 0 var(--i-e1); }
+.bloco-edit label { display: grid; gap: var(--i-e1); }
 .form .ajuda, .campo .ajuda { color: var(--i-texto-fraco); font-size: var(--i-t0); }
 .form .erro-campo, .campo .erro-campo, .erro-campo { color: var(--i-erro); font-size: var(--i-t0); display: inline-flex; align-items: center; gap: var(--i-e1); }
 .form .caixa, .caixa { display: flex; align-items: center; gap: var(--i-e2); }

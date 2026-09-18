@@ -195,7 +195,8 @@ def campos_json(corpo: Any, permitidos: set[str]) -> dict:
     return corpo
 
 
-CONFIG_PUBLICA = ("centro", "zoom", "basemap", "srid_padrao", "cor", "logo")
+CONFIG_PUBLICA = ("centro", "zoom", "basemap", "extent", "srid_padrao", "cor", "logo", "resumo",
+                  "pagina_inicial", "galeria_destaque")
 
 
 def eu_json(cur, auth: Auth) -> dict:
