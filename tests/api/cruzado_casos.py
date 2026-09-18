@@ -2577,9 +2577,9 @@ _LISTAS_PROPRIAS = (
     "/api/imagens/formatos", "/api/inquilino/exportacoes", "/api/inquilino/exportar/estimativa",
     "/api/intercambio/exportacoes", "/api/intercambio/formatos", "/api/layouts/modelos", "/api/log/nivel",
     "/api/mapa/fuso", "/api/mapas", "/api/mapas-base", "/api/migracao/inventarios", "/api/modelos",
-    "/api/modelos3d", "/api/modo", "/api/odk/pontes", "/api/org/logins", "/api/org/oidc", "/api/org/saml",
-    "/api/org/sso/oidc", "/api/org/sso/saml", "/api/plataforma/chamados", "/api/portal/exemplos",
-    "/api/render/saude", "/api/simbolos", "/api/telemetria", "/api/telemetria/appliances", "/api/videos",
+    "/api/modelos3d", "/api/odk/pontes", "/api/org/logins", "/api/org/oidc", "/api/org/saml",
+    "/api/org/sso/oidc", "/api/org/sso/saml", "/api/plataforma/chamados",
+    "/api/simbolos", "/api/telemetria", "/api/telemetria/appliances", "/api/videos",
     "/api/webhooks", "/api/widgets/externos",
 )
 CASOS.update({
@@ -2590,8 +2590,23 @@ CASOS.update({
     # listas próprias que exigem parâmetro de consulta
     ("GET", "/api/anotacoes"): Caso(
         lambda p: f"/api/anotacoes?camada_id={_it(p)}&fid=1"),
+    # ⛔ LACUNA DECLARADA: nesta instalacao o fluxo de eventos (SSE) esta DESLIGADO, e o 503 `sse_desligado`
+    # vem antes de qualquer verificacao de inquilino — as quatro chamadas da matriz recebem o mesmo 503,
+    # inclusive a anonima. Logo o isolamento desta rota NAO foi medido: ela esta na varredura para nao
+    # ficar invisivel, e o dia em que o SSE for ligado nesta base o caso comeca a reprovar e cobra a
+    # medicao de verdade (o alvo ja e a camada REAL de B). Isso e diferente de "passou".
     ("GET", "/api/eventos/camadas"): Caso(
-        lambda p: f"/api/eventos/camadas?camadas={_it(p)}"),
+        lambda p: f"/api/eventos/camadas?camadas={_it(p)}", publico=True, aceita=frozenset({503}),
+        verificar=_sem_marca, marcas=["nao-medido: SSE desligado nesta instalacao"]),
+    # ---- retratos da INSTALACAO, nao do inquilino: `/api/modo`, `/api/portal/exemplos` e
+    # `/api/render/saude` respondem 200 tambem com `X-Plat-Inquilino: demo2` porque nao carregam linha de
+    # inquilino nenhum — sao bandeira de modo, catalogo de exemplos de codigo e contador do renderizador.
+    # Nao e vazamento, e o `_sem_marca` e o que prende isso: no dia em que qualquer uma passar a refletir o
+    # inquilino pedido, o caso reprova.
+    **{("GET", c): Caso(lambda p, u=c: u, publico=True, aceita=frozenset({200}), verificar=_sem_marca)
+       for c in ("/api/modo", "/api/portal/exemplos", "/api/render/saude")},
+    # `{id}` do endpoint publico e INTEIRO, nao uuid
+    ("GET", "/api/endpoints-publicos/{id}"): Caso(lambda p: "/api/endpoints-publicos/999999999"),
     ("GET", "/api/cena/sol"): Caso(
         lambda p: "/api/cena/sol?lat=-23.5&lon=-46.6&instante=2026-01-01T12:00:00Z",
         proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
@@ -2726,6 +2741,6 @@ CASOS.update({
                  "/api/modelos3d/{id}/elementos", "/api/modelos3d/{id}/elementos/{guid}",
                  "/api/modelos3d/{id}/glb", "/api/odk/pontes/{id}",
                  "/api/odk/pontes/{id}/entidades/{dataset}", "/api/relacionamentos/{rel_id}",
-                 "/api/endpoints-publicos/{id}", "/api/widgets/externos/{nome}",
+                 "/api/widgets/externos/{nome}",
                  "/api/widgets/externos/{nome}/i18n.json", "/api/widgets/externos/{nome}/modulo.js")},
 })
