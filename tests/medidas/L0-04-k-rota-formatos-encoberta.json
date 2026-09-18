@@ -12,7 +12,7 @@
    "comando": "tests/api/ingestao/test_formatos_rota.py::test_formatos_responde_200_com_a_lista"
   },
   "rotas_varridas": {
-   "valor": 236,
+   "valor": 1086,
    "unidade": "rotas",
    "comando": "tests/unit/test_rotas_sombreamento.py::test_varredura_nao_acha_rota_fixa_encoberta_em_toda_a_app"
   },
@@ -25,9 +25,20 @@
    "valor": 1,
    "unidade": "pares",
    "comando": "ordem revertida a mao: pares_encobertos() devolveu [('GET', '/api/importacoes/{id}', '/api/importacoes/formatos')]"
+  },
+  "rotas_com_convertor_path": {
+   "valor": 8,
+   "unidade": "rotas",
+   "comando": "tests/unit/test_rotas_sombreamento.py::test_rotas_com_convertor_path_nao_engolem_nenhuma_rota_fixa_da_app (5 moldes distintos; /notebooks/{slug}/{caminho:path} aparece 5 vezes, uma por metodo)"
+  },
+  "par_real_achado_pela_varredura_nova": {
+   "valor": 1,
+   "unidade": "pares",
+   "comando": "GET /api/imagens/licencas engolida por GET /api/imagens/{item_id} em master; corrigido em app/main.py (tests/unit/test_rotas_sombreamento.py::test_rota_de_licencas_de_imagem_nao_esta_encoberta)"
   }
  },
  "nao_medido": {
-  "plat_camada_importar_sem_formato": "o comando `plat camada importar` nao existe no repositorio (scripts/plat so tem `segredo rotacionar`; nenhuma ocorrencia de --formato em toda a arvore). A clausula nao se aplica nesta base."
- }
+  "plat_camada_importar_sem_formato": "depende do item L0-14-cli-admin (a CLI `plat camada importar` ainda nao existe); medido la, nao aqui."
+ },
+ "gerado_em": "2026-09-18T01:07:12Z"
 }

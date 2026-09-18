@@ -159,7 +159,7 @@ responde pelos ausentes.
 <!-- gerado de laco/PAINEL.md:inicio -->
 ## O que a demonstração não faz ainda
 
-Gerado de laco/PAINEL.md (seção Fronteira) em 2026-09-17. Não editar entre os marcadores: rode `venv/bin/python docs/gerar_demo.py --preencher` depois de regenerar o painel.
+Gerado de laco/PAINEL.md (seção Fronteira) em 2026-09-18. Não editar entre os marcadores: rode `venv/bin/python docs/gerar_demo.py --preencher` depois de regenerar o painel.
 
 Uma linha por linha do produto. O que está `pendente` não existe na tela nem na máquina.
 

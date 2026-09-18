@@ -182,6 +182,7 @@ from app.tiles.exportacao import router as rotas_tiles_exportacao
 from app.tiles.rotas import router as rotas_tiles_martin_verificar
 from app.tiles.vector_tile_server import router as rotas_vector_tile_server
 from app.uploads.rotas import router as rotas_uploads
+from app.uso import rotas as rotas_uso
 from app.versao import versao
 from app.versionamento.rotas import router as rotas_versionamento
 from app.versionamento.rotas_esri import router as rotas_versionamento_esri
@@ -503,10 +504,13 @@ ROUTERS = [
     rotas_geocodificador_esri,
     # --- catálogo de imagens STAC por inquilino (L1-01-a): /svc/<token>/stac/*, token de serviço no PATH
     # (pgstac + convenção de nome de coleção `<tenant_id>-<slug>`; plat.raster_item com RLS)
+    # --- ficha de metadado e licença da imagem (L1-27): /api/imagens/licencas e /api/imagens/{id}/ficha.
+    # ORDEM OBRIGATÓRIA: vem ANTES de `rotas_imagens` porque `GET /api/imagens/licencas` é um segmento fixo
+    # que `GET /api/imagens/{item_id}` engoliria se declarado depois (era o defeito que
+    # tests/unit/test_rotas_sombreamento.py acusava em master: a rota de licenças respondia o painel do item).
+    rotas_ficha_imagem,
     rotas_imagens,
     rotas_stac,
-    # --- ficha de metadado e licença da imagem (L1-27): /api/imagens/licencas e /api/imagens/{id}/ficha
-    rotas_ficha_imagem,
     # --- ladrilho raster por token no caminho (L1-02): /svc/<token>/raster/<item>/{z}/{x}/{y}, WMTS,
     # TileJSON e mosaico por coleção; motor rio-tiler lendo COG no Garage por /vsis3
     rotas_tiles,
@@ -721,6 +725,8 @@ ROUTERS = [
     # GET /api/backup/ensaios (disparar usa a fila genérica: POST /api/jobs {tipo: backup.executar|
     # backup.ensaio_restauracao})
     rotas_backup.router,
+    # --- serie de uso do inquilino (L0-07-c-cotas-uso): le plat.uso_inquilino de volta
+    rotas_uso.router,
     # --- webhooks de eventos (L7-08-a): /api/webhooks (+ /{id}/rotacionar, /entregas, /reenviar, /reativar);
     # despacho é gatilho sobre plat.evento, entrega é o job webhooks.entregar do worker
     rotas_webhooks,

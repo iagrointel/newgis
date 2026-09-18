@@ -299,6 +299,29 @@ def token_revogar(args) -> int:
 
 
 # ---------------------------------------------------------------- camada
+def _formato_pela_extensao(cliente: Cliente, caminho: Path) -> str:
+    """Descobre o formato pela extensão do arquivo, perguntando a tabela à PRÓPRIA API
+    (`GET /api/importacoes/formatos`) — nunca a uma cópia local da lista, que envelheceria em silêncio.
+
+    A rota existe desde o item L0-04-d, mas até o conserto do item L0-04-k ela era encoberta por
+    `GET /api/importacoes/{id}` (declarada antes) e respondia 404 `importacao_inexistente`; por isso
+    `--formato` era obrigatório. Com a ordem corrigida, `plat camada importar arquivo.gpkg` funciona sozinho.
+    Extensão composta (`.shp.zip`) casa antes da simples, e empate nunca é adivinhado: vira erro com a lista."""
+    aceitos = [f for f in cliente.exigir("GET", "/api/importacoes/formatos") if f.get("aceito")]
+    nome = caminho.name.lower()
+    candidatos = sorted(
+        {f["tipo"] for f in aceitos for ext in f.get("extensoes") or [] if nome.endswith(ext.lower())},
+    )
+    if not candidatos:
+        conhecidas = sorted({ext for f in aceitos for ext in f.get("extensoes") or []})
+        raise ErroCLI(f"não sei o formato de {caminho.name}: a instalação aceita {', '.join(conhecidas)}. "
+                      "Passe --formato.")
+    if len(candidatos) > 1:
+        raise ErroCLI(f"a extensão de {caminho.name} serve a mais de um formato ({', '.join(candidatos)}). "
+                      "Passe --formato.")
+    return candidatos[0]
+
+
 def camada_importar(args) -> int:
     """Sobe o arquivo, cria a importação e (por padrão) espera inspeção e carga — os mesmos quatro passos
     que a tela de importação faz, na mesma ordem e pelas mesmas rotas."""
@@ -307,7 +330,7 @@ def camada_importar(args) -> int:
     if not caminho.is_file():
         raise ErroCLI(f"arquivo {caminho} não existe")
     cliente = _sessao(args, slug)
-    formato = args.formato
+    formato = args.formato or _formato_pela_extensao(cliente, caminho)
     token = cliente.exigir("POST", "/api/tokens",
                            {"nome": f"cli-importar-{caminho.stem[:32]}", "escopos": ["admin:inquilino"]},
                            esperado=(201,))
@@ -449,3 +472,39 @@ def documentacao(args) -> int:
     escrever(destino)
     print(f"{destino} gerado a partir do argparse")
     return 0
+
+
+# ---------------------------------------------------------------- dado de demonstração
+def _demo_argumentos(args):
+    """Os dois comandos de `demo` nasceram num ponto de entrada próprio (item L7-01-c) com opções de mesmo
+    nome que as globais do `plat`. Aqui a precedência é a do argparse: o que veio depois do grupo ganha, e o
+    que faltar cai nas globais — assim `plat --base-url X demo semear` e `plat demo semear --base-url X`
+    fazem a mesma coisa."""
+    base = getattr(args, "demo_base_url", None) or url(args)
+    credenciais = Path(getattr(args, "demo_credenciais", None) or arquivo_credenciais(args))
+    return base, credenciais
+
+
+def demo_semear(args) -> int:
+    from dados.demo import semear as demo
+
+    base, credenciais = _demo_argumentos(args)
+    medida = Path(args.medida) if args.medida else None
+    try:
+        resumo = demo.semear(base, credenciais, medida, verboso=not args.silencioso)
+    except demo.Erro as e:
+        raise ErroCLI(f"demo semear falhou: {e}") from e
+    print(json.dumps(resumo, ensure_ascii=False, indent=2 if not args.silencioso else None))
+    return 0
+
+
+def demo_verificar(args) -> int:
+    from dados.demo import semear as demo
+
+    base, credenciais = _demo_argumentos(args)
+    try:
+        resultado = demo.verificar(base, credenciais, verboso=not args.silencioso)
+    except demo.Erro as e:
+        raise ErroCLI(f"demo verificar falhou: {e}") from e
+    print(json.dumps(resultado, ensure_ascii=False, indent=2))
+    return 0 if resultado["ok"] else 1

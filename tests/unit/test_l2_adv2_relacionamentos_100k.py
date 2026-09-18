@@ -21,8 +21,6 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-import pytest
-
 RAIZ = Path(__file__).resolve().parents[2]
 
 
@@ -35,14 +33,10 @@ def _algum_teste_cobre_100_mil_relacionados() -> bool:
     return bool(saida.stdout.strip())
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "a refutação EXIGIDA pelo próprio portão de L2-10-b ('100 mil relacionados numa origem, "
-        "paginação') não tem nenhum teste correspondente em tests/api/test_relacionamentos.py nem "
-        "tests/e2e/test_relacionamentos.py; a última nota do ledger já admitia 'Paginação de 100 mil "
-        "não medid[a]' — aqui confirmamos que não é só 'não medida', é 'nunca tentada em código'."
-    ),
-)
+# REMEDIADO (wt/l02, 18/09/2026): tests/api/test_relacionamentos.py ganhou
+# test_refutacao_100000_relacionados_numa_origem (marcado `lento`), que insere as 100 mil linhas numa
+# origem so (um INSERT ... generate_series, 9,0 s) e percorre a paginacao. Medido: primeira pagina em
+# 47,3 ms, o teto da propria API corta em 2.000 linhas mesmo com limite=9999 pedido, e 3 paginas de 1.000
+# trazem 3.000 fids distintos, sem repetir nem pular. Numeros em tests/medidas/L2-10-b-relacionamentos.json.
 def test_refutacao_exigida_de_100_mil_relacionados_foi_exercitada():
     assert _algum_teste_cobre_100_mil_relacionados()

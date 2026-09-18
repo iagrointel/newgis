@@ -179,9 +179,10 @@ def montar_parser() -> argparse.ArgumentParser:
     imp.add_argument("arquivo", help="caminho do arquivo local (GeoPackage, GeoJSON, shapefile em zip, CSV)")
     imp.add_argument("--crs", type=int, default=None, metavar="SRID",
                      help="sistema de coordenadas a confirmar quando a inspeção perguntar")
-    imp.add_argument("--formato", required=True,
-                     help="formato do arquivo: gpkg, geojson, csv ou shapefile.zip (a API recusa o que não "
-                          "souber ler, com a lista dos aceitos na mensagem)")
+    imp.add_argument("--formato", default=None,
+                     help="formato do arquivo: gpkg, geojson, csv ou shapefile.zip. Sem ele, a CLI pergunta "
+                          "a lista à própria API (GET /api/importacoes/formatos) e casa pela extensão; se a "
+                          "extensão servir a mais de um formato, o erro diz quais e pede --formato")
     imp.add_argument("--titulo", default=None, help="título do item de arquivo (padrão: nome do arquivo)")
     imp.add_argument("--codificacao", default="UTF-8", help="codificação do texto quando a inspeção perguntar")
     imp.add_argument("--sem-esperar", action="store_true", help="devolve assim que a inspeção é enfileirada")
@@ -225,6 +226,25 @@ def montar_parser() -> argparse.ArgumentParser:
     rot.add_argument("resto", nargs=argparse.REMAINDER,
                      help="nome do segredo e opções repassados a scripts/segredo_rotacionar.py")
     rot.set_defaults(func=c.segredo)
+
+    # ---------------------------------------------------------------- dado de demonstração
+    # Item L7-01-c. Vive AQUI, e não num segundo executável, porque foi exatamente um segundo executável de
+    # mesmo nome que apagou esta CLI inteira de `scripts/plat` (achado do adversário do T9): quem acrescenta
+    # verbo acrescenta no parser único, e `docs/CLI.md` sai deste mesmo lugar.
+    dem = sub.add_parser("demo", help="pacote de dado de demonstração (semeia e confere pela própria API)")
+    dem_sub = dem.add_subparsers(dest="acao", required=True, metavar="AÇÃO")
+    sem = dem_sub.add_parser("semear", help="cria em demo e demo2 os itens do catálogo de demonstração")
+    sem.add_argument("--base-url", dest="demo_base_url", default=None, help="mesmo efeito da opção global")
+    sem.add_argument("--credenciais", dest="demo_credenciais", default=None, help="mesmo efeito da opção global")
+    sem.add_argument("--medida", default=None, help="grava o resultado e o tempo neste arquivo JSON")
+    sem.add_argument("--silencioso", action="store_true", help="imprime só o resumo, numa linha")
+    sem.set_defaults(func=c.demo_semear)
+
+    ver = dem_sub.add_parser("verificar", help="confere contagens e sha256 do pacote já semeado")
+    ver.add_argument("--base-url", dest="demo_base_url", default=None, help="mesmo efeito da opção global")
+    ver.add_argument("--credenciais", dest="demo_credenciais", default=None, help="mesmo efeito da opção global")
+    ver.add_argument("--silencioso", action="store_true", help="imprime só o resumo, numa linha")
+    ver.set_defaults(func=c.demo_verificar)
 
     doc = sub.add_parser("docs", help="regenera docs/CLI.md a partir desta descrição de comandos")
     doc.add_argument("--destino", default=None, help="caminho do arquivo gerado (padrão: docs/CLI.md)")

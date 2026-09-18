@@ -13,18 +13,13 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-import pytest
-
 ROOT = Path(__file__).resolve().parents[3]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L0-07-c: plat.uso_inquilino é escrito pelo periódico jobs.uso_medir mas NUNCA lido de volta — "
-    "nenhuma rota do OpenAPI vivo menciona 'uso' e nenhum arquivo em web/ é a tela 'Uso' que o portão exige "
-    "(gráfico + captura). Confirmado por leitura: `grep -rn uso_inquilino app/` só aparece na escrita "
-    "(app/jobs/periodicos.py, app/cotas.py em comentário), e `find web -iname '*uso*'` não acha nada.",
-)
+# REMEDIADO (wt/l02, 18/09/2026): plat.uso_inquilino passou a ter caminho de VOLTA. GET /api/uso devolve a
+# serie diaria do inquilino da sessao com as cotas em vigor e os contadores vivos ("agora") ao lado, e a tela
+# /admin/uso desenha consumo contra cota e a linha do armazenamento por dia (SVG proprio: a CSP nao deixa
+# carregar biblioteca de fora). Testes em tests/api/test_uso.py; medidas em tests/medidas/L0-07-c-cotas-uso.json.
 def test_existe_rota_e_tela_de_uso_do_inquilino(conexao_plat_app):
     """Confirma ao vivo, contra a trilha: (a) o OpenAPI comitado não declara nenhuma rota com 'uso' no
     caminho; (b) nenhum arquivo web/ tem nome relacionado a uso/gráfico de cota."""

@@ -35,8 +35,13 @@
    "valor": 1659.4,
    "unidade": "ms",
    "comando": "playwright chromium contra a URL interna (tests/e2e/test_crs.py)"
+  },
+  "grades_conferidas_pelo_install": {
+   "valor": 3,
+   "unidade": "grades",
+   "comando": "install.sh passo f2b -> grades_ibge/instalar.sh (sha256 de SAD69_003.GSB, CA61_003.GSB, CA7072_003.GSB contra grades_ibge/SHA256SUMS); antes de 18/09 o install.sh nunca chamava"
   }
  },
- "gerado_em": "2026-09-08T19:33:49Z",
+ "gerado_em": "2026-09-18T02:13:45Z",
  "git_sha": "99dacd935a73"
 }

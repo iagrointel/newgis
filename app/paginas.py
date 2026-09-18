@@ -33,6 +33,8 @@ PAGINAS = {
     "/admin/inquilinos": "admin/inquilinos.html",
     # --- backup lógico por inquilino e ensaio de restauração (L0-06-backup-status)
     "/admin/backup": "admin/backup.html",
+    # --- medição de uso do inquilino contra as cotas (L0-07-c-cotas-uso)
+    "/admin/uso": "admin/uso.html",
     # --- catálogo (L0-03)
     # --- catálogo (L0-03); /c/{token} é servida por app/catalogo/rotas_compartilhamento.py (leva og:)
     "/conteudo": "conteudo.html",

@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import io
 import json
+import os
 import time
 
 import pytest
@@ -292,6 +293,7 @@ def test_frio_e_quente_p95_da_demo_1024x768(servidor):
             await m.parar()
 
     tempos_frio, falhas_frio, tempos_quente, falhas_quente = asyncio.run(cenario())
+    carga = [round(x, 2) for x in os.getloadavg()]
 
     def p95(xs):
         if not xs:
@@ -303,8 +305,16 @@ def test_frio_e_quente_p95_da_demo_1024x768(servidor):
     medida = {
         "item": "L2-12-a-motor-render-servidor",
         "cenario": "1024x768, mapa-base local (pmtiles Guarulhos), pool=2",
-        "maquina_no_dia_da_medida": "carga/RAM medidas com `uptime`/`free` no momento — ver handoff do item; "
-                                     "esta é uma máquina compartilhada por dezenas de trilhas do laço ao mesmo tempo",
+        # 18/09/2026 (achado do adversário do T9): este gate é sensível a carga e a carga era descrita em
+        # PROSA — "ver handoff do item" —, então ninguém conseguia distinguir "o motor piorou" de "a máquina
+        # estava lotada" lendo o laudo. Agora a carga entra como NÚMERO, medida no mesmo instante da rodada.
+        "carga_1min": carga[0], "carga_5min": carga[1], "carga_15min": carga[2],
+        "cpus": os.cpu_count(),
+        "maquina_no_dia_da_medida": "máquina compartilhada por dezenas de trilhas do laço; a carga do "
+                                     "momento está em carga_1min/5min/15min. Referência medida: com carga ~20 "
+                                     "esta mesma medida deu quente_p95 1290,2 ms (fechamento f2a8cb15), e com "
+                                     "carga ~2 deu 173,4 ms — o teto de 1 s do portão só é significativo junto "
+                                     "com a carga, e por isso os dois números saem juntos.",
         "frio_ms": [round(x, 1) for x in tempos_frio],
         "quente_ms": [round(x, 1) for x in tempos_quente],
         "frio_p95_ms": p95(tempos_frio),

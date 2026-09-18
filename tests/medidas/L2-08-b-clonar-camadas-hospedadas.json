@@ -30,6 +30,13 @@
    "comando": "test_servico_publico_gravado_clona_esquema_dominios_relacionamento_e_anexos"
   }
  },
- "gerado_em": "2026-09-07T21:35:32Z",
- "git_sha": "77411ed09942"
+ "gerado_em": "2026-09-18T02:52:59Z",
+ "git_sha": "77411ed09942",
+ "nao_medido": {
+  "triagem_18_09_2026_wt_l02": {
+   "veredito": "causa raiz descrita, nao consertada nesta rodada (depende de credencial de terceiro)",
+   "o_que_falta": "Duas clausulas de ESCALA do portao nunca foram exercitadas: '5 camadas clonadas com contagem igual' (a evidencia cobre 3) e 'camada de 500 mil feicoes em tempo medido' (o proprio JSON de fechamento admite 'nao medida'; o maior teste real foi de 2.000 feicoes).",
+   "bloqueio": "as camadas publicas de teste precisam estar registradas com URL e data, e o portao tambem cita a credencial do parceiro (decisao D20, PENDENTE). Clonar 500 mil feicoes de um FeatureServer publico e trafego e tempo de rede que nao cabem numa rodada do laco sem alvo declarado."
+  }
+ }
 }

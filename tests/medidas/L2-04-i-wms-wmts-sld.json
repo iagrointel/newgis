@@ -82,6 +82,13 @@
    "comando": "gdal_translate baixando ladrilhos do endereço RESTful do WMTS (driver de ladrilho do GDAL)"
   }
  },
- "gerado_em": "2026-09-08T12:33:34Z",
- "git_sha": "4d885ef22774"
+ "gerado_em": "2026-09-18T02:52:59Z",
+ "git_sha": "4d885ef22774",
+ "nao_medido": {
+  "triagem_18_09_2026_wt_l02": {
+   "veredito": "causa raiz descrita, nao consertada nesta rodada (construcao grande)",
+   "o_que_falta": "A hipotese promete UM WMS que sirva camada vetorial E raster do catalogo, com estilo nomeado e SLD/SLD_BODY. Existem dois servicos distintos que nunca se encontram: app/ogc_mapas/rotas_wms.py (do proprio item, so vetorial, sem nenhuma mencao a raster/COG/TiTiler) e app/imagens/rotas_wms.py (item L1-02-g, raster, que RECUSA SLD/SLD_BODY por desenho). As duas familias de camada nunca convivem no mesmo servico com estilo.",
+   "tamanho": "nao e conserto: e' unificar dois servicos OGC com modelos de estilo diferentes (SLD 1.0 do conversor do L2-02-a de um lado, parametros de realce de raster do outro) e decidir o que GetMap faz quando a camada pedida e raster e o SLD manda simbologia de vetor. Precisa de decisao de arquitetura antes de codigo."
+  }
+ }
 }

@@ -2,17 +2,17 @@
  "item": "L0-03-catalogo",
  "medidas": {
   "pagina_conteudo_ms": {
-   "valor": 231.8,
+   "valor": 616.3,
    "unidade": "ms",
    "comando": "playwright chromium 1280x800 contra a URL interna (tests/e2e/test_conteudo.py)"
   },
   "primeira_pintura_conteudo_ms": {
-   "valor": 16,
+   "valor": 60,
    "unidade": "ms",
    "comando": "playwright chromium 1280x800 contra a URL interna (tests/e2e/test_conteudo.py)"
   },
   "soma_modulos_kb": {
-   "valor": 229.6,
+   "valor": 317.1,
    "unidade": "kB",
    "comando": "playwright chromium 1280x800 contra a URL interna (tests/e2e/test_conteudo.py)"
   },
@@ -75,8 +75,21 @@
    "valor": 50,
    "unidade": "linhas",
    "comando": "1.000 PUTs no mesmo item (21,4 s) e compactar_item(cur, item, 50) até estabilizar: removeu 951, sobraram 50 linhas em 40 ms; a passagem seguinte removeu 0"
+  },
+  "catalogo_traducao_kb": {
+   "valor": 193.9,
+   "unidade": "kB",
+   "comando": "playwright chromium 1280x800 contra a URL interna (tests/e2e/test_conteudo.py)"
+  },
+  "total_static_js_kb": {
+   "valor": 511.0,
+   "unidade": "kB",
+   "comando": "playwright chromium 1280x800 contra a URL interna (tests/e2e/test_conteudo.py)"
   }
  },
- "gerado_em": "2026-09-06T16:24:31Z",
- "git_sha": "90d03c07da0c"
+ "gerado_em": "2026-09-18T02:36:46Z",
+ "git_sha": "77ac598913f1",
+ "nao_medido": {
+  "orcamento_da_tela_conteudo": "Os 400 kB do ADR 0001 passam a valer para MODULO (317,1 kB medidos) e o catalogo de traducao ganha teto proprio de 220 kB (193,9 medidos) -- ADR docs/adr/20260918T0240-orcamento-da-tela-separa-modulo-de-catalogo-de-traducao.md. O total que o usuario baixa (511,0 kB) continua gravado em total_static_js_kb, sem maquiagem. O catalogo e' buscado com cache: 'no-store', entao volta do servidor a cada navegacao: nomeado no ADR, item proprio."
+ }
 }

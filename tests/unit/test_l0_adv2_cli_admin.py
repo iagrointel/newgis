@@ -21,20 +21,15 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-import pytest
-
 ROOT = Path(__file__).resolve().parents[2]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L0-14: scripts/plat (o ponto de entrada real) foi substituído pelo script menor de "
-    "L7-01-c-dado-demonstracao/L7-19-segredos — hoje só tem os grupos {segredo, demo}. A implementação "
-    "completa (inquilino/usuario/token/camada/job/evento/saude/docs) continua intacta em "
-    "app/cli/principal.py, mas não está mais ligada ao executável. docs/CLI.md ainda documenta o "
-    "conjunto completo e diz 'Ponto de entrada: scripts/plat'. tests/api/test_cli_admin.py: 16/16 falham "
-    "ao vivo nesta trilha com 'argument acao/grupo: invalid choice'.",
-)
+# REMEDIADO (wt/l02, 18/09/2026): `scripts/plat` voltou a ser o atalho de uma linha para `python -m app.cli`
+# que o ADR docs/adr/20260907T2318-linha-de-comando-plat.md (decisão 1) manda ele ser, e os dois grupos que
+# haviam tomado o lugar do arquivo (`demo`, de L7-01-c, e `segredo`, de L7-19) viraram subcomandos do parser
+# ÚNICO em app/cli/principal.py — que é de onde `plat docs` gera docs/CLI.md. O `xfail` saiu.
+# Prova ao vivo desta trilha: tests/api/test_cli_admin.py 19/19 verdes, incluindo a cláusula do portão sobre
+# o install.sh (passo h1b usa `plat inquilino criar --se-nao-existir --senha-arquivo`).
 def test_scripts_plat_e_o_ponto_de_entrada_que_docs_cli_promete():
     r = subprocess.run([str(ROOT / "scripts" / "plat"), "--help"], capture_output=True, text=True)
     assert r.returncode == 0, r.stderr

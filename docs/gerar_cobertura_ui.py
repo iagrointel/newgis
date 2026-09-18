@@ -140,7 +140,7 @@ def _resolver_import(origem: Path, alvo: str) -> Path | None:
 def grafo_modulos(arquivos: list[Path]) -> dict[Path, set[Path]]:
     grafo: dict[Path, set[Path]] = {}
     for arq in arquivos:
-        texto = arq.read_text(encoding="utf-8", errors="replace")
+        texto = sem_comentarios(arq.read_text(encoding="utf-8", errors="replace"))
         filhos = set()
         if arq.suffix == ".html":
             for src in RE_SCRIPT.findall(texto):
@@ -273,11 +273,71 @@ def literais(linha: str) -> list[str]:
     return saida
 
 
+def sem_comentarios(texto: str) -> str:
+    """Apaga comentário de linha (`//`) e de bloco (`/* */`) trocando cada caractere por espaço, PRESERVANDO a
+    quebra de linha — assim o número da linha de cada achado continua o mesmo do arquivo real.
+
+    Achado do adversário de linha (item UX-00): a varredura procurava literal de URL no texto cru, então uma
+    rota de escrita citada só num comentário (código desativado, `TODO`, exemplo em docstring) já bastava para
+    marcar a rota como coberta — e é essa contagem que UX-10..UX-23 usam como prova de "0 rota de escrita sem
+    controle na tela".
+
+    O passeio é por caractere e sabe em que estado está: `'`, `"` e crase (com `${...}` aninhado, que pode
+    conter aspas e comentários de verdade). Uma barra só abre comentário quando vem seguida de `/` ou `*` e o
+    passeio não está dentro de texto."""
+    saida, i, n = [], 0, len(texto)
+    aspas: str | None = None          # aspa aberta agora (', " ou `)
+    pilha: list[str] = []             # crases e ${...} abertos, para saber a que estado voltar
+    prof_expr = 0                     # profundidade de chaves dentro de um ${...}
+    while i < n:
+        c = texto[i]
+        prox = texto[i + 1] if i + 1 < n else ""
+        if aspas is None and c == "/" and prox == "/":
+            while i < n and texto[i] != "\n":
+                saida.append(" ")
+                i += 1
+            continue
+        if aspas is None and c == "/" and prox == "*":
+            while i < n and not (texto[i] == "*" and texto[i + 1: i + 2] == "/"):
+                saida.append("\n" if texto[i] == "\n" else " ")
+                i += 1
+            saida.append("  ")
+            i += 2
+            continue
+        if aspas is not None and c == "\\":      # escape dentro de texto: o par sai inteiro
+            saida.append(c)
+            saida.append(prox)
+            i += 2
+            continue
+        if aspas is None and c in "'\"`":
+            aspas = c
+        elif aspas == c and c in "'\"":
+            aspas = None
+        elif aspas == "`" and c == "`":
+            aspas = None
+        elif aspas == "`" and c == "$" and prox == "{":
+            pilha.append("`")
+            aspas, prof_expr = None, prof_expr + 1
+            saida.append(c)
+            saida.append(prox)
+            i += 2
+            continue
+        elif aspas is None and prof_expr and c == "{":
+            prof_expr += 1
+        elif aspas is None and prof_expr and c == "}":
+            prof_expr -= 1
+            if pilha and prof_expr == len(pilha) - 1:
+                aspas = pilha.pop()
+        saida.append(c)
+        i += 1
+    return "".join(saida)
+
+
 def chamadas(arquivos: list[Path]) -> list[dict]:
     """[{arquivo, linha, url, metodo, trata_erro}] para todo literal que pareça URL da API."""
     saida = []
     for arq in arquivos:
-        texto = arq.read_text(encoding="utf-8", errors="replace")
+        texto = sem_comentarios(arq.read_text(encoding="utf-8", errors="replace"))
         apelidos = {}
         for nome, tmpl in RE_APELIDO.findall(texto):
             if tmpl.startswith(PREFIXOS_URL):

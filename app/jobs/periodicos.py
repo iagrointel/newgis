@@ -146,6 +146,12 @@ def jobs_uso_medir(ctx, dia: str | None = None) -> dict:
     return {"dia": d.isoformat(), "inquilinos": medidos, "sem_bucket": sem_bucket, "garage_falhou": garage_falhou}
 
 
+# Periódicos que valem PARA CADA INQUILINO, não só para o técnico `plataforma`. Lista própria porque o
+# destino do upsert é outro (ver plat.agenda_periodica_por_inquilino_sincronizar, migração
+# 20260918T0242): a tarefa aqui age sobre o schema de dado do inquilino dono da agenda, e uma linha só no
+# inquilino técnico faria a tarefa rodar sobre `d_plataforma` e mais nada. O 5º campo é `ativa_na_criacao`.
+PERIODICOS_POR_INQUILINO: list[tuple[str, str, str, dict, bool]] = []
+
 PERIODICOS: list[tuple[str, str, str, dict]] = [
     ("expurgo diário", "30 3 * * *", "jobs.expurgo", {}),
     ("sessões vencidas", "0 * * * *", "jobs.sessoes_expurgar", {}),

@@ -54,7 +54,14 @@ def test_conteudo_fluxo_completo(browser, base_url, credenciais_demo, admin_api,
                 fcp if fcp is not None else tela.medidas["pagina_conteudo_ms"]
             )
             tela.medidas["soma_modulos_kb"] = tela.soma_modulos_kb()
+            tela.medidas["catalogo_traducao_kb"] = tela.catalogo_traducao_kb()
+            tela.medidas["total_static_js_kb"] = round(
+                tela.medidas["soma_modulos_kb"] + tela.medidas["catalogo_traducao_kb"], 1)
+            # dois orçamentos, dois tetos, os dois reprovam (ADR
+            # docs/adr/20260918T0240-orcamento-da-tela-separa-modulo-de-catalogo-de-traducao.md). O total
+            # fica gravado no laudo para ninguém precisar somar de cabeça o que o usuário baixa.
             assert tela.medidas["soma_modulos_kb"] <= 400, tela.medidas
+            assert tela.medidas["catalogo_traducao_kb"] <= 220, tela.medidas
             assert page.locator("#aba-meus[aria-selected='true']").count() == 1
             tela.capturar("lista")
             # vistas

@@ -1,7 +1,7 @@
 {
  "item": "L0-14-cli-admin",
  "assinado_por": "backend/testador (turno fable, portão leve de 07/09/2026)",
- "gerado_em": "2026-09-07T23:17:17Z",
+ "gerado_em": "2026-09-18T01:53:57Z",
  "git_sha": "5e89faa4",
  "maquina": "12 vCPU, 23 GB RAM (7 GB disponíveis), carga 1 min 11,95 (máquina disputada por outras trilhas); base de trilha plat_til014cliadm; uvicorn próprio em 127.0.0.1:8358",
  "medidas": {
@@ -39,6 +39,21 @@
    "valor": 0,
    "unidade": "caminhos aceitos",
    "comando": "recusar_senha_em_argv corta --senha/--password/--pass/-p antes de qualquer chamada (saída 2); provado em test_senha_em_argumento_e_recusada e test_arquivo_de_senha_frouxo_e_recusado (arquivo 644 recusado com instrução de chmod 600)"
+  },
+  "testes_do_item_verdes": {
+   "valor": 19,
+   "unidade": "testes",
+   "comando": "tests/api/test_cli_admin.py (19 de 19; eram 0 de 16 no laudo do adversario do T9)"
+  },
+  "grupos_no_ponto_de_entrada": {
+   "valor": 10,
+   "unidade": "grupos",
+   "comando": "scripts/plat --help: inquilino, usuario, token, camada, job, evento, saude, segredo, demo, docs"
+  },
+  "formato_deduzido_pela_api": {
+   "valor": 1,
+   "unidade": "comandos",
+   "comando": "plat camada importar sem --formato pergunta GET /api/importacoes/formatos e casa pela extensao (tests/api/test_cli_admin.py::test_camada_importar_cria_a_mesma_importacao_que_a_tela)"
   }
  },
  "fora_desta_passagem": [

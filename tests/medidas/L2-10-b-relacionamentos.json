@@ -55,8 +55,23 @@
    "valor": 72.8,
    "unidade": "ms",
    "comando": "playwright chromium (tests/e2e/test_relacionamentos.py) com --base-url próprio"
+  },
+  "relacionados_numa_origem": {
+   "valor": 100000,
+   "unidade": "linhas",
+   "comando": "INSERT ... generate_series em 9.0 s (pytest -m lento tests/api/test_relacionamentos.py::test_refutacao_100000_relacionados_numa_origem)"
+  },
+  "primeira_pagina_de_relacionados_ms": {
+   "valor": 47.3,
+   "unidade": "ms",
+   "comando": "GET /api/camadas/<quadras>/relacionados/lotes com limite=9999 sobre 100000 destinos -> devolveu 2000 linhas"
+  },
+  "paginas_percorridas_sem_repeticao": {
+   "valor": 3,
+   "unidade": "páginas",
+   "comando": "3000 fids distintos em 3 páginas de 1.000, deslocamento crescente"
   }
  },
- "gerado_em": "2026-09-07T14:40:39Z",
- "git_sha": "2f4574eb8aa5"
+ "gerado_em": "2026-09-18T02:40:55Z",
+ "git_sha": "b354db20bb0a"
 }

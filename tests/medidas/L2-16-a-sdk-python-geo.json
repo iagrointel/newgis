@@ -7,6 +7,13 @@
    "comando": "pla.ferramentas.buffer(PONTO, 100.0) — criação do job, espera e leitura do item; carga_1min=3.25, ram_livre_gb=7.75, medido_em=2026-09-08T20:22:36Z"
   }
  },
- "gerado_em": "2026-09-08T20:22:37Z",
- "git_sha": "610896979710"
+ "gerado_em": "2026-09-18T02:52:59Z",
+ "git_sha": "610896979710",
+ "nao_medido": {
+  "triagem_18_09_2026_wt_l02": {
+   "veredito": "causa raiz descrita, nao consertada nesta rodada (construcao grande + colisao de nome)",
+   "o_que_falta": "O pacote pacote/plat_geo so tem CRUD generico de item (listar/iterar/abrir/criar/atualizar/substituir_dados/apagar). Faltam as cinco coisas que o portao promete: Camada.ler(filtro, campos, bbox) -> GeoDataFrame e Camada.escrever(gdf, modo), a classe Raster, os dominios Tabela e Mapa, o widget de mapa em notebook, e o indice interno de pacotes (hoje a unica distribuicao e a copia de pacote/ para o contexto docker do notebook, que nao e indice).",
+   "colisao": "ha DOIS pacotes chamados `plat` 0.1.0 com APIs incompativeis: o deste item e o do L7-08-b (sdk/python). Instalar um quebra o outro. Resolver o nome vem ANTES de escrever a camada geoespacial, senao o doctest do portao passa a depender de qual dos dois esta instalado."
+  }
+ }
 }

@@ -628,13 +628,22 @@ def _banco_nome() -> str:
 
 
 def _slug_e_esquema(ctx) -> tuple[str, str]:
+    """Slug e schema de dado do inquilino do job.
+
+    18/09/2026: `esquema_dado.esquema(cur, slug)` estava FORA do `with` — o cursor já tinha comitado e a
+    conexão já voltara ao pool, e a consulta dele abria uma transação numa conexão que o pool dava por
+    ociosa. O `db()` seguinte fazia `con.autocommit = False` com transação aberta e o psycopg2 levantava
+    `ProgrammingError: set_session cannot be used inside a transaction` — que é o erro com que TODO
+    `backup.executar` terminava, manual ou agendado (medido nesta trilha: 0 linha em plat.backup, e os
+    testes de tests/api/test_backup.py reprovando com estado 'falhou'). O conserto é a indentação: as duas
+    consultas na MESMA transação, como o resto do módulo já faz."""
     with ctx.db() as cur:
         cur.execute("SELECT slug FROM plat.tenant WHERE id = %s", (ctx.tenant_id,))
         r = cur.fetchone()
-    if r is None:
-        raise FalhaDefinitiva("backup: inquilino inexistente no contexto do job")
-    slug = r["slug"]
-    esquema = esquema_dado.esquema(cur, slug)
+        if r is None:
+            raise FalhaDefinitiva("backup: inquilino inexistente no contexto do job")
+        slug = r["slug"]
+        esquema = esquema_dado.esquema(cur, slug)
     if not _IDENT_SQL.match(esquema):
         raise FalhaDefinitiva(f"backup: nome de schema fora do padrão esperado ({esquema!r})")
     return slug, esquema

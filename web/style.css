@@ -386,3 +386,19 @@ plat-idioma select.controle { width: auto; padding: var(--e1) var(--e2); font-si
 .rede-medicao-ficha .alarme-texto { color: var(--falha); font-weight: 600; }
 .grafico-linha { stroke: var(--acento); stroke-width: 2; }
 .grafico-eixo { stroke: var(--borda-forte); stroke-width: 1; }
+
+/* --- tela /admin/uso (item L0-07-c-cotas-uso): consumo contra cota e a linha do armazenamento por dia.
+   O gráfico é SVG desenhado pelo módulo da tela (a CSP não deixa carregar biblioteca de fora), então a
+   cor e a espessura das linhas vivem aqui, em token, e não em atributo de apresentação no SVG. */
+.cotas { display: grid; grid-template-columns: max-content 1fr; gap: var(--e1) var(--e4); margin: 0; }
+.cotas dt { color: var(--texto-fraco); }
+.cotas dd { margin: 0; }
+.barra { height: var(--i-barra-grossa); background: var(--i-superficie-2); border-radius: var(--i-raio-pilula); overflow: hidden; margin-top: var(--e1); }
+.barra i { display: block; height: 100%; background: var(--i-acento); }
+.barra-aviso i { background: var(--i-aviso); }
+.barra-falha i { background: var(--i-erro); }
+.grafico-uso { width: 100%; height: auto; }
+.grafico-uso .eixo { stroke: var(--i-linha); stroke-width: 1; }
+.grafico-uso .serie { stroke: var(--i-acento); stroke-width: 2; }
+.grafico-uso .cota { stroke: var(--i-erro); stroke-width: 1; stroke-dasharray: 4 3; }
+.grafico-uso .rotulo { fill: var(--i-texto-fraco); font-size: var(--i-t1); font-family: var(--i-fonte-dado); }

@@ -37,6 +37,13 @@
    "comando": "tests/e2e/test_cena_3d.py::test_medicao_de_altura_confere_com_a_altura_conhecida"
   }
  },
- "gerado_em": "2026-09-08T11:20:48Z",
- "git_sha": "a61254c04365"
+ "gerado_em": "2026-09-18T02:52:59Z",
+ "git_sha": "a61254c04365",
+ "nao_medido": {
+  "triagem_18_09_2026_wt_l02": {
+   "veredito": "causa raiz descrita, nao consertada nesta rodada (limite de hardware, exige decisao)",
+   "o_que_falta": "O portao pede '>= 30 fps OU limiar declarado'. A medida commitada no fechamento registra 8,3 fps sob SwiftShader (render por software: esta maquina nao tem GPU no caminho do chromium headless) e NAO existe, em ADR, handoff ou estado.json, nenhum limiar alternativo declarado -- entao a clausula nao tinha como passar, em nenhuma leitura.",
+   "decisao_necessaria": "ou se declara o limiar honesto para render por software (e o portao passa a dizer 8,3 fps medidos em SwiftShader, com a ressalva de que a maquina do usuario com GPU e outra historia), ou se mede num cliente com GPU e o numero vale para aquele hardware. As duas saidas sao decisao, nao codigo."
+  }
+ }
 }

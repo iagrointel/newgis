@@ -40,6 +40,8 @@ argumentos posicionais:
     saude               consulta /saude da API
     segredo             rotação de segredo e certificado (repassa ao script do
                         item L7-19)
+    demo                pacote de dado de demonstração (semeia e confere pela
+                        própria API)
     docs                regenera docs/CLI.md a partir desta descrição de
                         comandos
 
@@ -306,7 +308,7 @@ opções:
 ### `plat camada importar`
 
 ```
-uso: plat camada importar [-h] [--crs SRID] --formato FORMATO
+uso: plat camada importar [-h] [--crs SRID] [--formato FORMATO]
                             [--titulo TITULO] [--codificacao CODIFICACAO]
                             [--sem-esperar] [--espera ESPERA]
                             arquivo
@@ -320,8 +322,10 @@ opções:
   --crs SRID            sistema de coordenadas a confirmar quando a inspeção
                         perguntar
   --formato FORMATO     formato do arquivo: gpkg, geojson, csv ou
-                        shapefile.zip (a API recusa o que não souber ler, com
-                        a lista dos aceitos na mensagem)
+                        shapefile.zip. Sem ele, a CLI pergunta a lista à
+                        própria API (GET /api/importacoes/formatos) e casa
+                        pela extensão; se a extensão servir a mais de um
+                        formato, o erro diz quais e pede --formato
   --titulo TITULO       título do item de arquivo (padrão: nome do arquivo)
   --codificacao CODIFICACAO
                         codificação do texto quando a inspeção perguntar
@@ -444,6 +448,53 @@ argumentos posicionais:
 
 opções:
   -h, --help  mostra esta ajuda e sai
+```
+
+## `plat demo`
+
+```
+uso: plat demo [-h] AÇÃO ...
+
+argumentos posicionais:
+  AÇÃO
+    semear    cria em demo e demo2 os itens do catálogo de demonstração
+    verificar
+              confere contagens e sha256 do pacote já semeado
+
+opções:
+  -h, --help  mostra esta ajuda e sai
+```
+
+### `plat demo semear`
+
+```
+uso: plat demo semear [-h] [--base-url DEMO_BASE_URL]
+                        [--credenciais DEMO_CREDENCIAIS] [--medida MEDIDA]
+                        [--silencioso]
+
+opções:
+  -h, --help            mostra esta ajuda e sai
+  --base-url DEMO_BASE_URL
+                        mesmo efeito da opção global
+  --credenciais DEMO_CREDENCIAIS
+                        mesmo efeito da opção global
+  --medida MEDIDA       grava o resultado e o tempo neste arquivo JSON
+  --silencioso          imprime só o resumo, numa linha
+```
+
+### `plat demo verificar`
+
+```
+uso: plat demo verificar [-h] [--base-url DEMO_BASE_URL]
+                           [--credenciais DEMO_CREDENCIAIS] [--silencioso]
+
+opções:
+  -h, --help            mostra esta ajuda e sai
+  --base-url DEMO_BASE_URL
+                        mesmo efeito da opção global
+  --credenciais DEMO_CREDENCIAIS
+                        mesmo efeito da opção global
+  --silencioso          imprime só o resumo, numa linha
 ```
 
 ## `plat docs`

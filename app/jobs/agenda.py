@@ -134,8 +134,18 @@ def tick(con, agora: datetime.datetime, registro: dict[str, Tarefa] | None = Non
 
 
 def sincronizar_periodicos(con, agora: datetime.datetime) -> int:
-    """Upsert das linhas de app/jobs/periodicos.py no inquilino técnico `plataforma`."""
-    from app.jobs.periodicos import PERIODICOS
+    """Upsert das linhas de app/jobs/periodicos.py: `PERIODICOS` no inquilino técnico `plataforma` e
+    `PERIODICOS_POR_INQUILINO` em CADA inquilino ativo.
+
+    A segunda lista nasceu do achado do adversário do T9 sobre o item L0-06-backup-status: os dois
+    periódicos de backup por inquilino existiam só no inquilino técnico, porque este laço só conhecia o
+    upsert de lá. Um inquilino de cliente não tinha a linha nem pausada — não tinha linha. Ligar a agenda
+    (a decisão do dono) não teria efeito nenhum sobre dado de cliente, e sem aviso: a tarefa rodaria sobre
+    `d_plataforma` e terminaria com sucesso.
+
+    Devolve quantas LINHAS de agenda foram tocadas (não quantos periódicos), porque um periódico por
+    inquilino toca tantas linhas quantos forem os inquilinos ativos."""
+    from app.jobs.periodicos import PERIODICOS, PERIODICOS_POR_INQUILINO
 
     cur = con.cursor()
     n = 0
@@ -145,6 +155,12 @@ def sincronizar_periodicos(con, agora: datetime.datetime) -> int:
             cur.execute("SELECT plat.agenda_periodica_sincronizar(%s, %s, %s, %s, %s, %s)",
                         (nome, tipo, json.dumps(parametros), cron, "America/Sao_Paulo", prox))
             n += 1
+        for nome, cron, tipo, parametros, ativa_na_criacao in PERIODICOS_POR_INQUILINO:
+            prox = proxima(cron, "America/Sao_Paulo", agora)
+            cur.execute(
+                "SELECT plat.agenda_periodica_por_inquilino_sincronizar(%s, %s, %s, %s, %s, %s, %s) AS n",
+                (nome, tipo, json.dumps(parametros), cron, "America/Sao_Paulo", prox, ativa_na_criacao))
+            n += int(cur.fetchone()["n"])
     finally:
         cur.close()
     return n

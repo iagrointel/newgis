@@ -11,19 +11,11 @@ from __future__ import annotations
 
 import re
 
+from starlette.routing import compile_path
+
 from app.main import app
 
 PARAMETRO = re.compile(r"^\{[^}]+\}$")
-_CONVERSOR = re.compile(r"^\{[^:}]+:([a-z]+)\}$")
-# quando o molde declara um conversor do Starlette, o segmento parametrizado só cobre um literal que o
-# conversor aceitaria de verdade — sem isto, `{camada:int}` "cobria" `/replicas` (não é dígito nenhum) e a
-# varredura acusava um sombreamento que o PRÓPRIO conversor já impede na aplicação viva (é exatamente o
-# porquê do `:int` ali: ver o docstring de app/dominios/rotas_featureserver.py::camada_de_feicao)
-_ACEITA_POR_CONVERSOR = {
-    "int": re.compile(r"^-?\d+$"),
-    "float": re.compile(r"^-?\d+(\.\d+)?$"),
-    "uuid": re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"),
-}
 
 
 def achatar_rotas(rotas):
@@ -47,26 +39,36 @@ def _rotas_declaradas() -> list[tuple[int, str, frozenset[str]]]:
     return [(pos, caminho, metodos) for pos, (caminho, metodos) in enumerate(achatar_rotas(app.routes))]
 
 
+def _neutralizar(caminho: str) -> str:
+    """Troca cada `{param}` do caminho ENGOLIDO por um literal sem barra, para que ele possa ser testado como
+    se fosse uma requisição concreta contra o regex da outra rota. O sentinela não tem barra nem chaves, então
+    um `{x:path}` do lado engolido nunca ganha poder de casar vários segmentos por acidente."""
+    return "/".join("sentinela" if PARAMETRO.match(seg) else seg for seg in caminho.split("/"))
+
+
+def _so_troca_parametro_por_parametro(a: str, fixa: str) -> bool:
+    """As duas rotas têm a mesma forma e, onde diferem, os dois lados são parâmetro? Então nenhum literal está
+    sendo engolido: é o caso de `/api/itens/{id}` x `/api/itens/{slug}`, que é outro assunto (nome de
+    parâmetro repetido) e nunca foi o que esta varredura acusa."""
+    sa, sb = a.split("/"), fixa.split("/")
+    if len(sa) != len(sb):
+        return False
+    return all(x == y or (PARAMETRO.match(x) and PARAMETRO.match(y)) for x, y in zip(sa, sb, strict=True))
+
+
 def _cobre(parametrizada: str, fixa: str) -> bool:
-    """A rota `parametrizada` casa toda requisição que a rota `fixa` casaria? É verdade quando as duas têm o
-    mesmo número de segmentos e, em cada posição, ou os segmentos são iguais, ou a parametrizada tem `{param}`
-    ali (que casa qualquer segmento sem barra) e a fixa tem um segmento literal."""
-    a, b = parametrizada.split("/"), fixa.split("/")
-    if len(a) != len(b):
+    """A rota `parametrizada` casa toda requisição que a rota `fixa` casaria?
+
+    Quem responde é o regex que o PRÓPRIO Starlette compila do molde (`compile_path`), não uma reimplementação
+    segmento a segmento. Foi a reimplementação que deixou passar a classe de bug do item: ela comparava só
+    caminhos com o mesmo número de segmentos, e o convertor `path` compila para `.*`, que casa qualquer número
+    de segmentos, barra inclusive (`/api/x/{a:path}/fim` engole `/api/x/{b}/{c}/fim`). Usando o regex de
+    verdade, os convertores `int`, `float`, `uuid` e `path` passam a valer de graça e exatamente como na
+    aplicação viva."""
+    if parametrizada == fixa or _so_troca_parametro_por_parametro(parametrizada, fixa):
         return False
-    tem_parametro_no_lugar_de_literal = False
-    for seg_a, seg_b in zip(a, b, strict=True):
-        if seg_a == seg_b:
-            continue
-        if PARAMETRO.match(seg_a) and not PARAMETRO.match(seg_b):
-            m = _CONVERSOR.match(seg_a)
-            aceita = _ACEITA_POR_CONVERSOR.get(m.group(1)) if m else None
-            if aceita is not None and not aceita.match(seg_b):
-                return False  # o conversor recusaria este literal; o Starlette segue para a próxima rota
-            tem_parametro_no_lugar_de_literal = True
-            continue
-        return False
-    return tem_parametro_no_lugar_de_literal
+    regex, _, _ = compile_path(parametrizada)
+    return regex.fullmatch(_neutralizar(fixa)) is not None
 
 
 def pares_encobertos() -> list[tuple[str, str, str]]:
@@ -108,3 +110,38 @@ def test_a_varredura_acusa_quando_a_ordem_e_invertida():
     assert not _cobre("/api/importacoes/formatos", "/api/importacoes/{id}")
     assert not _cobre("/api/importacoes/{id}", "/api/importacoes/{id}/confirmar")
     assert not _cobre("/api/itens/{id}", "/api/camadas/formatos")
+
+
+def test_a_varredura_enxerga_o_convertor_path_multisegmento():
+    """Refutação do adversário de linha L0 (rodada 2, item L0-04-k): o convertor `path` do Starlette compila
+    para `.*`, que casa qualquer número de segmentos, barra inclusive. A varredura antiga comparava só
+    caminhos com o MESMO número de segmentos e por isso era cega para esta classe de sombreamento — a mesma
+    que motivou o item, agora com `{x:path}` no lugar de `{id}`."""
+    assert _cobre("/api/x/{a:path}/fim", "/api/x/{b}/{c}/fim")
+    assert _cobre("/api/x/{a:path}", "/api/x/y/z/w")
+    assert not _cobre("/api/x/{b}/{c}/fim", "/api/x/{a:path}/fim")
+    assert not _cobre("/api/y/{a:path}", "/api/x/y/z")
+
+
+def test_os_convertores_do_starlette_valem_sem_tabela_propria():
+    """`int`, `float` e `uuid` deixam de precisar da tabela paralela que a varredura mantinha: quem recusa o
+    literal é o regex que o próprio roteador usa."""
+    assert not _cobre("/api/camadas/{camada:int}/x", "/api/camadas/replicas/x")
+    assert _cobre("/api/camadas/{camada:int}/x", "/api/camadas/12/x")
+    assert not _cobre("/api/itens/{id:uuid}", "/api/itens/formatos")
+    assert _cobre("/api/itens/{id:uuid}", "/api/itens/0b3c2a1e-0000-4000-8000-000000000000")
+
+
+def test_rota_de_licencas_de_imagem_nao_esta_encoberta():
+    """Cláusula do portão sobre a aplicação viva: `GET /api/imagens/licencas` (segmento fixo) tem de ser
+    declarada antes de `GET /api/imagens/{item_id}`. Estava depois em master e respondia o painel do item."""
+    ordem = {c: p for p, c, _ in _rotas_declaradas()}
+    assert ordem["/api/imagens/licencas"] < ordem["/api/imagens/{item_id}"]
+
+
+def test_rotas_com_convertor_path_nao_engolem_nenhuma_rota_fixa_da_app():
+    """As 5 rotas `{x:path}` que hoje existem na aplicação passam a ser cobertas pela garantia da varredura,
+    não pelo cuidado manual na ordem de `include_router`."""
+    com_path = [c for _, c, _ in _rotas_declaradas() if ":path}" in c]
+    assert len(com_path) >= 4, f"esperava rotas com convertor path na app; achei {com_path}"
+    assert [p for p in pares_encobertos() if ":path}" in p[1]] == []

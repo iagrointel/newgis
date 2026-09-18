@@ -13,11 +13,14 @@ Estado de uso (ociosidade) mora em plat.notebook_uso; o ceifador lê com a role 
 fora de pedido HTTP.
 """
 
+import fcntl
+import os
 import secrets
 import subprocess
 import threading
 import time
 import urllib.request
+from pathlib import Path
 
 import psycopg2
 
@@ -26,7 +29,59 @@ from app.auth.sessao import sha256_hex
 from app.erros import ErroAPI
 from app.notebooks import config, gateway
 
-_TRAVA = threading.Lock()  # um levantar por processo (a fila de ativos é global da trilha)
+
+class TravaEntreProcessos:
+    """Exclusão de `levantar()` que atravessa PROCESSO, não só thread.
+
+    Achado do adversário do T9 (item L2-16-b): aqui havia `threading.Lock()`, que só exclui dentro de um
+    processo — e `deploy/plat-api.service` sobe a API com `--workers 2`. Dois pedidos atendidos por
+    workers diferentes passavam os dois pela seção crítica ao mesmo tempo, e o teto `ativos_max` (que
+    existe por causa da RAM da máquina, não por capricho) deixava de valer exatamente quando importa:
+    sob concorrência. O recurso protegido é o docker do HOST, então a trava certa é do host: `flock`
+    sobre um arquivo por instalação (`config.sufixo()`), que o núcleo solta sozinho se o processo morrer
+    — um dono morto nunca deixa a fila travada, ao contrário de uma trava gravada em tabela.
+
+    A interface é a de `threading.Lock` (`acquire(timeout=...)`, `release()`, gerenciador de contexto)
+    para que quem chama não precise saber da troca."""
+
+    def __init__(self, caminho: Path):
+        self._caminho = caminho
+        self._local = threading.local()
+
+    def acquire(self, timeout: float | None = None) -> bool:  # noqa: N802 - interface de threading.Lock
+        self._caminho.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(self._caminho, os.O_CREAT | os.O_RDWR, 0o600)
+        fim = None if timeout is None else time.monotonic() + timeout
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                self._local.fd = fd
+                return True
+            except OSError:
+                if fim is not None and time.monotonic() >= fim:
+                    os.close(fd)
+                    return False
+                time.sleep(0.02)
+
+    def release(self) -> None:
+        fd = getattr(self._local, "fd", None)
+        if fd is None:
+            raise RuntimeError("release() sem acquire() neste processo/thread")
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
+        self._local.fd = None
+
+    def __enter__(self):
+        self.acquire()
+        return self
+
+    def __exit__(self, *_):
+        self.release()
+
+
+# um `levantar` de cada vez POR INSTALAÇÃO (a fila de ativos é do docker do host, não do processo)
+_TRAVA = TravaEntreProcessos(Path(__file__).resolve().parents[2] / "var" / "notebooks"
+                             / f"levantar-{config.sufixo()}.lock")
 
 
 def _docker(*args: str, timeout: int = 60) -> subprocess.CompletedProcess:

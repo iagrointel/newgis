@@ -276,6 +276,13 @@ echo "venv: $(venv/bin/python --version) · fastapi $("${PY[@]}" -c 'import fast
 echo "== f2. cache do XSD ISO 19139 (item L0-09-metadado-catalogo): comitado no repo; idempotente, sem rede quando já presente"
 "${PY[@]}" docs/xsd/baixar_iso19139.py
 
+echo "== f2b. grades NTv2 do IBGE (item L2-17-crs-transformacoes)"
+# Atesta que os .gsb versionados no repositorio sao exatamente os baixados do IBGE (sha256 contra
+# grades_ibge/SHA256SUMS). O cabecalho de grades_ibge/instalar.sh sempre disse "chamado pelo install.sh",
+# e o install.sh nunca chamou (achado do adversario do T9): a transformacao SAD69 -> SIRGAS 2000 pela
+# grade e' o que separa 0,05 m de dezenas de metros, e uma grade trocada falha em silencio.
+bash grades_ibge/instalar.sh || { echo "conferencia das grades NTv2 do IBGE falhou" >&2; exit 1; }
+
 echo "== f3. validador oficial da MapLibre Style Spec (item L2-02-a-modelo-estilo): versão fixada em ferramentas/estilo/package.json"
 command -v node >/dev/null || { echo "node ausente (apt install nodejs)" >&2; exit 1; }
 (cd ferramentas/estilo && npm ci --no-audit --no-fund --silent 2>/dev/null || npm install --no-audit --no-fund --silent)
@@ -366,6 +373,26 @@ for i in $(seq 1 30); do
 done
 systemctl --no-pager --lines=0 status $UNIDADE | sed -n '1,4p'
 
+echo "== h1b. inquilinos de demonstração pela CLI (item L0-14: o instalador usa `plat inquilino criar`)"
+# A API já responde (passo h), então daqui em diante o instalador para de falar SQL com o banco e passa a
+# usar a mesma linha de comando que o operador usa — que por sua vez chama a mesma rota que a tela chama
+# (ADR docs/adr/20260907T2318-linha-de-comando-plat.md, decisão 2). `--se-nao-existir` torna o passo
+# idempotente: numa base que as migrações já semearam, ele confirma; numa base em que o inquilino foi
+# apagado (ou em que a semente sair das migrações), ele cria, com o primeiro administrador.
+# A senha NUNCA entra por argumento: vai por arquivo modo 600, um por inquilino, apagado ao fim (o passo g
+# continua sendo quem escolhe a senha, porque o superadmin precisa existir ANTES de a CLI poder entrar).
+SENHA_TMP=$(mktemp); chmod 600 "$SENHA_TMP"; trap 'rm -f "$SENHA_TMP"' EXIT
+while read -r slug login senha; do
+  case "$slug" in demo|demo2) ;; *) continue ;; esac
+  printf '%s' "$senha" > "$SENHA_TMP"
+  sudo -u "$APP_USER" env PLAT_CLI_URL="http://127.0.0.1:$PORTA" \
+    ./scripts/plat inquilino criar --slug "$slug" --nome "Inquilino de demonstração ($slug)" \
+      --admin-login "$login" --admin-nome "Administrador $slug" \
+      --se-nao-existir --senha-arquivo "$SENHA_TMP" \
+    || { echo "plat inquilino criar falhou para $slug" >&2; exit 1; }
+done < "$CRED"
+rm -f "$SENHA_TMP"; trap - EXIT
+
 echo "== h2. systemd plat-worker"
 install -d -o "$APP_USER" -g "$APP_USER" var/jobs
 sed -e "s#APP_DIR#$APP_DIR#g" -e "s#APP_USER#$APP_USER#g" deploy/plat-worker.service > /etc/systemd/system/plat-worker.service
@@ -403,6 +430,20 @@ for i in $(seq 1 30); do
   sleep 1
 done
 systemctl --no-pager --lines=0 status plat-titiler | sed -n '1,4p'
+
+echo "== h2d. conjunto de dado de demonstração (item L0-13-dado-demonstracao)"
+# Só em instalação de demonstração: $SEMEAR já é o interruptor que o passo g gravou em plat.ambiente
+# (semear_demo), e em produção nada de demonstração é criado. A semeadura fala com a API que acabou de
+# subir, pela mesma ingestão que o usuário usa — nunca por INSERT direto —, e grava o tempo medido em
+# tests/medidas/L0-13-dado-demonstracao.json (cláusula dos 90 s do portão).
+if [ "$SEMEAR" = true ]; then
+  sudo -u "$APP_USER" "${PY[@]}" scripts/semear_dado_demo.py \
+    --base-url "http://127.0.0.1:$PORTA" \
+    --medida tests/medidas/L0-13-dado-demonstracao.json \
+    || { echo "semeadura do dado de demonstração falhou" >&2; exit 1; }
+else
+  echo "ambiente não é de demonstração: conjunto de demonstração NÃO semeado"
+fi
 
 echo "== h3. timer de expiração do PLAT_SECRET_ANTERIOR (item L7-19: a dupla-chave vale 24 h de verdade)"
 sed -e "s#APP_DIR#$APP_DIR#g" deploy/plat-segredo-expira.service > /etc/systemd/system/plat-segredo-expira.service
