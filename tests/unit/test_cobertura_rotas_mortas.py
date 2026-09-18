@@ -24,7 +24,9 @@ RELATORIO = RAIZ / "docs" / "COBERTURA_UI.md"
 TITULO = "## URLs chamadas pela tela sem rota correspondente na API"
 
 # 17/09/2026: 38 na medida da manhã; 15 depois da união descer para o tronco e do conserto de fontes.js.
-MORTAS_MAXIMO = 15
+# 18/09/2026: 11 depois que as fusões da noite consertaram 4 chamadas (o tronco ganhou as rotas ou as telas
+# deixaram de chamá-las).
+MORTAS_MAXIMO = 11
 
 
 def _mortas() -> list[str]:

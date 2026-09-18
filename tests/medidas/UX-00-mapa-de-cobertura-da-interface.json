@@ -2,19 +2,24 @@
  "item": "UX-00-mapa-de-cobertura-da-interface",
  "medidas": {
   "rotas_cruzadas": {
-   "valor": 958,
+   "valor": 982,
    "unidade": "rotas",
    "comando": "venv/bin/python docs/gerar_cobertura_ui.py"
   },
   "lacunas_de_escrita": {
-   "valor": 194,
+   "valor": 195,
    "unidade": "rotas",
-   "comando": "venv/bin/python docs/gerar_cobertura_ui.py (era 184 antes de a varredura deixar de contar comentario)"
+   "comando": "venv/bin/python docs/gerar_cobertura_ui.py (era 184 antes de a varredura deixar de contar comentario; as 6 novas sao de rotas que entraram por fusoes posteriores: migracao/clones 2, rede 4)"
   },
   "rotas_de_escrita_cobertas_so_por_codigo_morto": {
    "valor": 10,
    "unidade": "rotas",
    "comando": "venv/bin/python docs/gerar_cobertura_ui.py --check antes de regravar a linha de base: modelos3d (2), webhooks (6), anexo de feicao (1), metadado.xml (1)"
+  },
+  "urls_mortas_chamadas_pela_tela": {
+   "valor": 11,
+   "unidade": "chamadas",
+   "comando": "tests/unit/test_cobertura_rotas_mortas.py (catraca MORTAS_MAXIMO baixada de 15 para 11)"
   },
   "teste_que_reprova_rota_nova_sem_cobertura": {
    "valor": 1,
@@ -23,7 +28,7 @@
   }
  },
  "nao_medido": {
-  "zero_lacunas_de_escrita_ao_fim_da_trilha_ux": "a clausula do portao e condicao de FIM da trilha UX (itens UX-10..UX-23), nao deste item: hoje sao 194 lacunas de escrita registradas na linha de base. UX-00 entrega a ferramenta e a linha de base honesta, nao o fechamento das lacunas."
+  "zero_lacunas_de_escrita_ao_fim_da_trilha_ux": "a clausula do portao e condicao de FIM da trilha UX (itens UX-10..UX-23), nao deste item: hoje sao 195 lacunas de escrita registradas na linha de base. UX-00 entrega a ferramenta e a linha de base honesta, nao o fechamento das lacunas."
  },
- "gerado_em": "2026-09-18T01:07:12Z"
+ "gerado_em": "2026-09-18T12:00:00Z"
 }

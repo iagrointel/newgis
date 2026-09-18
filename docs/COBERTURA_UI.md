@@ -6,36 +6,38 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 
 | medida | valor |
 |---|---|
-| rotas (método × caminho) | 958 |
-| coberto | 375 |
-| sem controle | 266 |
+| rotas (método × caminho) | 982 |
+| coberto | 392 |
+| sem controle | 272 |
 | sem tela | 165 |
-| externo | 37 |
+| externo | 38 |
 | externo sem exposição | 2 |
 | sem tela por desenho | 113 |
-| cobertas sem estado de erro perto da chamada | 13 |
-| lacunas de ESCRITA (linha de base do teste) | 194 |
-| URLs chamadas pela tela que não existem na API | 15 |
+| cobertas sem estado de erro perto da chamada | 12 |
+| lacunas de ESCRITA (linha de base do teste) | 195 |
+| URLs chamadas pela tela que não existem na API | 11 |
 
 ## Rotas → tela/controle → estado
 
 | método | rota | grupo | tela | controle (arquivo:linha) | estado | erro |
 |---|---|---|---|---|---|---|
-| GET | `/api/acervo` | acervo | `/admin`, `/admin/acervo` | `web/js/auth/acervo.js:76`<br>`web/js/auth/admin.js:97` | **coberto** | com erro |
-| GET | `/api/acervo/camadas` | acervo | `/admin/acervo`, `/amc/motor`, `/mapa` | `web/js/amc/motor_pagina.js:484`<br>`web/js/auth/acervo.js:104`<br>`web/js/mapa/mapa.js:65` | **coberto** | com erro |
-| GET | `/api/acervo/camadas/{acervo_camada_id}/verificacoes` | acervo | `/acervo` | `web/js/acervo/acervo.js:59` | **coberto** | com erro |
+| GET | `/api/acervo` | acervo | `/acervo`, `/admin`, `/admin/acervo` | `web/js/acervo/acervo.js:117`<br>`web/js/auth/acervo.js:76`<br>`web/js/auth/admin.js:97` | **coberto** | com erro |
+| GET | `/api/acervo/camadas` | acervo | `/acervo`, `/admin/acervo`, `/amc/motor`, `/mapa` | `web/js/acervo/acervo.js:181`<br>`web/js/amc/motor_pagina.js:484`<br>`web/js/auth/acervo.js:104`<br>`web/js/mapa/mapa.js:72` | **coberto** | com erro |
+| GET | `/api/acervo/camadas/{acervo_camada_id}/verificacoes` | acervo | `/acervo/frescor` | `web/js/acervo/frescor_tela.js:59` | **coberto** | com erro |
 | POST | `/api/acervo/camadas/{camada}/assinatura` | acervo | — | — | **sem controle** | não se aplica |
 | DELETE | `/api/acervo/camadas/{camada}/assinatura` | acervo | — | — | **sem controle** | não se aplica |
 | GET | `/api/acervo/camadas/{camada}/exportar` | acervo | — | — | **sem controle** | não se aplica |
 | GET | `/api/acervo/camadas/{camada}/feicoes` | acervo | — | — | **sem controle** | não se aplica |
 | GET | `/api/acervo/camadas/{camada}/tiles/{z}/{x}/{y}.mvt` | acervo | — | — | **sem controle** | não se aplica |
-| GET | `/api/acervo/frescor/camadas` | acervo | `/acervo` | `web/js/acervo/acervo.js:99` | **coberto** | com erro |
+| GET | `/api/acervo/dominios` | acervo | `/acervo`, `/admin/acervo` | `web/js/acervo/acervo.js:181`<br>`web/js/acervo/acervo.js:64`<br>`web/js/auth/acervo.js:104` | **coberto** | com erro |
+| GET | `/api/acervo/frescor/camadas` | acervo | `/acervo/frescor` | `web/js/acervo/frescor_tela.js:99` | **coberto** | com erro |
 | GET | `/api/acervo/frescor/execucoes` | acervo | — | — | **sem controle** | não se aplica |
-| GET | `/api/acervo/frescor/mudancas` | acervo | `/acervo` | `web/js/acervo/acervo.js:122` | **coberto** | com erro |
-| GET | `/api/acervo/uso` | acervo | `/admin/acervo` | `web/js/auth/acervo.js:104` | **coberto** | com erro |
+| GET | `/api/acervo/frescor/mudancas` | acervo | `/acervo/frescor` | `web/js/acervo/frescor_tela.js:122` | **coberto** | com erro |
+| GET | `/api/acervo/meu-mapa` | acervo | `/acervo`, `/admin/acervo`, `/mapa` | `web/js/acervo/acervo.js:181`<br>`web/js/auth/acervo.js:104`<br>`web/js/mapa/mapa.js:281` | **coberto** | com erro |
+| GET | `/api/acervo/uso` | acervo | `/acervo`, `/admin/acervo` | `web/js/acervo/acervo.js:181`<br>`web/js/auth/acervo.js:104` | **coberto** | com erro |
 | GET | `/api/acervo/uso/mensal` | acervo | — | — | **sem controle** | não se aplica |
-| GET | `/api/acervo/{fonte_id}` | acervo | `/admin/acervo`, `/amc/motor`, `/mapa` | `web/js/amc/motor_pagina.js:484`<br>`web/js/auth/acervo.js:104`<br>`web/js/mapa/mapa.js:65` | **coberto** | com erro |
-| POST | `/api/acervo/{fonte_id}/adicionar` | acervo | `/admin/acervo` | `web/js/auth/acervo.js:154` | **coberto** | com erro |
+| GET | `/api/acervo/{fonte_id}` | acervo | `/acervo`, `/admin/acervo`, `/amc/motor`, `/mapa` | `web/js/acervo/acervo.js:181`<br>`web/js/acervo/acervo.js:64`<br>`web/js/amc/motor_pagina.js:484`<br>`web/js/auth/acervo.js:104`<br>`web/js/mapa/mapa.js:281`<br>`web/js/mapa/mapa.js:72` | **coberto** | com erro |
+| POST | `/api/acervo/{fonte_id}/adicionar` | acervo | `/acervo`, `/admin/acervo` | `web/js/acervo/acervo.js:247`<br>`web/js/auth/acervo.js:154` | **coberto** | com erro |
 | GET | `/api/agendas` | agendas | `/ferramentas`, `/tarefas`, `/tarefas/{job_id}` | `web/js/jobs/api.js:57` | **coberto** | com erro |
 | POST | `/api/agendas` | agendas | `/ferramentas`, `/tarefas`, `/tarefas/{job_id}` | `web/js/jobs/api.js:59` | **coberto** | com erro |
 | GET | `/api/agendas/{agenda_id}` | agendas | `/ferramentas`, `/tarefas`, `/tarefas/{job_id}` | `web/js/jobs/api.js:58` | **coberto** | com erro |
@@ -89,16 +91,16 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | POST | `/api/analise3d/sombra` | analise3d | `/analise3d` | `web/js/analise3d/painel.js:177` | **coberto** | com erro |
 | POST | `/api/analise3d/viewshed` | analise3d | `/analise3d` | `web/js/analise3d/painel.js:130` | **coberto** | com erro |
 | POST | `/api/analise3d/visada` | analise3d | `/analise3d` | `web/js/analise3d/painel.js:90` | **coberto** | com erro |
-| GET | `/api/anotacoes` | mapa | — | — | **sem controle** | não se aplica |
-| POST | `/api/anotacoes` | mapa | — | — | **sem controle** | não se aplica |
-| PATCH | `/api/anotacoes/{id}` | mapa | — | — | **sem controle** | não se aplica |
-| DELETE | `/api/anotacoes/{id}` | mapa | — | — | **sem controle** | não se aplica |
+| GET | `/api/anotacoes` | mapa | `/mapa` | `web/js/mapa/anotacoes.js:78` | **coberto** | com erro |
+| POST | `/api/anotacoes` | mapa | `/mapa` | `web/js/mapa/anotacoes.js:151` | **coberto** | com erro |
+| PATCH | `/api/anotacoes/{id}` | mapa | `/mapa` | `web/js/mapa/anotacoes.js:130` | **coberto** | com erro |
+| DELETE | `/api/anotacoes/{id}` | mapa | `/mapa` | `web/js/mapa/anotacoes.js:138` | **coberto** | com erro |
 | GET | `/api/arquivos` | arquivos | — | — | **sem controle** | não se aplica |
 | POST | `/api/arquivos` | arquivos | — | — | **sem controle** | não se aplica |
-| GET | `/api/arquivos/_chave-leitura` | arquivos | `/admin/organizacao`, `/aplicativo`, `/executar` | `web/js/app/fontes.js:72`<br>`web/js/auth/organizacao.js:178` | **coberto** | com erro |
+| GET | `/api/arquivos/_chave-leitura` | arquivos | `/`, `/acervo`, `/acervo/frescor`, `/admin`, `/admin/acervo`, `/admin/atividade`, `/admin/auditoria`, `/admin/backup`, `/admin/categorias`, `/admin/chamados`, `/admin/grupos`, `/admin/inquilinos`, `/admin/log`, `/admin/logins`, `/admin/organizacao`, `/admin/papeis`, `/admin/tokens`, `/admin/uso`, `/admin/usuarios`, `/amc/criterios-feicao`, `/amc/explicacao/{execucao_id}/{unidade_id}`, `/amc/motor`, `/amc/pareto`, `/amc/presets`, `/analise`, `/analise3d`, `/aplicativo`, `/camadas/{id}/dominios`, `/camadas/{id}/feicoes/{globalid}/historico`, `/camadas/{id}/formulario`, `/campo/filas`, `/campo/filas/{fila_id}`, `/campo/roteiros/{roteiro_id}`, `/cena`, `/chamados`, `/colecao`, `/coleta`, `/conexoes`, `/construtor`, `/construtor-camada`, `/conta`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/crs`, `/estilo`, `/estilo-guia`, `/executar`, `/ferramenta`, `/ferramentas`, `/geocodificar`, `/imagens/{id}/ficha`, `/importacoes`, `/mapa`, `/migracao`, `/modelo/{id}`, `/modelos`, `/paineis/{id}`, `/plataforma`, `/rede/medicao/ficha`, `/redes/configuracoes`, `/redes/continuidade`, `/redes/controladores`, `/redes/diagrama`, `/redes/fluxo`, `/redes/isolamento`, `/redes/simples`, `/redes/tracado`, `/sig`, `/simbolos`, `/sites`, `/tarefas`, `/tarefas/{job_id}`, `/temas`, `/uploads`, `/versoes`, `/videos`, `/vista-de-camada`, `/visualizar` | `web/js/app/fontes.js:72`<br>`web/js/auth/organizacao.js:369`<br>`web/js/base/layout.js:82` | **coberto** | com erro |
 | GET | `/api/arquivos/_cog/autorizar` | arquivos | — | — | **sem controle** | não se aplica |
-| GET | `/api/arquivos/_varredura` | arquivos | `/admin/organizacao`, `/aplicativo`, `/executar` | `web/js/app/fontes.js:72`<br>`web/js/auth/organizacao.js:178` | **coberto** | com erro |
-| GET | `/api/arquivos/{sha256}` | arquivos | `/admin/organizacao`, `/aplicativo`, `/executar` | `web/js/app/fontes.js:72`<br>`web/js/auth/organizacao.js:178` | **coberto** | com erro |
+| GET | `/api/arquivos/_varredura` | arquivos | `/`, `/acervo`, `/acervo/frescor`, `/admin`, `/admin/acervo`, `/admin/atividade`, `/admin/auditoria`, `/admin/backup`, `/admin/categorias`, `/admin/chamados`, `/admin/grupos`, `/admin/inquilinos`, `/admin/log`, `/admin/logins`, `/admin/organizacao`, `/admin/papeis`, `/admin/tokens`, `/admin/uso`, `/admin/usuarios`, `/amc/criterios-feicao`, `/amc/explicacao/{execucao_id}/{unidade_id}`, `/amc/motor`, `/amc/pareto`, `/amc/presets`, `/analise`, `/analise3d`, `/aplicativo`, `/camadas/{id}/dominios`, `/camadas/{id}/feicoes/{globalid}/historico`, `/camadas/{id}/formulario`, `/campo/filas`, `/campo/filas/{fila_id}`, `/campo/roteiros/{roteiro_id}`, `/cena`, `/chamados`, `/colecao`, `/coleta`, `/conexoes`, `/construtor`, `/construtor-camada`, `/conta`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/crs`, `/estilo`, `/estilo-guia`, `/executar`, `/ferramenta`, `/ferramentas`, `/geocodificar`, `/imagens/{id}/ficha`, `/importacoes`, `/mapa`, `/migracao`, `/modelo/{id}`, `/modelos`, `/paineis/{id}`, `/plataforma`, `/rede/medicao/ficha`, `/redes/configuracoes`, `/redes/continuidade`, `/redes/controladores`, `/redes/diagrama`, `/redes/fluxo`, `/redes/isolamento`, `/redes/simples`, `/redes/tracado`, `/sig`, `/simbolos`, `/sites`, `/tarefas`, `/tarefas/{job_id}`, `/temas`, `/uploads`, `/versoes`, `/videos`, `/vista-de-camada`, `/visualizar` | `web/js/app/fontes.js:72`<br>`web/js/auth/organizacao.js:369`<br>`web/js/base/layout.js:82` | **coberto** | com erro |
+| GET | `/api/arquivos/{sha256}` | arquivos | `/`, `/acervo`, `/acervo/frescor`, `/admin`, `/admin/acervo`, `/admin/atividade`, `/admin/auditoria`, `/admin/backup`, `/admin/categorias`, `/admin/chamados`, `/admin/grupos`, `/admin/inquilinos`, `/admin/log`, `/admin/logins`, `/admin/organizacao`, `/admin/papeis`, `/admin/tokens`, `/admin/uso`, `/admin/usuarios`, `/amc/criterios-feicao`, `/amc/explicacao/{execucao_id}/{unidade_id}`, `/amc/motor`, `/amc/pareto`, `/amc/presets`, `/analise`, `/analise3d`, `/aplicativo`, `/camadas/{id}/dominios`, `/camadas/{id}/feicoes/{globalid}/historico`, `/camadas/{id}/formulario`, `/campo/filas`, `/campo/filas/{fila_id}`, `/campo/roteiros/{roteiro_id}`, `/cena`, `/chamados`, `/colecao`, `/coleta`, `/conexoes`, `/construtor`, `/construtor-camada`, `/conta`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/crs`, `/estilo`, `/estilo-guia`, `/executar`, `/ferramenta`, `/ferramentas`, `/geocodificar`, `/imagens/{id}/ficha`, `/importacoes`, `/mapa`, `/migracao`, `/modelo/{id}`, `/modelos`, `/paineis/{id}`, `/plataforma`, `/rede/medicao/ficha`, `/redes/configuracoes`, `/redes/continuidade`, `/redes/controladores`, `/redes/diagrama`, `/redes/fluxo`, `/redes/isolamento`, `/redes/simples`, `/redes/tracado`, `/sig`, `/simbolos`, `/sites`, `/tarefas`, `/tarefas/{job_id}`, `/temas`, `/uploads`, `/versoes`, `/videos`, `/vista-de-camada`, `/visualizar` | `web/js/app/fontes.js:72`<br>`web/js/auth/organizacao.js:369`<br>`web/js/base/layout.js:82` | **coberto** | com erro |
 | DELETE | `/api/arquivos/{sha256}` | arquivos | — | — | **sem controle** | não se aplica |
 | GET | `/api/atividade` | relatorios | `/admin/atividade` | `web/js/auth/atividade.js:46` | **coberto** | com erro |
 | GET | `/api/auditoria` | auditoria | `/admin/auditoria` | `web/js/auth/auditoria.js:147`<br>`web/js/auth/auditoria.js:148`<br>`web/js/auth/auditoria.js:150` | **coberto** | com erro |
@@ -109,26 +111,28 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | POST | `/api/camadas/esquema` | camada-esquema | `/construtor-camada` | `web/js/catalogo/camada_esquema.js:175` | **coberto** | com erro |
 | POST | `/api/camadas/{camada_id}/vistas` | vista-de-camada | `/vista-de-camada` | `web/js/catalogo/vista_camada.js:102` | **coberto** | com erro |
 | GET | `/api/camadas/{id}/campos` | formulario | `/camadas/{id}/formulario`, `/vista-de-camada` | `web/js/catalogo/vista_camada.js:45`<br>`web/js/formulario/construtor.js:41` | **coberto** | com erro |
-| POST | `/api/camadas/{id}/edicoes` | edicao | `/sig` | `web/js/mapa/edicao.js:217`<br>`web/js/mapa/edicao.js:229`<br>`web/js/mapa/edicao.js:407`<br>`web/js/mapa/edicao.js:428`<br>`web/js/mapa/edicao.js:522` | **coberto** | com erro |
+| GET | `/api/camadas/{id}/como-era` | edicao | — | — | **sem controle** | não se aplica |
+| POST | `/api/camadas/{id}/edicoes` | edicao | `/sig` | `web/js/mapa/edicao.js:220`<br>`web/js/mapa/edicao.js:233`<br>`web/js/mapa/edicao.js:353`<br>`web/js/mapa/edicao.js:543`<br>`web/js/mapa/edicao.js:565`<br>`web/js/mapa/edicao.js:659` | **coberto** | com erro |
 | GET | `/api/camadas/{id}/erros` | regras | — | — | **sem controle** | não se aplica |
-| GET | `/api/camadas/{id}/feicoes` | regras | `/aplicativo`, `/camadas/{id}/dominios`, `/executar` | `web/js/app/fontes.js:6`<br>`web/js/app/fontes.js:80`<br>`web/js/dominios/tela.js:173` | **coberto** | com erro |
-| POST | `/api/camadas/{id}/feicoes/dividir` | edicao | `/sig` | `web/js/mapa/edicao.js:266` | **coberto** | com erro |
-| POST | `/api/camadas/{id}/feicoes/unir` | edicao | `/sig` | `web/js/mapa/edicao.js:281` | **coberto** | com erro |
-| GET | `/api/camadas/{id}/feicoes/{fid}/popup` | mapa-popup | `/sig` | `web/js/mapa/atributos.js:124` | **coberto** | com erro |
-| GET | `/api/camadas/{id}/feicoes/{globalid}` | edicao | `/sig` | `web/js/mapa/edicao.js:199` | **coberto** | com erro |
-| GET | `/api/camadas/{id}/feicoes/{globalid}/anexos` | edicao | `/sig` | `web/js/mapa/edicao.js:467` | **coberto** | com erro |
-| POST | `/api/camadas/{id}/feicoes/{globalid}/anexos` | edicao | `/sig` | `web/js/mapa/edicao.js:495` | **coberto** | com erro |
-| GET | `/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}` | edicao | `/sig` | `web/js/mapa/edicao.js:472`<br>`web/js/mapa/edicao.js:477` | **coberto** | com erro |
+| GET | `/api/camadas/{id}/feicoes` | regras | `/aplicativo`, `/camadas/{id}/dominios`, `/executar` | `web/js/app/fontes.js:80`<br>`web/js/dominios/tela.js:173` | **coberto** | com erro |
+| POST | `/api/camadas/{id}/feicoes/dividir` | edicao | `/sig` | `web/js/mapa/edicao.js:400` | **coberto** | com erro |
+| POST | `/api/camadas/{id}/feicoes/unir` | edicao | `/sig` | `web/js/mapa/edicao.js:416` | **coberto** | com erro |
+| GET | `/api/camadas/{id}/feicoes/{fid}/popup` | mapa-popup | `/sig` | `web/js/mapa/atributos.js:127` | **coberto** | com erro |
+| GET | `/api/camadas/{id}/feicoes/{globalid}` | edicao | `/sig` | `web/js/mapa/edicao.js:202`<br>`web/js/mapa/edicao.js:350` | **coberto** | com erro |
+| GET | `/api/camadas/{id}/feicoes/{globalid}/anexos` | edicao | `/sig` | `web/js/mapa/edicao.js:604` | **coberto** | com erro |
+| POST | `/api/camadas/{id}/feicoes/{globalid}/anexos` | edicao | `/sig` | `web/js/mapa/edicao.js:632` | **coberto** | com erro |
+| GET | `/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}` | edicao | `/sig` | `web/js/mapa/edicao.js:609`<br>`web/js/mapa/edicao.js:614` | **coberto** | com erro |
 | DELETE | `/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}` | edicao | — | — | **sem controle** | não se aplica |
-| GET | `/api/camadas/{id}/feicoes/{globalid}/historico` | edicao | `/sig` | `web/js/mapa/edicao.js:439` | **coberto** | com erro |
-| POST | `/api/camadas/{id}/feicoes/{globalid}/historico/{historico_id}/restaurar` | edicao | `/sig` | `web/js/mapa/edicao.js:449` | **coberto** | com erro |
-| GET | `/api/camadas/{id}/formulario` | formulario | `/campo/roteiros/{roteiro_id}`, `/sig` | `web/js/campo/roteiro.js:208`<br>`web/js/mapa/edicao.js:298` | **coberto** | com erro |
+| GET | `/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}/miniatura` | edicao | — | — | **sem controle** | não se aplica |
+| GET | `/api/camadas/{id}/feicoes/{globalid}/historico` | edicao | `/camadas/{id}/feicoes/{globalid}/historico`, `/sig` | `web/js/historico/feicao.js:144`<br>`web/js/mapa/edicao.js:279`<br>`web/js/mapa/edicao.js:576` | **coberto** | com erro |
+| POST | `/api/camadas/{id}/feicoes/{globalid}/historico/{historico_id}/restaurar` | edicao | `/sig` | `web/js/mapa/edicao.js:358`<br>`web/js/mapa/edicao.js:586` | **coberto** | com erro |
+| GET | `/api/camadas/{id}/formulario` | formulario | `/campo/roteiros/{roteiro_id}`, `/sig` | `web/js/campo/roteiro.js:208`<br>`web/js/mapa/edicao.js:434` | **coberto** | com erro |
 | POST | `/api/camadas/{id}/formulario` | formulario | — | — | **sem controle** | não se aplica |
 | GET | `/api/camadas/{id}/formulario/versoes` | formulario | `/camadas/{id}/formulario` | `web/js/formulario/construtor.js:45` | **coberto** | com erro |
 | POST | `/api/camadas/{id}/formulario/versoes` | formulario | `/camadas/{id}/formulario` | `web/js/formulario/construtor.js:171` | **coberto** | com erro |
 | GET | `/api/camadas/{id}/formulario/versoes/{versao}` | formulario | `/camadas/{id}/formulario` | `web/js/formulario/construtor.js:52` | **coberto** | com erro |
 | POST | `/api/camadas/{id}/formulario/versoes/{versao}/publicar` | formulario | `/camadas/{id}/formulario` | `web/js/formulario/construtor.js:181` | **coberto** | com erro |
-| POST | `/api/camadas/{id}/lote` | edicao | `/sig` | `web/js/mapa/edicao.js:659`<br>`web/js/mapa/edicao.js:668` | **coberto** | com erro |
+| POST | `/api/camadas/{id}/lote` | edicao | `/sig` | `web/js/mapa/edicao.js:797`<br>`web/js/mapa/edicao.js:806` | **coberto** | com erro |
 | GET | `/api/camadas/{id}/regras` | regras | — | — | **sem controle** | não se aplica |
 | PUT | `/api/camadas/{id}/regras` | regras | — | — | **sem controle** | não se aplica |
 | POST | `/api/camadas/{id}/validar` | regras | — | — | **sem controle** | não se aplica |
@@ -251,7 +255,7 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | GET | `/api/esquemas` | catalogo | — | — | **sem controle** | não se aplica |
 | GET | `/api/esquemas/{tipo}` | catalogo | — | — | **sem controle** | não se aplica |
 | POST | `/api/estilos/compilar` | estilos | — | — | **sem tela** | não se aplica |
-| GET | `/api/eu` | eu | `/`, `/acervo`, `/admin`, `/admin/acervo`, `/admin/atividade`, `/admin/auditoria`, `/admin/backup`, `/admin/categorias`, `/admin/chamados`, `/admin/grupos`, `/admin/inquilinos`, `/admin/log`, `/admin/logins`, `/admin/organizacao`, `/admin/papeis`, `/admin/tokens`, `/admin/usuarios`, `/amc/criterios-feicao`, `/amc/explicacao/{execucao_id}/{unidade_id}`, `/amc/motor`, `/amc/pareto`, `/amc/presets`, `/analise`, `/analise3d`, `/camadas/{id}/dominios`, `/camadas/{id}/formulario`, `/campo/filas`, `/campo/filas/{fila_id}`, `/campo/roteiros/{roteiro_id}`, `/cena`, `/chamados`, `/colecao`, `/coleta`, `/conexoes`, `/construtor`, `/construtor-camada`, `/conta`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/crs`, `/entrar`, `/estilo`, `/estilo-guia`, `/executar`, `/ferramenta`, `/ferramentas`, `/geocodificar`, `/imagens/{id}/ficha`, `/importacoes`, `/mapa`, `/migracao`, `/modelo/{id}`, `/modelos`, `/paineis/{id}`, `/plataforma`, `/rede/medicao/ficha`, `/redes/configuracoes`, `/redes/controladores`, `/redes/diagrama`, `/redes/fluxo`, `/redes/isolamento`, `/redes/simples`, `/redes/tracado`, `/sig`, `/simbolos`, `/sites`, `/tarefas`, `/tarefas/{job_id}`, `/temas`, `/uploads`, `/versoes`, `/videos`, `/vista-de-camada`, `/visualizar` | `web/app.js:45`<br>`web/js/acervo/acervo.js:158`<br>`web/js/amc/criterios_feicao_pagina.js:187`<br>`web/js/amc/explicacao_pagina.js:129`<br>`web/js/amc/motor_pagina.js:853`<br>`web/js/amc/presets.js:292`<br>`web/js/analise/analise.js:170`<br>`web/js/auth/conta.js:91`<br>`web/js/auth/sessao.js:60`<br>`web/js/chamados/chamados.js:184`<br>`web/js/chamados/operador.js:184`<br>`web/js/conexoes/conexoes.js:557`<br>`web/js/crs/crs.js:162`<br>`web/js/estilo/estilo.js:384`<br>`web/js/ferramentas/pagina.js:143`<br>`web/js/jobs/tarefas.js:54`<br>`web/js/migracao/migracao.js:215`<br>`web/js/temas/tela.js:402` | **coberto** | com erro |
+| GET | `/api/eu` | eu | `/`, `/acervo`, `/acervo/frescor`, `/admin`, `/admin/acervo`, `/admin/atividade`, `/admin/auditoria`, `/admin/backup`, `/admin/categorias`, `/admin/chamados`, `/admin/grupos`, `/admin/inquilinos`, `/admin/log`, `/admin/logins`, `/admin/organizacao`, `/admin/papeis`, `/admin/tokens`, `/admin/uso`, `/admin/usuarios`, `/amc/criterios-feicao`, `/amc/explicacao/{execucao_id}/{unidade_id}`, `/amc/motor`, `/amc/pareto`, `/amc/presets`, `/analise`, `/analise3d`, `/camadas/{id}/dominios`, `/camadas/{id}/feicoes/{globalid}/historico`, `/camadas/{id}/formulario`, `/campo/filas`, `/campo/filas/{fila_id}`, `/campo/roteiros/{roteiro_id}`, `/cena`, `/chamados`, `/colecao`, `/coleta`, `/conexoes`, `/construtor`, `/construtor-camada`, `/conta`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/crs`, `/entrar`, `/estilo`, `/estilo-guia`, `/executar`, `/ferramenta`, `/ferramentas`, `/geocodificar`, `/imagens/{id}/ficha`, `/importacoes`, `/mapa`, `/migracao`, `/modelo/{id}`, `/modelos`, `/paineis/{id}`, `/plataforma`, `/rede/medicao/ficha`, `/redes/configuracoes`, `/redes/continuidade`, `/redes/controladores`, `/redes/diagrama`, `/redes/fluxo`, `/redes/isolamento`, `/redes/simples`, `/redes/tracado`, `/sig`, `/simbolos`, `/sites`, `/tarefas`, `/tarefas/{job_id}`, `/temas`, `/uploads`, `/versoes`, `/videos`, `/vista-de-camada`, `/visualizar` | `web/app.js:95`<br>`web/js/acervo/frescor_tela.js:158`<br>`web/js/amc/criterios_feicao_pagina.js:187`<br>`web/js/amc/explicacao_pagina.js:129`<br>`web/js/amc/motor_pagina.js:853`<br>`web/js/amc/presets.js:292`<br>`web/js/analise/analise.js:170`<br>`web/js/auth/conta.js:91`<br>`web/js/auth/sessao.js:60`<br>`web/js/chamados/chamados.js:184`<br>`web/js/chamados/operador.js:184`<br>`web/js/conexoes/conexoes.js:557`<br>`web/js/crs/crs.js:162`<br>`web/js/estilo/estilo.js:384`<br>`web/js/ferramentas/pagina.js:143`<br>`web/js/jobs/tarefas.js:54`<br>`web/js/migracao/migracao.js:215`<br>`web/js/temas/tela.js:402` | **coberto** | com erro |
 | PUT | `/api/eu` | eu | `/conta` | `web/js/auth/conta.js:144` | **coberto** | com erro |
 | POST | `/api/eu/2fa/codigos` | eu | `/conta` | `web/js/auth/conta.js:351` | **coberto** | com erro |
 | POST | `/api/eu/2fa/confirmar` | eu | `/conta` | `web/js/auth/conta.js:306` | **coberto** | com erro |
@@ -267,9 +271,9 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | GET | `/api/eventos` | log | `/admin`, `/admin/acervo`, `/admin/atividade`, `/admin/auditoria`, `/admin/grupos`, `/admin/log`, `/admin/logins`, `/admin/papeis`, `/admin/tokens`, `/admin/usuarios`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/auth/admin.js:125`<br>`web/js/auth/comum.js:67`<br>`web/js/auth/log.js:159` | **coberto** | com erro |
 | GET | `/api/eventos/camadas` | vivo | `/paineis/{id}` | `web/js/vivo/assinatura.js:62` | **coberto** | com erro |
 | GET | `/api/exportacoes` | exportacao | `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/paineis/{id}` | `web/js/catalogo/api.js:127` | **coberto** | com erro |
-| POST | `/api/exportacoes` | exportacao | `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/paineis/{id}` | `web/js/catalogo/api.js:125` | **coberto** | com erro |
-| GET | `/api/exportacoes/formatos` | exportacao | `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/paineis/{id}` | `web/js/catalogo/api.js:124`<br>`web/js/catalogo/api.js:126` | **coberto** | com erro |
-| GET | `/api/exportacoes/{exportacao_id}` | exportacao | `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/paineis/{id}` | `web/js/catalogo/api.js:124`<br>`web/js/catalogo/api.js:126` | **coberto** | com erro |
+| POST | `/api/exportacoes` | exportacao | `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/paineis/{id}`, `/sig` | `web/js/catalogo/api.js:125`<br>`web/js/mapa/exportar.js:259` | **coberto** | com erro |
+| GET | `/api/exportacoes/formatos` | exportacao | `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/paineis/{id}`, `/sig` | `web/js/catalogo/api.js:124`<br>`web/js/catalogo/api.js:126`<br>`web/js/mapa/exportar.js:29`<br>`web/js/mapa/exportar.js:58` | **coberto** | com erro |
+| GET | `/api/exportacoes/{exportacao_id}` | exportacao | `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/paineis/{id}`, `/sig` | `web/js/catalogo/api.js:124`<br>`web/js/catalogo/api.js:126`<br>`web/js/mapa/exportar.js:29`<br>`web/js/mapa/exportar.js:58` | **coberto** | com erro |
 | DELETE | `/api/exportacoes/{exportacao_id}` | exportacao | `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/paineis/{id}` | `web/js/catalogo/api.js:128` | **coberto** | com erro |
 | GET | `/api/exportacoes/{exportacao_id}/baixar` | exportacao | — | — | **sem controle** | não se aplica |
 | GET | `/api/favoritos` | favoritos | — | — | **sem controle** | não se aplica |
@@ -302,13 +306,13 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | GET | `/api/geocodificador/lote/{item_id}/pendentes` | geocodificador | — | — | **sem controle** | não se aplica |
 | PATCH | `/api/geocodificador/lote/{item_id}/pendentes/{fid}` | geocodificador | — | — | **sem controle** | não se aplica |
 | POST | `/api/geocodificador/lote/{item_id}/regeocodificar` | geocodificador | — | — | **sem controle** | não se aplica |
-| GET | `/api/geocodificar` | geocodificador | `/sig` | `web/js/mapa/busca.js:86`<br>`web/js/sig/sig.js:275` | **coberto** | com erro |
+| GET | `/api/geocodificar` | geocodificador | `/sig` | `web/js/mapa/busca.js:86` | **coberto** | com erro |
 | POST | `/api/geocodificar` | geocodificador | `/geocodificar` | `web/js/geocodificador/geocodificar.js:130` | **coberto** | com erro |
 | GET | `/api/geoparquet` | geoparquet | — | — | **sem tela** | não se aplica |
 | POST | `/api/geoparquet` | geoparquet | — | — | **sem tela** | não se aplica |
 | GET | `/api/geoparquet/{catalogo_item_id}/arquivos` | geoparquet | — | — | **sem tela** | não se aplica |
 | GET | `/api/geoparquet/{job_id}` | geoparquet | — | — | **sem tela** | não se aplica |
-| GET | `/api/grupos` | grupos | `/admin`, `/admin/grupos`, `/admin/logins`, `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/paineis/{id}` | `web/js/auth/admin.js:72`<br>`web/js/auth/grupos.js:108`<br>`web/js/auth/logins.js:31`<br>`web/js/catalogo/api.js:149` | **coberto** | com erro |
+| GET | `/api/grupos` | grupos | `/admin`, `/admin/grupos`, `/admin/logins`, `/admin/organizacao`, `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/mapa`, `/paineis/{id}` | `web/js/auth/admin.js:72`<br>`web/js/auth/grupos.js:108`<br>`web/js/auth/logins.js:31`<br>`web/js/auth/organizacao.js:239`<br>`web/js/catalogo/api.js:149`<br>`web/js/mapa/anotacoes.js:41` | **coberto** | com erro |
 | POST | `/api/grupos` | grupos | `/admin/grupos` | `web/js/auth/grupos.js:153` | **coberto** | com erro |
 | GET | `/api/grupos/{id}` | grupos | `/admin/grupos` | `web/js/auth/grupos.js:165` | **coberto** | com erro |
 | PUT | `/api/grupos/{id}` | grupos | `/admin/grupos` | `web/js/auth/grupos.js:201`<br>`web/js/auth/grupos.js:252` | **coberto** | com erro |
@@ -321,6 +325,8 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | DELETE | `/api/grupos/{id}/membros/{uid}` | grupos | `/admin/grupos` | `web/js/auth/grupos.js:221`<br>`web/js/auth/grupos.js:284` | **coberto** | com erro |
 | POST | `/api/grupos/{id}/membros/{uid}/aprovar` | grupos | `/admin/grupos` | `web/js/auth/grupos.js:283` | **coberto** | com erro |
 | POST | `/api/grupos/{id}/recusar` | grupos | `/admin/grupos`, `/conta` | `web/js/auth/conta.js:401`<br>`web/js/auth/grupos.js:93` | **coberto** | com erro |
+| GET | `/api/imagens/cache/status` | imagens | — | — | **sem controle** | não se aplica |
+| GET | `/api/imagens/conexao-s3` | imagens | `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/tipos/raster.js:37` | **coberto** | com erro |
 | GET | `/api/imagens/formatos` | imagens | `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/uploads` | `web/js/catalogo/tipos/raster.js:37`<br>`web/js/uploads/enviar.js:60` | **coberto** | com erro |
 | POST | `/api/imagens/ingestoes` | imagens | `/sig` | `web/js/uploads/nucleo.js:195` | **coberto** | com erro |
 | GET | `/api/imagens/licencas` | imagens | `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/imagens/{id}/ficha` | `web/js/catalogo/tipos/raster.js:37`<br>`web/js/imagens/ficha.js:91` | **coberto** | com erro |
@@ -357,14 +363,14 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | GET | `/api/intercambio/importacoes-lote/{lote_id}` | intercambio | — | — | **sem tela** | não se aplica |
 | PUT | `/api/intercambio/importacoes-lote/{lote_id}/confirmar` | intercambio | — | — | **sem tela** | não se aplica |
 | POST | `/api/isocrona` | rede | — | — | **sem tela** | não se aplica |
-| GET | `/api/itens` | catalogo | `/amc/motor`, `/analise`, `/aplicativo`, `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/importacoes`, `/modelos`, `/paineis/{id}`, `/vista-de-camada` | `web/js/amc/motor_pagina.js:483`<br>`web/js/analise/analise.js:142`<br>`web/js/analise/analise.js:143`<br>`web/js/analise/analise.js:144`<br>`web/js/catalogo/api.js:75`<br>`web/js/catalogo/modelos.js:88`<br>`web/js/catalogo/vista_camada.js:33`<br>`web/js/ingestao/importacoes.js:188`<br>`web/js/widgets/base.js:166` | **coberto** | com erro |
-| POST | `/api/itens` | catalogo | `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/paineis/{id}` | `web/js/catalogo/api.js:79` | **coberto** | com erro |
-| GET | `/api/itens/facetas` | catalogo | `/aplicativo`, `/cena`, `/colecao`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/executar`, `/paineis/{id}`, `/redes/simples`, `/sites`, `/visualizar` | `web/js/app/fontes.js:45`<br>`web/js/catalogo/api.js:64`<br>`web/js/catalogo/api.js:76`<br>`web/js/catalogo/api.js:78`<br>`web/js/catalogo/tipos/token_servico.js:41`<br>`web/js/cena/documento.js:76`<br>`web/js/colecao/tela.js:32`<br>`web/js/colecao/tela.js:43`<br>`web/js/editor/tela.js:44`<br>`web/js/executor/executar_tela.js:26`<br>`web/js/rede/simples.js:36`<br>`web/js/site/tela.js:37`<br>`web/js/visualizador/visualizador.js:47`<br>`web/js/widgets/aplicativo.js:38` | **coberto** | com erro |
+| GET | `/api/itens` | catalogo | `/`, `/amc/motor`, `/analise`, `/aplicativo`, `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/importacoes`, `/modelos`, `/paineis/{id}`, `/vista-de-camada` | `web/app.js:54`<br>`web/js/amc/motor_pagina.js:483`<br>`web/js/analise/analise.js:142`<br>`web/js/analise/analise.js:143`<br>`web/js/analise/analise.js:144`<br>`web/js/catalogo/api.js:75`<br>`web/js/catalogo/modelos.js:88`<br>`web/js/catalogo/vista_camada.js:33`<br>`web/js/ingestao/importacoes.js:188`<br>`web/js/widgets/base.js:166` | **coberto** | com erro |
+| POST | `/api/itens` | catalogo | `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/mapa`, `/paineis/{id}` | `web/js/catalogo/api.js:79`<br>`web/js/mapa/mapa.js:204` | **coberto** | com erro |
+| GET | `/api/itens/facetas` | catalogo | `/aplicativo`, `/cena`, `/colecao`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/executar`, `/mapa`, `/paineis/{id}`, `/redes/simples`, `/sites`, `/visualizar` | `web/js/app/fontes.js:45`<br>`web/js/catalogo/api.js:64`<br>`web/js/catalogo/api.js:76`<br>`web/js/catalogo/api.js:78`<br>`web/js/catalogo/tipos/token_servico.js:41`<br>`web/js/cena/documento.js:76`<br>`web/js/colecao/tela.js:32`<br>`web/js/colecao/tela.js:43`<br>`web/js/editor/tela.js:44`<br>`web/js/executor/executar_tela.js:26`<br>`web/js/mapa/mapa.js:247`<br>`web/js/rede/simples.js:36`<br>`web/js/site/tela.js:37`<br>`web/js/visualizador/visualizador.js:47`<br>`web/js/widgets/aplicativo.js:38` | **coberto** | com erro |
 | POST | `/api/itens/lote` | catalogo | `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/paineis/{id}` | `web/js/catalogo/api.js:83` | **coberto** | com erro |
-| GET | `/api/itens/tags` | catalogo | `/aplicativo`, `/cena`, `/colecao`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/executar`, `/paineis/{id}`, `/redes/simples`, `/sites`, `/visualizar` | `web/js/app/fontes.js:45`<br>`web/js/catalogo/api.js:64`<br>`web/js/catalogo/api.js:77`<br>`web/js/catalogo/api.js:78`<br>`web/js/catalogo/tipos/token_servico.js:41`<br>`web/js/cena/documento.js:76`<br>`web/js/colecao/tela.js:32`<br>`web/js/colecao/tela.js:43`<br>`web/js/editor/tela.js:44`<br>`web/js/executor/executar_tela.js:26`<br>`web/js/rede/simples.js:36`<br>`web/js/site/tela.js:37`<br>`web/js/visualizador/visualizador.js:47`<br>`web/js/widgets/aplicativo.js:38` | **coberto** | com erro |
+| GET | `/api/itens/tags` | catalogo | `/aplicativo`, `/cena`, `/colecao`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/executar`, `/mapa`, `/paineis/{id}`, `/redes/simples`, `/sites`, `/visualizar` | `web/js/app/fontes.js:45`<br>`web/js/catalogo/api.js:64`<br>`web/js/catalogo/api.js:77`<br>`web/js/catalogo/api.js:78`<br>`web/js/catalogo/tipos/token_servico.js:41`<br>`web/js/cena/documento.js:76`<br>`web/js/colecao/tela.js:32`<br>`web/js/colecao/tela.js:43`<br>`web/js/editor/tela.js:44`<br>`web/js/executor/executar_tela.js:26`<br>`web/js/mapa/mapa.js:247`<br>`web/js/rede/simples.js:36`<br>`web/js/site/tela.js:37`<br>`web/js/visualizador/visualizador.js:47`<br>`web/js/widgets/aplicativo.js:38` | **coberto** | com erro |
 | POST | `/api/itens/transferir` | catalogo | `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/paineis/{id}` | `web/js/catalogo/api.js:85` | **coberto** | com erro |
-| GET | `/api/itens/{id}` | catalogo | `/aplicativo`, `/cena`, `/colecao`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/executar`, `/paineis/{id}`, `/redes/simples`, `/sites`, `/visualizar` | `web/js/app/fontes.js:45`<br>`web/js/catalogo/api.js:64`<br>`web/js/catalogo/api.js:76`<br>`web/js/catalogo/api.js:77`<br>`web/js/catalogo/api.js:78`<br>`web/js/catalogo/tipos/token_servico.js:41`<br>`web/js/cena/documento.js:76`<br>`web/js/colecao/tela.js:32`<br>`web/js/colecao/tela.js:43`<br>`web/js/editor/tela.js:44`<br>`web/js/executor/executar_tela.js:26`<br>`web/js/rede/simples.js:36`<br>`web/js/site/tela.js:37`<br>`web/js/visualizador/visualizador.js:47`<br>`web/js/widgets/aplicativo.js:38` | **coberto** | com erro |
-| PUT | `/api/itens/{id}` | catalogo | `/cena`, `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/paineis/{id}` | `web/js/catalogo/api.js:80`<br>`web/js/cena/documento.js:87` | **coberto** | com erro |
+| GET | `/api/itens/{id}` | catalogo | `/aplicativo`, `/cena`, `/colecao`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/executar`, `/mapa`, `/paineis/{id}`, `/redes/simples`, `/sites`, `/visualizar` | `web/js/app/fontes.js:45`<br>`web/js/catalogo/api.js:64`<br>`web/js/catalogo/api.js:76`<br>`web/js/catalogo/api.js:77`<br>`web/js/catalogo/api.js:78`<br>`web/js/catalogo/tipos/token_servico.js:41`<br>`web/js/cena/documento.js:76`<br>`web/js/colecao/tela.js:32`<br>`web/js/colecao/tela.js:43`<br>`web/js/editor/tela.js:44`<br>`web/js/executor/executar_tela.js:26`<br>`web/js/mapa/mapa.js:247`<br>`web/js/rede/simples.js:36`<br>`web/js/site/tela.js:37`<br>`web/js/visualizador/visualizador.js:47`<br>`web/js/widgets/aplicativo.js:38` | **coberto** | com erro |
+| PUT | `/api/itens/{id}` | catalogo | `/cena`, `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/mapa`, `/paineis/{id}` | `web/js/catalogo/api.js:80`<br>`web/js/cena/documento.js:87`<br>`web/js/mapa/mapa.js:203` | **coberto** | com erro |
 | PATCH | `/api/itens/{id}` | catalogo | `/colecao`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/paineis/{id}`, `/sites` | `web/js/catalogo/api.js:81`<br>`web/js/catalogo/tipos/token_servico.js:21`<br>`web/js/editor/tela.js:108`<br>`web/js/site/tela.js:62` | **coberto** | com erro |
 | DELETE | `/api/itens/{id}` | catalogo | `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/paineis/{id}` | `web/js/catalogo/api.js:82` | **coberto** | com erro |
 | GET | `/api/itens/{id}/compartilhamento` | compartilhamento | `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/paineis/{id}` | `web/js/catalogo/api.js:115` | **coberto** | com erro |
@@ -407,10 +413,10 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | POST | `/api/itens/{item_id}/paineis/fontes/{fonte_id}/dados` | paineis | — | — | **sem tela** | não se aplica |
 | GET | `/api/jobs` | jobs | `/ferramentas`, `/tarefas`, `/tarefas/{job_id}` | `web/js/jobs/api.js:38` | **coberto** | com erro |
 | POST | `/api/jobs` | jobs | `/admin/backup`, `/ferramentas`, `/tarefas`, `/tarefas/{job_id}` | `web/js/admin/backup.js:127`<br>`web/js/jobs/api.js:40` | **coberto** | com erro |
-| GET | `/api/jobs/resumo` | jobs | `/admin/backup`, `/analise`, `/ferramenta`, `/ferramentas`, `/sig`, `/tarefas`, `/tarefas/{job_id}` | `web/js/admin/backup.js:116`<br>`web/js/analise/analise.js:107`<br>`web/js/ferramentas/pagina.js:75`<br>`web/js/jobs/api.js:39`<br>`web/js/jobs/api.js:45`<br>`web/js/mapa/edicao.js:642`<br>`web/js/uploads/nucleo.js:103` | **coberto** | com erro |
-| GET | `/api/jobs/tipos` | jobs | `/admin/backup`, `/analise`, `/ferramenta`, `/ferramentas`, `/sig`, `/tarefas`, `/tarefas/{job_id}` | `web/js/admin/backup.js:116`<br>`web/js/analise/analise.js:107`<br>`web/js/ferramentas/pagina.js:75`<br>`web/js/jobs/api.js:39`<br>`web/js/jobs/api.js:46`<br>`web/js/mapa/edicao.js:642`<br>`web/js/uploads/nucleo.js:103` | **coberto** | com erro |
-| GET | `/api/jobs/{job_id}` | jobs | `/admin/backup`, `/analise`, `/ferramenta`, `/ferramentas`, `/sig`, `/tarefas`, `/tarefas/{job_id}` | `web/js/admin/backup.js:116`<br>`web/js/analise/analise.js:107`<br>`web/js/ferramentas/pagina.js:75`<br>`web/js/jobs/api.js:39`<br>`web/js/jobs/api.js:45`<br>`web/js/jobs/api.js:46`<br>`web/js/mapa/edicao.js:642`<br>`web/js/uploads/nucleo.js:103` | **coberto** | com erro |
-| POST | `/api/jobs/{job_id}/cancelar` | jobs | `/ferramentas`, `/sig`, `/tarefas`, `/tarefas/{job_id}` | `web/js/jobs/api.js:41`<br>`web/js/mapa/edicao.js:656` | **coberto** | com erro |
+| GET | `/api/jobs/resumo` | jobs | `/admin/backup`, `/analise`, `/ferramenta`, `/ferramentas`, `/sig`, `/tarefas`, `/tarefas/{job_id}` | `web/js/admin/backup.js:116`<br>`web/js/analise/analise.js:107`<br>`web/js/ferramentas/pagina.js:75`<br>`web/js/jobs/api.js:39`<br>`web/js/jobs/api.js:45`<br>`web/js/mapa/edicao.js:780`<br>`web/js/uploads/nucleo.js:103` | **coberto** | com erro |
+| GET | `/api/jobs/tipos` | jobs | `/admin/backup`, `/analise`, `/ferramenta`, `/ferramentas`, `/sig`, `/tarefas`, `/tarefas/{job_id}` | `web/js/admin/backup.js:116`<br>`web/js/analise/analise.js:107`<br>`web/js/ferramentas/pagina.js:75`<br>`web/js/jobs/api.js:39`<br>`web/js/jobs/api.js:46`<br>`web/js/mapa/edicao.js:780`<br>`web/js/uploads/nucleo.js:103` | **coberto** | com erro |
+| GET | `/api/jobs/{job_id}` | jobs | `/admin/backup`, `/analise`, `/ferramenta`, `/ferramentas`, `/sig`, `/tarefas`, `/tarefas/{job_id}` | `web/js/admin/backup.js:116`<br>`web/js/analise/analise.js:107`<br>`web/js/ferramentas/pagina.js:75`<br>`web/js/jobs/api.js:39`<br>`web/js/jobs/api.js:45`<br>`web/js/jobs/api.js:46`<br>`web/js/mapa/edicao.js:780`<br>`web/js/uploads/nucleo.js:103` | **coberto** | com erro |
+| POST | `/api/jobs/{job_id}/cancelar` | jobs | `/ferramentas`, `/sig`, `/tarefas`, `/tarefas/{job_id}` | `web/js/jobs/api.js:41`<br>`web/js/mapa/edicao.js:794` | **coberto** | com erro |
 | GET | `/api/jobs/{job_id}/eventos` | jobs | `/ferramentas`, `/tarefas`, `/tarefas/{job_id}` | `web/js/jobs/eventos.js:75`<br>`web/js/jobs/eventos.js:76` | **coberto** | sem estado de erro |
 | GET | `/api/jobs/{job_id}/log` | jobs | `/ferramentas`, `/tarefas`, `/tarefas/{job_id}` | `web/js/jobs/api.js:44` | **coberto** | com erro |
 | POST | `/api/jobs/{job_id}/repetir` | jobs | `/ferramentas`, `/tarefas`, `/tarefas/{job_id}` | `web/js/jobs/api.js:42` | **coberto** | com erro |
@@ -426,38 +432,42 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | GET | `/api/log/nivel` | log | — | — | **sem controle** | não se aplica |
 | POST | `/api/log/nivel` | log | — | — | **sem controle** | não se aplica |
 | DELETE | `/api/log/nivel` | log | — | — | **sem controle** | não se aplica |
-| POST | `/api/login` | login | `/entrar` | `web/js/auth/login.js:208` | **coberto** | com erro |
-| POST | `/api/login/2fa` | login | `/entrar` | `web/js/auth/login.js:241` | **coberto** | com erro |
-| POST | `/api/login/ldap` | login | `/entrar` | `web/js/auth/login.js:208` | **coberto** | com erro |
+| POST | `/api/login` | login | `/entrar` | `web/js/auth/login.js:221` | **coberto** | com erro |
+| POST | `/api/login/2fa` | login | `/entrar` | `web/js/auth/login.js:254` | **coberto** | com erro |
+| POST | `/api/login/ldap` | login | `/entrar` | `web/js/auth/login.js:221` | **coberto** | com erro |
 | GET | `/api/login/oidc/iniciar` | login | — | — | **sem controle** | não se aplica |
 | GET | `/api/login/oidc/retorno` | login | — | — | **sem controle** | não se aplica |
-| GET | `/api/login/provedores` | login | `/entrar` | `web/js/auth/login.js:107` | **coberto** | com erro |
+| GET | `/api/login/provedores` | login | `/entrar` | `web/js/auth/login.js:118` | **coberto** | com erro |
 | POST | `/api/login/saml/acs` | login | — | `callback ACS do SAML: o navegador chega aqui por um POST que o IdP monta, nunca por chamada da nossa web/` | **sem tela por desenho** | não se aplica |
 | GET | `/api/login/saml/iniciar` | login | — | — | **sem controle** | não se aplica |
 | GET | `/api/login/saml/metadata` | login | — | — | **sem controle** | não se aplica |
-| POST | `/api/logout` | login | `/`, `/acervo`, `/admin`, `/admin/acervo`, `/admin/atividade`, `/admin/auditoria`, `/admin/backup`, `/admin/categorias`, `/admin/chamados`, `/admin/grupos`, `/admin/inquilinos`, `/admin/log`, `/admin/logins`, `/admin/organizacao`, `/admin/papeis`, `/admin/tokens`, `/admin/usuarios`, `/amc/criterios-feicao`, `/amc/explicacao/{execucao_id}/{unidade_id}`, `/amc/motor`, `/amc/pareto`, `/amc/presets`, `/analise`, `/analise3d`, `/camadas/{id}/dominios`, `/camadas/{id}/formulario`, `/campo/filas`, `/campo/filas/{fila_id}`, `/campo/roteiros/{roteiro_id}`, `/cena`, `/chamados`, `/colecao`, `/coleta`, `/conexoes`, `/construtor`, `/construtor-camada`, `/conta`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/crs`, `/entrar`, `/estilo`, `/estilo-guia`, `/executar`, `/ferramenta`, `/ferramentas`, `/geocodificar`, `/imagens/{id}/ficha`, `/importacoes`, `/mapa`, `/migracao`, `/modelo/{id}`, `/modelos`, `/paineis/{id}`, `/plataforma`, `/rede/medicao/ficha`, `/redes/configuracoes`, `/redes/controladores`, `/redes/diagrama`, `/redes/fluxo`, `/redes/isolamento`, `/redes/simples`, `/redes/tracado`, `/sig`, `/simbolos`, `/sites`, `/tarefas`, `/tarefas/{job_id}`, `/temas`, `/uploads`, `/versoes`, `/videos`, `/vista-de-camada`, `/visualizar` | `web/js/auth/sessao.js:75` | **coberto** | sem estado de erro |
-| GET | `/api/mapa/camadas` | mapa | `/campo/filas`, `/construtor`, `/executar`, `/redes/simples`, `/sig`, `/versoes` | `web/js/campo/filas.js:18`<br>`web/js/mapa/catalogo.js:30`<br>`web/js/rede/simples.js:31`<br>`web/js/versoes/painel.js:44` | **coberto** | com erro |
-| GET | `/api/mapa/camadas/{id}` | mapa | `/cena`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/executar`, `/sig` | `web/js/catalogo/tipos/camada_vetorial.js:41`<br>`web/js/cena/camadas3d.js:95`<br>`web/js/mapa/catalogo.js:181`<br>`web/js/mapa/edicao.js:197` | **coberto** | com erro |
-| GET | `/api/mapa/camadas/{id}/estilo` | mapa | — | — | **sem controle** | não se aplica |
-| GET | `/api/mapa/camadas/{id}/feicoes/{fid}` | mapa | — | — | **sem controle** | não se aplica |
+| POST | `/api/logout` | login | `/`, `/acervo`, `/acervo/frescor`, `/admin`, `/admin/acervo`, `/admin/atividade`, `/admin/auditoria`, `/admin/backup`, `/admin/categorias`, `/admin/chamados`, `/admin/grupos`, `/admin/inquilinos`, `/admin/log`, `/admin/logins`, `/admin/organizacao`, `/admin/papeis`, `/admin/tokens`, `/admin/uso`, `/admin/usuarios`, `/amc/criterios-feicao`, `/amc/explicacao/{execucao_id}/{unidade_id}`, `/amc/motor`, `/amc/pareto`, `/amc/presets`, `/analise`, `/analise3d`, `/camadas/{id}/dominios`, `/camadas/{id}/feicoes/{globalid}/historico`, `/camadas/{id}/formulario`, `/campo/filas`, `/campo/filas/{fila_id}`, `/campo/roteiros/{roteiro_id}`, `/cena`, `/chamados`, `/colecao`, `/coleta`, `/conexoes`, `/construtor`, `/construtor-camada`, `/conta`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/crs`, `/entrar`, `/estilo`, `/estilo-guia`, `/executar`, `/ferramenta`, `/ferramentas`, `/geocodificar`, `/imagens/{id}/ficha`, `/importacoes`, `/mapa`, `/migracao`, `/modelo/{id}`, `/modelos`, `/paineis/{id}`, `/plataforma`, `/rede/medicao/ficha`, `/redes/configuracoes`, `/redes/continuidade`, `/redes/controladores`, `/redes/diagrama`, `/redes/fluxo`, `/redes/isolamento`, `/redes/simples`, `/redes/tracado`, `/sig`, `/simbolos`, `/sites`, `/tarefas`, `/tarefas/{job_id}`, `/temas`, `/uploads`, `/versoes`, `/videos`, `/vista-de-camada`, `/visualizar` | `web/js/auth/sessao.js:75` | **coberto** | sem estado de erro |
+| GET | `/api/mapa/camadas` | mapa | `/campo/filas`, `/construtor`, `/executar`, `/mapa`, `/redes/simples`, `/sig`, `/versoes` | `web/js/campo/filas.js:18`<br>`web/js/mapa/catalogo.js:30`<br>`web/js/rede/simples.js:31`<br>`web/js/versoes/painel.js:44` | **coberto** | com erro |
+| GET | `/api/mapa/camadas/{id}` | mapa | `/cena`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/executar`, `/mapa`, `/sig` | `web/js/catalogo/tipos/camada_vetorial.js:41`<br>`web/js/cena/camadas3d.js:95`<br>`web/js/mapa/catalogo.js:181`<br>`web/js/mapa/edicao.js:200` | **coberto** | com erro |
+| GET | `/api/mapa/camadas/{id}/estilo` | mapa | `/sig` | `web/js/mapa/exportar.js:225` | **coberto** | com erro |
+| GET | `/api/mapa/camadas/{id}/feicoes/{fid}` | mapa | `/sig` | `web/js/mapa/exportar.js:50` | **coberto** | com erro |
 | POST | `/api/mapa/camadas/{id}/filtrar` | mapa | — | — | **sem controle** | não se aplica |
 | POST | `/api/mapa/camadas/{id}/selecionar` | mapa | — | — | **sem controle** | não se aplica |
 | GET | `/api/mapa/camadas/{id}/tilejson` | mapa | — | — | **sem controle** | não se aplica |
 | GET | `/api/mapa/camadas/{id}/valores` | mapa | — | — | **sem controle** | não se aplica |
 | GET | `/api/mapa/fuso` | mapa-popup | — | — | **sem controle** | não se aplica |
-| POST | `/api/mapa/pacotes/importar` | mapa | — | — | **sem controle** | não se aplica |
+| POST | `/api/mapa/pacotes/importar` | mapa | `/sig` | `web/js/mapa/exportar.js:177` | **coberto** | com erro |
 | POST | `/api/mapa/selecao-espacial` | mapa | — | — | **sem controle** | não se aplica |
-| POST | `/api/mapa/{mapa_id}/desenho/promover` | mapa | — | — | **sem controle** | não se aplica |
-| GET | `/api/mapas` | mapa | `/sig` | `web/js/sig/sig.js:631`<br>`web/js/sig/sig.js:709` | **coberto** | com erro |
-| POST | `/api/mapas` | mapa | `/sig` | `web/js/sig/sig.js:674` | **coberto** | com erro |
+| POST | `/api/mapa/{mapa_id}/desenho/promover` | mapa | `/mapa` | `web/js/mapa/mapa.js:220` | **coberto** | com erro |
+| GET | `/api/mapas` | mapa | `/sig` | `web/js/sig/sig.js:710` | **coberto** | com erro |
+| POST | `/api/mapas` | mapa | `/sig` | `web/js/sig/sig.js:675` | **coberto** | com erro |
 | GET | `/api/mapas-base` | mapas-base | — | — | **sem tela** | não se aplica |
 | POST | `/api/mapas-base/instalar` | mapas-base | — | — | **sem tela** | não se aplica |
 | GET | `/api/mapas-base/osm/{z}/{x}/{y}.png` | mapas-base | — | — | **sem tela** | não se aplica |
 | POST | `/api/mapas-base/{id}/tornar-padrao` | mapas-base | — | — | **sem tela** | não se aplica |
 | GET | `/api/mapas/{id}` | mapa | — | — | **sem controle** | não se aplica |
-| PUT | `/api/mapas/{id}` | mapa | `/sig` | `web/js/mapa/documento.js:29`<br>`web/js/mapa/documento.js:42`<br>`web/js/sig/sig.js:700` | **coberto** | com erro |
+| PUT | `/api/mapas/{id}` | mapa | `/sig` | `web/js/mapa/documento.js:29`<br>`web/js/mapa/documento.js:42`<br>`web/js/sig/sig.js:701` | **coberto** | com erro |
 | GET | `/api/mapas/{id}/completo` | mapa | `/sig` | `web/js/mapa/documento.js:12` | **coberto** | com erro |
 | POST | `/api/matriz` | rede | — | — | **sem tela** | não se aplica |
+| GET | `/api/migracao/clones` | migracao | — | — | **sem controle** | não se aplica |
+| POST | `/api/migracao/clones` | migracao | — | — | **sem controle** | não se aplica |
+| GET | `/api/migracao/clones/{id}` | migracao | — | — | **sem controle** | não se aplica |
+| DELETE | `/api/migracao/clones/{id}` | migracao | — | — | **sem controle** | não se aplica |
 | GET | `/api/migracao/inventarios` | migracao | `/migracao` | `web/js/migracao/migracao.js:123` | **coberto** | com erro |
 | POST | `/api/migracao/inventarios` | migracao | `/migracao` | `web/js/migracao/migracao.js:95` | **coberto** | com erro |
 | GET | `/api/migracao/inventarios/{id}` | migracao | `/migracao` | `web/js/migracao/migracao.js:169` | **coberto** | com erro |
@@ -472,13 +482,13 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | GET | `/api/modelos/{id}/pacote` | catalogo | `/modelos` | `web/js/catalogo/modelos.js:68` | **coberto** | com erro |
 | GET | `/api/modelos3d` | modelos3d | — | — | **sem controle** | não se aplica |
 | POST | `/api/modelos3d` | modelos3d | — | — | **sem controle** | não se aplica |
-| GET | `/api/modelos3d/{id}` | modelos3d | `/cena` | `web/js/cena/modelospainel.js:29`<br>`web/js/cena/modelospainel.js:4` | **coberto** | com erro |
+| GET | `/api/modelos3d/{id}` | modelos3d | `/cena` | `web/js/cena/modelospainel.js:29` | **coberto** | com erro |
 | DELETE | `/api/modelos3d/{id}` | modelos3d | — | — | **sem controle** | não se aplica |
 | GET | `/api/modelos3d/{id}/3dtiles/{caminho}` | modelos3d | `/cena` | `web/js/cena/modelos3d.js:229` | **coberto** | sem estado de erro |
 | GET | `/api/modelos3d/{id}/elementos` | modelos3d | — | — | **sem controle** | não se aplica |
-| GET | `/api/modelos3d/{id}/elementos/{guid}` | modelos3d | `/cena` | `web/js/cena/modelospainel.js:7`<br>`web/js/cena/modelospainel.js:86` | **coberto** | com erro |
+| GET | `/api/modelos3d/{id}/elementos/{guid}` | modelos3d | `/cena` | `web/js/cena/modelospainel.js:86` | **coberto** | com erro |
 | GET | `/api/modelos3d/{id}/glb` | modelos3d | `/cena` | `web/js/cena/modelos3d.js:228` | **coberto** | sem estado de erro |
-| GET | `/api/modo` | modo | `/`, `/acervo`, `/admin`, `/admin/acervo`, `/admin/atividade`, `/admin/auditoria`, `/admin/backup`, `/admin/categorias`, `/admin/chamados`, `/admin/grupos`, `/admin/inquilinos`, `/admin/log`, `/admin/logins`, `/admin/organizacao`, `/admin/papeis`, `/admin/tokens`, `/admin/usuarios`, `/amc/criterios-feicao`, `/amc/explicacao/{execucao_id}/{unidade_id}`, `/amc/motor`, `/amc/pareto`, `/amc/presets`, `/analise`, `/analise3d`, `/camadas/{id}/dominios`, `/camadas/{id}/formulario`, `/campo/filas`, `/campo/filas/{fila_id}`, `/campo/roteiros/{roteiro_id}`, `/cena`, `/chamados`, `/colecao`, `/coleta`, `/conexoes`, `/construtor`, `/construtor-camada`, `/conta`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/crs`, `/entrar`, `/estilo`, `/estilo-guia`, `/executar`, `/ferramenta`, `/ferramentas`, `/geocodificar`, `/imagens/{id}/ficha`, `/importacoes`, `/mapa`, `/migracao`, `/modelo/{id}`, `/modelos`, `/paineis/{id}`, `/plataforma`, `/rede/medicao/ficha`, `/redes/configuracoes`, `/redes/controladores`, `/redes/diagrama`, `/redes/fluxo`, `/redes/isolamento`, `/redes/simples`, `/redes/tracado`, `/sig`, `/simbolos`, `/sites`, `/tarefas`, `/tarefas/{job_id}`, `/temas`, `/uploads`, `/versoes`, `/videos`, `/vista-de-camada`, `/visualizar` | `web/js/base/modo.js:12` | **coberto** | com erro |
+| GET | `/api/modo` | modo | `/`, `/acervo`, `/acervo/frescor`, `/admin`, `/admin/acervo`, `/admin/atividade`, `/admin/auditoria`, `/admin/backup`, `/admin/categorias`, `/admin/chamados`, `/admin/grupos`, `/admin/inquilinos`, `/admin/log`, `/admin/logins`, `/admin/organizacao`, `/admin/papeis`, `/admin/tokens`, `/admin/uso`, `/admin/usuarios`, `/amc/criterios-feicao`, `/amc/explicacao/{execucao_id}/{unidade_id}`, `/amc/motor`, `/amc/pareto`, `/amc/presets`, `/analise`, `/analise3d`, `/camadas/{id}/dominios`, `/camadas/{id}/feicoes/{globalid}/historico`, `/camadas/{id}/formulario`, `/campo/filas`, `/campo/filas/{fila_id}`, `/campo/roteiros/{roteiro_id}`, `/cena`, `/chamados`, `/colecao`, `/coleta`, `/conexoes`, `/construtor`, `/construtor-camada`, `/conta`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/crs`, `/entrar`, `/estilo`, `/estilo-guia`, `/executar`, `/ferramenta`, `/ferramentas`, `/geocodificar`, `/imagens/{id}/ficha`, `/importacoes`, `/mapa`, `/migracao`, `/modelo/{id}`, `/modelos`, `/paineis/{id}`, `/plataforma`, `/rede/medicao/ficha`, `/redes/configuracoes`, `/redes/continuidade`, `/redes/controladores`, `/redes/diagrama`, `/redes/fluxo`, `/redes/isolamento`, `/redes/simples`, `/redes/tracado`, `/sig`, `/simbolos`, `/sites`, `/tarefas`, `/tarefas/{job_id}`, `/temas`, `/uploads`, `/versoes`, `/videos`, `/vista-de-camada`, `/visualizar` | `web/js/base/modo.js:12` | **coberto** | com erro |
 | GET | `/api/multiescala/conjuntos` | multiescala | — | — | **sem controle** | não se aplica |
 | POST | `/api/multiescala/conjuntos` | multiescala | — | — | **sem controle** | não se aplica |
 | GET | `/api/multiescala/conjuntos/{id}` | multiescala | — | — | **sem controle** | não se aplica |
@@ -499,22 +509,22 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | GET | `/api/notificacoes/contagem` | notificacoes | — | — | **sem tela** | não se aplica |
 | POST | `/api/notificacoes/lidas` | notificacoes | — | — | **sem tela** | não se aplica |
 | DELETE | `/api/notificacoes/{id}` | notificacoes | — | — | **sem tela** | não se aplica |
-| GET | `/api/objetos/{chave}` | compartilhamento | `/construtor` | `web/js/editor/paleta_narrativa.js:11` | **coberto** | sem estado de erro |
+| GET | `/api/objetos/{chave}` | compartilhamento | — | `entrega por URL assinada gerada pela API (ADR 0005); o navegador só a segue` | **externo** | não se aplica |
 | GET | `/api/odk/pontes` | odk | — | — | **sem tela** | não se aplica |
 | POST | `/api/odk/pontes` | odk | — | — | **sem tela** | não se aplica |
 | GET | `/api/odk/pontes/{id}` | odk | — | — | **sem tela** | não se aplica |
 | GET | `/api/odk/pontes/{id}/entidades/{dataset}` | odk | — | — | **sem tela** | não se aplica |
 | POST | `/api/odk/pontes/{id}/sincronizar` | odk | — | — | **sem tela** | não se aplica |
-| GET | `/api/org` | org | `/admin`, `/admin/organizacao` | `web/js/auth/admin.js:64`<br>`web/js/auth/organizacao.js:43` | **coberto** | com erro |
-| PUT | `/api/org` | org | `/admin/organizacao` | `web/js/auth/organizacao.js:75` | **coberto** | com erro |
+| GET | `/api/org` | org | `/admin`, `/admin/organizacao` | `web/js/auth/admin.js:64`<br>`web/js/auth/organizacao.js:53` | **coberto** | com erro |
+| PUT | `/api/org` | org | `/admin/organizacao` | `web/js/auth/organizacao.js:100`<br>`web/js/auth/organizacao.js:289` | **coberto** | com erro |
 | POST | `/api/org/exportar` | ingestao | — | — | **sem controle** | não se aplica |
-| GET | `/api/org/ldap` | login | `/admin`, `/admin/organizacao` | `web/js/auth/admin.js:93`<br>`web/js/auth/organizacao.js:311` | **coberto** | com erro |
-| PUT | `/api/org/ldap` | login | `/admin/organizacao` | `web/js/auth/organizacao.js:372` | **coberto** | com erro |
-| POST | `/api/org/ldap/importar` | login | `/admin/organizacao` | `web/js/auth/organizacao.js:406` | **coberto** | com erro |
+| GET | `/api/org/ldap` | login | `/admin`, `/admin/organizacao` | `web/js/auth/admin.js:93`<br>`web/js/auth/organizacao.js:502` | **coberto** | com erro |
+| PUT | `/api/org/ldap` | login | `/admin/organizacao` | `web/js/auth/organizacao.js:563` | **coberto** | com erro |
+| POST | `/api/org/ldap/importar` | login | `/admin/organizacao` | `web/js/auth/organizacao.js:597` | **coberto** | com erro |
 | GET | `/api/org/logins` | logins | `/admin/logins` | `web/js/auth/logins.js:120` | **coberto** | com erro |
 | PUT | `/api/org/logins/{tipo}/{id}` | logins | `/admin/logins` | `web/js/auth/logins.js:132`<br>`web/js/auth/logins.js:243` | **coberto** | com erro |
-| POST | `/api/org/logo` | org | `/admin/organizacao` | `web/js/auth/organizacao.js:203` | **coberto** | com erro |
-| DELETE | `/api/org/logo` | org | `/admin/organizacao` | `web/js/auth/organizacao.js:213` | **coberto** | com erro |
+| POST | `/api/org/logo` | org | `/admin/organizacao` | `web/js/auth/organizacao.js:394` | **coberto** | com erro |
+| DELETE | `/api/org/logo` | org | `/admin/organizacao` | `web/js/auth/organizacao.js:404` | **coberto** | com erro |
 | GET | `/api/org/oidc` | login | — | — | **sem controle** | não se aplica |
 | POST | `/api/org/oidc` | login | `/admin/logins` | `web/js/auth/logins.js:86` | **coberto** | com erro |
 | PUT | `/api/org/oidc/{provedor_id}` | login | — | — | **sem controle** | não se aplica |
@@ -523,9 +533,9 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | POST | `/api/org/saml` | login | — | — | **sem controle** | não se aplica |
 | PUT | `/api/org/saml/{provedor_id}` | login | — | — | **sem controle** | não se aplica |
 | DELETE | `/api/org/saml/{provedor_id}` | login | — | — | **sem controle** | não se aplica |
-| GET | `/api/org/smtp` | smtp | `/admin/organizacao` | `web/js/auth/organizacao.js:226` | **coberto** | com erro |
-| PUT | `/api/org/smtp` | smtp | `/admin/organizacao` | `web/js/auth/organizacao.js:254` | **coberto** | com erro |
-| POST | `/api/org/smtp/testar` | smtp | `/admin/organizacao` | `web/js/auth/organizacao.js:268` | **coberto** | com erro |
+| GET | `/api/org/smtp` | smtp | `/admin/organizacao` | `web/js/auth/organizacao.js:417` | **coberto** | com erro |
+| PUT | `/api/org/smtp` | smtp | `/admin/organizacao` | `web/js/auth/organizacao.js:445` | **coberto** | com erro |
+| POST | `/api/org/smtp/testar` | smtp | `/admin/organizacao` | `web/js/auth/organizacao.js:459` | **coberto** | com erro |
 | GET | `/api/org/sso/oidc` | login | — | — | **sem controle** | não se aplica |
 | PUT | `/api/org/sso/oidc` | login | — | — | **sem controle** | não se aplica |
 | GET | `/api/org/sso/saml` | login | — | — | **sem controle** | não se aplica |
@@ -570,7 +580,7 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | GET | `/api/publico/itens/{id}/miniatura` | compartilhamento | — | `leitura de item público por quem recebe o link, sem sessão; a ficha do item mostra o link` | **externo sem exposição** | não se aplica |
 | GET | `/api/publico/wms/{fonte}` | mapa | — | — | **sem controle** | não se aplica |
 | GET | `/api/qr.svg` | utilidades | — | — | **sem tela** | não se aplica |
-| GET | `/api/rede` | rede de utilidades | `/redes/configuracoes`, `/redes/controladores`, `/redes/diagrama`, `/redes/fluxo`, `/redes/isolamento`, `/redes/tracado`, `/sig` | `web/js/rede/configuracoes.js:24`<br>`web/js/rede/controladores.js:21`<br>`web/js/rede/diagrama.js:66`<br>`web/js/rede/fluxo.js:62`<br>`web/js/rede/isolamento.js:58`<br>`web/js/rede/tracado.js:22`<br>`web/js/sig/sig.js:399`<br>`web/js/sig/sig.js:527` | **coberto** | com erro |
+| GET | `/api/rede` | rede de utilidades | `/redes/configuracoes`, `/redes/continuidade`, `/redes/controladores`, `/redes/diagrama`, `/redes/fluxo`, `/redes/isolamento`, `/redes/tracado`, `/sig` | `web/js/rede/configuracoes.js:24`<br>`web/js/rede/continuidade.js:32`<br>`web/js/rede/controladores.js:21`<br>`web/js/rede/diagrama.js:66`<br>`web/js/rede/fluxo.js:62`<br>`web/js/rede/isolamento.js:58`<br>`web/js/rede/tracado.js:22`<br>`web/js/sig/sig.js:528` | **coberto** | com erro |
 | POST | `/api/rede` | rede de utilidades | — | — | **sem controle** | não se aplica |
 | GET | `/api/rede/consumidores/enderecos-sem-rede` | rede | — | — | **sem tela** | não se aplica |
 | POST | `/api/rede/consumidores/enderecos-sem-rede` | rede | — | — | **sem tela** | não se aplica |
@@ -585,7 +595,7 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | GET | `/api/rede/medicao/jusante` | rede_medicao | — | — | **sem controle** | não se aplica |
 | POST | `/api/rede/medicao/leituras` | rede_medicao | — | `lote de leituras de sensor/telemetria (item L4-13): publicado por script/logger de campo com escopo rede.medir, não por clique de usuário` | **sem tela por desenho** | não se aplica |
 | GET | `/api/rede/pacotes` | rede de utilidades | — | — | **sem controle** | não se aplica |
-| GET | `/api/rede/pacotes/{codigo}` | rede de utilidades | `/redes/configuracoes`, `/redes/controladores`, `/redes/diagrama`, `/redes/fluxo`, `/redes/tracado` | `web/js/rede/configuracoes.js:46`<br>`web/js/rede/controladores.js:44`<br>`web/js/rede/diagrama.js:213`<br>`web/js/rede/fluxo.js:80`<br>`web/js/rede/tracado.js:147` | **coberto** | com erro |
+| GET | `/api/rede/pacotes/{codigo}` | rede de utilidades | `/redes/configuracoes`, `/redes/controladores`, `/redes/diagrama`, `/redes/fluxo`, `/redes/tracado` | `web/js/rede/configuracoes.js:46`<br>`web/js/rede/controladores.js:44`<br>`web/js/rede/diagrama.js:213`<br>`web/js/rede/fluxo.js:80`<br>`web/js/rede/tracado.js:155` | **coberto** | com erro |
 | POST | `/api/rede/simples` | rede de utilidades — rede simples | `/redes/simples` | `web/js/rede/simples.js:98` | **coberto** | com erro |
 | GET | `/api/rede/{rede_id}` | rede de utilidades | — | — | **sem controle** | não se aplica |
 | DELETE | `/api/rede/{rede_id}` | rede de utilidades | — | — | **sem controle** | não se aplica |
@@ -607,6 +617,12 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | GET | `/api/rede/{rede_id}/config_tracado/{config_id}` | rede de utilidades — configuração de traçado | — | — | **sem controle** | não se aplica |
 | PUT | `/api/rede/{rede_id}/config_tracado/{config_id}` | rede de utilidades — configuração de traçado | — | — | **sem controle** | não se aplica |
 | DELETE | `/api/rede/{rede_id}/config_tracado/{config_id}` | rede de utilidades — configuração de traçado | `/redes/configuracoes` | `web/js/rede/configuracoes.js:70` | **coberto** | com erro |
+| DELETE | `/api/rede/{rede_id}/continuidade` | rede de utilidades — continuidade DEC/FEC | `/redes/continuidade` | `web/js/rede/continuidade.js:155` | **coberto** | com erro |
+| GET | `/api/rede/{rede_id}/continuidade/alimentadores` | rede de utilidades — continuidade DEC/FEC | `/redes/continuidade` | `web/js/rede/continuidade.js:119` | **coberto** | com erro |
+| GET | `/api/rede/{rede_id}/continuidade/conjuntos` | rede de utilidades — continuidade DEC/FEC | — | — | **sem controle** | não se aplica |
+| GET | `/api/rede/{rede_id}/continuidade/dic-fic` | rede de utilidades — continuidade DEC/FEC | — | — | **sem controle** | não se aplica |
+| POST | `/api/rede/{rede_id}/continuidade/importar` | rede de utilidades — continuidade DEC/FEC | `/redes/continuidade` | `web/js/rede/continuidade.js:140` | **coberto** | com erro |
+| GET | `/api/rede/{rede_id}/continuidade/painel` | rede de utilidades — continuidade DEC/FEC | `/redes/continuidade` | `web/js/rede/continuidade.js:112` | **coberto** | com erro |
 | POST | `/api/rede/{rede_id}/controlador` | rede de utilidades — controladores e tiers | — | — | **sem controle** | não se aplica |
 | GET | `/api/rede/{rede_id}/controlador/{controlador_id}` | rede de utilidades — controladores e tiers | `/redes/controladores` | `web/js/rede/controladores.js:75` | **coberto** | com erro |
 | DELETE | `/api/rede/{rede_id}/controlador/{controlador_id}` | rede de utilidades — controladores e tiers | `/redes/controladores` | `web/js/rede/controladores.js:90` | **coberto** | com erro |
@@ -628,12 +644,17 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | GET | `/api/rede/{rede_id}/faixas` | rede de utilidades — identificadores | — | — | **sem controle** | não se aplica |
 | POST | `/api/rede/{rede_id}/faixas` | rede de utilidades — identificadores | — | — | **sem controle** | não se aplica |
 | DELETE | `/api/rede/{rede_id}/faixas/{faixa_id}` | rede de utilidades — identificadores | — | — | **sem controle** | não se aplica |
+| POST | `/api/rede/{rede_id}/feicoes` | rede de utilidades | — | — | **sem controle** | não se aplica |
 | GET | `/api/rede/{rede_id}/feicoes/linhas` | rede de utilidades — topologia | — | — | **sem controle** | não se aplica |
 | POST | `/api/rede/{rede_id}/feicoes/linhas` | rede de utilidades — topologia | — | — | **sem controle** | não se aplica |
+| GET | `/api/rede/{rede_id}/feicoes/linhas.geojson` | rede de utilidades — topologia | `/sig` | `web/js/sig/sig.js:468` | **coberto** | com erro |
 | POST | `/api/rede/{rede_id}/feicoes/linhas/applyEdits` | rede de utilidades — topologia | — | — | **sem controle** | não se aplica |
 | GET | `/api/rede/{rede_id}/feicoes/pontos` | rede de utilidades — topologia | — | — | **sem controle** | não se aplica |
 | POST | `/api/rede/{rede_id}/feicoes/pontos` | rede de utilidades — topologia | — | — | **sem controle** | não se aplica |
+| GET | `/api/rede/{rede_id}/feicoes/pontos.geojson` | rede de utilidades — topologia | `/rede/medicao/ficha`, `/sig` | `web/js/rede/medicao_ficha.js:150`<br>`web/js/sig/sig.js:469` | **coberto** | com erro |
 | POST | `/api/rede/{rede_id}/feicoes/pontos/applyEdits` | rede de utilidades — topologia | — | — | **sem controle** | não se aplica |
+| GET | `/api/rede/{rede_id}/feicoes/{feicao_id}/isolamento` | rede de utilidades | — | — | **sem controle** | não se aplica |
+| POST | `/api/rede/{rede_id}/feicoes/{feicao_id}/ligar` | rede de utilidades | — | — | **sem controle** | não se aplica |
 | GET | `/api/rede/{rede_id}/gas/pressao` | rede de utilidades — gás e esgoto | — | — | **sem tela** | não se aplica |
 | GET | `/api/rede/{rede_id}/importacoes` | rede de utilidades — conector OSM | — | — | **sem tela** | não se aplica |
 | POST | `/api/rede/{rede_id}/importar-osm` | rede de utilidades — conector OSM | — | — | **sem tela** | não se aplica |
@@ -662,17 +683,19 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | POST | `/api/rede/{rede_id}/teksi` | rede de utilidades — gás e esgoto | — | — | **sem tela** | não se aplica |
 | PUT | `/api/rede/{rede_id}/tier/{codigo}/propagadores` | rede de utilidades — subredes | — | — | **sem controle** | não se aplica |
 | GET | `/api/rede/{rede_id}/tiers` | rede de utilidades — controladores e tiers | — | — | **sem controle** | não se aplica |
+| PUT | `/api/rede/{rede_id}/tipos/{tipo_id}/categorias` | rede de utilidades | — | — | **sem controle** | não se aplica |
+| PUT | `/api/rede/{rede_id}/tipos/{tipo_id}/restricoes` | rede de utilidades | — | — | **sem controle** | não se aplica |
 | GET | `/api/rede/{rede_id}/topologia` | rede de utilidades — topologia | — | — | **sem controle** | não se aplica |
 | GET | `/api/rede/{rede_id}/topologia/alcance` | rede de utilidades — topologia | — | — | **sem controle** | não se aplica |
 | GET | `/api/rede/{rede_id}/topologia/areas-sujas` | rede de utilidades — topologia | — | — | **sem controle** | não se aplica |
 | GET | `/api/rede/{rede_id}/topologia/arestas` | rede de utilidades — topologia | — | — | **sem controle** | não se aplica |
 | POST | `/api/rede/{rede_id}/topologia/habilitar` | rede de utilidades — topologia | — | — | **sem controle** | não se aplica |
 | GET | `/api/rede/{rede_id}/topologia/nos` | rede de utilidades — topologia | — | — | **sem controle** | não se aplica |
-| GET | `/api/rede/{rede_id}/tracados` | rede de utilidades — resultado de traçado | `/redes/tracado` | `web/js/rede/tracado.js:147` | **coberto** | com erro |
-| POST | `/api/rede/{rede_id}/tracados/{execucao_id}/repetir` | rede de utilidades — resultado de traçado | `/redes/tracado` | `web/js/rede/tracado.js:162` | **coberto** | com erro |
+| GET | `/api/rede/{rede_id}/tracados` | rede de utilidades — resultado de traçado | `/redes/tracado` | `web/js/rede/tracado.js:155` | **coberto** | com erro |
+| POST | `/api/rede/{rede_id}/tracados/{execucao_id}/repetir` | rede de utilidades — resultado de traçado | `/redes/tracado` | `web/js/rede/tracado.js:170` | **coberto** | com erro |
 | GET | `/api/rede/{rede_id}/tracar` | rede de utilidades | — | — | **sem controle** | não se aplica |
-| POST | `/api/rede/{rede_id}/tracar` | rede de utilidades — topologia | `/redes/isolamento`, `/redes/tracado` | `web/js/rede/isolamento.js:112`<br>`web/js/rede/tracado.js:99` | **coberto** | com erro |
-| POST | `/api/rede/{rede_id}/tracar/camada` | rede de utilidades — resultado de traçado | `/redes/tracado` | `web/js/rede/tracado.js:119` | **coberto** | com erro |
+| POST | `/api/rede/{rede_id}/tracar` | rede de utilidades — topologia | `/redes/isolamento`, `/redes/tracado` | `web/js/rede/isolamento.js:112`<br>`web/js/rede/tracado.js:106` | **coberto** | com erro |
+| POST | `/api/rede/{rede_id}/tracar/camada` | rede de utilidades — resultado de traçado | `/redes/tracado` | `web/js/rede/tracado.js:127` | **coberto** | com erro |
 | POST | `/api/rede/{rede_id}/tracar/exportar` | rede de utilidades — resultado de traçado | — | — | **sem controle** | não se aplica |
 | POST | `/api/rede/{rede_id}/validar` | rede de utilidades | — | — | **sem controle** | não se aplica |
 | POST | `/api/rede/{rede_id}/validar_extensao` | rede de utilidades | — | — | **sem controle** | não se aplica |
@@ -719,7 +742,7 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | GET | `/api/sso/saml/slo` | login | — | `callback de Single Logout do SAML: POST montado pelo IdP, nunca pela nossa web/` | **sem tela por desenho** | não se aplica |
 | POST | `/api/sso/saml/slo` | login | — | `callback de Single Logout do SAML: POST montado pelo IdP, nunca pela nossa web/` | **sem tela por desenho** | não se aplica |
 | GET | `/api/status` | status | `/status` | `web/js/status.js:144` | **coberto** | com erro |
-| GET | `/api/sugerir` | geocodificador | `/sig` | `web/js/mapa/busca.js:78`<br>`web/js/sig/sig.js:275` | **coberto** | com erro |
+| GET | `/api/sugerir` | geocodificador | `/sig` | `web/js/mapa/busca.js:78` | **coberto** | com erro |
 | GET | `/api/telemetria` | telemetria | — | — | **sem tela** | não se aplica |
 | PUT | `/api/telemetria` | telemetria | — | — | **sem tela** | não se aplica |
 | GET | `/api/telemetria/appliances` | telemetria | — | — | **sem tela** | não se aplica |
@@ -737,11 +760,12 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | GET | `/api/tokens/{id}/log` | tokens | `/admin/tokens` | `web/js/auth/tokens.js:194` | **coberto** | com erro |
 | POST | `/api/tokens/{id}/renovar` | tokens | `/admin/tokens`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/auth/tokens.js:123`<br>`web/js/catalogo/tipos/token_servico.js:68` | **coberto** | com erro |
 | POST | `/api/uploads` | uploads | `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/paineis/{id}`, `/sig`, `/uploads` | `web/js/catalogo/api.js:153`<br>`web/js/uploads/enviar.js:190`<br>`web/js/uploads/nucleo.js:64` | **coberto** | com erro |
-| GET | `/api/uploads/tipos` | uploads | `/sig`, `/uploads` | `web/js/sig/sig.js:553`<br>`web/js/uploads/enviar.js:132`<br>`web/js/uploads/enviar.js:55`<br>`web/js/uploads/nucleo.js:52`<br>`web/js/uploads/nucleo.js:58` | **coberto** | com erro |
-| GET | `/api/uploads/{id}` | uploads | `/sig`, `/uploads` | `web/js/sig/sig.js:553`<br>`web/js/uploads/enviar.js:132`<br>`web/js/uploads/enviar.js:55`<br>`web/js/uploads/nucleo.js:52`<br>`web/js/uploads/nucleo.js:58` | **coberto** | com erro |
+| GET | `/api/uploads/tipos` | uploads | `/sig`, `/uploads` | `web/js/uploads/enviar.js:132`<br>`web/js/uploads/enviar.js:55`<br>`web/js/uploads/nucleo.js:52`<br>`web/js/uploads/nucleo.js:58` | **coberto** | com erro |
+| GET | `/api/uploads/{id}` | uploads | `/sig`, `/uploads` | `web/js/uploads/enviar.js:132`<br>`web/js/uploads/enviar.js:55`<br>`web/js/uploads/nucleo.js:52`<br>`web/js/uploads/nucleo.js:58` | **coberto** | com erro |
 | DELETE | `/api/uploads/{id}` | uploads | `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/paineis/{id}` | `web/js/catalogo/api.js:156` | **coberto** | com erro |
 | POST | `/api/uploads/{id}/concluir` | uploads | `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/paineis/{id}` | `web/js/catalogo/api.js:155` | **coberto** | com erro |
 | PUT | `/api/uploads/{id}/partes/{n}` | uploads | `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/paineis/{id}` | `web/js/catalogo/api.js:154` | **coberto** | com erro |
+| GET | `/api/uso` | uso | `/admin/uso` | `web/js/admin/uso.js:64` | **coberto** | com erro |
 | GET | `/api/usuarios` | usuarios | `/admin`, `/admin/auditoria`, `/admin/grupos`, `/admin/log`, `/admin/usuarios`, `/colecao`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/paineis/{id}` | `web/js/auth/admin.js:65`<br>`web/js/auth/auditoria.js:38`<br>`web/js/auth/grupos.js:302`<br>`web/js/auth/log.js:35`<br>`web/js/auth/usuarios.js:106`<br>`web/js/catalogo/api.js:150` | **coberto** | com erro |
 | POST | `/api/usuarios` | usuarios | `/admin/usuarios` | `web/js/auth/usuarios.js:268` | **coberto** | com erro |
 | POST | `/api/usuarios/lote` | usuarios | `/admin/usuarios` | `web/js/auth/usuarios.js:144` | **coberto** | com erro |
@@ -770,7 +794,7 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | GET | `/api/widgets/externos/{nome}` | widgets | — | — | **sem controle** | não se aplica |
 | DELETE | `/api/widgets/externos/{nome}` | widgets | — | — | **sem controle** | não se aplica |
 | GET | `/api/widgets/externos/{nome}/i18n.json` | widgets | `/aplicativo` | `web/js/widgets/externos.js:32` | **coberto** | com erro |
-| GET | `/api/widgets/externos/{nome}/modulo.js` | widgets | `/aplicativo`, `/executar` | `web/js/widgets/externos.js:21`<br>`web/js/widgets/externos.js:63`<br>`web/js/widgets/registro.js:272` | **coberto** | com erro |
+| GET | `/api/widgets/externos/{nome}/modulo.js` | widgets | `/aplicativo` | `web/js/widgets/externos.js:21`<br>`web/js/widgets/externos.js:63` | **coberto** | com erro |
 | GET | `/csw` | csw | — | — | **sem tela** | não se aplica |
 | GET | `/notebooks/{slug}` | notebooks | — | `proxy transparente para o Jupyter do inquilino (item L2-16-b): a UI é a própria interface do Jupyter dentro do iframe, não uma tela nossa em web/ — nunca vai haver chamador nosso para este prefixo` | **sem tela por desenho** | não se aplica |
 | GET | `/notebooks/{slug}/` | notebooks | — | `proxy transparente para o Jupyter do inquilino (item L2-16-b): a UI é a própria interface do Jupyter dentro do iframe, não uma tela nossa em web/ — nunca vai haver chamador nosso para este prefixo` | **sem tela por desenho** | não se aplica |
@@ -832,7 +856,7 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | POST | `/rest/services/{item_id}/FeatureServer/{camada_id}/applyEdits` | edicao-esri | — | `protocolo FeatureServer da Esri (query/applyEdits/addFeatures/anexos/replica) consumido DIRETO por ArcGIS Pro/Field Maps/AGOL depois que o usuário cola a URL do serviço (mostrada na ficha da camada); não há operação individual para virar botão nosso` | **sem tela por desenho** | não se aplica |
 | POST | `/rest/services/{item_id}/FeatureServer/{camada_id}/calculate` | edicao-esri | — | `protocolo FeatureServer da Esri (query/applyEdits/addFeatures/anexos/replica) consumido DIRETO por ArcGIS Pro/Field Maps/AGOL depois que o usuário cola a URL do serviço (mostrada na ficha da camada); não há operação individual para virar botão nosso` | **sem tela por desenho** | não se aplica |
 | POST | `/rest/services/{item_id}/FeatureServer/{camada_id}/deleteFeatures` | edicao-esri | — | `protocolo FeatureServer da Esri (query/applyEdits/addFeatures/anexos/replica) consumido DIRETO por ArcGIS Pro/Field Maps/AGOL depois que o usuário cola a URL do serviço (mostrada na ficha da camada); não há operação individual para virar botão nosso` | **sem tela por desenho** | não se aplica |
-| GET | `/rest/services/{item_id}/FeatureServer/{camada_id}/query` | consulta-esri | `/aplicativo`, `/executar`, `/sig` | `web/js/app/consulta.js:4`<br>`web/js/mapa/tabela_atributos.js:27`<br>`web/js/sig/comparar.js:279`<br>`web/js/sig/comparar.js:322` | **coberto** | com erro |
+| GET | `/rest/services/{item_id}/FeatureServer/{camada_id}/query` | consulta-esri | `/sig` | `web/js/mapa/tabela_atributos.js:27`<br>`web/js/sig/comparar.js:279`<br>`web/js/sig/comparar.js:322` | **coberto** | com erro |
 | POST | `/rest/services/{item_id}/FeatureServer/{camada_id}/query` | consulta-esri | — | `protocolo FeatureServer da Esri (query/applyEdits/addFeatures/anexos/replica) consumido DIRETO por ArcGIS Pro/Field Maps/AGOL depois que o usuário cola a URL do serviço (mostrada na ficha da camada); não há operação individual para virar botão nosso` | **sem tela por desenho** | não se aplica |
 | GET | `/rest/services/{item_id}/FeatureServer/{camada_id}/queryAttachments` | edicao-esri | — | `protocolo FeatureServer da Esri (query/applyEdits/addFeatures/anexos/replica) consumido DIRETO por ArcGIS Pro/Field Maps/AGOL depois que o usuário cola a URL do serviço (mostrada na ficha da camada); não há operação individual para virar botão nosso` | **sem tela por desenho** | não se aplica |
 | POST | `/rest/services/{item_id}/FeatureServer/{camada_id}/queryAttachments` | edicao-esri | — | `protocolo FeatureServer da Esri (query/applyEdits/addFeatures/anexos/replica) consumido DIRETO por ArcGIS Pro/Field Maps/AGOL depois que o usuário cola a URL do serviço (mostrada na ficha da camada); não há operação individual para virar botão nosso` | **sem tela por desenho** | não se aplica |
@@ -984,7 +1008,7 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 
 | página | arquivo | existe | vazio | carregando | erro | negado |
 |---|---|---|---|---|---|---|
-| `/` | index.html | sim | **não** | **não** | sim | sim |
+| `/` | index.html | sim | sim | **não** | sim | sim |
 | `/entrar` | login.html | sim | **não** | sim | sim | sim |
 | `/conta` | conta.html | sim | sim | sim | sim | sim |
 | `/admin` | admin/index.html | sim | sim | sim | sim | sim |
@@ -1000,11 +1024,12 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | `/admin/categorias` | admin/categorias.html | sim | sim | sim | sim | sim |
 | `/admin/inquilinos` | admin/inquilinos.html | sim | sim | sim | sim | sim |
 | `/admin/backup` | admin/backup.html | sim | sim | sim | sim | sim |
+| `/admin/uso` | admin/uso.html | sim | sim | sim | sim | sim |
 | `/conteudo` | conteudo.html | sim | sim | sim | sim | sim |
 | `/conteudo/lixeira` | conteudo_lixeira.html | sim | sim | sim | sim | sim |
 | `/conteudo/{id}` | conteudo_item.html | sim | sim | sim | sim | sim |
 | `/imagens/{id}/ficha` | imagem_ficha.html | sim | **não** | **não** | sim | sim |
-| `/mapa` | mapa.html | sim | sim | **não** | sim | sim |
+| `/mapa` | mapa.html | sim | sim | sim | sim | sim |
 | `/modelo/{id}` | modelo.html | sim | **não** | sim | sim | sim |
 | `/sig` | sig.html | sim | sim | sim | sim | sim |
 | `/aplicativo` | aplicativo.html | sim | sim | sim | sim | **não** |
@@ -1013,7 +1038,8 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | `/simbolos` | simbolos.html | sim | **não** | **não** | sim | sim |
 | `/analise` | analise.html | sim | **não** | **não** | sim | sim |
 | `/cena` | cena.html | sim | sim | **não** | sim | sim |
-| `/acervo` | acervo.html | sim | **não** | **não** | sim | sim |
+| `/acervo` | acervo.html | sim | sim | sim | sim | sim |
+| `/acervo/frescor` | acervo_frescor.html | sim | **não** | **não** | sim | sim |
 | `/conexoes` | conexoes.html | sim | sim | sim | sim | sim |
 | `/chamados` | chamados.html | sim | sim | **não** | sim | sim |
 | `/admin/chamados` | admin/chamados.html | sim | sim | **não** | sim | sim |
@@ -1030,6 +1056,7 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | `/redes/tracado` | redes_tracado.html | sim | **não** | **não** | sim | sim |
 | `/redes/isolamento` | redes_isolamento.html | sim | **não** | **não** | sim | sim |
 | `/camadas/{id}/dominios` | camada_dominios.html | sim | sim | **não** | sim | sim |
+| `/redes/continuidade` | redes_continuidade.html | sim | sim | **não** | sim | sim |
 | `/uploads` | uploads.html | sim | **não** | **não** | sim | sim |
 | `/estilo-guia` | estilo_guia.html | sim | sim | sim | sim | sim |
 | `/amc/pareto` | amc_pareto.html | sim | **não** | **não** | sim | sim |
@@ -1053,6 +1080,7 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | `/estilo` | estilo.html | sim | sim | sim | sim | sim |
 | `/importacoes` | importacoes.html | sim | sim | sim | sim | sim |
 | `/versoes` | versoes.html | sim | **não** | **não** | sim | sim |
+| `/camadas/{id}/feicoes/{globalid}/historico` | feicao_historico.html | sim | **não** | **não** | sim | sim |
 | `/admin/logins` | admin/logins.html | sim | sim | sim | sim | sim |
 | `/coleta` | coleta.html | sim | **não** | **não** | sim | sim |
 | `/ferramenta` | ferramenta.html | sim | **não** | sim | sim | sim |
@@ -1095,9 +1123,9 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 - **log**: POST `/api/log/nivel` (sem controle); DELETE `/api/log/nivel` (sem controle)
 - **login**: PUT `/api/org/oidc/{provedor_id}` (sem controle); DELETE `/api/org/oidc/{provedor_id}` (sem controle); POST `/api/org/saml` (sem controle); PUT `/api/org/saml/{provedor_id}` (sem controle); DELETE `/api/org/saml/{provedor_id}` (sem controle); PUT `/api/org/sso/oidc` (sem controle); PUT `/api/org/sso/saml` (sem controle)
 - **logins**: POST `/api/usuarios/{id}/desregistrar` (sem controle)
-- **mapa**: POST `/api/anotacoes` (sem controle); PATCH `/api/anotacoes/{id}` (sem controle); DELETE `/api/anotacoes/{id}` (sem controle); POST `/api/mapa/camadas/{id}/filtrar` (sem controle); POST `/api/mapa/camadas/{id}/selecionar` (sem controle); POST `/api/mapa/pacotes/importar` (sem controle); POST `/api/mapa/selecao-espacial` (sem controle); POST `/api/mapa/{mapa_id}/desenho/promover` (sem controle)
+- **mapa**: POST `/api/mapa/camadas/{id}/filtrar` (sem controle); POST `/api/mapa/camadas/{id}/selecionar` (sem controle); POST `/api/mapa/selecao-espacial` (sem controle)
 - **mapas-base**: POST `/api/mapas-base/instalar` (sem tela); POST `/api/mapas-base/{id}/tornar-padrao` (sem tela)
-- **migracao**: DELETE `/api/migracao/inventarios/{id}` (sem controle)
+- **migracao**: POST `/api/migracao/clones` (sem controle); DELETE `/api/migracao/clones/{id}` (sem controle); DELETE `/api/migracao/inventarios/{id}` (sem controle)
 - **modelos3d**: POST `/api/modelos3d` (sem controle); DELETE `/api/modelos3d/{id}` (sem controle)
 - **multiescala**: POST `/api/multiescala/conjuntos` (sem controle); DELETE `/api/multiescala/conjuntos/{id}` (sem controle); POST `/api/multiescala/conjuntos/{id}/macro` (sem controle); POST `/api/multiescala/execucoes/{id}/backtest` (sem controle); POST `/api/multiescala/execucoes/{id}/corredor` (sem controle); POST `/api/multiescala/execucoes/{id}/micro` (sem controle); POST `/api/multiescala/execucoes/{id}/regioes` (sem controle); POST `/api/multiescala/fatores` (sem controle); DELETE `/api/multiescala/fatores/{id}` (sem controle); POST `/api/multiescala/fatores/{id}/amostras` (sem controle)
 - **notificacoes**: POST `/api/notificacoes/lidas` (sem tela); DELETE `/api/notificacoes/{id}` (sem tela)
@@ -1107,7 +1135,7 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 - **presenca**: POST `/api/itens/{id}/presenca` (sem tela)
 - **publicacao**: DELETE `/api/itens/{id}/publicacao` (sem controle)
 - **rede**: POST `/api/isocrona` (sem tela); POST `/api/matriz` (sem tela); POST `/api/rede/consumidores/enderecos-sem-rede` (sem tela); POST `/api/rede/consumidores/jusante/calcular` (sem tela); POST `/api/rota` (sem tela)
-- **rede de utilidades**: POST `/api/rede` (sem controle); DELETE `/api/rede/{rede_id}` (sem controle); POST `/api/rede/{rede_id}/applyEdits` (sem controle); PUT `/api/rede/{rede_id}/area_sujas/modo` (sem controle); POST `/api/rede/{rede_id}/pacote` (sem controle); POST `/api/rede/{rede_id}/regras.csv` (sem controle); PUT `/api/rede/{rede_id}/regras/ativacao` (sem controle); POST `/api/rede/{rede_id}/validar` (sem controle); POST `/api/rede/{rede_id}/validar_extensao` (sem controle)
+- **rede de utilidades**: POST `/api/rede` (sem controle); DELETE `/api/rede/{rede_id}` (sem controle); POST `/api/rede/{rede_id}/applyEdits` (sem controle); PUT `/api/rede/{rede_id}/area_sujas/modo` (sem controle); POST `/api/rede/{rede_id}/feicoes` (sem controle); POST `/api/rede/{rede_id}/feicoes/{feicao_id}/ligar` (sem controle); POST `/api/rede/{rede_id}/pacote` (sem controle); POST `/api/rede/{rede_id}/regras.csv` (sem controle); PUT `/api/rede/{rede_id}/regras/ativacao` (sem controle); PUT `/api/rede/{rede_id}/tipos/{tipo_id}/categorias` (sem controle); PUT `/api/rede/{rede_id}/tipos/{tipo_id}/restricoes` (sem controle); POST `/api/rede/{rede_id}/validar` (sem controle); POST `/api/rede/{rede_id}/validar_extensao` (sem controle)
 - **rede de utilidades — EPANET**: POST `/api/rede/{rede_id}/epanet` (sem tela)
 - **rede de utilidades — MATPOWER**: POST `/api/rede/{rede_id}/matpower` (sem tela)
 - **rede de utilidades — atributos**: POST `/api/rede/{rede_id}/atributos/conectividade` (sem tela); POST `/api/rede/{rede_id}/atributos/propagar-fase` (sem tela); POST `/api/rede/{rede_id}/atributos/sincronizar` (sem tela); POST `/api/rede/{rede_id}/atributos/substituicoes` (sem tela)
@@ -1142,100 +1170,14 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 - `web/js/auth/plataforma.js:239 GET /api/plataforma/fila`
 - `web/js/auth/plataforma.js:288 GET /api/plataforma/eventos`
 - `web/js/catalogo/api.js:68 GET /api/openapi.json`
-- `web/js/catalogo/tipos/raster.js:3 GET /svc/<token>/raster/<item>/...`
 - `web/js/mapa/motor.js:364 GET /api/multiescala/execucoes/{x}/celulas`
 - `web/js/mapa/render_layout_entrada.js:25 GET /api/render/layout/estilo`
 - `web/js/mapa/tabela.js:90 GET /api/camadas/{x}/tabela`
 - `web/js/mapa/tabela_atributos.js:52 GET /api/rede/{x}/feicoes/{x}.geojson`
 - `web/js/portal/portal.js:254 GET /api/openapi.json`
-- `web/js/rede/medicao_ficha.js:150 GET /api/rede/{x}/feicoes/pontos.geojson`
-- `web/js/sig/sig.js:467 GET /api/rede/{x}/feicoes/linhas.geojson`
-- `web/js/sig/sig.js:468 GET /api/rede/{x}/feicoes/pontos.geojson`
 - `web/js/simbolos/galeria.js:24 GET /api/simbolos/sprite/{x}.json`
 - `web/js/simbolos/galeria.js:29 GET /api/simbolos/sprite/{x}.png`
 
 ## Backlog: hipóteses com efeito visível × páginas e rotas cobertas
 
-| item | estado do item | referência no texto | veredito |
-|---|---|---|---|
-| L0-02-a-login-sessao | entregue | `/api/eu` | rota coberta |
-| L0-02-a-login-sessao | entregue | `/api/login` | rota coberta |
-| L0-02-a-login-sessao | entregue | `/api/logout` | rota coberta |
-| L0-02-a-login-sessao | entregue | `/entrar` | página existe |
-| L0-03-a-modelo-item | entregue | `/api/itens` | rota coberta |
-| L0-03-a-modelo-item | entregue | `/api/itens/{id}` | rota coberta |
-| L0-03-i-dependencias | entregue | `/api/itens/{camada}/usado_por` | rota sem tela |
-| L0-06-e-status | parcial | `/api/status` | rota coberta |
-| L0-07-f-console-plataforma | parcial | `/api/plataforma` | rota coberta |
-| L0-07-f-console-plataforma | parcial | `/p` | página inexistente |
-| L0-08-a-oidc | parcial | `/api/sso` | rota coberta |
-| L0-08-b-saml | parcial | `/api/sso/saml/metadata` | rota sem tela |
-| L0-09-c-xml-iso-validacao | parcial | `/api/itens/{id}/metadado` | rota coberta |
-| L2-01-a-documento-mapa | entregue | `/api/mapas` | rota coberta |
-| L2-01-a-documento-mapa | entregue | `/api/mapas/{id}/completo` | rota coberta |
-| L2-01-a-documento-mapa | entregue | `/c` | página inexistente |
-| L2-02-b-classificacao-servidor | parcial | `/api/camadas/{id}/classes` | rota sem tela |
-| L2-03-a-api-edicao-transacional | parcial | `/api/camadas/{id}/edicoes` | rota coberta |
-| L2-04-d-featureserver-edicao-anexos | parcial | `/uploads/upload` | página existe |
-| L2-04-g-ogc-api-features-crs-cql2 | parcial | `/api` | página inexistente |
-| L2-06-d-atualizacao-viva-sse | parcial | `/api/eventos` | rota coberta |
-| L2-11-b-geocodificador-brasil | parcial | `/api/geocodificar` | rota coberta |
-| L5-05-documento-versoes | entregue | `/api/esquemas` | rota sem tela |
-| L5-05-documento-versoes | entregue | `/api/itens/{id}/versoes` | rota coberta |
-| L2-01-a-basemap-local-pmtiles | entregue | `/mapa` | página existe |
-| UX-01-sistema-de-design | parcial | `/estilo-guia` | página existe |
-| UX-02-telas-entrada-conta-convite | parcial | `/aceitar-convite` | página existe |
-| UX-02-telas-entrada-conta-convite | parcial | `/conta` | página existe |
-| UX-02-telas-entrada-conta-convite | parcial | `/entrar` | página existe |
-| UX-02-telas-entrada-conta-convite | parcial | `/redefinir-senha` | página existe |
-| UX-03-tela-conteudo-item-lixeira | parcial | `/conteudo` | página existe |
-| UX-03-tela-conteudo-item-lixeira | parcial | `/conteudo/item` | página existe |
-| UX-03-tela-conteudo-item-lixeira | parcial | `/conteudo/lixeira` | página existe |
-| UX-04-tela-mapa-polimento | parcial | `/mapa` | página existe |
-| UX-05-telas-conexoes-uploads-tarefas-compartilhado | parcial | `/c` | página inexistente |
-| UX-05-telas-conexoes-uploads-tarefas-compartilhado | parcial | `/conexoes` | página existe |
-| UX-05-telas-conexoes-uploads-tarefas-compartilhado | parcial | `/tarefas` | página existe |
-| UX-05-telas-conexoes-uploads-tarefas-compartilhado | parcial | `/uploads` | página existe |
-| UX-06-tela-administracao-inquilino | parcial | `/api/convites` | rota coberta |
-| UX-06-tela-administracao-inquilino | parcial | `/api/cotas` | rota sem tela |
-| UX-06-tela-administracao-inquilino | parcial | `/api/grupos` | rota coberta |
-| UX-06-tela-administracao-inquilino | parcial | `/api/org` | rota coberta |
-| UX-06-tela-administracao-inquilino | parcial | `/api/sso` | rota coberta |
-| UX-09-telas-ferramentas-e-tarefas | parcial | `/tarefas` | página existe |
-| UX-10-acervo-sem-tela | parcial | `/api/acervo/{fonte_id}/adicionar` | rota coberta |
-| UX-11-arquivos-sem-controle | parcial | `/api/arquivos` | rota coberta |
-| UX-11-arquivos-sem-controle | parcial | `/api/arquivos/{sha256}` | rota coberta |
-| UX-12-categorias-sem-controle | parcial | `/api/categorias` | rota coberta |
-| UX-12-categorias-sem-controle | parcial | `/api/categorias/importar` | rota coberta |
-| UX-13-conexoes-sem-controle | parcial | `/api/conexoes` | rota coberta |
-| UX-13-conexoes-sem-controle | parcial | `/api/conexoes/{id}` | rota coberta |
-| UX-14-geocodificador-sem-tela | parcial | `/api/geocodificar` | rota coberta |
-| UX-14-geocodificador-sem-tela | parcial | `/api/reverso` | rota coberta |
-| UX-16-ingestao-sem-tela | parcial | `/api/importacoes` | rota coberta |
-| UX-16-ingestao-sem-tela | parcial | `/api/importacoes/{id}` | rota coberta |
-| UX-16-ingestao-sem-tela | parcial | `/api/importacoes/{id}/confirmar` | rota coberta |
-| UX-17-login-sem-controle | parcial | `/api/login/ldap` | rota coberta |
-| UX-17-login-sem-controle | parcial | `/api/org/ldap` | rota coberta |
-| UX-17-login-sem-controle | parcial | `/api/org/ldap/importar` | rota coberta |
-| UX-18-plataforma-sem-tela | parcial | `/api/plataforma/inquilinos` | rota coberta |
-| UX-18-plataforma-sem-tela | parcial | `/api/plataforma/inquilinos/{id}` | rota coberta |
-| UX-18-plataforma-sem-tela | parcial | `/api/plataforma/inquilinos/{id}/reativar` | rota coberta |
-| UX-18-plataforma-sem-tela | parcial | `/api/plataforma/inquilinos/{id}/suspender` | rota coberta |
-| UX-19-rede-sem-tela | parcial | `/api/isocrona` | rota sem tela |
-| UX-19-rede-sem-tela | parcial | `/api/matriz` | rota sem tela |
-| UX-19-rede-sem-tela | parcial | `/api/rota` | rota sem tela |
-| UX-20-usuarios-sem-controle | parcial | `/api/papeis/{id}` | rota coberta |
-| UX-21-multiescala-sem-tela | parcial | `/api/multiescala/conjuntos` | rota sem tela |
-| UX-21-multiescala-sem-tela | parcial | `/api/multiescala/conjuntos/{id}` | rota sem tela |
-| UX-21-multiescala-sem-tela | parcial | `/api/multiescala/conjuntos/{id}/macro` | rota sem tela |
-| UX-21-multiescala-sem-tela | parcial | `/api/multiescala/execucoes/{id}/micro` | rota sem tela |
-| UX-21-multiescala-sem-tela | parcial | `/api/multiescala/fatores` | rota sem tela |
-| UX-21-multiescala-sem-tela | parcial | `/api/multiescala/fatores/{id}` | rota sem tela |
-| UX-21-multiescala-sem-tela | parcial | `/api/multiescala/fatores/{id}/amostras` | rota sem tela |
-| UX-23-mapa-sem-controle | parcial | `/api/anotacoes/{id}` | rota sem tela |
-| UX-23-mapa-sem-controle | parcial | `/api/mapa/camadas/{id}/filtrar` | rota sem tela |
-| UX-23-mapa-sem-controle | parcial | `/api/mapa/camadas/{id}/selecionar` | rota sem tela |
-| UX-23-mapa-sem-controle | parcial | `/api/mapa/pacotes/importar` | rota sem tela |
-| UX-23-mapa-sem-controle | parcial | `/api/mapa/selecao-espacial` | rota sem tela |
-
-Itens com efeito visível que não citam página nem rota no texto (131; a cobertura deles é conferida pelo e2e do item, não por este cruzamento): L0-02-b-politica-senha-bloqueio, L0-02-c-2fa-totp, L0-02-d-token-servico, L0-02-f-tela-usuarios, L0-02-g-perfil-usuario, L0-02-tenant-auth, L0-03-b-pastas-tags-categorias-classificacao, L0-03-catalogo, L0-03-d-grupos, L0-03-g-detalhe-item-miniatura, L0-04-d-formatos-base, L0-04-e-formatos-cad, L0-04-h-exportar, L0-04-i-fonte-registrada, L0-04-ingest-vetor, L0-05-d-periodicos, L0-05-e-justica-entre-inquilinos, L0-05-jobs, L0-06-c-restore-drill, L0-06-d-exportar-inquilino, L0-07-b-papeis-privilegios, L0-07-d-smtp-convites, L0-07-e-relatorios, L0-08-c-govbr, L0-08-d-ldap, L0-08-e-mapeamento-provisionamento, L0-09-a-procedencia, L0-09-b-editor-iso-mgb, L0-10-eventos-historico, L0-11-arquivos-objetos, L0-12-contrato-api-e-limites, L0-14-identidade-visual, L1-01-b-validacao-e-isolamento-da-entrada, L1-01-d-garage-por-inquilino, L1-01-f-formatos-de-entrada, L1-01-i-ciclo-de-vida-exclusao-e-coleta-de-lixo, L1-01-ingest-raster, L1-01-j-proveniencia-da-imagem-lastro, L2-01-b-martin-tiles-vetoriais, L2-01-c-lista-camadas-legenda, L2-01-e-mapas-base, L2-01-f-navegacao-medicao-coordenadas, L2-01-g-tabela-atributos, L2-01-h-selecao-filtros, L2-01-i-graficos-de-camada, L2-01-j-comparacao-cortina-tempo, L2-01-mapa-web, L2-02-a-modelo-estilo, L2-02-c-editor-simbologia-vetor, L2-02-d-rotulos, L2-02-e-simbolos-sprites-glifos, L2-03-b-ferramentas-geometria, L2-03-c-formulario-atributos-runtime, L2-03-f-edicao-em-lote-calculo-campo, L2-04-b-featureserver-catalogo-metadados, L2-04-c-featureserver-query, L2-04-f-mapserver-identify-legend-geometryserver, L2-04-h-wfs-2-gml, L2-04-j-conformidade-clientes-e-paridade, L2-04-servicos-esri-ogc, L2-05-a-catalogo-ferramentas-gpserver, L2-05-b-vetor-basico, L2-05-c-sobreposicao-agregacao, L2-05-d-grades-densidade-padroes-interpolacao, L2-05-e-raster-basico, L2-05-f-rede-isocrona-rota-ferramentas, L2-06-a-modelo-painel-fontes, L2-06-b-elementos-basicos, L2-06-c-acoes-seletores-filtros-cruzados, L2-07-b-formulario-de-coleta-xlsform, L2-07-campo, L2-07-e-odk-central-ponte, L2-08-a-leitor-portal-inventario, L2-08-migracao-agol, L2-09-3d, L2-09-c-modelos-gltf-ifc-3dtiles, L2-09-d-analise-3d-visibilidade, L2-10-c-linguagem-expressao, L2-10-d-regras-de-atributo, L2-11-a-geocodificacao-csv, L2-13-a-versoes-ramo-reconciliar, L2-16-c-script-vira-ferramenta, L3-01-b-unidades, L3-01-e-combinacao, L3-01-f-explicacao, L3-01-g-tela-motor, L3-01-h-presets, L3-01-i-exportacao-metodo, L3-04-restricoes, L3-05-localizar-regioes, L3-06-criterios-de-feicao, L3-08-pareto, L3-10-corredor-custo-minimo, L3-14-cobertura-dado-ausente, L3-16-desempenho-escala, L4-04-b-atualizar-e-exportar-subrede, L4-15-serie-temporal-da-rede, L4-parcelas-01-modelo-de-parcelas, L4-parcelas-02-fluxos-cogo, L5-01-a-layout-paginas, L5-01-c-widgets-dado, L5-01-d-widgets-pagina-menu, L5-01-e-acoes-configuraveis, L5-04-a-blocos-de-conteudo, L5-04-c-temas-capa-colecao, L5-06-motor-widgets, L5-07-fontes-vistas-mensagens, L5-08-editor-arrasto, L5-09-desfazer-refazer-rascunho, L5-10-temas-marca, L5-11-expressoes-no-navegador, L5-12-acessibilidade-i18n-construtores, L5-15-vista-movel-responsivo, L5-32-vistas-de-camada, L5-36-widgets-personalizados-sdk, L6-01-b-view-so-leitura, L6-01-d-ficha-fonte, L6-01-g-licenca-curada, L6-02-b-wms-wmts, L6-02-c-wfs-ogcapi, L6-02-conectores-vivos, L6-02-d-arcgis-rest-externo, L6-02-l-saude, L6-02-m-catalogo-endpoints-brasil, L7-08-c-sdk-js, L7-11-c-telemetria-opcional, L7-13-a-chamados, L7-20-trilha-auditoria, UX-07-telas-do-construtor-e-aplicativo, UX-08-telas-rede-de-utilidades-e-motor, UX-15-geocodificador-esri-sem-controle
+backlog indisponível nesta máquina (PLAT_LACO_ESTADO).
