@@ -102,11 +102,21 @@
    "comando": "tests/e2e/test_mapa_exportacao.py::test_png_por_layout_sai_no_tamanho_do_papel_e_com_o_titulo_dentro"
   },
   "previa_layout_a4_96dpi_bytes": {
-   "valor": 11504,
+   "valor": 11712,
    "unidade": "bytes",
    "comando": "POST /api/layouts/previa pela tela"
+  },
+  "pdf_por_layout_bytes": {
+   "valor": 6785,
+   "unidade": "bytes",
+   "comando": "tests/e2e/test_mapa_exportacao.py::test_pdf_por_layout_e_um_pdf_de_verdade_com_o_titulo"
+  },
+  "pdf_por_layout_paginas": {
+   "valor": 1,
+   "unidade": "páginas",
+   "comando": "pdftoppm -png -r 60 sobre o PDF gerado"
   }
  },
- "gerado_em": "2026-09-18T01:37:15Z",
- "git_sha": "e7a53e0d8e87"
+ "gerado_em": "2026-09-18T01:43:58Z",
+ "git_sha": "0e1182b9e4d2"
 }
