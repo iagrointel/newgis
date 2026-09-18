@@ -159,21 +159,23 @@ def _contexto(cur, tenant_id: int, usuario_id: int) -> None:
                 "set_config('plat.login', 'admin', true)", (str(tenant_id), str(usuario_id)))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L6-02-k: agenda_criar/agenda_retomar fazem 'SELECT conta, compara com a cota, INSERT' na mesma "
-    "transação, sem SELECT ... FOR UPDATE, sem advisory lock e sem constraint no banco. Duas transações que "
-    "leem o mesmo n antes de qualquer uma commitar passam as duas pelo teto — reproduzido aqui de forma "
-    "determinística (as duas leituras acontecem antes de qualquer INSERT, sem depender de timing de "
-    "thread): o teto de 1 agenda ativa (cota rebaixada para o teste) não impede a segunda inserção.",
-)
-def test_l6_02_k_teto_de_agendas_por_usuario_tem_corrida_de_checar_e_agir():
+# CONSERTADO (17-18/09/2026, ramo wt/l56): a migração 20260917T2300_agenda_teto_usuario_sem_corrida.sql
+# pôs o teto NO BANCO — gatilho BEFORE INSERT/UPDATE em plat.agenda que primeiro pega
+# `pg_advisory_xact_lock` pela chave do usuário e só então conta. A trava de transação serializa o
+# "checar-e-agir": a segunda transação espera a primeira commitar e reconta com o resultado dela à vista.
+# O teste deixou de ser xfail e passou a provar o OPOSTO: a segunda inserção é RECUSADA com SQLSTATE
+# 53400. Os pares positivos estão nos dois testes seguintes.
+def test_l6_02_k_teto_de_agendas_por_usuario_nao_tem_mais_corrida_de_checar_e_agir():
+    """Mesmo cenário determinístico da refutação (as duas leituras acontecem antes de qualquer INSERT, sem
+    depender de timing de thread). Antes, as duas inserções passavam e o usuário terminava com uma agenda
+    ativa acima do teto. Agora a segunda morre no gatilho e o total final respeita a cota."""
     tenant_id, usuario_id = 1, 2  # tenant 'demo', usuário 'admin' — o mesmo par de tests/jobs_sessao.py
     existentes = int(_psql(f"SELECT plat.agendas_ativas_usuario({usuario_id})"))
     cota_nova = existentes + 1
     _psql(f"UPDATE plat.tenant SET config = config || jsonb_build_object('cota_agendas_usuario', {cota_nova}) "
           f"WHERE id = {tenant_id}")
-    id1 = id2 = None
+    id1 = None
+    con1 = con2 = None
     try:
         con1, con2 = _conectar_app(), _conectar_app()
         cur1, cur2 = con1.cursor(), con2.cursor()
@@ -195,20 +197,65 @@ def test_l6_02_k_teto_de_agendas_por_usuario_tem_corrida_de_checar_e_agir():
         id1 = cur1.fetchone()["id"]
         con1.commit()  # primeira transação já commitou a agenda dela
 
-        cur2.execute("INSERT INTO plat.agenda(tenant_id, usuario_id, nome, tipo, parametros, cron) "
-                     "VALUES (%s, %s, %s, 'prova.progresso', '{}'::jsonb, '*/15 * * * *') RETURNING id",
-                     (tenant_id, usuario_id, f"zt-adv-l6-corrida-2-{selo}"))
-        id2 = cur2.fetchone()["id"]
-        con2.commit()  # segunda transação nunca releu a cota: insere mesmo já tendo 1 a mais que o teto
+        with pytest.raises(psycopg2.errors.ConfigurationLimitExceeded):
+            cur2.execute("INSERT INTO plat.agenda(tenant_id, usuario_id, nome, tipo, parametros, cron) "
+                         "VALUES (%s, %s, %s, 'prova.progresso', '{}'::jsonb, '*/15 * * * *') RETURNING id",
+                         (tenant_id, usuario_id, f"zt-adv-l6-corrida-2-{selo}"))
+        con2.rollback()
 
         final = int(_psql(f"SELECT plat.agendas_ativas_usuario({usuario_id})"))
-        # o teste PASSA (xfail vira xpass=falha) só se o banco tiver recusado a segunda inserção.
-        assert final <= cota_nova, f"{final} agendas ativas com cota {cota_nova}: o teto foi contornado"
+        assert final == cota_nova, f"{final} agendas ativas com cota {cota_nova}"
     finally:
+        for c in (con1, con2):
+            if c is not None:
+                c.close()
         if id1:
             _psql(f"DELETE FROM plat.agenda WHERE id = '{id1}'")
-        if id2:
-            _psql(f"DELETE FROM plat.agenda WHERE id = '{id2}'")
+        _psql(f"UPDATE plat.tenant SET config = config - 'cota_agendas_usuario' WHERE id = {tenant_id}")
+
+
+def test_l6_02_k_usuario_abaixo_do_teto_continua_criando_agenda():
+    """Par positivo 1: o gatilho não fechou o uso legítimo — com espaço na cota, a inserção passa."""
+    tenant_id, usuario_id = 1, 2
+    existentes = int(_psql(f"SELECT plat.agendas_ativas_usuario({usuario_id})"))
+    _psql(f"UPDATE plat.tenant SET config = config || jsonb_build_object('cota_agendas_usuario', "
+          f"{existentes + 2}) WHERE id = {tenant_id}")
+    novo = None
+    try:
+        novo = _psql(
+            f"INSERT INTO plat.agenda(tenant_id, usuario_id, nome, tipo, parametros, cron) VALUES "
+            f"({tenant_id}, {usuario_id}, 'zt-adv-l6-positivo-{int(time.time() * 1000)}', 'prova.progresso', "
+            f"'{{}}'::jsonb, '*/15 * * * *') RETURNING id"
+        )
+        assert novo, "a inserção abaixo do teto tem de passar"
+        assert int(_psql(f"SELECT plat.agendas_ativas_usuario({usuario_id})")) == existentes + 1
+    finally:
+        if novo:
+            _psql(f"DELETE FROM plat.agenda WHERE id = '{novo}'")
+        _psql(f"UPDATE plat.tenant SET config = config - 'cota_agendas_usuario' WHERE id = {tenant_id}")
+
+
+def test_l6_02_k_editar_agenda_que_ja_estava_ativa_nao_conta_de_novo():
+    """Par positivo 2: o teto conta agendas ATIVAS, e uma agenda que já estava ativa não passa a contar
+    duas vezes ao ser editada — senão, com a cota cheia, ninguém mais conseguiria renomear a própria
+    agenda. É a razão do desvio `TG_OP = UPDATE AND OLD.ativa` no gatilho."""
+    tenant_id, usuario_id = 1, 2
+    existentes = int(_psql(f"SELECT plat.agendas_ativas_usuario({usuario_id})"))
+    alvo = None
+    try:
+        _psql(f"UPDATE plat.tenant SET config = config || jsonb_build_object('cota_agendas_usuario', "
+              f"{existentes + 1}) WHERE id = {tenant_id}")
+        alvo = _psql(
+            f"INSERT INTO plat.agenda(tenant_id, usuario_id, nome, tipo, parametros, cron) VALUES "
+            f"({tenant_id}, {usuario_id}, 'zt-adv-l6-edita-{int(time.time() * 1000)}', 'prova.progresso', "
+            f"'{{}}'::jsonb, '*/15 * * * *') RETURNING id"
+        )
+        # cota agora esgotada; editar a MESMA agenda ativa continua passando
+        _psql(f"UPDATE plat.agenda SET cron = '*/30 * * * *' WHERE id = '{alvo}'")
+        assert _psql(f"SELECT cron FROM plat.agenda WHERE id = '{alvo}'") == "*/30 * * * *"
+    finally:
+        if alvo:
+            _psql(f"DELETE FROM plat.agenda WHERE id = '{alvo}'")
         _psql(f"UPDATE plat.tenant SET config = config - 'cota_agendas_usuario' WHERE id = {tenant_id}")
 
 
