@@ -114,20 +114,33 @@ def test_getmap_responde_nos_quatro_crs_do_item(token_wms, raster_demo, crs):  #
 
 @pytest.mark.parametrize("crs", ["EPSG:4674", "EPSG:31983"])
 def test_ida_e_volta_pelo_crs_novo_fica_abaixo_de_um_pixel(token_wms, raster_demo, crs):  # noqa: F811
-    """O portão pede "≤ 1 px de diferença de reprojeção" contra o XYZ. O XYZ é WebMercatorQuad; a conta
-    que importa é a mesma: converter o retângulo do raster para o CRS novo e de volta não pode deslocar
-    o dado mais que um pixel do recorte pedido."""
-    from rasterio.warp import transform_bounds
+    """O portão pede "<= 1 px de diferença de reprojeção" contra o XYZ. Isso se mede por PONTO
+    (`rasterio.warp.transform`), canto a canto.
+
+    18/09/2026 — esta prova nasceu medindo a coisa errada, com `transform_bounds`, e reprovava o produto
+    sem defeito no produto. `transform_bounds` não reprojeta um retângulo: devolve a ENVOLTÓRIA alinhada
+    aos eixos da figura reprojetada. Num CRS projetado o meridiano converge, o retângulo geográfico vira
+    um quadrilátero torto, e a envoltória dele é legitimamente MAIOR que o retângulo de partida. Medido
+    neste raster (canto oeste -47,95, borda oeste do fuso 23S): envoltória 3,704 px e ponto 0,00e+00 px
+    no EPSG:31983; no EPSG:4674 as duas dão 0. O crescimento da envoltória é geometria do fuso, não erro
+    de reprojeção — e cresce com a distância ao meridiano central, logo o limiar de 1 px jamais fecharia
+    para UTM por esse caminho. Por ponto, a ida e volta é exata nos dois CRS."""
+    from rasterio.warp import transform
 
     c, tok, item = _cliente(), token_wms["token"], raster_demo["item_id"]
     oeste, sul, leste, norte = _bounds4326(c, tok, item)
-    ida = transform_bounds("EPSG:4326", crs, oeste, sul, leste, norte)
-    volta = transform_bounds(crs, "EPSG:4326", *ida)
     largura = 256
     grau_por_px = (leste - oeste) / largura
-    for esperado, obtido in zip((oeste, sul, leste, norte), volta, strict=True):
-        assert abs(esperado - obtido) <= grau_por_px, (
-            f"{crs}: canto deslocou {abs(esperado - obtido) / grau_por_px:.3f} px na ida e volta")
+
+    xs_0 = [oeste, leste, oeste, leste]
+    ys_0 = [sul, sul, norte, norte]
+    xs_1, ys_1 = transform("EPSG:4326", crs, xs_0, ys_0)
+    xs_2, ys_2 = transform(crs, "EPSG:4326", xs_1, ys_1)
+    for eixo, partida, chegada in (("x", xs_0, xs_2), ("y", ys_0, ys_2)):
+        for esperado, obtido in zip(partida, chegada, strict=True):
+            assert abs(esperado - obtido) <= grau_por_px, (
+                f"{crs}: canto deslocou {abs(esperado - obtido) / grau_por_px:.3f} px em {eixo} "
+                f"na ida e volta")
 
 
 def test_capabilities_anuncia_os_crs_novos_e_getfeatureinfo(token_wms, raster_demo):  # noqa: F811

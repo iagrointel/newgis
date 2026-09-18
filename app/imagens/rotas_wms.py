@@ -319,7 +319,7 @@ FORMATOS_INFO_SAIDA = {
 }
 
 
-def _valor_no_ponto(auth, item: str, x: float, y: float, crs: str, asset: str | None) -> list[float] | None:
+def _valor_no_ponto(auth, item: str, x: float, y: float, crs: str, asset: str | None) -> list[float | int] | None:
     """Valor por banda no ponto (x,y) do CRS dado. MESMO caminho de leitura do `identify` do ImageServer
     (`rio_tiler.Reader.point`) e do `/ponto` — não existe um segundo motor de pixel aqui. `None` quando o
     ponto cai fora do raster (o WMS responde com uma feição sem valor, nunca com erro)."""
@@ -334,7 +334,11 @@ def _valor_no_ponto(auth, item: str, x: float, y: float, crs: str, asset: str | 
                 pt = src.point(x, y, coord_crs=tiles.CRS.from_user_input(crs))
             except PointOutsideBounds:
                 return None
-            return [float(v) for v in pt.array.tolist()]
+            # SEM coercao para float: `identify` do ImageServer serializa `pt.array.tolist()` cru, e o
+            # portao deste item exige que GetFeatureInfo devolva O MESMO valor do endpoint /ponto. Com
+            # float() um raster inteiro saia '404.0,906.0' aqui e '404,906' la — mesmo pixel, texto
+            # diferente. O tipo nativo da banda e quem decide o texto, nos dois caminhos.
+            return pt.array.tolist()
 
 
 def _get_feature_info(auth, cur, p: dict[str, str]) -> Response:
