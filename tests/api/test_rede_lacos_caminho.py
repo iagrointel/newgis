@@ -397,9 +397,18 @@ def test_registra_clausulas_funcionais_nas_medidas(sessao_a, limpar_redes):
         "custo_por_atributo_customizado": True,
         "adversario_fecha_chave_laco_aparece": True,
         "adversario_atributo_nulo_recusado": True,
-        "frontend_clique_tabela_e2e": "NAO_CUMPRIDA: mesma fronteira honesta do item irmão "
-                                       "L4-02-a-conectado-e-subrede — não existe front-end de rede de "
-                                       "utilidades no repositório (sem web/ sob rede_utilidades) para acoplar "
-                                       "clique, tabela lateral e captura e2e; a API dos três tipos novos está "
-                                       "completa e testada",
+        "e2e_tela_tracado": {
+            "cumprida": True,
+            "teste": "tests/e2e/test_rede_lacos_caminho.py (chromium, tela /redes/tracado, servidor "
+                     "próprio da trilha)",
+            "capturas": [
+                "tests/e2e/capturas/L4-02-d-lacos-e-caminho-curto_lacos.png",
+                "tests/e2e/capturas/L4-02-d-lacos-e-caminho-curto_isolados.png",
+                "tests/e2e/capturas/L4-02-d-lacos-e-caminho-curto_caminho_curto.png",
+            ],
+            "nota": "os três tipos novos percorridos pela tela de formulário+tabela do item L4-02-f "
+                    "(que ganhou o tipo caminho_curto e o campo destino neste item); continua sem "
+                    "existir integração de clique NO MAPA com traçado — nenhum módulo de mapa chama "
+                    "POST /api/rede/{id}/tracar a partir de clique",
+        },
     })

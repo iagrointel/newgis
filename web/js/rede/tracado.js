@@ -10,7 +10,7 @@ import '../base/componentes.js';
 import { montarLayout, cabecalho, pronto } from '../base/layout.js';
 import { exigirSessao } from '../auth/sessao.js';
 
-const TIPOS = ['conectado', 'subrede', 'montante', 'jusante', 'lacos', 'isolados'];
+const TIPOS = ['conectado', 'subrede', 'montante', 'jusante', 'lacos', 'isolados', 'caminho_curto'];
 const FORMATOS = ['csv', 'geojson', 'gpkg'];
 
 await carregar();
@@ -37,6 +37,7 @@ async function iniciar() {
     ...lista.map((i) => h('option', { value: i.id }, i.nome)));
   const selTipo = h('select', { id: 'tipo' }, ...TIPOS.map((v) => h('option', { value: v }, v)));
   const campoFeicao = h('input', { id: 'feicao', maxlength: '36' });
+  const campoDestino = h('input', { id: 'destino', maxlength: '36' });
   const campoTerminal = h('input', { id: 'terminal', type: 'number', min: '1', max: '8' });
   const selFormato = h('select', { id: 'formato' }, ...FORMATOS.map((v) => h('option', { value: v }, v)));
   const campoTitulo = h('input', { id: 'titulo', maxlength: '250' });
@@ -61,6 +62,7 @@ async function iniciar() {
       if (campoTerminal.value) ponto.terminal = Number(campoTerminal.value);
       p.pontos_partida.push(ponto);
     }
+    if (campoDestino.value.trim()) p.destino = { feicao_id: campoDestino.value.trim() };
     return p;
   }
 
@@ -175,6 +177,7 @@ async function iniciar() {
     h('label', { for: 'rede' }, t('tracadoresultado.rede')), selRede,
     h('label', { for: 'tipo' }, t('tracadoresultado.tipo')), selTipo,
     h('label', { for: 'feicao' }, t('tracadoresultado.feicao')), campoFeicao,
+    h('label', { for: 'destino' }, t('tracadoresultado.destino')), campoDestino,
     h('label', { for: 'terminal' }, t('tracadoresultado.terminal')), campoTerminal,
     btTracar,
     h('fieldset', {}, h('legend', {}, t('tracadoresultado.acoes')),

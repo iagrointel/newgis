@@ -3514,6 +3514,7 @@
   "tracadoresultado.col_id": "Identifier",
   "tracadoresultado.col_terminal": "Terminal",
   "tracadoresultado.col_tipo": "Type",
+  "tracadoresultado.destino": "Destination feature (caminho_curto)",
   "tracadoresultado.escolha": "choose a network",
   "tracadoresultado.exportado": "file generated at",
   "tracadoresultado.exportar": "Export",

@@ -134,7 +134,7 @@ def detectar_lacos(cur, tenant_id: int, rede_id: str, barreiras: list[dict]) -> 
 
     cur.execute("SELECT 1 FROM lacos_arestas LIMIT 1")
     if cur.fetchone() is None:
-        return {"tipo": "lacos", "contagem": 0, "lacos": [], "duracao_ms": _dur_ms(inicio)}
+        return {"tipo": "lacos", "contagem": 0, "lacos": [], "elementos": [], "duracao_ms": _dur_ms(inicio)}
 
     cur.execute(
         f"SELECT component, edge FROM public.pgr_biconnectedComponents("
@@ -163,7 +163,17 @@ def detectar_lacos(cur, tenant_id: int, rede_id: str, barreiras: list[dict]) -> 
         resultado.append({"arestas": len(edges), "elementos": elementos, "contagem": len(elementos)})
 
     resultado.sort(key=lambda x: -x["contagem"])
-    return {"tipo": "lacos", "contagem": len(resultado), "lacos": resultado, "duracao_ms": _dur_ms(inicio)}
+    # `elementos` de topo (feições únicas de TODOS os laços, sem repetir): é o que a tela de resultado e as
+    # agregações do L4-02-f leem — sem ele a resposta de `lacos` não renderiza na tela nem agrega por tipo.
+    vistos: set[str] = set()
+    elementos_plano = []
+    for lc in resultado:
+        for e in lc["elementos"]:
+            if e["feicao_id"] not in vistos:
+                vistos.add(e["feicao_id"])
+                elementos_plano.append(e)
+    return {"tipo": "lacos", "contagem": len(resultado), "lacos": resultado,
+            "elementos": elementos_plano, "duracao_ms": _dur_ms(inicio)}
 
 
 # --- isolados: sem caminho a nenhum controlador -------------------------------------------------------------
@@ -310,7 +320,12 @@ def caminho_curto(cur, tenant_id: int, rede_id: str, origem: dict, destino: dict
     return {
         "tipo": "caminho_curto", "atributo_custo": atributo_custo,
         "k_solicitado": k, "k_encontrados": len(resultado_caminhos),
-        "caminhos": resultado_caminhos, "duracao_ms": _dur_ms(inicio),
+        "caminhos": resultado_caminhos,
+        # `elementos` de topo = os do PRIMEIRO caminho (o mais barato): o que a tela de resultado e as
+        # agregações do L4-02-f leem; as alternativas seguem completas em `caminhos`.
+        "elementos": resultado_caminhos[0]["elementos"] if resultado_caminhos else [],
+        "contagem": len(resultado_caminhos[0]["elementos"]) if resultado_caminhos else 0,
+        "duracao_ms": _dur_ms(inicio),
     }
 
 

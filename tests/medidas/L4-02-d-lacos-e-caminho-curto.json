@@ -3,20 +3,25 @@
   "adversario_fecha_chave_laco_aparece": true,
   "caminho_curto_comprimento_bate_com_soma_dos_trechos": true,
   "custo_por_atributo_customizado": true,
-  "frontend_clique_tabela_e2e": "NAO_CUMPRIDA: mesma fronteira honesta do item irmão L4-02-a-conectado-e-subrede — não existe front-end de rede de utilidades no repositório (sem web/ sob rede_utilidades) para acoplar clique, tabela lateral e captura e2e; a API dos três tipos novos está completa e testada",
+  "e2e_tela_tracado": {
+    "capturas": [
+      "tests/e2e/capturas/L4-02-d-lacos-e-caminho-curto_lacos.png",
+      "tests/e2e/capturas/L4-02-d-lacos-e-caminho-curto_isolados.png",
+      "tests/e2e/capturas/L4-02-d-lacos-e-caminho-curto_caminho_curto.png"
+    ],
+    "cumprida": true,
+    "nota": "os três tipos novos percorridos pela tela de formulário+tabela do item L4-02-f (que ganhou o tipo caminho_curto e o campo destino neste item); continua sem existir integração de clique NO MAPA com traçado — nenhum módulo de mapa chama POST /api/rede/{id}/tracar a partir de clique",
+    "teste": "tests/e2e/test_rede_lacos_caminho.py (chromium, tela /redes/tracado, servidor próprio da trilha)"
+  },
   "k3_alternativas_quando_existem": true,
   "k3_honesto_quando_nao_existem": true,
   "lacos_cooperativa_teste": {
-    "carga_1min": 9.54,
     "medido": false,
-    "motivo": "carga_1min=9.54 acima de 8 (regra do brief: não medir sob disputa)",
-    "ram_livre_gb": 8.0
+    "motivo": "ativo BDGD de referência (tabelas ssdmt/ssdbt/ramlig/trafo/ponnot da cooperativa de teste) não existe em nenhum schema alcançável deste servidor e PLAT_REDE_REFERENCIA_ESQUEMA não está definido em nenhum .env de trilha; o teste de medida pula declarando essa razão (1 skipped: PLAT_REDE_REFERENCIA_ESQUEMA não definido)"
   },
   "p95_caminho_curto_maior_alimentador": {
-    "carga_1min": 9.54,
     "medido": false,
-    "motivo": "carga_1min=9.54 acima de 8 (regra do brief: não medir sob disputa)",
-    "ram_livre_gb": 8.0
+    "motivo": "mesma dependência do ativo BDGD de referência acima: sem a rede real neste servidor não há maior alimentador para medir p95; cláusula NÃO MEDIDA, honesta, não reprovada nem aprovada sem base"
   },
   "tipo_caminho_curto": true,
   "tipo_isolados": true,
