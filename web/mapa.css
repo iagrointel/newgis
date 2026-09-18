@@ -85,3 +85,39 @@ body.mapa .mapa-painel-acervo code { font-family: var(--mono); font-size: var(--
 body.mapa .mapa-painel-acervo .marcador { font-size: var(--i-t-1); white-space: nowrap; }
 body.mapa .mapa-painel-acervo .marcador.falha { background: var(--i-carta-falha-fundo); color: var(--i-carta-falha-texto); border-color: var(--i-carta-falha-borda); }
 body.mapa .mapa-painel-acervo .marcador.ok { background: var(--i-carta-ok-fundo); color: var(--i-carta-ok-texto); border-color: var(--i-carta-ok-borda); }
+
+/* desenho e anotações (item L2-01-k): painéis flutuantes à direita, sobre o canvas. */
+body.mapa .mapa-painel-item {
+  left: auto;
+  right: var(--e4);
+  top: var(--e4);
+  width: 21rem;
+  max-width: calc(100vw - 2 * var(--e4));
+  max-height: calc(100% - 2 * var(--e4));
+  overflow: auto;
+  font-family: var(--sans);
+  padding: 0;
+}
+body.mapa .mapa-painel-item .painel-corpo { display: grid; gap: var(--e3); padding: var(--e2) var(--e3); }
+body.mapa .mapa-painel-item .desenho-ferramentas { display: flex; flex-wrap: wrap; gap: var(--e1); }
+body.mapa .mapa-painel-item [data-desenho][aria-pressed="true"] { background: var(--acento); color: var(--acento-texto); border-color: var(--acento); }
+body.mapa .mapa-painel-item .desenho-estilo { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: var(--e1) var(--e2); }
+body.mapa .mapa-painel-item .desenho-estilo input[type="number"] { width: 4.5rem; }
+body.mapa #lista-desenho, body.mapa #lista-anotacoes { max-height: 14rem; overflow: auto; list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e1); }
+body.mapa #lista-desenho .camada-item { display: flex; align-items: center; gap: var(--e1); }
+body.mapa #lista-desenho .camada-titulo { flex: 1; }
+body.mapa .mapa-painel-item .linha { display: flex; flex-wrap: wrap; gap: var(--e1); }
+body.mapa .mapa-painel-item .saida { margin: 0; color: var(--mapa-texto-fraco); font-size: var(--i-t-1); }
+body.mapa .anotacao-item { border: 1px solid var(--mapa-borda); border-radius: var(--raio); padding: var(--e1) var(--e2); display: grid; gap: var(--e1); }
+body.mapa .anotacao-item[data-resolvido="1"] { opacity: .55; }
+body.mapa .anotacao-cabecalho { font-size: var(--i-t-1); color: var(--mapa-texto-fraco); display: flex; flex-wrap: wrap; gap: var(--e1); align-items: center; }
+body.mapa .anotacao-item p { margin: 0; white-space: pre-wrap; }
+body.mapa .anotacao-acoes { display: flex; gap: var(--e1); flex-wrap: wrap; }
+body.mapa .anotacao-editor, body.mapa #anotacao-texto { width: 100%; box-sizing: border-box; resize: vertical; }
+body.mapa .mapa-painel-item .campo { display: grid; gap: var(--e0); }
+body.mapa .mapa-painel-camadas { padding: var(--e2) var(--e3); }
+body.mapa .mapa-painel-camadas h2 { margin: 0 0 var(--e1); font-size: var(--i-t1); }
+body.mapa .mapa-painel-camadas .fraco { margin: 0 0 var(--e2); font-size: var(--i-t-1); }
+body.mapa .mapa-painel-camadas ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e1); }
+body.mapa .mapa-painel-camadas .camada-titulo { text-align: left; }
+body.mapa .mapa-painel-camadas [aria-pressed="true"] { color: var(--acento); }

@@ -6,6 +6,7 @@ item (polígono auto-intersectante, círculo no polo, texto de 10 mil caracteres
 Depende de `/mapa` responder (item L2-01-mapa-web) e do terra-draw vendorizado carregar."""
 
 import json
+import time
 
 import pytest
 
@@ -16,13 +17,26 @@ ITEM = "L2-01-k-desenho-anotacoes"
 pytestmark = [pytest.mark.lento, pytest.mark.e2e]
 
 
+def _esperar_js(page, expressao, timeout_ms=15000):
+    """wait_for_function sem eval na página: a CSP do documento (script-src com nonce, sem unsafe-eval)
+    barra o predicado-string do playwright; page.evaluate vai por CDP e não passa pela CSP. MEDIDO nesta
+    trilha 18/09: todo wait_for_function(string) morria com 'violates ... Content Security Policy'."""
+    fim = time.monotonic() + timeout_ms / 1000
+    while True:
+        if page.evaluate(expressao):
+            return
+        if time.monotonic() > fim:
+            raise AssertionError(f"expressão não ficou verdadeira em {timeout_ms} ms: {expressao}")
+        time.sleep(0.1)
+
+
 @pytest.fixture
 def mapa(page, base_url, credenciais_demo):
     slug, login, senha = credenciais_demo
     tela = Tela(page, base_url)
     tela.entrar(slug, login, senha)
     tela.ir("/mapa", "pagina_pronta_ms_mapa_desenho")
-    page.wait_for_function("window.plat && window.plat.mapa && window.plat.mapa.desenho", timeout=15000)
+    _esperar_js(page, "!!(window.plat && window.plat.mapa && window.plat.mapa.desenho)")
     return tela
 
 
@@ -125,13 +139,12 @@ def test_salvar_e_reabrir_identico(mapa, page, base_url):
     antes = page.evaluate("JSON.stringify(window.plat.mapa.desenho.lista())")
     page.evaluate("() => window.plat.mapa.abrirPainel('desenho', { foco: false })")  # UX-04: painel na gaveta
     page.click("#btn-desenho-salvar")
-    page.wait_for_function("window.plat.mapa.mapaId", timeout=10000)
+    _esperar_js(page, "!!window.plat.mapa.mapaId", timeout_ms=10000)
     mapa_id = page.evaluate("window.plat.mapa.mapaId")
 
     page.goto(f"{base_url}/mapa?mapa={mapa_id}", wait_until="domcontentloaded")
     page.wait_for_selector("body[data-pronto='1']", timeout=20000)
-    page.wait_for_function("window.plat && window.plat.mapa && window.plat.mapa.desenho.lista().length > 0",
-                           timeout=15000)
+    _esperar_js(page, "window.plat && window.plat.mapa && window.plat.mapa.desenho.lista().length > 0")
     depois = page.evaluate("JSON.stringify(window.plat.mapa.desenho.lista())")
 
     a = sorted(json.loads(antes), key=lambda f: f["id"])
@@ -151,12 +164,13 @@ def test_promover_a_camada(mapa, page):
     _desenhar_poligono(page)
     page.evaluate("() => window.plat.mapa.abrirPainel('desenho', { foco: false })")  # UX-04: painel na gaveta
     page.click("#btn-desenho-salvar")
-    page.wait_for_function("window.plat.mapa.mapaId", timeout=10000)
+    _esperar_js(page, "!!window.plat.mapa.mapaId", timeout_ms=10000)
 
     page.once("dialog", lambda d: d.accept("camada e2e do desenho"))
     page.click("#btn-desenho-promover")
-    page.wait_for_function(
-        "document.getElementById('desenho-saida').textContent.includes('camada e2e do desenho')", timeout=15000
+    _esperar_js(
+        page,
+        "document.getElementById('desenho-saida').textContent.includes('camada e2e do desenho')",
     )
     saida = page.text_content("#desenho-saida")
     assert "2" in saida  # 2 feições promovidas
