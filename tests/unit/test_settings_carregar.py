@@ -145,9 +145,11 @@ def test_inteiros_e_booleanos_novos_batem_com_nao_string():
 
 @pytest.mark.parametrize("campo", INTEIROS_NOVOS)
 def test_campo_inteiro_texto_valido_converte(campo):
-    efetiva = carregar({**BASE, campo: "7"})
+    # "70": valor válido para TODOS os campos do conjunto — PLAT_RENDER_MAX_PX tem mínimo 64
+    # (conserto do L7-08-d: abaixo disso o teto de pixel não faz sentido); os demais têm mínimo 1.
+    efetiva = carregar({**BASE, campo: "70"})
     valor = getattr(efetiva, campo)
-    assert valor == 7 and isinstance(valor, int), f"{campo} não converteu '7' para o inteiro 7"
+    assert valor == 70 and isinstance(valor, int), f"{campo} não converteu '70' para o inteiro 70"
 
 
 @pytest.mark.parametrize("campo", INTEIROS_NOVOS)

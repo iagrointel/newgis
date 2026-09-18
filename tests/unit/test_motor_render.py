@@ -240,38 +240,53 @@ def test_pagina_headless_nao_alcanca_host_externo(servidor, motor_novo):
     assert resultado.startswith("bloqueado"), resultado
 
 
+TETO_QUENTE_MS = 1000
+TETO_FRIO_MS = 3000
+N_QUENTE_PORTAO = 50  # portão literal: "p95 de 50"
+
+
 def test_frio_e_quente_p95_da_demo_1024x768(servidor):
     """Cláusula do portão: "1024×768 do mapa da demo quente ≤ 1 s e frio ≤ 3 s (p95 de 50, medido em
     tests/medidas)". Definição operacional (declarada em app/render/motor.py): os primeiros `tamanho_pool`
     renders de um Motor recém-iniciado são frio; os 50 seguintes, quente. Grava a medida em
-    tests/medidas/L2-12-a-motor-render-servidor.json para o portão citar o número, não a promessa."""
-    # timeout_s alto de propósito (esta máquina é COMPARTILHADA por dezenas de trilhas — `ps aux` no dia
-    # desta medição mostrava uma dúzia de uvicorn+chromium concorrentes): um goto que estoure 15s aqui é
-    # contenção da máquina, não o motor; o teto real do PORTÃO (quente ≤ 1s, frio ≤ 3s) é conferido DEPOIS,
-    # na medida, não neste timeout de segurança.
-    m = Motor(tamanho_pool=2, fila_max=10, timeout_s=60)
+    tests/medidas/L2-12-a-motor-render-servidor.json para o portão citar o número, não a promessa.
 
-    async def uma_amostra():
-        """Uma tentativa; None se estourar o teto de rede/CPU da máquina COMPARTILHADA (medido no dia desta
-        rodada: `uptime` marcava carga ~20 e `free` mostrava 0 GB livre/swap cheio — dezenas de outras
-        trilhas do laço rodando ao mesmo tempo). Isso é contenção externa, não o motor travando: por isso a
-        amostra falha É DESCARTADA da medida em vez de derrubar o teste inteiro — a medida quer o tempo do
-        MOTOR, não o tempo de uma máquina lotada num instante específico."""
-        t0 = time.perf_counter()
-        try:
-            await m.renderizar(url_demo(servidor, zoom=13), largura=1024, altura=768, formato="png",
-                                espera_timeout_ms=15000)
-        except Exception as e:  # noqa: BLE001 — vira "falha" na medida, não um crash do teste
-            return None, str(e)
-        return (time.perf_counter() - t0) * 1000, None
+    Margem/retentativa documentada (achado do adversário do T9, 18/09/2026 — o fechamento f2a8cb15 commitou
+    uma medida VERMELHA de quente_p95=1290,2 ms colhida com a máquina a carga ~20, e ninguém percebeu):
+    este gate é sensível à disputa de CPU da máquina compartilhada, então a regra aqui é —
+    1. cada tentativa grava a carga do instante como NÚMERO (carga_1/5/15min), nunca em prosa;
+    2. se o p95 estourar o teto E a carga de 1 min estiver acima de 1 por CPU, a tentativa é contenção
+       externa, não regressão do motor: espera-se a carga cair (teto de relógio, abaixo) e re-mede-se,
+       até TENTATIVAS_MAX vezes; todas as tentativas ficam registradas em `tentativas` no JSON — a
+       margem é pública, nunca um descarte silencioso;
+    3. se o p95 estourar com carga BAIXA (≤ 1 por CPU), é regressão real do motor: reprova na hora, sem
+       retentar — retentativa não existe para esconder o motor lento;
+    4. o JSON só vai ao disco DEPOIS das asserções (antes era gravado no meio do teste: uma rodada
+       reprovada deixava o arquivo vermelho na árvore, pronto para ser commitado como "prova" — foi
+       exatamente o furo do f2a8cb15; a guarda de tests/conftest.py cobre a fixture `medida`, mas este
+       teste escreve o arquivo na mão e precisava da mesma disciplina)."""
+    # timeout_s alto de propósito (máquina COMPARTILHADA por dezenas de trilhas): um goto que estoura 15s
+    # sob contenção vira amostra descartada, não crash — o teto do PORTÃO é conferido no p95, não aqui.
+    TENTATIVAS_MAX = 3
+    # orçamento de relógio do teste inteiro (roda_teste.sh dá 10 min): 3 tentativas de ~2 min + esperas.
+    prazo_total = time.perf_counter() + 420
 
-    # orçamento de relógio (não só de amostra): esta máquina é compartilhada por dezenas de trilhas — sob
-    # contenção extrema (medido: `uptime` ~20 de carga, `free` com 0 GB livre e swap cheio) uma sequência de
-    # falhas de 15s cada ainda cabe no turno; sem este teto, uma máquina ruim o bastante faz o teste nunca
-    # ESCREVER a medida (nem sequer o resultado parcial), porque só grava no fim do laço.
-    prazo_final = time.perf_counter() + 200
+    async def medir_uma_vez():
+        m = Motor(tamanho_pool=2, fila_max=10, timeout_s=60)
 
-    async def cenario():
+        async def uma_amostra():
+            """Uma tentativa; None se estourar o teto de rede/CPU da máquina compartilhada — vira "falha"
+            na medida, não crash do teste (a medida quer o tempo do MOTOR; a contenção entra como carga)."""
+            t0 = time.perf_counter()
+            try:
+                await m.renderizar(url_demo(servidor, zoom=13), largura=1024, altura=768, formato="png",
+                                    espera_timeout_ms=15000)
+            except Exception as e:  # noqa: BLE001 — vira "falha" na medida, não um crash do teste
+                return None, str(e)
+            return (time.perf_counter() - t0) * 1000, None
+
+        # teto por tentativa: sem ele, uma máquina ruim o bastante faz o teste nunca escrever nada
+        prazo_amostras = min(time.perf_counter() + 120, prazo_total)
         await m.iniciar()
         try:
             tempos_frio, falhas_frio = [], []
@@ -280,10 +295,9 @@ def test_frio_e_quente_p95_da_demo_1024x768(servidor):
                 (tempos_frio if dt is not None else falhas_frio).append(dt if dt is not None else erro)
                 print(f"frio[{i}] {'%.1fms' % dt if dt is not None else 'FALHOU: ' + erro}", flush=True)
             tempos_quente, falhas_quente = [], []
-            for i in range(50):
-                if time.perf_counter() > prazo_final:
-                    print(f"orçamento de tempo esgotado em quente[{i}] — medida grava com o que já tem",
-                          flush=True)
+            for i in range(N_QUENTE_PORTAO):
+                if time.perf_counter() > prazo_amostras:
+                    print(f"orçamento da tentativa esgotado em quente[{i}]", flush=True)
                     break
                 dt, erro = await uma_amostra()
                 (tempos_quente if dt is not None else falhas_quente).append(dt if dt is not None else erro)
@@ -292,9 +306,6 @@ def test_frio_e_quente_p95_da_demo_1024x768(servidor):
         finally:
             await m.parar()
 
-    tempos_frio, falhas_frio, tempos_quente, falhas_quente = asyncio.run(cenario())
-    carga = [round(x, 2) for x in os.getloadavg()]
-
     def p95(xs):
         if not xs:
             return None
@@ -302,40 +313,78 @@ def test_frio_e_quente_p95_da_demo_1024x768(servidor):
         idx = max(0, min(len(xs) - 1, int(round(0.95 * (len(xs) - 1)))))
         return round(xs[idx], 1)
 
+    def carga_por_cpu():
+        return (os.cpu_count() or 1) * 1.0
+
+    def esperar_carga_cair():
+        """Espera a carga de 1 min cair abaixo de 0,75 por CPU, até o prazo total — a retentativa só faz
+        sentido medindo num instante menos disputado; sem vaga dentro do relógio, mede assim mesmo e a
+        tentativa registra a carga que havia."""
+        while time.perf_counter() < prazo_total and os.getloadavg()[0] > carga_por_cpu() * 0.75:
+            time.sleep(5)
+
+    def aprovou(t):
+        return (t["n_quente_ok"] >= N_QUENTE_PORTAO and t["quente_p95_ms"] is not None
+                and t["quente_p95_ms"] <= TETO_QUENTE_MS and t["n_frio_ok"] >= 1
+                and t["frio_p95_ms"] is not None and t["frio_p95_ms"] <= TETO_FRIO_MS)
+
+    tentativas = []
+    while len(tentativas) < TENTATIVAS_MAX and time.perf_counter() < prazo_total:
+        tempos_frio, falhas_frio, tempos_quente, falhas_quente = asyncio.run(medir_uma_vez())
+        carga = [round(x, 2) for x in os.getloadavg()]
+        tentativa = {
+            "carga_1min": carga[0], "carga_5min": carga[1], "carga_15min": carga[2],
+            "frio_ms": [round(x, 1) for x in tempos_frio],
+            "quente_ms": [round(x, 1) for x in tempos_quente],
+            "frio_p95_ms": p95(tempos_frio),
+            "quente_p95_ms": p95(tempos_quente),
+            "n_frio_ok": len(tempos_frio),
+            "n_frio_falhou": len(falhas_frio),
+            "n_quente_ok": len(tempos_quente),
+            "n_quente_falhou": len(falhas_quente),
+        }
+        tentativas.append(tentativa)
+        print(f"tentativa {len(tentativas)}: quente_p95={tentativa['quente_p95_ms']}ms "
+              f"frio_p95={tentativa['frio_p95_ms']}ms carga_1min={carga[0]}", flush=True)
+        if aprovou(tentativa):
+            break
+        if carga[0] <= carga_por_cpu():
+            print("carga baixa e p95 estourado: regressão do motor, não contenção — sem retentativa",
+                  flush=True)
+            break
+        esperar_carga_cair()
+
+    ultima = tentativas[-1]
     medida = {
         "item": "L2-12-a-motor-render-servidor",
         "cenario": "1024x768, mapa-base local (pmtiles Guarulhos), pool=2",
         # 18/09/2026 (achado do adversário do T9): este gate é sensível a carga e a carga era descrita em
-        # PROSA — "ver handoff do item" —, então ninguém conseguia distinguir "o motor piorou" de "a máquina
-        # estava lotada" lendo o laudo. Agora a carga entra como NÚMERO, medida no mesmo instante da rodada.
-        "carga_1min": carga[0], "carga_5min": carga[1], "carga_15min": carga[2],
+        # PROSA, então ninguém distinguia "o motor piorou" de "a máquina estava lotada" lendo o laudo.
+        # Carga como NÚMERO + retentativa documentada (docstring do teste): todas as tentativas ficam em
+        # `tentativas`, com a carga do instante de cada uma — a margem é pública, nunca descarte silencioso.
+        "carga_1min": ultima["carga_1min"], "carga_5min": ultima["carga_5min"],
+        "carga_15min": ultima["carga_15min"],
         "cpus": os.cpu_count(),
         "maquina_no_dia_da_medida": "máquina compartilhada por dezenas de trilhas do laço; a carga do "
-                                     "momento está em carga_1min/5min/15min. Referência medida: com carga ~20 "
-                                     "esta mesma medida deu quente_p95 1290,2 ms (fechamento f2a8cb15), e com "
-                                     "carga ~2 deu 173,4 ms — o teto de 1 s do portão só é significativo junto "
-                                     "com a carga, e por isso os dois números saem juntos.",
-        "frio_ms": [round(x, 1) for x in tempos_frio],
-        "quente_ms": [round(x, 1) for x in tempos_quente],
-        "frio_p95_ms": p95(tempos_frio),
-        "quente_p95_ms": p95(tempos_quente),
-        "n_frio_ok": len(tempos_frio),
-        "n_frio_falhou": len(falhas_frio),
-        "n_quente_ok": len(tempos_quente),
-        "n_quente_falhou": len(falhas_quente),
+                                     "momento está em carga_1min/5min/15min e a de cada tentativa em "
+                                     "tentativas[]. Referência medida: com carga ~20 esta medida deu "
+                                     "quente_p95 1290,2 ms (fechamento f2a8cb15, reprovado), com carga ~2 "
+                                     "deu 165,4 ms — o teto de 1 s do portão só é significativo junto com "
+                                     "a carga, e por isso os dois números saem juntos.",
+        "tentativas": tentativas,
+        "frio_ms": ultima["frio_ms"],
+        "quente_ms": ultima["quente_ms"],
+        "frio_p95_ms": ultima["frio_p95_ms"],
+        "quente_p95_ms": ultima["quente_p95_ms"],
+        "n_frio_ok": ultima["n_frio_ok"],
+        "n_frio_falhou": ultima["n_frio_falhou"],
+        "n_quente_ok": ultima["n_quente_ok"],
+        "n_quente_falhou": ultima["n_quente_falhou"],
         "comando": "venv/bin/pytest tests/unit/test_motor_render.py::test_frio_e_quente_p95_da_demo_1024x768 -q",
     }
+
+    # as asserções vêm ANTES da escrita: rodada reprovada não deixa arquivo na árvore para ser commitado
+    # como "prova" (o furo do f2a8cb15 era exatamente este — escrita no meio do teste, asserção depois).
+    assert aprovou(ultima), medida
     with open("tests/medidas/L2-12-a-motor-render-servidor.json", "w", encoding="utf-8") as f:
         json.dump(medida, f, ensure_ascii=False, indent=2, sort_keys=True)
-
-    # o motor tem de responder à MAIORIA das amostras (poucas falhas isoladas de contenção são aceitáveis;
-    # falha em massa seria o motor quebrado, não a máquina lenta)
-    # teto baixo de propósito (5, não 40): o objetivo desta asserção é só distinguir "o motor está quebrado"
-    # de "a máquina está lenta agora" — a confiança estatística do p95 em cima de poucas amostras é uma
-    # fronteira honesta que o handoff cita explicitamente quando `n_quente_ok` sair abaixo de 50.
-    assert len(tempos_quente) >= 5, medida
-    assert len(tempos_frio) >= 1, medida
-    # a cláusula pede quente <= 1s e frio <= 3s de p95; registrada como está medida nesta máquina (compartilhada,
-    # sob carga de outras trilhas) — se estourar aqui, o handoff cita o número exato, nunca "deu erro".
-    assert medida["quente_p95_ms"] <= 1000, medida
-    assert medida["frio_p95_ms"] <= 3000, medida
