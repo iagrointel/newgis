@@ -245,3 +245,39 @@ def test_b_nao_envia_anexo_para_feicao_de_a(sessao_b, camada_a, camada_b, sessao
     r = _enviar(sessao_b, camada_b["id"], gid, nome="intruso.png")
     assert r.status_code == 404, r.text[:300]
     assert r.json()["erro"] == "feicao_inexistente"
+
+
+# ---------------------------------------------------------------- medida do item (tests/medidas/)
+def test_medida_do_item_anexos(sessao_a, sessao_b, camada_a, camada_b, medida):  # noqa: F811
+    """Grava tests/medidas/L2-03-e-anexos.json com o que ESTE arquivo mede: os tetos declarados pelo
+    tronco e os códigos REAIS de cada recusa, colhidos em chamadas de verdade na mesma rodada (nada
+    copiado do portão: o portão pedia 413 e o servidor responde 422, ver o xfail acima)."""
+    gid = _feicao(sessao_a, camada_a["id"])
+    tipo_fora = _enviar(sessao_a, camada_a["id"], gid, nome="x.bin",
+                        tipo="application/octet-stream", conteudo=b"qualquer coisa")
+    bytes_mentirosos = _enviar(sessao_a, camada_a["id"], gid, nome="inocente.jpg", tipo="image/jpeg",
+                               conteudo=b"\x7fELF\x02\x01\x01\x00" + b"\x00" * 64)
+    intruso = _enviar(sessao_b, camada_b["id"], gid, nome="intruso.png")
+
+    gravar = medida("L2-03-e-anexos")
+    cmd = "pytest tests/api/test_feicao_anexo.py::test_medida_do_item_anexos"
+    gravar("teto_tamanho_bytes", limites.ANEXO_TAMANHO_MAX, "bytes (padrão da instalação)",
+           "app/limites.py::ANEXO_TAMANHO_MAX, lido na mesma rodada")
+    gravar("tipos_permitidos", sorted(limites.ANEXO_TIPOS_PERMITIDOS), "lista",
+           "app/limites.py::ANEXO_TIPOS_PERMITIDOS, lido na mesma rodada")
+    gravar("codigo_acima_do_teto", 422, "HTTP (erro anexo_grande)",
+           "pytest tests/api/test_feicao_anexo.py::test_teto_de_tamanho_aceita_abaixo_e_recusa_acima "
+           "(o portão pedia 413; divergência registrada em xfail estrito)")
+    gravar("codigo_tipo_fora_da_lista", tipo_fora.status_code, "HTTP (erro tipo_nao_permitido)", cmd)
+    gravar("codigo_extensao_mentirosa", bytes_mentirosos.status_code,
+           "HTTP (.jpg com bytes de ELF)", cmd)
+    gravar("codigo_anexo_de_b_em_feicao_de_a", intruso.status_code,
+           "HTTP (erro feicao_inexistente)", cmd)
+    gravar("clausulas_do_portao_sem_codigo_em_master",
+           ["miniatura de JPG/PDF", "remoção de EXIF GPS", "URL direta do Garage = 403",
+            "apagar feição apaga anexos", "e2e do popup com captura"],
+           "cláusulas", "app/edicao/anexos.py não tem rota nem coluna para nenhuma delas (17/09)")
+
+    assert tipo_fora.status_code == 415
+    assert bytes_mentirosos.status_code == 415
+    assert intruso.status_code == 404

@@ -1,0 +1,54 @@
+{
+ "item": "L2-03-e-anexos",
+ "medidas": {
+  "teto_tamanho_bytes": {
+   "valor": 7340032,
+   "unidade": "bytes (padrão da instalação)",
+   "comando": "app/limites.py::ANEXO_TAMANHO_MAX, lido na mesma rodada"
+  },
+  "tipos_permitidos": {
+   "valor": [
+    "application/pdf",
+    "image/gif",
+    "image/jpeg",
+    "image/png",
+    "image/webp"
+   ],
+   "unidade": "lista",
+   "comando": "app/limites.py::ANEXO_TIPOS_PERMITIDOS, lido na mesma rodada"
+  },
+  "codigo_acima_do_teto": {
+   "valor": 422,
+   "unidade": "HTTP (erro anexo_grande)",
+   "comando": "pytest tests/api/test_feicao_anexo.py::test_teto_de_tamanho_aceita_abaixo_e_recusa_acima (o portão pedia 413; divergência registrada em xfail estrito)"
+  },
+  "codigo_tipo_fora_da_lista": {
+   "valor": 415,
+   "unidade": "HTTP (erro tipo_nao_permitido)",
+   "comando": "pytest tests/api/test_feicao_anexo.py::test_medida_do_item_anexos"
+  },
+  "codigo_extensao_mentirosa": {
+   "valor": 415,
+   "unidade": "HTTP (.jpg com bytes de ELF)",
+   "comando": "pytest tests/api/test_feicao_anexo.py::test_medida_do_item_anexos"
+  },
+  "codigo_anexo_de_b_em_feicao_de_a": {
+   "valor": 404,
+   "unidade": "HTTP (erro feicao_inexistente)",
+   "comando": "pytest tests/api/test_feicao_anexo.py::test_medida_do_item_anexos"
+  },
+  "clausulas_do_portao_sem_codigo_em_master": {
+   "valor": [
+    "miniatura de JPG/PDF",
+    "remoção de EXIF GPS",
+    "URL direta do Garage = 403",
+    "apagar feição apaga anexos",
+    "e2e do popup com captura"
+   ],
+   "unidade": "cláusulas",
+   "comando": "app/edicao/anexos.py não tem rota nem coluna para nenhuma delas (17/09)"
+  }
+ },
+ "gerado_em": "2026-09-18T01:30:07Z",
+ "git_sha": "438c29d6b13a"
+}
