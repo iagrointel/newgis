@@ -10,7 +10,9 @@ do orçamento de uma requisição síncrona). A tarefa só sorteia peso e chama 
 (item L3-01-e) N vezes — não reimplementa a combinação.
 `amc.sensibilidade`: índices de Sobol (global) e tornado um-fator-por-vez (local) do mesmo modelo, com N
 declarado, intervalo por bootstrap e tempo medido (item L3-02-b) — job pela mesma razão do sorteio: o
-custo é N·(g+2) recombinações."""
+custo é N·(g+2) recombinações.
+`amc.executar`: processa uma execução registrada sobre camadas do acervo (app/amc/executor.py, item
+L6-04-acervo-no-motor) — a extração de camadas do tipo 'item' fica para item futuro."""
 
 import time
 import uuid
@@ -19,7 +21,7 @@ import numpy as np
 from psycopg2.extras import execute_values
 from pydantic import BaseModel, Field, field_validator
 
-from app.amc import escala, robustez, sensibilidade, smaa, unidades
+from app.amc import escala, executor, robustez, sensibilidade, smaa, unidades
 from app.jobs.registro import FalhaDefinitiva, tarefa
 
 MAX_UNIDADES = 20_000
@@ -31,6 +33,10 @@ MAX_BOOTSTRAP = 2_000
 
 class GerarUnidadesParametros(BaseModel):
     conjunto_id: uuid.UUID
+
+
+class ExecutarParametros(BaseModel):
+    execucao_id: uuid.UUID
 
 
 @tarefa(
@@ -436,3 +442,19 @@ def amc_sensibilidade(
                      + (", ".join(relatorio["mandam_no_resultado"]) or "nenhum")
                      + "; irrelevantes: " + (", ".join(relatorio["irrelevantes"]) or "nenhum"))
     return relatorio
+
+
+@tarefa(
+    nome="amc.executar",
+    descricao="Extrai os fatores do acervo de uma execução registrada pela view só-leitura de plat_acervo e grava "
+              "fator bruto e favorabilidade (item L6-04-acervo-no-motor)",
+    parametros=ExecutarParametros,
+    pesado=False,
+    memoria_mb=768,
+    timeout_s=1800,
+    tentativas=1,   # nunca repetir sozinho: revogação de assinatura é FalhaDefinitiva, não erro transiente
+    chave=lambda p: f"amc_execucao:{p.get('execucao_id')}",
+    perfil_minimo="editor",
+)
+def amc_executar(ctx, execucao_id: uuid.UUID) -> dict:
+    return executor.executar(ctx, execucao_id)

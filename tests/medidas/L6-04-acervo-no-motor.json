@@ -4,7 +4,7 @@
   "camadas_reais_usadas": {
    "valor": 3,
    "unidade": "camadas",
-   "comando": "public.icmbio_unidades_conservacao (UC, 346 linhas), public.funai_terras_indigenas (TI, 655 linhas), public.hidro_nacional_bc250 (hidrografia, 1.599.240 linhas COUNT(*) exato) — dado real da casa, nunca sintético"
+   "comando": "public.icmbio_unidades_conservacao (UC, 23 linhas — limiteucsfederais_a do ICMBio via WFS da INDE, recorte SC), public.funai_terras_indigenas (TI, 655 linhas — WFS FUNAI, nacional), public.hidro_nacional_bc250 (hidrografia, 39.570 linhas COUNT(*) exato — hid_trecho_drenagem_l do dump BC250 versao2017 do IBGE, recorte SC) — dado real oficial, nunca sintético"
   },
   "fatores_extraidos_sem_copia": {
    "valor": 3,
@@ -59,21 +59,17 @@
   "testes_verdes_desta_suite": {
    "valor": 4,
    "unidade": "testes",
-   "comando": "bash laco/roda_teste.sh tests/api/amc/test_acervo_no_motor.py -q"
+   "comando": "PLAT_BANCO=plat_trilhas PLAT_SERVIDOR=hetzner bash laco/roda_teste.sh tests/api/amc/test_acervo_no_motor.py -q — saída '....' (4/4), código de saída 0"
   },
-  "regressao_suites_dependentes": {
-   "valor": "sem regressão",
-   "unidade": "texto",
-   "comando": "bash laco/roda_teste.sh tests/api/amc tests/unit/test_amc_zonal.py tests/unit/test_amc_vetorial.py tests/unit/test_amc_adversario.py tests/unit/test_amc_esquema.py tests/unit/test_schema_ambiente.py tests/api/test_acervo_publicacao.py -q — só as 2 falhas PRÉ-EXISTENTES de docs/openapi.json desatualizado (test_amc_adversario_api.py, itens L3-01-a/b, não deste item) continuam vermelhas; nenhuma nova"
-  },
-  "carga_1min": {"valor": 16.81, "unidade": "load average", "medido_em": "2026-09-07T13:18:12Z"},
-  "ram_livre_gb": {"valor": 0, "unidade": "GB (buff/cache 14 GB, available 8 GB)", "medido_em": "2026-09-07T13:18:12Z"}
+  "carga_1min": {"valor": 2.05, "unidade": "load average", "medido_em": "2026-09-18T10:04:38Z"},
+  "ram_livre_gb": {"valor": 1, "unidade": "GB (available 47 GB)", "medido_em": "2026-09-18T10:04:38Z"}
  },
  "notas": [
-  "Sem cláusula de tempo/vazão no portão deste item — carga da máquina registrada só por transparência (regra do brief), não como medida de desempenho.",
-  "docs/openapi.json não inclui nenhuma das 18 rotas /api/amc (débito pré-existente do item L3-01-a/b, achado ao rodar tests/api/amc/test_amc_adversario_api.py e tests/api/test_cruzado.py::test_cobertura_100_por_cento) — 2 testes ficam vermelhos por isso, fora do escopo deste item, não regredidos por ele.",
-  "tests/api/cruzado_casos.py estava com ERRO DE SINTAXE real (SyntaxError, não conflito de git) resultante do merge automático (git ort) de wt/amc + wt/t601b: duas versões de `return Preparacao(...)` foram costuradas incorretamente, deixando uma função partida no meio por `def amc_feicoes` e faltando um `),` de fechamento no dicionário CASOS. Corrigido neste ramo (commit deste item) para o arquivo voltar a ser Python válido — sem essa correção `make lint` e QUALQUER teste que importe tests/api/conftest.py (ou seja, toda a suíte de API) falhava na coleta."
+  "RESTAURAÇÃO (18/09/2026): o item foi entregue em 07/09 (commit 9cee7749) e uma fusão do tronco apagou três pedaços em master: a checagem de assinatura+fonte_id de app/amc/camadas.py, o job amc.executar de app/amc/tarefas.py e o enfileiramento de app/amc/rotas.py (executor.py e este teste sobreviveram). Restaurados neste ramo com diff mínimo, lógica byte a byte da entrega original.",
+  "BASE DA TRILHA (Hetzner): as 3 camadas reais foram carregadas em plat_trilhas.public porque a base original (iagro_sat do vultr) não existe neste servidor. Fontes oficiais: INDE/ICMBio (WFS limiteucsfederais_a, bbox SC), FUNAI (mesmo dump WFS nacional de 655 TIs usado por outro projeto da casa), IBGE (dump pg_dump bc250_2017-11-08.tar, membro hid_trecho_drenagem_l filtrado por bbox SC em streaming — sem baixar o tar de 2,1 GB). ICMBio/MMA geoservers e ibge.gov.br estavam inacessíveis; por isso a hidrografia é a edição 2017 (mesmo produto BC250) e as UCs são o recorte SC da camada nacional.",
+  "ASSINATURA L6-01-e: o endpoint endureceu depois da entrega original — agora exige corpo {aceite_licenca, licenca_sha256} e licença curada na fonte. O teste semeia as 3 licenças no schema da trilha (FUNAI 'licenca-propria' com a frase literal verificada; ICMBio e IBGE 'nao-declarada', o valor honesto do vocabulário: nenhum termo explícito verificável hoje) e assina pelo mesmo ficha_licenca do servidor.",
+  "Sem cláusula de tempo/vazão no portão deste item — carga da máquina registrada só por transparência (regra do brief), não como medida de desempenho."
  ],
- "gerado_em": "2026-09-07T13:18:19Z",
- "git_sha": "92c7b2975d77"
+ "gerado_em": "2026-09-18T10:04:38Z",
+ "git_sha": "0322010e"
 }
