@@ -259,6 +259,28 @@ def exportar(cur, rede_id: str) -> dict | None:
 
 
 # --- regras avaliáveis e feições (item L4-03-a-regras-de-conectividade) --------------------------------------
+#
+# 18/09/2026 — REGRESSÃO DE FUSÃO, restaurada. `carregar_regras` e `mapas_catalogo` entraram em
+# 2e93420a5 e sumiram numa fusão posterior, sem que nenhum teste apontasse a causa: o sintoma era
+# `AttributeError: module ... has no attribute 'mapas_catalogo'` em rotas_regras.py:339, dentro de um
+# 500 da API, longe do arquivo que perdeu o código. As duas funções abaixo são a cópia literal da
+# versão de 2e93420a5 (conferida byte a byte); nada do que veio depois foi desfeito.
+#
+# É a terceira do mesmo tipo em dois dias (as outras: `tolerancia_m` em rotas.py e o vocabulário de
+# `rede_regra.tipo` em simples.py). O padrão é sempre o mesmo: a fusão resolve o conflito ficando com
+# o lado que NÃO tem o código novo, e o teste que o cobria passa a falhar por um sintoma que não
+# nomeia a perda. Conferir perda de símbolo depois de fundir (`git log -S <nome> -- <arquivo>`) é mais
+# barato que caçar o sintoma.
+#
+# ⛔ A MESMA fusão reverteu mais coisa e ISSO SEGUE ABERTO: o pacote de rede voltou de esquema versão 2
+# (a2f383a56: regra com `via`, `terminal` e lado-objeto, 58 regras em eletrica-br) para a versão 1
+# (24 regras, lado em texto "grupo/tipo", sem terminal nem via). `importar`/`exportar` neste arquivo,
+# `esquema.py`, `pacote.py` e os dois JSON de pacote estão todos na versão 1, enquanto `regras.py` e
+# `carregar_regras` avaliam na versão 2 — daí as 12 falhas que sobram em test_regras_conectividade.py,
+# test_regras_csv.py e rede/test_regras_atributo.py. O gerador determinístico `scripts/rede_gerar_pacotes.py`
+# SOBREVIVEU à fusão e é por onde a volta à versão 2 deve passar. Não é trabalho de uma linha: esquema.py
+# e pacote.py têm trabalho NOVO por cima da reversão (155+/211- e 9+/194- contra a2f383a56), então
+# `git checkout a2f383a56 -- ...` destruiria o que veio depois.
 
 
 def carregar_regras(cur, rede_id: str) -> list:
