@@ -17,17 +17,15 @@ Ele NÃO afirma que as rotas fora da lista vazam — afirma que ninguém mediu. 
 assim que tem de ser lido.
 """
 
-import pytest
-
 from tests.api.conftest import arquivo_openapi
 
-LACUNA_ABERTA = pytest.mark.xfail(
-    reason="18/09/2026: LACUNA MEDIDA, ainda aberta — 51 rotas servidas fora da varredura cruzada "
-    "(22 de escrita, 29 de leitura) e 7 casos para rota que já não existe. Fechar exige regerar "
-    "docs/openapi.json E escrever o caso de cada rota em tests/api/cruzado_casos.py, que é trabalho "
-    "de outro item. `strict=True`: no dia em que fechar, o XPASS obriga a tirar esta marca.",
-    strict=True,
-)
+# 18/09/2026, mesmo dia: a lacuna FECHOU do lado do arquivo. `docs/openapi.json` foi regerado do esquema vivo
+# (914 → 958 operações em 758 caminhos) e a diferença caiu a zero, então a marca `xfail(strict=True)` que este
+# arquivo trazia saiu — era ela que o XPASS obrigaria a tirar. O que continua aberto NÃO é isto e sim o
+# tamanho da varredura: medido hoje, `tests/api/cruzado_casos.py` tinha caso para 430 das 958 rotas (e 24
+# casos apontando para rota que não existe mais, por renome de parâmetro de caminho). Essa conta é do
+# `test_cobertura_100_por_cento` em tests/api/test_cruzado.py, não deste arquivo. Este aqui só garante que
+# nunca mais nasça rota INVISÍVEL para a varredura.
 
 METODOS_DE_ESCRITA = ("POST", "PUT", "PATCH", "DELETE")
 
@@ -50,7 +48,6 @@ def _fora_da_varredura() -> list[tuple[str, str]]:
     return sorted(_rotas_servidas() - _rotas_do_arquivo())
 
 
-@LACUNA_ABERTA
 def test_nenhuma_rota_de_escrita_servida_fica_fora_da_varredura_cruzada(medida):
     """Rota de escrita que a aplicação serve e a varredura cruzada não conhece: a autorização entre
     inquilinos dela nunca foi exercida por teste nenhum."""
@@ -66,7 +63,6 @@ def test_nenhuma_rota_de_escrita_servida_fica_fora_da_varredura_cruzada(medida):
         f"de cada uma em tests/api/cruzado_casos.py:\n  " + "\n  ".join(f"{m} {c}" for m, c in escrita))
 
 
-@LACUNA_ABERTA
 def test_nenhuma_rota_de_leitura_servida_fica_fora_da_varredura_cruzada():
     """Mesma conta para as rotas de leitura. Vazamento de leitura é vazamento igual — é por leitura que se
     lê o dado do vizinho."""
@@ -76,7 +72,6 @@ def test_nenhuma_rota_de_leitura_servida_fica_fora_da_varredura_cruzada():
         + "\n  ".join(f"{m} {c}" for m, c in fora))
 
 
-@LACUNA_ABERTA
 def test_a_varredura_nao_lista_rota_que_ja_nao_existe():
     """O contrário também conta: caso escrito para rota que saiu do produto dá cobertura de mentira."""
     sobrando = sorted(_rotas_do_arquivo() - _rotas_servidas())
