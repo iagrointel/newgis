@@ -66,7 +66,7 @@
       "chave_rw_segredo": 403
     },
     "2_controle_positivo": {
-      "balde": "tuniao-plat-demo2",
+      "balde": "tl02-plat-demo2",
       "bytes": 2176,
       "sha_bate": true
     },
@@ -78,9 +78,9 @@
       "GetBucketLocation_de_B": "AccessDenied",
       "GetObject_virtualhost_de_B": "AccessDenied",
       "GetObject_prefixo_do_alias_de_A": "NoSuchKey",
-      "travessia_ponto_ponto": "GET tuniao-plat-demo/../tuniao-plat-demo2/zadv/alvo_90185099.bin: 403 <?xml vers",
-      "travessia_codificada": "GET tuniao-plat-demo/..%2Ftuniao-plat-demo2%2Fzadv/alvo_90185099.bin: 403 <?xml ",
-      "travessia_codificada_dupla": "GET tuniao-plat-demo/..%252Ftuniao-plat-demo2%252Fzadv/alvo_90185099.bin: 403 <?",
+      "travessia_ponto_ponto": "GET tl02-plat-demo/../tl02-plat-demo2/zadv/alvo_90185099.bin: 403 <?xml version=",
+      "travessia_codificada": "GET tl02-plat-demo/..%2Ftl02-plat-demo2%2Fzadv/alvo_90185099.bin: 403 <?xml vers",
+      "travessia_codificada_dupla": "GET tl02-plat-demo/..%252Ftl02-plat-demo2%252Fzadv/alvo_90185099.bin: 403 <?xml ",
       "sufixo_no_nome_do_balde": "404",
       "caminho_cru_sem_assinatura": "403"
     },
@@ -91,26 +91,26 @@
       "web_ativo_no_balde": false
     },
     "3_multipart_acima_da_cota": {
-      "cota_bytes": 254830718,
-      "usado_antes": 249586814,
+      "cota_bytes": 6678987,
+      "usado_antes": 1435083,
       "partes": 2,
       "bytes_enviados": 10485760,
       "parte_1": "aceita",
       "parte_2": "aceita",
       "concluir": "AccessDenied",
-      "bytes_no_garage_depois": 249586814,
+      "bytes_no_garage_depois": 1435083,
       "ultrapassou_a_cota": false
     },
     "3b_cota_de_objetos": {
-      "objetos_antes": 212,
-      "cota_objetos": 215,
+      "objetos_antes": 12,
+      "cota_objetos": 15,
       "tentativas": 6,
       "aceitos": 3,
       "recusados": 3,
       "codigos": [
         "AccessDenied"
       ],
-      "objetos_no_garage_depois": 215
+      "objetos_no_garage_depois": 15
     },
     "3c_concorrencia": {
       "rodadas": [
@@ -118,54 +118,48 @@
           "gravacoes_simultaneas": 32,
           "tamanho_cada": 16384,
           "cabem_pela_cota": 1,
-          "cota_bytes": 249604222,
-          "aceitos": 2,
+          "cota_bytes": 1452491,
+          "aceitos": 17,
           "codigos_de_recusa": [
             "AccessDenied"
           ],
-          "bytes_no_garage_depois": 249619582,
-          "sobra_sobre_a_cota": 15360,
-          "razao": 1.0
+          "bytes_no_garage_depois": 1484235,
+          "sobra_sobre_a_cota": 31744,
+          "razao": 1.02
         },
         {
           "gravacoes_simultaneas": 32,
           "tamanho_cada": 16384,
           "cabem_pela_cota": 1,
-          "cota_bytes": 249604222,
-          "aceitos": 8,
-          "codigos_de_recusa": [
-            "AccessDenied"
-          ],
-          "bytes_no_garage_depois": 249717886,
-          "sobra_sobre_a_cota": 113664,
-          "razao": 1.0
+          "cota_bytes": 1452491,
+          "aceitos": 32,
+          "codigos_de_recusa": [],
+          "bytes_no_garage_depois": 1729995,
+          "sobra_sobre_a_cota": 277504,
+          "razao": 1.19
         },
         {
           "gravacoes_simultaneas": 32,
           "tamanho_cada": 16384,
           "cabem_pela_cota": 1,
-          "cota_bytes": 249604222,
-          "aceitos": 1,
-          "codigos_de_recusa": [
-            "AccessDenied"
-          ],
-          "bytes_no_garage_depois": 249603198,
-          "sobra_sobre_a_cota": -1024,
-          "razao": 1.0
+          "cota_bytes": 1452491,
+          "aceitos": 32,
+          "codigos_de_recusa": [],
+          "bytes_no_garage_depois": 1959371,
+          "sobra_sobre_a_cota": 506880,
+          "razao": 1.35
         }
       ],
       "pior": {
         "gravacoes_simultaneas": 32,
         "tamanho_cada": 16384,
         "cabem_pela_cota": 1,
-        "cota_bytes": 249604222,
-        "aceitos": 2,
-        "codigos_de_recusa": [
-          "AccessDenied"
-        ],
-        "bytes_no_garage_depois": 249619582,
-        "sobra_sobre_a_cota": 15360,
-        "razao": 1.0
+        "cota_bytes": 1452491,
+        "aceitos": 32,
+        "codigos_de_recusa": [],
+        "bytes_no_garage_depois": 1959371,
+        "sobra_sobre_a_cota": 506880,
+        "razao": 1.35
       }
     },
     "4_sobrescrita_no_garage": {
@@ -184,7 +178,7 @@
     "6_listbuckets": {
       "status": 200,
       "baldes_listados": [
-        "tuniao-plat-demo"
+        "tl02-plat-demo"
       ],
       "traz_o_proprio": true,
       "traz_o_do_vizinho": false,
@@ -211,16 +205,16 @@
     },
     "9_apagar_devolve_contadores": {
       "antes": {
-        "objetos": 212,
-        "bytes": 249586814
+        "objetos": 12,
+        "bytes": 1435083
       },
       "com_os_tres": {
-        "objetos": 215,
-        "bytes": 249592958
+        "objetos": 15,
+        "bytes": 1441227
       },
       "depois": {
-        "objetos": 212,
-        "bytes": 249586814
+        "objetos": 12,
+        "bytes": 1435083
       },
       "liberado": {
         "objetos": 3,
