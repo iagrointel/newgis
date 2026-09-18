@@ -88,6 +88,8 @@ class Preparacao:
     modelo_amc_b: dict = field(default_factory=dict)  # L3-01-a: modelo AMC de B (fica "executado" p/ sempre)
     conjunto_amc_b: dict = field(default_factory=dict)  # L3-01-a: conjunto de unidades AMC de B
     execucao_amc_b: dict = field(default_factory=dict)  # L3-01-a: execução AMC de B
+    webhook_b: dict = field(default_factory=dict)  # leva 4 (18/09): webhook de B, alvo de /api/webhooks/{id}
+    preset_amc_b: dict = field(default_factory=dict)  # leva 4: preset AMC de B, alvo de /api/amc/presets/{id}
 
     @property
     def marcas_de_b(self) -> list[str]:
@@ -105,6 +107,10 @@ class Preparacao:
             marcas += [self.conjunto_b["nome"], self.fator_b["nome"]]
         if self.modelo_amc_b:
             marcas.append(self.modelo_amc_b["nome"])
+        if self.webhook_b:
+            marcas.append(self.webhook_b["nome"])
+        if self.preset_amc_b:
+            marcas.append(self.preset_amc_b["nome"])
         return marcas
 
 
@@ -235,6 +241,17 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     r = sessao_b.post("/api/amc/execucoes",
                       json={"modelo_id": modelo_amc_b["id"], "conjunto_id": conjunto_amc_b["id"], "semente": 1})
     execucao_amc_b = r.json() if r.status_code == 201 else {}
+    # leva 4 (18/09): webhook e preset AMC de B. São os dois recursos que faltavam para que os DELETE e
+    # PATCH de /api/webhooks/{id} e /api/amc/presets/{id} apontassem para um alvo REAL de B em vez de um
+    # UUID nulo. O webhook depende do privilégio org.integracoes: sem ele o campo fica vazio e os casos
+    # caem no UUID nulo, que ainda é cruzamento honesto (id de ninguém tem de dar 404).
+    r = sessao_b.post("/api/webhooks", json={"nome": f"{PREFIXO}webhook-{sufixo}", "url": URL_CONEXAO_TESTE,
+                                             "eventos": ["acervo/assinar"]})
+    webhook_b = r.json() if r.status_code == 201 else {}
+    r = sessao_b.post("/api/amc/presets", json={
+        "nome": f"{PREFIXO}preset-{sufixo}", "descricao": "varredura cruzada", "escopo": "inquilino",
+        "conteudo": {"combinador": "soma_ponderada", "fatores": ["f1"], "pesos": {"f1": 1.0}}})
+    preset_amc_b = r.json() if r.status_code == 201 else {}
     # 18/09/2026: AQUI havia QUATRO `return Preparacao(...)` empilhados, sobra de fusão. Só o primeiro era
     # alcançável, então convite_b, conjunto_b, fator_b, execucao_b, modelo_amc_b, conjunto_amc_b,
     # execucao_amc_b e camada_acervo NUNCA eram preenchidos — e os 82 casos da varredura que apontam para
@@ -247,7 +264,7 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
                       camada_acervo=camada_acervo,
                       conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b,
                       modelo_amc_b=modelo_amc_b, conjunto_amc_b=conjunto_amc_b,
-                      execucao_amc_b=execucao_amc_b)
+                      execucao_amc_b=execucao_amc_b, webhook_b=webhook_b, preset_amc_b=preset_amc_b)
 
 
 def _id_execucao_amc(p: "Preparacao") -> str:
@@ -289,6 +306,10 @@ def desfazer(p: Preparacao) -> None:
         p.sessao_b.delete(f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}")
     # modelo_amc_b NUNCA se apaga (já foi executado — regra do item L3-01-a-modelo-dado); fica como
     # resíduo esperado do inquilino de teste demo2, do mesmo jeito que a semente de catálogo
+    if p.webhook_b:
+        p.sessao_b.delete(f"/api/webhooks/{p.webhook_b['id']}")
+    if p.preset_amc_b:
+        p.sessao_b.delete(f"/api/amc/presets/{p.preset_amc_b['id']}")
     if p.agenda_b:
         p.sessao_b.delete(f"/api/agendas/{p.agenda_b['id']}")
     p.sessao_b.delete(f"/api/grupos/{p.grupo_b['id']}")
@@ -2232,4 +2253,153 @@ CASOS.update({
     # ---- servidor de vídeo por caminho: a defesa aqui é de travessia de caminho, e o caso tenta sair da raiz
     ("GET", "/videos/arquivo/{caminho}"): Caso(
         lambda p: "/videos/arquivo/..%2F..%2Fetc%2Fpasswd", publico=True, verificar=_sem_marca),
+})
+
+
+# =====================================================================================================
+# LEVA 4 (18/09/2026) — o que sobrou de ESCRITA QUE MUTA: DELETE, PUT e PATCH. É a ordem de risco: apagar o
+# recurso do vizinho é o pior desfecho possível de uma falha de isolamento, e nenhuma destas rotas tinha caso.
+#
+# Três grupos, com garantias diferentes, e a diferença está escrita aqui porque ela muda o que a medição vale:
+#
+# (a) ALVO REAL DE B — o caso aponta um recurso que B criou nesta mesma rodada (`item_b` para item, mapa,
+#     camada, publicação, site e metadado; `conexao_b`; `webhook_b`; `preset_amc_b`; `job_b`). Aqui a medição
+#     é forte: se a RLS falhar, o teste vê.
+# (b) SINGLETON DO INQUILINO — `/api/telemetria`, `/api/org/sso/*`, `/api/auditoria/config`,
+#     `/api/agol/credencial`, `/api/log/nivel` e `/api/org/logins/*` não levam id de recurso: agem sobre a
+#     configuração do PRÓPRIO chamador. O cruzamento que existe nelas é a terceira chamada da matriz — A com
+#     `X-Plat-Inquilino: demo2` — e essa continua tendo de dar 401/403/404 mesmo com `proprio=True`, porque
+#     `proprio` só relaxa a chamada por token. É exatamente o que o caso prende.
+# (c) ⛔ SEM RECURSO DE B — famílias que esta preparação não constrói (anotação, fluxo, domínio, modelo,
+#     modelo 3D, relacionamento, exportação, inventário de migração, widget externo, appliance de telemetria,
+#     provedor OIDC/SAML, fila de campo, lote de importação, versão de camada). O caso aponta o UUID nulo, e
+#     isso é um cruzamento honesto mas FRACO: prova que um id que não é de ninguém dá 404, não prova que o id
+#     DE B dá 404. Está declarado como lacuna no relatório e em `tests/medidas/L0-02-e.json`; fechá-la é
+#     construir o recurso em `preparar()`, uma família por vez.
+_OIDC_MIN = {"issuer": "https://exemplo.invalido/", "client_id": "zt-cruzado"}
+_SSO_OIDC_MIN = {"emissor": "https://exemplo.invalido/", "cliente_id": "zt-cruzado"}
+# certificado X.509 AUTOASSINADO gerado so para este teste, com a chave privada descartada no ato: a rota
+# recusa qualquer coisa que nao seja PEM RSA valido (422) e esse 422 viria ANTES de ela olhar o inquilino,
+# escondendo o cruzamento. Nao credencia nada e nao e segredo de ninguem.
+_PEM_TESTE = (
+    "-----BEGIN CERTIFICATE-----\n"
+    "MIIC0DCCAbigAwIBAgIUWV1ABWgMIoZKIUXB7qYF4Ui30jgwDQYJKoZIhvcNAQEL\n"
+    "BQAwIjEgMB4GA1UEAwwXenQtY3J1emFkby1pZHAtZGUtdGVzdGUwHhcNMjYwMTAx\n"
+    "MDAwMDAwWhcNMzAwMTAxMDAwMDAwWjAiMSAwHgYDVQQDDBd6dC1jcnV6YWRvLWlk\n"
+    "cC1kZS10ZXN0ZTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMCUjDgd\n"
+    "EdQ0vjHIIQdRuusX10gAc4lhklG4ewWjnDYsY20w/doSrhYNlBzaqx3nT4psbY8r\n"
+    "hWDEsj+mFfVZ4BQ0lkrrMj0UlsYlVYfC7N03oVaD1DrCwKpb53bNuZ6RIbNKmeXk\n"
+    "fXw+rBF+35Qj5D5xTATQPzKeFt4SKefEN5kwY5KAoshky5BPRRHrZHKRXaMoiwk3\n"
+    "Ham2MMysOUpwOndlKVSNq6Sm4eXNDK5S2O7nGIc/gmSI0twcSw1OeiObh3wAgsQK\n"
+    "7byaiBEmoqUMb2nxhyrFHl+thIcD7qGhmd9MrKB5KDNe2lx7G/jWLjo4N8kDE29y\n"
+    "q06zw85Xsh+/y98CAwEAATANBgkqhkiG9w0BAQsFAAOCAQEAHHBRBkGKStMmYMJQ\n"
+    "uA/mj56E+BhlFkTKYBmlRkXjGpiv4z3CtHLRMOJuHC7Hfk1gvAYw6rpy9ROKN6za\n"
+    "v7deK84A372/sK3VwlPCtTUhlDGS0OLweBY0LnWu8zWbOR6iAG4HNpyorbfr9s49\n"
+    "/nZcux1BZjAP8dxtWWSMQfGohvNlxQbv6lxbq+G4VjDyXgi0lDOHDKYhAPEKPYH6\n"
+    "3fI3IPz67l3tY3uAyLgllbx6xERzc6KOmrzm6nZPXJqfY1AcZJSy5pF8Mo/VaWvf\n"
+    "Ze8fq9Gtlxr5lLXLDMgkvh7hdaN1JJBUVTK6XmPZuVgUyd+9KDjadc6PGYLl2tIg\n"
+    "9aZhaw==\n"
+    "-----END CERTIFICATE-----\n"
+)
+# metadado SAML minimo, inline: evita que a rota saia para a rede so para o caso poder medir o cruzamento
+_SAML_METADADO_XML = (
+    '<?xml version="1.0"?>'
+    '<EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata" entityID="urn:zt:cruzado">'
+    '<IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">'
+    '<SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" '
+    'Location="https://exemplo.invalido/sso"/>'
+    '</IDPSSODescriptor></EntityDescriptor>'
+)
+_SSO_SAML_MIN = {"idp_entidade": "urn:zt:cruzado", "idp_url_sso": "https://exemplo.invalido/sso",
+                 "idp_certificado": _PEM_TESTE}
+# `tipo_campo` e o tipo SQL da coluna ("text"), nao a palavra em portugues: com "texto" o 422 de esquema
+# vem antes de a rota procurar o dominio e o cruzamento nao e medido
+_DOMINIO_MIN = {"nome": "zt-cruzado", "tipo": "codificado", "tipo_campo": "text",
+                "valores": [{"codigo": "a", "descricao": "A"}]}
+
+
+def _wh(p: Preparacao) -> str:
+    return p.webhook_b.get("id", UUID_NULO)
+
+
+def _pre(p: Preparacao) -> str:
+    return p.preset_amc_b.get("id", UUID_NULO)
+
+
+CASOS.update({
+    # ---- (a) alvo REAL de B
+    ("DELETE", "/api/webhooks/{id}"): Caso(lambda p: f"/api/webhooks/{_wh(p)}"),
+    ("PATCH", "/api/webhooks/{id}"): Caso(
+        lambda p: f"/api/webhooks/{_wh(p)}", lambda p: {"nome": "zt-cruzado-renomeado"}),
+    ("DELETE", "/api/amc/presets/{id}"): Caso(lambda p: f"/api/amc/presets/{_pre(p)}"),
+    ("PATCH", "/api/amc/presets/{id}"): Caso(
+        lambda p: f"/api/amc/presets/{_pre(p)}", lambda p: {"descricao": "zt-cruzado"}),
+    ("PUT", "/api/mapas/{id}"): Caso(
+        lambda p: f"/api/mapas/{_it(p)}", lambda p: {"titulo": "zt-cruzado-renomeado"}),
+    ("PUT", "/api/itens/{id}/metadado"): Caso(
+        lambda p: f"/api/itens/{_it(p)}/metadado", lambda p: {"metadado": {}}),
+    ("PUT", "/api/itens/{id}/site"): Caso(
+        lambda p: f"/api/itens/{_it(p)}/site", lambda p: {"indexavel": False}),
+    ("DELETE", "/api/itens/{id}/site"): Caso(lambda p: f"/api/itens/{_it(p)}/site"),
+    ("DELETE", "/api/itens/{id}/publicacao"): Caso(lambda p: f"/api/itens/{_it(p)}/publicacao"),
+    ("DELETE", "/api/camadas/{id}/versoes/{versao}"): Caso(lambda p: f"/api/camadas/{_it(p)}/versoes/1"),
+    ("PUT", "/api/conexoes/{id}/arquivo"): Caso(
+        lambda p: f"/api/conexoes/{p.conexao_b['id']}/arquivo", lambda p: {"agendado": False}),
+    # ---- (b) singleton do inquilino: o cruzamento é a chamada com X-Plat-Inquilino, que `proprio` não relaxa
+    ("PUT", "/api/telemetria"): Caso(
+        lambda p: "/api/telemetria", lambda p: {"ligada": False}, proprio=True,
+        aceita=frozenset({200, 204}), verificar=_sem_marca),
+    ("PUT", "/api/auditoria/config"): Caso(
+        lambda p: "/api/auditoria/config", lambda p: {"retencao_dias": 365}, proprio=True,
+        aceita=frozenset({200, 204}), verificar=_sem_marca),
+    ("PUT", "/api/agol/credencial"): Caso(
+        lambda p: "/api/agol/credencial", lambda p: {"remover_credencial": True}, proprio=True,
+        aceita=frozenset({200, 204}), verificar=_sem_marca),
+    ("PUT", "/api/org/sso/oidc"): Caso(
+        lambda p: "/api/org/sso/oidc", lambda p: dict(_SSO_OIDC_MIN), proprio=True,
+        aceita=frozenset({200, 204}), verificar=_sem_marca),
+    ("PUT", "/api/org/sso/saml"): Caso(
+        lambda p: "/api/org/sso/saml", lambda p: dict(_SSO_SAML_MIN), proprio=True,
+        aceita=frozenset({200, 204}), verificar=_sem_marca),
+    ("DELETE", "/api/log/nivel"): Caso(lambda p: "/api/log/nivel?componente=zz-cruzado"),
+    ("PUT", "/api/org/logins/{tipo}/{id}"): Caso(
+        lambda p: "/api/org/logins/oidc/999999999", lambda p: {"habilitado": False}),
+    # ---- (c) sem recurso de B nesta preparação: o alvo é o UUID nulo (cruzamento fraco, declarado)
+    ("DELETE", "/api/anotacoes/{id}"): Caso(lambda p: f"/api/anotacoes/{UUID_NULO}"),
+    ("PATCH", "/api/anotacoes/{id}"): Caso(
+        lambda p: f"/api/anotacoes/{UUID_NULO}", lambda p: {"texto": "zt-cruzado"}),
+    ("DELETE", "/api/fluxos/{id}"): Caso(lambda p: f"/api/fluxos/{UUID_NULO}"),
+    ("PATCH", "/api/fluxos/{id}"): Caso(
+        lambda p: f"/api/fluxos/{UUID_NULO}", lambda p: {"nome": "zt-cruzado"}),
+    ("DELETE", "/api/fluxos/{id}/eventos"): Caso(
+        lambda p: f"/api/fluxos/{UUID_NULO}/eventos?antes_de=2026-01-01T00:00:00Z"),
+    ("DELETE", "/api/dominios/{dominio_id}"): Caso(lambda p: f"/api/dominios/{UUID_NULO}"),
+    ("PUT", "/api/dominios/{dominio_id}"): Caso(
+        lambda p: f"/api/dominios/{UUID_NULO}", lambda p: dict(_DOMINIO_MIN)),
+    ("DELETE", "/api/modelos/{id}"): Caso(lambda p: f"/api/modelos/{UUID_NULO}"),
+    ("DELETE", "/api/modelos3d/{id}"): Caso(lambda p: f"/api/modelos3d/{UUID_NULO}"),
+    ("DELETE", "/api/relacionamentos/{rel_id}"): Caso(lambda p: f"/api/relacionamentos/{UUID_NULO}"),
+    ("DELETE", "/api/exportacoes/{exportacao_id}"): Caso(lambda p: f"/api/exportacoes/{UUID_NULO}"),
+    ("DELETE", "/api/inquilino/exportacoes/{exportacao_id}"): Caso(
+        lambda p: f"/api/inquilino/exportacoes/{UUID_NULO}"),
+    ("DELETE", "/api/intercambio/exportacoes/{id}"): Caso(lambda p: f"/api/intercambio/exportacoes/{UUID_NULO}"),
+    ("PUT", "/api/intercambio/importacoes-lote/{lote_id}/confirmar"): Caso(
+        lambda p: f"/api/intercambio/importacoes-lote/{UUID_NULO}/confirmar",
+        lambda p: {"itens": [{"importacao_id": UUID_NULO}]}),
+    ("DELETE", "/api/migracao/inventarios/{id}"): Caso(lambda p: f"/api/migracao/inventarios/{UUID_NULO}"),
+    ("DELETE", "/api/widgets/externos/{nome}"): Caso(lambda p: "/api/widgets/externos/zz-cruzado"),
+    ("DELETE", "/api/telemetria/appliances/{chave}"): Caso(lambda p: "/api/telemetria/appliances/zz-cruzado"),
+    ("DELETE", "/api/org/oidc/{provedor_id}"): Caso(lambda p: "/api/org/oidc/999999999"),
+    ("PUT", "/api/org/oidc/{provedor_id}"): Caso(
+        lambda p: "/api/org/oidc/999999999", lambda p: dict(_OIDC_MIN)),
+    ("DELETE", "/api/org/saml/{provedor_id}"): Caso(lambda p: "/api/org/saml/999999999"),
+    ("PUT", "/api/org/saml/{provedor_id}"): Caso(
+        # a rota exige EXATAMENTE uma fonte de metadado, e ela e lida ANTES de o provedor ser procurado.
+        # `metadado_url` faria a rota sair para a rede (e morrer em dns_falhou, 422, antes do cruzamento),
+        # entao o caso manda o XML inline: assim o pedido chega ate a busca do provedor, que e onde o
+        # isolamento entre inquilinos e decidido.
+        lambda p: "/api/org/saml/999999999",
+        lambda p: {"metadado_xml": _SAML_METADADO_XML}),
+    ("PUT", "/api/campo/filas/{fila_id}/ordem"): Caso(
+        lambda p: f"/api/campo/filas/{UUID_NULO}/ordem", lambda p: {"alvo_ids": [UUID_NULO]}),
 })

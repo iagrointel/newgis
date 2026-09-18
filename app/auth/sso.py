@@ -849,10 +849,16 @@ def _gravar_config(request: Request, auth: Auth, tipo: str, corpo: ProvedorOidcE
         except ValueError:
             raise ErroAPI(422, "validacao", "idp_certificado precisa ser um PEM X.509 com chave RSA",
                           {"campo": "idp_certificado"}) from None
-    comuns = {
-        "oidc": (corpo.emissor, corpo.cliente_id, segredo_cifrado, None, None, None),
-        "saml": (None, None, None, corpo.idp_entidade, corpo.idp_url_sso, corpo.idp_certificado),
-    }[tipo]
+    # 18/09/2026: aqui havia um DICIONARIO LITERAL indexado por `tipo`. Python monta o dicionario INTEIRO
+    # antes de indexar, entao o ramo "saml" lia `corpo.idp_entidade` mesmo quando o corpo era um
+    # ProvedorOidcEntrada — e vice-versa. Resultado: `PUT /api/org/sso/oidc` e `PUT /api/org/sso/saml`
+    # estouravam AttributeError (500) em TODO pedido valido; as duas rotas estavam mortas. Achado pela
+    # varredura cruzada A->B, que so chegou ate aqui depois que o corpo passou a ser valido — enquanto o
+    # pedido morria no 422 de esquema, o defeito ficava escondido. Ramo por ramo, avaliado so o que vale.
+    if tipo == "oidc":
+        comuns = (corpo.emissor, corpo.cliente_id, segredo_cifrado, None, None, None)
+    else:
+        comuns = (None, None, None, corpo.idp_entidade, corpo.idp_url_sso, corpo.idp_certificado)
     try:
         with db.db(auth.contexto()) as cur:
             cur.execute(
