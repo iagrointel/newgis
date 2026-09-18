@@ -625,7 +625,7 @@ class _Importador:
                 self.cur,
                 "INSERT INTO plat.rede_aresta (tenant_id, rede_id, tipo_id, codigo_externo, "
                 "no_origem_id, no_destino_id, no_origem_seq, no_destino_seq, geom, comprimento_m, atributos) "
-                "VALUES %s ON CONFLICT (rede_id, codigo_externo) DO NOTHING",
+                "VALUES %s ON CONFLICT (rede_id, tipo_id, codigo_externo) DO NOTHING",
                 pendentes[i: i + LOTE],
                 template="(%s, %s::uuid, %s::uuid, %s, %s::uuid, %s::uuid, 0, 0, "
                          "ST_GeomFromText(%s, 4326), "

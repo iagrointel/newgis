@@ -9,10 +9,12 @@ mistura um nó de outra fonte no mesmo inquilino, coincidente em geometria com u
 que a importação não cria associação nenhuma com ele.
 
 O extrato de teste é `tests/dados/taquari_power.osm` (gerado por `gerar_osm_power.py`, sem baixar
-nada da internet): duas vias (`line`/`minor_line`) cortadas por nó tipado, torre e poste fixados no
-trecho sem cortar, um ativo avulso sem via, um trecho com ponta fora do recorte (torre nessa ponta
-fica de fora, contada em `fora_do_limite`), uma área de subestação com junção dentro e uma relação
-power=* (só contada, não importada nesta passagem)."""
+nada da internet) e o seu gêmeo binário `taquari_power.osm.pbf` (`osmium cat`, mesmo conteúdo --
+o teste de topologia roda sobre os DOIS, provando a cláusula "a partir do .pbf existente" no
+formato binário real): duas vias (`line`/`minor_line`) cortadas por nó tipado, torre e poste
+fixados no trecho sem cortar, um ativo avulso sem via, um trecho com ponta fora do recorte
+(torre nessa ponta fica de fora, contada em `fora_do_limite`), uma área de subestação com junção
+dentro e uma relação power=* (só contada, não importada nesta passagem)."""
 
 import json
 import os
@@ -29,6 +31,9 @@ from tests.api.test_rls import contexto, ids_por_slug
 
 RAIZ = Path(__file__).resolve().parents[2]
 EXTRATO = str(RAIZ / "tests" / "dados" / "taquari_power.osm")
+# o mesmo extrato em binário .pbf (osmium cat taquari_power.osm -o taquari_power.osm.pbf):
+# é ele que prova a cláusula literal do portão, "importar power=* a partir do .pbf existente".
+EXTRATO_PBF = str(RAIZ / "tests" / "dados" / "taquari_power.osm.pbf")
 MUNICIPIO = json.loads((RAIZ / "tests" / "dados" / "municipio_limite.geojson").read_text())
 
 
@@ -51,16 +56,17 @@ def _rede_com_eletrica(sessao, limpar, sufixo):
     return rid
 
 
-def _importar(sessao, rid):
-    corpo = {"caminho": EXTRATO, "municipio": MUNICIPIO, "nome_municipio": "Município de teste"}
+def _importar(sessao, rid, caminho=EXTRATO):
+    corpo = {"caminho": caminho, "municipio": MUNICIPIO, "nome_municipio": "Município de teste"}
     return sessao.post(f"/api/rede/{rid}/importar-osm", json=corpo)
 
 
 # --- cláusula: importar power=* de 1 município -> rede com topologia, contagem conferida --------------------
 
-def test_importa_um_municipio_e_confere_a_topologia(sessao_a, limpar_redes):
+@pytest.mark.parametrize("extrato", [EXTRATO, EXTRATO_PBF], ids=["osm-xml", "pbf"])
+def test_importa_um_municipio_e_confere_a_topologia(sessao_a, limpar_redes, extrato):
     rid = _rede_com_eletrica(sessao_a, limpar_redes, "topologia")
-    r = _importar(sessao_a, rid)
+    r = _importar(sessao_a, rid, extrato)
     assert r.status_code == 201, r.text
     corpo = r.json()
 
