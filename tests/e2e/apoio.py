@@ -64,6 +64,34 @@ def sufixo() -> str:
     return secrets.token_hex(3)
 
 
+def escrita_do_navegador_sem_origin(page) -> None:
+    """Deixa a PÁGINA gravar na API numa bancada de trilha.
+
+    A guarda de CSRF (ADR 0002 seção 5.3, app/auth/sessao.py::checar_escrita_sob_cookie) recusa com 403
+    `origem_invalida` toda escrita sob cookie cujo cabeçalho `Origin` não seja igual a PLAT_URL_PUBLICA, e
+    `app/settings.py` só aceita `https://` nessa variável. Na trilha, PLAT_URL_PUBLICA é um domínio que não
+    existe (`https://trilha-<nome>.invalido`) e o navegador abre a bancada em `http://127.0.0.1:<porta>`: o
+    Origin NUNCA bate, então todo POST/PUT/DELETE disparado pelo JS da página volta 403 — por causa da
+    bancada, não do produto (em produção os dois são a mesma origem). `Tela.api` não sofre disso porque
+    `page.request.fetch` não manda Origin; só o clique de verdade em botão sofre.
+
+    Aqui o cabeçalho `Origin` é REMOVIDO das escritas da página (o chromium ignora a remoção de cabeçalho em
+    `continue_`, por isso fetch+fulfill), que é o mesmo que o produto vê em produção. Nada mais é afrouxado:
+    a recusa por Origin diferente continua medida na API, em
+    tests/api/adversario/test_l1_identidade.py::test_csrf_origem_forjada_recusada_em_escrita_sob_cookie.
+    Mesmo recurso já usado em tests/e2e/test_graficos_camada.py (e no e2e do item L2-01-f).
+    """
+
+    def _sem_origin(rota):
+        if rota.request.method == "GET":
+            rota.continue_()
+            return
+        cabecalhos = {k: v for k, v in rota.request.headers.items() if k.lower() != "origin"}
+        rota.fulfill(response=rota.fetch(headers=cabecalhos))
+
+    page.route("**/api/**", _sem_origin)
+
+
 class Tela:
     """Uma página do playwright com coleta de erros de console, erros de página e respostas >= 400.
 

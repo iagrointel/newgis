@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.e2e.apoio import Tela, sufixo
+from tests.e2e.apoio import Tela, escrita_do_navegador_sem_origin, sufixo
 
 pytestmark = [pytest.mark.lento, pytest.mark.e2e]
 
@@ -62,6 +62,9 @@ def mapa(page, base_url, credenciais_demo, api_auth):
     if "/api/anotacoes" not in api_auth:
         pytest.skip("backend sem /api/anotacoes no OpenAPI da URL de teste")
     slug, login, senha = credenciais_demo
+    # salvar o desenho e enviar a anotação gravam pelo JS DA PÁGINA; numa bancada de trilha o Origin do
+    # navegador nunca é PLAT_URL_PUBLICA (ver apoio.escrita_do_navegador_sem_origin).
+    escrita_do_navegador_sem_origin(page)
     tela = Tela(page, base_url, ITEM)
     tela.entrar(slug, login, senha)
     tela.ir("/mapa")
@@ -73,9 +76,12 @@ def _camada_ligada(page, tela) -> str:
     """Liga a primeira camada servível da bancada e devolve o id — a anotação é sempre de uma FEIÇÃO de
     camada, então sem camada não há alvo (o teste salta dizendo isso, em vez de falhar por seletor).
 
-    O 503 dos ladrilhos é DECLARADO: a trilha não sobe a infra de tiles (PLAT_DSN_LEITOR/Martin, item
-    L2-01-b — ver app/tiles/rotas.py), então a camada liga mas não pinta; o que este teste mede é a
-    persistência da anotação (camada_id, fid), que não depende do ladrilho chegar."""
+    O 503 e o 502 dos ladrilhos são DECLARADOS: a trilha não sobe a infra de tiles (PLAT_DSN_LEITOR/Martin,
+    item L2-01-b — ver app/tiles/rotas.py), então a camada liga mas não pinta. Sem PLAT_DSN_LEITOR a rota
+    responde 503 `leitor_nao_configurado`; quando o Martin existe mas não conhece o schema da trilha, a
+    resposta é 502 `martin_indisponivel`/`martin_erro` (app/tiles/martin_cliente.py) — mesma ausência de
+    infra, outro código. O que este teste mede é a persistência da anotação (camada_id, fid), que não
+    depende do ladrilho chegar."""
     page.evaluate("() => window.plat.mapa.abrirPainel('camadas', { foco: false })")
     page.wait_for_selector("#lista-camadas li", timeout=20000)
     ids = page.evaluate(
@@ -83,7 +89,7 @@ def _camada_ligada(page, tela) -> str:
     )
     if not ids:
         pytest.skip("nenhuma camada servível nesta base: sem feição, não há alvo de anotação")
-    tela.esperar_status(503)
+    tela.esperar_status(502, 503)
     page.evaluate("(id) => window.plat.mapa.catalogo.ligar(id)", ids[0])
     return ids[0]
 

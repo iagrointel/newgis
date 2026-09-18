@@ -10,7 +10,7 @@ import time
 
 import pytest
 
-from tests.e2e.apoio import Tela
+from tests.e2e.apoio import Tela, escrita_do_navegador_sem_origin
 
 ITEM = "L2-01-k-desenho-anotacoes"
 
@@ -33,6 +33,9 @@ def _esperar_js(page, expressao, timeout_ms=15000):
 @pytest.fixture
 def mapa(page, base_url, credenciais_demo):
     slug, login, senha = credenciais_demo
+    # "salvar o desenho" e "promover a camada" gravam pelo JS DA PÁGINA; numa bancada de trilha o Origin do
+    # navegador nunca é PLAT_URL_PUBLICA (ver apoio.escrita_do_navegador_sem_origin).
+    escrita_do_navegador_sem_origin(page)
     tela = Tela(page, base_url)
     tela.entrar(slug, login, senha)
     tela.ir("/mapa", "pagina_pronta_ms_mapa_desenho")
