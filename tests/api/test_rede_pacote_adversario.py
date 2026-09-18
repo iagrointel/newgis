@@ -281,9 +281,14 @@ def test_toda_rota_de_escrita_de_rede_exige_rede_editar_no_openapi_e_na_pratica(
     esquema = app.openapi()
     escritas = [(c, m) for c, ops in esquema["paths"].items() if c.startswith("/api/rede")
                 for m in ops if m in ("post", "put", "patch", "delete")]
-    assert len(escritas) == 3, escritas
+    # 18/09: a contagem fixa em 3 e o `rede.editar` em TODA escrita de /api/rede quebraram com os itens
+    # seguintes da linha L4, que declararam privilégios próprios (rede.medir, rede.administrar,
+    # rls:visibilidade, conteudo.criar). O contrato deste item é: nenhuma escrita de /api/rede fica SEM
+    # x-privilegio declarado, e a rota do pacote exige exatamente rede.editar (prática abaixo: 403).
+    assert len(escritas) >= 3, escritas
     for c, m in escritas:
-        assert esquema["paths"][c][m].get("x-privilegio") == "rede.editar", (c, m)
+        assert esquema["paths"][c][m].get("x-privilegio"), (c, m)
+    assert esquema["paths"]["/api/rede/{rede_id}/pacote"]["post"]["x-privilegio"] == "rede.editar"
     rid = _rede_com_pacote(sessao_a, limpar_redes, "priv")
     visual, _, _ = usuarios_a.sessao("visualizador")
     assert visual.get(f"/api/rede/{rid}").status_code == 200

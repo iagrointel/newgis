@@ -1,0 +1,13 @@
+-- rede_regra: remove a política FOR ALL redundante (item L4-01-a-pacote-de-ativos).
+--
+-- A migração 20260906T1553 criou as 4 políticas granulares do catálogo (ler/inserir/alterar/apagar) para as
+-- 10 tabelas plat.rede*, rede_regra inclusa. A 20260908T1934 (regras de atributo, que reusa a tabela) criou
+-- uma QUINTA, `p_rede_regra FOR ALL`, que é redundante e ainda afrouxa a regra: as políticas são permissivas
+-- (vale OU entre elas), e o WITH CHECK da FOR ALL não exige `plat.usuario_do_inquilino()` como o da política
+-- de inserção granular exige. Ou seja, na prática, a FOR ALL era a que valia no INSERT.
+--
+-- Os dois caminhos de escrita (app/rede_utilidades/deposito.py e app/rede/regras.py) rodam com o contexto de
+-- sessão do inquilino (usuário ativo setado), então a checagem mais estrita das 4 granulares atende os dois.
+-- As demais 9 tabelas do catálogo seguem com exatamente 4 políticas cada — o invariante que
+-- tests/api/test_rede_pacote.py::test_toda_tabela_do_catalogo_tem_rls_ligada mede.
+DROP POLICY IF EXISTS p_rede_regra ON plat.rede_regra;

@@ -29,15 +29,10 @@ Reprodução dos testes já existentes (não tocados aqui), para conferência:
 
 import inspect
 
-import pytest
 
 from app.rede_utilidades import bdgd
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "regressao de merge (commit 04f20ef8b sobrescreveu bdgd.py com versao anterior ao conserto de "
-    "01a7fecaa): bdgd.py nao tem mais _pyogrio(), so 'import pyogrio' no topo"
-))
 def test_bdgd_ainda_tem_a_funcao_de_import_tardio_do_item_l4_01_g():
     """Achado: a função `_pyogrio()` que L4-01-g introduziu (commit 01a7fecaa) não existe mais em
     `bdgd.py` — foi perdida quando o RESGATE do agente Kimi (commit 04f20ef8b) sobrescreveu o arquivo
@@ -50,10 +45,6 @@ def test_bdgd_ainda_tem_a_funcao_de_import_tardio_do_item_l4_01_g():
     )
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "regressao de merge: bdgd.py tem 'import pyogrio' de volta no nivel do modulo, prendendo "
-    "'import app.main' a um pacote que so existe no site do usuario nesta maquina"
-))
 def test_bdgd_nao_importa_pyogrio_no_topo_do_modulo():
     """Achado, metade 2: mesmo que `_pyogrio()` volte a existir, o item exige que NENHUM `import
     pyogrio` de topo permaneça (é o que prende `import app.main` a um pacote pesado). Hoje `bdgd.py`
@@ -66,11 +57,6 @@ def test_bdgd_nao_importa_pyogrio_no_topo_do_modulo():
     )
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "regressao de merge: bdgd.py restaurado pelo RESGATE do Kimi nunca importa "
-    "app.rede_utilidades.unidades; plat.rede_importacao.unidades fica sempre NULL numa importacao nova "
-    "(item L4-01-e)"
-))
 def test_bdgd_ainda_grava_a_unidade_detectada_na_auditoria_da_importacao():
     """Achado (item L4-01-e-dicionario-unidades-bdgd): a versão de `bdgd.py` restaurada pelo RESGATE do
     Kimi nunca importa `app.rede_utilidades.unidades` nem chama `detectar_comprimento`/
