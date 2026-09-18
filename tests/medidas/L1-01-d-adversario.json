@@ -119,13 +119,26 @@
           "tamanho_cada": 16384,
           "cabem_pela_cota": 1,
           "cota_bytes": 1452491,
-          "aceitos": 17,
+          "aceitos": 31,
           "codigos_de_recusa": [
             "AccessDenied"
           ],
-          "bytes_no_garage_depois": 1484235,
-          "sobra_sobre_a_cota": 31744,
-          "razao": 1.02
+          "bytes_no_garage_depois": 1811915,
+          "sobra_sobre_a_cota": 359424,
+          "razao": 1.25
+        },
+        {
+          "gravacoes_simultaneas": 32,
+          "tamanho_cada": 16384,
+          "cabem_pela_cota": 1,
+          "cota_bytes": 1452491,
+          "aceitos": 1,
+          "codigos_de_recusa": [
+            "AccessDenied"
+          ],
+          "bytes_no_garage_depois": 1451467,
+          "sobra_sobre_a_cota": -1024,
+          "razao": 1.0
         },
         {
           "gravacoes_simultaneas": 32,
@@ -134,20 +147,9 @@
           "cota_bytes": 1452491,
           "aceitos": 32,
           "codigos_de_recusa": [],
-          "bytes_no_garage_depois": 1729995,
-          "sobra_sobre_a_cota": 277504,
-          "razao": 1.19
-        },
-        {
-          "gravacoes_simultaneas": 32,
-          "tamanho_cada": 16384,
-          "cabem_pela_cota": 1,
-          "cota_bytes": 1452491,
-          "aceitos": 32,
-          "codigos_de_recusa": [],
-          "bytes_no_garage_depois": 1959371,
-          "sobra_sobre_a_cota": 506880,
-          "razao": 1.35
+          "bytes_no_garage_depois": 1779147,
+          "sobra_sobre_a_cota": 326656,
+          "razao": 1.22
         }
       ],
       "pior": {
@@ -155,11 +157,13 @@
         "tamanho_cada": 16384,
         "cabem_pela_cota": 1,
         "cota_bytes": 1452491,
-        "aceitos": 32,
-        "codigos_de_recusa": [],
-        "bytes_no_garage_depois": 1959371,
-        "sobra_sobre_a_cota": 506880,
-        "razao": 1.35
+        "aceitos": 31,
+        "codigos_de_recusa": [
+          "AccessDenied"
+        ],
+        "bytes_no_garage_depois": 1811915,
+        "sobra_sobre_a_cota": 359424,
+        "razao": 1.25
       }
     },
     "4_sobrescrita_no_garage": {
