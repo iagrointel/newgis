@@ -127,8 +127,16 @@ def test_inquilino_nao_passa_do_teto_e_a_plataforma_e_quem_move(sessao_a, sessao
     org = sessao_a.get("/api/org").json()
     corpo = {
         "nome": org["nome"], "cor": org["cor"], "idioma_padrao": org["idioma_padrao"],
+        "resumo": org["resumo"], "contato": org["contato"],
+        "contatos_admin": list(org["contatos_admin"]),
+        "unidades": org["regional"]["unidades"], "formato_data": org["regional"]["formato_data"],
+        "formato_numero_data": org["regional"]["formato_numero_data"],
         "centro": org["mapa"]["centro"], "zoom": org["mapa"]["zoom"], "basemap": org["mapa"]["basemap"],
+        "extent": org["mapa"]["extent"],
         "srid_padrao": org["mapa"]["srid_padrao"], "cota_bytes": org["armazenamento"]["cota_bytes"],
+        "pagina_inicial": [dict(b) for b in org["pagina_inicial"]],
+        "galeria_destaque": org["galeria_destaque"],
+        "banner_aviso": org["banner_aviso"], "termo_acesso": org["termo_acesso"],
         "cota_usuarios": org["usuarios"]["cota"], "auth": dict(org["auth"]),
     }
     teto_bytes = org["armazenamento"]["cota_bytes_teto"]

@@ -415,8 +415,16 @@ def test_publico_desligado_400_e_ligado_em_inquilino_proprio(sessao_plat, sessao
         corpo = {
             "nome": org["nome"],
             "cor": org["cor"],
+            "resumo": org["resumo"],
+            "contato": org["contato"],
+            "contatos_admin": list(org["contatos_admin"]),
             "idioma_padrao": org["idioma_padrao"],
+            **org["regional"],
             **org["mapa"],
+            "pagina_inicial": [dict(b) for b in org["pagina_inicial"]],
+            "galeria_destaque": org["galeria_destaque"],
+            "banner_aviso": org["banner_aviso"],
+            "termo_acesso": org["termo_acesso"],
             "cota_bytes": org["armazenamento"]["cota_bytes"],
             "cota_usuarios": org["usuarios"]["cota"],
         }

@@ -37,6 +37,11 @@ def criar(corpo: InquilinoCriar, request: Request, auth: Auth = autenticado(supe
     if not SLUG.match(slug):
         raise ErroAPI(422, "validacao", "slug: minúsculas, dígitos e hífen, 2 a 39 caracteres", {"campo": "slug"})
     temporaria = secrets.token_urlsafe(limites.SENHA_TEMPORARIA_TAMANHO)[: limites.SENHA_TEMPORARIA_TAMANHO]
+    admin_login = corpo.admin_login.strip().lower()
+    # item L0-07-a: todo inquilino nasce com UM contato administrativo — o primeiro admin — senão o GET
+    # /api/org devolveria [] e o próprio inquilino novo nunca passaria na regra "pelo menos um contato"
+    # do PUT. Um config explícito do superadmin tem prioridade (spread por cima do semeado).
+    config = {"contatos_admin": [admin_login], **(corpo.config or {})}
     try:
         with db.db() as cur:
             cur.execute(
@@ -45,8 +50,8 @@ def criar(corpo: InquilinoCriar, request: Request, auth: Auth = autenticado(supe
                     auth.sessao_hash,
                     slug,
                     corpo.nome.strip(),
-                    __import__("json").dumps(corpo.config or {}),
-                    corpo.admin_login.strip().lower(),
+                    __import__("json").dumps(config),
+                    admin_login,
                     corpo.admin_nome.strip(),
                     senha.gerar_hash(temporaria),
                 ),

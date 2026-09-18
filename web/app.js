@@ -40,6 +40,56 @@ function mostrarLinkEntrar() {
   sec.hidden = false;
 }
 
+/* item L0-07-a: blocos da página inicial do inquilino (config_publica.pagina_inicial). Tudo textContent; o href
+   de um link só entra se começar por https:// ou / (o servidor já valida — aqui é defesa em profundidade, o
+   banco não é fronteira confiável para marcação). Bloco 'galeria' lista os itens do grupo galeria_destaque;
+   falha ou grupo vazio escondem o bloco (bloco vazio não é informação). */
+function urlSegura(url) {
+  return typeof url === 'string' && (url.startsWith('https://') || (url.startsWith('/') && !url.startsWith('//')));
+}
+
+async function montarBlocoGaleria(bloco, grupoId) {
+  const sec = h('section', { class: 'bloco bloco-galeria' });
+  if (bloco.titulo) sec.append(h('h2', {}, bloco.titulo));
+  const r = await obterJSON(`/api/itens?grupo_id=${encodeURIComponent(grupoId)}&limite=8`);
+  if (r.status !== 200 || !r.json || !Array.isArray(r.json.itens) || !r.json.itens.length) return null;
+  const ul = h('ul');
+  for (const item of r.json.itens) {
+    ul.append(h('li', {}, h('a', { href: `/conteudo/${item.id}` }, item.titulo || item.id)));
+  }
+  sec.append(ul);
+  return sec;
+}
+
+async function mostrarBlocos(pub) {
+  const caixa = document.getElementById('inicio-blocos');
+  limpar(caixa);
+  const blocos = Array.isArray(pub?.pagina_inicial) ? pub.pagina_inicial : [];
+  if (!blocos.length) { caixa.hidden = true; return; }
+  for (const bloco of blocos) {
+    if (!bloco || typeof bloco !== 'object') continue;
+    if (bloco.tipo === 'texto' && bloco.texto) {
+      const sec = h('section', { class: 'bloco bloco-texto' });
+      if (bloco.titulo) sec.append(h('h2', {}, bloco.titulo));
+      sec.append(h('p', {}, bloco.texto));
+      caixa.append(sec);
+    } else if (bloco.tipo === 'links' && Array.isArray(bloco.links)) {
+      const sec = h('section', { class: 'bloco bloco-links' });
+      if (bloco.titulo) sec.append(h('h2', {}, bloco.titulo));
+      const ul = h('ul');
+      for (const link of bloco.links) {
+        if (!link || !urlSegura(link.url)) continue;
+        ul.append(h('li', {}, h('a', { href: link.url }, link.rotulo || link.url)));
+      }
+      if (ul.children.length) caixa.append(sec);
+    } else if (bloco.tipo === 'galeria' && pub.galeria_destaque) {
+      const sec = await montarBlocoGaleria(bloco, pub.galeria_destaque);
+      if (sec) caixa.append(sec);
+    }
+  }
+  caixa.hidden = !caixa.children.length;
+}
+
 async function mostrarEntrada() {
   if (!sessaoProvavel()) { mostrarLinkEntrar(); return; }
   const r = await obterJSON('/api/eu');
@@ -55,6 +105,11 @@ async function mostrarEntrada() {
     grade.append(h('a', { href: tela.caminho }, icone(tela.icone, { tamanho: 20 }), h('span', {}, t(tela.chave)), h('small', {}, t(`${tela.chave}_desc`))));
   }
   sec.hidden = false;
+  try {
+    await mostrarBlocos(usuario.inquilino?.config_publica || {});
+  } catch (e) {
+    document.getElementById('inicio-blocos').hidden = true;
+  }
 }
 
 function mostrarReguaSemSessao() {

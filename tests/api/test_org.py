@@ -22,11 +22,22 @@ def _corpo(org: dict) -> dict:
     return {
         "nome": org["nome"],
         "cor": org["cor"],
+        "resumo": org["resumo"],
+        "contato": org["contato"],
+        "contatos_admin": list(org["contatos_admin"]),
         "idioma_padrao": org["idioma_padrao"],
+        "unidades": org["regional"]["unidades"],
+        "formato_data": org["regional"]["formato_data"],
+        "formato_numero_data": org["regional"]["formato_numero_data"],
         "centro": org["mapa"]["centro"],
         "zoom": org["mapa"]["zoom"],
         "basemap": org["mapa"]["basemap"],
+        "extent": org["mapa"]["extent"],
         "srid_padrao": org["mapa"]["srid_padrao"],
+        "pagina_inicial": [dict(b) for b in org["pagina_inicial"]],
+        "galeria_destaque": org["galeria_destaque"],
+        "banner_aviso": org["banner_aviso"],
+        "termo_acesso": org["termo_acesso"],
         "cota_bytes": org["armazenamento"]["cota_bytes"],
         "cota_usuarios": org["usuarios"]["cota"],
         "auth": dict(org["auth"]),
@@ -48,10 +59,14 @@ def test_ler_e_gravar_exige_org_configurar_editor_recebe_403(sessao_a, usuarios_
     r = sessao_a.get("/api/org")
     assert r.status_code == 200, r.text
     org = r.json()
-    for chave in ("slug", "nome", "ativo", "cor", "logo", "idioma_padrao", "mapa", "armazenamento", "usuarios", "auth"):
+    for chave in ("slug", "nome", "ativo", "cor", "logo", "resumo", "contato", "contatos_admin", "idioma_padrao",
+                  "regional", "mapa", "pagina_inicial", "galeria_destaque", "banner_aviso", "termo_acesso",
+                  "armazenamento", "usuarios", "auth"):
         assert chave in org, chave
     assert org["slug"] == "demo"
-    assert set(org["mapa"]) == {"centro", "zoom", "basemap", "srid_padrao"}
+    assert set(org["mapa"]) == {"centro", "zoom", "basemap", "extent", "srid_padrao"}
+    assert set(org["regional"]) == {"unidades", "formato_data", "formato_numero_data"}
+    assert org["contatos_admin"], "a migração semeia todo inquilino com o admin mais antigo (≥1 contato)"
     # cota_bytes_teto/teto (item L0-07-c-cotas-uso): teto imposto pela PLATAFORMA, que este PUT nunca
     # ultrapassa — só o superadmin move (POST /api/plataforma/inquilinos/{id}/cotas), ver tests/api/test_cotas.py
     assert set(org["armazenamento"]) == {"cota_bytes", "cota_bytes_teto", "bytes_usados"}
@@ -69,9 +84,14 @@ def test_ler_e_gravar_exige_org_configurar_editor_recebe_403(sessao_a, usuarios_
 
 def test_gravar_altera_nome_cor_idioma_mapa_e_cota_reflete_em_arquivos(sessao_a):
     original = sessao_a.get("/api/org").json()
+    # à prova de poluição (achado do adversário T9): a cota do inquilino demo pode já estar NO teto imposto
+    # pela plataforma — subir 111 MiB daria 422 cota_bytes_acima_do_teto. Sobe se couber; senão desce.
+    atual_cota = original["armazenamento"]["cota_bytes"]
+    teto = original["armazenamento"]["cota_bytes_teto"]
+    passo = 111 * 1024 * 1024
+    nova_cota = atual_cota + passo if atual_cota + passo <= teto else atual_cota - passo
     try:
         novo_nome = f"{PREFIXO_TESTE}-org-{secrets.token_hex(3)}"
-        nova_cota = original["armazenamento"]["cota_bytes"] + 111 * 1024 * 1024
         corpo = _corpo(original)
         corpo.update(
             nome=novo_nome, cor="#112233", idioma_padrao="pt-BR", centro=[-46.63, -23.55], zoom=11,
@@ -82,7 +102,8 @@ def test_gravar_altera_nome_cor_idioma_mapa_e_cota_reflete_em_arquivos(sessao_a)
         atualizado = r.json()
         assert atualizado["nome"] == novo_nome
         assert atualizado["cor"] == "#112233"
-        assert atualizado["mapa"] == {"centro": [-46.63, -23.55], "zoom": 11, "basemap": "osm", "srid_padrao": 4326}
+        assert atualizado["mapa"] == {"centro": [-46.63, -23.55], "zoom": 11, "basemap": "osm",
+                                      "extent": None, "srid_padrao": 4326}
         assert atualizado["armazenamento"]["cota_bytes"] == nova_cota
         # reflexo imediato em /api/arquivos (mesma coluna plat.tenant.cota_bytes, lida ao vivo — sem cache,
         # sem reinício de processo: é o portão do item)

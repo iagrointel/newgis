@@ -36,6 +36,10 @@ body.mapa .mapa-barra {
 }
 body.mapa .mapa-barra h1 { margin: 0; font-size: var(--i-t3); }
 body.mapa .mapa-barra plat-aviso { flex: 1; }
+/* .mapa-corpo entrou com o painel de camadas e ficou sem regra: dentro do .principal (flex coluna) ele
+   precisa alongar E virar flex para o flex:1 do .mapa-area valer — sem isto a área do mapa media 0px de
+   altura e a tela ficava em branco (achado L0-07-a, medido no e2e). */
+body.mapa .mapa-corpo { flex: 1; min-height: 0; display: flex; }
 body.mapa .mapa-area { position: relative; flex: 1; min-height: 0; }
 body.mapa #mapa { position: absolute; inset: 0; }
 /* o MapLibre injeta o canvas e os controles nativos dentro de #mapa; nada aqui estiliza .maplibregl-* além

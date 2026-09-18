@@ -115,7 +115,13 @@ def provedores(inquilino: str):
         # (OIDC/SAML) virão com `url`, que a tela já trata
         lista.append({"tipo": "ldap", "nome": "diretório da organização (LDAP)", "modo": "senha",
                       "endpoint": "/api/login/ldap"})
-    return {"inquilino": {"slug": t["slug"], "nome": t["nome"]}, "provedores": lista, "login_local": True}
+    # banner_aviso/termo_acesso (item L0-07-a): textos que o inquilino manda mostrar ANTES do login; a tela
+    # /entrar os renderiza como TEXTO (textContent — um `<script>` aqui vira caractere visível, nunca marcação)
+    return {
+        "inquilino": {"slug": t["slug"], "nome": t["nome"],
+                      "banner_aviso": t["banner_aviso"], "termo_acesso": t["termo_acesso"]},
+        "provedores": lista, "login_local": True,
+    }
 
 
 @router.post(

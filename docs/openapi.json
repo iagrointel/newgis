@@ -3096,6 +3096,87 @@
     "title": "BackupsPagina",
     "type": "object"
    },
+   "BlocoGaleria": {
+    "additionalProperties": false,
+    "description": "Galeria de itens: mostra os itens do grupo `galeria_destaque` (a fonte é única por inquilino, como o\n'featured content' da aba Gallery da Esri — o bloco só decide ONDE ela aparece na página inicial).",
+    "properties": {
+     "tipo": {
+      "const": "galeria",
+      "title": "Tipo",
+      "type": "string"
+     },
+     "titulo": {
+      "default": "",
+      "maxLength": 80,
+      "title": "Titulo",
+      "type": "string"
+     }
+    },
+    "required": [
+     "tipo"
+    ],
+    "title": "BlocoGaleria",
+    "type": "object"
+   },
+   "BlocoLinks": {
+    "additionalProperties": false,
+    "properties": {
+     "links": {
+      "items": {
+       "$ref": "#/components/schemas/Link-Input"
+      },
+      "maxItems": 8,
+      "minItems": 1,
+      "title": "Links",
+      "type": "array"
+     },
+     "tipo": {
+      "const": "links",
+      "title": "Tipo",
+      "type": "string"
+     },
+     "titulo": {
+      "default": "",
+      "maxLength": 80,
+      "title": "Titulo",
+      "type": "string"
+     }
+    },
+    "required": [
+     "tipo",
+     "links"
+    ],
+    "title": "BlocoLinks",
+    "type": "object"
+   },
+   "BlocoTexto": {
+    "additionalProperties": false,
+    "properties": {
+     "texto": {
+      "maxLength": 4000,
+      "minLength": 1,
+      "title": "Texto",
+      "type": "string"
+     },
+     "tipo": {
+      "const": "texto",
+      "title": "Tipo",
+      "type": "string"
+     },
+     "titulo": {
+      "default": "",
+      "maxLength": 80,
+      "title": "Titulo",
+      "type": "string"
+     }
+    },
+    "required": [
+     "tipo",
+     "texto"
+    ],
+    "title": "BlocoTexto",
+    "type": "object"
+   },
    "BuildEntrada": {
     "properties": {
      "buildExtent": {
@@ -12069,7 +12150,30 @@
     "title": "LinhaLog",
     "type": "object"
    },
-   "Link": {
+   "Link-Input": {
+    "additionalProperties": false,
+    "properties": {
+     "rotulo": {
+      "maxLength": 60,
+      "minLength": 1,
+      "title": "Rotulo",
+      "type": "string"
+     },
+     "url": {
+      "maxLength": 300,
+      "minLength": 1,
+      "title": "Url",
+      "type": "string"
+     }
+    },
+    "required": [
+     "rotulo",
+     "url"
+    ],
+    "title": "Link",
+    "type": "object"
+   },
+   "Link-Output": {
     "additionalProperties": true,
     "properties": {
      "acessos": {
@@ -13798,6 +13902,18 @@
       "title": "Auth",
       "type": "object"
      },
+     "banner_aviso": {
+      "anyOf": [
+       {
+        "maxLength": 500,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Banner Aviso"
+     },
      "basemap": {
       "anyOf": [
        {
@@ -13826,6 +13942,27 @@
       ],
       "title": "Centro"
      },
+     "contato": {
+      "anyOf": [
+       {
+        "maxLength": 254,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Contato"
+     },
+     "contatos_admin": {
+      "items": {
+       "type": "string"
+      },
+      "maxItems": 20,
+      "minItems": 1,
+      "title": "Contatos Admin",
+      "type": "array"
+     },
      "cor": {
       "default": "#2463a8",
       "pattern": "^#[0-9a-fA-F]{6}$",
@@ -13842,6 +13979,43 @@
       "title": "Cota Usuarios",
       "type": "integer"
      },
+     "extent": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "number"
+        },
+        "maxItems": 4,
+        "minItems": 4,
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Extent"
+     },
+     "formato_data": {
+      "default": "dd/mm/aaaa",
+      "title": "Formato Data",
+      "type": "string"
+     },
+     "formato_numero_data": {
+      "default": "idioma",
+      "title": "Formato Numero Data",
+      "type": "string"
+     },
+     "galeria_destaque": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Galeria Destaque"
+     },
      "idioma_padrao": {
       "default": "pt-BR",
       "maxLength": 10,
@@ -13853,6 +14027,44 @@
       "minLength": 1,
       "title": "Nome",
       "type": "string"
+     },
+     "pagina_inicial": {
+      "items": {
+       "discriminator": {
+        "mapping": {
+         "galeria": "#/components/schemas/BlocoGaleria",
+         "links": "#/components/schemas/BlocoLinks",
+         "texto": "#/components/schemas/BlocoTexto"
+        },
+        "propertyName": "tipo"
+       },
+       "oneOf": [
+        {
+         "$ref": "#/components/schemas/BlocoTexto"
+        },
+        {
+         "$ref": "#/components/schemas/BlocoLinks"
+        },
+        {
+         "$ref": "#/components/schemas/BlocoGaleria"
+        }
+       ]
+      },
+      "maxItems": 15,
+      "title": "Pagina Inicial",
+      "type": "array"
+     },
+     "resumo": {
+      "anyOf": [
+       {
+        "maxLength": 310,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Resumo"
      },
      "srid_padrao": {
       "anyOf": [
@@ -13866,6 +14078,23 @@
        }
       ],
       "title": "Srid Padrao"
+     },
+     "termo_acesso": {
+      "anyOf": [
+       {
+        "maxLength": 4000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Termo Acesso"
+     },
+     "unidades": {
+      "default": "metrico",
+      "title": "Unidades",
+      "type": "string"
      },
      "zoom": {
       "anyOf": [
@@ -13883,6 +14112,7 @@
     },
     "required": [
      "nome",
+     "contatos_admin",
      "cota_bytes",
      "cota_usuarios"
     ],
@@ -13955,9 +14185,49 @@
       "title": "Auth",
       "type": "object"
      },
+     "banner_aviso": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Banner Aviso"
+     },
+     "contato": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Contato"
+     },
+     "contatos_admin": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Contatos Admin",
+      "type": "array"
+     },
      "cor": {
       "title": "Cor",
       "type": "string"
+     },
+     "galeria_destaque": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Galeria Destaque"
      },
      "idioma_padrao": {
       "title": "Idioma Padrao",
@@ -13983,9 +14253,44 @@
       "title": "Nome",
       "type": "string"
      },
+     "pagina_inicial": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "title": "Pagina Inicial",
+      "type": "array"
+     },
+     "regional": {
+      "additionalProperties": true,
+      "title": "Regional",
+      "type": "object"
+     },
+     "resumo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Resumo"
+     },
      "slug": {
       "title": "Slug",
       "type": "string"
+     },
+     "termo_acesso": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Termo Acesso"
      },
      "usuarios": {
       "additionalProperties": true,
@@ -13999,8 +14304,16 @@
      "ativo",
      "cor",
      "logo",
+     "resumo",
+     "contato",
+     "contatos_admin",
      "idioma_padrao",
+     "regional",
      "mapa",
+     "pagina_inicial",
+     "galeria_destaque",
+     "banner_aviso",
+     "termo_acesso",
      "armazenamento",
      "usuarios",
      "auth"
@@ -43888,7 +44201,7 @@
        "application/json": {
         "schema": {
          "items": {
-          "$ref": "#/components/schemas/Link"
+          "$ref": "#/components/schemas/Link-Output"
          },
          "title": "Response Listar Links Api Itens  Id  Links Get",
          "type": "array"

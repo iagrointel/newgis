@@ -1,0 +1,24 @@
+# Inventário das capturas do portão e2e do item L0-07-a-configuracoes-org.
+#
+# Os PNG não entram no git (.gitignore linha 6: tests/e2e/capturas/*.png — o repositório não carrega
+# imagem). A prova é este inventário mais o teste que regenera tudo:
+#   set -a; source <env da trilha>; set +a
+#   PLAT_URL_PUBLICA=https://127.0.0.1:8157 venv/bin/python scripts/servir_local.py --porta 8157 \
+#     --cert <crt> --chave <key> &   # cert autoassinado de /tmp; CSRF exige Origin == PLAT_URL_PUBLICA
+#   SSL_CERT_FILE=<crt> bash /home/dev/plat-frota/laco/roda_teste.sh tests/e2e/test_organizacao.py \
+#     -q --base-url=https://127.0.0.1:8157
+# Quem quiser conferir roda o teste e compara nome, tamanho e sha256 desta lista (bytes/sha256 variam
+# a cada corrida: o sufixo aleatório do nome do inquilino e do texto do bloco entra nas imagens —
+# os valores abaixo são da corrida do relatório, 18/09/2026).
+#
+# entrada       = / depois do PUT pela tela: marca nova (nome + chip da cor) na barra lateral e o bloco
+#                 de texto da página inicial com o HTML injetado ESCRITO (<b> visível, nunca marcação).
+# mapa          = /mapa aberto na vista padrão nova do inquilino: -23.47000, -46.55000 · z12.0 na caixa
+#                 de coordenadas, sobre o recorte OSM de Guarulhos desenhado de verdade.
+# login_avisos  = /entrar?inquilino=demo ANTES da senha: banner de aviso e termo de acesso como texto
+#                 puro (a injeção <b>...</b> aparece caractere por caractere).
+#
+# nome  bytes  sha256
+L0-07-a-configuracoes-org_entrada.png  150105  c49e7dd73052828c45a7f4dde53b9edf3164a7ad22add171696b87ddad7c09e8
+L0-07-a-configuracoes-org_mapa.png  1307640  30249d8248a65691264d5b3422446221d0509ebced5e25b0cc79125d1bf9cbcb
+L0-07-a-configuracoes-org_login_avisos.png  22200  3a4fd6a80e8b5a0f4716d3f813fde54523b061d697df03c98fcaeee4db361032

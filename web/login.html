@@ -21,6 +21,11 @@
     </div>
     <h1 class="sr-only" data-i18n="login.entrar">Entrar</h1>
     <p class="inquilino-nome" id="inquilino-nome" hidden><span data-i18n="login.entrar_em">Entrar em:</span> <strong id="inquilino-rotulo"></strong></p>
+    <!-- item L0-07-a: banner de aviso e termo de acesso do inquilino (PUT /api/org), servidos por
+         GET /api/login/provedores antes de qualquer credencial. Sempre texto puro (textContent no JS):
+         um `<b>` aqui aparece escrito na tela, nunca vira marcação. -->
+    <p class="aviso-org" id="org-banner" role="note" hidden></p>
+    <p class="termo-org" id="org-termo" role="note" hidden></p>
     <plat-aviso id="aviso"></plat-aviso>
     <plat-estado id="estado-entrada" hidden></plat-estado>
     <!-- method="post": rede de segurança. O envio de verdade é o ouvinte de submit em js/auth/login.js, que
