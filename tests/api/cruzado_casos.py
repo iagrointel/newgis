@@ -2547,3 +2547,185 @@ CASOS.update({
     ("POST", "/api/telemetria/receber"): Caso(lambda p: "/api/telemetria/receber", lambda p: {}, publico=True,
                                               aceita=frozenset({400, 422}), verificar=_sem_marca),
 })
+
+
+# =====================================================================================================
+# LEVA 6 (18/09/2026) — as LEITURAS que faltavam. Vazamento de leitura é vazamento igual: é por leitura que
+# se lê o cadastro do vizinho, e são 170 rotas de GET que nenhum teste tinha exercido entre inquilinos.
+#
+# Duas formas, conforme o caminho:
+#
+# (1) COLEÇÃO DO PRÓPRIO INQUILINO (sem id no caminho) — `/api/webhooks`, `/api/mapas`, `/api/chamados`,
+#     `/api/fluxos`... A lista é do chamador, então o 2xx é legítimo (`proprio=True`). O que o caso mede é
+#     `_sem_marca`: se uma linha de B aparecer na lista de A — login, nome de grupo, de papel, de item, de
+#     webhook, de preset, ou a string "demo2" — o teste reprova. É o teste de RLS de listagem, e a matriz
+#     cuida do resto: a chamada com `X-Plat-Inquilino: demo2` continua tendo de dar 401/403/404.
+# (2) RECURSO COM ID — aponta o recurso de B quando a preparação o tem (item, conexão, webhook, preset,
+#     execução AMC e multiescala, modelo AMC), e o UUID nulo quando não tem (cruzamento fraco, declarado).
+#
+# `/api/p/{inquilino}/{slug}` merece nome próprio: é a página pública POR INQUILINO, e o caso pede
+# explicitamente a de `demo2`. Se uma publicação de B vazasse por ali, seria sem sessão nenhuma.
+_LISTAS_PROPRIAS = (
+    "/api/acervo/dominios", "/api/acervo/frescor/camadas", "/api/acervo/frescor/execucoes",
+    "/api/acervo/frescor/mudancas", "/api/acervo/meu-mapa", "/api/acervo/uso", "/api/acervo/uso/mensal",
+    "/api/agol/credencial", "/api/agol/publicacoes", "/api/amc/presets", "/api/auditoria",
+    "/api/auditoria/config", "/api/backup/backups", "/api/backup/ensaios", "/api/campo/filas",
+    "/api/campo/mapas", "/api/campo/roteiros", "/api/campo/visitas", "/api/chamados",
+    "/api/chamados/banner", "/api/crs", "/api/dominios", "/api/dominios-limites", "/api/dominios.csv",
+    "/api/endpoints-publicos", "/api/exportacoes", "/api/exportacoes/formatos", "/api/ferramentas",
+    "/api/fluxos", "/api/formularios/equivalencia", "/api/geocodificador/lote", "/api/geoparquet",
+    "/api/imagens/formatos", "/api/inquilino/exportacoes", "/api/inquilino/exportar/estimativa",
+    "/api/intercambio/exportacoes", "/api/intercambio/formatos", "/api/layouts/modelos", "/api/log/nivel",
+    "/api/mapa/fuso", "/api/mapas", "/api/mapas-base", "/api/migracao/inventarios", "/api/modelos",
+    "/api/modelos3d", "/api/modo", "/api/odk/pontes", "/api/org/logins", "/api/org/oidc", "/api/org/saml",
+    "/api/org/sso/oidc", "/api/org/sso/saml", "/api/plataforma/chamados", "/api/portal/exemplos",
+    "/api/render/saude", "/api/simbolos", "/api/telemetria", "/api/telemetria/appliances", "/api/videos",
+    "/api/webhooks", "/api/widgets/externos",
+)
+CASOS.update({
+    ("GET", c): Caso(lambda p, u=c: u, proprio=True, aceita=frozenset({200}), verificar=_sem_marca)
+    for c in _LISTAS_PROPRIAS
+})
+CASOS.update({
+    # listas próprias que exigem parâmetro de consulta
+    ("GET", "/api/anotacoes"): Caso(
+        lambda p: f"/api/anotacoes?camada_id={_it(p)}&fid=1"),
+    ("GET", "/api/eventos/camadas"): Caso(
+        lambda p: f"/api/eventos/camadas?camadas={_it(p)}"),
+    ("GET", "/api/cena/sol"): Caso(
+        lambda p: "/api/cena/sol?lat=-23.5&lon=-46.6&instante=2026-01-01T12:00:00Z",
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
+    # ---- início de login/SSO POR INQUILINO: A pedindo o fluxo de B. Não há sessão envolvida, e a resposta
+    # legítima é redirecionar (ou dizer que B não tem aquele provedor), nunca contar a configuração de B.
+    **{("GET", c): Caso(lambda p, u=c: f"{u}?inquilino=demo2", publico=True, descartavel=True,
+                        aceita=frozenset({200, 204, 302, 307, 400, 409, 422, 503}), verificar=_sem_marca)
+       for c in ("/api/login/oidc/iniciar", "/api/login/saml/iniciar", "/api/login/saml/metadata",
+                 "/api/sso/oidc/iniciar", "/api/sso/saml/iniciar")},
+    # ⚠ `descartavel=True` nestas seis por um motivo MEDIDO em 18/09: `GET /api/sso/oidc/logout` e
+    # `GET /api/sso/saml/logout` devolvem 204 e ENCERRAM a sessão de quem chamou. Sem cliente próprio, a
+    # varredura derrubava a sessão de A no meio da rodada e as ~170 rotas que vinham depois falhavam todas
+    # com 401 — um falso vermelho enorme que não tinha nada a ver com isolamento. É o mesmo motivo pelo qual
+    # `POST /api/logout` já era descartável. Fica registrado que são rotas de ENCERRAR SESSÃO por GET.
+    **{("GET", c): Caso(lambda p, u=c: u, publico=True, descartavel=True,
+                        aceita=frozenset({200, 204, 302, 307, 400, 409, 422, 503}), verificar=_sem_marca)
+       for c in ("/api/login/oidc/retorno", "/api/sso/oidc/retorno", "/api/sso/oidc/logout",
+                 "/api/sso/saml/logout", "/api/sso/saml/metadata", "/api/sso/saml/slo")},
+    # ---- página pública por inquilino: o caso pede a de B, sem credencial nenhuma
+    ("GET", "/api/p/{inquilino}/{slug}"): Caso(
+        lambda p: "/api/p/demo2/zt-cruzado-inexistente", publico=True, verificar=_sem_marca),
+    ("GET", "/api/publico/wms/{fonte}"): Caso(
+        lambda p: "/api/publico/wms/zz-fonte?service=WMS&request=GetCapabilities",
+        publico=True, verificar=_sem_marca),
+    ("GET", "/api/mapas-base/osm/{z}/{x}/{y}.png"): Caso(
+        lambda p: "/api/mapas-base/osm/1/0/0.png", proprio=True,
+        aceita=frozenset({200, 302, 502, 503}), verificar=_sem_marca),
+})
+
+# ---- LEVA 6b: leitura de recurso COM id. Alvo real de B onde a preparação tem; UUID nulo onde não tem.
+CASOS.update({
+    # item, camada e mapa de B
+    ("GET", "/api/camadas/{id}/feicoes/{fid}/popup"): Caso(lambda p: f"/api/camadas/{_it(p)}/feicoes/1/popup"),
+    ("GET", "/api/camadas/{id}/versoes"): Caso(lambda p: f"/api/camadas/{_it(p)}/versoes"),
+    ("GET", "/api/camadas/{id}/versoes/{versao}"): Caso(lambda p: f"/api/camadas/{_it(p)}/versoes/1"),
+    ("GET", "/api/camadas/{id}/versoes/{versao}/conflitos"): Caso(
+        lambda p: f"/api/camadas/{_it(p)}/versoes/1/conflitos"),
+    ("GET", "/api/itens/{id}/metadado"): Caso(lambda p: f"/api/itens/{_it(p)}/metadado"),
+    ("GET", "/api/itens/{id}/pacote"): Caso(lambda p: f"/api/itens/{_it(p)}/pacote"),
+    ("GET", "/api/itens/{id}/publicacao"): Caso(lambda p: f"/api/itens/{_it(p)}/publicacao"),
+    ("GET", "/api/itens/{id}/publicacao/exportacao"): Caso(lambda p: f"/api/itens/{_it(p)}/publicacao/exportacao"),
+    ("GET", "/api/itens/{id}/publicacao/visualizacoes"): Caso(
+        lambda p: f"/api/itens/{_it(p)}/publicacao/visualizacoes"),
+    ("GET", "/api/itens/{id}/site"): Caso(lambda p: f"/api/itens/{_it(p)}/site"),
+    ("GET", "/api/mapas/{id}"): Caso(lambda p: f"/api/mapas/{_it(p)}"),
+    ("GET", "/api/mapas/{id}/completo"): Caso(lambda p: f"/api/mapas/{_it(p)}/completo"),
+    ("GET", "/api/mapa/camadas/{id}/estilo"): Caso(lambda p: f"/api/mapa/camadas/{_it(p)}/estilo"),
+    ("GET", "/api/mapa/camadas/{id}/feicoes/{fid}"): Caso(lambda p: f"/api/mapa/camadas/{_it(p)}/feicoes/1"),
+    ("GET", "/api/mapa/camadas/{id}/valores"): Caso(lambda p: f"/api/mapa/camadas/{_it(p)}/valores?campo=zz"),
+    ("GET", "/api/campo/camadas/{camada_id}/globalids"): Caso(
+        lambda p: f"/api/campo/camadas/{_it(p)}/globalids"),
+    ("GET", "/api/geoparquet/{catalogo_item_id}/arquivos"): Caso(
+        lambda p: f"/api/geoparquet/{_it(p)}/arquivos"),
+    # conexão externa de B (a fachada Esri/WMS/WMTS dela expõe o catálogo do fornecedor de B)
+    **{("GET", c): Caso(lambda p, u=c: u.replace("{id}", p.conexao_b["id"])
+                        .replace("{camada}", "zz-camada").replace("{tile_matrix_set}", "WebMercatorQuad")
+                        .replace("{z}/{x}/{y}", "1/0/0"))
+       for c in ("/api/conexoes/{id}/arquivo", "/api/conexoes/{id}/esri/descricao",
+                 "/api/conexoes/{id}/esri/camadas/{camada}",
+                 "/api/conexoes/{id}/esri/camadas/{camada}/contagem",
+                 "/api/conexoes/{id}/esri/camadas/{camada}/feicoes",
+                 "/api/conexoes/{id}/tile", "/api/conexoes/{id}/tilejson",
+                 "/api/conexoes/{id}/wms/capacidades", "/api/conexoes/{id}/wmts/capacidades")},
+    ("GET", "/api/conexoes/{id}/esri/imagem"): Caso(
+        lambda p: f"/api/conexoes/{p.conexao_b['id']}/esri/imagem?bbox=-46.7,-23.6,-46.5,-23.4"),
+    ("GET", "/api/conexoes/{id}/esri/mapa"): Caso(
+        lambda p: f"/api/conexoes/{p.conexao_b['id']}/esri/mapa?bbox=-46.7,-23.6,-46.5,-23.4"),
+    ("GET", "/api/conexoes/{id}/wms/mapa"): Caso(
+        lambda p: f"/api/conexoes/{p.conexao_b['id']}/wms/mapa?camada=zz&bbox=-46.7,-23.6,-46.5,-23.4"),
+    ("GET", "/api/conexoes/{id}/wms/feicao"): Caso(
+        lambda p: (f"/api/conexoes/{p.conexao_b['id']}/wms/feicao?camada=zz&coluna=0&linha=0"
+                   "&bbox=-46.7,-23.6,-46.5,-23.4")),
+    ("GET", "/api/conexoes/{id}/wmts/tile-info"): Caso(
+        lambda p: f"/api/conexoes/{p.conexao_b['id']}/wmts/tile-info?camada=zz&tile_matrix_set=WebMercatorQuad"),
+    ("GET", "/api/conexoes/{id}/wmts/tile/{tile_matrix_set}/{z}/{x}/{y}"): Caso(
+        lambda p: f"/api/conexoes/{p.conexao_b['id']}/wmts/tile/WebMercatorQuad/1/0/0?camada=zz"),
+    # AMC e multiescala de B
+    ("GET", "/api/amc/presets/{id}"): Caso(lambda p: f"/api/amc/presets/{_pre(p)}"),
+    ("GET", "/api/amc/presets/{id}/exportar"): Caso(lambda p: f"/api/amc/presets/{_pre(p)}/exportar"),
+    ("GET", "/api/amc/modelos/{modelo_id}/versoes"): Caso(
+        lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}/versoes"),
+    ("GET", "/api/amc/modelos/{modelo_id}/versoes/{versao_hash}"): Caso(
+        lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}/versoes/{'0' * 64}"),
+    ("GET", "/api/amc/conjuntos/{conjunto_id}/unidades"): Caso(
+        lambda p: f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}/unidades"),
+    ("GET", "/api/amc/execucoes/{execucao_id}/matriz"): Caso(
+        lambda p: f"/api/amc/execucoes/{_id_execucao_amc(p)}/matriz"),
+    ("GET", "/api/amc/execucoes/{execucao_id}/unidades/{unidade_id}/explicacao"): Caso(
+        lambda p: f"/api/amc/execucoes/{_id_execucao_amc(p)}/unidades/{UUID_NULO}/explicacao"),
+    # webhook de B (a lista de entregas carrega corpo de evento do inquilino)
+    ("GET", "/api/webhooks/{id}"): Caso(lambda p: f"/api/webhooks/{_wh(p)}"),
+    ("GET", "/api/webhooks/{id}/entregas"): Caso(lambda p: f"/api/webhooks/{_wh(p)}/entregas"),
+    # acervo (registro da CASA, não de A nem de B)
+    ("GET", "/api/acervo/camadas/{acervo_camada_id}/verificacoes"): Caso(
+        lambda p: f"/api/acervo/camadas/{UUID_NULO}/verificacoes"),
+    ("GET", "/api/acervo/camadas/{camada}/exportar"): Caso(
+        lambda p: f"/api/acervo/camadas/{p.camada_acervo or 'inexistente'}/exportar"),
+    # utilitários de CRS e símbolos: da instalação, sem dado de inquilino
+    **{("GET", c): Caso(lambda p, u=c: u.replace("{epsg}", "4326").replace("{slug}", "zz-slug")
+                        .replace("{fontstack}", "zz-fonte").replace("{faixa}", "0-255"),
+                        proprio=True, aceita=frozenset({200}), verificar=_sem_marca)
+       for c in ("/api/crs/{epsg}", "/api/crs/{epsg}.proj4")},
+    **{("GET", c): Caso(lambda p, u=c: u.replace("{slug}", "zz-slug")
+                        .replace("{fontstack}", "zz-fonte").replace("{faixa}", "0-255"))
+       for c in ("/api/simbolos/fontes/{fontstack}/{faixa}.pbf", "/api/simbolos/sprite/{slug}.json",
+                 "/api/simbolos/sprite/{slug}.png", "/api/simbolos/sprite/{slug}@2x.json",
+                 "/api/simbolos/sprite/{slug}@2x.png")},
+    # ---- ⛔ sem recurso de B nesta preparação (cruzamento fraco, declarado)
+    **{("GET", c): Caso(lambda p, u=c: u.replace("{fila_id}", UUID_NULO).replace("{roteiro_id}", UUID_NULO)
+                        .replace("{visita_id}", UUID_NULO).replace("{anexo_id}", UUID_NULO)
+                        .replace("{exportacao_id}", UUID_NULO).replace("{lote_id}", UUID_NULO)
+                        .replace("{dominio_id}", UUID_NULO).replace("{rel_id}", UUID_NULO)
+                        .replace("{job_id}", UUID_NULO).replace("{caminho}", "tileset.json")
+                        .replace("{guid}", UUID_NULO).replace("{dataset}", "zz-dataset")
+                        .replace("{nome}", "zz-cruzado").replace("{id}", UUID_NULO))
+       for c in ("/api/campo/filas/{fila_id}", "/api/campo/filas/{fila_id}/alvos.geojson",
+                 "/api/campo/roteiros/{roteiro_id}", "/api/campo/roteiros/{roteiro_id}/trajeto.geojson",
+                 "/api/campo/visitas/{visita_id}", "/api/chamados/{id}",
+                 "/api/chamados/{id}/anexos/{anexo_id}", "/api/plataforma/chamados/{id}",
+                 "/api/plataforma/chamados/{id}/anexos/{anexo_id}", "/api/dominios/{dominio_id}",
+                 "/api/dominios/{dominio_id}/uso", "/api/exportacoes/{exportacao_id}",
+                 "/api/exportacoes/{exportacao_id}/baixar", "/api/inquilino/exportacoes/{exportacao_id}",
+                 "/api/inquilino/exportacoes/{exportacao_id}/baixar",
+                 "/api/intercambio/exportacoes/{id}", "/api/intercambio/exportacoes/{id}/baixar",
+                 "/api/intercambio/importacoes-lote/{lote_id}", "/api/ferramentas/script/{id}/execucoes",
+                 "/api/ferramentas/script/{id}/formulario", "/api/ferramentas/{nome}",
+                 "/api/fluxos/{id}", "/api/fluxos/{id}/eventos", "/api/formularios/{id}",
+                 "/api/geoparquet/{job_id}", "/api/layouts/modelos/{id}",
+                 "/api/migracao/inventarios/{id}", "/api/migracao/inventarios/{id}/itens",
+                 "/api/migracao/inventarios/{id}/relatorio.csv", "/api/modelos/{id}/pacote",
+                 "/api/modelos3d/{id}", "/api/modelos3d/{id}/3dtiles/{caminho}",
+                 "/api/modelos3d/{id}/elementos", "/api/modelos3d/{id}/elementos/{guid}",
+                 "/api/modelos3d/{id}/glb", "/api/odk/pontes/{id}",
+                 "/api/odk/pontes/{id}/entidades/{dataset}", "/api/relacionamentos/{rel_id}",
+                 "/api/endpoints-publicos/{id}", "/api/widgets/externos/{nome}",
+                 "/api/widgets/externos/{nome}/i18n.json", "/api/widgets/externos/{nome}/modulo.js")},
+})
