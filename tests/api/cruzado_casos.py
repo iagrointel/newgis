@@ -35,13 +35,16 @@ OBS_ANALISE3D = (
 )
 PADRAO = frozenset({401, 403, 404})
 UUID_NULO = "00000000-0000-0000-0000-000000000000"  # id que não é de A nem de B: 404 garantido pela RLS/dono
-# L3-01-a: documento mínimo válido de amc_modelo.v1 (mesmo shape de tests/unit/test_amc_esquema.py)
-AMC_DEF_MINIMA = {
-    "combinador": "soma_ponderada",
-    "fatores": [
-        {"id": "f1", "criterio": "c", "peso": 1, "transformacao": {"tipo": "linear", "minimo": 0, "maximo": 1}},
-    ],
-}
+# L3-01-a: documento válido de amc_modelo.v1. 18/09/2026: aqui havia um literal de 06/09 que o esquema já
+# não aceita (`amc_modelo.v1` passou a exigir esquema/nome/base/camada/direcao/extrator/fonte/unidade), e os
+# três casos que o usavam — POST /api/amc/modelos, POST /api/amc/modelos/validar e, por tabela, PUT
+# /api/amc/modelos/{modelo_id} — morriam em 422 de esquema ANTES de exercer qualquer isolamento. A varredura
+# contava as três como cobertas. Passa a vir do exemplo vivo do próprio item, que é atualizado junto com o
+# esquema; assim a deriva quebra o exemplo, não esconde a medição.
+def _amc_def_valida() -> dict:
+    from tests.api.amc import exemplos as _ex
+
+    return _ex.modelo_valido()
 
 
 @dataclass
@@ -673,8 +676,13 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("GET", "/api/acervo/camadas"): Caso(lambda p: "/api/acervo/camadas", proprio=True,
                                          aceita=frozenset({200}), verificar=_sem_marca),
     ("POST", "/api/acervo/camadas/{camada}/assinatura"): Caso(
-        lambda p: f"/api/acervo/camadas/{p.camada_acervo or 'inexistente'}/assinatura", proprio=True,
-        aceita=frozenset({201}), verificar=_sem_marca, limpar=_cancelar_assinatura,
+        lambda p: f"/api/acervo/camadas/{p.camada_acervo or 'inexistente'}/assinatura",
+        lambda p: {"aceite_licenca": True}, proprio=True,
+        # 409 `sem_licenca` e resposta LEGITIMA nesta base: `preparar()` pega a primeira camada publicada do
+        # acervo sem olhar se a fonte dela tem licenca curada, e a regra D17 recusa assinar o que nao tem
+        # licenca escrita. Em qualquer dos dois desfechos o que o caso mede e o mesmo — a resposta nao
+        # carrega marca de B — e nenhum deles e 422 de esquema, que era o que escondia a medicao.
+        aceita=frozenset({201, 409}), verificar=_sem_marca, limpar=_cancelar_assinatura,
     ),
     ("DELETE", "/api/acervo/camadas/{camada}/assinatura"): Caso(
         lambda p: f"/api/acervo/camadas/{p.camada_acervo or 'inexistente'}/assinatura", proprio=True,
@@ -1237,7 +1245,7 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     ("POST", "/api/amc/modelos"): Caso(
         lambda p: "/api/amc/modelos",
-        lambda p: {"nome": f"{PREFIXO}amc-modelo-a", "definicao": AMC_DEF_MINIMA},
+        lambda p: {"nome": f"{PREFIXO}amc-modelo-a", "definicao": _amc_def_valida()},
         proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
         limpar=_apagar_criado(("DELETE", "/api/amc/modelos/{modelo_id}")),
     ),
@@ -1245,12 +1253,15 @@ CASOS: dict[tuple[str, str], Caso] = {
                                       verificar=_sem_marca),
     ("GET", "/api/amc/modelos/{modelo_id}"): Caso(lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}"),
     ("PUT", "/api/amc/modelos/{modelo_id}"): Caso(
-        lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}", lambda p: {"nome": f"{PREFIXO}amc-invadido"},
+        lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}",
+        lambda p: {"nome": f"{PREFIXO}amc-invadido", "definicao": _amc_def_valida()},
     ),
     ("DELETE", "/api/amc/modelos/{modelo_id}"): Caso(lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}"),
     ("POST", "/api/amc/conjuntos"): Caso(
         lambda p: "/api/amc/conjuntos",
-        lambda p: {"nome": f"{PREFIXO}amc-conjunto-a", "tipo": "hexagonal", "lado_m": 250},
+        # a grade exige lado_m E area_estudo (Polygon/MultiPolygon em 4326); sem a area o 422 precedia tudo
+        lambda p: {"nome": f"{PREFIXO}amc-conjunto-a", "tipo": "hexagonal", "lado_m": 250,
+                   "area_estudo": AREA_MULTIESCALA_TESTE},
         proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
         limpar=_apagar_criado(("DELETE", "/api/amc/conjuntos/{conjunto_id}")),
     ),
@@ -1668,7 +1679,7 @@ CASOS: dict[tuple[str, str], Caso] = {
     # resolve o id de B (404 antes de tocar amc_execucao/amc_resultado; ver também o teste dedicado
     # tests/api/amc/test_modelo.py::test_a_nao_le_modelo_execucao_nem_resultado_de_b_pela_api).
     ("POST", "/api/amc/modelos/validar"): Caso(
-        lambda p: "/api/amc/modelos/validar", lambda p: {"definicao": AMC_DEF_MINIMA},
+        lambda p: "/api/amc/modelos/validar", lambda p: {"definicao": _amc_def_valida()},
         proprio=True, aceita=frozenset({200}),
     ),
     # --- clonagem de camadas hospedadas (L2-08-b): registro por inquilino; conexão de B nunca serve A
@@ -2406,4 +2417,133 @@ CASOS.update({
         lambda p: {"metadado_xml": _SAML_METADADO_XML}),
     ("PUT", "/api/campo/filas/{fila_id}/ordem"): Caso(
         lambda p: f"/api/campo/filas/{UUID_NULO}/ordem", lambda p: {"alvo_ids": [UUID_NULO]}),
+})
+
+
+# =====================================================================================================
+# LEVA 5 (18/09/2026) — POST que age SOBRE UM RECURSO EXISTENTE (o id está no caminho), mais os receptores
+# que a instalação expõe sem autenticação.
+#
+# Estes são os POST de maior valor: não criam coisa nova num inquilino, mandam numa coisa que já existe.
+# Onde a preparação tem o recurso de B, o alvo é ele — item, mapa, camada, webhook, preset AMC, conexão,
+# execução multiescala, USUÁRIO de B e o próprio INQUILINO B (a rota de cotas da plataforma).
+_PNG_1PX = ("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PKchyw"
+            "AAAABJRU5ErkJggg==")
+_GEOM_PT = {"type": "Point", "coordinates": [-46.6, -23.5]}
+_SCRIPT_MINIMO = (
+    '"""\n'
+    "nome: zt_cruzado\n"
+    "titulo: Script da varredura cruzada\n"
+    "parametros:\n"
+    "  - nome: entrada\n"
+    "    tipo: texto\n"
+    "saidas:\n"
+    "  - nome: saida\n"
+    "    tipo: texto\n"
+    '"""\n'
+    "def executar(entrada):\n"
+    "    return {'saida': entrada}\n"
+)
+_XML_META = '<?xml version="1.0"?><gmd:MD_Metadata xmlns:gmd="http://www.isotc211.org/2005/gmd"/>'
+CASOS.update({
+    # ---- versionamento da camada de B
+    ("POST", "/api/camadas/{id}/versionar"): Caso(lambda p: f"/api/camadas/{_it(p)}/versionar", lambda p: {}),
+    ("POST", "/api/camadas/{id}/versoes"): Caso(
+        lambda p: f"/api/camadas/{_it(p)}/versoes", lambda p: {"nome": "zt-cruzado"}),
+    ("POST", "/api/camadas/{id}/versoes/{versao}/publicar"): Caso(
+        lambda p: f"/api/camadas/{_it(p)}/versoes/1/publicar", lambda p: {}),
+    ("POST", "/api/camadas/{id}/versoes/{versao}/reconciliar"): Caso(
+        lambda p: f"/api/camadas/{_it(p)}/versoes/1/reconciliar"),
+    ("POST", "/api/camadas/{id}/versoes/{versao}/conflitos/{globalid}/resolver"): Caso(
+        lambda p: f"/api/camadas/{_it(p)}/versoes/1/conflitos/{UUID_NULO}/resolver",
+        lambda p: {"decisao": "padrao"}),
+    # ---- exportar, publicar e descrever o item de B (exportar é o que carrega o dado inteiro para fora)
+    ("POST", "/api/itens/{id}/exportar"): Caso(
+        lambda p: f"/api/itens/{_it(p)}/exportar", lambda p: {"formato": "geojson"}),
+    ("POST", "/api/itens/{id}/publicacao"): Caso(
+        lambda p: f"/api/itens/{_it(p)}/publicacao", lambda p: {"slug": "zt-cruzado"}),
+    ("POST", "/api/itens/{id}/metadado.xml"): Caso(
+        lambda p: f"/api/itens/{_it(p)}/metadado.xml", lambda p: {"xml": _XML_META}),
+    ("POST", "/api/itens/{id}/metadado/validar"): Caso(
+        lambda p: f"/api/itens/{_it(p)}/metadado/validar", lambda p: {"metadado": {}}),
+    # ---- consulta espacial sobre a camada de B pelo mapa
+    ("POST", "/api/mapa/camadas/{id}/filtrar"): Caso(
+        lambda p: f"/api/mapa/camadas/{_it(p)}/filtrar", lambda p: {"filtro": {}}),
+    ("POST", "/api/mapa/camadas/{id}/selecionar"): Caso(
+        lambda p: f"/api/mapa/camadas/{_it(p)}/selecionar", lambda p: {"geometria": _GEOM_PT}),
+    ("POST", "/api/mapa/{mapa_id}/desenho/promover"): Caso(
+        lambda p: f"/api/mapa/{_it(p)}/desenho/promover", lambda p: {"titulo": "zt-cruzado"}),
+    # ---- execução multiescala de B
+    ("POST", "/api/multiescala/execucoes/{id}/backtest"): Caso(
+        lambda p: f"/api/multiescala/execucoes/{p.execucao_b['id']}/backtest",
+        lambda p: {"pontos": [{"lon": -46.6, "lat": -23.5}]}),
+    ("POST", "/api/multiescala/execucoes/{id}/corredor"): Caso(
+        lambda p: f"/api/multiescala/execucoes/{p.execucao_b['id']}/corredor",
+        lambda p: {"origem": {"lon": -46.61, "lat": -23.51}, "destino": {"lon": -46.59, "lat": -23.49}}),
+    # ---- preset AMC, webhook e conexão de B
+    ("POST", "/api/amc/presets/{id}/aplicar"): Caso(
+        lambda p: f"/api/amc/presets/{_pre(p)}/aplicar",
+        lambda p: {"fatores": [[1.0]], "ids_fatores": ["f1"]}),
+    ("POST", "/api/webhooks/{id}/reativar"): Caso(lambda p: f"/api/webhooks/{_wh(p)}/reativar"),
+    ("POST", "/api/webhooks/{id}/rotacionar"): Caso(lambda p: f"/api/webhooks/{_wh(p)}/rotacionar"),
+    ("POST", "/api/webhooks/{id}/entregas/{entrega_id}/reenviar"): Caso(
+        lambda p: f"/api/webhooks/{_wh(p)}/entregas/{UUID_NULO}/reenviar"),
+    ("POST", "/api/conexoes/{id}/descobrir"): Caso(
+        lambda p: f"/api/conexoes/{p.conexao_b['id']}/descobrir"),
+    ("POST", "/api/conexoes/{id}/arquivo/sincronizar"): Caso(
+        lambda p: f"/api/conexoes/{p.conexao_b['id']}/arquivo/sincronizar"),
+    # ---- USUÁRIO de B e o INQUILINO B: dois alvos reais que a preparação já tinha e que nenhum caso usava
+    ("POST", "/api/usuarios/{id}/desregistrar"): Caso(
+        lambda p: f"/api/usuarios/{p.usuario_b['id']}/desregistrar"),
+    ("POST", "/api/plataforma/inquilinos/{id}/cotas"): Caso(
+        lambda p: f"/api/plataforma/inquilinos/{p.inquilino_b}/cotas", lambda p: {"cota_itens": 1}),
+    # ---- ⛔ sem recurso de B nesta preparação (cruzamento fraco, declarado): chamado, fila de campo,
+    # visita, script, ferramenta, fluxo, formulário, ponte ODK, endpoint público, mapa-base, relacionamento
+    ("POST", "/api/chamados/{id}/comentarios"): Caso(
+        lambda p: f"/api/chamados/{UUID_NULO}/comentarios", lambda p: {"texto": "zt-cruzado"}),
+    ("POST", "/api/chamados/{id}/anexos"): Caso(
+        lambda p: f"/api/chamados/{UUID_NULO}/anexos",
+        lambda p: {"nome": "zt.png", "tipo": "png", "conteudo": _PNG_1PX}),
+    ("POST", "/api/chamados/{id}/fechar"): Caso(lambda p: f"/api/chamados/{UUID_NULO}/fechar"),
+    ("POST", "/api/plataforma/chamados/{id}/comentarios"): Caso(
+        lambda p: f"/api/plataforma/chamados/{UUID_NULO}/comentarios", lambda p: {"texto": "zt-cruzado"}),
+    ("POST", "/api/plataforma/chamados/{id}/estado"): Caso(
+        lambda p: f"/api/plataforma/chamados/{UUID_NULO}/estado", lambda p: {"estado": "fechado"}),
+    ("POST", "/api/campo/filas/{fila_id}/alvos"): Caso(
+        lambda p: f"/api/campo/filas/{UUID_NULO}/alvos", lambda p: {"globalids": [_GID]}),
+    ("POST", "/api/campo/visitas/{visita_id}/fotos"): Caso(
+        lambda p: f"/api/campo/visitas/{UUID_NULO}/fotos", lambda p: {"conteudo": _PNG_1PX}),
+    ("POST", "/api/ferramentas/script/{id}/versao"): Caso(
+        lambda p: f"/api/ferramentas/script/{UUID_NULO}/versao",
+        # o cabecalho declarativo e um mapeamento YAML no docstring do modulo, com nome, titulo,
+        # parametros e saidas (app/ferramentas/cabecalho.py); sem ele o 422 precede o cruzamento
+        lambda p: {"codigo": _SCRIPT_MINIMO}),
+    ("POST", "/api/ferramentas/script/{id}/executar"): Caso(
+        lambda p: f"/api/ferramentas/script/{UUID_NULO}/executar", lambda p: {}),
+    ("POST", "/api/ferramentas/{nome}/executar"): Caso(
+        lambda p: "/api/ferramentas/zz-cruzado/executar", lambda p: {}),
+    ("POST", "/api/fluxos/{id}/simular"): Caso(lambda p: f"/api/fluxos/{UUID_NULO}/simular", lambda p: {}),
+    ("POST", "/api/formularios/{id}/respostas"): Caso(
+        lambda p: f"/api/formularios/{UUID_NULO}/respostas", lambda p: {"valores": {}}),
+    ("POST", "/api/odk/pontes/{id}/sincronizar"): Caso(lambda p: f"/api/odk/pontes/{UUID_NULO}/sincronizar"),
+    ("POST", "/api/endpoints-publicos/{id}/adicionar"): Caso(
+        lambda p: "/api/endpoints-publicos/999999999/adicionar"),
+    ("POST", "/api/mapas-base/{id}/tornar-padrao"): Caso(
+        lambda p: f"/api/mapas-base/{UUID_NULO}/tornar-padrao"),
+    ("POST", "/api/relacionamentos/{rel_id}/ligar"): Caso(
+        lambda p: f"/api/relacionamentos/{UUID_NULO}/ligar",
+        lambda p: {"origem_valor": "1", "destino_valor": "2"}),
+    ("POST", "/api/relacionamentos/{rel_id}/desligar"): Caso(
+        lambda p: f"/api/relacionamentos/{UUID_NULO}/desligar",
+        lambda p: {"origem_valor": "1", "destino_valor": "2"}),
+    # ---- receptores SEM autenticação: o ponto aqui é que aceitar um POST anônimo não pode virar escrita em
+    # inquilino nenhum. O digest de B, cercando cada chamada, é o que prende isso.
+    ("POST", "/api/login/saml/acs"): Caso(lambda p: "/api/login/saml/acs", lambda p: {}, publico=True,
+                                          aceita=frozenset({400, 422}), verificar=_sem_marca),
+    ("POST", "/api/sso/saml/acs"): Caso(lambda p: "/api/sso/saml/acs", lambda p: {}, publico=True,
+                                        aceita=frozenset({400, 422}), verificar=_sem_marca),
+    ("POST", "/api/sso/saml/slo"): Caso(lambda p: "/api/sso/saml/slo", lambda p: {}, publico=True,
+                                        aceita=frozenset({400, 422}), verificar=_sem_marca),
+    ("POST", "/api/telemetria/receber"): Caso(lambda p: "/api/telemetria/receber", lambda p: {}, publico=True,
+                                              aceita=frozenset({400, 422}), verificar=_sem_marca),
 })
