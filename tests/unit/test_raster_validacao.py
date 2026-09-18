@@ -104,6 +104,10 @@ def validar(nome: str, caminho: Path, **kw) -> dict:
 @pytest.fixture(scope="module", autouse=True)
 def gravar_medidas():
     yield
+    # 18/09/2026: gravava SEMPRE, sujando a arvore a cada rodada com carimbo de hora novo — o mesmo
+    # defeito que o conftest ja evita em tests/conftest.py:96. Quem mede de proposito usa a variavel.
+    if os.environ.get("PLAT_GRAVAR_MEDIDAS") != "1":
+        return
     if not _registro:
         return
     sha = subprocess.run(["git", "rev-parse", "--short=12", "HEAD"], cwd=RAIZ, capture_output=True, text=True,
