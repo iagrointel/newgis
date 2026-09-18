@@ -335,9 +335,24 @@ def test_medidas_do_portao(sessao_a, limpar_redes, medida, tmp_path):
               "nx.node_connected_component do grafo montado do PRÓPRIO .inp — a cláusula é a IGUALDADE com "
               "tracado_nos_alcancados")
     else:
-        grava("arquivo_real_junctions", None, "nós",
-              "NÃO MEDIDO: o arquivo real de 2 MB não entra no repositório (dado de operadora, repositório "
-              "público); está no disco da casa e o teste pula sem ele")
+        # 18/09 (trilha l405depc724): gravar None por cima APAGAVA a medição real feita na casa em 07/09
+        # (git diff mostrou "valor": 11119 -> null na trilha remota). O NÃO MEDIDO só se escreve quando não
+        # há medição anterior viva; havendo, ela fica como está e esta rodada não toca a cláusula.
+        import json as _json
+        from pathlib import Path as _Path
+
+        registro = _Path(__file__).resolve().parent.parent / "medidas" / "L4-05-d-epanet-inp.json"
+        anterior = None
+        if registro.exists():
+            try:
+                anterior = (_json.loads(registro.read_text(encoding="utf-8")).get("medidas") or {}
+                            ).get("arquivo_real_junctions", {}).get("valor")
+            except _json.JSONDecodeError:
+                anterior = None
+        if anterior is None:
+            grava("arquivo_real_junctions", None, "nós",
+                  "NÃO MEDIDO: o arquivo real de 2 MB não entra no repositório (dado de operadora, repositório "
+                  "público); está no disco da casa e o teste pula sem ele")
 
     # cláusula 3: exportar e reimportar dá o mesmo grafo (fixture sintética, sempre no checkout)
     rid1 = _criar_rede_agua(sessao_a, "medidas-export", limpar_redes)

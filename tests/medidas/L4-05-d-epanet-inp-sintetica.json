@@ -1,0 +1,26 @@
+{
+ "item": "L4-05-d-epanet-inp",
+ "git_sha": "f3440e60281b5de06af87c53e0691ac22b4ae884",
+ "tipo": "rede SINTÉTICA determinística (tests/dados/gerar_epanet.py, semente fixa) nas contagens exatas do portão — complemento da medição contra o arquivo real da casa, que não existe neste servidor remoto",
+ "gerado_em": "2026-09-18T04:37:25Z",
+ "comando": "venv/bin/pytest tests/api/test_rede_epanet_escala.py -m lento -q",
+ "rede_sintetica_escala_portao": {
+  "bytes_inp": 1437987,
+  "soma_comprimento_arquivo_m": 941775.86,
+  "importacao_s": 1.6,
+  "gravado_pontos": 11126,
+  "gravado_linhas": 14756,
+  "topologia_s": 4.1,
+  "topologia_nos": 11126,
+  "topologia_arestas": 14756,
+  "tracado_s": 11.0,
+  "tracado_nos_alcancados": 11126,
+  "componente_conexa_networkx": 11126,
+  "exportacao_s": 0.3,
+  "reimportacao_s": 1.9,
+  "ida_e_volta_mesmo_grafo": true,
+  "geracao_inp_s": 19.737,
+  "carga_1min": 2.71,
+  "ram_livre_gb": 0.6
+ }
+}
