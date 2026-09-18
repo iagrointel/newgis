@@ -186,7 +186,16 @@ def test_migracao_mede_a_leva(sessao: Tela):
                     pega_nova = page.evaluate(JS_SELETORES_QUE_PEGAM, sorted(set(nova)))
                     registro["seletores_da_antiga_que_pegam"] = pega_antiga
                     registro["so_na_antiga_e_pegam"] = sorted(set(pega_antiga) - set(pega_nova))
-            page.screenshot(path=str(CAPTURAS / f"{ITEM}_{nome}_{fase}_{tema}.png"), full_page=True)
+            # Pagina muito alta estoura o limite de captura do Chromium ("Unable to capture screenshot").
+            # Medido na leva 6. A foto da area visivel serve ao par antes/depois do mesmo jeito -- as duas
+            # fases caem no mesmo caminho -- e o que reprova a leva e a arvore, o contraste e o axe, que nao
+            # dependem da foto. O inventario registra qual foi.
+            caminho_png = CAPTURAS / f"{ITEM}_{nome}_{fase}_{tema}.png"
+            try:
+                page.screenshot(path=str(caminho_png), full_page=True)
+            except Exception:  # noqa: BLE001
+                page.screenshot(path=str(caminho_png))
+                registro.setdefault("captura_so_da_area_visivel", []).append(tema)
         relatorio[nome] = registro
     leva = int(os.environ.get("PLAT_LEVA", "1"))
     (SAIDA / f"leva{leva}_{fase}.json").write_text(json.dumps(relatorio, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
