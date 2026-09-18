@@ -28,7 +28,23 @@ import httpx
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[3]
-PORTA = 8251  # porta própria deste arquivo (não colide com a do e2e de estilo raster, 8248)
+def _porta_livre() -> int:
+    """Porta escolhida pelo sistema, não cravada no arquivo.
+
+    18/09/2026: aqui havia `PORTA = 8251`. Quando o pytest é morto pelo relógio do lançador (este
+    arquivo sobe uvicorn e chama `gdalinfo`, e passa dos 600 s padrão), o uvicorn filho SOBREVIVE e
+    continua segurando a porta; toda rodada seguinte pulava com "address already in use", e o portão
+    do item lia esse pulo como se a cláusula não fosse verificável nesta máquina. Porta livre por
+    rodada tira a colisão entre uma rodada e o cadáver da anterior — e entre duas rodadas paralelas,
+    que o semáforo de `roda_teste.sh` permite."""
+    import socket
+
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+PORTA = _porta_livre()
 BASE = f"http://127.0.0.1:{PORTA}"
 MEDIDA = RAIZ / "tests" / "medidas" / "L1-02-i-ogc-api-tiles-e-maps.json"
 
@@ -72,7 +88,8 @@ def servidor_vivo():
         capture_output=True, text=True, check=True).stdout.strip())
     proc = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "app.main:app", "--port", str(PORTA), "--host", "127.0.0.1"],
-        cwd=str(RAIZ), env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        cwd=str(RAIZ), env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+        start_new_session=True)
     try:
         for _ in range(100):
             try:
