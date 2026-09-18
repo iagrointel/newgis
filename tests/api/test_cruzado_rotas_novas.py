@@ -229,8 +229,10 @@ def item_b(sessao_b):
 @pytest.fixture
 def raster_b(sessao_b):
     s = _sufixo()
-    r = sessao_b.post("/api/itens", json={"tipo": "raster", "titulo": f"{PREFIXO}raster-{s}",
-                                          "dados": {"fonte": "hospedada"}})
+    r = sessao_b.post("/api/itens", json={
+        "tipo": "raster", "titulo": f"{PREFIXO}raster-{s}",
+        "dados": {"colecao": f"{PREFIXO}colecao", "stac_id": f"{PREFIXO}cena-{s}", "perfil": "visual",
+                  "origem": "referenciado", "srid_nativo": 4326}})
     if r.status_code != 201:
         pytest.skip(f"não foi possível criar item raster em B nesta base: {r.status_code} {r.text[:200]}")
     item = r.json()
@@ -443,7 +445,8 @@ def test_put_ficha_de_imagem_de_b(sessao_a, sessao_b, token_a, cliente, raster_b
     url = f"/api/imagens/{raster_b['id']}/ficha"
     corpo = {"plataforma": "sentinel-2", "instrumentos": ["msi"], "gsd": 10.0,
              "data_aquisicao": "2026-01-15T13:00:00Z", "fornecedor": "ESA/Copernicus",
-             "licenca": "cc-by-4.0", "fonte": "aberta"}
+             "licenca": "cc-by-4.0", "fonte": "upload",
+             "atribuicao": "ESA/Copernicus, CC BY 4.0"}
     negar(sessao_a, token_a, cliente, "PUT", url, corpo=corpo, marcas=[raster_b["titulo"]])
     r = sessao_b.put(url, json=corpo)
     assert r.status_code == 200, f"B legítimo não consegue gravar a ficha da própria imagem: {r.text[:200]}"
