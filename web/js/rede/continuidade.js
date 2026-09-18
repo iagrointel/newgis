@@ -5,13 +5,13 @@
    do ano, o limite daquele ano e a comparação entre os dois. Uma segunda tabela leva o mesmo número ao
    alimentador, ponderado pelas unidades consumidoras.
 
-   ⛔ A comparação com o limite tem duas frases e só duas: "dentro do limite" e "acima do limite
+   REGRA: a comparação com o limite tem duas frases e só duas: "dentro do limite" e "acima do limite
    regulatório", sempre com o valor e o limite ao lado. Nenhum texto desta tela classifica infração —
    isso é do processo da agência, não desta leitura. Ano sem apurado aparece como "sem dado", com célula
    vazia: uma linha caindo até zero seria continuidade perfeita, o contrário do que o dado diz.
 
    Módulo ES sem build; cache resolvido por no-store no nginx: NUNCA ?v= nos imports. */
-import { obter } from '../base/api.js';
+import { obter, enviar, apagar } from '../base/api.js';
 import { h, limpar } from '../base/dom.js';
 import { carregar, t } from '../base/i18n.js';
 import '../base/componentes.js';
@@ -120,7 +120,50 @@ async function iniciar() {
     if (a.status === 200) saida.append(tabelaAlimentadores(a.json));
   }
 
-  selRede.addEventListener('change', desenhar);
+  // --- controles de ESCRITA. A importação é o job `rede.importar_continuidade`; a rota responde com as
+  // contagens conferidas contra o arquivo, e é isso que o aviso mostra. O apagar limpa o que foi
+  // importado para esta rede, para que uma reimportação parta do zero.
+  const btImportar = h('button', { type: 'button', id: 'importar', class: 'botao' },
+    t('continuidade.importar'));
+  const btApagar = h('button', { type: 'button', id: 'apagar', class: 'botao secundario' },
+    t('continuidade.apagar'));
+
+  function ocupado(v) {
+    btImportar.disabled = v || !selRede.value;
+    btApagar.disabled = v || !selRede.value;
+  }
+  ocupado(false);
+
+  btImportar.addEventListener('click', async () => {
+    if (!selRede.value) return;
+    ocupado(true);
+    const r = await enviar(`/api/rede/${selRede.value}/continuidade/importar`,
+      { ano_de: ANO_DE, ano_ate: ANO_ATE });
+    ocupado(false);
+    if (r.status !== 200 && r.status !== 202) {
+      aviso.mostrar(r.json?.mensagem || t('continuidade.importar_falhou'), 'erro');
+      return;
+    }
+    aviso.mostrar(t('continuidade.importado'), 'ok');
+    await desenhar();
+  });
+
+  btApagar.addEventListener('click', async () => {
+    if (!selRede.value) return;
+    if (!window.confirm(t('continuidade.apagar_confirma'))) return;
+    ocupado(true);
+    const r = await apagar(`/api/rede/${selRede.value}/continuidade`);
+    ocupado(false);
+    if (r.status !== 200 && r.status !== 204) {
+      aviso.mostrar(r.json?.mensagem || t('continuidade.apagar_falhou'), 'erro');
+      return;
+    }
+    aviso.mostrar(t('continuidade.apagado'), 'ok');
+    await desenhar();
+  });
+
+  selRede.addEventListener('change', () => { ocupado(false); desenhar(); });
   principal.append(h('p', { class: 'ajuda' }, t('continuidade.ajuda')),
-    h('label', { for: 'rede' }, t('continuidade.rede')), selRede, saida, nota);
+    h('label', { for: 'rede' }, t('continuidade.rede')), selRede,
+    h('div', { class: 'acoes' }, btImportar, btApagar), saida, nota);
 }
