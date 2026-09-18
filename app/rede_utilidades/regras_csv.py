@@ -167,7 +167,13 @@ def importar(bruto: bytes, tipos_por_grupo: dict, terminais: dict, geometrias: d
             continue
         # papel de geometria: junção de um lado, aresta do outro (a mesma regra do pacote versão 2)
         if tipo == "juncao_aresta":
-            if geometrias.get(de[0][0]) not in GEOMETRIA_JUNCAO or geometrias.get(para[0][0]) not in GEOMETRIA_ARESTA:
+            de_geo, para_geo = geometrias.get(de[0][0]), geometrias.get(para[0][0])
+            # exceção documentada: aresta↔aresta é a convenção que o motor de topologia (topologia.py,
+            # regra_pares) usa para FUSÃO em junção anônima entre dois grupos de linha — ex.:
+            # ramal_de_ligacao/1 ↔ trecho_de_baixa_tensao/1, do pacote elétrico. Sem ela a exportação
+            # CSV da própria rede não reimporta (ida e volta medida em test_regras_csv).
+            aresta_aresta = de_geo in GEOMETRIA_ARESTA and para_geo in GEOMETRIA_ARESTA
+            if not aresta_aresta and (de_geo not in GEOMETRIA_JUNCAO or para_geo not in GEOMETRIA_ARESTA):
                 problemas.append(_problema(n, "FROMFEATURECLASS", "papel_errado",
                                            "na Junction Edge Connectivity o lado FROM é a junção (grupo de "
                                            "geometria ponto) e o TO é a aresta (linha)"))

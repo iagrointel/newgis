@@ -167,6 +167,24 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/rede/{rede_id}/tracar"): ["redes/tracar"],
     ("POST", "/api/rede/{rede_id}/epanet"): ["redes/epanet_importar"],
     ("POST", "/api/rede/{rede_id}/teksi"): ["redes/teksi_importar"],
+    # L4-03-a/L4-03-d (restauradas da linhagem il403dareas, 7e1003db — a fusão de 17/09 ficou com o lado do
+    # arquivo que não as tinha): applyEdits, validação de regras e de extensão, CSV de regras, ativação e o
+    # modo do traçado sobre área suja. Os tipos batem com os registrar_evento de rotas_regras/rotas_areas_sujas.
+    ("POST", "/api/rede/{rede_id}/applyEdits"): ["redes/apply_edits"],
+    ("POST", "/api/rede/{rede_id}/validar"): ["redes/validar_regras"],
+    ("POST", "/api/rede/{rede_id}/regras.csv"): ["redes/importar_regras_csv"],
+    ("PUT", "/api/rede/{rede_id}/regras/ativacao"): ["redes/regras_ativacao"],
+    ("POST", "/api/rede/{rede_id}/validar_extensao"): ["redes/validar_extensao"],
+    ("PUT", "/api/rede/{rede_id}/area_sujas/modo"): ["redes/area_sujas_modo"],
+    # ---- webhooks de eventos (L7-08-a-webhooks-eventos; vocabulário na migração 20260909T0345):
+    # toda escrita narra evento, e o próprio webhook escuta esses fatos (subscribe em webhooks/*);
+    # webhooks/desativar entra no log sem rota (nasce da tarefa de entrega por falhas seguidas).
+    ("POST", "/api/webhooks"): ["webhooks/criar"],
+    ("PATCH", "/api/webhooks/{id}"): ["webhooks/atualizar"],
+    ("DELETE", "/api/webhooks/{id}"): ["webhooks/apagar"],
+    ("POST", "/api/webhooks/{id}/rotacionar"): ["webhooks/rotacionar"],
+    ("POST", "/api/webhooks/{id}/reativar"): ["webhooks/reativar"],
+    ("POST", "/api/webhooks/{id}/entregas/{entrega_id}/reenviar"): ["webhooks/reenvio"],
     # L7-03-a: o envio bem-sucedido continua sem evento (sem dono humano — a auditoria é plat.arquivo +
     # plat.log_acesso); a RECUSA pelo pipeline único (tipo fora da rota, bytes, zip-bomba, SVG, antivírus) é
     # o que vai para a trilha.
@@ -210,13 +228,4 @@ ROTAS_SEM_EVENTO: dict[tuple[str, str], str] = {
         "geocodificação reversa no protocolo Esri: leitura pura, mesmo caso do findAddressCandidates acima",
     ("POST", "/rest/services/Geocodificador/GeocodeServer/geocodeAddresses"):
         "geocodificação em lote no protocolo Esri: leitura pura, mesmo caso do findAddressCandidates acima",
-    # ---- webhooks de eventos (L7-08-a-webhooks-eventos; vocabulário na migração 20260909T0345):
-    # toda escrita narra evento, e o próprio webhook escuta esses fatos (subscribe em webhooks/*);
-    # webhooks/desativar entra no log sem rota (nasce da tarefa de entrega por falhas seguidas).
-    ("POST", "/api/webhooks"): ["webhooks/criar"],
-    ("PATCH", "/api/webhooks/{id}"): ["webhooks/atualizar"],
-    ("DELETE", "/api/webhooks/{id}"): ["webhooks/apagar"],
-    ("POST", "/api/webhooks/{id}/rotacionar"): ["webhooks/rotacionar"],
-    ("POST", "/api/webhooks/{id}/reativar"): ["webhooks/reativar"],
-    ("POST", "/api/webhooks/{id}/entregas/{entrega_id}/reenviar"): ["webhooks/reenvio"],
 }

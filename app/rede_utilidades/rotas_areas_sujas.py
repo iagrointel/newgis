@@ -33,7 +33,7 @@ from app.rede_utilidades import areas_sujas, deposito, validacao
 from app.rede_utilidades.modelos import (
     ModoTracadoEntrada,
     ModoTracadoResultado,
-    TracadoResultado,
+    TracadoAreaSujaResultado,
     ValidacaoExtensaoEntrada,
     ValidacaoExtensaoResultado,
 )
@@ -199,7 +199,7 @@ def validar_extensao(rede_id: str, corpo: ValidacaoExtensaoEntrada, request: Req
         }
 
 
-@router.get("/{rede_id}/tracar", response_model=TracadoResultado, openapi_extra=LER)
+@router.get("/{rede_id}/tracar", response_model=TracadoAreaSujaResultado, openapi_extra=LER)
 def tracar(rede_id: str, feicao_id: str | None = None, geometria: str | None = None,
           auth: Auth = autenticado(escopo_token="catalogo:ler")):
     """Ponto de partida de um traçado: `feicao_id` (uuid de uma feição já gravada) OU `geometria` (GeoJSON

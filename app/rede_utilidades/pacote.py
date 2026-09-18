@@ -28,7 +28,10 @@ ORDEM = {
     "grupos": lambda d: (d.get("dominio", ""), d.get("codigo", "")),
     "tipos": lambda d: (d.get("grupo", ""), d.get("codigo", 0)),
     "atributos": lambda d: (d.get("grupo", ""), d.get("tipo") or 0, d.get("codigo", "")),
-    "regras": lambda d: (d.get("tipo", ""), d.get("de", ""), d.get("para", "")),
+    # via/terminais fazem parte da identidade da regra (ver _repetidos abaixo); entram na chave de ordenação
+    # para que a forma canônica seja única mesmo com duas regras de/para iguais (chave faca vs. fusível).
+    "regras": lambda d: (d.get("tipo", ""), d.get("de", ""), d.get("para", ""), d.get("via") or "",
+                         d.get("de_terminal") or "", d.get("para_terminal") or "", d.get("via_terminal") or ""),
 }
 
 
@@ -168,7 +171,11 @@ def _conferir_referencias(bruto: str, doc: dict) -> list[dict]:
         lambda d: (d["grupo"], d.get("tipo"), d["codigo"]), "código de atributo dentro do grupo",
     )
     problemas += _repetidos(
-        bruto, "regras", doc.get("regras", []), lambda d: (d["tipo"], d["de"], d["para"]), "regra",
+        bruto, "regras", doc.get("regras", []),
+        # via e terminais fazem parte da identidade da regra: aresta_juncao_aresta MT->MT existe uma por
+        # dispositivo (chave faca, fusível, religador...), e juncao_aresta pode diferir só pelo terminal.
+        lambda d: (d["tipo"], d["de"], d["para"], d.get("via"),
+                   d.get("de_terminal"), d.get("para_terminal"), d.get("via_terminal")), "regra",
     )
 
     for i, t in enumerate(doc.get("tiers", [])):

@@ -625,7 +625,10 @@ class _Importador:
                 self.cur,
                 "INSERT INTO plat.rede_aresta (tenant_id, rede_id, tipo_id, codigo_externo, "
                 "no_origem_id, no_destino_id, no_origem_seq, no_destino_seq, geom, comprimento_m, atributos) "
-                "VALUES %s ON CONFLICT (rede_id, codigo_externo) DO NOTHING",
+                # restaurado de 19639903: a unicidade de rede_aresta é por tipo desde 20260907T1530;
+                # a fusão de 17/09 trouxe de volta o ON CONFLICT antigo (rede_id, codigo_externo),
+                # que não casa com constraint nenhuma e derrubava a importação inteira.
+                "VALUES %s ON CONFLICT (rede_id, tipo_id, codigo_externo) DO NOTHING",
                 pendentes[i: i + LOTE],
                 template="(%s, %s::uuid, %s::uuid, %s, %s::uuid, %s::uuid, 0, 0, "
                          "ST_GeomFromText(%s, 4326), "

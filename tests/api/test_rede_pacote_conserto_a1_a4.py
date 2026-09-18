@@ -282,8 +282,26 @@ def test_toda_rota_de_escrita_de_rede_exige_rede_editar_no_openapi_e_na_pratica(
     # prefixo. O contrato do teste é o LAÇO abaixo (toda rota de escrita de /api/rede exige rede.editar);
     # o número só existe para o caso de a lista vir vazia por erro de coleta.
     assert len(escritas) >= 3, escritas
+    # 18/09 (fusão das linhagens L4): quatro grupos de rotas de escrita exigem OUTRO privilégio por decisão
+    # do próprio item — traçado é leitura (rls:visibilidade), camada de traçado é conteúdo de mapa
+    # (conteudo.criar), medição tem privilégio próprio (rede.medir) e a governança do catálogo/modo
+    # (regras.csv, ativação de regras, modo de área suja) é administração (rede.administrar). A lista é
+    # FIXA: qualquer rota nova fora de `rede.editar` derruba o teste e força a decisão explícita aqui.
+    excecoes = {
+        ("POST", "/api/rede/{rede_id}/tracar"): "rls:visibilidade",
+        ("POST", "/api/rede/{rede_id}/tracar/exportar"): "rls:visibilidade",
+        ("POST", "/api/rede/{rede_id}/tracados/{execucao_id}/repetir"): "rls:visibilidade",
+        ("POST", "/api/rede/{rede_id}/tracar/camada"): "conteudo.criar",
+        ("POST", "/api/rede/medicao/leituras"): "rede.medir",
+        ("PUT", "/api/rede/medicao/ativos/{ativo}"): "rede.medir",
+        ("POST", "/api/rede/{rede_id}/regras.csv"): "rede.administrar",
+        ("PUT", "/api/rede/{rede_id}/regras/ativacao"): "rede.administrar",
+        ("PUT", "/api/rede/{rede_id}/area_sujas/modo"): "rede.administrar",
+    }
     for c, m in escritas:
-        assert esquema["paths"][c][m].get("x-privilegio") == "rede.editar", (c, m)
+        esperado = excecoes.get((m.upper(), c), "rede.editar")
+        assert esquema["paths"][c][m].get("x-privilegio") == esperado, (c, m)
+    assert set(excecoes) <= {(m.upper(), c) for c, m in escritas}, "exceção declarada para rota que não existe mais"
     rid = _rede_com_pacote(sessao_a, limpar_redes, "priv")
     visual, _, _ = usuarios_a.sessao("visualizador")
     assert visual.get(f"/api/rede/{rid}").status_code == 200

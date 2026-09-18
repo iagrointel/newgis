@@ -208,7 +208,10 @@ def test_toda_tabela_do_catalogo_tem_rls_ligada(conexao_plat_app):
     assert set(linhas) == set(TABELAS), f"faltou tabela: {set(TABELAS) - set(linhas)}"
     for nome, r in linhas.items():
         assert r["relrowsecurity"], f"{nome} sem RLS"
-        assert r["politicas"] == 4, f"{nome} tem {r['politicas']} políticas, esperado 4"
+        # rede_regra tem 5: as 4 por comando + p_rede_regra (FOR ALL, migração 20260908T1934 — a tabela
+        # também carrega as regras de ATRIBUTO do motor regras_atributo_rede; mesma regra de inquilino).
+        esperado = 5 if nome == "rede_regra" else 4
+        assert r["politicas"] == esperado, f"{nome} tem {r['politicas']} políticas, esperado {esperado}"
 
 
 def test_apagar_a_rede_leva_o_catalogo_junto(sessao_a, env):

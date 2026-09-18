@@ -9,7 +9,9 @@ from tests.api.conftest import arquivo_openapi
 
 ROOT = Path(__file__).resolve().parents[2]
 SEM_PRIVILEGIO = {"/saude", "/api/versao"}
-VALORES_ESPECIAIS = {"publico", "proprio", "vocabulario", "superadmin", "rls:visibilidade"}
+# rls:tenant (widgets/externos, L5-36): leitura recortada pelo inquilino via RLS — marcador declarativo,
+# irmão do rls:visibilidade; a exigência real é autenticado() na rota.
+VALORES_ESPECIAIS = {"publico", "proprio", "vocabulario", "superadmin", "rls:visibilidade", "rls:tenant"}
 
 
 def _rotas(spec):
@@ -56,7 +58,7 @@ def test_vocabulario_python_igual_ao_banco(conexao_plat_app):
     for perfil in priv.PERFIS:
         assert tetos[perfil] == set(priv.teto(perfil)), perfil
     assert tetos["visualizador"] < tetos["editor"] < tetos["admin"] and tetos["campo"] < tetos["admin"]
-    assert len(priv.ADMINISTRATIVOS) == 20  # a tabela do ADR diz 18 no rodapé; a contagem linha a linha dá 20
+    assert len(priv.ADMINISTRATIVOS) == 21  # 20 anteriores + rede.administrar (L4-03-a), administrativo por desenho
 
 
 def test_openapi_comitado_esta_contido_na_aplicacao(cliente):

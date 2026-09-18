@@ -27,6 +27,9 @@ class Rede(BaseModel):
     disciplina: str
     descricao: str | None
     tolerancia_m: float
+    # comporta da avaliação de regras (L4-03-a); a fusão de 11/09 derrubou o campo do modelo e o GET
+    # deixou de expor — os testes de conectividade leem exatamente esta chave
+    regras_ativas: bool
     pacote: dict | None
     contagens: dict
     dono: dict
@@ -535,6 +538,16 @@ class ModoTracadoEntrada(BaseModel):
 class ModoTracadoResultado(BaseModel):
     rede_id: str
     modo: str
+
+
+# de wt/il403dareas — na fusão de 11/09 este resultado se chamava TracadoResultado e colidiu com o
+# TracadoResultado do traçado de rede (item L4-02-a), de campos diferentes; o nome novo desempata os dois.
+class TracadoAreaSujaResultado(BaseModel):
+    rede_id: str
+    cruza_area_suja: bool
+    bloqueado: bool
+    modo: str
+    area_suja: dict | None = None
 
 
 # de wt/il406dcateg

@@ -35,13 +35,13 @@ def test_pacote_eletrica_br_tem_a_regra_do_exemplo_do_portao():
     doc = json.loads(PACOTE_ELETRICO.read_text(encoding="utf-8"))
     achada = [
         r for r in doc["regras"]
-        if r["tipo"] == "juncao_aresta" and r["de"]["grupo"] == "transformador_de_distribuicao"
-        and r["de"].get("terminal") == "alta" and r["para"]["grupo"] == "trecho_de_media_tensao"
+        if r["tipo"] == "juncao_aresta" and r["de"].partition("/")[0] == "transformador_de_distribuicao"
+        and r.get("de_terminal") == "alta" and r["para"].partition("/")[0] == "trecho_de_media_tensao"
     ]
     assert achada, "falta a regra de terminal alta do transformador para o trecho de MT"
     assert not any(
-        r["tipo"] == "juncao_aresta" and r["de"]["grupo"] == "transformador_de_distribuicao"
-        and r["de"].get("terminal") == "baixa" and r["para"]["grupo"] == "trecho_de_media_tensao"
+        r["tipo"] == "juncao_aresta" and r["de"].partition("/")[0] == "transformador_de_distribuicao"
+        and r.get("de_terminal") == "baixa" and r["para"].partition("/")[0] == "trecho_de_media_tensao"
         for r in doc["regras"]
     ), "o terminal baixa do transformador não pode ligar ao trecho de MT (é o de BT)"
 

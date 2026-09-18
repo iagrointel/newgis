@@ -14,6 +14,9 @@ GEOMETRIAS = ("ponto", "linha", "poligono", "sem_geometria")
 TIPOS_DADO = ("texto", "inteiro", "real", "data", "booleano", "geometria")
 TIPOS_REGRA = ("juncao_juncao", "juncao_aresta", "aresta_juncao_aresta", "contencao", "estrutura")
 
+GEOMETRIA_JUNCAO = ("ponto", "sem_geometria")
+GEOMETRIA_ARESTA = ("linha",)
+
 _CODIGO = {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,62}$"}
 _NOME = {"type": "string", "minLength": 1, "maxLength": 200}
 _DESCRICAO = {"type": "string", "maxLength": 2000}
@@ -182,6 +185,10 @@ ESQUEMA = {
                     "tipo": {"enum": list(TIPOS_REGRA)},
                     "de": {"type": "string", "maxLength": 130},
                     "para": {"type": "string", "maxLength": 130},
+                    "via": {"type": "string", "maxLength": 130},
+                    "de_terminal": {"type": "string", "maxLength": 62},
+                    "para_terminal": {"type": "string", "maxLength": 62},
+                    "via_terminal": {"type": "string", "maxLength": 62},
                     "descricao": _DESCRICAO,
                 },
                 ["tipo", "de", "para"],

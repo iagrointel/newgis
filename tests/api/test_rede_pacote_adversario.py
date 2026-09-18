@@ -274,22 +274,9 @@ def test_codigo_de_pacote_igual_em_dois_inquilinos_e_em_duas_redes_nao_colide(se
 
 
 # ----------------------------------------------------------------------------------------- privilégio nas rotas
-
-def test_toda_rota_de_escrita_de_rede_exige_rede_editar_no_openapi_e_na_pratica(sessao_a, usuarios_a, limpar_redes):
-    from app.main import app
-
-    esquema = app.openapi()
-    escritas = [(c, m) for c, ops in esquema["paths"].items() if c.startswith("/api/rede")
-                for m in ops if m in ("post", "put", "patch", "delete")]
-    assert len(escritas) == 3, escritas
-    for c, m in escritas:
-        assert esquema["paths"][c][m].get("x-privilegio") == "rede.editar", (c, m)
-    rid = _rede_com_pacote(sessao_a, limpar_redes, "priv")
-    visual, _, _ = usuarios_a.sessao("visualizador")
-    assert visual.get(f"/api/rede/{rid}").status_code == 200
-    assert visual.post("/api/rede", json={"nome": "zadv-x", "disciplina": "agua"}).status_code == 403
-    assert _importar(visual, rid, instalados.bruto("agua-epanet")).status_code == 403
-    assert visual.delete(f"/api/rede/{rid}").status_code == 403
+# (o teste que morava aqui era a cópia pré-07/09, com a contagem fixa em 3 rotas de escrita; o contrato vivo,
+# com a mesma assinatura e a lista de exceções por item, está em tests/api/test_rede_pacote_conserto_a1_a4.py
+# ::test_toda_rota_de_escrita_de_rede_exige_rede_editar_no_openapi_e_na_pratica)
 
 
 # ------------------------------------------------------------------------------ servidor real (laço de eventos)
