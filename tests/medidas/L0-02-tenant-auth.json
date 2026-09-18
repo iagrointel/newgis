@@ -2,12 +2,12 @@
  "item": "L0-02-tenant-auth",
  "medidas": {
   "rotas_total": {
-   "valor": 138,
+   "valor": 960,
    "unidade": "rotas",
    "comando": "len(paths×methods) de docs/openapi.json"
   },
   "rotas_cobertas": {
-   "valor": 138,
+   "valor": 960,
    "unidade": "rotas",
    "comando": "rotas do OpenAPI com caso em tests/api/cruzado_casos.py"
   },
@@ -200,8 +200,18 @@
    "valor": 73.1,
    "unidade": "ms",
    "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
+  },
+  "rotas_com_alvo_real_de_b": {
+   "valor": 505,
+   "unidade": "rotas",
+   "comando": "casos cuja URL ou corpo cita um identificador de um recurso que demo2 criou nesta rodada"
+  },
+  "rotas_sem_alvo_real_de_b": {
+   "valor": 455,
+   "unidade": "rotas",
+   "comando": "casos que apontam UUID nulo ou literal zz-: provam que id de ninguem da 404, nao que o id DE B da"
   }
  },
- "gerado_em": "2026-09-06T13:00:50Z",
- "git_sha": "e2d5f9164f6b"
+ "gerado_em": "2026-09-18T03:36:07Z",
+ "git_sha": "1ef6f713b192"
 }
