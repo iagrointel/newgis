@@ -277,7 +277,7 @@ def feicao_editada_b(sessao_b, camada_b):
     assert r.status_code == 200, r.text
     h = sessao_b.get(f"/api/camadas/{camada_b['id']}/feicoes/{alvo['id']}/historico")
     assert h.status_code == 200, h.text
-    linhas = h.json()
+    linhas = h.json()["entradas"]
     assert linhas, "a feição de B ficou sem histórico depois da edição"
     return alvo, linhas[0]["id"]
 

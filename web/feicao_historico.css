@@ -1,0 +1,17 @@
+/* plat — tela /camadas/{id}/feicoes/{globalid}/historico (item L2-03-d): diff campo a campo de cada
+   entrada do histórico e a geometria antes/depois em DOIS MAPAS lado a lado (mesma extensão nos dois,
+   para a comparação ser por POSIÇÃO). Sem tiles externos: fundo liso + a geometria — a trilha e o
+   appliance não têm internet, e a prova do diff não precisa de basemap. */
+.feicao-historico .resumo { margin: var(--i-e2) 0 var(--i-e4); }
+.feicao-historico .entrada { border: 1px solid var(--borda); border-radius: var(--i-raio); padding: var(--i-e4); margin-bottom: var(--i-e4); }
+.feicao-historico .entrada > h2 { font-size: var(--i-t2); margin: 0 0 var(--i-e2); }
+.feicao-historico .diff { width: 100%; border-collapse: collapse; }
+.feicao-historico .diff th, .feicao-historico .diff td { text-align: left; padding: var(--i-e1) var(--i-e2); vertical-align: top; width: 33%; }
+.feicao-historico .diff tbody tr + tr { border-top: 1px solid var(--borda); }
+.feicao-historico .mudou { outline: 2px solid var(--acento); outline-offset: -2px; font-weight: 600; }
+.feicao-historico .geom-dif { margin-top: var(--i-e3); }
+.feicao-historico .geom-numeros { display: flex; gap: var(--i-e4); flex-wrap: wrap; margin-bottom: var(--i-e2); }
+.feicao-historico .mapas { display: grid; grid-template-columns: 1fr 1fr; gap: var(--i-e3); }
+.feicao-historico .mapa { height: 260px; border: 1px solid var(--borda); border-radius: var(--i-raio); }
+.feicao-historico .mapa-rotulo { font-size: var(--i-t3); margin: 0 0 var(--i-e1); }
+@media (max-width: 800px) { .feicao-historico .mapas { grid-template-columns: 1fr; } }

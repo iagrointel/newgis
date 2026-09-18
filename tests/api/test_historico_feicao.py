@@ -15,9 +15,13 @@ item-pai L2-03-edicao) não mede:
     o PAR POSITIVO na mesma conexão (o SELECT legítimo devolve as linhas) — senão um GRANT que negasse
     tudo passaria igual;
   * refutação: histórico de A invisível para B também NO BANCO (RLS), não só pela rota;
-  * teto da listagem (`HISTORICO_LISTA_MAX`) aplicado de fato, e a falta de paginação registrada como
-    `xfail` (a cláusula "paginação obrigatória" do item NÃO está implementada — a rota não tem cursor
-    nem deslocamento; ver `test_paginacao_do_historico_ainda_nao_existe`).
+  * teto da listagem (`HISTORICO_LISTA_MAX`) aplicado de fato;
+  * paginação obrigatória (refutação do adversário): 100 mil versões percorridas INTEIRAS por chaveset
+    (`cursor`/`limite` no contrato OpenAPI), sem duplicar nem perder entrada, cursor inválido = 400;
+  * "como era a camada em <data>" (o historicMoment do FeatureServer): contagem e geometria conferidas
+    com o próprio histórico, com a feição apagada sumindo do retrato;
+  * o diff campo a campo e da geometria (área/comprimento antes/depois, em metros via geography) que a
+    tela consome com `dif=1` — medido numa camada de SRID geográfico (4674), onde o ST_Transform importa.
 
 Reusa as fixtures de `tests/api/test_edicao_transacional.py` (mesma `FabricaCamada`), como o arquivo
 vizinho de histórico/anexos já faz — nenhuma estrutura nova.
@@ -34,6 +38,7 @@ from tests.api.test_edicao_transacional import (  # noqa: F401 — fixtures reap
     _admin_usuario_id,
     _ponto,
     camada_a,
+    camada_a_poligono,
     camada_b,
     fabrica,
 )
@@ -76,7 +81,7 @@ def test_editar_listar_versoes_e_restaurar_a_anterior_com_geometria(sessao_a, ca
     assert atual["atributos"]["nome"] == "mudado"
     assert atual["geometria"]["coordinates"][0] == pytest.approx(-45.0, abs=1e-6)
 
-    versoes = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()
+    versoes = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()["entradas"]
     assert [h["operacao"] for h in versoes] == ["atualizar", "inserir"], versoes
     insercao = versoes[-1]
     assert insercao["atributos_depois"]["nome"] == "original"
@@ -92,7 +97,7 @@ def test_editar_listar_versoes_e_restaurar_a_anterior_com_geometria(sessao_a, ca
     assert voltou["versao"] > atual["versao"], "restaurar é edição nova, nunca reescrita da versão anterior"
 
     # o histórico só CRESCE: as entradas antigas continuam lá, com o mesmo id
-    depois = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()
+    depois = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()["entradas"]
     assert len(depois) == len(versoes) + 2  # 'atualizar' do gatilho + marcador 'restaurar'
     assert {h["id"] for h in versoes} <= {h["id"] for h in depois}
 
@@ -229,6 +234,27 @@ def test_historico_de_a_invisivel_para_b_no_proprio_banco(sessao_a, camada_a, ca
 
 
 # ---------------------------------------------------------------- teto da listagem / paginação
+def test_tres_edicoes_produzem_tres_linhas_com_antes_depois_corretos(sessao_a, camada_a):  # noqa: F811
+    """Cláusula literal do portão: 3 edições numa feição = 3 linhas de histórico, com o antes/depois de
+    cada uma fechando a cadeia v0 → v1 → v2 → v3 (o 'depois' de uma é o 'antes' da seguinte)."""
+    f = _criar(sessao_a, camada_a["id"], nome="v0")
+    gid, versao = f["id"], f["versao"]
+    for i in (1, 2, 3):
+        r = sessao_a.post(
+            f"/api/camadas/{camada_a['id']}/edicoes",
+            json={"atualizar": [{"id": gid, "versao": versao, "atributos": {"nome": f"v{i}"}}]},
+        )
+        assert r.status_code == 200, r.text
+        versao = r.json()["atualizar"][0]["versao"]
+
+    hist = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()["entradas"]
+    edicoes = [h for h in hist if h["operacao"] == "atualizar"]
+    assert len(edicoes) == 3, edicoes
+    cadeia = [(h["atributos_antes"]["nome"], h["atributos_depois"]["nome"]) for h in edicoes]
+    assert cadeia == [("v2", "v3"), ("v1", "v2"), ("v0", "v1")], cadeia  # mais recente primeiro
+    assert [h["versao"] for h in edicoes] == [4, 3, 2]
+
+
 def test_listagem_respeita_o_teto_declarado(sessao_a, camada_a, monkeypatch):  # noqa: F811
     f = _criar(sessao_a, camada_a["id"], nome="v0")
     gid, versao = f["id"], f["versao"]
@@ -240,25 +266,214 @@ def test_listagem_respeita_o_teto_declarado(sessao_a, camada_a, monkeypatch):  #
         assert r.status_code == 200, r.text
         versao = r.json()["atualizar"][0]["versao"]
 
-    sem_teto = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()
+    sem_teto = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()["entradas"]
     assert len(sem_teto) == 6, sem_teto  # par positivo: sem teto baixo, vêm as 6 entradas
 
     monkeypatch.setattr(mod_historico, "HISTORICO_LISTA_MAX", 3)
-    com_teto = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()
+    com_teto = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()["entradas"]
     assert len(com_teto) == 3, com_teto
     assert com_teto[0]["id"] == sem_teto[0]["id"], "o teto corta as MAIS ANTIGAS, nunca as mais recentes"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="cláusula 'paginação obrigatória' do portão L2-03-d NÃO está implementada: "
-           "GET /api/camadas/{id}/feicoes/{globalid}/historico não aceita cursor nem deslocamento; "
-           "quem tiver mais de HISTORICO_LISTA_MAX versões perde as antigas sem saber que perdeu",
-)
-def test_paginacao_do_historico_ainda_nao_existe(cliente):
+def test_paginacao_do_historico_esta_no_contrato(cliente):
     rota = cliente.app.openapi()["paths"]["/api/camadas/{id}/feicoes/{globalid}/historico"]["get"]
     nomes = {p["name"] for p in rota.get("parameters", [])}
-    assert nomes & {"cursor", "pagina", "deslocamento", "offset", "limite"}
+    assert {"cursor", "limite"} <= nomes
+
+
+def test_cursor_invalido_e_400_nunca_primeira_pagina(sessao_a, camada_a):  # noqa: F811
+    f = _criar(sessao_a, camada_a["id"])
+    r = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{f['id']}/historico?cursor=lixo")
+    assert r.status_code == 400
+    assert r.json()["erro"] == "cursor_invalido"
+
+
+# ---------------------------------------------------------------- refutação: 100 mil versões
+def test_historico_com_100_mil_versoes_se_percorre_inteiro_paginado(sessao_a, camada_a, conexao_plat_app):  # noqa: F811
+    """A refutação do adversário, medida: 100.000 versões de UMA feição (inseridas direto na tabela de
+    histórico — o que se prova é a LEITURA paginada, não o gatilho, já medido acima com o lote de 1.000),
+    percorridas de ponta a ponta pelo chaveset: 100 páginas de 1.000, nenhuma entrada duplicada ou
+    perdida, ordem estritamente da mais recente para a mais antiga, `total` exato em todas as páginas."""
+    f = _criar(sessao_a, camada_a["id"])
+    schema, tabela = camada_a["dados"]["schema"], camada_a["dados"]["tabela"]
+    contexto(conexao_plat_app, camada_a["tenant_id"], usuario_id=camada_a["admin_id"], login="admin")
+    with conexao_plat_app.cursor() as cur:
+        cur.execute(
+            "INSERT INTO plat.feicao_historico (tenant_id, schema_dado, tabela_dado, fid, globalid, operacao,"
+            " versao, atributos_antes, atributos_depois, momento)"
+            " SELECT plat.tenant_atual(), %s, %s, 1, %s, 'atualizar', g,"
+            " jsonb_build_object('nome', 'v' || (g - 1)), jsonb_build_object('nome', 'v' || g),"
+            " now() - (g || ' seconds')::interval FROM generate_series(1, 100000) g",
+            (schema, tabela, f["id"]),
+        )
+    conexao_plat_app.commit()
+
+    url = f"/api/camadas/{camada_a['id']}/feicoes/{f['id']}/historico"
+    params: dict = {"limite": 1000}  # pede 1.000, recebe o teto da casa (HISTORICO_LISTA_MAX): o teto MANDA
+    vistos: set[int] = set()
+    paginas = 0
+    momento_anterior = None
+    teto = mod_historico.HISTORICO_LISTA_MAX
+    while url:
+        corpo = sessao_a.get(url, params=params).json()
+        assert corpo.get("total") == 100001, f"total exato (100.000 + o 'inserir' da criação): {corpo}"
+        entradas = corpo["entradas"]
+        assert entradas, "página vazia no meio do percurso"
+        assert len(entradas) <= teto, f"página com {len(entradas)} entradas, acima do teto {teto}"
+        for e in entradas:
+            assert e["id"] not in vistos, f"entrada {e['id']} apareceu em DUAS páginas"
+            vistos.add(e["id"])
+            if momento_anterior is not None:
+                assert (e["momento"], e["id"]) < momento_anterior, "ordem quebrou na emenda das páginas"
+            momento_anterior = (e["momento"], e["id"])
+        paginas += 1
+        proximo = corpo["proximo_cursor"]
+        params = {"limite": 1000, "cursor": proximo} if proximo else None
+        url = url if proximo else None
+    esperado = -(-100001 // teto)  # páginas de no MÁXIMO `teto`, até a última entrada ficar alcançável
+    assert paginas == esperado, paginas
+    assert len(vistos) == 100001
+
+
+# ---------------------------------------------------------------- "como era a camada em <data>"
+def _agora(con):
+    # clock_timestamp, NUNCA now(): a conexão da suíte fica dentro de UMA transação longa e now() congela
+    # no início dela — os dois retratos (t0/t1) sairiam com o MESMO instante e o teste mediria nada.
+    with con.cursor() as cur:
+        cur.execute("SELECT clock_timestamp() AS agora")
+        return cur.fetchone()["agora"]
+
+
+def test_como_era_em_data_devolve_contagem_e_geometria_conferidas_com_o_historico(  # noqa: F811
+    sessao_a, camada_a, conexao_plat_app
+):
+    fa = _criar(sessao_a, camada_a["id"], nome="a", lon=-46.10)
+    fb = _criar(sessao_a, camada_a["id"], nome="b", lon=-46.20)
+    fc = _criar(sessao_a, camada_a["id"], nome="c", lon=-46.30)
+    t0 = _agora(conexao_plat_app)
+
+    r = sessao_a.post(
+        f"/api/camadas/{camada_a['id']}/edicoes",
+        json={"atualizar": [{"id": fa["id"], "versao": fa["versao"], "geometria": _ponto(-45.90)}]},
+    )
+    assert r.status_code == 200, r.text
+    r = sessao_a.post(
+        f"/api/camadas/{camada_a['id']}/edicoes",
+        json={"apagar": [{"id": fb["id"], "versao": fb["versao"]}]},
+    )
+    assert r.status_code == 200, r.text
+    t1 = _agora(conexao_plat_app)
+
+    # retrato em t0: as três, com a geometria ORIGINAL de a — conferida com a entrada 'inserir' do histórico
+    r0 = sessao_a.get(f"/api/camadas/{camada_a['id']}/como-era", params={"em": t0.isoformat()})
+    assert r0.status_code == 200, r0.text
+    corpo0 = r0.json()
+    assert corpo0["total"] == 3, corpo0
+    por_id = {x["id"]: x for x in corpo0["feicoes"]}
+    assert set(por_id) == {fa["id"], fb["id"], fc["id"]}
+    hist_a = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{fa['id']}/historico").json()["entradas"]
+    insercao_a = [h for h in hist_a if h["operacao"] == "inserir"][0]
+    assert por_id[fa["id"]]["geometria"] == insercao_a["geometria_depois"]
+    assert por_id[fa["id"]]["geometria"]["coordinates"][0] == pytest.approx(-46.10, abs=1e-6)
+    assert por_id[fb["id"]]["atributos"]["nome"] == "b"
+    # os campos de rastreio (fid, tenant_id, criado_em...) NÃO vazam nos atributos do retrato
+    assert "tenant_id" not in por_id[fa["id"]]["atributos"]
+    assert "fid" not in por_id[fa["id"]]["atributos"]
+
+    # retrato em t1: b sumiu (apagada), a aparece com a geometria NOVA — conferida com o 'atualizar'
+    r1 = sessao_a.get(f"/api/camadas/{camada_a['id']}/como-era", params={"em": t1.isoformat()})
+    corpo1 = r1.json()
+    assert corpo1["total"] == 2, corpo1
+    por_id1 = {x["id"]: x for x in corpo1["feicoes"]}
+    assert fb["id"] not in por_id1
+    atualizacao_a = [h for h in hist_a if h["operacao"] == "atualizar"][0]
+    assert por_id1[fa["id"]]["geometria"] == atualizacao_a["geometria_depois"]
+    assert por_id1[fa["id"]]["geometria"]["coordinates"][0] == pytest.approx(-45.90, abs=1e-6)
+
+    # e o percurso paginado do retrato também anda (chaveset por globalid)
+    r_pag = sessao_a.get(
+        f"/api/camadas/{camada_a['id']}/como-era", params={"em": t0.isoformat(), "limite": 2}
+    )
+    pag = r_pag.json()
+    assert len(pag["feicoes"]) == 2 and pag["total"] == 3 and pag["proximo_cursor"]
+    r_pag2 = sessao_a.get(
+        f"/api/camadas/{camada_a['id']}/como-era",
+        params={"em": t0.isoformat(), "limite": 2, "cursor": pag["proximo_cursor"]},
+    )
+    pag2 = r_pag2.json()
+    assert len(pag2["feicoes"]) == 1 and pag2["proximo_cursor"] is None
+    ids = {x["id"] for x in pag["feicoes"]} | {x["id"] for x in pag2["feicoes"]}
+    assert ids == {fa["id"], fb["id"], fc["id"]}
+
+
+def test_como_era_de_camada_de_outro_inquilino_e_404(sessao_b, camada_a):  # noqa: F811
+    r = sessao_b.get(f"/api/camadas/{camada_a['id']}/como-era", params={"em": "2026-01-01T00:00:00Z"})
+    assert r.status_code == 404
+
+
+def test_como_era_exige_data_valida(sessao_a, camada_a):  # noqa: F811
+    r = sessao_a.get(f"/api/camadas/{camada_a['id']}/como-era", params={"em": "lixo"})
+    assert r.status_code == 422
+
+
+# ---------------------------------------------------------------- diff campo a campo e da geometria (dif=1)
+def _anel(cx, cy, lado):
+    m = lado / 2
+    return [[cx - m, cy - m], [cx + m, cy - m], [cx + m, cy + m], [cx - m, cy + m], [cx - m, cy - m]]
+
+
+def test_dif_campo_a_campo_e_da_geometria_em_metros(sessao_a, camada_a_poligono):  # noqa: F811
+    """O diff que a tela consome: atributo que mudou marcado, atributo intacto não marcado, e a geometria
+    com área antes/depois em m² (camada em SRID 4674 — geográfico —, onde ler o grau como metro daria
+    erro de ordem de grandeza; o valor tem de ser o da geography, conferido na ordem de magnitude)."""
+    r = sessao_a.post(
+        f"/api/camadas/{camada_a_poligono['id']}/edicoes",
+        json={"adicionar": [{"atributos": {"nome": "antes"},
+                             "geometria": {"type": "Polygon", "coordinates": [_anel(-46.0, -23.5, 0.01)]}}]},
+    )
+    assert r.status_code == 200, r.text
+    f = r.json()["adicionar"][0]
+    r = sessao_a.post(
+        f"/api/camadas/{camada_a_poligono['id']}/edicoes",
+        json={"atualizar": [{"id": f["id"], "versao": f["versao"], "atributos": {"nome": "depois"},
+                             "geometria": {"type": "Polygon", "coordinates": [_anel(-46.0, -23.5, 0.02)]}}]},
+    )
+    assert r.status_code == 200, r.text
+
+    corpo = sessao_a.get(
+        f"/api/camadas/{camada_a_poligono['id']}/feicoes/{f['id']}/historico?dif=1"
+    ).json()
+    edicao = [h for h in corpo["entradas"] if h["operacao"] == "atualizar"][0]
+    da = edicao["dif"]["atributos"]
+    assert da["nome"] == {"antes": "antes", "depois": "depois", "mudou": True}
+    # os campos de rastreio (versao, atualizado_em...) mudam em TODA escrita: não entram no diff
+    assert "versao" not in da and "atualizado_em" not in da and "tenant_id" not in da
+
+    dg = edicao["dif"]["geometria"]
+    assert dg["mudou"] is True
+    # quadrado de ~0,01° de lado na latitude -23,5 ≈ 1,1 km²; o de 0,02° ≈ 4x mais
+    assert dg["area_antes_m2"] == pytest.approx(1.13e6, rel=0.15), dg
+    assert dg["area_depois_m2"] == pytest.approx(4.5e6, rel=0.15), dg
+    assert dg["area_depois_m2"] > dg["area_antes_m2"]
+
+    # sem dif=1 a resposta NÃO carrega o custo nem a chave (a listagem comum continua enxuta)
+    sem = sessao_a.get(f"/api/camadas/{camada_a_poligono['id']}/feicoes/{f['id']}/historico").json()
+    assert all("dif" not in h for h in sem["entradas"])
+
+
+def test_dif_geometria_intacta_marcada_como_nao_mudou(sessao_a, camada_a):  # noqa: F811
+    f = _criar(sessao_a, camada_a["id"], nome="parado", lon=-46.1)
+    r = sessao_a.post(
+        f"/api/camadas/{camada_a['id']}/edicoes",
+        json={"atualizar": [{"id": f["id"], "versao": f["versao"], "atributos": {"nome": "andou"}}]},
+    )
+    assert r.status_code == 200, r.text
+    corpo = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{f['id']}/historico?dif=1").json()
+    edicao = [h for h in corpo["entradas"] if h["operacao"] == "atualizar"][0]
+    assert edicao["dif"]["geometria"]["mudou"] is False
+    # ponto: área/comprimento são 0 em qualquer SRID — mas têm de VIR (a tela não trata exceção)
+    assert edicao["dif"]["geometria"]["area_antes_m2"] == 0
+    assert edicao["dif"]["geometria"]["comprimento_depois_m"] == 0
 
 
 # -------------------------------- append-only no ARTEFATO que é entregue (as migrações), sem depender da base

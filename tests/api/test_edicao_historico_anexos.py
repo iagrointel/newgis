@@ -53,7 +53,7 @@ def test_historico_registra_inserir_atualizar_apagar_em_ordem(sessao_a, camada_a
 
     hist = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico")
     assert hist.status_code == 200, hist.text
-    linhas = hist.json()
+    linhas = hist.json()["entradas"]
     operacoes = [h["operacao"] for h in linhas]
     # mais recente primeiro: apagar, atualizar, inserir
     assert operacoes == ["apagar", "atualizar", "inserir"]
@@ -70,7 +70,7 @@ def test_historico_de_feicao_de_outro_inquilino_nunca_aparece(sessao_a, sessao_b
     f = _criar_ponto(sessao_a, camada_a["id"])
     r = sessao_b.get(f"/api/camadas/{camada_b['id']}/feicoes/{f['id']}/historico")
     assert r.status_code == 200
-    assert r.json() == []  # a mesma tabela d_demo2 nunca contém globalid nascido em d_demo
+    assert r.json()["entradas"] == []  # a mesma tabela d_demo2 nunca contém globalid nascido em d_demo
 
 
 def test_historico_de_camada_de_outro_inquilino_e_404(sessao_b, camada_a):  # noqa: F811
@@ -89,7 +89,7 @@ def test_restaurar_atributo_apos_atualizacao(sessao_a, camada_a):  # noqa: F811
     )
     assert r.status_code == 200, r.text
 
-    hist = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()
+    hist = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()["entradas"]
     entrada_insercao = [h for h in hist if h["operacao"] == "inserir"][0]
 
     r = sessao_a.post(
@@ -103,7 +103,7 @@ def test_restaurar_atributo_apos_atualizacao(sessao_a, camada_a):  # noqa: F811
     # a restauração grava DUAS entradas a mais (nunca reescreve as anteriores): a mecânica ('atualizar', pelo
     # MESMO gatilho genérico que qualquer UPDATE dispara) e o marcador explícito ('restaurar', para distinguir
     # "isto foi uma restauração" de uma edição comum ao consultar o histórico)
-    hist2 = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()
+    hist2 = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()["entradas"]
     assert len(hist2) == len(hist) + 2
     assert hist2[0]["operacao"] == "restaurar"
     assert hist2[0]["atributos_depois"]["nome"] == "original"
@@ -120,7 +120,7 @@ def test_restaurar_recria_feicao_apagada_com_o_mesmo_globalid(sessao_a, camada_a
     )
     assert r.status_code == 200, r.text
 
-    hist = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()
+    hist = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()["entradas"]
     entrada_insercao = [h for h in hist if h["operacao"] == "inserir"][0]
 
     r = sessao_a.post(
@@ -147,7 +147,7 @@ def test_restaurar_entrada_de_exclusao_e_recusado(sessao_a, camada_a):  # noqa: 
         f"/api/camadas/{camada_a['id']}/edicoes",
         json={"adicionar": [], "atualizar": [], "apagar": [{"id": gid, "versao": f["versao"]}]},
     )
-    hist = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()
+    hist = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()["entradas"]
     entrada_apagar = [h for h in hist if h["operacao"] == "apagar"][0]
     r = sessao_a.post(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico/{entrada_apagar['id']}/restaurar")
     assert r.status_code == 409
@@ -164,7 +164,7 @@ def test_restaurar_domino_atual_ainda_e_aplicado(sessao_a, camada_a):  # noqa: F
               "apagar": []},
     )
     assert r.status_code == 200, r.text
-    hist = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()
+    hist = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()["entradas"]
     entrada_a = [h for h in hist if h["atributos_depois"] and h["atributos_depois"].get("categoria") == "A"][0]
     # restaurar para "A" ainda é permitido (domínio não mudou aqui) — prova que o caminho de validação roda
     r2 = sessao_a.post(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico/{entrada_a['id']}/restaurar")
@@ -174,7 +174,7 @@ def test_restaurar_domino_atual_ainda_e_aplicado(sessao_a, camada_a):  # noqa: F
 def test_restaurar_feicao_de_outro_inquilino_e_404(sessao_a, sessao_b, camada_a, camada_b):  # noqa: F811
     f = _criar_ponto(sessao_a, camada_a["id"])
     gid = f["id"]
-    hist = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()
+    hist = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()["entradas"]
     hid = hist[0]["id"]
     r = sessao_b.post(f"/api/camadas/{camada_b['id']}/feicoes/{gid}/historico/{hid}/restaurar")
     assert r.status_code == 404
@@ -330,7 +330,7 @@ def test_conflito_de_versao_nao_apaga_a_trilha_de_historico(sessao_a, sessao_b, 
               "apagar": []},
     )
     assert r2.status_code == 409
-    hist = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()
+    hist = sessao_a.get(f"/api/camadas/{camada_a['id']}/feicoes/{gid}/historico").json()["entradas"]
     # só UMA entrada de 'atualizar' (a que teve sucesso); a que tomou 409 nunca chegou a gravar no banco
     assert sum(1 for h in hist if h["operacao"] == "atualizar") == 1
 

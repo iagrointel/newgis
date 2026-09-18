@@ -63,7 +63,7 @@ def test_unir_duas_linhas_conectadas_vira_uma(sessao_a, camada_linha):
     )
     assert r2.status_code == 404  # já não existe: a união apagou (modo transação propaga o erro)
 
-    hist = sessao_a.get(f"/api/camadas/{camada_linha['id']}/feicoes/{corpo['id']}/historico").json()
+    hist = sessao_a.get(f"/api/camadas/{camada_linha['id']}/feicoes/{corpo['id']}/historico").json()["entradas"]
     assert hist[0]["operacao"] == "inserir"
 
 
@@ -161,7 +161,7 @@ def test_dividir_linha_no_meio(sessao_a, camada_linha):
     assert r2.status_code == 404  # a origem foi apagada pela divisão
 
     for nova in corpo["novas"]:
-        hist = sessao_a.get(f"/api/camadas/{camada_linha['id']}/feicoes/{nova['id']}/historico").json()
+        hist = sessao_a.get(f"/api/camadas/{camada_linha['id']}/feicoes/{nova['id']}/historico").json()["entradas"]
         assert hist[0]["operacao"] == "inserir"
         assert hist[0]["atributos_depois"]["nome"] == "rota"  # atributo herdado da origem
 
