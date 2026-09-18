@@ -102,6 +102,10 @@ body:not(.com-lateral) .lateral { display: none; }
 .grade-atalhos a .icone { color: var(--i-acento); grid-row: span 2; }
 .grade-atalhos a:hover { border-color: var(--i-acento); }
 .grade-atalhos a small { display: block; color: var(--i-texto-fraco); }
+/* contagem fora de h1/h2: a folha nova so cobria `.principal > h1 .contagem` e `.cartao > h2 .contagem`,
+   e a leva 2 mediu `.contagem` pegando em admin_acervo, videos, admin_auditoria e admin_backup.
+   Verbatim da folha antiga (--t-1 nao existe em tokens.css: o tamanho e o herdado, e era assim antes). */
+.contagem { font-family: var(--mono); font-size: var(--t-1); color: var(--fraco); font-weight: 400; }
 .rodape-tela { color: var(--i-texto-fraco); font-size: var(--i-t1); margin-top: var(--i-e4); }
 .aviso-beta { margin: 0 0 var(--i-e4); color: var(--i-texto-fraco); text-transform: lowercase; font-size: var(--i-t1); }
 @media (max-width: 800px) {

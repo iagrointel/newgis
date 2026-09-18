@@ -1,4 +1,24 @@
 # capturas da migracao de folha (tests/e2e/test_migracao_folha.py). sha256  bytes  arquivo
+2cae9831297b0d6f0fdf3f783ccaa3c38011e0a2fbe87747f37f93282ed90731     933418  MIG_admin_acervo_antes_claro.png
+fd82ac4af85f33435b4bcc55473d91b2d7a7c467b03aff122ccdbb50cde2b51f     952035  MIG_admin_acervo_antes_escuro.png
+3faae5338d0392163683ca04e31597b32adaf9812760d051eef9db4eb5170b3e     585592  MIG_admin_acervo_depois_claro.png
+f4d50ab3d62ac257ecbb5a9da9a06281c5f7bc99e40dd638f4f20952e7857451     584935  MIG_admin_acervo_depois_escuro.png
+bf3d5b296c9776aa0f883711db157130c278ce3388a728d9875b4f16a4ad3eb4     675959  MIG_admin_auditoria_antes_claro.png
+88449155d610b3c4248b283d0d18e5de308dd74ed9d49efb5da4884482b964f1     685884  MIG_admin_auditoria_antes_escuro.png
+24694ca2e9d81a0b32ae60c30537b57d9bbc35b4b6a9b598abb6c831fb892d3d     437525  MIG_admin_auditoria_depois_claro.png
+e26f9632f801005475aed3f6dba171b01f305079255fb8b4eceda0219f9a2c8a     437248  MIG_admin_auditoria_depois_escuro.png
+8517f03cc43c69bd63535e5a1fdccab906f99b1e8dcdc1994355b6faa6ae7f8c      67468  MIG_admin_backup_antes_claro.png
+c7d91b941e2bf340d8b7336b25a3a42f17d2bde1fd538fb5d61389a791d35417      68625  MIG_admin_backup_antes_escuro.png
+080c16f3b39e09d998c0ed53a5e781b680e7abf219fd3267f8745a3e615899ca      55090  MIG_admin_backup_depois_claro.png
+a4694adab0f089956fa6494e4a672d453ef3b4e000e9dbd66969fe01b39ce290      55881  MIG_admin_backup_depois_escuro.png
+4ec4b557403bfd08f2bceee8456af618dd12b1f74123ba615b02630abe200751      90580  MIG_admin_index_antes_claro.png
+abdfe85daf0ae5349f0cafa94a45670da9e6e1678c74fe3af61a91c053ee3364      91971  MIG_admin_index_antes_escuro.png
+6ab2059fcb521258e2fb33aa60108d930a4851d6cbc19cfc644ccbec14e851d6      71554  MIG_admin_index_depois_claro.png
+9060f9a9164ab6c1cb064e1e6f43d1af6b1fc29f4c9c80c8719041f419dcb4ee      73112  MIG_admin_index_depois_escuro.png
+1f6444d5fdbe246e4e80e16629867b4cbf08ac421a3640536c6251e481f2ce18      39616  MIG_camada_dominios_antes_claro.png
+446900cd61b601880b2cc54baf236f73274f7f93756b4f27239a5b3379232c6a      40548  MIG_camada_dominios_antes_escuro.png
+4d1dec474be0e0ed1c4946b906ed3c9d406162ca11fbeb5bbf543090b2637728      34904  MIG_camada_dominios_depois_claro.png
+b1d81f4d88d298836c4ffc6a02e32f8c8a258436a492a963538d73a6f80cdab5      35231  MIG_camada_dominios_depois_escuro.png
 76acc3c142f3232e851ca886e6b82710cb45fd8ca34a72b39d6b285b4769a649      34891  MIG_campo_fila_antes_claro.png
 2bbbe88fafcad74111fc006542807ce407b68c42bee0db5a03150c1d76787405      35848  MIG_campo_fila_antes_escuro.png
 6ee40e2c8a92ad6843addfd6296b387a32f536a0fb15a64ce74c2be8a2e4d3bb      30518  MIG_campo_fila_depois_claro.png
@@ -15,6 +35,14 @@ a451b4b5ea2e57dfde9f3a7475725b3b7dfc2abc478b788d6ed2e76c7870cb7d      30466  MIG
 8fc487039db6b1042294b0f39c063b697ce2e58451eeb42036f8b6682df20c40      38739  MIG_ferramenta_antes_escuro.png
 14acaabcae6372a62e915e5f596ed04d2dd31174cd9870a162daf9cb5f3c51a7      31270  MIG_ferramenta_depois_claro.png
 83a7e2a6903301a810a8641b1552c594b29a4f16192a37723f6c5c0ca35334dc      31819  MIG_ferramenta_depois_escuro.png
+f29149c83d6b36a6ba9d76e9cc0a6d04f613082c552605422274df8202865bb0      39784  MIG_modelos_antes_claro.png
+2f6d583187ba045405a0f9aa2c44a3051cbe8f85bd7b644635f401c37af1d855      40886  MIG_modelos_antes_escuro.png
+9a35e55e171d0c277c980eadaf25f918055f945882cc8cd590c2c925bc902bc5      34204  MIG_modelos_depois_claro.png
+02551a0e78128aa8ecc45f0130ded224d10dc0454410875554a0f0ace1df5411      34939  MIG_modelos_depois_escuro.png
+ea2c2dc19e0c1a0aefe6b703e530e8105ba2863dec3e906e14f3d23373479e45      11882  MIG_plataforma_antes_claro.png
+ff3cadaca63c9848cab29e67696969245f365f3513b4d9fdbb7cd316842584d6      12135  MIG_plataforma_antes_escuro.png
+1c3ae4bec87ae3c537d2a7fe1a74555b5e16cbf297739e7743ba53a623f3e3f4      11690  MIG_plataforma_depois_claro.png
+b3b81d6b66cdea77f3e9c60efaa371eadbfead03b8ca807b82df1690a61e90ea      11817  MIG_plataforma_depois_escuro.png
 08e3148aad046c2daac9b2941577ae462a42bf467607a307379db6c09412f9f0      41594  MIG_redes_configuracoes_antes_claro.png
 295d7e6e7174e8345455188c89943bdf96eec0928b44f421d0dbfa4fd0fadfb1      42839  MIG_redes_configuracoes_antes_escuro.png
 6a2fe43549fc26b4d51c652763028bf7abb428ab6f7f4072cba1443b1045761b      35615  MIG_redes_configuracoes_depois_claro.png
@@ -31,3 +59,7 @@ a451b4b5ea2e57dfde9f3a7475725b3b7dfc2abc478b788d6ed2e76c7870cb7d      30466  MIG
 decec9261da27cf0031f6280247c825a0194e1855b330c44688f7dfdede0478c      54473  MIG_redes_tracado_antes_escuro.png
 01799563334fa75df34c4e8abc3d4a49448e291f080ef5efe002cf39ac883a40      46759  MIG_redes_tracado_depois_claro.png
 07f784fd47d8cc05197786e04c69fba350f3a1b14e692311f576bb160ebf556e      48091  MIG_redes_tracado_depois_escuro.png
+20766da10376cb07f2797df2b08cf12d651d941f49513ab394dc095d0f10e95e      55834  MIG_videos_antes_claro.png
+d2a6ae6cd092f287ac2f21e6972a661854bc7ee2a0cad8779ae934c2fffcbc85      56952  MIG_videos_antes_escuro.png
+6965438aed779e684c928ead539393a3c4fa0e29613596a811e9b59ffeaafb77      45159  MIG_videos_depois_claro.png
+01c4d1ed9180ce5a08c4f72456dba497bf445b792126a963597ddb9a15eefdc2      46118  MIG_videos_depois_escuro.png

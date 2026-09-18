@@ -115,7 +115,8 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada",
+   "nota": "section sem class=\"cartao\" perde a moldura de cartao: a folha nova marca cartao com .cartao, nao com a tag <section>. Regra cosmetica com equivalente na folha nova, entao descartada (secao 7 de docs/IDENTIDADE.md). Por em <section class=\"cartao\"> e decisao de desenho, do dono."
   },
   {
    "nome": "camada_dominios",
@@ -127,7 +128,8 @@
    "pesada": false,
    "rota_com_parametro": true,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada",
+   "nota": "section sem class=\"cartao\" perde a moldura de cartao: a folha nova marca cartao com .cartao, nao com a tag <section>. Regra cosmetica com equivalente na folha nova, entao descartada (secao 7 de docs/IDENTIDADE.md). Por em <section class=\"cartao\"> e decisao de desenho, do dono."
   },
   {
    "nome": "admin_acervo",
@@ -139,7 +141,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "videos",
@@ -151,7 +153,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "admin_index",
@@ -163,7 +165,8 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada",
+   "nota": "section sem class=\"cartao\" perde a moldura de cartao: a folha nova marca cartao com .cartao, nao com a tag <section>. Regra cosmetica com equivalente na folha nova, entao descartada (secao 7 de docs/IDENTIDADE.md). Por em <section class=\"cartao\"> e decisao de desenho, do dono."
   },
   {
    "nome": "admin_auditoria",
@@ -175,7 +178,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "admin_backup",
@@ -187,7 +190,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "plataforma",
@@ -199,7 +202,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "amc_explicacao",

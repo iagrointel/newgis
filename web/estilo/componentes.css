@@ -216,3 +216,28 @@ details summary { cursor: pointer; color: var(--i-acento); }
 #upload-progresso::-webkit-progress-value { background: var(--i-acento); border-radius: var(--i-raio-pilula); }
 #upload-rotulo-progresso { font-family: var(--i-fonte-dado); font-size: var(--i-t1); color: var(--i-texto-fraco); }
 .upload-ok { color: var(--i-sucesso); }
+
+/* ---------- estado de tela: vazio, carregando, erro, negado (<plat-estado>) ----------
+   Trazido VERBATIM de web/style.css na leva 2 do item L0-14-b: <plat-estado> pega nas telas
+   (medido no navegador, campo so_na_antiga_e_pegam) e a folha nova nao tinha regra nenhuma para ele.
+   Verbatim de proposito, apelidos de compatibilidade incluidos: a leva e troca de folha, nao redesenho.
+   AVISO ao proximo que ler: --borda-largura, --t0 e --painel-3 NAO existem em tokens.css e ja nao
+   existiam quando estas linhas viviam na folha antiga. As declaracoes que os citam sao invalidas no
+   valor calculado e nao pintam nada -- hoje plat-estado nao tem moldura nem tamanho proprio de titulo.
+   Trocar esses nomes por tokens vivos MUDA o desenho da tela, e desenho e decisao do dono, nao daqui. */
+plat-estado { display: grid; justify-items: center; text-align: center; gap: var(--e2); padding: var(--e6) var(--e4); color: var(--fraco); border: var(--borda-largura) dashed var(--borda); border-radius: var(--raio); }
+plat-estado[hidden] { display: none; }
+plat-estado .estado-titulo { font-family: var(--sans); text-transform: none; letter-spacing: 0; font-weight: 600; font-size: var(--t0); color: var(--texto); margin: 0; }
+plat-estado .estado-texto { margin: 0; max-width: 46ch; }
+plat-estado .estado-acoes { display: flex; gap: var(--e2); flex-wrap: wrap; justify-content: center; margin-top: var(--e2); }
+plat-estado[tipo="erro"] { border-color: var(--falha); }
+plat-estado[tipo="erro"] .estado-titulo { color: var(--falha); }
+plat-estado[tipo="negado"] { border-color: var(--atencao); }
+plat-estado[tipo="negado"] .estado-titulo { color: var(--atencao); }
+plat-estado[tipo="carregando"] { border-style: solid; }
+plat-estado .esqueleto { display: grid; gap: var(--e2); width: min(100%, 420px); }
+plat-estado .esqueleto span { display: block; height: var(--e4); border-radius: var(--raio); background: linear-gradient(90deg, var(--painel-2), var(--painel-3), var(--painel-2)); background-size: 200% 100%; animation: esqueleto 1.4s linear infinite; }
+plat-estado .esqueleto span:nth-child(2) { width: 80%; }
+plat-estado .esqueleto span:nth-child(3) { width: 60%; }
+@keyframes esqueleto { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { plat-estado .esqueleto span { animation: none; } }
