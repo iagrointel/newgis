@@ -15,10 +15,9 @@ reais aconteçam em produção. Este teste confere a ligação estática: toda m
 
 from __future__ import annotations
 
+import ast
 import re
 from pathlib import Path
-
-import pytest
 
 RAIZ = Path(__file__).resolve().parents[3]
 ALERTAS = RAIZ / "deploy" / "alertas.yml"
@@ -27,19 +26,64 @@ APP = RAIZ / "app"
 METRICA_HTTP = re.compile(r"\bplat_http_requests_total\b")
 
 
-def _metrica_e_incrementada_em_algum_lugar() -> bool:
+def _funcoes_que_tocam(constante: str) -> set[str]:
+    """Funções de app/metricas.py cujo corpo usa a constante da métrica (ex.: HTTP_REQUISICOES)."""
+    arvore = ast.parse((APP / "metricas.py").read_text(encoding="utf-8"))
+    nomes = set()
+    for no in ast.walk(arvore):
+        if isinstance(no, ast.FunctionDef):
+            for dentro in ast.walk(no):
+                if isinstance(dentro, ast.Name) and dentro.id == constante:
+                    nomes.add(no.name)
+    return nomes
+
+
+def _chamadores_fora_de_metricas(nomes: set[str]) -> list[str]:
+    """Arquivos de app/ (fora de metricas.py) que CHAMAM alguma dessas funções."""
+    achados = []
     for caminho in APP.rglob("*.py"):
-        texto = caminho.read_text(encoding="utf-8", errors="ignore")
-        if ".labels(" in texto and ("HTTP_REQUISICOES" in texto) and "app/metricas.py" not in str(caminho):
-            return True
-    return False
+        if caminho.name == "metricas.py":
+            continue
+        try:
+            arvore = ast.parse(caminho.read_text(encoding="utf-8"))
+        except SyntaxError:
+            continue
+        for no in ast.walk(arvore):
+            if isinstance(no, ast.Call):
+                alvo = no.func
+                nome = alvo.id if isinstance(alvo, ast.Name) else getattr(alvo, "attr", None)
+                if nome in nomes:
+                    achados.append(str(caminho.relative_to(RAIZ)))
+                    break
+    return achados
 
 
-# CONSERTADO (17/09/2026, turno L7 do construtor): a marca xfail saiu junto com o defeito.
+# CONSERTADO (18/09/2026, turno L7 do construtor). O defeito ERA real e foi corrigido em
+# app/auth/middleware.py, que agora chama app.metricas.registrar_requisicao em toda requisição. A
+# conferência antiga procurava a sequência literal `.labels(` num arquivo fora de app/metricas.py e por
+# isso continuava reprovando depois do conserto: o `.labels(...)` fica, e deve ficar, dentro de
+# `registrar_requisicao`, que é a única dona da métrica. A conferência agora segue a CADEIA (quem toca a
+# constante -> quem chama essa função) e, abaixo, confere ao vivo que a família da regra de alerta ganha
+# série de verdade depois de tráfego — é a série, não a forma da chamada, que faz a regra disparar.
 def test_regra_de_5xx_usa_metrica_que_e_incrementada():
     texto_alertas = ALERTAS.read_text()
     assert METRICA_HTTP.search(texto_alertas), "deploy/alertas.yml não cita mais plat_http_requests_total"
-    assert _metrica_e_incrementada_em_algum_lugar(), (
-        "plat_http_requests_total (usada pela regra de 5xx) nunca é incrementada fora de app/metricas.py "
-        "— o histórico chamador .labels(...) só existe na própria definição da métrica"
+    funcoes = _funcoes_que_tocam("HTTP_REQUISICOES")
+    assert funcoes, "nenhuma função de app/metricas.py toca HTTP_REQUISICOES"
+    chamadores = _chamadores_fora_de_metricas(funcoes)
+    assert chamadores, (
+        "plat_http_requests_total (usada pela regra de 5xx) nunca é incrementada fora de app/metricas.py: "
+        f"nenhum arquivo de app/ chama {sorted(funcoes)}"
     )
+
+
+def test_serie_da_regra_de_5xx_existe_apos_trafego(cliente):
+    """Par positivo da conferência estática acima: a expressão PromQL da regra só produz série se a
+    família tiver amostra. Mede-se a família inteira (com rótulo de status) depois de tráfego real."""
+    for _ in range(5):
+        cliente.get("/api/versao")
+    r = cliente.get("/metrics")
+    assert r.status_code == 200
+    series = [li for li in r.text.splitlines()
+              if li.startswith("plat_http_requests_total{") and 'status="' in li]
+    assert series, "plat_http_requests_total continua sem série nenhuma depois de tráfego real"
