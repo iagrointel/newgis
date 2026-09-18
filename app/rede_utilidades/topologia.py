@@ -99,8 +99,26 @@ def _carregar_esquema(cur, rede_id: str) -> dict:
             return []
         return terminais_por_config.get(cfg_id, [])
 
+    # aresta-junção-aresta cuja VIA é estrutura sem terminal (o poste: "é o que sustenta, não o que
+    # conduz") licencia a fusão DIRETA das duas pontas de aresta — a junção do meio nunca vira nó de
+    # topologia, então a conexão não pode depender dela (é o caso do ramal de ligação derivando do
+    # trecho de baixa tensão). Quando a via TEM terminais (chave, transformador), a corrente flui
+    # PELO dispositivo e uma licença direta soldaria o que ele existe para separar — por isso essas
+    # regras NÃO entram aqui: a fusão delas já acontece pelos pares junção-aresta dos terminais.
+    cur.execute(
+        "SELECT de_tipo_id, para_tipo_id, via_tipo_id FROM plat.rede_regra "
+        "WHERE rede_id = %s::uuid AND tipo = 'aresta_juncao_aresta'",
+        (rede_id,),
+    )
+    aresta_aresta_pares = {
+        frozenset((r["de_tipo_id"], r["para_tipo_id"]))
+        for r in cur.fetchall()
+        if r["via_tipo_id"] is not None and not terminais_do_tipo(r["via_tipo_id"])
+    }
+
     return {
         "tipos": tipos, "tier_ordem": tier_ordem, "regra_pares": regra_pares,
+        "aresta_aresta_pares": aresta_aresta_pares,
         "terminais_do_tipo": terminais_do_tipo,
     }
 
@@ -215,7 +233,9 @@ def _resolver_uniao(candidatos: list[dict], pares: list, esquema: dict) -> Uniao
         ia, ka, tia, ga = r["a_idx"], r["a_kind"], r["a_tipo_id"], r["a_grupo_id"]
         ib, kb, tib, gb = r["b_idx"], r["b_kind"], r["b_tipo_id"], r["b_grupo_id"]
         if ka == "trecho" and kb == "trecho":
-            permitido = ga == gb or frozenset((tia, tib)) in esquema["regra_pares"]
+            par = frozenset((tia, tib))
+            permitido = (ga == gb or par in esquema["regra_pares"]
+                         or par in esquema["aresta_aresta_pares"])
         else:
             permitido = frozenset((tia, tib)) in esquema["regra_pares"]
         if not permitido:
