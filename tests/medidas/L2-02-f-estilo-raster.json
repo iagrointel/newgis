@@ -1,8 +1,8 @@
 {
  "item": "L2-02-f-estilo-raster",
  "assinado_por": "gerente (retomada de sessão morta; papéis raster/cartografo/frontend/adversario acumulados por esta sessão)",
- "gerado_em": "2026-09-07T15:22:00Z",
- "git_sha": "1c1927c58780",
+ "gerado_em": "2026-09-18T01:48:33Z",
+ "git_sha": "85355e7759e0",
  "maquina": "12 vCPU, 23 GB RAM; disco / e /mnt/pgdata a 98%; ~8 trilhas concorrentes na máquina no momento da medição",
  "medidas": {
   "e2e_isolado_passou": {
@@ -44,6 +44,31 @@
    "valor": 17,
    "unidade": "rotas /svc/ sem caso cruzado",
    "comando": "grep -c svc em tests/api/cruzado_casos.py = 0: as 17 rotas /svc/... (STAC + raster, incluindo as 16 do L1-01-a/L1-02 já mescladas antes deste item) já não tinham caso cruzado; test_cobertura_100_por_cento já falhava antes deste item por essa razão — a rota nova soma 1 à mesma lista já vermelha, não muda o veredito da suíte"
+  },
+  "pixels_conferidos_contra_a_tabela_de_cores": {
+   "valor": 5,
+   "unidade": "pixels com dado na amostra",
+   "comando": "pytest tests/api/test_estilo_raster.py::test_medida_do_item_estilo_raster"
+  },
+  "maior_diferenca_de_cor_rampa_viridis": {
+   "valor": 0,
+   "unidade": "níveis de 0-255 (0 = idêntico)",
+   "comando": "pytest tests/api/test_estilo_raster.py::test_medida_do_item_estilo_raster"
+  },
+  "ponte_estilo_para_parametros_de_tile_18_09": {
+   "valor": false,
+   "unidade": "compilador.parametros_tile existe?",
+   "comando": "hasattr(app.estilos.compilador, 'parametros_tile')"
+  },
+  "legenda_raster_no_compilador_18_09": {
+   "valor": false,
+   "unidade": "compilador.legenda_raster existe?",
+   "comando": "hasattr(app.estilos.compilador, 'legenda_raster')"
+  },
+  "e2e_isolado_18_09": {
+   "valor": "4 failed (AttributeError: module 'app.estilos.compilador' has no attribute 'parametros_tile')",
+   "unidade": "resultado real",
+   "comando": "pytest tests/api/imagens/test_estilo_raster_e2e.py"
   }
  },
  "nao_passa": [

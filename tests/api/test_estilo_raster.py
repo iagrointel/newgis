@@ -240,3 +240,49 @@ def test_compilador_devolve_legenda_raster_com_min_e_max():
     pc = {"tipo": "raster", "geometria": "raster", "versao": 1,
           "parametros_raster": {"bandas": [4], "colormap_name": "viridis", "rescale": [10, 20]}}
     assert compilador.legenda_raster(pc) == {"colormap_name": "viridis", "min": 10, "max": 20}
+
+
+# ---------------------------------------------------------------- medida do item (tests/medidas/)
+def test_medida_do_item_estilo_raster(cliente, token_pixel, raster_pixel, medida):
+    """Grava tests/medidas/L2-02-f-estilo-raster.json com o que ESTE arquivo mede hoje: a maior
+    diferença de cor entre o pixel renderizado e a tabela de cores (quanto menor, mais a rampa do
+    servidor é a mesma do `rio_tiler`) e o estado REAL da ponte estilo -> parâmetros de ladrilho.
+
+    A medida de 07/09 neste mesmo arquivo dizia `e2e_isolado_passou` e `unit_compilador_raster_passou`;
+    medido de novo em 18/09, `app/estilos/compilador.py` não tem `parametros_tile` e
+    `tests/api/imagens/test_estilo_raster_e2e.py` falha nos 4 testes com AttributeError. A medida nova
+    não apaga a antiga: fica ao lado dela, com data, para a contradição aparecer."""
+    item = raster_pixel["item_id"]
+    mn, mx = _faixa_da_banda(cliente, token_pixel, item, 4)
+    cinza = _imagem(_pedir(cliente, token_pixel, item, bandas="4", faixa=f"{mn},{mx}"))
+    colorido = _imagem(_pedir(cliente, token_pixel, item, bandas="4", faixa=f"{mn},{mx}", colormap="viridis"))
+    tabela = colormaps.get("viridis")
+    pior, amostrados = 0, 0
+    for px in AMOSTRAS:
+        r_cinza = cinza.getpixel(px)
+        if r_cinza[3] == 0:
+            continue
+        esperado = tuple(tabela[r_cinza[0]])[:3]
+        obtido = colorido.getpixel(px)[:3]
+        pior = max(pior, max(abs(a - b) for a, b in zip(esperado, obtido, strict=True)))
+        amostrados += 1
+
+    tem_ponte = hasattr(compilador, "parametros_tile")
+    tem_legenda = hasattr(compilador, "legenda_raster")
+    gravar = medida("L2-02-f-estilo-raster")
+    cmd = "pytest tests/api/test_estilo_raster.py::test_medida_do_item_estilo_raster"
+    gravar("pixels_conferidos_contra_a_tabela_de_cores", amostrados, "pixels com dado na amostra", cmd)
+    gravar("maior_diferenca_de_cor_rampa_viridis", pior, "níveis de 0-255 (0 = idêntico)", cmd)
+    gravar("ponte_estilo_para_parametros_de_tile_18_09", tem_ponte,
+           "compilador.parametros_tile existe?", "hasattr(app.estilos.compilador, 'parametros_tile')")
+    gravar("legenda_raster_no_compilador_18_09", tem_legenda,
+           "compilador.legenda_raster existe?", "hasattr(app.estilos.compilador, 'legenda_raster')")
+    gravar("e2e_isolado_18_09", "4 failed (AttributeError: module 'app.estilos.compilador' has no "
+                                "attribute 'parametros_tile')", "resultado real",
+           "pytest tests/api/imagens/test_estilo_raster_e2e.py")
+
+    assert amostrados >= 3
+    assert pior <= 1, f"a rampa do servidor divergiu {pior} níveis da tabela do rio_tiler"
+    assert not tem_ponte and not tem_legenda, (
+        "a ponte estilo->parâmetros apareceu: tire os dois xfail deste arquivo e volte a medir o portão inteiro"
+    )
