@@ -22,7 +22,7 @@
    "comando": "bash laco/roda_teste.sh tests/api/test_rede_simples_bacia_bc250.py::test_montante_e_jusante_batem_com_networkx"
   },
   "bacia_bc250_criar_rede_ms": {
-   "valor": 464,
+   "valor": 385,
    "unidade": "ms",
    "comando": "bash laco/roda_teste.sh tests/api/test_rede_simples_bacia_bc250.py::test_montante_e_jusante_batem_com_networkx (POST /api/rede/simples, camada -> feições -> topologia)"
   },
@@ -32,21 +32,21 @@
    "comando": "bash laco/roda_teste.sh tests/e2e/test_rede_simples.py --base-url http://127.0.0.1:8309"
   },
   "abrir_redes_simples_ms": {
-   "valor": 61.2,
+   "valor": 58.2,
    "unidade": "ms",
    "comando": "goto até body[data-pronto=1] no chromium do playwright"
   },
   "carga_1min_quando_medido": {
-   "valor": 6.83,
+   "valor": 2.58,
    "unidade": "carga",
    "comando": "os.getloadavg()[0]"
   },
   "ram_livre_gb_quando_medido": {
-   "valor": 7.2,
+   "valor": 48.6,
    "unidade": "GiB",
    "comando": "MemAvailable de /proc/meminfo"
   }
  },
- "gerado_em": "2026-09-07T20:03:42Z",
- "git_sha": "b71c0e853deb"
+ "gerado_em": "2026-09-18T01:45:40Z",
+ "git_sha": "1a9887eafffe"
 }
