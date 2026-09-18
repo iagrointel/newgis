@@ -76,3 +76,4 @@ tests/dados/rede_agua_real.inp
 # o que fica versionado e o veredito da leva, o inventario com sha256 e o script que regenera.
 tests/e2e/migracao_saida/leva*_antes.json
 tests/e2e/migracao_saida/leva*_depois.json
+**/node_modules/
