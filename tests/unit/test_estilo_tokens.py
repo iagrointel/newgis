@@ -203,7 +203,7 @@ def test_c_icones_uma_familia_so_e_nenhum_glifo_fora_dela():
 # com captura antes e depois, o que esta máquina não faz (sem navegador — o headless quebra aqui). Enquanto
 # isso, o número não pode CRESCER: tela nova nasce na folha nova. Baixe o número no mesmo commit em que
 # migrar uma tela; quando chegar a 0, troque a catraca por `assert restantes == []` e apague web/style.css.
-TELAS_NA_FOLHA_ANTIGA = 8
+TELAS_NA_FOLHA_ANTIGA = 1
 
 
 COMPONENTES_DA_BASE = ["plat-aviso", "plat-busca", "plat-formulario", "plat-paginacao", "plat-tabela",

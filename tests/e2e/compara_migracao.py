@@ -24,6 +24,24 @@ CAPTURAS = AQUI / "capturas"
 MANIFESTO = AQUI / "telas_migracao.json"
 
 
+def _campo_do_manifesto(nome: str, campo: str) -> list[str]:
+    for t in json.loads(MANIFESTO.read_text(encoding="utf-8"))["telas"]:
+        if t["nome"] == nome:
+            return list(t.get(campo) or [])
+    return []
+
+
+def _prefixos_de_id_gerado(nome: str) -> list[str]:
+    """Prefixos de `id` que a propria tela sorteia a cada desenho.
+
+    Declarados tela a tela no manifesto (`ids_gerados`), com o motivo escrito ao lado. O caso e /sig: a
+    arvore de camadas da um id a cada no com `idCurto()` (web/js/camadas.js) e escreve `chk-<sorteado>`
+    no <input> e no `for` do <label>. Sao 62 nos de 1.756 que mudam de nome entre dois desenhos da MESMA
+    arvore, com ou sem troca de folha. Normalizado o sorteio, as duas fases batem elemento a elemento.
+    """
+    return _campo_do_manifesto(nome, "ids_gerados")
+
+
 def _prefixos_de_estado_vivo(nome: str) -> list[str]:
     """Prefixos de classe que, NAQUELA tela, carregam estado vivo do servidor e nao desenho.
 
@@ -34,20 +52,18 @@ def _prefixos_de_estado_vivo(nome: str) -> list[str]:
     acusa como "arvore mudou" a diferenca entre dois servicos, que nenhuma folha de estilo produz nem
     conserta. O que fica medido continua sendo tag, id e o resto das classes.
     """
-    telas = json.loads(MANIFESTO.read_text(encoding="utf-8"))["telas"]
-    for t in telas:
-        if t["nome"] == nome:
-            return list(t.get("classes_de_estado_vivo") or [])
-    return []
+    return _campo_do_manifesto(nome, "classes_de_estado_vivo")
 
 
-def _sem_estado_vivo(estrutura, prefixos: list[str]):
-    if not estrutura or not prefixos:
+def _sem_volatil(estrutura, classes: list[str], ids: list[str]):
+    if not estrutura or not (classes or ids):
         return estrutura
     fora = []
     for item in estrutura:
-        for pre in prefixos:
+        for pre in classes:
             item = re.sub(rf"(?<=\.){re.escape(pre)}[A-Za-z0-9_-]*", pre + "<estado vivo>", item)
+        for pre in ids:
+            item = re.sub(rf"(?<=#){re.escape(pre)}[A-Za-z0-9_-]*", pre + "<gerado>", item)
         fora.append(item)
     return fora
 
@@ -73,11 +89,14 @@ def comparar(leva: int) -> dict:
             continue
         if a["montou"] and not d["montou"]:
             veredito["reprovas"].append(f"{nome}: montava antes e nao monta depois")
-        prefixos = _prefixos_de_estado_vivo(nome)
-        if prefixos:
-            t["classes_de_estado_vivo_ignoradas"] = prefixos
-        ea_cmp = _sem_estado_vivo(a.get("estrutura"), prefixos)
-        ed_cmp = _sem_estado_vivo(d.get("estrutura"), prefixos)
+        classes = _prefixos_de_estado_vivo(nome)
+        ids = _prefixos_de_id_gerado(nome)
+        if classes:
+            t["classes_de_estado_vivo_ignoradas"] = classes
+        if ids:
+            t["ids_gerados_ignorados"] = ids
+        ea_cmp = _sem_volatil(a.get("estrutura"), classes, ids)
+        ed_cmp = _sem_volatil(d.get("estrutura"), classes, ids)
         iguais = ea_cmp == ed_cmp
         t["estrutura_igual"] = iguais
         t["elementos"] = len(d.get("estrutura") or [])

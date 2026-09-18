@@ -788,7 +788,11 @@
    "pesada": true,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada",
+   "ids_gerados": [
+    "chk-"
+   ],
+   "nota": "A arvore de camadas da um id a cada no com idCurto() (web/js/camadas.js) e escreve chk-<sorteado> no <input> e no `for` do <label>. Sao 62 nos de 1.756 que trocam de nome entre dois desenhos da MESMA arvore, com ou sem troca de folha. A comparacao normaliza o sorteio NESTA tela; normalizado, as duas fases batem elemento a elemento."
   },
   {
    "nome": "construtor",
@@ -804,7 +808,7 @@
    "pesada": true,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "geocodificacao",
@@ -820,7 +824,7 @@
    "pesada": true,
    "rota_com_parametro": true,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "amc_pareto",
@@ -836,7 +840,7 @@
    "pesada": true,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "cena",
@@ -852,7 +856,7 @@
    "pesada": true,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "amc_motor",
@@ -868,7 +872,7 @@
    "pesada": true,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "executar",
@@ -885,7 +889,7 @@
    "pesada": true,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "admin_organizacao",
