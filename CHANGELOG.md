@@ -3,6 +3,21 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## 18 de setembro de 2026 (item L2-02-f-estilo-raster: restauração da ponte perdida em fusão)
+
+A ponte "estilo salvo → parâmetros de ladrilho → legenda" do editor de estilo raster (entregue em
+1b91336a, 07/09) tinha sumido do tronco numa fusão posterior — mesmo modo de falha do compilador de
+rótulos (73ac3885): `compilador.parametros_tile`/`legenda_raster`, a validação de `parametros_raster`
+(bandas/rescale/expression/colormap_name/resampling/esticamento), os 12 testes de unidade, o teste de
+round-trip da API, o bloco `parametros_raster` completo do esquema `estilo-v1` e a seção "Style
+Imagery" de `docs/PARIDADE.md`. Tudo restaurado neste turno; a base cuja `versao_migracao` já registrou
+a variante reduzida do esquema recebe a migração nova `20260918T0735_estilo_raster_restaurado.sql`
+(idempotente — migração aplicada não se edita). Provas nesta máquina (sem Garage, ver relatório):
+53 passed em `tests/unit/test_estilos_compilador.py` + `tests/api/catalogo/test_estilos.py` +
+`tests/api/test_estilo_raster.py -k "not medida"`, incluindo o adversário contra a API real (rescale
+invertido, banda 99, `b4/0`, rampa inventada → 422). As cláusulas de pixel e as 4 capturas do e2e
+exigem Garage vivo para semear o COG; a rodada verde delas consta na medida de 07/09.
+
 ## setembro de 2026 (item L4-10-continuidade-dec-fec: DEC/FEC por conjunto e por alimentador)
 
 Os indicadores coletivos de continuidade da ANEEL (DEC e FEC) ligados à rede da BDGD pela chave `CONJ`, com

@@ -26,6 +26,14 @@ PC_CLASSES = {
     "tipo": "classes", "geometria": "poligono", "versao": 1, "campo": "area_ha", "campos": ["area_ha"],
     "classes": [{"min": 0, "max": 50, "cor": "#deebf7"}, {"min": 50, "max": 1000, "cor": "#08519c"}],
 }
+PC_RASTER = {
+    "tipo": "raster", "geometria": "raster", "versao": 1,
+    "parametros_raster": {
+        "bandas": [4, 3, 2], "colormap_name": "viridis", "rescale": [0, 3000],
+        "resampling": "bilinear", "nodata": 0,
+        "esticamento": {"metodo": "minmax"},
+    },
+}
 
 
 def criar_estilo(sessao, itens, pc, maplibre=None, **extra):
@@ -67,6 +75,28 @@ def test_criar_ler_e_o_documento_lido_e_igual_ao_gravado(sessao_a, itens_a, pc):
     assert lido.status_code == 200
     assert lido.json()["dados"]["corpo"]["plat_construtor"] == pc
     assert lido.json()["dados"]["corpo"]["maplibre"] == compilador.compilar(pc)
+
+
+def test_raster_salvo_e_reaberto_e_identico(sessao_a, itens_a):
+    """cláusula do portão do item L2-02-f: `plat_construtor.parametros_raster` (bandas, colormap,
+    rescale, resampling, nodata, esticamento) sobrevive intacto ao ciclo gravar/ler, e o `maplibre`
+    lido é exatamente o que `compilador.compilar` calcula do MESMO documento — nunca dois estados."""
+    r = criar_estilo(sessao_a, itens_a, PC_RASTER)
+    assert r.status_code == 201, r.text
+    eid = r.json()["id"]
+    lido = sessao_a.get(f"/api/itens/{eid}")
+    assert lido.status_code == 200
+    assert lido.json()["dados"]["corpo"]["plat_construtor"] == PC_RASTER
+    assert lido.json()["dados"]["corpo"]["maplibre"] == compilador.compilar(PC_RASTER)
+
+    # segunda volta: gravar de novo o que foi lido dá byte a byte o mesmo (ida-e-volta sem perda)
+    r2 = sessao_a.post("/api/itens", json={
+        "tipo": "estilo", "titulo": "zt estilo raster reimportado", "dados": lido.json()["dados"],
+    })
+    assert r2.status_code == 201, r2.text
+    itens_a.criados.append(r2.json()["id"])
+    lido2 = sessao_a.get(f"/api/itens/{r2.json()['id']}")
+    assert lido2.json()["dados"] == lido.json()["dados"]
 
 
 def test_exportar_e_importar_devolve_documento_igual_exceto_id(sessao_a, itens_a):
@@ -128,6 +158,34 @@ def test_faixa_de_classe_invertida_e_422(sessao_a, itens_a):
                                                                                  "paint": {"fill-color": "#000000"}}]})
     assert r.status_code == 422, r.text
     assert r.json()["erro"] == "plat_construtor_invalido"
+
+
+def test_raster_adversario_recusado_na_gravacao(sessao_a, itens_a):
+    """Refutação do item L2-02-f contra a API real (sem Garage: a recusa acontece na validação do
+    documento, antes de qualquer ladrilho): rescale invertido, banda inexistente, expressão com
+    divisão por zero literal e colormap fora do vocabulário do TiTiler saem 422 com o campo apontado;
+    o documento legítimo (PC_RASTER) passa no teste de round-trip acima."""
+    # maplibre montado à mão: `_documento` compilaria o construtor inválido no próprio teste
+    ml = {"version": 8, "layers": [{"id": "camada", "type": "raster"}]}
+    for parametros_raster in (
+        {"rescale": [3000, 0]},
+        {"bandas": [99]},
+        {"expression": "b4/0"},
+        {"colormap_name": "rampa-inventada", "rescale": [0, 1]},
+    ):
+        pc = {"tipo": "raster", "geometria": "raster", "versao": 1, "parametros_raster": parametros_raster}
+        r = criar_estilo(sessao_a, itens_a, pc, maplibre=ml)
+        assert r.status_code == 422, (parametros_raster, r.text)
+        # duas recusas legítimas: o esquema JSON barra na borda (dados_invalidos, ex.: banda 99 > 64)
+        # e o compilador barra o que o esquema não sabe dizer (plat_construtor_invalido)
+        assert r.json()["erro"] in ("plat_construtor_invalido", "dados_invalidos"), r.text
+
+    # rampa com 1 classe (o 4o caso do adversário): a rampa nomeada é contínua por construção — o que
+    # existe de discreto no documento é `rescale`, e a forma degenerada dele (min == max) é recusada
+    pc = {"tipo": "raster", "geometria": "raster", "versao": 1,
+          "parametros_raster": {"colormap_name": "viridis", "rescale": [5, 5]}}
+    r = criar_estilo(sessao_a, itens_a, pc, maplibre=ml)
+    assert r.status_code == 422 and r.json()["erro"] == "plat_construtor_invalido", r.text
 
 
 def test_300_layers_e_recusado_pelo_esquema(sessao_a, itens_a):
