@@ -8,9 +8,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "year_of_construction",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "inteiro",
    "unidade": null
@@ -23,9 +23,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "identifier",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -38,9 +38,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "co_level",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -53,9 +53,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "wn_bottom_level",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -68,9 +68,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "co_diameter",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "mm"
@@ -83,9 +83,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "ws_type",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -98,9 +98,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "obj_id",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -113,9 +113,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "co_material",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -128,9 +128,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "status",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -143,9 +143,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "clear_height",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "mm"
@@ -158,9 +158,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "identifier",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -173,9 +173,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "coefficient_of_friction",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": null
@@ -188,9 +188,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "length_effective",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -203,9 +203,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "rp_to_level",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -218,9 +218,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "rp_from_level",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -233,9 +233,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "_slope_per_mill",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "mm/m"
@@ -248,9 +248,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "ch_function_hierarchic",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -263,9 +263,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "obj_id",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -278,9 +278,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "material",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -293,9 +293,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "rp_to_obj_id",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -308,9 +308,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "rp_from_obj_id",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -323,9 +323,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "ws_status",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -338,9 +338,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "ch_usage_current",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -353,9 +353,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "year_of_construction",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "inteiro",
    "unidade": null
@@ -368,9 +368,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "identifier",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -383,9 +383,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "co_level",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -398,9 +398,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "wn_bottom_level",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -413,9 +413,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "ws_type",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -428,9 +428,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "obj_id",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -445,7 +445,7 @@
     "coluna": "stop_level",
     "conferida": false,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI; a camada pump não faz parte das duas views de trabalho exportadas no demo oficial 2026.1.0, segue não conferida"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -460,7 +460,7 @@
     "coluna": "start_level",
     "conferida": false,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI; a camada pump não faz parte das duas views de trabalho exportadas no demo oficial 2026.1.0, segue não conferida"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -475,7 +475,7 @@
     "coluna": "placement_of_pump",
     "conferida": false,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI; a camada pump não faz parte das duas views de trabalho exportadas no demo oficial 2026.1.0, segue não conferida"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -488,9 +488,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "status",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -505,7 +505,7 @@
     "coluna": "construction_type",
     "conferida": false,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI; a camada pump não faz parte das duas views de trabalho exportadas no demo oficial 2026.1.0, segue não conferida"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -520,7 +520,7 @@
     "coluna": "pump_flow_max_single",
     "conferida": false,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI; a camada pump não faz parte das duas views de trabalho exportadas no demo oficial 2026.1.0, segue não conferida"
    },
    "tipo_dado": "real",
    "unidade": "L/s"
@@ -533,9 +533,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "year_of_construction",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "inteiro",
    "unidade": null
@@ -556,9 +556,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "identifier",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -571,9 +571,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "co_level",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -586,9 +586,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "wn_bottom_level",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -601,9 +601,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "ws_type",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -616,9 +616,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "obj_id",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -631,9 +631,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "status",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -646,9 +646,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "year_of_construction",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "inteiro",
    "unidade": null
@@ -661,9 +661,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "identifier",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -676,9 +676,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "co_level",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -691,9 +691,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "wn_bottom_level",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -706,9 +706,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "ss_upper_elevation",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -721,9 +721,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "ws_type",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -736,9 +736,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "obj_id",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -750,10 +750,10 @@
    "obrigatorio": false,
    "origem": {
     "camada": "vw_tww_wastewater_structure",
-    "coluna": "ss_depth",
-    "conferida": false,
+    "coluna": "_depth",
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg); na view 2025.0.1 a profundidade vinha por espécie (ma_depth/ss_depth), na 2026.1.0 é a coluna calculada _depth"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -766,9 +766,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "status",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -781,9 +781,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "ss_bypass",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "booleano",
    "unidade": null
@@ -796,9 +796,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "clear_height",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "mm"
@@ -811,9 +811,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "identifier",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -826,9 +826,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "coefficient_of_friction",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": null
@@ -841,9 +841,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "length_effective",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -856,9 +856,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "rp_to_level",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -871,9 +871,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "rp_from_level",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -886,9 +886,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "_slope_per_mill",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "mm/m"
@@ -901,9 +901,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "ch_function_hierarchic",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -916,9 +916,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "obj_id",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -931,9 +931,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "material",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -946,9 +946,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "rp_to_obj_id",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -961,9 +961,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "rp_from_obj_id",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -976,9 +976,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "ws_status",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -991,9 +991,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "ch_usage_current",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -1006,9 +1006,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "clear_height",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "mm"
@@ -1021,9 +1021,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "identifier",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -1036,9 +1036,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "coefficient_of_friction",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": null
@@ -1051,9 +1051,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "length_effective",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -1066,9 +1066,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "rp_to_level",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -1081,9 +1081,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "rp_from_level",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -1096,9 +1096,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "_slope_per_mill",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "mm/m"
@@ -1111,9 +1111,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "ch_function_hierarchic",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -1126,9 +1126,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "obj_id",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -1141,9 +1141,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "material",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -1156,9 +1156,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "rp_to_obj_id",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -1171,9 +1171,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "rp_from_obj_id",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -1186,9 +1186,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "ws_status",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -1201,9 +1201,9 @@
    "origem": {
     "camada": "vw_tww_reach",
     "coluna": "ch_usage_current",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -1216,9 +1216,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "year_of_construction",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "inteiro",
    "unidade": null
@@ -1231,9 +1231,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "identifier",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -1246,9 +1246,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "co_level",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -1261,9 +1261,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "wn_bottom_level",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -1276,9 +1276,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "wn_backflow_level_current",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -1291,9 +1291,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "ma_dimension1",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "mm"
@@ -1306,9 +1306,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "ma_dimension2",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "mm"
@@ -1321,9 +1321,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "ws_type",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -1336,9 +1336,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "ma_function",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -1351,9 +1351,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "obj_id",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -1366,9 +1366,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "ma_material",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -1380,10 +1380,10 @@
    "obrigatorio": false,
    "origem": {
     "camada": "vw_tww_wastewater_structure",
-    "coluna": "ma_depth",
-    "conferida": false,
+    "coluna": "_depth",
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg); na view 2025.0.1 a profundidade vinha por espécie (ma_depth/ss_depth), na 2026.1.0 é a coluna calculada _depth"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -1396,9 +1396,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "status",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -1411,9 +1411,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "year_of_construction",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "inteiro",
    "unidade": null
@@ -1426,9 +1426,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "identifier",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -1441,9 +1441,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "co_level",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -1456,9 +1456,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "dp_highwater_level",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -1471,9 +1471,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "wn_bottom_level",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -1486,9 +1486,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "dp_terrain_level",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "real",
    "unidade": "m"
@@ -1501,9 +1501,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "ws_type",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -1516,9 +1516,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "obj_id",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -1531,9 +1531,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "dp_water_course_number",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null
@@ -1546,9 +1546,9 @@
    "origem": {
     "camada": "vw_tww_wastewater_structure",
     "coluna": "status",
-    "conferida": false,
+    "conferida": true,
     "esquema": "tww_app",
-    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+    "nota": "coluna conferida no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0, views exportadas em tests/dados/teksi_wastewater_demo_aletsch.gpkg)"
    },
    "tipo_dado": "texto",
    "unidade": null

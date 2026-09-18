@@ -1,24 +1,24 @@
 {
  "item": "L4-05-e-gas-e-esgoto",
- "medido_em": "2026-09-08",
+ "medido_em": "2026-09-18",
  "maquina": {"carga_1min": 7.08, "ram_livre_gb": 4, "nota": "nenhuma cláusula do portão é de tempo ou de vazão; a carga fica registrada só como contexto das rodadas"},
  "pacotes": {
   "gas-br": {
-   "sha256": "d7d3ccac26d832ded8e423b068b2bc54865770b2f3b98f051b67b0df5e725843",
-   "bytes": 28749,
+   "sha256": "019505eb8af4bda56c94c23cbe507d8013b9fadb4e2699fe4f0bc89ad19f59ba",
+   "bytes": 28459,
    "dominios": 1, "tiers": 4, "categorias": 10, "terminais": 3, "grupos": 7, "tipos": 24,
    "atributos": 51, "regras": 29,
    "atributos_com_origem_conferida": 0,
    "nota": "atributos são vocabulário próprio do pacote e não declaram coluna de origem"
   },
   "esgoto-teksi": {
-   "sha256": "308c5f038ad87f285804b1ce5a07f2b6b3bb9b2075c7c9399aeb0bd9bbd77e8b",
-   "bytes": 72442,
+   "sha256": "998d7027f1327d4ecb79a29a288099b9963b894e52bf3917a9f068fc26ec25d6",
+   "bytes": 69402,
    "dominios": 2, "tiers": 3, "categorias": 11, "terminais": 3, "grupos": 9, "tipos": 21,
    "atributos": 104, "regras": 29,
    "atributos_com_origem_declarada": 103,
-   "atributos_com_origem_conferida": 0,
-   "nota": "coluna de origem lida na definição de tabela do datamodel TEKSI, não em dado real: conferida = false em todos"
+   "atributos_com_origem_conferida": 98,
+   "nota": "98 colunas conferidas no dado oficial do projeto TEKSI (demo Aletsch, release 2026.1.0); a conferência em dado real pegou um desvio de mapeamento: ma_depth/ss_depth não existem na view 2026.1.0, a profundidade é a coluna calculada _depth — remapeado. As 5 da camada pump seguem não conferidas (a camada não está nas duas views de trabalho exportadas no demo)"
   }
  },
  "fontes_lidas": [
@@ -38,8 +38,23 @@
   {"o_que": "fonte de paridade do gás declarada no item",
    "url": "https://solutions.arcgis.com/utilities/gas/help/gas-utility-network-foundation/",
    "resultado": "HTTP 200 devolvendo o índice geral do ArcGIS Solutions, não a página do modelo de gás",
-   "baixado_em": "2026-09-08"}
+   "baixado_em": "2026-09-08"},
+  {"o_que": "dado de exemplo OFICIAL do projeto TEKSI (demo Aletsch): dump PostgreSQL com o datamodel completo + o dado de demonstração, release 2026.1.0",
+   "url": "https://github.com/teksi/wastewater/releases/download/2026.1.0/datamodel-dumps.zip",
+   "sha256_zip": "a4da2fab4740ad9bda2aa6bb794cad067c9d169f1272cc0b4446fc456714961e",
+   "sha256_dump_sql": "e12cbd0d4209c7219fbcbe617c094f0be55085e6f5c0bbc49505423a3bb89a29",
+   "resultado": "restaurado íntegro num banco descartável e exportado para tests/dados/teksi_wastewater_demo_aletsch.gpkg (sha256 f3138640ae8fac5dea5be8ee8eb8cd6fe2eeb6aa08fd324ef38a2f26fb737093; cadeia em tests/dados/teksi_wastewater_demo_aletsch.origem.md)",
+   "baixado_em": "2026-09-18"}
  ],
+ "rede_oficial_aletsch": {
+  "arquivo": "tests/dados/teksi_wastewater_demo_aletsch.gpkg (views vw_tww_wastewater_structure e vw_tww_reach do dump oficial, EPSG:4326, 2D)",
+  "estruturas": 77, "trechos": 102,
+  "lidas": {"estruturas": 71, "trechos": 101, "ignoradas": 7},
+  "ignoradas_detalhe": {"estrutura_sem_geometria": 4, "especie_sem_correspondencia_infiltration_installation": 2, "trecho_com_arco": 1},
+  "trechos_com_cota_nas_duas_pontas": 81,
+  "escoam_por_gravidade": 71, "sobem": 5, "empatados": 5,
+  "nota": "dado real não é a ficção do sintético: tem estrutura sem ponto, espécie sem grupo no pacote, 1 arco de verdade e 5 trechos que sobem (sifões/recalques alpinos) — cada lacuna vira aviso contado, nunca palpite"
+ },
  "rede_sintetica": {
   "elementos": 200,
   "estruturas": 101,
@@ -66,11 +81,11 @@
    "estado": "feito",
    "prova": "pacote: test_gas_o_regulador_e_o_controlador_de_tier_de_pressao; motor: GET /api/rede/{id}/gas/pressao em test_gas_com_regulador_entre_tiers_passa e test_gas_acusa_regulador_que_eleva_pressao_e_emenda_sem_ele"},
   {"clausula": "importação do esquema TEKSI (GeoPackage de exemplo do projeto) mapeada",
-   "estado": "parcial",
-   "prova": "POST /api/rede/{id}/teksi lê o GeoPackage e grava 200 feições (test_importa_geopackage_teksi_com_as_200_feicoes); o de-para sai das origens declaradas no pacote (test_mapa_teksi_sai_do_pacote_e_cobre_as_colunas_de_cota)",
-   "o_que_falta": "o exemplo publicado pelo projeto TEKSI é um dump SQL de PostGIS (datamodel/demo_data/demo_data_aletsch.sql), não um GeoPackage; o GeoPackage usado é o sintético desta casa, com as camadas e as colunas do TEKSI. As colunas foram lidas na definição de tabela do projeto, nunca em dado real: origem.conferida = false em todos os 103 atributos"},
+   "estado": "feito",
+   "prova": "tests/unit/test_l4_adv2_teksi_exemplo_oficial.py (era xfail do adversário T9): o GeoPackage com o dado de exemplo oficial do projeto (demo Aletsch, release 2026.1.0) entra por teksi.ler_geopackage com o de-para lido do pacote — 71 estruturas e 101 trechos mapeados, 7 lacunas do dado real contadas com aviso; na API, POST /api/rede/{id}/teksi provado em test_importa_geopackage_teksi_com_as_200_feicoes",
+   "ressalva": "as 5 colunas da camada pump seguem declaradas e não conferidas (a camada não está nas views de trabalho do demo oficial); o 1 trecho com arco fica de fora com aviso trecho_com_arco — endireitar arco em silêncio falsificaria a geometria"},
   {"clausula": "teste automatizado", "estado": "feito",
-   "prova": "tests/unit/test_gas_esgoto_pacotes.py (13 casos) e tests/api/test_rede_gas_esgoto.py (9 casos), rodados na base da trilha"},
+   "prova": "tests/unit/test_gas_esgoto_pacotes.py (14 casos), tests/unit/test_l4_adv2_teksi_exemplo_oficial.py (2 casos, dado oficial) e tests/api/test_rede_gas_esgoto.py (9 casos), rodados na base da trilha em 18/09/2026"},
   {"clausula": "paridade contra gas utility network foundation escrita",
    "estado": "parcial",
    "prova": "docs/rede/PARIDADE_GAS.md, 15 linhas de elemento do modelo",

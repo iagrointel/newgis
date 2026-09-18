@@ -47,6 +47,11 @@ class ErroTeksi(Exception):
         super().__init__(mensagem)
 
 
+class _ArcoNaoSuportado(Exception):
+    """Trecho modelado como arco (CircularString): endireitar o arco em silêncio falsificaria a
+    geometria; a leitura conta a feição como ignorada com aviso (ver ler_geopackage)."""
+
+
 def mapa_do_pacote(doc: dict) -> dict[str, dict[str, list[tuple[str, str]]]]:
     """{camada: {coluna: [(grupo, código do atributo), ...]}} lido das origens declaradas no pacote."""
     mapa: dict[str, dict[str, list[tuple[str, str]]]] = {}
@@ -86,16 +91,42 @@ def _wkb(wkb: bytes) -> tuple[str, list]:
         coords = struct.unpack_from(ordem + "d" * dimensoes, wkb, pos)
         return "Point", [coords[0], coords[1]]
     if geometria == 2:
+        coords, _ = _linha(wkb, pos, ordem, dimensoes)
+        return "LineString", coords
+    if geometria == 8:
+        raise _ArcoNaoSuportado
+    if geometria == 9:
+        # CompoundCurve: o TEKSI tipa a progressão do trecho como curva composta. Os segmentos
+        # retos entram como uma linha só (juntas emendadas); segmento em arco não entra.
         (n,) = struct.unpack_from(ordem + "I", wkb, pos)
         pos += 4
-        pontos = []
+        pontos: list = []
         for _ in range(n):
-            coords = struct.unpack_from(ordem + "d" * dimensoes, wkb, pos)
-            pos += 8 * dimensoes
-            pontos.append([coords[0], coords[1]])
+            ordem_sub = "<" if wkb[pos] == 1 else ">"
+            (tipo_sub,) = struct.unpack_from(ordem_sub + "I", wkb, pos + 1)
+            base_sub = tipo_sub & 0xFFFF
+            if base_sub % 1000 != 2:
+                raise _ArcoNaoSuportado
+            dimensoes_sub = 3 if 1000 <= base_sub < 2000 else 4 if 2000 <= base_sub < 4000 else 2
+            coords, pos = _linha(wkb, pos + 5, ordem_sub, dimensoes_sub)
+            if pontos and pontos[-1] == coords[0]:
+                coords = coords[1:]
+            pontos.extend(coords)
         return "LineString", pontos
     raise ErroTeksi("geometria_nao_suportada",
                     f"a camada traz geometria de tipo {geometria}; só ponto e linha entram na rede")
+
+
+def _linha(wkb: bytes, pos: int, ordem: str, dimensoes: int) -> tuple[list, int]:
+    """Lê `uint32 n` + n pontos a partir de pos; devolve (pontos xy, posição seguinte)."""
+    (n,) = struct.unpack_from(ordem + "I", wkb, pos)
+    pos += 4
+    pontos = []
+    for _ in range(n):
+        coords = struct.unpack_from(ordem + "d" * dimensoes, wkb, pos)
+        pos += 8 * dimensoes
+        pontos.append([coords[0], coords[1]])
+    return pontos, pos
 
 
 def _colunas(con: sqlite3.Connection, tabela: str) -> list[str]:
@@ -165,6 +196,7 @@ def ler_geopackage(caminho: str | Path, doc_pacote: dict) -> dict:
             geom_col = _coluna_de_geometria(con, CAMADA_ESTRUTURA)
             mapa_camada = mapa.get(CAMADA_ESTRUTURA, {})
             especies_sem_correspondencia: dict[str, int] = {}
+            sem_geometria = 0
             for linha in con.execute(f'SELECT * FROM "{CAMADA_ESTRUTURA}"'):
                 registro = dict(zip(colunas, linha, strict=True))
                 especie = registro.get(COLUNA_ESPECIE)
@@ -175,10 +207,21 @@ def ler_geopackage(caminho: str | Path, doc_pacote: dict) -> dict:
                     contagens["ignoradas"] += 1
                     continue
                 grupo, tipo_codigo = alvo
-                pontos.append(_feicao(registro, mapa_camada, grupo, tipo_codigo,
-                                      _geometria(registro.get(geom_col))))
+                blob = registro.get(geom_col)
+                if blob is None:
+                    sem_geometria += 1
+                    contagens["ignoradas"] += 1
+                    continue
+                feicao = _feicao(registro, mapa_camada, grupo, tipo_codigo, _geometria(blob))
+                pontos.append(feicao)
                 contagens["estruturas_lidas"] += 1
                 _limite(len(pontos) + len(linhas))
+            if sem_geometria:
+                avisos.append({"aviso": "estrutura_sem_geometria", "valor": None,
+                               "feicoes": sem_geometria,
+                               "mensagem": f"{sem_geometria} estrutura(s) vieram sem geometria e ficaram de "
+                                           f"fora; o dado oficial do TEKSI admite estrutura cadastrada sem "
+                                           f"ponto, e a rede não aceita feição sem forma"})
             for especie, n in sorted(especies_sem_correspondencia.items()):
                 avisos.append({"aviso": "especie_sem_correspondencia", "valor": especie, "feicoes": n,
                                "mensagem": f"{n} estrutura(s) com ws_type {especie!r} ficaram de fora: o "
@@ -189,12 +232,33 @@ def ler_geopackage(caminho: str | Path, doc_pacote: dict) -> dict:
             geom_col = _coluna_de_geometria(con, CAMADA_TRECHO)
             mapa_camada = mapa.get(CAMADA_TRECHO, {})
             grupo, tipo_codigo = GRUPO_TRECHO
+            sem_geometria = 0
+            com_arco = 0
             for linha in con.execute(f'SELECT * FROM "{CAMADA_TRECHO}"'):
                 registro = dict(zip(colunas, linha, strict=True))
-                linhas.append(_feicao(registro, mapa_camada, grupo, tipo_codigo,
-                                      _geometria(registro.get(geom_col))))
+                blob = registro.get(geom_col)
+                if blob is None:
+                    sem_geometria += 1
+                    contagens["ignoradas"] += 1
+                    continue
+                try:
+                    geometria = _geometria(blob)
+                except _ArcoNaoSuportado:
+                    com_arco += 1
+                    contagens["ignoradas"] += 1
+                    continue
+                linhas.append(_feicao(registro, mapa_camada, grupo, tipo_codigo, geometria))
                 contagens["trechos_lidos"] += 1
                 _limite(len(pontos) + len(linhas))
+            if sem_geometria:
+                avisos.append({"aviso": "trecho_sem_geometria", "valor": None, "feicoes": sem_geometria,
+                               "mensagem": f"{sem_geometria} trecho(s) vieram sem geometria e ficaram de "
+                                           f"fora; a rede não aceita feição sem forma"})
+            if com_arco:
+                avisos.append({"aviso": "trecho_com_arco", "valor": None, "feicoes": com_arco,
+                               "mensagem": f"{com_arco} trecho(s) têm arco (CircularString) na progressão e "
+                                           f"ficaram de fora: endireitar o arco em silêncio falsificaria a "
+                                           f"geometria, e a rede só guarda linhas retas"})
     finally:
         con.close()
 
