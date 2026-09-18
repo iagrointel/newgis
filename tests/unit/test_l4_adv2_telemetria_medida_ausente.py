@@ -13,22 +13,21 @@ medindo o tempo. `tests/medidas/L4-13-integracao-telemetria.json` não existe. A
 do item no brief também está vazia (`—`), diferente de todo item irmão desta linha, que tem nota com
 número. O item está registrado como ENTREGUE sem que as duas cláusulas quantitativas do seu próprio
 portão tenham sido tentadas — mesmo padrão do achado #4 da rodada 2 do adversário de L2 (cláusula do
-portão nomeada, sem teste correspondente)."""
+portão nomeada, sem teste correspondente).
+
+CONSERTO (construtor, 18/09/2026): `tests/api/test_rede_medicao_desempenho.py` simula os 20 sensores do
+portão (corrente por fase + temperatura a cada 5 min, tensão a cada 10 min), semeia 30 dias × 20 sensores
+(777.600 leituras) e mede as duas cláusulas — ficha de cada trafo com a leitura do ciclo em 684 ms do POST
+à última ficha (teto 5 s) e consulta de 1 mês dos 20 sensores (172.780 pontos) em 1.149 ms — gravando
+`tests/medidas/L4-13-integracao-telemetria.json` com carga da máquina ao lado. Este teste do adversário
+perde o xfail e fica de pé como guarda: se a medida sumir ou voltar incompleta, ele reprova de novo."""
 
 import json
 from pathlib import Path
 
-import pytest
-
 MEDIDAS = Path(__file__).resolve().parents[1] / "medidas" / "L4-13-integracao-telemetria.json"
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "achado adversário L4 rodada 2 (item L4-13-integracao-telemetria): as duas cláusulas quantitativas "
-    "do portão (20 sensores com latência <=5s na ficha do ativo; consulta de 1 mês de 20 sensores em "
-    "tempo medido) nunca foram medidas nem gravadas — tests/medidas/L4-13-integracao-telemetria.json "
-    "não existe, e nenhum teste em tests/api/test_rede_medicao.py simula 20 sensores"
-))
 def test_portao_de_l4_13_tem_medida_gravada_de_latencia_e_de_consulta_de_1_mes():
     assert MEDIDAS.exists(), f"{MEDIDAS} não existe: as cláusulas de desempenho do portão nunca foram medidas"
     dados = json.loads(MEDIDAS.read_text(encoding="utf-8"))
