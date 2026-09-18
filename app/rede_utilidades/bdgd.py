@@ -35,9 +35,12 @@ from app.rede_utilidades import unidades as unidades_mod
 
 # camadas de feição conferidas, na ordem de dependência da montagem. SUB/CTMT/SSDMT/UNTRMT/SSDBT/
 # UCBT_tab são o mínimo do portão; as demais enriquecem o mesmo modelo (chave com estado, ramal,
-# consumidor de MT) e são contadas da mesma forma. PONNOT não é camada de feição do modelo (é a
-# geometria dos pontos de conexão): entra como apoio, reportada à parte.
-CAMADAS = ("SUB", "CTMT", "SSDMT", "UNTRMT", "SSDBT", "UCBT_tab", "RAMLIG", "UNSEMT", "UCMT_tab")
+# consumidor de MT, ponto de iluminação pública, geração distribuída BT) e são contadas da mesma
+# forma — PIP e UGBT_tab entram pelo MESMO caminho de UCBT_tab (tabela sem geometria, ligação por
+# PN_CON, transformador por UNI_TR_MT), com tipos próprios do pacote. PONNOT não é camada de feição
+# do modelo (é a geometria dos pontos de conexão): entra como apoio, reportada à parte.
+CAMADAS = ("SUB", "CTMT", "SSDMT", "UNTRMT", "SSDBT", "UCBT_tab", "RAMLIG", "UNSEMT", "UCMT_tab",
+           "PIP", "UGBT_tab")
 CAMADAS_APOIO = ("PONNOT",)
 
 # camada -> (grupo do pacote eletrica-br, tipo_codigo). A tipificação fina da BDGD (TIP_UNID, POS
@@ -52,6 +55,8 @@ TIPO_POR_CAMADA = {
     "UNSEMT": ("chave_de_media_tensao", 1),
     "UCBT_tab": ("unidade_consumidora", 1),
     "UCMT_tab": ("unidade_consumidora", 2),
+    "PIP": ("ponto_de_iluminacao_publica", 1),
+    "UGBT_tab": ("geracao_distribuida", 1),
 }
 
 # A hierarquia declarada pelo arquivo vive na MESMA tabela da subrede derivada do controlador desde o item
@@ -305,6 +310,9 @@ class _Importador:
             self.progresso(80, "unidades consumidoras (UCBT/UCMT)")
             self._consumidores("UCBT_tab", geometrias)
             self._consumidores("UCMT_tab", geometrias)
+            self.progresso(88, "iluminação pública e geração distribuída (PIP/UGBT)")
+            self._consumidores("PIP", geometrias)
+            self._consumidores("UGBT_tab", geometrias)
             self.progresso(92, "órfãos: UC sem trafo, trafo sem alimentador, PAC sem trecho")
             orfaos = self._orfaos()
         except Exception as exc:
@@ -875,6 +883,19 @@ class _Importador:
             self.inseridos[camada] = 0
             return
         if df.empty:
+            self.inseridos[camada] = 0
+            return
+        if "PN_CON" not in df.columns:
+            # camada de consumo sem o ponto de ligação declarado (vista em PIP de safra antiga): sem
+            # PN_CON não há conectividade explícita — a camada inteira fica de fora, contada, nunca
+            # aborta a carga das irmãs.
+            self._desvio(
+                "camada_sem_pn_con",
+                f"{camada} não tem a coluna PN_CON: sem o ponto de ligação não há como montar a "
+                "associação de conectividade; a camada inteira fica fora do modelo",
+                None,
+                quantidade=int(len(df)),
+            )
             self.inseridos[camada] = 0
             return
         # UCBT_tab/UCMT_tab não têm COD_ID nem geometria: o identificador é o OBJECTID da tabela

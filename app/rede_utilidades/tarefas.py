@@ -44,7 +44,8 @@ from app.rede_utilidades import bdgd, contrato, subredes
 class ImportarBdgdParametros(BaseModel):
     rede_id: uuid.UUID
     caminho: str = Field(
-        min_length=1, max_length=1024, description="pacote .gdb.zip ou pasta .gdb, dentro de PLAT_BDGD_RAIZ"
+        min_length=1, max_length=1024,
+        description="pacote .gdb.zip, pasta .gdb ou .gpkg, dentro de PLAT_BDGD_RAIZ",
     )
     seguir_com_bloqueio: bool = Field(
         default=True,
@@ -74,11 +75,16 @@ def _resolver_caminho(caminho: str) -> Path:
 
 
 def _extrair_se_zip(p: Path, dir_trabalho: Path) -> Path:
-    """Devolve a pasta .gdb pronta para o GDAL: a própria `p` quando já é pasta, ou a extraída."""
+    """Devolve a pasta .gdb pronta para o GDAL: a própria `p` quando já é pasta, ou a extraída.
+    Arquivo de camadas único (GPKG — é o formato que a refutação do item usa para regravar uma
+    camada com outra unidade, porque FileGDB não é regravável sem o SDK da ESRI) entra direto:
+    o GDAL lê por camada do mesmo jeito."""
     if p.is_dir():
         return p
+    if p.suffix.lower() == ".gpkg":
+        return p
     if p.suffix.lower() != ".zip" and not p.name.lower().endswith(".gdb.zip"):
-        raise FalhaDefinitiva("o pacote tem de ser uma pasta .gdb ou um .gdb.zip")
+        raise FalhaDefinitiva("o pacote tem de ser uma pasta .gdb, um .gdb.zip ou um .gpkg")
     destino = dir_trabalho / "bdgd"
     destino.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(p) as z:

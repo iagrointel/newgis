@@ -23,6 +23,7 @@ import json
 import os
 import shutil
 import time
+import uuid
 from pathlib import Path
 
 import pyogrio
@@ -257,3 +258,229 @@ def test_cooperativa_inteira_contagens_e_tempo(rede_eletrica):
         )
     )
     assert duracao < 600, f"{duracao:.0f} s: a cooperativa inteira tem de caber em 10 min"
+
+
+# ---------------------------------------------------------------- cláusula: a importação é JOB, com barra
+
+
+@pytest.fixture
+def rede_propria(sessao_a):
+    """Rede do inquilino demo com o pacote eletrica-br instalado, COMMITADA e com nome único.
+
+    Diferente da fixture `rede_eletrica` (que deixa tudo numa transação aberta da conexão
+    compartilhada da suíte): o job roda em conexão PRÓPRIA (ContextoJob.db, como no worker), então a
+    rede tem de estar commitada — e o commit não pode ser na conexão compartilhada, que arrastaria
+    o trabalho pendente dos outros testes do módulo (achado desta trilha: um `con.commit()` ali
+    vazou a rede 'zt-modelo-bdgd' de um teste pulado e derrubou a fixture seguinte por ux_rede_nome).
+    Por isso conexão própria, no padrão `_lote` do item irmão L4-04-b."""
+    import psycopg2
+
+    from app.rede_utilidades import deposito, instalados
+    from app.rede_utilidades import pacote as pacote_mod
+    from app.schema_ambiente import CursorSchemaAmbiente
+    from tests.api.test_rls import ids_por_slug
+
+    con = psycopg2.connect(os.environ["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
+    ids = ids_por_slug(con)
+    tenant_id = ids["demo"]
+    with con.cursor() as cur:
+        contexto(con, tenant_id)
+        cur.execute("SELECT id FROM plat.usuario WHERE tenant_id = %s AND ativo ORDER BY id LIMIT 1", (tenant_id,))
+        usuario_id = cur.fetchone()["id"]
+        contexto(con, tenant_id, usuario_id)
+        cur.execute(
+            "INSERT INTO plat.rede (tenant_id, nome, disciplina, tolerancia_m, dono_id) "
+            "VALUES (%s, %s, 'eletrica', 0.05, %s) RETURNING id",
+            (tenant_id, f"zt-bdgd-job-{uuid.uuid4().hex[:10]}", usuario_id),
+        )
+        rede_id = str(cur.fetchone()["id"])
+        bruto = instalados.bruto("eletrica-br")
+        doc = pacote_mod.ler(bruto)
+        deposito.importar(cur, tenant_id, rede_id, doc, usuario_id, hashlib.sha256(bruto).hexdigest(), len(bruto))
+    con.commit()
+    yield con, tenant_id, usuario_id, rede_id
+    apagada = sessao_a.delete(f"/api/rede/{rede_id}")
+    assert apagada.status_code in (200, 204), apagada.text
+    con.close()
+
+
+def _gpkg_pacote_sintetico(destino: Path) -> str:
+    """Pacote BDGD sintético COMPLETO (todas as camadas que o importador lê), em escala de bancada.
+
+    Os 3 pacotes reais do portão (a casa em `/home/dev/liga/`) não existem neste servidor — a cláusula
+    de escala fica na suíte `lento`, que pula sem eles. O que esta função provê é a régua da cláusula
+    "importa POR JOB": o mesmo extrato sintético de `gerar_bdgd_unidades` (SUB/CTMT/PONNOT/SSDMT/
+    UNTRMT/UCBT_tab, geometria e COMP geodésico de verdade) mais as três camadas que o portão conta
+    e faltavam ali — SSDBT (com COMP próprio), PIP e UGBT_tab — gravadas na mesma régua: ligação por
+    PN_CON, transformador por UNI_TR_MT, energia em kWh coerente com a potência declarada."""
+    import geopandas as gpd
+    import pandas as pd
+    from pyproj import Geod
+    from shapely.geometry import LineString
+
+    from tests.dados import gerar_bdgd_unidades as ger
+
+    caminho = ger.escrever(destino, unidade_comp="m", unidade_ene="kWh")
+    geod = Geod(ellps="WGS84")
+
+    # SSDBT: sai da junção do transformador 0 (PN2) para a junção seguinte (PN3), ~195 m ao sul da MT
+    seg = LineString([(ger.LON0 + 2 * 0.002, ger.LAT0 - 0.0005), (ger.LON0 + 3 * 0.002, ger.LAT0 - 0.0005)])
+    gpd.GeoDataFrame(
+        {
+            "COD_ID": ["SSDBT0"],
+            "PN_CON_1": ["PN2"],
+            "PN_CON_2": ["PN3"],
+            "CTMT": ["CTMT1"],
+            "UNI_TR_MT": ["TRAFO0"],
+            "FAS_CON": ["ABCN"],
+            "COMP": [round(geod.geometry_length(seg), 6)],
+        },
+        geometry=[seg], crs=f"EPSG:{ger.SRID}",
+    ).to_file(caminho, layer="SSDBT", driver="GPKG")
+
+    # PIP: 3 pontos de iluminação pública na junção do trafo 0; 100 W × ~12 h/dia ≈ 37 kWh/mês
+    pip = pd.DataFrame(
+        {
+            "COD_ID": [f"PIP{i}" for i in range(3)],
+            "PN_CON": ["PN2"] * 3,
+            "UNI_TR_MT": ["TRAFO0"] * 3,
+            "POT_LAMP": [100.0] * 3,
+            **{f"ENE_{m:02d}": [37.0] * 3 for m in range(1, 13)},
+        }
+    )
+    gpd.GeoDataFrame(pip, geometry=[None] * 3, crs=f"EPSG:{ger.SRID}").to_file(
+        caminho, layer="PIP", driver="GPKG")
+
+    # UGBT_tab: 2 unidades geradoras de baixa tensão na outra ponta do SSDBT; 5 kW × ~4 h sol ≈ 600 kWh/mês
+    ugbt = pd.DataFrame(
+        {
+            "COD_ID": [f"UGBT{i}" for i in range(2)],
+            "PN_CON": ["PN3"] * 2,
+            "UNI_TR_MT": ["TRAFO0"] * 2,
+            "CEG_GD": ["GD.ZT.0001", "GD.ZT.0002"],
+            "POT_INST": [5.0] * 2,
+            **{f"ENE_{m:02d}": [600.0] * 2 for m in range(1, 13)},
+        }
+    )
+    gpd.GeoDataFrame(ugbt, geometry=[None] * 2, crs=f"EPSG:{ger.SRID}").to_file(
+        caminho, layer="UGBT_tab", driver="GPKG")
+    return caminho
+
+
+def test_job_importa_pacote_local_com_barra_de_progresso(rede_propria, sessao_a, tmp_path,
+                                                         monkeypatch, request):
+    """Cláusula "os pacotes importam POR JOB com barra de progresso", provada pela porta da frente:
+
+    1. enfileira `rede.importar_bdgd` pela rota oficial POST /api/jobs (a mesma que a tela usa);
+    2. pega o job pela MESMA função do worker (`plat.job_pegar`, com a role do worker) e roda o corpo
+       da tarefa com o `ContextoJob` real — progresso e log passam por `plat.job_progresso`/`plat.job_log`,
+       o encanamento da barra, não por um dublê;
+    3. termina por `plat.job_terminar` e confere: progresso 100, contagens iguais ao arquivo (PIP e
+       UGBT_tab incluídos — o portão os conta e o importador não os tinha), COMP detectado em metros,
+       relatório do contrato gravado na auditoria COM o job_id e linha de log da avaliação no job.
+
+    Sem worker externo: a fila da trilha é consumida no processo do teste (o padrão `_lote` do item
+    irmão L4-04-b), porque o que se prova é o CORPO do job e a escrita da barra, não o agendador."""
+    import psycopg2
+    from psycopg2.extras import Json
+
+    from app import settings as cfg
+    from app.jobs.contexto_job import ContextoJob
+    from app.rede_utilidades import tarefas as tarefas_mod
+    from app.schema_ambiente import CursorSchemaAmbiente
+
+    dsn_worker = os.environ.get("PLAT_DSN_WORKER")
+    if not dsn_worker:
+        pytest.skip("sem PLAT_DSN_WORKER nesta trilha: a prova do job precisa da role do worker")
+
+    con, tenant_id, usuario_id, rede_id = rede_propria
+    raiz = tmp_path / "raiz_bdgd"
+    raiz.mkdir()
+    pacote = _gpkg_pacote_sintetico(raiz / "cooperativa_zt_2024.gpkg")
+    monkeypatch.setenv("PLAT_BDGD_RAIZ", str(raiz))
+    cfg.obter.cache_clear()
+    request.addfinalizer(cfg.obter.cache_clear)
+
+    r = sessao_a.post(
+        "/api/jobs",
+        json={"tipo": "rede.importar_bdgd",
+              "parametros": {"rede_id": rede_id, "caminho": "cooperativa_zt_2024.gpkg"}},
+    )
+    assert r.status_code == 201, r.text
+    job_id = r.json()["id"]
+
+    worker = f"zt-worker-bdgd-{uuid.uuid4().hex[:6]}"
+    conw = psycopg2.connect(dsn_worker, cursor_factory=CursorSchemaAmbiente)
+    try:
+        with conw.cursor() as cur:
+            cur.execute("SELECT * FROM plat.job_pegar(%s, %s)", (worker, True))
+            pego = cur.fetchone()
+        conw.commit()
+        assert pego is not None and str(pego["id"]) == job_id, (
+            "a fila da trilha tinha outro job pendente na frente do nosso"
+        )
+        ctx = ContextoJob(dict(pego), tmp_path / "trabalho", worker)
+        resultado = tarefas_mod.rede_importar_bdgd(
+            ctx, rede_id=uuid.UUID(rede_id), caminho="cooperativa_zt_2024.gpkg")
+        with conw.cursor() as cur:
+            cur.execute(
+                "SELECT plat.job_terminar(%s, %s, 'concluido', %s, NULL, %s) AS ok",
+                (job_id, worker, Json(resultado), Json({"origem": "teste"})),
+            )
+            assert cur.fetchone()["ok"]
+        conw.commit()
+    finally:
+        conw.close()
+
+    assert resultado["conferido"], resultado["contagens"]
+    esperado = inspecionar(pacote)  # a régua: GetFeatureCount do MESMO pacote, camada a camada
+    for camada, n in (("PIP", 3), ("UGBT_tab", 2), ("UCBT_tab", 30), ("SSDMT", 12),
+                      ("SSDBT", 1), ("UNTRMT", 3), ("SUB", 1), ("CTMT", 1)):
+        assert esperado[camada] == n, (camada, esperado[camada])
+        assert resultado["contagens"][camada] == {"arquivo": n, "inserido": n}, (
+            camada, resultado["contagens"][camada])
+    assert resultado["comp"]["SSDMT"]["unidade"] == "metros"
+    assert resultado["comp"]["SSDBT"]["unidade"] == "metros"
+
+    with con.cursor() as cur:
+        contexto(con, tenant_id)
+        cur.execute("SELECT progresso, estado, mensagem FROM plat.job WHERE id = %s::uuid", (job_id,))
+        j = cur.fetchone()
+        assert j["estado"] == "concluido" and j["progresso"] == 100 and j["mensagem"], j
+        cur.execute(
+            "SELECT nivel, mensagem FROM plat.job_log WHERE job_id = %s::uuid AND mensagem LIKE %s",
+            (job_id, "contrato:%"),
+        )
+        assert cur.fetchone(), "a avaliação do contrato não deixou linha no log do job"
+        cur.execute(
+            "SELECT contrato, job_id, estado FROM plat.rede_importacao WHERE id = %s::uuid",
+            (resultado["importacao_id"],),
+        )
+        aud = cur.fetchone()
+    assert aud["estado"] == "concluida" and str(aud["job_id"]) == job_id
+    assert aud["contrato"]["total"] == 61, "o relatório gravado é o do YAML da casa, inteiro"
+    assert aud["contrato"]["avaliadas"] >= 30, {
+        e["id"]: e["detalhe"] for e in aud["contrato"]["expectativas"] if e["resultado"] == "nao_avaliada"
+    }
+
+
+def test_job_recusa_caminho_fora_da_raiz(rede_propria, tmp_path, monkeypatch, request):
+    """O job só lê dentro de PLAT_BDGD_RAIZ (defesa de caminho arbitrário do servidor): um caminho
+    fora da raiz falha na hora, sem tocar em banco nem em arquivo."""
+    from app import settings as cfg
+    from app.jobs.registro import FalhaDefinitiva
+    from app.rede_utilidades import tarefas as tarefas_mod
+
+    monkeypatch.setenv("PLAT_BDGD_RAIZ", str(tmp_path / "raiz"))
+    cfg.obter.cache_clear()
+    request.addfinalizer(cfg.obter.cache_clear)
+    (tmp_path / "raiz").mkdir()
+    fora = tmp_path / "fora_2024.gpkg"
+    _gpkg_pacote_sintetico(fora)
+    with pytest.raises(FalhaDefinitiva):
+        tarefas_mod._resolver_caminho(str(fora))
+    # e sem PLAT_BDGD_RAIZ configurada a importação por caminho local fica desligada (D21)
+    monkeypatch.delenv("PLAT_BDGD_RAIZ", raising=False)
+    cfg.obter.cache_clear()
+    with pytest.raises(FalhaDefinitiva):
+        tarefas_mod._resolver_caminho("qualquer.gpkg")
