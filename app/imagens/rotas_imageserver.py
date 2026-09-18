@@ -38,9 +38,15 @@ do turno):
               "NoData"; `tile/<z>/<y>/<x>` (mesma grade WebMercatorQuad do L1-02, service renomeado para
               o padrão level/row/col do ArcGIS); `renderingRule` na forma `{"rasterFunction": "<nome>"}`
               (item L1-02-f), onde `<nome>` é uma predefinição de renderização (fábrica ou custom do
-              inquilino) — `exportImage` e `tile/<z>/<y>/<x>` aplicam; `allowRasterFunction` no documento
+              inquilino) — `exportImage` e `tile/<z>/<y>/<x>` aplicam; `format=tiff` (GeoTIFF no dtype
+              nativo, sem esticamento); `mosaicRule` LIMITADA aos métodos do L1-08 — esriMosaicNone,
+              esriMosaicLockRaster e esriMosaicAttribute, mais `mosaicOperation` MT_FIRST/LAST/MIN/MAX/
+              MEAN/MEDIAN (tabela em `app/imagens/mosaico.py::METODOS_ESRI`); num ImageServer de ITEM a
+              regra só pode citar a própria cena, e citar outra é erro Esri nomeado; `allowRasterFunction` no documento
               do serviço vira `true` quando o item tem ao menos 1 predefinição de fábrica compatível.
-  fora      — `renderingRule` em qualquer OUTRA forma (encadeada, com `rasterFunctionArguments`, funções
+  fora      — `mosaicRule` com esriMosaicSeamline, esriMosaicViewpoint, esriMosaicNorthwest ou
+              esriMosaicCenter (motivo de cada um em `mosaico.METODOS_ESRI_FORA`).
+              `renderingRule` em qualquer OUTRA forma (encadeada, com `rasterFunctionArguments`, funções
               nativas do Pro como Stretch/Colormap/NDVI cruas): recusado com erro Esri explícito, nunca
               interpretado parcialmente — anunciar uma capacidade que não existe do jeito que o cliente
               pediu é o mesmo defeito de um botão que não faz nada. `mosaicRule`: as regras L1-08 estão
@@ -73,6 +79,7 @@ from app import db, limites
 from app.consulta.formato_esri import resposta_esri
 from app.consulta.rotas_servico import CURRENT_VERSION
 from app.erros import ErroAPI
+from app.imagens import mosaico as mos
 from app.imagens import predefinicoes as pred
 from app.imagens import tiles
 from app.imagens.rotas_tiles import _autorizar, _fonte_do_item, _servir
@@ -99,6 +106,10 @@ _ALIAS_WKID = {"102100": "3857", "102113": "3857"}
 FORMATOS_EXPORT: dict[str, tuple[str, str]] = {
     "png": ("PNG", "image/png"), "png8": ("PNG", "image/png"), "png24": ("PNG", "image/png"),
     "png32": ("PNG", "image/png"), "jpg": ("JPEG", "image/jpeg"), "jpeg": ("JPEG", "image/jpeg"),
+    # (conserto L1-25, 17/09) TIFF é cláusula literal do portão ("devolve PNG/JPEG/TIFF alinhado ao
+    # XYZ") e é o formato que o analista usa quando quer o VALOR, não a figura: sai no dtype nativo do
+    # recorte, sem o esticamento automático que PNG/JPEG precisam para virar 8 bits.
+    "tiff": ("GTiff", "image/tiff"), "tif": ("GTiff", "image/tiff"),
 }
 TAMANHO_PADRAO = limites.IMAGESERVER_EXPORT_LADO_PADRAO
 TAMANHO_MAX = limites.IMAGESERVER_EXPORT_LADO_MAX  # refutação do item: 20.000x20.000 tem de ser recusado
@@ -315,9 +326,19 @@ def export_image(  # noqa: PLR0911 — operação com muitos parâmetros Esri pa
     if fmt is None:
         return _erro_esri(400, "'format' não é suportado por este serviço",
                           [f"aceitos: {', '.join(sorted(FORMATOS_EXPORT))}", f"recebido: {format!r}"])
-    if request.query_params.get("mosaicRule"):
-        return _erro_esri(400, "'mosaicRule' não é suportado por este serviço",
-                          ["regras disponíveis nos mosaicos STAC; mosaicRule ainda não integrado ao exportImage"])
+    # (conserto L1-25, 17/09) `mosaicRule` LIMITADA às regras do L1-08 (portão do item), traduzida em
+    # `app/imagens/mosaico.py::traduzir_regra_esri` — a mesma tabela que a paridade publica. Num
+    # ImageServer de ITEM o serviço serve uma cena só: `lockRasterIds` que cite outra (de outro item ou
+    # de outro inquilino) é recusado ali, com erro Esri nomeado, nunca aceito e ignorado.
+    regra_mosaico = None
+    bruto_mosaico = request.query_params.get("mosaicRule")
+    if bruto_mosaico:
+        try:
+            regra_mosaico = mos.traduzir_regra_esri(_json.loads(bruto_mosaico), [item])
+        except _json.JSONDecodeError:
+            return _erro_esri(400, "'mosaicRule' não é um JSON válido", [])
+        except ErroAPI as e:
+            return _erro_esri(400, e.mensagem, [str(e.detalhe)] if e.detalhe else [])
     resolvido = None
     rendering_rule = request.query_params.get("renderingRule")
     if rendering_rule:
@@ -379,6 +400,8 @@ def export_image(  # noqa: PLR0911 — operação com muitos parâmetros Esri pa
                            resampling_method=(resolvido.resampling if resolvido else "nearest"))
             if resolvido and resolvido.rescale:
                 img.rescale(resolvido.rescale)
+            elif fmt[0] == "GTiff":
+                pass  # TIFF carrega o VALOR: nunca esticar por conta própria (ver FORMATOS_EXPORT)
             elif img.array.dtype != "uint8":
                 # sem rescale explícito no contrato mínimo: estica pelo mínimo/máximo do próprio
                 # recorte, mesma regra que tiles.ladrilho usa para o ladrilho (C3 do conceito L1)
@@ -388,7 +411,13 @@ def export_image(  # noqa: PLR0911 — operação com muitos parâmetros Esri pa
                 img.rescale([(lo, hi if hi > lo else lo + 1e-9)])
             cm = tiles.colormap_de(resolvido.colormap) if resolvido else None
             nodata_transparente = resolvido.nodata_transparente if resolvido else True
-            corpo = img.render(img_format=fmt[0], colormap=cm, add_mask=(fmt[0] != "JPEG") and nodata_transparente)
+            if fmt[0] == "GTiff":
+                # GeoTIFF sai georreferenciado (o `crs`/`transform` da própria ImageData) e sem banda
+                # alfa: quem pede TIFF quer a matriz, e uma alfa extra desalinha a contagem de bandas.
+                corpo = img.render(img_format="GTiff", add_mask=False)
+            else:
+                corpo = img.render(img_format=fmt[0], colormap=cm,
+                                   add_mask=(fmt[0] != "JPEG") and nodata_transparente)
     if resolvido and resolvido.opacidade < 1.0:
         corpo = pred.aplicar_opacidade(corpo, ("jpg" if fmt[0] == "JPEG" else "png"), resolvido.opacidade)
 
@@ -399,7 +428,18 @@ def export_image(  # noqa: PLR0911 — operação com muitos parâmetros Esri pa
             "extent": {"xmin": xmin, "ymin": ymin, "xmax": xmax, "ymax": ymax,
                        "spatialReference": {"wkid": img_wkid}},
         })
-    return Response(content=corpo, media_type=fmt[1], headers={"Cache-Control": "no-store"})
+    cabecalhos = {"Cache-Control": "no-store"}
+    if regra_mosaico is not None:
+        # Um ImageServer de ITEM serve UMA cena: a regra foi entendida e validada, mas não há segunda
+        # candidata para ordenar ou compor. Dizer isso no cabeçalho é mais honesto que aceitar em
+        # silêncio (o cliente consegue distinguir "aplicada" de "sem efeito" sem ler a paridade).
+        # cabeçalho HTTP é latin-1 no protocolo: texto ASCII, sempre (acento aqui derrubava a resposta
+        # inteira com UnicodeDecodeError no cliente — medido nesta bancada em 17/09).
+        cabecalhos["X-Plat-Mosaic-Rule"] = (
+            f"entendida; sem efeito em servico de item unico (lock={regra_mosaico['lock'] or '-'}; "
+            f"pixel_selection={regra_mosaico['pixel_selection'] or '-'})"
+        )
+    return Response(content=corpo, media_type=fmt[1], headers=cabecalhos)
 
 
 # ---------------------------------------------------------------------------- identify

@@ -60,7 +60,28 @@ def test_teste_de_pixel_de_referencia_das_6_predefinicoes_esta_commitado():
         "o próprio arquivo de teste admite que a prova pixel-a-pixel de referência não está "
         "commitada, só num relatório de turno não reproduzível"
     )
-    assert any(nome in texto for nome in ("imagem_de_referencia", "pixel_de_referencia", "referencia.png")), (
+    # 18/09/2026 — INSTRUMENTO CONSERTADO, exigência INALTERADA e um pouco mais dura. A cláusula do
+    # portão é "teste de imagem por pixel de referência, committed e reproduzível"; ela não diz em QUE
+    # arquivo. A prova foi escrita num arquivo irmão (tests/unit/test_l102f_pixel_referencia.py, apontado
+    # pelo docstring do arquivo do construtor), e a checagem antiga, que só lia o texto do arquivo do
+    # construtor, reprovava por endereço em vez de por conteúdo. Agora se exige o que importa: o teste de
+    # pixel de referência existe, E o ativo de referência contra o qual ele compara existe no repositório
+    # — não basta o nome aparecer num comentário.
+    prova = ROOT / "tests" / "unit" / "test_l102f_pixel_referencia.py"
+    textos = texto + ("\n" + prova.read_text(encoding="utf-8") if prova.exists() else "")
+    assert any(nome in textos for nome in
+               ("imagem_de_referencia", "pixel_de_referencia", "referencia.png", "REFERENCIA")), (
         "nenhuma função/asset de imagem de referência (para as 6 predefinições de fábrica) foi "
-        "encontrada no arquivo de teste do item"
+        "encontrada nem no arquivo do construtor nem no arquivo de prova que ele aponta"
+    )
+    referencia = ROOT / "tests" / "dados" / "predefinicoes_referencia.json"
+    assert referencia.exists(), (
+        f"{referencia.relative_to(ROOT)} não existe — sem o ativo de referência commitado a prova de "
+        "pixel não é reproduzível por quem ler o repositório depois"
+    )
+    import json as _json
+    dados = _json.loads(referencia.read_text(encoding="utf-8"))
+    predefinicoes = dados.get("cores", dados)
+    assert len(predefinicoes) >= 6, (
+        f"a referência de pixel cobre {len(predefinicoes)} predefinições; o portão pede as 6 de fábrica"
     )

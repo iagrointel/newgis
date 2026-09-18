@@ -1,0 +1,17 @@
+{
+ "item": "L1-25-servico-de-imagem-esri-compativel",
+ "medidas": {
+  "tiff_e_mosaicrule_no_exportimage": {
+   "valor": 8,
+   "unidade": "testes passando",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_l125_tiff_e_mosaicrule.py -W ignore -q   (trilha uniao, schema plat_tuniao; cgroup MemoryMax=4G)"
+  },
+  "portao_do_adversario": {
+   "valor": 2,
+   "unidade": "clausulas XPASS(strict)",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/unit/test_l1_adv2_imageserver_gate.py -W ignore -q   (trilha uniao, schema plat_tuniao; cgroup MemoryMax=4G)  -rxX  [exportImage devolve TIFF; exportImage aceita mosaicRule limitada as regras do L1-08]"
+  }
+ },
+ "gerado_em": "2026-09-18T01:43:00Z",
+ "git_sha": "ffa5e560a"
+}

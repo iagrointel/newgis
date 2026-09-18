@@ -95,5 +95,6 @@
    "x_plat_cenas_candidatas": "6",
    "server_timing": "ladrilho;dur=105.5"
   }
- }
+ },
+ "_leia": "Evidencia da GRADE SINTETICA 3x2: prova o COMPOSITOR (junta entre quadrantes, pegadas, registro idempotente) com dado determinístico e sem rede. NAO e a prova da clausula '>= 6 cenas Sentinel-2 abertas' do portao — essa e cena real e vive em tests/medidas/L1-07.json, a medida canonica do item. Este arquivo fica como historico."
 }

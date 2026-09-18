@@ -6,6 +6,14 @@ import re
 from app.erros import ErroAPI
 
 UUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+# L1-02-b (conserto 17/09): o escopo POR LISTA de `tiles:ler` tem de alcançar item de IMAGEM, e o id de um
+# item STAC não é um uuid — é uma string livre da própria fonte (a suíte da casa usa `item-nao-uuid-1`, uma
+# cena Sentinel-2 chega como `S2B_MSIL2A_...`). Enquanto só `tiles:ler:<uuid>` era aceito, `POST /api/tokens`
+# devolvia 422 "escopo fora do vocabulário" para o caso mais comum do item, e o único jeito de servir tile de
+# imagem por token era `imagens:ler`/`tiles:ler` SEM lista — isto é, escopo largo, o oposto do que o item
+# promete. `ID_ITEM` aceita uuid E id de item STAC; o `:` fica de fora do conjunto de propósito, porque é o
+# separador do próprio escopo (com ele, `tiles:ler:a:b` viraria ambíguo).
+ID_ITEM = r"[A-Za-z0-9_][A-Za-z0-9._~\-]{0,127}"
 # ⚠ Este vocabulário é a UNIÃO de todos os escopos que as rotas de fato exigem. A fusão de ramos o
 # encolheu duas vezes: em 10/09 a expressão regular nasceu concatenada doze vezes, e em 11/09 faltavam
 # QUATRO escopos que rotas vivas exigem — `conteudo:criar` (app/uploads/rotas.py, o envio de arquivo
@@ -15,7 +23,7 @@ UUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 # Regra ao mexer aqui: o conjunto desta expressão tem de ser o mesmo de ESCOPOS_SEM_UUID e o mesmo das
 # chaves de DESCRICAO; `tests/unit/test_escopos_vocabulario.py` confere os três contra as rotas.
 ESCOPO = re.compile(
-    rf"^(catalogo:(ler|escrever)|camada:(ler|editar)(:{UUID})?|tiles:ler(:{UUID})?|jobs:executar|"
+    rf"^(catalogo:(ler|escrever)|camada:(ler|editar)(:{UUID})?|tiles:ler(:{ID_ITEM})?|jobs:executar|"
     rf"rota:usar|geocodificar:usar|multiescala:usar|parcelas:usar|conteudo:(criar|exportar)|"
     rf"imagens:(ler|escrever)|rede:(ler|editar|validar|analisar)|campo:usar|crs:usar|fluxo:ler|"
     rf"analise3d:usar|modelo3d:ler|admin:inquilino)$"
@@ -104,6 +112,9 @@ def exigir_escopo(auth, base: str, uuid: str | None = None) -> None:
 # --- catálogo (L0-03; ADR 0004 seção 13): o <uuid> de camada:ler/camada:editar/tiles:ler tem de existir e ser
 # legível pelo dono do token na criação (422 escopo_item_inexistente); a função vem do catálogo para não acoplar
 COM_UUID = re.compile(rf"^(camada:(ler|editar)|tiles:ler):({UUID})$")
+# L1-02-b: `tiles:ler:<id>` em que `<id>` NÃO é uuid só pode ser item STAC (imagem). A existência continua
+# exigida — o que muda é ONDE se procura: `plat.item` para uuid, catálogo STAC do próprio inquilino para o resto.
+COM_ID_STAC = re.compile(rf"^tiles:ler:({ID_ITEM})$")
 
 
 def uuids_inexistentes(auth, escopos: list[str]) -> list[str]:
@@ -112,9 +123,24 @@ def uuids_inexistentes(auth, escopos: list[str]) -> list[str]:
     ruins = []
     for e in escopos:
         m = COM_UUID.match(e)
-        if m and not item_legivel(auth, m.group(3)):
+        if m:
+            if not item_legivel(auth, m.group(3)):
+                ruins.append(e)
+            continue
+        m = COM_ID_STAC.match(e)
+        if m and not _item_stac_legivel(auth, m.group(1)):
             ruins.append(e)
     return ruins
+
+
+def _item_stac_legivel(auth, item_id: str) -> bool:
+    """O item STAC existe em alguma coleção DO PRÓPRIO INQUILINO do dono do token. Nunca confirma a
+    existência de item alheio: a busca é filtrada pelo prefixo `<tenant_id>-` das coleções."""
+    from app import db
+    from app.imagens import pgstac
+
+    with db.db(auth.contexto()) as cur:
+        return pgstac.item_existe_no_tenant(cur, auth.tenant_id, item_id)
 
 
 # ---------------------------------------------------------------------------------------------

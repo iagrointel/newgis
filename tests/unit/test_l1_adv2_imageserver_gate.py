@@ -20,6 +20,13 @@ from __future__ import annotations
 import pytest
 
 from tests.api.imagens.test_imageserver_token import _base, raster_demo, token_img  # noqa: F401
+# 18/09/2026 — INSTRUMENTO CONSERTADO, nenhuma asserção mexida. Este portão vive em tests/unit/ e puxa
+# as fixtures do arquivo do construtor, mas `token_*` depende de `sessao_a`, que é definida em
+# tests/api/conftest.py — conftest que NÃO alcança tests/unit/. Sem esta linha o teste dá ERRO de setup
+# ('fixture sessao_a not found'), e o `xfail(strict=True)` transforma esse erro em XFAIL: o portão passa
+# a reportar 'o defeito continua' sem nunca ter tocado no produto. Medido hoje com --runxfail.
+from tests.api.conftest import cred, sessao_a  # noqa: F401
+from tests.api.imagens.conftest import tenant_id_a  # noqa: F401
 
 
 def _cliente():

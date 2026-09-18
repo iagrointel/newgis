@@ -90,6 +90,10 @@ class Fonte:
     caminho: str
     env: dict
     sessao: object | None = None
+    # (L1-08, 17/09) máscara de nuvem POR PIXEL: a fonte da banda de classificação de cena da própria
+    # cena (SCL do Sentinel-2 L2A, asset `scl`) quando ela existe. `None` = a cena não tem SCL e a regra
+    # `sem_nuvem` não pode limpá-la — ver `ladrilho_composto`.
+    mascara_nuvem: "Fonte | None" = None
 
 
 # GDAL só fala com o Garage em HTTP e com endereço no caminho (path-style). As duas opções valem para a
@@ -128,12 +132,44 @@ def env_gdal(extra: dict | None = None) -> dict:
     return base
 
 
-def _colormap(nome: str | None):
+TETO_COLORMAP_EXPLICITO = 256
+
+
+def _colormap(nome: "str | dict | None"):
+    """Nome do catálogo do rio-tiler OU tabela de cor EXPLÍCITA (item L1-02-f).
+
+    A forma explícita é a que o raster temático precisa (uso do solo, SCL, classe de declividade), e é
+    também a que torna a refutação do item testável de verdade: uma tabela de 70.000 entradas é recusada
+    aqui, pelo TETO, e não por o nome não existir no catálogo."""
     if not nome:
         return None
-    if nome not in COLORMAPS:
-        raise ErroTile(f"colormap desconhecido: {nome}")
-    return colormaps.get(nome)
+    if isinstance(nome, str):
+        if nome not in COLORMAPS:
+            raise ErroTile(f"colormap desconhecido: {nome}")
+        return colormaps.get(nome)
+    if not isinstance(nome, dict) or nome.get("tipo") not in ("valor", "intervalo"):
+        raise ErroTile("colormap explícito precisa de tipo 'valor' ou 'intervalo'")
+    entradas = nome.get("entradas")
+    if not entradas:
+        raise ErroTile("colormap explícito sem entradas")
+    if len(entradas) > TETO_COLORMAP_EXPLICITO:
+        raise ErroTile(
+            f"colormap explícito com {len(entradas)} entradas; o teto é {TETO_COLORMAP_EXPLICITO} "
+            "(truncar em silêncio pintaria o mapa com cor que ninguém pediu)")
+    if nome["tipo"] == "valor":
+        return {int(k): _rgba(v) for k, v in entradas.items()}
+    return [((float(faixa[0]), float(faixa[1])), _rgba(cor)) for faixa, cor in entradas]
+
+
+def _rgba(v) -> tuple[int, int, int, int]:
+    if not isinstance(v, (list, tuple)) or not (3 <= len(v) <= 4):
+        raise ErroTile(f"cor inválida no colormap explícito: {v!r} (esperado [r,g,b] ou [r,g,b,a])")
+    r, g, b = (int(c) for c in v[:3])
+    a = int(v[3]) if len(v) == 4 else 255
+    for c in (r, g, b, a):
+        if not 0 <= c <= 255:
+            raise ErroTile(f"componente de cor fora de 0-255 no colormap explícito: {v!r}")
+    return (r, g, b, a)
 
 
 def colormap_de(nome: str | None):
@@ -294,7 +330,20 @@ METODOS_COMPOSICAO = {
     "highest": "HighestMethod", "mean": "MeanMethod", "median": "MedianMethod", "stdev": "StdevMethod",
     "primeira": "FirstMethod", "mediana": "MedianMethod", "media": "MeanMethod",
     "maxima": "HighestMethod", "minima": "LowestMethod",
+    # (L1-08, 17/09) "mais recente sem nuvem": a ordem por data desc vem do `sortby` da busca; o que
+    # esta regra acrescenta é APAGAR, antes da composição, todo pixel que a banda de classificação de
+    # cena marca como nuvem — então a primeira cena COM PIXEL LIMPO vence. A composição em si é
+    # `FirstMethod`; a diferença toda está na máscara aplicada em `_ler`.
+    "sem_nuvem": "FirstMethod", "mais_recente_sem_nuvem": "FirstMethod",
 }
+# Regras que exigem máscara de nuvem por pixel.
+METODOS_SEM_NUVEM = frozenset({"sem_nuvem", "mais_recente_sem_nuvem"})
+
+# Classes do SCL (Sentinel-2 L2A, Scene Classification Layer — tabela oficial do ESA/Copernicus) que
+# contam como "não observável": sombra de nuvem (3), nuvem de probabilidade média (8) e alta (9), e
+# cirrus fino (10). Saturado/defeituoso (1) entra porque também não é observação válida. As classes de
+# solo/vegetação/água/neve ficam de fora de propósito — neve não é nuvem.
+CLASSES_NUVEM_SCL = (1, 3, 8, 9, 10)
 
 
 def _metodo_composicao(nome: str | None):
@@ -340,6 +389,15 @@ def ladrilho_composto(
     metodo_classe = _metodo_composicao(metodo)
     if metodo == "last":
         fontes = list(reversed(fontes))
+    sem_nuvem = (metodo or "") in METODOS_SEM_NUVEM
+    if sem_nuvem:
+        faltando = [f.caminho for f in fontes if f.mascara_nuvem is None]
+        if faltando:
+            raise ErroTile(
+                "a regra 'sem_nuvem' exige banda de classificação de cena (asset `scl`) em TODAS as "
+                f"cenas candidatas; {len(faltando)} de {len(fontes)} não tem. Trocar a regra por "
+                "'first' silenciosamente seria devolver nuvem dizendo que é céu limpo."
+            )
     from rio_tiler.mosaic import mosaic_reader
 
     cm = _colormap(colormap)
@@ -351,7 +409,10 @@ def ladrilho_composto(
             with Reader(fonte.caminho, tms=TMS) as src:
                 if indices is None and not expressao and src.dataset.count > 3:
                     indices = (1, 2, 3)
-                return src.tile(xx, yy, zz, tilesize=tamanho, expression=expressao, indexes=indices)
+                img = src.tile(xx, yy, zz, tilesize=tamanho, expression=expressao, indexes=indices)
+        if sem_nuvem and fonte.mascara_nuvem is not None:
+            img = _apagar_nuvem(img, fonte.mascara_nuvem, xx, yy, zz, tamanho)
+        return img
 
     # Uma fonte por vez limita buffers GDAL e resultados pendentes a um tile de 256×256.
     # chunk_size=1 também permite parar assim que FirstMethod preencher o ladrilho.
@@ -372,6 +433,26 @@ def ladrilho_composto(
         hi = float(dados.max()) if dados.size and not dados.mask.all() else 1.0
         img.rescale([(lo, hi if hi > lo else lo + 1e-9)])
     return img.render(img_format=RENDER[formato], colormap=cm, add_mask=RENDER[formato] != "JPEG")
+
+
+def _apagar_nuvem(img, mascara: Fonte, x: int, y: int, z: int, tamanho: int):
+    """Marca como SEM DADO todo pixel que o SCL classifica como nuvem/sombra/cirrus. O resultado entra
+    no `FirstMethod` do mosaico já furado, então a cena seguinte (mais antiga) preenche o buraco — é
+    isso, e só isso, que faz 'mais recente sem nuvem' diferir de 'mais recente'.
+
+    Reamostragem `nearest` de propósito: SCL é rótulo, não medida; interpolar classe inventa classe."""
+    import numpy as np
+
+    with rasterio.Env(session=mascara.sessao, **mascara.env):
+        with Reader(mascara.caminho, tms=TMS) as src:
+            scl = src.tile(x, y, z, tilesize=tamanho, indexes=(1,), resampling_method="nearest")
+    nuvem = np.isin(scl.array[0].filled(0), CLASSES_NUVEM_SCL)
+    if not nuvem.any():
+        return img
+    dados = img.array
+    dados.mask = dados.mask | np.broadcast_to(nuvem, dados.shape)
+    img.array = dados
+    return img
 
 
 def informacao(fonte: Fonte) -> dict:

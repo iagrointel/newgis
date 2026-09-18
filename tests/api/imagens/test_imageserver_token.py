@@ -203,21 +203,28 @@ def test_export_image_size_acima_do_teto_e_recusado_em_json_esri(token_img, rast
 
 
 def test_export_image_format_nao_suportado_e_recusado_em_json_esri(token_img, raster_demo):
+    """`tiff` PASSOU a ser suportado em 17/09 (conserto L1-25); o exemplo de formato recusado agora é
+    um que de fato não existe no serviço."""
     c, tok, item = _cliente(), token_img["token"], raster_demo["item_id"]
     r = c.get(f"{_base(tok, item)}/exportImage",
-             params={"bbox": "-47.95,-15.94,-47.76,-15.75", "format": "tiff"})
+             params={"bbox": "-47.95,-15.94,-47.76,-15.75", "format": "bmp"})
     assert r.status_code == 400 and r.json()["error"]["code"] == 400
 
 
-def test_export_image_mosaic_rule_e_recusado(token_img, raster_demo):
-    """`mosaicRule` continua fora (depende do item L1-07, não construído) — item L1-02-f não muda isso."""
+def test_export_image_mosaic_rule_fora_do_l1_08_e_recusado(token_img, raster_demo):
+    """`mosaicRule` é LIMITADA (portão do item L1-25): um objeto que nem é mosaicRule, e os dois métodos
+    Esri declarados FORA, continuam recusados com erro nomeado — nunca aceitos e ignorados."""
     c, tok, item = _cliente(), token_img["token"], raster_demo["item_id"]
     r = c.get(f"{_base(tok, item)}/exportImage",
              params={"bbox": "-47.95,-15.94,-47.76,-15.75", "mosaicRule": '{"rasterFunction":"Grayscale"}'})
     assert r.status_code == 400, r.text
-    corpo = r.json()
-    assert corpo["error"]["code"] == 400
-    assert "mosaicRule" in corpo["error"]["message"]
+    assert r.json()["error"]["code"] == 400
+    for metodo in ("esriMosaicSeamline", "esriMosaicViewpoint"):
+        rr = c.get(f"{_base(tok, item)}/exportImage",
+                   params={"bbox": "-47.95,-15.94,-47.76,-15.75",
+                           "mosaicRule": '{"mosaicMethod":"%s"}' % metodo})
+        assert rr.status_code == 400, f"{metodo}: {rr.text}"
+        assert metodo in rr.json()["error"]["message"], rr.text
 
 
 def test_export_image_rendering_rule_nome_desconhecido_e_recusado_sem_500(token_img, raster_demo):

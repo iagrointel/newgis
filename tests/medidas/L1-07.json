@@ -1,0 +1,195 @@
+{
+ "item": "L1-07-mosaico-por-colecao-e-pegadas",
+ "gerado_em": "2026-09-18T02:26:41Z",
+ "git_sha": "dc43ee136",
+ "fonte_das_cenas": {
+  "catalogo": "https://earth-search.aws.element84.com/v1 (Element84, publico, sem chave)",
+  "colecao": "sentinel-2-l2a",
+  "armazenamento": "s3://sentinel-cogs (publico), lido por /vsicurl",
+  "licenca": "Copernicus Sentinel data — uso aberto",
+  "recorte": "512x512 px a 10 m/px (~5,1 km de lado), bandas red/green/blue",
+  "por_que_recorte": "a cena inteira tem ~1 GB; o portao pede 'recortes pequenos'",
+  "centro": [
+   -47.9,
+   -15.79
+  ]
+ },
+ "cenas": [
+  {
+   "cena": "S2A_22LHH_20260831_1_L2A",
+   "datetime": "2026-08-31T13:36:55.683000Z",
+   "nuvem": 0.000889,
+   "epsg": 32722,
+   "bytes": 1562071,
+   "ms_recorte": 4273.9
+  },
+  {
+   "cena": "S2A_22LHH_20260828_0_L2A",
+   "datetime": "2026-08-28T13:27:00.442000Z",
+   "nuvem": 0.001949,
+   "epsg": 32722,
+   "bytes": 1557891,
+   "ms_recorte": 2632.0
+  },
+  {
+   "cena": "S2C_22LHH_20260826_0_L2A",
+   "datetime": "2026-08-26T13:26:42.914000Z",
+   "nuvem": 2.161743,
+   "epsg": 32722,
+   "bytes": 1565544,
+   "ms_recorte": 2578.0
+  },
+  {
+   "cena": "S2B_22LHH_20260824_0_L2A",
+   "datetime": "2026-08-24T13:36:37.317000Z",
+   "nuvem": 2.546838,
+   "epsg": 32722,
+   "bytes": 1549245,
+   "ms_recorte": 2713.3
+  },
+  {
+   "cena": "S2A_22LHH_20260821_1_L2A",
+   "datetime": "2026-08-21T13:36:55.318000Z",
+   "nuvem": 1.678424,
+   "epsg": 32722,
+   "bytes": 1561946,
+   "ms_recorte": 2630.6
+  },
+  {
+   "cena": "S2C_22LHH_20260819_0_L2A",
+   "datetime": "2026-08-19T13:36:37.720000Z",
+   "nuvem": 0.000339,
+   "epsg": 32722,
+   "bytes": 1570643,
+   "ms_recorte": 2720.5
+  }
+ ],
+ "medidas": {
+  "cenas_sentinel2_abertas_no_mosaico": {
+   "valor": 6,
+   "unidade": "cenas Sentinel-2 abertas",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_l107_sentinel_real.py -W ignore -q   (PLAT_GRAVAR_MEDIDAS=1 para regravar)  [6 cenas Sentinel-2 L2A ABERTAS do catalogo publico Element84, recortes de 512x512 px a 10 m/px lidos por /vsicurl do bucket sentinel-cogs; mosaico registrado pela rota de criacao; ladrilho medido pelo motor]"
+  },
+  "ladrilho_z8_frio_ms": {
+   "valor": 15265.6,
+   "unidade": "ms",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_l107_sentinel_real.py -W ignore -q   (PLAT_GRAVAR_MEDIDAS=1 para regravar)  [6 cenas Sentinel-2 L2A ABERTAS do catalogo publico Element84, recortes de 512x512 px a 10 m/px lidos por /vsicurl do bucket sentinel-cogs; mosaico registrado pela rota de criacao; ladrilho medido pelo motor]"
+  },
+  "ladrilho_z8_quente_mediana_ms": {
+   "valor": 14613.3,
+   "unidade": "ms",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_l107_sentinel_real.py -W ignore -q   (PLAT_GRAVAR_MEDIDAS=1 para regravar)  [6 cenas Sentinel-2 L2A ABERTAS do catalogo publico Element84, recortes de 512x512 px a 10 m/px lidos por /vsicurl do bucket sentinel-cogs; mosaico registrado pela rota de criacao; ladrilho medido pelo motor]"
+  },
+  "ladrilho_z8_bytes": {
+   "valor": 713,
+   "unidade": "bytes",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_l107_sentinel_real.py -W ignore -q   (PLAT_GRAVAR_MEDIDAS=1 para regravar)  [6 cenas Sentinel-2 L2A ABERTAS do catalogo publico Element84, recortes de 512x512 px a 10 m/px lidos por /vsicurl do bucket sentinel-cogs; mosaico registrado pela rota de criacao; ladrilho medido pelo motor]"
+  },
+  "ladrilho_z10_frio_ms": {
+   "valor": 4606.7,
+   "unidade": "ms",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_l107_sentinel_real.py -W ignore -q   (PLAT_GRAVAR_MEDIDAS=1 para regravar)  [6 cenas Sentinel-2 L2A ABERTAS do catalogo publico Element84, recortes de 512x512 px a 10 m/px lidos por /vsicurl do bucket sentinel-cogs; mosaico registrado pela rota de criacao; ladrilho medido pelo motor]"
+  },
+  "ladrilho_z10_quente_mediana_ms": {
+   "valor": 4669.7,
+   "unidade": "ms",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_l107_sentinel_real.py -W ignore -q   (PLAT_GRAVAR_MEDIDAS=1 para regravar)  [6 cenas Sentinel-2 L2A ABERTAS do catalogo publico Element84, recortes de 512x512 px a 10 m/px lidos por /vsicurl do bucket sentinel-cogs; mosaico registrado pela rota de criacao; ladrilho medido pelo motor]"
+  },
+  "ladrilho_z10_bytes": {
+   "valor": 4377,
+   "unidade": "bytes",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_l107_sentinel_real.py -W ignore -q   (PLAT_GRAVAR_MEDIDAS=1 para regravar)  [6 cenas Sentinel-2 L2A ABERTAS do catalogo publico Element84, recortes de 512x512 px a 10 m/px lidos por /vsicurl do bucket sentinel-cogs; mosaico registrado pela rota de criacao; ladrilho medido pelo motor]"
+  },
+  "ladrilho_z12_frio_ms": {
+   "valor": 136.3,
+   "unidade": "ms",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_l107_sentinel_real.py -W ignore -q   (PLAT_GRAVAR_MEDIDAS=1 para regravar)  [6 cenas Sentinel-2 L2A ABERTAS do catalogo publico Element84, recortes de 512x512 px a 10 m/px lidos por /vsicurl do bucket sentinel-cogs; mosaico registrado pela rota de criacao; ladrilho medido pelo motor]"
+  },
+  "ladrilho_z12_quente_mediana_ms": {
+   "valor": 142.1,
+   "unidade": "ms",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_l107_sentinel_real.py -W ignore -q   (PLAT_GRAVAR_MEDIDAS=1 para regravar)  [6 cenas Sentinel-2 L2A ABERTAS do catalogo publico Element84, recortes de 512x512 px a 10 m/px lidos por /vsicurl do bucket sentinel-cogs; mosaico registrado pela rota de criacao; ladrilho medido pelo motor]"
+  },
+  "ladrilho_z12_bytes": {
+   "valor": 14767,
+   "unidade": "bytes",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_l107_sentinel_real.py -W ignore -q   (PLAT_GRAVAR_MEDIDAS=1 para regravar)  [6 cenas Sentinel-2 L2A ABERTAS do catalogo publico Element84, recortes de 512x512 px a 10 m/px lidos por /vsicurl do bucket sentinel-cogs; mosaico registrado pela rota de criacao; ladrilho medido pelo motor]"
+  },
+  "ladrilho_z13_frio_ms": {
+   "valor": 219.7,
+   "unidade": "ms",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_l107_sentinel_real.py -W ignore -q   (PLAT_GRAVAR_MEDIDAS=1 para regravar)  [6 cenas Sentinel-2 L2A ABERTAS do catalogo publico Element84, recortes de 512x512 px a 10 m/px lidos por /vsicurl do bucket sentinel-cogs; mosaico registrado pela rota de criacao; ladrilho medido pelo motor]"
+  },
+  "ladrilho_z13_quente_mediana_ms": {
+   "valor": 129.4,
+   "unidade": "ms",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_l107_sentinel_real.py -W ignore -q   (PLAT_GRAVAR_MEDIDAS=1 para regravar)  [6 cenas Sentinel-2 L2A ABERTAS do catalogo publico Element84, recortes de 512x512 px a 10 m/px lidos por /vsicurl do bucket sentinel-cogs; mosaico registrado pela rota de criacao; ladrilho medido pelo motor]"
+  },
+  "ladrilho_z13_bytes": {
+   "valor": 44554,
+   "unidade": "bytes",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_l107_sentinel_real.py -W ignore -q   (PLAT_GRAVAR_MEDIDAS=1 para regravar)  [6 cenas Sentinel-2 L2A ABERTAS do catalogo publico Element84, recortes de 512x512 px a 10 m/px lidos por /vsicurl do bucket sentinel-cogs; mosaico registrado pela rota de criacao; ladrilho medido pelo motor]"
+  },
+  "ladrilho_z14_frio_ms": {
+   "valor": 130.7,
+   "unidade": "ms",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_l107_sentinel_real.py -W ignore -q   (PLAT_GRAVAR_MEDIDAS=1 para regravar)  [6 cenas Sentinel-2 L2A ABERTAS do catalogo publico Element84, recortes de 512x512 px a 10 m/px lidos por /vsicurl do bucket sentinel-cogs; mosaico registrado pela rota de criacao; ladrilho medido pelo motor]"
+  },
+  "ladrilho_z14_quente_mediana_ms": {
+   "valor": 125.9,
+   "unidade": "ms",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_l107_sentinel_real.py -W ignore -q   (PLAT_GRAVAR_MEDIDAS=1 para regravar)  [6 cenas Sentinel-2 L2A ABERTAS do catalogo publico Element84, recortes de 512x512 px a 10 m/px lidos por /vsicurl do bucket sentinel-cogs; mosaico registrado pela rota de criacao; ladrilho medido pelo motor]"
+  },
+  "ladrilho_z14_bytes": {
+   "valor": 120890,
+   "unidade": "bytes",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_l107_sentinel_real.py -W ignore -q   (PLAT_GRAVAR_MEDIDAS=1 para regravar)  [6 cenas Sentinel-2 L2A ABERTAS do catalogo publico Element84, recortes de 512x512 px a 10 m/px lidos por /vsicurl do bucket sentinel-cogs; mosaico registrado pela rota de criacao; ladrilho medido pelo motor]"
+  }
+ },
+ "observacao": "O custo por ladrilho cai com o zoom, e muito: o recorte tem 5,1 km de lado, entao em z8 (15265.6 ms) o ladrilho cobre uma area centenas de vezes maior que o dado e o motor reamostra tudo para devolver poucos pixels uteis; de z12 em diante (136.3 ms) o ladrilho ja esta na escala do dado. Isto confirma, sobre cena REAL e por medicao independente, a limitacao que o adversario do item L1-02-i registrou no motor de pixel compartilhado (zoom abaixo do minzoom nativo do item e lento). Nao e defeito desta bancada nem do mosaico: e o mesmo motor, e vale para XYZ, WMS e OGC API. Quem publica recorte pequeno deve declarar minzoom.",
+ "armadilha_da_bancada": "Medido em 18/09/2026: pôr AWS_NO_SIGN_REQUEST=YES em os.environ para ler o bucket PUBLICO da Sentinel fazia a propria aplicacao, no MESMO processo, falar com o Garage dela sem assinar — 'AccessDenied: Garage does not support anonymous access yet', 502 em todo ladrilho. Variavel de ambiente de GDAL e global ao processo; a opcao vai em rasterio.Env de escopo. O defeito era da bancada, nao do produto.",
+ "detalhe": {
+  "mosaico_id": "0be672df-e844-4f90-a47a-ecdd799d752c",
+  "centro": [
+   -47.90006386525632,
+   -15.789969234079456
+  ],
+  "por_zoom": {
+   "z8": {
+    "status_frio": 200,
+    "bytes": 713,
+    "ms_frio": 15265.6,
+    "ms_quente_mediana": 14613.3,
+    "status_quente": 200
+   },
+   "z10": {
+    "status_frio": 200,
+    "bytes": 4377,
+    "ms_frio": 4606.7,
+    "ms_quente_mediana": 4669.7,
+    "status_quente": 200
+   },
+   "z12": {
+    "status_frio": 200,
+    "bytes": 14767,
+    "ms_frio": 136.3,
+    "ms_quente_mediana": 142.1,
+    "status_quente": 200
+   },
+   "z13": {
+    "status_frio": 200,
+    "bytes": 44554,
+    "ms_frio": 219.7,
+    "ms_quente_mediana": 129.4,
+    "status_quente": 200
+   },
+   "z14": {
+    "status_frio": 200,
+    "bytes": 120890,
+    "ms_frio": 130.7,
+    "ms_quente_mediana": 125.9,
+    "status_quente": 200
+   }
+  }
+ }
+}

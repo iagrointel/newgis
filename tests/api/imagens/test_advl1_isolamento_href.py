@@ -71,6 +71,15 @@ def token_a_leitura_escrita(sessao_a):
     sessao_a.delete(f"/api/tokens/{tok['id']}")
 
 
+# 18/09/2026 — os ids de item deste arquivo eram FIXOS ("item-legitimo-1" e irmãos) e nada os apagava:
+# só a coleção e o objeto no Garage eram novos a cada rodada. `_resolver_asset` (app/imagens/rotas_cog.py)
+# procura o item por `WHERE tenant_id = %s AND item_id = %s LIMIT 1` sem ORDER BY, então da SEGUNDA rodada
+# em diante ele achava a linha de uma rodada ANTERIOR, cuja coleção apontava para um objeto já apagado no
+# `finally` daquela rodada — e o caso legítimo virava 404 asset_inexistente sem defeito nenhum no produto
+# (medido: 10 linhas item-legitimo-* vivas em plat_tuniao.raster_item). Pior no par negativo, que passaria
+# por estado velho em vez de pela defesa que quer provar. Id único por rodada corta os dois.
+
+
 def _semear_item_direto_no_pgstac(cur, tenant_id: int, colecao: str, item_id: str, href_alheio: str) -> None:
     """Cria o item STAC BYPASSANDO `app.imagens.pgstac.item_criar` (e portanto a defesa (a) de escrita) —
     simula um item que chegou ao catálogo por outro caminho que não a rota HTTP validada (migração,
@@ -105,7 +114,7 @@ def test_item_stac_recusa_href_de_outro_inquilino_na_escrita(
         rc = c.post(f"/svc/{token}/stac/collections", params={"slug": slug}, json={})
         assert rc.status_code == 201, rc.text
         colecao = rc.json()["id"]
-        corpo = item_stac("item-vazamento-escrita", colecao)
+        corpo = item_stac(f"item-vazamento-escrita-{secrets.token_hex(4)}", colecao)
         corpo["assets"] = {
             "cientifico": {"href": f"/api/objetos/{objeto_b['chave']}", "type": "image/tiff",
                           "file:checksum": "1220" + "0" * 64},
@@ -135,7 +144,7 @@ def test_cog_nao_deve_servir_objeto_de_outro_inquilino_por_href_forjado(
         rc = c.post(f"/svc/{token}/stac/collections", params={"slug": slug}, json={})
         assert rc.status_code == 201, rc.text
         colecao = rc.json()["id"]
-        item_id = "item-vazamento-1"
+        item_id = f"item-vazamento-1-{secrets.token_hex(4)}"
         contexto(conexao_plat_app, tenant_id_a, usuario_id=0, login="teste")
         with conexao_plat_app.cursor() as cur:
             _semear_item_direto_no_pgstac(cur, tenant_id_a, colecao, item_id, f"/api/objetos/{objeto_b['chave']}")
@@ -167,7 +176,7 @@ def test_conferir_nao_deve_ler_objeto_de_outro_inquilino_por_href_forjado(
     try:
         contexto(conexao_plat_app, tenant_id_a, usuario_id=0, login="teste")
         slug = f"advl1-vaz-{secrets.token_hex(4)}"
-        item_id = "item-vazamento-2"
+        item_id = f"item-vazamento-2-{secrets.token_hex(4)}"
         with conexao_plat_app.cursor() as cur:
             colecao = ps.nome_colecao(tenant_id_a, slug)
             ps.colecao_criar(cur, tenant_id_a, slug, {})
@@ -211,7 +220,7 @@ def test_legitimo_item_stac_com_href_do_proprio_inquilino_e_aceito_na_escrita(
         rc = c.post(f"/svc/{token}/stac/collections", params={"slug": slug}, json={})
         assert rc.status_code == 201, rc.text
         colecao = rc.json()["id"]
-        corpo = item_stac("item-legitimo-escrita", colecao)
+        corpo = item_stac(f"item-legitimo-escrita-{secrets.token_hex(4)}", colecao)
         corpo["assets"] = {
             "cientifico": {"href": f"/api/objetos/{objeto['chave']}", "type": "image/tiff",
                            "file:checksum": "1220" + "0" * 64},
@@ -239,7 +248,7 @@ def test_legitimo_cog_do_proprio_inquilino_continua_sendo_servido(
         rc = c.post(f"/svc/{token}/stac/collections", params={"slug": slug}, json={})
         assert rc.status_code == 201, rc.text
         colecao = rc.json()["id"]
-        item_id = "item-legitimo-1"
+        item_id = f"item-legitimo-1-{secrets.token_hex(4)}"
         contexto(conexao_plat_app, tenant_id_a, usuario_id=0, login="teste")
         with conexao_plat_app.cursor() as cur:
             _semear_item_direto_no_pgstac(cur, tenant_id_a, colecao, item_id, f"/api/objetos/{objeto['chave']}")
@@ -269,7 +278,7 @@ def test_legitimo_conferir_le_objeto_do_proprio_inquilino(conexao_plat_app, tena
     try:
         contexto(conexao_plat_app, tenant_id_a, usuario_id=0, login="teste")
         slug = f"advl1-ok-{secrets.token_hex(4)}"
-        item_id = "item-legitimo-2"
+        item_id = f"item-legitimo-2-{secrets.token_hex(4)}"
         with conexao_plat_app.cursor() as cur:
             colecao = ps.nome_colecao(tenant_id_a, slug)
             ps.colecao_criar(cur, tenant_id_a, slug, {})
@@ -295,13 +304,11 @@ def test_legitimo_conferir_le_objeto_do_proprio_inquilino(conexao_plat_app, tena
 # antes mesmo de checar posse — o único jeito de dar a alguém acesso a UM item desses é `imagens:ler`
 # (todo o inquilino) ou `admin:inquilino` (tudo). Vocabulário, fora do escopo do conserto de isolamento
 # por href acima — fica xfail.
-@pytest.mark.xfail(strict=True, reason=(
-    "app/auth/escopos.py::ESCOPO só aceita tiles:ler:<uuid> em formato estrito 8-4-4-4-12; um item STAC "
-    "criado pela própria API de imagens (imagens:escrever) pode ter qualquer id de 1-256 caracteres "
-    "(app/imagens/pgstac.py::item_criar não exige UUID) — para esses itens 'escopo por lista' (L1-02-b) "
-    "é impossível: POST /api/tokens recusa por vocabulário antes de checar posse (achado do adversário "
-    "de linha L1, T9 16/09/2026)"
-))
+# REMEDIADO em 17/09/2026 (item L1-02-b): `ID_ITEM` em app/auth/escopos.py passou a aceitar id de item
+# STAC além do uuid, e `pgstac.item_existe_no_tenant` faz a checagem de posse na criação do token. O
+# `xfail(strict=True)` saiu daqui porque o defeito saiu do produto; o par que prova o conserto (recusa E
+# permissão legítima, escopo cruzado, item de outro inquilino) está em
+# tests/api/imagens/test_l102b_escopo_por_lista.py.
 def test_token_deveria_conseguir_escopo_por_item_com_id_nao_uuid(sessao_a, token_stac_a):
     c = _cliente()
     tok = token_stac_a["token"]
@@ -309,7 +316,7 @@ def test_token_deveria_conseguir_escopo_por_item_com_id_nao_uuid(sessao_a, token
     rc = c.post(f"/svc/{tok}/stac/collections", params={"slug": slug}, json={})
     assert rc.status_code == 201, rc.text
     colecao = rc.json()["id"]
-    item_id = "item-nao-uuid-1"  # mesmo padrão de tests/api/imagens/conftest.py::item_stac
+    item_id = f"item-nao-uuid-1-{secrets.token_hex(4)}"  # mesmo padrão de conftest.py::item_stac
     ri = c.post(f"/svc/{tok}/stac/collections/{colecao}/items", json=item_stac(item_id, colecao))
     assert ri.status_code == 201, ri.text
 

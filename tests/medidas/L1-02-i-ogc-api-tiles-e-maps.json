@@ -40,7 +40,19 @@
    "valor": 1,
    "unidade": "honesto (nunca 500/200 fingido)",
    "comando": "GET /svc/<tok>/ogc/tiles/tileMatrixSets/NaoExiste -> 404 tileMatrixSet_invalido; GET /svc/tokeninvalido/ogc/tiles -> 403 (live, medido)"
+  },
+  "prova_por_driver_ogcapi": {
+   "valor": "NAO CONCLUIDA",
+   "unidade": "pendente",
+   "comando": "18/09/2026: tests/api/imagens/test_l102i_gdal_ogcapi.py (escrito em 17/09, sobe uvicorn proprio e chama `gdalinfo OGCAPI:<landing>` em subprocesso) NAO terminou dentro de 1500 s e foi cortado pelo relogio do lancador. Os dois servidores subiram; as chamadas do driver nao voltaram a tempo. A causa NAO foi isolada — pode ser o driver, a fachada ou a maquina disputada (loadavg de 15 min entre 11 e 24 durante a janela). Nenhum numero foi escrito e a clausula do portao segue ABERTA. Reproduzir com PLAT_TESTE_TIMEOUT alto e a maquina livre: bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_l102i_gdal_ogcapi.py -q"
+  },
+  "porta_do_servidor_de_teste": {
+   "valor": "livre por rodada",
+   "unidade": "conserto de instrumento",
+   "comando": "o arquivo cravava a porta 8251. Quando o pytest e morto pelo relogio, o uvicorn filho SOBREVIVE e segura a porta, e toda rodada seguinte PULA com 'address already in use' — o portao lia esse pulo como 'clausula nao verificavel nesta maquina'. Medido 3x hoje. Agora a porta vem de bind em 0 e o filho sobe em sessao propria (start_new_session)."
   }
  },
- "adversario": "veredito PARCIAL, texto completo do relatório no CHANGELOG.md (turno 9, item L1-02-i) — agente adversário independente lançado via ferramenta Agent, sem arquivo próprio de handoff nesta passagem"
+ "adversario": "veredito PARCIAL, texto completo do relatório no CHANGELOG.md (turno 9, item L1-02-i) — agente adversário independente lançado via ferramenta Agent, sem arquivo próprio de handoff nesta passagem",
+ "gerado_em": "2026-09-18T03:17:42Z",
+ "git_sha": "87c2c72a8"
 }

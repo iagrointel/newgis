@@ -3,9 +3,13 @@ refutações do adversário.
 
 Usa o COG sintético de 4 bandas de `tests/api/imagens/apoio_raster.py` (banda4 = infravermelho
 próximo, padrão de vegetação alternada com contraste real) — as predefinições de índice (NDVI/NDWI/
-NBR-aproximado) e a de falsa-cor exigem 4 bandas, que o item real da demo (Sentinel-2 3 bandas) não
-tem; a prova PIXEL A PIXEL contra a instância viva (rgb-natural × falsa-cor custom, 2 PNG salvos +
-diferença medida) está no relatório do turno, não aqui (não recarrega dado grande no processo de teste)."""
+NBR-aproximado) e a de falsa-cor exigem 4 bandas, que o item real da demo (Sentinel-2 3 bandas) não tem.
+
+A prova PIXEL DE REFERÊNCIA das 6 predefinições de fábrica — a cláusula do portão que o adversário de
+linha L1 (T9) achou em aberto — está COMMITADA e reproduzível desde 17/09/2026 em
+`tests/unit/test_l102f_pixel_referencia.py`, contra `tests/dados/predefinicoes_referencia.json`
+(9 pixels por predefinição, tolerância de 2 níveis por canal, COG gerado localmente pela mesma fórmula
+determinística deste apoio). Este arquivo segue medindo o comportamento pela API; aquele mede o pixel."""
 
 from __future__ import annotations
 

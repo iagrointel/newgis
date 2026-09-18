@@ -20,8 +20,10 @@ Cobertura desta passagem (linha viva em `docs/PARIDADE.md`):
              `BoundingBox` em EPSG:4326 e EPSG:3857 com o eixo correto nos dois); GetMap (LAYERS, CRS,
              BBOX, WIDTH, HEIGHT, FORMAT image/png|image/jpeg, TRANSPARENT, STYLES=vazio/default);
              `ServiceExceptionReport` para todo erro de domínio WMS (nunca 500 mudo).
-  fora     - GetFeatureInfo (cortado por tempo nesta passagem — ver `docs/PARIDADE.md` e o relatório
-             do turno); SLD_BODY/SLD (recusado explicitamente, nunca interpretado — ver `rotas_wms.py`);
+             GetFeatureInfo (INFO_FORMAT application/json e text/plain; valor por banda no pixel
+             pedido por I/J, lido com `rio_tiler.Reader.point`, o MESMO caminho de `identify` do
+             ImageServer e de `/ponto`).
+  fora     - SLD_BODY/SLD (recusado explicitamente, nunca interpretado — ver `rotas_wms.py`);
              TIME/dimensão; `UpdateSequence`; camadas com múltiplos `STYLES` nomeados."""
 
 from __future__ import annotations
@@ -35,11 +37,21 @@ NS_XLINK = "http://www.w3.org/1999/xlink"
 NS_OGC = "http://www.opengis.net/ogc"
 VERSAO = "1.3.0"
 FORMATOS_MAPA = ("image/png", "image/jpeg")
-CRS_SUPORTADOS = ("EPSG:4326", "EPSG:3857")
+FORMATOS_INFO = ("application/json", "text/plain")
+# (conserto L1-02-g, 17/09) A hipótese do item lista EPSG:3857/4326/4674/31981-31985; a fachada só
+# declarava dois. O motor de pixel (`app/imagens/tiles.py::recorte`) sempre aceitou qualquer EPSG via
+# pyproj — a limitação era só desta lista. EPSG:4674 é o SIRGAS2000 geográfico, referência oficial do
+# Brasil (IBGE); 31981-31985 são SIRGAS2000 / UTM 21S a 25S, que é o que a maioria das prefeituras usa.
+CRS_SUPORTADOS = (
+    "EPSG:4326", "EPSG:3857", "EPSG:4674",
+    "EPSG:31981", "EPSG:31982", "EPSG:31983", "EPSG:31984", "EPSG:31985",
+)
 
 # CRS cujo BBOX/BoundingBox troca de eixo no 1.3.0 (latitude antes de longitude). Fora daqui, a ordem é
-# a "normal" (x,y = leste,norte). Ver docstring do módulo.
-EIXO_TROCADO = {"EPSG:4326"}
+# a "normal" (x,y = leste,norte). Ver docstring do módulo. EPSG:4674, como todo CRS geográfico do
+# registro EPSG, é declarado (latitude, longitude) — mesma armadilha do 4326; as UTM (31981-31985) são
+# (easting, northing) e ficam de fora.
+EIXO_TROCADO = {"EPSG:4326", "EPSG:4674"}
 
 
 def normalizar_crs(valor: str | None) -> str | None:
@@ -91,6 +103,10 @@ def service_exception(mensagem: str, codigo: str | None = None) -> str:
     )
 
 
+def _finito(v: float) -> bool:
+    return v == v and v not in (float("inf"), float("-inf"))
+
+
 def _estilo_xml(item_id: str, nome: str, titulo: str, legend_href: str, indent: str) -> list[str]:
     """`<Style>` (OGC 06-042 §7.2.4.6.5) com `<LegendURL>` apontando para `GetLegendGraphic` — item
     L1-02-f: cada predefinição de renderização compatível com o item (fábrica cujo `min_bandas` cabe +
@@ -111,7 +127,7 @@ def _estilo_xml(item_id: str, nome: str, titulo: str, legend_href: str, indent: 
 def _camada_xml(item: dict, indent: str = "      ") -> list[str]:
     oeste, sul, leste, norte = item["bounds"]
     linhas = [
-        f"{indent}<Layer queryable=\"0\" opaque=\"0\">",
+        f"{indent}<Layer queryable=\"1\" opaque=\"0\">",  # GetFeatureInfo implementado (L1-02-g)
         f"{indent}  <Name>{escape(item['item_id'])}</Name>",
         f"{indent}  <Title>{escape(item['titulo'])}</Title>",
     ]
@@ -128,11 +144,20 @@ def _camada_xml(item: dict, indent: str = "      ") -> list[str]:
         f"{indent}  </EX_GeographicBoundingBox>",
     ]
     for crs in CRS_SUPORTADOS:
-        if crs == "EPSG:3857":
-            o3857, s3857, l3857, n3857 = transform_bounds("EPSG:4326", "EPSG:3857", oeste, sul, leste, norte)
-            minx, miny, maxx, maxy = bbox_para_atributo(crs, o3857, s3857, l3857, n3857)
+        if crs == "EPSG:4326":
+            o, sl, le, no = oeste, sul, leste, norte
         else:
-            minx, miny, maxx, maxy = bbox_para_atributo(crs, oeste, sul, leste, norte)
+            # projetada ou geográfica, a regra é a mesma: reprojetar o retângulo de 4326 para o CRS
+            # declarado. `transform_bounds` de um CRS UTM fora da zona do dado devolve infinito — a
+            # camada simplesmente não anuncia esse BoundingBox (o `<CRS>` continua anunciado, porque o
+            # GetMap aceita; é o que o GeoServer também faz).
+            try:
+                o, sl, le, no = transform_bounds("EPSG:4326", crs, oeste, sul, leste, norte)
+            except Exception:  # noqa: BLE001 — CRS impossível para este retângulo: pular, nunca quebrar
+                continue
+            if not all(_finito(v) for v in (o, sl, le, no)):
+                continue
+        minx, miny, maxx, maxy = bbox_para_atributo(crs, o, sl, le, no)
         linhas.append(
             f'{indent}  <BoundingBox CRS="{crs}" minx="{minx:.7f}" miny="{miny:.7f}" '
             f'maxx="{maxx:.7f}" maxy="{maxy:.7f}"/>'
@@ -184,6 +209,15 @@ def capabilities(*, base: str, titulo: str, resumo: str, camadas: list[dict], la
         f"          {onlineresource}",
         "        </Get></HTTP></DCPType>",
         "      </GetMap>",
+        "      <GetFeatureInfo>",
+    ]
+    for f in FORMATOS_INFO:
+        linhas.append(f"        <Format>{f}</Format>")
+    linhas += [
+        "        <DCPType><HTTP><Get>",
+        f"          {onlineresource}",
+        "        </Get></HTTP></DCPType>",
+        "      </GetFeatureInfo>",
         # (10/09) `GetLegendGraphic` NÃO entra em `<Request>`: no 1.3.0 ele não existe no esquema base
         # (é do perfil SLD, `sld:GetLegendGraphic` em outro namespace), e declará-lo aqui torna o
         # GetCapabilities INVÁLIDO para cliente com parser estrito. O caminho padrão de descoberta é o
@@ -205,6 +239,6 @@ def capabilities(*, base: str, titulo: str, resumo: str, camadas: list[dict], la
 
 
 __all__ = [
-    "CRS_SUPORTADOS", "EIXO_TROCADO", "FORMATOS_MAPA", "VERSAO",
+    "CRS_SUPORTADOS", "EIXO_TROCADO", "FORMATOS_INFO", "FORMATOS_MAPA", "VERSAO",
     "bbox_do_parametro", "bbox_para_atributo", "capabilities", "normalizar_crs", "service_exception",
 ]

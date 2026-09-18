@@ -656,3 +656,235 @@ def test_lock_nao_aceita_cena_alheia_ou_fora_do_filtro(token_regras, cenas_regra
         })
         assert resposta.status_code == 422
         assert resposta.json()["erro"] == "lock_indisponivel"
+
+
+# ------------------------------------------------- item L1-08: regra "sem nuvem" (SCL) medida PELA ROTA
+# Esta seção nasceu em 18/09/2026. O motor da regra já era medido em tests/unit/test_l108_sem_nuvem_e_crs.py
+# (composição pixel a pixel, sem banco e sem armazenamento remoto). Faltava a outra metade, que só a rota
+# prova: que a máscara de nuvem é OUTRO asset da MESMA cena, resolvido pelo MESMO caminho do asset
+# principal — e portanto com o MESMO isolamento por inquilino. O docstring daquele arquivo dizia que isso
+# era exercido aqui; não era: não havia uma linha com "SCL" em tests/api/imagens/.
+VALORES_SCL = [30, 200]  # índice 0 = mais recente (metade oeste nublada); índice 1 = mais antiga, limpa
+
+
+@pytest.fixture(scope="module")
+def cenas_scl_a(tenant_id_a, inquilinos_mosaico):
+    from tests.api.imagens.apoio_mosaico import apagar_grade, semear_com_scl
+
+    dados = semear_com_scl(tenant_id_a, inquilinos_mosaico[0].slug, VALORES_SCL, nublada=0)
+    yield dados
+    apagar_grade(tenant_id_a, dados)
+
+
+@pytest.fixture(scope="module")
+def mosaico_scl_a(token_stac_a, cenas_scl_a):
+    c, tok = _cliente(), token_stac_a["token"]
+    r = c.post(f"/svc/{tok}/stac/mosaicos", json={
+        "nome": f"{PREFIXO_TESTE} cenas com SCL L1-08", "collections": [cenas_scl_a["colecao"]],
+        "sortby": [{"field": "datetime", "direction": "desc"}]})
+    assert r.status_code == 201, r.text
+    dados = r.json()
+    yield dados
+    c.delete(f"/svc/{tok}/stac/mosaicos/{dados['id']}")
+
+
+@pytest.fixture(scope="module")
+def token_tiles_scl_a(sessao_a, mosaico_scl_a):
+    r = sessao_a.post("/api/tokens", json={"nome": f"{PREFIXO_TESTE}-tiles-scl",
+                                           "escopos": [f"tiles:ler:{mosaico_scl_a['id']}"]})
+    assert r.status_code == 201, r.text
+    dados = r.json()
+    yield dados
+    sessao_a.delete(f"/api/tokens/{dados['id']}")
+
+
+def _coluna_da_borda_de_nuvem(z: int, x: int, y: int, largura: int) -> int:
+    """Em que COLUNA do ladrilho cai a borda da nuvem do SCL.
+
+    A nuvem semeada cobre a metade oeste da CENA, e o ladrilho central não é centrado na cena: a
+    coluna do meio do ladrilho não é a borda da nuvem. Medir "metade do ladrilho" comparava, dos dois
+    lados, pedaços que estavam ambos sob nuvem — e a prova reprovava sem defeito no produto. A borda
+    se calcula da geometria: meio da cena em EPSG:3857, convertido para coluna dentro dos limites do
+    próprio ladrilho."""
+    import morecantile
+    import pyproj
+
+    from app.imagens import tiles
+    from tests.api.imagens.apoio_mosaico import CANTO_LAT, CANTO_LON, LADO_PX, RESOLUCAO
+
+    x0, _ = pyproj.Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform(
+        CANTO_LON, CANTO_LAT)
+    meio_cena_x = x0 + (LADO_PX * RESOLUCAO) / 2
+    limites = tiles.TMS.xy_bounds(morecantile.Tile(x, y, z))
+    fracao = (meio_cena_x - limites.left) / (limites.right - limites.left)
+    return int(round(fracao * largura))
+
+
+def _metades(token, mosaico, **params) -> tuple[float, float]:
+    """Média da banda 1 a OESTE e a LESTE da borda da nuvem, dentro do ladrilho central."""
+    import io
+
+    import numpy as np
+    from PIL import Image
+
+    z, x, y = _tile_central()
+    r = _cliente().get(f"/svc/{token}/mosaico/{mosaico['id']}/{z}/{x}/{y}.png",
+                       params={"faixa": "0,255", "bandas": "1", **params})
+    assert r.status_code == 200, r.text[:300]
+    pixels = np.asarray(Image.open(io.BytesIO(r.content)).convert("RGBA"))
+    assert np.all(pixels[:, :, 3] == 255), "o ladrilho tem de estar integralmente coberto"
+    largura = pixels.shape[1]
+    corte = _coluna_da_borda_de_nuvem(z, x, y, largura)
+    assert 20 <= corte <= largura - 20, (
+        f"a borda da nuvem caiu na coluna {corte} de {largura}: o ladrilho central não a atravessa, "
+        "então esta medição não separa nuvem de céu limpo")
+    banda = pixels[:, :, 0].astype(float)
+    # margem de 4 px de cada lado da borda: a reamostragem do ladrilho mistura os dois lados na costura
+    return float(banda[:, : corte - 4].mean()), float(banda[:, corte + 4:].mean())
+
+
+def test_l108_sem_nuvem_troca_de_cena_so_onde_o_scl_marca_nuvem(token_tiles_scl_a, mosaico_scl_a):
+    """PAR de referência: o MESMO ladrilho, o MESMO mosaico, mudando só a regra de seleção de pixel.
+
+    Com `primeira`, a cena mais recente vence o ladrilho inteiro, nuvem e tudo: as duas metades saem
+    com o valor dela. Com `sem_nuvem`, a metade que o SCL classifica como nuvem é apagada antes de
+    compor, e ali quem aparece é a cena seguinte — sem tocar na metade limpa.
+
+    Sem o par, um `sem_nuvem` que simplesmente devolvesse sempre a cena mais antiga passaria igual."""
+    oeste_primeira, leste_primeira = _metades(token_tiles_scl_a["token"], mosaico_scl_a, metodo="primeira")
+    assert abs(oeste_primeira - leste_primeira) <= 1, (
+        f"com 'primeira' o ladrilho inteiro vem da cena mais recente; veio {oeste_primeira} x {leste_primeira}")
+
+    oeste_sem_nuvem, leste_sem_nuvem = _metades(token_tiles_scl_a["token"], mosaico_scl_a, metodo="sem_nuvem")
+    assert abs(leste_sem_nuvem - leste_primeira) <= 1, (
+        "a metade LIMPA não pode mudar de cena: o SCL não marca nuvem ali "
+        f"({leste_sem_nuvem} contra {leste_primeira})")
+    assert oeste_sem_nuvem - oeste_primeira > 50, (
+        "a metade NUBLADA tinha de passar a vir da cena seguinte (valor bem maior); "
+        f"veio {oeste_sem_nuvem} contra {oeste_primeira}")
+
+
+def test_l108_sem_nuvem_recusa_quando_a_cena_nao_tem_scl(token_tiles_sobreposto_a, mosaico_sobreposto_a):
+    """As cenas de `semear_sobrepostas` não têm o asset `scl`. A regra tem de RECUSAR, não virar
+    'primeira' em silêncio: devolver nuvem dizendo que é céu limpo é pior que devolver erro."""
+    z, x, y = _tile_central()
+    r = _cliente().get(
+        f"/svc/{token_tiles_sobreposto_a['token']}/mosaico/{mosaico_sobreposto_a['id']}/{z}/{x}/{y}.png",
+        params={"faixa": "0,255", "bandas": "1", "metodo": "sem_nuvem"})
+    assert r.status_code >= 400, (
+        f"sem banda de classificação de cena a regra tem de recusar; devolveu {r.status_code}")
+    assert "scl" in r.text.lower(), r.text[:300]
+
+
+def test_l108_o_asset_scl_de_outro_inquilino_nao_e_lido(token_tiles_b, mosaico_scl_a):
+    """A máscara de nuvem é resolvida pelo MESMO caminho do asset principal, logo carrega o MESMO
+    isolamento: um token do inquilino B não lê o `scl` de uma cena do inquilino A."""
+    z, x, y = _tile_central()
+    r = _cliente().get(f"/svc/{token_tiles_b['token']}/mosaico/{mosaico_scl_a['id']}/{z}/{x}/{y}.png",
+                       params={"metodo": "sem_nuvem"})
+    assert r.status_code == 403, f"token de outro inquilino devolveu {r.status_code}"
+
+
+# --------------------------------------------- item L1-08: CRS nativos diferentes no MESMO mosaico (UTM 22S/23S)
+# Refutação exigida pelo item, verbatim: "cenas de CRS nativos diferentes (UTM 22S e 23S) num MESMO
+# mosaico, alinhamento na costura <= 1 px". O motor já era medido em unidade
+# (tests/unit/test_l108_sem_nuvem_e_crs.py); aqui a mesma pergunta é feita à ROTA, que é onde a cena
+# chega pelo catálogo STAC e não por um caminho de arquivo.
+@pytest.fixture(scope="module")
+def cenas_crs_misto_a(tenant_id_a, inquilinos_mosaico):
+    from tests.api.imagens.apoio_mosaico import apagar_grade, semear_crs_misto
+
+    dados = semear_crs_misto(tenant_id_a, inquilinos_mosaico[0].slug)
+    yield dados
+    apagar_grade(tenant_id_a, dados)
+
+
+@pytest.fixture(scope="module")
+def mosaico_crs_misto_a(token_stac_a, cenas_crs_misto_a):
+    c, tok = _cliente(), token_stac_a["token"]
+    r = c.post(f"/svc/{tok}/stac/mosaicos", json={
+        "nome": f"{PREFIXO_TESTE} CRS misto 22S/23S L1-08",
+        "collections": [cenas_crs_misto_a["colecao"]]})
+    assert r.status_code == 201, r.text
+    dados = r.json()
+    yield dados
+    c.delete(f"/svc/{tok}/stac/mosaicos/{dados['id']}")
+
+
+@pytest.fixture(scope="module")
+def token_tiles_crs_misto_a(sessao_a, mosaico_crs_misto_a):
+    r = sessao_a.post("/api/tokens", json={"nome": f"{PREFIXO_TESTE}-tiles-crsmisto",
+                                           "escopos": [f"tiles:ler:{mosaico_crs_misto_a['id']}"]})
+    assert r.status_code == 201, r.text
+    dados = r.json()
+    yield dados
+    sessao_a.delete(f"/api/tokens/{dados['id']}")
+
+
+def _ladrilho_da_costura(z: int = 14):
+    """Ladrilho que contém o meridiano 48 W na altura das duas cenas."""
+    from app.imagens import tiles
+    from tests.api.imagens.apoio_mosaico import CANTO_LAT, MERIDIANO_FUSO
+
+    t = tiles.TMS.tile(MERIDIANO_FUSO, CANTO_LAT - 0.01, z)
+    return z, t.x, t.y
+
+
+def _faixa_da_costura(token, mosaico, z, x, y):
+    import io
+
+    import numpy as np
+    from PIL import Image
+
+    r = _cliente().get(f"/svc/{token}/mosaico/{mosaico['id']}/{z}/{x}/{y}.png",
+                       params={"faixa": "0,255", "bandas": "1"})
+    assert r.status_code == 200, r.text[:300]
+    pixels = np.asarray(Image.open(io.BytesIO(r.content)).convert("RGBA"))
+    return pixels
+
+
+def test_l108_mosaico_de_crs_nativos_diferentes_mostra_as_duas_cenas(token_tiles_crs_misto_a,
+                                                                     mosaico_crs_misto_a,
+                                                                     cenas_crs_misto_a):
+    """As duas cenas (UTM 22S e UTM 23S) aparecem no MESMO ladrilho. Se o compositor ignorasse o CRS
+    nativo de uma delas, ou ela sumiria, ou cairia no lugar errado."""
+    import numpy as np
+
+    z, x, y = _ladrilho_da_costura()
+    pixels = _faixa_da_costura(token_tiles_crs_misto_a["token"], mosaico_crs_misto_a, z, x, y)
+    visivel = pixels[:, :, 3] > 0
+    assert visivel.any(), "o ladrilho da costura veio inteiramente vazio"
+    banda = pixels[:, :, 0][visivel]
+    valores = {it["lado"]: it["valor"] for it in cenas_crs_misto_a["itens"]}
+    perto_oeste = int(np.sum(np.abs(banda.astype(int) - valores["oeste"]) <= 2))
+    perto_leste = int(np.sum(np.abs(banda.astype(int) - valores["leste"]) <= 2))
+    assert perto_oeste > 100 and perto_leste > 100, (
+        f"o ladrilho tinha de conter as duas cenas; pixels perto de {valores['oeste']} = {perto_oeste}, "
+        f"perto de {valores['leste']} = {perto_leste}")
+
+
+def test_l108_a_costura_entre_dois_crs_nao_deixa_buraco(token_tiles_crs_misto_a, mosaico_crs_misto_a):
+    """Alinhamento na costura: entre a última coluna de uma cena e a primeira da outra não pode haver
+    coluna vazia. Uma coluna de 20 m a mais ou a menos apareceria aqui como buraco.
+
+    A tolerância é de 1 coluna de pixel, que é o que o portão pede ("<= 1 px"): a reamostragem do
+    ladrilho pode deixar meia coluna de mistura na junta, mas nunca uma coluna inteira sem dado."""
+    import numpy as np
+
+    z, x, y = _ladrilho_da_costura()
+    pixels = _faixa_da_costura(token_tiles_crs_misto_a["token"], mosaico_crs_misto_a, z, x, y)
+    visivel = pixels[:, :, 3] > 0
+    linhas_com_dado = np.where(visivel.any(axis=1))[0]
+    assert len(linhas_com_dado) > 10, "faltou área coberta para medir a costura"
+    buracos = []
+    for linha in linhas_com_dado:
+        colunas = np.where(visivel[linha])[0]
+        if len(colunas) < 2:
+            continue
+        saltos = np.diff(colunas)
+        maior = int(saltos.max())
+        if maior > 2:  # salto de 1 = contíguo; 2 = uma coluna de mistura tolerada
+            buracos.append((int(linha), maior - 1))
+    assert not buracos, (
+        f"a costura entre UTM 22S e UTM 23S deixou coluna(s) sem dado em {len(buracos)} linha(s); "
+        f"pior salto: {max(b[1] for b in buracos)} px (amostra: {buracos[:5]})")
