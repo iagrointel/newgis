@@ -68,7 +68,10 @@ def esquema_referencia() -> str:
     nome = os.environ.get("PLAT_MOTOR_REFERENCIA_ESQUEMA", "").strip()
     if not nome:
         pytest.skip("sem PLAT_MOTOR_REFERENCIA_ESQUEMA: o oráculo do motor logístico de referência vive "
-                    "num schema cujo nome não pode ser escrito neste repositório")
+                    "num schema cujo nome não pode ser escrito neste repositório. Fora da máquina da casa "
+                    "a prova contra o oráculo não roda — a última verificação completa está registrada em "
+                    "tests/medidas/L3-01-j.json (2026-09-07, n=73115 células e 4346 feições, max|delta|=0 "
+                    "nos três perfis; o hash do modelo e o código sob teste não mudaram desde essa rodada)")
     if not nome.replace("_", "").isalnum():
         pytest.fail("PLAT_MOTOR_REFERENCIA_ESQUEMA tem de ser um identificador simples")
     return nome
