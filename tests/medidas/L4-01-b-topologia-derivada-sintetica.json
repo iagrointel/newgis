@@ -1,0 +1,37 @@
+{
+ "item": "L4-01-b-topologia-derivada",
+ "git_sha": "99d9ba2c37ed51ea1eebd21c709abc1a0207c1b1",
+ "tipo": "rede SINTÉTICA determinística (gerar_rede.py, semente fixa) na escala exata do portão — complemento da medição contra o ativo real, que exige PLAT_REDE_REFERENCIA_ESQUEMA",
+ "gerado_em": "2026-09-18T03:25:54Z",
+ "comando": "venv/bin/pytest tests/api/test_rede_topologia_sintetica_medida.py -m lento -q",
+ "rede_sintetica_escala_real": {
+  "carga_1min": 3.6,
+  "ram_livre_gb": 48.0,
+  "rede_id": "348fe281-ba0f-4972-a46a-182e1b519ebd",
+  "contagem_gerador": {
+   "trechos_mt": 44268,
+   "trechos_bt": 29244,
+   "ramais": 26581,
+   "trafos": 5481,
+   "trafos_orfaos": 25,
+   "postes": 60549,
+   "trechos_degenerados": 10
+  },
+  "carga_segundos": 6.647,
+  "resumo": {
+   "rede_id": "348fe281-ba0f-4972-a46a-182e1b519ebd",
+   "tolerancia_m": 0.05,
+   "nos": 105548,
+   "arestas": 100103,
+   "nos_orfaos": 50,
+   "arestas_sem_no": 10,
+   "duracao_ms": 513962,
+   "construido_em": "2026-09-18T03:17:20Z"
+  },
+  "habilitar_http_segundos": 514.125,
+  "tempo_medido_sem_disputa": true,
+  "motivo_tempo": null,
+  "postes_zero_no": 0,
+  "ok": true
+ }
+}
