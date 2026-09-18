@@ -1,0 +1,22 @@
+{
+ "item": "L1-02-b-token-de-servico-com-escopo-por-lista",
+ "medidas": {
+  "par_escopo_por_lista_em_item_stac": {
+   "valor": 6,
+   "unidade": "testes passando",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_l102b_escopo_por_lista.py -W ignore -q   (trilha uniao, schema plat_tuniao; cgroup MemoryMax=4G)  [par completo: criacao aceita id de item STAC nao-uuid; par POSITIVO serve o tile do item escopado; par NEGATIVO o MESMO token nao abre outro item; item inexistente recusado; item de outro inquilino recusado; id com ':' segue fora do vocabulario]"
+  },
+  "isolamento_por_href_sem_regressao": {
+   "valor": 7,
+   "unidade": "testes passando",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_advl1_isolamento_href.py -W ignore -q   (trilha uniao, schema plat_tuniao; cgroup MemoryMax=4G)  [inclui o antigo xfail test_token_deveria_conseguir_escopo_por_item_com_id_nao_uuid, agora passando, e os 3 pares positivo/negativo de isolamento]"
+  },
+  "idempotencia_da_suite": {
+   "valor": 3,
+   "unidade": "rodadas seguidas verdes",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_advl1_isolamento_href.py tests/api/imagens/test_l102b_escopo_por_lista.py -W ignore -q   (trilha uniao, schema plat_tuniao; cgroup MemoryMax=4G)  [13 passed em cada rodada; antes do conserto a 2a rodada reprovava com 404 asset_inexistente por id de item FIXO reaproveitado entre rodadas]"
+  }
+ },
+ "gerado_em": "2026-09-18T01:43:00Z",
+ "git_sha": "ffa5e560a"
+}

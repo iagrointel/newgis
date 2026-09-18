@@ -1,0 +1,27 @@
+{
+ "item": "L1-02-g-wms-1-3-0-raster",
+ "medidas": {
+  "getfeatureinfo_bate_com_o_ponto": {
+   "valor": 13,
+   "unidade": "testes passando",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_l102g_wms_info_e_crs.py -W ignore -q   (trilha uniao, schema plat_tuniao; cgroup MemoryMax=4G)  [GetFeatureInfo json/texto, recusa fora da imagem, recusa INFO_FORMAT desconhecido, nao le camada de outro inquilino, GetMap nos 4 CRS, ida e volta por ponto, GetCapabilities]"
+  },
+  "portao_do_adversario": {
+   "valor": 2,
+   "unidade": "clausulas XPASS(strict)",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/unit/test_l1_adv2_wms_gate.py -W ignore -q   (trilha uniao, schema plat_tuniao; cgroup MemoryMax=4G)  -rxX  [XPASS(strict) = o defeito saiu do produto]"
+  },
+  "divergencia_getfeatureinfo_x_identify": {
+   "valor": 0,
+   "unidade": "caracteres de diferenca",
+   "comando": "mesmo pixel central, EPSG:3857, 256x256, I=J=128: GetFeatureInfo e /ImageServer/identify devolvem '404,906,900,3800' nos dois. Antes do conserto o WMS devolvia '404.0,906.0,900.0,3800.0' (coercao a float em _valor_no_ponto)."
+  },
+  "ida_e_volta_de_reprojecao_por_ponto": {
+   "valor": 0.0,
+   "unidade": "px",
+   "comando": "rasterio.warp.transform canto a canto, EPSG:4326 -> EPSG:31983 -> EPSG:4326, raster de demonstracao (canto oeste -47,95; fuso 23S). Por ENVOLTORIA (transform_bounds) a mesma conta da 3,704 px, que e crescimento de envoltoria por convergencia de meridiano, nao erro de reprojecao."
+  }
+ },
+ "gerado_em": "2026-09-18T01:43:00Z",
+ "git_sha": "ffa5e560a"
+}
