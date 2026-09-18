@@ -57,5 +57,23 @@
     "ram_livre_gb": 0,
     "medido_em": "2026-09-07T16:16:40Z",
     "observacao": "carga alta (13,89 em 12 nucleos) no momento da medida, mas a clausula nao e de desempenho/tempo — e de corretude funcional (contagens e frases) — logo a carga da maquina nao compromete o resultado; registrada por transparencia (regra da casa)."
+  },
+  {
+    "item": "L3-04-restricoes",
+    "clausula": "compor_com_restricoes_sobrepostas_veto_e_fracao_vetada_contra_caso_calculado_a_mao",
+    "resultado": "passou",
+    "detalhe": "tests/unit/test_amc_restricao_combinador.py (novo): tabela-verdade de 3 restricoes sobre 6 unidades escrita A MAO no cabecalho do arquivo, com as contas feitas antes de rodar. Esperado calculado a mao: fracao_vetada = [1,1,1,1,1,0]; unidades_vetadas_total = 5; contagem por restricao R1=2, R2=3, R3=3 (soma 8, com 3 sobreposicoes: u0 em R1 e R3, u1 em R1 e R2, u2 em R2 e R3); motivo = o da PRIMEIRA restricao na ordem declarada; a mesma tabela com a ordem invertida muda so o motivo. Veto nunca pesa: unidade vetada por duas restricoes continua com fracao 1,0. Favorabilidade final calculada a mao ((1x80 + 3x40)/4 = 50,0) sai 0,0 nas 5 vetadas e 50,0 na livre. Nenhum valor esperado veio da saida do proprio codigo.",
+    "n_testes": 10,
+    "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/provalocal.env; set +a; sudo -E systemd-run --scope --uid=dev --gid=dev -p MemoryMax=4G -p MemorySwapMax=0 venv/bin/python -m pytest tests/unit/test_amc_robustez_monte_carlo.py tests/unit/test_amc_restricao_combinador.py -q",
+    "saida": "20 passed",
+    "medido_em": "2026-09-17T23:18:00Z"
+  },
+  {
+    "item": "L3-04-restricoes",
+    "clausula": "par_positivo_do_veto_nenhuma_restricao_vetando_deixa_a_nota_passar",
+    "resultado": "passou",
+    "detalhe": "test_par_positivo_nenhuma_restricao_veta_nada_nao_vira_veto_silencioso: com as 3 restricoes avaliadas e nenhuma vetando, fracao = 0 em todas, motivo = None, contagem zerada e a combinacao devolve os 50,0 calculados a mao para as 6 unidades. Provar que barra o invalido nao basta: o par positivo prova que deixa passar o valido.",
+    "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/provalocal.env; set +a; sudo -E systemd-run --scope --uid=dev --gid=dev -p MemoryMax=4G -p MemorySwapMax=0 venv/bin/python -m pytest tests/unit/test_amc_robustez_monte_carlo.py tests/unit/test_amc_restricao_combinador.py -q",
+    "medido_em": "2026-09-17T23:18:00Z"
   }
 ]

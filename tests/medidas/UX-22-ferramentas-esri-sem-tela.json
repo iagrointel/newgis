@@ -1,0 +1,47 @@
+{
+ "item": "UX-22-ferramentas-esri-sem-tela",
+ "medidas": {
+  "rotas_de_escrita_gpserver_provadas_na_api": {
+   "valor": {
+    "submitJob": 200,
+    "jobs/{id} (jobStatus)": 200,
+    "jobs/{id}/results/{param}": 200,
+    "jobs/{id}/cancel": "200 ou 409"
+   },
+   "unidade": "status",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/provalocal.env; set +a; sudo -E systemd-run --scope --uid=dev --gid=dev -p MemoryMax=6G -p MemorySwapMax=0 ./venv/bin/python -m pytest tests/api/esri/test_gpserver.py -q  → 9 passed em 95,56 s"
+  },
+  "ciclo_assincrono_completo": {
+   "valor": "esriJobSubmitted -> esriJobSucceeded -> results/saida com itemId e featureCount 5",
+   "unidade": "sequência",
+   "comando": "tests/api/esri/test_gpserver.py::test_jobstatus_acompanha_ate_esrijobsucceeded_e_publica_o_paramurl e ::test_results_devolve_o_item_com_contagem_e_tipo_gp"
+  },
+  "erros_nomeados_nunca_500": {
+   "valor": {
+    "parametro_de_saida_inexistente": 404,
+    "resultado_antes_de_concluir": 409,
+    "sem_token": "401 ou 403",
+    "job_inexistente_ou_id_nao_uuid": 404
+   },
+   "unidade": "status",
+   "comando": "tests/api/esri/test_gpserver.py — todos com corpo no dialeto Esri (chave 'error'), nunca traceback cru"
+  },
+  "controle_de_tela_para_as_tres_rotas_de_escrita": {
+   "valor": {
+    "POST .../execute": "web/js/jobs/ferramentas.js:485",
+    "POST .../submitJob": "web/js/jobs/ferramentas.js:471",
+    "POST .../jobs/{id}/cancel": "web/js/jobs/ferramentas.js:496"
+   },
+   "unidade": "referência de código",
+   "comando": "docs/COBERTURA_UI.md (linhas 763-772): as três rotas de ESCRITA do grupo ferramentas-esri aparecem como 'coberto' pela tela /ferramentas, com estado de erro; docs/cobertura_ui_lacunas.json não lista nenhuma rota /rest/services/.../GPServer"
+  }
+ },
+ "nao_medido": {
+  "e2e_com_captura": "não existe e2e que exercite a aba 'ArcGIS (GPServer)' de /ferramentas. tests/e2e/test_ux09_ferramentas.py cobre a tela, mas a própria docstring dele declara que as ferramentas GP ficam de fora",
+  "erros_de_console": "não medido (depende do e2e acima)",
+  "axe_0_violacoes_serias": "não medido (depende do e2e acima)",
+  "cobertura_ui_regenerada": "docs/COBERTURA_UI.md já está sem a lacuna no tronco de hoje; não foi regenerado nesta medição"
+ },
+ "gerado_em": "2026-09-17T23:40:00Z",
+ "git_sha": "e9e2b1e3b1b4"
+}

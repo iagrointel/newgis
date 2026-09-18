@@ -2,7 +2,7 @@
  "item": "L2-10-a-dominios-subtipos",
  "medidas": {
   "codificado_mensagem_do_gatilho": {
-   "valor": "campo \"uf\": o valor 'ZZ' não pertence ao domínio \"zt dominio dfb3ff81\"",
+   "valor": "campo \"uf\": o valor 'ZZ' não pertence ao domínio \"zt dominio 2f0ad7cd\"",
    "unidade": "",
    "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
   },
@@ -52,17 +52,17 @@
    "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
   },
   "segundos_sem_gatilho": {
-   "valor": 1.513,
+   "valor": 2.732,
    "unidade": "s",
    "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
   },
   "segundos_com_gatilho": {
-   "valor": 1.696,
+   "valor": 2.935,
    "unidade": "s",
    "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
   },
   "razao_com_sobre_sem": {
-   "valor": 1.121,
+   "valor": 1.074,
    "unidade": "x",
    "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
   },
@@ -113,8 +113,13 @@
    "valor": 6,
    "unidade": "nomes",
    "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
+  },
+  "suite_do_item_17_09": {
+   "valor": "19 passed",
+   "unidade": "testes",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/provalocal.env; set +a; PLAT_GRAVAR_MEDIDAS=1 sudo -E systemd-run --scope --uid=dev --gid=dev -p MemoryMax=6G -p MemorySwapMax=0 ./venv/bin/python -m pytest tests/api/test_dominios_subtipos.py -q  → 19 passed em 262,67 s; as medidas numéricas deste arquivo foram REGRAVADAS por esta rodada (a razão com/sem gatilho caiu de 1,121x para 1,074x, teto do portão 1,5x)"
   }
  },
- "gerado_em": "2026-09-06T18:41:11Z",
- "git_sha": "90d03c07da0c"
+ "gerado_em": "2026-09-17T23:27:47Z",
+ "git_sha": "e9e2b1e3b1b4"
 }

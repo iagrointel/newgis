@@ -12,6 +12,7 @@ validadores oficiais."""
 from __future__ import annotations
 
 import json
+import math
 import socket
 import subprocess
 import time
@@ -21,6 +22,7 @@ import jsonschema
 import pytest
 import requests
 
+from app import esquema_dado
 from tests.api.test_leitor_tiles import (  # noqa: F401,F811 -- reexportada para o pytest achar a fixture (nome precisa bater com o parametro)
     _admin,
     _conectar_app,
@@ -101,13 +103,14 @@ def camada_poligono(env):
     """Uma camada de 30 polígonos no inquilino demo, com item, função de tile e token
     `camada:ler:<item>`. Apagada no fim (mesmo padrão de `tests/api/test_leitor_tiles.camadas`)."""
     con = _conectar_app(env)
-    esquema, tabela = "d_demo", "c_" + _hex16()
+    esquema, tabela = None, "c_" + _hex16()
     item = funcao = token_id = None
     try:
         adm = _admin(con, "demo")
         valor, hash_ = token_novo()
         with con.cursor() as cur:
             contexto(con, adm["tenant_id"], adm["usuario_id"], "admin")
+            esquema = esquema_dado.esquema(cur, "demo")
             cur.execute(
                 f'CREATE TABLE "{esquema}"."{tabela}" '
                 f'(fid bigserial PRIMARY KEY, rotulo text, geom geometry(Polygon, 4326))'
@@ -131,8 +134,9 @@ def camada_poligono(env):
             cur.execute("SELECT plat.camada_tile_garantir(%s, %s, %s) AS f", (esquema, tabela, item))
             funcao = cur.fetchone()["f"]
             cur.execute(
-                "INSERT INTO plat.token_servico(tenant_id, usuario_id, nome, token_hash, prefixo, escopos) "
-                "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
+                "INSERT INTO plat.token_servico(tenant_id, usuario_id, nome, token_hash, prefixo, escopos, "
+                "expira_em) "
+                "VALUES (%s, %s, %s, %s, %s, %s, now() + interval '1 day') RETURNING id",
                 (adm["tenant_id"], adm["usuario_id"], "zt-l204e", hash_, valor[:8],
                  ["camada:ler:" + str(item)]),
             )
@@ -181,6 +185,81 @@ def test_tile_esri_e_maplibre_sao_byte_a_byte_iguais(app_com_martin, camada_poli
     medida("L2-04-e-vector-tile-server-tilejson")(
         "tile_esri_ordem_zyx_igual_a_maplibre_zxy_bytes", len(r_ml.content), "bytes",
         "GET /tiles/<token>/<item>/2/2/2.pbf vs GET /svc/<token>/.../VectorTileServer/tile/2/2/2.pbf",
+    )
+
+
+def _tile_xy(lon: float, lat: float, z: int) -> tuple[int, int]:
+    """Índice de tile XYZ (slippy map) do ponto, pela fórmula pública da especificação — escrita aqui,
+    fora do produto, para que o tile pedido no teste não venha de nenhum código nosso."""
+    n = 2 ** z
+    x = int((lon + 180.0) / 360.0 * n)
+    lat_rad = math.radians(lat)
+    y = int((1.0 - math.asinh(math.tan(lat_rad)) / math.pi) / 2.0 * n)
+    return x, y
+
+
+def _decodificar_mvt(conteudo: bytes, z: int, x: int, y: int, tmp_path) -> str:
+    """Decodifica os bytes com o driver MVT do GDAL (`ogrinfo`) — decodificador INDEPENDENTE, que não
+    compartilha uma linha de código com a nossa pilha. O arquivo tem de estar em `<z>/<x>/<y>.pbf`
+    porque é do CAMINHO que o driver tira o z/x/y para georreferenciar o tile."""
+    destino = tmp_path / str(z) / str(x)
+    destino.mkdir(parents=True, exist_ok=True)
+    tile = destino / f"{y}.pbf"
+    tile.write_bytes(conteudo)
+    saida = subprocess.run(["ogrinfo", "-al", "-so", str(tile)], capture_output=True, text=True, timeout=60)
+    assert saida.returncode == 0, saida.stderr
+    return saida.stdout
+
+
+def test_tile_da_rota_esri_e_um_mvt_de_verdade_decodificado(app_com_martin, camada_poligono, medida,
+                                                            tmp_path):
+    """Cláusula do portão que a igualdade byte a byte sozinha NÃO prova: os bytes servidos em
+    `/tile/{z}/{y}/{x}.pbf` são um Mapbox Vector Tile 2.1 legítimo — não um blob opaco que por acaso é
+    idêntico nas duas rotas. Aqui eles são DECODIFICADOS pelo driver MVT do GDAL e conferidos contra
+    valores que vêm de fora do caminho do tile: o nome da camada é o nome da função de tile que a
+    fixture criou (`plat.camada_tile_garantir`), e a contagem esperada de 30 é a da própria fixture
+    (`generate_series(1, 30)`).
+
+    O tile escolhido é o que contém o agrupamento inteiro no zoom 6, calculado pela fórmula pública do
+    esquema XYZ dentro do teste (`_tile_xy`) — nunca por código nosso. No zoom 0 a contagem é MENOR
+    (os 30 polígonos de 0,05° ficam a menos de um pixel de distância uns dos outros na grade de 4096
+    do tile do mundo inteiro, e a geração do MVT funde/descarta os degenerados): isso é comportamento
+    declarado da geração de tile, não perda de dado, e está afirmado abaixo como desigualdade, nunca
+    como número mágico."""
+    if subprocess.run(["which", "ogrinfo"], capture_output=True).returncode != 0:
+        pytest.skip("ogrinfo/GDAL não instalado nesta máquina")
+    c, tok, item = app_com_martin, camada_poligono["token"], camada_poligono["item"]
+    funcao = camada_poligono["funcao"].split(".")[-1]
+
+    # centro do agrupamento da fixture: lon -55,0 + (g % 10)*0,3 e lat -15,0 + (g/10)*0,3, g de 1 a 30
+    z = 6
+    x, y = _tile_xy(-53.65, -14.7, z)
+    r_esri = c.get(f"/svc/{tok}/rest/services/{item}/VectorTileServer/tile/{z}/{y}/{x}.pbf")
+    assert r_esri.status_code == 200, r_esri.status_code
+    texto = _decodificar_mvt(r_esri.content, z, x, y, tmp_path)
+    assert "using driver `MVT' successful" in texto, texto
+    assert f"Layer name: {funcao}" in texto, texto
+    assert "Geometry: Polygon" in texto or "Geometry: Multi Polygon" in texto, texto
+    feicoes = next(int(linha.split(":")[1]) for linha in texto.splitlines()
+                    if linha.startswith("Feature Count:"))
+    assert feicoes == 30, texto
+
+    # a rota MapLibre (z/x/y) entrega os MESMOS bytes e decodifica no mesmo conteúdo
+    r_ml = c.get(f"/tiles/{tok}/{item}/{z}/{x}/{y}.pbf")
+    assert r_ml.content == r_esri.content
+
+    # zoom 0: mesmo tile legítimo, com menos feições por generalização — desigualdade, não número mágico
+    r_z0 = c.get(f"/svc/{tok}/rest/services/{item}/VectorTileServer/tile/0/0/0.pbf")
+    texto_z0 = _decodificar_mvt(r_z0.content, 0, 0, 0, tmp_path)
+    assert f"Layer name: {funcao}" in texto_z0, texto_z0
+    feicoes_z0 = next(int(linha.split(":")[1]) for linha in texto_z0.splitlines()
+                       if linha.startswith("Feature Count:"))
+    assert 0 < feicoes_z0 <= feicoes, (feicoes_z0, feicoes)
+
+    medida("L2-04-e-vector-tile-server-tilejson")(
+        "mvt_decodificado_feicoes", {"z6": feicoes, "z0": feicoes_z0, "na_tabela": 30}, "feições",
+        f"ogrinfo -al -so (driver MVT do GDAL) sobre os bytes de GET /svc/<token>/.../VectorTileServer/"
+        f"tile/{z}/{y}/{x}.pbf gravados em <tmp>/{z}/{x}/{y}.pbf; camada decodificada = {funcao}",
     )
 
 
@@ -273,13 +352,14 @@ def test_kml_de_10_mil_feicoes_abre_com_ogrinfo(app_com_martin, env, medida, tmp
     if subprocess.run(["which", "ogrinfo"], capture_output=True).returncode != 0:
         pytest.skip("ogrinfo/GDAL não instalado nesta máquina")
     con = _conectar_app(env)
-    esquema, tabela = "d_demo", "c_" + _hex16()
+    esquema, tabela = None, "c_" + _hex16()
     item = token_id = None
     try:
         adm = _admin(con, "demo")
         valor, hash_ = token_novo()
         with con.cursor() as cur:
             contexto(con, adm["tenant_id"], adm["usuario_id"], "admin")
+            esquema = esquema_dado.esquema(cur, "demo")
             cur.execute(f'CREATE TABLE "{esquema}"."{tabela}" '
                         f'(fid bigserial PRIMARY KEY, rotulo text, geom geometry(Point, 4326))')
             cur.execute(f"INSERT INTO \"{esquema}\".\"{tabela}\" (rotulo, geom) "
@@ -295,8 +375,9 @@ def test_kml_de_10_mil_feicoes_abre_com_ogrinfo(app_com_martin, env, medida, tmp
             )
             item = cur.fetchone()["id"]
             cur.execute(
-                "INSERT INTO plat.token_servico(tenant_id, usuario_id, nome, token_hash, prefixo, escopos) "
-                "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
+                "INSERT INTO plat.token_servico(tenant_id, usuario_id, nome, token_hash, prefixo, escopos, "
+                "expira_em) "
+                "VALUES (%s, %s, %s, %s, %s, %s, now() + interval '1 day') RETURNING id",
                 (adm["tenant_id"], adm["usuario_id"], "zt-l204e-10k", hash_, valor[:8], ["camada:ler:" + str(item)]),
             )
             token_id = cur.fetchone()["id"]
@@ -337,13 +418,14 @@ def test_csv_export_com_geometria_multi(app_com_martin, env):
     `camada_vetorial` exige SRID/tipo em `plat.camada_preparar`), então esse braço do pedido do
     adversário aterrissa em 404 `camada_nao_encontrada`, nunca um 500."""
     con = _conectar_app(env)
-    esquema, tabela = "d_demo", "c_" + _hex16()
+    esquema, tabela = None, "c_" + _hex16()
     item = token_id = None
     try:
         adm = _admin(con, "demo")
         valor, hash_ = token_novo()
         with con.cursor() as cur:
             contexto(con, adm["tenant_id"], adm["usuario_id"], "admin")
+            esquema = esquema_dado.esquema(cur, "demo")
             cur.execute(f'CREATE TABLE "{esquema}"."{tabela}" '
                         f'(fid bigserial PRIMARY KEY, rotulo text, geom geometry(MultiPolygon, 4326))')
             cur.execute(
@@ -363,8 +445,9 @@ def test_csv_export_com_geometria_multi(app_com_martin, env):
             )
             item = cur.fetchone()["id"]
             cur.execute(
-                "INSERT INTO plat.token_servico(tenant_id, usuario_id, nome, token_hash, prefixo, escopos) "
-                "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
+                "INSERT INTO plat.token_servico(tenant_id, usuario_id, nome, token_hash, prefixo, escopos, "
+                "expira_em) "
+                "VALUES (%s, %s, %s, %s, %s, %s, now() + interval '1 day') RETURNING id",
                 (adm["tenant_id"], adm["usuario_id"], "zt-l204e-multi", hash_, valor[:8], ["camada:ler:" + str(item)]),
             )
             token_id = cur.fetchone()["id"]
@@ -412,13 +495,14 @@ def test_geojson_1_milhao_streaming_sem_estourar_rss(env, tmp_path):
     worker isolado) e amostra `/proc/<pid>/status:VmRSS` durante o download inteiro."""
     porta = _porta_livre()
     con = _conectar_app(env)
-    esquema, tabela = "d_demo", "c_" + _hex16()
+    esquema, tabela = None, "c_" + _hex16()
     item = token_id = None
     try:
         adm = _admin(con, "demo")
         valor, hash_ = token_novo()
         with con.cursor() as cur:
             contexto(con, adm["tenant_id"], adm["usuario_id"], "admin")
+            esquema = esquema_dado.esquema(cur, "demo")
             cur.execute(f'CREATE TABLE "{esquema}"."{tabela}" '
                         f'(fid bigserial PRIMARY KEY, rotulo text, geom geometry(Point, 4326))')
             cur.execute(f"INSERT INTO \"{esquema}\".\"{tabela}\" (rotulo, geom) "
@@ -435,8 +519,9 @@ def test_geojson_1_milhao_streaming_sem_estourar_rss(env, tmp_path):
             )
             item = cur.fetchone()["id"]
             cur.execute(
-                "INSERT INTO plat.token_servico(tenant_id, usuario_id, nome, token_hash, prefixo, escopos) "
-                "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
+                "INSERT INTO plat.token_servico(tenant_id, usuario_id, nome, token_hash, prefixo, escopos, "
+                "expira_em) "
+                "VALUES (%s, %s, %s, %s, %s, %s, now() + interval '1 day') RETURNING id",
                 (adm["tenant_id"], adm["usuario_id"], "zt-l204e-1mi", hash_, valor[:8], ["camada:ler:" + str(item)]),
             )
             token_id = cur.fetchone()["id"]

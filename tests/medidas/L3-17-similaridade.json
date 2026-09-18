@@ -40,8 +40,51 @@
    "valor": true,
    "unidade": "booleano",
    "comando": "test_refutacao_referencia_igual_a_candidato_da_indice_1_e_1o_lugar"
+  },
+  "vizinhos_esperados_conjunto_conhecido_ordem": {
+   "valor": "A,B,C,D",
+   "unidade": "sequência de unidade_id",
+   "comando": "4 unidades nos cantos de um quadrado (x,y em {0,4}); z-score populacional dá média 2 e desvio 2 nos dois campos, logo os vetores padronizados são os cantos de [-1,1]². Ordem calculada à mão, igual nas duas métricas. set -a; source /home/dev/plataforma/laco/var/trilha/provalocal.env; set +a; sudo -E systemd-run --scope --uid=dev --gid=dev -p MemoryMax=6G -p MemorySwapMax=0 venv/bin/python -m pytest tests/api/test_amc_similaridade.py -q"
+  },
+  "indices_calculados_a_mao_euclidiana": {
+   "valor": {
+    "A": 1.0,
+    "B": 0.3333333333333333,
+    "C": 0.3333333333333333,
+    "D": 0.2612038749637414
+   },
+   "unidade": "índice (0-1)",
+   "comando": "1/(1+d) com d(A)=0, d(B)=d(C)=2, d(D)=2√2 — conta no cabeçalho de tests/api/test_amc_similaridade.py; conferido com folga de 1e-9. set -a; source /home/dev/plataforma/laco/var/trilha/provalocal.env; set +a; sudo -E systemd-run --scope --uid=dev --gid=dev -p MemoryMax=6G -p MemorySwapMax=0 venv/bin/python -m pytest tests/api/test_amc_similaridade.py -q"
+  },
+  "indices_calculados_a_mao_cosseno": {
+   "valor": {
+    "A": 1.0,
+    "B": 0.5,
+    "C": 0.5,
+    "D": 0.0
+   },
+   "unidade": "índice (0-1)",
+   "comando": "(cos+1)/2 com cos(A)=+1, cos(B)=cos(C)=0, cos(D)=-1 sobre o centroide (-1,-1). set -a; source /home/dev/plataforma/laco/var/trilha/provalocal.env; set +a; sudo -E systemd-run --scope --uid=dev --gid=dev -p MemoryMax=6G -p MemorySwapMax=0 venv/bin/python -m pytest tests/api/test_amc_similaridade.py -q"
+  },
+  "estatisticas_z_score_conferidas": {
+   "valor": {
+    "media": 2.0,
+    "desvio": 2.0
+   },
+   "unidade": "unidades do campo",
+   "comando": "desvio POPULACIONAL (ddof=0); com ddof=1 daria 2,309 e todos os índices mudariam — é o que separa a conta certa da conta parecida. set -a; source /home/dev/plataforma/laco/var/trilha/provalocal.env; set +a; sudo -E systemd-run --scope --uid=dev --gid=dev -p MemoryMax=6G -p MemorySwapMax=0 venv/bin/python -m pytest tests/api/test_amc_similaridade.py -q"
+  },
+  "escolha_de_campos_muda_os_vizinhos_de_forma_prevista": {
+   "valor": "A,C,B,D",
+   "unidade": "sequência de unidade_id",
+   "comando": "só o campo y: z(A)=z(C)=-1 e z(B)=z(D)=+1, logo A e C ficam a distância 0 (índice 1,0) e B e D a distância 2 (índice 1/3). Ordem calculada à mão. set -a; source /home/dev/plataforma/laco/var/trilha/provalocal.env; set +a; sudo -E systemd-run --scope --uid=dev --gid=dev -p MemoryMax=6G -p MemorySwapMax=0 venv/bin/python -m pytest tests/api/test_amc_similaridade.py -q"
+  },
+  "testes_do_arquivo_novo": {
+   "valor": 9,
+   "unidade": "testes",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/provalocal.env; set +a; sudo -E systemd-run --scope --uid=dev --gid=dev -p MemoryMax=6G -p MemorySwapMax=0 venv/bin/python -m pytest tests/api/test_amc_similaridade.py -q  → 9 passed"
   }
  },
- "gerado_em": "2026-09-07T12:45:05Z",
- "git_sha": "325b004a38bd"
+ "gerado_em": "2026-09-17T23:18:00Z",
+ "git_sha": "e9e2b1e3b1b4"
 }

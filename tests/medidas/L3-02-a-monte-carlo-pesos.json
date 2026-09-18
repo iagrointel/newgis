@@ -5,8 +5,55 @@
    "valor": 0.767,
    "unidade": "s",
    "comando": "amc.robustez_pesos (1000 sorteios × 5000 unidades × 8 fatores, dirichlet, ContextoJob sem banco) — limite 60.0 s; carga_1min=12.94, ram_livre_gb=9.21, medido_em=2026-09-07T12:44:33Z (passou com folga mesmo sob carga alta)"
+  },
+  "modelo_analitico_2_fatores_media_esperada": {
+   "valor": 50.0,
+   "unidade": "favorabilidade",
+   "comando": "E[100·w1] com w1~U(0,1) (Dirichlet(1,1) em 2 dimensões), calculado à mão no cabeçalho de tests/unit/test_amc_robustez_monte_carlo.py; medido 48,62 em 1.000 sorteios (semente 20260917), dentro de 5 erros-padrão da média (±4,57). set -a; source /home/dev/plataforma/laco/var/trilha/provalocal.env; set +a; sudo -E systemd-run --scope --uid=dev --gid=dev -p MemoryMax=4G -p MemorySwapMax=0 venv/bin/python -m pytest tests/unit/test_amc_robustez_monte_carlo.py tests/unit/test_amc_restricao_combinador.py -q"
+  },
+  "modelo_analitico_2_fatores_desvio_esperado": {
+   "valor": 28.867513,
+   "unidade": "favorabilidade",
+   "comando": "100/√12, calculado à mão; medido 29,163 (erro relativo 1,0 %). set -a; source /home/dev/plataforma/laco/var/trilha/provalocal.env; set +a; sudo -E systemd-run --scope --uid=dev --gid=dev -p MemoryMax=4G -p MemorySwapMax=0 venv/bin/python -m pytest tests/unit/test_amc_robustez_monte_carlo.py tests/unit/test_amc_restricao_combinador.py -q"
+  },
+  "frequencia_no_topo_esperada_analitica": {
+   "valor": 0.98,
+   "unidade": "fração dos sorteios",
+   "comando": "P(0,01 < w1 < 0,99) para a unidade (99, 99) contra (100, 0) e (0, 100), calculado à mão; medido 0,985 em 1.000 sorteios (banda de 5 desvios binomiais = ±0,0221). set -a; source /home/dev/plataforma/laco/var/trilha/provalocal.env; set +a; sudo -E systemd-run --scope --uid=dev --gid=dev -p MemoryMax=4G -p MemorySwapMax=0 venv/bin/python -m pytest tests/unit/test_amc_robustez_monte_carlo.py tests/unit/test_amc_restricao_combinador.py -q"
+  },
+  "faixa_de_posicao_estavel": {
+   "valor": {
+    "unidade_indiferente_ao_peso": 0.985,
+    "unidades_extremas": [
+     0.006,
+     0.009
+    ],
+    "corte_estavel": 0.95
+   },
+   "unidade": "frequência no top-1",
+   "comando": "a unidade cujo resultado não depende do peso fica estável (≥ 95 %) e as duas que dependem não ficam — separação de 6,8 desvios binomiais do corte, calculada à mão. set -a; source /home/dev/plataforma/laco/var/trilha/provalocal.env; set +a; sudo -E systemd-run --scope --uid=dev --gid=dev -p MemoryMax=4G -p MemorySwapMax=0 venv/bin/python -m pytest tests/unit/test_amc_robustez_monte_carlo.py tests/unit/test_amc_restricao_combinador.py -q"
+  },
+  "reproducao_bit_a_bit_mesma_semente": {
+   "valor": true,
+   "unidade": "bool",
+   "comando": "igualdade EXATA de float (np.array_equal) em minimo/media/maximo/desvio/frequencia_topk/frequencia_decil_superior/estavel/vetado em duas execuções com semente 20260917, e nos vetores de peso sorteados. set -a; source /home/dev/plataforma/laco/var/trilha/provalocal.env; set +a; sudo -E systemd-run --scope --uid=dev --gid=dev -p MemoryMax=4G -p MemorySwapMax=0 venv/bin/python -m pytest tests/unit/test_amc_robustez_monte_carlo.py tests/unit/test_amc_restricao_combinador.py -q"
+  },
+  "resposta_analitica_independente_da_semente": {
+   "valor": [
+    1,
+    7,
+    2026,
+    999983
+   ],
+   "unidade": "sementes conferidas",
+   "comando": "a média (50,0), o desvio zero da unidade indiferente e a frequência 0,98 aparecem com as quatro sementes — o número certo não é coincidência de uma semente escolhida a dedo. set -a; source /home/dev/plataforma/laco/var/trilha/provalocal.env; set +a; sudo -E systemd-run --scope --uid=dev --gid=dev -p MemoryMax=4G -p MemorySwapMax=0 venv/bin/python -m pytest tests/unit/test_amc_robustez_monte_carlo.py tests/unit/test_amc_restricao_combinador.py -q"
+  },
+  "testes_do_arquivo_novo": {
+   "valor": 10,
+   "unidade": "testes",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/provalocal.env; set +a; sudo -E systemd-run --scope --uid=dev --gid=dev -p MemoryMax=4G -p MemorySwapMax=0 venv/bin/python -m pytest tests/unit/test_amc_robustez_monte_carlo.py tests/unit/test_amc_restricao_combinador.py -q  → 20 passed (10 deste arquivo + 10 de test_amc_restricao_combinador.py)"
   }
  },
- "gerado_em": "2026-09-07T12:44:34Z",
- "git_sha": "31c7a4d11850"
+ "gerado_em": "2026-09-17T23:18:00Z",
+ "git_sha": "e9e2b1e3b1b4"
 }
