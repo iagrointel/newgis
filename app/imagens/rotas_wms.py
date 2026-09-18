@@ -312,6 +312,114 @@ def _get_map(auth, cur, p: dict[str, str]) -> Response:
     return Response(corpo, media_type=media, headers={"Cache-Control": CACHE_TILE})
 
 
+# ---------------------------------------------------------------------------- GetFeatureInfo (L1-02-g)
+FORMATOS_INFO_SAIDA = {
+    "application/json": "json", "application/geo+json": "json", "json": "json",
+    "text/plain": "texto", "text/plain; charset=utf-8": "texto",
+}
+
+
+def _valor_no_ponto(auth, item: str, x: float, y: float, crs: str, asset: str | None) -> list[float] | None:
+    """Valor por banda no ponto (x,y) do CRS dado. MESMO caminho de leitura do `identify` do ImageServer
+    (`rio_tiler.Reader.point`) e do `/ponto` — não existe um segundo motor de pixel aqui. `None` quando o
+    ponto cai fora do raster (o WMS responde com uma feição sem valor, nunca com erro)."""
+    import rasterio
+    from rio_tiler.errors import PointOutsideBounds
+    from rio_tiler.io import Reader
+
+    fonte, _ = _fonte_do_item(auth, item, _asset_padrao(None, asset or "cientifico"))
+    with rasterio.Env(session=fonte.sessao, **fonte.env):
+        with Reader(fonte.caminho, tms=tiles.TMS) as src:
+            try:
+                pt = src.point(x, y, coord_crs=tiles.CRS.from_user_input(crs))
+            except PointOutsideBounds:
+                return None
+            return [float(v) for v in pt.array.tolist()]
+
+
+def _get_feature_info(auth, cur, p: dict[str, str]) -> Response:
+    """OGC 06-042 §7.4. O pedido repete o GetMap (CRS/BBOX/WIDTH/HEIGHT) e acrescenta QUERY_LAYERS e o
+    pixel I,J contado a partir do canto SUPERIOR ESQUERDO da imagem (§7.4.3.7/7.4.3.8) — a conversão de
+    I,J para coordenada é feita aqui, nunca no motor de pixel."""
+    camadas = _camadas_visiveis(cur, auth)
+    nomes = [n for n in (p.get("QUERY_LAYERS") or "").split(",") if n]
+    if not nomes:
+        return _excecao("QUERY_LAYERS é obrigatório no GetFeatureInfo", "LayerNotQueryable")
+    faltando = [n for n in nomes if n not in camadas]
+    if faltando:
+        return _excecao(f"camada não definida neste serviço: {', '.join(faltando)}", "LayerNotDefined")
+    if len(nomes) > limites.WMS_CAMADAS_MAX:
+        return _excecao(f"QUERY_LAYERS acima do teto de {limites.WMS_CAMADAS_MAX} camadas")
+
+    crs_bruto = p.get("CRS") or p.get("SRS")
+    crs = wms_doc.normalizar_crs(crs_bruto)
+    if crs is None:
+        return _excecao(f"CRS não suportado: {crs_bruto!r} (aceitos: {', '.join(wms_doc.CRS_SUPORTADOS)})",
+                        "InvalidCRS")
+    bbox_bruto = _parse_bbox(p.get("BBOX"))
+    if bbox_bruto is None:
+        return _excecao("BBOX é obrigatório: quatro números separados por vírgula")
+    oeste, sul, leste, norte = wms_doc.bbox_do_parametro(crs, bbox_bruto)
+    if oeste >= leste or sul >= norte:
+        return _excecao(f"BBOX inválido (mínimo >= máximo depois de aplicar a ordem de eixo de {crs}): "
+                        f"{p.get('BBOX')!r}")
+    largura, altura = _parse_dim(p.get("WIDTH")), _parse_dim(p.get("HEIGHT"))
+    if largura is None or altura is None:
+        return _excecao("WIDTH e HEIGHT são obrigatórios e têm de ser inteiros positivos")
+    if largura > limites.WMS_LARGURA_MAX or altura > limites.WMS_ALTURA_MAX:
+        return _excecao(f"WIDTH×HEIGHT acima do teto ({largura}×{altura})")
+
+    try:
+        i, j = int(str(p.get("I")).strip()), int(str(p.get("J")).strip())
+    except (TypeError, ValueError):
+        return _excecao("I e J são obrigatórios e têm de ser inteiros (pixel na imagem do GetMap)",
+                        "InvalidPoint")
+    if not (0 <= i < largura and 0 <= j < altura):
+        return _excecao(f"I,J fora da imagem pedida ({i},{j} em {largura}x{altura})", "InvalidPoint")
+
+    formato = FORMATOS_INFO_SAIDA.get((p.get("INFO_FORMAT") or "application/json").strip().lower())
+    if formato is None:
+        return _excecao(f"INFO_FORMAT não suportado: {p.get('INFO_FORMAT')!r} "
+                        f"(aceitos: {', '.join(wms_doc.FORMATOS_INFO)})", "InvalidFormat")
+
+    # centro do pixel (I,J), com J crescendo para BAIXO: o topo da imagem é `norte`
+    x = oeste + (i + 0.5) * (leste - oeste) / largura
+    y = norte - (j + 0.5) * (norte - sul) / altura
+
+    feicoes = []
+    for nome in nomes:
+        try:
+            valores = _valor_no_ponto(auth, nome, x, y, crs, p.get("ASSET"))
+        except ErroAPI as e:
+            return _excecao(e.mensagem, status=e.status_code)
+        except Exception as e:  # noqa: BLE001 — leitura remota falhou: 502 nomeado, nunca 500 mudo
+            return _excecao(f"não foi possível ler o valor do pixel: {e}", status=502)
+        feicoes.append({
+            "type": "Feature", "id": f"{nome}.{i}.{j}",
+            "geometry": {"type": "Point", "coordinates": [x, y]},
+            "properties": (
+                {"camada": nome, "valor": "NoData", "bandas": None} if valores is None
+                else {"camada": nome, "valor": ",".join(str(v) for v in valores),
+                      "bandas": {f"banda_{n}": v for n, v in enumerate(valores, start=1)}}
+            ),
+        })
+
+    if formato == "texto":
+        linhas = []
+        for f in feicoes:
+            props = f["properties"]
+            linhas.append(f"{props['camada']}: {props['valor']}")
+        corpo_txt = "\n".join(linhas) + "\n"
+        return Response(corpo_txt, media_type="text/plain; charset=utf-8",
+                        headers={"Cache-Control": "no-store, must-revalidate"})
+    import json as _json
+
+    corpo = {"type": "FeatureCollection", "features": feicoes,
+             "crs": {"type": "name", "properties": {"name": crs}}}
+    return Response(_json.dumps(corpo, ensure_ascii=False), media_type="application/json",
+                    headers={"Cache-Control": "no-store, must-revalidate"})
+
+
 # ---------------------------------------------------------------------------- GetLegendGraphic (L1-02-f)
 def _get_legend_graphic(auth, cur, p: dict[str, str]) -> Response:
     camada = p.get("LAYER")
@@ -338,7 +446,7 @@ def _get_legend_graphic(auth, cur, p: dict[str, str]) -> Response:
 
 
 # ---------------------------------------------------------------------------- despacho KVP
-@router.get("/svc/{token}/wms", openapi_extra=X, summary="WMS 1.3.0 (GetCapabilities, GetMap e GetLegendGraphic)")
+@router.get("/svc/{token}/wms", openapi_extra=X, summary="WMS 1.3.0 (GetCapabilities, GetMap, GetFeatureInfo e GetLegendGraphic)")
 def wms_kvp(request: Request, token: str):
     auth = _autorizar(request, token)
     p = _kvp(request)
@@ -350,11 +458,13 @@ def wms_kvp(request: Request, token: str):
             return _get_capabilities(token, auth, cur)
         if operacao == "getmap":
             return _get_map(auth, cur, p)
+        if operacao == "getfeatureinfo":
+            return _get_feature_info(auth, cur, p)
         if operacao == "getlegendgraphic":
             return _get_legend_graphic(auth, cur, p)
     return _excecao(
-        f"REQUEST={p.get('REQUEST')!r} não suportado (use GetCapabilities, GetMap ou GetLegendGraphic; "
-        "GetFeatureInfo não está implementado nesta passagem)",
+        f"REQUEST={p.get('REQUEST')!r} não suportado (use GetCapabilities, GetMap, GetFeatureInfo ou "
+        "GetLegendGraphic)",
         "OperationNotSupported",
     )
 

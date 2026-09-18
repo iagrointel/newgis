@@ -131,9 +131,18 @@ def validar_corpo(corpo: dict) -> None:
         raise ErroAPI(422, "predefinicao_invalida",
                       "predefinição fora do esquema (docs/esquemas/renderizacao-v1.json)", erros)
     colormap = corpo.get("colormap")
-    if colormap and colormap not in tiles.COLORMAPS:
+    if isinstance(colormap, str) and colormap not in tiles.COLORMAPS:
         raise ErroAPI(422, "predefinicao_invalida", f"colormap desconhecido: {colormap}",
                       [{"campo": "colormap", "erro": "fora do catálogo do rio-tiler", "regra": "enum"}])
+    if isinstance(colormap, dict):
+        # tabela de cor EXPLÍCITA (item L1-02-f): o esquema já garantiu a forma e o teto de 256
+        # entradas; aqui se prova que ela de fato COMPILA no motor de render, para que a predefinição
+        # nunca seja gravada podendo quebrar só na hora de desenhar o ladrilho.
+        try:
+            tiles.colormap_de(colormap)
+        except tiles.ErroTile as e:
+            raise ErroAPI(422, "predefinicao_invalida", str(e),
+                          [{"campo": "colormap", "erro": str(e), "regra": "colormap_explicito"}]) from e
     esticamento = corpo.get("esticamento")
     if esticamento and esticamento.get("tipo") == "explicito" and not esticamento.get("faixas"):
         raise ErroAPI(422, "predefinicao_invalida", "esticamento explícito exige 'faixas'",
@@ -206,7 +215,7 @@ class Resolvido:
     versao: int | None
     bandas: list[int] | None
     expressao: str | None
-    colormap: str | None
+    colormap: "str | dict | None"  # nome do catálogo OU tabela de cor explícita (item L1-02-f)
     rescale: list[tuple[float, float]] | None
     nodata_transparente: bool
     opacidade: float
@@ -399,7 +408,9 @@ def renderizar_hillshade(
 
 
 # ---------------------------------------------------------------------------- legenda
-def _amostras_colormap(nome_colormap: str, faixa: tuple[float, float], n: int = 5) -> list[dict]:
+def _amostras_colormap(nome_colormap, faixa: tuple[float, float], n: int = 5) -> list[dict]:
+    if not isinstance(nome_colormap, str):
+        return _amostras_explicitas(nome_colormap)
     cm = tiles.colormaps.get(nome_colormap)
     lo, hi = faixa
     saida = []
@@ -409,6 +420,20 @@ def _amostras_colormap(nome_colormap: str, faixa: tuple[float, float], n: int = 
         rgba = cm.get(indice_255) or cm.get(min(cm.keys(), key=lambda k: abs(k - indice_255)))
         valor = lo + frac * (hi - lo)
         saida.append({"valor": round(valor, 4), "cor": "#%02x%02x%02x" % tuple(rgba[:3])})
+    return saida
+
+
+def _amostras_explicitas(colormap: dict) -> list[dict]:
+    """Legenda de tabela de cor explícita: cada entrada vira uma amostra, com o VALOR (ou o intervalo)
+    que a produz — a legenda sai da MESMA estrutura que pinta o pixel, nunca de uma segunda tabela."""
+    saida = []
+    if colormap["tipo"] == "valor":
+        for chave, cor in sorted(colormap["entradas"].items(), key=lambda kv: int(kv[0])):
+            saida.append({"valor": int(chave), "cor": "#%02x%02x%02x" % tuple(int(c) for c in cor[:3])})
+    else:
+        for faixa, cor in colormap["entradas"]:
+            saida.append({"valor": [float(faixa[0]), float(faixa[1])],
+                          "cor": "#%02x%02x%02x" % tuple(int(c) for c in cor[:3])})
     return saida
 
 
@@ -422,6 +447,12 @@ def legenda_json(resolvido: Resolvido) -> dict:
     if resolvido.hillshade:
         base["tipo"] = "relevo_sombreado"
         base["nota"] = "tons de cinza: 0 = sombra, 255 = voltado para o sol (azimute 315°, altitude 45°)"
+        return base
+    if isinstance(resolvido.colormap, dict):
+        base["tipo"] = "tabela_de_cor"
+        base["colormap"] = resolvido.colormap
+        base["faixa"] = list(resolvido.rescale[0]) if resolvido.rescale else None
+        base["amostras"] = _amostras_explicitas(resolvido.colormap)
         return base
     if resolvido.colormap and resolvido.rescale:
         base["tipo"] = "rampa"
@@ -458,6 +489,16 @@ def legenda_png(resolvido: Resolvido, *, largura: int = 240, altura: int = 56) -
         draw.text((5, 32), f"{amostras[0]['valor']}", fill=(0, 0, 0, 255))
         txt = f"{amostras[-1]['valor']}"
         draw.text((largura - 5 - 6 * len(txt), 32), txt, fill=(0, 0, 0, 255))
+    elif doc["tipo"] == "tabela_de_cor":
+        # tabela de cor explícita (L1-02-f): faixa DISCRETA, um retângulo por entrada, sem interpolar —
+        # interpolar entre classes desenharia uma cor que nenhuma classe tem.
+        amostras = doc["amostras"][:12]
+        larg = max(1, (largura - 10) // max(len(amostras), 1))
+        for i, a in enumerate(amostras):
+            cor = tuple(int(a["cor"][j:j + 2], 16) for j in (1, 3, 5))
+            draw.rectangle([5 + i * larg, 8, 5 + (i + 1) * larg - 1, 28], fill=(*cor, 255))
+        rotulo = str(amostras[0]["valor"]) if amostras else ""
+        draw.text((5, 32), rotulo, fill=(0, 0, 0, 255))
     elif doc["tipo"] == "relevo_sombreado":
         for i in range(largura - 10):
             v = round(255 * i / max(largura - 11, 1))

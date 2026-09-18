@@ -33,6 +33,7 @@ expiração, escopo insuficiente, Referer/IP fora da restrição e item de outro
 
 from __future__ import annotations
 
+import dataclasses
 import time
 from typing import Any
 
@@ -673,13 +674,22 @@ def _servir_composto(request: Request, auth, feicoes: list[dict], z: int, x: int
     if not feicoes:
         return Response(status_code=204, headers={"Cache-Control": CACHE_TILE})
     asset_final = _asset_padrao(expressao, asset)
+    quer_sem_nuvem = (metodo or "") in tiles.METODOS_SEM_NUVEM
     fontes = []
     for f in feicoes:
         try:
-            fonte, _ = _fonte_do_item(auth, f["id"], asset_final)
-            fontes.append(fonte)
+            fonte, stac_cena = _fonte_do_item(auth, f["id"], asset_final)
         except ErroAPI:
             continue
+        if quer_sem_nuvem:
+            # (L1-08) a máscara de nuvem é OUTRO asset da MESMA cena (`scl`); resolver pelo mesmo
+            # caminho garante o mesmo isolamento por inquilino do asset principal.
+            try:
+                mascara, _ = _fonte_do_item(auth, f["id"], mo.ASSET_MASCARA_NUVEM)
+                fonte = dataclasses.replace(fonte, mascara_nuvem=mascara)
+            except ErroAPI:
+                pass  # `ladrilho_composto` recusa a regra com mensagem nomeada, em vez de fingir
+        fontes.append(fonte)
     if not fontes:
         return Response(status_code=204, headers={"Cache-Control": CACHE_TILE})
     inicio = time.perf_counter()

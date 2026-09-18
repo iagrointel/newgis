@@ -112,6 +112,19 @@ def item_obter(cur, tenant_id: int, colecao_id: str, item_id: str) -> dict | Non
     return conteudo  # get_item devolve null (não erro) quando não existe
 
 
+def item_existe_no_tenant(cur, tenant_id: int, item_id: str) -> bool:
+    """L1-02-b: o item STAC `item_id` existe em ALGUMA coleção deste inquilino. Usado na criação de token
+    para validar `tiles:ler:<id-de-item-stac>` (escopo por lista). O filtro é o prefixo `<tenant_id>-` do
+    nome da coleção, a mesma regra de `colecoes_do_tenant` — item de outro inquilino nunca é confirmado."""
+    if not isinstance(item_id, str) or not item_id:
+        return False
+    cur.execute(
+        "SELECT collection FROM pgstac.items WHERE id = %s AND collection LIKE %s LIMIT 20",
+        (item_id, f"{tenant_id}-%"),
+    )
+    return any(colecao_pertence(r["collection"], tenant_id) for r in cur.fetchall())
+
+
 def item_apagar(cur, item_id: str, colecao: str) -> None:
     """`pgstac.delete_item` (ao contrário de `get_item`/`create_item`, que já trazem o schema na própria
     definição) resolve `items` SEM qualificar: depende do search_path de quem chama. Troca o search_path

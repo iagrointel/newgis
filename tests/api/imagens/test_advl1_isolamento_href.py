@@ -295,13 +295,11 @@ def test_legitimo_conferir_le_objeto_do_proprio_inquilino(conexao_plat_app, tena
 # antes mesmo de checar posse — o único jeito de dar a alguém acesso a UM item desses é `imagens:ler`
 # (todo o inquilino) ou `admin:inquilino` (tudo). Vocabulário, fora do escopo do conserto de isolamento
 # por href acima — fica xfail.
-@pytest.mark.xfail(strict=True, reason=(
-    "app/auth/escopos.py::ESCOPO só aceita tiles:ler:<uuid> em formato estrito 8-4-4-4-12; um item STAC "
-    "criado pela própria API de imagens (imagens:escrever) pode ter qualquer id de 1-256 caracteres "
-    "(app/imagens/pgstac.py::item_criar não exige UUID) — para esses itens 'escopo por lista' (L1-02-b) "
-    "é impossível: POST /api/tokens recusa por vocabulário antes de checar posse (achado do adversário "
-    "de linha L1, T9 16/09/2026)"
-))
+# REMEDIADO em 17/09/2026 (item L1-02-b): `ID_ITEM` em app/auth/escopos.py passou a aceitar id de item
+# STAC além do uuid, e `pgstac.item_existe_no_tenant` faz a checagem de posse na criação do token. O
+# `xfail(strict=True)` saiu daqui porque o defeito saiu do produto; o par que prova o conserto (recusa E
+# permissão legítima, escopo cruzado, item de outro inquilino) está em
+# tests/api/imagens/test_l102b_escopo_por_lista.py.
 def test_token_deveria_conseguir_escopo_por_item_com_id_nao_uuid(sessao_a, token_stac_a):
     c = _cliente()
     tok = token_stac_a["token"]

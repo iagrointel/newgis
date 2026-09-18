@@ -6,19 +6,106 @@
     "bandas": {
       "description": "bandas do asset, na ordem de saída (1-based); 1 banda = tabela de cor; 3-4 = composição RGB(A). Omitido = mesma regra padrão de hoje (3 primeiras bandas de um item com mais de 3).",
       "items": {
-        "type": "integer",
+        "maximum": 64,
         "minimum": 1,
-        "maximum": 64
+        "type": "integer"
       },
       "maxItems": 4,
       "minItems": 1,
       "type": "array"
     },
     "colormap": {
-      "description": "nome de uma rampa do catálogo do rio-tiler (GET /svc/<token>/raster/<item>/info.json lista os 211 nomes); só faz sentido com 1 banda de saída.",
-      "maxLength": 40,
-      "pattern": "^[a-z][a-z0-9_]*$",
-      "type": ["string", "null"]
+      "description": "duas formas (item L1-02-f): (a) NOME de uma rampa do catálogo do rio-tiler (string; GET /svc/<token>/raster/<item>/info.json lista os 211 nomes); (b) TABELA DE COR EXPLÍCITA, por VALOR discreto (`{\"tipo\":\"valor\",\"entradas\":{\"1\":[r,g,b,a], ...}}`, para raster temático como uso do solo ou o SCL) ou por INTERVALO (`{\"tipo\":\"intervalo\",\"entradas\":[[[min,max],[r,g,b,a]], ...]}`, para classe de declividade, faixa de NDVI etc.). Nas duas formas explícitas o teto é 256 entradas: uma tabela de cor de 70.000 entradas não é renderizável e é recusada com 422, não truncada em silêncio. Só faz sentido com 1 banda de saída. A tabela explícita é aplicada sobre o valor JÁ ESTICADO para 0-255 pelo `esticamento` (mesmo comportamento do colormap por nome, herdado do rio-tiler): declare os valores e intervalos nesse domínio, não no domínio bruto do pixel.",
+      "oneOf": [
+        {
+          "maxLength": 40,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "entradas": {
+              "additionalProperties": {
+                "description": "cor RGBA (0-255). Alfa omitido = 255 (opaco).",
+                "items": {
+                  "maximum": 255,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "maxItems": 4,
+                "minItems": 3,
+                "type": "array"
+              },
+              "maxProperties": 256,
+              "minProperties": 1,
+              "propertyNames": {
+                "pattern": "^(0|[1-9][0-9]{0,4})$"
+              },
+              "type": "object"
+            },
+            "tipo": {
+              "enum": [
+                "valor"
+              ]
+            }
+          },
+          "required": [
+            "tipo",
+            "entradas"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "entradas": {
+              "items": {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "items": {
+                      "type": "number"
+                    },
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "type": "array"
+                  },
+                  {
+                    "description": "cor RGBA (0-255). Alfa omitido = 255 (opaco).",
+                    "items": {
+                      "maximum": 255,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "maxItems": 4,
+                    "minItems": 3,
+                    "type": "array"
+                  }
+                ],
+                "type": "array"
+              },
+              "maxItems": 256,
+              "minItems": 1,
+              "type": "array"
+            },
+            "tipo": {
+              "enum": [
+                "intervalo"
+              ]
+            }
+          },
+          "required": [
+            "tipo",
+            "entradas"
+          ],
+          "type": "object"
+        }
+      ]
     },
     "descricao": {
       "maxLength": 500,
@@ -59,10 +146,17 @@
           "type": "number"
         },
         "tipo": {
-          "enum": ["minmax", "desvio_padrao", "percentil", "explicito"]
+          "enum": [
+            "minmax",
+            "desvio_padrao",
+            "percentil",
+            "explicito"
+          ]
         }
       },
-      "required": ["tipo"],
+      "required": [
+        "tipo"
+      ],
       "type": "object"
     },
     "nodata_transparente": {
@@ -79,7 +173,17 @@
     "resampling": {
       "default": "nearest",
       "description": "método de reamostro do rio-tiler/GDAL ao ler o COG na resolução do ladrilho/recorte pedido.",
-      "enum": ["nearest", "bilinear", "cubic", "cubic_spline", "lanczos", "average", "mode", "gauss", "rms"]
+      "enum": [
+        "nearest",
+        "bilinear",
+        "cubic",
+        "cubic_spline",
+        "lanczos",
+        "average",
+        "mode",
+        "gauss",
+        "rms"
+      ]
     },
     "titulo": {
       "maxLength": 200,
@@ -87,6 +191,8 @@
       "type": "string"
     }
   },
-  "required": ["titulo"],
+  "required": [
+    "titulo"
+  ],
   "type": "object"
 }

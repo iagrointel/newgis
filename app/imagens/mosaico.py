@@ -28,7 +28,12 @@ LIMITE_TILE_PADRAO = 6
 LIMITE_TILE_MAX = 12
 LIMITE_PEGADAS = 2000  # teto de segurança: uma busca larga não pagina infinito na resposta de pegadas
 PADRAO_HASH = re.compile(r"^[0-9a-f]{32}$")
-SELECOES_PIXEL = frozenset({"first", "last", "lowest", "highest", "mean", "median", "stdev"})
+# (L1-08, 17/09) `sem_nuvem` é a 5ª regra da hipótese do item ("mais recente sem nuvem"): a ordem por
+# data desc vem do `sortby`, e a regra APAGA o pixel que o SCL marca como nuvem antes de compor — ver
+# `app/imagens/tiles.py::_apagar_nuvem`. Exige asset `scl` em todas as cenas candidatas; sem ele a
+# leitura é recusada, nunca rebaixada para `first` em silêncio.
+SELECOES_PIXEL = frozenset({"first", "last", "lowest", "highest", "mean", "median", "stdev", "sem_nuvem"})
+ASSET_MASCARA_NUVEM = "scl"
 
 
 def validar_regras(corpo: dict[str, Any]) -> dict:
@@ -54,6 +59,78 @@ def validar_regras(corpo: dict[str, Any]) -> dict:
     if lock is not None and (not isinstance(lock, str) or not lock.strip() or len(lock) > 250):
         raise ErroAPI(422, "lock_invalido", "lock deve ser o id STAC de uma única cena")
     return {"sortby": sortby, "pixel_selection": selecao, "lock": lock}
+
+
+# --------------------------------------------------------------------- tradução Esri -> L1-08 (item L1-25)
+# `mosaicRule` do ArcGIS REST tem 7 métodos. Esta tabela é a única fonte de verdade de quais deles esta
+# plataforma ATENDE, e traduz cada um para o vocabulário do L1-08 (`SELECOES_PIXEL`/`sortby`/`lock`).
+# Os dois que faltam são declarados FORA com o motivo — não são aceitos e ignorados em silêncio.
+METODOS_ESRI = {
+    "esriMosaicNone": "nenhuma ordem imposta; a busca do mosaico decide (equivale ao sortby padrão)",
+    "esriMosaicLockRaster": "trava numa cena (lockRasterIds) — o `lock` do L1-08",
+    "esriMosaicAttribute": "ordena por atributo (sortField/sortValue) — o `sortby` do L1-08",
+    "esriMosaicCenter": "ordena pela distância ao centro do pedido — o `sortby` do L1-08 não tem esse "
+                        "critério geométrico; aceito como sinônimo de esriMosaicNone seria mentira",
+}
+METODOS_ESRI_FORA = {
+    "esriMosaicSeamline": "exige linha de costura construída (Build Seamlines); esta plataforma compõe "
+                          "pixel a pixel, sem seamline",
+    "esriMosaicViewpoint": "exige ponto de vista do cliente (Closest to Viewpoint); sem equivalente no L1-08",
+    "esriMosaicNorthwest": "ordem por canto noroeste; sem equivalente no L1-08",
+    "esriMosaicCenter": "Closest to Center: sem equivalente no L1-08 (a composição é por pixel, não por cena)",
+}
+# `mosaicOperation` do Esri -> `pixel_selection` do L1-08. MT_BLEND/MT_SUM não têm equivalente.
+OPERACOES_ESRI = {
+    "MT_FIRST": "first", "MT_LAST": "last", "MT_MIN": "lowest", "MT_MAX": "highest",
+    "MT_MEAN": "mean", "MT_MEDIAN": "median",
+}
+
+
+def traduzir_regra_esri(regra: dict[str, Any], itens_deste_servico: list[str]) -> dict[str, Any]:
+    """`mosaicRule` do ArcGIS -> regras do L1-08, LIMITADA aos métodos que existem aqui (item L1-25).
+
+    `itens_deste_servico` é a lista de ids que o serviço de fato serve (num ImageServer de ITEM é um id
+    só). `lockRasterIds` fora dessa lista é erro — é por aqui que a refutação do item ("lockRasterIds de
+    outro inquilino") é barrada, e não por uma checagem de tenant à parte: o serviço só conhece o que é
+    dele. Levanta `ErroAPI` com mensagem nomeada; nunca aceita e ignora."""
+    if not isinstance(regra, dict):
+        raise ErroAPI(400, "mosaic_rule_invalido", "mosaicRule tem de ser um objeto JSON")
+    metodo = regra.get("mosaicMethod", "esriMosaicNone")
+    if metodo in METODOS_ESRI_FORA:
+        raise ErroAPI(400, "mosaic_rule_fora_do_escopo",
+                      f"mosaicMethod {metodo!r} não é suportado por este serviço: {METODOS_ESRI_FORA[metodo]}")
+    if metodo not in METODOS_ESRI:
+        raise ErroAPI(400, "mosaic_rule_invalido",
+                      f"mosaicMethod {metodo!r} desconhecido; suportados: {', '.join(sorted(METODOS_ESRI))}")
+    saida: dict[str, Any] = {"lock": None, "sortby": None, "pixel_selection": None}
+    if metodo == "esriMosaicLockRaster":
+        ids = regra.get("lockRasterIds")
+        if not isinstance(ids, list) or not ids or not all(isinstance(i, str) for i in ids):
+            raise ErroAPI(400, "mosaic_rule_invalido",
+                          "esriMosaicLockRaster exige lockRasterIds: lista não vazia de ids de cena")
+        fora = [i for i in ids if i not in itens_deste_servico]
+        if fora:
+            raise ErroAPI(400, "mosaic_rule_fora_do_servico",
+                          "lockRasterIds cita cena que este serviço não serve",
+                          {"fora": fora[:5]})
+        if len(ids) > 1:
+            raise ErroAPI(400, "mosaic_rule_invalido",
+                          "o `lock` do L1-08 trava em UMA cena; lockRasterIds com mais de um id não é "
+                          "traduzível sem inventar ordem")
+        saida["lock"] = ids[0]
+    if metodo == "esriMosaicAttribute":
+        campo = regra.get("sortField")
+        if not isinstance(campo, str) or not campo.strip():
+            raise ErroAPI(400, "mosaic_rule_invalido", "esriMosaicAttribute exige sortField")
+        saida["sortby"] = [{"field": campo, "direction": "asc"}]
+    operacao = regra.get("mosaicOperation")
+    if operacao is not None:
+        if operacao not in OPERACOES_ESRI:
+            raise ErroAPI(400, "mosaic_rule_fora_do_escopo",
+                          f"mosaicOperation {operacao!r} não tem equivalente no L1-08; suportadas: "
+                          + ", ".join(sorted(OPERACOES_ESRI)))
+        saida["pixel_selection"] = OPERACOES_ESRI[operacao]
+    return saida
 
 
 def _validar_nome(nome: Any) -> str:
