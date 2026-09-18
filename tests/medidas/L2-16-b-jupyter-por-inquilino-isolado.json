@@ -40,8 +40,16 @@
    "valor": 1,
    "unidade": "segredo",
    "comando": "tests/api/test_notebooks.py::test_environ_so_tem_o_token lê /proc/1/environ do contêiner: o único segredo é PLAT_NOTEBOOK_TOKEN (token de serviço do usuário, escopos catalogo:ler+camada:ler, validade 1 d); nada de PLAT_SECRET, DSN, credencial de banco ou admin do Garage"
+  },
+  "trava_de_levantar_atravessa_processo": {
+   "valor": 1,
+   "unidade": "processos que passam de 2 concorrentes",
+   "comando": "tests/api/adversario/test_l2_16b_notebooks_trava_entre_processos.py (dois processos irmaos, acquire(timeout=0.01); antes de 18/09 passavam os dois, porque a trava era threading.Lock por processo e a unidade sobe com --workers 2)"
   }
  },
- "gerado_em": "2026-09-09T00:18:01Z",
- "git_sha": "9233f6e2c826"
+ "gerado_em": "2026-09-18T02:16:36Z",
+ "git_sha": "9233f6e2c826",
+ "nao_medido": {
+  "resto_da_suite_de_notebooks": "7 dos 10 testes de tests/api/test_notebooks.py deram erro em 18/09 por causa do REGISTRO docker: `docker pull busybox` devolve 502 Bad Gateway em registry-1.docker.io. E' condicao de rede da maquina, nao do codigo; 3 passaram (os que nao sobem conteiner)."
+ }
 }

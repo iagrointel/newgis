@@ -37,8 +37,6 @@ import sys
 import time
 from pathlib import Path
 
-import pytest
-
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
@@ -64,16 +62,12 @@ def _tenta_acquire(hold_s: float, fila: multiprocessing.Queue) -> None:
         contenedor._TRAVA.release()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "L2-16-b: ATIVOS_MAX=1 (app/notebooks/config.py) e a exclusão de 'levantar' é "
-        "threading.Lock() por processo (app/notebooks/contenedor.py::_TRAVA); deploy/plat-api.service "
-        "sobe a API com --workers 2 (dois processos), então dois pedidos concorrentes em workers "
-        "diferentes passam os dois pela seção crítica ao mesmo tempo — o teto de contêineres "
-        "simultâneos por RAM não é respeitado entre processos"
-    ),
-)
+# REMEDIADO (wt/l02, 18/09/2026): `_TRAVA` deixou de ser `threading.Lock()` e passou a ser
+# `TravaEntreProcessos`, um `flock` sobre um arquivo por instalacao. O recurso protegido e o docker do
+# HOST, entao a trava e do host: atravessa os `--workers 2` da unidade, e o nucleo a solta sozinho se o
+# processo dono morrer (uma trava gravada em tabela deixaria a fila presa nesse caso).
+# A interface continua a de threading.Lock, e este teste continua exercendo exatamente o que exercia:
+# dois processos irmaos tentando `acquire(timeout=0.01)` ao mesmo tempo, so um pode conseguir.
 def test_l2_16b_trava_de_ativos_max_nao_atravessa_processo():
     assert _confirma_workers_2_em_producao(), "premissa mudou: plat-api.service não sobe mais com --workers >= 2"
 
