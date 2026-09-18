@@ -32,7 +32,7 @@ def _mortas() -> list[str]:
     i = texto.find(TITULO)
     assert i >= 0, f"{RELATORIO.name} sem a seção '{TITULO}'; regenere com docs/gerar_cobertura_ui.py"
     bloco = texto[i:].split("\n## ")[0]
-    return [l for l in bloco.splitlines() if l.startswith("- `")]
+    return [linha for linha in bloco.splitlines() if linha.startswith("- `")]
 
 
 def test_relatorio_existe_e_tem_a_secao():

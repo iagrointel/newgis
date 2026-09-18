@@ -8,9 +8,8 @@ silencio.
 
 Os dois arquivos nasceram no mesmo dia, de dois agentes que receberam o mesmo item por erro de
 despacho do gerente. Ficaram os dois porque medem coisas diferentes, nao porque ninguem olhou.
-"""
 
-"""Item L3-04-restricoes — teste do COMBINADOR `app.amc.restricao.compor` (remediação de 17/09/2026:
+Item L3-04-restricoes — teste do COMBINADOR `app.amc.restricao.compor` (remediação de 17/09/2026:
 o combinador já existia; o que faltava era o teste do portão).
 
 Caso calculado à mão (números escritos aqui, nunca derivados do código sob teste):
