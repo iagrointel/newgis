@@ -418,6 +418,18 @@ def autenticado(
             raise ErroAPI(403, "sem_privilegio", f"a operação exige o privilégio {privilegio}", {"exigido": privilegio})
         return auth
 
+    # Etiqueta lida por app/portal/openapi.py::_escopo_da_dependencia para escrever `x-plat-escopo` em
+    # cada operação do OpenAPI. RESTAURADA em 18/09/2026: os três atributos tinham sumido (regressão da
+    # montagem de ramos, da mesma família de deposito.mapas_catalogo e bdgd.py), e sem eles o derivador
+    # não achava nada e caía no padrão `publico`. Medido antes do conserto: 952 de 958 operações do
+    # OpenAPI declaravam `x-plat-escopo: publico` — a documentação pública da API dizia que quase toda
+    # rota dispensa credencial, e a varredura adversarial do item L7-08-d, que pula o que é `publico`,
+    # tentava 6 rotas em vez das mais de 100 que o portão exige. O servidor sempre conferiu certo; a
+    # etiqueta é que mentia. Fica AQUI, e não escrita à mão em cada rota, para não haver o que
+    # sincronizar: é o mesmo argumento que a chamada usa.
+    dependencia.plat_escopo_token = escopo_token
+    dependencia.plat_so_sessao = so_sessao
+    dependencia.plat_superadmin = superadmin
     return Depends(dependencia)
 
 
