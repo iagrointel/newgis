@@ -375,6 +375,89 @@ def test_refutacao_chave_aberta_desconecta_e_zera_subrede(sessao_a, limpar_redes
     assert depois["subrede_codigo"] is None, depois
 
 
+def test_raiz_assumida_e_extremidade_de_fase_mais_larga(sessao_a, limpar_redes, env, ctx):
+    """Reproduz em miniatura a árvore de um alimentador radial real (tronco trifásico, ramais que só
+    estreitam para jusante) e trava a regra da raiz assumida:
+
+    1. a raiz cai na extremidade de grau 1 do lado da CABECEIRA (a cuja aresta incidente tem a fase mais
+       larga), nunca numa ponta de ramal — a regra anterior (grau 1 de menor id, arbitrária) partia com
+       frequência de uma folha monofásica e, como a propagação é a INTERSEÇÃO ao longo do caminho,
+       fixava a fase estreita no tronco inteiro: artefato que derrubou a concordância real medida para
+       ~70% (medida de 10/09, trilha il401datrib) sem inconsistência de cadastro correspondente;
+    2. propagando da cabeceira assumida, TODO trecho cadastro-consistente concorda com o FAS_CON declarado;
+    3. o trecho cadastro-INCONSISTENTE (fase C pendurada abaixo de um ramal só A — impossível fisicamente)
+       diverge, é gravado em `plat.rede_atributo_discrepancia` como candidato a erro de cadastro e NUNCA
+       tem o valor declarado corrigido em silêncio.
+    """
+    rid = _criar_rede(sessao_a, "raiz-fase", limpar_redes)
+    _importar_eletrica(sessao_a, rid)
+    tronco1 = _linha(sessao_a, rid, [[-44.00, -22.00], [-44.00, -21.99]])
+    tronco2 = _linha(sessao_a, rid, [[-44.00, -21.99], [-43.99, -21.99]])
+    lateral_a = _linha(sessao_a, rid, [[-43.99, -21.99], [-43.98, -21.99]])
+    lateral_ab = _linha(sessao_a, rid, [[-44.00, -21.99], [-44.01, -21.99]])
+    lateral_c = _linha(sessao_a, rid, [[-43.98, -21.99], [-43.97, -21.99]])
+    _habilitar(sessao_a, rid)
+
+    from app.rede_utilidades import atributos
+
+    con = _conectar(env, *ctx)
+    try:
+        with con.cursor() as cur:
+            for feicao, fase in ((tronco1, 7), (tronco2, 7), (lateral_a, 1), (lateral_ab, 3), (lateral_c, 4)):
+                cur.execute("UPDATE plat.rede_feicao_linha SET fase_bitmask = %s WHERE id = %s::uuid",
+                            (fase, feicao["id"]))
+        con.commit()
+
+        with con.cursor() as cur:
+            # grau de cada nó no grafo de MT, para identificar a extremidade de grau 1 do tronco1
+            # (a cabeceira: a outra ponta dele liga tronco2 e lateral_ab, grau 3)
+            cur.execute(
+                "SELECT a.origem_id, a.no_origem_id::text AS o, a.no_destino_id::text AS d "
+                "FROM plat.rede_topo_aresta a JOIN plat.rede_grupo g ON g.id = a.grupo_id "
+                "WHERE a.rede_id = %s::uuid AND g.codigo = 'trecho_de_media_tensao'",
+                (rid,))
+            grau = {}
+            pontas_tronco1 = None
+            for r in cur.fetchall():
+                grau[r["o"]] = grau.get(r["o"], 0) + 1
+                grau[r["d"]] = grau.get(r["d"], 0) + 1
+                if str(r["origem_id"]) == tronco1["id"]:
+                    pontas_tronco1 = (r["o"], r["d"])
+            cabeceira = next(n for n in pontas_tronco1 if grau[n] == 1)
+
+            raizes = atributos.raizes_assumidas_por_alimentador(cur, rid)
+            assert list(raizes.values()) == [cabeceira], (raizes, cabeceira, grau)
+
+            resumo = atributos.propagar_fase(cur, ctx[0], rid)
+        con.commit()
+
+        assert resumo["via_raiz"] == "raiz_assumida_por_alimentador", resumo
+        assert resumo["trechos_mt_alcancados"] == 5, resumo
+        assert resumo["concordantes"] == 4, resumo
+        assert resumo["discrepantes"] == 1, resumo
+
+        with con.cursor() as cur:
+            for feicao, fase_esperada in ((tronco1, 7), (tronco2, 7), (lateral_a, 1), (lateral_ab, 3)):
+                cur.execute("SELECT fase_propagada FROM plat.rede_topo_aresta WHERE origem_id = %s::uuid",
+                            (feicao["id"],))
+                assert cur.fetchone()["fase_propagada"] == fase_esperada, feicao
+
+            cur.execute(
+                "SELECT valor_declarado, valor_propagado FROM plat.rede_atributo_discrepancia d "
+                "JOIN plat.rede_topo_aresta a ON a.id = d.aresta_id "
+                "WHERE d.rede_id = %s::uuid AND a.origem_id = %s::uuid AND d.atributo_codigo = 'fase'",
+                (rid, lateral_c["id"]))
+            disc = cur.fetchone()
+            assert disc is not None and disc["valor_declarado"] == 4 and disc["valor_propagado"] == 0, disc
+
+            # o declarado NUNCA é corrigido em silêncio: a feição segue com o FAS_CON do cadastro
+            cur.execute("SELECT fase_bitmask FROM plat.rede_feicao_linha WHERE id = %s::uuid",
+                        (lateral_c["id"],))
+            assert cur.fetchone()["fase_bitmask"] == 4
+    finally:
+        con.close()
+
+
 def test_substituicao_troca_fase_declarada_por_regra(sessao_a, limpar_redes, env, ctx):
     rid = _criar_rede(sessao_a, "subst", limpar_redes)
     _importar_eletrica(sessao_a, rid)

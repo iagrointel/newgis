@@ -25,11 +25,12 @@ L4-01-b (`tests/dados/carga_bdgd.py`) só tem `ssdmt`/`ssdbt`/`ramlig`/`trafo`/`
 (`subestacao_de_distribuicao`, categoria `fonte`) nem chave de média tensão (categoria `seccionamento`) do
 pacote `eletrica-br` está no arquivo real da cooperativa de teste. Sem um nó de categoria `fonte` real, a
 propagação de fase e o recálculo de conectividade não têm de onde partir pela via "oficial" (nó com
-categoria `fonte`); a via de teste honesta, `raizes_assumidas_por_alimentador` (função deste módulo), usa a
-extremidade de grau 1 de CADA alimentador (coluna `ctmt`, já a junção usada pelo item anterior) como RAIZ
-ASSUMIDA — nunca chamada de "subestação" no código nem no relatório. Isso mede genuinamente a mecânica de
-propagação (BFS + substituição + discrepância) sobre a topologia real; não mede "o traçado achou a
-subestação certa", porque a subestação não está no arquivo.
+categoria `fonte`); a via de teste honesta, `raizes_assumidas_por_alimentador` (função deste módulo), usa
+como RAIZ ASSUMIDA de cada alimentador (coluna `ctmt`, já a junção usada pelo item anterior) a extremidade
+de grau 1 cuja aresta incidente tem o conjunto de fases MAIS LARGO — o lado da cabeceira num alimentador
+radial, onde as fases só estreitam para jusante — nunca chamada de "subestação" no código nem no relatório.
+Isso mede genuinamente a mecânica de propagação (BFS + substituição + discrepância) sobre a topologia
+real; não mede "o traçado achou a subestação certa", porque a subestação não está no arquivo.
 """
 
 from collections import defaultdict, deque
@@ -260,27 +261,41 @@ def _raizes_por_categoria_fonte(cur, rede_id: str) -> list[str]:
 
 
 def raizes_assumidas_por_alimentador(cur, rede_id: str) -> dict:
-    """Fallback de teste (fronteira declarada): para cada `ctmt` presente nas arestas de MT, a extremidade de
-    grau 1 de índice mais baixo (ordenação estável por id de nó) vira raiz assumida daquele alimentador —
-    NUNCA chamada de subestação. Devolve {ctmt: no_id}."""
+    """Fallback de teste (fronteira declarada): para cada `ctmt` presente nas arestas de MT, a raiz
+    assumida é a extremidade de grau 1 cuja ÚNICA aresta incidente tem o conjunto de fases MAIS LARGO
+    (maior popcount de `fase_bitmask`; desempate determinístico pelo id do nó) — NUNCA chamada de
+    subestação. Por que a fase mais larga e não qualquer extremidade de grau 1: num alimentador RADIAL o
+    conjunto de fases só ESTREITA da cabeceira para as pontas (um ramal monofásico deriva de um tronco
+    trifásico, nunca o contrário), então a extremidade de grau 1 do lado da cabeceira é a que tem mais
+    fases na aresta incidente; as demais extremidades de grau 1 são PONTAS de ramal. A regra anterior
+    (extremidade de grau 1 de menor id, arbitrária) escolhia com frequência uma ponta monofásica: como a
+    propagação de `propagar_fase` é a INTERSEÇÃO ao longo do caminho, partir de uma folha estreita fixa a
+    fase estreita no tronco inteiro a montante — artefato de medição que derrubava a concordância contra
+    FAS_CON para ~70% em escala real (medida de 10/09, trilha il401datrib), sem nenhuma inconsistência de
+    cadastro correspondente. Devolve {ctmt: no_id}."""
     cur.execute(
-        "SELECT a.no_origem_id::text AS o, a.no_destino_id::text AS d, a.atributos->>'ctmt' AS ctmt "
-        "FROM plat.rede_topo_aresta a JOIN plat.rede_grupo g ON g.id = a.grupo_id "
+        "SELECT a.no_origem_id::text AS o, a.no_destino_id::text AS d, a.atributos->>'ctmt' AS ctmt, "
+        "a.fase_bitmask FROM plat.rede_topo_aresta a JOIN plat.rede_grupo g ON g.id = a.grupo_id "
         "WHERE a.rede_id = %s::uuid AND g.codigo = 'trecho_de_media_tensao' AND a.no_origem_id IS NOT NULL",
         (rede_id,),
     )
     grau: dict[str, int] = defaultdict(int)
     por_ctmt: dict[str, set] = defaultdict(set)
+    fase_incidente: dict[str, int] = {}
     for r in cur.fetchall():
         grau[r["o"]] += 1
         grau[r["d"]] += 1
         por_ctmt[r["ctmt"]].add(r["o"])
         por_ctmt[r["ctmt"]].add(r["d"])
+        # num nó de grau 1 há exatamente UMA aresta incidente, então a última escrita é a certa;
+        # nos nós de grau maior o valor é sobrescrito e nunca lido.
+        fase_incidente[r["o"]] = r["fase_bitmask"] or 0
+        fase_incidente[r["d"]] = r["fase_bitmask"] or 0
     raizes = {}
     for ctmt, nos in por_ctmt.items():
-        grau1 = sorted(n for n in nos if grau[n] == 1)
+        grau1 = [n for n in nos if grau[n] == 1]
         if grau1:
-            raizes[ctmt] = grau1[0]
+            raizes[ctmt] = max(grau1, key=lambda n: ((fase_incidente.get(n) or 0).bit_count(), n))
     return raizes
 
 
