@@ -94,6 +94,39 @@ def sessao(env, api_jobs_disponivel):
 
 
 @pytest.fixture
+def job_terminal_semeado(env, sessao, api_jobs_disponivel):
+    """1 job terminal do próprio admin, semeado por plat.jobs_semear_demo (014) e apagado no fim pela marca
+    `semente_demo`. Numa base virgem (trilha recém-nascida) a lista abriria sem nenhuma linha e a asserção
+    "a lista abre populada" dependeria de sobra de outro teste — ordem de suíte não é pré-condição."""
+    _, tenant_id, usuario_id = sessao
+    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
+    try:
+        with con.cursor() as cur:
+            cur.execute("SET search_path = plat, public")
+            cur.execute(
+                "SELECT set_config('plat.tenant_id', %s, true), set_config('plat.usuario_id', %s, true), "
+                "set_config('plat.login', %s, true)",
+                (str(tenant_id), str(usuario_id), "admin"),
+            )
+            cur.execute("SELECT plat.jobs_semear_demo(%s, %s, %s::jsonb) AS n",
+                        (1, "prova.progresso", '{"duracao_s": 0, "passos": 1}'))
+            assert cur.fetchone()["n"] == 1
+        con.commit()
+        yield
+    finally:
+        with con.cursor() as cur:
+            cur.execute("SET search_path = plat, public")
+            cur.execute(
+                "SELECT set_config('plat.tenant_id', %s, true), set_config('plat.usuario_id', %s, true), "
+                "set_config('plat.login', %s, true)",
+                (str(tenant_id), str(usuario_id), "admin"),
+            )
+            cur.execute("DELETE FROM plat.job WHERE parametros->>'semente_demo' = 'true'")
+        con.commit()
+        con.close()
+
+
+@pytest.fixture
 def pagina(page, base_url, sessao):
     """página com o cookie de sessão, coleta de erros de console e de respostas ≥ 400."""
     token = sessao[0]
@@ -154,7 +187,7 @@ def confirmar_dialogo(page):
 
 # ---------------------------------------------------------------- testes
 
-def test_lista_progresso_ao_vivo_e_detalhe(pagina, base_url, medida):
+def test_lista_progresso_ao_vivo_e_detalhe(pagina, base_url, job_terminal_semeado, medida):
     page = pagina
     pronto_ms = abrir_tarefas(page)
     assert page.text_content("h1").strip() == "Tarefas"
@@ -212,6 +245,38 @@ def test_lista_progresso_ao_vivo_e_detalhe(pagina, base_url, medida):
     gravar("linha_nova_aparece_s", aparece_s, "s", "POST /api/jobs pela API até tr[data-id] na tela sem recarregar")
     gravar("progresso_valores_distintos", len(set(vistos)), "valores",
            "leituras distintas de .c-progresso .valor na linha durante o job de 60 s")
+
+
+def test_concluido_link_leva_ao_item_gerado(pagina, base_url):
+    """Portão: 'concluir e o link levar ao item'. Job REAL `ferramentas.buffer` (shapely + INSERT no catálogo;
+    não usa objeto/storage nem serviço externo, então roda em qualquer trilha): o worker grava no resultado o
+    item_id do item que ele mesmo criou, o detalhe mostra o link e o clique abre a ficha /conteudo/<id>."""
+    page = pagina
+    abrir_tarefas(page)
+    corpo = {"tipo": "ferramentas.buffer",
+             "parametros": {"geometria": {"type": "Point", "coordinates": [619000.0, 9955000.0]},
+                            "distancia_m": 150, "srid": 31983, "titulo": "e2e buffer tarefas"}}
+    r = page.request.post(f"{base_url}/api/jobs", data=corpo)
+    assert r.status == 201, f"POST /api/jobs → {r.status}: {r.text()}"
+    job = r.json()
+    page.wait_for_selector(f"#lista-corpo tr[data-id='{job['id']}']", timeout=25000)
+    esperar_estado(page, job["id"], "concluido", 60000)
+    fim = page.request.get(f"{base_url}/api/jobs/{job['id']}").json()
+    item_id = (fim.get("resultado") or {}).get("item_id")
+    assert item_id, fim
+
+    linha(page, job["id"]).click()
+    page.wait_for_selector("#detalhe[data-carregado='1']", timeout=15000)
+    link = page.locator("#detalhe-item")
+    assert link.is_visible(), "link 'abrir item' ausente num job concluído com resultado.item_id"
+    assert link.get_attribute("href") == f"/conteudo/{item_id}"
+    link.click()
+    page.wait_for_url(f"**/conteudo/{item_id}", timeout=15000)
+    page.wait_for_selector("body[data-pronto='1']", timeout=20000)
+    page.wait_for_selector("#painel dialog[open] #item-titulo", timeout=15000)
+    assert page.text_content("#painel dialog[open] #item-titulo").strip() == "e2e buffer tarefas"
+    page.screenshot(path=str(CAPTURAS / f"{ITEM}_link_item.png"), full_page=True)
+    conferir_limpo(page)
 
 
 def test_cancelar_pela_tela(pagina, base_url, medida):
@@ -385,6 +450,26 @@ def sessao_plataforma_e2e(env, api_jobs_disponivel):
 
     con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
     try:
+        # o inquilino técnico exige 2FA (politica.py: `exigir_2fa` forçado para 'plataforma', ADR 0002 seção 10)
+        # e o admin semeado pela trilha nasce sem TOTP — a sessão herdaria a pendência `configurar_2fa` e TODA
+        # rota fora de ROTAS_COM_PENDENCIA (inclusive /api/agendas) devolveria 403, saltando o portão. Marcar o
+        # TOTP como enrolado ANTES de criar a sessão é o estado real de um admin que concluiu a enrolação; o
+        # segredo é o vetor público de teste de TOTP e nunca é usado (a sessão entra por SECURITY DEFINER).
+        with con.cursor() as cur:
+            cur.execute("SET search_path = plat, public")
+            cur.execute("SELECT usuario_id, tenant_id FROM plat.auth_login(%s, %s)", ("plataforma", "admin"))
+            adm = cur.fetchone()
+            assert adm, "admin de plataforma não semeado (rode a trilha_ambiente.sh)"
+            cur.execute(
+                "SELECT set_config('plat.tenant_id', %s, true), set_config('plat.usuario_id', %s, true), "
+                "set_config('plat.login', %s, true)",
+                (str(adm["tenant_id"]), str(adm["usuario_id"]), "admin"),
+            )
+            cur.execute(
+                "UPDATE plat.usuario SET totp_ativo = true, totp_secret = 'JBSWY3DPEHPK3PXP' "
+                "WHERE id = %s AND NOT totp_ativo", (adm["usuario_id"],)
+            )
+        con.commit()
         r = jobs_sessao.criar_sessao(con, "plataforma", "admin")
         con.commit()
         return r
@@ -416,7 +501,10 @@ def test_tela_lista_os_periodicos_e_rodar_agora_admin_plataforma(pagina_platafor
     abrir_tarefas(page)
     if not page.locator("#agendas").is_visible():
         pytest.skip("seção de agendas oculta para este perfil")
-    for nome_p in ("expurgo diário", "sessões vencidas", "manutenção semanal", "lixeira diária", "versões diárias"):
+    # os nomes são os do registro vivo (app/catalogo/periodicos.py e irmãos): o de versões era "versões diárias"
+    # na 026 e hoje é "versões de hora em hora" — o teste confere o que o produto semeia, não o comentário velho
+    for nome_p in ("expurgo diário", "sessões vencidas", "manutenção semanal", "lixeira diária",
+                   "versões de hora em hora"):
         page.locator(f"#agendas-tabela tr:has-text('{nome_p}')").first.wait_for(timeout=10000)
     antes = page.request.get(f"{base_url}/api/jobs",
                              params={"tipo": "jobs.manutencao_analyze", "limite": 1}).json()["total"]
