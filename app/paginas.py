@@ -33,6 +33,8 @@ PAGINAS = {
     "/admin/inquilinos": "admin/inquilinos.html",
     # --- backup lógico por inquilino e ensaio de restauração (L0-06-backup-status)
     "/admin/backup": "admin/backup.html",
+    # --- taxa de acerto do cache de ladrilhos por dia, do log do nginx (L1-02-d)
+    "/admin/cache": "admin/cache.html",
     # --- medição de uso do inquilino contra as cotas (L0-07-c-cotas-uso)
     "/admin/uso": "admin/uso.html",
     # --- catálogo (L0-03)

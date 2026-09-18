@@ -1,0 +1,21 @@
+# Inventário da captura do portão e2e do item L1-02-d-cache-nginx-cdn-e-bancada-de-carga.
+#
+# Os PNG não entram no git (.gitignore: tests/e2e/capturas/*.png — o repositório não carrega imagem).
+# A prova é este inventário mais o teste que regenera tudo:
+#   set -a; source <env da trilha>; set +a
+#   openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/t.key -out /tmp/t.crt -days 2 \
+#     -subj /CN=127.0.0.1 -addext "subjectAltName=IP:127.0.0.1"
+#   PLAT_URL_PUBLICA=https://127.0.0.1:8177 venv/bin/python scripts/servir_local.py --porta 8177 \
+#     --cert /tmp/t.crt --chave /tmp/t.key &   # CSRF exige Origin == PLAT_URL_PUBLICA
+#   SSL_CERT_FILE=/tmp/t.crt bash /home/dev/plat-frota/laco/roda_teste.sh tests/e2e/test_l102d_cache.py \
+#     -q --base-url=https://127.0.0.1:8177
+# Quem quiser conferir roda o teste e compara nome, tamanho e sha256 desta lista (bytes/sha256 variam
+# a cada corrida: o dia da janela e as linhas do journal entram na imagem — os valores abaixo são da
+# corrida do relatório, 18/09/2026).
+#
+# admin_cache = /admin/cache logada como admin de demo: resumo com o marcador de estado da fonte
+#               (sem_linhas na trilha, que não tem journal plat_nginx) + janela e linhas lidas, e a
+#               tabela de dias com as cinco colunas (dia, acertos, sem acerto, fora do cache, taxa).
+#
+# nome  bytes  sha256
+L1-02-d_admin_cache.png  44218  dedda85b2ec2a1e44eb0ffc7093439096679f123457e84581d6c3d984029aeb6

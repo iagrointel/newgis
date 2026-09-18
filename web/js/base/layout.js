@@ -43,6 +43,7 @@ export const TELAS = [
   { caminho: '/admin/log', chave: 'nav.log', privilegio: 'org.log_ver', grupo: 'administracao' },
   { caminho: '/admin/organizacao', chave: 'nav.organizacao', privilegio: 'org.configurar', grupo: 'administracao' },
   { caminho: '/admin/backup', chave: 'nav.backup', privilegio: 'org.configurar', grupo: 'administracao' },
+  { caminho: '/admin/cache', chave: 'nav.cache', privilegio: 'org.configurar', grupo: 'administracao' },
   { caminho: '/admin/uso', chave: 'nav.uso', privilegio: 'org.configurar', grupo: 'administracao' },
 ];
 
