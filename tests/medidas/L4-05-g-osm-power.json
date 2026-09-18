@@ -1,16 +1,23 @@
 {
  "item": "L4-05-g-osm-power",
- "descricao": "Conector OpenStreetMap power=* para a rede de utilidades: código já existia no worktree (não commitado, escrito por um agente Kimi anterior); esta rodada terminou a fiação (modelos pydantic, registro da rota, teto de leitura em memória), corrigiu 3 bugs que impediam qualquer chamada de funcionar, escreveu o teste automatizado que faltava e provou cada cláusula do portão.",
- "extrato_de_teste": "tests/dados/taquari_power.osm (gerado por tests/dados/gerar_osm_power.py, sem baixar nada da internet: 2 vias, 6 nós tipados, 1 avulso, 1 trecho com ponta fora do recorte, 1 área de subestação, 1 relação power=*)",
+ "descricao": "Conector OpenStreetMap power=* para a rede de utilidades: código já existia no worktree (não commitado, escrito por um agente Kimi anterior); a rodada 2 terminou a fiação (modelos pydantic, registro da rota, teto de leitura em memória), corrigiu 3 bugs que impediam qualquer chamada de funcionar, escreveu o teste automatizado que faltava e provou cada cláusula do portão (commit e8917912). A rodada 3 (trilha l405gosd4b8) achou o item ainda refutado porque a junção wt/l4d trocou a unicidade de plat.rede_aresta e o conector ficou com o ON CONFLICT velho: corrigido em 19639903, que também fecha a cláusula literal do .pbf.",
+ "rodada_3": {
+  "estado_ao_abrir": "refutado, tentativas 2: os 6 testes da rodada 2 passavam na trilha f405g, mas 3 falhavam aqui -- o ramo tinha mergulhado a junção wt/l4d (migração 20260907T1530_rede_aresta_codigo_por_tipo.sql)",
+  "causa_raiz": "psycopg2.errors.InvalidColumnReference: there is no unique or exclusion constraint matching the ON CONFLICT specification -- plat.rede_aresta passou a UNIQUE (rede_id, tipo_id, codigo_externo) e osm_power.py:_gravar_arestas ainda dizia ON CONFLICT (rede_id, codigo_externo). bdgd.py:557 e matpower_importar.py:159 foram atualizados na época da migração; osm_power.py ficou para trás por existir só no ramo do item. Conserto de 1 linha, sha 19639903.",
+  "pbf_literal": "a cláusula 'a partir do .pbf existente' agora roda no formato binário de verdade: tests/dados/taquari_power.osm.pbf (osmium cat do extrato sintético, 562 bytes; osmium tags-filter nwr/power | wc -l = 20 nos dois formatos) e test_importa_um_municipio_e_confere_a_topologia parametrizado [osm-xml, pbf]. O único .pbf real da casa, osrm/guarulhos.osm.pbf (extrato de RUAS para o OSRM), tem 0 feições power=* (tags-filter | wc -l = 0): não serve de fonte para esta cláusula.",
+  "comando": "set -a; source /home/dev/plat-frota/laco/var/trilha/l405gosd4b8.env; set +a; bash /home/dev/plat-frota/laco/roda_teste.sh tests/api/test_rede_osm.py",
+  "resultado": "7 passed in 23.57s (6 casos da rodada 2 + a variante [pbf] do teste de topologia)"
+ },
+ "extrato_de_teste": "tests/dados/taquari_power.osm (gerado por tests/dados/gerar_osm_power.py, sem baixar nada da internet: 2 vias, 6 nós tipados, 1 avulso, 1 trecho com ponta fora do recorte, 1 área de subestação, 1 relação power=*) + o gêmeo binário tests/dados/taquari_power.osm.pbf (rodada 3)",
  "bugs_consertados": [
-  {"onde": "app/rede_utilidades/osm_power.py:_tipos_mapa", "erro": "ValueError: not enough values to unpack (misturava tuplas de 2 e 3 posições de MAPA_VIA/MAPA_NO/MAPA_AREA no mesmo set comprehension)", "sha_do_conserto": "pendente-commit"},
-  {"onde": "app/rede_utilidades/osm_power.py:_Importador.rodar", "erro": "FileNotFoundError cru (não ErroOsm) quando o caminho do extrato não existe: sha256_arquivo() era chamado antes de qualquer checagem de existência", "sha_do_conserto": "pendente-commit"},
-  {"onde": "app/schema_ambiente.py:CursorSchemaAmbiente.execute", "erro": "psycopg2.extras.execute_values monta a consulta em BYTES; o reescritor de schema só tratava str, então TODO insert em lote (rede_no/rede_aresta, usado por bdgd.py e por este conector) ia sempre para o schema plat de produção em vez do schema da trilha -- 'permission denied for schema plat' em qualquer ambiente isolado", "sha_do_conserto": "pendente-commit"}
+  {"onde": "app/rede_utilidades/osm_power.py:_tipos_mapa", "erro": "ValueError: not enough values to unpack (misturava tuplas de 2 e 3 posições de MAPA_VIA/MAPA_NO/MAPA_AREA no mesmo set comprehension)", "sha_do_conserto": "e8917912"},
+  {"onde": "app/rede_utilidades/osm_power.py:_Importador.rodar", "erro": "FileNotFoundError cru (não ErroOsm) quando o caminho do extrato não existe: sha256_arquivo() era chamado antes de qualquer checagem de existência", "sha_do_conserto": "e8917912"},
+  {"onde": "app/schema_ambiente.py:CursorSchemaAmbiente.execute", "erro": "psycopg2.extras.execute_values monta a consulta em BYTES; o reescritor de schema só tratava str, então TODO insert em lote (rede_no/rede_aresta, usado por bdgd.py e por este conector) ia sempre para o schema plat de produção em vez do schema da trilha -- 'permission denied for schema plat' em qualquer ambiente isolado", "sha_do_conserto": "e8917912"}
  ],
  "clausulas": [
   {
    "clausula": "importar power=* de 1 município a partir do .pbf existente (osm_raw da cooperativa de teste) -> rede com topologia",
-   "prova": "tests/api/test_rede_osm.py::test_importa_um_municipio_e_confere_a_topologia -- 1 município sintético (Taquari-RS, limite oficial IBGE), 4 trechos e 2 fixações realmente gravados em plat.rede_no/rede_aresta/rede_associacao (conferido por SELECT direto, não só pelo JSON da resposta)",
+   "prova": "tests/api/test_rede_osm.py::test_importa_um_municipio_e_confere_a_topologia[osm-xml] e [pbf] -- 1 município sintético (Taquari-RS, limite oficial IBGE), 4 trechos e 2 fixações realmente gravados em plat.rede_no/rede_aresta/rede_associacao (conferido por SELECT direto, não só pelo JSON da resposta), nos DOIS formatos do extrato (XML e o binário .pbf da cláusula)",
    "comando": "set -a; source laco/var/trilha/f405g.env; set +a; venv/bin/pytest tests/api/test_rede_osm.py -q -p no:cacheprovider",
    "resultado": "PASS"
   },
