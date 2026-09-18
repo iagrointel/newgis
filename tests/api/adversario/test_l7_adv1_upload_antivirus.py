@@ -29,15 +29,9 @@ def _token(sessao_a, nome):
     return sessao_a.post("/api/tokens", json={"nome": nome, "escopos": ["admin:inquilino"]}).json()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "app/varredura_conteudo.py (módulo que atende POST /api/arquivos) não define endereco_clamd nem "
-        "qualquer integração com clamd — PLAT_CLAMD em app/settings.py é configuração morta (achado "
-        "transversal nº 1 do laudo L7 parte 1). A alegação do ledger de L7-03-a-antivirus-upload de um "
-        "'MotorClamd INSTREAM opcional' não corresponde a código nenhum em wt/uniao."
-    ),
-)
+# CONSERTADO (medido em 18/09/2026: este teste vinha dando XPASS(strict), ou seja, reprovava a suíte
+# pela marca velha e não pelo defeito). A integração com clamd existe em app/varredura_conteudo.py e
+# PLAT_CLAMD deixou de ser configuração morta. A marca xfail saiu; o motivo original fica como registro.
 def test_modulo_de_varredura_conhece_endereco_do_clamd():
     assert hasattr(varredura, "endereco_clamd"), (
         "app.varredura_conteudo não tem endereco_clamd — não há integração com ClamAV no código integrado"
@@ -87,15 +81,9 @@ def test_anexo_html_e_aceito_para_servir_com_sandbox_nao_rejeitado(cliente, sess
         sessao_a.delete(f"/api/tokens/{tok['id']}")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "não existe tabela de tipos permitidos por CLASSE de rota em app/varredura_conteudo.py — só a "
-        "tabela global TIPOS_PERMITIDOS. POST /api/arquivos?classe=foto_campo deveria recusar "
-        "application/octet-stream (415, motor politica_de_rota) e hoje aceita (201). Item "
-        "L7-03-a-antivirus-upload."
-    ),
-)
+# CONSERTADO (medido em 18/09/2026: XPASS(strict), mesma situação do teste do clamd acima). A tabela de
+# tipos permitidos por CLASSE de rota existe e POST /api/arquivos?classe=foto_campo recusa
+# application/octet-stream com 415. A marca xfail saiu; o motivo original fica como registro.
 def test_tipo_fora_da_lista_da_rota_e_recusado(cliente, sessao_a):
     tok = _token(sessao_a, "zt-l7adv1-rota")
     try:
