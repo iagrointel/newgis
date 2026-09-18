@@ -243,6 +243,8 @@ def test_medida_kva_a_jusante_contra_o_arquivo(cred, env):
     finally:
         if con is not None:
             con.close()
-        MEDIDAS.parent.mkdir(parents=True, exist_ok=True)
-        MEDIDAS.write_text(json.dumps(medida, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        # ponytail: skip (sem ativo de referência na trilha) não pode apagar a medida já gravada
+        if medida["clausulas"]:
+            MEDIDAS.parent.mkdir(parents=True, exist_ok=True)
+            MEDIDAS.write_text(json.dumps(medida, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         cliente.delete(f"/api/rede/{rid}")
