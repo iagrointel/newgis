@@ -1,15 +1,20 @@
 {
   "barreira": true,
   "chave_aberta_interrompe_travessia": true,
-  "frontend_clique_tabela_e2e": "NAO_CUMPRIDA: nao existe front-end de rede de utilidades no repositorio (sem web/ sob rede_utilidades) para acoplar clique, tabela lateral e captura e2e; a API do item esta completa e testada",
+  "frontend_clique_tabela_e2e": "NAO_CUMPRIDA: nao existe integracao de tracado com o mapa no repositorio — a tela /redes/tracado (web/js/rede/tracado.js, item L4-02-f) e formulario + tabela, sem mapa, e nenhum modulo de mapa chama POST /api/rede/{id}/tracar a partir de clique; a API devolve a geometria agregada pronta para pintar",
   "loop_nao_duplica_e_termina": true,
   "p95_tracar_maior_alimentador": {
-    "carga_1min": 18.24,
+    "carga_1min": 3.23,
     "medido": false,
-    "motivo": "carga_1min=18.24 acima de 8 (regra do brief: não medir tempo sob disputa)",
-    "ram_livre_gb": 7.0
+    "motivo": "PLAT_REDE_REFERENCIA_ESQUEMA nao definido nesta trilha: o ativo BDGD de referencia (139.542 elementos) nao existe em nenhum banco alcancavel deste servidor (conferido: nenhum banco local tem ssdmt/ssdbt/ramlig/trafo/ponnot); o teste pula declarando essa razao",
+    "ram_livre_gb": 47.0
   },
   "pgrouting_instalada": true,
+  "pgrouting_versao": {
+    "instalada": "3.6.1",
+    "exigida_pelo_portao": "4.0.1",
+    "motivo_divergencia": "Postgres 16 deste servidor vem do Ubuntu noble, que so publica postgresql-16-pgrouting 3.6.1-1; subir para 4.0.1 exigiria compilar de fonte e trocar biblioteca de sistema em servidor compartilhado com cliente pagante (proibido pelas regras duras). pgr_connectedComponents, usada pelo tracado, tem a mesma assinatura desde a 3.0."
+  },
   "ponto_de_partida_por_coordenada": true,
   "ponto_de_partida_por_terminal_explicito": true,
   "rede_sintetica_12_nos": {
@@ -21,6 +26,6 @@
   "transformador_e_fronteira_de_subrede": true,
   "tres_clientes_simultaneos": {
     "medido": false,
-    "motivo": "carga_1min=18.24 acima de 8 (regra do brief: não medir sob disputa)"
+    "motivo": "mesma dependencia do ativo de referencia: PLAT_REDE_REFERENCIA_ESQUEMA nao definido, teste pula"
   }
 }
