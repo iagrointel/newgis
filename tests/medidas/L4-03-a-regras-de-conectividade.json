@@ -1,9 +1,9 @@
 {
  "item": "L4-03-a-regras-de-conectividade",
- "assinado_por": "gerente (rebase e prova do trabalho do agente Kimi K3, turno T4, handoff laco/handoffs/T4/L4-03-a-regras-de-conectividade.md)",
- "gerado_em": "2026-09-07T01:55:00Z",
- "git_sha": "ac7da355c84c6534fef98bce05e5a3552e935ea7",
- "maquina": "12 vCPU, 23 GB RAM (574 MiB livres no momento da prova, swap 7,8/8,0 GiB), disco / a 94%; PostgreSQL 16 em iagro_sat; base própria da trilha (schema plat_tf403, laco/trilha_ambiente.sh f403 com FONTE=wt/il403aregra), com outras sessões da casa na mesma máquina",
+ "assinado_por": "construtor (re-restauração do trabalho do turno 4 — apagado de master por cadeia de fusões — mais o conserto de duas colisões novas da mesma família, 18/09)",
+ "gerado_em": "2026-09-18T02:21:51Z",
+ "git_sha": "d1b0e773e8a399124be845a057289ac88c18da49",
+ "maquina": "frota remota (Hetzner); PostgreSQL 16 remoto, base própria da trilha (schema plat_tl403areeccf, laco/trilha_ambiente.sh l403areeccf com FONTE=wt/l403areeccf); migrações aplicadas com PLAT_DB_HOST=127.0.0.1 PLAT_DB=plat_trilhas (a .env da trilha não carrega as variáveis de admin — sem elas o script cai num schema local obsoleto e falha na migração 021)",
  "medidas": {
   "pacote_eletrica_br_regras": {
    "valor": 58,
@@ -17,12 +17,12 @@
    "comando": "Counter(r['tipo'] for r in regras) sobre app/rede_utilidades/pacotes/eletrica-br.json"
   },
   "pacote_eletrica_br_bytes": {
-   "valor": 108260,
+   "valor": 108569,
    "unidade": "bytes",
    "comando": "wc -c app/rede_utilidades/pacotes/eletrica-br.json"
   },
   "pacote_eletrica_br_sha256": {
-   "valor": "17bad527b2985864040bec12ccb955cb3a532f613b71e031f02e31a0a67cacb5",
+   "valor": "81aa7ca357c42cdd4c0354df5de1ada061cb29a33e58a203428a546059de4776",
    "unidade": "hex",
    "comando": "sha256sum app/rede_utilidades/pacotes/eletrica-br.json"
   },
@@ -30,21 +30,21 @@
    "valor": 34,
    "unidade": "casos pytest",
    "portao": ">= 20",
-   "comando": "venv/bin/pytest tests/unit/test_regras_motor.py tests/api/test_regras_conectividade.py tests/api/test_regras_csv.py --collect-only -q -p no:cacheprovider"
+   "comando": "set -a; source /home/dev/plat-frota/laco/var/trilha/l403areeccf.env; set +a && bash /home/dev/plat-frota/laco/roda_teste.sh tests/unit/test_regras_motor.py tests/api/test_regras_conectividade.py tests/api/test_regras_csv.py -q   →   34 pontos [100%], rc=0 (a linha de contagem final é engolida pelo wrapper systemd-run; a prova é a linha de pontos mais o código de saída)"
   },
   "suite_do_item_e_regressao_vizinha": {
    "valor": 92,
    "unidade": "casos pytest, 0 falhas",
-   "comando": "set -a; source laco/var/trilha/f403.env; set +a; timeout 900 venv/bin/pytest tests/unit/test_regras_motor.py tests/unit/test_rede_pacote_formato.py tests/api/test_rede_pacote.py tests/api/test_rede_pacote_conserto_a1_a4.py tests/api/test_fk_composta_por_inquilino.py tests/api/test_regras_conectividade.py tests/api/test_regras_csv.py -q -p no:cacheprovider"
+   "comando": "set -a; source /home/dev/plat-frota/laco/var/trilha/l403areeccf.env; set +a && bash /home/dev/plat-frota/laco/roda_teste.sh tests/unit/test_rede_pacote_formato.py tests/api/test_rede_pacote.py tests/api/test_rede_pacote_conserto_a1_a4.py tests/api/test_rede_pacote_adversario.py -q   →   58 pontos [100%], rc=0 (58 + os 34 da medida testes_dedicados_do_item = 92)"
   },
   "rotas_de_escrita_de_rede": {
-   "valor": {"total": 7, "rede.editar": 5, "rede.administrar": 2},
+   "valor": {"total": 52, "rede.editar": 43, "rede.administrar": 3, "rede.medir": 2, "conteudo.criar": 1, "rls:visibilidade": 3},
    "unidade": "rotas HTTP",
-   "comando": "app.main.app.openapi() filtrado por /api/rede e método post/put/patch/delete"
+   "comando": "app.main.app.openapi() filtrado por /api/rede e método post/put/patch/delete; as 3 de rls:visibilidade são os POSTs de CÁLCULO de traçado (não gravam nada do inquilino) — contrato codificado em test_toda_rota_de_escrita_de_rede_exige_editar_ou_administrar_no_openapi_e_na_pratica"
   },
   "lint": {
    "valor": "0 erros nos arquivos do item",
-   "comando": "venv/bin/ruff check app/rede_utilidades/rotas_regras.py app/rede_utilidades/regras.py app/rede_utilidades/regras_csv.py app/rede_utilidades/deposito.py app/rede_utilidades/modelos.py app/rede_utilidades/rotas.py"
+   "comando": "venv/bin/ruff check app/rede_utilidades/ tests/api/test_regras_conectividade.py tests/api/test_regras_csv.py tests/unit/test_regras_motor.py tests/api/test_rede_pacote_conserto_a1_a4.py tests/api/test_rede_pacote_adversario.py"
   }
  },
  "cobertura_do_portao": {
