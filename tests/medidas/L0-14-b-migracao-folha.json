@@ -2,17 +2,17 @@
  "item": "L0-14-b-migracao-folha",
  "medidas": {
   "telas_migradas_neste_ramo": {
-   "valor": 24,
+   "valor": 32,
    "unidade": "telas",
    "comando": "tests/e2e/telas_migracao.json, campo estado=migrada (o mesmo manifesto que o e2e percorre)"
   },
   "telas_ainda_na_folha_antiga": {
-   "valor": 39,
+   "valor": 31,
    "unidade": "telas",
    "comando": "grep '/static/style.css' em web/**/*.html; e a MESMA contagem de tests/unit/test_estilo_tokens.py::test_e_catraca_da_migracao_de_folha_nao_pode_crescer"
   },
   "catraca_no_codigo": {
-   "valor": 39,
+   "valor": 31,
    "unidade": "telas",
    "comando": "TELAS_NA_FOLHA_ANTIGA em tests/unit/test_estilo_tokens.py (o teste reprova se a contagem real for diferente, para cima ou para baixo)"
   },
@@ -22,12 +22,12 @@
    "comando": "tests/e2e/telas_migracao.json, campo estado=deixada_para_tras, com o motivo no campo `motivo`: nenhuma"
   },
   "arvore_identica_antes_e_depois": {
-   "valor": "26 de 26",
+   "valor": "37 de 37",
    "unidade": "telas",
    "comando": "tests/e2e/compara_migracao.py: impressao digital tag#id.classe de cada elemento, em ordem de documento, nas duas fases. Troca de folha nao mexe em estrutura"
   },
   "elementos_conferidos": {
-   "valor": 4431,
+   "valor": 10325,
    "unidade": "elementos de DOM",
    "comando": "soma dos elementos da impressao digital das telas medidas (tema escuro)"
   },
@@ -62,7 +62,7 @@
    "comando": "axe-core 4.12.1 (color-contrast, aria-allowed-attr, button-name, link-name, label) pelo apoio_axe, antes e depois; conta regra que aparece so no depois"
   },
   "capturas_no_inventario": {
-   "valor": 104,
+   "valor": 148,
    "unidade": "PNG",
    "comando": "tests/e2e/capturas/INVENTARIO_MIG.txt (sha256 e bytes de cada uma). As PNG nao entram no git; o que fica versionado e o inventario e o script que regenera"
   }
@@ -108,10 +108,26 @@
     "visualizar"
    ],
    "reprovas": []
+  },
+  "4": {
+   "telas": [
+    "admin_inquilinos",
+    "analise",
+    "colecao",
+    "coleta",
+    "conteudo",
+    "conteudo_lixeira",
+    "estilo",
+    "estilo_guia",
+    "importacoes",
+    "painel",
+    "versoes"
+   ],
+   "reprovas": []
   }
  },
- "gerado_em": "2026-09-18T01:34:28Z",
- "git_sha": "25b9e62e2db9",
+ "gerado_em": "2026-09-18T01:41:50Z",
+ "git_sha": "95966e975d71",
  "assinado_por": "construtor (migracao da folha antiga web/style.css; continuacao do item L0-14-identidade-visual, ramo wt/telas)",
  "maquina": "chromium do PLAYWRIGHT (~/.cache/ms-playwright), 1280x800, locale pt-BR, dois temas. NUNCA conter memoria com `ulimit -v` (o Chromium morre com SIGTRAP: enderecamento virtual nao e memoria) - o teto vai em systemd-run --scope -p MemoryMax=. Base de dados: schema de TRILHA plat_ttelas (laco/trilha_ambiente.sh telas), nunca o schema `plat` de producao.",
  "capturas": "tests/e2e/capturas/MIG_<tela>_{antes,depois}_{escuro,claro}.png, regeneraveis por `bash tests/e2e/regerar_capturas_migracao.sh <leva>`"

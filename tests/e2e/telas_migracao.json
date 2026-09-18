@@ -320,7 +320,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "painel",
@@ -334,7 +334,7 @@
    "pesada": false,
    "rota_com_parametro": true,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "estilo_guia",
@@ -348,7 +348,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "colecao",
@@ -362,7 +362,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "versoes",
@@ -376,7 +376,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "admin_inquilinos",
@@ -390,7 +390,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "importacoes",
@@ -404,7 +404,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "analise",
@@ -418,7 +418,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "status",
