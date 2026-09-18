@@ -333,12 +333,10 @@ def test_banner_de_aviso_e_saneado(sessao_a):
 
 
 # ================================================================ L0-11 — saúde obrigatória
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G4-19 (L0-11): o portão diz '/saude marca garage como obrigatório a partir deste item'. "
-           "app/saude.py decide o status só pelo banco (linha 79: 200 if banco == 'ok' else 503); com o Garage "
-           "inalcançável a plataforma continua respondendo 200 e 'saudável'.",
-)
+# 18/09/2026: a marca xfail(strict=True) saiu porque o teste PASSA — rodado isolado na trilha `uniao`.
+# O achado G4-19 (L0-11) dizia que app/saude.py decidia o status só pelo banco e devolvia 200 com o
+# Garage fora. Hoje a sonda do Garage entra na decisão e a rota reprova, como o portão exige.
+# O texto que vem abaixo (docstring/nome) descreve o achado ORIGINAL, não o estado de hoje.
 def test_saude_reprova_quando_o_garage_esta_fora(cliente, monkeypatch):
     from app import saude as mod
 

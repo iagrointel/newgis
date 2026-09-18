@@ -57,14 +57,10 @@ def test_make_manual_existe_como_alvo():
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "`make videos` não existe como alvo do Makefile (`make -n videos` -> 'No rule to make "
-        "target'); o portão literal de L7-04-d-videos-por-tarefa cita exatamente esse comando "
-        "como o que precisa produzir >= 10 vídeos."
-    ),
-)
+# 18/09/2026: a marca xfail(strict=True) saiu porque o teste PASSA — rodado isolado na trilha `uniao`.
+# Consertado em 52e28ffa4 ("fix(makefile): restaura os alvos `videos`/`videos-validar`", item L7-04-d).
+# As marcas dos outros dois testes deste arquivo CONTINUAM: aqueles alvos ainda faltam.
+# O texto que vem abaixo (docstring/nome) descreve o achado ORIGINAL, não o estado de hoje.
 def test_make_videos_existe_como_alvo():
     resultado = _make_dry_run("videos")
     assert resultado.returncode == 0, (

@@ -29,15 +29,11 @@ def _token(sessao_a, nome):
     return sessao_a.post("/api/tokens", json={"nome": nome, "escopos": ["admin:inquilino"]}).json()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "app/varredura_conteudo.py (módulo que atende POST /api/arquivos) não define endereco_clamd nem "
-        "qualquer integração com clamd — PLAT_CLAMD em app/settings.py é configuração morta (achado "
-        "transversal nº 1 do laudo L7 parte 1). A alegação do ledger de L7-03-a-antivirus-upload de um "
-        "'MotorClamd INSTREAM opcional' não corresponde a código nenhum em wt/uniao."
-    ),
-)
+# 18/09/2026: a marca xfail(strict=True) saiu porque o teste PASSA — rodado isolado na trilha `uniao`.
+# Consertado em 94a65a46a ("fix(upload): restaura o pipeline único por classe (Politica/MotorClamd)
+# perdido na fusão"). As marcas dos testes de SVG e de HTML, mais abaixo, CONTINUAM: aqueles dois
+# defeitos ainda existem.
+# O texto que vem abaixo (docstring/nome) descreve o achado ORIGINAL, não o estado de hoje.
 def test_modulo_de_varredura_conhece_endereco_do_clamd():
     assert hasattr(varredura, "endereco_clamd"), (
         "app.varredura_conteudo não tem endereco_clamd — não há integração com ClamAV no código integrado"
@@ -87,15 +83,10 @@ def test_anexo_html_e_aceito_para_servir_com_sandbox_nao_rejeitado(cliente, sess
         sessao_a.delete(f"/api/tokens/{tok['id']}")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "não existe tabela de tipos permitidos por CLASSE de rota em app/varredura_conteudo.py — só a "
-        "tabela global TIPOS_PERMITIDOS. POST /api/arquivos?classe=foto_campo deveria recusar "
-        "application/octet-stream (415, motor politica_de_rota) e hoje aceita (201). Item "
-        "L7-03-a-antivirus-upload."
-    ),
-)
+# 18/09/2026: a marca xfail(strict=True) saiu porque o teste PASSA — rodado isolado na trilha `uniao`.
+# Mesma causa e mesmo conserto do primeiro teste deste arquivo (94a65a46a): a tabela de tipos
+# permitidos por CLASSE de rota passou a existir, então a recusa acontece.
+# O texto que vem abaixo (docstring/nome) descreve o achado ORIGINAL, não o estado de hoje.
 def test_tipo_fora_da_lista_da_rota_e_recusado(cliente, sessao_a):
     tok = _token(sessao_a, "zt-l7adv1-rota")
     try:

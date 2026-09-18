@@ -36,15 +36,11 @@ def local():
     return novo_cliente()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "app/consulta/rotas_query.py::_autenticar só aceita (request, item_id) — 2 argumentos — mas "
-        "app/consulta/rotas_edicao_esri.py e app/consulta/rotas_sync_esri.py (16 chamadas) e "
-        "app/versionamento/rotas_esri.py chamam _autenticar(request, item_id, escopo) com 3. Achado "
-        "transversal nº 2 do laudo L7 parte 1."
-    ),
-)
+# 18/09/2026: a marca xfail(strict=True) saiu porque o teste PASSA — rodado isolado na trilha `uniao`.
+# A assinatura hoje é `_autenticar(request, item_id, escopo=ESCOPO)` em app/consulta/rotas_query.py:39
+# — os três argumentos que rotas_edicao_esri.py e rotas_sync_esri.py já passavam. Some com isso a
+# causa dos 500 de queryAttachments e de applyEdits que estes três testes descreviam.
+# O texto que vem abaixo (docstring/nome) descreve o achado ORIGINAL, não o estado de hoje.
 def test_assinatura_de_autenticar_bate_com_quem_chama_com_escopo():
     """`rotas_query._autenticar` tem de aceitar o 3º parâmetro (escopo) que
     `rotas_edicao_esri`/`rotas_sync_esri` já passam — hoje não aceita."""
@@ -57,31 +53,21 @@ def test_assinatura_de_autenticar_bate_com_quem_chama_com_escopo():
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "app/consulta/rotas_edicao_esri.py e app/consulta/rotas_sync_esri.py chamam "
-        "rotas_query._autenticar(request, item_id, escopo) com 3 argumentos, mas a função hoje só aceita "
-        "2 (request, item_id) — TypeError não tratado vira 500 em toda rota de attachments/applyEdits/"
-        "addFeatures/updateFeatures/deleteFeatures/calculate/createReplica/extractChanges/"
-        "synchronizeReplica/unRegisterReplica/uploads-upload. Achado transversal nº 2 do laudo L7 parte 1; "
-        "derruba a cláusula 'tokens com escopo' de L7-03-seguranca e 19 casos de "
-        "test_conjunto_de_seguranca_em_toda_rota_do_openapi (L7-03-e)."
-    ),
-)
+# 18/09/2026: a marca xfail(strict=True) saiu porque o teste PASSA — rodado isolado na trilha `uniao`.
+# A assinatura hoje é `_autenticar(request, item_id, escopo=ESCOPO)` em app/consulta/rotas_query.py:39
+# — os três argumentos que rotas_edicao_esri.py e rotas_sync_esri.py já passavam. Some com isso a
+# causa dos 500 de queryAttachments e de applyEdits que estes três testes descreviam.
+# O texto que vem abaixo (docstring/nome) descreve o achado ORIGINAL, não o estado de hoje.
 def test_query_attachments_nunca_e_500(local):
     r = local.get("/rest/services/1/FeatureServer/1/queryAttachments?attachmentIds=1")
     assert r.status_code != 500, (r.status_code, r.text[:300])
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "mesma causa do teste acima: app/consulta/rotas_edicao_esri.py:113 chama "
-        "_autenticar(request, item_id, ESCOPO_EDITAR/ESCOPO_LER) — 3 argumentos — contra a assinatura de "
-        "2 argumentos hoje em app/consulta/rotas_query.py."
-    ),
-)
+# 18/09/2026: a marca xfail(strict=True) saiu porque o teste PASSA — rodado isolado na trilha `uniao`.
+# A assinatura hoje é `_autenticar(request, item_id, escopo=ESCOPO)` em app/consulta/rotas_query.py:39
+# — os três argumentos que rotas_edicao_esri.py e rotas_sync_esri.py já passavam. Some com isso a
+# causa dos 500 de queryAttachments e de applyEdits que estes três testes descreviam.
+# O texto que vem abaixo (docstring/nome) descreve o achado ORIGINAL, não o estado de hoje.
 def test_apply_edits_nunca_e_500(local):
     r = local.post("/rest/services/1/FeatureServer/1/applyEdits", data={"f": "json"})
     assert r.status_code != 500, (r.status_code, r.text[:300])

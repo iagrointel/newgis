@@ -236,15 +236,11 @@ def test_b_bloqueio_por_usuario_nao_nega_o_inquilino(cred):
 
 # ====================================================================== L0-02-c segundo fator
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G1-c1: com config.auth.exigir_2fa ligado, a pendência 'configurar_2fa' fecha as rotas que "
-    "passam por app.auth.sessao.autenticado(), mas as 7 rotas /rest/services/Geocodificador/GeocodeServer/* "
-    "autenticam por app/geocodificador/rotas_esri.py::_autenticar, que chama resolver() direto e nunca olha "
-    "pendências (nem CSRF sob cookie, nem X-Plat-Inquilino). Medido: /api/usuarios -> 403 pendencia e "
-    "/rest/services/Geocodificador/GeocodeServer/suggest?text=rua -> 200 para o MESMO usuário sem 2FA. "
-    "Cláusula do portão: 'usuário sem 2FA cai na tela de configuração antes de qualquer rota'.",
-)
+# 18/09/2026: a marca xfail(strict=True) saiu porque o teste PASSA — rodado isolado na trilha `uniao`.
+# O achado G1-c1 dizia que as rotas /rest/services/Geocodificador/GeocodeServer/* autenticavam por um
+# caminho próprio que nunca olhava pendências. Hoje a pendência 'configurar_2fa' fecha também essas
+# rotas, que era a cláusula do portão.
+# O texto que vem abaixo (docstring/nome) descreve o achado ORIGINAL, não o estado de hoje.
 def test_c1_pendencia_de_2fa_fecha_tambem_o_geocodeserver(sessao_plat):
     slug = f"{PREFIXO_TESTE}-inq-{secrets.token_hex(3)}"
     r = sessao_plat.post(
