@@ -1,4 +1,9 @@
 VENV=venv/bin
+# 18/09/2026: o conftest RECUSA pytest sem teto de memoria residente — em 17/09 um pytest de 3,2 GB
+# derrubou o Postgres que serve cliente pagante. Todo alvo que chama pytest passa por este envoltorio,
+# senao o alvo do Makefile fura a propria guarda da casa (foi o que aconteceu com `make tokens`).
+# PLAT_TESTE_RSS ajusta o teto; PLAT_SEM_CGROUP=1 sai pelo caminho consciente (medir consumo real).
+CGROUP=$(if $(PLAT_SEM_CGROUP),,sudo systemd-run --scope --uid=$$(id -u) --gid=$$(id -g) -q -p MemoryMax=$(or $(PLAT_TESTE_RSS),4G) -p MemorySwapMax=0 --)
 # nunca ~/.local: a suíte prova o que a venv + dpkg fornecem, igual à unidade systemd
 export PYTHONNOUSERSITE=1
 URL_PUBLICA=$(shell grep ^PLAT_URL_PUBLICA .env 2>/dev/null | cut -d= -f2)
@@ -31,7 +36,7 @@ lint:
 	$(VENV)/ruff check app tests docs/gerar_limites.py docs/gerar_pacote_rede.py
 
 tokens:                                     ## item L0-14 (identidade visual): 0 literal de cor em css/html fora de web/estilo/tokens.css, orçamento contado no js que não resolve var(), toda tela carrega tokens.css 1º, família única de ícones sem emoji e página viva /estilo gerada dos tokens; -p no:base_url tira a dependência de PLAT_DSN (só lê arquivo, não bate no banco)
-	$(VENV)/pytest tests/unit/test_tokens_cor.py tests/unit/test_telas_carregam_tokens.py \
+	$(CGROUP) $(VENV)/pytest tests/unit/test_tokens_cor.py tests/unit/test_telas_carregam_tokens.py \
 	  tests/unit/test_estilo_tokens.py tests/unit/test_tokens_visuais.py -p no:base_url
 
 limites:                                    ## docs/LIMITES.md == app/limites.py (item L0-12); falha se divergir
@@ -53,10 +58,10 @@ sem-marcador:                               ## mesma expressão do laco/driver.s
 	  | grep -vE -f tests/marcadores.excecoes
 
 teste:
-	$(SEGREDOS) $(VENV)/pytest -m "not lento"
+	$(SEGREDOS) $(CGROUP) $(VENV)/pytest -m "not lento"
 
 e2e:
-	$(SEGREDOS) $(VENV)/pytest -m lento --base-url $(URL_PUBLICA)
+	$(SEGREDOS) $(CGROUP) $(VENV)/pytest -m lento --base-url $(URL_PUBLICA)
 
 conformidade:                               ## item L2-04-j: roda as provas dos serviços Esri/OGC e regrava tests/esri/conformidade.json + a seção de docs/PARIDADE.md
 	$(SEGREDOS) $(VENV)/python tests/esri/conformidade.py
@@ -65,7 +70,7 @@ conformidade-conferir:                      ## reprova se docs/PARIDADE.md diver
 	$(VENV)/python tests/esri/conformidade.py --conferir
 
 medidas:                                    ## suíte inteira gravando tests/medidas/<item>.json (ADR 0001 seção 10)
-	$(SEGREDOS) PLAT_GRAVAR_MEDIDAS=1 $(VENV)/pytest --base-url $(URL_PUBLICA)
+	$(SEGREDOS) PLAT_GRAVAR_MEDIDAS=1 $(CGROUP) $(VENV)/pytest --base-url $(URL_PUBLICA)
 
 pacote-rede:                                ## docs/PACOTE_REDE.md == app/rede_utilidades/pacotes/*.json (item L4-01-a); GERA (o `make check` confere via tests/unit/test_rede_pacote.py)
 	$(VENV)/python docs/gerar_pacote_rede.py
@@ -116,7 +121,7 @@ worker:                                     ## worker da fila em primeiro plano 
 	$(SEGREDOS) $(VENV)/python -m app.jobs.worker
 
 e2e-worker:                                 ## testes lentos da fila (reinício por systemctl, morte do pai, job de 5 min)
-	$(SEGREDOS) $(VENV)/pytest -m lento tests/api/jobs
+	$(SEGREDOS) $(CGROUP) $(VENV)/pytest -m lento tests/api/jobs
 
 homolog:                                    ## item L7-31 (docs/HOMOLOGACAO.md): migra plat_homolog, sobe API+worker em :8154 e roda o e2e isolado; derruba tudo ao final
 	bash scripts/homolog_e2e.sh
