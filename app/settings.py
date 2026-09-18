@@ -81,9 +81,12 @@ class Settings:
     # IP privado/loopback do guarda SSRF (app/conexao/seguranca.py) vale para qualquer esquema.
     PLAT_WEBHOOK_ESQUEMAS: str
     PLAT_DSN_WORKER: str | None  # role plat_worker (006): só ela muda estado de job
-    # rede de rota (L2-11-c): OSRM isolado plat-osrm-guarulhos (:5010), só recorte de teste ≤ 50 MB;
+    # rede de rota (L2-11-c): OSRM isolado plat-osrm-guarulhos (:5010 carro, :5011 bicicleta,
+    # :5012 pé — um grafo/contêiner por perfil), só recorte de teste ≤ 50 MB;
     # nunca aponta para os OSRM de outras frentes da casa (5000-5003)
     PLAT_OSRM_URL: str
+    PLAT_OSRM_URL_BICICLETA: str
+    PLAT_OSRM_URL_PE: str
     # importação BDGD por caminho local (item L4-01-c): pasta de onde o job aceita ler pacotes .gdb.zip;
     # vazia = desligada (D21: o job nunca baixa da ANEEL, o disco não comporta)
     PLAT_BDGD_RAIZ: str | None
@@ -91,6 +94,7 @@ class Settings:
     # (apurado, compensação e limites); vazia = desligada (mesma regra D21 do BDGD)
     PLAT_ANEEL_CONTINUIDADE_RAIZ: str | None
     PLAT_ROTA_MATRIZ_MAX: int
+    PLAT_ROTA_MATRIZ_JOB_MAX: int
     PLAT_ROTA_ISOCRONA_MAX_PONTOS: int
     # tiles vetoriais (L2-01-b): DSN do papel plat_leitor (LOGIN, sem BYPASSRLS), usado SÓ pela rota
     # /internal/tiles/verificar (auth_request do nginx) para validar o token antes de o pedido chegar ao
@@ -295,9 +299,16 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_WEBHOOK_ESQUEMAS=(_opcional(valores, "PLAT_WEBHOOK_ESQUEMAS") or "https"),
         PLAT_DSN_WORKER=_dsn_worker(valores, f"{schema}_worker"),
         PLAT_OSRM_URL=(_opcional(valores, "PLAT_OSRM_URL") or "http://127.0.0.1:5010").rstrip("/"),
+        PLAT_OSRM_URL_BICICLETA=(
+            _opcional(valores, "PLAT_OSRM_URL_BICICLETA") or "http://127.0.0.1:5011"
+        ).rstrip("/"),
+        PLAT_OSRM_URL_PE=(_opcional(valores, "PLAT_OSRM_URL_PE") or "http://127.0.0.1:5012").rstrip("/"),
         PLAT_BDGD_RAIZ=_opcional(valores, "PLAT_BDGD_RAIZ"),
         PLAT_ANEEL_CONTINUIDADE_RAIZ=_opcional(valores, "PLAT_ANEEL_CONTINUIDADE_RAIZ"),
         PLAT_ROTA_MATRIZ_MAX=_inteiro(valores, "PLAT_ROTA_MATRIZ_MAX", limites.ROTA_MATRIZ_MAX_PADRAO, 1),
+        PLAT_ROTA_MATRIZ_JOB_MAX=_inteiro(
+            valores, "PLAT_ROTA_MATRIZ_JOB_MAX", limites.ROTA_MATRIZ_JOB_MAX_PADRAO, 1
+        ),
         PLAT_ROTA_ISOCRONA_MAX_PONTOS=_inteiro(
             valores, "PLAT_ROTA_ISOCRONA_MAX_PONTOS", limites.ROTA_ISOCRONA_MAX_PONTOS_PADRAO, 4
         ),

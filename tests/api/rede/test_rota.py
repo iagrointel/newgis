@@ -33,8 +33,62 @@ def test_rota_dois_pontos_conhecidos(sessao_a):
 
 
 def test_rota_perfil_nao_disponivel(sessao_a):
-    r = sessao_a.post("/api/rota", json={"origem": CENTRO_GUARULHOS, "destino": PERTO_GRU, "perfil": "bicicleta"})
+    r = sessao_a.post("/api/rota", json={"origem": CENTRO_GUARULHOS, "destino": PERTO_GRU, "perfil": "caminhao"})
     assert r.status_code == 422, r.text
+
+
+def test_rota_perfis_bicicleta_e_pe(sessao_a):
+    """Os três grafos estão carregados (um contêiner OSRM por perfil): bicicleta e pé respondem com
+    durações coerentes com o modo (pé muito mais lento que carro no mesmo par de pontos)."""
+    tempos = {}
+    for perfil in ("carro", "bicicleta", "pe"):
+        r = sessao_a.post(
+            "/api/rota", json={"origem": CENTRO_GUARULHOS, "destino": PERTO_GRU, "perfil": perfil}
+        )
+        assert r.status_code == 200, (perfil, r.text)
+        corpo = r.json()
+        assert corpo["perfil"] == perfil
+        assert corpo["geometria"]["type"] == "LineString"
+        assert corpo["instrucoes"], perfil
+        tempos[perfil] = corpo["duracao_s"]
+    assert tempos["pe"] > tempos["bicicleta"] > 0
+    assert tempos["pe"] > tempos["carro"], tempos
+
+
+def test_mais_proximo_snap(sessao_a):
+    """Um ponto no miolo do recorte sai andando até a via mais próxima: distância de snap pequena e
+    coordenada devolvida diferente da pedida (a menos que já esteja em cima da via)."""
+    r = sessao_a.post("/api/mais-proximo", json={"ponto": CENTRO_GUARULHOS, "perfil": "carro"})
+    assert r.status_code == 200, r.text
+    corpo = r.json()
+    assert 0 <= corpo["distancia_m"] < 200
+    lon, lat = corpo["ponto_rede"]
+    assert -46.62 <= lon <= -46.42 and -23.53 <= lat <= -23.38
+    assert corpo["proveniencia"]["sha256"]
+
+
+def test_ajuste_de_trajeto_match(sessao_a):
+    """Traçado GPS ruidoso ao longo da rota centro→GRU: os pontos são os vértices da PRÓPRIA geometria
+    roteada (logo sobre a rede) sacudidos por ~30 m; o /match tem de devolver uma geometria encaixada
+    na rede com extensão da mesma ordem da rota original."""
+    import random
+
+    r = sessao_a.post("/api/rota", json={"origem": CENTRO_GUARULHOS, "destino": PERTO_GRU, "perfil": "carro"})
+    assert r.status_code == 200, r.text
+    coords = r.json()["geometria"]["coordinates"]
+    distancia_rota = r.json()["distancia_m"]
+    random.seed(7)
+    tracado = [[lon + random.uniform(-0.0003, 0.0003), lat + random.uniform(-0.0003, 0.0003)]
+               for lon, lat in coords[:: max(len(coords) // 30, 1)]]
+    r = sessao_a.post(
+        "/api/ajuste-de-trajeto", json={"pontos": tracado, "perfil": "carro", "raio_m": 80}
+    )
+    assert r.status_code == 200, r.text
+    corpo = r.json()
+    assert corpo["geometria"]["type"] == "LineString"
+    assert 0.5 * distancia_rota < corpo["distancia_m"] < 2.0 * distancia_rota
+    assert corpo["confianca"] is None or 0 <= corpo["confianca"] <= 1
+    assert corpo["instrucoes"]
 
 
 def test_rota_coordenada_invalida(sessao_a):
@@ -55,14 +109,30 @@ def test_matriz_5x5_sem_erro(sessao_a):
     assert all(v is not None for linha in duracoes for v in linha)
 
 
-def test_matriz_acima_do_teto_e_422(sessao_a, monkeypatch):
-    # 26x26 = 676 > 625 (PLAT_ROTA_MATRIZ_MAX padrão) sem precisar de 676 coordenadas de verdade:
-    # a checagem de teto é feita ANTES de chamar o OSRM (conferido pelo 422 com o corpo do teto)
-    origens = [[CENTRO_GUARULHOS[0] + 0.0005 * i, CENTRO_GUARULHOS[1]] for i in range(26)]
-    destinos = [[PERTO_GRU[0] + 0.0005 * j, PERTO_GRU[1]] for j in range(26)]
+def test_matriz_10x10_ate_1s(sessao_a):
+    """Portão: matriz 10×10 em ≤ 1 s (cronometrado na resposta da API)."""
+    import time
+
+    origens = [[CENTRO_GUARULHOS[0] + 0.001 * i, CENTRO_GUARULHOS[1] + 0.001 * i] for i in range(10)]
+    destinos = [[PERTO_GRU[0] + 0.001 * j, PERTO_GRU[1] + 0.001 * j] for j in range(10)]
+    t0 = time.monotonic()
+    r = sessao_a.post("/api/matriz", json={"origens": origens, "destinos": destinos, "perfil": "carro"})
+    dt = time.monotonic() - t0
+    assert r.status_code == 200, r.text
+    assert len(r.json()["duracoes_s"]) == 10
+    assert dt <= 1.0, f"10×10 levou {dt:.2f}s (portão: ≤ 1 s)"
+
+
+def test_matriz_acima_do_teto_e_422(sessao_a):
+    """Teto declarado do item: 1.000×1.000 (1M células) por job. A refutação do adversário pede
+    5.000×5.000 (25M): recusada com 422 nomeado ANTES de qualquer chamada ao OSRM (medido pelo corpo
+    do erro, que devolve origens/destinos/teto)."""
+    origens = [[CENTRO_GUARULHOS[0] + 0.00001 * i, CENTRO_GUARULHOS[1]] for i in range(5000)]
+    destinos = [[PERTO_GRU[0] + 0.00001 * j, PERTO_GRU[1]] for j in range(5000)]
     r = sessao_a.post("/api/matriz", json={"origens": origens, "destinos": destinos})
     assert r.status_code == 422, r.text
     assert r.json()["erro"] == "matriz_grande_demais"
+    assert r.json()["detalhe"]["teto"] == 1_000_000
 
 
 def test_isocrona_10_min_poligono_nao_vazio(sessao_a):

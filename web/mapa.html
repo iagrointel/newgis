@@ -25,6 +25,7 @@
       <button type="button" id="btn-painel-camadas" class="pequeno" data-i18n="mapa.camadas">Camadas</button>
       <button type="button" id="btn-painel-desenho" class="pequeno" data-i18n="mapa.desenho">Desenho</button>
       <button type="button" id="btn-painel-anotacoes" class="pequeno" data-i18n="mapa.anotacoes">Anotações</button>
+      <button type="button" id="btn-painel-rotas" class="pequeno" data-i18n="rotas.titulo">Rotas</button>
       <button type="button" id="salvar-mapa" class="pequeno" hidden data-i18n="mapa.salvar">salvar</button>
     </div>
     <div class="mapa-corpo">
@@ -99,6 +100,11 @@
             <div class="botoes"><button type="button" id="btn-anotacao-enviar" class="pequeno primario" data-i18n="mapa.anotacao_enviar">Comentar</button></div>
           </div>
         </div>
+      </plat-painel>
+      <!-- item UX-08 (religado pelo L2-11-c após perda na fusão do L2-01-k): o painel de rotas que o tronco
+           já tinha — rota, isócrona e matriz sobre o OSRM do recorte; o conteúdo é montado por rotas.js. -->
+      <plat-painel id="painel-rotas" class="mapa-painel mapa-painel-item" fechavel hidden>
+        <div id="rotas" class="rotas"></div>
       </plat-painel>
     </div>
     </div>

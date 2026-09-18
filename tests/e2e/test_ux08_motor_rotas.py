@@ -209,6 +209,12 @@ def test_rotas_rota_isocrona_matriz_e_erro_nomeado(page, base_url, credenciais_d
     assert "km" in resumo_rota and "min" in resumo_rota
     assert _fonte_tem(page, "plat-rotas-rota") >= 1
     assert page.locator("#rotas-saida .rotas-proveniencia").count() == 1
+    # portão do L2-11-c: instruções resumidas EM PORTUGUÊS junto da geometria
+    passos = page.locator("#rotas-saida ol.rotas-instrucoes li")
+    assert passos.count() >= 2
+    texto_passos = " ".join(passos.all_inner_texts()).lower()
+    assert any(marcador in texto_passos for marcador in ("siga", "vire", "chegou", "continue", "rotatória")), texto_passos[:200]
+    assert "Chegou ao destino" in passos.last.inner_text()
     _axe(page, "rota")
     _capturar(page, "rotas_rota")
     # isócrona de 5 min

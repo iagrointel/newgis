@@ -1,12 +1,52 @@
 {
  "item": "L2-11-c-rota-matriz-isocrona",
- "medidas": {},
- "nao_medido": {
-  "triagem_18_09_2026_wt_l02": {
-   "veredito": "causa raiz descrita, nao consertada nesta rodada (construcao grande)",
-   "o_que_falta": "Cinco promessas do item nao existem no repositorio: pgRouting usado (drivingDistance conferido contra networkx), NAServer compativel com Esri, perfis bicicleta e pe (so 'carro' e aceito), /mais-proximo e /ajuste-de-trajeto. O proprio handoff do turno ja dizia que tudo isso 'fica para a continuacao do item', e o item foi marcado entregue sem a continuacao.",
-   "medido_em_18_09": "a extensao pgrouting ESTA instalada e disponivel neste banco (SELECT pgr_version() = 4.0.1), entao a clausula 'pgRouting instalado' e' alcancavel hoje; o que falta e' a rede de demonstracao topologizada e o codigo que a consulta. Os perfis exigem rodar osrm-extract 3x (um por perfil) sobre o .pbf, e o NAServer exige implementar o contrato de servico de rede da Esri."
+ "medidas": {
+  "matriz_1000x1000_s": {
+   "valor": 61.7,
+   "unidade": "s",
+   "comando": "1M células particionadas em blocos de 625 (--max-table-size), 0 células nulas"
+  },
+  "isocrona_15min_grade_pontos": {
+   "valor": 2997,
+   "unidade": "pontos",
+   "comando": "alcançáveis 769, resolução 60.7 m"
+  },
+  "isocrona_30min_grade_pontos": {
+   "valor": 2997,
+   "unidade": "pontos",
+   "comando": "alcançáveis 828, resolução 121.4 m"
+  },
+  "isocrona_45min_grade_pontos": {
+   "valor": 2997,
+   "unidade": "pontos",
+   "comando": "alcançáveis 797, resolução 182.0 m"
+  },
+  "isocrona_15min_taxa_dentro": {
+   "valor": 0.99,
+   "unidade": "proporção",
+   "comando": "198/200 da amostra roteia em ≤ 15 min (portão ≥ 0.95)"
+  },
+  "isocrona_30min_taxa_dentro": {
+   "valor": 0.975,
+   "unidade": "proporção",
+   "comando": "195/200 da amostra roteia em ≤ 30 min (portão ≥ 0.95)"
+  },
+  "isocrona_45min_taxa_dentro": {
+   "valor": 0.98,
+   "unidade": "proporção",
+   "comando": "196/200 da amostra roteia em ≤ 45 min (portão ≥ 0.95)"
+  },
+  "isocrona_faixa30_45_taxa_acima_de_30": {
+   "valor": 0.965,
+   "unidade": "proporção",
+   "comando": "386/400 da faixa 30–45 mede > 30 min (portão ≥ 0.95)"
+  },
+  "carro_max_recorte_min": {
+   "valor": 22.4,
+   "unidade": "min",
+   "comando": "máximo de 150 pontos da caixa ±0,07° roteados do centro; < 30 min ⇒ faixa 30–45 de carro é vazia"
   }
  },
- "gerado_em": "2026-09-18T02:52:59Z"
+ "gerado_em": "2026-09-18T12:22:29Z",
+ "git_sha": "c9ce19746250"
 }

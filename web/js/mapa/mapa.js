@@ -19,6 +19,7 @@ import { h, limpar } from '../base/dom.js';
 import { AVISO_VENCIDA, selo } from '../acervo/frescor.js';
 import { Desenho, kmlParaGeoJSON } from './desenho.js';
 import { PainelAnotacoes } from './anotacoes.js';
+import { PainelRotas } from './rotas.js';
 import { Catalogo } from './catalogo.js';
 import { icone } from '../base/icones.js';
 
@@ -91,14 +92,17 @@ async function montarPainelAcervo() {
 /* item L2-01-k-desenho-anotacoes: painéis de desenho e de anotações ligados à tela. O desenho mora no
    documento do mapa (POST/PUT /api/itens tipo 'mapa', corpo.desenho.features — GeoJSON + estilo, sem
    tabela); "promover a camada" chama /api/mapa/{id}/desenho/promover (job de ingestão do L0-04); as
-   anotações são as rotas /api/anotacoes (visibilidade por grupo, prova em tests/api/catalogo). */
-const PAINEIS_FLUTUANTES = { desenho: 'painel-desenho', anotacoes: 'painel-anotacoes', camadas: 'painel-camadas' };
+   anotações são as rotas /api/anotacoes (visibilidade por grupo, prova em tests/api/catalogo).
+   'rotas' (UX-08) foi religado pelo L2-11-c: a fusão que trouxe o L2-01-k reescreveu esta tela e perdeu a
+   montagem do painel de rotas que o tronco já tinha (rotas.js sobreviveu; a fiação, não). */
+const PAINEIS_FLUTUANTES = { desenho: 'painel-desenho', anotacoes: 'painel-anotacoes', camadas: 'painel-camadas', rotas: 'painel-rotas' };
+const TITULO_PAINEL = { desenho: 'mapa.desenho', anotacoes: 'mapa.anotacoes', rotas: 'rotas.titulo' };
 
 function abrirPainel(nome, { foco = true } = {}) {
   const painel = el(PAINEIS_FLUTUANTES[nome]);
   if (!painel) return;
   if (typeof painel.abrir === 'function') {
-    painel.titulo = t(nome === 'desenho' ? 'mapa.desenho' : 'mapa.anotacoes');
+    painel.titulo = t(TITULO_PAINEL[nome] || nome);
     painel.abrir();
   } else {
     painel.hidden = false;
@@ -145,6 +149,7 @@ async function montarDesenhoAnotacoes(map) {
   el('btn-painel-desenho').addEventListener('click', () => abrirPainel('desenho'));
   el('btn-painel-anotacoes').addEventListener('click', () => abrirPainel('anotacoes'));
   el('btn-painel-camadas').addEventListener('click', () => abrirPainel('camadas'));
+  el('btn-painel-rotas').addEventListener('click', () => abrirPainel('rotas'));
 
   const desenho = new Desenho(map, window.maplibregl, el('bloco-desenho'));
   const catalogo = new Catalogo(map);
@@ -239,6 +244,8 @@ async function montarDesenhoAnotacoes(map) {
     btnEnviar: el('btn-anotacao-enviar'), estado: el('anotacoes-estado'), aviso: el('anotacoes-aviso'),
   });
 
+  const rotas = new PainelRotas(map, window.maplibregl, el('rotas'));
+
   await montarPainelCamadas(map, catalogo);
 
   if (mapaId) {
@@ -253,7 +260,7 @@ async function montarDesenhoAnotacoes(map) {
 
   // ponto de inspeção do e2e, nunca de negócio
   window.plat = window.plat || {};
-  window.plat.mapa = { map, desenho, anotacoes, painelAnotacoes: anotacoes, catalogo, abrirPainel, get mapaId() { return mapaId; } };
+  window.plat.mapa = { map, desenho, anotacoes, painelAnotacoes: anotacoes, catalogo, rotas, abrirPainel, get mapaId() { return mapaId; } };
 }
 
 async function iniciarMapa(usuario) {

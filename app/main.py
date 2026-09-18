@@ -149,6 +149,7 @@ from app.parcelas.rotas import router_qualidade as rotas_parcelas_qualidade
 from app.portal import openapi as portal_openapi
 from app.portal.rotas import router as rotas_portal
 from app.rede.consumidores_rotas import router as rotas_rede_consumidores
+from app.rede.naserver import router as rotas_naserver
 from app.rede.rotas import router as rotas_rede
 from app.rede_medicao.rotas import router as rotas_rede_medicao
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
@@ -429,8 +430,11 @@ ROUTERS = [
     # --- GeoParquet no bucket (L2-15-a): /api/geoparquet (particionado, incremental, item de catálogo duradouro)
     rotas_geoparquet,
     # --- mapa (L2-01-a-documento-mapa): /api/mapas (lista, criar, ler, editar) e /api/mapas/{id}/completo
-    # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
+    # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona, /api/mais-proximo,
+    # /api/ajuste-de-trajeto sobre o OSRM de teste plat-osrm-guarulhos (3 perfis) e a camada
+    # Esri-compatível /api/naserver/NAServer/... (solve, solveServiceArea, solveClosestFacility, OD matrix)
     rotas_rede,
+    rotas_naserver,
     # --- telemetria da rede de utilidades (L4-13-integracao-telemetria): /api/rede/medicao/leituras (publicar
     # lote), /api/rede/medicao/ativos/{ativo} (placa), .../ultimas e .../serie (ficha do ativo), .../jusante
     # (agregação pela topologia derivada, abaixo). ANTES de qualquer router "/api/rede/{rede_id}/..." da

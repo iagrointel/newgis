@@ -150,11 +150,17 @@ UPLOAD_CABECALHO_INICIO_BYTES = 65536        # bytes da parte 1 usados para recu
 # --- rede de rota (L2-11-c): OSRM isolado `plat-osrm-guarulhos` (:5010; recorte de teste ≤ 50 MB — nunca os
 # OSRM de outras frentes da casa em 5000-5003); PLAT_ROTA_MATRIZ_MAX/PLAT_ROTA_ISOCRONA_MAX_PONTOS no .env
 # sobrepõem os padrões abaixo (settings.py). ROTA_MATRIZ_MAX_PADRAO bate com --max-table-size do container.
-ROTA_MATRIZ_MAX_PADRAO = 625            # N×M <= isto por pedido de /api/matriz
-ROTA_ISOCRONA_MAX_PONTOS_PADRAO = 400   # pontos de grade por pedido de /api/isocrona (1 fonte + N destinos)
-ROTA_PERFIS = ("carro",)                # só car.lua está carregado nesta instância de teste (D-osrm-perfis)
+ROTA_MATRIZ_MAX_PADRAO = 625            # células por CHAMADA ao /table do OSRM (bate com --max-table-size)
+ROTA_MATRIZ_JOB_MAX_PADRAO = 1_000_000  # células por pedido de /api/matriz (teto declarado: 1.000×1.000 por job;
+                                        # acima disto o serviço /table é particionado em blocos de ROTA_MATRIZ_MAX)
+ROTA_ISOCRONA_MAX_PONTOS_PADRAO = 3000  # pontos de grade por pedido de /api/isocrona (1 fonte + N destinos;
+                                        # medido: ~3.000 dá resolução ~60 m na isócrona de pé de 15 min e
+                                        # mantém a taxa de acerto ≥ 97 % contra a própria matriz)
+ROTA_PERFIS = ("carro", "bicicleta", "pe")  # um grafo OSRM por perfil (car/bicycle/foot.lua), contêiner por perfil
 ROTA_MINUTOS_MAX = 180                  # 3 h; acima disso o polígono satura no limite do recorte de teste
-ROTA_ISOCRONA_RATIO_PADRAO = 0.3        # parâmetro do casco côncavo (shapely.concave_hull); 0 = casco convexo
+ROTA_ISOCRONA_RATIO_PADRAO = 0.1        # parâmetro do casco côncavo (shapely.concave_hull); medido 18/09/2026:
+                                        # 0,1 é o ponto que segura ≥ 95 % nos DOIS lados do portão (dentro do
+                                        # polígono ≤ T e faixa 30–45 > T); 0,0 estrangula a faixa, 0,3 afrouxa o dentro
 
 # --- LDAP/Active Directory (L0-08-d; app/auth/ldap.py): provedor externo por inquilino, sem servidor de
 # sistema (ldap3 puro Python). Os tempos são curtos de propósito: "diretório fora do ar não derruba o login

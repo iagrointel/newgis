@@ -15,7 +15,10 @@ from app.rede import osrm
 from app.settings import settings
 
 M_POR_GRAU_LAT = 111_320.0
-VELOCIDADE_GUIA_KMH = 40.0  # estimativa inicial de raio (não é limite físico; só ponto de partida da grade)
+# estimativa inicial de raio por perfil (não é limite físico; só ponto de partida da grade). Medida
+# 18/09/2026: o recorte INTEIRO (17 km) roteia em ≤ 28,8 min do centro de carro — isócrona de carro
+# acima disso satura na borda do grafo (documentado no limite do item); as de pé/bicicleta não saturam.
+VELOCIDADE_GUIA_KMH = {"carro": 40.0, "bicicleta": 16.0, "pe": 5.0}
 MARGEM_RAIO = 1.5
 
 
@@ -23,15 +26,16 @@ def _m_por_grau_lon(lat: float) -> float:
     return M_POR_GRAU_LAT * math.cos(math.radians(lat))
 
 
-def _raio_inicial_km(minutos: float) -> float:
-    return (minutos / 60.0) * VELOCIDADE_GUIA_KMH * MARGEM_RAIO
+def _raio_inicial_km(minutos: float, perfil: str = "carro") -> float:
+    return (minutos / 60.0) * VELOCIDADE_GUIA_KMH.get(perfil, 40.0) * MARGEM_RAIO
 
 
 def _resolucao_para(raio_km: float, max_pontos: int) -> float:
-    """Resolução (m) tal que a grade quadrada sobre o círculo de raio `raio_km` fique <= max_pontos
-    (fração círculo/quadrado ~ pi/4); nunca abaixo de 50 m nem acima de 2.000 m."""
-    area_m2 = math.pi * (raio_km * 1000) ** 2
-    resolucao = math.sqrt(area_m2 * (math.pi / 4) / max(max_pontos, 4))
+    """Resolução (m) tal que a grade circular de raio `raio_km` fique <= max_pontos
+    (pontos da grade ~ pi·(raio/resolucao)²); nunca abaixo de 50 m nem acima de 2.000 m (acima de
+    ~60 min de carro o teto de 2.000 m vence e a grade passa de max_pontos — caso já saturado na
+    borda do recorte, documentado)."""
+    resolucao = raio_km * 1000 * math.sqrt(math.pi / max(max_pontos, 4))
     return min(max(resolucao, 50.0), 2000.0)
 
 
@@ -67,7 +71,7 @@ def calcular(centro: list[float], minutos: float, perfil: str, ratio: float | No
     orcamento_s = minutos * 60.0
     ratio = limites.ROTA_ISOCRONA_RATIO_PADRAO if ratio is None else ratio
 
-    raio_km = _raio_inicial_km(minutos)
+    raio_km = _raio_inicial_km(minutos, perfil)
     resolucao_m = _resolucao_para(raio_km, max_pontos)
     grade = gerar_grade(centro, raio_km, resolucao_m)
 

@@ -86,14 +86,22 @@ export function montarLayout({ usuario, ativo = location.pathname }) {
   aside.append(h('div', { class: 'marca' }, ...marcaFilhos));
   const ul = h('ul');
   let grupoAberto = null;
+  let sublista = null;
   for (const tela of telasVisiveis(usuario)) {
     if (tela.grupo !== grupoAberto) {
       grupoAberto = tela.grupo;
       const chaveRotulo = ROTULOS_GRUPO[grupoAberto];
-      if (chaveRotulo) ul.append(h('li', { class: 'grupo-rotulo', role: 'separator' }, t(chaveRotulo)));
+      /* rótulo de grupo como <span> num <li> dono de uma sub-lista: li[role=separator] solto dentro de <ul>
+         derruba a regra "list" do axe (séria) em TODA tela com a lateral — achado do L2-11-c no e2e UX-08. */
+      if (chaveRotulo) {
+        sublista = h('ul');
+        ul.append(h('li', { class: 'grupo-nav' }, h('span', { class: 'grupo-rotulo' }, t(chaveRotulo)), sublista));
+      } else {
+        sublista = null;
+      }
     }
     const a = h('a', { href: tela.caminho, 'aria-current': tela.caminho === ativo ? 'page' : undefined }, t(tela.chave));
-    ul.append(h('li', {}, a));
+    (sublista || ul).append(h('li', {}, a));
   }
   aside.append(h('nav', { 'aria-label': t('nav.rotulo') }, ul));
   const btSair = h('button', { type: 'button', class: 'pequeno', id: 'sair' }, t('nav.sair'));

@@ -19,19 +19,30 @@ RAIZ = Path(__file__).resolve().parents[2]
 # quando o recorte foi construído). É a "versão do grafo OSM" que toda resposta e toda camada derivada carrega.
 PROVENIENCIA = json.loads((RAIZ / "osrm" / "proveniencia.json").read_text(encoding="utf-8"))
 
-PERFIL_OSRM = {"carro": "driving"}  # só carro tem grafo carregado nesta instância de teste (D-osrm-perfis)
+# um grafo e um contêiner OSRM por perfil (car/bicycle/foot.lua — o OSRM serve um único perfil por
+# processo): carro em PLAT_OSRM_URL (:5010), bicicleta em PLAT_OSRM_URL_BICICLETA (:5011), pé em
+# PLAT_OSRM_URL_PE (:5012). O nome no PATH do OSRM é o do perfil falado pelo protocolo dele.
+PERFIL_OSRM = {"carro": "driving", "bicicleta": "cycling", "pe": "foot"}
 _TIMEOUT = httpx.Timeout(connect=1.0, read=8.0, write=2.0, pool=2.0)
 
 
-def _cliente() -> httpx.Client:
-    return httpx.Client(base_url=settings.PLAT_OSRM_URL, timeout=_TIMEOUT)
+def _url_perfil(perfil: str) -> str:
+    if perfil == "bicicleta":
+        return settings.PLAT_OSRM_URL_BICICLETA
+    if perfil == "pe":
+        return settings.PLAT_OSRM_URL_PE
+    return settings.PLAT_OSRM_URL
+
+
+def _cliente(base_url: str) -> httpx.Client:
+    return httpx.Client(base_url=base_url, timeout=_TIMEOUT)
 
 
 def _coord(p: list[float]) -> str:
     return f"{p[0]:.7f},{p[1]:.7f}"
 
 
-def _perfil_ou_422(perfil: str) -> str:
+def _perfil_ou_422(perfil: str) -> tuple[str, str]:
     if perfil not in limites.ROTA_PERFIS:
         raise ErroAPI(
             422,
@@ -39,12 +50,12 @@ def _perfil_ou_422(perfil: str) -> str:
             f"perfil {perfil!r} não disponível nesta instância de teste (só {limites.ROTA_PERFIS})",
             {"perfis_disponiveis": list(limites.ROTA_PERFIS)},
         )
-    return PERFIL_OSRM[perfil]
+    return PERFIL_OSRM[perfil], _url_perfil(perfil)
 
 
-def _chamar(path: str, params: dict) -> dict:
+def _chamar(path: str, params: dict, base_url: str) -> dict:
     try:
-        with _cliente() as c:
+        with _cliente(base_url) as c:
             r = c.get(path, params=params)
     except httpx.ConnectError as e:
         raise ErroAPI(503, "osrm_indisponivel", "serviço de rota (OSRM) fora do ar") from e
@@ -62,11 +73,12 @@ def _chamar(path: str, params: dict) -> dict:
 
 def rota_por_pontos(pontos: list[list[float]], perfil: str) -> dict:
     """Rota na ORDEM dada, com 2 ou mais pontos (cada par vira uma perna em `legs`)."""
-    osrm_perfil = _perfil_ou_422(perfil)
+    osrm_perfil, base_url = _perfil_ou_422(perfil)
     coords = ";".join(_coord(p) for p in pontos)
     return _chamar(
         f"/route/v1/{osrm_perfil}/{coords}",
         {"overview": "full", "geometries": "geojson", "steps": "true", "alternatives": "false"},
+        base_url,
     )
 
 
@@ -77,23 +89,37 @@ def rota(origem: list[float], destino: list[float], perfil: str) -> dict:
 def viagem(pontos: list[list[float]], perfil: str, fechar_ciclo: bool = False) -> dict:
     """Serviço /trip do OSRM: ordem de visita por heurística (inserção do mais distante) sobre a ordem dada.
     `fechar_ciclo` falso fixa a primeira parada como início e a última como fim (doc OSRM v5.24, trip service)."""
-    osrm_perfil = _perfil_ou_422(perfil)
+    osrm_perfil, base_url = _perfil_ou_422(perfil)
     coords = ";".join(_coord(p) for p in pontos)
     params = {"overview": "full", "geometries": "geojson", "steps": "true",
               "roundtrip": "true" if fechar_ciclo else "false"}
     if not fechar_ciclo:
         params.update({"source": "first", "destination": "last"})
-    return _chamar(f"/trip/v1/{osrm_perfil}/{coords}", params)
+    return _chamar(f"/trip/v1/{osrm_perfil}/{coords}", params, base_url)
 
 
 def mais_proximo(ponto: list[float], perfil: str) -> dict:
     """Serviço /nearest: o ponto da REDE mais próximo da coordenada dada (é o `snap` do OSRM)."""
-    osrm_perfil = _perfil_ou_422(perfil)
-    return _chamar(f"/nearest/v1/{osrm_perfil}/{_coord(ponto)}", {"number": 1})
+    osrm_perfil, base_url = _perfil_ou_422(perfil)
+    return _chamar(f"/nearest/v1/{osrm_perfil}/{_coord(ponto)}", {"number": 1}, base_url)
+
+
+def ajustar_trajeto(pontos: list[list[float]], perfil: str, raio_m: float = 50.0) -> dict:
+    """Serviço /match (map matching): encaixa um traçado GPS ruidoso na rede. `radiuses` por ponto é a
+    incerteza em metros (um valor só para todos aqui); `gaps=ignore` costura trechos quando o sinal pulou,
+    `tidy=false` mantém os pontos originais (doc OSRM v5.24, match service)."""
+    osrm_perfil, base_url = _perfil_ou_422(perfil)
+    coords = ";".join(_coord(p) for p in pontos)
+    return _chamar(
+        f"/match/v1/{osrm_perfil}/{coords}",
+        {"overview": "full", "geometries": "geojson", "steps": "true",
+         "radiuses": ";".join(str(raio_m) for _ in pontos), "gaps": "ignore", "tidy": "false"},
+        base_url,
+    )
 
 
 def matriz(origens: list[list[float]], destinos: list[list[float]], perfil: str) -> dict:
-    osrm_perfil = _perfil_ou_422(perfil)
+    osrm_perfil, base_url = _perfil_ou_422(perfil)
     n, m = len(origens), len(destinos)
     todos = origens + destinos
     coords = ";".join(_coord(p) for p in todos)
@@ -102,6 +128,7 @@ def matriz(origens: list[list[float]], destinos: list[list[float]], perfil: str)
     return _chamar(
         f"/table/v1/{osrm_perfil}/{coords}",
         {"sources": fontes, "destinations": alvos, "annotations": "duration,distance"},
+        base_url,
     )
 
 

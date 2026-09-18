@@ -21,14 +21,19 @@ outro valor é sequer aceito pelo Pydantic); nenhum módulo do repositório cont
 `app/rede/`. Cinco cláusulas/promessas distintas do mesmo item, zero delas presente — não é uma
 lacuna pontual, é o item inteiro reduzido a "OSRM carro sobre um recorte de 1,6 MB de Guarulhos com
 rota/matriz/isócrona básicos", marcado ENTREGUE do mesmo jeito que os itens que de fato cobrem o
-próprio portão."""
+próprio portão.
+
+ATUALIZAÇÃO 18/09/2026 (construção wt/l211croc2be): as cinco lacunas foram fechadas — os três perfis
+são aceitos (Literal["carro","bicicleta","pe"], um grafo OSRM por perfil), `app/rede/pgr.py` usa
+pgr_version/pgr_drivingDistance/pgr_alphaShape sobre a rede demo `plat.rota_pgr_demo`,
+`app/rede/naserver.py` serve NAServer Route/ServiceArea/ClosestFacility/ODCostMatrix, e existem
+/api/mais-proximo e /api/ajuste-de-trajeto. O xfail(strict) virou XPASS e por isso o marcador saiu:
+este arquivo passa a ser o teste PERMANENTE do escopo, não mais a prova da lacuna."""
 
 from __future__ import annotations
 
 import subprocess
 from pathlib import Path
-
-import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 APP = RAIZ / "app"
@@ -41,16 +46,6 @@ def _grep_app(padrao: str) -> bool:
     return bool(saida.stdout.strip())
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "L2-11-c promete pgRouting instalado+medido, NAServer Esri-compatível, perfis "
-        "carro/bicicleta/pé, /mais-proximo e /ajuste-de-trajeto; nenhum dos cinco existe no "
-        "repositório (só 'carro' é aceito, zero pgr_*/NAServer/solveServiceArea/match) — o próprio "
-        "handoff do turno (laco/handoffs/T3/L2-11-c-rota.md) já dizia que tudo isso 'fica para a "
-        "continuação do item', mas o item foi marcado ENTREGUE sem essa continuação."
-    ),
-)
 def test_pgrouting_naserver_perfis_e_rotas_auxiliares_existem():
     from app.rede import rotas as rede_rotas
 

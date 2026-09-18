@@ -1,0 +1,29 @@
+# Inventário das capturas do e2e de rotas do item UX-08 (religado pelo L2-11-c-rota-matriz-isocrona
+# em 18/09/2026: a fusão que trouxe o L2-01-k reescreveu a tela /mapa e perdeu a montagem do painel
+# Rotas; o painel foi remontado no chrome novo e o teste ganhou a asserção de instruções em PT).
+#
+# Os PNG não entram no git (.gitignore: tests/e2e/capturas/*.png). A prova é este inventário mais o
+# teste que regenera tudo:
+#   set -a; source <env da trilha>; set +a
+#   PLAT_URL_PUBLICA=https://127.0.0.1:8157 venv/bin/python scripts/servir_local.py --porta 8157 \
+#     --cert <crt> --chave <key> &   # cert autoassinado de /tmp com SAN IP:127.0.0.1
+#   SSL_CERT_FILE=<crt> bash /home/dev/plat-frota/laco/roda_teste.sh \
+#     "tests/e2e/test_ux08_motor_rotas.py::test_rotas_rota_isocrona_matriz_e_erro_nomeado" \
+#     -q --base-url=https://127.0.0.1:8157
+# Quem quiser conferir roda o teste e compara nome, tamanho e sha256 desta lista (bytes/sha256 variam
+# a cada corrida — horário, renderização de fonte e a geometria do dia entram nas imagens; os valores
+# abaixo são da corrida do relatório, 18/09/2026).
+#
+# rotas_rota     = painel Rotas com a rota centro de Guarulhos → GRU: linha no mapa, resumo
+#                  (km · min · perfil), lista de instruções resumidas EM PORTUGUÊS e proveniência
+#                  (.pbf + versão do OSRM) — a cláusula do portão do L2-11-c (390 e 1280 de largura).
+# rotas_isocrona = isócrona de 5 min a pé do centro: polígono no mapa e resumo no painel.
+# rotas_matriz   = matriz 2 × 1: tabela de durações com cabeçalho O1/O2 × D1.
+# rotas_erro     = 503 interceptado no /api/rota: erro nomeado com "tentar de novo", nunca painel vazio.
+#
+# nome  bytes  sha256
+UX-08_rotas_erro_1280.png  971542  3aafec4d0a4b20f8b748951ac12751fb10f422936e42b601152bd419dbb95a64
+UX-08_rotas_isocrona_1280.png  102853  ac3ddc0b0ca7fc1ff69c21036495f2da6f57a09b340d55e59539cc36705e15f6
+UX-08_rotas_matriz_1280.png  960484  04e7adb04bfb4629a9f884aedd70150941fcefef64db1edc72dc732ea630ac5b
+UX-08_rotas_rota_1280.png  106280  2fc71607d95c4c2da4a506ae921d2b33e01b0b1ac8ba99020e0836c4086e3bbd
+UX-08_rotas_rota_390.png  44298  2edb8124f54ddb6d983c3705600ec4c06e702eddf099c9b55dafd862c3877bdd

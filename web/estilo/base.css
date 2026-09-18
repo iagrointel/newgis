@@ -69,8 +69,8 @@ body:not(.com-lateral) .lateral { display: none; }
 /* rotulo de grupo do menu: regra de LAYOUT que so existia em web/style.css e que as telas usam de
    verdade (medida no navegador, campo so_na_antiga_e_pegam da fase 'antes' da leva 1 do item
    L0-14-b). Trazida verbatim, com os tokens --i-* no lugar dos apelidos de compatibilidade. */
-.lateral nav .grupo-rotulo { padding: var(--i-e3) var(--i-e4) var(--i-e1); margin-top: var(--i-e1); color: var(--i-texto-fraco); font-size: var(--i-t-1); text-transform: uppercase; letter-spacing: var(--i-espaco-letra-media); }
-.lateral nav ul li.grupo-rotulo:first-child { margin-top: 0; }
+.lateral nav .grupo-rotulo { display: block; padding: var(--i-e3) var(--i-e4) var(--i-e1); margin-top: var(--i-e1); color: var(--i-texto-fraco); font-size: var(--i-t-1); text-transform: uppercase; letter-spacing: var(--i-espaco-letra-media); }
+.lateral nav ul > li.grupo-nav:first-child > .grupo-rotulo { margin-top: 0; }
 .lateral nav a {
   display: flex; align-items: center; gap: var(--i-e2);
   padding: var(--i-e2) var(--i-e4);

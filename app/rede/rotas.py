@@ -13,9 +13,11 @@ from pydantic import BaseModel, Field, field_validator
 
 from app import limites
 from app.auth.sessao import autenticado
+from app.db import db
 from app.erros import ErroAPI
 from app.rede import isocrona as isocrona_mod
 from app.rede import osrm
+from app.rede import pgr
 from app.rede.instrucoes import resumir_rota
 from app.settings import settings
 
@@ -40,7 +42,7 @@ def _ponto_valido(p: list[float]) -> list[float]:
 class PedidoRota(BaseModel):
     origem: list[float] = Field(..., examples=[[-46.5330, -23.4628]])
     destino: list[float] = Field(..., examples=[[-46.4730, -23.4356]])
-    perfil: Literal["carro"] = "carro"
+    perfil: Literal["carro", "bicicleta", "pe"] = "carro"
 
     @field_validator("origem", "destino")
     @classmethod
@@ -51,7 +53,7 @@ class PedidoRota(BaseModel):
 class PedidoMatriz(BaseModel):
     origens: list[list[float]] = Field(..., min_length=1)
     destinos: list[list[float]] = Field(..., min_length=1)
-    perfil: Literal["carro"] = "carro"
+    perfil: Literal["carro", "bicicleta", "pe"] = "carro"
 
     @field_validator("origens", "destinos")
     @classmethod
@@ -62,13 +64,34 @@ class PedidoMatriz(BaseModel):
 class PedidoIsocrona(BaseModel):
     ponto: list[float] = Field(..., examples=[[-46.5330, -23.4628]])
     minutos: float = Field(..., gt=0, le=limites.ROTA_MINUTOS_MAX)
-    perfil: Literal["carro"] = "carro"
+    perfil: Literal["carro", "bicicleta", "pe"] = "carro"
     ratio_casco: float | None = Field(None, ge=0.0, le=1.0)
 
     @field_validator("ponto")
     @classmethod
     def _v_ponto(cls, v):
         return _ponto_valido(v)
+
+
+class PedidoMaisProximo(BaseModel):
+    ponto: list[float] = Field(..., examples=[[-46.5330, -23.4628]])
+    perfil: Literal["carro", "bicicleta", "pe"] = "carro"
+
+    @field_validator("ponto")
+    @classmethod
+    def _v_ponto(cls, v):
+        return _ponto_valido(v)
+
+
+class PedidoAjusteTrajeto(BaseModel):
+    pontos: list[list[float]] = Field(..., min_length=2)
+    perfil: Literal["carro", "bicicleta", "pe"] = "carro"
+    raio_m: float = Field(50.0, gt=0, le=500)
+
+    @field_validator("pontos")
+    @classmethod
+    def _v_pontos(cls, v):
+        return [_ponto_valido(p) for p in v]
 
 
 @router.post("/rota", openapi_extra=X)
@@ -89,20 +112,78 @@ def calcular_rota(pedido: PedidoRota, auth=autenticado(escopo_token="rota:usar")
 @router.post("/matriz", openapi_extra=X)
 def calcular_matriz(pedido: PedidoMatriz, auth=autenticado(escopo_token="rota:usar")):
     n, m = len(pedido.origens), len(pedido.destinos)
-    teto = settings.PLAT_ROTA_MATRIZ_MAX
+    teto = settings.PLAT_ROTA_MATRIZ_JOB_MAX
     if n * m > teto:
         raise ErroAPI(
             422,
             "matriz_grande_demais",
-            f"{n}×{m} = {n * m} pedidos excede o teto de {teto} (PLAT_ROTA_MATRIZ_MAX)",
+            f"{n}×{m} = {n * m} pedidos excede o teto de {teto} células por job (PLAT_ROTA_MATRIZ_JOB_MAX)",
             {"origens": n, "destinos": m, "teto": teto},
         )
-    resposta = osrm.matriz(pedido.origens, pedido.destinos, pedido.perfil)
+    # acima do teto de UMA chamada /table (--max-table-size do contêiner), o serviço é chamado em blocos
+    # e a matriz remontada (matriz_grande); abaixo, uma chamada só
+    if n * m > settings.PLAT_ROTA_MATRIZ_MAX:
+        resposta = osrm.matriz_grande(pedido.origens, pedido.destinos, pedido.perfil)
+    else:
+        resposta = osrm.matriz(pedido.origens, pedido.destinos, pedido.perfil)
     return {
         "duracoes_s": resposta.get("durations"),
         "distancias_m": resposta.get("distances"),
         "origens": n,
         "destinos": m,
+        "perfil": pedido.perfil,
+        "proveniencia": _PROVENIENCIA,
+    }
+
+
+@router.post("/isocrona-rede", openapi_extra=X)
+def calcular_isocrona_rede(pedido: PedidoIsocrona, auth=autenticado(escopo_token="rota:usar")):
+    """Isócrona pela REDE roteável em PostGIS (pgRouting), alternativa ao método de grade do
+    /api/isocrona: pgr_drivingDistance sobre `plat.rota_pgr_demo` (mesmo recorte OSM do OSRM)."""
+    with db(somente_leitura=True) as cur:
+        if not pgr.rede_presente(cur):
+            raise ErroAPI(
+                422, "rede_ausente", "rede de demonstração pgRouting não carregada (scripts/rota_pgr_demo_carga.py)"
+            )
+        resultado = pgr.isocrona_poligono(cur, pedido.ponto[0], pedido.ponto[1], pedido.minutos)
+    if resultado is None:
+        raise ErroAPI(
+            422, "isocrona_vazia", "menos de 3 nós alcançáveis no orçamento de tempo pedido (rede insuficiente)"
+        )
+    return {
+        "poligono": resultado["poligono"],
+        "minutos": pedido.minutos,
+        "ponto": pedido.ponto,
+        "metodo": resultado["metodo"],
+        "nos_alcancaveis": resultado["nos_alcancaveis"],
+        "proveniencia": _PROVENIENCIA,
+    }
+
+
+@router.post("/mais-proximo", openapi_extra=X)
+def calcular_mais_proximo(pedido: PedidoMaisProximo, auth=autenticado(escopo_token="rota:usar")):
+    resposta = osrm.mais_proximo(pedido.ponto, pedido.perfil)
+    ponto_rede = resposta["waypoints"][0]
+    return {
+        "ponto_rede": ponto_rede["location"],
+        "distancia_m": ponto_rede["distance"],
+        "nome": ponto_rede.get("name") or "",
+        "perfil": pedido.perfil,
+        "proveniencia": _PROVENIENCIA,
+    }
+
+
+@router.post("/ajuste-de-trajeto", openapi_extra=X)
+def calcular_ajuste_de_trajeto(pedido: PedidoAjusteTrajeto, auth=autenticado(escopo_token="rota:usar")):
+    resposta = osrm.ajustar_trajeto(pedido.pontos, pedido.perfil, pedido.raio_m)
+    ajuste = resposta["matchings"][0]
+    passos = [s for leg in ajuste["legs"] for s in leg["steps"]]
+    return {
+        "distancia_m": ajuste["distance"],
+        "duracao_s": ajuste["duration"],
+        "confianca": ajuste.get("confidence"),
+        "geometria": ajuste["geometry"],
+        "instrucoes": resumir_rota(passos),
         "perfil": pedido.perfil,
         "proveniencia": _PROVENIENCIA,
     }

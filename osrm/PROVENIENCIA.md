@@ -51,28 +51,40 @@ verificado every-caso, só a ausência de nó de via faltando (`check-refs`) e a
 ## Resultado
 
 - `guarulhos.osm.pbf`: 1.669.892 bytes (1,6 MiB) — bem abaixo do teto de 50 MB do item.
+  `guarulhos-bike.osm.pbf` e `guarulhos-pe.osm.pbf` são **cópias byte a byte** (mesmo sha256): o que muda
+  entre perfis é só o profile `.lua` na extração, e o `osrm-extract` exige que o `.pbf` tenha o mesmo nome
+  base do dataset de saída.
 - sha256: `aea5af38b5511ce3cbaae3218743c38295bb9948645e6b8ae676b8d623e0d7b2`
 - 210.065 nós, 42.720 vias, 0 relações (restrições de manobra vêm de `type=restriction`, nenhuma no
   recorte — `osrm-extract` não relatou nenhuma).
-- `osrm-extract -p car.lua` (imagem `osrm/osrm-backend`, mesma versão v5.26.0 já usada nos 4 contêineres
-  da casa) → `osrm-partition` → `osrm-customize` (MLD): 117.140 nós no grafo por aresta, 227.801 arestas
-  processadas, pico de RAM relatado pelo próprio OSRM 156 MB (extract) / 82 MB (partition) / 63 MB
-  (customize) — todos rodados com `docker run --memory=1200m`/`800m` (teto duro do container; nenhum
-  chegou perto do teto). Diretório final `osrm/`: **61 MB** (script + `.pbf` + `.osrm*`).
-- Extraído/construído em 06/09/2026. Reprodutível: os três comandos acima, nesta ordem, sobre o mesmo
-  `area_estudo.osm.pbf` (mesmo timestamp de dado citado acima).
+- Extraído em 06/09/2026; datasets **reconstruídos em 18/09/2026** (3 perfis, ver abaixo). Reprodutível:
+  os três comandos acima, nesta ordem, sobre o mesmo `area_estudo.osm.pbf` (mesmo timestamp de dado citado
+  acima).
+
+## Versão do OSRM e os 3 perfis (reconstrução de 18/09/2026)
+
+A rodada anterior compilou o OSRM **v5.26.0 da fonte** (a imagem `osrm/osrm-backend` do Docker Hub não
+publica essa tag — a mais nova publicada é **v5.25.0**). Os arquivos `.osrm*` gerados pela 5.26.0 são
+incompatíveis com a 5.25.0 (`osrm-routed` recusa: "File is incompatible with this version of OSRM"), e o
+item exigia os perfis bicicleta e pé além de carro — então os **três datasets foram reconstruídos do zero
+com a imagem `osrm/osrm-backend:v5.25.0`**, um `osrm-extract` por profile (`car.lua`, `bicycle.lua`,
+`foot.lua`) → `osrm-partition` → `osrm-customize` (MLD), todos sob `docker run --memory=1200m`/`800m`,
+sem chegar perto dos tetos. Diretório final `osrm/`: ~180 MB (script + 3 `.pbf` idênticos + 3 conjuntos
+`.osrm*`).
 
 ## Serviço
 
-Contêiner `plat-osrm-guarulhos` (imagem `osrm/osrm-backend`, `osrm-routed --algorithm mld
---max-table-size 625`), **127.0.0.1:5010**, só perfil carro (`car.lua`; não há grafo de pé/bicicleta neste
-recorte — `ROTA_PERFIS = ("carro",)` em `app/limites.py`). Teto de memória do contêiner: 600 MB (medido em
-uso: ~40 MB). Unidade systemd `plat-osrm-guarulhos.service` (`deploy/plat-osrm-guarulhos.service`) — decisão
-de manter vivo (não por job): o serviço é um roteador HTTP leve (memória medida ~40 MB) que qualquer
-pedido de `/api/rota`, `/api/matriz` ou `/api/isocrona` pode chamar a qualquer momento; o padrão da casa
-para os outros 4 contêineres OSRM (`osrm-cbre`, `osrm-cbre-polos`, `osrm-edpes`, `buslog-osrm`) também é
-"sempre ligado", não sob demanda — manter o mesmo padrão evita uma classe nova de latência de partida fria
-(alguns segundos para carregar os arquivos `.osrm*` do disco) na primeira chamada de cada sessão.
+Três contêineres, um por perfil, todos `osrm-routed --algorithm mld --max-table-size 625` sobre o recorte,
+loopback apenas: `plat-osrm-guarulhos` (**127.0.0.1:5010**, carro), `plat-osrm-guarulhos-bike`
+(**127.0.0.1:5011**, bicicleta) e `plat-osrm-guarulhos-pe` (**127.0.0.1:5012**, pé). Teto de memória de
+600 MB cada (medido em uso: ~40-70 MB por contêiner). Unidade systemd template
+`plat-osrm-guarulhos@.service` (`deploy/plat-osrm-guarulhos@.service`; a instância é o perfil — o `case`
+deriva porta e dataset) — decisão de manter vivo (não por job): o serviço é um roteador HTTP leve que
+qualquer pedido de `/api/rota`, `/api/matriz`, `/api/isocrona`, `/api/mais-proximo`,
+`/api/ajuste-de-trajeto` ou `/api/naserver/*` pode chamar a qualquer momento; o padrão da casa para os
+outros 4 contêineres OSRM (`osrm-cbre`, `osrm-cbre-polos`, `osrm-edpes`, `buslog-osrm`) também é "sempre
+ligado", não sob demanda — manter o mesmo padrão evita uma classe nova de latência de partida fria (alguns
+segundos para carregar os arquivos `.osrm*` do disco) na primeira chamada de cada sessão.
 
 ## Portas e isolamento (não repetir o que já existe na casa)
 

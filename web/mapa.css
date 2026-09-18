@@ -121,3 +121,18 @@ body.mapa .mapa-painel-camadas .fraco { margin: 0 0 var(--e2); font-size: var(--
 body.mapa .mapa-painel-camadas ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e1); }
 body.mapa .mapa-painel-camadas .camada-titulo { text-align: left; }
 body.mapa .mapa-painel-camadas [aria-pressed="true"] { color: var(--acento); }
+
+/* ---------- painel Rotas (UX-08, religado pelo L2-11-c; regras recuperadas do commit c10286f2) ---------- */
+.rotas { display: grid; gap: var(--e3); }
+.rotas .campo { display: grid; gap: var(--e1); }
+.rotas .linha { display: flex; gap: var(--e2); align-items: center; flex-wrap: wrap; }
+.rotas .linha .controle { flex: 1; min-width: 8rem; }
+.rotas-modos { display: flex; gap: var(--e1); flex-wrap: wrap; }
+.rotas-modos [aria-checked="true"] { background: var(--acento); color: var(--acento-texto); border-color: var(--acento); }
+.rotas-bloco { display: grid; gap: var(--e2); }
+.rotas-conjunto { border: 1px solid var(--borda); border-radius: var(--raio); padding: var(--e2) var(--e3); display: grid; gap: var(--e2); }
+.rotas-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e1); font-size: var(--i-t-1); }
+.rotas-lista li { display: flex; justify-content: space-between; align-items: center; gap: var(--e2); }
+.rotas-resumo { margin: 0; }
+.rotas-instrucoes { margin: 0; padding-left: var(--e5); font-size: var(--i-t-1); display: grid; gap: var(--e1); }
+.rotas-saida { display: grid; gap: var(--e2); }

@@ -1,0 +1,33 @@
+[Unit]
+Description=plat — OSRM isolado de teste (item L2-11-c-rota-matriz-isocrona), recorte de Guarulhos <= 50 MB, perfil %i.
+Analise / beta privado. NUNCA aponta para os OSRM de outras frentes da casa (portas 5000-5003).
+After=docker.service network.target
+Requires=docker.service
+
+[Service]
+Type=simple
+# docker é o único jeito de rodar osrm-routed nesta máquina (mesmo padrão dos outros 4 contêineres OSRM da
+# casa); "docker run" sem -d fica em primeiro plano e É o processo supervisionado (Type=simple), não uma
+# política de restart do próprio docker — systemd é o único dono do ciclo de vida deste contêiner.
+# Instância = perfil: systemctl start plat-osrm-guarulhos@{carro,bicicleta,pe} — o case deriva porta e
+# dataset (os 3 .osm.pbf são CÓPIAS do mesmo arquivo; só o profile .lua muda na extração).
+ExecStartPre=-/usr/bin/docker rm -f plat-osrm-guarulhos-%i
+ExecStart=/bin/sh -c 'case %i in \
+    carro)     P=5010; F=guarulhos;; \
+    bicicleta) P=5011; F=guarulhos-bike;; \
+    pe)        P=5012; F=guarulhos-pe;; \
+    *) echo "perfil desconhecido: %i" >&2; exit 1;; \
+  esac; \
+  exec /usr/bin/docker run --rm --name plat-osrm-guarulhos-%i \
+    --memory=600m --memory-swap=600m \
+    -p 127.0.0.1:$P:5000 \
+    -v APP_DIR/osrm:/data \
+    osrm/osrm-backend:v5.25.0 osrm-routed --algorithm mld --max-table-size 625 /data/$F.osrm'
+ExecStop=/bin/sh -c '/usr/bin/docker stop -t 5 plat-osrm-guarulhos-%i'
+Restart=on-failure
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
