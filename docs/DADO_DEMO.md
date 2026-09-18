@@ -27,3 +27,140 @@ exige atribuição e mesma licença de trabalhos derivados; a Política de Dados
 mas cita a UE/ESA como titular dos dados originais. A atribuição visível no canto do mapa (DOM) e a
 listagem acima cobrem a exigência de atribuição das três licenças; nenhuma delas autoriza remover a
 atribuição, mesmo em relatório impresso.
+
+## Conjunto de demonstração (`dados_demo/`, item L0-13-dado-demonstracao)
+
+Os arquivos abaixo são o conjunto que o `install.sh` semeia em `demo` e `demo2` quando a instalação é
+de demonstração (`PLAT_AMBIENTE` de demonstração; em produção nada é semeado). Um bloco por arquivo, com
+a mesma fonte, endereço, licença e data de acesso que `dados_demo/catalogo.json` registra — o teste
+`tests/api/test_dado_demo.py` reprova quando documento e catálogo divergem em qualquer um dos quatro campos.
+
+Nenhum arquivo aqui é dado de cliente, de parceiro ou de piloto, e o mesmo teste varre os arquivos
+(inclusive dentro dos `.zip`) contra a lista de nomes proibidos da casa.
+
+Uma alteração declarada na origem: de `estacoes_inmet_centro_oeste.csv` foi removida uma linha, a da
+estação A934 (MT). O nome do município dela colide, como palavra inteira, com um nome da lista de
+`laco/nomes_proibidos.regex` — o nome não é repetido aqui, porque este documento passa pela mesma varredura.
+A estação é pública e legítima; a remoção existe para manter a varredura absoluta, sem lista de exceção.
+O resto do arquivo é o cadastro oficial do INMET tal como baixado.
+
+#### `municipios_ap_rr.zip`
+
+- Título: Limites municipais do Amapá e de Roraima
+- Inquilino: demo
+- Formato: shapefile.zip
+- Fonte: IBGE, malha municipal
+- Endereço: https://ftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/
+- Licença: IBGE, dado aberto (o FTP declara apenas que os arquivos disponíveis são públicos)
+- Data de acesso: 2026-09-06
+- Tamanho: 161559 bytes (sha256 `2f9e8ef463244c58c333100aeb29fdd1e8e0f42cbba072d98f8949a000023541`)
+
+#### `pontos_municipais_ap_rr.geojson`
+
+- Título: Ponto representativo dos municípios do Amapá e de Roraima
+- Inquilino: demo
+- Formato: geojson
+- Fonte: IBGE, malha municipal (ponto derivado pela casa)
+- Endereço: https://ftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/
+- Licença: IBGE, dado aberto (o FTP declara apenas que os arquivos disponíveis são públicos)
+- Data de acesso: 2026-09-06
+- Tamanho: 6075 bytes (sha256 `46eb9a3d9808bbcd331c5a0337689145243680c8911a60940f926f7e11e54e27`)
+
+#### `rodovias_federais_rr.geojson`
+
+- Título: Rodovias federais de Roraima
+- Inquilino: demo
+- Formato: geojson
+- Fonte: DNIT, SNV (rodovias federais)
+- Endereço: https://servicos.dnit.gov.br/vgeo/
+- Licença: DNIT, dado público do VGeo; licença não declarada na fonte
+- Data de acesso: 2026-09-06
+- Tamanho: 91370 bytes (sha256 `d97855c658667e30514ef25264e74ce2f1708bc96e4c6f8464b7ab2ca3da4a14`)
+
+#### `hidrografia_bacia_4668.geojson`
+
+- Título: Hidrografia da otto-bacia 4668
+- Inquilino: demo
+- Formato: geojson
+- Fonte: ANA, Base Hidrográfica Ottocodificada (BHO 2017)
+- Endereço: https://dadosabertos.ana.gov.br/
+- Licença: ANA, dado aberto; licença não declarada na fonte (campo licenseInfo nulo no portal, conferido em 06/09/2026)
+- Data de acesso: 2026-09-06
+- Tamanho: 374457 bytes (sha256 `66ce1103d7150cf51edfa191ed5e629603faf3c7171ee7df9ce7a3f41afa4ddb`)
+
+#### `estacoes_inmet_norte.csv`
+
+- Título: Estações meteorológicas do INMET na região Norte
+- Inquilino: demo
+- Formato: csv
+- Fonte: INMET, cadastro de estações
+- Endereço: https://portal.inmet.gov.br/dadoshistoricos
+- Licença: INMET, dado aberto; licença não declarada na fonte
+- Data de acesso: 2026-09-06
+- Tamanho: 5493 bytes (sha256 `6e277ab2af3492cf1df4f98084a38f97fb5d5574d366a335625854b303cabb5d`)
+
+#### `demonstracao_3_camadas.gpkg`
+
+- Título: GeoPackage de demonstração com três camadas
+- Inquilino: demo
+- Formato: gpkg
+- Fonte: IBGE, DNIT e ANA (mesmas camadas acima, reunidas pela casa)
+- Endereço: https://ftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/
+- Licença: IBGE, dado aberto (o FTP declara apenas que os arquivos disponíveis são públicos); DNIT, dado público do VGeo; licença não declarada na fonte; ANA, dado aberto; licença não declarada na fonte (campo licenseInfo nulo no portal, conferido em 06/09/2026)
+- Data de acesso: 2026-09-06
+- Tamanho: 393216 bytes (sha256 `1035423dbdc50e354267cf34398d175dcf1c6e6951406f5312dbb70980f98ce4`)
+
+#### `estacoes_inmet_norte.xlsx`
+
+- Título: Planilha das estações do INMET na região Norte
+- Inquilino: demo
+- Formato: xlsx
+- Fonte: INMET, cadastro de estações (convertido pela casa)
+- Endereço: https://portal.inmet.gov.br/dadoshistoricos
+- Licença: INMET, dado aberto; licença não declarada na fonte
+- Data de acesso: 2026-09-06
+- Tamanho: 7831 bytes (sha256 `b4c8662aaa0024ab5e9f1db139f485daaef677209de0ec1185895d56bed85981`)
+
+#### `planta_exemplo.dxf`
+
+- Título: Planta de exemplo em DXF
+- Inquilino: demo
+- Formato: dxf
+- Fonte: desenho da casa (dados_demo/gerar_do_acervo.py)
+- Endereço: https://iagrointel.com/
+- Licença: CC0 1.0 (arquivo desenhado pela casa só para demonstração; nenhum dado de terceiro dentro)
+- Data de acesso: 2026-09-06
+- Tamanho: 9337 bytes (sha256 `b37a397d3ae50192f7eb493ee573e25edea7a8741855fa06c7d8bca805c17332`)
+
+#### `municipios_ac.zip`
+
+- Título: Limites municipais do Acre
+- Inquilino: demo2
+- Formato: shapefile.zip
+- Fonte: IBGE, malha municipal
+- Endereço: https://ftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/
+- Licença: IBGE, dado aberto (o FTP declara apenas que os arquivos disponíveis são públicos)
+- Data de acesso: 2026-09-06
+- Tamanho: 81101 bytes (sha256 `3198c01e98abf3b2116b76b6fc3f48e8d5f452ff7a74328fdabcc741a6395b84`)
+
+#### `rodovias_federais_ac.geojson`
+
+- Título: Rodovias federais do Acre
+- Inquilino: demo2
+- Formato: geojson
+- Fonte: DNIT, SNV (rodovias federais)
+- Endereço: https://servicos.dnit.gov.br/vgeo/
+- Licença: DNIT, dado público do VGeo; licença não declarada na fonte
+- Data de acesso: 2026-09-06
+- Tamanho: 52149 bytes (sha256 `a1b404525a616597a03ed859dbac49b8ad59025173e6c1f71011b7ac74a5d5aa`)
+
+#### `estacoes_inmet_centro_oeste.csv`
+
+- Título: Estações meteorológicas do INMET na região Centro-Oeste
+- Inquilino: demo2
+- Formato: csv
+- Fonte: INMET, cadastro de estações
+- Endereço: https://portal.inmet.gov.br/dadoshistoricos
+- Licença: INMET, dado aberto; licença não declarada na fonte
+- Data de acesso: 2026-09-06
+- Tamanho: 10380 bytes (sha256 `883f45456098117517ba9950e73e5b09875a6d1288eef1ef538fe783553e1e28`)

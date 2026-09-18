@@ -31,18 +31,13 @@ import json
 import re
 from pathlib import Path
 
-import pytest
-
 ROOT = Path(__file__).resolve().parents[2]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L0-13: _nomes_proibidos() (tests/api/test_dado_demo.py) extrai o PRIMEIRO grupo entre "
-    "parênteses de laco/nomes_proibidos.regex, que hoje começa com a flag inline '(?i)' — o grupo "
-    "extraído é '?i', não a lista real de nomes de cliente/parceiro. A cláusula 'nenhum nome de cliente, "
-    "parceiro ou piloto' não testa nenhum nome de verdade desde que a flag foi acrescentada ao arquivo.",
-)
+# REMEDIADO (wt/l02, 18/09/2026): `_nomes_proibidos()` passa a pular as flags inline e a exigir o primeiro
+# grupo que NAO comece por `?`, com piso de 5 nomes. A correcao achou, na primeira rodada, uma violacao
+# REAL que o defeito escondia: uma estacao do INMET cujo nome de municipio esta na lista (ver
+# docs/DADO_DEMO.md, "alteracao declarada na origem").
 def test_nomes_proibidos_extraidos_pelo_teste_incluem_nomes_de_cliente_reais():
     import sys
 
@@ -63,13 +58,9 @@ def test_nomes_proibidos_extraidos_pelo_teste_incluem_nomes_de_cliente_reais():
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L0-13: docs/DADO_DEMO.md foi tomado por L2-01-e-mapas-base (commit 35d00a434) e hoje só "
-    "documenta a galeria de mapas base (OSM/Sentinel); zero linha sobre qualquer arquivo real do conjunto "
-    "de demonstração do item (dados_demo/catalogo.json). A cláusula 'cada arquivo tem linha no documento' "
-    "está sem cumprimento para os 11 arquivos reais.",
-)
+# REMEDIADO (wt/l02, 18/09/2026): docs/DADO_DEMO.md voltou a documentar os 11 arquivos do conjunto, num
+# bloco por arquivo gerado do proprio dados_demo/catalogo.json, SEM desalojar a secao de mapas base que o
+# item L2-01-e escreveu no mesmo arquivo: os dois itens passam a conviver em secoes separadas.
 def test_docs_dado_demo_documenta_os_arquivos_reais_do_conjunto():
     catalogo = json.loads((ROOT / "dados_demo" / "catalogo.json").read_text(encoding="utf-8"))
     doc = (ROOT / "docs" / "DADO_DEMO.md").read_text(encoding="utf-8")

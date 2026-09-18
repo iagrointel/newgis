@@ -43,7 +43,18 @@ def _nomes_proibidos() -> list[str]:
     junção usa para reprovar nome de cliente em arquivo do produto — nunca listado aqui, para não virar
     ele mesmo uma ocorrência do que proíbe."""
     padrao = (RAIZ / "laco" / "nomes_proibidos.regex").read_text(encoding="utf-8").strip()
-    return re.search(r"\(([^)]*)\)", padrao).group(1).split("|")
+    # 18/09/2026 (achado do adversário do T9): o `re.search` pegava o PRIMEIRO parêntese do arquivo, e o
+    # arquivo começa com a flag inline `(?i)` — a lista devolvida era `["?i"]`, então a cláusula do portão
+    # ("nenhum nome de cliente, parceiro ou piloto") passou meses conferindo a string "?i" e nenhum nome de
+    # verdade. As flags inline saem antes, e o grupo aceito é o primeiro que NÃO começa por `?`.
+    padrao = re.sub(r"^(?:\(\?[a-zA-Z]+\))+", "", padrao)
+    grupo = re.search(r"\((?!\?)([^)]*)\)", padrao)
+    if grupo is None:
+        raise AssertionError(f"laco/nomes_proibidos.regex não tem grupo de nomes legível: {padrao[:40]!r}...")
+    nomes = [n.strip() for n in grupo.group(1).split("|") if n.strip()]
+    if len(nomes) < 5:
+        raise AssertionError(f"lista de nomes proibidos curta demais ({len(nomes)}) — o arquivo mudou de forma")
+    return nomes
 
 
 # palavra inteira, sem acento, sem diferenciar maiúscula (ver _texto_de/_nomes_proibidos abaixo).

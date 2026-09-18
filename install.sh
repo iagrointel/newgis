@@ -407,6 +407,20 @@ for i in $(seq 1 30); do
 done
 systemctl --no-pager --lines=0 status plat-titiler | sed -n '1,4p'
 
+echo "== h2d. conjunto de dado de demonstração (item L0-13-dado-demonstracao)"
+# Só em instalação de demonstração: $SEMEAR já é o interruptor que o passo g gravou em plat.ambiente
+# (semear_demo), e em produção nada de demonstração é criado. A semeadura fala com a API que acabou de
+# subir, pela mesma ingestão que o usuário usa — nunca por INSERT direto —, e grava o tempo medido em
+# tests/medidas/L0-13-dado-demonstracao.json (cláusula dos 90 s do portão).
+if [ "$SEMEAR" = true ]; then
+  sudo -u "$APP_USER" "${PY[@]}" scripts/semear_dado_demo.py \
+    --base-url "http://127.0.0.1:$PORTA" \
+    --medida tests/medidas/L0-13-dado-demonstracao.json \
+    || { echo "semeadura do dado de demonstração falhou" >&2; exit 1; }
+else
+  echo "ambiente não é de demonstração: conjunto de demonstração NÃO semeado"
+fi
+
 echo "== h3. timer de expiração do PLAT_SECRET_ANTERIOR (item L7-19: a dupla-chave vale 24 h de verdade)"
 sed -e "s#APP_DIR#$APP_DIR#g" deploy/plat-segredo-expira.service > /etc/systemd/system/plat-segredo-expira.service
 install -m 0644 deploy/plat-segredo-expira.timer /etc/systemd/system/plat-segredo-expira.timer
