@@ -1,9 +1,44 @@
 """Fixtures do catálogo de imagens (item L1-01-a): token de serviço com escopo imagens:escrever para os
 dois inquilinos de demonstração (A=demo, B=demo2) — o par que o teste de isolamento cruza."""
 
+import os
+
 import pytest
 
 from tests.api.conftest import PREFIXO_TESTE
+
+
+@pytest.fixture(scope="module")
+def garage_duble():
+    """Garage de trilhas não existe neste servidor (a unidade `plataforma-garage-trilhas.service` não foi
+    provisionada — TCP recusado no PLAT_GARAGE_URL da trilha, medido 18/09). Sem ele, `semear_raster` morre
+    em `garantir_bucket` (PLAT_GARAGE_ADMIN_TOKEN vazio no .env da trilha) e NENHUM teste que semeia raster
+    roda aqui. O duble em memória (tests/servidor_garage.py, mesmo remendo de test_arquivo_url.py) cobre o
+    contrato S3/Admin que o caminho usa; SigV4 e cota física são prova do L0-11 contra o Garage real.
+
+    Opt-in por nome: só o módulo que pede a fixture paga o remendo. Mexe nos DOIS lados — `os.environ`
+    (qualquer subprocesso monta Settings do zero) e o `settings` deste processo (TestClient), já montado
+    quando a fixture roda. Restaurado ao fim do módulo."""
+    from app.settings import settings
+    from tests.servidor_garage import GarageDuble
+
+    chaves = ("PLAT_GARAGE_URL", "PLAT_GARAGE_ADMIN_URL", "PLAT_GARAGE_ADMIN_TOKEN")
+    with GarageDuble() as g:
+        ambiente_anterior = {k: os.environ.get(k) for k in chaves}
+        atributos_anteriores = {k: getattr(settings, k) for k in chaves}
+        for k, v in {"PLAT_GARAGE_URL": g.url, "PLAT_GARAGE_ADMIN_URL": g.url,
+                     "PLAT_GARAGE_ADMIN_TOKEN": "token-do-duble-de-teste"}.items():
+            os.environ[k] = v
+            object.__setattr__(settings, k, v)  # Settings é dataclass frozen; o remendo é só de teste
+        try:
+            yield g
+        finally:
+            for k in chaves:
+                if ambiente_anterior[k] is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = ambiente_anterior[k]
+                object.__setattr__(settings, k, atributos_anteriores[k])
 
 
 def _criar_token(sessao, escopos):

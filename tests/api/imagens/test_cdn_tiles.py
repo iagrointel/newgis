@@ -18,7 +18,7 @@ def _cliente():
 
 
 @pytest.fixture(scope="module")
-def raster_demo(tenant_id_a):
+def raster_demo(tenant_id_a, garage_duble):
     from tests.api.imagens.apoio_raster import semear_raster
 
     return semear_raster(tenant_id_a, "cdn")

@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import socket
 import subprocess
 import sys
 import time
@@ -27,13 +29,45 @@ ROOT = Path(__file__).resolve().parents[1]
 Z, X, Y = 12, 1503, 2230
 
 
+def _garage_alcancavel() -> bool:
+    """O Garage de trilhas não existe em toda máquina (neste servidor, 18/09: TCP recusado). Onde ele
+    existe, a prova roda contra ele; onde não existe, sobe o duble em memória (tests/servidor_garage.py)
+    ANTES de qualquer import de app.* — assim o Settings do processo pai e o do uvicorn subprocesso (que
+    herda os.environ) já nascem apontando para o duble. SigV4/cota física são prova do L0-11, não deste."""
+    url = os.environ.get("PLAT_GARAGE_URL", "")
+    if not url:
+        return False
+    partes = urllib.parse.urlsplit(url)
+    try:
+        with socket.create_connection((partes.hostname, partes.port or 80), timeout=2):
+            return True
+    except OSError:
+        return False
+
+
+def _subir_garage_duble_se_preciso():
+    if _garage_alcancavel():
+        print("== Garage da trilha alcançável — prova roda contra ele")
+        return None
+    sys.path.insert(0, str(ROOT))
+    from tests.servidor_garage import GarageDuble
+
+    duble = GarageDuble()
+    duble.__enter__()
+    os.environ["PLAT_GARAGE_URL"] = duble.url
+    os.environ["PLAT_GARAGE_ADMIN_URL"] = duble.url
+    os.environ["PLAT_GARAGE_ADMIN_TOKEN"] = "token-do-duble-de-teste"
+    print(f"== Garage da trilha inalcançável — duble em memória em {duble.url}")
+    return duble
+
+
 def _get(porta: int, caminho: str, timeout: float = 10.0):
     req = urllib.request.Request(f"http://127.0.0.1:{porta}{caminho}", method="GET")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
-            return r.status, dict(r.headers.items()), r.read()
+            return r.status, {k.lower(): v for k, v in r.headers.items()}, r.read()
     except urllib.error.HTTPError as e:
-        return e.code, dict(e.headers.items()), e.read()
+        return e.code, {k.lower(): v for k, v in e.headers.items()}, e.read()
 
 
 def _post_json(porta: int, caminho: str, corpo: dict, timeout: float = 10.0):
@@ -146,6 +180,15 @@ def principal() -> None:
     var.mkdir(parents=True, exist_ok=True)
     resultado: dict = {"item": "L7-26-cdn-tiles", "clausulas": {}}
 
+    duble = _subir_garage_duble_se_preciso()
+    try:
+        _principal(args, var, resultado)
+    finally:
+        if duble is not None:
+            duble.__exit__(None, None, None)
+
+
+def _principal(args, var: Path, resultado: dict) -> None:
     print("== semeando login/token/raster (em processo, mesma base que a API subprocesso vai ler)")
     ctx = _semear()
     token, item = ctx["token"]["token"], ctx["raster"]["item_id"]
@@ -240,12 +283,24 @@ def principal() -> None:
         print(f"   {c3}")
 
         # ---------------------------------------------------------------- cláusula 4: API/app não passa pela CDN
-        print("== cláusula 4: rota de API nunca tem cabeçalho de cache de CDN")
+        print("== cláusula 4: rota de API nunca tem cabeçalho de cache de CDN nem passa pela CDN")
         s4, h4, _ = _get(args.porta_api, "/api/tiles/leituras", timeout=5.0)
         cc4 = h4.get("cache-control", "")
+        # a MESMA rota pedida ATRAVÉS da CDN: tem de sair BYPASS (nunca entra no cache) e o cabeçalho
+        # `server` tem de ser o da ORIGEM, byte a byte — numa conta Cloudflare real tudo que passa pelo
+        # proxy sai com `server: cloudflare`; o app continua DNS-only (D19) e a Cache Rule só existe no
+        # prefixo do ladrilho, então qualquer `server` trocado ou HIT/MISS aqui derruba a cláusula.
+        s4b, h4b, _ = _get(args.porta_cdn, "/api/tiles/leituras", timeout=5.0)
+        servidor_direto = h4.get("server", "")
+        servidor_via_cdn = h4b.get("server", "")
         c4 = {
             "status": s4, "cache_control": cc4,
-            "passou": "immutable" not in cc4 and "max-age=31536000" not in cc4 and "no-store" in cc4,
+            "via_cdn_status": s4b, "via_cdn_cf_cache_status": h4b.get("cf-cache-status"),
+            "server_direto": servidor_direto, "server_via_cdn": servidor_via_cdn,
+            "passou": ("immutable" not in cc4 and "max-age=31536000" not in cc4 and "no-store" in cc4
+                       and s4b == s4 and h4b.get("cf-cache-status") == "BYPASS"
+                       and bool(servidor_direto) and servidor_via_cdn == servidor_direto
+                       and "cloudflare" not in servidor_via_cdn.lower()),
         }
         resultado["clausulas"]["4_api_sem_cache_de_cdn"] = c4
         print(f"   {c4}")
