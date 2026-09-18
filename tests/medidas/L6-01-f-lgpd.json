@@ -1,0 +1,12 @@
+{
+ "item": "L6-01-f-lgpd",
+ "medidas": {
+  "remedicao_20260918_testes_verdes": {
+   "valor": 27,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/seguranca/test_acervo_varredura_pii_conteudo.py -p no:randomly (trilha seg, teto 4G): 27 passed em 5,60 s. Rede fina por CONTEUDO construida (app/acervo/varredura_pii.py): CPF/CNPJ com pontuacao contam sempre, sequencia nua de 11/14 digitos so com digito verificador valido, digito repetido nunca. Prova em 3 camadas: detector offline (ataque x legitimo), varredura sobre view plantada com CPF valido em coluna de nome inocente + view so geografica que sai limpa, e varredura das views que o schema de publicacao tem hoje (0 achado). Entra no make check pelo alvo 'teste'."
+  }
+ },
+ "gerado_em": "2026-09-18T01:48:49Z",
+ "git_sha": "088c190838fd"
+}
