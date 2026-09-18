@@ -58,18 +58,30 @@ Fonte única (código e texto): `MAPEAMENTO_GNM` em `app/rede_utilidades/inspire
 | elo (`pipe`) | `us-net-common:UtilityLink` | `net:centrelineGeometry` |
 | `pipeDiameter` (só existiria em `Pipe`) | **fora do GML** | mesma decorrência acima |
 
+### Gás (`gas-br.json`)
+
+| pacote | GNM | elemento |
+|---|---|---|
+| nó (`city_gate`, `estacao_de_medicao`, `juncao_de_gas`, `ponto_de_entrega`, `regulador`, `valvula_de_gas`) | `us-net-common:Appurtenance` | `net:geometry` |
+| elo (`tubulacao_de_gas`) | `us-net-common:UtilityLink` | `net:centrelineGeometry` |
+| `appurtenanceType` (obrigatório no XSD) | fixo `urn:iagrointel:gnm:gas:no` | mesma lacuna de codelist da elétrica: o INSPIRE não publica vocabulário de aparelhos para gás (não existe `us-net-og` utilizável) |
+| `pipeDiameter` (só existiria em `Pipe`) | **fora do GML** | o pacote gas-br não modela diâmetro nominal com unidade normalizada |
+
 ## O que o exportador PROVA (portão de pronto)
 
 1. Documento de mapeamento campo a campo — este arquivo + `MAPEAMENTO_GNM` (dado, não prosa solta).
 2. Exportador (`app/rede_utilidades/inspire_gnm.py::exportar_gml`) que gera GML para 1 rede de teste
    por disciplina (elétrica: 3 nós / 2 elos com códigos reais do pacote `eletrica-br.json`; água: 2
-   nós / 1 elo), coordenadas dentro do Brasil, sem CAR nem dado de cliente.
+   nós / 1 elo; gás: 3 nós / 2 elos com grupos reais do pacote `gas-br.json` — `city_gate`,
+   `regulador`, `ponto_de_entrega`, `tubulacao_de_gas`), coordenadas dentro do Brasil, sem CAR nem
+   dado de cliente.
 3. Validação contra o XSD OFICIAL do INSPIRE (não uma cópia relaxada): `tests/unit/test_inspire_gnm.py`
-   roda `xmllint --schema <XSD oficial vendorizado> <GML gerado>` com resolução 100% OFFLINE via
-   `gnm_xsd/catalogo.xml` (nenhuma chamada de rede durante o teste) e confere que a saída contém
-   literalmente `validates`.
+   valida o GML gerado com `lxml.etree.XMLSchema` — a mesma engine libxml2 do `xmllint --schema`
+   (lxml é binding da libxml2; o binário xmllint não está instalado neste servidor e a trilha proíbe
+   alterar o sistema) — com resolução 100% OFFLINE via `gnm_xsd/catalogo.xml` (nenhuma chamada de
+   rede durante o teste), e um teste negativo confere que GML adulterado é recusado pelo mesmo XSD.
 
-Comando de reprodução manual:
+Comando de reprodução manual (em máquina com xmllint instalado — o teste de CI usa lxml, mesma engine):
 
 ```
 XML_CATALOG_FILES=app/rede_utilidades/gnm_xsd/catalogo.xml \
@@ -79,9 +91,9 @@ XML_CATALOG_FILES=app/rede_utilidades/gnm_xsd/catalogo.xml \
 
 ## O que NÃO está feito (fronteira honesta)
 
-- **Gás e esgoto**: o portão de pronto pede elétrica, água e gás; só elétrica e água têm pacote de
-  ativos publicado (`L4-01-a` só entregou `eletrica-br.json` e `agua-epanet.json`). Gás fica de fora
-  porque não há pacote-fonte — não é uma lacuna do mapeamento GNM, é dependência a montante.
+- **Esgoto**: o portão de pronto nomeia elétrica, água e gás — os três têm mapeamento + rede de
+  teste + validação XSD. Esgoto (`esgoto-teksi.json`) não é nomeado pelo portão e ficou de fora;
+  o caminho é o mesmo de água/gás (Pipe/Appurtenance), sem surpresa esperada.
 - **Atributos operacionais** (tensão, diâmetro, potência, corrente) não aparecem no GML — ver acima;
   reintroduzi-los exigiria usar `Cable`/`Pipe` (LinkSet) em vez de `UtilityLink`, ou estender o GNM
   com um `applicationSchema` próprio, o que o INSPIRE permite mas o portão não pediu.
