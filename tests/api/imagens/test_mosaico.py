@@ -698,8 +698,30 @@ def token_tiles_scl_a(sessao_a, mosaico_scl_a):
     sessao_a.delete(f"/api/tokens/{dados['id']}")
 
 
+def _coluna_da_borda_de_nuvem(z: int, x: int, y: int, largura: int) -> int:
+    """Em que COLUNA do ladrilho cai a borda da nuvem do SCL.
+
+    A nuvem semeada cobre a metade oeste da CENA, e o ladrilho central não é centrado na cena: a
+    coluna do meio do ladrilho não é a borda da nuvem. Medir "metade do ladrilho" comparava, dos dois
+    lados, pedaços que estavam ambos sob nuvem — e a prova reprovava sem defeito no produto. A borda
+    se calcula da geometria: meio da cena em EPSG:3857, convertido para coluna dentro dos limites do
+    próprio ladrilho."""
+    import morecantile
+    import pyproj
+
+    from app.imagens import tiles
+    from tests.api.imagens.apoio_mosaico import CANTO_LAT, CANTO_LON, LADO_PX, RESOLUCAO
+
+    x0, _ = pyproj.Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform(
+        CANTO_LON, CANTO_LAT)
+    meio_cena_x = x0 + (LADO_PX * RESOLUCAO) / 2
+    limites = tiles.TMS.xy_bounds(morecantile.Tile(x, y, z))
+    fracao = (meio_cena_x - limites.left) / (limites.right - limites.left)
+    return int(round(fracao * largura))
+
+
 def _metades(token, mosaico, **params) -> tuple[float, float]:
-    """Média da banda 1 na metade OESTE e na metade LESTE do ladrilho central."""
+    """Média da banda 1 a OESTE e a LESTE da borda da nuvem, dentro do ladrilho central."""
     import io
 
     import numpy as np
@@ -712,8 +734,13 @@ def _metades(token, mosaico, **params) -> tuple[float, float]:
     pixels = np.asarray(Image.open(io.BytesIO(r.content)).convert("RGBA"))
     assert np.all(pixels[:, :, 3] == 255), "o ladrilho tem de estar integralmente coberto"
     largura = pixels.shape[1]
+    corte = _coluna_da_borda_de_nuvem(z, x, y, largura)
+    assert 20 <= corte <= largura - 20, (
+        f"a borda da nuvem caiu na coluna {corte} de {largura}: o ladrilho central não a atravessa, "
+        "então esta medição não separa nuvem de céu limpo")
     banda = pixels[:, :, 0].astype(float)
-    return float(banda[:, : largura // 2].mean()), float(banda[:, largura // 2:].mean())
+    # margem de 4 px de cada lado da borda: a reamostragem do ladrilho mistura os dois lados na costura
+    return float(banda[:, : corte - 4].mean()), float(banda[:, corte + 4:].mean())
 
 
 def test_l108_sem_nuvem_troca_de_cena_so_onde_o_scl_marca_nuvem(token_tiles_scl_a, mosaico_scl_a):
