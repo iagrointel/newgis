@@ -4,16 +4,21 @@ contagem na proveniência. Depende de L6-01-b-view-so-leitura (PARCIAL) e L3-01-
 os módulos que faltavam (`app/amc/*`, `app/acervo/publicacao.py`) foram trazidos para este ramo pelo merge
 dos worktrees `wt/amc`, `wt/extrat` e `wt/t601b` (ver handoff do item).
 
-Três camadas REAIS, já ingeridas nesta casa (nunca dado sintético), pequenas o bastante para caber num
-teste: `public.icmbio_unidades_conservacao` (UC, 346 polígonos), `public.funai_terras_indigenas` (TI, 655
-polígonos) e `public.hidro_nacional_bc250` (hidrografia, 1,6 mi de linhas, com índice GiST — por isso ela e
-não `car_hidrografia`, 3,86 mi de linhas SEM índice espacial, teria estourado o relógio do teste). A área de
-Santa Catarina em torno do Parque Nacional da Serra do Itajaí, da Floresta Nacional de Ibirama e da Terra
-Indígena Águas Claras foi escolhida por medição prévia (bbox -49.5,-27.4,-48.9,-26.9): 2 UC, 1 TI e 1.101
-feições de hidrografia — dado real o bastante para o motor produzir número, não zero por falta de dado.
+Três camadas REAIS de fontes oficiais (nunca dado sintético): `public.icmbio_unidades_conservacao`
+(limiteucsfederais_a do ICMBio via WFS da INDE, recorte SC: 23 polígonos), `public.funai_terras_indigenas`
+(WFS da FUNAI, nacional: 655 polígonos) e `public.hidro_nacional_bc250` (hid_trecho_drenagem_l do
+geopackage BC250 versao2023 do IBGE, recorte SC, com índice GiST). Na prova original (vultr, 07/09) as
+três eram nacionais; nesta trilha (Hetzner) ICMBio/MMA estavam fora do ar e o gpkg nacional da BC250 tem
+1,5 GB — os recortes SC são o mesmo dado oficial, espacialmente subsetado (a grade de teste é de SC). A
+área de Santa Catarina em torno do Parque Nacional da Serra do Itajaí, da Floresta Nacional de Ibirama e
+da Terra Indígena Águas Claras foi escolhida por medição prévia (bbox -49.5,-27.4,-48.9,-26.9): 2 UC,
+1 TI e 1.101 feições de hidrografia — dado real o bastante para o motor produzir número, não zero por
+falta de dado.
 
 Registro do acervo é SEMPRE por schema de trilha (`plat_til604acervo` aqui via PLAT_SCHEMA), nunca a tabela
 `plat.acervo_camada` de produção — mesma regra e mesmo padrão de tests/api/test_acervo_publicacao.py.
+O banco do psql/publicador é PLAT_BANCO (padrão iagro_sat, a casa original); nesta trilha o schema vive no
+banco plat_trilhas, então a variável precisa estar no ambiente.
 """
 
 import json
@@ -24,6 +29,7 @@ from pathlib import Path
 import pytest
 
 from app import db as banco
+from app.acervo import licenca as mod_licenca
 from app.amc import executor
 from app.jobs.registro import FalhaDefinitiva
 from tests.api.amc.test_unidades import ContextoDeTeste
@@ -31,6 +37,8 @@ from tests.api.amc.test_unidades import ContextoDeTeste
 ROOT = Path(__file__).resolve().parents[3]
 PUBLICAR = ROOT / "scripts" / "acervo_publicar.py"
 PREFIXO = "zt-l604"
+BANCO = os.environ.get("PLAT_BANCO", "iagro_sat")
+SERVIDOR = os.environ.get("PLAT_SERVIDOR", "vultr")
 
 CAMADA_UC = "icmbio-mma-unidades-de-conservacao-cnuc/public.icmbio_unidades_conservacao"
 CAMADA_TI = "funai-terras-indigenas/public.funai_terras_indigenas"
@@ -47,7 +55,7 @@ LADO = 0.01  # ~1,1 km
 
 
 def _psql(sql: str, timeout: int = 60) -> str:
-    cmd = ["sudo", "-u", "postgres", "psql", "-d", os.environ.get("PLAT_BANCO", "iagro_sat"),
+    cmd = ["sudo", "-u", "postgres", "psql", "-d", BANCO,
            "-X", "-q", "-tA", "-v", "ON_ERROR_STOP=1", "-c", sql]
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     assert r.returncode == 0, r.stderr
@@ -88,7 +96,7 @@ def _registrar_camada(camada_id: str, schema_nome: str, tabela: str, coluna_geom
         f"""INSERT INTO {s}.acervo_camada (acervo_camada_id, fonte_id, servidor, banco, schema_nome, tabela,
               coluna_geom, srid, tipo_geom, colunas_expostas, colunas_bloqueadas, linhas_exatas,
               linhas_contadas_em, linhas_estimadas, estado)
-            VALUES ('{camada_id}', '{camada_id.split("/")[0]}', 'vultr', 'iagro_sat', '{schema_nome}', '{tabela}',
+            VALUES ('{camada_id}', '{camada_id.split("/")[0]}', '{SERVIDOR}', '{BANCO}', '{schema_nome}', '{tabela}',
               '{coluna_geom}', {srid}, 'GEOMETRY', ARRAY[{lista}], ARRAY[]::text[], {exatas}, current_date,
               {exatas}, 'exposta')
             ON CONFLICT (acervo_camada_id) DO UPDATE SET estado = 'exposta',
@@ -96,9 +104,49 @@ def _registrar_camada(camada_id: str, schema_nome: str, tabela: str, coluna_geom
     )
 
 
+def _curar_licencas() -> None:
+    """Semeia a licença curada das 3 fontes no schema da trilha (L6-01-e: sem licença escrita a assinatura é
+    409). Evidências verificadas ao vivo desta máquina em 18/09/2026: a página da FUNAI traz a frase de
+    licença literal (a mesma da curadoria de produção em scripts/acervo_licenca_sync.py); a página de dados
+    geoespaciais do ICMBio anuncia o download mas NÃO declara licença para o dado (geoservicos.icmbio.gov.br
+    fora do ar); o leiame da BC250 2017 não traz termo e ibge.gov.br responde 403 para este servidor — por
+    isso as duas últimas ficam 'nao-declarada', que é o valor honesto do vocabulário para isso."""
+    s = _schema()
+    linhas = [
+        ("funai-terras-indigenas", "licenca-propria",
+         "https://www.gov.br/funai/pt-br/atuacao/terras-indigenas/geoprocessamento-e-mapas", "html_regex", 200,
+         "Licença de uso: o conteúdo dos arquivos correspondentes a geoprocessamento e mapas poderão ser "
+         "reproduzidos desde que citada a fonte, excetuando os casos especificados em contrário e os "
+         "conteúdos replicados de outras fontes.", "alta"),
+        ("icmbio-mma-unidades-de-conservacao-cnuc", "nao-declarada",
+         "https://www.gov.br/icmbio/pt-br/dados-icmbio/dados_geoespaciais", "html_regex", 200,
+         "Acesse os dados de referência e temáticos produzidos pelos ICMBio disponíveis para download no "
+         "formato .shp e o Mapa Oficial das Unidades de Conservação federais — página sem licença explícita "
+         "para o dado; rodapé gov.br (CC BY-ND) cobre o site, não o shapefile.", "baixa"),
+        ("ibge-bc250-hidrografia-nacional", "nao-declarada",
+         "https://geoftp.ibge.gov.br/cartas_e_mapas/bases_cartograficas_continuas/bc250/versao2017/postgis/",
+         "manual", 200,
+         "leiame-bc250_2017-NOV.odt: 'O arquivo bc250_2017-11-08.tar contém uma cópia em formato tar gerada "
+         "pelo utilitário pg_dump' — leiame sem termo de licença; www.ibge.gov.br 403 para esta máquina.",
+         "baixa"),
+    ]
+    for fonte_id, tipo, url, metodo, status, evidencia, confianca in linhas:
+        _psql(
+            f"""INSERT INTO {s}.acervo_licenca (fonte_id, tipo, url_licenca, metodo, http_status, evidencia,
+                  confianca, verificado_em, atualizado_em)
+                VALUES ('{fonte_id}', '{tipo}', '{url}', '{metodo}', {status}, $E${evidencia}$E$,
+                  '{confianca}', now(), now())
+                ON CONFLICT (fonte_id) DO UPDATE SET tipo = EXCLUDED.tipo,
+                  url_licenca = EXCLUDED.url_licenca, http_status = EXCLUDED.http_status,
+                  evidencia = EXCLUDED.evidencia, confianca = EXCLUDED.confianca,
+                  verificado_em = EXCLUDED.verificado_em"""
+        )
+
+
 @pytest.fixture(scope="module")
 def camadas_publicadas():
-    """Registra as 3 camadas REAIS (schema da trilha) e publica de verdade (scripts/acervo_publicar.py)."""
+    """Registra as 3 camadas REAIS (schema da trilha), semeia a licença curada e publica de verdade
+    (scripts/acervo_publicar.py)."""
     if _psql("SELECT to_regclass('public.icmbio_unidades_conservacao') IS NOT NULL") != "t":
         pytest.skip("public.icmbio_unidades_conservacao não existe nesta base")
     _registrar_camada(CAMADA_UC, "public", "icmbio_unidades_conservacao", "geom", 4326,
@@ -106,9 +154,10 @@ def camadas_publicadas():
     _registrar_camada(CAMADA_TI, "public", "funai_terras_indigenas", "geom", 4326,
                       ["ogc_fid", "terrai_nome"])
     _registrar_camada(CAMADA_HIDRO, "public", "hidro_nacional_bc250", "geom", 4326, ["ogc_fid", "nome"])
+    _curar_licencas()
     r = subprocess.run(
         ["sudo", "-u", "postgres", "python3", str(PUBLICAR), "--schema", _schema(),
-         "--banco", os.environ.get("PLAT_BANCO", "iagro_sat")],
+         "--banco", BANCO],
         capture_output=True, text=True, timeout=120,
     )
     assert r.returncode == 0, r.stderr
@@ -143,11 +192,27 @@ def _modelo_3_fatores_acervo() -> dict:
     }
 
 
+def _sha_licenca(fonte_id: str) -> str:
+    """O sha256 do texto da licença pela MESMA função que o servidor usa na assinatura (ficha_licenca de
+    app/acervo/licenca.py) — nunca uma segunda montagem do texto que pudesse divergir."""
+    with banco.db(banco.Contexto(_tenant_id("demo"), 0, "teste")) as cur:
+        ficha = mod_licenca.ficha_licenca(cur, fonte_id)
+    assert ficha is not None, f"fonte {fonte_id} sem licença curada (a semente do fixture falhou?)"
+    return ficha["licenca_sha256"]
+
+
+def _assinar(sessao, view: str, camada_id: str) -> None:
+    """POST de assinatura no formato do L6-01-e: aceite + sha256 do texto da licença que a tela mostrou."""
+    r = sessao.post(f"/api/acervo/camadas/{view}/assinatura",
+                    json={"aceite_licenca": True,
+                          "licenca_sha256": _sha_licenca(camada_id.split("/")[0])})
+    assert r.status_code == 201, r.text
+
+
 @pytest.fixture
 def assinaturas_a(camadas_publicadas, sessao_a):
-    for v in (VIEW_UC, VIEW_TI, VIEW_HIDRO):
-        r = sessao_a.post(f"/api/acervo/camadas/{v}/assinatura")
-        assert r.status_code == 201, r.text
+    for v, c in ((VIEW_UC, CAMADA_UC), (VIEW_TI, CAMADA_TI), (VIEW_HIDRO, CAMADA_HIDRO)):
+        _assinar(sessao_a, v, c)
     yield
     for v in (VIEW_UC, VIEW_TI, VIEW_HIDRO):
         sessao_a.delete(f"/api/acervo/camadas/{v}/assinatura")
@@ -270,7 +335,7 @@ def test_revogar_assinatura_impede_nova_execucao_mas_nao_apaga_resultado_antigo(
         assert corpo["erro"] == "sem_assinatura", corpo
         assert CAMADA_UC in json.dumps(corpo)
     finally:
-        sessao_a.post(f"/api/acervo/camadas/{VIEW_UC}/assinatura")  # devolve para o resto do módulo
+        _assinar(sessao_a, VIEW_UC, CAMADA_UC)  # devolve para o resto do módulo
 
     with banco.db(banco.Contexto(tenant_id, 0, "teste")) as cur:
         cur.execute("SELECT count(*) AS n, count(favorabilidade) AS com_valor FROM plat.amc_resultado "
@@ -320,7 +385,7 @@ def test_refutacao_revogar_assinatura_durante_o_job_falha_com_mensagem_nunca_zer
         assert CAMADA_TI in str(exc.value), str(exc.value)
     finally:
         monkeypatch.setattr(executor.vetorial, "extrair", original)
-        sessao_a.post(f"/api/acervo/camadas/{VIEW_TI}/assinatura")  # devolve para o resto do módulo
+        _assinar(sessao_a, VIEW_TI, CAMADA_TI)  # devolve para o resto do módulo
 
     with banco.db(banco.Contexto(tenant_id, 0, "teste")) as cur:
         cur.execute("SELECT estado, erro FROM plat.amc_execucao WHERE id = %s::uuid", (eid,))
