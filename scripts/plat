@@ -69,7 +69,10 @@ def _quem() -> str:
 
 
 def _tenant_id(cur, slug: str) -> int:
-    cur.execute("SELECT id FROM plat.tenant WHERE slug = %s", (slug,))
+    """Pela função `plat.tenant_publico`, não por SELECT em plat.tenant: `plat_worker` não tem (nem deve
+    ter) leitura direta na tabela de inquilinos — a função é SECURITY DEFINER, devolve só id/slug/nome/
+    ativo e já é a porta usada pelo pré-contexto de login pelo mesmo motivo."""
+    cur.execute("SELECT id FROM plat.tenant_publico(%s)", (slug,))
     linha = cur.fetchone()
     if not linha:
         raise ErroModo(f"inquilino inexistente: {slug}")
