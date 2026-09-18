@@ -107,6 +107,8 @@ def test_modulo_so_monta_caminho_de_leitura():
         "sharing/rest/content/items/{item_id}/relatedItems",
         "sharing/rest/portals/{portal_id}/groups", "sharing/rest/community/groups/{grupo_id}/users",
         "sharing/rest/portals/{portal_id}/users", "{camada_id}/query", "",
+        # clonagem (L2-08-b): esquema da camada, anexos por feição e bytes de um anexo — só leitura
+        "{camada_id}", "{camada_id}/{oid}/attachments", "{camada_id}/{oid}/attachments/{anexo_id}",
     }
     caminhos, metodos = set(), set()
     for no in ast.walk(arvore):

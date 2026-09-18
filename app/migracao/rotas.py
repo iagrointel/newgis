@@ -26,6 +26,9 @@ from app.jobs.registro import ordem_perfil
 from app.migracao import relatorio
 from app.migracao.classificacao import CLASSES
 from app.migracao.modelos import (
+    CloneCartao,
+    CloneEntrada,
+    ClonePagina,
     InventarioDetalhe,
     InventarioEntrada,
     InventarioPagina,
@@ -211,4 +214,95 @@ def apagar(id: str, request: Request, auth: Auth = autenticado("conteudo.registr
         cur.execute("DELETE FROM plat.migracao_inventario WHERE id = %s::uuid", (inv,))
         registrar_evento(cur, request, "migracao/inventario_apagar", "conexao", str(r["conexao_id"]),
                          {"inventario_id": inv})
+    return Response(status_code=204)
+
+
+# ------------------------------------------------------------------ clonagem de camadas hospedadas (item L2-08-b)
+def _clone_json(r: dict) -> dict:
+    return {
+        "id": str(r["id"]),
+        "conexao_id": str(r["conexao_id"]),
+        "url_servico": r["url_servico"],
+        "estado": r["estado"],
+        "camadas_pedidas": list(r["camadas_pedidas"]) if r["camadas_pedidas"] is not None else None,
+        "job_id": str(r["job_id"]) if r["job_id"] else None,
+        "mensagem": r["mensagem"],
+        "camadas": r["camadas"] or [],
+        "relatorio": r["relatorio"] or {},
+        "criado_em": r["criado_em"].isoformat(),
+        "atualizado_em": r["atualizado_em"].isoformat(),
+    }
+
+
+@router.get("/clones", response_model=ClonePagina, openapi_extra=LER)
+def listar_clones(auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    with db.db(auth.contexto()) as cur:
+        cur.execute("SELECT * FROM plat.migracao_clone ORDER BY criado_em DESC LIMIT 200")
+        itens = [_clone_json(r) for r in cur.fetchall()]
+    return {"total": len(itens), "itens": itens}
+
+
+@router.get("/clones/{id}", response_model=CloneCartao, openapi_extra=LER)
+def ver_clone(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    cid = uuid_ok(id, "clone_inexistente", "clonagem inexistente")
+    with db.db(auth.contexto()) as cur:
+        cur.execute("SELECT * FROM plat.migracao_clone WHERE id = %s::uuid", (cid,))
+        r = cur.fetchone()
+    if r is None:
+        raise ErroAPI(404, "clone_inexistente", "clonagem inexistente")
+    return _clone_json(r)
+
+
+@router.post("/clones", status_code=201, response_model=CloneCartao, openapi_extra=CRIAR)
+def criar_clone(corpo: CloneEntrada, request: Request, auth: Auth = autenticado("conteudo.publicar_camada")):
+    """Pede a clonagem (job `migracao.clonar`) das camadas/tabelas de um FeatureServer da conexão `esri_rest`.
+    `url_servico` tem de estar sob a URL da conexão (a credencial dela nunca viaja para outro host)."""
+    tipo_job = servico.tipo_registrado("migracao.clonar")
+    if not auth.superadmin and ordem_perfil(auth.perfil) < ordem_perfil(tipo_job.perfil_minimo):
+        raise ErroAPI(403, "perfil_insuficiente", f"clonar exige perfil {tipo_job.perfil_minimo} ou superior")
+    cid = uuid_ok(corpo.conexao_id, "conexao_inexistente", "conexão inexistente")
+    url = corpo.url_servico.strip().rstrip("/")
+    if "/FeatureServer" not in url and "/MapServer" not in url:
+        raise ErroAPI(422, "url_servico_invalida", "url_servico precisa apontar para um FeatureServer/MapServer")
+    with db.db(auth.contexto()) as cur:
+        cur.execute("SELECT id, tipo, url FROM plat.conexao WHERE id = %s::uuid", (cid,))
+        conexao = cur.fetchone()
+        if conexao is None:
+            raise ErroAPI(404, "conexao_inexistente", "conexão inexistente")
+        if conexao["tipo"] != "esri_rest":
+            raise ErroAPI(422, "conexao_nao_e_portal", "a clonagem só roda sobre conexão do tipo esri_rest")
+        from app.conexao.seguranca import _mesma_origem_de_confianca
+
+        if not _mesma_origem_de_confianca(conexao["url"], url):
+            raise ErroAPI(422, "url_servico_fora_da_conexao", "url_servico fica fora da origem da conexão")
+        try:
+            cur.execute(
+                "INSERT INTO plat.migracao_clone(tenant_id, conexao_id, url_servico, camadas_pedidas, criado_por) "
+                "VALUES (%s, %s::uuid, %s, %s, %s) RETURNING *",
+                (auth.tenant_id, cid, url, corpo.camadas, auth.usuario_id),
+            )
+            r = cur.fetchone()
+        except psycopg2.Error as e:
+            raise auth_comum.erro_do_banco(e) from e
+        registrar_evento(
+            cur, request, "migracao/clonar", "conexao", cid, {"clone_id": str(r["id"]), "url_servico": url}
+        )
+        job = servico.criar(sessao_de(auth), "migracao.clonar", {"clone_id": str(r["id"])})
+        cur.execute(
+            "UPDATE plat.migracao_clone SET job_id = %s::uuid WHERE id = %s::uuid RETURNING *",
+            (str(job["id"]), str(r["id"])),
+        )
+        r = cur.fetchone()
+    return _clone_json(r)
+
+
+@router.delete("/clones/{id}", status_code=204, openapi_extra=CRIAR)
+def apagar_clone(id: str, request: Request, auth: Auth = autenticado("conteudo.publicar_camada")):
+    """Apaga só o registro da clonagem; as camadas clonadas continuam no catálogo (são itens comuns)."""
+    cid = uuid_ok(id, "clone_inexistente", "clonagem inexistente")
+    with db.db(auth.contexto()) as cur:
+        cur.execute("DELETE FROM plat.migracao_clone WHERE id = %s::uuid RETURNING id", (cid,))
+        if cur.fetchone() is None:
+            raise ErroAPI(404, "clone_inexistente", "clonagem inexistente")
+        registrar_evento(cur, request, "migracao/clone_apagar", "migracao_clone", cid)
     return Response(status_code=204)

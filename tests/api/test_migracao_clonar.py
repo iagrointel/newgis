@@ -4,7 +4,8 @@ Duas fontes: (1) um serviço PÚBLICO da Esri gravado com URL e data (`tests/mig
 pelo portal de mentira — camada com domínios codificados, subtipos, relacionamento 1:N com uma tabela e anexos;
 (2) o PRÓPRIO FeatureServer da plataforma, subido na trilha em IP público (a defesa de SSRF recusa loopback),
 lido com token de serviço pelo cabeçalho X-Esri-Authorization. A clonagem roda de forma síncrona (`CtxFalso` do
-inventário) — o job real é o mesmo código com o worker por fora."""
+inventário) — o job real é o mesmo código com o worker por fora. O último teste (`lento`) é a cláusula de escala
+do portão: 5 camadas clonadas com contagem igual, uma delas de 500 mil feições com o tempo medido."""
 
 import base64
 import hashlib
@@ -25,6 +26,7 @@ from tests.api.conftest import PREFIXO_TESTE
 from tests.api.test_migracao_inventario import CtxFalso, _conexao_direta
 from tests.api.test_rls import contexto, ids_por_slug
 from tests.migracao.portal_falso import PortalFalso, ip_publico
+from tests.servidor_garage import GarageDuble
 
 RAIZ = Path(__file__).resolve().parents[2]
 PORTA_FONTE = 8503
@@ -114,7 +116,34 @@ def _registrar_itens(sessao_a, limpar, clone_id: str) -> dict:
 
 
 # ---------------------------------------------------------------- fonte 1: serviço público gravado
-def test_servico_publico_gravado_clona_esquema_dominios_relacionamento_e_anexos(sessao_a, env, limpar, medida):
+@pytest.fixture(scope="module")
+def garage_duble():
+    """A trilha não tem Garage (PLAT_GARAGE_ADMIN_TOKEN vazio) e a clonagem grava anexos com
+    `objetos.guardar`, que fala S3/Admin no contrato do Garage (L0-11). O duble em memória
+    (tests/servidor_garage.py) cobre exatamente esse contrato — mesmo remendo de
+    tests/api/conexao/test_arquivo_url.py; SigV4 e cota física são prova do L0-11, não deste item."""
+    from app.settings import settings
+
+    chaves = ("PLAT_GARAGE_URL", "PLAT_GARAGE_ADMIN_URL", "PLAT_GARAGE_ADMIN_TOKEN")
+    with GarageDuble() as g:
+        ambiente_anterior = {k: os.environ.get(k) for k in chaves}
+        atributos_anteriores = {k: getattr(settings, k) for k in chaves}
+        for k, v in {"PLAT_GARAGE_URL": g.url, "PLAT_GARAGE_ADMIN_URL": g.url,
+                     "PLAT_GARAGE_ADMIN_TOKEN": "token-do-duble-de-teste"}.items():
+            os.environ[k] = v
+            object.__setattr__(settings, k, v)  # Settings é dataclass frozen; o remendo é só de teste
+        try:
+            yield g
+        finally:
+            for k in chaves:
+                if ambiente_anterior[k] is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = ambiente_anterior[k]
+                object.__setattr__(settings, k, atributos_anteriores[k])
+
+
+def test_servico_publico_gravado_clona_esquema_dominios_relacionamento_e_anexos(sessao_a, env, limpar, medida, garage_duble):
     with PortalFalso() as portal:
         url = f"{portal.base}/server/rest/services/publico/FeatureServer"
         pedido = _pedir_clone(sessao_a, limpar, portal.base, url)
@@ -244,10 +273,14 @@ def servidor_fonte(env):
         proc.kill()
 
 
-def _camada_fonte(conexao_plat_app, n_feicoes: int, com_dominio: bool = True) -> tuple[str, dict]:
-    """Camada de pontos em demo com `n_feicoes` linhas e um domínio codificado no campo categoria."""
+def _camada_fonte(
+    conexao_plat_app, n_feicoes: int, com_dominio: bool = True, geometria: str = "Point", ewkt=None
+) -> tuple[str, dict]:
+    """Camada em demo com `n_feicoes` linhas e um domínio codificado no campo categoria.
+    `ewkt(i)` gera a geometria da linha i (padrão: pontos numa diagonal)."""
     from app.catalogo.camada_nova import criar_camada
 
+    ewkt = ewkt or (lambda i: f"SRID=4326;POINT({-46 + i * 0.001} {-23 + i * 0.001})")
     ids = ids_por_slug(conexao_plat_app)
     admin = _admin_id(conexao_plat_app, "demo")
     contexto(conexao_plat_app, ids["demo"], usuario_id=admin, login="admin")
@@ -262,20 +295,14 @@ def _camada_fonte(conexao_plat_app, n_feicoes: int, com_dominio: bool = True) ->
                 {"nome": "valor", "tipo": "double precision"},
                 {"nome": "quando", "tipo": "timestamptz"},
             ],
-            geometria="Point",
+            geometria=geometria,
             srid=4326,
         )
         psycopg2.extras.execute_values(
             cur,
             f'INSERT INTO "{dados["schema"]}"."{dados["tabela"]}" (nome, categoria, valor, quando, geom) VALUES %s',
             [
-                (
-                    f"f{i}",
-                    "AB"[i % 2],
-                    i * 1.5,
-                    "1969-07-20T20:17:00Z",
-                    f"SRID=4326;POINT({-46 + i * 0.001} {-23 + i * 0.001})",
-                )
+                (f"f{i}", "AB"[i % 2], i * 1.5, "1969-07-20T20:17:00Z", ewkt(i))
                 for i in range(n_feicoes)
             ],
             template="(%s, %s, %s, %s, ST_GeomFromEWKT(%s))",
@@ -349,6 +376,106 @@ def test_proprio_featureserver_como_fonte(sessao_a, env, limpar, servidor_fonte,
     )
     # segunda execução sem mudança = 0 escritas
     assert _rodar(sessao_a, env, pedido["id"])["escritas"] == 0
+
+
+# ---------------------------------------------------------------- escala do portão: 5 camadas, uma com 500 mil feições
+def _ewkt_linha(i: int) -> str:
+    x = -46 + i * 0.001
+    return f"SRID=4326;LINESTRING({x} {-23}, {x + 0.0005} {-23 + 0.0005})"
+
+
+def _ewkt_quadrado(i: int) -> str:
+    x, y = -46 + i * 0.001, -23.0
+    return (
+        f"SRID=4326;POLYGON(({x} {y}, {x + 0.0005} {y}, {x + 0.0005} {y + 0.0005}, "
+        f"{x} {y + 0.0005}, {x} {y}))"
+    )
+
+
+def _camada_500_mil(conexao_plat_app, n: int) -> str:
+    """Camada de pontos com `n` feições semeadas num INSERT só (generate_series): semear por
+    execute_values em lotes de 1.000 custaria minutos antes de o clone começar."""
+    from app.catalogo.camada_nova import criar_camada
+
+    ids = ids_por_slug(conexao_plat_app)
+    admin = _admin_id(conexao_plat_app, "demo")
+    contexto(conexao_plat_app, ids["demo"], usuario_id=admin, login="admin")
+    with conexao_plat_app.cursor() as cur:
+        item_id, dados = criar_camada(
+            cur,
+            admin,
+            f"{PREFIXO_TESTE} fonte 500 mil",
+            [
+                {"nome": "nome", "tipo": "text"},
+                {"nome": "valor", "tipo": "double precision"},
+                {"nome": "quando", "tipo": "timestamptz"},
+            ],
+            geometria="Point",
+            srid=4326,
+        )
+        cur.execute(
+            f'INSERT INTO "{dados["schema"]}"."{dados["tabela"]}" (nome, valor, quando, geom) '
+            "SELECT 'f' || i, i * 1.5, '1969-07-20T20:17:00Z'::timestamptz, "
+            "ST_SetSRID(ST_MakePoint(-46 + (i %% 1000) * 0.001, -23 + (i / 1000) * 0.001), 4326) "
+            "FROM generate_series(0, %s) AS i",
+            (n - 1,),
+        )
+    conexao_plat_app.commit()
+    return item_id
+
+
+@pytest.mark.lento
+def test_escala_do_portao_5_camadas_e_500_mil_feicoes(
+    sessao_a, env, limpar, servidor_fonte, conexao_plat_app, token_a, medida
+):
+    """As duas cláusulas de escala que o adversário (T9, L2-2) derrubou: "5 camadas clonadas com
+    contagem igual" e "camada de 500 mil feições em tempo medido". Fonte: o próprio FeatureServer da
+    trilha (um serviço por camada, um job de clone por serviço) — a credencial de terceiro (D20) não
+    é necessária para medir o caminho de clonagem; serviço público de 500 mil segue na fronteira."""
+    esperadas = {}
+    for geometria, n, ewkt in [
+        ("Point", 600, None),
+        ("LineString", 600, _ewkt_linha),
+        ("Polygon", 600, _ewkt_quadrado),
+        ("Point", 700, None),
+    ]:
+        item_id, _ = _camada_fonte(conexao_plat_app, n, com_dominio=False, geometria=geometria, ewkt=ewkt)
+        limpar["itens"].append(item_id)
+        esperadas[item_id] = n
+    grande_id = _camada_500_mil(conexao_plat_app, 500_000)
+    limpar["itens"].append(grande_id)
+    esperadas[grande_id] = 500_000
+
+    segundos_500k = None
+    for item_id, n in esperadas.items():
+        url = f"{servidor_fonte}/rest/services/{item_id}/FeatureServer"
+        pedido = _pedir_clone(sessao_a, limpar, servidor_fonte, url, credencial=token_a["token"])
+        t0 = time.perf_counter()
+        relatorio = _rodar(sessao_a, env, pedido["id"])
+        segundos = time.perf_counter() - t0
+        cartao = _registrar_itens(sessao_a, limpar, pedido["id"])
+        assert cartao["estado"] == "concluido", cartao
+        (camada,) = cartao["camadas"]
+        assert camada["verificacao"]["contagem_origem"] == n == camada["verificacao"]["contagem_destino"]
+        assert camada["verificacao"]["contagem_igual"] is True
+        assert camada["verificacao"]["hash_amostra_igual"] is True, camada["verificacao"]
+        assert relatorio["escritas"] == n
+        if n == 500_000:
+            segundos_500k = round(segundos, 2)
+    m = medida("L2-08-b-clonar-camadas-hospedadas")
+    m(
+        "camadas_clonadas_nos_testes",
+        len(esperadas),
+        "camadas",
+        "test_escala_do_portao_5_camadas_e_500_mil_feicoes: Point, LineString, Polygon, Point e Point "
+        "com 500 mil — todas com contagem_igual e hash_amostra_igual",
+    )
+    m(
+        "segundos_clone_500_mil_feicoes",
+        segundos_500k,
+        "s",
+        f"carga_1min={os.getloadavg()[0]:.1f}; fonte: o próprio FeatureServer da trilha (sem rede externa)",
+    )
 
 
 def test_clone_de_a_invisivel_para_b_e_url_fora_da_conexao(sessao_a, sessao_b, limpar):
