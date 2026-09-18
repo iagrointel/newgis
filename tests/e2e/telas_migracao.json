@@ -620,7 +620,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "deixada_para_tras",
+   "estado": "pendente",
    "nota": "Fica na folha antiga. O bloqueio NAO e desenho, e capacidade de medida nesta maquina: a tela desenha a lista inteira de sistemas de coordenadas -- 47.049 elementos e 439.805 px de altura, medidos no navegador. A foto de pagina inteira derruba o processo do Chromium (bitmap de 1280 x 439.805) e a medida de contraste no a no, mais o axe, sobre 47 mil elementos levou o oom-kill do sistema em 18/09/2026 01:59 (global_oom; a maquina estava com 2,4 GB livres e swap zerada). Sem par antes/depois medido nao se migra. Para retomar: maquina com folga de memoria, ou a tela com a lista paginada."
   },
   {
