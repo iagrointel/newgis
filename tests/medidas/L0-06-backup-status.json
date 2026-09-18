@@ -1,0 +1,20 @@
+{
+ "item": "L0-06-backup-status",
+ "medidas": {
+  "linhas_de_agenda_de_backup_por_inquilino": {
+   "valor": 10,
+   "unidade": "linhas",
+   "comando": "5 inquilinos ativos x 2 tipos em plat.agenda apos reiniciar o worker (antes: 2, so no inquilino tecnico plataforma). SELECT em plat_tl02.agenda WHERE tipo IN ('backup.executar','backup.ensaio_restauracao')"
+  },
+  "inquilinos_alcancados": {
+   "valor": 5,
+   "unidade": "inquilinos",
+   "comando": "plat.agenda_periodica_por_inquilino_sincronizar percorre plat.tenant WHERE ativo (migracao 20260918T0242)"
+  }
+ },
+ "nao_medido": {
+  "backup_diario_ativo_por_padrao": "os dois periodicos nascem ativa=false. E' decisao do dono, registrada na migracao 20260910T2210 ('agenda no banco, pausada, para o dono decidir'), e NAO foi mudada aqui. Enquanto ninguem ligar, 'backup diario' nao e o comportamento padrao de nenhum inquilino -- o que existe agora e o interruptor ligado ao lugar certo. tests/api/adversario/test_l0_backup_status_periodico.py::test_periodicos_de_backup_por_inquilino_estao_ativos_por_padrao segue xfail de proposito.",
+  "backup_executar_termina_com_sucesso": "NAO termina nesta trilha. Dois defeitos encontrados ao ligar a agenda de demo: (1) CONSERTADO -- _slug_e_esquema usava o cursor DEPOIS do commit, abrindo transacao numa conexao que o pool dava por ociosa, e todo backup.executar morria em 'ProgrammingError: set_session cannot be used inside a transaction', manual ou agendado; (2) ABERTO -- passado o (1), o job chega a progresso 5 e falha em 'NotNullViolation: null value in column arquivo of relation backup', ou seja o pg_dump por `sudo -n -u postgres` nao produziu arquivo nesta maquina. tests/api/test_backup.py continua vermelho por (2). plat.backup tem 0 linhas."
+ },
+ "gerado_em": "2026-09-18T02:51:58Z"
+}

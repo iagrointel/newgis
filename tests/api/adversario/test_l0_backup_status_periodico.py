@@ -51,15 +51,12 @@ def test_periodicos_de_backup_por_inquilino_estao_ativos_por_padrao(conexao_plat
     assert not inativos, f"periódico(s) de backup por inquilino continuam pausados por padrão: {inativos}"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO (turno 9, adversário de linha L0, item L0-06-backup-status): "
-    "app/jobs/agenda.py::sincronizar_periodicos só faz upsert no inquilino TÉCNICO `plataforma` -- um "
-    "inquilino de cliente comum (`demo`) nunca ganha uma linha de backup.executar/backup.ensaio_restauracao "
-    "em plat.agenda, ligada ou pausada. 'Backup por inquilino diário' (a hipótese do item) é "
-    "arquiteturalmente impossível de automatizar hoje para qualquer inquilino além do técnico -- só o "
-    "disparo manual (POST /api/jobs) alcança um inquilino de cliente.",
-)
+# REMEDIADO (wt/l02, 18/09/2026): os dois periodicos de backup sairam da lista global e entraram em
+# PERIODICOS_POR_INQUILINO, que sincronizar_periodicos aplica a CADA inquilino ativo pela funcao nova
+# plat.agenda_periodica_por_inquilino_sincronizar (migracao 20260918T0242). Medido nesta trilha apos
+# reiniciar o worker: 5 inquilinos ativos x 2 tipos = 10 linhas em plat.agenda, onde antes havia 2 (so o
+# inquilino tecnico). Elas nascem pausadas de proposito -- ver o xfail do teste de cima, que continua de pe
+# porque 'nascer ativa' e decisao do dono (migracao 20260910T2210), nao defeito.
 def test_inquilino_de_cliente_tem_periodico_de_backup_proprio(conexao_plat_app):
     ids = ids_por_slug(conexao_plat_app)
     contexto(conexao_plat_app, ids["demo"], usuario_id=0, login="teste")
