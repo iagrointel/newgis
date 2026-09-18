@@ -26,9 +26,11 @@ def _sobe(handler_cls) -> tuple[socketserver.TCPServer, int]:
     return httpd, httpd.server_address[1]
 
 
-@pytest.mark.xfail(strict=True, reason="L6-02-c: o Bearer da conexão vaza para qualquer host público "
-                   "indicado no link rel=next (controlado pelo servidor). buscar_seguro só retira a "
-                   "credencial em REDIRECT cross-host; o rel=next é caminho do CHAMADOR e não é coberto.")
+# 18/09/2026: a marca xfail(strict=True) saiu porque o teste PASSA — rodado isolado na trilha `uniao`.
+# Consertado em 022d70acd ("Conserto de segurança: credencial não atravessa link rel=next para outra
+# origem", item L6-02-c-wfs-ogcapi). A marca do teste do KMZ, logo abaixo, CONTINUA: aquele defeito
+# ainda existe e o teste ainda falha.
+# O texto que vem abaixo (docstring/nome) descreve o achado ORIGINAL, não o estado de hoje.
 def test_l6_02_c_credencial_vaza_para_host_externo_via_rel_next():
     from app.conexao import vetor_externo as ve
 

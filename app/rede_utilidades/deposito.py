@@ -255,3 +255,113 @@ def exportar(cur, rede_id: str) -> dict | None:
             for r in regras
         ],
     }
+
+
+
+# --- regras avaliáveis e feições (item L4-03-a-regras-de-conectividade) --------------------------------------
+#
+# 18/09/2026 — REGRESSÃO DE FUSÃO, restaurada. `carregar_regras` e `mapas_catalogo` entraram em
+# 2e93420a5 e sumiram numa fusão posterior, sem que nenhum teste apontasse a causa: o sintoma era
+# `AttributeError: module ... has no attribute 'mapas_catalogo'` em rotas_regras.py:339, dentro de um
+# 500 da API, longe do arquivo que perdeu o código. As duas funções abaixo são a cópia literal da
+# versão de 2e93420a5 (conferida byte a byte); nada do que veio depois foi desfeito.
+#
+# É a terceira do mesmo tipo em dois dias (as outras: `tolerancia_m` em rotas.py e o vocabulário de
+# `rede_regra.tipo` em simples.py). O padrão é sempre o mesmo: a fusão resolve o conflito ficando com
+# o lado que NÃO tem o código novo, e o teste que o cobria passa a falhar por um sintoma que não
+# nomeia a perda. Conferir perda de símbolo depois de fundir (`git log -S <nome> -- <arquivo>`) é mais
+# barato que caçar o sintoma.
+#
+# ⛔ A MESMA fusão reverteu mais coisa e ISSO SEGUE ABERTO: o pacote de rede voltou de esquema versão 2
+# (a2f383a56: regra com `via`, `terminal` e lado-objeto, 58 regras em eletrica-br) para a versão 1
+# (24 regras, lado em texto "grupo/tipo", sem terminal nem via). `importar`/`exportar` neste arquivo,
+# `esquema.py`, `pacote.py` e os dois JSON de pacote estão todos na versão 1, enquanto `regras.py` e
+# `carregar_regras` avaliam na versão 2 — daí as 12 falhas que sobram em test_regras_conectividade.py,
+# test_regras_csv.py e rede/test_regras_atributo.py. O gerador determinístico `scripts/rede_gerar_pacotes.py`
+# SOBREVIVEU à fusão e é por onde a volta à versão 2 deve passar. Não é trabalho de uma linha: esquema.py
+# e pacote.py têm trabalho NOVO por cima da reversão (155+/211- e 9+/194- contra a2f383a56), então
+# `git checkout a2f383a56 -- ...` destruiria o que veio depois.
+
+
+def carregar_regras(cur, rede_id: str) -> list:
+    """As regras da rede como `regras.Regra`, com as chaves naturais (codigo do grupo, codigo do tipo) no
+    lugar dos uuids internos — é a chave estável que a avaliação, a mensagem de recusa e o CSV usam."""
+    from app.rede_utilidades.regras import Regra
+
+    cur.execute(
+        "SELECT rg.id, rg.tipo, rg.de_terminal, rg.para_terminal, rg.via_terminal, rg.descricao, "
+        "gd.codigo AS de_grupo, td.codigo AS de_tipo, gp.codigo AS para_grupo, tp.codigo AS para_tipo, "
+        "gv.codigo AS via_grupo, tv.codigo AS via_tipo "
+        "FROM plat.rede_regra rg "
+        "JOIN plat.rede_tipo td ON td.id = rg.de_tipo_id "
+        "JOIN plat.rede_grupo gd ON gd.id = td.grupo_id "
+        "JOIN plat.rede_tipo tp ON tp.id = rg.para_tipo_id "
+        "JOIN plat.rede_grupo gp ON gp.id = tp.grupo_id "
+        "LEFT JOIN plat.rede_tipo tv ON tv.id = rg.via_tipo_id "
+        "LEFT JOIN plat.rede_grupo gv ON gv.id = tv.grupo_id "
+        "WHERE rg.rede_id = %s::uuid ORDER BY rg.tipo, gd.codigo, td.codigo, gp.codigo, tp.codigo",
+        (rede_id,),
+    )
+    return [
+        Regra(
+            id=str(r["id"]), tipo=r["tipo"],
+            de=(r["de_grupo"], r["de_tipo"]), para=(r["para_grupo"], r["para_tipo"]),
+            de_terminal=r["de_terminal"], para_terminal=r["para_terminal"],
+            via=(r["via_grupo"], r["via_tipo"]) if r["via_grupo"] is not None else None,
+            via_terminal=r["via_terminal"], descricao=r["descricao"],
+        )
+        for r in cur.fetchall()
+    ]
+
+
+def mapas_catalogo(cur, rede_id: str) -> dict:
+    """Os quatro mapas que a validação de CSV e o applyEdits usam, todos por chave natural:
+    tipos_por_grupo {grupo: {codigo: chave}}, terminais {(grupo, codigo): {nomes de terminal}},
+    geometrias {grupo: geometria}, ids {(grupo, codigo): uuid do tipo}, grupo_ids {grupo: uuid}."""
+    cur.execute("SELECT id, codigo FROM plat.rede_grupo WHERE rede_id = %s::uuid", (rede_id,))
+    grupo_ids = {r["codigo"]: str(r["id"]) for r in cur.fetchall()}
+    cur.execute(
+        "SELECT t.id, g.codigo AS grupo, g.geometria, t.codigo, t.chave, tc.terminais "
+        "FROM plat.rede_tipo t JOIN plat.rede_grupo g ON g.id = t.grupo_id "
+        "LEFT JOIN plat.rede_terminal_config tc ON tc.id = t.terminal_id "
+        "WHERE t.rede_id = %s::uuid",
+        (rede_id,),
+    )
+    tipos_por_grupo: dict = {}
+    terminais: dict = {}
+    geometrias: dict = {}
+    ids: dict = {}
+    for r in cur.fetchall():
+        tipos_por_grupo.setdefault(r["grupo"], {})[r["codigo"]] = r["chave"]
+        geometrias[r["grupo"]] = r["geometria"]
+        ids[(r["grupo"], r["codigo"])] = str(r["id"])
+        nomes = {t["nome"] for t in (r["terminais"] or [])}
+        if nomes:
+            terminais[(r["grupo"], r["codigo"])] = nomes
+    return {"tipos_por_grupo": tipos_por_grupo, "terminais": terminais,
+            "geometrias": geometrias, "ids": ids, "grupo_ids": grupo_ids}
+
+
+def regras_ativas(cur, rede_id: str) -> bool:
+    cur.execute("SELECT regras_ativas FROM plat.rede WHERE id = %s::uuid", (rede_id,))
+    return cur.fetchone()["regras_ativas"]
+
+
+def definir_regras_ativas(cur, rede_id: str, ativa: bool) -> None:
+    cur.execute("UPDATE plat.rede SET regras_ativas = %s WHERE id = %s::uuid", (ativa, rede_id))
+
+
+def substituir_regras(cur, tenant_id: int, rede_id: str, regras: list[dict], ids: dict) -> int:
+    """Substitui o conjunto INTEIRO de regras pelo validado no CSV, na transação do chamador. As conexões e
+    associações já gravadas ficam (regra_id vira NULL pelo ON DELETE SET NULL): a regra nova vale da próxima
+    edição em diante, e a validação em lote reavalia o que já existe contra o conjunto novo."""
+    cur.execute("DELETE FROM plat.rede_regra WHERE rede_id = %s::uuid", (rede_id,))
+    for r in regras:
+        cur.execute(
+            "INSERT INTO plat.rede_regra(tenant_id, rede_id, tipo, de_tipo_id, para_tipo_id, via_tipo_id, "
+            "de_terminal, para_terminal, via_terminal) VALUES (%s, %s::uuid, %s, %s, %s, %s, %s, %s, %s)",
+            (tenant_id, rede_id, r["tipo"], ids[(r["de"][0], r["de"][1])], ids[(r["para"][0], r["para"][1])],
+             ids[(r["via"][0], r["via"][1])] if r["via"] else None,
+             r["de_terminal"], r["para_terminal"], r["via_terminal"]),
+        )
+    return len(regras)

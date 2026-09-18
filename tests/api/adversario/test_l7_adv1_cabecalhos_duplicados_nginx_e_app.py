@@ -55,17 +55,11 @@ def http():
 
 
 @pytest.mark.parametrize("cabecalho", ["referrer-policy", "permissions-policy"])
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "o nginx da instalação pública usa add_header para Referrer-Policy/Permissions-Policy, que "
-        "ACRESCENTA ao cabeçalho que a aplicação já mandou em vez de substituir — a decisão 'Cache-Control "
-        "com UMA origem só' (app/auth/middleware.py) só foi aplicada ao Cache-Control. Medido: "
-        "Referrer-Policy chega duplicado com o MESMO valor, Permissions-Policy chega com DOIS valores "
-        "DIFERENTES na mesma resposta. (Strict-Transport-Security, conferido à parte, NÃO duplica — fora "
-        "deste parametrize.) Item L7-03-e-cabecalhos-csp-tls."
-    ),
-)
+# 18/09/2026: a marca xfail(strict=True) saiu porque o teste PASSA — rodado isolado na trilha `uniao`.
+# Vale para os DOIS parâmetros (referrer-policy e permissions-policy).
+# Consertado em 64f6148fd ("fix(nginx): completa a repartição de cabeçalho de uma origem só",
+# item L7-03-e): o cabeçalho passou a sair de um lugar só, e não de nginx e aplicação ao mesmo tempo.
+# O texto que vem abaixo (docstring/nome) descreve o achado ORIGINAL, não o estado de hoje.
 def test_cabecalho_de_seguranca_aparece_uma_unica_vez(http, cabecalho):
     r = http.get("/")
     assert r.status_code == 200

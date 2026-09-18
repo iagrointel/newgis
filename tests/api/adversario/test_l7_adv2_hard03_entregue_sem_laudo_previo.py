@@ -60,14 +60,12 @@ def _estado_do_item(item_id: str) -> str:
 
 
 @pytest.mark.parametrize("item_id", ITENS_SEM_LAUDO_PREVIO)
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "item chegou a estado=entregue em laco/estado.json sem que nenhum "
-        "linha-*-laudo-adversario-*.md anterior a esta rodada o citasse — o portão de HARD-03 "
-        "('nenhum item vira entregue sem laudo') não foi respeitado antes deste laudo existir."
-    ),
-)
+# 18/09/2026: a marca xfail(strict=True) saiu porque o teste PASSA — rodado isolado na trilha `uniao`.
+# Vale para os CINCO itens parametrizados.
+# Nenhum dos cinco está hoje em estado=entregue sem laudo adversário anterior, então o portão HARD-03
+# é respeitado e a asserção passa. ⚠ este teste lê laco/estado.json, que é dado VIVO: se um item novo
+# voltar a virar entregue sem laudo, ele falha — e é exatamente isso que se quer dele agora.
+# O texto que vem abaixo (docstring/nome) descreve o achado ORIGINAL, não o estado de hoje.
 def test_item_so_tem_laudo_adversario_nesta_rodada(item_id):
     tinha_laudo_previo = _algum_laudo_adversario_previo_cita(item_id)
     estado_atual = _estado_do_item(item_id)
