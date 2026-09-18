@@ -656,3 +656,103 @@ def test_lock_nao_aceita_cena_alheia_ou_fora_do_filtro(token_regras, cenas_regra
         })
         assert resposta.status_code == 422
         assert resposta.json()["erro"] == "lock_indisponivel"
+
+
+# ------------------------------------------------- item L1-08: regra "sem nuvem" (SCL) medida PELA ROTA
+# Esta seção nasceu em 18/09/2026. O motor da regra já era medido em tests/unit/test_l108_sem_nuvem_e_crs.py
+# (composição pixel a pixel, sem banco e sem armazenamento remoto). Faltava a outra metade, que só a rota
+# prova: que a máscara de nuvem é OUTRO asset da MESMA cena, resolvido pelo MESMO caminho do asset
+# principal — e portanto com o MESMO isolamento por inquilino. O docstring daquele arquivo dizia que isso
+# era exercido aqui; não era: não havia uma linha com "SCL" em tests/api/imagens/.
+VALORES_SCL = [30, 200]  # índice 0 = mais recente (metade oeste nublada); índice 1 = mais antiga, limpa
+
+
+@pytest.fixture(scope="module")
+def cenas_scl_a(tenant_id_a, inquilinos_mosaico):
+    from tests.api.imagens.apoio_mosaico import apagar_grade, semear_com_scl
+
+    dados = semear_com_scl(tenant_id_a, inquilinos_mosaico[0].slug, VALORES_SCL, nublada=0)
+    yield dados
+    apagar_grade(tenant_id_a, dados)
+
+
+@pytest.fixture(scope="module")
+def mosaico_scl_a(token_stac_a, cenas_scl_a):
+    c, tok = _cliente(), token_stac_a["token"]
+    r = c.post(f"/svc/{tok}/stac/mosaicos", json={
+        "nome": f"{PREFIXO_TESTE} cenas com SCL L1-08", "collections": [cenas_scl_a["colecao"]],
+        "sortby": [{"field": "datetime", "direction": "desc"}]})
+    assert r.status_code == 201, r.text
+    dados = r.json()
+    yield dados
+    c.delete(f"/svc/{tok}/stac/mosaicos/{dados['id']}")
+
+
+@pytest.fixture(scope="module")
+def token_tiles_scl_a(sessao_a, mosaico_scl_a):
+    r = sessao_a.post("/api/tokens", json={"nome": f"{PREFIXO_TESTE}-tiles-scl",
+                                           "escopos": [f"tiles:ler:{mosaico_scl_a['id']}"]})
+    assert r.status_code == 201, r.text
+    dados = r.json()
+    yield dados
+    sessao_a.delete(f"/api/tokens/{dados['id']}")
+
+
+def _metades(token, mosaico, **params) -> tuple[float, float]:
+    """Média da banda 1 na metade OESTE e na metade LESTE do ladrilho central."""
+    import io
+
+    import numpy as np
+    from PIL import Image
+
+    z, x, y = _tile_central()
+    r = _cliente().get(f"/svc/{token}/mosaico/{mosaico['id']}/{z}/{x}/{y}.png",
+                       params={"faixa": "0,255", "bandas": "1", **params})
+    assert r.status_code == 200, r.text[:300]
+    pixels = np.asarray(Image.open(io.BytesIO(r.content)).convert("RGBA"))
+    assert np.all(pixels[:, :, 3] == 255), "o ladrilho tem de estar integralmente coberto"
+    largura = pixels.shape[1]
+    banda = pixels[:, :, 0].astype(float)
+    return float(banda[:, : largura // 2].mean()), float(banda[:, largura // 2:].mean())
+
+
+def test_l108_sem_nuvem_troca_de_cena_so_onde_o_scl_marca_nuvem(token_tiles_scl_a, mosaico_scl_a):
+    """PAR de referência: o MESMO ladrilho, o MESMO mosaico, mudando só a regra de seleção de pixel.
+
+    Com `primeira`, a cena mais recente vence o ladrilho inteiro, nuvem e tudo: as duas metades saem
+    com o valor dela. Com `sem_nuvem`, a metade que o SCL classifica como nuvem é apagada antes de
+    compor, e ali quem aparece é a cena seguinte — sem tocar na metade limpa.
+
+    Sem o par, um `sem_nuvem` que simplesmente devolvesse sempre a cena mais antiga passaria igual."""
+    oeste_primeira, leste_primeira = _metades(token_tiles_scl_a["token"], mosaico_scl_a, metodo="primeira")
+    assert abs(oeste_primeira - leste_primeira) <= 1, (
+        f"com 'primeira' o ladrilho inteiro vem da cena mais recente; veio {oeste_primeira} x {leste_primeira}")
+
+    oeste_sem_nuvem, leste_sem_nuvem = _metades(token_tiles_scl_a["token"], mosaico_scl_a, metodo="sem_nuvem")
+    assert abs(leste_sem_nuvem - leste_primeira) <= 1, (
+        "a metade LIMPA não pode mudar de cena: o SCL não marca nuvem ali "
+        f"({leste_sem_nuvem} contra {leste_primeira})")
+    assert oeste_sem_nuvem - oeste_primeira > 50, (
+        "a metade NUBLADA tinha de passar a vir da cena seguinte (valor bem maior); "
+        f"veio {oeste_sem_nuvem} contra {oeste_primeira}")
+
+
+def test_l108_sem_nuvem_recusa_quando_a_cena_nao_tem_scl(token_tiles_sobreposto_a, mosaico_sobreposto_a):
+    """As cenas de `semear_sobrepostas` não têm o asset `scl`. A regra tem de RECUSAR, não virar
+    'primeira' em silêncio: devolver nuvem dizendo que é céu limpo é pior que devolver erro."""
+    z, x, y = _tile_central()
+    r = _cliente().get(
+        f"/svc/{token_tiles_sobreposto_a['token']}/mosaico/{mosaico_sobreposto_a['id']}/{z}/{x}/{y}.png",
+        params={"faixa": "0,255", "bandas": "1", "metodo": "sem_nuvem"})
+    assert r.status_code >= 400, (
+        f"sem banda de classificação de cena a regra tem de recusar; devolveu {r.status_code}")
+    assert "scl" in r.text.lower(), r.text[:300]
+
+
+def test_l108_o_asset_scl_de_outro_inquilino_nao_e_lido(token_tiles_b, mosaico_scl_a):
+    """A máscara de nuvem é resolvida pelo MESMO caminho do asset principal, logo carrega o MESMO
+    isolamento: um token do inquilino B não lê o `scl` de uma cena do inquilino A."""
+    z, x, y = _tile_central()
+    r = _cliente().get(f"/svc/{token_tiles_b['token']}/mosaico/{mosaico_scl_a['id']}/{z}/{x}/{y}.png",
+                       params={"metodo": "sem_nuvem"})
+    assert r.status_code == 403, f"token de outro inquilino devolveu {r.status_code}"
