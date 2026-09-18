@@ -2057,3 +2057,107 @@ CASOS.update({
             if j.get("aceitas") else None,
         ]),
 })
+
+
+# =====================================================================================================
+# LEVA 3 (18/09/2026) — rotas de SERVIÇO cujo caminho carrega a credencial (`{token}`), mais as fachadas
+# ArcGIS REST que não levam item (GPServer, UtilityNetworkServer, GeometryServer), o CSW, os notebooks e
+# o servidor de vídeo.
+#
+# Seguem a regra que o bloco `_SVC` acima já fixou (item L1-02-tiles-token): quem credencia essas rotas é a
+# PRÓPRIA URL, então as quatro formas de chamar desta suíte — sessão de A, token de A, sessão de A com
+# X-Plat-Inquilino, e sem autenticação — recebem todas a mesma resposta, e o token do caminho é inválido de
+# propósito. O que o caso mede aqui é que a rota com token inválido não devolve NADA de B, nem por eco.
+# ⛔ LIMITE DECLARADO: o cruzamento forte dessas rotas — token válido de um inquilino pedindo item de OUTRO —
+# NÃO é medido aqui; está em `tests/api/imagens/test_isolamento.py`, escrito pelo item L1-02. Onde a rota
+# leva `{item_id}`/`{item}`, o caso já aponta o item REAL de B, para que o alvo seja o certo.
+_MOSAICO = "zz-mosaico"
+_GEOM_OPS = ("areasAndLengths", "buffer", "convexHull", "difference", "distance", "intersect",
+             "lengths", "project", "simplify", "union")
+_SVC3: list[tuple[str, str, str]] = [
+    # ---- exportação da camada de B por token (o vazamento aqui seria o dado vetorial inteiro)
+    *[("GET", f"/svc/{{token}}/camadas/{{item_id}}.{e}", f"/svc/{_TOK}/camadas/{{ITEM}}.{e}")
+      for e in ("csv", "fgb", "geojson", "gpkg", "kml")],
+    # ---- raster e mosaico de B por token
+    ("GET", "/svc/{token}/raster/{item}/estatisticas.json", f"/svc/{_TOK}/raster/{{ITEM}}/estatisticas.json"),
+    ("GET", "/svc/{token}/raster/{item}/legenda.json", f"/svc/{_TOK}/raster/{{ITEM}}/legenda.json"),
+    ("GET", "/svc/{token}/raster/{item}/legenda.png", f"/svc/{_TOK}/raster/{{ITEM}}/legenda.png"),
+    ("GET", "/svc/{token}/raster/{item}/predefinicoes.json", f"/svc/{_TOK}/raster/{{ITEM}}/predefinicoes.json"),
+    ("GET", "/svc/{token}/cog/{item}/{asset}.tif", f"/svc/{_TOK}/cog/{{ITEM}}/zz-asset.tif"),
+    ("GET", "/svc/{token}/mosaico/{alvo}/{z}/{x}/{y}.{ext}", f"/svc/{_TOK}/mosaico/{_MOSAICO}/1/0/0.png"),
+    ("GET", "/svc/{token}/mosaico/{mosaico_id}/pegadas", f"/svc/{_TOK}/mosaico/{_MOSAICO}/pegadas"),
+    ("GET", "/svc/{token}/mosaico/{mosaico_id}/tilejson.json", f"/svc/{_TOK}/mosaico/{_MOSAICO}/tilejson.json"),
+    ("GET", "/svc/{token}/mosaico/{mosaico_id}/wmts", f"/svc/{_TOK}/mosaico/{_MOSAICO}/wmts"),
+    ("GET", "/svc/{token}/mosaico/{mosaico_id}/wmts/1.0.0/WMTSCapabilities.xml",
+     f"/svc/{_TOK}/mosaico/{_MOSAICO}/wmts/1.0.0/WMTSCapabilities.xml"),
+    # ---- catálogo de mosaicos por token (inclui o DELETE, que é escrita)
+    ("GET", "/svc/{token}/stac/mosaicos", f"/svc/{_TOK}/stac/mosaicos"),
+    ("POST", "/svc/{token}/stac/mosaicos", f"/svc/{_TOK}/stac/mosaicos"),
+    ("GET", "/svc/{token}/stac/mosaicos/{mosaico_id}", f"/svc/{_TOK}/stac/mosaicos/{_MOSAICO}"),
+    ("DELETE", "/svc/{token}/stac/mosaicos/{mosaico_id}", f"/svc/{_TOK}/stac/mosaicos/{_MOSAICO}"),
+    # ---- OGC API - Tiles por token
+    ("GET", "/svc/{token}/ogc/tiles", f"/svc/{_TOK}/ogc/tiles"),
+    ("GET", "/svc/{token}/ogc/tiles/conformance", f"/svc/{_TOK}/ogc/tiles/conformance"),
+    ("GET", "/svc/{token}/ogc/tiles/collections", f"/svc/{_TOK}/ogc/tiles/collections"),
+    ("GET", "/svc/{token}/ogc/tiles/collections/{item}", f"/svc/{_TOK}/ogc/tiles/collections/{{ITEM}}"),
+    ("GET", "/svc/{token}/ogc/tiles/collections/{item}/map", f"/svc/{_TOK}/ogc/tiles/collections/{{ITEM}}/map"),
+    ("GET", "/svc/{token}/ogc/tiles/collections/{item}/map/tiles/{tile_matrix_set_id}",
+     f"/svc/{_TOK}/ogc/tiles/collections/{{ITEM}}/map/tiles/WebMercatorQuad"),
+    ("GET", "/svc/{token}/ogc/tiles/collections/{item}/map/tiles/{tile_matrix_set_id}/{tile_matrix}/"
+            "{tile_row}/{tile_col}",
+     f"/svc/{_TOK}/ogc/tiles/collections/{{ITEM}}/map/tiles/WebMercatorQuad/1/0/0"),
+    ("GET", "/svc/{token}/ogc/tiles/collections/{item}/map/tiles/{tile_matrix_set_id}/{tile_matrix}/"
+            "{tile_row}/{tile_col}.{ext}",
+     f"/svc/{_TOK}/ogc/tiles/collections/{{ITEM}}/map/tiles/WebMercatorQuad/1/0/0.png"),
+    ("GET", "/svc/{token}/ogc/tiles/tileMatrixSets", f"/svc/{_TOK}/ogc/tiles/tileMatrixSets"),
+    ("GET", "/svc/{token}/ogc/tiles/tileMatrixSets/{tile_matrix_set_id}",
+     f"/svc/{_TOK}/ogc/tiles/tileMatrixSets/WebMercatorQuad"),
+    # ---- fachada ArcGIS MapServer / VectorTileServer / ImageServer sobre o item de B, por token
+    ("GET", "/svc/{token}/rest/services/{item_id}/MapServer", f"/svc/{_TOK}/rest/services/{{ITEM}}/MapServer?f=json"),
+    *[(m, f"/svc/{{token}}/rest/services/{{item_id}}/MapServer/{op}",
+       f"/svc/{_TOK}/rest/services/{{ITEM}}/MapServer/{op}?f=json")
+      for op in ("export", "find", "identify") for m in ("GET", "POST")],
+    ("GET", "/svc/{token}/rest/services/{item_id}/MapServer/generateKml",
+     f"/svc/{_TOK}/rest/services/{{ITEM}}/MapServer/generateKml?f=json"),
+    ("GET", "/svc/{token}/rest/services/{item_id}/MapServer/layers",
+     f"/svc/{_TOK}/rest/services/{{ITEM}}/MapServer/layers?f=json"),
+    ("GET", "/svc/{token}/rest/services/{item_id}/MapServer/legend",
+     f"/svc/{_TOK}/rest/services/{{ITEM}}/MapServer/legend?f=json"),
+    ("GET", "/svc/{token}/rest/services/{item_id}/MapServer/{camada_id}",
+     f"/svc/{_TOK}/rest/services/{{ITEM}}/MapServer/0?f=json"),
+    ("GET", "/svc/{token}/rest/services/{item_id}/VectorTileServer",
+     f"/svc/{_TOK}/rest/services/{{ITEM}}/VectorTileServer?f=json"),
+    ("GET", "/svc/{token}/rest/services/{item_id}/VectorTileServer/resources/fonts/{fontstack}/{faixa}.pbf",
+     f"/svc/{_TOK}/rest/services/{{ITEM}}/VectorTileServer/resources/fonts/zz-fonte/0-255.pbf"),
+    ("GET", "/svc/{token}/rest/services/{item_id}/VectorTileServer/resources/sprites/sprite.json",
+     f"/svc/{_TOK}/rest/services/{{ITEM}}/VectorTileServer/resources/sprites/sprite.json"),
+    ("GET", "/svc/{token}/rest/services/{item_id}/VectorTileServer/resources/sprites/sprite.png",
+     f"/svc/{_TOK}/rest/services/{{ITEM}}/VectorTileServer/resources/sprites/sprite.png"),
+    ("GET", "/svc/{token}/rest/services/{item_id}/VectorTileServer/resources/styles/root.json",
+     f"/svc/{_TOK}/rest/services/{{ITEM}}/VectorTileServer/resources/styles/root.json"),
+    ("GET", "/svc/{token}/rest/services/{item_id}/VectorTileServer/tile/{z}/{y}/{x}.pbf",
+     f"/svc/{_TOK}/rest/services/{{ITEM}}/VectorTileServer/tile/1/0/0.pbf"),
+    ("GET", "/svc/{token}/rest/services/{item}/ImageServer",
+     f"/svc/{_TOK}/rest/services/{{ITEM}}/ImageServer?f=json"),
+    ("GET", "/svc/{token}/rest/services/{item}/ImageServer/exportImage",
+     f"/svc/{_TOK}/rest/services/{{ITEM}}/ImageServer/exportImage?f=json&bbox=-46.7,-23.6,-46.5,-23.4"),
+    ("GET", "/svc/{token}/rest/services/{item}/ImageServer/identify",
+     f"/svc/{_TOK}/rest/services/{{ITEM}}/ImageServer/identify?f=json&geometry=-46.6,-23.5"),
+    ("GET", "/svc/{token}/rest/services/{item}/ImageServer/tile/{level}/{row}/{col}",
+     f"/svc/{_TOK}/rest/services/{{ITEM}}/ImageServer/tile/1/0/0"),
+    ("GET", "/svc/{token}/wms", f"/svc/{_TOK}/wms?service=WMS&request=GetCapabilities"),
+    # ---- GeometryServer: calculadora geométrica, sem dado de inquilino, mas atrás do mesmo token
+    ("GET", "/svc/{token}/rest/services/Utilities/Geometry/GeometryServer",
+     f"/svc/{_TOK}/rest/services/Utilities/Geometry/GeometryServer?f=json"),
+    ("POST", "/svc/{token}/rest/services/Utilities/Geometry/GeometryServer",
+     f"/svc/{_TOK}/rest/services/Utilities/Geometry/GeometryServer?f=json"),
+    *[(m, f"/svc/{{token}}/rest/services/Utilities/Geometry/GeometryServer/{op}",
+       f"/svc/{_TOK}/rest/services/Utilities/Geometry/GeometryServer/{op}?f=json")
+      for op in _GEOM_OPS for m in ("GET", "POST")],
+]
+CASOS.update({
+    (metodo, caminho): Caso(
+        lambda p, u=url: u.replace("{ITEM}", p.item_b["id"]), lambda p: {},
+        publico=True, verificar=_sem_marca)
+    for metodo, caminho, url in _SVC3
+})
