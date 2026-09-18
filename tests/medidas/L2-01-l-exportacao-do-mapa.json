@@ -95,8 +95,18 @@
    },
    "unidade": "feições e EPSG lidos do arquivo baixado",
    "comando": "tests/api/exportacao/test_exportacao_mapa.py::test_doze_formatos_da_selecao_de_500_com_contagem_e_crs"
+  },
+  "previa_layout_a4_96dpi_px": {
+   "valor": "794x1123",
+   "unidade": "px",
+   "comando": "tests/e2e/test_mapa_exportacao.py::test_png_por_layout_sai_no_tamanho_do_papel_e_com_o_titulo_dentro"
+  },
+  "previa_layout_a4_96dpi_bytes": {
+   "valor": 11504,
+   "unidade": "bytes",
+   "comando": "POST /api/layouts/previa pela tela"
   }
  },
- "gerado_em": "2026-09-07T20:26:20Z",
- "git_sha": "500292445074"
+ "gerado_em": "2026-09-18T01:37:15Z",
+ "git_sha": "e7a53e0d8e87"
 }
