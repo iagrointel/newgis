@@ -118,9 +118,11 @@ def infra():
                            cwd=str(RAIZ), env=os.environ, capture_output=True, text=True, timeout=300)
         assert r.returncode == 0, r.stderr[-2000:]
 
-        # 3. Martin da trilha (funções de tile são auto-publicadas do DSN do leitor)
+        # 3. Martin da trilha (funções de tile são auto-publicadas do DSN do leitor). Log em /tmp:
+        # quando um tile volta 502 no boot o motivo real (erro PG dentro da função) só aparece aqui.
+        martin_log = open(f"/tmp/martin_l203eanexos_e2e_{porta_martin}.log", "w")
         procs.append(subprocess.Popen([MARTIN_BIN, "--config", str(yaml)],
-                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
+                                      stdout=martin_log, stderr=martin_log))
 
         # 4. a app por servir_local com certificado autoassinado de /tmp (https é obrigatório na
         # PLAT_URL_PUBLICA; o navegador do teste abre com ignore_https_errors)
@@ -138,10 +140,11 @@ def infra():
             "PLAT_MARTIN_URL": f"http://127.0.0.1:{porta_martin}",
             "PLAT_URL_PUBLICA": url_app,
         })
+        app_log = open(f"/tmp/plat_l203eanexos_e2e_app_{porta_app}.log", "w")
         procs.append(subprocess.Popen(
             [sys.executable, "scripts/servir_local.py", "--porta", str(porta_app),
              "--cert", str(cert), "--chave", str(chave)],
-            cwd=str(RAIZ), env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
+            cwd=str(RAIZ), env=env, stdout=app_log, stderr=app_log))
         _esperar_http(f"{url_app}/api/openapi.json", 90)
         _esperar_http(f"http://127.0.0.1:{porta_martin}/catalog", 60)
 
@@ -153,19 +156,24 @@ def infra():
         contexto(conexao_plat_app, ids["demo"], usuario_id=admin_id, login="admin")
         anexos_semeados = []
         with conexao_plat_app.cursor() as cur:
-            # lixo de rodadas MORTAS da suíte de API nesta trilha (prefixo "zt", tabela já dropada,
-            # item órfão): a casca /sig pede o tilejson de toda camada da lista e cada órfão devolve
-            # 500, sujando o console do e2e. plat.item não aceita DELETE direto (política USING false):
-            # lixeira + expurgo, o caminho de produção. Hoje é rede de segurança — o FabricaCamada.limpar
-            # já limpa pelo mesmo caminho; isto apanha o que uma morte por timeout deixou para trás.
+            # lixo de rodadas MORTAS da suíte de API nesta trilha (prefixo "zt" = PREFIXO_TESTE): a
+            # casca /sig pede tiles de toda camada viva do inquilino no boot, e camada de teste não tem
+            # função de tile (FabricaCamada não chama camada_tile_garantir) — cada uma viva devolve 502
+            # (medido 18/09), cada órfã de tabela devolve 500 no tilejson. As rodadas são serializadas
+            # pelo trinco da trilha, então varrer TODA camada "zt" é seguro. plat.item não aceita DELETE
+            # direto (política USING false): lixeira + expurgo, o caminho de produção. Hoje é rede de
+            # segurança — o FabricaCamada.limpar já limpa pelo mesmo caminho; isto apanha o que uma
+            # morte por timeout/worker deixou para trás.
             cur.execute(
-                "SELECT id FROM plat.item WHERE tipo = 'camada_vetorial' AND titulo LIKE 'zt %' "
-                "AND NOT EXISTS (SELECT 1 FROM information_schema.tables t "
-                "WHERE t.table_schema = dados->>'schema' AND t.table_name = dados->>'tabela')"
+                "SELECT id, dados->>'schema' AS schema, dados->>'tabela' AS tabela FROM plat.item "
+                "WHERE tipo = 'camada_vetorial' AND titulo LIKE 'zt %'"
             )
-            for (orfao_id,) in cur.fetchall():
-                cur.execute("SELECT plat.item_lixeira(%s::uuid, true)", (orfao_id,))
-                cur.execute("SELECT plat.item_expurgar(%s::uuid)", (orfao_id,))
+            for orfao in cur.fetchall():
+                cur.execute(f'DROP TABLE IF EXISTS "{orfao["schema"]}"."{orfao["tabela"]}" CASCADE')
+                cur.execute("DELETE FROM plat.feicao_anexo WHERE schema_dado = %s AND tabela_dado = %s",
+                            (orfao["schema"], orfao["tabela"]))
+                cur.execute("SELECT plat.item_lixeira(%s::uuid, true)", (orfao["id"],))
+                cur.execute("SELECT plat.item_expurgar(%s::uuid)", (orfao["id"],))
             cur.execute(
                 "SELECT id, dados FROM plat.item WHERE tipo = 'camada_vetorial' "
                 "AND titulo LIKE 'mapa-popup %(L2-01-d%' AND titulo NOT LIKE '%area%'"

@@ -79,6 +79,10 @@ class FabricaCamada:
             return cur.fetchall()
 
     def limpar(self):
+        # Rollback primeiro: se o teste (ou outra fixture, ex. um worker que não subiu) deixou a
+        # conexão com a transação abortada, o primeiro execute da limpeza levantaria e a camada
+        # vazava viva (medido 18/09: zt com tabela e sem função de tile derrubava o /sig com 502).
+        self.con.rollback()
         # plat.item tem política de DELETE `USING (false)` para plat_app: o único caminho é o de produção
         # (lixeira lógica + expurgo, SECURITY DEFINER com as cascatas de versões/relações). DELETE direto
         # remove 0 linhas EM SILÊNCIO — e como o DROP TABLE passa (DDL ignora RLS), o item virava órfão de
