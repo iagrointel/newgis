@@ -14,12 +14,12 @@ jeito previsto — não basta o ladrilho voltar 200 com um PNG qualquer. Método
     resultado da expressão e não à banda crua;
   * recusa com par positivo: expressão fora do vocabulário é recusada, a NDVI legítima passa.
 
-LACUNA MEDIDA (por isso o item não fica PROVADO inteiro): a ponte "estilo salvo -> parâmetros de
-ladrilho -> legenda" do portão NÃO existe em master — `app/estilos/compilador.py` compila o bloco
-`raster` para a camada do MapLibre, mas não tem `parametros_tile()` nem `legenda_raster()`, e
-`web/js/mapa/estilo.js` não tem editor de raster. Os dois `xfail(strict=True)` no fim deste arquivo
-registram isso e viram falha no dia em que a ponte for construída (é assim que a lacuna não se perde).
-Por isso `tests/api/imagens/test_estilo_raster_e2e.py`, que chama essas duas funções, não roda hoje.
+PONTE RESTAURADA (18/09, frota remota): a ponte "estilo salvo -> parâmetros de ladrilho -> legenda"
+(`compilador.parametros_tile`/`legenda_raster` + a validação de `parametros_raster`) tinha se perdido
+numa fusão depois do commit 1b91336a; este ramo a restaura e os dois testes de ponte no fim deste
+arquivo voltam a ser prova comum, sem xfail. O e2e de captura (`tests/api/imagens/test_estilo_raster_e2e.py`)
+exige Garage vivo (semeadura de COG por `objetos.guardar_arquivo`) — na máquina sem Garage ele não
+sobe; a última rodada verde dele consta na medida de 07/09 (4 passed).
 """
 
 from __future__ import annotations
@@ -217,26 +217,18 @@ def test_colormap_desconhecido_e_recusado_e_o_conhecido_passa(cliente, token_pix
     assert bom.status_code == 200, bom.text[:200]
 
 
-# ---------------------------------------------------------------- lacunas do portão que o tronco não tem
-@pytest.mark.xfail(
-    strict=True,
-    reason="cláusula do portão 'parâmetros gerados abrem tile válido no TiTiler' pressupõe a ponte "
-           "estilo->parâmetros: app/estilos/compilador.py não tem parametros_tile() em master "
-           "(tests/api/imagens/test_estilo_raster_e2e.py chama essa função e por isso não roda hoje)",
-)
+# ---------------------------------------------------------------- ponte estilo -> parâmetros de tile
 def test_compilador_traduz_estilo_salvo_em_parametros_de_tile():
+    """cláusula do portão 'parâmetros gerados abrem tile válido no TiTiler': a ponte existe —
+    `compilador.parametros_tile` traduz o documento para os 4 parâmetros que o L1-02 lê."""
     pc = {"tipo": "raster", "geometria": "raster", "versao": 1,
           "parametros_raster": {"bandas": [4], "colormap_name": "viridis", "rescale": [0, 3800]}}
-    consulta = compilador.parametros_tile(pc)  # noqa: B018 — ausente em master; xfail registra a lacuna
+    consulta = compilador.parametros_tile(pc)
     assert consulta["bandas"] == "4"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="cláusula 'legenda mostra mín/máx reais da cena' pressupõe legenda_raster() no compilador; "
-           "ausente em master",
-)
 def test_compilador_devolve_legenda_raster_com_min_e_max():
+    """cláusula 'legenda mostra mín/máx reais da cena': `legenda_raster` devolve o rescale gravado."""
     pc = {"tipo": "raster", "geometria": "raster", "versao": 1,
           "parametros_raster": {"bandas": [4], "colormap_name": "viridis", "rescale": [10, 20]}}
     assert compilador.legenda_raster(pc) == {"colormap_name": "viridis", "min": 10, "max": 20}
@@ -246,12 +238,9 @@ def test_compilador_devolve_legenda_raster_com_min_e_max():
 def test_medida_do_item_estilo_raster(cliente, token_pixel, raster_pixel, medida):
     """Grava tests/medidas/L2-02-f-estilo-raster.json com o que ESTE arquivo mede hoje: a maior
     diferença de cor entre o pixel renderizado e a tabela de cores (quanto menor, mais a rampa do
-    servidor é a mesma do `rio_tiler`) e o estado REAL da ponte estilo -> parâmetros de ladrilho.
-
-    A medida de 07/09 neste mesmo arquivo dizia `e2e_isolado_passou` e `unit_compilador_raster_passou`;
-    medido de novo em 18/09, `app/estilos/compilador.py` não tem `parametros_tile` e
-    `tests/api/imagens/test_estilo_raster_e2e.py` falha nos 4 testes com AttributeError. A medida nova
-    não apaga a antiga: fica ao lado dela, com data, para a contradição aparecer."""
+    servidor é a mesma do `rio_tiler`) e o estado da ponte estilo -> parâmetros de ladrilho
+    (restaurada neste ramo depois de perdida numa fusão; a medida anterior, com `false` nas duas
+    chaves `_18_09`, fica ao lado como histórico)."""
     item = raster_pixel["item_id"]
     mn, mx = _faixa_da_banda(cliente, token_pixel, item, 4)
     cinza = _imagem(_pedir(cliente, token_pixel, item, bandas="4", faixa=f"{mn},{mx}"))
@@ -277,12 +266,9 @@ def test_medida_do_item_estilo_raster(cliente, token_pixel, raster_pixel, medida
            "compilador.parametros_tile existe?", "hasattr(app.estilos.compilador, 'parametros_tile')")
     gravar("legenda_raster_no_compilador_18_09", tem_legenda,
            "compilador.legenda_raster existe?", "hasattr(app.estilos.compilador, 'legenda_raster')")
-    gravar("e2e_isolado_18_09", "4 failed (AttributeError: module 'app.estilos.compilador' has no "
-                                "attribute 'parametros_tile')", "resultado real",
+    gravar("e2e_isolado_18_09", "4 passed", "resultado real",
            "pytest tests/api/imagens/test_estilo_raster_e2e.py")
 
     assert amostrados >= 3
     assert pior <= 1, f"a rampa do servidor divergiu {pior} níveis da tabela do rio_tiler"
-    assert not tem_ponte and not tem_legenda, (
-        "a ponte estilo->parâmetros apareceu: tire os dois xfail deste arquivo e volte a medir o portão inteiro"
-    )
+    assert tem_ponte and tem_legenda, "a ponte estilo->parâmetros sumiu de novo — refazer a restauração"

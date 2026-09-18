@@ -595,6 +595,33 @@ plataforma sem cada um inventar o próprio mecanismo.
 | tabela de cor CUSTOM por intervalo/valor | "Colormap Function" com tabela arbitrária | fora — só rampa NOMEADA do catálogo do rio-tiler (211 nomes); portão do item pede exatamente isso ("rampa nomeada") | fora (fora do escopo do portão) | — | 2026-09-10 | pendente (D20) |
 | histórico de versão de uma predefinição editada | o Pro guarda histórico de edição do template | fora — editar substitui o corpo e sobe `versao`, mas não guarda o corpo anterior (só TROCAR de predefinição padrão preserva a URL antiga, seção 25.3 do MANUAL) | fora (não coube no turno) | — | 2026-09-10 | pendente (D20) |
 
+## Style Imagery (Map Viewer) → editor de estilo raster (item L2-02-f-estilo-raster)
+
+Fonte: `doc.arcgis.com/en/arcgis-online/create-maps/style-imagery-mv.htm` (ArcGIS Online) e
+`enterprise.arcgis.com/en/portal/11.4/use/style-imagery-mv.htm` (Enterprise), lidas em 07/09/2026. O painel
+"Style" da imagem no Map Viewer é um editor sobre o `rasterFunction`/renderer da camada; aqui é
+`plat_construtor.parametros_raster` compilado por `app/estilos/compilador.py` para os parâmetros de URL que
+`app/imagens/rotas_tiles.py` (L1-02) de fato lê. Fora do recorte: **funções raster encadeadas do Image
+Server** (Stretch → Convolution → Colormap em cadeia, com histórico de passos) — o L1-02 aplica um esticamento
+e uma rampa por vez, não uma cadeia.
+
+| Style Imagery (Map Viewer) | nosso | estado | nota |
+|---|---|---|---|
+| "Band Combination" (RGB, false color) | `parametros_raster.bandas` (1 a 4 índices) | feito | um `rescale` só, aplicado às bandas escolhidas — a Esri estica banda a banda; aqui é o subconjunto de um par (min,max) só |
+| "Stretch Type": Min-Max | `esticamento.metodo = "minmax"` + `rescale` calculado por `GET .../estatisticas.json` (min/max reais da cena, rio-tiler) | feito | o editor CHAMA a rota de estatísticas e grava o número; a legenda cita exatamente o que veio de lá, nunca recalcula |
+| "Stretch Type": Percent Clip (a Esri usa 2%/98% por padrão) | `esticamento.metodo = "percentil_2_98"` + `rescale` = `[percentil_2, percentil_98]` de `.../estatisticas.json` | feito | mesmos percentis que a Esri usa por padrão |
+| "Stretch Type": Standard Deviation | `esticamento.metodo = "desvio_padrao"` | parcial | campo aceito no documento; o cálculo do número (média ± N·desvio) fica do lado do editor (a rota de estatísticas já devolve média e desvio-padrão) — sem teste de e2e dedicado nesta passagem |
+| "Stretch Type": None | `esticamento.metodo = "nenhum"` (usa `rescale` fixo, ex. NDVI `[-1, 1]`) | feito | capturado no e2e (`tests/api/imagens/test_estilo_raster_e2e.py::test_ndvi_por_expressao...`) |
+| "Color Ramp" (banda única) | `parametros_raster.colormap_name` | feito | vocabulário = `rio_tiler.colormap.cmap.list()` (211 rampas, ColorBrewer + terreno/NDVI/etc.), o mesmo que `app/imagens/rotas_tiles.py` aceita — validado contra a MESMA lista (`app.imagens.tiles.COLORMAPS`), nunca uma cópia |
+| "Invert Color Ramp" | sufixo `_r` do nome da rampa (`viridis_r` etc., já embutido no vocabulário do rio-tiler) | feito | não é um campo booleano à parte — é outro `colormap_name` |
+| classes discretas vs. contínuas na rampa | — | fora | o L1-02 só aceita `colormap_name` (rampa nomeada); rampa discreta custom exigiria um `colormap` em JSON no ladrilho, que o serviço não expõe hoje — registrado como pendência do L1-02, não deste item |
+| "Transparency" | `plat_construtor.transparencia` → `raster-opacity` do layer MapLibre | feito | mesmo campo que os demais tipos de construtor usam |
+| "NoData Color"/transparência de nodata | `parametros_raster.nodata` (documento) | parcial | aceito no documento para leitura/legenda; o ladrilho usa o nodata do próprio COG — sem parâmetro de sobrescrita no L1-02 hoje |
+| "Resampling" (Nearest/Bilinear/Cubic) | `parametros_raster.resampling` (`vizinho`/`bilinear`) | parcial | aceito no documento; o L1-02 hoje sempre lê com o padrão do rio-tiler (nearest) — sem parâmetro de reamostragem na URL de ladrilho ainda |
+| Renderização por índice (NDVI, NDWI, custom) | `parametros_raster.expression` | feito | mesma gramática restrita do L1-02 (`app.imagens.tiles.expressao_valida`, numexpr limitado por regex, sem `__`); o compilador recusa o que o ladrilho recusaria — nunca dois vocabulários |
+| Histograma da banda (painel de estatísticas do Style Imagery) | `GET /svc/<token>/raster/<item>/estatisticas.json` (histograma + percentis do rio-tiler) | feito | rota nova do L1-02 (item L2-02-f); decimada (`max_size` do rio-tiler), não lê a cena inteira |
+| Legenda contínua com valores | `compilador.legenda_raster(pc)` | feito | mín/máx = o `rescale` gravado, que por sua vez nasceu de `estatisticas.json` — nunca dois números para a mesma cena |
+
 ## WMS 1.3.0 por token (item L1-02-g-wms-1-3-0-raster; L1 imagens)
 
 Referência Esri: ArcGIS Server 11.4 publica "WMS services" para qualquer serviço de mapa/imagem
