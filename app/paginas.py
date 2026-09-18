@@ -92,6 +92,8 @@ PAGINAS = {
     "/redes/isolamento": "redes_isolamento.html",
     # --- domínios e subtipos da camada (L2-10-a): campos x domínio, formulário de feição e tabela
     "/camadas/{id}/dominios": "camada_dominios.html",
+    # --- continuidade DEC/FEC (L4-10-continuidade-dec-fec)
+    "/redes/continuidade": "redes_continuidade.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
     "/uploads": "uploads.html",
     # --- sistema de design (UX-01-sistema-de-design): guia viva de tokens e componentes

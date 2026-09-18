@@ -87,6 +87,9 @@ class Settings:
     # importação BDGD por caminho local (item L4-01-c): pasta de onde o job aceita ler pacotes .gdb.zip;
     # vazia = desligada (D21: o job nunca baixa da ANEEL, o disco não comporta)
     PLAT_BDGD_RAIZ: str | None
+    # continuidade DEC/FEC da ANEEL por caminho local (item L4-10): pasta com os arquivos de dado aberto
+    # (apurado, compensação e limites); vazia = desligada (mesma regra D21 do BDGD)
+    PLAT_ANEEL_CONTINUIDADE_RAIZ: str | None
     PLAT_ROTA_MATRIZ_MAX: int
     PLAT_ROTA_ISOCRONA_MAX_PONTOS: int
     # tiles vetoriais (L2-01-b): DSN do papel plat_leitor (LOGIN, sem BYPASSRLS), usado SÓ pela rota
@@ -293,6 +296,7 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_DSN_WORKER=_dsn_worker(valores, f"{schema}_worker"),
         PLAT_OSRM_URL=(_opcional(valores, "PLAT_OSRM_URL") or "http://127.0.0.1:5010").rstrip("/"),
         PLAT_BDGD_RAIZ=_opcional(valores, "PLAT_BDGD_RAIZ"),
+        PLAT_ANEEL_CONTINUIDADE_RAIZ=_opcional(valores, "PLAT_ANEEL_CONTINUIDADE_RAIZ"),
         PLAT_ROTA_MATRIZ_MAX=_inteiro(valores, "PLAT_ROTA_MATRIZ_MAX", limites.ROTA_MATRIZ_MAX_PADRAO, 1),
         PLAT_ROTA_ISOCRONA_MAX_PONTOS=_inteiro(
             valores, "PLAT_ROTA_ISOCRONA_MAX_PONTOS", limites.ROTA_ISOCRONA_MAX_PONTOS_PADRAO, 4

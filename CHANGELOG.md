@@ -3,6 +3,30 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## setembro de 2026 (item L4-10-continuidade-dec-fec: DEC/FEC por conjunto e por alimentador)
+
+Os indicadores coletivos de continuidade da ANEEL (DEC e FEC) ligados à rede da BDGD pela chave `CONJ`, com
+o limite do ano ao lado. Tabelas novas `plat.rede_continuidade`, `plat.rede_continuidade_limite` e
+`plat.rede_continuidade_fonte` (migração `20260908T1328_rede_continuidade.sql`, RLS por inquilino como o
+resto da linha L4); job `rede.importar_continuidade` e rotas
+`/api/rede/{id}/continuidade/{conjuntos,alimentadores,dic-fic,painel,importar}`; painel `/redes/continuidade`
+com a série 2020-2025. Medido em dado aberto real (`tests/medidas/L4-10-continuidade-dec-fec.json`):
+importação com contagem conferida contra o arquivo (432 de 432 linhas apuradas, 36 de 36 limites, resumo
+criptográfico gravado); três conjuntos recontados direto do parquet em Python puro batem em 36 valores; e,
+sobre as 26.584 unidades consumidoras e os 5.481 transformadores da cooperativa de teste, 15 alimentadores
+recebem o DEC do conjunto por média ponderada e 4.967 transformadores saem com DIC e FIC médios.
+Duas regras que o item trava em teste: a palavra de acusação não aparece em nenhum arquivo (a comparação
+diz "dentro do limite" ou "acima do limite regulatório", com o número e o limite ao lado), e conjunto sem
+par no arquivo da agência sai como "sem dado", nunca como zero. Fora do escopo, declarado: a compensação
+paga (o conjunto de dados da agência usa outros 96 códigos de indicador, nenhum deles DEC ou FEC) e as
+interrupções com causa e data. ADR `20260908T1400-continuidade-dec-fec.md`.
+
+O código foi escrito em 08/09/2026 e ficou dez dias fora do tronco: a sessão que o reivindicou morreu antes
+de commitar, o ciclo noturno de 18/09 resgatou a árvore solta e só então ele foi rebaseado, auditado e
+medido. O que a auditoria consertou está nos commits do ramo: a medida gravava sempre (sujava a árvore), o
+teste de vocabulário terminava numa tautologia (`... or True`) e a recusa de caminho fora da raiz não tinha
+par positivo. As três eram provas que passariam com o módulo quebrado.
+
 ## setembro de 2026 (item L4-03-a-regras-de-conectividade: re-restauração após "artefato ausente em master")
 
 Refutado duas vezes por "sem regras de conectividade em master" (auditoria HARD-03 07/09): o trabalho do turno 4

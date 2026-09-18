@@ -1860,6 +1860,39 @@
     "title": "AgendaPedido",
     "type": "object"
    },
+   "Agora": {
+    "properties": {
+     "bytes_total": {
+      "title": "Bytes Total",
+      "type": "integer"
+     },
+     "itens": {
+      "title": "Itens",
+      "type": "integer"
+     },
+     "itens_lixeira": {
+      "title": "Itens Lixeira",
+      "type": "integer"
+     },
+     "jobs_hoje": {
+      "title": "Jobs Hoje",
+      "type": "integer"
+     },
+     "usuarios_total": {
+      "title": "Usuarios Total",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "bytes_total",
+     "itens",
+     "itens_lixeira",
+     "usuarios_total",
+     "jobs_hoje"
+    ],
+    "title": "Agora",
+    "type": "object"
+   },
    "AmostraEntrada": {
     "additionalProperties": false,
     "properties": {
@@ -6152,6 +6185,62 @@
      "duracao_ms"
     ],
     "title": "CorredorSaida",
+    "type": "object"
+   },
+   "Cotas": {
+    "properties": {
+     "cota_bytes": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cota Bytes"
+     },
+     "cota_itens": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cota Itens"
+     },
+     "cota_jobs_dia": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cota Jobs Dia"
+     },
+     "cota_usuarios": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cota Usuarios"
+     }
+    },
+    "required": [
+     "cota_bytes",
+     "cota_usuarios",
+     "cota_itens",
+     "cota_jobs_dia"
+    ],
+    "title": "Cotas",
     "type": "object"
    },
    "CreateSeedsEntrada": {
@@ -10589,56 +10678,6 @@
      "modelo"
     ],
     "title": "ImportarCategorias",
-    "type": "object"
-   },
-   "ImportarEntrada": {
-    "additionalProperties": false,
-    "description": "Recorte do JSON de uma camada de FeatureServer/FGDB: `fields` com `domain`, e `types` com\n`domains`/`templates`. É o mesmo objeto que a Esri publica em `/FeatureServer/0?f=json`.",
-    "properties": {
-     "fields": {
-      "items": {
-       "additionalProperties": true,
-       "type": "object"
-      },
-      "maxItems": 500,
-      "title": "Fields",
-      "type": "array"
-     },
-     "item_id": {
-      "anyOf": [
-       {
-        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Item Id"
-     },
-     "prefixo": {
-      "anyOf": [
-       {
-        "pattern": "^[A-Za-z_][A-Za-z0-9_ .\\-]{0,40}$",
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Prefixo"
-     },
-     "types": {
-      "items": {
-       "additionalProperties": true,
-       "type": "object"
-      },
-      "maxItems": 500,
-      "title": "Types",
-      "type": "array"
-     }
-    },
-    "title": "ImportarEntrada",
     "type": "object"
    },
    "ImportarGrupoEntrada": {
@@ -15543,6 +15582,86 @@
     "title": "PontoTracado",
     "type": "object"
    },
+   "PontoUso": {
+    "properties": {
+     "bytes_banco": {
+      "title": "Bytes Banco",
+      "type": "integer"
+     },
+     "bytes_bucket": {
+      "title": "Bytes Bucket",
+      "type": "integer"
+     },
+     "bytes_servidos": {
+      "title": "Bytes Servidos",
+      "type": "integer"
+     },
+     "bytes_total": {
+      "title": "Bytes Total",
+      "type": "integer"
+     },
+     "dia": {
+      "title": "Dia",
+      "type": "string"
+     },
+     "itens": {
+      "title": "Itens",
+      "type": "integer"
+     },
+     "itens_lixeira": {
+      "title": "Itens Lixeira",
+      "type": "integer"
+     },
+     "job_tempo_ms": {
+      "title": "Job Tempo Ms",
+      "type": "integer"
+     },
+     "jobs": {
+      "title": "Jobs",
+      "type": "integer"
+     },
+     "medido_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Medido Em"
+     },
+     "requisicoes": {
+      "title": "Requisicoes",
+      "type": "integer"
+     },
+     "usuarios_ativos_30d": {
+      "title": "Usuarios Ativos 30D",
+      "type": "integer"
+     },
+     "usuarios_total": {
+      "title": "Usuarios Total",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "dia",
+     "bytes_banco",
+     "bytes_bucket",
+     "bytes_total",
+     "itens",
+     "itens_lixeira",
+     "usuarios_total",
+     "usuarios_ativos_30d",
+     "jobs",
+     "job_tempo_ms",
+     "requisicoes",
+     "bytes_servidos",
+     "medido_em"
+    ],
+    "title": "PontoUso",
+    "type": "object"
+   },
    "PredefinicaoEntrada": {
     "additionalProperties": false,
     "properties": {
@@ -17188,6 +17307,10 @@
       ],
       "title": "Pacote"
      },
+     "regras_ativas": {
+      "title": "Regras Ativas",
+      "type": "boolean"
+     },
      "tolerancia_m": {
       "title": "Tolerancia M",
       "type": "number"
@@ -17200,6 +17323,7 @@
      "descricao",
      "tolerancia_m",
      "pacote",
+     "regras_ativas",
      "contagens",
      "dono",
      "criado_em",
@@ -19336,6 +19460,52 @@
      "senha_temporaria"
     ],
     "title": "SenhaTemporaria",
+    "type": "object"
+   },
+   "SerieUso": {
+    "properties": {
+     "agora": {
+      "$ref": "#/components/schemas/Agora"
+     },
+     "cotas": {
+      "$ref": "#/components/schemas/Cotas"
+     },
+     "dias": {
+      "title": "Dias",
+      "type": "integer"
+     },
+     "inquilino": {
+      "title": "Inquilino",
+      "type": "string"
+     },
+     "pontos": {
+      "items": {
+       "$ref": "#/components/schemas/PontoUso"
+      },
+      "title": "Pontos",
+      "type": "array"
+     },
+     "ultimo_medido_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ultimo Medido Em"
+     }
+    },
+    "required": [
+     "inquilino",
+     "dias",
+     "pontos",
+     "cotas",
+     "agora",
+     "ultimo_medido_em"
+    ],
+    "title": "SerieUso",
     "type": "object"
    },
    "ServicoSaida": {
@@ -23882,6 +24052,56 @@
     "title": "FeicoesSaida",
     "type": "object"
    },
+   "app__dominios__modelos__ImportarEntrada": {
+    "additionalProperties": false,
+    "description": "Recorte do JSON de uma camada de FeatureServer/FGDB: `fields` com `domain`, e `types` com\n`domains`/`templates`. É o mesmo objeto que a Esri publica em `/FeatureServer/0?f=json`.",
+    "properties": {
+     "fields": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "maxItems": 500,
+      "title": "Fields",
+      "type": "array"
+     },
+     "item_id": {
+      "anyOf": [
+       {
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Item Id"
+     },
+     "prefixo": {
+      "anyOf": [
+       {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_ .\\-]{0,40}$",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Prefixo"
+     },
+     "types": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "maxItems": 500,
+      "title": "Types",
+      "type": "array"
+     }
+    },
+    "title": "ImportarEntrada",
+    "type": "object"
+   },
    "app__edicao__modelos__FeicaoAdicionar": {
     "additionalProperties": false,
     "properties": {
@@ -24702,6 +24922,39 @@
      "id"
     ],
     "title": "FeicaoAtualizar",
+    "type": "object"
+   },
+   "app__rede_utilidades__rotas_continuidade__ImportarEntrada": {
+    "properties": {
+     "ano_ate": {
+      "default": 2025,
+      "maximum": 2100.0,
+      "minimum": 1990.0,
+      "title": "Ano Ate",
+      "type": "integer"
+     },
+     "ano_de": {
+      "default": 2020,
+      "maximum": 2100.0,
+      "minimum": 1990.0,
+      "title": "Ano De",
+      "type": "integer"
+     },
+     "caminho": {
+      "anyOf": [
+       {
+        "maxLength": 1024,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "subpasta dentro de PLAT_ANEEL_CONTINUIDADE_RAIZ",
+      "title": "Caminho"
+     }
+    },
+    "title": "ImportarEntrada",
     "type": "object"
    },
    "app__regras__modelos__FeicoesSaida": {
@@ -36927,7 +37180,7 @@
      "content": {
       "application/json": {
        "schema": {
-        "$ref": "#/components/schemas/ImportarEntrada"
+        "$ref": "#/components/schemas/app__dominios__modelos__ImportarEntrada"
        }
       }
      },
@@ -40901,6 +41154,90 @@
     "x-auth": "S/T",
     "x-plat-escopo": "admin:inquilino",
     "x-privilegio": "grupo:convidado"
+   }
+  },
+  "/api/imagens/cache/status": {
+   "get": {
+    "description": "Taxa de acerto do cache de ladrilhos, por dia.\n\nO número não pode sair daqui de dentro: o cache fica no nginx, ANTES da aplicação, e um acerto\nnunca chega a este processo. A fonte é `$upstream_cache_status` no log do nginx — ver\n`app/imagens/cache_status.py`, que também explica por que a resposta diz `sem_dado` em vez de\n0 % quando o campo não está sendo gravado.",
+    "operationId": "cache_status_api_imagens_cache_status_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "desde",
+      "required": false,
+      "schema": {
+       "default": "-7d",
+       "title": "Desde",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "ate",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Ate"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Cache Status",
+    "tags": [
+     "imagens"
+    ],
+    "x-auth": "S",
+    "x-plat-escopo": "sessao",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/imagens/conexao-s3": {
+   "get": {
+    "description": "Credencial S3 SÓ-LEITURA do balde DESTE inquilino, para o `Create Cloud Storage Connection File`\ndo ArcGIS Pro e para `/vsis3/` do QGIS/GDAL — a \"Porta 2\" do item L1-02-e.\n\nPor que existe: o ArcGIS Pro não abre COG por URL direta (pedido aberto na comunidade Esri); o que\nele abre é um armazenamento em nuvem configurado num `.acs`, com provedor \"Amazon S3\" e um\n`Service End Point` próprio. A chave só-leitura por inquilino JÁ era criada em\n`app/objetos.py::garantir_bucket` (`<alias>-ro`, `read=true, write=false, owner=false` no Garage);\no que faltava era uma porta que a entregasse ao dono do dado. Passo a passo em `docs/PRO_CONEXAO.md`.\n\nTrês travas deliberadas:\n1. SÓ SESSÃO (`so_sessao=True`): um token de serviço não emite credencial de armazenamento — senão\n   um token de tiles viraria escada para o balde inteiro.\n2. Exige o privilégio `conteudo.publicar_camada` (quem publica dado do inquilino), não leitura.\n3. Devolve SEMPRE a chave `ro`, nunca a `rw`. A de escrita não sai deste servidor por rota nenhuma.\n\nO segredo vai no CORPO da resposta e em lugar nenhum mais: não entra em log (o registro de evento\ngrava só que a credencial foi entregue, nunca o valor) e a resposta é `no-store`.",
+    "operationId": "conexao_s3_api_imagens_conexao_s3_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "summary": "Conexao S3",
+    "tags": [
+     "imagens"
+    ],
+    "x-auth": "S",
+    "x-plat-escopo": "sessao",
+    "x-privilegio": "conteudo.publicar_camada"
    }
   },
   "/api/imagens/formatos": {
@@ -55461,6 +55798,345 @@
     "x-privilegio": "rede.editar"
    }
   },
+  "/api/rede/{rede_id}/continuidade": {
+   "delete": {
+    "description": "Apaga a continuidade dos conjuntos desta rede (o dado é do inquilino, não da rede: outra rede do\nmesmo inquilino que declare o mesmo conjunto perde o dado junto, e por isso o evento registra os\nconjuntos afetados).",
+    "operationId": "apagar_api_rede__rede_id__continuidade_delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "rede_id",
+      "required": true,
+      "schema": {
+       "title": "Rede Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Apagar",
+    "tags": [
+     "rede de utilidades — continuidade DEC/FEC"
+    ],
+    "x-auth": "S/T",
+    "x-plat-escopo": "admin:inquilino",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/continuidade/alimentadores": {
+   "get": {
+    "description": "O indicador do conjunto levado ao alimentador, ponderado pelas unidades consumidoras que cada\nconjunto tem naquele alimentador. `uc_sem_dado` diz quantas ficaram de fora da média.",
+    "operationId": "alimentadores_api_rede__rede_id__continuidade_alimentadores_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "rede_id",
+      "required": true,
+      "schema": {
+       "title": "Rede Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "ano",
+      "required": false,
+      "schema": {
+       "default": 2025,
+       "title": "Ano",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Alimentadores",
+    "tags": [
+     "rede de utilidades — continuidade DEC/FEC"
+    ],
+    "x-auth": "S/T",
+    "x-plat-escopo": "catalogo:ler",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/continuidade/conjuntos": {
+   "get": {
+    "description": "A ficha de cada conjunto declarado pela rede: DEC e FEC apurados no ano, o limite daquele ano com o\narquivo de onde veio e a situação.\n\nConjunto que a rede declara e o arquivo da ANEEL não tem sai com `apurado` nulo e `situacao` igual a\n\"sem dado\" — nunca zero.",
+    "operationId": "conjuntos_api_rede__rede_id__continuidade_conjuntos_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "rede_id",
+      "required": true,
+      "schema": {
+       "title": "Rede Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "ano_de",
+      "required": false,
+      "schema": {
+       "default": 2020,
+       "title": "Ano De",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "query",
+      "name": "ano_ate",
+      "required": false,
+      "schema": {
+       "default": 2025,
+       "title": "Ano Ate",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Conjuntos",
+    "tags": [
+     "rede de utilidades — continuidade DEC/FEC"
+    ],
+    "x-auth": "S/T",
+    "x-plat-escopo": "catalogo:ler",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/continuidade/dic-fic": {
+   "get": {
+    "description": "DIC e FIC médios por transformador, calculados sobre as unidades consumidoras da própria BDGD.\n`formato=csv` devolve a mesma tabela como arquivo.",
+    "operationId": "dic_fic_api_rede__rede_id__continuidade_dic_fic_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "rede_id",
+      "required": true,
+      "schema": {
+       "title": "Rede Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "limite",
+      "required": false,
+      "schema": {
+       "default": 1000,
+       "title": "Limite",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "query",
+      "name": "formato",
+      "required": false,
+      "schema": {
+       "default": "json",
+       "title": "Formato",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Dic Fic",
+    "tags": [
+     "rede de utilidades — continuidade DEC/FEC"
+    ],
+    "x-auth": "S/T",
+    "x-plat-escopo": "catalogo:ler",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/continuidade/importar": {
+   "post": {
+    "description": "Importa o dado aberto de continuidade da ANEEL para os conjuntos que esta rede declara.\n\nA leitura de arquivo e a carga vão para o threadpool, para não segurar o laço de eventos. A resposta\ntraz, por arquivo, quantas linhas o arquivo tinha no recorte e quantas foram gravadas: é a\nconferência de contagem, e ela também fica gravada em `plat.rede_continuidade_fonte`.",
+    "operationId": "importar_api_rede__rede_id__continuidade_importar_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "rede_id",
+      "required": true,
+      "schema": {
+       "title": "Rede Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/app__rede_utilidades__rotas_continuidade__ImportarEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Importar",
+    "tags": [
+     "rede de utilidades — continuidade DEC/FEC"
+    ],
+    "x-auth": "S/T",
+    "x-plat-escopo": "admin:inquilino",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/continuidade/painel": {
+   "get": {
+    "description": "A série por ano de cada conjunto (apurado, limite e situação), com a base normativa do limite.",
+    "operationId": "painel_api_rede__rede_id__continuidade_painel_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "rede_id",
+      "required": true,
+      "schema": {
+       "title": "Rede Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "ano_de",
+      "required": false,
+      "schema": {
+       "default": 2020,
+       "title": "Ano De",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "query",
+      "name": "ano_ate",
+      "required": false,
+      "schema": {
+       "default": 2025,
+       "title": "Ano Ate",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Painel",
+    "tags": [
+     "rede de utilidades — continuidade DEC/FEC"
+    ],
+    "x-auth": "S/T",
+    "x-plat-escopo": "catalogo:ler",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
   "/api/rede/{rede_id}/controlador": {
    "post": {
     "description": "Só um tipo de ativo com a categoria de rede `controlador` pode controlar uma subrede, e o controlador\né sempre um TERMINAL do dispositivo — não a feição inteira.",
@@ -62070,6 +62746,53 @@
     "x-auth": "T",
     "x-plat-escopo": "conteudo:criar",
     "x-privilegio": "conteudo.criar"
+   }
+  },
+  "/api/uso": {
+   "get": {
+    "description": "Série diária do inquilino da sessão, do dia mais antigo para o mais recente (a ordem que um gráfico\nde linha desenha sem inverter nada no navegador).",
+    "operationId": "serie_api_uso_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "dias",
+      "required": false,
+      "schema": {
+       "default": 30,
+       "title": "Dias",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SerieUso"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Serie",
+    "tags": [
+     "uso"
+    ],
+    "x-auth": "S/T",
+    "x-plat-escopo": "admin:inquilino",
+    "x-privilegio": "org.configurar"
    }
   },
   "/api/usuarios": {
@@ -75434,7 +76157,7 @@
       "description": "Validation Error"
      }
     },
-    "summary": "WMS 1.3.0 (GetCapabilities, GetMap e GetLegendGraphic)",
+    "summary": "WMS 1.3.0 (GetCapabilities, GetMap, GetFeatureInfo e GetLegendGraphic)",
     "tags": [
      "wms"
     ],

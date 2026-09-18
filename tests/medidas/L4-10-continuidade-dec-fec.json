@@ -1,0 +1,165 @@
+{
+  "gerado_em": "2026-09-18T04:30:20Z",
+  "git_sha": "4f2cd8eabb51",
+  "item": "L4-10-continuidade-dec-fec",
+  "maquina": "12 vCPU, 23 GB RAM; PostgreSQL 16 em iagro_sat; base própria da trilha (laco/trilha_ambiente.sh), com outras sessões da casa na mesma máquina. Dado aberto da ANEEL lido do disco local (PLAT_ANEEL_CONTINUIDADE_RAIZ); nada é baixado da agência (D21, disco).",
+  "medidas": {
+    "comparacao_com_limite": {
+      "comando": "PLAT_ANEEL_CONTINUIDADE_RAIZ=<pasta do dado aberto da ANEEL> PLAT_REDE_REFERENCIA_ESQUEMA=<schema da cooperativa> PLAT_GRAVAR_MEDIDAS=1 bash laco/roda_teste.sh tests/api/test_rede_continuidade.py",
+      "unidade": "contagens do bloco, com a carga da máquina no momento da medição",
+      "valor": {
+        "anos_conjunto_indicador_com_limite": 36,
+        "carga_1min": 1.08,
+        "medido_em": "2026-09-18T04:30:12",
+        "ram_livre_gb": 9.28
+      }
+    },
+    "cooperativa_de_teste": {
+      "comando": "PLAT_ANEEL_CONTINUIDADE_RAIZ=<pasta do dado aberto da ANEEL> PLAT_REDE_REFERENCIA_ESQUEMA=<schema da cooperativa> PLAT_GRAVAR_MEDIDAS=1 bash laco/roda_teste.sh tests/api/test_rede_continuidade.py",
+      "unidade": "contagens do bloco, com a carga da máquina no momento da medição",
+      "valor": {
+        "alimentadores": 15,
+        "alimentadores_com_dec": 15,
+        "camadas_carregadas": {
+          "ucbt": {
+            "linhas": 26584,
+            "segundos": 0.897
+          },
+          "untrmt": {
+            "linhas": 5481,
+            "segundos": 0.183
+          }
+        },
+        "carga_1min": 1.21,
+        "conjuntos_com_dec_apurado": 6,
+        "conjuntos_declarados": 1,
+        "dec_por_ano": {
+          "2020": 29.77,
+          "2021": 23.2,
+          "2022": 25.07,
+          "2023": 31.39,
+          "2024": 27.03,
+          "2025": 24.76
+        },
+        "duracao_total_s": 2.25,
+        "limite_por_ano": {
+          "2020": 59.0,
+          "2021": 56.0,
+          "2022": 53.0,
+          "2023": 50.0,
+          "2024": 48.0,
+          "2025": 48.0
+        },
+        "medido_em": "2026-09-18T04:30:20",
+        "ram_livre_gb": 9.12,
+        "situacao_por_ano": {
+          "2020": "dentro do limite",
+          "2021": "dentro do limite",
+          "2022": "dentro do limite",
+          "2023": "dentro do limite",
+          "2024": "dentro do limite",
+          "2025": "dentro do limite"
+        },
+        "trafos_com_dic_medio": 4967,
+        "trafos_com_uc": 4967
+      }
+    },
+    "dic_fic_por_trafo": {
+      "comando": "PLAT_ANEEL_CONTINUIDADE_RAIZ=<pasta do dado aberto da ANEEL> PLAT_REDE_REFERENCIA_ESQUEMA=<schema da cooperativa> PLAT_GRAVAR_MEDIDAS=1 bash laco/roda_teste.sh tests/api/test_rede_continuidade.py",
+      "unidade": "contagens do bloco, com a carga da máquina no momento da medição",
+      "valor": {
+        "T-1": {
+          "dic_medio": 14.375,
+          "fic_medio": 5.75,
+          "n_uc": 8,
+          "n_uc_com_dic": 8
+        },
+        "T-2": {
+          "dic_medio": 30.0,
+          "fic_medio": 12.0,
+          "n_uc": 7,
+          "n_uc_com_dic": 4
+        },
+        "carga_1min": 1.23,
+        "medido_em": "2026-09-18T04:30:16",
+        "ram_livre_gb": 9.32,
+        "trafos": 2
+      }
+    },
+    "importacao": {
+      "comando": "PLAT_ANEEL_CONTINUIDADE_RAIZ=<pasta do dado aberto da ANEEL> PLAT_REDE_REFERENCIA_ESQUEMA=<schema da cooperativa> PLAT_GRAVAR_MEDIDAS=1 bash laco/roda_teste.sh tests/api/test_rede_continuidade.py",
+      "unidade": "contagens do bloco, com a carga da máquina no momento da medição",
+      "valor": {
+        "arquivos": [
+          {
+            "arquivo": "dec_2020_2029.parquet",
+            "especie": "apurado",
+            "linhas_arquivo": 432,
+            "linhas_gravadas": 432
+          },
+          {
+            "arquivo": "dec_fec_limite.csv",
+            "especie": "limite",
+            "linhas_arquivo": 36,
+            "linhas_gravadas": 36
+          }
+        ],
+        "carga_1min": 1.08,
+        "conjuntos_pedidos": 4,
+        "duracao_ms": 676,
+        "linhas_apuradas_gravadas": 432,
+        "medido_em": "2026-09-18T04:30:10",
+        "ram_livre_gb": 9.35
+      }
+    },
+    "painel": {
+      "comando": "PLAT_ANEEL_CONTINUIDADE_RAIZ=<pasta do dado aberto da ANEEL> PLAT_REDE_REFERENCIA_ESQUEMA=<schema da cooperativa> PLAT_GRAVAR_MEDIDAS=1 bash laco/roda_teste.sh tests/api/test_rede_continuidade.py",
+      "unidade": "contagens do bloco, com a carga da máquina no momento da medição",
+      "valor": {
+        "anos": [
+          2020,
+          2021,
+          2022,
+          2023,
+          2024,
+          2025
+        ],
+        "carga_1min": 1.08,
+        "conjuntos": 4,
+        "medido_em": "2026-09-18T04:30:13",
+        "ram_livre_gb": 9.24
+      }
+    },
+    "refutacao_recontagem_independente": {
+      "comando": "PLAT_ANEEL_CONTINUIDADE_RAIZ=<pasta do dado aberto da ANEEL> PLAT_REDE_REFERENCIA_ESQUEMA=<schema da cooperativa> PLAT_GRAVAR_MEDIDAS=1 bash laco/roda_teste.sh tests/api/test_rede_continuidade.py",
+      "unidade": "contagens do bloco, com a carga da máquina no momento da medição",
+      "valor": {
+        "anos": [
+          2020,
+          2025
+        ],
+        "carga_1min": 1.23,
+        "conjuntos": [
+          12591,
+          14562,
+          14563
+        ],
+        "medido_em": "2026-09-18T04:30:14",
+        "ram_livre_gb": 9.1,
+        "valores_conferidos": 36
+      }
+    },
+    "refutacao_sem_dado": {
+      "comando": "PLAT_ANEEL_CONTINUIDADE_RAIZ=<pasta do dado aberto da ANEEL> PLAT_REDE_REFERENCIA_ESQUEMA=<schema da cooperativa> PLAT_GRAVAR_MEDIDAS=1 bash laco/roda_teste.sh tests/api/test_rede_continuidade.py",
+      "unidade": "contagens do bloco, com a carga da máquina no momento da medição",
+      "valor": {
+        "anos_sem_dado": 6,
+        "carga_1min": 1.23,
+        "conjunto_fantasma": 999999999,
+        "medido_em": "2026-09-18T04:30:15",
+        "ram_livre_gb": 9.05,
+        "uc_sem_dado_no_alimentador": 3
+      }
+    }
+  }
+}
