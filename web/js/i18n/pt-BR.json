@@ -2253,6 +2253,8 @@
  "mapa.edicao_concluir": "Concluir",
  "mapa.edicao_conflito": "outra sessão alterou esta feição; recarregue antes de salvar de novo",
  "mapa.edicao_desfazer": "Desfazer",
+ "mapa.edicao_desfeito": "edição desfeita",
+ "mapa.edicao_refeito": "edição refeita",
  "mapa.edicao_dividir": "Dividir",
  "mapa.edicao_dividir_ajuda": "clique num ponto no meio da linha selecionada",
  "mapa.edicao_historico": "Histórico",

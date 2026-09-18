@@ -2214,6 +2214,8 @@
  "mapa.edicao_concluir": "Concluir",
  "mapa.edicao_conflito": "otra sesión cambió esta entidad; recargue antes de guardar de nuevo",
  "mapa.edicao_desfazer": "Deshacer",
+ "mapa.edicao_desfeito": "edición deshecha",
+ "mapa.edicao_refeito": "edición rehecha",
  "mapa.edicao_dividir": "Dividir",
  "mapa.edicao_dividir_ajuda": "haga clic en un punto en medio de la línea seleccionada",
  "mapa.edicao_historico": "Historial",

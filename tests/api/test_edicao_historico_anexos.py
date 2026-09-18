@@ -5,6 +5,8 @@ tabela criada direto no banco com `plat.camada_preparar`, agora também com `tg_
 from __future__ import annotations
 
 import base64
+import re
+import socket
 
 import pytest
 
@@ -19,6 +21,30 @@ from tests.api.test_edicao_transacional import (  # noqa: F401 — fixtures reap
 
 PNG_1X1 = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+)
+
+
+def _garage_no_ar() -> bool:
+    """Instância de Garage das trilhas no ar E token de administração presente? Sem os dois, `guardar()`
+    levanta ConfiguracaoAusente e o caminho FELIZ de anexo (gravar/ler objeto) não é testável nesta
+    máquina — laco/trilha_ambiente.sh: token vazio = trilha SEM Garage, nunca usar o de produção. As
+    RECUSAS (tipo/tamanho/conteúdo) não tocam o Garage e rodam sempre."""
+    from app.settings import settings
+    if not settings.PLAT_GARAGE_ADMIN_TOKEN:
+        return False
+    m = re.match(r"https?://([^:/]+):(\d+)", settings.PLAT_GARAGE_URL or "")
+    if not m:
+        return False
+    try:
+        with socket.create_connection((m.group(1), int(m.group(2))), timeout=2):
+            return True
+    except OSError:
+        return False
+
+
+requer_garage = pytest.mark.skipif(
+    not _garage_no_ar(),
+    reason="Garage de trilhas fora do ar ou sem token nesta máquina (só o caminho feliz de anexo precisa)",
 )
 
 
@@ -205,6 +231,7 @@ def test_campo_obrigatorio_ausente_direto_na_api_e_recusado(sessao_a, camada_a):
 
 
 # ---------------------------------------------------------------- anexos: limite de tamanho e de tipo
+@requer_garage
 def test_anexo_enviado_e_listado(sessao_a, camada_a):  # noqa: F811
     f = _criar_ponto(sessao_a, camada_a["id"])
     gid = f["id"]
@@ -286,6 +313,7 @@ def test_anexo_conteudo_nao_bate_com_content_type_declarado_e_recusado(sessao_a,
     assert r.json()["erro"] == "conteudo_recusado"
 
 
+@requer_garage
 def test_anexo_apagado_some_da_listagem(sessao_a, camada_a):  # noqa: F811
     f = _criar_ponto(sessao_a, camada_a["id"])
     envio = sessao_a.post(

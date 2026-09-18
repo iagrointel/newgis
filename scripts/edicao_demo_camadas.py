@@ -19,6 +19,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import psycopg2  # noqa: E402
 
+from app.esquema_dado import esquema as esquema_dado  # noqa: E402
+
 DSN = os.environ["PLAT_DSN"]
 MARCA = "edicao-l2-03"
 
@@ -38,7 +40,9 @@ def _contexto(cur, slug):
 
 
 def _publicar(cur, adm, titulo, tabela, tipo, campos, edicao, regras_campo=None, simbologia=None):
-    esquema = "d_demo"
+    # prefixo da instalação (d_ em produção, d_plat_t<trilha>_ numa trilha) — nunca "d_demo" na mão
+    esquema = esquema_dado(cur, "demo")
+    cur.execute("SELECT plat.camada_schema_garantir(%s)", ("demo",))
     cur.execute("SELECT plat.camada_preparar(%s, %s, 4326, %s, %s)", (esquema, tabela, tipo, adm["usuario_id"]))
     cur.execute(f'SELECT ST_Extent(geom)::text AS e, count(*) AS n FROM "{esquema}"."{tabela}"')
     r = cur.fetchone()
@@ -67,18 +71,20 @@ def criar():
     try:
         with con.cursor() as cur:
             adm = _contexto(cur, "demo")
+            esquema = esquema_dado(cur, "demo")
+            cur.execute("SELECT plat.camada_schema_garantir(%s)", ("demo",))
 
             t = "c_" + _hex16()
             # `ordem`/`calc` (item L2-03-f): campo numérico de entrada e campo alvo para "calcular campo" no e2e
-            cur.execute(f'CREATE TABLE "d_demo"."{t}" (fid bigserial PRIMARY KEY, nome text, categoria text, '
+            cur.execute(f'CREATE TABLE "{esquema}"."{t}" (fid bigserial PRIMARY KEY, nome text, categoria text, '
                         f'ativo boolean, ordem integer, calc double precision, geom geometry(Point, 4326))')
             cur.execute(
-                f'INSERT INTO "d_demo"."{t}" (nome, categoria, ativo, ordem, geom) VALUES '
+                f'INSERT INTO "{esquema}"."{t}" (nome, categoria, ativo, ordem, geom) VALUES '
                 "('ponto um', 'A', true, 1, ST_SetSRID(ST_MakePoint(-46.533, -23.462), 4326)), "
                 "('ponto dois', 'B', false, 2, ST_SetSRID(ST_MakePoint(-46.528, -23.458), 4326)), "
                 "('ponto tres', 'C', true, 3, ST_SetSRID(ST_MakePoint(-46.520, -23.470), 4326))"
             )
-            cur.execute(f'CREATE INDEX ON "d_demo"."{t}" USING gist(geom)')
+            cur.execute(f'CREATE INDEX ON "{esquema}"."{t}" USING gist(geom)')
             saida["pontos"] = _publicar(
                 cur, adm, "edicao-pontos (L2-03, editável)", t, "Point",
                 [{"nome": "nome", "tipo": "text"}, {"nome": "categoria", "tipo": "text"},
@@ -90,14 +96,14 @@ def criar():
             )
 
             t2 = "c_" + _hex16()
-            cur.execute(f'CREATE TABLE "d_demo"."{t2}" (fid bigserial PRIMARY KEY, nome text, '
+            cur.execute(f'CREATE TABLE "{esquema}"."{t2}" (fid bigserial PRIMARY KEY, nome text, '
                         f'geom geometry(LineString, 4326))')
             cur.execute(
-                f'INSERT INTO "d_demo"."{t2}" (nome, geom) VALUES '
+                f'INSERT INTO "{esquema}"."{t2}" (nome, geom) VALUES '
                 "('trecho um', ST_SetSRID(ST_MakeLine(ST_MakePoint(-46.560, -23.480), "
                 "ST_MakePoint(-46.500, -23.480)), 4326))"
             )
-            cur.execute(f'CREATE INDEX ON "d_demo"."{t2}" USING gist(geom)')
+            cur.execute(f'CREATE INDEX ON "{esquema}"."{t2}" USING gist(geom)')
             saida["linhas"] = _publicar(
                 cur, adm, "edicao-linhas (L2-03, editável)", t2, "LineString",
                 [{"nome": "nome", "tipo": "text"}], edicao={"habilitada": True},
