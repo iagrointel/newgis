@@ -2306,6 +2306,10 @@ _SAML_METADADO_XML = (
     '<?xml version="1.0"?>'
     '<EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata" entityID="urn:zt:cruzado">'
     '<IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">'
+    '<KeyDescriptor use="signing"><KeyInfo xmlns="http://www.w3.org/2000/09/xmldsig#">'
+    '<X509Data><X509Certificate>' + _PEM_TESTE.replace("-----BEGIN CERTIFICATE-----", "")
+    .replace("-----END CERTIFICATE-----", "").replace("\n", "") +
+    '</X509Certificate></X509Data></KeyInfo></KeyDescriptor>'
     '<SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" '
     'Location="https://exemplo.invalido/sso"/>'
     '</IDPSSODescriptor></EntityDescriptor>'
