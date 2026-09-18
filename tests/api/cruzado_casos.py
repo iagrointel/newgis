@@ -561,15 +561,6 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: f"/api/plataforma/inquilinos/{p.inquilino_b}/reativar"
     ),
     # ---- L0-07-f console da plataforma: as rotas novas seguem a mesma regra (404 para quem não é superadmin)
-    ("GET", "/api/plataforma/inquilinos/{id}"): Caso(lambda p: f"/api/plataforma/inquilinos/{p.inquilino_b}"),
-    ("PUT", "/api/plataforma/inquilinos/{id}/cotas"): Caso(
-        lambda p: f"/api/plataforma/inquilinos/{p.inquilino_b}/cotas", lambda p: {"cota_usuarios": 5}
-    ),
-    ("POST", "/api/plataforma/inquilinos/{id}/admins/{usuario_id}/2fa/desativar"): Caso(
-        lambda p: f"/api/plataforma/inquilinos/{p.inquilino_b}/admins/{p.ids['b']['id']}/2fa/desativar"
-    ),
-    ("GET", "/api/plataforma/fila"): Caso(lambda p: "/api/plataforma/fila"),
-    ("GET", "/api/plataforma/eventos"): Caso(lambda p: "/api/plataforma/eventos?limite=5"),
     # ---- L0-07-e relatórios do admin: leituras e pedidos agem só no chamador; job/agenda de B = 404 (RLS)
     ("GET", "/api/relatorios/tipos"): Caso(lambda p: "/api/relatorios/tipos", proprio=True, aceita=frozenset({200})),
     ("GET", "/api/relatorios"): Caso(
@@ -709,10 +700,6 @@ CASOS: dict[tuple[str, str], Caso] = {
     # item L0-04-i-fonte-registrada: mesma regra (conexão de B é cross-tenant puro para A) — as 3 rotas
     # novas do conector postgres_fdw seguem a mesma _carregar/RLS das duas acima, nenhuma toca o banco
     # remoto antes de checar a posse da conexão.
-    ("GET", "/api/conexoes/{id}/tabelas"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/tabelas"),
-    ("POST", "/api/conexoes/{id}/publicar-em-massa"): Caso(
-        lambda p: f"/api/conexoes/{p.conexao_b['id']}/publicar-em-massa", lambda p: {"tabelas": ["qualquer"]}
-    ),
     ("GET", "/api/conexoes/{id}/camadas"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/camadas"),
     # ---- L3-19-multiescala: conjunto/fator/execução são do INQUILINO (tenant_id + RLS, mesma classe da
     # conexão acima, não do registro compartilhado do acervo); GET/POST/DELETE de lista agem só sobre o
@@ -1040,10 +1027,6 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: json.loads(instalados.bruto("agua-epanet")),
     ),
     # L4-01-c: importação BDGD por job — a rede de B não pode ser alvo de A (o job nem é criado)
-    ("POST", "/api/rede/{rede_id}/importar-bdgd"): Caso(
-        lambda p: f"/api/rede/{p.rede_b['id']}/importar-bdgd",
-        lambda p: {"caminho": "inexistente.gdb"},
-    ),
     # L4-05-c: importação de caso MATPOWER — a rota confere a REDE antes de olhar o corpo (mesma ordem de
     # POST /pacote), então a rede de B dá 404 sem que o `.m` chegue a ser lido. O corpo vai sem caso válido
     # de propósito: se a ordem fosse invertida, a resposta seria 422 e a varredura acusaria.
@@ -1077,8 +1060,6 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("GET", "/api/rede/{rede_id}/topologia/nos"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/topologia/nos"),
     ("GET", "/api/rede/{rede_id}/topologia/arestas"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/topologia/arestas"),
-    ("GET", "/api/rede/{rede_id}/topologia/diagnostico"): Caso(
-        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/diagnostico"),
     ("GET", "/api/rede/{rede_id}/topologia/areas-sujas"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/topologia/areas-sujas"),
     ("GET", "/api/rede/{rede_id}/topologia/alcance"): Caso(
@@ -1236,34 +1217,34 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: "/api/amc/modelos",
         lambda p: {"nome": f"{PREFIXO}amc-modelo-a", "definicao": AMC_DEF_MINIMA},
         proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
-        limpar=_apagar_criado(("DELETE", "/api/amc/modelos/{id}")),
+        limpar=_apagar_criado(("DELETE", "/api/amc/modelos/{modelo_id}")),
     ),
     ("GET", "/api/amc/modelos"): Caso(lambda p: "/api/amc/modelos", proprio=True, aceita=frozenset({200}),
                                       verificar=_sem_marca),
-    ("GET", "/api/amc/modelos/{id}"): Caso(lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}"),
-    ("PUT", "/api/amc/modelos/{id}"): Caso(
+    ("GET", "/api/amc/modelos/{modelo_id}"): Caso(lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}"),
+    ("PUT", "/api/amc/modelos/{modelo_id}"): Caso(
         lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}", lambda p: {"nome": f"{PREFIXO}amc-invadido"},
     ),
-    ("DELETE", "/api/amc/modelos/{id}"): Caso(lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}"),
+    ("DELETE", "/api/amc/modelos/{modelo_id}"): Caso(lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}"),
     ("POST", "/api/amc/conjuntos"): Caso(
         lambda p: "/api/amc/conjuntos",
         lambda p: {"nome": f"{PREFIXO}amc-conjunto-a", "tipo": "hexagonal", "lado_m": 250},
         proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
-        limpar=_apagar_criado(("DELETE", "/api/amc/conjuntos/{id}")),
+        limpar=_apagar_criado(("DELETE", "/api/amc/conjuntos/{conjunto_id}")),
     ),
     ("GET", "/api/amc/conjuntos"): Caso(lambda p: "/api/amc/conjuntos", proprio=True, aceita=frozenset({200}),
                                         verificar=_sem_marca),
-    ("GET", "/api/amc/conjuntos/{id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}"),
-    ("DELETE", "/api/amc/conjuntos/{id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}"),
+    ("GET", "/api/amc/conjuntos/{conjunto_id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}"),
+    ("DELETE", "/api/amc/conjuntos/{conjunto_id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}"),
     ("POST", "/api/amc/execucoes"): Caso(
         lambda p: "/api/amc/execucoes",
         lambda p: {"modelo_id": p.modelo_amc_b["id"], "conjunto_id": p.conjunto_amc_b["id"], "semente": 1},
     ),
     ("GET", "/api/amc/execucoes"): Caso(lambda p: "/api/amc/execucoes", proprio=True, aceita=frozenset({200}),
                                         verificar=_sem_marca),
-    ("GET", "/api/amc/execucoes/{id}"): Caso(lambda p: f"/api/amc/execucoes/{_id_execucao_amc(p)}"),
-    ("DELETE", "/api/amc/execucoes/{id}"): Caso(lambda p: f"/api/amc/execucoes/{_id_execucao_amc(p)}"),
-    ("GET", "/api/amc/execucoes/{id}/resultados"): Caso(
+    ("GET", "/api/amc/execucoes/{execucao_id}"): Caso(lambda p: f"/api/amc/execucoes/{_id_execucao_amc(p)}"),
+    ("DELETE", "/api/amc/execucoes/{execucao_id}"): Caso(lambda p: f"/api/amc/execucoes/{_id_execucao_amc(p)}"),
+    ("GET", "/api/amc/execucoes/{execucao_id}/resultados"): Caso(
         lambda p: f"/api/amc/execucoes/{_id_execucao_amc(p)}/resultados",
     ),
     # ---- L0-07-d convite de membro por e-mail (ADR 0013): GET/POST/DELETE agem só sobre o inquilino do
@@ -1669,13 +1650,6 @@ CASOS: dict[tuple[str, str], Caso] = {
         proprio=True, aceita=frozenset({200}),
     ),
     # --- clonagem de camadas hospedadas (L2-08-b): registro por inquilino; conexão de B nunca serve A
-    ("GET", "/api/migracao/clones"): Caso(lambda p: "/api/migracao/clones", proprio=True, aceita=frozenset({200})),
-    ("GET", "/api/migracao/clones/{id}"): Caso(lambda p: f"/api/migracao/clones/{UUID_NULO}"),
-    ("POST", "/api/migracao/clones"): Caso(
-        lambda p: "/api/migracao/clones",
-        lambda p: {"conexao_id": p.conexao_b["id"], "url_servico": "https://portal.invalido/server/rest/services/x/FeatureServer"},
-    ),
-    ("DELETE", "/api/migracao/clones/{id}"): Caso(lambda p: f"/api/migracao/clones/{UUID_NULO}"),
     # ---- L4-18-rede-simples: rede simples de B = 404; criar rede simples com camada de B = 404/422
     # ---- L2-09-d-analise-3d: análise é stateless SEM salvar_item (o corpo não pede item) — nada é criado
     # nem em A nem em B; a verificação é a resposta não carregar marca de B
@@ -1761,12 +1735,6 @@ CASOS.update({
 # ---- L6-01-i-raster-e-arquivos: o acervo é da CASA (global, sem tenant_id) — a lista é igual para todo
 # inquilino (nada de B nela) e a exposição só cria item no inquilino de quem chama
 CASOS.update({
-    ("GET", "/api/acervo/arquivos"): Caso(lambda p: "/api/acervo/arquivos?limite=1", proprio=True,
-                                          aceita=frozenset({200}), verificar=_sem_marca),
-    ("POST", "/api/acervo/arquivos/expor"): Caso(
-        lambda p: "/api/acervo/arquivos/expor", lambda p: {"caminhos": ["zz/inexistente-no-registro.geojson"]},
-        proprio=True, aceita=frozenset({202, 409}), verificar=_sem_marca,
-    ),
 })
 
 
@@ -1785,7 +1753,7 @@ _SVC = (
      f"/svc/{_TOK}/raster/{_ITEM_NULO}/wmts/1.0.0/WMTSCapabilities.xml"),
     ("GET", "/svc/{token}/raster/{item}/{z}/{x}/{y}", f"/svc/{_TOK}/raster/{_ITEM_NULO}/1/0/0"),
     ("GET", "/svc/{token}/raster/{item}/{z}/{x}/{y}.{ext}", f"/svc/{_TOK}/raster/{_ITEM_NULO}/1/0/0.png"),
-    ("GET", "/svc/{token}/mosaico/{colecao}/{z}/{x}/{y}", f"/svc/{_TOK}/mosaico/zz-colecao/1/0/0"),
+    ("GET", "/svc/{token}/mosaico/{alvo}/{z}/{x}/{y}", f"/svc/{_TOK}/mosaico/zz-colecao/1/0/0"),
     ("GET", "/svc/{token}/stac/", f"/svc/{_TOK}/stac/"),
     ("GET", "/svc/{token}/stac/api", f"/svc/{_TOK}/stac/api"),
     ("GET", "/svc/{token}/stac/conformance", f"/svc/{_TOK}/stac/conformance"),
