@@ -1,0 +1,15 @@
+{
+ "item": "L7-15-processo-release",
+ "assinado_por": "construtor L7 (turno de 18/09/2026)",
+ "gerado_em": "2026-09-18T01:56:30Z",
+ "git_sha": "635ffccce919",
+ "maquina": "iagrosat-db-sp; trilha seg (schema plat_tseg), pytest sob cgroup MemoryMax=4G",
+ "clausulas": {
+  "prova_do_item": {
+   "resultado": "medido",
+   "comando": "bash laco/roda_teste.sh tests/adversario_raiz/test_g6_processo_release.py -q -p no:randomly",
+   "contagem": "5 passed, 1 xfailed",
+   "nota": "regressao e repeticao de versao recusadas pelo caminho real; etiqueta so depois da secao do CHANGELOG e apagada quando a rede de tras reprova. Xfail que resta: a arvore REAL tem VERSAO=0.1.0 sem etiqueta e sem secao"
+  }
+ }
+}
