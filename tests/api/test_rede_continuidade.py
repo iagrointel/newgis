@@ -285,9 +285,18 @@ def test_job_usa_o_mesmo_caminho_da_rota():
 
     tipo = REGISTRO["rede.importar_continuidade"]
     assert tipo.perfil_minimo == "editor"
-    _raiz()
-    with pytest.raises(Exception, match="fora de PLAT_ANEEL_CONTINUIDADE_RAIZ"):
-        tarefas_continuidade.resolver_caminho("/etc")
+    raiz = _raiz()
+
+    # --- a RECUSA: caminho absoluto fora da raiz, e a subida por '..' que um caminho relativo permitiria
+    for fora in ("/etc", "../..", "subpasta/../../.."):
+        with pytest.raises(Exception, match="fora de PLAT_ANEEL_CONTINUIDADE_RAIZ"):
+            tarefas_continuidade.resolver_caminho(fora)
+
+    # --- o PAR POSITIVO. Sem ele, um `resolver_caminho` que recusasse TUDO passaria na recusa acima e
+    # deixaria o job sem serventia. A raiz configurada tem de ser aceita, e devolvida resolvida.
+    assert tarefas_continuidade.resolver_caminho(None) == raiz.resolve()
+    assert tarefas_continuidade.resolver_caminho("") == raiz.resolve()
+    assert tarefas_continuidade.resolver_caminho(str(raiz)) == raiz.resolve()
 
 
 # --------------------------------------------------------------------------- cláusulas 3, 5 e 7
