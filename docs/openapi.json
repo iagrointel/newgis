@@ -5240,6 +5240,8 @@
       }
      }
     },
+    "x-auth": "-",
+    "x-privilegio": "publico",
     "x-plat-escopo": "publico"
    }
   },
@@ -8351,7 +8353,7 @@
      "catalogo"
     ],
     "summary": "Metadado Iso",
-    "description": "Metadado ISO do item (item L0-09-metadado-catalogo; ADR 0004 D17). Padrão = ISO 19139/GMD (o que o\nPerfil MGB/INDE consome); `?formato=19115-3` pede `mdb:MD_Metadata` (ISO 19115-1/19115-3, L0-09 cláusula\n2/D42) — os dois validados contra o XSD oficial ANTES de sair (docs/xsd/cache/, baixado por\ndocs/xsd/baixar_iso19139.py --perfil iso19139|iso19115-3); `item_ou_404` + RLS de `plat.item` garantem que\no token/sessão de um inquilino nunca gera o XML de item de outro.",
+    "description": "Metadado ISO do item (itens L0-09-metadado-catalogo e L1-27). Padrão = ISO 19139/GMD (o que o Perfil\nMGB/INDE consome); `?formato=19115-3` pede `mdb:MD_Metadata` (ISO 19115-1/19115-3, L0-09 cláusula 2/D42);\nitem raster COM ficha de imagem sai por padrão em ISO 19115-2/gmi, o perfil de imagem (item L1-27), que\nacrescenta aquisição, plataforma, instrumento, nuvem, ângulos do sol e a licença como restrição legal, e\n`?perfil=generico` força o GMD de volta. Os três são validados contra o XSD oficial ANTES de sair\n(docs/xsd/cache/, baixado por docs/xsd/baixar_iso19139.py --perfil iso19139|iso19115-3); `item_ou_404` +\nRLS de `plat.item` garantem que o token/sessão de um inquilino nunca gera o XML de item de outro.\n`formato=19115-3` e `perfil=imagem` são exclusivos: o 19115-3 é outro esquema, não outro perfil.",
     "operationId": "metadado_iso_api_itens__id__metadado_xml_get",
     "parameters": [
      {
@@ -8379,6 +8381,17 @@
        ],
        "title": "Formato"
       }
+     },
+     {
+      "name": "perfil",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "pattern": "^(auto|generico|imagem)$",
+       "default": "auto",
+       "title": "Perfil"
+      }
      }
     ],
     "responses": {
@@ -8403,6 +8416,78 @@
     },
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade",
+    "x-plat-escopo": "publico"
+   },
+   "post": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Metadado Iso Importar",
+    "description": "Importa metadado ISO 19139 no item (item L0-09-c-xml-iso-validacao): o mesmo analisador de\n`app.catalogo.metadado.analisar` (tests/unit/test_metadado_iso_importacao.py) preenche os campos do\nperfil (título/resumo/tags/créditos/termos de uso/status/extent), `dados.procedencia` (quando o tipo\naceita — `_tipo_aceita_procedencia`) e `metadado_iso`; o que a ISO trouxe e a plataforma não guarda sai em\n`nao_coube`, com caminho e linha. `estrito=1` transforma o parecer do XSD (avisos) em recusa 422;\n`aplicar=false` devolve o relatório sem gravar nada. `item_ou_404` + RLS garantem que a leitura/escrita\nnunca atravessa inquilino.",
+    "operationId": "metadado_iso_importar_api_itens__id__metadado_xml_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "estrito",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Estrito"
+      }
+     },
+     {
+      "name": "aplicar",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": true,
+       "title": "Aplicar"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MetadadoIsoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo",
     "x-plat-escopo": "publico"
    }
   },
@@ -11336,33 +11421,26 @@
   "/api/modelos": {
    "get": {
     "tags": [
-     "modelos3d"
+     "catalogo"
     ],
-    "summary": "Listar",
-    "description": "Modelos 3D do inquilino, do mais recente para o mais antigo.",
-    "operationId": "listar_api_modelos_get",
+    "summary": "Listar Modelos",
+    "description": "Modelos do próprio inquilino e os de escopo `plataforma` (a política de linha da tabela é quem\ndecide; a rota não filtra por inquilino à mão).",
+    "operationId": "listar_modelos_api_modelos_get",
     "parameters": [
      {
-      "name": "limite",
+      "name": "escopo",
       "in": "query",
       "required": false,
       "schema": {
-       "type": "integer",
-       "maximum": 200,
-       "minimum": 1,
-       "default": 50,
-       "title": "Limite"
-      }
-     },
-     {
-      "name": "deslocamento",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "type": "integer",
-       "minimum": 0,
-       "default": 0,
-       "title": "Deslocamento"
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Escopo"
       }
      }
     ],
@@ -11371,7 +11449,13 @@
       "description": "Successful Response",
       "content": {
        "application/json": {
-        "schema": {}
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ModeloGaleria"
+         },
+         "title": "Response Listar Modelos Api Modelos Get"
+        }
        }
       }
      },
@@ -11387,24 +11471,22 @@
      }
     },
     "x-auth": "S/T",
-    "x-privilegio": "proprio",
+    "x-privilegio": "rls:visibilidade",
     "x-plat-escopo": "publico"
    },
    "post": {
     "tags": [
-     "modelos3d"
+     "catalogo"
     ],
-    "summary": "Criar",
-    "description": "Cria o modelo e enfileira a conversão. O arquivo já tem de estar no inquilino (`POST /api/arquivos`).",
-    "operationId": "criar_api_modelos_post",
+    "summary": "Publicar Modelo",
+    "description": "Publica um pacote na galeria: `conteudo` em base64, ou `item_id` para exportar e publicar de uma vez.\nEscopo `plataforma` (visível a todos os inquilinos) só passa se quem chama for superadmin — quem recusa\né a política da tabela, não um `if` da rota.",
+    "operationId": "publicar_modelo_api_modelos_post",
     "requestBody": {
      "required": true,
      "content": {
       "application/json": {
        "schema": {
-        "type": "object",
-        "additionalProperties": true,
-        "title": "Corpo"
+        "$ref": "#/components/schemas/app__catalogo__modelos__ModeloEntrada"
        }
       }
      }
@@ -11414,7 +11496,9 @@
       "description": "Successful Response",
       "content": {
        "application/json": {
-        "schema": {}
+        "schema": {
+         "$ref": "#/components/schemas/ModeloGaleria"
+        }
        }
       }
      },
@@ -11429,8 +11513,8 @@
       }
      }
     },
-    "x-auth": "S/T",
-    "x-privilegio": "proprio",
+    "x-auth": "S",
+    "x-privilegio": "conteudo.criar",
     "x-plat-escopo": "publico"
    }
   },
@@ -11481,11 +11565,10 @@
   "/api/modelos/{id}": {
    "delete": {
     "tags": [
-     "modelos3d"
+     "catalogo"
     ],
-    "summary": "Apagar",
-    "description": "Apaga o modelo; os elementos saem em cascata pelo banco. Os objetos gravados (glTF e tileset) ficam\npara a varredura de órfãos do L0-11 — apagar objeto aqui duplicaria aquela responsabilidade.",
-    "operationId": "apagar_api_modelos__id__delete",
+    "summary": "Apagar Modelo",
+    "operationId": "apagar_modelo_api_modelos__id__delete",
     "parameters": [
      {
       "name": "id",
@@ -11498,13 +11581,8 @@
      }
     ],
     "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
+     "204": {
+      "description": "Successful Response"
      },
      "422": {
       "description": "Validation Error",
@@ -11517,49 +11595,8 @@
       }
      }
     },
-    "x-auth": "S/T",
-    "x-privilegio": "proprio",
-    "x-plat-escopo": "publico"
-   },
-   "get": {
-    "tags": [
-     "modelos3d"
-    ],
-    "summary": "Obter",
-    "operationId": "obter_api_modelos__id__get",
-    "parameters": [
-     {
-      "name": "id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Id"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "proprio",
+    "x-auth": "S",
+    "x-privilegio": "conteudo.criar",
     "x-plat-escopo": "publico"
    }
   },
@@ -12245,101 +12282,13 @@
     ],
     "summary": "Listar Camadas",
     "operationId": "listar_camadas_api_acervo_camadas_get",
-    "parameters": [
-     {
-      "name": "fonte_id",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "anyOf": [
-        {
-         "type": "string",
-         "maxLength": 200
-        },
-        {
-         "type": "null"
-        }
-       ],
-       "title": "Fonte Id"
-      }
-     },
-     {
-      "name": "vencida",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "anyOf": [
-        {
-         "type": "boolean"
-        },
-        {
-         "type": "null"
-        }
-       ],
-       "title": "Vencida"
-      }
-     },
-     {
-      "name": "estado",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "type": "string",
-       "pattern": "^(exposta|bloqueada|pendente_de_licenca|todos)$",
-       "default": "exposta",
-       "title": "Estado"
-      }
-     },
-     {
-      "name": "limite",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "anyOf": [
-        {
-         "type": "integer"
-        },
-        {
-         "type": "null"
-        }
-       ],
-       "title": "Limite"
-      }
-     },
-     {
-      "name": "deslocamento",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "anyOf": [
-        {
-         "type": "integer"
-        },
-        {
-         "type": "null"
-        }
-       ],
-       "title": "Deslocamento"
-      }
-     }
-    ],
     "responses": {
      "200": {
       "description": "Successful Response",
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/AcervoCamadaFrescorPagina"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
+         "$ref": "#/components/schemas/AcervoCamadaPagina"
         }
        }
       }
@@ -12780,6 +12729,118 @@
        "application/json": {
         "schema": {
          "$ref": "#/components/schemas/AcervoUsoMensal"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/acervo/frescor/camadas": {
+   "get": {
+    "tags": [
+     "acervo"
+    ],
+    "summary": "Listar Camadas",
+    "operationId": "listar_camadas_api_acervo_frescor_camadas_get",
+    "parameters": [
+     {
+      "name": "fonte_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 200
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Fonte Id"
+      }
+     },
+     {
+      "name": "vencida",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "boolean"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Vencida"
+      }
+     },
+     {
+      "name": "estado",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "pattern": "^(exposta|bloqueada|pendente_de_licenca|todos)$",
+       "default": "exposta",
+       "title": "Estado"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AcervoCamadaFrescorPagina"
         }
        }
       }
@@ -13418,6 +13479,248 @@
     "x-plat-escopo": "publico"
    }
   },
+  "/api/conexoes/{id}/tilejson": {
+   "get": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Tilejson",
+    "description": "TileJSON 3.0.0 de uma conexão `xyz` (item L6-02-g-pmtiles-xyz-tilejson) — só monta o que a conexão já\nguarda (`app.conexao.ladrilhos.tilejson`), nunca sonda o serviço de novo.",
+    "operationId": "tilejson_api_conexoes__id__tilejson_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/conexoes/{id}/colecoes": {
+   "get": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Listar Colecoes",
+    "description": "Coleções que o serviço publica: `wfs:FeatureTypeList` do GetCapabilities (WFS 2.0) ou `GET /collections`\n(OGC API - Features). Resposta em cache curto por (inquilino, conexão).",
+    "operationId": "listar_colecoes_api_conexoes__id__colecoes_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ColecoesPagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/conexoes/{id}/colecoes/{colecao}/campos": {
+   "get": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Campos Da Colecao",
+    "description": "Atributos e o tipo que o SERVIÇO declara (`DescribeFeatureType` no WFS, `/queryables` no OGC API). Quando\no serviço não declara nada, os tipos vêm de uma amostra de uma feição e `origem_do_tipo` diz `amostra` —\ninferido nunca é apresentado como declarado.",
+    "operationId": "campos_da_colecao_api_conexoes__id__colecoes__colecao__campos_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "colecao",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Colecao"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CamposSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/conexoes/{id}/colecoes/{colecao}/feicoes": {
+   "get": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Feicoes Da Colecao",
+    "description": "Feições ao vivo (modo referenciado), no máximo `CONEXAO_VETOR_PREVIA_MAX` por chamada. `bbox` é\n`minx,miny,maxx,maxy` em graus (CRS84) e `datahora` é o `datetime` do OGC API (instante ou intervalo).\nA resposta traz `numberMatched` (o total que o serviço declara) ao lado de `numberReturned` — sem os dois\nnão dá para saber se a página é a coleção inteira.",
+    "operationId": "feicoes_da_colecao_api_conexoes__id__colecoes__colecao__feicoes_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "colecao",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Colecao"
+      }
+     },
+     {
+      "name": "bbox",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Bbox"
+      }
+     },
+     {
+      "name": "datahora",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Datahora"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 1000,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/app__conexao__modelos__FeicoesSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade",
+    "x-plat-escopo": "publico"
+   }
+  },
   "/api/conexoes/{id}/testar": {
    "post": {
     "tags": [
@@ -13588,7 +13891,7 @@
      "conexoes"
     ],
     "summary": "Arquivo Configurar",
-    "description": "Marca a conexão como fonte de arquivo por URL e define o intervalo da atualização agendada (item\nL6-02-h). Só faz sentido em conexão `http` no modo `copiada`: `referenciada` significa que o dado FICA no\nserviço de origem, e este item copia o arquivo para dentro da plataforma.",
+    "description": "Marca a conexão como fonte de arquivo por URL e define o intervalo da atualização agendada (item\nL6-02-h; `google_sheets` entra pelo item L6-02-i — a planilha vira o MESMO CSV por URL). Só faz sentido\nem conexão no modo `copiada`: `referenciada` significa que o dado FICA no serviço de origem, e este\nitem copia o arquivo para dentro da plataforma.",
     "operationId": "arquivo_configurar_api_conexoes__id__arquivo_put",
     "parameters": [
      {
@@ -15932,6 +16235,7 @@
      "arquivos"
     ],
     "summary": "Uso",
+    "description": "Uso × cota do balde do inquilino, lido do PRÓPRIO Garage (GetBucketInfo), nas DUAS dimensões que o balde\ntem desde o item L1-01-d: bytes e número de objetos. `cota_bytes` continua no corpo com o mesmo nome e o\nmesmo significado de antes (item L0-11); `objetos_usados`/`cota_objetos` são os campos novos.",
     "operationId": "uso_api_arquivos_get",
     "responses": {
      "200": {
@@ -15988,6 +16292,47 @@
     },
     "x-auth": "T",
     "x-privilegio": "conteudo.criar",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/arquivos/_chave-leitura": {
+   "get": {
+    "tags": [
+     "arquivos"
+    ],
+    "summary": "Chave Leitura",
+    "description": "A chave S3 SÓ-LEITURA do balde do inquilino: é o que a conexão S3 do ArcGIS Pro (`Create Cloud Storage\nConnection File`, provedor S3 compatível, endereçamento por caminho) e o TiTiler (`/vsis3`) precisam para ler\no COG direto do Garage, sem passar byte por esta API. Nunca a chave de escrita — essa só existe dentro do\nprocesso da API e do worker (ADR 20260908T1255 seção 4). Só sob sessão e com `org.integracoes`: um token de serviço\nnão troca a si mesmo por uma credencial de armazenamento.",
+    "operationId": "chave_leitura_api_arquivos__chave_leitura_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "org.integracoes",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/arquivos/_cog/autorizar": {
+   "get": {
+    "tags": [
+     "arquivos"
+    ],
+    "summary": "Cog Autorizar",
+    "description": "Subrequisição `auth_request` do bloco `/svc/<token>/cog/<slug>/...` do nginx (deploy/nginx.conf). Recebe o\ncaminho original em `X-Original-URI` e responde 204 (o nginx serve a fatia do Garage) ou 403 (não serve).\nAutoriza quando: o caminho está na forma esperada, o token existe, não está revogado nem expirado, e o\ninquilino do token é o dono do `<slug>` do caminho. Nunca diz QUAL das condições falhou — a resposta é a\nmesma 403 para token inexistente e para token de outro inquilino, senão a rota vira oráculo de token.\nÉ rota pública de propósito: a subrequisição do nginx não carrega cookie nem `Authorization`.",
+    "operationId": "cog_autorizar_api_arquivos__cog_autorizar_get",
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico",
     "x-plat-escopo": "publico"
    }
   },
@@ -16455,6 +16800,7 @@
      "ingestao"
     ],
     "summary": "Formatos Aceitos",
+    "description": "Item L0-04-d: a instalação declara TODOS os formatos que conhece, aceitos ou não, com o motivo de cada\nrecusa — nunca omite um formato como se ele não existisse (achado do adversário do turno 3).",
     "operationId": "formatos_aceitos_api_importacoes_formatos_get",
     "responses": {
      "200": {
@@ -16605,6 +16951,371 @@
     "x-plat-escopo": "publico"
    }
   },
+  "/api/camadas/{id}/campos": {
+   "get": {
+    "tags": [
+     "formulario"
+    ],
+    "summary": "Campos Da Camada",
+    "description": "Paleta do construtor: atributos reais da camada (nome/tipo/alias) — o campo do desenho tem de\ncasar com um destes, ou ser declarado `persistido: false` (portão cláusula 2).",
+    "operationId": "campos_da_camada_api_camadas__id__campos_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Campos Da Camada Api Camadas  Id  Campos Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/camadas/{id}/formulario": {
+   "get": {
+    "tags": [
+     "formulario"
+    ],
+    "summary": "Formulario Publicado",
+    "description": "Formulário PUBLICADO da camada — o que a edição web e o PWA de campo renderizam. `desenho: null`\nquando a camada não tem formulário publicado ainda (a tela cai para o formulário genérico de sempre,\ncampo a campo sem grupo/condicional/cálculo).",
+    "operationId": "formulario_publicado_api_camadas__id__formulario_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Formulario Publicado Api Camadas  Id  Formulario Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade",
+    "x-plat-escopo": "publico"
+   },
+   "post": {
+    "tags": [
+     "formulario"
+    ],
+    "summary": "Formulario Criar Ou Renomear",
+    "operationId": "formulario_criar_ou_renomear_api_camadas__id__formulario_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/FormularioCriar"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Formulario Criar Ou Renomear Api Camadas  Id  Formulario Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.criar|conteudo.editar_tudo",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/camadas/{id}/formulario/versoes": {
+   "get": {
+    "tags": [
+     "formulario"
+    ],
+    "summary": "Formulario Versoes",
+    "operationId": "formulario_versoes_api_camadas__id__formulario_versoes_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Formulario Versoes Api Camadas  Id  Formulario Versoes Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.criar|conteudo.editar_tudo",
+    "x-plat-escopo": "publico"
+   },
+   "post": {
+    "tags": [
+     "formulario"
+    ],
+    "summary": "Formulario Salvar Versao",
+    "operationId": "formulario_salvar_versao_api_camadas__id__formulario_versoes_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/VersaoSalvar"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Formulario Salvar Versao Api Camadas  Id  Formulario Versoes Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.criar|conteudo.editar_tudo",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/camadas/{id}/formulario/versoes/{versao}": {
+   "get": {
+    "tags": [
+     "formulario"
+    ],
+    "summary": "Formulario Versao Ver",
+    "operationId": "formulario_versao_ver_api_camadas__id__formulario_versoes__versao__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "versao",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Versao"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Formulario Versao Ver Api Camadas  Id  Formulario Versoes  Versao  Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.criar|conteudo.editar_tudo",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/camadas/{id}/formulario/versoes/{versao}/publicar": {
+   "post": {
+    "tags": [
+     "formulario"
+    ],
+    "summary": "Formulario Publicar",
+    "operationId": "formulario_publicar_api_camadas__id__formulario_versoes__versao__publicar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "versao",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Versao"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Formulario Publicar Api Camadas  Id  Formulario Versoes  Versao  Publicar Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.criar|conteudo.editar_tudo",
+    "x-plat-escopo": "publico"
+   }
+  },
   "/api/camadas/esquema": {
    "post": {
     "tags": [
@@ -16647,13 +17358,14 @@
     "x-plat-escopo": "publico"
    }
   },
-  "/api/camadas/{item_id}/campos": {
+  "/api/camadas/{item_id}/esquema/campos": {
    "get": {
     "tags": [
      "camada-esquema"
     ],
     "summary": "Campos",
-    "operationId": "campos_api_camadas__item_id__campos_get",
+    "description": "Fields no formato FeatureServer. Mora sob `/esquema/` desde 16/09: `GET /api/camadas/{id}/campos`\n(sem prefixo) é do form-builder (`app/formulario/rotas.py`, item L5-03) — mesmo caminho, {id}/{item_id}\nsó de nome, então sombreava um ao outro; a paleta do construtor de formulário é a que fica no nome\ncurto porque tem mais chamadas (edição web, PWA de campo, item L5-03) do que este endpoint (usado só\npela tela /construtor-camada, item L5-31).",
+    "operationId": "campos_api_camadas__item_id__esquema_campos_get",
     "parameters": [
      {
       "name": "item_id",
@@ -17050,6 +17762,536 @@
        }
       },
       "description": "Accepted"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "feicoes.editar|feicoes.editar_total",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/camadas/{id}/feicoes/{globalid}": {
+   "get": {
+    "tags": [
+     "edicao"
+    ],
+    "summary": "Obter Feicao Rota",
+    "operationId": "obter_feicao_rota_api_camadas__id__feicoes__globalid__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "globalid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Globalid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Obter Feicao Rota Api Camadas  Id  Feicoes  Globalid  Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/camadas/{id}/feicoes/{globalid}/historico": {
+   "get": {
+    "tags": [
+     "edicao"
+    ],
+    "summary": "Listar Historico",
+    "operationId": "listar_historico_api_camadas__id__feicoes__globalid__historico_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "globalid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Globalid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "additionalProperties": true
+         },
+         "title": "Response Listar Historico Api Camadas  Id  Feicoes  Globalid  Historico Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/camadas/{id}/feicoes/{globalid}/historico/{historico_id}/restaurar": {
+   "post": {
+    "tags": [
+     "edicao"
+    ],
+    "summary": "Restaurar Feicao",
+    "operationId": "restaurar_feicao_api_camadas__id__feicoes__globalid__historico__historico_id__restaurar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "globalid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Globalid"
+      }
+     },
+     {
+      "name": "historico_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Historico Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RestaurarSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "feicoes.editar|feicoes.editar_total",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/camadas/{id}/feicoes/{globalid}/anexos": {
+   "get": {
+    "tags": [
+     "edicao"
+    ],
+    "summary": "Listar Anexos",
+    "operationId": "listar_anexos_api_camadas__id__feicoes__globalid__anexos_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "globalid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Globalid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "additionalProperties": true
+         },
+         "title": "Response Listar Anexos Api Camadas  Id  Feicoes  Globalid  Anexos Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade",
+    "x-plat-escopo": "publico"
+   },
+   "post": {
+    "tags": [
+     "edicao"
+    ],
+    "summary": "Enviar Anexo",
+    "operationId": "enviar_anexo_api_camadas__id__feicoes__globalid__anexos_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "globalid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Globalid"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AnexoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Enviar Anexo Api Camadas  Id  Feicoes  Globalid  Anexos Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "feicoes.editar|feicoes.editar_total",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}": {
+   "get": {
+    "tags": [
+     "edicao"
+    ],
+    "summary": "Baixar Anexo",
+    "operationId": "baixar_anexo_api_camadas__id__feicoes__globalid__anexos__anexo_id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "globalid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Globalid"
+      }
+     },
+     {
+      "name": "anexo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Anexo Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade",
+    "x-plat-escopo": "publico"
+   },
+   "delete": {
+    "tags": [
+     "edicao"
+    ],
+    "summary": "Apagar Anexo",
+    "operationId": "apagar_anexo_api_camadas__id__feicoes__globalid__anexos__anexo_id__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "globalid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Globalid"
+      }
+     },
+     {
+      "name": "anexo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Anexo Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "feicoes.editar|feicoes.editar_total",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/camadas/{id}/feicoes/unir": {
+   "post": {
+    "tags": [
+     "edicao"
+    ],
+    "summary": "Unir Feicoes",
+    "operationId": "unir_feicoes_api_camadas__id__feicoes_unir_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/UniaoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Unir Feicoes Api Camadas  Id  Feicoes Unir Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "feicoes.editar|feicoes.editar_total",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/camadas/{id}/feicoes/dividir": {
+   "post": {
+    "tags": [
+     "edicao"
+    ],
+    "summary": "Dividir Feicao",
+    "operationId": "dividir_feicao_api_camadas__id__feicoes_dividir_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DivisaoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Dividir Feicao Api Camadas  Id  Feicoes Dividir Post"
+        }
+       }
+      }
      },
      "422": {
       "description": "Validation Error",
@@ -17898,7 +19140,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/FeicoesSaida"
+         "$ref": "#/components/schemas/app__regras__modelos__FeicoesSaida"
         }
        }
       }
@@ -19028,60 +20270,6 @@
     "x-auth": "S/T",
     "x-privilegio": "feicoes.editar",
     "x-plat-escopo": "publico"
-   },
-   "get": {
-    "tags": [
-     "feicoes"
-    ],
-    "summary": "Listar Feicoes",
-    "description": "Só os atributos declarados e o fid; sem geometria (a leitura de geometria é do serviço de camada).",
-    "operationId": "listar_feicoes_api_camadas__item_id__feicoes_get",
-    "parameters": [
-     {
-      "name": "item_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Item Id"
-      }
-     },
-     {
-      "name": "limite",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "type": "integer",
-       "maximum": 500,
-       "minimum": 1,
-       "default": 50,
-       "title": "Limite"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "proprio",
-    "x-plat-escopo": "publico"
    }
   },
   "/rest/services/{item_id}/FeatureServer": {
@@ -19134,7 +20322,7 @@
      "featureserver"
     ],
     "summary": "Camada De Feicao",
-    "description": "Só a camada 0 existe: um item de catálogo `camada_vetorial` é UMA tabela (ADR 0005). Índice diferente\nde 0 responde 404 em vez de devolver a mesma camada com outro número.",
+    "description": "Só a camada 0 existe: um item de catálogo `camada_vetorial` é UMA tabela (ADR 0005). Índice diferente\nde 0 responde 404 em vez de devolver a mesma camada com outro número.\n\nO `:int` no molde do caminho (Starlette) é o conserto do achado de rotas: sem ele, `camada: int` só\nfiltrava DEPOIS do roteamento escolher esta função (por ordem de registro em `app/main.py`, este\nrouter vem antes de `rotas_sync_esri`) — qualquer palavra de um segmento só (`/replicas`,\n`/createReplica`) caía aqui e morria com 422 de conversão, nunca chegando à rota certa do item\nL2-04-k. Com o conversor no molde, um segmento não-numérico deixa de casar aqui e o Starlette\ntenta a próxima rota registrada — sem precisar reordenar `app/main.py`.",
     "operationId": "camada_de_feicao_rest_services__item_id__FeatureServer__camada__get",
     "parameters": [
      {
@@ -21334,6 +22522,382 @@
     "x-plat-escopo": "publico"
    }
   },
+  "/api/rede/medicao/leituras": {
+   "post": {
+    "tags": [
+     "rede_medicao"
+    ],
+    "summary": "Publicar Leituras",
+    "description": "Lote de leituras de sensor. Idempotente por (ativo, grandeza, ts): reenviar não duplica. Recusa item a\nitem (nunca o lote inteiro) por ts futuro, grandeza/unidade desconhecida — resposta sempre 201, com o\ndetalhe de quem foi aceito/duplicado/rejeitado. Depois de gravar, roda o motor de alarme (carregamento >\n100% por 30 min) para cada ativo tocado que já tem placa cadastrada — é o que deixa a ficha do ativo e o\nalarme quase em tempo real, sem depender de um job periódico.",
+    "operationId": "publicar_leituras_api_rede_medicao_leituras_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LeiturasLote"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.medir",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/rede/medicao/ativos/{ativo}": {
+   "put": {
+    "tags": [
+     "rede_medicao"
+    ],
+    "summary": "Configurar Ativo",
+    "description": "Placa do ativo (kVA/tensão nominal): sem ela o motor de alarme não calcula carregamento — não é erro\n(nem todo ativo tem placa cadastrada ainda), só fica sem essa leitura derivada.",
+    "operationId": "configurar_ativo_api_rede_medicao_ativos__ativo__put",
+    "parameters": [
+     {
+      "name": "ativo",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ativo"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AtivoConfigEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.medir",
+    "x-plat-escopo": "publico"
+   },
+   "get": {
+    "tags": [
+     "rede_medicao"
+    ],
+    "summary": "Ver Ativo",
+    "operationId": "ver_ativo_api_rede_medicao_ativos__ativo__get",
+    "parameters": [
+     {
+      "name": "ativo",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ativo"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Ver Ativo Api Rede Medicao Ativos  Ativo  Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/rede/medicao/ativos/{ativo}/ultimas": {
+   "get": {
+    "tags": [
+     "rede_medicao"
+    ],
+    "summary": "Ultimas Leituras",
+    "description": "Última leitura de cada grandeza publicada para este ativo — o que a ficha do ativo mostra no topo.",
+    "operationId": "ultimas_leituras_api_rede_medicao_ativos__ativo__ultimas_get",
+    "parameters": [
+     {
+      "name": "ativo",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ativo"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Ultimas Leituras Api Rede Medicao Ativos  Ativo  Ultimas Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/rede/medicao/ativos/{ativo}/serie": {
+   "get": {
+    "tags": [
+     "rede_medicao"
+    ],
+    "summary": "Serie",
+    "description": "Série de `grandeza` nos últimos `dias` dias (padrão 7 — o gráfico da ficha do ativo).",
+    "operationId": "serie_api_rede_medicao_ativos__ativo__serie_get",
+    "parameters": [
+     {
+      "name": "ativo",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ativo"
+      }
+     },
+     {
+      "name": "grandeza",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Grandeza"
+      }
+     },
+     {
+      "name": "dias",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 7,
+       "title": "Dias"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Serie Api Rede Medicao Ativos  Ativo  Serie Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/rede/medicao/jusante": {
+   "get": {
+    "tags": [
+     "rede_medicao"
+    ],
+    "summary": "Agregado Jusante",
+    "description": "Soma a leitura mais recente (até `janela_min` min) de `grandeza` entre os transformadores de\ndistribuição alcançados a JUSANTE de `ativo` pela topologia derivada da rede — exemplo do portão: soma\ndas correntes dos trafos de um alimentador. `terminal` desambigua um dispositivo com mais de um\nterminal (ex.: um trafo tem alta=1/baixa=2; partir do lado de baixa é o normal para \"o que ele\nalimenta\").",
+    "operationId": "agregado_jusante_api_rede_medicao_jusante_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "ativo",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ativo"
+      }
+     },
+     {
+      "name": "grandeza",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "corrente_a",
+       "title": "Grandeza"
+      }
+     },
+     {
+      "name": "janela_min",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 15,
+       "title": "Janela Min"
+      }
+     },
+     {
+      "name": "terminal",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Terminal"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Agregado Jusante Api Rede Medicao Jusante Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/rede/medicao/grandezas": {
+   "get": {
+    "tags": [
+     "rede_medicao"
+    ],
+    "summary": "Grandezas",
+    "operationId": "grandezas_api_rede_medicao_grandezas_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Grandezas Api Rede Medicao Grandezas Get"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade",
+    "x-plat-escopo": "publico"
+   }
+  },
   "/api/rede/pacotes": {
    "get": {
     "tags": [
@@ -22269,6 +23833,136 @@
       "content": {
        "application/json": {
         "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/rede/{rede_id}/tracar": {
+   "post": {
+    "tags": [
+     "rede de utilidades — topologia"
+    ],
+    "summary": "Tracar Rede",
+    "description": "Traça `tipo=conectado` (tudo que se alcança do(s) ponto(s) de partida, respeitando a traversabilidade\nde cada dispositivo e as barreiras) ou `tipo=subrede` (o mesmo, mas parando em qualquer controlador de\noutra subrede — hoje, categoria `transformacao` do pacote); ou, item L4-02-d-lacos-e-caminho-curto:\n`tipo=lacos` (ciclos por componente biconexo, `pgr_biconnectedComponents`), `tipo=isolados` (elementos sem\ncaminho a nenhuma feição da categoria `categoria_controlador`, padrão `fonte`, `pgr_connectedComponents`)\nou `tipo=caminho_curto` (origem em `pontos_partida[0]`, `destino`, custo = `atributo_custo` ou o\ncomprimento geodésico por padrão; `k` alternativas por `pgr_ksp` quando `k>1`); ou, item\nitens L4-18-rede-simples-trace-network e L4-02-b-montante-jusante, `tipo=montante`/`tipo=jusante`: numa\nrede com controlador de subrede em tier hierárquico o sentido vem da DISTÂNCIA AO CONTROLADOR (jusante de\num ponto = o que só chega ao controlador passando por ele); sem controlador, vem da DIREÇÃO DE FLUXO\ndeclarada no atributo `direcao_fluxo` de cada trecho (digitalizada/contra/indeterminada), que para, com\naviso por trecho, em toda aresta indeterminada. `origem_direcao` no pedido impõe um dos dois, e a\nresposta sempre diz qual valeu; em malha (tier particionado) sem atributo, e em laço, a resposta é\n`direcao='indeterminado'` com o motivo e os nós do laço, nunca um sentido arbitrado. Ponto de partida, destino\ne barreira são a mesma forma: feição+terminal ou coordenada com tolerância. Não exige `rede.editar`: é\nleitura sobre o índice já construído (mesmo privilégio de `topologia/alcance`), nunca grava nada na rede.\nSem `response_model` fixo porque cada `tipo` devolve um formato diferente (ver `docs/openapi.json` para o\nformato de cada um, e os testes de cada item para exemplo).",
+    "operationId": "tracar_rede_api_rede__rede_id__tracar_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TracadoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade",
+    "x-plat-escopo": "publico"
+   },
+   "get": {
+    "tags": [
+     "rede de utilidades"
+    ],
+    "summary": "Tracar",
+    "description": "Ponto de partida de um traçado: `feicao_id` (uuid de uma feição já gravada) OU `geometria` (GeoJSON\nde ponto/linha, codificado como string de query). Só lê: não deriva conexão nem grava nada — a checagem\nde área suja aqui é a mesma que a rota de rota (`L2-11-c`) chamaria antes de rodar o algoritmo pesado.",
+    "operationId": "tracar_api_rede__rede_id__tracar_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "feicao_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Feicao Id"
+      }
+     },
+     {
+      "name": "geometria",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Geometria"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TracadoResultado"
+        }
        }
       }
      },
@@ -25783,84 +27477,6 @@
     "x-plat-escopo": "publico"
    }
   },
-  "/api/rede/{rede_id}/tracar": {
-   "get": {
-    "tags": [
-     "rede de utilidades"
-    ],
-    "summary": "Tracar",
-    "description": "Ponto de partida de um traçado: `feicao_id` (uuid de uma feição já gravada) OU `geometria` (GeoJSON\nde ponto/linha, codificado como string de query). Só lê: não deriva conexão nem grava nada — a checagem\nde área suja aqui é a mesma que a rota de rota (`L2-11-c`) chamaria antes de rodar o algoritmo pesado.",
-    "operationId": "tracar_api_rede__rede_id__tracar_get",
-    "parameters": [
-     {
-      "name": "rede_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Rede Id"
-      }
-     },
-     {
-      "name": "feicao_id",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "anyOf": [
-        {
-         "type": "string"
-        },
-        {
-         "type": "null"
-        }
-       ],
-       "title": "Feicao Id"
-      }
-     },
-     {
-      "name": "geometria",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "anyOf": [
-        {
-         "type": "string"
-        },
-        {
-         "type": "null"
-        }
-       ],
-       "title": "Geometria"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/TracadoResultado"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "rls:visibilidade",
-    "x-plat-escopo": "publico"
-   }
-  },
   "/api/rede/{rede_id}/area_sujas/modo": {
    "put": {
     "tags": [
@@ -26903,382 +28519,6 @@
     "x-plat-escopo": "publico"
    }
   },
-  "/api/rede/medicao/leituras": {
-   "post": {
-    "tags": [
-     "rede_medicao"
-    ],
-    "summary": "Publicar Leituras",
-    "description": "Lote de leituras de sensor. Idempotente por (ativo, grandeza, ts): reenviar não duplica. Recusa item a\nitem (nunca o lote inteiro) por ts futuro, grandeza/unidade desconhecida — resposta sempre 201, com o\ndetalhe de quem foi aceito/duplicado/rejeitado. Depois de gravar, roda o motor de alarme (carregamento >\n100% por 30 min) para cada ativo tocado que já tem placa cadastrada — é o que deixa a ficha do ativo e o\nalarme quase em tempo real, sem depender de um job periódico.",
-    "operationId": "publicar_leituras_api_rede_medicao_leituras_post",
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/LeiturasLote"
-       }
-      }
-     },
-     "required": true
-    },
-    "responses": {
-     "201": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "rede.medir",
-    "x-plat-escopo": "publico"
-   }
-  },
-  "/api/rede/medicao/ativos/{ativo}": {
-   "put": {
-    "tags": [
-     "rede_medicao"
-    ],
-    "summary": "Configurar Ativo",
-    "description": "Placa do ativo (kVA/tensão nominal): sem ela o motor de alarme não calcula carregamento — não é erro\n(nem todo ativo tem placa cadastrada ainda), só fica sem essa leitura derivada.",
-    "operationId": "configurar_ativo_api_rede_medicao_ativos__ativo__put",
-    "parameters": [
-     {
-      "name": "ativo",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Ativo"
-      }
-     }
-    ],
-    "requestBody": {
-     "required": true,
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/AtivoConfigEntrada"
-       }
-      }
-     }
-    },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "rede.medir",
-    "x-plat-escopo": "publico"
-   },
-   "get": {
-    "tags": [
-     "rede_medicao"
-    ],
-    "summary": "Ver Ativo",
-    "operationId": "ver_ativo_api_rede_medicao_ativos__ativo__get",
-    "parameters": [
-     {
-      "name": "ativo",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Ativo"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object",
-         "additionalProperties": true,
-         "title": "Response Ver Ativo Api Rede Medicao Ativos  Ativo  Get"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "rls:visibilidade",
-    "x-plat-escopo": "publico"
-   }
-  },
-  "/api/rede/medicao/ativos/{ativo}/ultimas": {
-   "get": {
-    "tags": [
-     "rede_medicao"
-    ],
-    "summary": "Ultimas Leituras",
-    "description": "Última leitura de cada grandeza publicada para este ativo — o que a ficha do ativo mostra no topo.",
-    "operationId": "ultimas_leituras_api_rede_medicao_ativos__ativo__ultimas_get",
-    "parameters": [
-     {
-      "name": "ativo",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Ativo"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object",
-         "additionalProperties": true,
-         "title": "Response Ultimas Leituras Api Rede Medicao Ativos  Ativo  Ultimas Get"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "rls:visibilidade",
-    "x-plat-escopo": "publico"
-   }
-  },
-  "/api/rede/medicao/ativos/{ativo}/serie": {
-   "get": {
-    "tags": [
-     "rede_medicao"
-    ],
-    "summary": "Serie",
-    "description": "Série de `grandeza` nos últimos `dias` dias (padrão 7 — o gráfico da ficha do ativo).",
-    "operationId": "serie_api_rede_medicao_ativos__ativo__serie_get",
-    "parameters": [
-     {
-      "name": "ativo",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Ativo"
-      }
-     },
-     {
-      "name": "grandeza",
-      "in": "query",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Grandeza"
-      }
-     },
-     {
-      "name": "dias",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "type": "integer",
-       "default": 7,
-       "title": "Dias"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object",
-         "additionalProperties": true,
-         "title": "Response Serie Api Rede Medicao Ativos  Ativo  Serie Get"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "rls:visibilidade",
-    "x-plat-escopo": "publico"
-   }
-  },
-  "/api/rede/medicao/jusante": {
-   "get": {
-    "tags": [
-     "rede_medicao"
-    ],
-    "summary": "Agregado Jusante",
-    "description": "Soma a leitura mais recente (até `janela_min` min) de `grandeza` entre os transformadores de\ndistribuição alcançados a JUSANTE de `ativo` pela topologia derivada da rede — exemplo do portão: soma\ndas correntes dos trafos de um alimentador. `terminal` desambigua um dispositivo com mais de um\nterminal (ex.: um trafo tem alta=1/baixa=2; partir do lado de baixa é o normal para \"o que ele\nalimenta\").",
-    "operationId": "agregado_jusante_api_rede_medicao_jusante_get",
-    "parameters": [
-     {
-      "name": "rede_id",
-      "in": "query",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Rede Id"
-      }
-     },
-     {
-      "name": "ativo",
-      "in": "query",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Ativo"
-      }
-     },
-     {
-      "name": "grandeza",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "type": "string",
-       "default": "corrente_a",
-       "title": "Grandeza"
-      }
-     },
-     {
-      "name": "janela_min",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "type": "integer",
-       "default": 15,
-       "title": "Janela Min"
-      }
-     },
-     {
-      "name": "terminal",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "anyOf": [
-        {
-         "type": "integer"
-        },
-        {
-         "type": "null"
-        }
-       ],
-       "title": "Terminal"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object",
-         "additionalProperties": true,
-         "title": "Response Agregado Jusante Api Rede Medicao Jusante Get"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "rls:visibilidade",
-    "x-plat-escopo": "publico"
-   }
-  },
-  "/api/rede/medicao/grandezas": {
-   "get": {
-    "tags": [
-     "rede_medicao"
-    ],
-    "summary": "Grandezas",
-    "operationId": "grandezas_api_rede_medicao_grandezas_get",
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "additionalProperties": true,
-         "type": "object",
-         "title": "Response Grandezas Api Rede Medicao Grandezas Get"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "rls:visibilidade",
-    "x-plat-escopo": "publico"
-   }
-  },
   "/api/geocodificar": {
    "post": {
     "tags": [
@@ -27751,6 +28991,29 @@
     },
     "x-auth": "S/T",
     "x-plat-escopo": "geocodificar:usar"
+   }
+  },
+  "/api/imagens/formatos": {
+   "get": {
+    "tags": [
+     "imagens"
+    ],
+    "summary": "Formatos De Entrada",
+    "description": "A tabela canônica de formatos de entrada raster (`app.imagens.formatos.lista()`): aceitos com a\ngeorreferência de cada um e recusados com a mensagem exata (ECW/MrSID sem SDK no GDAL desta\ninstalação; GeoPDF e HDF5 com razão medida). A tela de upload lê ESTA rota — nunca mantém lista à\nmão: tabela da tela diferente da tabela do código é a refutação nomeada do item L1-01-f.",
+    "operationId": "formatos_de_entrada_api_imagens_formatos_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio",
+    "x-plat-escopo": "publico"
    }
   },
   "/api/imagens/ingestoes": {
@@ -29050,6 +30313,123 @@
      }
     },
     "x-auth": "T",
+    "x-privilegio": "proprio",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/imagens/licencas": {
+   "get": {
+    "tags": [
+     "imagens"
+    ],
+    "summary": "Licencas Listar",
+    "description": "A tabela de licenças da casa. Não depende do inquilino nem de nenhum item: é a lista fechada do\ncódigo, e é daqui que a tela monta o seletor.",
+    "operationId": "licencas_listar_api_imagens_licencas_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/imagens/{item_id}/ficha": {
+   "get": {
+    "tags": [
+     "imagens"
+    ],
+    "summary": "Ficha Ver",
+    "operationId": "ficha_ver_api_imagens__item_id__ficha_get",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio",
+    "x-plat-escopo": "publico"
+   },
+   "put": {
+    "tags": [
+     "imagens"
+    ],
+    "summary": "Ficha Gravar",
+    "operationId": "ficha_gravar_api_imagens__item_id__ficha_put",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/FichaEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
     "x-privilegio": "proprio",
     "x-plat-escopo": "publico"
    }
@@ -34614,14 +35994,200 @@
     "x-plat-escopo": "publico"
    }
   },
-  "/api/modelos/{id}/elementos": {
+  "/api/modelos3d": {
+   "get": {
+    "tags": [
+     "modelos3d"
+    ],
+    "summary": "Listar",
+    "description": "Modelos 3D do inquilino, do mais recente para o mais antigo.",
+    "operationId": "listar_api_modelos3d_get",
+    "parameters": [
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 200,
+       "minimum": 1,
+       "default": 50,
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0,
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio",
+    "x-plat-escopo": "publico"
+   },
+   "post": {
+    "tags": [
+     "modelos3d"
+    ],
+    "summary": "Criar",
+    "description": "Cria o modelo e enfileira a conversão. O arquivo já tem de estar no inquilino (`POST /api/arquivos`).",
+    "operationId": "criar_api_modelos3d_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": true,
+        "title": "Corpo"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/modelos3d/{id}": {
+   "get": {
+    "tags": [
+     "modelos3d"
+    ],
+    "summary": "Obter",
+    "operationId": "obter_api_modelos3d__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio",
+    "x-plat-escopo": "publico"
+   },
+   "delete": {
+    "tags": [
+     "modelos3d"
+    ],
+    "summary": "Apagar",
+    "description": "Apaga o modelo; os elementos saem em cascata pelo banco. Os objetos gravados (glTF e tileset) ficam\npara a varredura de órfãos do L0-11 — apagar objeto aqui duplicaria aquela responsabilidade.",
+    "operationId": "apagar_api_modelos3d__id__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/modelos3d/{id}/elementos": {
    "get": {
     "tags": [
      "modelos3d"
     ],
     "summary": "Elementos",
     "description": "Elementos do modelo (um por linha do IFC), filtráveis por tipo e por pavimento.",
-    "operationId": "elementos_api_modelos__id__elementos_get",
+    "operationId": "elementos_api_modelos3d__id__elementos_get",
     "parameters": [
      {
       "name": "id",
@@ -34715,14 +36281,14 @@
     "x-plat-escopo": "publico"
    }
   },
-  "/api/modelos/{id}/elementos/{guid}": {
+  "/api/modelos3d/{id}/elementos/{guid}": {
    "get": {
     "tags": [
      "modelos3d"
     ],
     "summary": "Elemento",
     "description": "Propriedades de um elemento pelo identificador global que o próprio arquivo IFC carrega.",
-    "operationId": "elemento_api_modelos__id__elementos__guid__get",
+    "operationId": "elemento_api_modelos3d__id__elementos__guid__get",
     "parameters": [
      {
       "name": "id",
@@ -34769,14 +36335,14 @@
     "x-plat-escopo": "publico"
    }
   },
-  "/api/modelos/{id}/glb": {
+  "/api/modelos3d/{id}/glb": {
    "get": {
     "tags": [
      "modelos3d"
     ],
     "summary": "Glb Do Modelo",
     "description": "glTF binário do modelo, entregue pela API (a chave do armazenamento nunca sai para o cliente).",
-    "operationId": "glb_do_modelo_api_modelos__id__glb_get",
+    "operationId": "glb_do_modelo_api_modelos3d__id__glb_get",
     "parameters": [
      {
       "name": "id",
@@ -34813,14 +36379,14 @@
     "x-plat-escopo": "publico"
    }
   },
-  "/api/modelos/{id}/3dtiles/{caminho}": {
+  "/api/modelos3d/{id}/3dtiles/{caminho}": {
    "get": {
     "tags": [
      "modelos3d"
     ],
     "summary": "Tres D Tiles",
     "description": "Árvore OGC 3D Tiles 1.1: `tileset.json` e `conteudo/N.glb`, por URI relativa a partir daqui.",
-    "operationId": "tres_d_tiles_api_modelos__id__3dtiles__caminho__get",
+    "operationId": "tres_d_tiles_api_modelos3d__id__3dtiles__caminho__get",
     "parameters": [
      {
       "name": "id",
@@ -36091,6 +37657,116 @@
       }
      }
     ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/amc/execucoes/{execucao_id}/matriz": {
+   "get": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Matriz Execucao",
+    "description": "Item L3-01-g-tela-motor: valor bruto E favorabilidade de CADA fator em CADA unidade, para que a tela\nrecombine no navegador quando o usuário move um peso — sem novo job e sem nova extração. É a mesma conta\nque `GET .../unidades/{id}/explicacao` faz para uma unidade, feita de uma vez para uma página de unidades.\n\nA favorabilidade por fator sai de `app/amc/transformacoes.py` (item L3-01-d), vetorizada por fator: uma\nchamada com todos os valores brutos daquele fator, não uma por unidade. Fator sem dado na unidade continua\nNULL — nunca 0. Quem combina os fatores no navegador é `web/js/amc/combinacao.js`, provado equivalente ao\n`app/amc/combinacao.py` em tests/unit/test_amc_combinacao_equivalencia.py; esta rota NÃO combina nada, para\nnão existir uma terceira implementação da mesma conta.",
+    "operationId": "matriz_execucao_api_amc_execucoes__execucao_id__matriz_get",
+    "parameters": [
+     {
+      "name": "execucao_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Execucao Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 2000,
+       "minimum": 1,
+       "default": 500,
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0,
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/amc/transformacoes/previsao": {
+   "post": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Previsao Transformacao",
+    "description": "Pré-visualização da transformação escolhida (item L3-01-g): histograma do valor bruto, histograma da\nfavorabilidade resultante e a curva desenhada. Não grava nada e não abre o banco — os valores vêm de quem\nchama (a tela manda a coluna do fator que `GET .../matriz` já lhe entregou). É a porta HTTP da função\n`app.amc.transformacoes.pre_visualizar`, do item L3-01-d; a conta não é reimplementada aqui.",
+    "operationId": "previsao_transformacao_api_amc_transformacoes_previsao_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PrevisaoEntrada"
+       }
+      }
+     },
+     "required": true
+    },
     "responses": {
      "200": {
       "description": "Successful Response",
@@ -41815,6 +43491,155 @@
     "x-plat-escopo": "publico"
    }
   },
+  "/api/camadas/{item_id}/classes": {
+   "get": {
+    "tags": [
+     "estatistica"
+    ],
+    "summary": "Classes",
+    "operationId": "classes_api_camadas__item_id__classes_get",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     },
+     {
+      "name": "campo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "title": "Campo"
+      }
+     },
+     {
+      "name": "metodo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "title": "Metodo"
+      }
+     },
+     {
+      "name": "n",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 32,
+       "minimum": 1,
+       "default": 5,
+       "title": "N"
+      }
+     },
+     {
+      "name": "filtro",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Filtro"
+      }
+     },
+     {
+      "name": "cortes",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Cortes"
+      }
+     },
+     {
+      "name": "fracao_desvio",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Fracao Desvio"
+      }
+     },
+     {
+      "name": "histograma_faixas",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 256,
+       "minimum": 1,
+       "default": 10,
+       "title": "Histograma Faixas"
+      }
+     },
+     {
+      "name": "classificationDef",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Classificationdef"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio",
+    "x-plat-escopo": "publico"
+   }
+  },
   "/api/camadas/{item_id}/estatisticas": {
    "post": {
     "tags": [
@@ -43098,6 +44923,8 @@
       }
      }
     },
+    "x-auth": "S",
+    "x-privilegio": "proprio",
     "x-plat-escopo": "publico"
    }
   },
@@ -43140,6 +44967,8 @@
       }
      }
     },
+    "x-auth": "S",
+    "x-privilegio": "proprio",
     "x-plat-escopo": "publico"
    }
   },
@@ -46811,6 +48640,395 @@
     "x-plat-escopo": "publico"
    }
   },
+  "/api/amc/presets": {
+   "get": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Listar",
+    "description": "Lista os presets visíveis: os INTEGRADOS primeiro (sempre existem), depois os do inquilino.",
+    "operationId": "listar_api_amc_presets_get",
+    "parameters": [
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PresetPagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc",
+    "x-plat-escopo": "publico"
+   },
+   "post": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Criar",
+    "operationId": "criar_api_amc_presets_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PresetEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Preset"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/amc/presets/importar": {
+   "post": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Importar",
+    "description": "Importa o documento de exportação. Com `fatores_modelo` informado, preset que declara fator\nfora do modelo é recusado com a LISTA do que falta (refutação do item).",
+    "operationId": "importar_api_amc_presets_importar_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PresetImportar"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PresetImportado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/amc/presets/{id}": {
+   "get": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Ver",
+    "operationId": "ver_api_amc_presets__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Preset"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc",
+    "x-plat-escopo": "publico"
+   },
+   "patch": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Editar",
+    "operationId": "editar_api_amc_presets__id__patch",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PresetEditar"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Preset"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc",
+    "x-plat-escopo": "publico"
+   },
+   "delete": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Apagar",
+    "operationId": "apagar_api_amc_presets__id__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/amc/presets/{id}/exportar": {
+   "get": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Exportar",
+    "operationId": "exportar_api_amc_presets__id__exportar_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/amc/presets/{id}/aplicar": {
+   "post": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Aplicar",
+    "description": "Aplica o preset sobre a matriz enviada e devolve a nota recalculada NA HORA (nenhum job é\ncriado; a rota nem toca em plat.job). Preset que declara fator fora da matriz é recusado com a\nlista do que falta.",
+    "operationId": "aplicar_api_amc_presets__id__aplicar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PresetAplicar"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AplicacaoFeita"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc",
+    "x-plat-escopo": "publico"
+   }
+  },
   "/api/amc/criterios-feicao": {
    "post": {
     "tags": [
@@ -48282,371 +50500,6 @@
     "x-plat-escopo": "publico"
    }
   },
-  "/api/camadas/{id}/campos": {
-   "get": {
-    "tags": [
-     "formulario"
-    ],
-    "summary": "Campos Da Camada",
-    "description": "Paleta do construtor: atributos reais da camada (nome/tipo/alias) — o campo do desenho tem de\ncasar com um destes, ou ser declarado `persistido: false` (portão cláusula 2).",
-    "operationId": "campos_da_camada_api_camadas__id__campos_get",
-    "parameters": [
-     {
-      "name": "id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Id"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object",
-         "additionalProperties": true,
-         "title": "Response Campos Da Camada Api Camadas  Id  Campos Get"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "rls:visibilidade",
-    "x-plat-escopo": "publico"
-   }
-  },
-  "/api/camadas/{id}/formulario": {
-   "get": {
-    "tags": [
-     "formulario"
-    ],
-    "summary": "Formulario Publicado",
-    "description": "Formulário PUBLICADO da camada — o que a edição web e o PWA de campo renderizam. `desenho: null`\nquando a camada não tem formulário publicado ainda (a tela cai para o formulário genérico de sempre,\ncampo a campo sem grupo/condicional/cálculo).",
-    "operationId": "formulario_publicado_api_camadas__id__formulario_get",
-    "parameters": [
-     {
-      "name": "id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Id"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object",
-         "additionalProperties": true,
-         "title": "Response Formulario Publicado Api Camadas  Id  Formulario Get"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "rls:visibilidade",
-    "x-plat-escopo": "publico"
-   },
-   "post": {
-    "tags": [
-     "formulario"
-    ],
-    "summary": "Formulario Criar Ou Renomear",
-    "operationId": "formulario_criar_ou_renomear_api_camadas__id__formulario_post",
-    "parameters": [
-     {
-      "name": "id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Id"
-      }
-     }
-    ],
-    "requestBody": {
-     "required": true,
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/FormularioCriar"
-       }
-      }
-     }
-    },
-    "responses": {
-     "201": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object",
-         "additionalProperties": true,
-         "title": "Response Formulario Criar Ou Renomear Api Camadas  Id  Formulario Post"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "conteudo.criar|conteudo.editar_tudo",
-    "x-plat-escopo": "publico"
-   }
-  },
-  "/api/camadas/{id}/formulario/versoes": {
-   "get": {
-    "tags": [
-     "formulario"
-    ],
-    "summary": "Formulario Versoes",
-    "operationId": "formulario_versoes_api_camadas__id__formulario_versoes_get",
-    "parameters": [
-     {
-      "name": "id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Id"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object",
-         "additionalProperties": true,
-         "title": "Response Formulario Versoes Api Camadas  Id  Formulario Versoes Get"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "conteudo.criar|conteudo.editar_tudo",
-    "x-plat-escopo": "publico"
-   },
-   "post": {
-    "tags": [
-     "formulario"
-    ],
-    "summary": "Formulario Salvar Versao",
-    "operationId": "formulario_salvar_versao_api_camadas__id__formulario_versoes_post",
-    "parameters": [
-     {
-      "name": "id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Id"
-      }
-     }
-    ],
-    "requestBody": {
-     "required": true,
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/VersaoSalvar"
-       }
-      }
-     }
-    },
-    "responses": {
-     "201": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object",
-         "additionalProperties": true,
-         "title": "Response Formulario Salvar Versao Api Camadas  Id  Formulario Versoes Post"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "conteudo.criar|conteudo.editar_tudo",
-    "x-plat-escopo": "publico"
-   }
-  },
-  "/api/camadas/{id}/formulario/versoes/{versao}": {
-   "get": {
-    "tags": [
-     "formulario"
-    ],
-    "summary": "Formulario Versao Ver",
-    "operationId": "formulario_versao_ver_api_camadas__id__formulario_versoes__versao__get",
-    "parameters": [
-     {
-      "name": "id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Id"
-      }
-     },
-     {
-      "name": "versao",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "integer",
-       "title": "Versao"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object",
-         "additionalProperties": true,
-         "title": "Response Formulario Versao Ver Api Camadas  Id  Formulario Versoes  Versao  Get"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "conteudo.criar|conteudo.editar_tudo",
-    "x-plat-escopo": "publico"
-   }
-  },
-  "/api/camadas/{id}/formulario/versoes/{versao}/publicar": {
-   "post": {
-    "tags": [
-     "formulario"
-    ],
-    "summary": "Formulario Publicar",
-    "operationId": "formulario_publicar_api_camadas__id__formulario_versoes__versao__publicar_post",
-    "parameters": [
-     {
-      "name": "id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Id"
-      }
-     },
-     {
-      "name": "versao",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "integer",
-       "title": "Versao"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object",
-         "additionalProperties": true,
-         "title": "Response Formulario Publicar Api Camadas  Id  Formulario Versoes  Versao  Publicar Post"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "conteudo.criar|conteudo.editar_tudo",
-    "x-plat-escopo": "publico"
-   }
-  },
   "/api/backup/backups": {
    "get": {
     "tags": [
@@ -48756,6 +50609,425 @@
     },
     "x-auth": "S/T",
     "x-privilegio": "org.configurar",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/webhooks": {
+   "get": {
+    "tags": [
+     "webhooks"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_webhooks_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WebhookPagina"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.integracoes",
+    "x-plat-escopo": "publico"
+   },
+   "post": {
+    "tags": [
+     "webhooks"
+    ],
+    "summary": "Criar",
+    "operationId": "criar_api_webhooks_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/WebhookEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WebhookSegredo"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.integracoes",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/webhooks/{id}": {
+   "get": {
+    "tags": [
+     "webhooks"
+    ],
+    "summary": "Ver",
+    "operationId": "ver_api_webhooks__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Webhook"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.integracoes",
+    "x-plat-escopo": "publico"
+   },
+   "patch": {
+    "tags": [
+     "webhooks"
+    ],
+    "summary": "Editar",
+    "operationId": "editar_api_webhooks__id__patch",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/WebhookEditar"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Webhook"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.integracoes",
+    "x-plat-escopo": "publico"
+   },
+   "delete": {
+    "tags": [
+     "webhooks"
+    ],
+    "summary": "Apagar",
+    "operationId": "apagar_api_webhooks__id__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.integracoes",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/webhooks/{id}/rotacionar": {
+   "post": {
+    "tags": [
+     "webhooks"
+    ],
+    "summary": "Rotacionar",
+    "description": "Segredo novo; o antigo deixa de assinar na PRÓXIMA entrega (não há janela de dupla assinatura:\nquem coordenar a troca no receptor, coordena — o aviso é este).",
+    "operationId": "rotacionar_api_webhooks__id__rotacionar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WebhookSegredo"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.integracoes",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/webhooks/{id}/reativar": {
+   "post": {
+    "tags": [
+     "webhooks"
+    ],
+    "summary": "Reativar",
+    "description": "Desfaz a desativação (automática ou não): limpa o motivo, zera a conta de falhas e volta a\nreceber despachos. Nada reteste a URL aqui — quem reativa afirma que o receptor foi corrigido.",
+    "operationId": "reativar_api_webhooks__id__reativar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Webhook"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.integracoes",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/webhooks/{id}/entregas": {
+   "get": {
+    "tags": [
+     "webhooks"
+    ],
+    "summary": "Entregas",
+    "description": "Log de entregas do webhook (RLS do inquilino; `plat.webhook_entrega` é SELECT/UPDATE a plat_app,\nINSERT só pelo gatilho de despacho).",
+    "operationId": "entregas_api_webhooks__id__entregas_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "estado",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Estado"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 20,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EntregaPagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.integracoes",
+    "x-plat-escopo": "publico"
+   }
+  },
+  "/api/webhooks/{id}/entregas/{entrega_id}/reenviar": {
+   "post": {
+    "tags": [
+     "webhooks"
+    ],
+    "summary": "Reenviar",
+    "description": "Reenvio manual: a MESMA entrega volta a 'pendente' com o MESMO payload e o MESMO `webhook-id`\n(idempotência no receptor) e um job novo entra na fila (tentativas recomeçam no job; `tentativas`\nda entrega segue acumulando como histórico).",
+    "operationId": "reenviar_api_webhooks__id__entregas__entrega_id__reenviar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "entrega_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Entrega Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Entrega"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.integracoes",
     "x-plat-escopo": "publico"
    }
   }
@@ -50601,6 +52873,35 @@
     ],
     "title": "AnexoCriar"
    },
+   "AnexoEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "content_type": {
+      "type": "string",
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Content Type"
+     },
+     "conteudo": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Conteudo"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "nome",
+     "content_type",
+     "conteudo"
+    ],
+    "title": "AnexoEntrada"
+   },
    "AnexoResposta": {
     "properties": {
      "campo": {
@@ -50698,6 +52999,36 @@
      "texto"
     ],
     "title": "AnotacaoEntrada"
+   },
+   "AplicacaoFeita": {
+    "properties": {
+     "preset_id": {
+      "type": "string",
+      "title": "Preset Id"
+     },
+     "preset_nome": {
+      "type": "string",
+      "title": "Preset Nome"
+     },
+     "pesos_iguais": {
+      "type": "boolean",
+      "title": "Pesos Iguais"
+     },
+     "resultado": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Resultado"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "preset_id",
+     "preset_nome",
+     "pesos_iguais",
+     "resultado"
+    ],
+    "title": "AplicacaoFeita"
    },
    "ApplianceEntrada": {
     "properties": {
@@ -51781,7 +54112,7 @@
       "anyOf": [
        {
         "type": "string",
-        "pattern": "^(conectado|subrede|lacos|caminho_curto|isolados|montante|jusante)$"
+        "pattern": "^(conectado|subrede|lacos|caminho_curto|isolados|montante|jusante|isolamento)$"
        },
        {
         "type": "null"
@@ -51859,6 +54190,24 @@
       "pattern": "^(auto|controlador|atributo)$",
       "title": "Origem Direcao",
       "default": "auto"
+     },
+     "categorias_isolamento": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 20,
+      "title": "Categorias Isolamento"
+     },
+     "incluir_isolados": {
+      "type": "boolean",
+      "title": "Incluir Isolados",
+      "default": false
+     },
+     "ignorar_inoperante": {
+      "type": "boolean",
+      "title": "Ignorar Inoperante",
+      "default": true
      },
      "titulo": {
       "type": "string",
@@ -52143,6 +54492,40 @@
     ],
     "title": "CampoEntrada"
    },
+   "CampoSaida": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "origem": {
+      "type": "string",
+      "title": "Origem"
+     },
+     "tipo": {
+      "type": "string",
+      "title": "Tipo"
+     },
+     "tipo_declarado": {
+      "type": "string",
+      "title": "Tipo Declarado"
+     },
+     "origem_do_tipo": {
+      "type": "string",
+      "title": "Origem Do Tipo"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "nome",
+     "origem",
+     "tipo",
+     "tipo_declarado",
+     "origem_do_tipo"
+    ],
+    "title": "CampoSaida"
+   },
    "CampoVirtualEntrada": {
     "properties": {
      "nome": {
@@ -52176,6 +54559,33 @@
      "expressao"
     ],
     "title": "CampoVirtualEntrada"
+   },
+   "CamposSaida": {
+    "properties": {
+     "colecao": {
+      "type": "string",
+      "title": "Colecao"
+     },
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/CampoSaida"
+      },
+      "type": "array",
+      "title": "Itens"
+     },
+     "do_cache": {
+      "type": "boolean",
+      "title": "Do Cache",
+      "default": false
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "colecao",
+     "itens"
+    ],
+    "title": "CamposSaida"
    },
    "CategoriaNo": {
     "properties": {
@@ -52450,6 +54860,107 @@
      "codigos_recuperacao"
     ],
     "title": "CodigosRecuperacao"
+   },
+   "ColecaoSaida": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "titulo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Titulo"
+     },
+     "crs_nativo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Crs Nativo"
+     },
+     "srid_nativo": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Srid Nativo"
+     },
+     "srid_entregue": {
+      "type": "integer",
+      "title": "Srid Entregue"
+     },
+     "extent_4326": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "number"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Extent 4326"
+     },
+     "formatos": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Formatos",
+      "default": []
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "nome",
+     "srid_entregue"
+    ],
+    "title": "ColecaoSaida"
+   },
+   "ColecoesPagina": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/ColecaoSaida"
+      },
+      "type": "array",
+      "title": "Itens"
+     },
+     "do_cache": {
+      "type": "boolean",
+      "title": "Do Cache",
+      "default": false
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "total",
+     "itens"
+    ],
+    "title": "ColecoesPagina"
    },
    "ColunaVista": {
     "properties": {
@@ -53215,7 +55726,7 @@
     "properties": {
      "tipo": {
       "type": "string",
-      "pattern": "^(wms|wmts|wfs|ogc_api|esri_rest|stac|geoparquet|pmtiles|xyz|postgres_fdw|s3|http|wms|wmts|wfs|ogc_api|esri_rest|stac|geoparquet|pmtiles|postgres_fdw|s3|http|odk_central|google_sheets)$",
+      "pattern": "^(wms|wmts|wfs|ogc_api|esri_rest|stac|geoparquet|pmtiles|xyz|postgres_fdw|s3|http|odk_central|google_sheets)$",
       "title": "Tipo"
      },
      "nome": {
@@ -53674,6 +56185,30 @@
        }
       ],
       "title": "Validade"
+     },
+     "cad": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cad"
+     },
+     "camada": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Camada"
      }
     },
     "additionalProperties": false,
@@ -53777,6 +56312,30 @@
        }
       ],
       "title": "Validade"
+     },
+     "cad": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cad"
+     },
+     "camada": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Camada"
      },
      "importacao_id": {
       "type": "string",
@@ -54948,6 +57507,37 @@
     "title": "DivideEntrada",
     "description": "Divide na forma da doc (divideOption + bearing) OU com linha de corte direta (campo\n`linha`, com 2 pontos) — o corte por linha é extra declarado da casa (§11)."
    },
+   "DivisaoEntrada": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "title": "Id"
+     },
+     "versao": {
+      "type": "integer",
+      "minimum": 1.0,
+      "title": "Versao"
+     },
+     "ponto": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Ponto"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "id",
+     "versao",
+     "ponto"
+    ],
+    "title": "DivisaoEntrada"
+   },
    "DocumentoPublico": {
     "properties": {
      "item_id": {
@@ -55689,6 +58279,114 @@
      "total"
     ],
     "title": "EnsaiosPagina"
+   },
+   "Entrega": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "webhook_id": {
+      "type": "string",
+      "title": "Webhook Id"
+     },
+     "evento_id": {
+      "type": "integer",
+      "title": "Evento Id"
+     },
+     "tipo_evento": {
+      "type": "string",
+      "title": "Tipo Evento"
+     },
+     "payload": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Payload"
+     },
+     "estado": {
+      "type": "string",
+      "title": "Estado"
+     },
+     "tentativas": {
+      "type": "integer",
+      "title": "Tentativas"
+     },
+     "reenvios": {
+      "type": "integer",
+      "title": "Reenvios"
+     },
+     "ultima_status": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ultima Status"
+     },
+     "ultima_erro": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ultima Erro"
+     },
+     "criado_em": {
+      "type": "string",
+      "title": "Criado Em"
+     },
+     "entregue_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Entregue Em"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "webhook_id",
+     "evento_id",
+     "tipo_evento",
+     "payload",
+     "estado",
+     "tentativas",
+     "reenvios",
+     "criado_em"
+    ],
+    "title": "Entrega"
+   },
+   "EntregaPagina": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/Entrega"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "type": "object",
+    "required": [
+     "total",
+     "itens"
+    ],
+    "title": "EntregaPagina"
    },
    "EpanetImportacao": {
     "properties": {
@@ -57143,36 +59841,206 @@
     ],
     "title": "FeicaoPontoEntrada"
    },
-   "FeicoesSaida": {
+   "FichaEntrada": {
     "properties": {
-     "total": {
-      "type": "integer",
-      "title": "Total"
+     "plataforma": {
+      "type": "string",
+      "maxLength": 120,
+      "title": "Plataforma"
      },
-     "itens": {
-      "items": {
-       "additionalProperties": true,
-       "type": "object"
-      },
-      "type": "array",
-      "title": "Itens"
-     },
-     "campos_virtuais": {
+     "instrumentos": {
       "items": {
        "type": "string"
       },
       "type": "array",
-      "title": "Campos Virtuais"
+      "maxItems": 20,
+      "title": "Instrumentos"
+     },
+     "gsd": {
+      "type": "number",
+      "title": "Gsd"
+     },
+     "data_aquisicao": {
+      "type": "string",
+      "maxLength": 40,
+      "title": "Data Aquisicao"
+     },
+     "fornecedor": {
+      "type": "string",
+      "maxLength": 200,
+      "title": "Fornecedor"
+     },
+     "licenca": {
+      "type": "string",
+      "maxLength": 60,
+      "title": "Licenca"
+     },
+     "fonte": {
+      "type": "string",
+      "maxLength": 20,
+      "title": "Fonte"
+     },
+     "constelacao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 120
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Constelacao"
+     },
+     "data_aquisicao_fim": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 40
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Data Aquisicao Fim"
+     },
+     "nuvem_pct": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nuvem Pct"
+     },
+     "angulo_off_nadir": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Angulo Off Nadir"
+     },
+     "angulo_incidencia": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Angulo Incidencia"
+     },
+     "angulo_azimute": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Angulo Azimute"
+     },
+     "sol_azimute": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sol Azimute"
+     },
+     "sol_elevacao": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sol Elevacao"
+     },
+     "orbita_estado": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 20
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Orbita Estado"
+     },
+     "orbita_relativa": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Orbita Relativa"
+     },
+     "orbita_absoluta": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Orbita Absoluta"
+     },
+     "atribuicao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 300
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Atribuicao"
+     },
+     "observacao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 1000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Observacao"
      }
     },
-    "additionalProperties": true,
+    "additionalProperties": false,
     "type": "object",
     "required": [
-     "total",
-     "itens",
-     "campos_virtuais"
+     "plataforma",
+     "instrumentos",
+     "gsd",
+     "data_aquisicao",
+     "fornecedor",
+     "licenca",
+     "fonte"
     ],
-    "title": "FeicoesSaida"
+    "title": "FichaEntrada"
    },
    "FilaAlvosAdicionar": {
     "properties": {
@@ -59677,6 +62545,17 @@
       "type": "boolean",
       "title": "Somente Leitura",
       "default": false
+     },
+     "posicao_fila": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Posicao Fila"
      }
     },
     "type": "object",
@@ -61153,6 +64032,23 @@
     "type": "object",
     "title": "MetadadoEditorEntrada",
     "description": "Corpo de `POST /api/itens/{id}/metadado/validar` e `PUT /api/itens/{id}/metadado` (item\nL0-09-metadado-catalogo, cláusula 3): `item` é o subconjunto sincronizado (título/resumo/tags/créditos/\ntermos de uso — mesmo contrato de `ItemEditar`, validado por `editar_item`), `metadado` é a parte própria\ndo Perfil MGB 2.0 (`app/catalogo/metadado_mgb.py`, `ESQUEMA_MGB`). Ambos ficam soltos (`dict`) aqui: quem\nvalida estrutura é `metadado_mgb.validar_estrutura`/`editar_item`, nunca este modelo — repetir o esquema\naqui seria um segundo lugar de verdade."
+   },
+   "MetadadoIsoEntrada": {
+    "properties": {
+     "xml": {
+      "type": "string",
+      "maxLength": 2097152,
+      "minLength": 1,
+      "title": "Xml"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "xml"
+    ],
+    "title": "MetadadoIsoEntrada",
+    "description": "Corpo de POST /api/itens/{id}/metadado.xml (item L0-09-c): o documento ISO 19139 inteiro num campo de\ntexto. O teto aqui é de caracteres; o de bytes, que é o que vale para o analisador, está em\n`limites.METADADO_XML_BYTES_MAX` e é conferido em `metadado.ler_documento`."
    },
    "Metrica": {
     "properties": {
@@ -63618,6 +66514,347 @@
     ],
     "title": "PresencaEntrada"
    },
+   "Preset": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "descricao": {
+      "type": "string",
+      "title": "Descricao"
+     },
+     "escopo": {
+      "type": "string",
+      "title": "Escopo"
+     },
+     "integrado": {
+      "type": "boolean",
+      "title": "Integrado"
+     },
+     "conteudo": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Conteudo"
+     },
+     "dono_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Dono Id"
+     },
+     "dono_login": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Dono Login"
+     },
+     "criado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Em"
+     },
+     "atualizado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Atualizado Em"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "nome",
+     "descricao",
+     "escopo",
+     "integrado",
+     "conteudo"
+    ],
+    "title": "Preset"
+   },
+   "PresetAplicar": {
+    "properties": {
+     "fatores": {
+      "items": {
+       "items": {},
+       "type": "array"
+      },
+      "type": "array",
+      "title": "Fatores"
+     },
+     "ids_fatores": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "minItems": 1,
+      "title": "Ids Fatores"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "fatores",
+     "ids_fatores"
+    ],
+    "title": "PresetAplicar",
+    "description": "Matriz de fatores (unidade × fator, escala 0-100, `null` = sem dado) na ordem de\n`ids_fatores`. Tudo que é escolha do modelo (peso, veto, combinador, política) vem do PRESET —\na chamada só traz dado."
+   },
+   "PresetEditar": {
+    "properties": {
+     "nome": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 200,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nome"
+     },
+     "descricao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Descricao"
+     },
+     "escopo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "usuario",
+         "inquilino"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Escopo"
+     },
+     "conteudo": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Conteudo"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "PresetEditar"
+   },
+   "PresetEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "descricao": {
+      "type": "string",
+      "maxLength": 2000,
+      "title": "Descricao",
+      "default": ""
+     },
+     "escopo": {
+      "type": "string",
+      "enum": [
+       "usuario",
+       "inquilino"
+      ],
+      "title": "Escopo",
+      "default": "usuario"
+     },
+     "conteudo": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Conteudo",
+      "description": "pesos e vetos por fator; ver app/amc/presets.py"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "nome",
+     "conteudo"
+    ],
+    "title": "PresetEntrada"
+   },
+   "PresetImportado": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "escopo": {
+      "type": "string",
+      "title": "Escopo"
+     },
+     "integrado": {
+      "type": "boolean",
+      "title": "Integrado",
+      "default": false
+     },
+     "faltando": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Faltando",
+      "default": []
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "nome",
+     "escopo"
+    ],
+    "title": "PresetImportado"
+   },
+   "PresetImportar": {
+    "properties": {
+     "formato": {
+      "type": "string",
+      "title": "Formato"
+     },
+     "versao": {
+      "type": "integer",
+      "title": "Versao"
+     },
+     "nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "descricao": {
+      "type": "string",
+      "maxLength": 2000,
+      "title": "Descricao",
+      "default": ""
+     },
+     "escopo": {
+      "type": "string",
+      "enum": [
+       "usuario",
+       "inquilino"
+      ],
+      "title": "Escopo",
+      "default": "usuario"
+     },
+     "conteudo": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Conteudo"
+     },
+     "integrado": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Integrado"
+     },
+     "fatores_modelo": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fatores Modelo"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "formato",
+     "versao",
+     "nome",
+     "conteudo"
+    ],
+    "title": "PresetImportar",
+    "description": "Documento gerado por GET .../exportar. `fatores_modelo` é OPCIONAL: quando informado, preset\nque declara fator fora dessa lista é recusado com a lista do que falta (refutação do item)."
+   },
+   "PresetPagina": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/Preset"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "total",
+     "itens"
+    ],
+    "title": "PresetPagina"
+   },
    "PreviaCorpo": {
     "properties": {
      "layout": {
@@ -63684,6 +66921,44 @@
     },
     "type": "object",
     "title": "PreviaCorpo"
+   },
+   "PrevisaoEntrada": {
+    "properties": {
+     "transformacao": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Transformacao"
+     },
+     "valores": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "type": "array",
+      "maxItems": 200000,
+      "minItems": 1,
+      "title": "Valores"
+     },
+     "bins": {
+      "type": "integer",
+      "maximum": 200.0,
+      "minimum": 2.0,
+      "title": "Bins",
+      "default": 30
+     }
+    },
+    "type": "object",
+    "required": [
+     "transformacao",
+     "valores"
+    ],
+    "title": "PrevisaoEntrada"
    },
    "Privilegio": {
     "properties": {
@@ -66112,6 +69387,59 @@
     "type": "object",
     "title": "RespostaEntrada"
    },
+   "RestaurarSaida": {
+    "properties": {
+     "sucesso": {
+      "type": "boolean",
+      "title": "Sucesso"
+     },
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "fid": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fid"
+     },
+     "versao": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Versao"
+     },
+     "recriada": {
+      "type": "boolean",
+      "title": "Recriada"
+     },
+     "avisos": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Avisos"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "sucesso",
+     "id",
+     "recriada"
+    ],
+    "title": "RestaurarSaida"
+   },
    "RestaurarVersaoEntrada": {
     "properties": {
      "comentario": {
@@ -68197,7 +71525,7 @@
       "anyOf": [
        {
         "type": "string",
-        "pattern": "^(conectado|subrede|lacos|caminho_curto|isolados|montante|jusante)$"
+        "pattern": "^(conectado|subrede|lacos|caminho_curto|isolados|montante|jusante|isolamento)$"
        },
        {
         "type": "null"
@@ -68275,6 +71603,24 @@
       "pattern": "^(auto|controlador|atributo)$",
       "title": "Origem Direcao",
       "default": "auto"
+     },
+     "categorias_isolamento": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 20,
+      "title": "Categorias Isolamento"
+     },
+     "incluir_isolados": {
+      "type": "boolean",
+      "title": "Incluir Isolados",
+      "default": false
+     },
+     "ignorar_inoperante": {
+      "type": "boolean",
+      "title": "Ignorar Inoperante",
+      "default": true
      }
     },
     "type": "object",
@@ -68448,6 +71794,45 @@
      "novo_dono_id"
     ],
     "title": "TransferenciaEntrada"
+   },
+   "UniaoEntrada": {
+    "properties": {
+     "ids": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 200,
+      "minItems": 2,
+      "title": "Ids"
+     },
+     "versoes": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Versoes"
+     },
+     "atributos": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Atributos"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "ids",
+     "versoes"
+    ],
+    "title": "UniaoEntrada"
    },
    "UploadCriar": {
     "properties": {
@@ -69723,6 +73108,294 @@
     ],
     "title": "VisualizacaoDia"
    },
+   "Webhook": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "url": {
+      "type": "string",
+      "title": "Url"
+     },
+     "eventos": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Eventos"
+     },
+     "ativo": {
+      "type": "boolean",
+      "title": "Ativo"
+     },
+     "falhas_consecutivas": {
+      "type": "integer",
+      "title": "Falhas Consecutivas"
+     },
+     "desativada_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Desativada Em"
+     },
+     "desativada_motivo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Desativada Motivo"
+     },
+     "criado_em": {
+      "type": "string",
+      "title": "Criado Em"
+     },
+     "criado_por": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Por"
+     },
+     "criado_por_login": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Por Login"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "nome",
+     "url",
+     "eventos",
+     "ativo",
+     "falhas_consecutivas",
+     "criado_em"
+    ],
+    "title": "Webhook",
+    "description": "Saída de listagem/detalhe: NUNCA traz segredo (nem cifrado, em nenhum caminho)."
+   },
+   "WebhookEditar": {
+    "properties": {
+     "nome": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 120,
+        "minLength": 3
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nome"
+     },
+     "url": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2048,
+        "minLength": 8
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Url"
+     },
+     "eventos": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 30,
+        "minItems": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Eventos"
+     }
+    },
+    "type": "object",
+    "title": "WebhookEditar"
+   },
+   "WebhookEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 120,
+      "minLength": 3,
+      "title": "Nome"
+     },
+     "url": {
+      "type": "string",
+      "maxLength": 2048,
+      "minLength": 8,
+      "title": "Url"
+     },
+     "eventos": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 30,
+      "minItems": 1,
+      "title": "Eventos"
+     }
+    },
+    "type": "object",
+    "required": [
+     "nome",
+     "url",
+     "eventos"
+    ],
+    "title": "WebhookEntrada"
+   },
+   "WebhookPagina": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/Webhook"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "type": "object",
+    "required": [
+     "total",
+     "itens"
+    ],
+    "title": "WebhookPagina"
+   },
+   "WebhookSegredo": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "url": {
+      "type": "string",
+      "title": "Url"
+     },
+     "eventos": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Eventos"
+     },
+     "ativo": {
+      "type": "boolean",
+      "title": "Ativo"
+     },
+     "falhas_consecutivas": {
+      "type": "integer",
+      "title": "Falhas Consecutivas"
+     },
+     "desativada_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Desativada Em"
+     },
+     "desativada_motivo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Desativada Motivo"
+     },
+     "criado_em": {
+      "type": "string",
+      "title": "Criado Em"
+     },
+     "criado_por": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Por"
+     },
+     "criado_por_login": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Por Login"
+     },
+     "segredo": {
+      "type": "string",
+      "title": "Segredo"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "nome",
+     "url",
+     "eventos",
+     "ativo",
+     "falhas_consecutivas",
+     "criado_em",
+     "segredo"
+    ],
+    "title": "WebhookSegredo",
+    "description": "Criar/rotacionar: o campo extra `segredo` viaja UMA vez; quem perder, rotaciona."
+   },
    "XlsformEntrada": {
     "properties": {
      "nome": {
@@ -70977,6 +74650,69 @@
     ],
     "title": "PaginaCatalogo"
    },
+   "app__conexao__modelos__FeicoesSaida": {
+    "properties": {
+     "type": {
+      "type": "string",
+      "title": "Type",
+      "default": "FeatureCollection"
+     },
+     "features": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Features"
+     },
+     "numberReturned": {
+      "type": "integer",
+      "title": "Numberreturned"
+     },
+     "numberMatched": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Numbermatched"
+     },
+     "colecao": {
+      "type": "string",
+      "title": "Colecao"
+     },
+     "srid_entregue": {
+      "type": "integer",
+      "title": "Srid Entregue"
+     },
+     "do_cache": {
+      "type": "boolean",
+      "title": "Do Cache",
+      "default": false
+     },
+     "avisos": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Avisos",
+      "default": []
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "features",
+     "numberReturned",
+     "colecao",
+     "srid_entregue"
+    ],
+    "title": "FeicoesSaida",
+    "description": "GeoJSON + o que a paginação apurou. `numero_matched` é o total DECLARADO pelo serviço (pode ser None:\nnem todo serviço declara) e `numberReturned` é o que veio nesta resposta — os dois juntos, nunca um só."
+   },
    "app__edicao__modelos__FeicaoAdicionar": {
     "properties": {
      "atributos": {
@@ -71356,6 +75092,33 @@
         "type": "null"
        }
       ]
+     },
+     "ids": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "integer"
+        },
+        "type": "array",
+        "maxItems": 200000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ids"
+     },
+     "filtro": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Filtro"
      }
     },
     "additionalProperties": false,
@@ -71772,6 +75535,37 @@
     "title": "FeicaoAtualizar",
     "description": "Grupo e tipo NÃO mudam (mudança de classe é apagar + adicionar); só geometria, atributos e os\nterminais declarados nas pontas."
    },
+   "app__regras__modelos__FeicoesSaida": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Itens"
+     },
+     "campos_virtuais": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Campos Virtuais"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "total",
+     "itens",
+     "campos_virtuais"
+    ],
+    "title": "FeicoesSaida"
+   },
    "app__versionamento__modelos__PublicarEntrada": {
     "properties": {
      "modo": {
@@ -71935,6 +75729,10 @@
   {
    "escopo": "fluxo:ler",
    "descricao": "ler definição e execução de fluxo de geoprocessamento"
+  },
+  {
+   "escopo": "analise3d:usar",
+   "descricao": "linha de visada, bacia visual, perfil de elevação e sombra projetada sobre terreno inline (L2-09-d); salvar o resultado como item exige conteudo.criar no dono"
   },
   {
    "escopo": "admin:inquilino",

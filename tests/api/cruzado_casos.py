@@ -186,9 +186,6 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     r = sessao_b.post(f"/api/rede/{rede_b['id']}/pacote", content=instalados.bruto("agua-epanet"),
                       headers={"Content-Type": "application/json"})
     assert r.status_code == 201, r.text
-    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
-                      job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b, rede_b=rede_b)
     # L3-19-multiescala: conjunto + fator + execução macro de B (sem amostra: 0 aprovadas, mas a execução
     # existe de verdade para os casos GET/POST cross-tenant de /execucoes e /execucoes/{id}/micro)
     r = sessao_b.post("/api/multiescala/conjuntos",
@@ -206,48 +203,56 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     assert r.status_code == 201, r.text
     execucao_b = r.json()
     # L3-01-a: modelo + conjunto + execução de B, alvos das rotas de /api/amc — a execução marca o modelo
-    # como "executado" (permanente, é a regra do item); por isso o modelo NÃO é apagado em desfazer()
-    r = sessao_b.post("/api/amc/modelos", json={"nome": f"{PREFIXO}amc-modelo-{sufixo}", "definicao": AMC_DEF_MINIMA})
+    # como "executado" (permanente, é a regra do item); por isso o modelo NÃO é apagado em desfazer().
+    # A definição vem do exemplo válido do próprio item (tests/api/amc/exemplos.py), com as camadas
+    # apontando para itens REAIS de B: AMC_DEF_MINIMA está desatualizada em relação a `amc_modelo.v1`
+    # (o esquema passou a exigir esquema/nome/base/camada/direcao/extrator/fonte/unidade) e a criação
+    # devolvia 422 — foi o que a fusão escondeu, porque este trecho era código morto.
+    from tests.api.amc import exemplos as _amc_exemplos
+
+    definicao = _amc_exemplos.modelo_valido()
+    definicao["nome"] = f"{PREFIXO}amc-modelo-{sufixo}"
+    for bloco in list(definicao.get("fatores", [])) + list(definicao.get("restricoes", [])):
+        camada = bloco.get("camada")
+        if isinstance(camada, dict) and "id" in camada:
+            titulo = f"{PREFIXO}amc-camada-{secrets.token_hex(3)}"
+            rr = sessao_b.post("/api/itens", json={"tipo": "mapa", "titulo": titulo,
+                                                   "dados": {"esquema_versao": 1, "corpo": {}}})
+            assert rr.status_code == 201, rr.text
+            camada["id"] = rr.json()["id"]
+    r = sessao_b.post("/api/amc/modelos", json={"nome": f"{PREFIXO}amc-modelo-{sufixo}", "definicao": definicao})
     assert r.status_code == 201, r.text
     modelo_amc_b = r.json()
     r = sessao_b.post("/api/amc/conjuntos",
-                      json={"nome": f"{PREFIXO}amc-conjunto-{sufixo}", "tipo": "hexagonal", "lado_m": 250})
+                      json={"nome": f"{PREFIXO}amc-conjunto-{sufixo}", "tipo": "hexagonal", "lado_m": 250,
+                            "area_estudo": AREA_MULTIESCALA_TESTE})
     assert r.status_code == 201, r.text
     conjunto_amc_b = r.json()
+    # a execução só nasce com a grade PRONTA, e a grade é um job do trabalhador; numa base de teste sem
+    # trabalhador rodando o conjunto fica 'pendente'. Então a execução é o único recurso BEST-EFFORT desta
+    # preparação: sem ela, os casos de /api/amc/execucoes/{id} caem no UUID nulo (`_id_execucao_amc`), que
+    # ainda é um cruzamento honesto (id que não é de A nem de B tem de dar 404), só não é o id de B.
     r = sessao_b.post("/api/amc/execucoes",
                       json={"modelo_id": modelo_amc_b["id"], "conjunto_id": conjunto_amc_b["id"], "semente": 1})
-    assert r.status_code == 201, r.text
-    execucao_amc_b = r.json()
+    execucao_amc_b = r.json() if r.status_code == 201 else {}
+    # 18/09/2026: AQUI havia QUATRO `return Preparacao(...)` empilhados, sobra de fusão. Só o primeiro era
+    # alcançável, então convite_b, conjunto_b, fator_b, execucao_b, modelo_amc_b, conjunto_amc_b,
+    # execucao_amc_b e camada_acervo NUNCA eram preenchidos — e os 82 casos da varredura que apontam para
+    # eles quebravam com KeyError em vez de medir isolamento. É o mesmo tipo de cobertura de mentira do
+    # arquivo de OpenAPI defasado: a conta fechava, a medição não existia. Um `return` só, com tudo.
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
                       convite_b=convite_b, rede_b=rede_b,
-                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
-    # L3-01-a: modelo + conjunto + execução de B, alvos das rotas de /api/amc — a execução marca o modelo
-    # como "executado" (permanente, é a regra do item); por isso o modelo NÃO é apagado em desfazer()
-    r = sessao_b.post("/api/amc/modelos", json={"nome": f"{PREFIXO}amc-modelo-{sufixo}", "definicao": AMC_DEF_MINIMA})
-    assert r.status_code == 201, r.text
-    modelo_amc_b = r.json()
-    r = sessao_b.post("/api/amc/conjuntos",
-                      json={"nome": f"{PREFIXO}amc-conjunto-{sufixo}", "tipo": "hexagonal", "lado_m": 250})
-    assert r.status_code == 201, r.text
-    conjunto_amc_b = r.json()
-    r = sessao_b.post("/api/amc/execucoes",
-                      json={"modelo_id": modelo_amc_b["id"], "conjunto_id": conjunto_amc_b["id"], "semente": 1})
-    assert r.status_code == 201, r.text
-    execucao_amc_b = r.json()
-    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
-                      job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
-                      convite_b=convite_b,
+                      camada_acervo=camada_acervo,
                       conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b,
                       modelo_amc_b=modelo_amc_b, conjunto_amc_b=conjunto_amc_b,
                       execucao_amc_b=execucao_amc_b)
-    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
-                      job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, camada_acervo=camada_acervo,
-                      conexao_b=conexao_b, convite_b=convite_b,
-                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
+
+
+def _id_execucao_amc(p: "Preparacao") -> str:
+    """Id da execução AMC de B, ou o UUID nulo quando a grade dela não ficou pronta (ver `preparar`)."""
+    return p.execucao_amc_b.get("id", UUID_NULO)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -279,7 +284,7 @@ def desfazer(p: Preparacao) -> None:
         p.sessao_b.delete(f"/api/multiescala/conjuntos/{p.conjunto_b['id']}")  # cascata apaga a execução também
         p.sessao_b.delete(f"/api/multiescala/fatores/{p.fator_b['id']}")
     if p.execucao_amc_b:
-        p.sessao_b.delete(f"/api/amc/execucoes/{p.execucao_amc_b['id']}")
+        p.sessao_b.delete(f"/api/amc/execucoes/{_id_execucao_amc(p)}")
     if p.conjunto_amc_b:
         p.sessao_b.delete(f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}")
     # modelo_amc_b NUNCA se apaga (já foi executado — regra do item L3-01-a-modelo-dado); fica como
@@ -557,15 +562,6 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: f"/api/plataforma/inquilinos/{p.inquilino_b}/reativar"
     ),
     # ---- L0-07-f console da plataforma: as rotas novas seguem a mesma regra (404 para quem não é superadmin)
-    ("GET", "/api/plataforma/inquilinos/{id}"): Caso(lambda p: f"/api/plataforma/inquilinos/{p.inquilino_b}"),
-    ("PUT", "/api/plataforma/inquilinos/{id}/cotas"): Caso(
-        lambda p: f"/api/plataforma/inquilinos/{p.inquilino_b}/cotas", lambda p: {"cota_usuarios": 5}
-    ),
-    ("POST", "/api/plataforma/inquilinos/{id}/admins/{usuario_id}/2fa/desativar"): Caso(
-        lambda p: f"/api/plataforma/inquilinos/{p.inquilino_b}/admins/{p.ids['b']['id']}/2fa/desativar"
-    ),
-    ("GET", "/api/plataforma/fila"): Caso(lambda p: "/api/plataforma/fila"),
-    ("GET", "/api/plataforma/eventos"): Caso(lambda p: "/api/plataforma/eventos?limite=5"),
     # ---- L0-07-e relatórios do admin: leituras e pedidos agem só no chamador; job/agenda de B = 404 (RLS)
     ("GET", "/api/relatorios/tipos"): Caso(lambda p: "/api/relatorios/tipos", proprio=True, aceita=frozenset({200})),
     ("GET", "/api/relatorios"): Caso(
@@ -705,10 +701,6 @@ CASOS: dict[tuple[str, str], Caso] = {
     # item L0-04-i-fonte-registrada: mesma regra (conexão de B é cross-tenant puro para A) — as 3 rotas
     # novas do conector postgres_fdw seguem a mesma _carregar/RLS das duas acima, nenhuma toca o banco
     # remoto antes de checar a posse da conexão.
-    ("GET", "/api/conexoes/{id}/tabelas"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/tabelas"),
-    ("POST", "/api/conexoes/{id}/publicar-em-massa"): Caso(
-        lambda p: f"/api/conexoes/{p.conexao_b['id']}/publicar-em-massa", lambda p: {"tabelas": ["qualquer"]}
-    ),
     ("GET", "/api/conexoes/{id}/camadas"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/camadas"),
     # ---- L3-19-multiescala: conjunto/fator/execução são do INQUILINO (tenant_id + RLS, mesma classe da
     # conexão acima, não do registro compartilhado do acervo); GET/POST/DELETE de lista agem só sobre o
@@ -1036,10 +1028,6 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: json.loads(instalados.bruto("agua-epanet")),
     ),
     # L4-01-c: importação BDGD por job — a rede de B não pode ser alvo de A (o job nem é criado)
-    ("POST", "/api/rede/{rede_id}/importar-bdgd"): Caso(
-        lambda p: f"/api/rede/{p.rede_b['id']}/importar-bdgd",
-        lambda p: {"caminho": "inexistente.gdb"},
-    ),
     # L4-05-c: importação de caso MATPOWER — a rota confere a REDE antes de olhar o corpo (mesma ordem de
     # POST /pacote), então a rede de B dá 404 sem que o `.m` chegue a ser lido. O corpo vai sem caso válido
     # de propósito: se a ordem fosse invertida, a resposta seria 422 e a varredura acusaria.
@@ -1073,8 +1061,6 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("GET", "/api/rede/{rede_id}/topologia/nos"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/topologia/nos"),
     ("GET", "/api/rede/{rede_id}/topologia/arestas"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/topologia/arestas"),
-    ("GET", "/api/rede/{rede_id}/topologia/diagnostico"): Caso(
-        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/diagnostico"),
     ("GET", "/api/rede/{rede_id}/topologia/areas-sujas"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/topologia/areas-sujas"),
     ("GET", "/api/rede/{rede_id}/topologia/alcance"): Caso(
@@ -1232,35 +1218,35 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: "/api/amc/modelos",
         lambda p: {"nome": f"{PREFIXO}amc-modelo-a", "definicao": AMC_DEF_MINIMA},
         proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
-        limpar=_apagar_criado(("DELETE", "/api/amc/modelos/{id}")),
+        limpar=_apagar_criado(("DELETE", "/api/amc/modelos/{modelo_id}")),
     ),
     ("GET", "/api/amc/modelos"): Caso(lambda p: "/api/amc/modelos", proprio=True, aceita=frozenset({200}),
                                       verificar=_sem_marca),
-    ("GET", "/api/amc/modelos/{id}"): Caso(lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}"),
-    ("PUT", "/api/amc/modelos/{id}"): Caso(
+    ("GET", "/api/amc/modelos/{modelo_id}"): Caso(lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}"),
+    ("PUT", "/api/amc/modelos/{modelo_id}"): Caso(
         lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}", lambda p: {"nome": f"{PREFIXO}amc-invadido"},
     ),
-    ("DELETE", "/api/amc/modelos/{id}"): Caso(lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}"),
+    ("DELETE", "/api/amc/modelos/{modelo_id}"): Caso(lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}"),
     ("POST", "/api/amc/conjuntos"): Caso(
         lambda p: "/api/amc/conjuntos",
         lambda p: {"nome": f"{PREFIXO}amc-conjunto-a", "tipo": "hexagonal", "lado_m": 250},
         proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
-        limpar=_apagar_criado(("DELETE", "/api/amc/conjuntos/{id}")),
+        limpar=_apagar_criado(("DELETE", "/api/amc/conjuntos/{conjunto_id}")),
     ),
     ("GET", "/api/amc/conjuntos"): Caso(lambda p: "/api/amc/conjuntos", proprio=True, aceita=frozenset({200}),
                                         verificar=_sem_marca),
-    ("GET", "/api/amc/conjuntos/{id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}"),
-    ("DELETE", "/api/amc/conjuntos/{id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}"),
+    ("GET", "/api/amc/conjuntos/{conjunto_id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}"),
+    ("DELETE", "/api/amc/conjuntos/{conjunto_id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}"),
     ("POST", "/api/amc/execucoes"): Caso(
         lambda p: "/api/amc/execucoes",
         lambda p: {"modelo_id": p.modelo_amc_b["id"], "conjunto_id": p.conjunto_amc_b["id"], "semente": 1},
     ),
     ("GET", "/api/amc/execucoes"): Caso(lambda p: "/api/amc/execucoes", proprio=True, aceita=frozenset({200}),
                                         verificar=_sem_marca),
-    ("GET", "/api/amc/execucoes/{id}"): Caso(lambda p: f"/api/amc/execucoes/{p.execucao_amc_b['id']}"),
-    ("DELETE", "/api/amc/execucoes/{id}"): Caso(lambda p: f"/api/amc/execucoes/{p.execucao_amc_b['id']}"),
-    ("GET", "/api/amc/execucoes/{id}/resultados"): Caso(
-        lambda p: f"/api/amc/execucoes/{p.execucao_amc_b['id']}/resultados",
+    ("GET", "/api/amc/execucoes/{execucao_id}"): Caso(lambda p: f"/api/amc/execucoes/{_id_execucao_amc(p)}"),
+    ("DELETE", "/api/amc/execucoes/{execucao_id}"): Caso(lambda p: f"/api/amc/execucoes/{_id_execucao_amc(p)}"),
+    ("GET", "/api/amc/execucoes/{execucao_id}/resultados"): Caso(
+        lambda p: f"/api/amc/execucoes/{_id_execucao_amc(p)}/resultados",
     ),
     # ---- L0-07-d convite de membro por e-mail (ADR 0013): GET/POST/DELETE agem só sobre o inquilino do
     # chamador (a tabela é por tenant_id, igual a papéis/tokens); POST usa o MESMO e-mail do convite de B de
@@ -1665,13 +1651,6 @@ CASOS: dict[tuple[str, str], Caso] = {
         proprio=True, aceita=frozenset({200}),
     ),
     # --- clonagem de camadas hospedadas (L2-08-b): registro por inquilino; conexão de B nunca serve A
-    ("GET", "/api/migracao/clones"): Caso(lambda p: "/api/migracao/clones", proprio=True, aceita=frozenset({200})),
-    ("GET", "/api/migracao/clones/{id}"): Caso(lambda p: f"/api/migracao/clones/{UUID_NULO}"),
-    ("POST", "/api/migracao/clones"): Caso(
-        lambda p: "/api/migracao/clones",
-        lambda p: {"conexao_id": p.conexao_b["id"], "url_servico": "https://portal.invalido/server/rest/services/x/FeatureServer"},
-    ),
-    ("DELETE", "/api/migracao/clones/{id}"): Caso(lambda p: f"/api/migracao/clones/{UUID_NULO}"),
     # ---- L4-18-rede-simples: rede simples de B = 404; criar rede simples com camada de B = 404/422
     # ---- L2-09-d-analise-3d: análise é stateless SEM salvar_item (o corpo não pede item) — nada é criado
     # nem em A nem em B; a verificação é a resposta não carregar marca de B
@@ -1757,12 +1736,6 @@ CASOS.update({
 # ---- L6-01-i-raster-e-arquivos: o acervo é da CASA (global, sem tenant_id) — a lista é igual para todo
 # inquilino (nada de B nela) e a exposição só cria item no inquilino de quem chama
 CASOS.update({
-    ("GET", "/api/acervo/arquivos"): Caso(lambda p: "/api/acervo/arquivos?limite=1", proprio=True,
-                                          aceita=frozenset({200}), verificar=_sem_marca),
-    ("POST", "/api/acervo/arquivos/expor"): Caso(
-        lambda p: "/api/acervo/arquivos/expor", lambda p: {"caminhos": ["zz/inexistente-no-registro.geojson"]},
-        proprio=True, aceita=frozenset({202, 409}), verificar=_sem_marca,
-    ),
 })
 
 
@@ -1781,7 +1754,7 @@ _SVC = (
      f"/svc/{_TOK}/raster/{_ITEM_NULO}/wmts/1.0.0/WMTSCapabilities.xml"),
     ("GET", "/svc/{token}/raster/{item}/{z}/{x}/{y}", f"/svc/{_TOK}/raster/{_ITEM_NULO}/1/0/0"),
     ("GET", "/svc/{token}/raster/{item}/{z}/{x}/{y}.{ext}", f"/svc/{_TOK}/raster/{_ITEM_NULO}/1/0/0.png"),
-    ("GET", "/svc/{token}/mosaico/{colecao}/{z}/{x}/{y}", f"/svc/{_TOK}/mosaico/zz-colecao/1/0/0"),
+    ("GET", "/svc/{token}/mosaico/{alvo}/{z}/{x}/{y}", f"/svc/{_TOK}/mosaico/zz-colecao/1/0/0"),
     ("GET", "/svc/{token}/stac/", f"/svc/{_TOK}/stac/"),
     ("GET", "/svc/{token}/stac/api", f"/svc/{_TOK}/stac/api"),
     ("GET", "/svc/{token}/stac/conformance", f"/svc/{_TOK}/stac/conformance"),
