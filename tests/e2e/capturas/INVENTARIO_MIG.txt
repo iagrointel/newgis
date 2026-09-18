@@ -131,7 +131,10 @@ aba76d9af0976c3abef3cfbb9ab04052fffba1c2c40762ee9cc6f701f6e74df1      99297  MIG
 652b14f23fab9f24b201c40f9657b084a5524c5e250eae5251f002128cb93c74     101043  MIG_conteudo_lixeira_antes_escuro.png
 aba76d9af0976c3abef3cfbb9ab04052fffba1c2c40762ee9cc6f701f6e74df1      99297  MIG_conteudo_lixeira_depois_claro.png
 652b14f23fab9f24b201c40f9657b084a5524c5e250eae5251f002128cb93c74     101043  MIG_conteudo_lixeira_depois_escuro.png
+ce9c70036007b1a8b5b2570c4c6d3f52e838eca126b7cf7a9968062a87ce8d1d     131703  MIG_crs_antes_claro.png
 16cbc32020ef41c73ec788a2f7661a911411219dbe5e447cbef61c1fc33b0e40     134569  MIG_crs_antes_escuro.png
+b048f49e17b6e9ce492cc9343f8447f67495bda60d614393a34be8bb9793fd6c     116184  MIG_crs_depois_claro.png
+a943a6fefb3d1e8107df5c0a16b4bfb893fcf8dce9a5d882d31fc21e6174864a     117842  MIG_crs_depois_escuro.png
 1abb591aad7107f655b2a916e5b7d2473e07d5de5c6480bf6ec5d4a0d7306918     963370  MIG_estilo_antes_claro.png
 b38db5eb9a2306665d3345f1d8cb910d97f78a206dd0fcb603ca177e79d88a2e     988663  MIG_estilo_antes_escuro.png
 75bdf3b5b0e961ad0771ea311d2f650bd6b6e73ec0089cce61565e982e856096     963259  MIG_estilo_depois_claro.png

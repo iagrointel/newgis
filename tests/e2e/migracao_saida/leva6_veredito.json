@@ -231,6 +231,39 @@
      "axe_novas": []
     }
    }
+  },
+  "crs": {
+   "rota": "/crs",
+   "montou_antes": true,
+   "montou_depois": true,
+   "estrutura_igual": true,
+   "elementos": 47044,
+   "temas": {
+    "escuro": {
+     "nos_medidos_antes": 23516,
+     "nos_medidos_depois": 23516,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    },
+    "claro": {
+     "nos_medidos_antes": 23516,
+     "nos_medidos_depois": 23516,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    }
+   }
   }
  },
  "reprovas": []
