@@ -9,17 +9,17 @@
     }
   },
   "p95_jusante": {
-    "carga_1min": 3.1,
+    "carga_1min": 1.38,
     "contagem": 51,
     "direcao": "definida",
-    "max_ms": 115.3,
-    "media_ms": 96.8,
+    "max_ms": 436.3,
+    "media_ms": 243.5,
     "medido": true,
     "n_amostras": 30,
     "nos_alcancados": 51,
     "origem_direcao": "controlador",
-    "p95_ms": 104.2,
-    "ram_livre_gb": 47.0,
+    "p95_ms": 378.8,
+    "ram_livre_gb": 9.0,
     "rede_sintetica": {
       "arestas": 4500,
       "nos": 4530,
