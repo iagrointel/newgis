@@ -194,6 +194,19 @@ class Cliente:
             corpo["crs"] = {"srid": sugestao}
         if "codificacao" in perguntas:
             corpo["codificacao"] = {"valor": "UTF-8"}
+        if "camada" in perguntas:
+            # 18/09/2026: arquivo de MÚLTIPLAS camadas (o GeoPackage de três camadas do conjunto) faz a
+            # inspeção perguntar qual camada carregar, e a confirmação recusa com 422 `perguntas_pendentes`
+            # enquanto ninguém responde. O semeador respondia só `crs` e `codificacao` e por isso nunca
+            # conseguiu semear o GeoPackage nesta árvore. Resposta: a camada que o catálogo nomear e, sem
+            # isso, a primeira com geometria — a mesma ordem que a tela oferece ao usuário.
+            opcoes = proposta.get("camadas") or []
+            com_geometria = [c["camada_origem"] for c in opcoes if c.get("tem_geometria", True)]
+            nomes = [c["camada_origem"] for c in opcoes]
+            escolhida = metadado.get("camada") or next(iter(com_geometria or nomes), None)
+            if escolhida is None:
+                raise Erro(f"inspeção de {titulo!r} pediu a camada mas não ofereceu opção: {proposta!r}")
+            corpo["camada"] = {"escolhida": escolhida}
         r = self.http.put(f"/api/importacoes/{importacao_id}/confirmar", json=corpo)
         if r.status_code != 202:
             raise Erro(f"confirmação de {titulo!r} recusada: {r.status_code} {r.text[:300]}")
