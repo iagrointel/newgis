@@ -2,7 +2,7 @@
  "item": "L2-03-a-api-edicao-transacional",
  "medidas": {
   "mil_feicoes_lote_s": {
-   "valor": 1.038,
+   "valor": 0.843,
    "unidade": "s",
    "comando": "POST /api/camadas/{id}/edicoes com 1.000 feições em `adicionar` (modo transação padrão), camada de teste em d_demo; tests/api/test_edicao_transacional.py::test_mil_feicoes_em_lote_menos_de_3s"
   }
@@ -85,6 +85,6 @@
   "comando": "flock /home/dev/plataforma/laco/.pytest.lock venv/bin/pytest tests/api/test_edicao_transacional.py -q -p no:cacheprovider",
   "resultado": "20 passed"
  },
- "gerado_em": "2026-09-07T02:28:59Z",
- "git_sha": "1ade59ea0ffe"
+ "gerado_em": "2026-09-18T01:21:12Z",
+ "git_sha": "438c29d6b13a"
 }

@@ -8,7 +8,7 @@ aqui são dois em OU, então a checagem é feita à mão dentro de outra depend�
 import psycopg2
 from fastapi import APIRouter, Depends, Request, Response
 
-from app import db, limites
+from app import db, entrega_conteudo, limites
 from app.auth import escopos as esc
 from app.auth.sessao import Auth, autenticado
 from app.catalogo import comum
@@ -168,9 +168,16 @@ def baixar_anexo(id: str, globalid: str, anexo_id: str, auth: Auth = autenticado
     esc.exigir_escopo(auth, "camada:ler", iid)
     with db.db(auth.contexto()) as cur:
         dados, content_type, nome = anexos.baixar(cur, iid, globalid, anexo_id)
+    # o nome do anexo vem do cliente: entra no cabeçalho SANEADO (sem aspas, barra, "../" nem caractere
+    # de controle — `app/entrega_conteudo.py`), com `nosniff`. Sem isso, `../../etc/passwd.png` ia
+    # verbatim para o `Content-Disposition` e uma aspa no nome quebraria o cabeçalho (medido 17/09 pelo
+    # portão do item L2-03-e); a entrega segue `inline`, que é o que o popup do mapa usa.
     return Response(
         content=dados, media_type=content_type,
-        headers={"Content-Disposition": f'inline; filename="{nome}"'},
+        headers={
+            "Content-Disposition": f'inline; filename="{entrega_conteudo.nome_saneado(nome)}"',
+            "X-Content-Type-Options": "nosniff",
+        },
     )
 
 

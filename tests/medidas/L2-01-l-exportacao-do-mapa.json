@@ -95,8 +95,33 @@
    },
    "unidade": "feições e EPSG lidos do arquivo baixado",
    "comando": "tests/api/exportacao/test_exportacao_mapa.py::test_doze_formatos_da_selecao_de_500_com_contagem_e_crs"
+  },
+  "previa_layout_a4_96dpi_px": {
+   "valor": "794x1123",
+   "unidade": "px",
+   "comando": "tests/e2e/test_mapa_exportacao.py::test_png_por_layout_sai_no_tamanho_do_papel_e_com_o_titulo_dentro"
+  },
+  "previa_layout_a4_96dpi_bytes": {
+   "valor": 11712,
+   "unidade": "bytes",
+   "comando": "POST /api/layouts/previa pela tela"
+  },
+  "pdf_por_layout_bytes": {
+   "valor": 6785,
+   "unidade": "bytes",
+   "comando": "tests/e2e/test_mapa_exportacao.py::test_pdf_por_layout_e_um_pdf_de_verdade_com_o_titulo"
+  },
+  "pdf_por_layout_paginas": {
+   "valor": 1,
+   "unidade": "páginas",
+   "comando": "pdftoppm -png -r 60 sobre o PDF gerado"
+  },
+  "exportar_ligado_a_pagina_do_mapa": {
+   "valor": false,
+   "unidade": "módulo alcançado a partir de web/mapa.html (False = e2e da tela impossível hoje)",
+   "comando": "pytest tests/unit/test_l201k_frente_desenho.py::test_medida_da_ligacao_da_tela_de_desenho"
   }
  },
- "gerado_em": "2026-09-07T20:26:20Z",
- "git_sha": "500292445074"
+ "gerado_em": "2026-09-18T01:49:42Z",
+ "git_sha": "ac77aa551e5f"
 }

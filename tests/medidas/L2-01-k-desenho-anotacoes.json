@@ -25,8 +25,48 @@
    "valor": "2026-09-07T18:46:13Z",
    "unidade": "UTC",
    "comando": "pytest tests/api/catalogo/test_desenho_anotacoes.py::test_5000_desenhos_salvam_reabrem_identicos_e_o_tempo_fica_registrado"
+  },
+  "modulos_alcancados_pela_pagina_do_mapa": {
+   "valor": 24,
+   "unidade": "arquivos .js",
+   "comando": "pytest tests/unit/test_l201k_frente_desenho.py::test_medida_da_ligacao_da_tela_de_desenho"
+  },
+  "modulos_de_mapa_orfaos": {
+   "valor": [
+    "anotacoes.js",
+    "atributos.js",
+    "catalogo.js",
+    "crs.js",
+    "desenho.js",
+    "documento.js",
+    "edicao.js",
+    "estilo_editor.js",
+    "estilo_sugestao.js",
+    "exportar.js",
+    "formato.js",
+    "grafico_svg.js",
+    "graficos.js",
+    "impressao.js",
+    "medicao.js",
+    "motor.js",
+    "navegacao.js",
+    "painel_camadas.js",
+    "pdf.js",
+    "render_entrada.js",
+    "render_layout_entrada.js",
+    "rotas.js",
+    "selecao.js",
+    "tabela_atributos.js"
+   ],
+   "unidade": "arquivos em web/js/mapa sem ninguém que os importe",
+   "comando": "pytest tests/unit/test_l201k_frente_desenho.py::test_medida_da_ligacao_da_tela_de_desenho"
+  },
+  "desenho_e_anotacao_ligados_a_tela": {
+   "valor": false,
+   "unidade": "módulos do item alcançados pela página (False = nenhum)",
+   "comando": "pytest tests/unit/test_l201k_frente_desenho.py::test_medida_da_ligacao_da_tela_de_desenho"
   }
  },
- "gerado_em": "2026-09-07T18:46:13Z",
- "git_sha": "5fd1a941"
+ "gerado_em": "2026-09-18T01:49:42Z",
+ "git_sha": "ac77aa551e5f"
 }
