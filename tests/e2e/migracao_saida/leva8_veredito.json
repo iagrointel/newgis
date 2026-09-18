@@ -1,0 +1,240 @@
+{
+ "leva": 8,
+ "telas": {
+  "geocodificacao": {
+   "rota": "/geocodificacoes/00000000-0000-0000-0000-000000000000",
+   "montou_antes": false,
+   "montou_depois": false,
+   "estrutura_igual": true,
+   "elementos": 32,
+   "temas": {
+    "escuro": {
+     "nos_medidos_antes": 9,
+     "nos_medidos_depois": 9,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    },
+    "claro": {
+     "nos_medidos_antes": 9,
+     "nos_medidos_depois": 9,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    }
+   }
+  },
+  "amc_pareto": {
+   "rota": "/amc/pareto",
+   "montou_antes": true,
+   "montou_depois": true,
+   "estrutura_igual": true,
+   "elementos": 88,
+   "temas": {
+    "escuro": {
+     "nos_medidos_antes": 37,
+     "nos_medidos_depois": 37,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    },
+    "claro": {
+     "nos_medidos_antes": 37,
+     "nos_medidos_depois": 37,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    }
+   }
+  },
+  "executar": {
+   "rota": "/executar",
+   "montou_antes": true,
+   "montou_depois": true,
+   "estrutura_igual": true,
+   "elementos": 14,
+   "temas": {
+    "escuro": {
+     "nos_medidos_antes": 2,
+     "nos_medidos_depois": 2,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    },
+    "claro": {
+     "nos_medidos_antes": 2,
+     "nos_medidos_depois": 2,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    }
+   }
+  },
+  "construtor": {
+   "rota": "/construtor",
+   "montou_antes": true,
+   "montou_depois": true,
+   "estrutura_igual": true,
+   "elementos": 175,
+   "temas": {
+    "escuro": {
+     "nos_medidos_antes": 95,
+     "nos_medidos_depois": 95,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    },
+    "claro": {
+     "nos_medidos_antes": 95,
+     "nos_medidos_depois": 95,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    }
+   }
+  },
+  "cena": {
+   "rota": "/cena",
+   "montou_antes": true,
+   "montou_depois": true,
+   "estrutura_igual": true,
+   "elementos": 119,
+   "temas": {
+    "escuro": {
+     "nos_medidos_antes": 50,
+     "nos_medidos_depois": 50,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    },
+    "claro": {
+     "nos_medidos_antes": 50,
+     "nos_medidos_depois": 50,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    }
+   }
+  },
+  "amc_motor": {
+   "rota": "/amc/motor",
+   "montou_antes": true,
+   "montou_depois": true,
+   "estrutura_igual": true,
+   "elementos": 153,
+   "temas": {
+    "escuro": {
+     "nos_medidos_antes": 55,
+     "nos_medidos_depois": 55,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    },
+    "claro": {
+     "nos_medidos_antes": 55,
+     "nos_medidos_depois": 55,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    }
+   }
+  },
+  "sig": {
+   "rota": "/sig",
+   "montou_antes": true,
+   "montou_depois": true,
+   "ids_gerados_ignorados": [
+    "chk-"
+   ],
+   "estrutura_igual": true,
+   "elementos": 1756,
+   "temas": {
+    "escuro": {
+     "nos_medidos_antes": 153,
+     "nos_medidos_depois": 153,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    },
+    "claro": {
+     "nos_medidos_antes": 153,
+     "nos_medidos_depois": 153,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    }
+   }
+  }
+ },
+ "reprovas": []
+}

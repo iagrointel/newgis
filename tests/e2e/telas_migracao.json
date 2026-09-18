@@ -1,0 +1,960 @@
+{
+ "comentario": "Ordem de RISCO da migracao da folha antiga web/style.css para estilo/base.css + estilo/componentes.css. Ordenada por: tela sem folha propria antes de tela com folha propria, mapa/3D/canvas por ultimo, e por tamanho dentro de cada grupo. Leva = 8 telas. `estado` e escrito pelo turno que migrar: pendente | migrada | deixada_para_tras.",
+ "telas": [
+  {
+   "nome": "campo_fila",
+   "arquivo": "web/campo_fila.html",
+   "rota": "/campo/filas/{fila_id}",
+   "leva": 1,
+   "bytes": 837,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": true,
+   "classes_so_na_folha_antiga_estimadas": [
+    "campo-fila"
+   ],
+   "estado": "migrada"
+  },
+  {
+   "nome": "campo_filas",
+   "arquivo": "web/campo_filas.html",
+   "rota": "/campo/filas",
+   "leva": 1,
+   "bytes": 854,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [
+    "campo-filas"
+   ],
+   "estado": "migrada"
+  },
+  {
+   "nome": "campo_roteiro",
+   "arquivo": "web/campo_roteiro.html",
+   "rota": "/campo/roteiros/{roteiro_id}",
+   "leva": 1,
+   "bytes": 854,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": true,
+   "classes_so_na_folha_antiga_estimadas": [
+    "campo-roteiro"
+   ],
+   "estado": "migrada"
+  },
+  {
+   "nome": "redes_simples",
+   "arquivo": "web/redes_simples.html",
+   "rota": "/redes/simples",
+   "leva": 1,
+   "bytes": 857,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [
+    "redes-simples"
+   ],
+   "estado": "migrada"
+  },
+  {
+   "nome": "redes_tracado",
+   "arquivo": "web/redes_tracado.html",
+   "rota": "/redes/tracado",
+   "leva": 1,
+   "bytes": 870,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "redes_controladores",
+   "arquivo": "web/redes_controladores.html",
+   "rota": "/redes/controladores",
+   "leva": 1,
+   "bytes": 885,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "redes_configuracoes",
+   "arquivo": "web/redes_configuracoes.html",
+   "rota": "/redes/configuracoes",
+   "leva": 1,
+   "bytes": 891,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "ferramenta",
+   "arquivo": "web/ferramenta.html",
+   "rota": "/ferramenta",
+   "leva": 1,
+   "bytes": 1007,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "modelos",
+   "arquivo": "web/modelos.html",
+   "rota": "/modelos",
+   "leva": 2,
+   "bytes": 1195,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada",
+   "nota": "section sem class=\"cartao\" perde a moldura de cartao: a folha nova marca cartao com .cartao, nao com a tag <section>. Regra cosmetica com equivalente na folha nova, entao descartada (secao 7 de docs/IDENTIDADE.md). Por em <section class=\"cartao\"> e decisao de desenho, do dono."
+  },
+  {
+   "nome": "camada_dominios",
+   "arquivo": "web/camada_dominios.html",
+   "rota": "/camadas/{id}/dominios",
+   "leva": 2,
+   "bytes": 1458,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": true,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada",
+   "nota": "section sem class=\"cartao\" perde a moldura de cartao: a folha nova marca cartao com .cartao, nao com a tag <section>. Regra cosmetica com equivalente na folha nova, entao descartada (secao 7 de docs/IDENTIDADE.md). Por em <section class=\"cartao\"> e decisao de desenho, do dono."
+  },
+  {
+   "nome": "admin_acervo",
+   "arquivo": "web/admin/acervo.html",
+   "rota": "/admin/acervo",
+   "leva": 2,
+   "bytes": 1578,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "videos",
+   "arquivo": "web/videos.html",
+   "rota": "/videos",
+   "leva": 2,
+   "bytes": 1625,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "admin_index",
+   "arquivo": "web/admin/index.html",
+   "rota": "/admin",
+   "leva": 2,
+   "bytes": 1747,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada",
+   "nota": "section sem class=\"cartao\" perde a moldura de cartao: a folha nova marca cartao com .cartao, nao com a tag <section>. Regra cosmetica com equivalente na folha nova, entao descartada (secao 7 de docs/IDENTIDADE.md). Por em <section class=\"cartao\"> e decisao de desenho, do dono."
+  },
+  {
+   "nome": "admin_auditoria",
+   "arquivo": "web/admin/auditoria.html",
+   "rota": "/admin/auditoria",
+   "leva": 2,
+   "bytes": 1866,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "admin_backup",
+   "arquivo": "web/admin/backup.html",
+   "rota": "/admin/backup",
+   "leva": 2,
+   "bytes": 1972,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "plataforma",
+   "arquivo": "web/plataforma.html",
+   "rota": "/plataforma",
+   "leva": 2,
+   "bytes": 2482,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "amc_explicacao",
+   "arquivo": "web/amc_explicacao.html",
+   "rota": "/amc/explicacao/{execucao_id}/{unidade_id}",
+   "leva": 3,
+   "bytes": 3527,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": true,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "admin_atividade",
+   "arquivo": "web/admin/atividade.html",
+   "rota": "/admin/atividade",
+   "leva": 3,
+   "bytes": 3571,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "amc_criterios_feicao",
+   "arquivo": "web/amc_criterios_feicao.html",
+   "rota": "/amc/criterios-feicao",
+   "leva": 3,
+   "bytes": 3575,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "admin_logins",
+   "arquivo": "web/admin/logins.html",
+   "rota": "/admin/logins",
+   "leva": 3,
+   "bytes": 3643,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "login",
+   "arquivo": "web/login.html",
+   "rota": "/entrar",
+   "leva": 3,
+   "bytes": 4631,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [
+    "topo"
+   ],
+   "estado": "migrada"
+  },
+  {
+   "nome": "aplicativo",
+   "arquivo": "web/aplicativo.html",
+   "rota": "/aplicativo",
+   "leva": 3,
+   "bytes": 794,
+   "folhas_extras": [
+    "widgets.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "visualizar",
+   "arquivo": "web/visualizar.html",
+   "rota": "/visualizar",
+   "leva": 3,
+   "bytes": 818,
+   "folhas_extras": [
+    "estilo/visualizador.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "sites",
+   "arquivo": "web/sites.html",
+   "rota": "/sites",
+   "leva": 3,
+   "bytes": 853,
+   "folhas_extras": [
+    "estilo/editor.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "coleta",
+   "arquivo": "web/coleta.html",
+   "rota": "/coleta",
+   "leva": 4,
+   "bytes": 979,
+   "folhas_extras": [
+    "coleta.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "painel",
+   "arquivo": "web/painel.html",
+   "rota": "/paineis/{id}",
+   "leva": 4,
+   "bytes": 1153,
+   "folhas_extras": [
+    "painel.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": true,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "estilo_guia",
+   "arquivo": "web/estilo_guia.html",
+   "rota": "/estilo-guia",
+   "leva": 4,
+   "bytes": 1348,
+   "folhas_extras": [
+    "estilo/guia.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "colecao",
+   "arquivo": "web/colecao.html",
+   "rota": "/colecao",
+   "leva": 4,
+   "bytes": 1467,
+   "folhas_extras": [
+    "conteudo.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "versoes",
+   "arquivo": "web/versoes.html",
+   "rota": "/versoes",
+   "leva": 4,
+   "bytes": 1508,
+   "folhas_extras": [
+    "versoes.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "admin_inquilinos",
+   "arquivo": "web/admin/inquilinos.html",
+   "rota": "/admin/inquilinos",
+   "leva": 4,
+   "bytes": 1689,
+   "folhas_extras": [
+    "inquilinos.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "importacoes",
+   "arquivo": "web/importacoes.html",
+   "rota": "/importacoes",
+   "leva": 4,
+   "bytes": 1749,
+   "folhas_extras": [
+    "importacoes.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "analise",
+   "arquivo": "web/analise.html",
+   "rota": "/analise",
+   "leva": 4,
+   "bytes": 1889,
+   "folhas_extras": [
+    "tarefas.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "status",
+   "arquivo": "web/status.html",
+   "rota": "/status",
+   "leva": 5,
+   "bytes": 1968,
+   "folhas_extras": [
+    "status.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada",
+   "classes_de_estado_vivo": [
+    "status-estado-"
+   ],
+   "nota": "A classe do <td> de estado e status-estado-<ok|degradado|erro|ausente>, escrita por web/js/status.js a partir de GET /api/status. As duas fases falam com dois processos diferentes, cada um com a sua saude, entao esse sufixo difere sem que nenhuma folha o cause. A comparacao ignora o sufixo NESTA tela; o resto da arvore continua medido."
+  },
+  {
+   "nome": "analise3d",
+   "arquivo": "web/analise3d.html",
+   "rota": "/analise3d",
+   "leva": 5,
+   "bytes": 1994,
+   "folhas_extras": [
+    "tarefas.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "chamados",
+   "arquivo": "web/chamados.html",
+   "rota": "/chamados",
+   "leva": 5,
+   "bytes": 1996,
+   "folhas_extras": [
+    "tarefas.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "formulario_construtor",
+   "arquivo": "web/formulario_construtor.html",
+   "rota": "/camadas/{id}/formulario",
+   "leva": 5,
+   "bytes": 2490,
+   "folhas_extras": [
+    "estilo/editor.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": true,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "amc_presets",
+   "arquivo": "web/amc_presets.html",
+   "rota": "/amc/presets",
+   "leva": 5,
+   "bytes": 2518,
+   "folhas_extras": [
+    "tarefas.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "admin_chamados",
+   "arquivo": "web/admin/chamados.html",
+   "rota": "/admin/chamados",
+   "leva": 5,
+   "bytes": 2580,
+   "folhas_extras": [
+    "tarefas.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "admin_categorias",
+   "arquivo": "web/admin/categorias.html",
+   "rota": "/admin/categorias",
+   "leva": 5,
+   "bytes": 2892,
+   "folhas_extras": [
+    "categorias.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [
+    "controle"
+   ],
+   "estado": "migrada"
+  },
+  {
+   "nome": "construtor_camada",
+   "arquivo": "web/construtor_camada.html",
+   "rota": "/construtor-camada",
+   "leva": 5,
+   "bytes": 3500,
+   "folhas_extras": [
+    "estilo/camada_esquema.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "vista_camada",
+   "arquivo": "web/vista_camada.html",
+   "rota": "/vista-de-camada",
+   "leva": 6,
+   "bytes": 3609,
+   "folhas_extras": [
+    "estilo/camada_esquema.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "geocodificar",
+   "arquivo": "web/geocodificar.html",
+   "rota": "/geocodificar",
+   "leva": 6,
+   "bytes": 3865,
+   "folhas_extras": [
+    "geocodificar.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "temas",
+   "arquivo": "web/temas.html",
+   "rota": "/temas",
+   "leva": 6,
+   "bytes": 3878,
+   "folhas_extras": [
+    "estilo/temas.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "acervo",
+   "arquivo": "web/acervo.html",
+   "rota": "/acervo",
+   "leva": 6,
+   "bytes": 4041,
+   "folhas_extras": [
+    "tarefas.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "portal",
+   "arquivo": "web/portal.html",
+   "rota": "/portal",
+   "leva": 6,
+   "bytes": 4821,
+   "folhas_extras": [
+    "portal.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "crs",
+   "arquivo": "web/crs.html",
+   "rota": "/crs",
+   "leva": 6,
+   "bytes": 4929,
+   "folhas_extras": [
+    "tarefas.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada",
+   "nota": "Reprovou na primeira tentativa e voltou para a folha antiga: a foto de pagina inteira pedia um bitmap de 1280 x 439.805 (47.044 elementos, altura medida no navegador) e matava o processo do Chromium, o que somado a maquina no limite deu oom-kill do sistema as 01:59 de 18/09/2026. Migrada depois que a ferramenta ganhou teto de altura para a foto: medida sozinha, arvore identica nos 47.044 elementos, 0 violacao de contraste, 0 de axe. A foto desta tela e a da area visivel, nao a da pagina inteira."
+  },
+  {
+   "nome": "ferramentas",
+   "arquivo": "web/ferramentas.html",
+   "rota": "/ferramentas",
+   "leva": 6,
+   "bytes": 4904,
+   "folhas_extras": [
+    "tarefas.css",
+    "estilo/ferramentas.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "migracao",
+   "arquivo": "web/migracao.html",
+   "rota": "/migracao",
+   "leva": 6,
+   "bytes": 5308,
+   "folhas_extras": [
+    "tarefas.css",
+    "migracao.css"
+   ],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "rede_medicao_ficha",
+   "arquivo": "web/rede_medicao_ficha.html",
+   "rota": "/rede/medicao/ficha",
+   "leva": 7,
+   "bytes": 1238,
+   "folhas_extras": [
+    "vendor/maplibre-gl-4.7.1.css"
+   ],
+   "pesada": true,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [
+    "rede-medicao-ficha"
+   ],
+   "estado": "migrada"
+  },
+  {
+   "nome": "conexoes",
+   "arquivo": "web/conexoes.html",
+   "rota": "/conexoes",
+   "leva": 7,
+   "bytes": 4874,
+   "folhas_extras": [
+    "tarefas.css"
+   ],
+   "pesada": true,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [
+    "conexoes"
+   ],
+   "estado": "migrada"
+  },
+  {
+   "nome": "redes_isolamento",
+   "arquivo": "web/redes_isolamento.html",
+   "rota": "/redes/isolamento",
+   "leva": 7,
+   "bytes": 1077,
+   "folhas_extras": [
+    "vendor/maplibre-gl-4.7.1.css",
+    "isolamento.css"
+   ],
+   "pesada": true,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "redes_fluxo",
+   "arquivo": "web/redes_fluxo.html",
+   "rota": "/redes/fluxo",
+   "leva": 7,
+   "bytes": 1362,
+   "folhas_extras": [
+    "vendor/maplibre-gl-4.7.1.css",
+    "mapa.css"
+   ],
+   "pesada": true,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "redes_diagrama",
+   "arquivo": "web/redes_diagrama.html",
+   "rota": "/redes/diagrama",
+   "leva": 7,
+   "bytes": 1518,
+   "folhas_extras": [
+    "vendor/maplibre-gl-4.7.1.css",
+    "redes_diagrama.css"
+   ],
+   "pesada": true,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "modelo",
+   "arquivo": "web/modelo.html",
+   "rota": "/modelo/{id}",
+   "leva": 7,
+   "bytes": 2112,
+   "folhas_extras": [
+    "vendor/pannellum-2.5.7.css",
+    "modelo.css"
+   ],
+   "pesada": true,
+   "rota_com_parametro": true,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "simbolos",
+   "arquivo": "web/simbolos.html",
+   "rota": "/simbolos",
+   "leva": 7,
+   "bytes": 2730,
+   "folhas_extras": [
+    "vendor/maplibre-gl-4.7.1.css",
+    "simbolos.css"
+   ],
+   "pesada": true,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "mapa",
+   "arquivo": "web/mapa.html",
+   "rota": "/mapa",
+   "leva": 7,
+   "bytes": 2742,
+   "folhas_extras": [
+    "vendor/maplibre-gl-4.7.1.css",
+    "mapa.css"
+   ],
+   "pesada": true,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "sig",
+   "arquivo": "web/sig.html",
+   "rota": "/sig",
+   "leva": 8,
+   "bytes": 18544,
+   "folhas_extras": [
+    "vendor/maplibre-gl-4.7.1.css",
+    "sig.css"
+   ],
+   "pesada": true,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada",
+   "ids_gerados": [
+    "chk-"
+   ],
+   "nota": "A arvore de camadas da um id a cada no com idCurto() (web/js/camadas.js) e escreve chk-<sorteado> no <input> e no `for` do <label>. Sao 62 nos de 1.756 que trocam de nome entre dois desenhos da MESMA arvore, com ou sem troca de folha. A comparacao normaliza o sorteio NESTA tela; normalizado, as duas fases batem elemento a elemento."
+  },
+  {
+   "nome": "construtor",
+   "arquivo": "web/construtor.html",
+   "rota": "/construtor",
+   "leva": 8,
+   "bytes": 1192,
+   "folhas_extras": [
+    "estilo/editor.css",
+    "vendor/maplibre-gl-4.7.1.css",
+    "estilo/narrativa.css"
+   ],
+   "pesada": true,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "geocodificacao",
+   "arquivo": "web/geocodificacao.html",
+   "rota": "/geocodificacoes/{geocodificacao_id}",
+   "leva": 8,
+   "bytes": 1980,
+   "folhas_extras": [
+    "vendor/maplibre-gl-4.7.1.css",
+    "mapa.css",
+    "geocodificacao.css"
+   ],
+   "pesada": true,
+   "rota_com_parametro": true,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "amc_pareto",
+   "arquivo": "web/amc_pareto.html",
+   "rota": "/amc/pareto",
+   "leva": 8,
+   "bytes": 2610,
+   "folhas_extras": [
+    "vendor/maplibre-gl-4.7.1.css",
+    "mapa.css",
+    "amc_pareto.css"
+   ],
+   "pesada": true,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "cena",
+   "arquivo": "web/cena.html",
+   "rota": "/cena",
+   "leva": 8,
+   "bytes": 4452,
+   "folhas_extras": [
+    "vendor/maplibre-gl-4.7.1.css",
+    "mapa.css",
+    "cena.css"
+   ],
+   "pesada": true,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "amc_motor",
+   "arquivo": "web/amc_motor.html",
+   "rota": "/amc/motor",
+   "leva": 8,
+   "bytes": 4700,
+   "folhas_extras": [
+    "vendor/maplibre-gl-4.7.1.css",
+    "mapa.css",
+    "amc_motor.css"
+   ],
+   "pesada": true,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "executar",
+   "arquivo": "web/executar.html",
+   "rota": "/executar",
+   "leva": 8,
+   "bytes": 1129,
+   "folhas_extras": [
+    "estilo/executor.css",
+    "widgets.css",
+    "vendor/maplibre-gl-4.7.1.css",
+    "estilo/narrativa.css"
+   ],
+   "pesada": true,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "migrada"
+  },
+  {
+   "nome": "admin_organizacao",
+   "arquivo": "web/admin/organizacao.html",
+   "rota": "/admin/organizacao",
+   "leva": 3,
+   "bytes": 0,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "ja_na_folha_nova",
+   "nota": "Nao esta na folha antiga e nao conta na catraca. Entra na leva 3 porque a leva levou `.caixa` para a folha nova e esta tela tem 8 `.caixa` (medido no navegador): a regra levada tem de ser provada tambem onde ela chega sem ser chamada."
+  },
+  {
+   "nome": "campo_index",
+   "arquivo": "web/campo/index.html",
+   "rota": "/campo",
+   "leva": 3,
+   "bytes": 0,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "ja_na_folha_nova",
+   "nota": "Mesmo motivo: a leva levou `.campo` fora de `.form` para a folha nova e esta tela tem 1."
+  },
+  {
+   "nome": "conteudo",
+   "arquivo": "web/conteudo.html",
+   "rota": "/conteudo",
+   "leva": 4,
+   "bytes": 0,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "ja_na_folha_nova",
+   "nota": "Nao esta na folha antiga e nao conta na catraca. Entra na leva 4 porque a leva levou `button[aria-pressed=\"true\"]:not(.texto)` para a folha nova (a folha nova so cobria o caso `.seletor-tema`) e esta tela tem botao de vista nesse estado, medido no navegador."
+  },
+  {
+   "nome": "conteudo_lixeira",
+   "arquivo": "web/conteudo_lixeira.html",
+   "rota": "/conteudo/lixeira",
+   "leva": 4,
+   "bytes": 0,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "ja_na_folha_nova",
+   "nota": "Nao esta na folha antiga e nao conta na catraca. Entra na leva 4 porque a leva levou `button[aria-pressed=\"true\"]:not(.texto)` para a folha nova (a folha nova so cobria o caso `.seletor-tema`) e esta tela tem botao de vista nesse estado, medido no navegador."
+  },
+  {
+   "nome": "estilo",
+   "arquivo": "web/estilo.html",
+   "rota": "/estilo",
+   "leva": 4,
+   "bytes": 0,
+   "folhas_extras": [],
+   "pesada": false,
+   "rota_com_parametro": false,
+   "classes_so_na_folha_antiga_estimadas": [],
+   "estado": "ja_na_folha_nova",
+   "nota": "Nao esta na folha antiga e nao conta na catraca. Entra na leva 4 porque a leva levou `button[aria-pressed=\"true\"]:not(.texto)` para a folha nova (a folha nova so cobria o caso `.seletor-tema`) e esta tela tem botao de vista nesse estado, medido no navegador."
+  }
+ ]
+}

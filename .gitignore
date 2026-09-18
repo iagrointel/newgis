@@ -71,3 +71,8 @@ pacote/plat.egg-info/
 # fixture real de rede de agua (item L4-05-d): 2 MB, dado de operadora — repositorio publico,
 # fica so no disco da casa; os testes que dependem dela pulam quando ela nao esta no checkout
 tests/dados/rede_agua_real.inp
+
+# migracao de folha (item L0-14-b): as fases cruas sao grandes (arvore de DOM inteira);
+# o que fica versionado e o veredito da leva, o inventario com sha256 e o script que regenera.
+tests/e2e/migracao_saida/leva*_antes.json
+tests/e2e/migracao_saida/leva*_depois.json

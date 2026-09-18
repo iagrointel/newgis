@@ -128,7 +128,74 @@ e demonstrados com os elementos reais em `/estilo`:
   versionado é o script e o inventário com sha256 em `tests/e2e/capturas/INVENTARIO_L0-14.txt`.
 - O axe entra por URL do mesmo domínio, servida por interceptação de rota do playwright: a CSP do produto
   (`script-src 'self' 'nonce-...'`) recusa script inline, e não se afrouxa CSP para caber ferramenta de teste.
-- O que ainda NÃO foi medido, e por quê: A migração das telas da folha antiga
-  `web/style.css` para `estilo/base.css` + `estilo/componentes.css` é item próprio; enquanto ela não acontece,
-  o número de telas na folha antiga está sob catraca (`TELAS_NA_FOLHA_ANTIGA` em
-  `tests/unit/test_estilo_tokens.py`): não pode crescer, e tela nova nasce na folha nova.
+- A migração das telas da folha antiga `web/style.css` para `estilo/base.css` + `estilo/componentes.css`
+  é o item L0-14-b e está FEITA: a catraca `TELAS_NA_FOLHA_ANTIGA` em `tests/unit/test_estilo_tokens.py`
+  desceu de 63 para 0 em 18/09/2026, medida em oito levas (seção 7). Tela nova nasce na folha nova, e a
+  catraca em zero impede que a folha antiga volte a ser ligada por alguma tela.
+
+## 7. Migração da folha antiga, tela a tela (item L0-14-b)
+
+O item L0-14 deixou o sistema de design de pé e a catraca `TELAS_NA_FOLHA_ANTIGA` marcando quantas telas
+ainda carregam `web/style.css` em vez de `estilo/base.css` + `estilo/componentes.css`. Este item desce essa
+catraca. A regra é uma só: **troca de folha, não redesenho**. Desenho é decisão do dono; aqui só se troca a
+folha que a tela carrega, e prova-se que a tela continua a mesma.
+
+Como uma leva é migrada e provada:
+
+1. a ordem é de RISCO, escrita em `tests/e2e/telas_migracao.json`: tela sem folha própria antes de tela com
+   folha própria, mapa/SIG/construtor por último, e por tamanho dentro de cada grupo. Leva = 8 telas;
+2. `bash tests/e2e/regerar_capturas_migracao.sh <leva>` sobe DUAS instâncias contra o MESMO banco de trilha
+   (`plat_ttelas`, nunca o schema `plat` de produção): o "antes" é o HEAD anterior à leva, servido de uma
+   worktree própria, e o "depois" é a árvore de trabalho. A única diferença entre as fotos é a folha;
+3. `tests/e2e/test_migracao_folha.py` roda as duas fases: fotografa cada tela nos dois temas, grava a
+   IMPRESSÃO DIGITAL DA ÁRVORE (tag, id e classes de cada elemento, em ordem de documento), mede o contraste
+   de todo nó de texto visível com a fórmula do L0-14 e roda o axe-core;
+4. `tests/e2e/compara_migracao.py` dá o veredito da leva. Reprova se a árvore mudou, se a tela montava e
+   deixou de montar, ou se apareceu violação de contraste ou de axe que não existia antes. Violação que já
+   existia na folha antiga fica registrada como HERDADA: não é regressão desta migração, e não se conserta
+   aqui — consertar seria redesenhar;
+5. `tests/e2e/grava_medida_migracao.py` escreve `tests/medidas/L0-14-b-migracao-folha.json` a partir dos
+   vereditos. Nenhum número é digitado.
+
+O que a fase "antes" mede e que decide a migração: os seletores de `web/style.css` que de fato PEGAM naquela
+tela (`document.querySelector` de cada um, no navegador) e, desses, os que a folha nova não cobre
+(`so_na_antiga_e_pegam`). Regra de corte: regra de LAYOUT que só existe na folha antiga é levada para a folha
+nova, verbatim; regra puramente cosmética cuja equivalente já existe na folha nova é descartada, e a diferença
+aparece no par de capturas. Tela que não passa sem redesenho PARA: fica com `estado: deixada_para_tras` e o
+motivo escrito no manifesto.
+
+Armadilhas desta máquina: o chromium é o do PLAYWRIGHT (o `google-chrome` do sistema quebra), e **nunca se
+contém memória com `ulimit -v`** — endereçamento virtual não é memória e o Chromium morre com SIGTRAP sob esse
+teto; o teto vai em `systemd-run --scope -p MemoryMax=`.
+
+### O que a prova mediu, e as quatro correções que ela exigiu (18/09/2026)
+
+Resultado: **63 telas migradas, catraca 63 → 0**; mais 5 telas que já estavam na folha nova entraram nas levas
+3 e 4 porque uma regra levada alcançava também a elas. 68 pares antes/depois, 69.253 elementos de DOM
+conferidos, 272 capturas com sha256 no inventário, **0 violação de contraste introduzida e 0 de axe**. As 2
+violações que a medida mostra são HERDADAS, as duas do mesmo nó (`span#estado-rede` em `/campo`).
+
+Regras que só existiam na folha antiga e que as telas usam de verdade foram levadas para a folha nova: o rótulo
+de grupo do menu lateral, `<plat-estado>` inteiro, `.contagem` fora de h1/h2, as alternativas sem `.form` do
+bloco de formulário (`.campo`, `.caixa`, `select.controle`), `<plat-painel>`, `<plat-tema>`, `plat-idioma`,
+`.aviso-caps`, `.ref-suporte`, `button[aria-pressed="true"]` e a barra de andamento em linha. Uma regra foi
+DESCARTADA com motivo escrito no manifesto: `section { … }`, que dava moldura de cartão a qualquer `<section>`
+— a folha nova marca cartão com `class="cartao"`, e as telas que já nasceram nela também têm `<section>` sem
+moldura. Vale para `modelos`, `camada_dominios` e `admin/index`: pôr `class="cartao"` nelas é decisão de desenho.
+
+A ferramenta de prova precisou de quatro correções, todas medidas, nenhuma afrouxando o portão:
+
+1. a impressão digital da árvore media também os `<link>` do `<head>` — isto é, acusava como "árvore mudou"
+   exatamente a linha que a migração troca. `<link>` saiu da medida; o resto do head e o body inteiro ficam;
+2. a árvore era lida no primeiro instante de `body[data-pronto=1]`, com a tela ainda montando: a mesma tela deu
+   72 elementos numa fase e 247 na outra. Agora espera-se a árvore parar antes de medir;
+3. a foto de página inteira ganhou teto de altura (30.000 px). Sem ele, `/crs` (47.044 elementos, 439.805 px)
+   pede um bitmap de 1280 × 439.805, mata o processo do navegador sem levantar exceção e leva a leva junto;
+4. duas exceções DECLARADAS tela a tela no manifesto, nunca uma regra geral: `classes_de_estado_vivo` (só
+   `/status`: a classe do `<td>` carrega a saúde que cada uma das duas instâncias reporta) e `ids_gerados`
+   (só `/sig`: a árvore de camadas sorteia `chk-<id>` a cada desenho, 62 nós de 1.756).
+
+`PLAT_TELAS` corta uma leva em pedaços: a máquina é partilhada e oito telas de mapa no mesmo navegador
+acumulam memória até o oom-kill. As duas fases leem a mesma variável, então a prova não muda.
+
+`web/style.css` continua no disco e continua servido — apagar a folha é decisão à parte. Nenhuma TELA a liga.

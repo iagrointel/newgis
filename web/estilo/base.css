@@ -61,6 +61,11 @@ body:not(.com-lateral) .lateral { display: none; }
 .lateral .marca span { color: var(--i-texto-fraco); font-size: var(--i-t0); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lateral nav { flex: 1; padding: var(--i-e2) 0; overflow: auto; }
 .lateral nav ul { list-style: none; margin: 0; padding: 0; }
+/* rotulo de grupo do menu: regra de LAYOUT que so existia em web/style.css e que as telas usam de
+   verdade (medida no navegador, campo so_na_antiga_e_pegam da fase 'antes' da leva 1 do item
+   L0-14-b). Trazida verbatim, com os tokens --i-* no lugar dos apelidos de compatibilidade. */
+.lateral nav .grupo-rotulo { padding: var(--i-e3) var(--i-e4) var(--i-e1); margin-top: var(--i-e1); color: var(--i-texto-fraco); font-size: var(--i-t-1); text-transform: uppercase; letter-spacing: var(--i-espaco-letra-media); }
+.lateral nav ul li.grupo-rotulo:first-child { margin-top: 0; }
 .lateral nav a {
   display: flex; align-items: center; gap: var(--i-e2);
   padding: var(--i-e2) var(--i-e4);
@@ -97,6 +102,10 @@ body:not(.com-lateral) .lateral { display: none; }
 .grade-atalhos a .icone { color: var(--i-acento); grid-row: span 2; }
 .grade-atalhos a:hover { border-color: var(--i-acento); }
 .grade-atalhos a small { display: block; color: var(--i-texto-fraco); }
+/* contagem fora de h1/h2: a folha nova so cobria `.principal > h1 .contagem` e `.cartao > h2 .contagem`,
+   e a leva 2 mediu `.contagem` pegando em admin_acervo, videos, admin_auditoria e admin_backup.
+   Verbatim da folha antiga (--t-1 nao existe em tokens.css: o tamanho e o herdado, e era assim antes). */
+.contagem { font-family: var(--mono); font-size: var(--t-1); color: var(--fraco); font-weight: 400; }
 .rodape-tela { color: var(--i-texto-fraco); font-size: var(--i-t1); margin-top: var(--i-e4); }
 .aviso-beta { margin: 0 0 var(--i-e4); color: var(--i-texto-fraco); text-transform: lowercase; font-size: var(--i-t1); }
 @media (max-width: 800px) {

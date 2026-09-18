@@ -1,0 +1,270 @@
+{
+ "leva": 1,
+ "telas": {
+  "campo_fila": {
+   "rota": "/campo/filas/00000000-0000-0000-0000-000000000000",
+   "montou_antes": true,
+   "montou_depois": true,
+   "estrutura_igual": true,
+   "elementos": 73,
+   "temas": {
+    "escuro": {
+     "nos_medidos_antes": 33,
+     "nos_medidos_depois": 33,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    },
+    "claro": {
+     "nos_medidos_antes": 33,
+     "nos_medidos_depois": 33,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    }
+   }
+  },
+  "campo_filas": {
+   "rota": "/campo/filas",
+   "montou_antes": true,
+   "montou_depois": true,
+   "estrutura_igual": true,
+   "elementos": 233,
+   "temas": {
+    "escuro": {
+     "nos_medidos_antes": 39,
+     "nos_medidos_depois": 39,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    },
+    "claro": {
+     "nos_medidos_antes": 39,
+     "nos_medidos_depois": 39,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    }
+   }
+  },
+  "campo_roteiro": {
+   "rota": "/campo/roteiros/00000000-0000-0000-0000-000000000000",
+   "montou_antes": true,
+   "montou_depois": true,
+   "estrutura_igual": true,
+   "elementos": 73,
+   "temas": {
+    "escuro": {
+     "nos_medidos_antes": 33,
+     "nos_medidos_depois": 33,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    },
+    "claro": {
+     "nos_medidos_antes": 33,
+     "nos_medidos_depois": 33,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    }
+   }
+  },
+  "redes_simples": {
+   "rota": "/redes/simples",
+   "montou_antes": true,
+   "montou_depois": true,
+   "estrutura_igual": true,
+   "elementos": 243,
+   "temas": {
+    "escuro": {
+     "nos_medidos_antes": 40,
+     "nos_medidos_depois": 40,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    },
+    "claro": {
+     "nos_medidos_antes": 40,
+     "nos_medidos_depois": 40,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    }
+   }
+  },
+  "redes_tracado": {
+   "rota": "/redes/tracado",
+   "montou_antes": true,
+   "montou_depois": true,
+   "estrutura_igual": true,
+   "elementos": 103,
+   "temas": {
+    "escuro": {
+     "nos_medidos_antes": 42,
+     "nos_medidos_depois": 42,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    },
+    "claro": {
+     "nos_medidos_antes": 42,
+     "nos_medidos_depois": 42,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    }
+   }
+  },
+  "redes_controladores": {
+   "rota": "/redes/controladores",
+   "montou_antes": true,
+   "montou_depois": true,
+   "estrutura_igual": true,
+   "elementos": 78,
+   "temas": {
+    "escuro": {
+     "nos_medidos_antes": 35,
+     "nos_medidos_depois": 35,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    },
+    "claro": {
+     "nos_medidos_antes": 35,
+     "nos_medidos_depois": 35,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    }
+   }
+  },
+  "redes_configuracoes": {
+   "rota": "/redes/configuracoes",
+   "montou_antes": true,
+   "montou_depois": true,
+   "estrutura_igual": true,
+   "elementos": 123,
+   "temas": {
+    "escuro": {
+     "nos_medidos_antes": 34,
+     "nos_medidos_depois": 34,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    },
+    "claro": {
+     "nos_medidos_antes": 34,
+     "nos_medidos_depois": 34,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    }
+   }
+  },
+  "ferramenta": {
+   "rota": "/ferramenta",
+   "montou_antes": true,
+   "montou_depois": true,
+   "estrutura_igual": true,
+   "elementos": 73,
+   "temas": {
+    "escuro": {
+     "nos_medidos_antes": 34,
+     "nos_medidos_depois": 34,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    },
+    "claro": {
+     "nos_medidos_antes": 34,
+     "nos_medidos_depois": 34,
+     "contraste_antes": 0,
+     "contraste_depois": 0,
+     "contraste_novas": [],
+     "contraste_herdadas": [],
+     "contraste_resolvidas": [],
+     "axe_antes": [],
+     "axe_depois": [],
+     "axe_novas": []
+    }
+   }
+  }
+ },
+ "reprovas": []
+}
