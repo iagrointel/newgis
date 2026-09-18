@@ -499,9 +499,6 @@ ROUTERS = [
     # --- gás e esgoto (L4-05-e): GET /api/rede/{rede_id}/esgoto/escoamento e .../gas/pressao (conferências
     # que só leem) e POST .../teksi (GeoPackage no esquema TEKSI vira feição no vocabulário do pacote)
     rotas_rede_gas_esgoto,
-    # --- série temporal da rede (L4-15): /api/rede-serie (séries e safras), /calcular (linhagem por
-    # COD_ID, carregamento e crescimento) e as leituras /linhagem, /tendencia, /alimentadores
-    rotas_rede_serie,
     # --- continuidade DEC/FEC (L4-10): /api/rede/{rede_id}/continuidade/{conjuntos,alimentadores,
     # dic-fic,painel,importar} — o dado aberto da ANEEL ligado à rede pela chave CONJ da BDGD
     rotas_rede_continuidade,
