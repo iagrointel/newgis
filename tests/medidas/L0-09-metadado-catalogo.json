@@ -30,6 +30,6 @@
    "comando": "pytest tests/api/catalogo/test_csw_paridade.py::test_medida_paridade -q"
   }
  },
- "gerado_em": "2026-09-17T23:49:19Z",
- "git_sha": "e9e2b1e3b1b4"
+ "gerado_em": "2026-09-18T01:22:37Z",
+ "git_sha": "d48a8b813230"
 }

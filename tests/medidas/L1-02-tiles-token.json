@@ -103,6 +103,6 @@
   "cache": "proxy_cache em /tmp (bancada); em producao o install.sh cria /var/cache/nginx/plat_tiles, 20 GB",
   "aviso": "numero de UMA maquina e de um COG sintetico pequeno; nao extrapolar para acervo grande sem remedir"
  },
- "gerado_em": "2026-09-17T23:49:21Z",
- "git_sha": "e9e2b1e3b1b4"
+ "gerado_em": "2026-09-18T01:22:38Z",
+ "git_sha": "d48a8b813230"
 }

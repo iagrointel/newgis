@@ -11,6 +11,6 @@
    "comando": "pytest tests/api/test_notificacoes.py -q"
   }
  },
- "gerado_em": "2026-09-17T23:49:18Z",
- "git_sha": "e9e2b1e3b1b4"
+ "gerado_em": "2026-09-18T01:22:31Z",
+ "git_sha": "d48a8b813230"
 }
