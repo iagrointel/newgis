@@ -65,21 +65,38 @@ def test_log_format_plat_json_existe_em_algum_deploy_conf():
     assert achados, "log_format plat_json citado no docstring não existe em deploy/"
 
 
+def _journalctl(*args: str) -> str:
+    return subprocess.run(["journalctl", "--no-pager", *args], capture_output=True, text=True,
+                          timeout=15, check=False).stdout
+
+
+# CONSERTADO (18/09/2026, turno L7 do construtor). O defeito era real e tinha DUAS causas, as duas
+# medidas e consertadas:
+#  1. nenhuma configuração de nginx escrevia a tag. deploy/nginx.conf ganhou o `access_log syslog:...`
+#     com `nohostname`: SEM `nohostname` o nginx manda a linha RFC 3164 com o hostname antes da tag, o
+#     journald não a reconhece como SYSLOG_IDENTIFIER, e `journalctl -t plat_nginx` continua devolvendo
+#     zero — foi exatamente o que se viu ao ligar a primeira versão, e é a armadilha do item.
+#  2. o usuário do serviço não estava no grupo `systemd-journal`. journalctl NÃO dá erro a quem não pode
+#     ler o journal do sistema: devolve ZERO linha. A consulta de log não falhava, ela MENTIA — e não só
+#     para o nginx: para as quatro fontes. install.sh passou a acrescentar o usuário ao grupo (passo d1b).
+#
+# Por isso a conferência abaixo separa as duas coisas antes de acusar: se ESTE processo não consegue ler
+# o journal do sistema (o lançador de teste da casa roda num escopo que não carrega grupo suplementar),
+# o resultado é SKIP com esse motivo, nunca um verde falso; só com leitura confirmada a ausência de
+# linha vira reprovação.
 @pytest.mark.skipif(not shutil.which("journalctl"), reason="journalctl ausente nesta máquina")
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "journalctl -t plat_nginx nesta máquina (nginx rodando >24h, servindo a trilha uniao) "
-        "devolve zero linhas — a fonte 'nginx' de FONTES_PADRAO está estruturalmente vazia, não "
-        "é questão de o req_id específico não bater. Item L7-06-c-logs-consulta-req-id."
-    ),
-)
 def test_journal_tem_alguma_linha_com_a_tag_plat_nginx():
-    resultado = subprocess.run(
-        ["journalctl", "-t", "plat_nginx", "--no-pager", "-n", "5", "--output", "cat"],
-        capture_output=True, text=True, timeout=15, check=False,
+    if not _journalctl("-n", "1", "--output", "cat").strip():
+        pytest.skip(
+            "este processo não lê o journal do SISTEMA (journalctl -n 1 também volta vazio): sem "
+            "leitura não dá para distinguir 'fonte vazia' de 'sem permissão', e journalctl devolve "
+            "zero linha nos dois casos. Rode com o usuário no grupo systemd-journal."
+        )
+    saida = _journalctl("-t", "plat_nginx", "-n", "5", "--output", "cat").strip()
+    assert saida, "journalctl -t plat_nginx não tem NENHUMA linha, e este processo LÊ o journal"
+    assert "/svc/<token>/" in saida or "/svc/" not in saida, (
+        f"o token de serviço saiu em texto claro no log do nginx: {saida[:200]}"
     )
-    assert resultado.stdout.strip(), "journalctl -t plat_nginx não tem NENHUMA linha nesta máquina"
 
 
 # CONSERTADO (17/09/2026, turno L7 do construtor): a marca xfail saiu junto com o defeito.

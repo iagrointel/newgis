@@ -98,6 +98,23 @@ for chave in PLAT_OSRM_URL=http://127.0.0.1:5010 PLAT_ROTA_MATRIZ_MAX=625 PLAT_R
   grep -q "^${chave%%=*}=" .env || echo "$chave" >> .env
 done
 
+echo "== d1b. leitura do journal para o usuário do serviço (item L7-06-c)"
+# `plat logs --req-id` junta as linhas dos 4 serviços chamando `journalctl -t <tag>` / `-u <unidade>`
+# (app/logs_consulta.py). journalctl NÃO devolve erro a quem não pode ler o journal do sistema: devolve
+# ZERO linha. Sem este grupo, portanto, a consulta de log não falha — ela mente, em silêncio, dizendo
+# que não houve linha nenhuma. MEDIDO em 18/09/2026: o usuário do serviço não estava em
+# `systemd-journal`, `journalctl -t plat_nginx` como ele saía vazio e como root trazia as linhas.
+# É leitura, e só: o grupo `systemd-journal` não dá escrita no journal nem privilégio nenhum além de ler.
+if getent group systemd-journal > /dev/null; then
+  if id -nG "$APP_USER" | tr ' ' '\n' | grep -qx systemd-journal; then
+    echo "$APP_USER já está em systemd-journal"
+  else
+    usermod -aG systemd-journal "$APP_USER" && echo "$APP_USER acrescentado a systemd-journal (relogar/reiniciar unidades para valer)"
+  fi
+else
+  echo "AVISO: grupo systemd-journal não existe nesta máquina; plat logs não lerá o journal do sistema" >&2
+fi
+
 echo "== d2. segredos fora do .env (item L7-19, docs/SEGURANCA.md)"
 # PLAT_SECRET e a senha da role plat_worker (PLAT_DSN_WORKER) moram em arquivo fora do repositório, dono
 # root, modo 600; só o systemd (LoadCredential=, deploy/plat-api.service e plat-worker.service) entrega
