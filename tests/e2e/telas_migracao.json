@@ -432,7 +432,11 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada",
+   "classes_de_estado_vivo": [
+    "status-estado-"
+   ],
+   "nota": "A classe do <td> de estado e status-estado-<ok|degradado|erro|ausente>, escrita por web/js/status.js a partir de GET /api/status. As duas fases falam com dois processos diferentes, cada um com a sua saude, entao esse sufixo difere sem que nenhuma folha o cause. A comparacao ignora o sufixo NESTA tela; o resto da arvore continua medido."
   },
   {
    "nome": "analise3d",
@@ -446,7 +450,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "chamados",
@@ -460,7 +464,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "formulario_construtor",
@@ -474,7 +478,7 @@
    "pesada": false,
    "rota_com_parametro": true,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "amc_presets",
@@ -488,7 +492,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "admin_chamados",
@@ -502,7 +506,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "admin_categorias",
@@ -518,7 +522,7 @@
    "classes_so_na_folha_antiga_estimadas": [
     "controle"
    ],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "construtor_camada",
@@ -532,7 +536,7 @@
    "pesada": false,
    "rota_com_parametro": false,
    "classes_so_na_folha_antiga_estimadas": [],
-   "estado": "pendente"
+   "estado": "migrada"
   },
   {
    "nome": "vista_camada",

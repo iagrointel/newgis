@@ -14,12 +14,42 @@ tests/e2e/capturas/INVENTARIO_MIG.txt (as PNG nao entram no git; o que fica vers
 
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
 AQUI = Path(__file__).resolve().parent
 SAIDA = AQUI / "migracao_saida"
 CAPTURAS = AQUI / "capturas"
+MANIFESTO = AQUI / "telas_migracao.json"
+
+
+def _prefixos_de_estado_vivo(nome: str) -> list[str]:
+    """Prefixos de classe que, NAQUELA tela, carregam estado vivo do servidor e nao desenho.
+
+    Declarados um a um no manifesto (campo `classes_de_estado_vivo`), com o motivo escrito ao lado --
+    nunca uma regra geral. A tela /status e o caso: a classe do <td> e
+    `status-estado-<ok|degradado|erro|ausente>`, escrita por web/js/status.js a partir de GET /api/status,
+    e as duas fases falam com DOIS processos diferentes, cada um com a sua saude. Sem isto a comparacao
+    acusa como "arvore mudou" a diferenca entre dois servicos, que nenhuma folha de estilo produz nem
+    conserta. O que fica medido continua sendo tag, id e o resto das classes.
+    """
+    telas = json.loads(MANIFESTO.read_text(encoding="utf-8"))["telas"]
+    for t in telas:
+        if t["nome"] == nome:
+            return list(t.get("classes_de_estado_vivo") or [])
+    return []
+
+
+def _sem_estado_vivo(estrutura, prefixos: list[str]):
+    if not estrutura or not prefixos:
+        return estrutura
+    fora = []
+    for item in estrutura:
+        for pre in prefixos:
+            item = re.sub(rf"(?<=\.){re.escape(pre)}[A-Za-z0-9_-]*", pre + "<estado vivo>", item)
+        fora.append(item)
+    return fora
 
 
 def _chave_contraste(v: dict) -> str:
@@ -43,11 +73,16 @@ def comparar(leva: int) -> dict:
             continue
         if a["montou"] and not d["montou"]:
             veredito["reprovas"].append(f"{nome}: montava antes e nao monta depois")
-        iguais = a.get("estrutura") == d.get("estrutura")
+        prefixos = _prefixos_de_estado_vivo(nome)
+        if prefixos:
+            t["classes_de_estado_vivo_ignoradas"] = prefixos
+        ea_cmp = _sem_estado_vivo(a.get("estrutura"), prefixos)
+        ed_cmp = _sem_estado_vivo(d.get("estrutura"), prefixos)
+        iguais = ea_cmp == ed_cmp
         t["estrutura_igual"] = iguais
         t["elementos"] = len(d.get("estrutura") or [])
         if not iguais:
-            ea, ed = a.get("estrutura") or [], d.get("estrutura") or []
+            ea, ed = ea_cmp or [], ed_cmp or []
             difs = [f"{i}: {x!r} -> {y!r}" for i, (x, y) in enumerate(zip(ea, ed)) if x != y][:5]
             if len(ea) != len(ed):
                 difs.append(f"tamanho {len(ea)} -> {len(ed)}")
