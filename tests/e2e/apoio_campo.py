@@ -24,14 +24,13 @@ def sair_por_api(pagina) -> None:
     pagina.request.post("/api/logout", data={})
 
 
-def criar_mapa_de_campo(tela, titulo: str, n_camadas: int = 2) -> str:
+def criar_mapa_de_campo(tela, titulo: str) -> str:
+    # corpo vazio: o documento de mapa exige camadas[].id em ULID + ref de item real; o que este item prova é
+    # a LISTAGEM do mapa no /campo/ (o conteúdo das camadas é do L2-07-d, não deste).
     corpo = {
         "tipo": "mapa",
         "titulo": titulo,
-        "dados": {
-            "esquema_versao": 1,
-            "corpo": {"camadas": [{"id": f"camada-{i}", "nome": f"camada {i}"} for i in range(n_camadas)]},
-        },
+        "dados": {"esquema_versao": 1, "corpo": {}},
     }
     r = tela.api("POST", "/api/itens", corpo)
     assert r.status == 201, (r.status, r.text())

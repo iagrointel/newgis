@@ -226,7 +226,15 @@ def campo_sw():
     return Response(
         corpo,
         media_type="text/javascript; charset=utf-8",
-        headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/campo/"},
+        # CSP própria, sem a qual o middleware fecha com CSP_DADO (`default-src 'none'`): o worker herda a
+        # política do script e todo `fetch` dele cai como connect-src 'none' (TypeError: Failed to fetch no
+        # install, cache.addAll falha, e o Chromium apaga o registro recém-criado). Só precisa de connect-src.
+        headers={
+            "Cache-Control": "no-cache",
+            "Service-Worker-Allowed": "/campo/",
+            "Content-Security-Policy": "default-src 'none'; connect-src 'self'; "
+            "base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+        },
     )
 
 
