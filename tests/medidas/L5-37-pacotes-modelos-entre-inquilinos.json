@@ -15,8 +15,13 @@
    "valor": 1622,
    "unidade": "bytes",
    "comando": "GET /api/itens/{id}/pacote"
+  },
+  "remedicao_20260918_testes_verdes": {
+   "valor": 23,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/api/catalogo/test_pacote.py tests/api/adversario/test_l5_adv2_pacote_sanitizador_perde_conteudo.py -p no:randomly (trilha seg, teto 4G): 23 passed em 46,49 s. Cobre as 4 clausulas do portao (exporta de A e importa em B mapeando 3 fontes; esquema incompativel listado campo a campo antes de importar; ids regerados sem quebrar referencia; assinatura sha256 conferida) e as 2 da refutacao (id de item de outro inquilino recusado; caminho ../ no zip recusado; importar duas vezes da dois apps distintos), mais a galeria de modelos. O bloqueio registrado no estado (saneador perdia todo o texto depois de tag autofechada) esta fechado com par positivo: tag perigosa COM conteudo continua removida em 7 tags, e o texto que volta a passar nao escapa de on*/javascript:/script."
   }
  },
- "gerado_em": "2026-09-08T11:16:43Z",
- "git_sha": "02760fb91cd6"
+ "gerado_em": "2026-09-18T01:21:10Z",
+ "git_sha": "e7a20b04bccc"
 }
