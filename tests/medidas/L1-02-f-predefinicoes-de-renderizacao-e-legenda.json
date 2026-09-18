@@ -1,0 +1,32 @@
+{
+ "item": "L1-02-f-predefinicoes-de-renderizacao-e-legenda",
+ "medidas": {
+  "pixel_de_referencia_das_6_predefinicoes": {
+   "valor": 8,
+   "unidade": "testes passando",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/unit/test_l102f_pixel_referencia.py -W ignore -q   (trilha uniao, schema plat_tuniao; cgroup MemoryMax=4G)  [9 pixels fixos por predefinicao contra tests/dados/predefinicoes_referencia.json, tolerancia de 2 niveis por canal; COG gerado em disco pela mesma formula deterministica de tests/api/imagens/apoio_raster.py, sem banco e sem leitura remota]"
+  },
+  "predefinicoes_cobertas_pela_referencia": {
+   "valor": 6,
+   "unidade": "predefinicoes de fabrica",
+   "comando": "python3 -c \"import json;print(sorted(json.load(open('tests/dados/predefinicoes_referencia.json'))['cores']))\"  -> falsa-cor-nir, nbr-aproximado, ndvi, ndwi, relevo-sombreado, rgb-natural"
+  },
+  "comportamento_pela_api": {
+   "valor": 21,
+   "unidade": "testes passando",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/imagens/test_predefinicoes.py -W ignore -q   (trilha uniao, schema plat_tuniao; cgroup MemoryMax=4G)  [21 passed, 1 skipped]"
+  },
+  "portao_do_adversario": {
+   "valor": 2,
+   "unidade": "clausulas XPASS(strict)",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/unit/test_l1_adv2_predefinicoes_gate.py -W ignore -q   (trilha uniao, schema plat_tuniao; cgroup MemoryMax=4G)  -rxX  [colormap explicito por intervalo/valor no esquema; prova de pixel de referencia commitada]"
+  },
+  "colormap_explicito_de_70_mil_entradas": {
+   "valor": 422,
+   "unidade": "HTTP na recusa",
+   "comando": "test_colormap_explicito_de_70_mil_entradas_e_recusado em tests/unit/test_l102f_pixel_referencia.py — a refutacao do item deixou de ser testada com uma STRING inventada e passa a usar um colormap OBJETO de fato, agora que o esquema aceita a forma de objeto"
+  }
+ },
+ "gerado_em": "2026-09-18T01:45:26Z",
+ "git_sha": "4ba824612"
+}
