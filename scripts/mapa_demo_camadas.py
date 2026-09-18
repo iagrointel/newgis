@@ -49,7 +49,14 @@ def _contexto(cur, slug):
 
 def _publicar(cur, adm, titulo, tabela, tipo, campos, simbologia=None):
     """DDL já feita pelo chamador; aqui: camada_preparar + item no catálogo + função de tile."""
-    esquema = "d_demo"
+    # 18/09/2026: era `"d_demo"` à mão — o defeito que app/esquema_dado.py documenta (achado de 11/09:
+    # o SQL respeita `plat.camada_schema_prefixo()`, o Python montava o nome sozinho). Em produção os dois
+    # coincidem e ninguém percebe; numa TRILHA o schema certo é `d_plat_t<trilha>_demo`, e escrever em
+    # `d_demo` bate em `permission denied` — que é o isolamento funcionando, não um bug do banco. Efeito
+    # medido: a bancada de camadas não podia ser semeada em trilha nenhuma, e todo e2e que precisa de uma
+    # camada ligada saltava por falta de alvo.
+    from app.esquema_dado import esquema as esquema_de
+    esquema = esquema_de(cur, "demo")
     cur.execute("SELECT plat.camada_preparar(%s, %s, 4326, %s, %s)", (esquema, tabela, tipo, adm["usuario_id"]))
     cur.execute(f'SELECT ST_Extent(geom)::text AS e, count(*) AS n FROM "{esquema}"."{tabela}"')
     r = cur.fetchone()
@@ -87,22 +94,26 @@ def criar():
     try:
         with con.cursor() as cur:
             adm = _contexto(cur, "demo")
+            # mesmo motivo da nota em _publicar: o nome do schema de dado vem do BANCO
+            # (plat.camada_schema_prefixo), nunca montado à mão — senão a bancada só nasce em produção.
+            from app.esquema_dado import esquema as _esquema_de
+            esquema = _esquema_de(cur, "demo")
 
             # 1. 1 milhão de pontos
             t = "c_" + _hex16()
             cur.execute(
-                f'CREATE TABLE "d_demo"."{t}" (fid bigserial PRIMARY KEY, rotulo text, '
+                f'CREATE TABLE "{esquema}"."{t}" (fid bigserial PRIMARY KEY, rotulo text, '
                 f"categoria text, valor double precision, geom geometry(Point, 4326))"
             )
             ini = time.perf_counter()
             cur.execute(
-                f'INSERT INTO "d_demo"."{t}" (rotulo, categoria, valor, geom) '
+                f'INSERT INTO "{esquema}"."{t}" (rotulo, categoria, valor, geom) '
                 f"SELECT 'ponto ' || g, (ARRAY['norte','sul','leste','oeste'])[1 + (g % 4)], "
                 f"round((random() * 100)::numeric, 2)::double precision, "
                 f"ST_SetSRID(ST_MakePoint(-73.0 + random() * 39.0, -33.0 + random() * 28.0), 4326) "
                 f"FROM generate_series(1, {N_MI}) g"
             )
-            cur.execute(f'CREATE INDEX ON "d_demo"."{t}" USING gist(geom)')
+            cur.execute(f'CREATE INDEX ON "{esquema}"."{t}" USING gist(geom)')
             seg_carga = round(time.perf_counter() - ini, 1)
             saida["um_milhao"] = _publicar(
                 cur,
@@ -127,11 +138,11 @@ def criar():
             # 2. 5.000 multipolígonos com campo nulo em 1 de cada 4
             t = "c_" + _hex16()
             cur.execute(
-                f'CREATE TABLE "d_demo"."{t}" (fid bigserial PRIMARY KEY, nome text, '
+                f'CREATE TABLE "{esquema}"."{t}" (fid bigserial PRIMARY KEY, nome text, '
                 f"classe text, area_ha double precision, geom geometry(MultiPolygon, 4326))"
             )
             cur.execute(
-                f'INSERT INTO "d_demo"."{t}" (nome, classe, area_ha, geom) '
+                f'INSERT INTO "{esquema}"."{t}" (nome, classe, area_ha, geom) '
                 f"SELECT CASE WHEN g % 4 = 0 THEN NULL ELSE 'gleba ' || g END, "
                 f"CASE WHEN g % 4 = 0 THEN NULL ELSE (ARRAY['a','b','c'])[1 + (g % 3)] END, "
                 f"CASE WHEN g % 4 = 0 THEN NULL ELSE round((random() * 500)::numeric, 1)::double precision END, "
@@ -141,7 +152,7 @@ def criar():
                 f"FROM (SELECT g, -60.0 + (g % 100) * 0.35 AS x, -25.0 + ((g / 100) % 50) * 0.35 AS y "
                 f"      FROM generate_series(1, 5000) g) s"
             )
-            cur.execute(f'CREATE INDEX ON "d_demo"."{t}" USING gist(geom)')
+            cur.execute(f'CREATE INDEX ON "{esquema}"."{t}" USING gist(geom)')
             saida["poligonos"] = _publicar(
                 cur,
                 adm,
@@ -159,16 +170,16 @@ def criar():
             # 3. 20.000 linhas
             t = "c_" + _hex16()
             cur.execute(
-                f'CREATE TABLE "d_demo"."{t}" (fid bigserial PRIMARY KEY, nome text, geom geometry(LineString, 4326))'
+                f'CREATE TABLE "{esquema}"."{t}" (fid bigserial PRIMARY KEY, nome text, geom geometry(LineString, 4326))'
             )
             cur.execute(
-                f'INSERT INTO "d_demo"."{t}" (nome, geom) '
+                f'INSERT INTO "{esquema}"."{t}" (nome, geom) '
                 f"SELECT 'trecho ' || g, ST_SetSRID(ST_MakeLine("
                 f"ST_MakePoint(-60.0 + (g % 200) * 0.2, -25.0 + ((g / 200) % 100) * 0.2), "
                 f"ST_MakePoint(-60.0 + (g % 200) * 0.2 + 0.15, -25.0 + ((g / 200) % 100) * 0.2 + 0.1)), 4326) "
                 f"FROM generate_series(1, 20000) g"
             )
-            cur.execute(f'CREATE INDEX ON "d_demo"."{t}" USING gist(geom)')
+            cur.execute(f'CREATE INDEX ON "{esquema}"."{t}" USING gist(geom)')
             saida["linhas"] = _publicar(
                 cur,
                 adm,
@@ -184,15 +195,15 @@ def criar():
             for i in range(1, 8):
                 t = "c_" + _hex16()
                 cur.execute(
-                    f'CREATE TABLE "d_demo"."{t}" (fid bigserial PRIMARY KEY, rotulo text, geom geometry(Point, 4326))'
+                    f'CREATE TABLE "{esquema}"."{t}" (fid bigserial PRIMARY KEY, rotulo text, geom geometry(Point, 4326))'
                 )
                 cur.execute(
-                    f'INSERT INTO "d_demo"."{t}" (rotulo, geom) '
+                    f'INSERT INTO "{esquema}"."{t}" (rotulo, geom) '
                     f"SELECT 'e{i}-' || g, ST_SetSRID(ST_MakePoint("
                     f"-70.0 + random() * 35.0, -30.0 + random() * 25.0), 4326) "
                     f"FROM generate_series(1, 1000) g"
                 )
-                cur.execute(f'CREATE INDEX ON "d_demo"."{t}" USING gist(geom)')
+                cur.execute(f'CREATE INDEX ON "{esquema}"."{t}" USING gist(geom)')
                 saida["extras"].append(
                     _publicar(
                         cur, adm, f"mapa-extra-{i} (L2-01, sintética)", t, "Point", [{"nome": "rotulo", "tipo": "text"}]
@@ -205,14 +216,14 @@ def criar():
             lat, lon0 = -23.46, -46.53
             dlon = 1000.0 / (111320.0 * math.cos(math.radians(lat)))
             cur.execute(
-                f'CREATE TABLE "d_demo"."{t}" (fid bigserial PRIMARY KEY, nome text, geom geometry(Point, 4326))'
+                f'CREATE TABLE "{esquema}"."{t}" (fid bigserial PRIMARY KEY, nome text, geom geometry(Point, 4326))'
             )
             cur.execute(
-                f'INSERT INTO "d_demo"."{t}" (nome, geom) VALUES '
+                f'INSERT INTO "{esquema}"."{t}" (nome, geom) VALUES '
                 f"('oeste', ST_SetSRID(ST_MakePoint(%s, %s), 4326)), ('leste', ST_SetSRID(ST_MakePoint(%s, %s), 4326))",
                 (lon0, lat, lon0 + dlon, lat),
             )
-            cur.execute(f'CREATE INDEX ON "d_demo"."{t}" USING gist(geom)')
+            cur.execute(f'CREATE INDEX ON "{esquema}"."{t}" USING gist(geom)')
             saida["regua"] = _publicar(
                 cur,
                 adm,
