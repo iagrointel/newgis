@@ -65,9 +65,18 @@ def test_log_format_plat_json_existe_em_algum_deploy_conf():
     assert achados, "log_format plat_json citado no docstring não existe em deploy/"
 
 
-def _journalctl(*args: str) -> str:
+def _journalctl(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run(["journalctl", "--no-pager", *args], capture_output=True, text=True,
-                          timeout=15, check=False).stdout
+                          timeout=15, check=False)
+
+
+def _le_o_journal_do_sistema() -> bool:
+    """`journalctl` SEM `--system` também lê o journal do PRÓPRIO usuário, que quase nunca está vazio:
+    medido em 18/09/2026, a sonda ingênua devolvia uma linha de sessão do PAM e o teste concluía, errado,
+    que havia permissão. A pergunta certa é sobre o journal do SISTEMA, e aí journalctl responde com
+    código != 0 e "No journal files were opened due to insufficient permissions"."""
+    r = _journalctl("--system", "-n", "1", "--output", "cat")
+    return r.returncode == 0 and "insufficient permissions" not in (r.stdout + r.stderr)
 
 
 # CONSERTADO (18/09/2026, turno L7 do construtor). O defeito era real e tinha DUAS causas, as duas
@@ -86,13 +95,14 @@ def _journalctl(*args: str) -> str:
 # linha vira reprovação.
 @pytest.mark.skipif(not shutil.which("journalctl"), reason="journalctl ausente nesta máquina")
 def test_journal_tem_alguma_linha_com_a_tag_plat_nginx():
-    if not _journalctl("-n", "1", "--output", "cat").strip():
+    if not _le_o_journal_do_sistema():
         pytest.skip(
-            "este processo não lê o journal do SISTEMA (journalctl -n 1 também volta vazio): sem "
-            "leitura não dá para distinguir 'fonte vazia' de 'sem permissão', e journalctl devolve "
-            "zero linha nos dois casos. Rode com o usuário no grupo systemd-journal."
+            "este processo não lê o journal do SISTEMA: sem leitura não dá para distinguir 'fonte "
+            "vazia' de 'sem permissão', e journalctl devolve zero linha nos dois casos. Rode com o "
+            "usuário no grupo systemd-journal (o lançador de teste da casa abre um escopo que não "
+            "carrega grupo suplementar; `sg systemd-journal -c ...` resolve)."
         )
-    saida = _journalctl("-t", "plat_nginx", "-n", "5", "--output", "cat").strip()
+    saida = _journalctl("--system", "-t", "plat_nginx", "-n", "5", "--output", "cat").stdout.strip()
     assert saida, "journalctl -t plat_nginx não tem NENHUMA linha, e este processo LÊ o journal"
     assert "/svc/<token>/" in saida or "/svc/" not in saida, (
         f"o token de serviço saiu em texto claro no log do nginx: {saida[:200]}"
