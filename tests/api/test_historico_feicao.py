@@ -259,3 +259,39 @@ def test_paginacao_do_historico_ainda_nao_existe(cliente):
     rota = cliente.app.openapi()["paths"]["/api/camadas/{id}/feicoes/{globalid}/historico"]["get"]
     nomes = {p["name"] for p in rota.get("parameters", [])}
     assert nomes & {"cursor", "pagina", "deslocamento", "offset", "limite"}
+
+
+# -------------------------------- append-only no ARTEFATO que é entregue (as migrações), sem depender da base
+def test_as_migracoes_nunca_dao_update_nem_delete_do_historico_ao_papel_de_aplicacao(medida):
+    """Complemento de `test_plat_app_le_e_insere_no_historico_mas_nunca_atualiza_nem_apaga`, que SALTA nas
+    bases de trilha (o `GRANT` em massa de `laco/trilha_ambiente.sh` dá UPDATE/DELETE por cima do da
+    migração). Aqui a mesma cláusula é medida onde ela é decidida para uma instalação de verdade: o texto
+    das migrações, que é o que roda no cliente.
+
+    Par positivo obrigatório: a mesma varredura TEM de achar o `GRANT SELECT, INSERT` — sem isso, uma
+    varredura quebrada (regex errada, diretório errado) não acharia nada e o teste passaria por engano."""
+    import re
+    from pathlib import Path
+
+    raiz = Path(__file__).resolve().parents[2] / "db" / "migracoes"
+    grants = []
+    for arquivo in sorted(raiz.glob("*.sql")):
+        texto = arquivo.read_text(encoding="utf-8")
+        for m in re.finditer(r"GRANT\s+([A-Z,\s]+?)\s+ON\s+(?:TABLE\s+)?plat\.feicao_historico\s+TO\s+(\w+)",
+                             texto, re.IGNORECASE):
+            privilegios = {p.strip().upper() for p in m.group(1).split(",")}
+            grants.append((arquivo.name, privilegios, m.group(2)))
+
+    assert grants, f"nenhum GRANT sobre plat.feicao_historico achado em {raiz}: a varredura é que está errada"
+    para_app = [g for g in grants if g[2].lower() == "plat_app"]
+    assert para_app, [g[2] for g in grants]
+    for nome, privilegios, _ in para_app:
+        assert privilegios == {"SELECT", "INSERT"}, (nome, sorted(privilegios))
+        assert not ({"UPDATE", "DELETE", "TRUNCATE", "ALL"} & privilegios), (nome, sorted(privilegios))
+
+    medida("L2-03-d-historico-restauracao")(
+        "grants_do_historico_nas_migracoes",
+        sorted({f"{g[2]}:{'+'.join(sorted(g[1]))}" for g in grants}),
+        "papel:privilégios concedidos sobre plat.feicao_historico em db/migracoes",
+        "pytest tests/api/test_historico_feicao.py::"
+        "test_as_migracoes_nunca_dao_update_nem_delete_do_historico_ao_papel_de_aplicacao")
