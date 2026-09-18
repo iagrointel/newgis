@@ -318,9 +318,18 @@ def semear_composicoes(
             "tags": ["demonstracao", "mapa"],
             "dados": {
                 "esquema_versao": 1,
+                # Forma do esquema `mapa` (tipo_item.esquema, additionalProperties=false no corpo):
+                # cada camada é {id: ULID da ENTRADA no documento, ref: uuid do item do catálogo}, e o
+                # enquadramento é `extensao_inicial` = [oeste, sul, leste, norte] em graus (EPSG:4326).
+                # Até 18/09/2026 este corpo mandava {titulo, item_id} e {centro, zoom}, forma de uma
+                # versão antiga do esquema: POST /api/itens respondia 422 "dados fora do esquema do tipo
+                # mapa / Additional properties are not allowed", `plat demo semear` parava ali, e as 4
+                # peças do fim do catálogo (mapa, painel, formulário, rede) não eram criadas — a
+                # semeadura ficava pela metade sem dizer por quê. A extensão abaixo cobre Amapá e
+                # Roraima, que são as camadas citadas.
                 "corpo": {
                     "camadas": [
-                        {"titulo": t, "item_id": i}
+                        {"id": gerar_ulid(), "ref": i}
                         for t, i in titulos.items()
                         if t
                         in (
@@ -329,8 +338,7 @@ def semear_composicoes(
                             "Rodovias federais de Roraima",
                         )
                     ],
-                    "centro": [-61.5, 2.0],
-                    "zoom": 6,
+                    "extensao_inicial": [-64.9, -1.6, -49.8, 5.3],
                 },
             },
         }
@@ -383,17 +391,20 @@ def semear_composicoes(
             "resumo": "Ficha de visita de campo, sem dado nenhum atrás — só demonstra o construtor "
             "de formulário, semeada por plat demo semear.",
             "tags": ["demonstracao", "formulario"],
+            # O tipo `formulario` NÃO usa o invólucro {esquema_versao, corpo} dos outros: o esquema
+            # registrado em tipo_item exige, na RAIZ, versao/nome/titulo/campos/listas (é a forma XLSForm
+            # da casa). Até 18/09/2026 este corpo mandava o invólucro e POST /api/itens respondia 422
+            # "'versao' is a required property", parando `plat demo semear` no formulário.
             "dados": {
-                "tipo": "formulario",
-                "esquema_versao": 1,
-                "corpo": {
-                    "titulo": "Ficha de visita de campo (demonstração)",
-                    "campos": [
-                        {"nome": "data_visita", "rotulo": "Data da visita", "tipo": "data", "obrigatorio": True},
-                        {"nome": "observacao", "rotulo": "Observação", "tipo": "texto", "obrigatorio": False},
-                        {"nome": "foto", "rotulo": "Foto", "tipo": "arquivo", "obrigatorio": False},
-                    ],
-                },
+                "versao": 1,
+                "nome": "ficha_visita_campo_demo",
+                "titulo": "Ficha de visita de campo (demonstração)",
+                "campos": [
+                    {"nome": "data_visita", "rotulo": "Data da visita", "tipo": "data", "obrigatorio": True},
+                    {"nome": "observacao", "rotulo": "Observação", "tipo": "texto", "obrigatorio": False},
+                    {"nome": "foto", "rotulo": "Foto", "tipo": "arquivo", "obrigatorio": False},
+                ],
+                "listas": {},
             },
         }
         if cat_demo:
