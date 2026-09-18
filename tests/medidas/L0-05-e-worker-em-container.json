@@ -1,6 +1,6 @@
 {
  "item": "L0-05-e-worker-em-container",
- "gerado_em": "2026-09-06T16:23:39Z",
+ "gerado_em": "2026-09-18T02:52:59Z",
  "git_sha": "1409076da35d",
  "medidas": {
   "gdal_da_imagem": {
@@ -37,6 +37,14 @@
    "valor": "docker build -f deploy/Dockerfile.worker -t plat-worker:<tag> .",
    "unidade": "comando",
    "comando": "a imagem foi APAGADA depois de medida (disco a 92 %)"
+  }
+ },
+ "nao_medido": {
+  "triagem_18_09_2026_wt_l02": {
+   "veredito": "causa raiz descrita, nao consertada nesta rodada (bloqueio externo)",
+   "o_que_falta": "A clausula central do portao (job real da fila -- ingestao.inspecionar e ingestao.carregar -- pego DENTRO do conteiner e comparado ao executor por processo, mais matar o conteiner no meio e conferir que o job volta a fila) nunca foi exercitada. A evidencia commitada so cobre paridade de LEITURA por ogrinfo (13/13 formatos, host x conteiner).",
+   "bloqueio_medido_em_18_09": "Nenhuma imagem plat-worker existe neste host (`docker images` tem 15 imagens, nenhuma do produto) e construi-la exige `python:3.12-slim` do Docker Hub, que HOJE devolve 502 Bad Gateway em registry-1.docker.io (medido as 02:26 ao rodar tests/api/test_notebooks.py, onde 7 de 10 testes erraram por `docker pull busybox` falhar). Sem registro nao ha imagem; sem imagem nao ha como executar um job dentro do conteiner.",
+   "quando_desbloquear": "docker build da imagem do worker -> subir pelo deploy/docker-compose.worker.yml -> enfileirar um ingestao.inspecionar de arquivo real com o executor do conteiner -> comparar proposta e contagem de feicoes com o executor por processo -> matar o conteiner no meio de um carregar e conferir job de volta na fila, sem tabela orfa."
   }
  }
 }

@@ -1,0 +1,12 @@
+{
+ "item": "L2-11-c-rota-matriz-isocrona",
+ "medidas": {},
+ "nao_medido": {
+  "triagem_18_09_2026_wt_l02": {
+   "veredito": "causa raiz descrita, nao consertada nesta rodada (construcao grande)",
+   "o_que_falta": "Cinco promessas do item nao existem no repositorio: pgRouting usado (drivingDistance conferido contra networkx), NAServer compativel com Esri, perfis bicicleta e pe (so 'carro' e aceito), /mais-proximo e /ajuste-de-trajeto. O proprio handoff do turno ja dizia que tudo isso 'fica para a continuacao do item', e o item foi marcado entregue sem a continuacao.",
+   "medido_em_18_09": "a extensao pgrouting ESTA instalada e disponivel neste banco (SELECT pgr_version() = 4.0.1), entao a clausula 'pgRouting instalado' e' alcancavel hoje; o que falta e' a rede de demonstracao topologizada e o codigo que a consulta. Os perfis exigem rodar osrm-extract 3x (um por perfil) sobre o .pbf, e o NAServer exige implementar o contrato de servico de rede da Esri."
+  }
+ },
+ "gerado_em": "2026-09-18T02:52:59Z"
+}
