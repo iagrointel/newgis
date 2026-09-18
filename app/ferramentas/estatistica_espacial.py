@@ -18,9 +18,13 @@ from __future__ import annotations
 import math
 
 import numpy as np
-from scipy import sparse
-from scipy.spatial import cKDTree
-from scipy.special import erfc
+
+from app.tardio import Tardio
+
+# scipy no primeiro uso real, não no arranque: o pacote inteiro custa dezenas de MB de RSS por worker.
+sparse = Tardio("scipy.sparse")
+cKDTree = Tardio("scipy.spatial", "cKDTree")
+erfc = Tardio("scipy.special", "erfc")
 
 FUNCOES_KERNEL = ("quartica", "gaussiana", "triangular", "uniforme")
 FUNCOES_VIZINHANCA = ("distancia_fixa",)

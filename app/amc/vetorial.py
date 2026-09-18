@@ -14,13 +14,19 @@ inválida (auto-interseção) é reparada com `shapely.make_valid` antes de qual
 e nunca derruba o job silenciosamente — a reparação fica registrada em `avisos`.
 """
 
-import geopandas as gpd
+from __future__ import annotations
+
 import numpy as np
-import pandas as pd
 import shapely
 from shapely.geometry import shape
 
 from app.amc.zonal import ErroExtracao
+from app.tardio import Tardio
+
+# geopandas+pandas somam ~110 MB de RSS por worker só pelo import (medido em 18/09/2026): entram no
+# primeiro uso real do extrator, nunca no arranque da aplicação.
+gpd = Tardio("geopandas")
+pd = Tardio("pandas")
 
 TIPOS = (
     "vetor_fracao_area", "vetor_area", "vetor_contagem", "vetor_atributo_ponderado_area",

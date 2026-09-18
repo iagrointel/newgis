@@ -34,7 +34,6 @@ import time
 from dataclasses import dataclass, field
 
 import numpy as np
-from scipy.stats import qmc
 
 from app.amc.combinacao import ErroCombinacao, combinar
 
@@ -198,6 +197,8 @@ def amostra_saltelli(limites, n: int, semente: int, grupos=None):
             "n_nao_e_potencia_de_dois",
             f"N tem de ser potência de 2 (recebido {n}); a sequência de Sobol perde o equilíbrio fora disso",
         )
+    from scipy.stats import qmc  # import local: scipy.stats custa ~40 MB de RSS por worker no arranque
+
     motor = qmc.Sobol(d=2 * d, scramble=True, seed=semente)
     bruto = motor.random(n)
     a_unit, b_unit = bruto[:, :d], bruto[:, d:]
