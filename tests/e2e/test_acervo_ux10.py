@@ -14,6 +14,7 @@
 Servidor: scripts/servir_local.py (serve /static do worktree) — sem Martin, sem bancada além da licença semeada."""
 
 import json
+import os
 import subprocess
 
 import pytest
@@ -23,6 +24,11 @@ from tests.e2e.apoio_axe import resumo, serias
 
 ITEM = "UX-10-acervo-sem-tela"
 LARGURAS = (390, 1280)
+
+# banco onde o psql como postgres lê/escreve: iagro_sat em produção; na trilha remota (Hetzner) o schema da
+# trilha vive no banco plat_trilhas — passa-se PLAT_BANCO=plat_trilhas inline no comando de prova.
+BANCO = os.environ.get("PLAT_BANCO", "iagro_sat")
+
 pytestmark = [pytest.mark.lento, pytest.mark.e2e]
 
 # mesma linha real de produção para 'openstreetmap' (ODbL) que tests/e2e/test_acervo.py semeia: sem licença
@@ -39,7 +45,7 @@ SEMENTE_ODBL = (
 
 def _psql(sql: str) -> str:
     r = subprocess.run(
-        ["sudo", "-u", "postgres", "psql", "-d", "iagro_sat", "-X", "-q", "-t", "-A", "-v", "ON_ERROR_STOP=1",
+        ["sudo", "-u", "postgres", "psql", "-d", BANCO, "-X", "-q", "-t", "-A", "-v", "ON_ERROR_STOP=1",
          "-c", sql],
         check=True, capture_output=True, text=True,
     )

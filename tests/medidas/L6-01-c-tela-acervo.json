@@ -2,17 +2,17 @@
  "item": "L6-01-c-tela-acervo",
  "medidas": {
   "pagina_pronta_ms_acervo": {
-   "valor": 150.3,
+   "valor": 130.6,
    "unidade": "ms",
    "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
   },
   "pagina_pronta_ms_acervo_celular": {
-   "valor": 281.6,
+   "valor": 136.9,
    "unidade": "ms",
    "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
   },
   "pagina_pronta_ms_mapa_celular": {
-   "valor": 1720.5,
+   "valor": 417.0,
    "unidade": "ms",
    "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
   },
@@ -62,12 +62,12 @@
    "comando": "page.screenshot em tests/e2e/capturas/L6-01-c-tela-acervo_celular.png"
   },
   "carga_1min": {
-   "valor": 12.48,
+   "valor": 2.33,
    "unidade": "media de processos prontos",
    "comando": "os.getloadavg()[0] no fim da rodada"
   },
   "ram_livre_gb": {
-   "valor": 0.3,
+   "valor": 1.1,
    "unidade": "GB",
    "comando": "SC_AVPHYS_PAGES * SC_PAGE_SIZE no fim da rodada"
   },
@@ -77,8 +77,8 @@
    "comando": "venv/bin/pytest tests/api/test_acervo.py -p no:randomly (trilha seg, teto 4G): 20 passed (antes 6 failed). O bloqueio registrado de 07/09 ('sem pagina/JS de tela em web/') caducou: web/acervo.html existe. O que faltava era a API — GET /api/acervo/dominios (taxonomia inteira com contagem de visiveis por dominio), GET /api/acervo/meu-mapa (camadas do acervo do proprio inquilino, para a legenda) e licenca_curada_tipo no cartao, na ficha e congelado no item ao adicionar."
   }
  },
- "gerado_em": "2026-09-18T01:48:49Z",
- "git_sha": "088c190838fd",
+ "gerado_em": "2026-09-18T11:13:32Z",
+ "git_sha": "d29b80ae0e60",
  "nao_passa": [
   "clausula e2e do portao NAO fechada em 18/09/2026: a API esta verde (tests/api/test_acervo.py, 20 passed), mas a TELA que tests/e2e/test_acervo.py exige nao existe. web/acervo.html hoje e a pagina de frescor/licencas, nao a de navegacao do acervo: faltam a grade de cartoes (#grade .acervo-cartao[data-fonte-id]), a busca (#busca input), o dialogo da ficha (dialog .acervo-ficha e .acervo-atribuicao), o botao #acervo-ver-no-mapa e a legenda do mapa (#acervo-legenda li[data-fonte-id]) — nenhum desses seletores aparece em web/. web/js/acervo/acervo.js so consome /api/acervo/camadas e /api/acervo/frescor; nao consome nem /api/acervo/dominios nem /api/acervo/meu-mapa, que agora existem. E trabalho de frontend, com clausula de responsivo e de 0 erro de console, e precisa de bancada viva com --base-url."
  ]

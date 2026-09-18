@@ -3,6 +3,7 @@
 ficam de fora e confirmam que a ficha de uma sem licença nunca aparece. O `adicionar` cria item tipo `conexao` no
 inquilino de quem chamou, provado com a mesma trava cruzada A→B do resto do catálogo (RLS por `tenant_id`)."""
 
+import os
 import subprocess
 
 import psycopg2.extras
@@ -11,6 +12,10 @@ import pytest
 from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 from tests.api.conftest import PREFIXO_TESTE
 from tests.api.test_rls import contexto, ids_por_slug
+
+# banco onde o psql como postgres escreve: iagro_sat em produção/homolog; na trilha remota (Hetzner) o schema
+# da trilha vive no banco plat_trilhas — passa-se PLAT_BANCO=plat_trilhas inline no comando de prova.
+BANCO = os.environ.get("PLAT_BANCO", "iagro_sat")
 
 # item L6-01-c-tela-acervo: `plat.acervo_licenca` (item L6-01-g) só é povoada por scripts/acervo_licenca_sync.py
 # rodando como postgres SEM olhar PLAT_SCHEMA (grava sempre em produção) — inútil para provar o JOIN novo desta
@@ -32,12 +37,12 @@ def licenca_curada_odbl(env):
         "ON CONFLICT (fonte_id) DO NOTHING"
     )
     subprocess.run(
-        ["sudo", "-u", "postgres", "psql", "-d", "iagro_sat", "-X", "-q", "-v", "ON_ERROR_STOP=1", "-c", sql],
+        ["sudo", "-u", "postgres", "psql", "-d", BANCO, "-X", "-q", "-v", "ON_ERROR_STOP=1", "-c", sql],
         check=True, capture_output=True, text=True,
     )
     yield "openstreetmap"
     subprocess.run(
-        ["sudo", "-u", "postgres", "psql", "-d", "iagro_sat", "-X", "-q", "-c",
+        ["sudo", "-u", "postgres", "psql", "-d", BANCO, "-X", "-q", "-c",
          f"DELETE FROM {schema}.acervo_licenca WHERE fonte_id='openstreetmap'"],
         check=True, capture_output=True, text=True,
     )

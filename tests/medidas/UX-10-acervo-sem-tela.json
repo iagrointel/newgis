@@ -17,11 +17,11 @@
    "comando": "Tela.verificar (console.error, pageerror, respostas >= 400 não declaradas)"
   },
   "pagina_pronta_ms_acervo": {
-   "valor": 101.4,
+   "valor": 147.0,
    "unidade": "ms",
    "comando": "goto até body[data-pronto=1] no chromium do playwright"
   }
  },
- "gerado_em": "2026-09-08T02:41:35Z",
- "git_sha": "3315d92ab839"
+ "gerado_em": "2026-09-18T11:13:09Z",
+ "git_sha": "d29b80ae0e60"
 }

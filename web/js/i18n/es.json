@@ -125,6 +125,8 @@
   "acervo.vazio": "ninguna fuente con licencia escrita en este acervo; sin licencia el acervo es auditable, no publicable",
   "acervo.vazio_filtro": "ninguna fuente coincide con la búsqueda o el dominio",
   "acervo.vazio_titulo": "ninguna fuente para mostrar",
+  "acervo.ver_catalogo": "catálogo del acervo",
+  "acervo.ver_frescor": "verificación de frescura",
   "acervo.ver_no_mapa": "ver en el mapa",
   "acervo.vivo": "vivo",
   "admin.acervo_fontes": "fuentes con licencia escrita",

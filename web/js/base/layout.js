@@ -90,7 +90,9 @@ export function montarLayout({ usuario, ativo = location.pathname }) {
     if (tela.grupo !== grupoAberto) {
       grupoAberto = tela.grupo;
       const chaveRotulo = ROTULOS_GRUPO[grupoAberto];
-      if (chaveRotulo) ul.append(h('li', { class: 'grupo-rotulo', role: 'separator' }, t(chaveRotulo)));
+      /* rótulo de grupo é um <li> comum: role="separator" aqui derruba a regra "list" do axe (<ul> só admite
+         <li> filho direto — medido no e2e UX-10 em 18/09) e escondia o texto do rótulo de quem lê tela. */
+      if (chaveRotulo) ul.append(h('li', { class: 'grupo-rotulo' }, t(chaveRotulo)));
     }
     const a = h('a', { href: tela.caminho, 'aria-current': tela.caminho === ativo ? 'page' : undefined }, t(tela.chave));
     ul.append(h('li', {}, a));
